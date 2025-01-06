@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Aevatar.AI.Brain;
@@ -29,14 +30,20 @@ public abstract class AIGAgent<TState, TEvent> : GAgentBase<TState, TEvent>, IAI
     {
         //save state
 
-        _brain = _brainFactory.GetBrain(Guid.Parse(this.GetGrainId().ToString()), initializeDto);
+        _brain = _brainFactory.GetBrain(initializeDto.LLM);
         
         if(_brain == null)
         {
             Logger.LogError("Failed to initialize brain.");
+            return Task.FromResult(false);
         }
-
-        return Task.FromResult(_brain != null);
+        
+        var result = _brain.Initialize(
+            Guid.Parse(this.GetGrainId().ToString()),
+            initializeDto.Instructions, 
+            initializeDto.Files.Select(f => new File(){Content = f.Content, Type = f.Type}).ToList());
+        
+        return Task.FromResult(result);
     }
 
     protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)

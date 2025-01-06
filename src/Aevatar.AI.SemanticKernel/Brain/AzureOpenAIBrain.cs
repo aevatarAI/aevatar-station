@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.AI.Common;
 using Aevatar.AI.KernelBuilderFactory;
@@ -12,21 +13,32 @@ namespace Aevatar.AI.Brain;
 
 public class AzureOpenAIBrain : IBrain
 {
-    private readonly Kernel _kernel;
-    private readonly string _promptTemplate;
+    private Kernel _kernel;
+    private string _promptTemplate;
+    
+    private readonly IOptions<AzureOpenAIConfig> _azureOpenAIConfig;
+    private readonly IKernelBuilderFactory _kernelBuilderFactory;
+    private readonly AzureOpenAIClient _azureOpenAIClient;
 
-    public AzureOpenAIBrain(IOptions<AzureOpenAIConfig> config, AzureOpenAIClient azureOpenAIClient, IKernelBuilderFactory kernelBuilderFactory, Guid guid, string promptTemplate)
+    public AzureOpenAIBrain(IOptions<AzureOpenAIConfig> azureOpenAIConfig, AzureOpenAIClient azureOpenAIClient, IKernelBuilderFactory kernelBuilderFactory)
     {
-        var azureOpenAIConfig = config.Value;
-        
-        var kernelBuilder = kernelBuilderFactory.GetKernelBuilder(guid);
-        kernelBuilder.AddAzureOpenAIChatCompletion(azureOpenAIConfig.ChatDeploymentName, azureOpenAIClient);
+        _azureOpenAIClient = azureOpenAIClient;
+        _kernelBuilderFactory = kernelBuilderFactory;
+        _azureOpenAIConfig = azureOpenAIConfig;
+    }
+    
+    public bool Initialize(Guid guid, string promptTemplate, List<File> files)
+    {
+        var kernelBuilder = _kernelBuilderFactory.GetKernelBuilder(guid);
+        kernelBuilder.AddAzureOpenAIChatCompletion(_azureOpenAIConfig.Value.ChatDeploymentName, _azureOpenAIClient);
         _kernel = kernelBuilder.Build();
         
         _promptTemplate = promptTemplate;
+
+        return true;
     }
 
-    //TODO: added an overloaded function that takes in dictionary to pass arguments to the prompt template
+    //TODO: add an overloaded function that takes in dictionary to pass arguments to the prompt template
     public async Task<string?> InvokePromptAsync(string prompt)
     {
         var result = await _kernel.InvokePromptAsync(
