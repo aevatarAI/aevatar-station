@@ -9,7 +9,7 @@ public interface IDevelopingLeaderTestGAgent: IGAgent
     
 }
 
-[GAgent]
+[GAgent("developingLeader", "Test")]
 public class DevelopingLeaderTestGAgent : GAgentBase<NaiveTestGAgentState, NaiveTestGEvent>, IDevelopingLeaderTestGAgent
 {
     public DevelopingLeaderTestGAgent(ILogger<DevelopingLeaderTestGAgent> logger) : base(logger)

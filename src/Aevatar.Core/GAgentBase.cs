@@ -10,7 +10,7 @@ using Orleans.Streams;
 
 namespace Aevatar.Core;
 
-[GAgent]
+[GAgent("base")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState, TEvent>, IStateGAgent<TState>

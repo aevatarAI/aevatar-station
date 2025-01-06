@@ -5,7 +5,7 @@ using Orleans.TestKit;
 
 namespace Aevatar.Core.Tests;
 
-public abstract class GAgentTestKitBase : TestKitBase, IAsyncLifetime
+public abstract class GAgentTestKitBase : TestKitBase
 {
     protected async Task<PublishingGAgent> CreatePublishingGAgentAsync(params IGAgent[] gAgentsToPublish)
     {
@@ -54,15 +54,5 @@ public abstract class GAgentTestKitBase : TestKitBase, IAsyncLifetime
 
         var lambda = Expression.Lambda<Func<IdSpan, IGAgent>>(body, parameter).Compile();
         Silo.AddProbe(lambda);
-    }
-
-    public Task InitializeAsync()
-    {
-        return Task.CompletedTask;
-    }
-
-    public Task DisposeAsync()
-    {
-        return Task.CompletedTask;
     }
 }

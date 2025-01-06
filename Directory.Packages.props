@@ -32,6 +32,7 @@
     <PackageVersion Include="Volo.Abp.AspNetCore.Mvc.Dapr.EventBus" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite" Version="3.2.0" />
     <PackageVersion Include="Volo.Abp.AspNetCore.Serilog" Version="$(AbpVersion)" />
+    <PackageVersion Include="Volo.Abp.Auditing" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.AuditLogging.Domain" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.AuditLogging.Domain.Shared" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.AuditLogging.MongoDB" Version="$(AbpVersion)" />
