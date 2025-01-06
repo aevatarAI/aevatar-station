@@ -16,6 +16,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.EventSourcing.Core"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Core.Tests", "test\Aevatar.Core.Tests\Aevatar.Core.Tests.csproj", "{6545F4B2-EB81-4CF6-8FEC-C5FF8E116C7C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.AI.Abstractions", "src\Aevatar.AI.Abstractions\Aevatar.AI.Abstractions.csproj", "{3B516449-884F-43E3-A88B-C3FFEE438217}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.AI.SemanticKernel", "src\Aevatar.AI.SemanticKernel\Aevatar.AI.SemanticKernel.csproj", "{C75500BE-F61B-47E9-AD97-92E2659B7DCD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -28,6 +32,8 @@ Global
 		{42158451-CF7A-4084-9927-3F11FE08D0D3} = {96D7B45D-F041-44DD-BFCC-E17048911357}
 		{4787AF76-981A-4D29-A4F0-466981E7E780} = {94D0A422-54BA-48E4-9AAA-4C59BFF72F06}
 		{6545F4B2-EB81-4CF6-8FEC-C5FF8E116C7C} = {96D7B45D-F041-44DD-BFCC-E17048911357}
+		{3B516449-884F-43E3-A88B-C3FFEE438217} = {94D0A422-54BA-48E4-9AAA-4C59BFF72F06}
+		{C75500BE-F61B-47E9-AD97-92E2659B7DCD} = {94D0A422-54BA-48E4-9AAA-4C59BFF72F06}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{70485291-29F6-4FBA-BFE3-3F400184B3C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -54,5 +60,13 @@ Global
 		{6545F4B2-EB81-4CF6-8FEC-C5FF8E116C7C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6545F4B2-EB81-4CF6-8FEC-C5FF8E116C7C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6545F4B2-EB81-4CF6-8FEC-C5FF8E116C7C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3B516449-884F-43E3-A88B-C3FFEE438217}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3B516449-884F-43E3-A88B-C3FFEE438217}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3B516449-884F-43E3-A88B-C3FFEE438217}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3B516449-884F-43E3-A88B-C3FFEE438217}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C75500BE-F61B-47E9-AD97-92E2659B7DCD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C75500BE-F61B-47E9-AD97-92E2659B7DCD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C75500BE-F61B-47E9-AD97-92E2659B7DCD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C75500BE-F61B-47E9-AD97-92E2659B7DCD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
