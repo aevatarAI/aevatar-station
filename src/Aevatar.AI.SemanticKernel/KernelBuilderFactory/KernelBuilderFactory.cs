@@ -1,6 +1,7 @@
 using System;
 using Aevatar.AI.Model;
 using Aevatar.AI.Options;
+using Aevatar.AI.VectorStoreBuilder;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Data;
@@ -9,23 +10,19 @@ namespace Aevatar.AI.KernelBuilderFactory;
 
 public class KernelBuilderFactory : IKernelBuilderFactory
 {
-    private readonly QdrantConfig _qdrantConfig;
+    private readonly Func<IKernelBuilder, IVectorStoreBuilder> _vectorStoreBuilderFactory;
     
-    public KernelBuilderFactory(IOptions<QdrantConfig> qdrantConfig)
+    public KernelBuilderFactory(Func<IKernelBuilder, IVectorStoreBuilder> vectorStoreBuilderFactory)
     {
-        _qdrantConfig = qdrantConfig.Value;
+        _vectorStoreBuilderFactory = vectorStoreBuilderFactory;
     }
 
     public IKernelBuilder GetKernelBuilder(Guid guid)
     {
         var kernelBuilder = Kernel.CreateBuilder();
 
-        kernelBuilder.AddQdrantVectorStoreRecordCollection<Guid, TextSnippet<Guid>>(
-            guid.ToString(),
-            _qdrantConfig.Host,
-            _qdrantConfig.Port,
-            _qdrantConfig.Https,
-            _qdrantConfig.ApiKey);
+        _vectorStoreBuilderFactory(kernelBuilder)
+            .ConfigureCollection<Guid, TextSnippet<Guid>>(guid.ToString());
         
         RegisterVectorStore<Guid>(kernelBuilder);
 
