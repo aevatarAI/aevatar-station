@@ -11,6 +11,7 @@
         <PackageReference Include="Microsoft.SemanticKernel" />
         <PackageReference Include="Microsoft.SemanticKernel.Connectors.Qdrant" />
         <PackageReference Include="Microsoft.SemanticKernel.PromptTemplates.Handlebars" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
     </ItemGroup>
 
     <ItemGroup>
