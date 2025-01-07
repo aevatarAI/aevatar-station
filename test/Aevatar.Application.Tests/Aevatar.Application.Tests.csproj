@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\..\common.props" />
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Aevatar</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Aevatar.Application\Aevatar.Application.csproj" />
+    <ProjectReference Include="..\Aevatar.Domain.Tests\Aevatar.Domain.Tests.csproj" />
+    <ProjectReference Include="..\Aevatar.Orleans.TestBase\Aevatar.Orleans.TestBase.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+      <PackageReference Include="AutoGen" />
+      <PackageReference Include="Azure.AI.TextAnalytics" />
+      <PackageReference Include="Microsoft.NET.Test.Sdk" />
+      <PackageReference Include="Microsoft.Orleans.TestingHost" />
+      <PackageReference Include="AutoGen" Version="0.2.1" />
+      <PackageReference Include="Azure.AI.TextAnalytics" Version="5.3.0" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+      <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+      <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
+      <PackageReference Include="Microsoft.Orleans.TestingHost" Version="7.2.6" />
+      <PackageReference Include="AutoGen" />
+      <PackageReference Include="Azure.AI.TextAnalytics" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+      <PackageReference Include="Microsoft.NET.Test.Sdk" />
+      <PackageReference Include="Microsoft.Orleans.TestingHost" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

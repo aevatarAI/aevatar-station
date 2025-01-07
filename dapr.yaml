@@ -1,0 +1,10 @@
+version: 1
+common:
+  resourcesPath: ./components/
+apps:
+  - appID: Aevatar.HttpApi.Host
+    appDirPath: ./src/Aevatar.HttpApi.Host/
+    command: ["dotnet", "run"]
+  - appID: Aevatar.Worker
+    appDirPath: ./src/Aevatar.Worker/
+    command: [ "dotnet", "run" ]
