@@ -14,14 +14,14 @@ using Orleans;
 
 namespace Aevatar.AI.Agent;
 
-public abstract class AIGAgent<TState, TEvent> : GAgentBase<TState, TEvent>, IAIGAgent
+public abstract class AIGAgentBase<TState, TEvent> : GAgentBase<TState, TEvent>, IAIGAgent
     where TState : AIGAgentState, new()
     where TEvent : AIEventBase
 {
     private readonly IBrainFactory _brainFactory;
     private IBrain? _brain = null;
     
-    public AIGAgent(ILogger logger) : base(logger)
+    public AIGAgentBase(ILogger logger) : base(logger)
     {
         _brainFactory = ServiceProvider.GetRequiredService<IBrainFactory>();
     }
