@@ -5,5 +5,5 @@ namespace Aevatar.AI.KernelBuilderFactory;
 
 public interface IKernelBuilderFactory
 {
-    IKernelBuilder GetKernelBuilder(Guid guid);
+    IKernelBuilder GetKernelBuilder(string id);
 }

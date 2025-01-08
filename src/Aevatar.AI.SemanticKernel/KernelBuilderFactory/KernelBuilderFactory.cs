@@ -25,14 +25,14 @@ public sealed class KernelBuilderFactory : IKernelBuilderFactory
     /// <summary>
     /// Creates and configures a kernel builder for the specified GUID.
     /// </summary>
-    /// <param name="guid">The GUID to configure the vector store collection.</param>
+    /// <param name="id">The ID to configure the vector store collection.</param>
     /// <returns>A configured IKernelBuilder instance.</returns>
     /// <exception cref="ArgumentException">Thrown when guid is empty.</exception>
-    public IKernelBuilder GetKernelBuilder(Guid guid)
+    public IKernelBuilder GetKernelBuilder(string id)
     {
-        if (guid == Guid.Empty)
+        if (string.IsNullOrEmpty(id))
         {
-            throw new ArgumentException("GUID cannot be empty.", nameof(guid));
+            throw new ArgumentException("Brain ID cannot be empty.", nameof(id));
         }
 
         var config = _ragConfig.Value;
@@ -40,7 +40,7 @@ public sealed class KernelBuilderFactory : IKernelBuilderFactory
         var kernelBuilder = Kernel.CreateBuilder();
         
         var vectorStore = _serviceProvider.GetRequiredKeyedService<IVectorStore>(config.VectorStoreType);
-        vectorStore.ConfigureCollection(kernelBuilder, guid.ToString());
+        vectorStore.ConfigureCollection(kernelBuilder, id);
         vectorStore.RegisterVectorStoreTextSearch(kernelBuilder);
         
         var embedding = _serviceProvider.GetRequiredKeyedService<IEmbedding>(config.AIEmbeddingService);

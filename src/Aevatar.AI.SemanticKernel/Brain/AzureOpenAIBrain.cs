@@ -5,6 +5,7 @@ using Aevatar.AI.Common;
 using Aevatar.AI.KernelBuilderFactory;
 using Aevatar.AI.Options;
 using Azure.AI.OpenAI;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Data;
@@ -20,22 +21,25 @@ public class AzureOpenAIBrain : IBrain
     private readonly IOptions<AzureOpenAIConfig> _azureOpenAIConfig;
     private readonly IKernelBuilderFactory _kernelBuilderFactory;
     private readonly AzureOpenAIClient _azureOpenAIClient;
+    private readonly IServiceProvider _serviceProvider;
 
-    public AzureOpenAIBrain(IOptions<AzureOpenAIConfig> azureOpenAIConfig, AzureOpenAIClient azureOpenAIClient, IKernelBuilderFactory kernelBuilderFactory)
+    public AzureOpenAIBrain(IOptions<AzureOpenAIConfig> azureOpenAIConfig, IKernelBuilderFactory kernelBuilderFactory, IServiceProvider serviceProvider)
     {
-        _azureOpenAIClient = azureOpenAIClient;
         _kernelBuilderFactory = kernelBuilderFactory;
+        _serviceProvider = serviceProvider;
         _azureOpenAIConfig = azureOpenAIConfig;
+
+        _azureOpenAIClient = _serviceProvider.GetRequiredKeyedService<AzureOpenAIClient>(AzureOpenAIConfig.ConfigSectionName);
     }
     
-    public bool Initialize(Guid guid, string promptTemplate, List<File> files)
+    public bool Initialize(string id, string promptTemplate, List<File> files)
     {
-        var kernelBuilder = _kernelBuilderFactory.GetKernelBuilder(guid);
+        var kernelBuilder = _kernelBuilderFactory.GetKernelBuilder(id);
         kernelBuilder.AddAzureOpenAIChatCompletion(_azureOpenAIConfig.Value.ChatDeploymentName, _azureOpenAIClient);
         _kernel = kernelBuilder.Build();
 
-        var ts = _kernel.GetRequiredService<ITextSearch>();
-        ts.CreateWithGetTextSearchResults("SearchPlugin");
+        //var ts = _kernel.GetRequiredService<ITextSearch>();
+        //ts.CreateWithGetTextSearchResults("SearchPlugin");
         
         //_kernel.Plugins.Add(vectorStoreTextSearch.CreateWithGetTextSearchResults("SearchPlugin"));
         

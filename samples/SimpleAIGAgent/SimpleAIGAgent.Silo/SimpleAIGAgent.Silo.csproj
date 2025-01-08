@@ -18,4 +18,10 @@
         <ProjectReference Include="..\..\..\src\Aevatar.AI.AIGAgent\Aevatar.AI.AIGAgent.csproj" />
         <ProjectReference Include="..\..\..\src\Aevatar.AI.SemanticKernel\Aevatar.AI.SemanticKernel.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+        <None Update="appsettings.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
 </Project>

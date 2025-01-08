@@ -24,7 +24,7 @@ internal class QdrantVectorStore : IVectorStore
         kernelBuilder.AddQdrantVectorStoreRecordCollection<Guid, TextSnippet<Guid>>(
             collectionName);
         
-        kernelBuilder.Services.AddSingleton<IVectorStoreCollection>();
+        kernelBuilder.Services.AddSingleton<IVectorStoreCollection, QdrantVectorStoreCollection>();
     }
 
     public void RegisterVectorStoreTextSearch(IKernelBuilder kernelBuilder)

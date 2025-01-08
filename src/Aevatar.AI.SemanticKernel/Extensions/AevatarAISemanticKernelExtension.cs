@@ -3,6 +3,7 @@ using Aevatar.AI.Brain;
 using Aevatar.AI.BrainFactory;
 using Aevatar.AI.Common;
 using Aevatar.AI.Embeddings;
+using Aevatar.AI.KernelBuilderFactory;
 using Aevatar.AI.Options;
 using Aevatar.AI.VectorStores;
 using Aevatar.AI.VectorStores.Qdrant;
@@ -21,17 +22,27 @@ public static class AevatarAISemanticKernelExtension
     public static IServiceCollection AddSemanticKernel(this IServiceCollection services)
     {
         services.AddSingleton<IBrainFactory, BrainFactory.BrainFactory>();
+        services.AddSingleton<IKernelBuilderFactory, KernelBuilderFactory.KernelBuilderFactory>();
         
         return services;
     }
 
     public static IServiceCollection AddAzureOpenAI(this IServiceCollection services)
     {
-        services.AddOptions<AzureOpenAIConfig>()
-            .Configure<IConfiguration>((settings, configuration) =>
-            {
-                configuration.GetSection(AzureOpenAIConfig.ConfigSectionName).Bind(settings);
-            });
+        // services.AddOptions<AzureOpenAIConfig>()
+        //     .Configure<IConfiguration>((settings, configuration) =>
+        //     {
+        //         configuration.GetSection(AzureOpenAIConfig.ConfigSectionName).Bind(settings);
+        //     });
+        
+        services.AddKeyedSingleton<AzureOpenAIClient>(AzureOpenAIConfig.ConfigSectionName, (sp, key) =>
+        {
+            var options = sp.GetRequiredService<IOptions<AzureOpenAIConfig>>().Value;
+            return new AzureOpenAIClient(
+                new Uri(options.Endpoint),
+                new AzureKeyCredential(options.ApiKey)
+            );
+        });
 
         services.AddKeyedTransient<IBrain, AzureOpenAIBrain>(AzureOpenAIConfig.ConfigSectionName);
         
@@ -45,11 +56,11 @@ public static class AevatarAISemanticKernelExtension
         services.AddSingleton(new UniqueKeyGenerator<Guid>(() => Guid.NewGuid()));
         
         // Register Qdrant configuration options
-        services.AddOptions<QdrantConfig>()
-            .Configure<IConfiguration>((settings, configuration) =>
-            {
-                configuration.GetSection(QdrantConfig.ConfigSectionName).Bind(settings);
-            });
+        // services.AddOptions<QdrantConfig>()
+        //     .Configure<IConfiguration>((settings, configuration) =>
+        //     {
+        //         configuration.GetSection(QdrantConfig.ConfigSectionName).Bind(settings);
+        //     });
 
         // Register Qdrant client as a singleton
         services.AddSingleton<QdrantClient>(sp =>
@@ -67,11 +78,11 @@ public static class AevatarAISemanticKernelExtension
     
     public static IServiceCollection AddAzureOpenAITextEmbedding(this IServiceCollection services)
     {
-        services.AddOptions<AzureOpenAIEmbeddingsConfig>()
-            .Configure<IConfiguration>((settings, configuration) =>
-            {
-                configuration.GetSection(AzureOpenAIEmbeddingsConfig.ConfigSectionName).Bind(settings);
-            });
+        // services.AddOptions<AzureOpenAIEmbeddingsConfig>()
+        //     .Configure<IConfiguration>((settings, configuration) =>
+        //     {
+        //         configuration.GetSection(AzureOpenAIEmbeddingsConfig.ConfigSectionName).Bind(settings);
+        //     });
         
         services.AddKeyedSingleton<AzureOpenAIClient>(AevatarAISemanticKernelConstants.EmbeddingClientServiceKey, (sp, key) =>
         {

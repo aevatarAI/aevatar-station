@@ -39,7 +39,7 @@ public abstract class AIGAgentBase<TState, TEvent> : GAgentBase<TState, TEvent>,
         }
         
         var result = _brain.Initialize(
-            Guid.Parse(this.GetGrainId().ToString()),
+            this.GetGrainId().ToString(),
             initializeDto.Instructions, 
             initializeDto.Files.Select(f => new File(){Content = f.Content, Type = f.Type, Name = f.Name}).ToList());
         

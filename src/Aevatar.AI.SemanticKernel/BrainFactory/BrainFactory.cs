@@ -7,10 +7,10 @@ namespace Aevatar.AI.BrainFactory;
 
 public class BrainFactory : IBrainFactory
 {
-    private readonly Logger<BrainFactory> _logger;
+    private readonly ILogger<BrainFactory> _logger;
     private readonly IServiceProvider _serviceProvider;
 
-    public BrainFactory(Logger<BrainFactory> logger, IServiceProvider serviceProvider)
+    public BrainFactory(ILogger<BrainFactory> logger, IServiceProvider serviceProvider)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;

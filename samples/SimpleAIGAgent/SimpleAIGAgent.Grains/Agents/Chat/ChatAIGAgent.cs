@@ -24,5 +24,6 @@ public class ChatAIGAgent : AIGAgentBase<ChatAIGState, ChatAIEvent>, IChatAIGAge
     public async Task OnChatAIEvent(ChatEvent @event)
     {
         var result = await InvokePromptAsync(@event.Message);
+        Logger.LogInformation("Chat output: {Result}", result);
     }
 }
