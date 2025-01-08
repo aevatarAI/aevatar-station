@@ -76,11 +76,6 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
         });
         await ConfirmEvents();
     }
-
-    public Task<string> GetOwnerAddressAsync()
-    {
-        return Task.FromResult(State.UserAddress);
-    }
     
     public async Task RegisterToGroupAsync(string groupId)
     {
@@ -91,13 +86,6 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
         });
         await ConfirmEvents();
     }
-    
-    public async Task<bool> GetInUseAsync()
-    {
-        _logger.LogInformation("GetInUseAsync");
-        var inUse = !State.GroupId.IsNullOrEmpty();
-        return await Task.FromResult(inUse);
-    }
 }
 
 public interface IAtomicGAgent : IStateGAgent<AtomicGAgentState>
@@ -106,7 +94,5 @@ public interface IAtomicGAgent : IStateGAgent<AtomicGAgentState>
     Task CreateAgentAsync(AtomicAgentData data);
     Task UpdateAgentAsync(AtomicAgentData data);
     Task DeleteAgentAsync();
-    Task<string> GetOwnerAddressAsync();
     Task RegisterToGroupAsync(string groupId);
-    Task<bool> GetInUseAsync();
 }

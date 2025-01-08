@@ -1,9 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Aevatar.Agents.Group;
 using Aevatar.AtomicAgent.Agent;
 using Aevatar.AtomicAgent.Dtos;
 using Aevatar.AtomicAgent.Models;
+using Aevatar.CombinationAgent.Agent;
+using Aevatar.CombinationAgent.Dtos;
+using Aevatar.CombinationAgent.Models;
+using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Provider;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -142,75 +147,86 @@ public class AgentService : ApplicationService, IAgentService
         return "my_address";
     }
     
-    // public async Task<CombinationAgentDto> CombineAgentAsync(CombineAgentDto combineAgentDto)
-    // {
-    //     if (combineAgentDto.AgentComponent.IsNullOrEmpty())
-    //     {
-    //         _logger.LogInformation("CombineAgentAsync agentComponent is null, name: {name}", combineAgentDto.Name);
-    //         throw new UserFriendlyException("agentComponent is null");
-    //     }
-    //     
-    //     if (combineAgentDto.Name.IsNullOrEmpty())
-    //     {
-    //         _logger.LogInformation("CombineAgentAsync name is null, name: {name}", combineAgentDto.Name);
-    //         throw new UserFriendlyException("name is null");
-    //     }
-    //     
-    //     var address = GetCurrentUserAddress();
-    //     var guid = Guid.NewGuid();
-    //     var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(guid);
-    //     var status = await combinationAgent.GetStatusAsync();
-    //     if (status == AgentStatus.Running || status == AgentStatus.Stopped)
-    //     {
-    //         _logger.LogInformation("CombineAgentAsync agent exist, name: {name} status: {status}", 
-    //             combineAgentDto.Name, status);
-    //         throw new UserFriendlyException("agent already exist");
-    //     }
-    //     
-    //     var groupId = await SetGroupAsync(combineAgentDto.AgentComponent, combineAgentDto.Name, address);
-    //     var data = _objectMapper.Map<CombineAgentDto, CombinationAgentData>(combineAgentDto);
-    //     data.GroupId = groupId;
-    //     data.UserAddress = address;
-    //     await combinationAgent.CombineAgentAsync(data);
-    //     var resp = _objectMapper.Map<CombineAgentDto, CombinationAgentDto>(combineAgentDto);
-    //     resp.Id = guid.ToString();
-    //     return resp;
-    // }
-    //
-    // private async Task<string> SetGroupAsync(List<string> agentComponent, string name, string address)
-    // {
-    //     var groupGuid = Guid.NewGuid();
-    //     var groupAgent = _clusterClient.GetGrain<IStateGAgent<GroupAgentState>>(groupGuid);
-    //     foreach (var agentId in agentComponent)
-    //     {
-    //         if (!Guid.TryParse(agentId, out Guid validGuid))
-    //         {
-    //             _logger.LogInformation("SetGroupAsync invalid id: {id}", agentId);
-    //             throw new UserFriendlyException("Invalid id");
-    //         }
-    //         
-    //         var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(validGuid);
-    //         var ownerAddress = await atomicAgent.GetOwnerAddressAsync();
-    //         if (ownerAddress != address)
-    //         {
-    //             _logger.LogInformation("SetGroupAsync agent not belong to user, id: {id}, ownerAddress: {ownerAddress}", 
-    //                 agentId, ownerAddress);
-    //             throw new UserFriendlyException("agent not belong to user");
-    //         }
-    //         
-    //         var inUse = await atomicAgent.GetInUseAsync();
-    //         if (inUse)
-    //         {
-    //             _logger.LogInformation("SetGroupAsync agent in use, id: {id}", agentId);
-    //             throw new UserFriendlyException("agent in use");
-    //         }
-    //         
-    //         var agentData = await atomicAgent.GetAgentAsync();
-    //         // todo: get business agent and register to group
-    //         await atomicAgent.RegisterToGroupAsync(groupGuid.ToString());
-    //     }
-    //
-    //     return groupGuid.ToString();
-    // }
+    public async Task<CombinationAgentDto> CombineAgentAsync(CombineAgentDto combineAgentDto)
+    {
+        if (combineAgentDto.AgentComponent.IsNullOrEmpty())
+        {
+            _logger.LogInformation("CombineAgentAsync agentComponent is null, name: {name}", combineAgentDto.Name);
+            throw new UserFriendlyException("agentComponent is null");
+        }
+        
+        if (combineAgentDto.Name.IsNullOrEmpty())
+        {
+            _logger.LogInformation("CombineAgentAsync name is null, name: {name}", combineAgentDto.Name);
+            throw new UserFriendlyException("name is null");
+        }
+        
+        var address = GetCurrentUserAddress();
+        var guid = Guid.NewGuid();
+        var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(guid);
+        var status = await combinationAgent.GetStatusAsync();
+        if (status == AgentStatus.Running || status == AgentStatus.Stopped)
+        {
+            _logger.LogInformation("CombineAgentAsync agent exist, name: {name} status: {status}", 
+                combineAgentDto.Name, status);
+            throw new UserFriendlyException("agent already exist");
+        }
+        
+        var groupId = await SetGroupAsync(combineAgentDto.AgentComponent, combineAgentDto.Name, address);
+        var data = _objectMapper.Map<CombineAgentDto, CombinationAgentData>(combineAgentDto);
+        data.GroupId = groupId;
+        data.UserAddress = address;
+        await combinationAgent.CombineAgentAsync(data);
+        var resp = _objectMapper.Map<CombineAgentDto, CombinationAgentDto>(combineAgentDto);
+        resp.Id = guid.ToString();
+        return resp;
+    }
+    
+    private async Task<string> SetGroupAsync(List<string> agentComponent, string name, string address)
+    {
+        var groupGuid = Guid.NewGuid();
+        var groupAgent = _clusterClient.GetGrain<IStateGAgent<GroupAgentState>>(groupGuid);
+        var agentList = new List<IAtomicGAgent>();
+        foreach (var agentId in agentComponent)
+        {
+            if (!Guid.TryParse(agentId, out Guid validGuid))
+            {
+                _logger.LogInformation("SetGroupAsync invalid id: {id}", agentId);
+                throw new UserFriendlyException("Invalid id");
+            }
+            
+            var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(validGuid);
+            var agentData = await atomicAgent.GetAgentAsync();
+            if (agentData == null)
+            {
+                _logger.LogInformation("SetGroupAsync agent not exist, id: {id}", agentId);
+                throw new UserFriendlyException("agent not exist");
+            }
+            
+            if (agentData.UserAddress != address)
+            {
+                _logger.LogInformation("SetGroupAsync agent not belong to user, id: {id}, ownerAddress: {ownerAddress}", 
+                    agentId, agentData.UserAddress);
+                throw new UserFriendlyException("agent not belong to user");
+            }
+            
+            var inUse = !agentData.GroupId.IsNullOrEmpty();
+            if (inUse)
+            {
+                _logger.LogInformation("SetGroupAsync agent in use, id: {id}", agentId);
+                throw new UserFriendlyException("agent in use");
+            }
+            
+            agentList.Add(atomicAgent);
+        }
+
+        foreach (var agent in agentList)
+        {
+            // todo: get business agent and register to group
+           await agent.RegisterToGroupAsync(groupGuid.ToString());
+        }
+        
+        return groupGuid.ToString();
+    }
     
 }

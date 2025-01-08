@@ -57,6 +57,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.EventSourcing.Mongo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.AtomicAgent", "src\Aevatar.AtomicAgent\Aevatar.AtomicAgent.csproj", "{37AC3B94-DBAC-4F40-BA50-72731F48E744}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.CombinationAgent", "src\Aevatar.CombinationAgent\Aevatar.CombinationAgent.csproj", "{DCC1B805-75AC-4611-B087-4014F8DBAE6B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -163,6 +165,10 @@ Global
 		{37AC3B94-DBAC-4F40-BA50-72731F48E744}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{37AC3B94-DBAC-4F40-BA50-72731F48E744}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{37AC3B94-DBAC-4F40-BA50-72731F48E744}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DCC1B805-75AC-4611-B087-4014F8DBAE6B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DCC1B805-75AC-4611-B087-4014F8DBAE6B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DCC1B805-75AC-4611-B087-4014F8DBAE6B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DCC1B805-75AC-4611-B087-4014F8DBAE6B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -193,6 +199,7 @@ Global
 		{3F98FAFA-95E4-434D-A0EC-98546355341F} = {CA9AC87F-097E-4F15-8393-4BC07735A5B0}
 		{6595AA57-4FCD-49C3-A5FA-536203F02F17} = {CA9AC87F-097E-4F15-8393-4BC07735A5B0}
 		{37AC3B94-DBAC-4F40-BA50-72731F48E744} = {CA9AC87F-097E-4F15-8393-4BC07735A5B0}
+		{DCC1B805-75AC-4611-B087-4014F8DBAE6B} = {CA9AC87F-097E-4F15-8393-4BC07735A5B0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {28315BFD-90E7-4E14-A2EA-F3D23AF4126F}

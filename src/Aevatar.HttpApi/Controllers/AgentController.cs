@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Aevatar.AtomicAgent.Dtos;
+using Aevatar.CombinationAgent.Dtos;
 using Aevatar.Service;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
@@ -25,7 +26,7 @@ public class AgentController : AevatarController
         _agentService = agentService;
     }
     
-    [HttpPost]
+    [HttpPost("/atomic-agent")]
     public async Task<AtomicAgentDto> CreateAgent([FromBody] CreateAtomicAgentDto createAtomicAgentDto)
     {
         _logger.LogInformation("Create Atomic-Agent: {agent}", JsonConvert.SerializeObject(createAtomicAgentDto));
@@ -33,7 +34,7 @@ public class AgentController : AevatarController
         return agentDto;
     }
     
-    [HttpGet("{id}")]
+    [HttpGet("/atomic-agent/{id}")]
     public async Task<AtomicAgentDto> GetAgent(string id)
     {
         _logger.LogInformation("Get Atomic-Agent: {agent}", id);
@@ -41,7 +42,7 @@ public class AgentController : AevatarController
         return agentDto;
     }
     
-    [HttpPut("{id}")]
+    [HttpPut("/atomic-agent/{id}")]
     public async Task<AtomicAgentDto> UpdateAgent(string id, [FromBody] UpdateAtomicAgentDto updateAtomicAgentDto)
     {
         _logger.LogInformation("Update Atomic-Agent: {agent}", JsonConvert.SerializeObject(updateAtomicAgentDto));
@@ -50,10 +51,18 @@ public class AgentController : AevatarController
     }
 
    
-    [HttpDelete("{id}")]
+    [HttpDelete("/atomic-agent/{id}")]
     public async Task DeleteAgent(string id)
     {
         _logger.LogInformation("Delete Atomic-Agent: {agent}", id);
         await _agentService.DeleteAtomicAgentAsync(id);
+    }
+    
+    [HttpPost("/combination-agent")]
+    public async Task<CombinationAgentDto> CombineAgent([FromBody] CombineAgentDto combineAgentDto)
+    {
+        _logger.LogInformation("Combine Atomic-Agent: {agent}", JsonConvert.SerializeObject(combineAgentDto));
+        var agentDto = await _agentService.CombineAgentAsync(combineAgentDto);
+        return agentDto;
     }
 }
