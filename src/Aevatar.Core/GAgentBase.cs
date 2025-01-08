@@ -46,19 +46,19 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
             return;
         }
 
-        await AddSubscriberAsync(gAgent.GetGrainId());
+        await AddChildAsync(gAgent.GetGrainId());
         await gAgent.SubscribeToAsync(this);
         await OnRegisterAgentAsync(guid);
     }
 
     public Task SubscribeToAsync(IGAgent gAgent)
     {
-        return SetSubscriptionAsync(gAgent.GetGrainId());
+        return SetParentAsync(gAgent.GetGrainId());
     }
 
     public async Task UnregisterAsync(IGAgent gAgent)
     {
-        await RemoveSubscriberAsync(gAgent.GetGrainId());
+        await RemoveChildAsync(gAgent.GetGrainId());
         await OnUnregisterAgentAsync(gAgent.GetPrimaryKey());
     }
 
@@ -77,14 +77,14 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
         return handlingTypes.ToList();
     }
 
-    public async Task<List<GrainId>> GetSubscribersAsync()
+    public async Task<List<GrainId>> GetChildrenAsync()
     {
-        return State.Subscribers;
+        return State.Children;
     }
 
-    public async Task<GrainId> GetSubscriptionAsync()
+    public async Task<GrainId> GetParentAsync()
     {
-        return State.Subscription;
+        return State.Parent;
     }
 
     public virtual Task<Type?> GetInitializeDtoTypeAsync()
@@ -101,7 +101,7 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
 
     private async Task<SubscribedEventListEvent> GetGroupSubscribedEventListEvent()
     {
-        var gAgentList = State.Subscribers.Select(grainId => GrainFactory.GetGrain<IGAgent>(grainId)).ToList();
+        var gAgentList = State.Children.Select(grainId => GrainFactory.GetGrain<IGAgent>(grainId)).ToList();
 
         if (gAgentList.IsNullOrEmpty())
         {
