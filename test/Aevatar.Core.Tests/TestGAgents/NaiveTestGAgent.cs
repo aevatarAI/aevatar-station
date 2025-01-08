@@ -16,7 +16,7 @@ public class NaiveTestGEvent : GEventBase
 }
 
 [GAgent("naiveTest")]
-public class NaiveTestGAgent : GAgentBase<NaiveTestGAgentState, NaiveTestGEvent>
+public class NaiveTestGAgent : GAgentBaseWithInitialization<NaiveTestGAgentState, NaiveTestGEvent, NaiveGAgentInitializeDto>
 {
     public NaiveTestGAgent(ILogger<NaiveTestGAgent> logger) : base(logger)
     {
@@ -27,7 +27,7 @@ public class NaiveTestGAgent : GAgentBase<NaiveTestGAgentState, NaiveTestGEvent>
         return Task.FromResult("This is a naive test GAgent");
     }
 
-    public async Task InitializeAsync(NaiveGAgentInitializeDto initializeDto)
+    public override async Task InitializeAsync(NaiveGAgentInitializeDto initializeDto)
     {
         if (State.Content.IsNullOrEmpty())
         {

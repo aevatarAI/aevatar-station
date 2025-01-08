@@ -7,8 +7,12 @@ namespace Aevatar.Core;
 public interface IGAgentFactory
 {
     Task<IGAgent> GetGAgentAsync(GrainId grainId, InitializeDtoBase? initializeDto = null);
-    Task<IGAgent> GetGAgentAsync(string alias, Guid primaryKey, string ns = "aevatar", InitializeDtoBase? initializeDto = null);
-    Task<IGAgent> GetGAgentAsync(string alias, string ns = "aevatar", InitializeDtoBase? initializeDto = null);
+
+    Task<IGAgent> GetGAgentAsync(string alias, Guid primaryKey,
+        string ns = AevatarGAgentConstants.GAgentDefaultNamespace, InitializeDtoBase? initializeDto = null);
+
+    Task<IGAgent> GetGAgentAsync(string alias, string ns = AevatarGAgentConstants.GAgentDefaultNamespace,
+        InitializeDtoBase? initializeDto = null);
 
     Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(Guid primaryKey, InitializeDtoBase? initializeDto = null)
         where TGrainInterface : IGAgent;

@@ -12,7 +12,7 @@ public class BadEventHandlerTestGAgentState
 
 public class BadEventHandlerTestGEvent : GEventBase;
 
-[GAgent("badEventHandlerTest", "Test")]
+[GAgent("badEventHandlerTest")]
 public class BadEventHandlerTestGAgent : GAgentBase<EventHandlerTestGAgentState, EventHandlerTestGEvent>
 {
     public BadEventHandlerTestGAgent(ILogger logger) : base(logger)

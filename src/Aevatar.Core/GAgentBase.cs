@@ -9,6 +9,21 @@ using Orleans.Streams;
 
 namespace Aevatar.Core;
 
+[GAgent("baseWithInitialization")]
+[StorageProvider(ProviderName = "PubSubStore")]
+[LogConsistencyProvider(ProviderName = "LogStorage")]
+public abstract class GAgentBaseWithInitialization<TState, TEvent, TInitializeDto> : GAgentBase<TState, TEvent>
+    where TState : StateBase, new()
+    where TEvent : GEventBase
+    where TInitializeDto : InitializeDtoBase
+{
+    protected GAgentBaseWithInitialization(ILogger logger) : base(logger)
+    {
+    }
+    
+    public abstract Task InitializeAsync(TInitializeDto initializeDto);
+}
+
 [GAgent("base")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
@@ -65,7 +80,8 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
     public async Task<List<Type>?> GetAllSubscribedEventsAsync(bool includeBaseHandlers = false)
     {
         var eventHandlerMethods = GetEventHandlerMethods();
-        eventHandlerMethods = eventHandlerMethods.Where(m => m.Name != nameof(ForwardEventAsync));
+        eventHandlerMethods = eventHandlerMethods.Where(m =>
+            m.Name != nameof(ForwardEventAsync) && m.Name != AevatarGAgentConstants.InitializeDefaultMethodName);
         var handlingTypes = eventHandlerMethods
             .Select(m => m.GetParameters().First().ParameterType);
         if (!includeBaseHandlers)
@@ -173,6 +189,7 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
     {
         // This must be called first to initialize Observers field.
         await UpdateObserverList();
+        await UpdateInitializeDtoType();
         await InitializeStreamOfThisGAgentAsync();
     }
 

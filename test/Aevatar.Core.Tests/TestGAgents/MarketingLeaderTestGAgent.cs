@@ -8,7 +8,7 @@ public interface IMarketingLeaderTestGAgent : IGAgent;
 [GenerateSerializer]
 public class MarketingLeaderTestGAgentState : NaiveTestGAgentState;
 
-[GAgent("marketingLeader", "Test")]
+[GAgent("marketingLeader", "test")]
 public class MarketingLeaderTestGAgent : GAgentBase<MarketingLeaderTestGAgentState, NaiveTestGEvent>, IMarketingLeaderTestGAgent
 {
     public MarketingLeaderTestGAgent(ILogger<MarketingLeaderTestGAgent> logger) : base(logger)

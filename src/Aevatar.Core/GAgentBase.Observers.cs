@@ -63,6 +63,22 @@ public abstract partial class GAgentBase<TState, TEvent>
         return Task.CompletedTask;
     }
 
+    private Task UpdateInitializeDtoType()
+    {
+        var initializeMethod = GetType()
+            .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
+            .Single(IsInitializeMethod);
+
+        var parameterType = initializeMethod.GetParameters()[0].ParameterType;
+        RaiseEvent(new SetInitializeDtoTypeGEvent
+        {
+            InitializeDtoType = parameterType
+        });
+        ConfirmEvents();
+
+        return Task.CompletedTask;
+    }
+
     private IEnumerable<MethodInfo> GetEventHandlerMethods()
     {
         return GetType()
@@ -87,6 +103,13 @@ public abstract partial class GAgentBase<TState, TEvent>
             // Or the method is for GAgent initialization
             || (methodInfo.Name == AevatarGAgentConstants.InitializeDefaultMethodName &&
                 typeof(EventBase).IsAssignableFrom(methodInfo.GetParameters()[0].ParameterType)));
+    }
+
+    private bool IsInitializeMethod(MethodInfo methodInfo)
+    {
+        return methodInfo.GetParameters().Length == 1 &&
+               methodInfo.Name == AevatarGAgentConstants.InitializeDefaultMethodName &&
+               typeof(EventBase).IsAssignableFrom(methodInfo.GetParameters()[0].ParameterType);
     }
 
     private async Task HandleMethodInvocationAsync(MethodInfo method, ParameterInfo parameter, EventBase eventType,

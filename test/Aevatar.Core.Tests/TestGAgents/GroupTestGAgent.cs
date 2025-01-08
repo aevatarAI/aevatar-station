@@ -13,7 +13,7 @@ public class GroupTestGAgentState : StateBase
     [Id(1)] public int CalledCount { get; set; }
 }
 
-[GAgent("groupTest", "Test")]
+[GAgent("groupTest", "test")]
 public class GroupTestGAgent: GAgentBase<GroupTestGAgentState, GroupGEvent>
 {
     public GroupTestGAgent(ILogger<GroupTestGAgent> logger) : base(logger)

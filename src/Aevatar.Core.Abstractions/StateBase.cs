@@ -25,8 +25,8 @@ public abstract class StateBase
         Subscription = setSubscription.Subscription;
     }
 
-    public void Apply(InitializeDtoTypeGEvent initializeDtoType)
+    public void Apply(SetInitializeDtoTypeGEvent setInitializeDtoType)
     {
-        InitializeDtoType = initializeDtoType.InitializeDtoType;
+        InitializeDtoType = setInitializeDtoType.InitializeDtoType;
     }
 }

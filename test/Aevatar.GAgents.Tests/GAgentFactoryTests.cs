@@ -7,46 +7,80 @@ using Shouldly;
 
 namespace Aevatar.GAgents.Tests;
 
-public class GAgentFactoryTests : AevatarGAgentsTestBase
+public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
 {
-    protected readonly IGAgentFactory _gAgentFactory;
+    private readonly IGAgentFactory _gAgentFactory;
 
     public GAgentFactoryTests()
     {
         _gAgentFactory = GetRequiredService<IGAgentFactory>();
     }
 
-    [Fact]
-    public async Task CreateNormalGAgentTest()
+    [Fact(DisplayName = "Can create GAgent by GrainId.")]
+    public async Task CreateGAgentByGrainIdTest()
     {
-        var gAgent = await _gAgentFactory.GetGAgentAsync<IStateGAgent<GroupGAgentState>>(Guid.NewGuid());
+        var grainId = GrainId.Create("test/group", Guid.NewGuid().ToString("N"));
+        var gAgent = await _gAgentFactory.GetGAgentAsync(grainId);
         gAgent.ShouldNotBeNull();
-        gAgent.GetGrainId().ShouldBe(GrainId.Create("test/group", gAgent.GetPrimaryKey().ToString("N")));
+        gAgent.GetGrainId().ShouldBe(grainId);
+        await CheckSubscribedEventsAsync(gAgent);
     }
 
-    [Fact]
+    [Fact(DisplayName = "Can create GAgent by generic type.")]
+    public async Task CreateGAgentByGenericTypeTest()
+    {
+        {
+            var gAgent = await _gAgentFactory.GetGAgentAsync<IStateGAgent<GroupGAgentState>>(Guid.NewGuid());
+            gAgent.ShouldNotBeNull();
+            gAgent.GetGrainId().ShouldBe(GrainId.Create("test/group", gAgent.GetPrimaryKey().ToString("N")));
+            await CheckSubscribedEventsAsync(gAgent);
+        }
+
+        {
+            var gAgent = await _gAgentFactory.GetGAgentAsync<IStateGAgent<NaiveTestGAgentState>>();
+            gAgent.ShouldNotBeNull();
+            gAgent.GetGrainId().ShouldBe(GrainId.Create("aevatar/naiveTest", gAgent.GetPrimaryKey().ToString("N")));
+            await CheckSubscribedEventsAsync(gAgent);
+        }
+
+        {
+            var gAgent = await _gAgentFactory.GetGAgentAsync<IPublishingGAgent>();
+            gAgent.ShouldNotBeNull();
+            gAgent.GetGrainId().ShouldBe(GrainId.Create("aevatar/publishing", gAgent.GetPrimaryKey().ToString("N")));
+            await CheckSubscribedEventsAsync(gAgent);
+        }
+    }
+
+    [Fact(DisplayName = "Can create GAgent and execute InitializeAsync method.")]
     public async Task CreateGAgentWithInitializeMethodTest()
     {
+        // Arrange & Act.
         var gAgent = await _gAgentFactory.GetGAgentAsync<IStateGAgent<NaiveTestGAgentState>>(Guid.NewGuid(),
             new NaiveGAgentInitializeDto
             {
                 InitialGreeting = "Test"
             });
-        gAgent.GetGrainId().ShouldBe(GrainId.Create("aevatar/naiveTest", gAgent.GetPrimaryKey().ToString("N")));
+
+        var initializeDtoType = await gAgent.GetInitializeDtoTypeAsync();
+        initializeDtoType.ShouldBe(typeof(NaiveGAgentInitializeDto));
+
         await TestHelper.WaitUntilAsync(_ => CheckState(gAgent), TimeSpan.FromSeconds(20));
+
+        // Assert.
+        await CheckSubscribedEventsAsync(gAgent);
+        gAgent.GetGrainId().ShouldBe(GrainId.Create("aevatar/naiveTest", gAgent.GetPrimaryKey().ToString("N")));
         var gAgentState = await gAgent.GetStateAsync();
         gAgentState.Content.Count.ShouldBe(1);
+        gAgentState.Content.First().ShouldBe("Test");
     }
 
-    [Fact]
-    public async Task CreateGAgentWithAliasTest()
+    [Fact(DisplayName = "Can create GAgent by alias.")]
+    public async Task CreateGAgentByAliasTest()
     {
         {
-            var gAgent = await _gAgentFactory.GetGAgentAsync("naiveTest");
+            var gAgent = await _gAgentFactory.GetGAgentAsync("naiveTest", Guid.NewGuid());
             gAgent.ShouldNotBeNull();
-            var subscribedEvents = await gAgent.GetAllSubscribedEventsAsync();
-            subscribedEvents.ShouldNotBeNull();
-            subscribedEvents.Count.ShouldBePositive();
+            await CheckSubscribedEventsAsync(gAgent);
         }
 
         {
@@ -55,18 +89,11 @@ public class GAgentFactoryTests : AevatarGAgentsTestBase
                 InitialGreeting = "Test"
             });
             gAgent.ShouldNotBeNull();
+            await CheckSubscribedEventsAsync(gAgent);
         }
     }
 
-    [Fact]
-    public async Task CreateGAgentWithInterfaceTest()
-    {
-        var gAgent = await _gAgentFactory.GetGAgentAsync<IPublishingGAgent>();
-        gAgent.ShouldNotBeNull();
-        gAgent.GetGrainId().ShouldBe(GrainId.Create("aevatar/publishing", gAgent.GetPrimaryKey().ToString("N")));
-    }
-
-    [Fact]
+    [Fact(DisplayName = "The implementation of GetAvailableGAgentTypes works.")]
     public async Task GetAvailableGAgentTypesTest()
     {
         var availableGAgents = _gAgentFactory.GetAvailableGAgentTypes();
@@ -77,5 +104,12 @@ public class GAgentFactoryTests : AevatarGAgentsTestBase
     {
         var state = await gAgent.GetStateAsync();
         return !state.Content.IsNullOrEmpty();
+    }
+
+    private async Task CheckSubscribedEventsAsync(IGAgent gAgent)
+    {
+        var subscribedEvents = await gAgent.GetAllSubscribedEventsAsync(true);
+        subscribedEvents.ShouldNotBeNull();
+        subscribedEvents.Count.ShouldBePositive();
     }
 }

@@ -9,7 +9,7 @@ public interface IDevelopingLeaderTestGAgent : IGAgent;
 [GenerateSerializer]
 public class DevelopingLeaderTestGAgentState : NaiveTestGAgentState;
 
-[GAgent("developingLeader", "Test")]
+[GAgent("developingLeader", "test")]
 public class DevelopingLeaderTestGAgent : GAgentBase<DevelopingLeaderTestGAgentState, NaiveTestGEvent>, IDevelopingLeaderTestGAgent
 {
     public DevelopingLeaderTestGAgent(ILogger<DevelopingLeaderTestGAgent> logger) : base(logger)

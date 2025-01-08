@@ -15,7 +15,7 @@ public class InvestorTestGAgentState : NaiveTestGAgentState
     
 }
 
-[GAgent("investor", "Test")]
+[GAgent("investor", "test")]
 public class InvestorTestGAgent : GAgentBase<InvestorTestGAgentState, NaiveTestGEvent>, IInvestorTestGAgent
 {
     public InvestorTestGAgent(ILogger<InvestorTestGAgent> logger) : base(logger)

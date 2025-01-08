@@ -9,7 +9,7 @@ public interface ILogViewAdaptorTestGAgent
     
 }
 
-[GAgent("logViewAdaptorTest", "Test")]
+[GAgent("logViewAdaptorTest", "test")]
 public class LogViewAdaptorTestGAgent
     : GAgentBase<LogViewAdaptorTestGState, LogViewAdaptorTestGEvent>, ILogViewAdaptorTestGAgent
 {
