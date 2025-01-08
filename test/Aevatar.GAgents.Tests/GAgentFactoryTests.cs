@@ -95,6 +95,14 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
         }
     }
 
+    [Fact(DisplayName = "The implementation of GetInitializeDtoTypeAsync works.")]
+    public async Task GetInitializeDtoTypeTest()
+    {
+        var gAgent = await _gAgentFactory.GetGAgentAsync("initialize", Guid.NewGuid());
+        var initializeDtoType = await gAgent.GetInitializeDtoTypeAsync();
+        initializeDtoType.ShouldBe(typeof(InitializeDto));
+    }
+
     [Fact(DisplayName = "The implementation of GetAvailableGAgentTypes works.")]
     public async Task GetAvailableGAgentTypesTest()
     {
