@@ -87,11 +87,11 @@ public class ElasticIndexingService : IIndexingService
         );
         if (!createIndexResponse.IsValid)
         {
-            _logger.LogError("Error creating index {error}", createIndexResponse.ServerError?.Error);
+            _logger.LogError("Error creating state index. indexName:{indexName}  {error}", indexName, createIndexResponse.ServerError?.Error);
         }
         else
         {
-            _logger.LogError("Index created successfully. {indexName}", indexName);
+            _logger.LogError("Successfully created state index . indexName:{indexName}", indexName);
         }
     }
 
@@ -138,99 +138,59 @@ public class ElasticIndexingService : IIndexingService
         return response.Source; 
     }
 
-    public void CheckExistOrCreateGEventIndex<T>(T gEvent) where T : GEventBase
+    public void CheckExistOrCreateIndex<T>(T baseIndex) where T : BaseIndex
     {
-        var indexName = gEvent.GetType().Name.ToLower() + IndexSuffix;
+        var indexName = baseIndex.GetType().Name.ToLower();
         var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
         if (indexExistsResponse.Exists)
         {
             return;
         }
-
         var createIndexResponse = _elasticClient.Indices.Create(indexName, c => c
-            .Map<T>(m => m
-                .AutoMap()
-                .Properties(props =>
-                {
-                    var type = gEvent.GetType();
-                    foreach (var property in type.GetProperties())
-                    {
-                        var propertyName = property.Name;
-                        if (property.PropertyType == typeof(string))
-                        {
-                            props.Keyword(k => k
-                                .Name(propertyName)
-                            );
-                        }
-                        else if (property.PropertyType == typeof(int) || property.PropertyType == typeof(long))
-                        {
-                            props.Number(n => n
-                                .Name(propertyName)
-                                .Type(NumberType.Long)
-                            );
-                        }
-                        else if (property.PropertyType == typeof(DateTime))
-                        {
-                            props.Date(d => d
-                                .Name(propertyName)
-                            );
-                        }
-                        else if (property.PropertyType == typeof(Guid))
-                        {
-                            props.Keyword(k => k
-                                .Name(propertyName)
-                            );
-                        }
-                        else if (property.PropertyType == typeof(bool))
-                        {
-                            props.Boolean(b => b
-                                .Name(propertyName)
-                            );
-                        }
-                    }
-
-                    props.Date(d => d
-                        .Name(CTime)
-                    );
-                    return props;
-                })
-            )
+            .Map<T>(m => m.AutoMap())
         );
         if (!createIndexResponse.IsValid)
         {
-            _logger.LogError("Error creating gevent index {error}", createIndexResponse.ServerError?.Error);
+            _logger.LogError("Error creating index. indexName:{indexName}  {error}", indexName, createIndexResponse.ServerError?.Error);
         }
         else
         {
-            _logger.LogError("Index created gevent successfully. {indexName}", indexName);
+            _logger.LogError("Successfully created index . indexName:{indexName}", indexName);
         }
     }
 
-    public async Task SaveOrUpdateGEventIndexAsync<T>(T gEvent) where T : GEventBase
+    public async Task SaveOrUpdateGEventIndexAsync<T>(string id, T baseIndex) where T : BaseIndex
     {
-        var indexName = gEvent.GetType().Name.ToLower() + IndexSuffix;
-        var properties = gEvent.GetType().GetProperties();
+        var indexName = baseIndex.GetType().Name.ToLower();
+        var properties = baseIndex.GetType().GetProperties();
         var document = new Dictionary<string, object>();
 
         foreach (var property in properties)
         {
-            var value = property.GetValue(gEvent);
-            document.Add(property.Name, value);
+            var value = property.GetValue(baseIndex);
+            if (value is IList or IDictionary)
+            {
+                document[property.Name] = JsonConvert.SerializeObject(value);
+            }
+            else
+            {
+                document.Add(property.Name, value);
+            }
         }
         document.Add(CTime, DateTime.Now);
 
         var response = await _elasticClient.IndexAsync(document , i => i
             .Index(indexName)
-            .Id(gEvent.Id)
+            .Id(id)
         );
 
         if (!response.IsValid)
         {
-            _logger.LogInformation("{indexName} save Error, indexing document error:{error}: " ,indexName, response.ServerError);
+            _logger.LogInformation("Index: {indexName} save Error, indexing document error:{error}: " ,indexName, response.ServerError);
         }
         else
         {
-            _logger.LogInformation("{indexName} save Successfully.",indexName);
+            _logger.LogInformation("Index: {indexName} save Successfully.",indexName);
         }
     }
     

@@ -1,7 +1,9 @@
+using System;
 using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
 using MediatR;
+using Newtonsoft.Json;
 using Volo.Abp.DependencyInjection;
 
 namespace Aevatar.CQRS.Provider;
@@ -57,13 +59,27 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         return documentContent;
     }
 
-    public async Task PublishAsync(GEventBase eventBase, string id)
+    public async Task PublishAsync(Guid eventId, Guid GrainId, string GrainType, GEventBase eventBase)
     {
+        var agentGEventIndex = new AgentGEventIndex()
+        {
+            Id = eventId,
+            GrainId = GrainId,
+            GrainType = GrainType,
+            Ctime = DateTime.UtcNow,
+            EventJson = JsonConvert.SerializeObject(eventBase)
+        };
+        
         var command = new SaveGEventCommand
         {
-            Id = id,
-            GEvent = eventBase
+            Id = eventId==null?Guid.NewGuid():eventId,
+            AgentGEventIndex = agentGEventIndex
         };
         await _mediator.Send(command);
+    }
+    
+    public Task PublishAsync(GEventBase eventBase, string id)
+    {
+        throw new NotImplementedException();
     }
 }

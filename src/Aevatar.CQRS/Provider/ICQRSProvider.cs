@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
@@ -12,5 +13,6 @@ public interface ICQRSProvider : IEventDispatcher
 
     Task<string> QueryGEventAsync(string index, string id);
 
+    Task PublishAsync(Guid eventId, Guid GrainId, string GrainType, GEventBase eventBase);
 
 }
