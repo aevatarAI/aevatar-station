@@ -4,6 +4,7 @@
         <TargetFramework>net8.0</TargetFramework>
         <Nullable>enable</Nullable>
         <RootNamespace>Aevatar.AI</RootNamespace>
+        <NoWarn>$(NoWarn);SKEXP0001;SKEXP0010;SKEXP0020</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
@@ -12,6 +13,7 @@
         <PackageReference Include="Microsoft.SemanticKernel.Connectors.Qdrant" />
         <PackageReference Include="Microsoft.SemanticKernel.PromptTemplates.Handlebars" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
+        <PackageReference Include="PdfPig" />
     </ItemGroup>
 
     <ItemGroup>

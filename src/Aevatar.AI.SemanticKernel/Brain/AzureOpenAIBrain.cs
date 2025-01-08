@@ -7,6 +7,7 @@ using Aevatar.AI.Options;
 using Azure.AI.OpenAI;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Data;
 using Microsoft.SemanticKernel.PromptTemplates.Handlebars;
 
 namespace Aevatar.AI.Brain;
@@ -32,6 +33,11 @@ public class AzureOpenAIBrain : IBrain
         var kernelBuilder = _kernelBuilderFactory.GetKernelBuilder(guid);
         kernelBuilder.AddAzureOpenAIChatCompletion(_azureOpenAIConfig.Value.ChatDeploymentName, _azureOpenAIClient);
         _kernel = kernelBuilder.Build();
+
+        var ts = _kernel.GetRequiredService<ITextSearch>();
+        ts.CreateWithGetTextSearchResults("SearchPlugin");
+        
+        //_kernel.Plugins.Add(vectorStoreTextSearch.CreateWithGetTextSearchResults("SearchPlugin"));
         
         _promptTemplate = promptTemplate;
 

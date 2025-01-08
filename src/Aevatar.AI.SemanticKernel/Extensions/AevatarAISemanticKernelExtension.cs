@@ -1,6 +1,11 @@
 using System;
+using Aevatar.AI.Common;
+using Aevatar.AI.Embeddings;
 using Aevatar.AI.Options;
-using Aevatar.AI.VectorStoreBuilder;
+using Aevatar.AI.VectorStores;
+using Aevatar.AI.VectorStores.Qdrant;
+using Azure;
+using Azure.AI.OpenAI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -13,9 +18,10 @@ public static class AevatarAISemanticKernelExtension
 {
     public static IServiceCollection AddQdrantVectorStore(this IServiceCollection services)
     {
-        services.AddTransient<Func<IKernelBuilder, IVectorStoreBuilder>>(sp => 
-            kernelBuilder => new QdrantVectorStoreBuilder(kernelBuilder));
-
+        services.AddKeyedTransient<IVectorStore, QdrantVectorStore>(QdrantConfig.ConfigSectionName);
+        
+        services.AddSingleton(new UniqueKeyGenerator<Guid>(() => Guid.NewGuid()));
+        
         // Register Qdrant configuration options
         services.AddOptions<QdrantConfig>()
             .Configure<IConfiguration>((settings, configuration) =>
@@ -24,7 +30,7 @@ public static class AevatarAISemanticKernelExtension
             });
 
         // Register Qdrant client as a singleton
-        services.AddSingleton(sp =>
+        services.AddSingleton<QdrantClient>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<QdrantConfig>>().Value;
             return new QdrantClient(
@@ -33,6 +39,35 @@ public static class AevatarAISemanticKernelExtension
                 https: options.Https,
                 apiKey: options.ApiKey);
         });
+        
+        return services;
+    }
+    
+    public static IServiceCollection AddAzureOpenAITextEmbedding(this IServiceCollection services)
+    {
+        services.AddOptions<AzureOpenAIEmbeddingsConfig>()
+            .Configure<IConfiguration>((settings, configuration) =>
+            {
+                configuration.GetSection(AzureOpenAIEmbeddingsConfig.ConfigSectionName).Bind(settings);
+            });
+        
+        services.AddKeyedSingleton<AzureOpenAIClient>(AevatarAISemanticKernelConstants.EmbeddingClientServiceKey, (sp, key) =>
+        {
+            var options = sp.GetRequiredService<IOptions<AzureOpenAIEmbeddingsConfig>>().Value;
+            return new AzureOpenAIClient(
+                new Uri(options.Endpoint),
+                new AzureKeyCredential(options.ApiKey)
+                );
+        });
+        
+        services.AddKeyedTransient<IEmbedding, AzureOpenAITextEmbedding>(AzureOpenAIEmbeddingsConfig.ConfigSectionName);
+        
+        // Register AzureOpenAIEmbedding configuration options
+        services.AddOptions<AzureOpenAIEmbeddingsConfig>()
+            .Configure<IConfiguration>((settings, configuration) =>
+            {
+                configuration.GetSection(AzureOpenAIEmbeddingsConfig.ConfigSectionName).Bind(settings);
+            });
         
         return services;
     }

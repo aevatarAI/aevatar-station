@@ -5,7 +5,7 @@ namespace Aevatar.AI.Options;
 /// <summary>
 /// Azure OpenAI Embeddings service settings.
 /// </summary>
-internal sealed class AzureOpenAIEmbeddingsConfig
+public class AzureOpenAIEmbeddingsConfig
 {
     public const string ConfigSectionName = "AzureOpenAIEmbeddings";
 
