@@ -34,5 +34,24 @@ public class CqrsProviderTest : AevatarApplicationTestBase
         await _cqrsProvider.PublishAsync(cqrsTestAgentState,grainId.ToString());
     }
     
+    [Fact]
+    public async Task SendGeventCommandTest()
+    {
+        var eventId = Guid.NewGuid();
+        var agentGrainId = Guid.NewGuid();
+        var agentType = nameof(CqrsTestCreateAgentGEvent);
+
+        var cqrsTestCreateAgentGEvent = new CqrsTestCreateAgentGEvent
+        {
+            Id = eventId,
+            UserAddress = "2HxX36oXZS89Jvz7kCeUyuWWDXLTiNRkAzfx3EuXq4KSSkH62W",
+            Type = "twitter",
+            Name = agentType,
+            BusinessAgentId = agentGrainId.ToString(),
+            Properties = "create"
+        };
+        await _cqrsProvider.PublishAsync(eventId, agentGrainId, agentType, cqrsTestCreateAgentGEvent);
+    }
+    
    
 }
