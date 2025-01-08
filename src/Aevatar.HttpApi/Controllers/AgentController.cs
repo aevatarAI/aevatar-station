@@ -72,4 +72,19 @@ public class AgentController : AevatarController
         var agentDto = await _agentService.UpdateCombinationAsync(id, updateCombinationDto);
         return agentDto;
     }
+    
+    [HttpDelete("/combination-agent/{id}")]
+    public async Task DeleteCombination(string id)
+    {
+        _logger.LogInformation("Delete Combination: {agent}", id);
+        await _agentService.DeleteCombinationAsync(id);
+    }
+    
+    [HttpGet("/combination-agent/{id}")]
+    public async Task<CombinationAgentDto> GetCombination(string id)
+    {
+        _logger.LogInformation("Get Combination: {agent}", id);
+        var agentDto = await _agentService.GetCombinationAsync(id);
+        return agentDto;
+    }
 }

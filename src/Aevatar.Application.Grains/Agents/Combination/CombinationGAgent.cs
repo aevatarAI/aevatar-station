@@ -56,10 +56,10 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
         return await Task.FromResult(combinationData);
     }
 
-    public async Task UpdateAgentAsync(CombinationAgentData data)
+    public async Task UpdateCombinationAsync(CombinationAgentData data)
     {
         _logger.LogInformation("UpdateAgentAsync");
-        RaiseEvent(new UpdateAgentGEvent()
+        RaiseEvent(new UpdateCombinationGEvent()
         {
             Name = data.Name,
             AgentComponent = data.AgentComponent
@@ -71,6 +71,15 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
     {
         return Task.FromResult(State.Status);
     }
+
+    public async Task DeleteCombinationAsync()
+    {
+        _logger.LogInformation("DeleteAgentAsync");
+        RaiseEvent(new DeleteCombinationGEvent()
+        {
+        });
+        await ConfirmEvents();
+    }
 }
 
 
@@ -78,8 +87,7 @@ public interface ICombinationGAgent : IStateGAgent<CombinationGAgentState>
 {
     Task CombineAgentAsync(CombinationAgentData data);
     Task<CombinationAgentData> GetCombinationAsync();
-    // Task UpdateCombinationAsync(CombinationAgentData data);
-    Task UpdateAgentAsync(CombinationAgentData data);
-
+    Task UpdateCombinationAsync(CombinationAgentData data);
     Task<AgentStatus> GetStatusAsync();
+    Task DeleteCombinationAsync();
 }

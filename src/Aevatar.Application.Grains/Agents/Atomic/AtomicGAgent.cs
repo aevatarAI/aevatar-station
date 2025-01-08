@@ -71,7 +71,7 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
     
     public async Task DeleteAgentAsync()
     {
-        _logger.LogInformation("UpdateAgentAsync");
+        _logger.LogInformation("DeleteAgentAsync");
         RaiseEvent(new DeleteAgentGEvent()
         {
         });

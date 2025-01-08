@@ -52,6 +52,12 @@ public class AgentService : ApplicationService, IAgentService
         var agentData = await atomicAgent.GetAgentAsync();
         if (agentData == null)
         {
+            _logger.LogInformation("GetAgentAsync agent is null: {id}", id);
+            throw new UserFriendlyException("agent not exist");
+        }
+        
+        if (agentData.Properties.IsNullOrEmpty())
+        {
             _logger.LogInformation("GetAgentAsync agentProperty is null: {id}", id);
             throw new UserFriendlyException("agent not exist");
         }
@@ -152,6 +158,14 @@ public class AgentService : ApplicationService, IAgentService
             throw new UserFriendlyException("agent in group!");
         }
         
+        var address = GetCurrentUserAddress();
+        if (data.UserAddress != address)
+        {
+            _logger.LogInformation("agent not belong to user address: {address}, owner: {owner}", 
+                address, data.UserAddress);
+            throw new UserFriendlyException("agent not belong to user!");
+        }
+        
         await atomicAgent.DeleteAgentAsync();
     }
 
@@ -212,10 +226,16 @@ public class AgentService : ApplicationService, IAgentService
         
         var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(validGuid);
         var combinationData = await combinationAgent.GetCombinationAsync();
-        if (combinationData == null)
+        if (combinationData == null || combinationData.Status == AgentStatus.Undefined)
         {
             _logger.LogInformation("GetCombinationAsync combinationData is null: {id}", id);
             throw new UserFriendlyException("combination not exist");
+        }
+        
+        if (combinationData.Status == AgentStatus.Deleted)
+        {
+            _logger.LogInformation("GetCombinationAsync combinationData is deleted: {id}", id);
+            throw new UserFriendlyException("combination deleted");
         }
 
         var resp = new CombinationAgentDto()
@@ -278,7 +298,7 @@ public class AgentService : ApplicationService, IAgentService
     {
         if (!Guid.TryParse(id, out Guid validGuid))
         {
-            _logger.LogInformation("UpdateAgentAsync Invalid id: {id}", id);
+            _logger.LogInformation("UpdateCombinationAsync Invalid id: {id}", id);
             throw new UserFriendlyException("Invalid id");
         }
         
@@ -307,7 +327,7 @@ public class AgentService : ApplicationService, IAgentService
             combinationData.AgentComponent = updateDto.AgentComponent;
         }
         
-        await combinationAgent.UpdateAgentAsync(combinationData);
+        await combinationAgent.UpdateCombinationAsync(combinationData);
         
         var resp = new CombinationAgentDto
         {
@@ -319,7 +339,7 @@ public class AgentService : ApplicationService, IAgentService
         return resp;
     }
     
-    public async Task ExcludeFromGroupAsync(List<string> excludedAgent, Guid guid)
+    private async Task ExcludeFromGroupAsync(List<string> excludedAgent, Guid guid)
     {
         var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(guid);
         foreach (var agentId in excludedAgent)
@@ -328,5 +348,33 @@ public class AgentService : ApplicationService, IAgentService
             // todo: get business agent and unregister from group
             await atomicAgent.SetGroupAsync("");
         }
+    }
+
+    public async Task DeleteCombinationAsync(string id)
+    {
+        if (!Guid.TryParse(id, out Guid validGuid))
+        {
+            _logger.LogInformation("DeleteCombinationAsync Invalid id: {id}", id);
+            throw new UserFriendlyException("Invalid id");
+        }
+        
+        var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(validGuid);
+        var combinationData = await combinationAgent.GetCombinationAsync();
+        if (combinationData == null)
+        {
+            _logger.LogInformation("DeleteCombinationAsync combinationData is null: {id}", id);
+            throw new UserFriendlyException("combination not exist");
+        }
+        
+        var address = GetCurrentUserAddress();
+        if (combinationData.UserAddress != address)
+        {
+            _logger.LogInformation("combination not belong to user address: {address}, owner: {owner}", 
+                address, combinationData.UserAddress);
+            throw new UserFriendlyException("combination not belong to user!");
+        }
+        
+        await ExcludeFromGroupAsync(combinationData.AgentComponent, validGuid);
+        await combinationAgent.DeleteCombinationAsync();
     }
 }

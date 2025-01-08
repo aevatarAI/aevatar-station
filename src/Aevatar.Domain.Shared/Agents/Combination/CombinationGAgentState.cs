@@ -28,10 +28,19 @@ public class CombinationGAgentState : GroupAgentState
         AgentComponent = combineAgentGEvent.AgentComponent;
     }
     
-    public void Apply(UpdateAgentGEvent combineAgentGEvent)
+    public void Apply(UpdateCombinationGEvent combineCombinationGEvent)
     {
-        Name = combineAgentGEvent.Name;
-        AgentComponent = combineAgentGEvent.AgentComponent;
+        Name = combineCombinationGEvent.Name;
+        AgentComponent = combineCombinationGEvent.AgentComponent;
+    }
+    
+    public void Apply(DeleteCombinationGEvent deleteCombinationGEvent)
+    {
+        Name = "";
+        AgentComponent = new List<string>();
+        GroupId = "";
+        Status = AgentStatus.Deleted;
+        UserAddress = "";
     }
 }
 
