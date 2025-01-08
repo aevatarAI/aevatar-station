@@ -12,4 +12,8 @@
         <PackageReference Include="Microsoft.Extensions.Logging.Console" />
         <PackageReference Include="Microsoft.Extensions.Hosting" />
     </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\SimpleAIGAgent\SimpleAIGAgent.Grains\SimpleAIGAgent.Grains.csproj" />
+    </ItemGroup>
 </Project>

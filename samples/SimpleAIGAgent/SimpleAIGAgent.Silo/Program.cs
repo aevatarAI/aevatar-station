@@ -1,3 +1,14 @@
-﻿// See https://aka.ms/new-console-template for more information
+﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
-Console.WriteLine("Hello, World!");
+var builder = Host.CreateDefaultBuilder(args)
+    .UseOrleans(silo =>
+    {
+        silo.UseLocalhostClustering()
+            .ConfigureLogging(logging => logging.AddConsole());
+    })
+    .UseConsoleLifetime();
+
+using var host = builder.Build();
+
+await host.RunAsync();
