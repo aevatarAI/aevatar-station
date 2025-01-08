@@ -1,3 +1,5 @@
+using Orleans.Streams;
+
 namespace Aevatar.Core.Abstractions;
 
 public interface IGAgent : IGrainWithGuidKey
@@ -53,6 +55,10 @@ public interface IGAgent : IGrainWithGuidKey
     /// </summary>
     /// <returns></returns>
     Task<GrainId> GetSubscriptionAsync();
+
+    Task<Type?> GetInitializeDtoTypeAsync();
+
+    Task<IAsyncStream<EventWrapperBase>> GetStreamAsync();
 }
 
 public interface IStateGAgent<TState> : IGAgent

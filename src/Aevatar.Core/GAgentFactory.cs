@@ -1,12 +1,17 @@
 using Aevatar.Core.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
+using Orleans.Streams;
 
 namespace Aevatar.Core;
 
 public interface IGAgentFactory
 {
-    Task<IGAgent> GetGAgentAsync(GrainId grainId, InitializeDtoBase? initializeDto = null);
+    Task<IGAgent> GetGAgentAsync(GrainId grainId, EventBase? initializeDto = null);
 
-    Task<IGAgent> GetGAgentAsync<TGrainInterface>(Guid primaryKey, InitializeDtoBase? initializeDto = null)
+    Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(Guid primaryKey, EventBase? initializeDto = null)
+        where TGrainInterface : IGAgent;
+
+    Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(EventBase? initializeDto = null)
         where TGrainInterface : IGAgent;
 
     List<Type> GetAvailableGAgentTypes();
@@ -14,33 +19,45 @@ public interface IGAgentFactory
 
 public class GAgentFactory : IGAgentFactory
 {
-    private readonly IGrainFactory _grainFactory;
+    private readonly IClusterClient _grainFactory;
+    private readonly IStreamProvider _streamProvider;
 
-    public GAgentFactory(IGrainFactory grainFactory)
+    public GAgentFactory(IClusterClient grainFactory)
     {
         _grainFactory = grainFactory;
+        _streamProvider =
+            _grainFactory.ServiceProvider.GetRequiredKeyedService<IStreamProvider>(AevatarCoreConstants.StreamProvider);
     }
-    
-    public async Task<IGAgent> GetGAgentAsync(GrainId grainId, InitializeDtoBase? initializeDto = null)
+
+    public async Task<IGAgent> GetGAgentAsync(GrainId grainId, EventBase? initializeDto = null)
     {
-        dynamic gAgent = _grainFactory.GetGrain<IGAgent>(grainId);
+        var gAgent = _grainFactory.GetGrain<IGAgent>(grainId);
         if (initializeDto != null)
         {
-            await gAgent.InitializeAsync(initializeDto);
+            await InitializeAsync(gAgent, new EventWrapper<EventBase>(initializeDto, Guid.NewGuid(), grainId));
         }
 
         return gAgent;
     }
 
-    public async Task<IGAgent> GetGAgentAsync<TGrainInterface>(Guid primaryKey, InitializeDtoBase? initializeDto = null) where TGrainInterface : IGAgent
+    public async Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(Guid primaryKey, EventBase? initializeDto = null)
+        where TGrainInterface : IGAgent
     {
-        dynamic gAgent = _grainFactory.GetGrain<TGrainInterface>(primaryKey);
+        var gAgent = _grainFactory.GetGrain<TGrainInterface>(primaryKey);
         if (initializeDto != null)
         {
-            await gAgent.InitializeAsync(initializeDto);
+            await InitializeAsync(gAgent,
+                new EventWrapper<EventBase>(initializeDto, Guid.NewGuid(), gAgent.GetGrainId()));
         }
 
         return gAgent;
+    }
+
+    public Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(EventBase? initializeDto = null)
+        where TGrainInterface : IGAgent
+    {
+        var guid = Guid.NewGuid();
+        return GetGAgentAsync<TGrainInterface>(guid, initializeDto);
     }
 
     public List<Type> GetAvailableGAgentTypes()
@@ -57,5 +74,11 @@ public class GAgentFactory : IGAgentFactory
         }
 
         return gAgentTypes;
+    }
+
+    private async Task InitializeAsync(IGAgent gAgent, EventWrapperBase eventWrapper)
+    {
+        var stream = await gAgent.GetStreamAsync();
+        await stream.OnNextAsync(eventWrapper);
     }
 }

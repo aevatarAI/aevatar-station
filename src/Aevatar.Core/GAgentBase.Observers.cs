@@ -17,7 +17,8 @@ public abstract partial class GAgentBase<TState, TEvent>
             var observer = new EventWrapperBaseAsyncObserver(async item =>
             {
                 var grainId = (GrainId)item.GetType().GetProperty(nameof(EventWrapper<EventBase>.GrainId))?.GetValue(item)!;
-                if (grainId == this.GetGrainId() && eventHandlerMethod.Name != nameof(ForwardEventAsync))
+                if (grainId == this.GetGrainId() && eventHandlerMethod.Name != nameof(ForwardEventAsync) &&
+                    eventHandlerMethod.Name != AevatarGAgentConstants.InitializeDefaultMethodName)
                 {
                     // Skip the event if it is sent by itself.
                     return;
@@ -82,7 +83,10 @@ public abstract partial class GAgentBase<TState, TEvent>
              typeof(EventBase).IsAssignableFrom(methodInfo.GetParameters()[0].ParameterType))
             // Or the method has the AllEventHandlerAttribute and the parameter is EventWrapperBase
             || (methodInfo.GetCustomAttribute<AllEventHandlerAttribute>() != null &&
-                methodInfo.GetParameters()[0].ParameterType == typeof(EventWrapperBase)));
+                methodInfo.GetParameters()[0].ParameterType == typeof(EventWrapperBase))
+            // Or the method is for GAgent initialization
+            || (methodInfo.Name == AevatarGAgentConstants.InitializeDefaultMethodName &&
+                typeof(EventBase).IsAssignableFrom(methodInfo.GetParameters()[0].ParameterType)));
     }
 
     private async Task HandleMethodInvocationAsync(MethodInfo method, ParameterInfo parameter, EventBase eventType,

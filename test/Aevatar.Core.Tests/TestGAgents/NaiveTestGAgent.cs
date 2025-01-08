@@ -15,10 +15,10 @@ public class NaiveTestGEvent : GEventBase
     [Id(0)] public Guid Id { get; set; }
 }
 
-[GAgent("naive", "Test")]
+[GAgent("naiveTest")]
 public class NaiveTestGAgent : GAgentBase<NaiveTestGAgentState, NaiveTestGEvent>
 {
-    public NaiveTestGAgent(ILogger logger) : base(logger)
+    public NaiveTestGAgent(ILogger<NaiveTestGAgent> logger) : base(logger)
     {
     }
 
@@ -27,7 +27,7 @@ public class NaiveTestGAgent : GAgentBase<NaiveTestGAgentState, NaiveTestGEvent>
         return Task.FromResult("This is a naive test GAgent");
     }
 
-    public Task InitializeAsync(NaiveGAgentInitializeDto initializeDto)
+    public async Task InitializeAsync(NaiveGAgentInitializeDto initializeDto)
     {
         if (State.Content.IsNullOrEmpty())
         {
@@ -35,7 +35,5 @@ public class NaiveTestGAgent : GAgentBase<NaiveTestGAgentState, NaiveTestGEvent>
         }
 
         State.Content.Add(initializeDto.InitialGreeting);
-        
-        return Task.CompletedTask;
     }
 }

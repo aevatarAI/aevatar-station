@@ -2,7 +2,8 @@ using Aevatar.Core.Abstractions;
 
 namespace Aevatar.Core.Tests.TestInitializeDtos;
 
-public class NaiveGAgentInitializeDto : InitializeDtoBase
+[GenerateSerializer]
+public class NaiveGAgentInitializeDto : EventBase
 {
-    public string InitialGreeting { get; set; }
+    [Id(0)] public string InitialGreeting { get; set; }
 }

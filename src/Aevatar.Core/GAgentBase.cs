@@ -86,6 +86,16 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
         return State.Subscription;
     }
 
+    public Task<Type?> GetInitializeDtoTypeAsync()
+    {
+        return Task.FromResult(State.InitializeDtoType);
+    }
+
+    public Task<IAsyncStream<EventWrapperBase>> GetStreamAsync()
+    {
+        return Task.FromResult(GetStream(this.GetGrainId().ToString()));
+    }
+
     [EventHandler]
     public async Task<SubscribedEventListEvent> HandleRequestAllSubscriptionsEventAsync(
         RequestAllSubscriptionsEvent request)
