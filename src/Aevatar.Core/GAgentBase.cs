@@ -27,13 +27,13 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
     /// </summary>
     private readonly Dictionary<EventWrapperBaseAsyncObserver, Dictionary<StreamId, Guid>> Observers = new();
 
-    private IEventDispatcher EventDispatcher { get; set; }
+    private IEventDispatcher? EventDispatcher { get; set; }
 
     protected GAgentBase(ILogger logger)
     {
         Logger = logger;
         GrainStorage = ServiceProvider.GetRequiredService<IGrainStorage>();
-        EventDispatcher = ServiceProvider.GetRequiredService<IEventDispatcher>();
+        EventDispatcher = ServiceProvider.GetService<IEventDispatcher>();
     }
 
     public async Task ActivateAsync()
@@ -220,7 +220,10 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
     {
         await HandleStateChangedAsync();
         //TODO:  need optimize use kafka,ensure Es written successfully
-        await EventDispatcher.PublishAsync(State, this.GetGrainId().ToString());
+        if(EventDispatcher != null)
+        {
+            await EventDispatcher.PublishAsync(State, this.GetGrainId().ToString());
+        }
     }
     
     protected sealed override async void RaiseEvent<TEvent>(TEvent @event)
@@ -239,7 +242,10 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
     {
         await HandleRaiseEventAsync();
         //TODO:  need optimize use kafka,ensure Es written successfully
-        await EventDispatcher.PublishAsync(@event, @event.Id.ToString());
+        if (EventDispatcher != null)
+        {
+            await EventDispatcher.PublishAsync(@event, @event.Id.ToString());
+        }
     }
     protected virtual async Task HandleRaiseEventAsync()
     {
