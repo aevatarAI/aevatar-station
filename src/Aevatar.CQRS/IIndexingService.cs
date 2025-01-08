@@ -9,7 +9,7 @@ namespace Aevatar.CQRS;
 
 public interface IIndexingService
 {
-    public void CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase;
+    public Task CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase;
     public Task SaveOrUpdateStateIndexAsync<T>(string id, T stateBase) where T : StateBase;
     
     public Task<BaseStateIndex> QueryStateIndexAsync(string id,string indexName);

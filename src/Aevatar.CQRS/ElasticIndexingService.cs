@@ -26,16 +26,16 @@ public class ElasticIndexingService : IIndexingService
         _elasticClient = elasticClient;
     }
 
-    public void CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase
+    public async Task CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase
     {
         var indexName = stateBase.GetType().Name.ToLower() + IndexSuffix;
-        var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
+        var indexExistsResponse = await _elasticClient.Indices.ExistsAsync(indexName);
         if (indexExistsResponse.Exists)
         {
             return;
         }
 
-        var createIndexResponse = _elasticClient.Indices.Create(indexName, c => c
+        var createIndexResponse = await _elasticClient.Indices.CreateAsync(indexName, c => c
             .Map<T>(m => m
                 .AutoMap()
                 .Properties(props =>
@@ -117,7 +117,10 @@ public class ElasticIndexingService : IIndexingService
             }
             else
             {
-                document.Add(propertyName, value);
+                if (value != null)
+                {
+                    document.Add(propertyName, value);
+                }
             }
         }
 
@@ -148,7 +151,7 @@ public class ElasticIndexingService : IIndexingService
     public async Task CheckExistOrCreateIndex<T>(T baseIndex) where T : BaseIndex
     {
         var indexName = baseIndex.GetType().Name.ToLower();
-        var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
+        var indexExistsResponse = await _elasticClient.Indices.ExistsAsync(indexName);
         if (indexExistsResponse.Exists)
         {
             return;
@@ -184,7 +187,10 @@ public class ElasticIndexingService : IIndexingService
             }
             else
             {
-                document.Add(propertyName, value);
+                if (value != null)
+                {
+                    document.Add(propertyName, value);
+                }
             }
         }
 
@@ -222,8 +228,8 @@ public class ElasticIndexingService : IIndexingService
         }
         catch (Exception e)
         {
-            _logger.LogInformation("{indexName} ,id:{id}QueryEventIndexAsync fail.", indexName, id);
-            throw e;
+            _logger.LogError(e,"{indexName} ,id:{id}QueryEventIndexAsync fail.", indexName, id);
+            throw;
         }
     }
 
@@ -237,7 +243,7 @@ public class ElasticIndexingService : IIndexingService
         var indexName = index ?? typeof(TEntity).Name.ToLower();
         try
         {
-            Func<SearchDescriptor<TEntity>, ISearchRequest> selector = null;
+            Func<SearchDescriptor<TEntity>, ISearchRequest> selector;
             if (sortFunc != null)
             {
                 selector = new Func<SearchDescriptor<TEntity>, ISearchRequest>(s => s
@@ -271,7 +277,7 @@ public class ElasticIndexingService : IIndexingService
         catch (Exception e)
         {
             _logger.LogError(e, "{indexName} Search Exception.", indexName);
-            throw e;
+            throw;
         }
     }
 }
