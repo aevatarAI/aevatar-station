@@ -30,9 +30,4 @@
     <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Agents\Atomic\" />
-    <Folder Include="Agents\Combination\" />
-  </ItemGroup>
-
 </Project>
