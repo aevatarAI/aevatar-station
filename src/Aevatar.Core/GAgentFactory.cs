@@ -84,7 +84,8 @@ public class GAgentFactory : IGAgentFactory
 
     private async Task InitializeAsync(IGAgent gAgent, EventWrapperBase eventWrapper)
     {
-        var stream = await gAgent.GetStreamAsync();
+        var streamId = StreamId.Create(AevatarCoreConstants.StreamNamespace, gAgent.GetGrainId().ToString());
+        var stream = _streamProvider.GetStream<EventWrapperBase>(streamId);
         await stream.OnNextAsync(eventWrapper);
     }
 }

@@ -57,8 +57,6 @@ public interface IGAgent : IGrainWithGuidKey
     Task<GrainId> GetSubscriptionAsync();
 
     Task<Type?> GetInitializeDtoTypeAsync();
-
-    Task<IAsyncStream<EventWrapperBase>> GetStreamAsync();
 }
 
 public interface IStateGAgent<TState> : IGAgent

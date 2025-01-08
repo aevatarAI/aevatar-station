@@ -67,7 +67,11 @@ public abstract partial class GAgentBase<TState, TEvent>
     {
         var initializeMethod = GetType()
             .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
-            .Single(IsInitializeMethod);
+            .SingleOrDefault(IsInitializeMethod);
+        if (initializeMethod == null)
+        {
+            return Task.CompletedTask;
+        }
 
         var parameterType = initializeMethod.GetParameters()[0].ParameterType;
         RaiseEvent(new SetInitializeDtoTypeGEvent
