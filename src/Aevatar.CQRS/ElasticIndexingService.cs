@@ -1,7 +1,7 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Aevatar.Agents;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
 using Microsoft.Extensions.Logging;
@@ -22,16 +22,68 @@ public class ElasticIndexingService : IIndexingService
         _elasticClient = elasticClient;
     }
 
-    public void CheckExistOrCreateStateIndex(string typeName)
+    public void CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase
     {
-        var indexName = typeName.ToLower() + IndexSuffix;
+        var indexName = stateBase.GetType().Name.ToLower() + IndexSuffix;
         var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
         if (indexExistsResponse.Exists)
         {
             return;
         }
         var createIndexResponse = _elasticClient.Indices.Create(indexName, c => c
-            .Map<BaseStateIndex>(m => m.AutoMap())
+            .Map<T>(m => m
+                .AutoMap()
+                .Properties(props =>
+                {
+                    var type = stateBase.GetType();
+                    foreach (var property in type.GetProperties())
+                    {
+                        var propertyName = property.Name;
+                        if (property.PropertyType == typeof(string))
+                        {
+                            props.Keyword(k => k
+                                .Name(propertyName)
+                            );
+                        }
+                        else if (property.PropertyType == typeof(int) || property.PropertyType == typeof(long))
+                        {
+                            props.Number(n => n
+                                .Name(propertyName)
+                                .Type(NumberType.Long)
+                            );
+                        }
+                        else if (property.PropertyType == typeof(DateTime))
+                        {
+                            props.Date(d => d
+                                .Name(propertyName)
+                            );
+                        }
+                        else if (property.PropertyType == typeof(Guid))
+                        {
+                            props.Keyword(k => k
+                                .Name(propertyName)
+                            );
+                        }
+                        else if (property.PropertyType == typeof(bool))
+                        {
+                            props.Boolean(b => b
+                                .Name(propertyName)
+                            );
+                        }
+                        else
+                        {
+                            props.Text(o => o
+                                .Name(propertyName)
+                            );
+                        }
+                    }
+
+                    props.Date(d => d
+                        .Name(CTime)
+                    );
+                    return props;
+                })
+            )
         );
         if (!createIndexResponse.IsValid)
         {
@@ -43,13 +95,41 @@ public class ElasticIndexingService : IIndexingService
         }
     }
 
-    public async Task SaveOrUpdateStateIndexAsync(string typeName, BaseStateIndex baseStateIndex)
+    public async Task SaveOrUpdateStateIndexAsync<T>(string id, T stateBase) where T : StateBase
     {
-        var indexName = typeName.ToLower() + IndexSuffix;
-        await _elasticClient.IndexAsync(baseStateIndex, i => i
+
+        var indexName = stateBase.GetType().Name.ToLower() + IndexSuffix;
+        var properties = stateBase.GetType().GetProperties();
+        var document = new Dictionary<string, object>();
+
+        foreach (var property in properties)
+        {
+            var value = property.GetValue(stateBase);
+            if (value is IList or IDictionary)
+            {
+                document[property.Name] = JsonConvert.SerializeObject(value);
+            }
+            else
+            {
+                document.Add(property.Name, value);
+            }
+        }
+        document.Add(CTime, DateTime.Now);
+
+        var response = await _elasticClient.IndexAsync(document , i => i
             .Index(indexName)
-            .Id(baseStateIndex.Id)
+            .Id(id)
         );
+
+        if (!response.IsValid)
+        {
+            _logger.LogInformation("State {indexName} save Error, indexing document error:{error}: " ,indexName, response.ServerError);
+        }
+        else
+        {
+            _logger.LogInformation("State {indexName} save Successfully.",indexName);
+        }
+
     }
 
     public async Task<BaseStateIndex> QueryStateIndexAsync(string id,string indexName)

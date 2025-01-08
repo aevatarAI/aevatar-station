@@ -1,4 +1,3 @@
-using Aevatar.Agents;
 using Aevatar.Core.Abstractions;
 using MediatR;
 
