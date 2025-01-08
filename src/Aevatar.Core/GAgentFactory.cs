@@ -6,12 +6,14 @@ namespace Aevatar.Core;
 
 public interface IGAgentFactory
 {
-    Task<IGAgent> GetGAgentAsync(GrainId grainId, EventBase? initializeDto = null);
+    Task<IGAgent> GetGAgentAsync(GrainId grainId, InitializeDtoBase? initializeDto = null);
+    Task<IGAgent> GetGAgentAsync(string alias, Guid primaryKey, string ns = "aevatar", InitializeDtoBase? initializeDto = null);
+    Task<IGAgent> GetGAgentAsync(string alias, string ns = "aevatar", InitializeDtoBase? initializeDto = null);
 
-    Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(Guid primaryKey, EventBase? initializeDto = null)
+    Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(Guid primaryKey, InitializeDtoBase? initializeDto = null)
         where TGrainInterface : IGAgent;
 
-    Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(EventBase? initializeDto = null)
+    Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(InitializeDtoBase? initializeDto = null)
         where TGrainInterface : IGAgent;
 
     List<Type> GetAvailableGAgentTypes();
@@ -29,7 +31,7 @@ public class GAgentFactory : IGAgentFactory
             _grainFactory.ServiceProvider.GetRequiredKeyedService<IStreamProvider>(AevatarCoreConstants.StreamProvider);
     }
 
-    public async Task<IGAgent> GetGAgentAsync(GrainId grainId, EventBase? initializeDto = null)
+    public async Task<IGAgent> GetGAgentAsync(GrainId grainId, InitializeDtoBase? initializeDto = null)
     {
         var gAgent = _grainFactory.GetGrain<IGAgent>(grainId);
         if (initializeDto != null)
@@ -40,7 +42,25 @@ public class GAgentFactory : IGAgentFactory
         return gAgent;
     }
 
-    public async Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(Guid primaryKey, EventBase? initializeDto = null)
+    public async Task<IGAgent> GetGAgentAsync(string alias, Guid primaryKey, string ns = "aevatar", InitializeDtoBase? initializeDto = null)
+    {
+        var gAgent = _grainFactory.GetGrain<IGAgent>(GrainId.Create($"{ns}/{alias}", primaryKey.ToString()));
+        await gAgent.ActivateAsync();
+        if (initializeDto != null)
+        {
+            await InitializeAsync(gAgent,
+                new EventWrapper<EventBase>(initializeDto, Guid.NewGuid(), gAgent.GetGrainId()));
+        }
+
+        return gAgent;
+    }
+
+    public async Task<IGAgent> GetGAgentAsync(string alias, string ns = "aevatar", InitializeDtoBase? initializeDto = null)
+    {
+        return await GetGAgentAsync(alias, Guid.NewGuid(), ns, initializeDto);
+    }
+
+    public async Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(Guid primaryKey, InitializeDtoBase? initializeDto = null)
         where TGrainInterface : IGAgent
     {
         var gAgent = _grainFactory.GetGrain<TGrainInterface>(primaryKey);
@@ -53,7 +73,7 @@ public class GAgentFactory : IGAgentFactory
         return gAgent;
     }
 
-    public Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(EventBase? initializeDto = null)
+    public Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(InitializeDtoBase? initializeDto = null)
         where TGrainInterface : IGAgent
     {
         var guid = Guid.NewGuid();

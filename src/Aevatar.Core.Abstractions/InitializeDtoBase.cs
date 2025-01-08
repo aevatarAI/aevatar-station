@@ -1,3 +1,4 @@
 namespace Aevatar.Core.Abstractions;
 
-public class InitializeDtoBase;
+[GenerateSerializer]
+public class InitializeDtoBase : EventBase;

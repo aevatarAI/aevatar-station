@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Aevatar.Core.Tests.TestGAgents;
 
-[GAgent("group", "Test")]
+[GAgent("group", "test")]
 public class GroupGAgent : GAgentBase<GroupGAgentState, GroupGEvent>
 {
     public GroupGAgent(ILogger<GroupGAgent> logger) : base(logger)
