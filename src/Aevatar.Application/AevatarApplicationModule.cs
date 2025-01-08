@@ -1,6 +1,4 @@
 ﻿using Aevatar.Application.Grains;
-using Aevatar.AtomicAgent;
-using Aevatar.CombinationAgent;
 using Aevatar.CQRS;
 using Aevatar.Options;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,10 +21,7 @@ namespace Aevatar;
     typeof(AbpDaprModule),
     typeof(AbpAspNetCoreMvcDaprModule),
     typeof(AIApplicationGrainsModule),
-    typeof(AevatarCQRSModule),
-    typeof(AevatarAtomicAgentModule),
-    typeof(AevatarCombinationAgentModule)
-
+    typeof(AevatarCQRSModule)
 )]
 public class AevatarApplicationModule : AbpModule
 {

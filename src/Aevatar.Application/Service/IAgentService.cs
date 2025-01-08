@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
-using Aevatar.AtomicAgent.Dtos;
-using Aevatar.CombinationAgent.Dtos;
+using Aevatar.AtomicAgent;
+using Aevatar.CombinationAgent;
 
 namespace Aevatar.Service;
 

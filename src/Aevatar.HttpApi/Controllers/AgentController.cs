@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
-using Aevatar.AtomicAgent.Dtos;
-using Aevatar.CombinationAgent.Dtos;
+using Aevatar.AtomicAgent;
+using Aevatar.CombinationAgent;
 using Aevatar.Service;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;

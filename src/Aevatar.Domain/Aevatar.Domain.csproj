@@ -24,4 +24,9 @@
     <PackageReference Include="AElf.OpenTelemetry" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="AtomicAgent\" />
+    <Folder Include="CombinationAgent\" />
+  </ItemGroup>
+
 </Project>

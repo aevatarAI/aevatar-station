@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Aevatar.Agents.Atomic.Models;
+using Aevatar.Agents.Combination.Models;
 using Aevatar.Agents.Group;
-using Aevatar.AtomicAgent.Agent;
-using Aevatar.AtomicAgent.Dtos;
-using Aevatar.AtomicAgent.Models;
-using Aevatar.CombinationAgent.Agent;
-using Aevatar.CombinationAgent.Dtos;
-using Aevatar.CombinationAgent.Models;
+using Aevatar.Application.Grains.Agents.Atomic;
+using Aevatar.Application.Grains.Agents.Combination;
+using Aevatar.AtomicAgent;
+using Aevatar.CombinationAgent;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Provider;
 using Microsoft.Extensions.Logging;
@@ -219,7 +219,7 @@ public class AgentService : ApplicationService, IAgentService
             
             agentList.Add(atomicAgent);
         }
-
+    
         foreach (var agent in agentList)
         {
             // todo: get business agent and register to group

@@ -30,9 +30,6 @@
         <ProjectReference Include="..\Aevatar.MongoDB\Aevatar.MongoDB.csproj" />
         <ProjectReference Include="..\Aevatar.Domain.Grains\Aevatar.Domain.Grains.csproj" />
         <ProjectReference Include="..\Aevatar.Application.Grains\Aevatar.Application.Grains.csproj" />
-        <ProjectReference Include="..\Aevatar.AtomicAgent\Aevatar.AtomicAgent.csproj" />
-        <ProjectReference Include="..\Aevatar.CombinationAgent\Aevatar.CombinationAgent.csproj" />
-
     </ItemGroup>
 
     <ItemGroup>

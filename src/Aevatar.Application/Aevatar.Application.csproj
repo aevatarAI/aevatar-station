@@ -13,8 +13,6 @@
         <ProjectReference Include="..\Aevatar.Domain\Aevatar.Domain.csproj" />
         <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj" />
         <ProjectReference Include="..\Aevatar.Application.Grains\Aevatar.Application.Grains.csproj" />
-        <ProjectReference Include="..\Aevatar.AtomicAgent\Aevatar.AtomicAgent.csproj" />
-        <ProjectReference Include="..\Aevatar.CombinationAgent\Aevatar.CombinationAgent.csproj" />
     </ItemGroup>
 
     <ItemGroup>
