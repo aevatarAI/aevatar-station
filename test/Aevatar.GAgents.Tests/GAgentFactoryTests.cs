@@ -10,10 +10,12 @@ namespace Aevatar.GAgents.Tests;
 public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
 {
     private readonly IGAgentFactory _gAgentFactory;
+    private readonly IGAgentManager _gAgentManager;
 
     public GAgentFactoryTests()
     {
         _gAgentFactory = GetRequiredService<IGAgentFactory>();
+        _gAgentManager = GetRequiredService<IGAgentManager>();
     }
 
     [Fact(DisplayName = "Can create GAgent by GrainId.")]
@@ -96,7 +98,7 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
     [Fact(DisplayName = "The implementation of GetAvailableGAgentTypes works.")]
     public async Task GetAvailableGAgentTypesTest()
     {
-        var availableGAgents = _gAgentFactory.GetAvailableGAgentTypes();
+        var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
         availableGAgents.Count.ShouldBeGreaterThan(20);
     }
 
