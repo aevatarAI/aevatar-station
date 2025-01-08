@@ -1,4 +1,6 @@
 using System;
+using Aevatar.AI.Brain;
+using Aevatar.AI.BrainFactory;
 using Aevatar.AI.Common;
 using Aevatar.AI.Embeddings;
 using Aevatar.AI.Options;
@@ -16,6 +18,26 @@ namespace Aevatar.AI.Extensions;
 
 public static class AevatarAISemanticKernelExtension
 {
+    public static IServiceCollection AddSemanticKernel(this IServiceCollection services)
+    {
+        services.AddSingleton<IBrainFactory, BrainFactory.BrainFactory>();
+        
+        return services;
+    }
+
+    public static IServiceCollection AddAzureOpenAI(this IServiceCollection services)
+    {
+        services.AddOptions<AzureOpenAIConfig>()
+            .Configure<IConfiguration>((settings, configuration) =>
+            {
+                configuration.GetSection(AzureOpenAIConfig.ConfigSectionName).Bind(settings);
+            });
+
+        services.AddKeyedTransient<IBrain, AzureOpenAIBrain>(AzureOpenAIConfig.ConfigSectionName);
+        
+        return services;
+    }
+
     public static IServiceCollection AddQdrantVectorStore(this IServiceCollection services)
     {
         services.AddKeyedTransient<IVectorStore, QdrantVectorStore>(QdrantConfig.ConfigSectionName);

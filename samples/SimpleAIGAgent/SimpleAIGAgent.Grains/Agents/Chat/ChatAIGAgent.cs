@@ -1,12 +1,17 @@
 using Aevatar.AI.Agent;
 using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.Logging;
+using SimpleAIGAgent.Grains.Agents.Events;
 
 namespace SimpleAIGAgent.Grains.Agents.Chat;
 
-public class ChatAIGAgent : AIGAgentBase<ChatAIGState, ChatAIEvent>
+public interface IChatAIGAgent : IAIGAgent, IGAgent
 {
-    public ChatAIGAgent(ILogger logger) : base(logger)
+}
+
+public class ChatAIGAgent : AIGAgentBase<ChatAIGState, ChatAIEvent>, IChatAIGAgent
+{
+    public ChatAIGAgent(ILogger<ChatAIGAgent> logger) : base(logger)
     {
     }
 
@@ -16,8 +21,8 @@ public class ChatAIGAgent : AIGAgentBase<ChatAIGState, ChatAIEvent>
     }
     
     [EventHandler]
-    public Task OnChatAIEvent(ChatAIEvent chatAIEvent)
+    public async Task OnChatAIEvent(ChatEvent @event)
     {
-        var result = await InvokePromptAsync(chatAIEvent.)
+        var result = await InvokePromptAsync(@event.Message);
     }
 }

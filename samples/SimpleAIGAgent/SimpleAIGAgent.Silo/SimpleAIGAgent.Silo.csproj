@@ -15,5 +15,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\SimpleAIGAgent\SimpleAIGAgent.Grains\SimpleAIGAgent.Grains.csproj" />
+        <ProjectReference Include="..\..\..\src\Aevatar.AI.AIGAgent\Aevatar.AI.AIGAgent.csproj" />
+        <ProjectReference Include="..\..\..\src\Aevatar.AI.SemanticKernel\Aevatar.AI.SemanticKernel.csproj" />
     </ItemGroup>
 </Project>
