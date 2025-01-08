@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
 using MediatR;
+using Nest;
 using Newtonsoft.Json;
 using Volo.Abp.DependencyInjection;
 
@@ -47,12 +49,35 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         await _mediator.Send(command);
     }
 
-    public async Task<string> QueryGEventAsync(string index, string id)
+    public async Task<string> QueryGEventAsync(string eventId,  List<string> grainIds, int pageNumber, int pageSize)
     {
+        Func<QueryContainerDescriptor<AgentGEventIndex>, QueryContainer> query;
+        if (eventId.IsNullOrEmpty())
+        {
+            query = q => q.Bool(b => b
+                .Must(m => m
+                    .Term(f => f.Id, eventId)
+                )
+            );
+        }
+        else
+        {
+            query = q => q.Bool(b => b
+                .Must(m => m
+                    .Terms(t => t.Field(f => f.GrainId).Terms(grainIds))
+                )
+            );
+        }
+        
+        Func<SortDescriptor<AgentGEventIndex>, IPromise<IList<ISort>>> sort = s => s
+            .Ascending(f => f.Ctime);
+
         var getStateQuery = new GetGEventQuery()
         {
-            Index = index,
-            Id = id
+            Query = query,
+            Sort = sort,
+            PageNumber = pageNumber,
+            PageSize = pageSize
         };
         
         var documentContent = await _mediator.Send(getStateQuery);

@@ -37,7 +37,7 @@ public class CqrsService : ApplicationService,ICqrsService
 
     public async Task<K> QueryGEventAsync<T, K>(string index, string id) where T : GEventBase
     {
-        try
+        /*try
         {
             var documentContent = await _cqrsProvider.QueryGEventAsync(index, id);
             var gEvent = JsonConvert.DeserializeObject<T>(documentContent);
@@ -52,6 +52,7 @@ public class CqrsService : ApplicationService,ICqrsService
         {
             _logger.LogError(e, "QueryGEventAsync error index:{index} id:{id}", index, id);
             throw;
-        }
+        }*/
+        throw new Exception();
     }
 }

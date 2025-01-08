@@ -19,6 +19,6 @@ public class GetGEventQueryHandler : IRequestHandler<GetGEventQuery, string>
 
     public async Task<string> Handle(GetGEventQuery request, CancellationToken cancellationToken)
     {
-        return await _indexingService.QueryEventIndexAsync(request.Id, request.Index);
+        return await _indexingService.QueryAsync<AgentGEventIndex>(request.Query, request.PageNumber, request.PageSize, request.Sort);
     }
 }

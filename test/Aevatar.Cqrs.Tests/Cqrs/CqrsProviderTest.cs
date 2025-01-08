@@ -1,5 +1,6 @@
 using Aevatar.CQRS.Provider;
 using Aevatar.GAgent.Dto;
+using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -41,6 +42,7 @@ public class CqrsProviderTest : AevatarApplicationTestBase
         var agentGrainId = Guid.NewGuid();
         var agentType = nameof(CqrsTestCreateAgentGEvent);
 
+        //save gEvent index
         var cqrsTestCreateAgentGEvent = new CqrsTestCreateAgentGEvent
         {
             Id = eventId,
@@ -51,6 +53,12 @@ public class CqrsProviderTest : AevatarApplicationTestBase
             Properties = "create"
         };
         await _cqrsProvider.PublishAsync(eventId, agentGrainId, agentType, cqrsTestCreateAgentGEvent);
+        
+        //query gEvent index query by eventId
+        //    Task<string> QueryGEventAsync(string eventId, List<string> grainIds, int pageNumber, int pageSize);
+
+        var documents = await _cqrsProvider.QueryGEventAsync("3e64ce58-929b-41d6-b54b-1290f568c768", new List<string>(){"a064a05a-2b60-4955-adb5-81d435d4736b"}, 1, 10);
+        documents.ShouldBe("");
     }
     
    
