@@ -49,39 +49,36 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         await _mediator.Send(command);
     }
 
-    public async Task<string> QueryGEventAsync(string eventId,  List<string> grainIds, int pageNumber, int pageSize)
+    public async Task<Tuple<long, List<AgentGEventIndex>>> QueryGEventAsync(string eventId,  List<string> grainIds, int pageNumber, int pageSize)
     {
-        Func<QueryContainerDescriptor<AgentGEventIndex>, QueryContainer> query;
-        if (eventId.IsNullOrEmpty())
+        var mustQuery = new List<Func<QueryContainerDescriptor<AgentGEventIndex>, QueryContainer>>();
+        if (!eventId.IsNullOrEmpty())
         {
-            query = q => q.Bool(b => b
-                .Must(m => m
-                    .Term(f => f.Id, eventId)
-                )
-            );
+            mustQuery.Add(q => q.Term(i =>
+                i.Field(f => f.Id).Value(eventId)));
         }
-        else
+
+        if (!grainIds.IsNullOrEmpty())
         {
-            query = q => q.Bool(b => b
-                .Must(m => m
-                    .Terms(t => t.Field(f => f.GrainId).Terms(grainIds))
-                )
-            );
+            mustQuery.Add(q => q.Terms(i => i.Field(f => f.GrainId).Terms(grainIds)));
+
         }
-        
-        Func<SortDescriptor<AgentGEventIndex>, IPromise<IList<ISort>>> sort = s => s
-            .Ascending(f => f.Ctime);
+
+        QueryContainer Filter(QueryContainerDescriptor<AgentGEventIndex> f) => f.Bool(b => b.Must(mustQuery));
+
+        var sorting = new Func<SortDescriptor<AgentGEventIndex>, IPromise<IList<ISort>>>(s =>
+            s.Ascending(t => t.Ctime));
 
         var getStateQuery = new GetGEventQuery()
         {
-            Query = query,
-            Sort = sort,
-            PageNumber = pageNumber,
-            PageSize = pageSize
+            Query = Filter,
+            Sort = sorting,
+            Skip = (pageNumber-1) * pageSize,
+            Limit = pageSize
         };
         
-        var documentContent = await _mediator.Send(getStateQuery);
-        return documentContent;
+        var tuple = await _mediator.Send(getStateQuery);
+        return tuple;
     }
 
     public async Task PublishAsync(Guid eventId, Guid GrainId, string GrainType, GEventBase eventBase)

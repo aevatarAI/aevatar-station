@@ -107,7 +107,8 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                 services.AddSingleton<IElasticClient>(provider =>
                 {
                     var settings =new ConnectionSettings(new Uri("http://127.0.0.1:9200"))
-                        .DefaultIndex("cqrs");
+                        .DefaultIndex("cqrs").DefaultFieldNameInferrer(fieldName => 
+                            char.ToLowerInvariant(fieldName[0]) + fieldName[1..]);
                     return new ElasticClient(settings);
                 });
                 services.AddSingleton(typeof(ICqrsService), typeof(CqrsService));

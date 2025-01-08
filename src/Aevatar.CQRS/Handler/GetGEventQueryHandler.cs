@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Aevatar.CQRS.Dto;
@@ -5,7 +7,7 @@ using MediatR;
 
 namespace Aevatar.CQRS.Handler;
 
-public class GetGEventQueryHandler : IRequestHandler<GetGEventQuery, string>
+public class GetGEventQueryHandler : IRequestHandler<GetGEventQuery, Tuple<long, List<AgentGEventIndex>>>
 {
     private readonly IIndexingService  _indexingService ;
 
@@ -17,8 +19,8 @@ public class GetGEventQueryHandler : IRequestHandler<GetGEventQuery, string>
 
     }
 
-    public async Task<string> Handle(GetGEventQuery request, CancellationToken cancellationToken)
+    public async Task<Tuple<long, List<AgentGEventIndex>>> Handle(GetGEventQuery request, CancellationToken cancellationToken)
     {
-        return await _indexingService.QueryAsync<AgentGEventIndex>(request.Query, request.PageNumber, request.PageSize, request.Sort);
+        return await _indexingService.GetSortListAsync<AgentGEventIndex>(request.Query,sortFunc:request.Sort,skip:request.Skip, limit: request.Limit);
     }
 }

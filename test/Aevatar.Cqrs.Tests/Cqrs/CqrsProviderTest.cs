@@ -10,7 +10,10 @@ public class CqrsProviderTest : AevatarApplicationTestBase
 {
     private readonly IClusterClient _clusterClient;
     private readonly ICQRSProvider _cqrsProvider;
-
+    private const string AgentType = nameof(CqrsTestCreateAgentGEvent);
+    private const string User1Address = "2HxX36oXZS89Jvz7kCeUyuWWDXLTiNRkAzfx3EuXq4KSSkH62W";
+    private const string User2Address = "2KxX36oXZS89Jvz7kCeUyuWWDXLTiNRkAzfx3EuXq4KSSkH62S";
+    
     public CqrsProviderTest(ITestOutputHelper output)
     {
         _clusterClient = GetRequiredService<IClusterClient>();
@@ -38,27 +41,47 @@ public class CqrsProviderTest : AevatarApplicationTestBase
     [Fact]
     public async Task SendGeventCommandTest()
     {
-        var eventId = Guid.NewGuid();
+        var eventId1 = Guid.NewGuid();
         var agentGrainId = Guid.NewGuid();
-        var agentType = nameof(CqrsTestCreateAgentGEvent);
+
 
         //save gEvent index
         var cqrsTestCreateAgentGEvent = new CqrsTestCreateAgentGEvent
         {
-            Id = eventId,
-            UserAddress = "2HxX36oXZS89Jvz7kCeUyuWWDXLTiNRkAzfx3EuXq4KSSkH62W",
+            Id = eventId1,
+            UserAddress = User1Address,
             Type = "twitter",
-            Name = agentType,
+            Name = AgentType,
             BusinessAgentId = agentGrainId.ToString(),
             Properties = "create"
         };
-        await _cqrsProvider.PublishAsync(eventId, agentGrainId, agentType, cqrsTestCreateAgentGEvent);
+        await _cqrsProvider.PublishAsync(eventId1, agentGrainId, AgentType, cqrsTestCreateAgentGEvent);
         
         //query gEvent index query by eventId
-        //    Task<string> QueryGEventAsync(string eventId, List<string> grainIds, int pageNumber, int pageSize);
+        await Task.Delay(1000);
+        var tuple = await _cqrsProvider.QueryGEventAsync(eventId1.ToString(), new List<string>(){}, 1, 10);
+        tuple.Item1.ShouldBe(1);
+        tuple.Item2.Count.ShouldBe(1);
+        tuple.Item2.FirstOrDefault().Id.ShouldBe(eventId1);
+        tuple.Item2.FirstOrDefault().GrainId.ShouldBe(agentGrainId);
+        tuple.Item2.FirstOrDefault().EventJson.ShouldContain(User1Address);
+        
+        //query gEvent index query by grainId
+        var eventId2 = Guid.NewGuid();
+        cqrsTestCreateAgentGEvent.UserAddress = User2Address;
+        await _cqrsProvider.PublishAsync(eventId2, agentGrainId, AgentType, cqrsTestCreateAgentGEvent);
+        
+        await Task.Delay(1000);
+        var tupleResult = await _cqrsProvider.QueryGEventAsync("", new List<string>(){agentGrainId.ToString()}, 1, 10);
+        tupleResult.Item1.ShouldBe(2);
+        tupleResult.Item2.Count.ShouldBe(2);
+        tupleResult.Item2[0].Id.ShouldBe(eventId1);
+        tupleResult.Item2[1].Id.ShouldBe(eventId2);
+        tupleResult.Item2[0].GrainId.ShouldBe(agentGrainId);
+        tupleResult.Item2[1].GrainId.ShouldBe(agentGrainId);
+        tupleResult.Item2[0].EventJson.ShouldContain(User1Address);
+        tupleResult.Item2[1].EventJson.ShouldContain(User2Address);
 
-        var documents = await _cqrsProvider.QueryGEventAsync("3e64ce58-929b-41d6-b54b-1290f568c768", new List<string>(){"a064a05a-2b60-4955-adb5-81d435d4736b"}, 1, 10);
-        documents.ShouldBe("");
     }
     
    

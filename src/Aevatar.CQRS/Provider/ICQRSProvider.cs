@@ -12,7 +12,7 @@ public interface ICQRSProvider : IEventDispatcher
     
     Task SendEventCommandAsync(EventBase eventBase);
 
-    Task<string> QueryGEventAsync(string eventId, List<string> grainIds, int pageNumber, int pageSize);
+    Task<Tuple<long, List<AgentGEventIndex>>> QueryGEventAsync(string eventId, List<string> grainIds, int pageNumber, int pageSize);
 
     Task PublishAsync(Guid eventId, Guid GrainId, string GrainType, GEventBase eventBase);
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
@@ -15,9 +16,9 @@ public class ElasticIndexingService : IIndexingService
     private readonly IElasticClient _elasticClient;
     private readonly ILogger<ElasticIndexingService> _logger;
     private const string IndexSuffix = "index";
-    private const string CTime = "CTime";
-    private const int DefaultPageIndex = 1;
-    private const int DefaultPageSize = 50;
+    private const string CTime = "cTime";
+    private const int DefaultSkip = 0;
+    private const int DefaultLimit = 1000;
 
     public ElasticIndexingService(ILogger<ElasticIndexingService> logger, IElasticClient elasticClient)
     {
@@ -42,7 +43,7 @@ public class ElasticIndexingService : IIndexingService
                     var type = stateBase.GetType();
                     foreach (var property in type.GetProperties())
                     {
-                        var propertyName = property.Name;
+                        var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
                         if (property.PropertyType == typeof(string))
                         {
                             props.Keyword(k => k
@@ -109,13 +110,14 @@ public class ElasticIndexingService : IIndexingService
         foreach (var property in properties)
         {
             var value = property.GetValue(stateBase);
+            var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
             if (value is IList or IDictionary)
             {
-                document[property.Name] = JsonConvert.SerializeObject(value);
+                document[propertyName] = JsonConvert.SerializeObject(value);
             }
             else
             {
-                document.Add(property.Name, value);
+                document.Add(propertyName, value);
             }
         }
 
@@ -143,7 +145,7 @@ public class ElasticIndexingService : IIndexingService
         return response.Source;
     }
 
-    public void CheckExistOrCreateIndex<T>(T baseIndex) where T : BaseIndex
+    public async Task CheckExistOrCreateIndex<T>(T baseIndex) where T : BaseIndex
     {
         var indexName = baseIndex.GetType().Name.ToLower();
         var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
@@ -152,7 +154,7 @@ public class ElasticIndexingService : IIndexingService
             return;
         }
 
-        var createIndexResponse = _elasticClient.Indices.Create(indexName, c => c
+        var createIndexResponse = await _elasticClient.Indices.CreateAsync(indexName, c => c
             .Map<T>(m => m.AutoMap())
         );
         if (!createIndexResponse.IsValid)
@@ -174,14 +176,15 @@ public class ElasticIndexingService : IIndexingService
 
         foreach (var property in properties)
         {
+            var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
             var value = property.GetValue(baseIndex);
             if (value is IList or IDictionary)
             {
-                document[property.Name] = JsonConvert.SerializeObject(value);
+                document[propertyName] = JsonConvert.SerializeObject(value);
             }
             else
             {
-                document.Add(property.Name, value);
+                document.Add(propertyName, value);
             }
         }
 
@@ -224,36 +227,51 @@ public class ElasticIndexingService : IIndexingService
         }
     }
 
-    public async Task<string> QueryAsync<T>(Func<QueryContainerDescriptor<T>, QueryContainer> query,
-        int pageNumber = DefaultPageIndex, int pageSize = DefaultPageSize, Func<SortDescriptor<T>, IPromise<IList<ISort>>> sort = null)
-        where T : BaseIndex
+    public async Task<Tuple<long, List<TEntity>>> GetSortListAsync<TEntity>(
+        Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterFunc = null,
+        Func<SourceFilterDescriptor<TEntity>, ISourceFilter> includeFieldFunc = null,
+        Func<SortDescriptor<TEntity>, IPromise<IList<ISort>>> sortFunc = null, int limit = DefaultLimit,
+        int skip = DefaultSkip, string? index = null) where TEntity : class
+
     {
-        /*var queryJson = JsonConvert.SerializeObject(query);
-        var sortJson = JsonConvert.SerializeObject(sort);*/
-        var indexName = typeof(T).Name.ToLower();
+        var indexName = index ?? typeof(TEntity).Name.ToLower();
         try
         {
-            var response = await _elasticClient.SearchAsync<T>(s => s
-                .Index(indexName)
-                .Query(query)
-                .Sort(sort)
-                .From((pageNumber - 1) * pageSize)
-                .Size(pageSize)
-            );
-
-            if (!response.IsValid)
+            Func<SearchDescriptor<TEntity>, ISearchRequest> selector = null;
+            if (sortFunc != null)
             {
-                _logger.LogError("{IndexName} QueryAsync fail. Error: {Error}", indexName, response.ServerError);
-                return null;
+                selector = new Func<SearchDescriptor<TEntity>, ISearchRequest>(s => s
+                    .Index(indexName)
+                    .Query(filterFunc ?? (q => q.MatchAll()))
+                    .Sort(sortFunc)
+                    .Source(includeFieldFunc ?? (i => i.IncludeAll()))
+                    .From(skip)
+                    .Size(limit));
+            }
+            else
+            {
+                selector = new Func<SearchDescriptor<TEntity>, ISearchRequest>(s => s
+                    .Index(indexName)
+                    .Query(filterFunc ?? (q => q.MatchAll()))
+                    .Source(includeFieldFunc ?? (i => i.IncludeAll()))
+                    .From(skip)
+                    .Size(limit));
             }
 
-            var documents = JsonConvert.SerializeObject(response.Documents);
-            return documents;
+            var result = await _elasticClient.SearchAsync(selector);
+            if (result.IsValid)
+            {
+                return new Tuple<long, List<TEntity>>(result.Total, result.Documents.ToList());
+            }
+
+            _logger.LogError("{indexName} Search fail. error:{error}", indexName, result.ServerError?.Error);
+            return null;
+
         }
         catch (Exception e)
         {
-            _logger.LogError("{IndexName} QueryAsync fail. Exception: {Error}", indexName, e.Message);
-            throw;
+            _logger.LogError(e, "{indexName} Search Exception.", indexName);
+            throw e;
         }
     }
 }

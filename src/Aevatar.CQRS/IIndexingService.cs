@@ -14,12 +14,13 @@ public interface IIndexingService
     
     public Task<BaseStateIndex> QueryStateIndexAsync(string id,string indexName);
 
-    public void CheckExistOrCreateIndex<T>(T baseIndex) where T : BaseIndex;
+    public Task CheckExistOrCreateIndex<T>(T baseIndex) where T : BaseIndex;
     
     public Task SaveOrUpdateGEventIndexAsync<T>(string id, T baseIndex) where T : BaseIndex;
 
     public Task<string> QueryEventIndexAsync(string id, string indexName);
-    public Task<string> QueryAsync<T>(Func<QueryContainerDescriptor<T>, QueryContainer> query, int pageNumber = 1, int pageSize = 10, Func<SortDescriptor<T>, IPromise<IList<ISort>>> sort = null) where T : BaseIndex;
-
+    public Task<Tuple<long, List<TEntity>>> GetSortListAsync<TEntity>(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterFunc = null,
+        Func<SourceFilterDescriptor<TEntity>, ISourceFilter> includeFieldFunc = null
+        ,Func<SortDescriptor<TEntity>, IPromise<IList<ISort>>> sortFunc = null, int limit = 1000, int skip = 0, string? index = null) where TEntity : class;
 
 }
