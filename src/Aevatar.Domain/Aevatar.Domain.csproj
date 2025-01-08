@@ -23,10 +23,5 @@
     <PackageReference Include="Volo.Abp.PermissionManagement.Domain.OpenIddict" />
     <PackageReference Include="AElf.OpenTelemetry" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="AtomicAgent\" />
-    <Folder Include="CombinationAgent\" />
-  </ItemGroup>
-
+  
 </Project>

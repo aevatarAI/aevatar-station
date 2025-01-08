@@ -11,4 +11,5 @@ public interface IAgentService
     Task<AtomicAgentDto> UpdateAtomicAgentAsync(string id, UpdateAtomicAgentDto updateDto);
     Task DeleteAtomicAgentAsync(string id);
     Task<CombinationAgentDto> CombineAgentAsync(CombineAgentDto combineAgentDto);
+    Task<CombinationAgentDto> UpdateCombinationAsync(string id, UpdateCombinationDto updateCombinationDto);
 }

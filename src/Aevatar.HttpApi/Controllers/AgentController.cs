@@ -49,7 +49,6 @@ public class AgentController : AevatarController
         var agentDto = await _agentService.UpdateAtomicAgentAsync(id, updateAtomicAgentDto);
         return agentDto;
     }
-
    
     [HttpDelete("/atomic-agent/{id}")]
     public async Task DeleteAgent(string id)
@@ -63,6 +62,14 @@ public class AgentController : AevatarController
     {
         _logger.LogInformation("Combine Atomic-Agent: {agent}", JsonConvert.SerializeObject(combineAgentDto));
         var agentDto = await _agentService.CombineAgentAsync(combineAgentDto);
+        return agentDto;
+    }
+    
+    [HttpPut("/combination-agent/{id}")]
+    public async Task<CombinationAgentDto> UpdateCombination(string id, [FromBody] UpdateCombinationDto updateCombinationDto)
+    {
+        _logger.LogInformation("Update Combination: {agent}", JsonConvert.SerializeObject(updateCombinationDto));
+        var agentDto = await _agentService.UpdateCombinationAsync(id, updateCombinationDto);
         return agentDto;
     }
 }

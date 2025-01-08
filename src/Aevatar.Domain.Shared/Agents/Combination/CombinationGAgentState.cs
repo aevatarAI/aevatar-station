@@ -2,13 +2,14 @@ using System;
 using System.Collections.Generic;
 using Aevatar.Agents.Combination.GEvents;
 using Aevatar.Agents.Combination.Models;
+using Aevatar.Agents.Group;
 using Aevatar.Core.Abstractions;
 using Orleans;
 
 namespace Aevatar.Agents.Combination;
 
 [GenerateSerializer]
-public class CombinationGAgentState : StateBase
+public class CombinationGAgentState : GroupAgentState
 {
     [Id(0)] public Guid Id { get; set; }
     [Id(1)] public AgentStatus Status { get; set; }
@@ -24,6 +25,12 @@ public class CombinationGAgentState : StateBase
         GroupId = combineAgentGEvent.GroupId;
         UserAddress = combineAgentGEvent.UserAddress;
         Status = AgentStatus.Running;
+        AgentComponent = combineAgentGEvent.AgentComponent;
+    }
+    
+    public void Apply(UpdateAgentGEvent combineAgentGEvent)
+    {
+        Name = combineAgentGEvent.Name;
         AgentComponent = combineAgentGEvent.AgentComponent;
     }
 }

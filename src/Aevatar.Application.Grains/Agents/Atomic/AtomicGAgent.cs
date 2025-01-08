@@ -78,7 +78,7 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
         await ConfirmEvents();
     }
     
-    public async Task RegisterToGroupAsync(string groupId)
+    public async Task SetGroupAsync(string groupId)
     {
         _logger.LogInformation("SetUseFlagAsync");
         RaiseEvent(new RegisterToGroupGEvent()
@@ -95,5 +95,5 @@ public interface IAtomicGAgent : IStateGAgent<AtomicGAgentState>
     Task CreateAgentAsync(AtomicAgentData data);
     Task UpdateAgentAsync(AtomicAgentData data);
     Task DeleteAgentAsync();
-    Task RegisterToGroupAsync(string groupId);
+    Task SetGroupAsync(string groupId);
 }

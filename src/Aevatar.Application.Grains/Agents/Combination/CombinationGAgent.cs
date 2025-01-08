@@ -40,13 +40,33 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
         });
         await ConfirmEvents();
     }
-    
-    public Task<bool> AgentExistAsync()
+
+    public async Task<CombinationAgentData> GetCombinationAsync()
     {
-        var exist = State.Status == AgentStatus.Running || State.Status == AgentStatus.Stopped;
-        return Task.FromResult(exist);
+        _logger.LogInformation("GetCombinationAsync");
+        var combinationData = new CombinationAgentData()
+        {
+            Id = this.GetPrimaryKey(),
+            Name = State.Name,
+            GroupId = State.GroupId,
+            AgentComponent = State.AgentComponent,
+            UserAddress = State.UserAddress,
+            Status = State.Status
+        };
+        return await Task.FromResult(combinationData);
     }
 
+    public async Task UpdateAgentAsync(CombinationAgentData data)
+    {
+        _logger.LogInformation("UpdateAgentAsync");
+        RaiseEvent(new UpdateAgentGEvent()
+        {
+            Name = data.Name,
+            AgentComponent = data.AgentComponent
+        });
+        await ConfirmEvents();
+    }
+    
     public Task<AgentStatus> GetStatusAsync()
     {
         return Task.FromResult(State.Status);
@@ -57,7 +77,9 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
 public interface ICombinationGAgent : IStateGAgent<CombinationGAgentState>
 {
     Task CombineAgentAsync(CombinationAgentData data);
-    // Task UpdateAgentAsync(AgentData data);
-    // Task DeleteAgentAsync();
+    Task<CombinationAgentData> GetCombinationAsync();
+    // Task UpdateCombinationAsync(CombinationAgentData data);
+    Task UpdateAgentAsync(CombinationAgentData data);
+
     Task<AgentStatus> GetStatusAsync();
 }

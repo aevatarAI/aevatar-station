@@ -18,7 +18,6 @@ public class AevatarApplicationAutoMapperProfile : Profile
         CreateMap<CreateAtomicAgentDto, AtomicAgentDto>().ReverseMap();
         CreateMap<AtomicAgentData, CreateAtomicAgentDto>().ReverseMap();
         
-        CreateMap<CombineAgentDto, CombinationAgentDto>().ReverseMap();
         CreateMap<CombineAgentDto, CombinationAgentData>().ReverseMap();
     }
 }
