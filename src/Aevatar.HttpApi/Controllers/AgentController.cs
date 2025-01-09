@@ -89,10 +89,18 @@ public class AgentController : AevatarController
         return agentDto;
     }
     [HttpGet("/atomic-agents")]
-    public async Task<List<AtomicAgentDto>> GetAgentListByUser(string userAddress)
+    public async Task<List<AtomicAgentDto>> GetAgentListByUser(string userAddress, int pageIndex, int pageSize)
     {
         _logger.LogInformation("Get Atomic-Agent list: {address}", userAddress);
-        var agentDto = await _agentService.GetAtomicAgentsAsync(userAddress);
+        var agentDto = await _agentService.GetAtomicAgentsAsync(userAddress, pageIndex, pageSize);
         return agentDto;
+    }
+    
+    [HttpGet("/combination-agents")]
+    public async Task<List<CombinationAgentDto>> GetAgentListByUser(string userAddress, string groupId, int pageIndex, int pageSize)
+    {
+        _logger.LogInformation("Get Combination-Agent list: {address} {groupId} {pageIndex} {pageSize}", userAddress,groupId, pageIndex,pageSize);
+        var agentDtoList = await _agentService.GetCombinationAgentsAsync(userAddress, groupId, pageIndex, pageSize);
+        return agentDtoList;
     }
 }

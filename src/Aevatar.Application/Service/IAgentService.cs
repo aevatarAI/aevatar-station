@@ -10,11 +10,13 @@ public interface IAgentService
     Task<AtomicAgentDto> GetAtomicAgentAsync(string id);
     Task<AtomicAgentDto> CreateAtomicAgentAsync(CreateAtomicAgentDto createDto);
     Task<AtomicAgentDto> UpdateAtomicAgentAsync(string id, UpdateAtomicAgentDto updateDto);
-    Task<List<AtomicAgentDto>> GetAtomicAgentsAsync(string userAddress);
+    Task<List<AtomicAgentDto>> GetAtomicAgentsAsync(string userAddress, int pageIndex, int pageSize);
 
     Task DeleteAtomicAgentAsync(string id);
     Task<CombinationAgentDto> GetCombinationAsync(string id);
     Task<CombinationAgentDto> CombineAgentAsync(CombineAgentDto combineAgentDto);
     Task<CombinationAgentDto> UpdateCombinationAsync(string id, UpdateCombinationDto updateCombinationDto);
     Task DeleteCombinationAsync(string id);
+    Task<List<CombinationAgentDto>> GetCombinationAgentsAsync(string userAddress, string groupId, int pageIndex, int pageSize);
+
 }
