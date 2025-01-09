@@ -8,6 +8,7 @@ using Aevatar.CQRS.Dto;
 using Microsoft.Extensions.Logging;
 using Nest;
 using Newtonsoft.Json;
+using Orleans.Runtime;
 
 namespace Aevatar.CQRS;
 
@@ -112,7 +113,7 @@ public class ElasticIndexingService : IIndexingService
         {
             var value = property.GetValue(stateBase);
             var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
-            if (value is IList or IDictionary)
+            if (value is IList or IDictionary or GrainId)
             {
                 document[propertyName] = JsonConvert.SerializeObject(value);
             }
@@ -171,7 +172,7 @@ public class ElasticIndexingService : IIndexingService
 
     public void CheckExistOrCreateIndex<T>(T baseIndex) where T : BaseIndex
     {
-        var indexName = baseIndex.GetType().Name.ToLower();
+        var indexName = IndexPrefix + baseIndex.GetType().Name.ToLower();
         var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
         if (indexExistsResponse.Exists)
         {
@@ -246,7 +247,7 @@ public class ElasticIndexingService : IIndexingService
 
     public async Task SaveOrUpdateGEventIndexAsync<T>(string id, T baseIndex) where T : BaseIndex
     {
-        var indexName = baseIndex.GetType().Name.ToLower();
+        var indexName = IndexPrefix + baseIndex.GetType().Name.ToLower();
         var properties = baseIndex.GetType().GetProperties();
         var document = new Dictionary<string, object>();
 
@@ -313,7 +314,7 @@ public class ElasticIndexingService : IIndexingService
         int skip = DefaultSkip, string? index = null) where TEntity : class
 
     {
-        var indexName = index ?? typeof(TEntity).Name.ToLower();
+        var indexName = index ?? IndexPrefix + typeof(TEntity).Name.ToLower();
         try
         {
             Func<SearchDescriptor<TEntity>, ISearchRequest> selector;
