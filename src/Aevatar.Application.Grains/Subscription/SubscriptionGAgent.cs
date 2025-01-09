@@ -4,9 +4,11 @@ using Aevatar.Core.Abstractions;
 using Aevatar.Domain.Grains.Subscription;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Orleans.Providers;
 
 namespace Aevatar.Application.Grains.Subscription;
-
+[StorageProvider(ProviderName = "PubSubStore")]
+[LogConsistencyProvider(ProviderName = "LogStorage")]
 public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, SubscriptionEvent>, ISubscriptionGAgent
 {
     private readonly ILogger<SubscriptionGAgent> _logger;
