@@ -445,9 +445,41 @@ public class AgentService : ApplicationService, IAgentService
         return combinationGAgentStateDtoList.Select(stateDto => new CombinationAgentDto { Id = stateDto.Id.ToString(), Name = stateDto.Name, AgentComponent = JsonConvert.DeserializeObject<List<string>>(stateDto.AgentComponent) }).ToList();
     }
 
-    public Task<Tuple<long, List<AgentGEventIndex>>> GetAgentEventLogsAsync(string agentId, int pageNumber, int pageSize)
+    public async Task<Tuple<long, List<AgentGEventIndex>>> GetAgentEventLogsAsync(string agentId, int pageNumber, int pageSize)
     {
-        var agentIds = new List<string>();
-        return _cqrsProvider.QueryGEventAsync("", agentIds, pageNumber, pageSize);
+        if (!Guid.TryParse(agentId, out var validGuid))
+        {
+            _logger.LogInformation("GetAgentAsync Invalid id: {id}", agentId);
+            throw new UserFriendlyException("Invalid id");
+        }
+        var agentIds = await ViewGroupTreeAsync(agentId);
+
+        return await _cqrsProvider.QueryGEventAsync("", agentIds, pageNumber, pageSize);
     }
+    
+    private async Task<List<string>> ViewGroupTreeAsync(string agentId)
+    {
+        var result = new List<string>();
+        await BuildGroupTreeAsync(agentId, result);
+        return result;
+    }
+
+    private async Task BuildGroupTreeAsync(string agentId, List<string> result)
+    {
+        var gAgent = _clusterClient.GetGrain<ICombinationGAgent>(Guid.Parse(agentId));
+        var childrenAgentIds = await gAgent.GetChildrenAsync();
+        if (childrenAgentIds.IsNullOrEmpty())
+        {
+            return;
+        }
+
+        var childrenIds = childrenAgentIds.Select(s => s.Key.ToString()).ToList();
+        result.AddRange(childrenIds);
+
+        foreach (var childrenId in childrenIds)
+        {
+            await BuildGroupTreeAsync(childrenId, result);
+        }
+    }
+    
 }
