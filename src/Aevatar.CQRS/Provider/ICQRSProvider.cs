@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
+using Nest;
 
 namespace Aevatar.CQRS.Provider;
 
 public interface ICQRSProvider : IEventDispatcher
 {
-    Task<BaseStateIndex> QueryAsync(string index, string id);
+    Task<string> QueryStateAsync(string indexName,Func<QueryContainerDescriptor<dynamic>, QueryContainer> query,int skip, int limit);
     
     Task SendEventCommandAsync(EventBase eventBase);
 

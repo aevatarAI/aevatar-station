@@ -26,18 +26,18 @@ public class ElasticIndexingService : IIndexingService
         _elasticClient = elasticClient;
     }
 
-    public async Task CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase
+    public  void CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase
     {
         var indexName = stateBase.GetType().Name.ToLower() + IndexSuffix;
-        var indexExistsResponse = await _elasticClient.Indices.ExistsAsync(indexName);
+        var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
         if (indexExistsResponse.Exists)
         {
             return;
         }
 
-        var createIndexResponse = await _elasticClient.Indices.CreateAsync(indexName, c => c
+        var createIndexResponse = _elasticClient.Indices.Create(indexName, c => c
             .Map<T>(m => m
-                .AutoMap()
+                .Dynamic(false) 
                 .Properties(props =>
                 {
                     var type = stateBase.GetType();
@@ -142,23 +142,95 @@ public class ElasticIndexingService : IIndexingService
         }
     }
 
-    public async Task<BaseStateIndex> QueryStateIndexAsync(string id, string indexName)
+    public async Task<string> GetStateIndexDocumentsAsync(string indexName, Func<QueryContainerDescriptor<dynamic>, QueryContainer> query, int skip = DefaultSkip, int limit =  DefaultLimit)
     {
-        var response = await _elasticClient.GetAsync<BaseStateIndex>(id, g => g.Index(indexName));
-        return response.Source;
+        try
+        {
+            var response = await _elasticClient.SearchAsync<dynamic>(s=>s
+                .Index(indexName)
+                .Query(query)
+                .From(skip)
+                .Size(limit)); 
+            
+            if (!response.IsValid)
+            {
+                _logger.LogError("{indexName} documents query fail: {reason}", indexName, response.ServerError?.Error.Reason);
+                return null;
+            }
+            var documents = response.Hits.Select(hit => hit.Source);
+            var documentContent = JsonConvert.SerializeObject(documents);
+            return documentContent;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e,"{indexName} documents query Exception: {reason}", indexName);
+            throw;
+        }
     }
 
-    public async Task CheckExistOrCreateIndex<T>(T baseIndex) where T : BaseIndex
+    public void CheckExistOrCreateIndex<T>(T baseIndex) where T : BaseIndex
     {
         var indexName = baseIndex.GetType().Name.ToLower();
-        var indexExistsResponse = await _elasticClient.Indices.ExistsAsync(indexName);
+        var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
         if (indexExistsResponse.Exists)
         {
             return;
         }
 
-        var createIndexResponse = await _elasticClient.Indices.CreateAsync(indexName, c => c
-            .Map<T>(m => m.AutoMap())
+        var createIndexResponse = _elasticClient.Indices.Create(indexName, c => c
+            .Map<T>(m => m
+                .Dynamic(false) 
+                .Properties(props =>
+                {
+                    var type = baseIndex.GetType();
+                    foreach (var property in type.GetProperties())
+                    {
+                        var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
+                        if (property.PropertyType == typeof(string))
+                        {
+                            props.Keyword(k => k
+                                .Name(propertyName)
+                            );
+                        }
+                        else if (property.PropertyType == typeof(int) || property.PropertyType == typeof(long))
+                        {
+                            props.Number(n => n
+                                .Name(propertyName)
+                                .Type(NumberType.Long)
+                            );
+                        }
+                        else if (property.PropertyType == typeof(DateTime))
+                        {
+                            props.Date(d => d
+                                .Name(propertyName)
+                            );
+                        }
+                        else if (property.PropertyType == typeof(Guid))
+                        {
+                            props.Keyword(k => k
+                                .Name(propertyName)
+                            );
+                        }
+                        else if (property.PropertyType == typeof(bool))
+                        {
+                            props.Boolean(b => b
+                                .Name(propertyName)
+                            );
+                        }
+                        else
+                        {
+                            props.Text(o => o
+                                .Name(propertyName)
+                            );
+                        }
+                    }
+
+                    props.Date(d => d
+                        .Name(CTime)
+                    );
+                    return props;
+                })
+            )
         );
         if (!createIndexResponse.IsValid)
         {

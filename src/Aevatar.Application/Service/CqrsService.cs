@@ -27,7 +27,8 @@ public class CqrsService : ApplicationService,ICqrsService
     
     public async Task<BaseStateIndex> QueryAsync(string index, string id)
     {
-        return await _cqrsProvider.QueryAsync(index, id);
+        //return await _cqrsProvider.QueryStateAsync(index, id);
+        return null;
     }
 
     public async Task SendEventCommandAsync(EventBase eventBase)

@@ -28,16 +28,18 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         await _mediator.Send(command);
     }
 
-    public async Task<BaseStateIndex> QueryAsync(string index, string id)
+    public async Task<string> QueryStateAsync(string indexName,Func<QueryContainerDescriptor<dynamic>, QueryContainer> query,int skip, int limit)
     {
         var getStateQuery = new GetStateQuery()
         {
-            Index = index,
-            Id = id
+            Index = indexName,
+            Query = query,
+            Skip = skip,
+            Limit = limit
         };
         
-        var state = await _mediator.Send(getStateQuery);
-        return state;
+        var document = await _mediator.Send(getStateQuery);
+        return document;
     }
 
     public async Task SendEventCommandAsync(EventBase eventBase)
