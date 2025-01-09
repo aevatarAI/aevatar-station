@@ -6,12 +6,11 @@ using Aevatar.Agents.Atomic;
 using Aevatar.Agents.Atomic.Models;
 using Aevatar.Agents.Combination;
 using Aevatar.Agents.Combination.Models;
-using Aevatar.Agents.Group;
 using Aevatar.Application.Grains.Agents.Atomic;
 using Aevatar.Application.Grains.Agents.Combination;
 using Aevatar.AtomicAgent;
 using Aevatar.CombinationAgent;
-using Aevatar.Core.Abstractions;
+using Aevatar.CQRS.Dto;
 using Aevatar.CQRS.Provider;
 using Microsoft.Extensions.Logging;
 using Nest;
@@ -444,5 +443,11 @@ public class AgentService : ApplicationService, IAgentService
         var combinationGAgentStateDtoList = JsonConvert.DeserializeObject<List<CombinationGAgentStateDto>>(result);
 
         return combinationGAgentStateDtoList.Select(stateDto => new CombinationAgentDto { Id = stateDto.Id.ToString(), Name = stateDto.Name, AgentComponent = JsonConvert.DeserializeObject<List<string>>(stateDto.AgentComponent) }).ToList();
+    }
+
+    public Task<Tuple<long, List<AgentGEventIndex>>> GetAgentEventLogsAsync(string agentId, int pageNumber, int pageSize)
+    {
+        var agentIds = new List<string>();
+        return _cqrsProvider.QueryGEventAsync("", agentIds, pageNumber, pageSize);
     }
 }
