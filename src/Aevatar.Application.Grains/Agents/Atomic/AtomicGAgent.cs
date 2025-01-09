@@ -99,7 +99,7 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
 
 public interface IAtomicGAgent : IStateGAgent<AtomicGAgentState>
 {
-    Task<AtomicAgentData?> GetAgentAsync();
+    Task<AtomicAgentData> GetAgentAsync();
     Task CreateAgentAsync(AtomicAgentData data);
     Task UpdateAgentAsync(AtomicAgentData data);
     Task DeleteAgentAsync();

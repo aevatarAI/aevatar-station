@@ -21,7 +21,6 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
     
     public async Task<EventSubscriptionState> SubscribeAsync(SubscribeEventInputDto input)
     {
-        //todo  group register
         RaiseEvent(new AddSubscriptionEvent()
         {
             Id = Guid.NewGuid(),
@@ -40,7 +39,7 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
         {
            return;
         }
-        //todo  group unregister
+        
         RaiseEvent(new CancelSubscriptionEvent()
         {
             Id = Guid.NewGuid(),

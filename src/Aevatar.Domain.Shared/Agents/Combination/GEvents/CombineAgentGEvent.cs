@@ -11,5 +11,5 @@ public class CombineAgentGEvent : CombinationAgentGEvent
     [Id(1)] public string UserAddress { get; set; }
     [Id(2)] public string Name { get; set; }
     [Id(3)] public string GroupId { get; set; }
-    [Id(4)] public List<string> AgentComponent { get; set; }
+    [Id(4)] public Dictionary<string, List<string>> AgentComponents { get; set; }
 }

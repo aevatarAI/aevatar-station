@@ -5,5 +5,5 @@ namespace Aevatar.CombinationAgent;
 public class CombineAgentDto
 {
     public string Name { get; set; }
-    public List<string> AgentComponent { get; set; }
+    public Dictionary<string, int> AgentComponents { get; set; }
 }

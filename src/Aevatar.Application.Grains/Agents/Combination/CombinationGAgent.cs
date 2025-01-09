@@ -36,7 +36,7 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
             UserAddress = data.UserAddress,
             Name = data.Name,
             GroupId = data.GroupId,
-            AgentComponent = data.AgentComponent
+            AgentComponents = data.AgentComponents
         });
         await ConfirmEvents();
     }
@@ -49,7 +49,7 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
             Id = this.GetPrimaryKey(),
             Name = State.Name,
             GroupId = State.GroupId,
-            AgentComponent = State.AgentComponent,
+            AgentComponents = State.AgentComponents,
             UserAddress = State.UserAddress,
             Status = State.Status
         };
@@ -62,7 +62,7 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
         RaiseEvent(new UpdateCombinationGEvent()
         {
             Name = data.Name,
-            AgentComponent = data.AgentComponent
+            AgentComponents = data.AgentComponents
         });
         await ConfirmEvents();
     }
@@ -91,6 +91,11 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
         Logger.LogInformation( "publish event: {event}", @event);
         await PublishAsync(@event);
     }
+
+    public async Task SetBusinessAgentsAsync(string atomicAgentId, List<string> businessAgents)
+    {
+        
+    }
 }
 
 
@@ -101,4 +106,5 @@ public interface ICombinationGAgent : IStateGAgent<CombinationGAgentState>
     Task UpdateCombinationAsync(CombinationAgentData data);
     Task<AgentStatus> GetStatusAsync();
     Task DeleteCombinationAsync();
+    Task SetBusinessAgentsAsync(string atomicAgentId, List<string> businessAgents);
 }

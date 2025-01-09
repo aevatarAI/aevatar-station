@@ -16,8 +16,8 @@ public class CombinationGAgentState : GroupAgentState
     [Id(2)] public string UserAddress { get; set; }
     [Id(3)] public string Name { get; set; }
     [Id(4)] public string GroupId { get; set; }
-    [Id(5)] public List<string> AgentComponent { get; set; }
-    [Id(6)] public Dictionary<string, List<string>> BusinessAgents { get; set; }
+    // [Id(5)] public List<string> AgentComponent { get; set; }
+    [Id(5)] public Dictionary<string, List<string>> AgentComponents { get; set; }
     
     public void Apply(CombineAgentGEvent combineAgentGEvent)
     {
@@ -26,19 +26,19 @@ public class CombinationGAgentState : GroupAgentState
         GroupId = combineAgentGEvent.GroupId;
         UserAddress = combineAgentGEvent.UserAddress;
         Status = AgentStatus.Running;
-        AgentComponent = combineAgentGEvent.AgentComponent;
+        AgentComponents = combineAgentGEvent.AgentComponents;
     }
     
     public void Apply(UpdateCombinationGEvent combineCombinationGEvent)
     {
         Name = combineCombinationGEvent.Name;
-        AgentComponent = combineCombinationGEvent.AgentComponent;
+        AgentComponents = combineCombinationGEvent.AgentComponents;
     }
     
     public void Apply(DeleteCombinationGEvent deleteCombinationGEvent)
     {
         Name = "";
-        AgentComponent = new List<string>();
+        AgentComponents = new ();
         GroupId = "";
         Status = AgentStatus.Deleted;
         UserAddress = "";

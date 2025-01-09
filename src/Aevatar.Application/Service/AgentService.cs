@@ -10,6 +10,7 @@ using Aevatar.Application.Grains.Agents.Atomic;
 using Aevatar.Application.Grains.Agents.Combination;
 using Aevatar.AtomicAgent;
 using Aevatar.CombinationAgent;
+using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Provider;
 using Microsoft.Extensions.Logging;
@@ -27,6 +28,8 @@ public class AgentService : ApplicationService, IAgentService
     private readonly ICQRSProvider _cqrsProvider;
     private readonly ILogger<AgentService> _logger;
     private readonly IObjectMapper _objectMapper;
+    private readonly IGAgentFactory _gAgentFactory;
+    
     private const string GroupAgentName = "GroupAgent";
     private const string IndexSuffix = "index";
     private const string IndexPrefix = "aevatar";
@@ -35,12 +38,14 @@ public class AgentService : ApplicationService, IAgentService
         IClusterClient clusterClient, 
         ICQRSProvider cqrsProvider, 
         ILogger<AgentService> logger,  
-        IObjectMapper objectMapper)
+        IObjectMapper objectMapper, 
+        IGAgentFactory gAgentFactory)
     {
         _clusterClient = clusterClient;
         _cqrsProvider = cqrsProvider;
         _logger = logger;
         _objectMapper = objectMapper;
+        _gAgentFactory = gAgentFactory;
     }
     
     public async Task<AtomicAgentDto> GetAtomicAgentAsync(string id)
@@ -48,11 +53,6 @@ public class AgentService : ApplicationService, IAgentService
         var validGuid = ParseGuid(id);
         var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(validGuid);
         var agentData = await atomicAgent.GetAgentAsync();
-        if (agentData == null)
-        {
-            _logger.LogInformation("GetAgentAsync agent is null: {id}", id);
-            throw new UserFriendlyException("agent not exist");
-        }
         
         if (agentData.Properties.IsNullOrEmpty())
         {
@@ -208,17 +208,18 @@ public class AgentService : ApplicationService, IAgentService
             throw new UserFriendlyException("agent already exist");
         }
         
-        var groupId = await SetGroupAsync(combineAgentDto.AgentComponent, guid);
+        var components = await SetGroupAsync(combineAgentDto.AgentComponents, guid);
         var data = _objectMapper.Map<CombineAgentDto, CombinationAgentData>(combineAgentDto);
-        data.GroupId = groupId;
+        data.GroupId = guid.ToString();
         data.UserAddress = address;
+        data.AgentComponents = components;
         await combinationAgent.CombineAgentAsync(data);
 
         var resp = new CombinationAgentDto
         {
             Id = guid.ToString(),
             Name = data.Name,
-            AgentComponent = data.AgentComponent
+            AgentComponents = components
         };
    
         return resp;
@@ -226,7 +227,7 @@ public class AgentService : ApplicationService, IAgentService
 
     private void CheckCombineParam(CombineAgentDto combineAgentDto)
     {
-        if (combineAgentDto.AgentComponent.IsNullOrEmpty())
+        if (combineAgentDto.AgentComponents.IsNullOrEmpty())
         {
             _logger.LogInformation("CombineAgentAsync agentComponent is null, name: {name}", combineAgentDto.Name);
             throw new UserFriendlyException("agentComponent is null");
@@ -260,31 +261,42 @@ public class AgentService : ApplicationService, IAgentService
         {
             Id = id,
             Name = combinationData.Name,
-            AgentComponent = combinationData.AgentComponent
+            AgentComponents = combinationData.AgentComponents
         };
         
         return resp;
     }
     
-    private async Task<string> SetGroupAsync(List<string> agentComponent, Guid guid)
+    private async Task<Dictionary<string, List<string>>> SetGroupAsync(Dictionary<string, int> agentComponent, Guid guid)
     {
         var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(guid);
-        var agentList = new List<IAtomicGAgent>();
-        foreach (var agentId in agentComponent)
+  
+        foreach (var agentId in agentComponent.Keys.ToList())
         {
             var validGuid = ParseGuid(agentId);
             await CheckAtomicAgentValid(validGuid);
-            var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(validGuid);
-            agentList.Add(atomicAgent);
-        }
-    
-        foreach (var agent in agentList)
-        {
-            // todo: initialize actual agent, and add to BusinessAgents map
-            await agent.AddToGroupAsync(guid.ToString());
         }
         
-        return guid.ToString();
+        var components = new Dictionary<string, List<string>>();
+        foreach (var agentId in agentComponent.Keys.ToList())
+        {
+            var validGuid = ParseGuid(agentId);
+            var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(validGuid);
+            var agentData = await atomicAgent.GetAgentAsync();
+            var businessAgentIds = new List<string>();
+            for (int i = 0; i < agentComponent[agentId]; i++)
+            {
+                var businessAgent = await _gAgentFactory.GetGAgentAsync(agentData.Type, initializeDto: new InitializeDto
+                {
+                    Properties = agentData.Properties
+                });
+                await combinationAgent.RegisterAsync(businessAgent);
+                businessAgentIds.Add(businessAgent.GetPrimaryKey().ToString());
+            }
+            components.Add(agentId, businessAgentIds);
+        }
+
+        return components;
     }
     
     public async Task<CombinationAgentDto> UpdateCombinationAsync(string id, UpdateCombinationDto updateDto)
@@ -299,16 +311,26 @@ public class AgentService : ApplicationService, IAgentService
             combinationData.Name = updateDto.Name;
         }
 
-        if (!updateDto.AgentComponent.IsNullOrEmpty())
+        if (!updateDto.AgentComponents.IsNullOrEmpty())
         {
-            var newIncludedAgent = updateDto.AgentComponent.Except(combinationData.AgentComponent).ToList();
-            await SetGroupAsync(newIncludedAgent, validGuid);
+            var oldAgentList = combinationData.AgentComponents.Keys.ToList();
+            var newAgentList = updateDto.AgentComponents.Keys.ToList();
+            
+            var newIncludedAgent = updateDto.AgentComponents.Where(kv => !oldAgentList.Contains(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value);
+            _logger.LogInformation("UpdateCombinationAsync newIncludedAgent: {newIncludedAgent}", newIncludedAgent);
+            var newComponents = await SetGroupAsync(newIncludedAgent, validGuid);
              
-            var excludedAgent = combinationData.AgentComponent.Except(updateDto.AgentComponent).ToList();
+            var excludedAgent = combinationData.AgentComponents.Where(kv => !newAgentList.Contains(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value);
             _logger.LogInformation("UpdateCombinationAsync excludeAgent: {excludedAgent}", excludedAgent);
             await ExcludeFromGroupAsync(excludedAgent, validGuid);
             
-            combinationData.AgentComponent = updateDto.AgentComponent;
+            var currentComponents =  combinationData.AgentComponents.Where(kv => excludedAgent.ContainsKey(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value);
+            foreach (var component in newComponents)
+            {
+                currentComponents[component.Key] = component.Value;
+            }
+            combinationData.AgentComponents = currentComponents;
+            _logger.LogInformation("UpdateCombinationAsync currentComponents: {currentComponents}", combinationData.AgentComponents);
         }
         
         await combinationAgent.UpdateCombinationAsync(combinationData);
@@ -317,20 +339,26 @@ public class AgentService : ApplicationService, IAgentService
         {
             Id = id,
             Name = combinationData.Name,
-            AgentComponent = combinationData.AgentComponent
+            AgentComponents = combinationData.AgentComponents
         };
 
         return resp;
     }
     
-    private async Task ExcludeFromGroupAsync(List<string> excludedAgent, Guid guid)
+    private async Task ExcludeFromGroupAsync(Dictionary<string, List<string>> excludedAgent, Guid guid)
     {
         var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(guid);
-        foreach (var agentId in excludedAgent)
+        foreach (var agentId in excludedAgent.Keys.ToList())
         {
             var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(Guid.Parse(agentId));
-            // todo: get business agent and unregister from group
             await atomicAgent.RemoveFromGroupAsync(guid.ToString());
+            var agentData = await atomicAgent.GetAgentAsync();
+            foreach (var businessAgentId in excludedAgent[agentId])
+            {
+                var businessAgentGuid = ParseGuid(businessAgentId);
+                var businessAgent = await _gAgentFactory.GetGAgentAsync(agentData.Type, businessAgentGuid);
+                await combinationAgent.UnregisterAsync(businessAgent);
+            }
         }
     }
 
@@ -341,7 +369,7 @@ public class AgentService : ApplicationService, IAgentService
         
         var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(validGuid);
         var combinationData = await combinationAgent.GetCombinationAsync();
-        await ExcludeFromGroupAsync(combinationData.AgentComponent, validGuid);
+        await ExcludeFromGroupAsync(combinationData.AgentComponents, validGuid);
         await combinationAgent.DeleteCombinationAsync();
     }
 
@@ -359,7 +387,7 @@ public class AgentService : ApplicationService, IAgentService
     {
         var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(guid);
         var agentData = await atomicAgent.GetAgentAsync();
-        if (agentData == null || agentData.Properties.IsNullOrEmpty())
+        if (agentData.Properties.IsNullOrEmpty())
         {
             _logger.LogInformation("agent not exist, id: {id}", guid);
             throw new UserFriendlyException("agent not exist");
@@ -378,7 +406,7 @@ public class AgentService : ApplicationService, IAgentService
     {
         var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(guid);
         var combinationData = await combinationAgent.GetCombinationAsync();
-        if (combinationData.AgentComponent.IsNullOrEmpty())
+        if (combinationData.AgentComponents.IsNullOrEmpty())
         {
             _logger.LogInformation("combinationData is null: {id}", guid);
             throw new UserFriendlyException("combination not exist");
