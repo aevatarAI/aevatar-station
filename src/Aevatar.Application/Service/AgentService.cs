@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Aevatar.Agents.Atomic;
 using Aevatar.Agents.Atomic.Models;
 using Aevatar.Agents.Combination.Models;
 using Aevatar.Agents.Group;
@@ -27,6 +28,8 @@ public class AgentService : ApplicationService, IAgentService
     private readonly ILogger<AgentService> _logger;
     private readonly IObjectMapper _objectMapper;
     private const string GroupAgentName = "GroupAgent";
+    private const string IndexSuffix = "index";
+    private const string IndexPrefix = "aevatar";
 
     public AgentService(
         IClusterClient clusterClient, 
@@ -141,6 +144,30 @@ public class AgentService : ApplicationService, IAgentService
         resp.Properties = newProperties;
 
         return resp;
+    }
+
+    public async Task<List<AtomicAgentDto>> GetAtomicAgentsAsync(string userAddress)
+    {
+        if (userAddress.IsNullOrEmpty())
+        {
+            _logger.LogInformation("GetAgentAsync Invalid userAddress: {userAddress}", userAddress);
+            throw new UserFriendlyException("Invalid userAddress");
+        }
+        
+        var index = IndexPrefix + nameof(AtomicGAgentState).ToLower() + IndexSuffix;
+        var result = await _cqrsProvider.QueryStateAsync(index,
+            q => q.Term(t => t.Field("userAddress").Value(userAddress)), 
+            0,
+            10
+        );
+        if (result == null)
+        {
+            return null;
+        }
+        
+        var atomicGAgentStateDtoList = JsonConvert.DeserializeObject<List<AtomicGAgentStateDto>>(result);
+
+        return atomicGAgentStateDtoList.Select(stateDto => new AtomicAgentDto { Id = stateDto.Id.ToString(), Type = stateDto.Type, Name = stateDto.Name, Properties = JsonConvert.DeserializeObject<Dictionary<string, string>>(stateDto.Properties) }).ToList();
     }
 
     public async Task DeleteAtomicAgentAsync(string id)

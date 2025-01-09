@@ -19,13 +19,13 @@ public class SaveGEventCommandHandler : IRequestHandler<SaveGEventCommand>
 
     public async Task<Unit> Handle(SaveGEventCommand request, CancellationToken cancellationToken)
     {
-        _indexingService.CheckExistOrCreateGEventIndex(request.GEvent);
+        _indexingService.CheckExistOrCreateIndex(request.AgentGEventIndex);
         await SaveIndexAsync(request);
         return Unit.Value;
     }
 
     private async Task SaveIndexAsync(SaveGEventCommand request)
     {
-        await _indexingService.SaveOrUpdateGEventIndexAsync(request.GEvent);
+        await _indexingService.SaveOrUpdateGEventIndexAsync(request.Id.ToString(), request.AgentGEventIndex);
     }
 }

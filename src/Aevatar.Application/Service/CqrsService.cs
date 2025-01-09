@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using Aevatar.Agents.Atomic;
+using Aevatar.Agents.Atomic.Models;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
 using Aevatar.CQRS.Provider;
@@ -27,7 +30,8 @@ public class CqrsService : ApplicationService,ICqrsService
     
     public async Task<BaseStateIndex> QueryAsync(string index, string id)
     {
-        return await _cqrsProvider.QueryAsync(index, id);
+        //return await _cqrsProvider.QueryStateAsync(index, id);
+        return null;
     }
 
     public async Task SendEventCommandAsync(EventBase eventBase)
@@ -37,7 +41,7 @@ public class CqrsService : ApplicationService,ICqrsService
 
     public async Task<K> QueryGEventAsync<T, K>(string index, string id) where T : GEventBase
     {
-        try
+        /*try
         {
             var documentContent = await _cqrsProvider.QueryGEventAsync(index, id);
             var gEvent = JsonConvert.DeserializeObject<T>(documentContent);
@@ -52,6 +56,7 @@ public class CqrsService : ApplicationService,ICqrsService
         {
             _logger.LogError(e, "QueryGEventAsync error index:{index} id:{id}", index, id);
             throw;
-        }
+        }*/
+        throw new Exception();
     }
 }

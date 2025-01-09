@@ -1,13 +1,11 @@
 using System.Threading;
 using System.Threading.Tasks;
-using Aevatar.Agents;
 using Aevatar.CQRS.Dto;
 using MediatR;
-using Nest;
 
 namespace Aevatar.CQRS.Handler;
 
-public class GetStateQueryHandler : IRequestHandler<GetStateQuery, BaseStateIndex>
+public class GetStateQueryHandler : IRequestHandler<GetStateQuery, string>
 {
     private readonly IIndexingService  _indexingService ;
 
@@ -19,8 +17,8 @@ public class GetStateQueryHandler : IRequestHandler<GetStateQuery, BaseStateInde
 
     }
     
-    public async Task<BaseStateIndex> Handle(GetStateQuery request, CancellationToken cancellationToken)
+    public async Task<string> Handle(GetStateQuery request, CancellationToken cancellationToken)
     {
-        return await _indexingService.QueryStateIndexAsync(request.Id, request.Index);
+        return await _indexingService.GetStateIndexDocumentsAsync(request.Index, request.Query, request.Skip, request.Limit);
     }
 }

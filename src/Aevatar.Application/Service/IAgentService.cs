@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.AtomicAgent;
 using Aevatar.CombinationAgent;
@@ -9,6 +10,8 @@ public interface IAgentService
     Task<AtomicAgentDto> GetAtomicAgentAsync(string id);
     Task<AtomicAgentDto> CreateAtomicAgentAsync(CreateAtomicAgentDto createDto);
     Task<AtomicAgentDto> UpdateAtomicAgentAsync(string id, UpdateAtomicAgentDto updateDto);
+    Task<List<AtomicAgentDto>> GetAtomicAgentsAsync(string userAddress);
+
     Task DeleteAtomicAgentAsync(string id);
     Task<CombinationAgentDto> GetCombinationAsync(string id);
     Task<CombinationAgentDto> CombineAgentAsync(CombineAgentDto combineAgentDto);

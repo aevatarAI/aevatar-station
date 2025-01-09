@@ -33,8 +33,8 @@ public class CqrsServiceTest : AevatarApplicationTestBase
         _mockIndexingService = new Mock<IIndexingService>();
         _mockIndexingService.Setup(service => service.SaveOrUpdateStateIndexAsync(It.IsAny<string>(), It.IsAny<StateBase>()))
             .Returns(Task.CompletedTask);
-        _mockIndexingService.Setup(b => b.QueryStateIndexAsync(It.IsAny<string>(), It.IsAny<string>()))
-            .ReturnsAsync((string id, string indexName) => new BaseStateIndex { Id = IndexId.ToString(), Ctime = DateTime.Now, State = Address});
+        /*_mockIndexingService.Setup(b => b.QueryStateIndexAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync((string id, string indexName) => new BaseStateIndex { Id = IndexId.ToString(), Ctime = DateTime.Now, State = Address});*/
 
         var services = new ServiceCollection();
         services.AddSingleton<IIndexingService>(_mockIndexingService.Object); 
