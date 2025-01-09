@@ -48,13 +48,13 @@ public interface IGAgent : IGrainWithGuidKey
     /// Get subscriber list of current GAgent.
     /// </summary>
     /// <returns></returns>
-    Task<List<GrainId>> GetSubscribersAsync();
+    Task<List<GrainId>> GetChildrenAsync();
 
     /// <summary>
     /// Get the subscription of current GAgent.
     /// </summary>
     /// <returns></returns>
-    Task<GrainId> GetSubscriptionAsync();
+    Task<GrainId> GetParentAsync();
 
     Task<Type?> GetInitializeDtoTypeAsync();
 }
