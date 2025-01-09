@@ -8,6 +8,7 @@ using Aevatar.CQRS.Dto;
 using Microsoft.Extensions.Logging;
 using Nest;
 using Newtonsoft.Json;
+using Orleans.Runtime;
 
 namespace Aevatar.CQRS;
 
@@ -112,7 +113,7 @@ public class ElasticIndexingService : IIndexingService
         {
             var value = property.GetValue(stateBase);
             var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
-            if (value is IList or IDictionary)
+            if (value is IList or IDictionary or GrainId)
             {
                 document[propertyName] = JsonConvert.SerializeObject(value);
             }
