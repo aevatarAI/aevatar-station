@@ -34,7 +34,7 @@ public abstract class AIGAgentBase<TState, TEvent> : GAgentBase<TState, TEvent>,
         
         if(_brain == null)
         {
-            Logger.LogError("Failed to initialize brain.");
+            Logger.LogError("Failed to initialize brain. {@InitializeDto}", initializeDto);
             return false;
         }
         
