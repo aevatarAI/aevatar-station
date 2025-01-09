@@ -17,4 +17,9 @@ public abstract class GAgentBaseWithInitialization<TState, TEvent, TInitializeDt
     }
     
     public abstract Task InitializeAsync(TInitializeDto initializeDto);
+
+    public override Task<Type?> GetInitializeDtoTypeAsync()
+    {
+        return Task.FromResult(typeof(TInitializeDto))!;
+    }
 }

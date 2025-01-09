@@ -87,7 +87,7 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
         return State.Subscription;
     }
 
-    public Task<Type?> GetInitializeDtoTypeAsync()
+    public virtual Task<Type?> GetInitializeDtoTypeAsync()
     {
         return Task.FromResult(State.InitializeDtoType);
     }
@@ -241,7 +241,7 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
         var gEvent = @event as GEventBase;
         if (EventDispatcher != null)
         {
-            await EventDispatcher.PublishAsync(gEvent!, gEvent!.Id.ToString());
+            await EventDispatcher.PublishAsync(gEvent!.Id, this.GetGrainId(), gEvent);
         }
     }
 
