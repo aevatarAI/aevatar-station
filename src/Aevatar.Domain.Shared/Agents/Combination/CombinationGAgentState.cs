@@ -17,6 +17,7 @@ public class CombinationGAgentState : GroupAgentState
     [Id(3)] public string Name { get; set; }
     [Id(4)] public string GroupId { get; set; }
     [Id(5)] public List<string> AgentComponent { get; set; }
+    [Id(6)] public Dictionary<string, List<string>> BusinessAgents { get; set; }
     
     public void Apply(CombineAgentGEvent combineAgentGEvent)
     {

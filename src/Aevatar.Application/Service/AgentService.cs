@@ -42,12 +42,7 @@ public class AgentService : ApplicationService, IAgentService
     
     public async Task<AtomicAgentDto> GetAtomicAgentAsync(string id)
     {
-        if (!Guid.TryParse(id, out Guid validGuid))
-        {
-            _logger.LogInformation("GetAgentAsync Invalid id: {id}", id);
-            throw new UserFriendlyException("Invalid id");
-        }
-        
+        var validGuid = ParseGuid(id);
         var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(validGuid);
         var agentData = await atomicAgent.GetAgentAsync();
         if (agentData == null)
@@ -75,6 +70,7 @@ public class AgentService : ApplicationService, IAgentService
 
     public async Task<AtomicAgentDto> CreateAtomicAgentAsync(CreateAtomicAgentDto createDto)
     {
+        CheckCreateParam(createDto);
         var address = GetCurrentUserAddress();
         var guid = Guid.NewGuid();
         var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(guid);
@@ -87,23 +83,34 @@ public class AgentService : ApplicationService, IAgentService
         return resp;
     }
 
+    private void CheckCreateParam(CreateAtomicAgentDto createDto)
+    {
+        if (createDto.Type.IsNullOrEmpty())
+        {
+            _logger.LogInformation("CreateAtomicAgentAsync type is null");
+            throw new UserFriendlyException("type is null");
+        }
+        
+        if (createDto.Name.IsNullOrEmpty())
+        {
+            _logger.LogInformation("CreateAtomicAgentAsync name is null");
+            throw new UserFriendlyException("name is null");
+        }
+        
+        if (createDto.Properties.IsNullOrEmpty())
+        {
+            _logger.LogInformation("CreateAtomicAgentAsync properties is null");
+            throw new UserFriendlyException("properties is null");
+        }
+    }
+
     public async Task<AtomicAgentDto> UpdateAtomicAgentAsync(string id, UpdateAtomicAgentDto updateDto)
     {
-        if (!Guid.TryParse(id, out Guid validGuid))
-        {
-            _logger.LogInformation("UpdateAgentAsync Invalid id: {id}", id);
-            throw new UserFriendlyException("Invalid id");
-        }
+        var validGuid = ParseGuid(id);
+        await CheckAtomicAgentValid(validGuid);
         
         var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(validGuid);
         var agentData = await atomicAgent.GetAgentAsync();
-        
-        if (agentData == null)
-        {
-            _logger.LogInformation("UpdateAgentAsync agentProperty is null: {id}", id);
-            throw new UserFriendlyException("agent not exist");
-        }
-        
         var resp = new AtomicAgentDto()
         {
             Id = id,
@@ -138,32 +145,16 @@ public class AgentService : ApplicationService, IAgentService
 
     public async Task DeleteAtomicAgentAsync(string id)
     {
-        if (!Guid.TryParse(id, out Guid validGuid))
-        {
-            _logger.LogInformation("DeleteAgentAsync Invalid id: {id}", id);
-            throw new UserFriendlyException("Invalid id");
-        }
+        var validGuid = ParseGuid(id);
+        await CheckAtomicAgentValid(validGuid);
         
         var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(validGuid);
-        var data = await atomicAgent.GetAgentAsync();
-        if (data == null)
-        {
-            _logger.LogInformation("DeleteAgentAsync agentProperty is null: {id}", id);
-            throw new UserFriendlyException("agent not exist");
-        }
+        var agentData = await atomicAgent.GetAgentAsync();
         
-        if (!data.GroupId.IsNullOrEmpty())
+        if (!agentData.Groups.IsNullOrEmpty())
         {
-            _logger.LogInformation("agent in group id: {id}", data.GroupId);
+            _logger.LogInformation("agent in group: {group}", agentData.Groups);
             throw new UserFriendlyException("agent in group!");
-        }
-        
-        var address = GetCurrentUserAddress();
-        if (data.UserAddress != address)
-        {
-            _logger.LogInformation("agent not belong to user address: {address}, owner: {owner}", 
-                address, data.UserAddress);
-            throw new UserFriendlyException("agent not belong to user!");
         }
         
         await atomicAgent.DeleteAgentAsync();
@@ -176,18 +167,8 @@ public class AgentService : ApplicationService, IAgentService
     }
     
     public async Task<CombinationAgentDto> CombineAgentAsync(CombineAgentDto combineAgentDto)
-    {
-        if (combineAgentDto.AgentComponent.IsNullOrEmpty())
-        {
-            _logger.LogInformation("CombineAgentAsync agentComponent is null, name: {name}", combineAgentDto.Name);
-            throw new UserFriendlyException("agentComponent is null");
-        }
-        
-        if (combineAgentDto.Name.IsNullOrEmpty())
-        {
-            _logger.LogInformation("CombineAgentAsync name is null, name: {name}", combineAgentDto.Name);
-            throw new UserFriendlyException("name is null");
-        }
+    { 
+        CheckCombineParam(combineAgentDto);
         
         var address = GetCurrentUserAddress();
         var guid = Guid.NewGuid();
@@ -200,7 +181,7 @@ public class AgentService : ApplicationService, IAgentService
             throw new UserFriendlyException("agent already exist");
         }
         
-        var groupId = await SetGroupAsync(combineAgentDto.AgentComponent, address, guid);
+        var groupId = await SetGroupAsync(combineAgentDto.AgentComponent, guid);
         var data = _objectMapper.Map<CombineAgentDto, CombinationAgentData>(combineAgentDto);
         data.GroupId = groupId;
         data.UserAddress = address;
@@ -215,15 +196,25 @@ public class AgentService : ApplicationService, IAgentService
    
         return resp;
     }
+
+    private void CheckCombineParam(CombineAgentDto combineAgentDto)
+    {
+        if (combineAgentDto.AgentComponent.IsNullOrEmpty())
+        {
+            _logger.LogInformation("CombineAgentAsync agentComponent is null, name: {name}", combineAgentDto.Name);
+            throw new UserFriendlyException("agentComponent is null");
+        }
+        
+        if (combineAgentDto.Name.IsNullOrEmpty())
+        {
+            _logger.LogInformation("CombineAgentAsync name is null, name: {name}", combineAgentDto.Name);
+            throw new UserFriendlyException("name is null");
+        }
+    }
     
     public async Task<CombinationAgentDto> GetCombinationAsync(string id)
     {
-        if (!Guid.TryParse(id, out Guid validGuid))
-        {
-            _logger.LogInformation("GetAgentAsync Invalid id: {id}", id);
-            throw new UserFriendlyException("Invalid id");
-        }
-        
+        var validGuid = ParseGuid(id);
         var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(validGuid);
         var combinationData = await combinationAgent.GetCombinationAsync();
         if (combinationData == null || combinationData.Status == AgentStatus.Undefined)
@@ -248,47 +239,22 @@ public class AgentService : ApplicationService, IAgentService
         return resp;
     }
     
-    private async Task<string> SetGroupAsync(List<string> agentComponent, string address, Guid guid)
+    private async Task<string> SetGroupAsync(List<string> agentComponent, Guid guid)
     {
         var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(guid);
         var agentList = new List<IAtomicGAgent>();
         foreach (var agentId in agentComponent)
         {
-            if (!Guid.TryParse(agentId, out Guid validGuid))
-            {
-                _logger.LogInformation("SetGroupAsync invalid id: {id}", agentId);
-                throw new UserFriendlyException("Invalid id");
-            }
-            
+            var validGuid = ParseGuid(agentId);
+            await CheckAtomicAgentValid(validGuid);
             var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(validGuid);
-            var agentData = await atomicAgent.GetAgentAsync();
-            if (agentData == null)
-            {
-                _logger.LogInformation("SetGroupAsync agent not exist, id: {id}", agentId);
-                throw new UserFriendlyException("agent not exist");
-            }
-            
-            if (agentData.UserAddress != address)
-            {
-                _logger.LogInformation("SetGroupAsync agent not belong to user, id: {id}, ownerAddress: {ownerAddress}", 
-                    agentId, agentData.UserAddress);
-                throw new UserFriendlyException("agent not belong to user");
-            }
-            
-            var inUse = !agentData.GroupId.IsNullOrEmpty();
-            if (inUse)
-            {
-                _logger.LogInformation("SetGroupAsync agent in use, id: {id}", agentId);
-                throw new UserFriendlyException("agent in use");
-            }
-            
             agentList.Add(atomicAgent);
         }
     
         foreach (var agent in agentList)
         {
-            // todo: get business agent and register to group
-            await agent.SetGroupAsync(guid.ToString());
+            // todo: initialize actual agent, and add to BusinessAgents map
+            await agent.AddToGroupAsync(guid.ToString());
         }
         
         return guid.ToString();
@@ -296,19 +262,10 @@ public class AgentService : ApplicationService, IAgentService
     
     public async Task<CombinationAgentDto> UpdateCombinationAsync(string id, UpdateCombinationDto updateDto)
     {
-        if (!Guid.TryParse(id, out Guid validGuid))
-        {
-            _logger.LogInformation("UpdateCombinationAsync Invalid id: {id}", id);
-            throw new UserFriendlyException("Invalid id");
-        }
-        
+        var validGuid = ParseGuid(id);
+        await CheckCombinationValid(validGuid);
         var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(validGuid);
         var combinationData = await combinationAgent.GetCombinationAsync();
-        if (combinationData == null)
-        {
-            _logger.LogInformation("GetCombinationAsync combinationData is null: {id}", id);
-            throw new UserFriendlyException("combination not exist");
-        }
         
         if (!updateDto.Name.IsNullOrEmpty())
         {
@@ -318,7 +275,7 @@ public class AgentService : ApplicationService, IAgentService
         if (!updateDto.AgentComponent.IsNullOrEmpty())
         {
             var newIncludedAgent = updateDto.AgentComponent.Except(combinationData.AgentComponent).ToList();
-            await SetGroupAsync(newIncludedAgent, combinationData.UserAddress, validGuid);
+            await SetGroupAsync(newIncludedAgent, validGuid);
              
             var excludedAgent = combinationData.AgentComponent.Except(updateDto.AgentComponent).ToList();
             _logger.LogInformation("UpdateCombinationAsync excludeAgent: {excludedAgent}", excludedAgent);
@@ -346,23 +303,57 @@ public class AgentService : ApplicationService, IAgentService
         {
             var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(Guid.Parse(agentId));
             // todo: get business agent and unregister from group
-            await atomicAgent.SetGroupAsync("");
+            await atomicAgent.RemoveFromGroupAsync(guid.ToString());
         }
     }
 
     public async Task DeleteCombinationAsync(string id)
     {
-        if (!Guid.TryParse(id, out Guid validGuid))
-        {
-            _logger.LogInformation("DeleteCombinationAsync Invalid id: {id}", id);
-            throw new UserFriendlyException("Invalid id");
-        }
+        var validGuid = ParseGuid(id);
+        await CheckCombinationValid(validGuid);
         
         var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(validGuid);
         var combinationData = await combinationAgent.GetCombinationAsync();
-        if (combinationData == null)
+        await ExcludeFromGroupAsync(combinationData.AgentComponent, validGuid);
+        await combinationAgent.DeleteCombinationAsync();
+    }
+
+    private Guid ParseGuid(string id)
+    {
+        if (!Guid.TryParse(id, out Guid validGuid))
         {
-            _logger.LogInformation("DeleteCombinationAsync combinationData is null: {id}", id);
+            _logger.LogInformation("Invalid id: {id}", id);
+            throw new UserFriendlyException("Invalid id");
+        }
+        return validGuid;
+    }
+
+    private async Task CheckAtomicAgentValid(Guid guid)
+    {
+        var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(guid);
+        var agentData = await atomicAgent.GetAgentAsync();
+        if (agentData == null || agentData.Properties.IsNullOrEmpty())
+        {
+            _logger.LogInformation("agent not exist, id: {id}", guid);
+            throw new UserFriendlyException("agent not exist");
+        }
+        
+        var address = GetCurrentUserAddress();
+        if (agentData.UserAddress != address)
+        {
+            _logger.LogInformation("agent not belong to user, id: {id}, ownerAddress: {ownerAddress}", 
+                guid, agentData.UserAddress);
+            throw new UserFriendlyException("agent not belong to user");
+        }
+    }
+    
+    private async Task CheckCombinationValid(Guid guid)
+    {
+        var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(guid);
+        var combinationData = await combinationAgent.GetCombinationAsync();
+        if (combinationData.AgentComponent.IsNullOrEmpty())
+        {
+            _logger.LogInformation("combinationData is null: {id}", guid);
             throw new UserFriendlyException("combination not exist");
         }
         
@@ -373,8 +364,7 @@ public class AgentService : ApplicationService, IAgentService
                 address, combinationData.UserAddress);
             throw new UserFriendlyException("combination not belong to user!");
         }
-        
-        await ExcludeFromGroupAsync(combinationData.AgentComponent, validGuid);
-        await combinationAgent.DeleteCombinationAsync();
     }
+
+
 }

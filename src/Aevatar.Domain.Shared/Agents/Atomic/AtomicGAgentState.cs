@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Aevatar.Agents.Atomic.GEvents;
 using Aevatar.Core.Abstractions;
 using Orleans;
@@ -9,11 +10,10 @@ public class AtomicGAgentState : StateBase
 {
     [Id(0)] public Guid Id { get; set; }
     [Id(1)] public string UserAddress { get; set; }
-    [Id(2)] public string GroupId { get; set; }
+    [Id(2)] public List<string> Groups { get; set; } = new List<string>();
     [Id(3)] public string Type { get; set; }
     [Id(4)] public string Name { get; set; }
-    [Id(5)] public string BusinessAgentId { get; set; }
-    [Id(6)] public string Properties { get; set; }
+    [Id(5)] public string Properties { get; set; }
     
     public void Apply(CreateAgentGEvent createAgentGEvent)
     {
@@ -22,7 +22,6 @@ public class AtomicGAgentState : StateBase
         UserAddress = createAgentGEvent.UserAddress;
         Type = createAgentGEvent.Type;
         Name = createAgentGEvent.Name;
-        BusinessAgentId = createAgentGEvent.BusinessAgentId;
     }
     
     public void Apply(UpdateAgentGEvent updateAgentGEvent)
@@ -37,11 +36,22 @@ public class AtomicGAgentState : StateBase
         Properties = "";
         Type = "";
         Name = "";
-        BusinessAgentId = "";
+        Groups = new List<string>();
     }
     
-    public void Apply(RegisterToGroupGEvent registerToGroupGEvent)
+    public void Apply(AddToGroupGEvent addToGroupGEvent)
     {
-        GroupId = registerToGroupGEvent.GroupId;
+        if (!Groups.Contains(addToGroupGEvent.GroupId))
+        {
+            Groups.Add(addToGroupGEvent.GroupId);
+        }
+    }
+    
+    public void Apply(RemoveFromGroupGEvent removeFromGroupGEvent)
+    {
+        if (Groups.Contains(removeFromGroupGEvent.GroupId))
+        {
+            Groups.Remove(removeFromGroupGEvent.GroupId);
+        }
     }
 }

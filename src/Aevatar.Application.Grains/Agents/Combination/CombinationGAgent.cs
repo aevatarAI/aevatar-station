@@ -80,6 +80,17 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
         });
         await ConfirmEvents();
     }
+    
+    public async Task PublishEventAsync<T>(T @event) where T : EventBase
+    {
+        if (@event == null)
+        {
+            throw new ArgumentNullException(nameof(@event));
+        }
+
+        Logger.LogInformation( "publish event: {event}", @event);
+        await PublishAsync(@event);
+    }
 }
 
 
