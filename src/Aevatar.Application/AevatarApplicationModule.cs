@@ -22,7 +22,6 @@ namespace Aevatar;
     typeof(AbpAspNetCoreMvcDaprModule),
     typeof(AIApplicationGrainsModule),
     typeof(AevatarCQRSModule)
-
 )]
 public class AevatarApplicationModule : AbpModule
 {

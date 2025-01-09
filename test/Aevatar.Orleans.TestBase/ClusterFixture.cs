@@ -100,14 +100,11 @@ public class ClusterFixture : IDisposable, ISingletonDependency
 
                 services.AddSingleton(typeof(IEventDispatcher), typeof(CQRSProvider));
                 services.AddSingleton(typeof(ICQRSProvider), typeof(CQRSProvider));
-                /*var mockElasticClient = new Mock<IElasticClient>();
-                services.AddSingleton(mockElasticClient.Object);
-                var _mockIndexingService = new Mock<IIndexingService>();
-                services.AddSingleton(_mockIndexingService.Object); */
                 services.AddSingleton<IElasticClient>(provider =>
                 {
                     var settings =new ConnectionSettings(new Uri("http://127.0.0.1:9200"))
-                        .DefaultIndex("cqrs");
+                        .DefaultIndex("cqrs").DefaultFieldNameInferrer(fieldName => 
+                            char.ToLowerInvariant(fieldName[0]) + fieldName[1..]);
                     return new ElasticClient(settings);
                 });
                 services.AddSingleton(typeof(ICqrsService), typeof(CqrsService));

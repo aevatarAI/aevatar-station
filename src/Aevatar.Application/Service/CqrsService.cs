@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using Aevatar.Agents.Atomic;
+using Aevatar.Agents.Atomic.Models;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
 using Aevatar.CQRS.Provider;
@@ -25,32 +28,16 @@ public class CqrsService : ApplicationService,ICqrsService
 
     }
     
-    public async Task<BaseStateIndex> QueryAsync(string index, string id)
-    {
-        return await _cqrsProvider.QueryAsync(index, id);
-    }
-
-    public async Task SendEventCommandAsync(EventBase eventBase)
-    {
-        await _cqrsProvider.SendEventCommandAsync(eventBase);
-    }
-
-    public async Task<K> QueryGEventAsync<T, K>(string index, string id) where T : GEventBase
+    public async Task<Tuple<long, List<AgentGEventIndex>>> QueryGEventAsync(string eventId, List<string> groupIds, int pageNumber, int pageSize)
     {
         try
         {
-            var documentContent = await _cqrsProvider.QueryGEventAsync(index, id);
-            var gEvent = JsonConvert.DeserializeObject<T>(documentContent);
-            return _objectMapper.Map<T, K>(gEvent);
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogError(ex, "QueryGEventAsync error JsonException index:{index} id:{id}", index, id);
-            return default(K);
+            var resp = await _cqrsProvider.QueryGEventAsync(eventId, groupIds, pageNumber, pageSize);
+            return resp;
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "QueryGEventAsync error index:{index} id:{id}", index, id);
+            _logger.LogError(e, "QueryGEventAsync error eventId:{eventId} id:{groupIds} pageNumber:{pageNumber} pageSize:{pageSize}", eventId, JsonConvert.SerializeObject(groupIds), pageNumber, pageSize);
             throw;
         }
     }

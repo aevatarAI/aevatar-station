@@ -50,7 +50,8 @@ public class AevatarCQRSModule : AbpModule
                    throw new ArgumentNullException("ElasticUris:Uris", "Elasticsearch URIs cannot be null or empty.");
                }
 
-               var settings = new ConnectionSettings(new StaticConnectionPool(uris.Select(uri => new Uri(uri)).ToArray()));
+               var settings = new ConnectionSettings(new StaticConnectionPool(uris.Select(uri => new Uri(uri)).ToArray())).DefaultFieldNameInferrer(fieldName => 
+                   char.ToLowerInvariant(fieldName[0]) + fieldName[1..]);
 
                return new ElasticClient(settings);
            });
