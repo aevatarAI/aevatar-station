@@ -1,4 +1,4 @@
-namespace Aevatar.Core;
+namespace Aevatar.Core.Abstractions;
 
 public class AevatarCoreConstants
 {

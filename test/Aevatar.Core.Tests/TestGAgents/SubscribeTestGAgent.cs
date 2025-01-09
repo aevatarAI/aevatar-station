@@ -11,7 +11,7 @@ public class SubscribeTestGAgentState : StateBase
 
 public class SubscribeTestGEvent : GEventBase;
 
-[GAgent]
+[GAgent("subscribeTest", "test")]
 public class SubscribeTestGAgent : GAgentBase<SubscribeTestGAgentState, SubscribeTestGEvent>
 {
     public SubscribeTestGAgent(ILogger logger) : base(logger)

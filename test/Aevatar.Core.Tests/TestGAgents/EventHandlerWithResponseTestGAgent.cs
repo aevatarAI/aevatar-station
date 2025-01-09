@@ -12,7 +12,7 @@ public class EventHandlerWithResponseTestGAgentState : StateBase
 
 public class EventHandlerWithResponseTestGEvent : GEventBase;
 
-[GAgent]
+[GAgent("eventHandlerWithResponseTest", "test")]
 public class
     EventHandlerWithResponseTestGAgent : GAgentBase<EventHandlerWithResponseTestGAgentState,
     EventHandlerWithResponseTestGEvent>
