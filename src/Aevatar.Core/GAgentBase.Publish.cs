@@ -24,8 +24,7 @@ public abstract partial class GAgentBase<TState, TEvent>
         if (State.Parent.IsDefault)
         {
             Logger.LogInformation(
-                "Event {@Event} is the first time appeared to silo: {EventJson}",
-                @event, JsonConvert.SerializeObject(@event));
+                "Event is the first time appeared to silo: {@Event}", @event);
             // This event is the first time appeared to silo.
             await SendEventToSelfAsync(new EventWrapper<T>(@event, eventId, this.GetGrainId()));
         }
