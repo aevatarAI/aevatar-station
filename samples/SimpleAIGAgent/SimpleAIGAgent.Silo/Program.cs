@@ -1,6 +1,6 @@
 ﻿using Aevatar.AI.Extensions;
 using Aevatar.AI.Options;
-using Aevatar.Core;
+using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;

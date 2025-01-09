@@ -1,4 +1,4 @@
-﻿using Aevatar.Core;
+﻿using Aevatar.Core.Abstractions;
 using MessagingGAgent.Grains.Agents.Events;
 using MessagingGAgent.Grains.Agents.Messaging;
 using MessagingGAgent.Grains.Agents.Publisher;
@@ -21,7 +21,8 @@ await host.StartAsync();
 var client = host.Services.GetRequiredService<IClusterClient>();
 
 var parentId = Guid.NewGuid();
-var messagingParentAgent = client.GetGrain<IMessagingGAgent>(parentId);
+//var messagingParentAgent = client.GetGrain<IMessagingGAgent>(parentId);
+var parentAgent = client.GetGrain<IGAgent>(parentId);
 
 List<IMessagingGAgent> messagingAgents = [];
 var maxAgents = 2;
@@ -29,13 +30,13 @@ for(var i = 0; i < maxAgents; ++i)
 {
     var messagingAgentId = Guid.NewGuid();
     var messagingAgent = client.GetGrain<IMessagingGAgent>(messagingAgentId);
-    await messagingParentAgent.RegisterAsync(messagingAgent);
+    await parentAgent.RegisterAsync(messagingAgent);
     
     messagingAgents.Add(messagingAgent);
 }
 
 var publisher = client.GetGrain<IPublishingGAgent>(Guid.NewGuid());
-await messagingParentAgent.RegisterAsync(publisher);
+await parentAgent.RegisterAsync(publisher);
 await publisher.PublishEventAsync(new SendEvent()
 {
     Message = "Hello, World!"
@@ -52,7 +53,7 @@ foreach (var agent in messagingAgents)
         Console.ForegroundColor = ConsoleColor.Red;
         Console.Write("Agent did not receive the expected number of messages. " + receivedMessages);
 
-        break;
+        continue;
     }
     completed++;
 }

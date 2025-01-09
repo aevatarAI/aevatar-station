@@ -1,4 +1,4 @@
-﻿using Aevatar.Core;
+﻿using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
