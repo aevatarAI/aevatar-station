@@ -1,4 +1,6 @@
-﻿using Aevatar.Agents.Atomic.Models;
+using Aevatar.Application.Grains.Subscription;
+using Aevatar.Subscription;
+using Aevatar.Agents.Atomic.Models;
 using Aevatar.Agents.Combination.Models;
 using Aevatar.AtomicAgent;
 using Aevatar.CombinationAgent;
@@ -10,11 +12,7 @@ public class AevatarApplicationAutoMapperProfile : Profile
 {
     public AevatarApplicationAutoMapperProfile()
     {
-        /* You can configure your AutoMapper mapping configuration here.
-         * Alternatively, you can split your mapping configurations
-         * into multiple profile classes for a better organization. */
-        
-        //Example related, can be removed
+        CreateMap<EventSubscriptionState, SubscriptionDto>().ReverseMap();
         CreateMap<CreateAtomicAgentDto, AtomicAgentDto>().ReverseMap();
         CreateMap<AtomicAgentData, CreateAtomicAgentDto>().ReverseMap();
         
