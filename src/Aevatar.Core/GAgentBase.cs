@@ -12,7 +12,7 @@ namespace Aevatar.Core;
 [GAgent("base")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
-public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState>, IStateGAgent<TState>
+public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState>, IStateGAgent<TState>, IAsyncObserver<EventWrapperBase>
     where TState : StateBase, new()
     where TEvent : GEventBase
 {
@@ -170,25 +170,9 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
         // This must be called first to initialize Observers field.
         await UpdateObserverList();
         await UpdateInitializeDtoType();
-        await InitializeStreamOfThisGAgentAsync();
-    }
-
-    private async Task InitializeStreamOfThisGAgentAsync()
-    {
+        //await InitializeStreamOfThisGAgentAsync();
         var streamOfThisGAgent = GetStream(this.GetGrainId().ToString());
-        var handles = await streamOfThisGAgent.GetAllSubscriptionHandles();
-        if (handles.Count != 0)
-        {
-            foreach (var handle in handles)
-            {
-                await handle.UnsubscribeAsync();
-            }
-        }
-
-        foreach (var observer in Observers.Keys)
-        {
-            await streamOfThisGAgent.SubscribeAsync(observer);
-        }
+        await streamOfThisGAgent.SubscribeAsync(this);
     }
 
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
@@ -254,5 +238,29 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
     {
         var streamId = StreamId.Create(AevatarCoreConstants.StreamNamespace, grainIdString);
         return StreamProvider.GetStream<EventWrapperBase>(streamId);
+    }
+
+    public async Task OnNextAsync(EventWrapperBase item, StreamSequenceToken? token = null)
+    {
+        foreach (var observer in Observers)
+        {
+            await observer.Key.OnNextAsync(item);
+        }
+    }
+
+    public async Task OnCompletedAsync()
+    {
+        foreach (var observer in Observers)
+        {
+            await observer.Key.OnCompletedAsync();
+        }
+    }
+
+    public async Task OnErrorAsync(Exception ex)
+    {
+        foreach (var observer in Observers)
+        {
+            await observer.Key.OnErrorAsync(ex);
+        }
     }
 }
