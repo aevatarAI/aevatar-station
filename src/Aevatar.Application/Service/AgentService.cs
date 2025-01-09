@@ -4,15 +4,16 @@ using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Agents.Atomic;
 using Aevatar.Agents.Atomic.Models;
+using Aevatar.Agents.Combination;
 using Aevatar.Agents.Combination.Models;
-using Aevatar.Agents.Group;
 using Aevatar.Application.Grains.Agents.Atomic;
 using Aevatar.Application.Grains.Agents.Combination;
 using Aevatar.AtomicAgent;
 using Aevatar.CombinationAgent;
-using Aevatar.Core.Abstractions;
+using Aevatar.CQRS.Dto;
 using Aevatar.CQRS.Provider;
 using Microsoft.Extensions.Logging;
+using Nest;
 using Newtonsoft.Json;
 using Orleans;
 using Volo.Abp;
@@ -139,19 +140,25 @@ public class AgentService : ApplicationService, IAgentService
         return resp;
     }
 
-    public async Task<List<AtomicAgentDto>> GetAtomicAgentsAsync(string userAddress)
+    public async Task<List<AtomicAgentDto>> GetAtomicAgentsAsync(string userAddress, int pageIndex, int pageSize)
     {
         if (userAddress.IsNullOrEmpty())
         {
             _logger.LogInformation("GetAgentAsync Invalid userAddress: {userAddress}", userAddress);
             throw new UserFriendlyException("Invalid userAddress");
         }
-        
+
+        if (pageIndex <= 0 || pageSize <= 1)
+        {
+            _logger.LogInformation("GetAgentAsync Invalid pageIndex: {pageIndex} pageSize:{pageSize}", pageIndex, pageSize);
+            throw new UserFriendlyException("Invalid pageIndex pageSize");
+        }
+
         var index = IndexPrefix + nameof(AtomicGAgentState).ToLower() + IndexSuffix;
         var result = await _cqrsProvider.QueryStateAsync(index,
             q => q.Term(t => t.Field("userAddress").Value(userAddress)), 
-            0,
-            10
+            (pageIndex-1)*pageSize,
+            pageSize
         );
         if (result == null)
         {
@@ -404,4 +411,75 @@ public class AgentService : ApplicationService, IAgentService
         await ExcludeFromGroupAsync(combinationData.AgentComponent, validGuid);
         await combinationAgent.DeleteCombinationAsync();
     }
+
+    public async Task<List<CombinationAgentDto>> GetCombinationAgentsAsync(string userAddress, string groupId, int pageIndex, int pageSize)
+    {
+        if (userAddress.IsNullOrEmpty() || groupId.IsNullOrEmpty())
+        {
+            _logger.LogInformation("GetAgentAsync Invalid userAddress: {userAddress} groupId:{groupId}", userAddress, groupId);
+            throw new UserFriendlyException("Invalid userAddress groupId");
+        }
+        if (pageIndex <= 0 || pageSize <= 1)
+        {
+            _logger.LogInformation("GetAgentAsync Invalid pageIndex: {pageIndex} pageSize:{pageSize}", pageIndex, pageSize);
+            throw new UserFriendlyException("Invalid pageIndex pageSize");
+        }
+        
+        var index = IndexPrefix + nameof(CombinationGAgentState).ToLower() + IndexSuffix;
+        var filters = new List<Func<QueryContainerDescriptor<object>, QueryContainer>>();
+        filters.Add(m => m.Term(t => t.Field("userAddress").Value(userAddress)));
+        filters.Add(m => m.Term(t => t.Field("groupId").Value(groupId)));
+
+        var result = await _cqrsProvider.QueryStateAsync(index,
+            q => q.Bool(b => b.Must(filters)),
+            (pageIndex-1)*pageSize,
+            pageSize
+        );
+        if (result == null)
+        {
+            return null;
+        }
+        
+        var combinationGAgentStateDtoList = JsonConvert.DeserializeObject<List<CombinationGAgentStateDto>>(result);
+
+        return combinationGAgentStateDtoList.Select(stateDto => new CombinationAgentDto { Id = stateDto.Id.ToString(), Name = stateDto.Name, AgentComponent = JsonConvert.DeserializeObject<List<string>>(stateDto.AgentComponent) }).ToList();
+    }
+
+    public async Task<Tuple<long, List<AgentGEventIndex>>> GetAgentEventLogsAsync(string agentId, int pageNumber, int pageSize)
+    {
+        if (!Guid.TryParse(agentId, out var validGuid))
+        {
+            _logger.LogInformation("GetAgentAsync Invalid id: {id}", agentId);
+            throw new UserFriendlyException("Invalid id");
+        }
+        var agentIds = await ViewGroupTreeAsync(agentId);
+
+        return await _cqrsProvider.QueryGEventAsync("", agentIds, pageNumber, pageSize);
+    }
+    
+    private async Task<List<string>> ViewGroupTreeAsync(string agentId)
+    {
+        var result = new List<string>();
+        await BuildGroupTreeAsync(agentId, result);
+        return result;
+    }
+
+    private async Task BuildGroupTreeAsync(string agentId, List<string> result)
+    {
+        var gAgent = _clusterClient.GetGrain<ICombinationGAgent>(Guid.Parse(agentId));
+        var childrenAgentIds = await gAgent.GetChildrenAsync();
+        if (childrenAgentIds.IsNullOrEmpty())
+        {
+            return;
+        }
+
+        var childrenIds = childrenAgentIds.Select(s => s.Key.ToString()).ToList();
+        result.AddRange(childrenIds);
+
+        foreach (var childrenId in childrenIds)
+        {
+            await BuildGroupTreeAsync(childrenId, result);
+        }
+    }
+    
 }
