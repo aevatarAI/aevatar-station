@@ -92,8 +92,8 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         var agentGEventIndex = new AgentGEventIndex()
         {
             Id = eventId,
-            GrainId = agentGrainId,//grainId.GetGuidKey(),
-            GrainType = grainType.ToString(),//grainId.GetType().ToString(),
+            GrainId = agentGrainId,
+            GrainType = grainType.ToString(),
             Ctime = DateTime.UtcNow,
             EventJson = JsonConvert.SerializeObject(eventBase)
         };
@@ -104,10 +104,5 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
             AgentGEventIndex = agentGEventIndex
         };
         await _mediator.Send(command);
-    }
-    
-    public Task PublishAsync(GEventBase eventBase, string id)
-    {
-        throw new NotImplementedException();
     }
 }
