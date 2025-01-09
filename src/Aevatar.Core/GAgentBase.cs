@@ -5,22 +5,20 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Orleans.EventSourcing;
 using Orleans.Providers;
-using Orleans.Storage;
 using Orleans.Streams;
 
 namespace Aevatar.Core;
 
-[GAgent]
+[GAgent("base")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
-public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState, TEvent>, IStateGAgent<TState>
+public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState>, IStateGAgent<TState>
     where TState : StateBase, new()
     where TEvent : GEventBase
 {
     protected IStreamProvider StreamProvider => this.GetStreamProvider(AevatarCoreConstants.StreamProvider);
 
     protected readonly ILogger Logger;
-    protected readonly IGrainStorage GrainStorage;
 
     /// <summary>
     /// Observer -> StreamId -> HandleId
@@ -32,7 +30,6 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
     protected GAgentBase(ILogger logger)
     {
         Logger = logger;
-        GrainStorage = ServiceProvider.GetRequiredService<IGrainStorage>();
         EventDispatcher = ServiceProvider.GetService<IEventDispatcher>();
     }
 
@@ -48,26 +45,28 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
             Logger.LogError($"Cannot register GAgent with same GrainId.");
             return;
         }
-        await AddSubscriberAsync(gAgent.GetGrainId());
+
+        await AddChildAsync(gAgent.GetGrainId());
         await gAgent.SubscribeToAsync(this);
         await OnRegisterAgentAsync(guid);
     }
 
     public Task SubscribeToAsync(IGAgent gAgent)
     {
-        return SetSubscriptionAsync(gAgent.GetGrainId());
+        return SetParentAsync(gAgent.GetGrainId());
     }
 
     public async Task UnregisterAsync(IGAgent gAgent)
     {
-        await RemoveSubscriberAsync(gAgent.GetGrainId());
+        await RemoveChildAsync(gAgent.GetGrainId());
         await OnUnregisterAgentAsync(gAgent.GetPrimaryKey());
     }
 
     public async Task<List<Type>?> GetAllSubscribedEventsAsync(bool includeBaseHandlers = false)
     {
         var eventHandlerMethods = GetEventHandlerMethods();
-        eventHandlerMethods = eventHandlerMethods.Where(m => m.Name != nameof(ForwardEventAsync));
+        eventHandlerMethods = eventHandlerMethods.Where(m =>
+            m.Name != nameof(ForwardEventAsync) && m.Name != AevatarGAgentConstants.InitializeDefaultMethodName);
         var handlingTypes = eventHandlerMethods
             .Select(m => m.GetParameters().First().ParameterType);
         if (!includeBaseHandlers)
@@ -78,16 +77,19 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
         return handlingTypes.ToList();
     }
 
-    public async Task<List<GrainId>> GetSubscribersAsync()
+    public async Task<List<GrainId>> GetChildrenAsync()
     {
-        await LoadSubscribersAsync();
-        return _subscribers.State;
+        return State.Children;
     }
 
-    public async Task<GrainId> GetSubscriptionAsync()
+    public async Task<GrainId> GetParentAsync()
     {
-        await LoadSubscriptionAsync();
-        return _subscription.State;
+        return State.Parent;
+    }
+
+    public virtual Task<Type?> GetInitializeDtoTypeAsync()
+    {
+        return Task.FromResult(State.InitializeDtoType);
     }
 
     [EventHandler]
@@ -99,9 +101,7 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
 
     private async Task<SubscribedEventListEvent> GetGroupSubscribedEventListEvent()
     {
-        await LoadSubscribersAsync();
-
-        var gAgentList = _subscribers.State.Select(grainId => GrainFactory.GetGrain<IGAgent>(grainId)).ToList();
+        var gAgentList = State.Children.Select(grainId => GrainFactory.GetGrain<IGAgent>(grainId)).ToList();
 
         if (gAgentList.IsNullOrEmpty())
         {
@@ -169,11 +169,8 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
     {
         // This must be called first to initialize Observers field.
         await UpdateObserverList();
-
+        await UpdateInitializeDtoType();
         await InitializeStreamOfThisGAgentAsync();
-
-        //_stateSaveTimer =
-        // this.RegisterGrainTimer(SaveSubscriberAsync, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
     }
 
     private async Task InitializeStreamOfThisGAgentAsync()
@@ -196,8 +193,6 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
 
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
-        _stateSaveTimer?.Dispose();
-        await SaveSubscriberAsync(cancellationToken);
         await base.OnDeactivateAsync(reason, cancellationToken);
     }
 
@@ -220,13 +215,13 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
     {
         await HandleStateChangedAsync();
         //TODO:  need optimize use kafka,ensure Es written successfully
-        if(EventDispatcher != null)
+        if (EventDispatcher != null)
         {
             await EventDispatcher.PublishAsync(State, this.GetGrainId().ToString());
         }
     }
-    
-    protected sealed override async void RaiseEvent<TEvent>(TEvent @event)
+
+    protected sealed override async void RaiseEvent<T>(T @event)
     {
         Logger.LogInformation("base raiseEvent info:{info}", JsonConvert.SerializeObject(@event));
         base.RaiseEvent(@event);
@@ -238,18 +233,21 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
             }
         }, TaskContinuationOptions.OnlyOnFaulted);
     }
-    private async Task InternalRaiseEventAsync(TEvent @event)
+
+    private async Task InternalRaiseEventAsync<T>(T @event)
     {
         await HandleRaiseEventAsync();
         //TODO:  need optimize use kafka,ensure Es written successfully
+        var gEvent = @event as GEventBase;
         if (EventDispatcher != null)
         {
-            await EventDispatcher.PublishAsync(@event, @event.Id.ToString());
+            await EventDispatcher.PublishAsync(gEvent!.Id, this.GetGrainId(), gEvent);
         }
     }
+
     protected virtual async Task HandleRaiseEventAsync()
     {
-        
+
     }
 
     private IAsyncStream<EventWrapperBase> GetStream(string grainIdString)

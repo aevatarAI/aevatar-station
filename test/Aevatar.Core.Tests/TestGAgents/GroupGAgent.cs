@@ -1,13 +1,12 @@
+using Aevatar.Core.Abstractions;
 using Aevatar.Core.Tests.TestGEvents;
 using Aevatar.Core.Tests.TestStates;
 using Microsoft.Extensions.Logging;
-using Orleans.Providers;
 
 namespace Aevatar.Core.Tests.TestGAgents;
 
-[StorageProvider(ProviderName = "PubSubStore")]
-[LogConsistencyProvider(ProviderName = "LogStorage")]
-public class GroupGAgent : GAgentBase<GroupAgentState, GroupGEvent>
+[GAgent("group", "test")]
+public class GroupGAgent : GAgentBase<GroupGAgentState, GroupGEvent>
 {
     public GroupGAgent(ILogger<GroupGAgent> logger) : base(logger)
     {
@@ -20,18 +19,18 @@ public class GroupGAgent : GAgentBase<GroupAgentState, GroupGEvent>
 
     protected override Task OnRegisterAgentAsync(Guid agentGuid)
     {
-        ++State.RegisteredAgents;
+        ++State.RegisteredGAgents;
         return Task.CompletedTask;
     }
 
     protected override Task OnUnregisterAgentAsync(Guid agentGuid)
     {
-        --State.RegisteredAgents;
+        --State.RegisteredGAgents;
         return Task.CompletedTask;
     }
     
     protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)
     {
-        State.RegisteredAgents = 0;
+        State.RegisteredGAgents = 0;
     }
 }

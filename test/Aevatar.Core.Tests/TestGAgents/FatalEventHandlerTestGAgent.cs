@@ -12,7 +12,7 @@ public class FatalEventHandlerTestGAgentState
 
 public class FatalEventHandlerTestGEvent : GEventBase;
 
-[GAgent]
+[GAgent("fatalEventHandlerTest", "test")]
 public class FatalEventHandlerTestGAgent : GAgentBase<EventHandlerTestGAgentState, EventHandlerTestGEvent>
 {
     public FatalEventHandlerTestGAgent(ILogger logger) : base(logger)
