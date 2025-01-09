@@ -1,7 +1,9 @@
 using System.Net.Http.Json;
+using Aevatar.AtomicAgent;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Domain.Grains.Subscription;
+using Aevatar.Subscription;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Orleans.Providers;
@@ -61,7 +63,7 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
                 eventPushRequest.EventId = eventWrapper.EventId;
                 eventPushRequest.EventType = eventWrapper.Event.GetType().Name;
                 eventPushRequest.Payload = JsonConvert.SerializeObject(eventWrapper.Event);
-                eventPushRequest.AtomicAgent = new AtomicAgent()
+                eventPushRequest.AtomicAgent = new AtomicAgentDto()
                 {
                     //todo query agent
                 };
