@@ -12,7 +12,7 @@ namespace Aevatar.Core;
 [GAgent("base")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
-public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState>, IStateGAgent<TState>
+public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState>, IStateGAgent<TState>, IAsyncObserver<EventWrapperBase>
     where TState : StateBase, new()
     where TEvent : GEventBase
 {
@@ -20,10 +20,7 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
 
     protected readonly ILogger Logger;
 
-    /// <summary>
-    /// Observer -> StreamId -> HandleId
-    /// </summary>
-    private readonly Dictionary<EventWrapperBaseAsyncObserver, Dictionary<StreamId, Guid>> Observers = new();
+    private readonly List<EventWrapperBaseAsyncObserver> _observers = [];
 
     private IEventDispatcher? EventDispatcher { get; set; }
 
@@ -170,24 +167,18 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
         // This must be called first to initialize Observers field.
         await UpdateObserverList();
         await UpdateInitializeDtoType();
-        await InitializeStreamOfThisGAgentAsync();
-    }
-
-    private async Task InitializeStreamOfThisGAgentAsync()
-    {
         var streamOfThisGAgent = GetStream(this.GetGrainId().ToString());
         var handles = await streamOfThisGAgent.GetAllSubscriptionHandles();
-        if (handles.Count != 0)
+        if (handles.Count > 0)
         {
             foreach (var handle in handles)
             {
-                await handle.UnsubscribeAsync();
+                await handle.ResumeAsync(this);
             }
         }
-
-        foreach (var observer in Observers.Keys)
+        else
         {
-            await streamOfThisGAgent.SubscribeAsync(observer);
+            await streamOfThisGAgent.SubscribeAsync(this);
         }
     }
 
@@ -254,5 +245,29 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
     {
         var streamId = StreamId.Create(AevatarCoreConstants.StreamNamespace, grainIdString);
         return StreamProvider.GetStream<EventWrapperBase>(streamId);
+    }
+
+    public async Task OnNextAsync(EventWrapperBase item, StreamSequenceToken? token = null)
+    {
+        foreach (var observer in _observers)
+        {
+            await observer.OnNextAsync(item);
+        }
+    }
+
+    public async Task OnCompletedAsync()
+    {
+        foreach (var observer in _observers)
+        {
+            await observer.OnCompletedAsync();
+        }
+    }
+
+    public async Task OnErrorAsync(Exception ex)
+    {
+        foreach (var observer in _observers)
+        {
+            await observer.OnErrorAsync(ex);
+        }
     }
 }
