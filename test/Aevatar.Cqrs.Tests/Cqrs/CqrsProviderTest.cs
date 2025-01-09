@@ -89,8 +89,11 @@ public class CqrsProviderTest : AevatarApplicationTestBase
     {
         var eventId1 = Guid.NewGuid();
         var agentGrainId = Guid.NewGuid();
+       
+       var grainType = GrainType.Create(AgentType);
+       var primaryKey = IdSpan.Create(agentGrainId.ToString());
 
-
+        var grainId = GrainId.Create(grainType,primaryKey);
         //save gEvent index
         var cqrsTestCreateAgentGEvent = new CqrsTestCreateAgentGEvent
         {
@@ -101,7 +104,7 @@ public class CqrsProviderTest : AevatarApplicationTestBase
             BusinessAgentId = agentGrainId.ToString(),
             Properties = "create"
         };
-        await _cqrsProvider.PublishAsync(eventId1, agentGrainId, AgentType, cqrsTestCreateAgentGEvent);
+        await _cqrsProvider.PublishAsync(eventId1, grainId, cqrsTestCreateAgentGEvent);
 
         await Task.Delay(1000);
         //query gEvent index query by eventId
@@ -115,7 +118,7 @@ public class CqrsProviderTest : AevatarApplicationTestBase
         //query gEvent index query by grainId
         var eventId2 = Guid.NewGuid();
         cqrsTestCreateAgentGEvent.UserAddress = User2Address;
-        await _cqrsProvider.PublishAsync(eventId2, agentGrainId, AgentType, cqrsTestCreateAgentGEvent);
+        await _cqrsProvider.PublishAsync(eventId2, grainId, cqrsTestCreateAgentGEvent);
         await Task.Delay(1000);
 
         var tupleResult = await _cqrsProvider.QueryGEventAsync("", new List<string>(){agentGrainId.ToString()}, 1, 10);

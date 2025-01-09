@@ -6,6 +6,7 @@ using Aevatar.CQRS.Dto;
 using MediatR;
 using Nest;
 using Newtonsoft.Json;
+using Orleans.Runtime;
 using Volo.Abp.DependencyInjection;
 
 namespace Aevatar.CQRS.Provider;
@@ -83,13 +84,16 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         return tuple;
     }
 
-    public async Task PublishAsync(Guid eventId, Guid GrainId, string GrainType, GEventBase eventBase)
+    public async Task PublishAsync(Guid eventId, GrainId grainId, GEventBase eventBase)
     {
+        var agentGrainId = Guid.Parse(grainId.Key.ToString());
+        var grainType = grainId.Type;
+        
         var agentGEventIndex = new AgentGEventIndex()
         {
             Id = eventId,
-            GrainId = GrainId,
-            GrainType = GrainType,
+            GrainId = agentGrainId,//grainId.GetGuidKey(),
+            GrainType = grainType.ToString(),//grainId.GetType().ToString(),
             Ctime = DateTime.UtcNow,
             EventJson = JsonConvert.SerializeObject(eventBase)
         };
