@@ -41,6 +41,7 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
     }
     public async Task<List<EventTypeDto>> GetAvailableEventsAsync(string agentId)
     {
+        // todo
         return new List<EventTypeDto>(){};
     }
 

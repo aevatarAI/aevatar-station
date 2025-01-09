@@ -56,7 +56,7 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
                                JsonConvert.SerializeObject(eventWrapper));
         if (State.Status.IsNullOrEmpty() && State.Status == "active")
         {
-            if (State.EventTypes.Contains( eventWrapper.GetType().Name))
+            if (State.EventTypes.IsNullOrEmpty() || State.EventTypes.Contains( eventWrapper.GetType().Name))
             {
                 var eventPushRequest = new EventPushRequest();
                 eventPushRequest.AgentId = State.AgentId;
@@ -65,7 +65,7 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
                 eventPushRequest.Payload = JsonConvert.SerializeObject(eventWrapper.Event);
                 eventPushRequest.AtomicAgent = new AtomicAgentDto()
                 {
-                    //todo query agent
+                    //todo query AtomicAgent
                 };
                 using var httpClient = new HttpClient();
                 await httpClient.PostAsJsonAsync(State.CallbackUrl, eventPushRequest);
