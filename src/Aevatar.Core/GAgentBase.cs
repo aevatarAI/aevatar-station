@@ -168,17 +168,22 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
         await UpdateObserverList();
         await UpdateInitializeDtoType();
         var streamOfThisGAgent = GetStream(this.GetGrainId().ToString());
-        await streamOfThisGAgent.SubscribeAsync(this);
+        var handles = await streamOfThisGAgent.GetAllSubscriptionHandles();
+        if (handles.Count > 0)
+        {
+            foreach (var handle in handles)
+            {
+                await handle.ResumeAsync(this);
+            }
+        }
+        else
+        {
+            await streamOfThisGAgent.SubscribeAsync(this);
+        }
     }
 
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
-        var streamOfThisGAgent = GetStream(this.GetGrainId().ToString());
-        var handles = await streamOfThisGAgent.GetAllSubscriptionHandles();
-        foreach (var handle in handles)
-        {
-            await handle.UnsubscribeAsync();
-        }
         await base.OnDeactivateAsync(reason, cancellationToken);
     }
 
