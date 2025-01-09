@@ -26,7 +26,7 @@ public abstract class AIGAgentBase<TState, TEvent> : GAgentBase<TState, TEvent>,
         _brainFactory = ServiceProvider.GetRequiredService<IBrainFactory>();
     }
 
-    public Task<bool> InitializeAsync(InitializeDto initializeDto)
+    public async Task<bool> InitializeAsync(InitializeDto initializeDto)
     {
         //save state
         
@@ -35,15 +35,18 @@ public abstract class AIGAgentBase<TState, TEvent> : GAgentBase<TState, TEvent>,
         if(_brain == null)
         {
             Logger.LogError("Failed to initialize brain.");
-            return Task.FromResult(false);
+            return false;
         }
         
-        var result = _brain.Initialize(
-            this.GetGrainId().ToString(),
+        // remove slash from this.GetGrainId().ToString() so that it can be used as the collection name pertaining to the grain
+        var grainId = this.GetGrainId().ToString().Replace("/", "");
+        
+        var result = await _brain.Initialize(
+            grainId,
             initializeDto.Instructions, 
             initializeDto.Files.Select(f => new File(){Content = f.Content, Type = f.Type, Name = f.Name}).ToList());
         
-        return Task.FromResult(result);
+        return result;
     }
 
     protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)

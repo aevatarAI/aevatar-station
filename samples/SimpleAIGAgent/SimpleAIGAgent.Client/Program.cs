@@ -2,9 +2,9 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using SimpleAIGAgent.Client.Options;
 using SimpleAIGAgent.Grains.Agents.Chat;
-using SimpleAIGAgent.Grains.Agents.Events;
-using SimpleAIGAgent.Grains.Agents.Publisher;
 
 IHostBuilder builder = Host.CreateDefaultBuilder(args)
     .UseOrleansClient(client =>
@@ -12,37 +12,97 @@ IHostBuilder builder = Host.CreateDefaultBuilder(args)
         client.UseLocalhostClustering()
             .AddMemoryStreams("InMemoryStreamProvider");
     })
+    .ConfigureServices((context, services) =>
+    {
+        services.Configure<KnowledgeConfig>(context.Configuration.GetSection("Knowledge"));
+    })
     .ConfigureLogging(logging => logging.AddConsole())
     .UseConsoleLifetime();
 
 using IHost host = builder.Build();
 await host.StartAsync();
 
+var knowledgeConfig = host.Services.GetRequiredService<IOptions<KnowledgeConfig>>().Value;
 IClusterClient client = host.Services.GetRequiredService<IClusterClient>();
 
-// IHello friend = client.GetGrain<IHello>(0);
-// string response = await friend.SayHello("Hi friend!");
+List<FileDto> fileDtoList = [];
+// load a pdf files into byte arrays
+if (knowledgeConfig.PdfFilePaths != null)
+{
+    foreach (var pdfFilePath in knowledgeConfig.PdfFilePaths)
+    {
+        var pdfBytes = File.ReadAllBytes(pdfFilePath);
+        fileDtoList.Add(new FileDto()
+        {
+            Content = pdfBytes,
+            Type = "pdf",
+            Name = Path.GetFileName(pdfFilePath)
+        });
+    }
+}
 
-var chatAgentId = Guid.NewGuid();
+//var chatAgentId = Guid.NewGuid();
+var chatAgentId = GrainId.Parse("chataigagent/792b1cb87bad4f759fcde3fe51ff55bc");
 var chatAgent = client.GetGrain<IChatAIGAgent>(chatAgentId);
 await chatAgent.InitializeAsync(new InitializeDto()
 {
-    Files = [],
-    Instructions = "{{prompt}}",
+    Files = fileDtoList,
+    Instructions = @"
+            Please use this information to answer the question:
+            {{#with (SearchPlugin-GetTextSearchResults prompt)}}
+              {{#each this}}
+                Name: {{Name}}
+                Value: {{Value}}
+                Link: {{Link}}
+                -----------------
+              {{/each}}
+            {{/with}}
+
+            Include citations to the relevant information where it is referenced in the response.
+
+            Question: {{prompt}}
+            ",
     LLM = "AzureOpenAI"
 });
 
-var publisher = client.GetGrain<IPublishingGAgent>(Guid.NewGuid());
-await chatAgent.RegisterAsync(publisher);
-await publisher.PublishEventAsync(new ChatEvent()
+Console.ForegroundColor = ConsoleColor.Green;
+Console.WriteLine("Assistant > Press enter with no prompt to exit.");
+
+var appShutdownCancellationTokenSource = new CancellationTokenSource();
+var cancellationToken = appShutdownCancellationTokenSource.Token;
+
+while (!cancellationToken.IsCancellationRequested)
 {
-    Message = "Tell me about Einstein's theory of relativity."
-});
+    // Prompt the user for a question.
+    Console.ForegroundColor = ConsoleColor.Green;
+    Console.WriteLine("Assistant > What would you like to know?");
 
-Console.WriteLine($"""
-                   Press any key to exit...
-                   """);
+    // Read the user question.
+    Console.ForegroundColor = ConsoleColor.White;
+    Console.Write("User > ");
+    var question = Console.ReadLine();
 
-Console.ReadKey();
+    // Exit the application if the user didn't type anything.
+    if (string.IsNullOrWhiteSpace(question))
+    {
+        appShutdownCancellationTokenSource.Cancel();
+        break;
+    }
+
+    var response = await chatAgent.ChatAsync(question);
+
+    // Stream the LLM response to the console with error handling.
+    Console.ForegroundColor = ConsoleColor.Green;
+    Console.Write($"\nAssistant > {response}");
+}
+
+//chatAgent.ChatAsync("Tell me more about aelf")
+
+// var publisher = client.GetGrain<IPublishingGAgent>(Guid.NewGuid());
+// await chatAgent.RegisterAsync(publisher);
+// await publisher.PublishEventAsync(new ChatEvent()
+// {
+//     Message = "Tell me about Einstein's theory of relativity."
+// });
 
 await host.StopAsync();

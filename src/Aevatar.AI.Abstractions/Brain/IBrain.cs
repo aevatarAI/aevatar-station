@@ -6,6 +6,6 @@ namespace Aevatar.AI.Brain;
 
 public interface IBrain
 {
-    bool Initialize(string id, string promptTemplate, List<File> files);
+    Task<bool> Initialize(string id, string promptTemplate, List<File> files);
     Task<string?> InvokePromptAsync(string prompt);
 }

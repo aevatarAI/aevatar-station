@@ -58,7 +58,8 @@ internal class EmbeddedPftDataLoader<TKey>(
                     Key = uniqueKeyGenerator.GenerateKey(),
                     Text = content.Text,
                     ReferenceDescription = $"{file.Name}#page={content.PageNumber}",
-                    ReferenceLink = $"{new Uri(file.Name).AbsoluteUri}#page={content.PageNumber}",
+                    //ReferenceLink = $"{new Uri(file.Name).AbsoluteUri}#page={content.PageNumber}",
+                    ReferenceLink = $"{file.Name}#page={content.PageNumber}",
                     TextEmbedding = await GenerateEmbeddingsWithRetryAsync(textEmbeddingGenerationService, content.Text!,
                         cancellationToken: cancellationToken).ConfigureAwait(false)
                 });

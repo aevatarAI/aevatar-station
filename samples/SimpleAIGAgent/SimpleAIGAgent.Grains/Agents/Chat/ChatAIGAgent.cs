@@ -7,6 +7,7 @@ namespace SimpleAIGAgent.Grains.Agents.Chat;
 
 public interface IChatAIGAgent : IAIGAgent, IGAgent
 {
+    Task<string> ChatAsync(string message);
 }
 
 public class ChatAIGAgent : AIGAgentBase<ChatAIGState, ChatAIEvent>, IChatAIGAgent
@@ -19,7 +20,12 @@ public class ChatAIGAgent : AIGAgentBase<ChatAIGState, ChatAIEvent>, IChatAIGAge
     {
         return Task.FromResult("Agent for chatting with user.");
     }
-    
+
+    public async Task<string> ChatAsync(string message)
+    {
+        return await InvokePromptAsync(message) ?? string.Empty;
+    }
+
     [EventHandler]
     public async Task OnChatAIEvent(ChatEvent @event)
     {

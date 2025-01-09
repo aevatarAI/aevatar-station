@@ -3,9 +3,12 @@ using Orleans;
 namespace Aevatar.AI.Dtos;
 
 [GenerateSerializer]
-public struct FileDto
-{
-    [Id(0)] public byte[] Content;
-    [Id(1)] public string Type;
-    [Id(2)] public string Name;
+public class FileDto
+{ 
+    [Id(0)]
+    public byte[] Content { get; set; }
+    [Id(1)]
+    public string Type { get; set; }
+    [Id(2)]
+    public string Name { get; set; }
 }

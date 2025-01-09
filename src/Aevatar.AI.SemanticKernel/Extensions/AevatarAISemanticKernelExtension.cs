@@ -2,6 +2,8 @@ using System;
 using Aevatar.AI.Brain;
 using Aevatar.AI.BrainFactory;
 using Aevatar.AI.Common;
+using Aevatar.AI.EmbeddedDataLoader;
+using Aevatar.AI.EmbeddedDataLoader.EmbeddedPdf;
 using Aevatar.AI.Embeddings;
 using Aevatar.AI.KernelBuilderFactory;
 using Aevatar.AI.Options;
@@ -52,8 +54,6 @@ public static class AevatarAISemanticKernelExtension
     public static IServiceCollection AddQdrantVectorStore(this IServiceCollection services)
     {
         services.AddKeyedTransient<IVectorStore, QdrantVectorStore>(QdrantConfig.ConfigSectionName);
-        
-        services.AddSingleton(new UniqueKeyGenerator<Guid>(() => Guid.NewGuid()));
         
         // Register Qdrant configuration options
         // services.AddOptions<QdrantConfig>()

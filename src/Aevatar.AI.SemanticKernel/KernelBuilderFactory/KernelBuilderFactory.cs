@@ -1,4 +1,6 @@
 using System;
+using Aevatar.AI.EmbeddedDataLoader;
+using Aevatar.AI.EmbeddedDataLoader.EmbeddedPdf;
 using Aevatar.AI.Embeddings;
 using Aevatar.AI.Options;
 using Aevatar.AI.VectorStores;

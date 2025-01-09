@@ -16,4 +16,16 @@
     <ItemGroup>
         <ProjectReference Include="..\..\SimpleAIGAgent\SimpleAIGAgent.Grains\SimpleAIGAgent.Grains.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+        <None Update="appsettings.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Update="aelf_whitepaper_v2.0.pdf">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
 </Project>

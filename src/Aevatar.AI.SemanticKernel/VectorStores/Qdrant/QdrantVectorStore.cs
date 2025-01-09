@@ -1,4 +1,7 @@
 using System;
+using Aevatar.AI.Common;
+using Aevatar.AI.EmbeddedDataLoader;
+using Aevatar.AI.EmbeddedDataLoader.EmbeddedPdf;
 using Aevatar.AI.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
@@ -22,9 +25,14 @@ internal class QdrantVectorStore : IVectorStore
         kernelBuilder.Services.AddSingleton(_qdrantClient);
         
         kernelBuilder.AddQdrantVectorStoreRecordCollection<Guid, TextSnippet<Guid>>(
-            collectionName);
+            collectionName: collectionName);
         
         kernelBuilder.Services.AddSingleton<IVectorStoreCollection, QdrantVectorStoreCollection>();
+        
+        //add the embedded data loaders here
+        kernelBuilder.Services.AddKeyedTransient<IEmbeddedDataLoader, EmbeddedPftDataLoader<Guid>>("pdf");
+        
+        kernelBuilder.Services.AddSingleton(new UniqueKeyGenerator<Guid>(() => Guid.NewGuid()));
     }
 
     public void RegisterVectorStoreTextSearch(IKernelBuilder kernelBuilder)
