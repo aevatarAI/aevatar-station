@@ -55,17 +55,6 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
         Logger.LogInformation(
             $"{this.GetGrainId().ToString()} is sending event to self: {JsonConvert.SerializeObject(eventWrapper)}");
         var streamOfThisGAgent = GetStream(this.GetGrainId().ToString());
-        var handles = await streamOfThisGAgent.GetAllSubscriptionHandles();
-        foreach (var handle in handles)
-        {
-            await handle.UnsubscribeAsync();
-        }
-
-        foreach (var observer in Observers.Keys)
-        {
-            await streamOfThisGAgent.SubscribeAsync(observer);
-        }
-
         await streamOfThisGAgent.OnNextAsync(eventWrapper);
     }
 
