@@ -20,10 +20,7 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
 
     protected readonly ILogger Logger;
 
-    /// <summary>
-    /// Observer -> StreamId -> HandleId
-    /// </summary>
-    private readonly Dictionary<EventWrapperBaseAsyncObserver, Dictionary<StreamId, Guid>> Observers = new();
+    private readonly List<EventWrapperBaseAsyncObserver> _observers = [];
 
     private IEventDispatcher? EventDispatcher { get; set; }
 
@@ -170,13 +167,18 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
         // This must be called first to initialize Observers field.
         await UpdateObserverList();
         await UpdateInitializeDtoType();
-        //await InitializeStreamOfThisGAgentAsync();
         var streamOfThisGAgent = GetStream(this.GetGrainId().ToString());
         await streamOfThisGAgent.SubscribeAsync(this);
     }
 
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
+        var streamOfThisGAgent = GetStream(this.GetGrainId().ToString());
+        var handles = await streamOfThisGAgent.GetAllSubscriptionHandles();
+        foreach (var handle in handles)
+        {
+            await handle.UnsubscribeAsync();
+        }
         await base.OnDeactivateAsync(reason, cancellationToken);
     }
 
@@ -242,25 +244,25 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
 
     public async Task OnNextAsync(EventWrapperBase item, StreamSequenceToken? token = null)
     {
-        foreach (var observer in Observers)
+        foreach (var observer in _observers)
         {
-            await observer.Key.OnNextAsync(item);
+            await observer.OnNextAsync(item);
         }
     }
 
     public async Task OnCompletedAsync()
     {
-        foreach (var observer in Observers)
+        foreach (var observer in _observers)
         {
-            await observer.Key.OnCompletedAsync();
+            await observer.OnCompletedAsync();
         }
     }
 
     public async Task OnErrorAsync(Exception ex)
     {
-        foreach (var observer in Observers)
+        foreach (var observer in _observers)
         {
-            await observer.Key.OnErrorAsync(ex);
+            await observer.OnErrorAsync(ex);
         }
     }
 }

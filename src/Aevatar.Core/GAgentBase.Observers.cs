@@ -57,7 +57,7 @@ public abstract partial class GAgentBase<TState, TEvent>
                 }
             });
 
-            Observers.Add(observer, new Dictionary<StreamId, Guid>());
+            _observers.Add(observer);
         }
 
         return Task.CompletedTask;
