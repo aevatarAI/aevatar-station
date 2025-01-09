@@ -1,6 +1,6 @@
 using System;
 
-namespace Aevatar.Dto;
+namespace Aevatar.Agents.Atomic.Models;
 
 public abstract class BaseStateDto
 {

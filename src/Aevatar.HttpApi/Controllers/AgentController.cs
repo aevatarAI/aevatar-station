@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.AtomicAgent;
 using Aevatar.CombinationAgent;
@@ -85,6 +86,13 @@ public class AgentController : AevatarController
     {
         _logger.LogInformation("Get Combination: {agent}", id);
         var agentDto = await _agentService.GetCombinationAsync(id);
+        return agentDto;
+    }
+    [HttpGet("/atomic-agents")]
+    public async Task<List<AtomicAgentDto>> GetAgentListByUser(string userAddress)
+    {
+        _logger.LogInformation("Get Atomic-Agent list: {address}", userAddress);
+        var agentDto = await _agentService.GetAtomicAgentsAsync(userAddress);
         return agentDto;
     }
 }

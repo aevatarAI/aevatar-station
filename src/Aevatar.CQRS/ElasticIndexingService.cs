@@ -16,6 +16,7 @@ public class ElasticIndexingService : IIndexingService
     private readonly IElasticClient _elasticClient;
     private readonly ILogger<ElasticIndexingService> _logger;
     private const string IndexSuffix = "index";
+    private const string IndexPrefix = "aevatar";
     private const string CTime = "cTime";
     private const int DefaultSkip = 0;
     private const int DefaultLimit = 1000;
@@ -28,7 +29,7 @@ public class ElasticIndexingService : IIndexingService
 
     public  void CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase
     {
-        var indexName = stateBase.GetType().Name.ToLower() + IndexSuffix;
+        var indexName = IndexPrefix + stateBase.GetType().Name.ToLower() + IndexSuffix;
         var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
         if (indexExistsResponse.Exists)
         {
@@ -103,7 +104,7 @@ public class ElasticIndexingService : IIndexingService
 
     public async Task SaveOrUpdateStateIndexAsync<T>(string id, T stateBase) where T : StateBase
     {
-        var indexName = stateBase.GetType().Name.ToLower() + IndexSuffix;
+        var indexName = IndexPrefix + stateBase.GetType().Name.ToLower() + IndexSuffix;
         var properties = stateBase.GetType().GetProperties();
         var document = new Dictionary<string, object>();
 

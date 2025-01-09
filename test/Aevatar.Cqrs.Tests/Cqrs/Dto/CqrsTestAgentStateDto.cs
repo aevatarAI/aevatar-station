@@ -1,7 +1,6 @@
-using Aevatar.Dto;
+using Aevatar.Agents.Atomic.Models;
 
 namespace Aevatar.GAgent.Dto;
-[GenerateSerializer]
 public class CqrsTestAgentStateDto :BaseStateDto
 {
     public  string Id { get; set; }

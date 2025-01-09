@@ -15,6 +15,8 @@ public class CqrsProviderTest : AevatarApplicationTestBase
     private const string User1Address = "2HxX36oXZS89Jvz7kCeUyuWWDXLTiNRkAzfx3EuXq4KSSkH62W";
     private const string User2Address = "2KxX36oXZS89Jvz7kCeUyuWWDXLTiNRkAzfx3EuXq4KSSkH62S";
     private const string IndexSuffix = "index";
+    private const string IndexPrefix = "aevatar";
+
     public CqrsProviderTest(ITestOutputHelper output)
     {
         _clusterClient = GetRequiredService<IClusterClient>();
@@ -40,7 +42,7 @@ public class CqrsProviderTest : AevatarApplicationTestBase
         await _cqrsProvider.PublishAsync(cqrsTestAgentState,grainId.ToString());
         
         //query state index query by eventId
-        var indexName = nameof(CqrsTestAgentState).ToLower() + IndexSuffix;
+        var indexName = IndexPrefix + nameof(CqrsTestAgentState).ToLower() + IndexSuffix;
         await Task.Delay(1000);
 
         var result = await _cqrsProvider.QueryStateAsync(indexName,
