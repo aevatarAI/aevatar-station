@@ -19,7 +19,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
                 State.Parent=setParentEvent.Parent;
                 break;
             case InnerSetInitializeDtoTypeStateLogEvent setInnerEvent:
-                State.InitializeDtoType = setInnerEvent.InitializeDtoType;
+                State.InitializationEventType = setInnerEvent.InitializeDtoType;
                 break;
         }
         base.TransitionState(state, @event);

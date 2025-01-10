@@ -93,9 +93,9 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent> : Journ
         return State.Parent;
     }
 
-    public virtual Task<Type?> GetInitializeDtoTypeAsync()
+    public virtual Task<Type?> GetInitializationTypeAsync()
     {
-        return Task.FromResult(State.InitializeDtoType);
+        return Task.FromResult(State.InitializationEventType);
     }
 
     [EventHandler]
@@ -176,7 +176,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent> : Journ
     {
         // This must be called first to initialize Observers field.
         await UpdateObserverList();
-        await UpdateInitializeDtoType();
+        await UpdateInitializationEventType();
         var streamOfThisGAgent = GetStream(this.GetGrainId().ToString());
         var handles = await streamOfThisGAgent.GetAllSubscriptionHandles();
         if (handles.Count > 0)
