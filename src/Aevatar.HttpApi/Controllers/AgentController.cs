@@ -99,7 +99,7 @@ public class AgentController : AevatarController
     }
     
     [HttpGet("/combination-agents")]
-    public async Task<List<CombinationAgentDto>> GetCombinationAgentList(string userAddress, string groupId, int pageIndex, int pageSize)
+    public async Task<List<CombinationAgentDto>> GetCombinationAgentList(string userAddress, string? groupId, int pageIndex, int pageSize)
     {
         _logger.LogInformation("Get Combination-Agent list: {address} {groupId} {pageIndex} {pageSize}", userAddress,groupId, pageIndex,pageSize);
         var agentDtoList = await _agentService.GetCombinationAgentsAsync(userAddress, groupId, pageIndex, pageSize);

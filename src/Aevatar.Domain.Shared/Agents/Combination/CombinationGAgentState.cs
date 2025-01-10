@@ -20,7 +20,7 @@ public class CombinationGAgentState : GroupAgentState
     
     public void Apply(CombineAgentGEvent combineAgentGEvent)
     {
-        Id = combineAgentGEvent.Id;
+        Id = combineAgentGEvent.AtomicGAgentId;
         Name = combineAgentGEvent.Name;
         GroupId = combineAgentGEvent.GroupId;
         UserAddress = combineAgentGEvent.UserAddress;

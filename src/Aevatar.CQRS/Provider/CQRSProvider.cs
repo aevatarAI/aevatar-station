@@ -22,9 +22,11 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
 
     public async Task PublishAsync(StateBase state, string id)
     {
+        var grainId = GrainId.Parse(id);
+
         var command = new SaveStateCommand
         {
-            Id = id,
+            Id = grainId.GetGuidKey().ToString(),
             State = state
         };
         await _mediator.Send(command);
@@ -90,7 +92,10 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
     {
         var agentGrainId = Guid.Parse(grainId.Key.ToString());
         var grainType = grainId.Type;
-
+        if (eventId == Guid.Empty)
+        {
+            eventId = Guid.NewGuid();
+        }
         var agentGEventIndex = new AgentGEventIndex()
         {
             Id = eventId,

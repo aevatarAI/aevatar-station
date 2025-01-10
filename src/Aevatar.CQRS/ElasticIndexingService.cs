@@ -126,7 +126,7 @@ public class ElasticIndexingService : IIndexingService
             }
         }
 
-        document.Add(CTime, DateTime.Now);
+        document.Add(CTime, DateTime.UtcNow);
 
         var response = await _elasticClient.IndexAsync(document, i => i
             .Index(indexName)
@@ -268,7 +268,7 @@ public class ElasticIndexingService : IIndexingService
             }
         }
 
-        document.Add(CTime, DateTime.Now);
+        document.Add(CTime, DateTime.UtcNow);
 
         var response = await _elasticClient.IndexAsync(document, i => i
             .Index(indexName)

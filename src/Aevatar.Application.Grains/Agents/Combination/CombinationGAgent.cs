@@ -32,7 +32,8 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
         _logger.LogInformation("CombineAgentAsync");
         RaiseEvent(new CombineAgentGEvent()
         {
-            Id = this.GetPrimaryKey(),
+            Id = Guid.NewGuid(),
+            AtomicGAgentId = this.GetPrimaryKey(),
             UserAddress = data.UserAddress,
             Name = data.Name,
             GroupId = data.GroupId,

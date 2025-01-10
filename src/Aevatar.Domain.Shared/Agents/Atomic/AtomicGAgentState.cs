@@ -17,7 +17,7 @@ public class AtomicGAgentState : StateBase
     
     public void Apply(CreateAgentGEvent createAgentGEvent)
     {
-        Id = createAgentGEvent.Id;
+        Id = createAgentGEvent.AtomicGAgentId;
         Properties = createAgentGEvent.Properties;
         UserAddress = createAgentGEvent.UserAddress;
         Type = createAgentGEvent.Type;
