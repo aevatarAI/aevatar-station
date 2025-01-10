@@ -63,7 +63,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
         return Task.CompletedTask;
     }
 
-    private Task UpdateInitializeDtoType()
+    private Task UpdateInitializationEventType()
     {
         var initializeMethod = GetType()
             .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)

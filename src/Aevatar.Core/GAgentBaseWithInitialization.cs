@@ -11,7 +11,7 @@ public abstract class GAgentBase<TState, TStateLogEvent, TEvent, TInitialization
     where TState : StateBase, new()
     where TStateLogEvent: StateLogEventBase<TStateLogEvent>
     where TEvent : EventBase
-    where TInitializationDtoEvent : InitializationDtoEventBase
+    where TInitializationDtoEvent : InitializationEventBase
 {
     protected GAgentBase(ILogger logger) : base(logger)
     {
@@ -19,7 +19,7 @@ public abstract class GAgentBase<TState, TStateLogEvent, TEvent, TInitialization
     
     public abstract Task InitializeAsync(TInitializationDtoEvent initializeDto);
 
-    public override Task<Type?> GetInitializeDtoTypeAsync()
+    public override Task<Type?> GetInitializationTypeAsync()
     {
         return Task.FromResult(typeof(TInitializationDtoEvent))!;
     }

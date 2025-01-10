@@ -56,7 +56,11 @@ public interface IGAgent : IGrainWithGuidKey, IAsyncObserver<EventWrapperBase>
     /// <returns></returns>
     Task<GrainId> GetParentAsync();
 
-    Task<Type?> GetInitializeDtoTypeAsync();
+    /// <summary>
+    /// Get the type of GAgent initialization event.
+    /// </summary>
+    /// <returns></returns>
+    Task<Type?> GetInitializationTypeAsync();
 }
 
 public interface IStateGAgent<TState> : IGAgent
