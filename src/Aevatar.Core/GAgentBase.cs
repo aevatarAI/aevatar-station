@@ -179,16 +179,17 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent> : Journ
         await UpdateInitializationEventType();
         var streamOfThisGAgent = GetStream(this.GetGrainId().ToString());
         var handles = await streamOfThisGAgent.GetAllSubscriptionHandles();
+        var asyncObserver = new GAgentAsyncObserver(_observers);
         if (handles.Count > 0)
         {
             foreach (var handle in handles)
             {
-                await handle.ResumeAsync(this);
+                await handle.ResumeAsync(asyncObserver);
             }
         }
         else
         {
-            await streamOfThisGAgent.SubscribeAsync(this);
+            await streamOfThisGAgent.SubscribeAsync(asyncObserver);
         }
     }
 
@@ -255,29 +256,5 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent> : Journ
     {
         var streamId = StreamId.Create(AevatarCoreConstants.StreamNamespace, grainIdString);
         return StreamProvider.GetStream<EventWrapperBase>(streamId);
-    }
-
-    public async Task OnNextAsync(EventWrapperBase item, StreamSequenceToken? token = null)
-    {
-        foreach (var observer in _observers)
-        {
-            await observer.OnNextAsync(item);
-        }
-    }
-
-    public async Task OnCompletedAsync()
-    {
-        foreach (var observer in _observers)
-        {
-            await observer.OnCompletedAsync();
-        }
-    }
-
-    public async Task OnErrorAsync(Exception ex)
-    {
-        foreach (var observer in _observers)
-        {
-            await observer.OnErrorAsync(ex);
-        }
     }
 }
