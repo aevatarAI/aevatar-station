@@ -10,13 +10,13 @@ public class NaiveTestGAgentState : StateBase
     [Id(0)]  public List<string> Content { get; set; }
 }
 
-public class NaiveTestGEvent : GEventBase
+public class NaiveTestStateLogEvent : StateLogEventBase<NaiveTestStateLogEvent>
 {
     [Id(0)] public Guid Id { get; set; }
 }
 
 [GAgent("naiveTest")]
-public class NaiveTestGAgent : GAgentBaseWithInitialization<NaiveTestGAgentState, NaiveTestGEvent, NaiveGAgentInitializeDto>
+public class NaiveTestGAgent : GAgentBase<NaiveTestGAgentState, NaiveTestStateLogEvent,EventBase, NaiveGAgentInitializeDto>
 {
     public NaiveTestGAgent(ILogger<NaiveTestGAgent> logger) : base(logger)
     {
