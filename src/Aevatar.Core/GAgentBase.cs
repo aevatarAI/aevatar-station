@@ -208,7 +208,7 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
         //TODO:  need optimize use kafka,ensure Es written successfully
         if (EventDispatcher != null)
         {
-            await EventDispatcher.PublishAsync(State, this.GetGrainId().ToString());
+            await EventDispatcher.PublishAsync(State, this.GetGrainId());
         }
     }
 
