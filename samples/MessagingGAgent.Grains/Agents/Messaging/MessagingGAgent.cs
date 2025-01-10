@@ -24,6 +24,7 @@ public class MessagingGAgent : GAgentBase<MessagingGState, MessagingGEvent>, IMe
     [EventHandler]
     public async Task OnSendEvent(SendEvent @event)
     {
+        await Task.Delay(1000);
         await PublishAsync(new MessagingEvent()
         {
             Message = $"{this.GetGrainId().ToString()} sent a message."
@@ -31,10 +32,10 @@ public class MessagingGAgent : GAgentBase<MessagingGState, MessagingGEvent>, IMe
     }
 
     [EventHandler]
-    public Task OnMessagingEvent(MessagingEvent @event)
+    public async Task OnMessagingEvent(MessagingEvent @event)
     {
         RaiseEvent(new MessagingGEvent());
-        return Task.CompletedTask;
+        await ConfirmEvents();
     }
 
     public Task<int> GetReceivedMessagesAsync()

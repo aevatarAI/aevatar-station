@@ -1,12 +1,17 @@
 using Aevatar.Core;
+using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
 namespace MessagingGAgent.Grains.Agents.Group;
 
+public interface IGroupGAgent : IGAgent
+{
+}
+
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
-public class GroupGAgent : GAgentBase<GroupAgentState, GroupGEvent>
+public class GroupGAgent : GAgentBase<GroupAgentState, GroupGEvent>, IGroupGAgent
 {
     public GroupGAgent(ILogger<GroupGAgent> logger) : base(logger)
     {
