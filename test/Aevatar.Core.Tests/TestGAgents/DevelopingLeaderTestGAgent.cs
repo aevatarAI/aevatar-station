@@ -4,13 +4,13 @@ using Microsoft.Extensions.Logging;
 
 namespace Aevatar.Core.Tests.TestGAgents;
 
-public interface IDevelopingLeaderTestGAgent: IGAgent
-{
-    
-}
+public interface IDevelopingLeaderTestGAgent : IGAgent;
 
-[GAgent]
-public class DevelopingLeaderTestGAgent : GAgentBase<NaiveTestGAgentState, NaiveTestGEvent>, IDevelopingLeaderTestGAgent
+[GenerateSerializer]
+public class DevelopingLeaderTestGAgentState : NaiveTestGAgentState;
+
+[GAgent("developingLeader", "test")]
+public class DevelopingLeaderTestGAgent : GAgentBase<DevelopingLeaderTestGAgentState, NaiveTestStateLogEvent>, IDevelopingLeaderTestGAgent
 {
     public DevelopingLeaderTestGAgent(ILogger<DevelopingLeaderTestGAgent> logger) : base(logger)
     {

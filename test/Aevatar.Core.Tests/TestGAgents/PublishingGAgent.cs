@@ -1,5 +1,5 @@
 using Aevatar.Core.Abstractions;
-using Aevatar.Core.Tests.TestGEvents;
+using Aevatar.Core.Tests.TestStateLogEvents;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
@@ -10,9 +10,8 @@ public class PublishingAgentState : StateBase
 {
 }
 
-[StorageProvider(ProviderName = "PubSubStore")]
-[LogConsistencyProvider(ProviderName = "LogStorage")]
-public class PublishingGAgent : GAgentBase<PublishingAgentState, PublishingGEvent>, IPublishingGAgent
+[GAgent("publishing")]
+public class PublishingGAgent : GAgentBase<PublishingAgentState, PublishingStateLogEvent>, IPublishingGAgent
 {
     public PublishingGAgent(ILogger<PublishingGAgent> logger) : base(logger)
     {
