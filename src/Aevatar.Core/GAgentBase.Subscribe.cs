@@ -18,6 +18,10 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
             case SetParentStateLogEvent setParentEvent:
                 State.Parent = setParentEvent.Parent;
                 break;
+            case ClearParentStateLogEvent clearParentEvent:
+                if (State.Parent == clearParentEvent.Parent)
+                    State.Parent = default;
+                break;
             case InnerSetInitializeDtoTypeStateLogEvent setInnerEvent:
                 State.InitializationEventType = setInnerEvent.InitializeDtoType;
                 break;
@@ -80,6 +84,21 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
     private async Task SetParentAsync(GrainId grainId)
     {
         base.RaiseEvent(new SetParentStateLogEvent
+        {
+            Parent = grainId
+        });
+        await ConfirmEvents();
+    }
+
+    [GenerateSerializer]
+    public class ClearParentStateLogEvent : StateLogEventBase<TStateLogEvent>
+    {
+        [Id(0)] public GrainId Parent { get; set; }
+    }
+    
+    private async Task ClearParentAsync(GrainId grainId)
+    {
+        base.RaiseEvent(new ClearParentStateLogEvent
         {
             Parent = grainId
         });
