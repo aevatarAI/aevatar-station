@@ -15,6 +15,7 @@ public class AddSubscriptionEvent : SubscriptionEvent
     [Id(1)]   public List<string> EventTypes { get; set; }
     [Id(2)]   public string CallbackUrl { get; set; }
     [Id(3)]   public string Status { get; set; } // active
+    [Id(4)]   public Guid SubscriptionId { get; set; }
 }
 
 [GenerateSerializer]

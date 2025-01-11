@@ -1,4 +1,6 @@
 using System.Net.Http.Json;
+using Aevatar.Application.Grains.Agents.Atomic;
+using Aevatar.Application.Grains.Agents.Combination;
 using Aevatar.AtomicAgent;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
@@ -14,9 +16,13 @@ namespace Aevatar.Application.Grains.Subscription;
 public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, SubscriptionEvent>, ISubscriptionGAgent
 {
     private readonly ILogger<SubscriptionGAgent> _logger;
-    public SubscriptionGAgent(ILogger<SubscriptionGAgent> logger) : base(logger)
+    private readonly IClusterClient _clusterClient;
+    public SubscriptionGAgent(ILogger<SubscriptionGAgent> logger, 
+        IGAgentFactory gAgentFactory, 
+        IClusterClient clusterClient) : base(logger)
     {
         _logger = logger;
+        _clusterClient = clusterClient;
     }
     
     public async Task<EventSubscriptionState> SubscribeAsync(SubscribeEventInputDto input)
@@ -28,6 +34,7 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
             AgentId = input.AgentId,
             EventTypes = input.EventTypes.Count > 0 ? input.EventTypes : new List<string> { "ALL" },
             CallbackUrl = input.CallbackUrl,
+            SubscriptionId = this.GetPrimaryKey()
         });
         await ConfirmEvents();
         return State;
@@ -55,21 +62,44 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
                                JsonConvert.SerializeObject(eventWrapper));
         if (State.Status.IsNullOrEmpty() && State.Status == "active")
         {
-            if (State.EventTypes.IsNullOrEmpty() || State.EventTypes.Contains( eventWrapper.GetType().Name))
+            if (State.EventTypes.IsNullOrEmpty() || State.EventTypes.Contains("ALL") || State.EventTypes.Contains( eventWrapper.GetType().Name))
             {
                 var eventPushRequest = new EventPushRequest();
                 eventPushRequest.AgentId = State.AgentId;
                 eventPushRequest.EventId = eventWrapper.EventId;
                 eventPushRequest.EventType = eventWrapper.Event.GetType().Name;
                 eventPushRequest.Payload = JsonConvert.SerializeObject(eventWrapper.Event);
-                eventPushRequest.AtomicAgent = new AtomicAgentDto()
-                {
-                    //todo query AtomicAgent
-                };
+                eventPushRequest.AtomicAgent = await GetAtomicAgentDtoFromEventGrainId(eventWrapper.GrainId);
                 using var httpClient = new HttpClient();
                 await httpClient.PostAsJsonAsync(State.CallbackUrl, eventPushRequest);
             }
         }
+    }
+    
+    private async Task<AtomicAgentDto> GetAtomicAgentDtoFromEventGrainId(GrainId grainId)
+    {
+        Guid.TryParse(State.AgentId, out Guid combinationGuid);
+        var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(combinationGuid);
+        var combinationData = await combinationAgent.GetCombinationAsync();
+        foreach (var agentId in combinationData.AgentComponent)
+        {
+            var businessGuid = grainId.GetGuidKey().ToString();
+            if (agentId.Value == businessGuid)
+            {
+                Guid.TryParse(agentId.Key, out Guid atomicGuid);
+                var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(atomicGuid);
+                var atomicAgentData = await atomicAgent.GetAgentAsync();
+                return new AtomicAgentDto()
+                {
+                    Id = agentId.Key,
+                    Type = atomicAgentData.Type,
+                    Name = atomicAgentData.Name,
+                    Properties = JsonConvert.DeserializeObject<Dictionary<string, string>>(atomicAgentData.Properties)
+                };
+            }
+        }
+
+        return new AtomicAgentDto();
     }
 
     public override async Task<string> GetDescriptionAsync()

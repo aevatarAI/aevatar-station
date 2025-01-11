@@ -14,7 +14,7 @@ public class EventSubscriptionState : StateBase
     
     public void Apply(AddSubscriptionEvent add)
     {
-        Id = Guid.NewGuid();
+        Id = add.SubscriptionId;
         AgentId = add.AgentId;
         EventTypes = add.EventTypes;
         CallbackUrl = add.CallbackUrl;

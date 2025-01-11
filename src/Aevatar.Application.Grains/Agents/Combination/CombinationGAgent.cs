@@ -36,7 +36,7 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
             UserAddress = data.UserAddress,
             Name = data.Name,
             GroupId = data.GroupId,
-            AgentComponents = data.AgentComponents
+            AgentComponent = data.AgentComponent
         });
         await ConfirmEvents();
     }
@@ -49,7 +49,7 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
             Id = this.GetPrimaryKey(),
             Name = State.Name,
             GroupId = State.GroupId,
-            AgentComponents = State.AgentComponents,
+            AgentComponent = State.AgentComponent,
             UserAddress = State.UserAddress,
             Status = State.Status
         };
@@ -62,7 +62,7 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
         RaiseEvent(new UpdateCombinationGEvent()
         {
             Name = data.Name,
-            AgentComponents = data.AgentComponents
+            AgentComponent = data.AgentComponent
         });
         await ConfirmEvents();
     }
@@ -91,10 +91,17 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
         Logger.LogInformation( "publish event: {event}", @event);
         await PublishAsync(@event);
     }
-
-    public async Task SetBusinessAgentsAsync(string atomicAgentId, List<string> businessAgents)
+    
+    protected override Task OnRegisterAgentAsync(Guid agentGuid)
     {
-        
+        ++State.RegisteredAgents;
+        return Task.CompletedTask;
+    }
+
+    protected override Task OnUnregisterAgentAsync(Guid agentGuid)
+    {
+        --State.RegisteredAgents;
+        return Task.CompletedTask;
     }
 }
 
@@ -106,5 +113,4 @@ public interface ICombinationGAgent : IStateGAgent<CombinationGAgentState>
     Task UpdateCombinationAsync(CombinationAgentData data);
     Task<AgentStatus> GetStatusAsync();
     Task DeleteCombinationAsync();
-    Task SetBusinessAgentsAsync(string atomicAgentId, List<string> businessAgents);
 }

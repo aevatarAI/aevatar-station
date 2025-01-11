@@ -14,6 +14,7 @@ public class PublishingAgentState : StateBase
 
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
+[GAgent("publish")]
 public class PublishingGAgent : GAgentBase<PublishingAgentState, PublishingGEvent>, IPublishingGAgent
 {
     public PublishingGAgent(ILogger<PublishingGAgent> logger) : base(logger)

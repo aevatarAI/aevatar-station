@@ -11,7 +11,6 @@ using Aevatar.Application.Grains.Agents.Combination;
 using Aevatar.AtomicAgent;
 using Aevatar.CombinationAgent;
 using Aevatar.Core;
-using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
 using Aevatar.CQRS.Provider;
 using Microsoft.Extensions.Logging;
@@ -216,18 +215,18 @@ public class AgentService : ApplicationService, IAgentService
             throw new UserFriendlyException("agent already exist");
         }
         
-        var components = await SetGroupAsync(combineAgentDto.AgentComponents, guid);
+        var components = await SetGroupAsync(combineAgentDto.AgentComponent, guid);
         var data = _objectMapper.Map<CombineAgentDto, CombinationAgentData>(combineAgentDto);
         data.GroupId = guid.ToString();
         data.UserAddress = address;
-        data.AgentComponents = components;
+        data.AgentComponent = components;
         await combinationAgent.CombineAgentAsync(data);
 
         var resp = new CombinationAgentDto
         {
             Id = guid.ToString(),
             Name = data.Name,
-            AgentComponents = components
+            AgentComponent = components
         };
    
         return resp;
@@ -235,7 +234,7 @@ public class AgentService : ApplicationService, IAgentService
 
     private void CheckCombineParam(CombineAgentDto combineAgentDto)
     {
-        if (combineAgentDto.AgentComponents.IsNullOrEmpty())
+        if (combineAgentDto.AgentComponent.IsNullOrEmpty())
         {
             _logger.LogInformation("CombineAgentAsync agentComponent is null, name: {name}", combineAgentDto.Name);
             throw new UserFriendlyException("agentComponent is null");
@@ -269,39 +268,39 @@ public class AgentService : ApplicationService, IAgentService
         {
             Id = id,
             Name = combinationData.Name,
-            AgentComponents = combinationData.AgentComponents
+            AgentComponent = combinationData.AgentComponent
         };
         
         return resp;
     }
     
-    private async Task<Dictionary<string, List<string>>> SetGroupAsync(Dictionary<string, int> agentComponent, Guid guid)
+    private async Task<Dictionary<string, string>> SetGroupAsync(List<string> agentComponent, Guid guid)
     {
         var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(guid);
   
-        foreach (var agentId in agentComponent.Keys.ToList())
+        foreach (var agentId in agentComponent)
         {
             var validGuid = ParseGuid(agentId);
             await CheckAtomicAgentValid(validGuid);
         }
         
-        var components = new Dictionary<string, List<string>>();
-        foreach (var agentId in agentComponent.Keys.ToList())
+        var components = new Dictionary<string, string>();
+        foreach (var agentId in agentComponent)
         {
             var validGuid = ParseGuid(agentId);
             var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(validGuid);
             var agentData = await atomicAgent.GetAgentAsync();
-            var businessAgentIds = new List<string>();
-            for (int i = 0; i < agentComponent[agentId]; i++)
+
+            var businessAgent = await _gAgentFactory.GetGAgentAsync(agentData.Type, initializeDto: new InitializeDto
             {
-                var businessAgent = await _gAgentFactory.GetGAgentAsync(agentData.Type, initializeDto: new InitializeDto
-                {
-                    Properties = agentData.Properties
-                });
-                await combinationAgent.RegisterAsync(businessAgent);
-                businessAgentIds.Add(businessAgent.GetPrimaryKey().ToString());
-            }
-            components.Add(agentId, businessAgentIds);
+                Properties = agentData.Properties
+            });
+            // var publishAgent =  _clusterClient.GetGrain<IPublishingGAgent>(Guid.NewGuid());
+            await combinationAgent.RegisterAsync(businessAgent);
+
+            var primaryKey = businessAgent.GetPrimaryKey().ToString();
+            components.Add(agentId, primaryKey);
+            await atomicAgent.AddToGroupAsync(guid.ToString());
         }
 
         return components;
@@ -319,26 +318,26 @@ public class AgentService : ApplicationService, IAgentService
             combinationData.Name = updateDto.Name;
         }
 
-        if (!updateDto.AgentComponents.IsNullOrEmpty())
+        if (!updateDto.AgentComponent.IsNullOrEmpty())
         {
-            var oldAgentList = combinationData.AgentComponents.Keys.ToList();
-            var newAgentList = updateDto.AgentComponents.Keys.ToList();
+            var oldAgentList = combinationData.AgentComponent.Keys.ToList();
+            var newAgentList = updateDto.AgentComponent;
             
-            var newIncludedAgent = updateDto.AgentComponents.Where(kv => !oldAgentList.Contains(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value);
+            var newIncludedAgent = updateDto.AgentComponent.Where(i => !oldAgentList.Contains(i)).ToList();
             _logger.LogInformation("UpdateCombinationAsync newIncludedAgent: {newIncludedAgent}", newIncludedAgent);
             var newComponents = await SetGroupAsync(newIncludedAgent, validGuid);
              
-            var excludedAgent = combinationData.AgentComponents.Where(kv => !newAgentList.Contains(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value);
+            var excludedAgent = combinationData.AgentComponent.Where(kv => !newAgentList.Contains(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value);
             _logger.LogInformation("UpdateCombinationAsync excludeAgent: {excludedAgent}", excludedAgent);
             await ExcludeFromGroupAsync(excludedAgent, validGuid);
             
-            var currentComponents =  combinationData.AgentComponents.Where(kv => excludedAgent.ContainsKey(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value);
+            var currentComponents =  combinationData.AgentComponent.Where(kv => !excludedAgent.ContainsKey(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value);
             foreach (var component in newComponents)
             {
                 currentComponents[component.Key] = component.Value;
             }
-            combinationData.AgentComponents = currentComponents;
-            _logger.LogInformation("UpdateCombinationAsync currentComponents: {currentComponents}", combinationData.AgentComponents);
+            combinationData.AgentComponent = currentComponents;
+            _logger.LogInformation("UpdateCombinationAsync currentComponents: {currentComponents}", combinationData.AgentComponent);
         }
         
         await combinationAgent.UpdateCombinationAsync(combinationData);
@@ -347,13 +346,13 @@ public class AgentService : ApplicationService, IAgentService
         {
             Id = id,
             Name = combinationData.Name,
-            AgentComponents = combinationData.AgentComponents
+            AgentComponent = combinationData.AgentComponent
         };
 
         return resp;
     }
     
-    private async Task ExcludeFromGroupAsync(Dictionary<string, List<string>> excludedAgent, Guid guid)
+    private async Task ExcludeFromGroupAsync(Dictionary<string, string> excludedAgent, Guid guid)
     {
         var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(guid);
         foreach (var agentId in excludedAgent.Keys.ToList())
@@ -361,12 +360,9 @@ public class AgentService : ApplicationService, IAgentService
             var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(Guid.Parse(agentId));
             await atomicAgent.RemoveFromGroupAsync(guid.ToString());
             var agentData = await atomicAgent.GetAgentAsync();
-            foreach (var businessAgentId in excludedAgent[agentId])
-            {
-                var businessAgentGuid = ParseGuid(businessAgentId);
-                var businessAgent = await _gAgentFactory.GetGAgentAsync(agentData.Type, businessAgentGuid);
-                await combinationAgent.UnregisterAsync(businessAgent);
-            }
+            var businessAgentGuid = ParseGuid(excludedAgent[agentId]);
+            var businessAgent = await _gAgentFactory.GetGAgentAsync(agentData.Type, businessAgentGuid);
+            await combinationAgent.UnregisterAsync(businessAgent);
         }
     }
 
@@ -377,7 +373,7 @@ public class AgentService : ApplicationService, IAgentService
         
         var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(validGuid);
         var combinationData = await combinationAgent.GetCombinationAsync();
-        await ExcludeFromGroupAsync(combinationData.AgentComponents, validGuid);
+        await ExcludeFromGroupAsync(combinationData.AgentComponent, validGuid);
         await combinationAgent.DeleteCombinationAsync();
     }
 
@@ -414,7 +410,7 @@ public class AgentService : ApplicationService, IAgentService
     {
         var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(guid);
         var combinationData = await combinationAgent.GetCombinationAsync();
-        if (combinationData.AgentComponents.IsNullOrEmpty())
+        if (combinationData.AgentComponent.IsNullOrEmpty())
         {
             _logger.LogInformation("combinationData is null: {id}", guid);
             throw new UserFriendlyException("combination not exist");
@@ -446,7 +442,7 @@ public class AgentService : ApplicationService, IAgentService
         var filters = new List<Func<QueryContainerDescriptor<object>, QueryContainer>>();
         filters.Add(m => m.Term(t => t.Field("userAddress").Value(userAddress)));
         filters.Add(m => m.Term(t => t.Field("groupId").Value(groupId)));
-
+    
         var result = await _cqrsProvider.QueryStateAsync(index,
             q => q.Bool(b => b.Must(filters)),
             (pageIndex-1)*pageSize,
@@ -458,8 +454,8 @@ public class AgentService : ApplicationService, IAgentService
         }
         
         var combinationGAgentStateDtoList = JsonConvert.DeserializeObject<List<CombinationGAgentStateDto>>(result);
-
-        return combinationGAgentStateDtoList.Select(stateDto => new CombinationAgentDto { Id = stateDto.Id.ToString(), Name = stateDto.Name, AgentComponent = JsonConvert.DeserializeObject<List<string>>(stateDto.AgentComponent) }).ToList();
+    
+        return combinationGAgentStateDtoList.Select(stateDto => new CombinationAgentDto { Id = stateDto.Id.ToString(), Name = stateDto.Name, AgentComponent = JsonConvert.DeserializeObject<Dictionary<string, string>>(stateDto.AgentComponent) }).ToList();
     }
 
     public async Task<Tuple<long, List<AgentGEventIndex>>> GetAgentEventLogsAsync(string agentId, int pageNumber, int pageSize)

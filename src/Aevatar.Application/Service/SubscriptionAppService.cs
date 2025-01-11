@@ -64,9 +64,9 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
         var subscriptionStateAgent =
             _clusterClient.GetGrain<ISubscriptionGAgent>(subscriptionId);
         var subscriptionState = await subscriptionStateAgent.GetStateAsync();
-        await subscriptionStateAgent.UnsubscribeAsync();
         var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(ParseGuid(subscriptionState.AgentId));
-        await combinationAgent.RegisterAsync(subscriptionStateAgent);
+        await combinationAgent.UnregisterAsync(subscriptionStateAgent);
+        await subscriptionStateAgent.UnsubscribeAsync();
     }
 
     public async Task<SubscriptionDto> GetSubscriptionAsync(Guid subscriptionId)
