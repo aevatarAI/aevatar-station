@@ -3,7 +3,7 @@ using Aevatar.Core.Abstractions;
 namespace Aevatar.Application.Grains.Subscription;
 
 [GenerateSerializer]
-public abstract class SubscriptionEvent : GEventBase
+public abstract class SubscriptionEvent : StateLogEventBase<SubscriptionEvent>
 {
     
 }
