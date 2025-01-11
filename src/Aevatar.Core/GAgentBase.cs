@@ -62,9 +62,15 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent> : Journ
         return SetParentAsync(gAgent.GetGrainId());
     }
 
+    public Task UnsubscribeFromAsync(IGAgent gAgent)
+    {
+        return ClearParentAsync(gAgent.GetGrainId());
+    }
+
     public async Task UnregisterAsync(IGAgent gAgent)
     {
         await RemoveChildAsync(gAgent.GetGrainId());
+        await gAgent.UnsubscribeFromAsync(this);
         await OnUnregisterAgentAsync(gAgent.GetPrimaryKey());
     }
 
