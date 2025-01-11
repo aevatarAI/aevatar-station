@@ -31,6 +31,13 @@ public interface IGAgent : IGrainWithGuidKey
     Task SubscribeToAsync(IGAgent gAgent);
 
     /// <summary>
+    /// Unregister current GAgent from the next level of the provided GAgent.
+    /// </summary>
+    /// <param name="gAgent"></param>
+    /// <returns></returns>
+    Task UnsubscribeFromAsync(IGAgent gAgent);
+
+    /// <summary>
     /// Undo the registration.
     /// </summary>
     /// <param name="gAgent"></param>
@@ -56,7 +63,11 @@ public interface IGAgent : IGrainWithGuidKey
     /// <returns></returns>
     Task<GrainId> GetParentAsync();
 
-    Task<Type?> GetInitializeDtoTypeAsync();
+    /// <summary>
+    /// Get the type of GAgent initialization event.
+    /// </summary>
+    /// <returns></returns>
+    Task<Type?> GetInitializationTypeAsync();
 }
 
 public interface IStateGAgent<TState> : IGAgent

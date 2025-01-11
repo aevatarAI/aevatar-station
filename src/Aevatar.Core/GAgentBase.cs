@@ -12,18 +12,24 @@ namespace Aevatar.Core;
 [GAgent("base")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
-public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState>, IStateGAgent<TState>
+public abstract partial class
+    GAgentBase<TState, TStateLogEvent>(ILogger logger) : GAgentBase<TState, TStateLogEvent, EventBase>(logger)
     where TState : StateBase, new()
-    where TEvent : GEventBase
+    where TStateLogEvent : StateLogEventBase<TStateLogEvent>;
+
+[GAgent("base")]
+[StorageProvider(ProviderName = "PubSubStore")]
+[LogConsistencyProvider(ProviderName = "LogStorage")]
+public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent> : JournaledGrain<TState, StateLogEventBase<TStateLogEvent>>, IStateGAgent<TState>
+    where TState : StateBase, new()
+    where TStateLogEvent : StateLogEventBase<TStateLogEvent>
+    where TEvent: EventBase
 {
     protected IStreamProvider StreamProvider => this.GetStreamProvider(AevatarCoreConstants.StreamProvider);
 
     protected readonly ILogger Logger;
 
-    /// <summary>
-    /// Observer -> StreamId -> HandleId
-    /// </summary>
-    private readonly Dictionary<EventWrapperBaseAsyncObserver, Dictionary<StreamId, Guid>> Observers = new();
+    private readonly List<EventWrapperBaseAsyncObserver> _observers = [];
 
     private IEventDispatcher? EventDispatcher { get; set; }
 
@@ -56,9 +62,15 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
         return SetParentAsync(gAgent.GetGrainId());
     }
 
+    public Task UnsubscribeFromAsync(IGAgent gAgent)
+    {
+        return ClearParentAsync(gAgent.GetGrainId());
+    }
+
     public async Task UnregisterAsync(IGAgent gAgent)
     {
         await RemoveChildAsync(gAgent.GetGrainId());
+        await gAgent.UnsubscribeFromAsync(this);
         await OnUnregisterAgentAsync(gAgent.GetPrimaryKey());
     }
 
@@ -87,9 +99,9 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
         return State.Parent;
     }
 
-    public virtual Task<Type?> GetInitializeDtoTypeAsync()
+    public virtual Task<Type?> GetInitializationTypeAsync()
     {
-        return Task.FromResult(State.InitializeDtoType);
+        return Task.FromResult(State.InitializationEventType);
     }
 
     [EventHandler]
@@ -107,6 +119,7 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
         {
             return new SubscribedEventListEvent
             {
+                Value = new Dictionary<Type, List<Type>>(),
                 GAgentType = GetType()
             };
         }
@@ -169,25 +182,20 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
     {
         // This must be called first to initialize Observers field.
         await UpdateObserverList();
-        await UpdateInitializeDtoType();
-        await InitializeStreamOfThisGAgentAsync();
-    }
-
-    private async Task InitializeStreamOfThisGAgentAsync()
-    {
+        await UpdateInitializationEventType();
         var streamOfThisGAgent = GetStream(this.GetGrainId().ToString());
         var handles = await streamOfThisGAgent.GetAllSubscriptionHandles();
-        if (handles.Count != 0)
+        var asyncObserver = new GAgentAsyncObserver(_observers);
+        if (handles.Count > 0)
         {
             foreach (var handle in handles)
             {
-                await handle.UnsubscribeAsync();
+                await handle.ResumeAsync(asyncObserver);
             }
         }
-
-        foreach (var observer in Observers.Keys)
+        else
         {
-            await streamOfThisGAgent.SubscribeAsync(observer);
+            await streamOfThisGAgent.SubscribeAsync(asyncObserver);
         }
     }
 
@@ -217,7 +225,7 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
         //TODO:  need optimize use kafka,ensure Es written successfully
         if (EventDispatcher != null)
         {
-            await EventDispatcher.PublishAsync(State, this.GetGrainId().ToString());
+            await EventDispatcher.PublishAsync(State, this.GetGrainId());
         }
     }
 
@@ -238,7 +246,7 @@ public abstract partial class GAgentBase<TState, TEvent> : JournaledGrain<TState
     {
         await HandleRaiseEventAsync();
         //TODO:  need optimize use kafka,ensure Es written successfully
-        var gEvent = @event as GEventBase;
+        var gEvent = @event as StateLogEventBase;
         if (EventDispatcher != null)
         {
             await EventDispatcher.PublishAsync(gEvent!.Id, this.GetGrainId(), gEvent);

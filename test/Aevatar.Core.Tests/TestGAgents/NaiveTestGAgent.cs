@@ -10,13 +10,13 @@ public class NaiveTestGAgentState : StateBase
     [Id(0)]  public List<string> Content { get; set; }
 }
 
-public class NaiveTestGEvent : GEventBase
+public class NaiveTestStateLogEvent : StateLogEventBase<NaiveTestStateLogEvent>
 {
     [Id(0)] public Guid Id { get; set; }
 }
 
 [GAgent("naiveTest")]
-public class NaiveTestGAgent : GAgentBaseWithInitialization<NaiveTestGAgentState, NaiveTestGEvent, NaiveGAgentInitializeDto>
+public class NaiveTestGAgent : GAgentBase<NaiveTestGAgentState, NaiveTestStateLogEvent,EventBase, NaiveGAgentInitialize>
 {
     public NaiveTestGAgent(ILogger<NaiveTestGAgent> logger) : base(logger)
     {
@@ -27,13 +27,13 @@ public class NaiveTestGAgent : GAgentBaseWithInitialization<NaiveTestGAgentState
         return Task.FromResult("This is a naive test GAgent");
     }
 
-    public override async Task InitializeAsync(NaiveGAgentInitializeDto initializeDto)
+    public override async Task InitializeAsync(NaiveGAgentInitialize initialize)
     {
         if (State.Content.IsNullOrEmpty())
         {
             State.Content = [];
         }
 
-        State.Content.Add(initializeDto.InitialGreeting);
+        State.Content.Add(initialize.InitialGreeting);
     }
 }
