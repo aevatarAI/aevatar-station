@@ -33,7 +33,7 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
         RaiseEvent(new CombineAgentGEvent()
         {
             Id = Guid.NewGuid(),
-            AtomicGAgentId = this.GetPrimaryKey(),
+            CombineGAgentId = this.GetPrimaryKey(),
             UserAddress = data.UserAddress,
             Name = data.Name,
             GroupId = data.GroupId,
