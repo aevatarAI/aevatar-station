@@ -7,6 +7,9 @@ public class EventWrapperBaseAsyncObserver : IAsyncObserver<EventWrapperBase>
 {
     private readonly Func<EventWrapperBase, Task> _action;
 
+    public string MethodName { get; set; }
+    public string ParameterTypeName { get; set; }
+
     public EventWrapperBaseAsyncObserver(Func<EventWrapperBase, Task> action)
     {
         _action = action;
