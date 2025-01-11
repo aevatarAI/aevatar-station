@@ -5,7 +5,7 @@ namespace Aevatar.Core;
 
 public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
 {
-    protected override void TransitionState(TState state, StateLogEventBase<TStateLogEvent> @event)
+    protected sealed override void TransitionState(TState state, StateLogEventBase<TStateLogEvent> @event)
     {
         switch (@event)
         {
@@ -16,13 +16,20 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
                 State.Children.Remove(removeChildEvent.Child);
                 break;
             case SetParentStateLogEvent setParentEvent:
-                State.Parent=setParentEvent.Parent;
+                State.Parent = setParentEvent.Parent;
                 break;
             case InnerSetInitializeDtoTypeStateLogEvent setInnerEvent:
                 State.InitializationEventType = setInnerEvent.InitializeDtoType;
                 break;
         }
+
+        GAgentTransitionState(state, @event);
         base.TransitionState(state, @event);
+    }
+
+    protected virtual void GAgentTransitionState(TState state, StateLogEventBase<TStateLogEvent> @event)
+    {
+        // Derived classes can override this method.
     }
 
     private async Task AddChildAsync(GrainId grainId)
@@ -40,10 +47,12 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
         await ConfirmEvents();
     }
 
+    [GenerateSerializer]
     public class AddChildStateLogEvent : StateLogEventBase<TStateLogEvent>
     {
         [Id(0)] public GrainId Child { get; set; }
     }
+
     private async Task RemoveChildAsync(GrainId grainId)
     {
         if (!State.Children.IsNullOrEmpty())
@@ -55,20 +64,19 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
             await ConfirmEvents();
         }
     }
-    
-    
+
     [GenerateSerializer]
     public class RemoveChildStateLogEvent : StateLogEventBase<TStateLogEvent>
     {
         [Id(0)] public GrainId Child { get; set; }
     }
-    
+
     [GenerateSerializer]
     public class SetParentStateLogEvent : StateLogEventBase<TStateLogEvent>
     {
         [Id(0)] public GrainId Parent { get; set; }
     }
-    
+
     private async Task SetParentAsync(GrainId grainId)
     {
         base.RaiseEvent(new SetParentStateLogEvent
