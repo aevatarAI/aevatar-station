@@ -14,22 +14,26 @@ namespace Aevatar.CQRS.Provider;
 public class CQRSProvider : ICQRSProvider, ISingletonDependency
 {
     private readonly IMediator _mediator;
+
     public CQRSProvider(IMediator mediator)
     {
         _mediator = mediator;
     }
-    
+
     public async Task PublishAsync(StateBase state, string id)
     {
+        var grainId = GrainId.Parse(id);
+
         var command = new SaveStateCommand
         {
-            Id = id,
+            Id = grainId.GetGuidKey().ToString(),
             State = state
         };
         await _mediator.Send(command);
     }
 
-    public async Task<string> QueryStateAsync(string indexName,Func<QueryContainerDescriptor<dynamic>, QueryContainer> query,int skip, int limit)
+    public async Task<string> QueryStateAsync(string indexName,
+        Func<QueryContainerDescriptor<dynamic>, QueryContainer> query, int skip, int limit)
     {
         var getStateQuery = new GetStateQuery()
         {
@@ -38,7 +42,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
             Skip = skip,
             Limit = limit
         };
-        
+
         var document = await _mediator.Send(getStateQuery);
         return document;
     }
@@ -52,7 +56,8 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         await _mediator.Send(command);
     }
 
-    public async Task<Tuple<long, List<AgentGEventIndex>>> QueryGEventAsync(string eventId,  List<string> grainIds, int pageNumber, int pageSize)
+    public async Task<Tuple<long, List<AgentGEventIndex>>> QueryGEventAsync(string eventId, List<string> grainIds,
+        int pageNumber, int pageSize)
     {
         var mustQuery = new List<Func<QueryContainerDescriptor<AgentGEventIndex>, QueryContainer>>();
         if (!eventId.IsNullOrEmpty())
@@ -64,7 +69,6 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         if (!grainIds.IsNullOrEmpty())
         {
             mustQuery.Add(q => q.Terms(i => i.Field(f => f.GrainId).Terms(grainIds)));
-
         }
 
         QueryContainer Filter(QueryContainerDescriptor<AgentGEventIndex> f) => f.Bool(b => b.Must(mustQuery));
@@ -76,10 +80,10 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         {
             Query = Filter,
             Sort = sorting,
-            Skip = (pageNumber-1) * pageSize,
+            Skip = (pageNumber - 1) * pageSize,
             Limit = pageSize
         };
-        
+
         var tuple = await _mediator.Send(getStateQuery);
         return tuple;
     }
@@ -88,7 +92,10 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
     {
         var agentGrainId = Guid.Parse(grainId.Key.ToString());
         var grainType = grainId.Type;
-        
+        if (eventId == Guid.Empty)
+        {
+            eventId = Guid.NewGuid();
+        }
         var agentGEventIndex = new AgentGEventIndex()
         {
             Id = eventId,
@@ -97,10 +104,10 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
             Ctime = DateTime.UtcNow,
             EventJson = JsonConvert.SerializeObject(eventBase)
         };
-        
+
         var command = new SaveGEventCommand
         {
-            Id = eventId==null?Guid.NewGuid():eventId,
+            Id = eventId == null ? Guid.NewGuid() : eventId,
             AgentGEventIndex = agentGEventIndex
         };
         await _mediator.Send(command);

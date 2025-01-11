@@ -427,10 +427,10 @@ public class AgentService : ApplicationService, IAgentService
 
     public async Task<List<CombinationAgentDto>> GetCombinationAgentsAsync(string userAddress, string groupId, int pageIndex, int pageSize)
     {
-        if (userAddress.IsNullOrEmpty() || groupId.IsNullOrEmpty())
+        if (userAddress.IsNullOrEmpty())
         {
-            _logger.LogInformation("GetAgentAsync Invalid userAddress: {userAddress} groupId:{groupId}", userAddress, groupId);
-            throw new UserFriendlyException("Invalid userAddress groupId");
+            _logger.LogInformation("GetAgentAsync Invalid userAddress: {userAddress} ", userAddress);
+            throw new UserFriendlyException("Invalid userAddress");
         }
         if (pageIndex <= 0 || pageSize <= 1)
         {
@@ -439,10 +439,12 @@ public class AgentService : ApplicationService, IAgentService
         }
         
         var index = IndexPrefix + nameof(CombinationGAgentState).ToLower() + IndexSuffix;
-        var filters = new List<Func<QueryContainerDescriptor<object>, QueryContainer>>();
-        filters.Add(m => m.Term(t => t.Field("userAddress").Value(userAddress)));
-        filters.Add(m => m.Term(t => t.Field("groupId").Value(groupId)));
-    
+        var filters = new List<Func<QueryContainerDescriptor<object>, QueryContainer>> { m => m.Term(t => t.Field("userAddress").Value(userAddress)) };
+        if (!groupId.IsNullOrEmpty())
+        {
+            filters.Add(m => m.Term(t => t.Field("groupId").Value(groupId)));
+        }
+
         var result = await _cqrsProvider.QueryStateAsync(index,
             q => q.Bool(b => b.Must(filters)),
             (pageIndex-1)*pageSize,
@@ -472,7 +474,7 @@ public class AgentService : ApplicationService, IAgentService
     
     private async Task<List<string>> ViewGroupTreeAsync(string agentId)
     {
-        var result = new List<string>();
+        var result = new List<string> { agentId };
         await BuildGroupTreeAsync(agentId, result);
         return result;
     }

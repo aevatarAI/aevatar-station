@@ -48,7 +48,8 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
         RaiseEvent(new CreateAgentGEvent()
         {
             UserAddress = data.UserAddress,
-            Id = this.GetPrimaryKey(),
+            Id = Guid.NewGuid(),
+            AtomicGAgentId = this.GetPrimaryKey(),
             Type = data.Type,
             Properties = data.Properties,
             Name = data.Name
