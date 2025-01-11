@@ -1,4 +1,7 @@
+using System.Reflection;
+using Aevatar.Core.Abstractions.Plugin;
 using AutoMapper;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -41,9 +44,13 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                 .AddJsonFile("appsettings.secrets.json", true)
                 .Build();
 
-            hostBuilder.ConfigureServices(services =>
+            hostBuilder
+                .ConfigureServices(services =>
                 {
-                    //services.AddAutoMapper(typeof(AIApplicationGrainsModule).Assembly);
+                    services.AddSingleton<ApplicationPartManager>(new ApplicationPartManager());
+
+                    services.AddAutoMapper(typeof(AevatarTestBaseModule).Assembly);
+
                     var mock = new Mock<ILocalEventBus>();
                     services.AddSingleton(typeof(ILocalEventBus), mock.Object);
 
@@ -71,11 +78,30 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                     {
                         Mapper = sp.GetRequiredService<IMapper>()
                     });
+                    services.AddTransient<IPluginDirectoryProvider>(sp => new DefaultPluginDirectoryProvider());
                 })
                 .AddMemoryStreams("Aevatar")
                 .AddMemoryGrainStorage("PubSubStore")
                 .AddMemoryGrainStorageAsDefault()
                 .AddLogStorageBasedLogConsistencyProvider("LogStorage");
+            
+            // Load external grain assemblies
+            var pluginDirectory = new DefaultPluginDirectoryProvider().GetDirectory();
+            var pluginAssemblies = Directory.GetFiles(pluginDirectory, "*.dll")
+                .Select(Assembly.LoadFrom)
+                .ToList();
+
+            hostBuilder.ConfigureServices(services =>
+            {
+                var foo = services.FirstOrDefault(service => service.ServiceType == typeof(ApplicationPartManager));
+                if (foo?.ImplementationInstance is ApplicationPartManager partManager)
+                {
+                    foreach (var assembly in pluginAssemblies)
+                    {
+                        partManager.ApplicationParts.Add(new AssemblyPart(assembly));
+                    }
+                }
+            });
         }
     }
 
