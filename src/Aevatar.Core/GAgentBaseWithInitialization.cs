@@ -7,19 +7,20 @@ namespace Aevatar.Core;
 [GAgent("baseWithInitialization")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
-public abstract class GAgentBaseWithInitialization<TState, TEvent, TInitializeDto> : GAgentBase<TState, TEvent>
+public abstract class GAgentBase<TState, TStateLogEvent, TEvent, TInitializationEvent> : GAgentBase<TState, TStateLogEvent, TEvent>
     where TState : StateBase, new()
-    where TEvent : GEventBase
-    where TInitializeDto : InitializeDtoBase
+    where TStateLogEvent: StateLogEventBase<TStateLogEvent>
+    where TEvent : EventBase
+    where TInitializationEvent : InitializationEventBase
 {
-    protected GAgentBaseWithInitialization(ILogger logger) : base(logger)
+    protected GAgentBase(ILogger logger) : base(logger)
     {
     }
     
-    public abstract Task InitializeAsync(TInitializeDto initializeDto);
+    public abstract Task InitializeAsync(TInitializationEvent initializeDto);
 
-    public override Task<Type?> GetInitializeDtoTypeAsync()
+    public override Task<Type?> GetInitializationTypeAsync()
     {
-        return Task.FromResult(typeof(TInitializeDto))!;
+        return Task.FromResult(typeof(TInitializationEvent))!;
     }
 }

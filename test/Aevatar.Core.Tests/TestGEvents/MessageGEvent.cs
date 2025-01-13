@@ -1,9 +1,9 @@
 using Aevatar.Core.Abstractions;
 
-namespace Aevatar.Core.Tests.TestGEvents;
+namespace Aevatar.Core.Tests.TestStateLogEvents;
 
 [GenerateSerializer]
-public class MessageGEvent : GEventBase
+public class MessageStateLogEvent : StateLogEventBase
 {
-    [Id(0)] public Guid Id { get; set; } = Guid.NewGuid();
+    public override Guid Id { get; set; }= Guid.NewGuid();
 }
