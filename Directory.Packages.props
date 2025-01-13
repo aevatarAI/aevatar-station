@@ -160,7 +160,6 @@
     <PackageVersion Include="GraphQL.Client.Serializer.Newtonsoft" Version="6.1.0" />
     <PackageVersion Include="PdfPig" Version="0.1.9" />
     <!-- AI packages -->
-    <PackageVersion Include="Microsoft.SemanticKernel" Version="1.32.0" />
     <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Qdrant" Version="1.33.0-preview" />
     <PackageVersion Include="Microsoft.SemanticKernel.PromptTemplates.Handlebars" Version="1.32.0" />
   </ItemGroup>
