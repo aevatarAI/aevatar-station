@@ -11,8 +11,8 @@
     <PackageVersion Include="AElf.Sdk.CSharp" Version="1.5.0" />
     <PackageVersion Include="AElf.Types" Version="1.5.0" />
     <PackageVersion Include="AElf.OpenTelemetry" Version="8.2.0" />
-    <PackageVersion Include="Aevatar.Core" Version="1.2.0" />
-    <PackageVersion Include="Aevatar.Core.Abstractions" Version="1.2.0" />
+    <PackageVersion Include="Aevatar.Core" Version="1.2.1" />
+    <PackageVersion Include="Aevatar.Core.Abstractions" Version="1.2.1" />
     <PackageVersion Include="Aevatar.EventSourcing.Core" Version="1.2.0" />
     <!-- AI and Analysis packages -->
     <PackageVersion Include="AutoGen" Version="0.2.1" />
