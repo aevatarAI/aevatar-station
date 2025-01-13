@@ -114,4 +114,5 @@ public interface ICombinationGAgent : IStateGAgent<CombinationGAgentState>
     Task UpdateCombinationAsync(CombinationAgentData data);
     Task<AgentStatus> GetStatusAsync();
     Task DeleteCombinationAsync();
+    Task PublishEventAsync<T>(T @event) where T : EventBase;
 }

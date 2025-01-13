@@ -37,6 +37,7 @@ public class AevatarApplicationModule : AbpModule
         var configuration = context.Services.GetConfiguration();
         Configure<NameContestOptions>(configuration.GetSection("NameContest"));
         context.Services.AddSingleton<IGAgentFactory>(sp => new GAgentFactory(context.Services.GetRequiredService<IClusterClient>()));
+        context.Services.AddSingleton<IGAgentManager>(sp => new GAgentManager());
 
     }
 }

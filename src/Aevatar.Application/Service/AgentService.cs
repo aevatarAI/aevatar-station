@@ -8,6 +8,7 @@ using Aevatar.Agents.Combination;
 using Aevatar.Agents.Combination.Models;
 using Aevatar.Application.Grains.Agents.Atomic;
 using Aevatar.Application.Grains.Agents.Combination;
+using Aevatar.Application.Grains.Agents.Investment;
 using Aevatar.AtomicAgent;
 using Aevatar.CombinationAgent;
 using Aevatar.Core;
@@ -30,6 +31,7 @@ public class AgentService : ApplicationService, IAgentService
     private readonly ILogger<AgentService> _logger;
     private readonly IObjectMapper _objectMapper;
     private readonly IGAgentFactory _gAgentFactory;
+    private readonly IGAgentManager _gAgentManager;
     
     private const string GroupAgentName = "GroupAgent";
     private const string IndexSuffix = "index";
@@ -40,13 +42,15 @@ public class AgentService : ApplicationService, IAgentService
         ICQRSProvider cqrsProvider, 
         ILogger<AgentService> logger,  
         IObjectMapper objectMapper, 
-        IGAgentFactory gAgentFactory)
+        IGAgentFactory gAgentFactory, 
+        IGAgentManager gAgentManager)
     {
         _clusterClient = clusterClient;
         _cqrsProvider = cqrsProvider;
         _logger = logger;
         _objectMapper = objectMapper;
         _gAgentFactory = gAgentFactory;
+        _gAgentManager = gAgentManager;
     }
     
     public async Task<AtomicAgentDto> GetAtomicAgentAsync(string id)
@@ -290,7 +294,7 @@ public class AgentService : ApplicationService, IAgentService
             var validGuid = ParseGuid(agentId);
             var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(validGuid);
             var agentData = await atomicAgent.GetAgentAsync();
-
+            
             var businessAgent = await _gAgentFactory.GetGAgentAsync(agentData.Type, initializeDto: new InitializeDto
             {
                 Properties = agentData.Properties
@@ -497,4 +501,31 @@ public class AgentService : ApplicationService, IAgentService
         }
     }
     
+    public async Task RunAgentAsync(string agentId)
+    {
+        var gAgent = _clusterClient.GetGrain<ICombinationGAgent>(Guid.Parse(agentId));
+        await gAgent.PublishEventAsync(new InvestmentEvent { Content = "test"});
+    }
+
+    public async Task<List<string>> GetAllAgents()
+    {
+        var systemAgents = new List<string>()
+        {
+            "GroupGAgent",
+            "PublishingGAgent",
+            "SubscriptionGAgent",
+            "AtomicGAgent",
+            "CombinationGAgent",
+        };
+        var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
+        var validAgent = availableGAgents.Where(a => a.Namespace.StartsWith("Aevatar")).ToList();
+        var businessAgent = validAgent.Where(a => !systemAgents.Contains(a.Name)).ToList();
+        foreach (var type in businessAgent)
+        {
+            var agent = await _gAgentFactory.GetGAgentAsync(type.Name);
+            var dto = await agent.GetInitializeDtoTypeAsync();
+            _logger.LogInformation("GetAllAgents: {agent}", JsonConvert.SerializeObject(dto));
+        }
+        return businessAgent.Select(a => a.Name).ToList();
+    }
 }

@@ -18,7 +18,6 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
     private readonly ILogger<SubscriptionGAgent> _logger;
     private readonly IClusterClient _clusterClient;
     public SubscriptionGAgent(ILogger<SubscriptionGAgent> logger, 
-        IGAgentFactory gAgentFactory, 
         IClusterClient clusterClient) : base(logger)
     {
         _logger = logger;
@@ -56,20 +55,21 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
     }
     
     [AllEventHandler]
-    public async Task HandleRequestAllSubscriptionsEventAsync<T>(EventWrapper<T> eventWrapper) where T : EventBase
+    public async Task HandleEventAsync(EventWrapperBase eventWrapperBase) 
     {
-        _logger.LogInformation("EventSubscriptionGAgent HandleRequestAllSubscriptionsEventAsync :" +
-                               JsonConvert.SerializeObject(eventWrapper));
-        if (State.Status.IsNullOrEmpty() && State.Status == "active")
+        if (eventWrapperBase is EventWrapper<EventBase> eventWrapper)
         {
-            if (State.EventTypes.IsNullOrEmpty() || State.EventTypes.Contains("ALL") || State.EventTypes.Contains( eventWrapper.GetType().Name))
+            _logger.LogInformation("EventSubscriptionGAgent HandleRequestAllSubscriptionsEventAsync :" +
+                                   JsonConvert.SerializeObject(eventWrapper));
+            if (State.Status == "Active" && (State.EventTypes.IsNullOrEmpty() || State.EventTypes.Contains("ALL") || 
+                                             State.EventTypes.Contains( eventWrapper.GetType().Name)))
             {
                 var eventPushRequest = new EventPushRequest();
                 eventPushRequest.AgentId = State.AgentId;
                 eventPushRequest.EventId = eventWrapper.EventId;
                 eventPushRequest.EventType = eventWrapper.Event.GetType().Name;
                 eventPushRequest.Payload = JsonConvert.SerializeObject(eventWrapper.Event);
-                eventPushRequest.AtomicAgent = await GetAtomicAgentDtoFromEventGrainId(eventWrapper.GrainId);
+                eventPushRequest.AtomicAgent = await GetAtomicAgentDtoFromEventGrainId(eventWrapper.PublisherGrainId);
                 using var httpClient = new HttpClient();
                 await httpClient.PostAsJsonAsync(State.CallbackUrl, eventPushRequest);
             }
@@ -83,6 +83,7 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
         var combinationData = await combinationAgent.GetCombinationAsync();
         foreach (var agentId in combinationData.AgentComponent)
         {
+            var guid = grainId.GetGuidKey();
             var businessGuid = grainId.GetGuidKey().ToString();
             if (agentId.Value == businessGuid)
             {
