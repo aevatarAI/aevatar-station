@@ -21,8 +21,10 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
     [Fact(DisplayName = "Can create GAgent by GrainId.")]
     public async Task CreateGAgentByGrainIdTest()
     {
-        var grainId = GrainId.Create("test/group", Guid.NewGuid().ToString("N"));
+        var guid = Guid.NewGuid().ToString("N");
+        var grainId = GrainId.Create("test/group", guid);
         var gAgent = await _gAgentFactory.GetGAgentAsync(grainId);
+        gAgent.GetPrimaryKey().ToString("N").ShouldBe(guid);
         gAgent.ShouldNotBeNull();
         gAgent.GetGrainId().ShouldBe(grainId);
         await CheckSubscribedEventsAsync(gAgent);
@@ -34,6 +36,7 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
         {
             var gAgent = await _gAgentFactory.GetGAgentAsync<IStateGAgent<GroupGAgentState>>(Guid.NewGuid());
             gAgent.ShouldNotBeNull();
+            Should.NotThrow(() => gAgent.GetPrimaryKey());
             gAgent.GetGrainId().ShouldBe(GrainId.Create("test/group", gAgent.GetPrimaryKey().ToString("N")));
             await CheckSubscribedEventsAsync(gAgent);
         }
@@ -41,6 +44,7 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
         {
             var gAgent = await _gAgentFactory.GetGAgentAsync<IStateGAgent<NaiveTestGAgentState>>();
             gAgent.ShouldNotBeNull();
+            Should.NotThrow(() => gAgent.GetPrimaryKey());
             gAgent.GetGrainId().ShouldBe(GrainId.Create("aevatar/naiveTest", gAgent.GetPrimaryKey().ToString("N")));
             await CheckSubscribedEventsAsync(gAgent);
         }
@@ -48,6 +52,7 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
         {
             var gAgent = await _gAgentFactory.GetGAgentAsync<IPublishingGAgent>();
             gAgent.ShouldNotBeNull();
+            Should.NotThrow(() => gAgent.GetPrimaryKey());
             gAgent.GetGrainId().ShouldBe(GrainId.Create("aevatar/publishing", gAgent.GetPrimaryKey().ToString("N")));
             await CheckSubscribedEventsAsync(gAgent);
         }
@@ -57,7 +62,8 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
     public async Task CreateGAgentWithInitializeMethodTest()
     {
         // Arrange & Act.
-        var gAgent = await _gAgentFactory.GetGAgentAsync<IStateGAgent<NaiveTestGAgentState>>(Guid.NewGuid(),
+        var guid = Guid.NewGuid();
+        var gAgent = await _gAgentFactory.GetGAgentAsync<IStateGAgent<NaiveTestGAgentState>>(guid,
             new NaiveGAgentInitialize
             {
                 InitialGreeting = "Test"
@@ -69,6 +75,7 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
         await TestHelper.WaitUntilAsync(_ => CheckState(gAgent), TimeSpan.FromSeconds(20));
 
         // Assert.
+        Should.NotThrow(() => gAgent.GetPrimaryKey());
         await CheckSubscribedEventsAsync(gAgent);
         gAgent.GetGrainId().ShouldBe(GrainId.Create("aevatar/naiveTest", gAgent.GetPrimaryKey().ToString("N")));
         var gAgentState = await gAgent.GetStateAsync();
@@ -82,6 +89,7 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
         {
             var gAgent = await _gAgentFactory.GetGAgentAsync("naiveTest", Guid.NewGuid());
             gAgent.ShouldNotBeNull();
+            Should.NotThrow(() => gAgent.GetPrimaryKey());
             await CheckSubscribedEventsAsync(gAgent);
         }
 
@@ -91,6 +99,7 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
                 InitialGreeting = "Test"
             });
             gAgent.ShouldNotBeNull();
+            Should.NotThrow(() => gAgent.GetPrimaryKey());
             await CheckSubscribedEventsAsync(gAgent);
         }
     }
