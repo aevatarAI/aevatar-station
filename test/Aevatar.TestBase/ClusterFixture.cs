@@ -1,4 +1,5 @@
 using System.Reflection;
+using Aevatar.Core.Abstractions;
 using Aevatar.Core.Abstractions.Plugin;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
@@ -47,8 +48,6 @@ public class ClusterFixture : IDisposable, ISingletonDependency
             hostBuilder
                 .ConfigureServices(services =>
                 {
-                    services.AddSingleton<ApplicationPartManager>(new ApplicationPartManager());
-
                     services.AddAutoMapper(typeof(AevatarTestBaseModule).Assembly);
 
                     var mock = new Mock<ILocalEventBus>();
@@ -78,13 +77,15 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                     {
                         Mapper = sp.GetRequiredService<IMapper>()
                     });
-                    services.AddTransient<IPluginDirectoryProvider>(sp => new DefaultPluginDirectoryProvider());
+                    services.AddSingleton<IPluginGAgentManager>(sp =>
+                        new PluginGAgentManager(new ApplicationPartManager()));
                 })
+                 //.LoadPluginGAgents()
                 .AddMemoryStreams("Aevatar")
                 .AddMemoryGrainStorage("PubSubStore")
                 .AddMemoryGrainStorageAsDefault()
                 .AddLogStorageBasedLogConsistencyProvider("LogStorage");
-            
+
             // Load external grain assemblies
             var pluginDirectory = new DefaultPluginDirectoryProvider().GetDirectory();
             var pluginAssemblies = Directory.GetFiles(pluginDirectory, "*.dll")
