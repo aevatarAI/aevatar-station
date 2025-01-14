@@ -11,7 +11,7 @@ namespace Aevatar.Application.Grains.Agents.Investment;
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 [GAgent("InvestmentGAgent")]
-public class InvestmentGAgent : GAgentBase<InvestmentAgentState, InvestmentGEvent>, IInvestmentStateGAgent
+public class InvestmentGAgent : GAgentBaseWithInitialization<InvestmentAgentState, InvestmentGEvent, InvestmentInitializeDto>, IInvestmentStateGAgent
 {
     public InvestmentGAgent(ILogger<InvestmentGAgent> logger) : base(logger)
     {
@@ -25,6 +25,17 @@ public class InvestmentGAgent : GAgentBase<InvestmentAgentState, InvestmentGEven
     public Task<InvestmentAgentState> GetStateAsync()
     {
         return Task.FromResult(State);
+    }
+    
+    public override async Task InitializeAsync(InvestmentInitializeDto initializeDto)
+    {
+        if (State.Content.IsNullOrEmpty())
+        {
+            State.Content = [];
+        }
+
+        State.Content.Add(initializeDto.InvestmentContent);
+        State.Number = initializeDto.Number;
     }
 
     [EventHandler]
@@ -42,15 +53,6 @@ public class InvestmentGAgent : GAgentBase<InvestmentAgentState, InvestmentGEven
         });
     }
     
-    // public override async Task InitializeAsync(InvestmentInitializeDto initializeDto)
-    // {
-    //     if (State.Content.IsNullOrEmpty())
-    //     {
-    //         State.Content = [];
-    //     }
-    //
-    //     State.Content.Add(initializeDto.InitialGreeting);
-    // }
 }
 
 public interface IInvestmentStateGAgent :  IStateGAgent<InvestmentAgentState>

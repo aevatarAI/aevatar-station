@@ -83,20 +83,25 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
         var combinationData = await combinationAgent.GetCombinationAsync();
         foreach (var agentId in combinationData.AgentComponent)
         {
-            var guid = grainId.GetGuidKey();
             var businessGuid = grainId.GetGuidKey().ToString();
             if (agentId.Value == businessGuid)
             {
                 Guid.TryParse(agentId.Key, out Guid atomicGuid);
                 var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(atomicGuid);
                 var atomicAgentData = await atomicAgent.GetAgentAsync();
-                return new AtomicAgentDto()
+                var agentDto = new AtomicAgentDto()
                 {
                     Id = agentId.Key,
                     Type = atomicAgentData.Type,
-                    Name = atomicAgentData.Name,
-                    Properties = JsonConvert.DeserializeObject<Dictionary<string, string>>(atomicAgentData.Properties)
+                    Name = atomicAgentData.Name
                 };
+                if (!atomicAgentData.Properties.IsNullOrEmpty())
+                {
+                    agentDto.Properties =
+                        JsonConvert.DeserializeObject<Dictionary<string, object>>(atomicAgentData.Properties);
+                }
+
+                return agentDto;
             }
         }
 

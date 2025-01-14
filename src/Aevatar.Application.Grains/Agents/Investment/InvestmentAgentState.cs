@@ -6,4 +6,5 @@ namespace Aevatar.Application.Grains.Agents.Investment;
 public class InvestmentAgentState : StateBase
 {
     [Id(0)]  public List<string> Content { get; set; }
+    [Id(1)]  public int Number { get; set; }
 }

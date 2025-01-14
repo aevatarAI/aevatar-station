@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Aevatar.Agents.Atomic;
 using Aevatar.Agents.Atomic.Models;
@@ -12,6 +13,7 @@ using Aevatar.Application.Grains.Agents.Investment;
 using Aevatar.AtomicAgent;
 using Aevatar.CombinationAgent;
 using Aevatar.Core;
+using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
 using Aevatar.CQRS.Provider;
 using Microsoft.Extensions.Logging;
@@ -36,6 +38,7 @@ public class AgentService : ApplicationService, IAgentService
     private const string GroupAgentName = "GroupAgent";
     private const string IndexSuffix = "index";
     private const string IndexPrefix = "aevatar";
+    private List<AgentParamDto> _businessAgents;
 
     public AgentService(
         IClusterClient clusterClient, 
@@ -70,7 +73,7 @@ public class AgentService : ApplicationService, IAgentService
             Id = id,
             Type = agentData.Type,
             Name = agentData.Name,
-            Properties = JsonConvert.DeserializeObject<Dictionary<string, string>>(agentData.Properties)
+            Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentData.Properties)
         };
         
         return resp;
@@ -83,7 +86,11 @@ public class AgentService : ApplicationService, IAgentService
         var guid = Guid.NewGuid();
         var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(guid);
         var agentData = _objectMapper.Map<CreateAtomicAgentDto, AtomicAgentData>(createDto);
-        agentData.Properties = JsonConvert.SerializeObject(createDto.Properties);
+        if (!createDto.Properties.IsNullOrEmpty())
+        {
+            agentData.Properties = JsonConvert.SerializeObject(createDto.Properties);
+        }
+        
         agentData.UserAddress = address;
         await atomicAgent.CreateAgentAsync(agentData);
         var resp = _objectMapper.Map<CreateAtomicAgentDto, AtomicAgentDto>(createDto);
@@ -103,12 +110,6 @@ public class AgentService : ApplicationService, IAgentService
         {
             _logger.LogInformation("CreateAtomicAgentAsync name is null");
             throw new UserFriendlyException("name is null");
-        }
-        
-        if (createDto.Properties.IsNullOrEmpty())
-        {
-            _logger.LogInformation("CreateAtomicAgentAsync properties is null");
-            throw new UserFriendlyException("properties is null");
         }
     }
 
@@ -130,7 +131,7 @@ public class AgentService : ApplicationService, IAgentService
             agentData.Name = updateDto.Name;
         }
 
-        var newProperties = JsonConvert.DeserializeObject<Dictionary<string, string>>(agentData.Properties);
+        var newProperties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentData.Properties);
         if (newProperties != null)
         {
             foreach (var kvp in updateDto.Properties)
@@ -178,7 +179,7 @@ public class AgentService : ApplicationService, IAgentService
         
         var atomicGAgentStateDtoList = JsonConvert.DeserializeObject<List<AtomicGAgentStateDto>>(result);
 
-        return atomicGAgentStateDtoList.Select(stateDto => new AtomicAgentDto { Id = stateDto.Id.ToString(), Type = stateDto.Type, Name = stateDto.Name, Properties = JsonConvert.DeserializeObject<Dictionary<string, string>>(stateDto.Properties) }).ToList();
+        return atomicGAgentStateDtoList.Select(stateDto => new AtomicAgentDto { Id = stateDto.Id.ToString(), Type = stateDto.Type, Name = stateDto.Name, Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(stateDto.Properties) }).ToList();
     }
 
     public async Task DeleteAtomicAgentAsync(string id)
@@ -288,6 +289,7 @@ public class AgentService : ApplicationService, IAgentService
             await CheckAtomicAgentValid(validGuid);
         }
         
+        var agentPropertyDict = await GetInitializedDtos();
         var components = new Dictionary<string, string>();
         foreach (var agentId in agentComponent)
         {
@@ -295,11 +297,35 @@ public class AgentService : ApplicationService, IAgentService
             var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(validGuid);
             var agentData = await atomicAgent.GetAgentAsync();
             
-            var businessAgent = await _gAgentFactory.GetGAgentAsync(agentData.Type, initializeDto: new InitializeDto
+            InitializeDtoBase? dto = null;
+                   
+            if (agentPropertyDict.TryGetValue(agentData.Type, out var initializeParam) && !agentData.Properties.IsNullOrEmpty()) 
             {
-                Properties = agentData.Properties
-            });
-            // var publishAgent =  _clusterClient.GetGrain<IPublishingGAgent>(Guid.NewGuid());
+                if (initializeParam != null)
+                {
+                    var properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentData.Properties);
+                    var actualDto = Activator.CreateInstance(initializeParam.DtoType);
+                    dto = (InitializeDtoBase)actualDto!;
+                    
+                    foreach (var kvp in properties)
+                    {
+                        var propertyName = kvp.Key; 
+                        var propertyValue = kvp.Value;
+                        var propertyType = initializeParam.Properties.FirstOrDefault(x => x.Name == propertyName)?.Type;
+                        if (propertyType == null)
+                        {
+                            continue;
+                        }
+                        
+                        var propertyInfo = initializeParam.DtoType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+                        object convertedValue = ConvertValue(propertyType, propertyValue);
+                        propertyInfo?.SetValue(dto, convertedValue);
+                        _logger.LogInformation("SetGroupAsync propertyName: {propertyName}, propertyValue: {propertyValue}, propertyType: {propertyType}", propertyName, propertyValue, propertyType);
+                    }
+                }
+            }
+            
+            var businessAgent = await _gAgentFactory.GetGAgentAsync(agentData.Type, initializeDto: dto);
             await combinationAgent.RegisterAsync(businessAgent);
 
             var primaryKey = businessAgent.GetPrimaryKey().ToString();
@@ -395,7 +421,7 @@ public class AgentService : ApplicationService, IAgentService
     {
         var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(guid);
         var agentData = await atomicAgent.GetAgentAsync();
-        if (agentData.Properties.IsNullOrEmpty())
+        if (agentData.Type.IsNullOrEmpty())
         {
             _logger.LogInformation("agent not exist, id: {id}", guid);
             throw new UserFriendlyException("agent not exist");
@@ -506,8 +532,8 @@ public class AgentService : ApplicationService, IAgentService
         var gAgent = _clusterClient.GetGrain<ICombinationGAgent>(Guid.Parse(agentId));
         await gAgent.PublishEventAsync(new InvestmentEvent { Content = "test"});
     }
-
-    public async Task<List<string>> GetAllAgents()
+    
+    public async Task<Dictionary<string, AgentInitializedDto?>> GetInitializedDtos()
     {
         var systemAgents = new List<string>()
         {
@@ -520,12 +546,88 @@ public class AgentService : ApplicationService, IAgentService
         var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
         var validAgent = availableGAgents.Where(a => a.Namespace.StartsWith("Aevatar")).ToList();
         var businessAgent = validAgent.Where(a => !systemAgents.Contains(a.Name)).ToList();
+
+        var dict = new Dictionary<string, AgentInitializedDto?>();
+        
         foreach (var type in businessAgent)
         {
             var agent = await _gAgentFactory.GetGAgentAsync(type.Name);
-            var dto = await agent.GetInitializeDtoTypeAsync();
-            _logger.LogInformation("GetAllAgents: {agent}", JsonConvert.SerializeObject(dto));
+            var initializeDtoType = await agent.GetInitializeDtoTypeAsync();
+            if (initializeDtoType == null)
+            {
+                dict[type.Name] = null;
+                continue;
+            }
+            
+            PropertyInfo[] properties = initializeDtoType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
+
+            var initializeDto = new AgentInitializedDto
+            {
+                DtoType = initializeDtoType
+            };
+            
+            var propertyDtos = new List<PropertyDto>();
+            foreach (PropertyInfo property in properties)
+            {
+                var propertyDto = new PropertyDto()
+                {
+                    Name = property.Name,
+                    Type = property.PropertyType
+                };
+                propertyDtos.Add(propertyDto);
+            }
+            initializeDto.Properties = propertyDtos;
+            dict[type.Name] = initializeDto;
         }
-        return businessAgent.Select(a => a.Name).ToList();
+
+        return dict;
+    }
+    
+    public async Task<List<AgentParamDto>> GetAllAgents()
+    {
+        var propertyDtos = await GetInitializedDtos();
+        var resp = new List<AgentParamDto>();
+        foreach (var kvp in propertyDtos)
+        {
+            var paramDto = new AgentParamDto
+            {
+                AgentType = kvp.Key
+            };
+            
+            if (kvp.Value != null)
+            {
+                paramDto.AgentParams = kvp.Value.Properties.Select(p => new ParamDto
+                {
+                    Name = p.Name,
+                    Type = p.Type.ToString()
+                }).ToList();
+            }
+            
+            resp.Add(paramDto);
+        }
+        return resp;
+    }
+    
+    private static object ConvertValue(Type targetType, object value)
+    {
+        if (value == null)
+        {
+            return null;
+        }
+        
+        if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(List<>))
+        {
+            var elementType = targetType.GetGenericArguments()[0];
+            var list = Activator.CreateInstance(targetType) as System.Collections.IList;
+
+            foreach (var item in (IEnumerable<object>)value)
+            {
+                list.Add(ConvertValue(elementType, item));
+            }
+
+            return list;
+        }
+        
+        return Convert.ChangeType(value, targetType);
     }
 }
