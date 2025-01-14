@@ -9,7 +9,9 @@
     <ItemGroup>
       <PackageReference Include="Aevatar.EventSourcing.Core" />
       <PackageReference Include="Microsoft.Orleans.EventSourcing" />
-      <PackageReference Include="MongoDB.Driver" />
+        <PackageReference Include="MongoDB.Driver"/>
+        <PackageReference Include="MongoDB.Driver.Core.Extensions.DiagnosticSources"/>
+
     </ItemGroup>
 
     <ItemGroup>
