@@ -53,7 +53,7 @@
     <PackageVersion Include="Volo.Abp.EntityFrameworkCore.Sqlite" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.EventBus" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.EventBus.Abstractions" Version="$(AbpVersion)" />
-    <PackageVersion Include="Volo.Abp.FeatureManagement.MongoDB" Version="9.0.3" />
+    <PackageVersion Include="Volo.Abp.FeatureManagement.MongoDB" Version="$(AbpVersion)" />
 
     <PackageVersion Include="Volo.Abp.Http.Client.IdentityModel" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Identity.Application" Version="$(AbpVersion)" />
@@ -79,8 +79,8 @@
     <PackageVersion Include="Volo.Abp.PermissionManagement.EntityFrameworkCore" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.PermissionManagement.HttpApi" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.PermissionManagement.HttpApi.Client" Version="$(AbpVersion)" />
-    <PackageVersion Include="Volo.Abp.PermissionManagement.MongoDB" Version="9.0.3" />
-    <PackageVersion Include="Volo.Abp.MongoDB" Version="9.0.3" />
+    <PackageVersion Include="Volo.Abp.PermissionManagement.MongoDB" Version="$(AbpVersion)" />
+    <PackageVersion Include="Volo.Abp.MongoDB" Version="$(AbpVersion)" />
 
     <PackageVersion Include="Volo.Abp.SettingManagement.MongoDB" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Swashbuckle" Version="$(AbpVersion)" />
@@ -122,10 +122,9 @@
     <PackageVersion Include="EphemeralMongo6.runtime.osx-x64" Version="1.1.3" />
     <PackageVersion Include="MongoDB.Driver.Core.Extensions.DiagnosticSources" Version="1.0.0" />
 
-    <PackageVersion Include="MongoDB.Driver" Version="2.29.0" Condition="'$(MSBuildProjectName)' != 'Aevatar.HttpApi.Host'" />
-    <PackageVersion Include="MongoDB.Driver" Version="2.29.0" Condition="'$(MSBuildProjectName)' == 'Aevatar.HttpApi.Host'" />
-    <PackageVersion Include="Orleans.Providers.MongoDB" Version="8.1.0" Condition="'$(MSBuildProjectName)' == 'Aevatar.HttpApi.Host'" />
-    <PackageVersion Include="Orleans.Providers.MongoDB" Version="8.2.0" Condition="'$(MSBuildProjectName)' != 'Aevatar.HttpApi.Host'" />
+    <PackageVersion Include="MongoDB.Driver" Version="2.29.0" />
+    <PackageVersion Include="Orleans.Providers.MongoDB" Version="8.1.0" Condition="'$(MSBuildProjectName)' != 'Aevatar.Silo'" />
+    <PackageVersion Include="Orleans.Providers.MongoDB" Version="8.2.0" Condition="'$(MSBuildProjectName)' == 'Aevatar.Silo'" />
 
     <!-- Serilog packages -->
     <PackageVersion Include="Serilog" Version="4.0.2" />
