@@ -61,7 +61,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Listener.SDK", "src
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Listener.Template", "src\Aevatar.Listener.Template\Aevatar.Listener.Template.csproj", "{65FD0641-E20A-4EDF-9579-8F58FE2572F0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.App.Deploy", "src\Aevatar.App.Deploy\Aevatar.App.Deploy.csproj", "{0CE6D780-9322-4718-B233-AA7646BD70EF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Listener.Deploy", "src\Aevatar.Listener.Deploy\Aevatar.Listener.Deploy.csproj", "{0CE6D780-9322-4718-B233-AA7646BD70EF}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Kubernetes", "src\Aevatar.Kubernetes\Aevatar.Kubernetes.csproj", "{889426DC-3443-4DB1-ABC4-9CB4571B90FD}"
 EndProject

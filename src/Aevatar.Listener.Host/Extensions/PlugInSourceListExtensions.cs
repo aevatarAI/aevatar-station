@@ -1,9 +1,8 @@
-using Aevatar.Listener.Extensions;
 using JetBrains.Annotations;
 using Volo.Abp;
 using Volo.Abp.Modularity.PlugIns;
 
-namespace AeFinder.App.PlugIns;
+namespace Aevatar.Listener.Extensions;
 
 public static class PlugInSourceListExtensions
 {

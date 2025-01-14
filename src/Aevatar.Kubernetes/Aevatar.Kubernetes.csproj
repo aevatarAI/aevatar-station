@@ -19,7 +19,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Aevatar.App.Deploy\Aevatar.App.Deploy.csproj" />
+      <ProjectReference Include="..\Aevatar.Listener.Deploy\Aevatar.Listener.Deploy.csproj" />
       <ProjectReference Include="..\Aevatar.Domain.Shared\Aevatar.Domain.Shared.csproj" />
     </ItemGroup>
 

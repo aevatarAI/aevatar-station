@@ -11,15 +11,15 @@ namespace Aevatar.Controllers;
 [RemoteService]
 [ControllerName("App")]
 [Route("api/listener")]
-public class AppController : AevatarController
+public class ListenerController : AevatarController
 {
 
-    public AppController()
+    public ListenerController()
     {
     }
 
     [HttpPut]
-    [Authorize]
+    [Authorize(Policy = "OnlyAdminAccess")]
     [Route("code/{listenerId}/{version}")]
     [RequestSizeLimit(209715200)]
     [RequestFormLimits(MultipartBodyLengthLimit = 209715200)]
@@ -30,6 +30,8 @@ public class AppController : AevatarController
         {
             codeBytes = input.Code.GetAllBytes();
         }
+        //save code
+        //CreateNewAppAsync
     }
 
 
