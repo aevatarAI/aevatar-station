@@ -3,8 +3,6 @@
   <Import Project="..\..\common.props" />
   <PropertyGroup>
     <DisableStaticWebAssets>true</DisableStaticWebAssets>
-    <EnableDefaultItems>false</EnableDefaultItems>
-    <EnableStaticWebAssetsIntegration>false</EnableStaticWebAssetsIntegration>
   </PropertyGroup>
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
