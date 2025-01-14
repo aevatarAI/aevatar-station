@@ -35,6 +35,7 @@ public static class OrleansHostExtensions
                     options.SupportedNamespacePrefixes.Add("Newtonsoft.Json");
                     options.SupportedNamespacePrefixes.Add("MongoDB.Driver");
                 })
+                .AddMemoryStreams("Aevatar")
                 .AddActivityPropagation();
         });
     }

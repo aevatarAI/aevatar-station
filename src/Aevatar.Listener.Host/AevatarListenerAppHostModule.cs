@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
+using Aevatar.Core;
 using Aevatar.Listener.Extensions;
-using Aevatar.Listener.Handler;
 using Aevatar.Listener.SDK.Handler;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors;
@@ -26,7 +26,7 @@ public class AevatarListenerHostModule : AbpModule
     {
         var configuration = context.Services.GetConfiguration();
         ConfigureCors(context, configuration);
-        
+        context.Services.AddSingleton<IGAgentFactory,GAgentFactory>();
     }
 
     private void ConfigureCors(ServiceConfigurationContext context, IConfiguration configuration)
