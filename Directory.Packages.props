@@ -45,7 +45,7 @@
     <PackageVersion Include="Volo.Abp.BackgroundJobs.Domain.Shared" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.BackgroundJobs.MongoDB" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Caching.StackExchangeRedis" Version="$(AbpVersion)" />
-    <PackageVersion Include="Volo.Abp.Core" Version="$(AbpVersion)" />
+    <PackageVersion Include="Volo.Abp.Core" Version="8.2.0" />
     <PackageVersion Include="Volo.Abp.Dapr" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Ddd.Domain" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Emailing" Version="$(AbpVersion)" />
@@ -157,5 +157,6 @@
     <PackageVersion Include="NEST" Version="7.17.5" />
     <PackageVersion Include="GraphQL.Client" Version="6.1.0" />
     <PackageVersion Include="GraphQL.Client.Serializer.Newtonsoft" Version="6.1.0" />
+    <PackageVersion Include="KubernetesClient" Version="13.0.11" />
   </ItemGroup>
 </Project>

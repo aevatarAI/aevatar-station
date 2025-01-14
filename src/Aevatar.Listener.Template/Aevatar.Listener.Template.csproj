@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="..\..\common.props" />
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <RootNamespace>Aevatar.Listener</RootNamespace>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Aevatar.Listener.SDK\Aevatar.Listener.SDK.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Telegram\" />
+    </ItemGroup>
+    
+</Project>
