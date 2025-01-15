@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AbpVersion>9.0.3</AbpVersion>
-    <OrleansVerion>9.0.0</OrleansVerion>
+    <OrleansVerion>9.0.1</OrleansVerion>
   </PropertyGroup>
   <ItemGroup>
     <!-- AElf packages -->
@@ -97,7 +97,7 @@
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Http.Polly" Version="8.0.3" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
@@ -124,7 +124,7 @@
 
     <PackageVersion Include="MongoDB.Driver" Version="2.29.0" />
     <PackageVersion Include="Orleans.Providers.MongoDB" Version="8.1.0" Condition="'$(MSBuildProjectName)' != 'Aevatar.Silo'" />
-    <PackageVersion Include="Orleans.Providers.MongoDB" Version="8.2.0" Condition="'$(MSBuildProjectName)' == 'Aevatar.Silo'" />
+    <PackageVersion Include="Orleans.Providers.MongoDB" Version="9.0.0" Condition="'$(MSBuildProjectName)' == 'Aevatar.Silo'" />
 
     <!-- Serilog packages -->
     <PackageVersion Include="Serilog" Version="4.0.2" />
