@@ -22,6 +22,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.GAgents.Tests", "te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.GAgents.Plugins", "test\Aevatar.GAgents.Plugins\Aevatar.GAgents.Plugins.csproj", "{FDA00E3B-C9C8-4B66-B516-C17E7F7BA9CD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Plugins", "src\Aevatar.Plugins\Aevatar.Plugins.csproj", "{6FD57F65-0633-4C02-8FAB-AE93DFD094B8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -37,6 +39,7 @@ Global
 		{55EF840B-F16D-4D15-9770-B3006ADB6EFB} = {96D7B45D-F041-44DD-BFCC-E17048911357}
 		{B06AEDD8-DCE4-4F23-B730-C353E627A8E4} = {96D7B45D-F041-44DD-BFCC-E17048911357}
 		{FDA00E3B-C9C8-4B66-B516-C17E7F7BA9CD} = {96D7B45D-F041-44DD-BFCC-E17048911357}
+		{6FD57F65-0633-4C02-8FAB-AE93DFD094B8} = {94D0A422-54BA-48E4-9AAA-4C59BFF72F06}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{70485291-29F6-4FBA-BFE3-3F400184B3C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -75,5 +78,9 @@ Global
 		{FDA00E3B-C9C8-4B66-B516-C17E7F7BA9CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FDA00E3B-C9C8-4B66-B516-C17E7F7BA9CD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FDA00E3B-C9C8-4B66-B516-C17E7F7BA9CD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6FD57F65-0633-4C02-8FAB-AE93DFD094B8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6FD57F65-0633-4C02-8FAB-AE93DFD094B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6FD57F65-0633-4C02-8FAB-AE93DFD094B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6FD57F65-0633-4C02-8FAB-AE93DFD094B8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

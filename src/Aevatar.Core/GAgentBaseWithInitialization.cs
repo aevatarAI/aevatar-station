@@ -16,8 +16,8 @@ public abstract class GAgentBase<TState, TStateLogEvent, TEvent, TInitialization
     protected GAgentBase(ILogger logger) : base(logger)
     {
     }
-    
-    public abstract Task InitializeAsync(TInitializationEvent initializeDto);
+
+    public abstract Task InitializeAsync(TInitializationEvent initializationEvent);
 
     public override Task<Type?> GetInitializationTypeAsync()
     {
