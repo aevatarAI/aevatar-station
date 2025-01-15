@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
@@ -9,7 +9,9 @@
     <ItemGroup>
       <PackageReference Include="Aevatar.EventSourcing.Core" />
       <PackageReference Include="Microsoft.Orleans.EventSourcing" />
-      <PackageReference Include="MongoDB.Driver" />
+        <PackageReference Include="MongoDB.Driver"/>
+        <PackageReference Include="MongoDB.Driver.Core.Extensions.DiagnosticSources"/>
+
     </ItemGroup>
 
     <ItemGroup>
