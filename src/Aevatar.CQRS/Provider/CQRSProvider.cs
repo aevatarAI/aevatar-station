@@ -20,10 +20,13 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         _mediator = mediator;
     }
 
-    public async Task PublishAsync(StateBase state, string id)
+    public Task PublishAsync(StateBase state, string grainId)
     {
-        var grainId = GrainId.Parse(id);
+        throw new NotImplementedException();
+    }
 
+    public async Task PublishAsync(StateBase state, GrainId grainId)
+    {
         var command = new SaveStateCommand
         {
             Id = grainId.GetGuidKey().ToString(),
@@ -88,7 +91,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         return tuple;
     }
 
-    public async Task PublishAsync(Guid eventId, GrainId grainId, GEventBase eventBase)
+    public async Task PublishAsync(Guid eventId, GrainId grainId, StateLogEventBase eventBase)
     {
         var agentGrainId = Guid.Parse(grainId.Key.ToString());
         var grainType = grainId.Type;
@@ -111,5 +114,10 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
             AgentGEventIndex = agentGEventIndex
         };
         await _mediator.Send(command);
+    }
+
+    public Task PublishAsync(Guid eventId, string grainId, StateLogEventBase eventBase)
+    {
+        throw new NotImplementedException();
     }
 }
