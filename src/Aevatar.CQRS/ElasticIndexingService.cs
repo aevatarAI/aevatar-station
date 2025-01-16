@@ -255,7 +255,7 @@ public class ElasticIndexingService : IIndexingService
         }
     }
 
-    public async Task SaveOrUpdateGEventIndexAsync<T>(string id, T baseIndex) where T : BaseIndex
+    public async Task SaveOrUpdateIndexAsync<T>(string id, T baseIndex) where T : BaseIndex
     {
         var indexName = IndexPrefix + baseIndex.GetType().Name.ToLower();
         var properties = baseIndex.GetType().GetProperties();
@@ -287,33 +287,12 @@ public class ElasticIndexingService : IIndexingService
 
         if (!response.IsValid)
         {
-            _logger.LogError("GEvent save Error, indexName:{indexName} error:{error},DebugInfo:{DebugInfo} ", indexName,
+            _logger.LogError("Index save Error, indexName:{indexName} error:{error},DebugInfo:{DebugInfo} ", indexName,
                 response.ServerError, JsonConvert.SerializeObject(response.DebugInformation));
         }
         else
         {
-            _logger.LogInformation("GEvent save Successfully, indexName: {indexName} ", indexName);
-        }
-    }
-
-    public async Task<string> QueryEventIndexAsync(string id, string indexName)
-    {
-        try
-        {
-            var response = await _elasticClient.GetAsync<dynamic>(id, g => g.Index(indexName));
-            var source = response.Source;
-            if (source == null)
-            {
-                return "";
-            }
-
-            var documentContent = JsonConvert.SerializeObject(source);
-            return documentContent;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "GEvent query fail.indexName:{indexName} ,id:{id}", indexName, id);
-            throw;
+            _logger.LogInformation("Index save Successfully, indexName: {indexName} ", indexName);
         }
     }
 
@@ -364,33 +343,7 @@ public class ElasticIndexingService : IIndexingService
             throw;
         }
     }
-
-    public async Task SaveOrUpdateChatLogIndexAsync(AIChatLogIndex index)
-    {
-        if (index.Id == null || index.Id == Guid.Empty.ToString())
-        {
-            index.Id = Guid.NewGuid().ToString();
-        }
-
-        var indexName = index.GetType().Name.ToLower();
-        var response = await _elasticClient.IndexAsync(index, i => i
-            .Index(indexName)
-            .Id(index.Id)
-        );
-
-        if (!response.IsValid)
-        {
-            _logger.LogError(
-                "Save chat log Error, indexName:{indexName} error:{error} response:{response} ,DebugInfo{DebugInfo}",
-                indexName, response.ServerError, JsonConvert.SerializeObject(response),
-                JsonConvert.SerializeObject(response.DebugInformation));
-        }
-        else
-        {
-            _logger.LogInformation("Save chat log Successfully.indexName:{indexName}", indexName);
-        }
-    }
-
+    
     public async Task<(long TotalCount, List<AIChatLogIndex> ChatLogs)> QueryChatLogListAsync(
         ChatLogQueryInputDto input)
     {
