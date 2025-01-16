@@ -11,7 +11,7 @@ public interface IGroupGAgent : IGAgent
 
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
-public class GroupGAgent : GAgentBase<GroupAgentState, GroupGEvent>, IGroupGAgent
+public class GroupGAgent : GAgentBase<GroupAgentState, GroupStateLogEvent>, IGroupGAgent
 {
     public GroupGAgent(ILogger<GroupGAgent> logger) : base(logger)
     {

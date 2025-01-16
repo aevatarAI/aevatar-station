@@ -10,7 +10,7 @@ public interface IMessagingGAgent : IGAgent
     Task<int> GetReceivedMessagesAsync();
 }
 
-public class MessagingGAgent : GAgentBase<MessagingGState, MessagingGEvent>, IMessagingGAgent
+public class MessagingGAgent : GAgentBase<MessagingGState, MessagingStateLogEvent>, IMessagingGAgent
 {
     public MessagingGAgent(ILogger<MessagingGAgent> logger) : base(logger)
     {
@@ -34,7 +34,7 @@ public class MessagingGAgent : GAgentBase<MessagingGState, MessagingGEvent>, IMe
     [EventHandler]
     public async Task OnMessagingEvent(MessagingEvent @event)
     {
-        RaiseEvent(new MessagingGEvent());
+        RaiseEvent(new MessagingStateLogEvent());
         await ConfirmEvents();
     }
 

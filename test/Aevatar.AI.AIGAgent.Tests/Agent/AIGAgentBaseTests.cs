@@ -2,9 +2,8 @@ using Aevatar.AI.Agent;
 using Aevatar.AI.Brain;
 using Aevatar.AI.BrainFactory;
 using Aevatar.AI.Dtos;
-using Aevatar.AI.Events;
 using Aevatar.AI.State;
-using Microsoft.Extensions.DependencyInjection;
+using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Shouldly;
@@ -12,7 +11,17 @@ using File = Aevatar.AI.Brain.File;
 
 namespace Aevatar.AI.AIGAgent.Tests.Agent;
 
-public class TestAIGAgent : AIGAgentBase<AIGAgentState, AIEventBase>
+public class TestAIGAgentStateLogEvent : StateLogEventBase<TestAIGAgentStateLogEvent>
+{
+}
+
+[GenerateSerializer]
+public class TestAIGAgentState : AIGAgentStateBase
+{
+    [Id(0)]  public List<string> Content { get; set; }
+}
+
+public class TestAIGAgent : AIGAgentBase<TestAIGAgentState, TestAIGAgentStateLogEvent>
 {
     public TestAIGAgent(ILogger logger) : base(logger)
     {

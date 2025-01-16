@@ -2,7 +2,6 @@ using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
-using SimpleAIGAgent.Grains.Agents.Publisher;
 
 namespace MessagingGAgent.Grains.Agents.Publisher;
 
@@ -13,7 +12,7 @@ public class PublishingAgentState : StateBase
 
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
-public class PublishingGAgent : GAgentBase<PublishingAgentState, PublishingGEvent>, IPublishingGAgent
+public class PublishingGAgent : GAgentBase<PublishingAgentState, PublishingStateLogEvent>, IPublishingGAgent
 {
     public PublishingGAgent(ILogger<PublishingGAgent> logger) : base(logger)
     {

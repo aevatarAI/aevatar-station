@@ -10,7 +10,7 @@ public interface IChatAIGAgent : IAIGAgent, IGAgent
     Task<string> ChatAsync(string message);
 }
 
-public class ChatAIGAgent : AIGAgentBase<ChatAIGState, ChatAIEvent>, IChatAIGAgent
+public class ChatAIGAgent : AIGAgentBase<ChatAIGStateBase, ChatAIStateLogEvent>, IChatAIGAgent
 {
     public ChatAIGAgent(ILogger<ChatAIGAgent> logger) : base(logger)
     {
