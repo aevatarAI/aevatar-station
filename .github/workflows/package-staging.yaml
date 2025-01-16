@@ -24,6 +24,7 @@ jobs:
             Aevatar.HttpApi.Host,
             Aevatar.Silo,
             Aevatar.AuthServer,
+            Aevatar.WebHook.Host,
           ]
     steps:
       - uses: actions/checkout@v4
@@ -58,6 +59,7 @@ jobs:
             Aevatar.HttpApi.Host,
             Aevatar.Silo,
             Aevatar.AuthServer,
+            Aevatar.WebHook.Host,
           ]
     permissions:
       contents: read

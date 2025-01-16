@@ -1,7 +1,9 @@
 ﻿using Aevatar.Application.Grains;
 using Aevatar.Core;
 using Aevatar.CQRS;
+using Aevatar.Kubernetes;
 using Aevatar.Options;
+using Aevatar.WebHook.Deploy;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans;
 using Volo.Abp.Account;
@@ -23,7 +25,9 @@ namespace Aevatar;
     typeof(AbpDaprModule),
     typeof(AbpAspNetCoreMvcDaprModule),
     typeof(AIApplicationGrainsModule),
-    typeof(AevatarCQRSModule)
+    typeof(AevatarCQRSModule),
+    typeof(AevatarWebhookDeployModule),
+    typeof(AevatarKubernetesModule)
 )]
 public class AevatarApplicationModule : AbpModule
 {
@@ -38,6 +42,6 @@ public class AevatarApplicationModule : AbpModule
         Configure<NameContestOptions>(configuration.GetSection("NameContest"));
         context.Services.AddSingleton<IGAgentFactory>(sp => new GAgentFactory(context.Services.GetRequiredService<IClusterClient>()));
         context.Services.AddSingleton<IGAgentManager>(sp => new GAgentManager());
-
+        Configure<WebhookDeployOptions>(configuration.GetSection("WebhookDeploy"));
     }
 }
