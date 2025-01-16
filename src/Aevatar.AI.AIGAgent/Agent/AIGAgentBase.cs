@@ -108,7 +108,7 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
         // Derived classes can override this method.
     }
 
-    protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)
+    protected sealed override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)
     {
         await base.OnGAgentActivateAsync(cancellationToken);
         
@@ -119,5 +119,26 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
         }
         
         await OnAIGAgentActivateAsync(cancellationToken);
+    }
+    
+    protected sealed override void GAgentTransitionState(TState state, StateLogEventBase<TStateLogEvent> @event)
+    {
+        switch (@event)
+        {
+            case SetLLMStateLogEvent setLlmStateLogEvent:
+                State.LLM = setLlmStateLogEvent.LLM;
+                break;
+            case SetPromptTemplateStateLogEvent setPromptTemplateStateLogEvent:
+                State.PromptTemplate = setPromptTemplateStateLogEvent.PromptTemplate;
+                break;
+        }
+
+        AIGAgentTransitionState(state, @event);
+        TransitionState(state, @event);
+    }
+    
+    protected virtual void AIGAgentTransitionState(TState state, StateLogEventBase<TStateLogEvent> @event)
+    {
+        // Derived classes can override this method.
     }
 }
