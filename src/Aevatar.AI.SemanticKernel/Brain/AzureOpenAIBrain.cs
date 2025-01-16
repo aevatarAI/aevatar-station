@@ -40,28 +40,31 @@ public class AzureOpenAIBrain : IBrain
         _azureOpenAIClient = _serviceProvider.GetRequiredKeyedService<AzureOpenAIClient>(AzureOpenAIConfig.ConfigSectionName);
     }
     
-    public async Task<bool> Initialize(string id, string promptTemplate, List<File> files)
+    public async Task<bool> Initialize(string id, string promptTemplate, List<File>? files)
     {
         var kernelBuilder = _kernelBuilderFactory.GetKernelBuilder(id);
         kernelBuilder.AddAzureOpenAIChatCompletion(_azureOpenAIConfig.Value.ChatDeploymentName, _azureOpenAIClient);
         _kernel = kernelBuilder.Build();
 
-        var ragConfig = _ragConfig.Value;
-        foreach (var file in files)
+        if (files != null)
         {
-            var dataLoader = _kernel.Services.GetKeyedService<IEmbeddedDataLoader>(file.Type);
-            if (dataLoader == null)
+            var ragConfig = _ragConfig.Value;
+            foreach (var file in files)
             {
-                _logger.LogWarning("Data loader not found for file type {FileType}", file.Type);
-                continue;
-            }
+                var dataLoader = _kernel.Services.GetKeyedService<IEmbeddedDataLoader>(file.Type);
+                if (dataLoader == null)
+                {
+                    _logger.LogWarning("Data loader not found for file type {FileType}", file.Type);
+                    continue;
+                }
 
-            await dataLoader.Load(file, 
-                ragConfig.DataLoadingBatchSize, 
-                ragConfig.DataLoadingBetweenBatchDelayInMilliseconds,
-                new CancellationToken());
+                await dataLoader.Load(file,
+                    ragConfig.DataLoadingBatchSize,
+                    ragConfig.DataLoadingBetweenBatchDelayInMilliseconds,
+                    new CancellationToken());
+            }
         }
-        
+
         //VectorStoreTextSearch<TextSnippet<TKey>>
         var ts = _kernel.GetRequiredService<VectorStoreTextSearch<TextSnippet<Guid>>>();
         //ts.CreateWithGetTextSearchResults("SearchPlugin");

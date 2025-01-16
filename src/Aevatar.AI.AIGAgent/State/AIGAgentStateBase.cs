@@ -8,7 +8,7 @@ namespace Aevatar.AI.State;
 [GenerateSerializer]
 public abstract class AIGAgentStateBase : StateBase
 {
-    [Id(0)] public string LLM { get; set; } = "AzureOpenAI";
+    [Id(0)] public required string LLM { get; set; }
 
-    [Id(1)] public List<Guid> Stores { get; set; } = [];
+    [Id(1)] public required string PromptTemplate { get; set; }
 }

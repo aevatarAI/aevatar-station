@@ -29,6 +29,7 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
     {
         //save state
         await AddLLM(initializeDto.LLM);
+        await AddPromptTemplate(initializeDto.Instructions);
         
         _brain = _brainFactory.GetBrain(initializeDto.LLM);
         
@@ -68,6 +69,21 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
     public class SetLLMStateLogEvent : StateLogEventBase<TStateLogEvent>
     {
         [Id(0)] public string LLM { get; set; }
+    }
+    
+    private async Task AddPromptTemplate(string promptTemplate)
+    {
+        base.RaiseEvent(new SetPromptTemplateStateLogEvent
+        {
+            PromptTemplate = promptTemplate
+        });
+        await ConfirmEvents();
+    }
+    
+    [GenerateSerializer]
+    public class SetPromptTemplateStateLogEvent : StateLogEventBase<TStateLogEvent>
+    {
+        [Id(0)] public required string PromptTemplate { get; set; }
     }
 
     protected async Task<string?> InvokePromptAsync(string prompt)
