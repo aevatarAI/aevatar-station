@@ -20,7 +20,8 @@ public class CodeGAgent : GAgentBase<CodeGAgentState, CodeAgentGEvent>, ICodeGAg
 
     public override Task<string> GetDescriptionAsync()
     {
-        throw new NotImplementedException();
+        return Task.FromResult(
+            "This agent is used to store the code needed to create a webhook.");
     }
 
     public async Task UploadCodeAsync(string webhookId, string version, byte[] codeBytes)
