@@ -27,7 +27,7 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
             "Represents an atomic agent responsible for creating other agents such as TwitterGAgent and TelegramGAgent");
     }
     
-    public async Task<AtomicAgentData?> GetAgentAsync()
+    public async Task<AtomicAgentData> GetAgentAsync()
     {
         _logger.LogInformation("GetAgentAsync");
         var agentData = new AtomicAgentData()
@@ -39,7 +39,7 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
             Name = State.Name,
             Groups = State.Groups
         };
-        return await Task.FromResult(agentData);
+        return agentData;
     }
     
     public async Task CreateAgentAsync(AtomicAgentData data)

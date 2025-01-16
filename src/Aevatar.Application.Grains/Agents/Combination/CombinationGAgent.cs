@@ -54,7 +54,7 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
             UserAddress = State.UserAddress,
             Status = State.Status
         };
-        return await Task.FromResult(combinationData);
+        return combinationData;
     }
 
     public async Task UpdateCombinationAsync(CombinationAgentData data)
