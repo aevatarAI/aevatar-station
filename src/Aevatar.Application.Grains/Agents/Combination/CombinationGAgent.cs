@@ -54,7 +54,7 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
             UserAddress = State.UserAddress,
             Status = State.Status
         };
-        return await Task.FromResult(combinationData);
+        return combinationData;
     }
 
     public async Task UpdateCombinationAsync(CombinationAgentData data)
@@ -81,6 +81,55 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
         });
         await ConfirmEvents();
     }
+    
+    public async Task PublishEventAsync<T>(T @event) where T : EventBase
+    {
+        if (@event == null)
+        {
+            throw new ArgumentNullException(nameof(@event));
+        }
+
+        Logger.LogInformation( "publish event: {event}", @event);
+        await PublishAsync(@event);
+    }
+    
+    protected override Task OnRegisterAgentAsync(Guid agentGuid)
+    {
+        ++State.RegisteredAgents;
+        return Task.CompletedTask;
+    }
+
+    protected override Task OnUnregisterAgentAsync(Guid agentGuid)
+    {
+        --State.RegisteredAgents;
+        return Task.CompletedTask;
+    }
+    
+    protected override void GAgentTransitionState(CombinationGAgentState state, StateLogEventBase<CombinationAgentGEvent> @event)
+    {
+        switch (@event)
+        {
+            case CombineAgentGEvent combineAgentGEvent:
+                State.Id = combineAgentGEvent.CombineGAgentId;
+                State.Name = combineAgentGEvent.Name;
+                State.GroupId = combineAgentGEvent.GroupId;
+                State.UserAddress = combineAgentGEvent.UserAddress;
+                State.Status = AgentStatus.Running;
+                State.AgentComponent = combineAgentGEvent.AgentComponent;
+                break;
+            case UpdateCombinationGEvent combineCombinationGEvent:
+                State.Name = combineCombinationGEvent.Name;
+                State.AgentComponent = combineCombinationGEvent.AgentComponent;
+                break;
+            case DeleteCombinationGEvent deleteCombinationGEvent:
+                State.Name = "";
+                State.AgentComponent = new ();
+                State.GroupId = "";
+                State.Status = AgentStatus.Deleted;
+                State.UserAddress = "";
+                break;
+        }
+    }
 }
 
 
@@ -91,4 +140,5 @@ public interface ICombinationGAgent : IStateGAgent<CombinationGAgentState>
     Task UpdateCombinationAsync(CombinationAgentData data);
     Task<AgentStatus> GetStatusAsync();
     Task DeleteCombinationAsync();
+    Task PublishEventAsync<T>(T @event) where T : EventBase;
 }
