@@ -15,4 +15,7 @@ public interface ICQRSProvider : IEventDispatcher
 
     Task<Tuple<long, List<AgentGEventIndex>>> QueryGEventAsync(string eventId, List<string> grainIds, int pageNumber, int pageSize);
     
+    Task SendLogCommandAsync(SaveLogCommand command);
+    
+    Task<ChatLogPageResultDto> QueryChatLogListAsync(GetLogQuery command);
 }

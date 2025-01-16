@@ -22,5 +22,8 @@ public interface IIndexingService
     public Task<Tuple<long, List<TEntity>>> GetSortListAsync<TEntity>(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterFunc = null,
         Func<SourceFilterDescriptor<TEntity>, ISourceFilter> includeFieldFunc = null
         ,Func<SortDescriptor<TEntity>, IPromise<IList<ISort>>> sortFunc = null, int limit = 1000, int skip = 0, string? index = null) where TEntity : class;
+    public Task SaveOrUpdateChatLogIndexAsync(AIChatLogIndex index);
+    
+    public Task<(long TotalCount,List<AIChatLogIndex> ChatLogs)> QueryChatLogListAsync(ChatLogQueryInputDto input);
 
 }

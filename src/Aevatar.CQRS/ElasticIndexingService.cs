@@ -28,7 +28,7 @@ public class ElasticIndexingService : IIndexingService
         _elasticClient = elasticClient;
     }
 
-    public  void CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase
+    public void CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase
     {
         var indexName = IndexPrefix + stateBase.GetType().Name.ToLower() + IndexSuffix;
         var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
@@ -39,7 +39,7 @@ public class ElasticIndexingService : IIndexingService
 
         var createIndexResponse = _elasticClient.Indices.Create(indexName, c => c
             .Map<T>(m => m
-                .Dynamic(false) 
+                .Dynamic(false)
                 .Properties(props =>
                 {
                     var type = stateBase.GetType();
@@ -94,12 +94,14 @@ public class ElasticIndexingService : IIndexingService
         );
         if (!createIndexResponse.IsValid)
         {
-            _logger.LogError("Error creating state index. indexName:{indexName}  {error}", indexName,
-                createIndexResponse.ServerError?.Error);
+            _logger.LogError("Error creating state index. indexName:{indexName},error:{error},DebugInfo:{DebugInfo}",
+                indexName,
+                createIndexResponse.ServerError?.Error,
+                JsonConvert.SerializeObject(createIndexResponse.DebugInformation));
         }
         else
         {
-            _logger.LogError("Successfully created state index . indexName:{indexName}", indexName);
+            _logger.LogInformation("Successfully created state index . indexName:{indexName}", indexName);
         }
     }
 
@@ -135,37 +137,43 @@ public class ElasticIndexingService : IIndexingService
 
         if (!response.IsValid)
         {
-            _logger.LogInformation("State {indexName} save Error, indexing document error:{error}: ", indexName,
-                response.ServerError);
+            _logger.LogError(
+                "Save State Error, indexing document error,indexName:{indexName} error:{error}, DebugInfo{DebugInfo} ",
+                indexName,
+                response.ServerError, JsonConvert.SerializeObject(response.DebugInformation));
         }
         else
         {
-            _logger.LogInformation("State {indexName} save Successfully.", indexName);
+            _logger.LogInformation("Save State Successfully. indexName:{indexName}", indexName);
         }
     }
 
-    public async Task<string> GetStateIndexDocumentsAsync(string indexName, Func<QueryContainerDescriptor<dynamic>, QueryContainer> query, int skip = DefaultSkip, int limit =  DefaultLimit)
+    public async Task<string> GetStateIndexDocumentsAsync(string indexName,
+        Func<QueryContainerDescriptor<dynamic>, QueryContainer> query, int skip = DefaultSkip, int limit = DefaultLimit)
     {
         try
         {
-            var response = await _elasticClient.SearchAsync<dynamic>(s=>s
+            var response = await _elasticClient.SearchAsync<dynamic>(s => s
                 .Index(indexName)
                 .Query(query)
                 .From(skip)
-                .Size(limit)); 
-            
+                .Size(limit));
+
             if (!response.IsValid)
             {
-                _logger.LogError("{indexName} documents query fail: {reason}", indexName, response.ServerError?.Error.Reason);
+                _logger.LogError(
+                    "state documents query fail, indexName:{indexName} error:{error} ,DebugInfo{DebugInfo}", indexName,
+                    response.ServerError?.Error.Reason, JsonConvert.SerializeObject(response.DebugInformation));
                 return null;
             }
+
             var documents = response.Hits.Select(hit => hit.Source);
             var documentContent = JsonConvert.SerializeObject(documents);
             return documentContent;
         }
         catch (Exception e)
         {
-            _logger.LogError(e,"{indexName} documents query Exception: {reason}", indexName);
+            _logger.LogError(e, "state documents query Exception,indexName:{indexName}", indexName);
             throw;
         }
     }
@@ -181,7 +189,7 @@ public class ElasticIndexingService : IIndexingService
 
         var createIndexResponse = _elasticClient.Indices.Create(indexName, c => c
             .Map<T>(m => m
-                .Dynamic(false) 
+                .Dynamic(false)
                 .Properties(props =>
                 {
                     var type = baseIndex.GetType();
@@ -236,12 +244,14 @@ public class ElasticIndexingService : IIndexingService
         );
         if (!createIndexResponse.IsValid)
         {
-            _logger.LogError("Error creating index. indexName:{indexName}  {error}", indexName,
-                createIndexResponse.ServerError?.Error);
+            _logger.LogError("Error creating index. indexName:{indexName},error:{error},DebugInfo{DebugInfo}",
+                indexName,
+                createIndexResponse.ServerError?.Error,
+                JsonConvert.SerializeObject(createIndexResponse.DebugInformation));
         }
         else
         {
-            _logger.LogError("Successfully created index . indexName:{indexName}", indexName);
+            _logger.LogInformation("Successfully created index . indexName:{indexName}", indexName);
         }
     }
 
@@ -277,12 +287,12 @@ public class ElasticIndexingService : IIndexingService
 
         if (!response.IsValid)
         {
-            _logger.LogInformation("Index: {indexName} save Error, indexing document error:{error}: ", indexName,
-                response.ServerError);
+            _logger.LogError("GEvent save Error, indexName:{indexName} error:{error},DebugInfo:{DebugInfo} ", indexName,
+                response.ServerError, JsonConvert.SerializeObject(response.DebugInformation));
         }
         else
         {
-            _logger.LogInformation("Index: {indexName} save Successfully.", indexName);
+            _logger.LogInformation("GEvent save Successfully, indexName: {indexName} ", indexName);
         }
     }
 
@@ -302,7 +312,7 @@ public class ElasticIndexingService : IIndexingService
         }
         catch (Exception e)
         {
-            _logger.LogError(e,"{indexName} ,id:{id}QueryEventIndexAsync fail.", indexName, id);
+            _logger.LogError(e, "GEvent query fail.indexName:{indexName} ,id:{id}", indexName, id);
             throw;
         }
     }
@@ -344,14 +354,129 @@ public class ElasticIndexingService : IIndexingService
                 return new Tuple<long, List<TEntity>>(result.Total, result.Documents.ToList());
             }
 
-            _logger.LogError("{indexName} Search fail. error:{error}", indexName, result.ServerError?.Error);
+            _logger.LogError("{indexName} Search fail. error:{error}, DebugInfo{DebugInfo}", indexName,
+                result.ServerError?.Error, JsonConvert.SerializeObject(result.DebugInformation));
             return null;
-
         }
         catch (Exception e)
         {
             _logger.LogError(e, "{indexName} Search Exception.", indexName);
             throw;
         }
+    }
+
+    public async Task SaveOrUpdateChatLogIndexAsync(AIChatLogIndex index)
+    {
+        if (index.Id == null || index.Id == Guid.Empty.ToString())
+        {
+            index.Id = Guid.NewGuid().ToString();
+        }
+
+        var indexName = index.GetType().Name.ToLower();
+        var response = await _elasticClient.IndexAsync(index, i => i
+            .Index(indexName)
+            .Id(index.Id)
+        );
+
+        if (!response.IsValid)
+        {
+            _logger.LogError(
+                "Save chat log Error, indexName:{indexName} error:{error} response:{response} ,DebugInfo{DebugInfo}",
+                indexName, response.ServerError, JsonConvert.SerializeObject(response),
+                JsonConvert.SerializeObject(response.DebugInformation));
+        }
+        else
+        {
+            _logger.LogInformation("Save chat log Successfully.indexName:{indexName}", indexName);
+        }
+    }
+
+    public async Task<(long TotalCount, List<AIChatLogIndex> ChatLogs)> QueryChatLogListAsync(
+        ChatLogQueryInputDto input)
+    {
+        try
+        {
+            if (input == null)
+            {
+                return (0, new List<AIChatLogIndex>());
+            }
+
+            if (input.BeginTimestamp > input.EndTimestamp)
+            {
+                return (0, new List<AIChatLogIndex>());
+            }
+
+            var mustQuery = new List<Func<QueryContainerDescriptor<AIChatLogIndex>, QueryContainer>>();
+            if (!input.GroupId.IsNullOrEmpty())
+            {
+                mustQuery.Add(q => q.Term(i
+                    => i.Field(f => f.GroupId).Field(input.GroupId)));
+            }
+
+            if (!input.AgentId.IsNullOrEmpty())
+            {
+                mustQuery.Add(q => q.Term(i
+                    => i.Field(f => f.AgentId).Field(input.AgentId)));
+            }
+
+            if (input.Ids?.Count > 0)
+            {
+                mustQuery.Add(q => q.Terms(i => i.Field(f => f.Id).Terms(input.Ids)));
+            }
+
+            if (input.BeginTimestamp > 0)
+            {
+                mustQuery.Add(q => q.DateRange(i =>
+                    i.Field(f => f.Ctime)
+                        .GreaterThanOrEquals(DateTime.UnixEpoch.AddMilliseconds((double)input.BeginTimestamp))));
+            }
+
+            if (input.EndTimestamp > 0)
+            {
+                mustQuery.Add(q => q.DateRange(i =>
+                    i.Field(f => f.Ctime)
+                        .LessThanOrEquals(DateTime.UnixEpoch.AddMilliseconds((double)input.EndTimestamp))));
+            }
+
+            QueryContainer Filter(QueryContainerDescriptor<AIChatLogIndex> f)
+                => f.Bool(b => b.Must(mustQuery));
+
+            var searchResponse = _elasticClient.Search<AIChatLogIndex>(s => s
+                .Index(nameof(AIChatLogIndex).ToLower())
+                .Query(q => q
+                    .Bool(b => b
+                        .Must(mustQuery)
+                    )
+                )
+                .From(input.SkipCount)
+                .Size(input.MaxResultCount)
+                .Sort(ss => ss
+                    .Ascending(a => a.Ctime)
+                )
+            );
+            switch (searchResponse.IsValid)
+            {
+                case true:
+                {
+                    var chatLogIndexList = new List<AIChatLogIndex>();
+                    if (searchResponse.Total != 0)
+                    {
+                        chatLogIndexList = searchResponse.Documents.ToList();
+                    }
+
+                    return (searchResponse.Total, chatLogIndexList);
+                }
+                default:
+                    _logger.LogError("Query Chat log fail errMsg:{errMsg},DebugInfo:{DebugInfo}",
+                        searchResponse.ServerError, JsonConvert.SerializeObject(searchResponse.DebugInformation));
+                    break;
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Query Chat log Exception");
+        }
+
+        return (0, new List<AIChatLogIndex>());
     }
 }

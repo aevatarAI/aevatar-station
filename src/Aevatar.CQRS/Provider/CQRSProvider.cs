@@ -120,4 +120,12 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
     {
         throw new NotImplementedException();
     }
+    public async Task SendLogCommandAsync(SaveLogCommand command)
+    {
+        await _mediator.Send(command);
+    }
+    public async Task<ChatLogPageResultDto> QueryChatLogListAsync(GetLogQuery command)
+    {
+        return await _mediator.Send(command);
+    }
 }

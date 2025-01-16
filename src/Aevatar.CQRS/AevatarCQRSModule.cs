@@ -18,13 +18,15 @@ public class AevatarCQRSModule : AbpModule
        public override void ConfigureServices(ServiceConfigurationContext context)
         {
             Configure<AbpAutoMapperOptions>(options => { options.AddMaps<AevatarCQRSModule>(); });
+            context.Services.AddAutoMapper(typeof(AISmartCQRSAutoMapperProfile).Assembly);
 
             context.Services.AddMediatR(typeof(SaveStateCommandHandler).Assembly);
             context.Services.AddMediatR(typeof(GetStateQueryHandler).Assembly);
             context.Services.AddMediatR(typeof(SendEventCommandHandler).Assembly);
             context.Services.AddMediatR(typeof(SaveGEventCommandHandler).Assembly);
             context.Services.AddMediatR(typeof(GetGEventQueryHandler).Assembly);
-
+            context.Services.AddMediatR(typeof(SaveLogCommandHandler).Assembly);
+            context.Services.AddMediatR(typeof(GetLogQueryHandler).Assembly);
             context.Services.AddSingleton<IIndexingService, ElasticIndexingService>();
             context.Services.AddSingleton<IEventDispatcher, CQRSProvider>();
             context.Services.AddSingleton<ICQRSProvider, CQRSProvider>();
@@ -33,7 +35,8 @@ public class AevatarCQRSModule : AbpModule
             context.Services.AddTransient<SendEventCommandHandler>();
             context.Services.AddTransient<SaveGEventCommandHandler>();
             context.Services.AddTransient<GetGEventQueryHandler>();
-
+            context.Services.AddTransient<SaveLogCommandHandler>();
+            context.Services.AddTransient<GetLogQueryHandler>();
             var configuration = context.Services.GetConfiguration();
             ConfigureElasticsearch(context, configuration);
 
