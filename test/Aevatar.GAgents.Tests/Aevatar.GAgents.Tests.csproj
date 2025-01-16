@@ -26,6 +26,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\src\Aevatar.Plugins\Aevatar.Plugins.csproj" />
         <ProjectReference Include="..\Aevatar.Core.Tests\Aevatar.Core.Tests.csproj" />
         <ProjectReference Include="..\Aevatar.TestBase\Aevatar.TestBase.csproj" />
     </ItemGroup>

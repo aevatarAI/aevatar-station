@@ -22,10 +22,15 @@ public class PluginCodeStorageInitializationEvent : InitializationEventBase
     [Id(0)] public byte[] Code { get; set; }
 }
 
+public interface IPluginCodeStorageGAgent: IStateGAgent<PluginCodeStorageGAgentState>
+{
+    Task<byte[]> GetPluginCodeAsync();
+}
+
 [GAgent("pluginCodeStorage")]
 public class PluginCodeStorageGAgent(ILogger<PluginCodeStorageGAgent> logger)
     : GAgentBase<PluginCodeStorageGAgentState, PluginCodeStorageStateLogEvent, EventBase,
-        PluginCodeStorageInitializationEvent>(logger)
+        PluginCodeStorageInitializationEvent>(logger), IPluginCodeStorageGAgent
 {
     public override Task<string> GetDescriptionAsync()
     {
@@ -52,5 +57,10 @@ public class PluginCodeStorageGAgent(ILogger<PluginCodeStorageGAgent> logger)
     public override async Task InitializeAsync(PluginCodeStorageInitializationEvent initializationEvent)
     {
         State.Code = initializationEvent.Code;
+    }
+
+    public Task<byte[]> GetPluginCodeAsync()
+    {
+        return Task.FromResult(State.Code);
     }
 }

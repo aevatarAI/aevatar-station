@@ -1,5 +1,7 @@
 using Aevatar.Core;
+using Aevatar.Core.Abstractions;
 using Aevatar.Core.Abstractions.Plugin;
+using Aevatar.Plugins;
 using Aevatar.TestBase;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Shouldly;
@@ -30,11 +32,16 @@ public sealed class PluginGAgentsTests : AevatarGAgentsTestBase
     public async Task PluginGAgentManagerTest()
     {
         var directory = new DefaultPluginDirectoryProvider().GetDirectory();
-        var pluginGAgentManager = new PluginGAgentManager(GetRequiredService<ApplicationPartManager>());
+        var pluginGAgentManager = GetRequiredService<IPluginGAgentManager>();
         var codeList = LoadDllsAsByteArrays(directory);
+        var tenantId = Guid.NewGuid();
         foreach (var code in codeList)
         {
-            pluginGAgentManager.AddPluginGAgent(code);
+            await pluginGAgentManager.AddPluginGAgentAsync(new AddPluginGAgentDto
+            {
+                Code = code,
+                TenantId = tenantId
+            });
         }
 
         var gAgent = await _gAgentFactory.GetGAgentAsync("pluginTest");

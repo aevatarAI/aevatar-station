@@ -1,6 +1,9 @@
+using Aevatar.Core.Abstractions.Plugin;
+
 namespace Aevatar.Core.Abstractions;
 
 public interface IPluginGAgentManager
 {
-    void AddPluginGAgent(byte[] pluginGAgentCode);
+    Task<Guid> AddPluginGAgentAsync(AddPluginGAgentDto addPluginGAgentDto);
+    Task LoadPluginGAgentsAsync(Guid tenantId);
 }

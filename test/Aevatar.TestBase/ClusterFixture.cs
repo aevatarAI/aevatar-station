@@ -1,6 +1,8 @@
 using System.Reflection;
+using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Core.Abstractions.Plugin;
+using Aevatar.Plugins;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.Extensions.Configuration;
@@ -77,10 +79,7 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                     {
                         Mapper = sp.GetRequiredService<IMapper>()
                     });
-                    services.AddSingleton<IPluginGAgentManager>(sp =>
-                        new PluginGAgentManager(new ApplicationPartManager()));
                 })
-                 //.LoadPluginGAgents()
                 .AddMemoryStreams("Aevatar")
                 .AddMemoryGrainStorage("PubSubStore")
                 .AddMemoryGrainStorageAsDefault()

@@ -18,7 +18,8 @@ public class TenantPluginStateLogEvent : StateLogEventBase<TenantPluginStateLogE
 
 public interface ITenantPluginCodeGAgent : IStateGAgent<TenantPluginCodeGAgentState>
 {
-    Task AddPluginCode(IEnumerable<Guid> codeStorageGuid);
+    Task AddPluginAsync(Guid codeStorageGuid);
+    Task AddPluginsAsync(IEnumerable<Guid> codeStorageGuid);
 }
 
 [GAgent("pluginTenant")]
@@ -48,11 +49,20 @@ public class TenantPluginCodeGAgent(ILogger<TenantPluginCodeGAgent> logger)
         base.GAgentTransitionState(state, @event);
     }
 
-    public async Task AddPluginCode(IEnumerable<Guid> codeStorageGuids)
+    public async Task AddPluginsAsync(IEnumerable<Guid> codeStorageGuids)
     {
         RaiseEvent(new AddPluginCodeStateLogEvent
         {
             CodeStorageGuids = codeStorageGuids.ToList()
+        });
+        await ConfirmEvents();
+    }
+
+    public async Task AddPluginAsync(Guid codeStorageGuid)
+    {
+        RaiseEvent(new AddPluginCodeStateLogEvent
+        {
+            CodeStorageGuids = [codeStorageGuid]
         });
         await ConfirmEvents();
     }
