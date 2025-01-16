@@ -6,6 +6,7 @@ using Aevatar.CombinationAgent;
 using Aevatar.CQRS.Dto;
 using Aevatar.Service;
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -16,6 +17,7 @@ namespace Aevatar.Controllers;
 [RemoteService]
 [ControllerName("Agent")]
 [Route("api/agent")]
+[Authorize]
 public class AgentController : AevatarController
 {
     private readonly ILogger<AgentController> _logger;

@@ -14,7 +14,7 @@ namespace Aevatar.Controllers;
 [RemoteService]
 [ControllerName("Subscription")]
 [Route("api/subscription")]
-// [Authorize]
+[Authorize]
 public class SubscriptionController :  AevatarController
 {
     private readonly SubscriptionAppService _subscriptionAppService;
