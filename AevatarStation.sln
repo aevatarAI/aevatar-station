@@ -55,13 +55,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Application.Grains"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.EventSourcing.MongoDB", "src\Aevatar.EventSourcing.MongoDB\Aevatar.EventSourcing.MongoDB.csproj", "{6595AA57-4FCD-49C3-A5FA-536203F02F17}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Listener.Host", "src\Aevatar.Listener.Host\Aevatar.Listener.Host.csproj", "{DD36065E-F144-4A63-B107-8572497ECBF2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.WebHook.Host", "src\Aevatar.WebHook.Host\Aevatar.WebHook.Host.csproj", "{DD36065E-F144-4A63-B107-8572497ECBF2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Listener.SDK", "src\Aevatar.Listener.SDK\Aevatar.Listener.SDK.csproj", "{2AB30AC8-CF64-44DC-827E-F9B179FA1560}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.WebHook.SDK", "src\Aevatar.WebHook.SDK\Aevatar.WebHook.SDK.csproj", "{2AB30AC8-CF64-44DC-827E-F9B179FA1560}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Listener.Template", "src\Aevatar.Listener.Template\Aevatar.Listener.Template.csproj", "{65FD0641-E20A-4EDF-9579-8F58FE2572F0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Webhook.Template", "src\Aevatar.Webhook.Template\Aevatar.Webhook.Template.csproj", "{65FD0641-E20A-4EDF-9579-8F58FE2572F0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Listener.Deploy", "src\Aevatar.Listener.Deploy\Aevatar.Listener.Deploy.csproj", "{0CE6D780-9322-4718-B233-AA7646BD70EF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.WebHook.Deploy", "src\Aevatar.WebHook.Deploy\Aevatar.WebHook.Deploy.csproj", "{0CE6D780-9322-4718-B233-AA7646BD70EF}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Kubernetes", "src\Aevatar.Kubernetes\Aevatar.Kubernetes.csproj", "{889426DC-3443-4DB1-ABC4-9CB4571B90FD}"
 EndProject

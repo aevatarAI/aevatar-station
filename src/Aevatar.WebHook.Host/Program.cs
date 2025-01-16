@@ -17,8 +17,8 @@ public class Program
             .AddJsonFile("appsettings.json")
             .Build();
         
-        var ListenerId = configuration["ListenerInfo:ListenerId"];
-        var version = configuration["ListenerInfo:Version"];
+        var webhookId = configuration["Webhook:WebhookId"];
+        var version = configuration["Webhook:Version"];
         Log.Logger = new LoggerConfiguration()
 #if DEBUG
             .MinimumLevel.Debug()
@@ -27,14 +27,14 @@ public class Program
 #endif
             .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
             .Enrich.FromLogContext()
-            .Enrich.WithProperty("ListenerId", ListenerId)
+            .Enrich.WithProperty("WebhookId", webhookId)
             .Enrich.WithProperty("Version", version)
             .ReadFrom.Configuration(configuration)
             .CreateLogger();
 
         try
         {
-            Log.Information("Starting Aevatar.Listener.Host.");
+            Log.Information("Starting Aevatar.WebHook.Host.");
             await CreateHostBuilder(args).Build().RunAsync();
             return 0;
         }

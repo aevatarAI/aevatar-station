@@ -1,6 +1,8 @@
 ﻿using Aevatar.Application.Grains;
 using Aevatar.CQRS;
+using Aevatar.Kubernetes;
 using Aevatar.Options;
+using Aevatar.WebHook.Deploy;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.Account;
 using Volo.Abp.AspNetCore.Mvc.Dapr;
@@ -21,7 +23,9 @@ namespace Aevatar;
     typeof(AbpDaprModule),
     typeof(AbpAspNetCoreMvcDaprModule),
     typeof(AIApplicationGrainsModule),
-    typeof(AevatarCQRSModule)
+    typeof(AevatarCQRSModule),
+    typeof(AevatarWebhookDeployModule),
+    typeof(AevatarKubernetesModule)
 )]
 public class AevatarApplicationModule : AbpModule
 {

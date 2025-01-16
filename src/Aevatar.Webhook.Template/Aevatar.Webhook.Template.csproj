@@ -7,11 +7,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Aevatar.Listener.SDK\Aevatar.Listener.SDK.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="Telegram\" />
+        <ProjectReference Include="..\Aevatar.WebHook.SDK\Aevatar.WebHook.SDK.csproj" />
     </ItemGroup>
     
 </Project>

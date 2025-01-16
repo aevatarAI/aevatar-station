@@ -12,26 +12,27 @@ public static class EndpointsExtensions
 {
     /// <param name="endpoints">Endpoints </param>
     /// <param name="webhookHandlers">webhookHandlers </param>
-    public static void MapWebhookHandlers(this IEndpointRouteBuilder endpoints, IEnumerable<IWebhookHandler> webhookHandlers)
+    /// <param name="webhookId"></param>
+    public static void MapWebhookHandlers(this IEndpointRouteBuilder endpoints, IEnumerable<IWebhookHandler> webhookHandlers,string webhookId)
     {
         foreach (var webhook in webhookHandlers)
         {
             switch (webhook.HttpMethod.ToUpperInvariant())
             {
                 case "POST":
-                    endpoints.MapPost(webhook.Path, async context =>
+                    endpoints.MapPost(webhook.GetFullPath(webhookId), async context =>
                     {
                         await ExecuteWebhookHandler(webhook, context);
                     });
                     break;
                 case "GET":
-                    endpoints.MapGet(webhook.Path, async context =>
+                    endpoints.MapGet(webhook.GetFullPath(webhookId), async context =>
                     {
                         await ExecuteWebhookHandler(webhook, context);
                     });
                     break;
                 default:
-                    throw new NotSupportedException($"HTTP method {webhook.HttpMethod} is not supported for webhook {webhook.Path}");
+                    throw new NotSupportedException($"HTTP method {webhook.HttpMethod} is not supported for webhook {webhook.RelativePath}");
             }
         }
     }
@@ -43,12 +44,12 @@ public static class EndpointsExtensions
             await webhook.HandleAsync(context.Request);
 
             context.Response.ContentType = "application/json";
-            await context.Response.WriteAsync($"Webhook {webhook.Path} successfully processed.");
+            await context.Response.WriteAsync($"Webhook {webhook.RelativePath} successfully processed.");
         }
         catch (Exception ex)
         {
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            await context.Response.WriteAsync($"Error processing Webhook {webhook.Path}: {ex.Message}");
+            await context.Response.WriteAsync($"Error processing Webhook {webhook.RelativePath}: {ex.Message}");
         }
     }
 }

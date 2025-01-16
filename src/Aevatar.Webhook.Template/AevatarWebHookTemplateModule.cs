@@ -13,11 +13,11 @@ namespace Aevatar.Listener;
     typeof(AbpAutoMapperModule),
     typeof(AbpAspNetCoreSerilogModule)
 )]
-public class AevatarListenerTemplatetModule : AbpModule
+public class AevatarWebHookTemplateModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
-        Configure<AbpAutoMapperOptions>(options => { options.AddMaps<AevatarListenerTemplatetModule>(); });
+        Configure<AbpAutoMapperOptions>(options => { options.AddMaps<AevatarWebHookTemplateModule>(); });
         var services = context.Services;
         services.AddSingleton<IWebhookHandler, TelegramWebhookHandler>();
     }

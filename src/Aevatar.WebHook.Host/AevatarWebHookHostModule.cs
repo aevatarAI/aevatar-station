@@ -18,7 +18,7 @@ namespace Aevatar.Listener;
 [DependsOn(typeof(AbpAutofacModule),
     typeof(AbpAutoMapperModule),
     typeof(AbpAspNetCoreSerilogModule),
-    typeof(AevatarListenerTemplatetModule)
+    typeof(AevatarWebHookTemplateModule)
 )]
 public class AevatarListenerHostModule : AbpModule
 {
@@ -65,9 +65,11 @@ public class AevatarListenerHostModule : AbpModule
         var app = context.GetApplicationBuilder();
         var handlers = context.ServiceProvider.GetServices<IWebhookHandler>();
         app.UseRouting();
+        var configuration = context.GetConfiguration();
+        var webhookId = configuration["Webhook:WebhookId"];
         app.UseEndpoints(endpoints =>
         {
-            endpoints.MapWebhookHandlers(handlers);
+            endpoints.MapWebhookHandlers(handlers,webhookId);
         });
        
         app.UseCors();

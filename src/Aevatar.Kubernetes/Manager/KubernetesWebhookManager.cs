@@ -1,21 +1,21 @@
-using Aevatar.App.Deploy;
 using Aevatar.Kubernetes.Adapter;
 using Aevatar.Kubernetes.ResourceDefinition;
 using Aevatar.Options;
+using Aevatar.WebHook.Deploy;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Volo.Abp.DependencyInjection;
 
 namespace Aevatar.Kubernetes.Manager;
 
-public class KubernetesAppManager: IAppDeployManager, ISingletonDependency
+public class KubernetesWebhookManager: IWebhookDeployManager, ISingletonDependency
 {
     // private readonly k8s.Kubernetes _k8sClient;
     private readonly KubernetesOptions _kubernetesOptions;
-    private readonly ILogger<KubernetesAppManager> _logger;
+    private readonly ILogger<KubernetesWebhookManager> _logger;
     private readonly IKubernetesClientAdapter _kubernetesClientAdapter;
 
-    public KubernetesAppManager(ILogger<KubernetesAppManager> logger,
+    public KubernetesWebhookManager(ILogger<KubernetesWebhookManager> logger,
         IKubernetesClientAdapter kubernetesClientAdapter,
         IOptionsSnapshot<KubernetesOptions> kubernetesOptions)
     {
@@ -24,12 +24,12 @@ public class KubernetesAppManager: IAppDeployManager, ISingletonDependency
         _kubernetesOptions = kubernetesOptions.Value;
     }
 
-    public async Task<string> CreateNewAppAsync(string appId, string version, string imageName)
+    public async Task<string> CreateNewWebHookAsync(string appId, string version, string imageName)
     {
         return await CreatePodAsync(appId, version, imageName);
     }
 
-    public async Task DestroyAppAsync(string appId, string version)
+    public async Task DestroyWebHookAsync(string appId, string version)
     {
         await DestroyPodsAsync(appId, version);
     }
@@ -208,7 +208,7 @@ public class KubernetesAppManager: IAppDeployManager, ISingletonDependency
         }
     }
 
-    public async Task RestartAppAsync(string appId, string version)
+    public async Task RestartWebHookAsync(string appId, string version)
     {
         //Restart Query Client Type App Pod
         await RestartAppQueryPodsAsync(appId, version);

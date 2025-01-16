@@ -1,13 +1,13 @@
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.Modularity;
 
-namespace Aevatar.App.Deploy;
+namespace Aevatar.WebHook.Deploy;
 
-public class AevatarAppDeployModule : AbpModule
+public class AevatarWebhookDeployModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
         var services = context.Services;
-        services.AddTransient(typeof(IAppDeployManager), typeof(DefaultAppDeployManager));
+        services.AddTransient(typeof(IWebhookDeployManager), typeof(DefaultWebhookDeployManager));
     }
 }

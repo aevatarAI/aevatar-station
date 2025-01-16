@@ -3,9 +3,9 @@
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
-        <PackageId>Aevatar.Listener.Deploy</PackageId>
+        <PackageId>Aevatar.WebHook.Deploy</PackageId>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <RootNamespace>Aevatar.App.Deploy</RootNamespace>
+        <RootNamespace>Aevatar.WebHook.Deploy</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

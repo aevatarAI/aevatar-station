@@ -12,7 +12,7 @@
     </ItemGroup>
     
     <ItemGroup>
-        <ProjectReference Include="..\Aevatar.Listener.Template\Aevatar.Listener.Template.csproj" />
+        <ProjectReference Include="..\Aevatar.Webhook.Template\Aevatar.Webhook.Template.csproj" />
     </ItemGroup>
     
 </Project>
