@@ -17,30 +17,5 @@ public class CombinationGAgentState : GroupAgentState
     [Id(3)] public string Name { get; set; }
     [Id(4)] public string GroupId { get; set; }
     [Id(5)] public Dictionary<string, string> AgentComponent { get; set; } //  {atomicId: businessId}
-    
-    public void Apply(CombineAgentGEvent combineAgentGEvent)
-    {
-        Id = combineAgentGEvent.CombineGAgentId;
-        Name = combineAgentGEvent.Name;
-        GroupId = combineAgentGEvent.GroupId;
-        UserAddress = combineAgentGEvent.UserAddress;
-        Status = AgentStatus.Running;
-        AgentComponent = combineAgentGEvent.AgentComponent;
-    }
-    
-    public void Apply(UpdateCombinationGEvent combineCombinationGEvent)
-    {
-        Name = combineCombinationGEvent.Name;
-        AgentComponent = combineCombinationGEvent.AgentComponent;
-    }
-    
-    public void Apply(DeleteCombinationGEvent deleteCombinationGEvent)
-    {
-        Name = "";
-        AgentComponent = new ();
-        GroupId = "";
-        Status = AgentStatus.Deleted;
-        UserAddress = "";
-    }
 }
 

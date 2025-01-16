@@ -11,19 +11,4 @@ public class EventSubscriptionState : StateBase
     [Id(3)]   public string CallbackUrl { get; set; }
     [Id(4)]   public string Status { get; set; } // active
     [Id(5)]   public DateTime CreateTime { get; set; } 
-    
-    public void Apply(AddSubscriptionEvent add)
-    {
-        Id = add.SubscriptionId;
-        AgentId = add.AgentId;
-        EventTypes = add.EventTypes;
-        CallbackUrl = add.CallbackUrl;
-        Status = "Active";
-        CreateTime = DateTime.Now;
-    }
-    
-    public void Apply(CancelSubscriptionEvent cancel)
-    {
-        Status = "Cancelled";
-    }
 }

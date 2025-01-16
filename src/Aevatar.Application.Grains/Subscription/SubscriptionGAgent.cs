@@ -13,7 +13,7 @@ using Orleans.Providers;
 namespace Aevatar.Application.Grains.Subscription;
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
-public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, SubscriptionEvent>, ISubscriptionGAgent
+public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, SubscriptionGEvent>, ISubscriptionGAgent
 {
     private readonly ILogger<SubscriptionGAgent> _logger;
     private readonly IClusterClient _clusterClient;
@@ -26,7 +26,7 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
     
     public async Task<EventSubscriptionState> SubscribeAsync(SubscribeEventInputDto input)
     {
-        RaiseEvent(new AddSubscriptionEvent()
+        RaiseEvent(new AddSubscriptionGEvent()
         {
             Id = Guid.NewGuid(),
             Ctime = DateTime.UtcNow,
@@ -46,7 +46,7 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
            return;
         }
         
-        RaiseEvent(new CancelSubscriptionEvent()
+        RaiseEvent(new CancelSubscriptionGEvent()
         {
             Id = Guid.NewGuid(),
             Ctime = DateTime.UtcNow,
@@ -111,6 +111,24 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
     public override async Task<string> GetDescriptionAsync()
     {
         return " a global event subscription and notification management agent";
+    }
+    
+    protected override void GAgentTransitionState(EventSubscriptionState state, StateLogEventBase<SubscriptionGEvent> @event)
+    {
+        switch (@event)
+        {
+            case AddSubscriptionGEvent add:
+                State.Id = add.SubscriptionId;
+                State.AgentId = add.AgentId;
+                State.EventTypes = add.EventTypes;
+                State.CallbackUrl = add.CallbackUrl;
+                State.Status = "Active";
+                State.CreateTime = DateTime.Now;
+                break;
+            case CancelSubscriptionGEvent cancel:
+                State.Status = "Cancelled";
+                break;
+        }
     }
 }
 

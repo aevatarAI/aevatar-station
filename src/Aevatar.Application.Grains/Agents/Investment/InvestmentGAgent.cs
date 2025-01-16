@@ -11,7 +11,7 @@ namespace Aevatar.Application.Grains.Agents.Investment;
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 [GAgent("InvestmentGAgent")]
-public class InvestmentGAgent : GAgentBaseWithInitialization<InvestmentAgentState, InvestmentGEvent, InvestmentInitializeDto>, IInvestmentStateGAgent
+public class InvestmentGAgent : GAgentBase<InvestmentAgentState, InvestmentLogEvent, EventBase, InvestmentInitializeDto>, IInvestmentStateGAgent
 {
     public InvestmentGAgent(ILogger<InvestmentGAgent> logger) : base(logger)
     {

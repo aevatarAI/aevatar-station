@@ -132,7 +132,7 @@ public class AgentService : ApplicationService, IAgentService
         }
 
         var newProperties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentData.Properties);
-        if (newProperties != null)
+        if (newProperties != null && updateDto.Properties != null)
         {
             foreach (var kvp in updateDto.Properties)
             {
@@ -297,7 +297,7 @@ public class AgentService : ApplicationService, IAgentService
             var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(validGuid);
             var agentData = await atomicAgent.GetAgentAsync();
             
-            InitializeDtoBase? dto = null;
+            InitializationEventBase? dto = null;
                    
             if (agentPropertyDict.TryGetValue(agentData.Type, out var initializeParam) && !agentData.Properties.IsNullOrEmpty()) 
             {
@@ -305,7 +305,7 @@ public class AgentService : ApplicationService, IAgentService
                 {
                     var properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentData.Properties);
                     var actualDto = Activator.CreateInstance(initializeParam.DtoType);
-                    dto = (InitializeDtoBase)actualDto!;
+                    dto = (InitializationEventBase)actualDto!;
                     
                     foreach (var kvp in properties)
                     {
@@ -552,7 +552,7 @@ public class AgentService : ApplicationService, IAgentService
         foreach (var type in businessAgent)
         {
             var agent = await _gAgentFactory.GetGAgentAsync(type.Name);
-            var initializeDtoType = await agent.GetInitializeDtoTypeAsync();
+            var initializeDtoType = await agent.GetInitializationTypeAsync();
             if (initializeDtoType == null)
             {
                 dict[type.Name] = null;

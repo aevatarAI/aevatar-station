@@ -96,6 +96,43 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
         });
         await ConfirmEvents();
     }
+    
+    protected override void GAgentTransitionState(AtomicGAgentState state, StateLogEventBase<AtomicAgentGEvent> @event)
+    {
+        switch (@event)
+        {
+            case CreateAgentGEvent createAgentGEvent:
+                State.Id = createAgentGEvent.AtomicGAgentId;
+                State.Properties = createAgentGEvent.Properties;
+                State.UserAddress = createAgentGEvent.UserAddress;
+                State.Type = createAgentGEvent.Type;
+                State.Name = createAgentGEvent.Name;
+                break;
+            case UpdateAgentGEvent updateAgentGEvent:
+                State.Properties = updateAgentGEvent.Properties;
+                State.Name = updateAgentGEvent.Name;
+                break;
+            case DeleteAgentGEvent deleteAgentGEvent:
+                State.UserAddress = "";
+                State.Properties = "";
+                State.Type = "";
+                State.Name = "";
+                State.Groups = new List<string>();
+                break;
+            case AddToGroupGEvent addToGroupGEvent:
+                if (!State.Groups.Contains(addToGroupGEvent.GroupId))
+                {
+                    State.Groups.Add(addToGroupGEvent.GroupId);
+                }
+                break;
+            case RemoveFromGroupGEvent removeFromGroupGEvent:
+                if (State.Groups.Contains(removeFromGroupGEvent.GroupId))
+                {
+                    State.Groups.Remove(removeFromGroupGEvent.GroupId);
+                }
+                break;
+        }
+    }
 }
 
 public interface IAtomicGAgent : IStateGAgent<AtomicGAgentState>

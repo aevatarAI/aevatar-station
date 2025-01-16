@@ -3,13 +3,13 @@ using Aevatar.Core.Abstractions;
 namespace Aevatar.Application.Grains.Subscription;
 
 [GenerateSerializer]
-public abstract class SubscriptionEvent : StateLogEventBase<SubscriptionEvent>
+public abstract class SubscriptionGEvent : StateLogEventBase<SubscriptionGEvent>
 {
     
 }
 
 [GenerateSerializer]
-public class AddSubscriptionEvent : SubscriptionEvent
+public class AddSubscriptionGEvent : SubscriptionGEvent
 {
     [Id(0)]   public string AgentId { get; set; }
     [Id(1)]   public List<string> EventTypes { get; set; }
@@ -19,6 +19,6 @@ public class AddSubscriptionEvent : SubscriptionEvent
 }
 
 [GenerateSerializer]
-public class CancelSubscriptionEvent : SubscriptionEvent
+public class CancelSubscriptionGEvent : SubscriptionGEvent
 {
 }

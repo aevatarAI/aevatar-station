@@ -104,6 +104,32 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
         --State.RegisteredAgents;
         return Task.CompletedTask;
     }
+    
+    protected override void GAgentTransitionState(CombinationGAgentState state, StateLogEventBase<CombinationAgentGEvent> @event)
+    {
+        switch (@event)
+        {
+            case CombineAgentGEvent combineAgentGEvent:
+                State.Id = combineAgentGEvent.CombineGAgentId;
+                State.Name = combineAgentGEvent.Name;
+                State.GroupId = combineAgentGEvent.GroupId;
+                State.UserAddress = combineAgentGEvent.UserAddress;
+                State.Status = AgentStatus.Running;
+                State.AgentComponent = combineAgentGEvent.AgentComponent;
+                break;
+            case UpdateCombinationGEvent combineCombinationGEvent:
+                State.Name = combineCombinationGEvent.Name;
+                State.AgentComponent = combineCombinationGEvent.AgentComponent;
+                break;
+            case DeleteCombinationGEvent deleteCombinationGEvent:
+                State.Name = "";
+                State.AgentComponent = new ();
+                State.GroupId = "";
+                State.Status = AgentStatus.Deleted;
+                State.UserAddress = "";
+                break;
+        }
+    }
 }
 
 
