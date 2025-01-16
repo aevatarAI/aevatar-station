@@ -4,7 +4,7 @@
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <PackageId>Aevetar.Sdk</PackageId>
-        <RootNamespace>Aevatar.Listener.SDK</RootNamespace>
+        <RootNamespace>Aevatar.Webhook.SDK</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

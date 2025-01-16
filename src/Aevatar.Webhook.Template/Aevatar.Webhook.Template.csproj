@@ -2,7 +2,7 @@
     <Import Project="..\..\common.props" />
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
-        <RootNamespace>Aevatar.Listener</RootNamespace>
+        <RootNamespace>Aevatar.Webhook</RootNamespace>
         <Nullable>enable</Nullable>
     </PropertyGroup>
 

@@ -7,7 +7,7 @@ using Orleans.Hosting;
 using Orleans.Providers.MongoDB.Configuration;
 using Orleans.Serialization;
 
-namespace Aevatar.Listener.Extensions;
+namespace Aevatar.Webhook.Extensions;
 
 public static class OrleansHostExtensions
 {

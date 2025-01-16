@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Http;
 
-namespace Aevatar.Listener.SDK.Handler;
+namespace Aevatar.Webhook.SDK.Handler;
 
 public interface IWebhookHandler
 {

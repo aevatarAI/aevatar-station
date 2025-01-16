@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Aevatar.Listener.Extensions;
+using Aevatar.Webhook.Extensions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Events;
 
-namespace Aevatar.Listener;
+namespace Aevatar.Webhook;
 
 public class Program
 {

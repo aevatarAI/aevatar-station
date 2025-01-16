@@ -9,9 +9,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.Modularity;
-using Volo.Abp.Threading;
 
-namespace Aevatar.Listener;
+namespace Aevatar.Webhook;
 
 public class Startup
 {

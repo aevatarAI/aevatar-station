@@ -1,10 +1,10 @@
 using System.IO;
 using System.Threading.Tasks;
-using Aevatar.Listener.SDK.Handler;
+using Aevatar.Webhook.SDK.Handler;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
-namespace Aevatar.Listener.Handler;
+namespace Aevatar.Webhook.Handler;
 
 public class TelegramWebhookHandler : IWebhookHandler
 {

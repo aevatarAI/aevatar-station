@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
 using Aevatar.Core;
-using Aevatar.Listener.Extensions;
-using Aevatar.Listener.SDK.Handler;
+using Aevatar.Webhook.Extensions;
+using Aevatar.Webhook.SDK.Handler;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.Extensions.Configuration;
@@ -13,7 +13,7 @@ using Volo.Abp.Autofac;
 using Volo.Abp.AutoMapper;
 using Volo.Abp.Modularity;
 
-namespace Aevatar.Listener;
+namespace Aevatar.Webhook;
 
 [DependsOn(typeof(AbpAutofacModule),
     typeof(AbpAutoMapperModule),

@@ -5,7 +5,7 @@ using System.Runtime.Loader;
 using Volo.Abp.Modularity;
 using Volo.Abp.Modularity.PlugIns;
 
-namespace Aevatar.Listener.Extensions;
+namespace Aevatar.Webhook.Extensions;
 
 public class CodePlugInSource : IPlugInSource
 {

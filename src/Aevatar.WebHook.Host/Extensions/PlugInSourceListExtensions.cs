@@ -2,7 +2,7 @@ using JetBrains.Annotations;
 using Volo.Abp;
 using Volo.Abp.Modularity.PlugIns;
 
-namespace Aevatar.Listener.Extensions;
+namespace Aevatar.Webhook.Extensions;
 
 public static class PlugInSourceListExtensions
 {
