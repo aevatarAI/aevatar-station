@@ -40,7 +40,7 @@ public class AzureOpenAIBrain : IBrain
         _azureOpenAIClient = _serviceProvider.GetRequiredKeyedService<AzureOpenAIClient>(AzureOpenAIConfig.ConfigSectionName);
     }
     
-    public async Task<bool> Initialize(string id, string promptTemplate, List<File>? files)
+    public async Task<bool> InitializeAsync(string id, string promptTemplate, List<File>? files)
     {
         var kernelBuilder = _kernelBuilderFactory.GetKernelBuilder(id);
         kernelBuilder.AddAzureOpenAIChatCompletion(_azureOpenAIConfig.Value.ChatDeploymentName, _azureOpenAIClient);

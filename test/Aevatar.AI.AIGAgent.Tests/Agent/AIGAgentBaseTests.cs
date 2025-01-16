@@ -80,7 +80,7 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
             .Returns(_brainMock.Object);
 
         _brainMock
-            .Setup(x => x.Initialize(
+            .Setup(x => x.InitializeAsync(
                 It.IsAny<string>(),
                 initializeDto.Instructions,
                 It.IsAny<List<File>>()))
@@ -93,7 +93,7 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
         result.ShouldBeTrue();
         _brainFactoryMock.Verify(x => x.GetBrain(initializeDto.LLM), Times.Once);
         _brainMock.Verify(
-            x => x.Initialize(
+            x => x.InitializeAsync(
                 It.IsAny<string>(),
                 initializeDto.Instructions,
                 It.IsAny<List<File>>()),
@@ -143,7 +143,7 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
             .Returns(_brainMock.Object);
 
         _brainMock
-            .Setup(x => x.Initialize(
+            .Setup(x => x.InitializeAsync(
                 It.IsAny<string>(),
                 initializeDto.Instructions,
                 It.IsAny<List<File>>()))

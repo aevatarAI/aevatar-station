@@ -42,7 +42,7 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
         // remove slash from this.GetGrainId().ToString() so that it can be used as the collection name pertaining to the grain
         var grainId = this.GetGrainId().ToString().Replace("/", "");
         
-        var result = await _brain.Initialize(
+        var result = await _brain.InitializeAsync(
             grainId,
             initializeDto.Instructions, 
             initializeDto.Files.Select(f => new File(){Content = f.Content, Type = f.Type, Name = f.Name}).ToList());
