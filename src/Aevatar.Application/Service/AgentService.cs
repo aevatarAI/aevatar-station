@@ -26,6 +26,8 @@ using Volo.Abp.ObjectMapping;
 
 namespace Aevatar.Service;
 
+
+[RemoteService(IsEnabled = false)]
 public class AgentService : ApplicationService, IAgentService
 {
     private readonly IClusterClient _clusterClient;

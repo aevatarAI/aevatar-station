@@ -6,6 +6,7 @@ using Orleans;
 
 namespace Aevatar.Agents.Atomic;
 
+[GenerateSerializer]
 public class AtomicGAgentState : StateBase
 {
     [Id(0)] public Guid Id { get; set; }
