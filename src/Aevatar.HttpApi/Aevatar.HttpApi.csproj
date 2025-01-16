@@ -15,7 +15,6 @@
 
   <ItemGroup>
     <PackageReference Include="Volo.Abp.Account.HttpApi" />
-    <PackageReference Include="Volo.Abp.Core" />
     <PackageReference Include="Volo.Abp.Identity.HttpApi" />
     <PackageReference Include="Volo.Abp.PermissionManagement.HttpApi" />
   </ItemGroup>

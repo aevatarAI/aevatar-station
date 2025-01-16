@@ -2,7 +2,7 @@
     
     <Import Project="..\..\common.props" />
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <PackageId>Aevatar.Kubernetes</PackageId>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -10,7 +10,6 @@
 
     <ItemGroup>
       <PackageReference Include="KubernetesClient" />
-      <PackageReference Include="Volo.Abp.Core" />
     </ItemGroup>
 
     <ItemGroup>

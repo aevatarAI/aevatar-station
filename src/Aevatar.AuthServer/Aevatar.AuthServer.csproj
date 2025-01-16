@@ -41,7 +41,6 @@
         <PackageReference Include="Volo.Abp.AspNetCore.Serilog" />
         <PackageReference Include="Volo.Abp.Authorization" />
         <PackageReference Include="Volo.Abp.Autofac" />
-        <PackageReference Include="Volo.Abp.Core" />
         <PackageReference Include="Volo.Abp.Identity.EntityFrameworkCore" />
         <PackageReference Include="Volo.Abp.OpenIddict.AspNetCore" />
         <PackageReference Include="Volo.Abp.OpenIddict.Domain" />

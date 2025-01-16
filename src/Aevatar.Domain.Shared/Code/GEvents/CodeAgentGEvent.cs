@@ -4,7 +4,7 @@ using Orleans;
 
 namespace Aevatar.Code.GEvents;
 [GenerateSerializer]
-public class CodeAgentGEvent : GEventBase
+public class CodeAgentGEvent : StateLogEventBase<CodeAgentGEvent>
 {
     [Id(0)]  public override Guid Id { get; set; } = Guid.NewGuid();
 }
