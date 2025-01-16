@@ -37,7 +37,7 @@ public class AevatarApplicationModule : AbpModule
         });
         
         var configuration = context.Services.GetConfiguration();
-        Configure<NameContestOptions>(configuration.GetSection("NameContest"));
+        Configure<WebhookDeployOptions>(configuration.GetSection("WebhookDeploy"));
 
     }
 }
