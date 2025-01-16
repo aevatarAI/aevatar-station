@@ -56,7 +56,11 @@ public class PluginCodeStorageGAgent(ILogger<PluginCodeStorageGAgent> logger)
 
     public override async Task InitializeAsync(PluginCodeStorageInitializationEvent initializationEvent)
     {
-        State.Code = initializationEvent.Code;
+        RaiseEvent(new SetPluginCodeStateLogEvent
+        {
+            Code = initializationEvent.Code
+        });
+        await ConfirmEvents();
     }
 
     public Task<byte[]> GetPluginCodeAsync()

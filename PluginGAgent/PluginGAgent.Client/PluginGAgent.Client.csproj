@@ -11,9 +11,12 @@
         <PackageReference Include="Microsoft.Orleans.Client" />
         <PackageReference Include="Microsoft.Extensions.Logging.Console" />
         <PackageReference Include="Microsoft.Extensions.Hosting" />
+        <PackageReference Include="Orleans.Providers.MongoDB" />
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\src\Aevatar.EventSourcing.MongoDB\Aevatar.EventSourcing.MongoDB.csproj" />
+        <ProjectReference Include="..\..\test\Aevatar.Core.Tests\Aevatar.Core.Tests.csproj" />
         <ProjectReference Include="..\PluginGAgent.Grains\PluginGAgent.Grains.csproj" />
         <ProjectReference Include="..\..\src\Aevatar.Plugins\Aevatar.Plugins.csproj" />
     </ItemGroup>

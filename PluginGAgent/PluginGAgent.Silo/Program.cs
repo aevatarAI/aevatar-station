@@ -1,37 +1,48 @@
-﻿using Aevatar.Core;
-using Aevatar.Core.Abstractions;
-using Aevatar.EventSourcing.MongoDB.Hosting;
-using Aevatar.Plugins;
-using Microsoft.AspNetCore.Mvc.ApplicationParts;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using MongoDB.Driver;
+using Microsoft.Extensions.DependencyInjection;
+using PluginGAgent.Silo.Extensions;
+using Serilog;
 
-var builder = Host.CreateDefaultBuilder(args)
-    .UseOrleans(silo =>
+namespace AISmart.Silo;
+
+public class Program
+{
+    public async static Task<int> Main(string[] args)
     {
-        silo.AddMemoryGrainStorage("Default")
-            .AddMemoryStreams(AevatarCoreConstants.StreamProvider)
-            .AddMemoryGrainStorage("PubSubStore")
-            .AddMongoDbStorageBasedLogConsistencyProvider("LogStorage", options =>
+        var configuration = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json")
+            .AddJsonFile("appsettings.secrets.json", optional: true)
+            .Build();
+        Log.Logger = new LoggerConfiguration()
+            .Enrich.FromLogContext()
+            .ReadFrom.Configuration(configuration)
+            .CreateLogger();
+
+        try
+        {
+            Log.Information("Starting Silo");
+            await CreateHostBuilder(args).RunConsoleAsync();
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(ex, "Host terminated unexpectedly!");
+            return 1;
+        }
+        finally
+        {
+            Log.CloseAndFlush();
+        }
+    }
+
+    internal static IHostBuilder CreateHostBuilder(string[] args) =>
+        Host.CreateDefaultBuilder(args)
+            .ConfigureServices((hostcontext, services) =>
             {
-                options.ClientSettings =
-                    MongoClientSettings.FromConnectionString("mongodb://localhost:27017/?maxPoolSize=555");
-                options.Database = "Aevatar";
+                services.AddApplication<PluginGAgentTestModule>();
             })
-            .UseLocalhostClustering()
-            .ConfigureLogging(logging => logging.AddConsole())
-            .ConfigureServices(services =>
-            {
-                services.AddSingleton<IGAgentFactory, GAgentFactory>();
-                services.AddSingleton<ApplicationPartManager>();
-                services.AddSingleton<PluginGAgentManager>();
-                services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>>(sp => sp.GetRequiredService<PluginGAgentManager>());
-            });
-    })
-    .UseConsoleLifetime();
-
-using var host = builder.Build();
-
-await host.RunAsync();
+            .UseOrleansConfiguration()
+            .UseAutofac()
+            .UseSerilog();
+}

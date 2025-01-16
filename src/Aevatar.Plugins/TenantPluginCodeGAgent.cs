@@ -13,7 +13,13 @@ public class TenantPluginCodeGAgentState : StateBase
 [GenerateSerializer]
 public class TenantPluginStateLogEvent : StateLogEventBase<TenantPluginStateLogEvent>
 {
-    
+    [Id(0)] public override Guid Id { get; set; } = Guid.NewGuid();
+}
+
+[GenerateSerializer]
+public class AddPluginCodeStateLogEvent : TenantPluginStateLogEvent
+{
+    [Id(0)] public List<Guid> CodeStorageGuids { get; set; }
 }
 
 public interface ITenantPluginCodeGAgent : IStateGAgent<TenantPluginCodeGAgentState>
@@ -65,11 +71,5 @@ public class TenantPluginCodeGAgent(ILogger<TenantPluginCodeGAgent> logger)
             CodeStorageGuids = [codeStorageGuid]
         });
         await ConfirmEvents();
-    }
-
-    [GenerateSerializer]
-    public class AddPluginCodeStateLogEvent : TenantPluginStateLogEvent
-    {
-        [Id(0)] public List<Guid> CodeStorageGuids { get; set; }
     }
 }

@@ -1,10 +1,13 @@
 using System.Diagnostics;
+using Aevatar.Core.Abstractions;
 using Aevatar.EventSourcing.Core.Storage;
 using Aevatar.EventSourcing.MongoDB.Options;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Conventions;
+using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using Orleans.Configuration;
 using Orleans.Storage;
@@ -138,9 +141,6 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
             var database = GetDatabase();
             var collection = database.GetCollection<BsonDocument>(collectionName);
 
-            var session = await _client.StartSessionAsync().ConfigureAwait(false);
-            session.StartTransaction();
-
             var currentVersion = await GetLastVersionAsync(grainTypeName, grainId).ConfigureAwait(false);
             if (currentVersion != expectedVersion)
             {
@@ -156,7 +156,6 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
             }).ToList();
 
             await collection.InsertManyAsync(documents).ConfigureAwait(false);
-            await session.CommitTransactionAsync().ConfigureAwait(false);
 
             return currentVersion;
         }

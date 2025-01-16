@@ -87,9 +87,9 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
         }
 
         var parameterType = initializeMethod.GetParameters()[0].ParameterType;
-        RaiseEvent(new InnerSetInitializeDtoTypeStateLogEvent
+        RaiseEvent(new InnerSetInitializationEventTypeStateLogEvent
         {
-            InitializeDtoType = parameterType
+            InitializationEventType = parameterType
         });
         ConfirmEvents();
 
@@ -97,9 +97,9 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
     }
     
     [GenerateSerializer]
-    public class InnerSetInitializeDtoTypeStateLogEvent : StateLogEventBase<TStateLogEvent>
+    public class InnerSetInitializationEventTypeStateLogEvent : StateLogEventBase<TStateLogEvent>
     {
-        [Id(0)] public Type InitializeDtoType { get; set; }
+        [Id(0)] public required Type InitializationEventType { get; set; }
     }
 
     private IEnumerable<MethodInfo> GetEventHandlerMethods()

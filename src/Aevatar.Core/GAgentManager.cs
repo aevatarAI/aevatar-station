@@ -2,11 +2,6 @@ using Aevatar.Core.Abstractions;
 
 namespace Aevatar.Core;
 
-public interface IGAgentManager
-{
-    List<Type> GetAvailableGAgentTypes();
-}
-
 public class GAgentManager : IGAgentManager
 {
     public List<Type> GetAvailableGAgentTypes()

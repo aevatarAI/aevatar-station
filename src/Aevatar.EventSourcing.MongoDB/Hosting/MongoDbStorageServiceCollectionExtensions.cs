@@ -53,7 +53,12 @@ public static class MongoDbStorageServiceCollectionExtensions
 
         services.AddKeyedSingleton<ILogConsistentStorage>(name, MongoDbLogConsistentStorageFactory.Create);
         services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>>(
-            sp => (ILifecycleParticipant<ISiloLifecycle>)sp.GetRequiredKeyedService<ILogConsistentStorage>(name));
+            sp =>
+            {
+                var participant =
+                    (ILifecycleParticipant<ISiloLifecycle>)sp.GetRequiredKeyedService<ILogConsistentStorage>(name);
+                return participant;
+            });
 
         // Configure log consistency.
         services.TryAddSingleton<Factory<IGrainContext, ILogConsistencyProtocolServices>>(serviceProvider =>

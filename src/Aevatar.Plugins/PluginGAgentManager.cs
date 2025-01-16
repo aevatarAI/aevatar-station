@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Core.Abstractions.Plugin;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
@@ -10,9 +9,10 @@ namespace Aevatar.Plugins;
 
 public class PluginGAgentManager : IPluginGAgentManager, ILifecycleParticipant<ISiloLifecycle>
 {
+    protected readonly ILogger<PluginGAgentManager> Logger;
+
     private readonly ApplicationPartManager _applicationPartManager;
     private readonly IGAgentFactory _gAgentFactory;
-    protected readonly ILogger<PluginGAgentManager> Logger;
     private readonly PluginGAgentLoadOptions _options;
 
     public PluginGAgentManager(ApplicationPartManager applicationPartManager, IGAgentFactory gAgentFactory,
@@ -26,7 +26,7 @@ public class PluginGAgentManager : IPluginGAgentManager, ILifecycleParticipant<I
 
     public async Task<Guid> AddPluginGAgentAsync(AddPluginGAgentDto addPluginGAgentDto)
     {
-        if (addPluginGAgentDto.Code.IsNullOrEmpty())
+        if (addPluginGAgentDto.Code.Length == 0)
         {
             return Guid.Empty;
         }
@@ -38,6 +38,7 @@ public class PluginGAgentManager : IPluginGAgentManager, ILifecycleParticipant<I
             });
         var pluginCodeGuid = pluginCode.GetPrimaryKey();
         var tenant = await _gAgentFactory.GetGAgentAsync<ITenantPluginCodeGAgent>(addPluginGAgentDto.TenantId);
+        Logger.LogInformation($"About to plugin to tenant {addPluginGAgentDto.TenantId}.");
         await tenant.AddPluginAsync(pluginCodeGuid);
         Logger.LogInformation($"Added plugin to tenant {addPluginGAgentDto.TenantId}.");
         return pluginCodeGuid;
