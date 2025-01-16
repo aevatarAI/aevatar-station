@@ -21,7 +21,6 @@ public interface IAgentService
     Task DeleteCombinationAsync(string id);
     Task<List<CombinationAgentDto>> GetCombinationAgentsAsync(string userAddress, string groupId, int pageIndex, int pageSize);
     Task<Tuple<long, List<AgentGEventIndex>>> GetAgentEventLogsAsync(string agentId, int pageIndex, int pageSize);
-
-    Task RunAgentAsync(string agentId);
+    
     Task<List<AgentParamDto>> GetAllAgents();
 }

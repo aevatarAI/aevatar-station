@@ -9,7 +9,6 @@ using Aevatar.Agents.Combination;
 using Aevatar.Agents.Combination.Models;
 using Aevatar.Application.Grains.Agents.Atomic;
 using Aevatar.Application.Grains.Agents.Combination;
-using Aevatar.Application.Grains.Agents.Investment;
 using Aevatar.AtomicAgent;
 using Aevatar.CombinationAgent;
 using Aevatar.Core;
@@ -527,12 +526,6 @@ public class AgentService : ApplicationService, IAgentService
         {
             await BuildGroupTreeAsync(childrenId, result);
         }
-    }
-    
-    public async Task RunAgentAsync(string agentId)
-    {
-        var gAgent = _clusterClient.GetGrain<ICombinationGAgent>(Guid.Parse(agentId));
-        await gAgent.PublishEventAsync(new InvestmentEvent { Content = "test"});
     }
     
     public async Task<Dictionary<string, AgentInitializedDto?>> GetInitializedDtos()

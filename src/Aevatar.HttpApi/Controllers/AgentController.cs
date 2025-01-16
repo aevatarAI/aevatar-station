@@ -114,12 +114,6 @@ public class AgentController : AevatarController
         return agentDtoList;
     }
     
-    [HttpPost("/combination-agent/{id}")]
-    public async Task RunAgent(string id)
-    {
-        await _agentService.RunAgentAsync(id);
-    }
-    
     [HttpGet("/all-agents")]
     public async Task<List<AgentParamDto>> GetAllAgent()
     {
