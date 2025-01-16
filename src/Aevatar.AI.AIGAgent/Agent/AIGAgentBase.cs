@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,15 +29,26 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
     public async Task<bool> InitializeAsync(InitializeDto initializeDto)
     {
         //save state
-        await AddLLM(initializeDto.LLM);
-        await AddPromptTemplate(initializeDto.Instructions);
+        await AddLLMAsync(initializeDto.LLM);
+        await AddPromptTemplateAsync(initializeDto.Instructions);
         
-        _brain = _brainFactory.GetBrain(initializeDto.LLM);
+        return await InitializeBrainAsync(initializeDto.LLM, initializeDto.Instructions, initializeDto.Files);
+    }
+
+    private async Task<bool> InitializeBrainAsync(string LLM, string promptTemplate, IReadOnlyCollection<FileDto>? files = null)
+    {
+        _brain = _brainFactory.GetBrain(LLM);
         
         if(_brain == null)
         {
-            Logger.LogError("Failed to initialize brain. {@InitializeDto}", initializeDto);
+            Logger.LogError("Failed to initialize brain. {@LLM}", LLM);
             return false;
+        }
+
+        List<File>? fileList = null;
+        if (files != null)
+        {
+            fileList = files.Select(f => new File() { Content = f.Content, Type = f.Type, Name = f.Name }).ToList();
         }
         
         // remove slash from this.GetGrainId().ToString() so that it can be used as the collection name pertaining to the grain
@@ -44,13 +56,13 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
         
         var result = await _brain.InitializeAsync(
             grainId,
-            initializeDto.Instructions, 
-            initializeDto.Files.Select(f => new File(){Content = f.Content, Type = f.Type, Name = f.Name}).ToList());
-        
+            promptTemplate, 
+            fileList);
+
         return result;
     }
     
-    private async Task AddLLM(string LLM)
+    private async Task AddLLMAsync(string LLM)
     {
         if (State.LLM == LLM)
         {
@@ -58,7 +70,7 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
             return;
         }
 
-        base.RaiseEvent(new SetLLMStateLogEvent
+        RaiseEvent(new SetLLMStateLogEvent
         {
             LLM = LLM
         });
@@ -68,12 +80,12 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
     [GenerateSerializer]
     public class SetLLMStateLogEvent : StateLogEventBase<TStateLogEvent>
     {
-        [Id(0)] public string LLM { get; set; }
+        [Id(0)] public required string LLM { get; set; }
     }
     
-    private async Task AddPromptTemplate(string promptTemplate)
+    private async Task AddPromptTemplateAsync(string promptTemplate)
     {
-        base.RaiseEvent(new SetPromptTemplateStateLogEvent
+        RaiseEvent(new SetPromptTemplateStateLogEvent
         {
             PromptTemplate = promptTemplate
         });
@@ -90,9 +102,22 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
     {
         return await _brain?.InvokePromptAsync(prompt)!;
     }
-
-    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    
+    protected virtual async Task OnAIGAgentActivateAsync(CancellationToken cancellationToken)
     {
-        await base.OnDeactivateAsync(reason, cancellationToken);
+        // Derived classes can override this method.
+    }
+
+    protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)
+    {
+        await base.OnGAgentActivateAsync(cancellationToken);
+        
+        // setup brain
+        if(State.LLM != string.Empty)
+        {
+            await InitializeBrainAsync(State.LLM, State.PromptTemplate);
+        }
+        
+        await OnAIGAgentActivateAsync(cancellationToken);
     }
 }
