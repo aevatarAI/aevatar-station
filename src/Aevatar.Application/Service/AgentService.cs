@@ -19,6 +19,7 @@ using Microsoft.Extensions.Logging;
 using Nest;
 using Newtonsoft.Json;
 using Orleans;
+using Orleans.Runtime;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.ObjectMapping;
@@ -519,7 +520,7 @@ public class AgentService : ApplicationService, IAgentService
             return;
         }
 
-        var childrenIds = childrenAgentIds.Select(s => s.Key.ToString()).ToList();
+        var childrenIds = childrenAgentIds.Select(s => s.GetGuidKey().ToString()).ToList();
         result.AddRange(childrenIds);
 
         foreach (var childrenId in childrenIds)
