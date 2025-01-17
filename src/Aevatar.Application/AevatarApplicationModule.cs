@@ -1,6 +1,7 @@
 ﻿using Aevatar.Application.Grains;
 using Aevatar.CQRS;
 using Aevatar.Kubernetes;
+using Aevatar.Kubernetes.Manager;
 using Aevatar.Options;
 using Aevatar.WebHook.Deploy;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,6 +39,6 @@ public class AevatarApplicationModule : AbpModule
         
         var configuration = context.Services.GetConfiguration();
         Configure<WebhookDeployOptions>(configuration.GetSection("WebhookDeploy"));
-
+        context.Services.AddTransient<IWebhookDeployManager, KubernetesWebhookManager>();
     }
 }

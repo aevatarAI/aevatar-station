@@ -22,25 +22,20 @@ public class KubernetesConstants
      public const string FileBeatImage = "docker.elastic.co/beats/filebeat:7.16.2";
      public const string FileBeatConfigMountPath = "/etc/filebeat/filebeat.yml";
      public const string FileBeatConfigFileName = "filebeat.yml";
-     public const string FileBeatLogILMPolicyName = "filebeat-log-policy";
      public const string FileBeatContainerName = "filebeat-sidecar";
      
      //manager
      public const string AppClientTypeQuery = "Query";
-     public const string AppSettingTemplateFilePath = "AppConfigTemplate/appsettings-template.json";
-     public const string AppFileBeatConfigTemplateFilePath = "AppConfigTemplate/filebeat-template.yml";
-     public const string PlaceHolderAppId = "[AppId]";
+     public const string AppSettingTemplateFilePath = "WebhookConfigTemplate/appsettings-template.json";
+     public const string AppFileBeatConfigTemplateFilePath = "WebhookConfigTemplate/filebeat-template.yml";
+     public const string PlaceHolderAppId = "[WebhookId]";
      public const string PlaceHolderVersion = "[Version]";
-     public const string PlaceHolderClientType = "[ClientType]";
-     public const string PlaceHolderChainId = "[ChainId]";
      public const string PlaceHolderNameSpace = "[NameSpace]";
      public const int AppContainerTargetPort = 8308;
      public const string FullPodMaxSurge = "0";
      public const string FullPodMaxUnavailable = "1";
      public const string QueryPodMaxSurge = "50%";
      public const string QueryPodMaxUnavailable = "0";
-     public const string PlaceHolderEventBusClientName = "[EventBusClientName]";
-     public const string PlaceHolderEventBusExchangeName = "[EventBusExchangeName]";
      
      //Prometheus
      public const string MonitorLabelKey = "monitor";
