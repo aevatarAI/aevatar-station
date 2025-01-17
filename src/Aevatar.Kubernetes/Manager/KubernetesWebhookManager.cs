@@ -89,8 +89,8 @@ public class KubernetesWebhookManager: IWebhookDeployManager, ISingletonDependen
         { 
             var healthPath = GethealthPath(appId, version);
             var deployment = DeploymentHelper.CreateAppDeploymentWithFileBeatSideCarDefinition(appId, version,
-                KubernetesConstants.AppClientTypeQuery, string.Empty, imageName, deploymentName, deploymentLabelName,
-                1, containerName, targetPort, configMapName, sideCarConfigName, "", "", 
+                KubernetesConstants.AppClientTypeQuery, imageName, deploymentName, deploymentLabelName,
+                1, containerName, targetPort, configMapName, sideCarConfigName, _kubernetesOptions.RequestCpuCore, _kubernetesOptions.RequestMemory, 
                 maxSurge, maxUnavailable, healthPath);
             // Create Deployment
             await _kubernetesClientAdapter.CreateDeploymentAsync(deployment, KubernetesConstants.AppNameSpace);
@@ -136,7 +136,7 @@ public class KubernetesWebhookManager: IWebhookDeployManager, ISingletonDependen
     
     private string GethealthPath(string appId, string version)
     {
-        return $"/{appId}/{version}/index.html";
+        return $"/{appId}/{version}/health_check.html";
     }
 
 

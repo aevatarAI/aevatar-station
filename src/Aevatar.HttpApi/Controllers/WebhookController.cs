@@ -21,7 +21,6 @@ public class WebhookController : AevatarController
     }
 
     [HttpPut]
-    [Authorize(Policy = "OnlyAdminAccess")]
     [Route("code/{webhookId}/{version}")]
     [RequestSizeLimit(209715200)]
     [RequestFormLimits(MultipartBodyLengthLimit = 209715200)]

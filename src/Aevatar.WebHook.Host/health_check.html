@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Check</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 100px;
+            color: #4caf50; 
+        }
+        .status {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .timestamp {
+            font-size: 14px;
+            color: #888888;
+        }
+    </style>
+</head>
+<body>
+<h1>Service Health Check</h1>
+<p class="status">✅ Status: Healthy</p>
+<p class="timestamp">Last Checked: <span id="timestamp"></span></p>
+
+<script>
+    const timestampElement = document.getElementById('timestamp');
+    const now = new Date();
+    timestampElement.textContent = now.toISOString();
+</script>
+</body>
+</html>

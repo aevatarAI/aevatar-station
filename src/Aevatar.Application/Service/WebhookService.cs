@@ -4,6 +4,7 @@ using Aevatar.Application.Grains.Agents.Code;
 using Aevatar.Common;
 using Aevatar.Options;
 using Aevatar.WebHook.Deploy;
+using Microsoft.Extensions.Options;
 using Orleans;
 using Volo.Abp.Application.Services;
 
@@ -22,17 +23,20 @@ public class WebhookService: ApplicationService, IWebhookService
     private readonly IWebhookDeployManager _webhookDeployManager;
     private readonly WebhookDeployOptions _webhookDeployOptions;
     public WebhookService(IClusterClient clusterClient,IWebhookDeployManager webhookDeployManager,
-        WebhookDeployOptions webhookDeployOptions)
+        IOptions<WebhookDeployOptions> webhookDeployOptions)
     {
         _clusterClient = clusterClient;
         _webhookDeployManager = webhookDeployManager;
-        _webhookDeployOptions = webhookDeployOptions;
+        _webhookDeployOptions = webhookDeployOptions.Value;
     }
 
     public async Task UploadCodeAsync(string webhookId, string version, byte[]? codeBytes)
     {
-       await _clusterClient.GetGrain<ICodeGAgent>(GuidUtil.StringToGuid(webhookId)).UploadCodeAsync(
-            webhookId,version,codeBytes);
+        if (codeBytes !=null)
+        {
+            await _clusterClient.GetGrain<ICodeGAgent>(GuidUtil.StringToGuid(webhookId)).UploadCodeAsync(
+                webhookId,version,codeBytes);
+        }
        await _webhookDeployManager.CreateNewWebHookAsync(webhookId, version,_webhookDeployOptions.WebhookImageName);
     }
 

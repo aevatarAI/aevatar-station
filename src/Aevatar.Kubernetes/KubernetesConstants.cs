@@ -27,9 +27,9 @@ public class KubernetesConstants
      
      //manager
      public const string AppClientTypeQuery = "Query";
-     public const string AppSettingTemplateFilePath = "AppConfigTemplate/appsettings-template.json";
-     public const string AppFileBeatConfigTemplateFilePath = "AppConfigTemplate/filebeat-template.yml";
-     public const string PlaceHolderAppId = "[AppId]";
+     public const string AppSettingTemplateFilePath = "WebhookConfigTemplate/appsettings-template.json";
+     public const string AppFileBeatConfigTemplateFilePath = "WebhookConfigTemplate/filebeat-template.yml";
+     public const string PlaceHolderAppId = "[WebhookId]";
      public const string PlaceHolderVersion = "[Version]";
      public const string PlaceHolderClientType = "[ClientType]";
      public const string PlaceHolderChainId = "[ChainId]";

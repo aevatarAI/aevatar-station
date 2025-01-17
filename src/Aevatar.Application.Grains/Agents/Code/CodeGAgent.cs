@@ -14,7 +14,7 @@ namespace Aevatar.Application.Grains.Agents.Code;
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 public class CodeGAgent : GAgentBase<CodeGAgentState, CodeAgentGEvent>, ICodeGAgent
 {
-    public CodeGAgent(ILogger logger) : base(logger)
+    public CodeGAgent(ILogger<CodeGAgent> logger) : base(logger)
     {
     }
 
