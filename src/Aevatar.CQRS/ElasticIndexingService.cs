@@ -344,92 +344,49 @@ public class ElasticIndexingService : IIndexingService
         }
     }
     
-    public async Task<(long TotalCount, List<AIChatLogIndex> ChatLogs)> QueryChatLogListAsync(
-        ChatLogQueryInputDto input)
+    
+    public async Task<string> GetSortDataDocumentsAsync<TEntity>(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterFunc = null, Func<SourceFilterDescriptor<TEntity>, ISourceFilter> includeFieldFunc = null, Func<SortDescriptor<TEntity>, IPromise<IList<ISort>>> sortFunc = null,
+        int limit = 1000, int skip = 0, string? index = null) where TEntity : class
     {
+        var indexName = index ?? IndexPrefix + typeof(TEntity).Name.ToLower();
         try
         {
-            if (input == null)
+            Func<SearchDescriptor<TEntity>, ISearchRequest> selector;
+            if (sortFunc != null)
             {
-                return (0, new List<AIChatLogIndex>());
+                selector = new Func<SearchDescriptor<TEntity>, ISearchRequest>(s => s
+                    .Index(indexName)
+                    .Query(filterFunc ?? (q => q.MatchAll()))
+                    .Sort(sortFunc)
+                    .Source(includeFieldFunc ?? (i => i.IncludeAll()))
+                    .From(skip)
+                    .Size(limit));
+            }
+            else
+            {
+                selector = new Func<SearchDescriptor<TEntity>, ISearchRequest>(s => s
+                    .Index(indexName)
+                    .Query(filterFunc ?? (q => q.MatchAll()))
+                    .Source(includeFieldFunc ?? (i => i.IncludeAll()))
+                    .From(skip)
+                    .Size(limit));
             }
 
-            if (input.BeginTimestamp > input.EndTimestamp)
+            var result = await _elasticClient.SearchAsync(selector);
+            return result.Documents.ToString();
+            /*if (result.IsValid)
             {
-                return (0, new List<AIChatLogIndex>());
+                return new Tuple<long, List<TEntity>>(result.Total, result.Documents.ToList());
             }
 
-            var mustQuery = new List<Func<QueryContainerDescriptor<AIChatLogIndex>, QueryContainer>>();
-            if (!input.GroupId.IsNullOrEmpty())
-            {
-                mustQuery.Add(q => q.Term(i
-                    => i.Field(f => f.GroupId).Field(input.GroupId)));
-            }
-
-            if (!input.AgentId.IsNullOrEmpty())
-            {
-                mustQuery.Add(q => q.Term(i
-                    => i.Field(f => f.AgentId).Field(input.AgentId)));
-            }
-
-            if (input.Ids?.Count > 0)
-            {
-                mustQuery.Add(q => q.Terms(i => i.Field(f => f.Id).Terms(input.Ids)));
-            }
-
-            if (input.BeginTimestamp > 0)
-            {
-                mustQuery.Add(q => q.DateRange(i =>
-                    i.Field(f => f.Ctime)
-                        .GreaterThanOrEquals(DateTime.UnixEpoch.AddMilliseconds((double)input.BeginTimestamp))));
-            }
-
-            if (input.EndTimestamp > 0)
-            {
-                mustQuery.Add(q => q.DateRange(i =>
-                    i.Field(f => f.Ctime)
-                        .LessThanOrEquals(DateTime.UnixEpoch.AddMilliseconds((double)input.EndTimestamp))));
-            }
-
-            QueryContainer Filter(QueryContainerDescriptor<AIChatLogIndex> f)
-                => f.Bool(b => b.Must(mustQuery));
-
-            var searchResponse = _elasticClient.Search<AIChatLogIndex>(s => s
-                .Index(nameof(AIChatLogIndex).ToLower())
-                .Query(q => q
-                    .Bool(b => b
-                        .Must(mustQuery)
-                    )
-                )
-                .From(input.SkipCount)
-                .Size(input.MaxResultCount)
-                .Sort(ss => ss
-                    .Ascending(a => a.Ctime)
-                )
-            );
-            switch (searchResponse.IsValid)
-            {
-                case true:
-                {
-                    var chatLogIndexList = new List<AIChatLogIndex>();
-                    if (searchResponse.Total != 0)
-                    {
-                        chatLogIndexList = searchResponse.Documents.ToList();
-                    }
-
-                    return (searchResponse.Total, chatLogIndexList);
-                }
-                default:
-                    _logger.LogError("Query Chat log fail errMsg:{errMsg},DebugInfo:{DebugInfo}",
-                        searchResponse.ServerError, JsonConvert.SerializeObject(searchResponse.DebugInformation));
-                    break;
-            }
+            _logger.LogError("{indexName} Search fail. error:{error}, DebugInfo{DebugInfo}", indexName,
+                result.ServerError?.Error, JsonConvert.SerializeObject(result.DebugInformation));
+            return null;*/
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Query Chat log Exception");
+            _logger.LogError(e, "{indexName} Search Exception.", indexName);
+            throw;
         }
-
-        return (0, new List<AIChatLogIndex>());
     }
 }

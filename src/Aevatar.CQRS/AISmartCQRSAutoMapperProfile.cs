@@ -7,7 +7,7 @@ public class AISmartCQRSAutoMapperProfile : Profile
 {
     public AISmartCQRSAutoMapperProfile()
     {
-        CreateMap<GetLogQuery, ChatLogQueryInputDto>();
+        CreateMap<GetDataQuery, ChatLogQueryInputDto>();
         CreateMap<AIChatLogIndex, ChatLogPageResultDto>();
         CreateMap<AIChatLogIndex, AIChatLogIndexDto>();
     }

@@ -90,6 +90,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         var tuple = await _mediator.Send(getStateQuery);
         return tuple;
     }
+    
 
     public async Task PublishAsync(Guid eventId, GrainId grainId, StateLogEventBase eventBase)
     {
@@ -121,7 +122,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         throw new NotImplementedException();
     }
 
-    public async Task<ChatLogPageResultDto> QueryDataListAsync(GetLogQuery command)
+    public async Task<string> QueryDataListAsync(GetDataQuery command)
     {
         return await _mediator.Send(command);
     }

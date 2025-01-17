@@ -148,7 +148,7 @@ public class AgentService : ApplicationService, IAgentService
             throw new UserFriendlyException("Invalid userAddress");
         }
 
-        if (pageIndex <= 0 || pageSize <= 1)
+        if (pageIndex <= 0 || pageSize < 1)
         {
             _logger.LogInformation("GetAgentAsync Invalid pageIndex: {pageIndex} pageSize:{pageSize}", pageIndex, pageSize);
             throw new UserFriendlyException("Invalid pageIndex pageSize");
@@ -419,7 +419,7 @@ public class AgentService : ApplicationService, IAgentService
             _logger.LogInformation("GetAgentAsync Invalid userAddress: {userAddress} ", userAddress);
             throw new UserFriendlyException("Invalid userAddress");
         }
-        if (pageIndex <= 0 || pageSize <= 1)
+        if (pageIndex <= 0 || pageSize < 1)
         {
             _logger.LogInformation("GetAgentAsync Invalid pageIndex: {pageIndex} pageSize:{pageSize}", pageIndex, pageSize);
             throw new UserFriendlyException("Invalid pageIndex pageSize");
