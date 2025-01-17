@@ -345,47 +345,32 @@ public class ElasticIndexingService : IIndexingService
     }
     
     
-    public async Task<string> GetSortDataDocumentsAsync<TEntity>(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterFunc = null, Func<SourceFilterDescriptor<TEntity>, ISourceFilter> includeFieldFunc = null, Func<SortDescriptor<TEntity>, IPromise<IList<ISort>>> sortFunc = null,
-        int limit = 1000, int skip = 0, string? index = null) where TEntity : class
+    public async Task<string> GetSortDataDocumentsAsync(string indexName,
+        Func<QueryContainerDescriptor<dynamic>, QueryContainer> query, int skip = 0, int limit = 1000)
     {
-        var indexName = index ?? IndexPrefix + typeof(TEntity).Name.ToLower();
         try
         {
-            Func<SearchDescriptor<TEntity>, ISearchRequest> selector;
-            if (sortFunc != null)
+            var response = await _elasticClient.SearchAsync<dynamic>(s => s
+                .Index(indexName)
+                .Query(query)
+                .From(skip)
+                .Size(limit));
+
+            if (!response.IsValid)
             {
-                selector = new Func<SearchDescriptor<TEntity>, ISearchRequest>(s => s
-                    .Index(indexName)
-                    .Query(filterFunc ?? (q => q.MatchAll()))
-                    .Sort(sortFunc)
-                    .Source(includeFieldFunc ?? (i => i.IncludeAll()))
-                    .From(skip)
-                    .Size(limit));
-            }
-            else
-            {
-                selector = new Func<SearchDescriptor<TEntity>, ISearchRequest>(s => s
-                    .Index(indexName)
-                    .Query(filterFunc ?? (q => q.MatchAll()))
-                    .Source(includeFieldFunc ?? (i => i.IncludeAll()))
-                    .From(skip)
-                    .Size(limit));
+                _logger.LogError(
+                    "index documents query fail, indexName:{indexName} error:{error} ,DebugInfo{DebugInfo}", indexName,
+                    response.ServerError?.Error.Reason, JsonConvert.SerializeObject(response.DebugInformation));
+                return null;
             }
 
-            var result = await _elasticClient.SearchAsync(selector);
-            return result.Documents.ToString();
-            /*if (result.IsValid)
-            {
-                return new Tuple<long, List<TEntity>>(result.Total, result.Documents.ToList());
-            }
-
-            _logger.LogError("{indexName} Search fail. error:{error}, DebugInfo{DebugInfo}", indexName,
-                result.ServerError?.Error, JsonConvert.SerializeObject(result.DebugInformation));
-            return null;*/
+            var documents = response.Hits.Select(hit => hit.Source);
+            var documentContent = JsonConvert.SerializeObject(documents);
+            return documentContent;
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "{indexName} Search Exception.", indexName);
+            _logger.LogError(e, "index documents query Exception,indexName:{indexName}", indexName);
             throw;
         }
     }
