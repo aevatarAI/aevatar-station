@@ -22,7 +22,7 @@ public interface IIndexingService
         Func<SourceFilterDescriptor<TEntity>, ISourceFilter> includeFieldFunc = null
         ,Func<SortDescriptor<TEntity>, IPromise<IList<ISort>>> sortFunc = null, int limit = 1000, int skip = 0, string? index = null) where TEntity : class;
 
-    public Task<string> GetSortDataDocumentsAsync(string indexName,
+    public Task<Tuple<long, string>> GetSortDataDocumentsAsync(string indexName,
         Func<QueryContainerDescriptor<dynamic>, QueryContainer> query, int skip = 0, int limit = 1000);
 
 

@@ -4,7 +4,7 @@ using Nest;
 
 namespace Aevatar.CQRS.Dto;
 
-public class GetDataQuery : MediatR.IRequest<string>
+public class GetDataQuery : MediatR.IRequest<Tuple<long, string>>
 {
     public string Index { get; set; }
     public Func<QueryContainerDescriptor<dynamic>, QueryContainer> Query { get; set; }

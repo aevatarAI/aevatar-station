@@ -15,7 +15,7 @@ public interface ICQRSProvider : IEventDispatcher
 
     Task<Tuple<long, List<AgentGEventIndex>>> QueryGEventAsync(string eventId, List<string> grainIds, int pageNumber, int pageSize);
     
-    Task<string> QueryDataListAsync(string indexName,Func<QueryContainerDescriptor<dynamic>, QueryContainer> query,int skip, int limit);
+    Task<Tuple<long,string>> QueryDataListAsync(string indexName,Func<QueryContainerDescriptor<dynamic>, QueryContainer> query,int skip, int limit);
     
     Task SendSaveDataCommandAsync(BaseIndex index, string id);
 

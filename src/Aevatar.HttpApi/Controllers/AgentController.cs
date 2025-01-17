@@ -147,7 +147,7 @@ public class AgentController : AevatarController
         return chatIndex;
     }
     [HttpGet("/chat-logs")]
-    public async Task<List<AIChatLogIndexDto>> GetChatLogs(string? agentId, string? groupId, int pageIndex, int pageSize)
+    public async Task<Tuple<long,List<AIChatLogIndexDto>>> GetChatLogs(string? agentId, string? groupId, int pageIndex, int pageSize)
     {
         _logger.LogInformation("GetChatLogs");
         var index = "aevatar" + nameof(AIChatLogIndex).ToLower();
@@ -167,12 +167,12 @@ public class AgentController : AevatarController
             (pageIndex-1)*pageSize,
             pageSize
         );
-        if (result == null)
+        if (result == null || result.Item1 == 0)
         {
             return null;
         }
         
-        var chatLogs = JsonConvert.DeserializeObject<List<AIChatLogIndexDto>>(result);
-        return chatLogs;
+        var chatLogs = JsonConvert.DeserializeObject<List<AIChatLogIndexDto>>(result.Item2);
+        return new Tuple<long, List<AIChatLogIndexDto>>(result.Item1, chatLogs);
     }
 }

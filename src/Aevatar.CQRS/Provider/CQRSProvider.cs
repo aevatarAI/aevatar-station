@@ -122,7 +122,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         throw new NotImplementedException();
     }
 
-    public async Task<string> QueryDataListAsync(string indexName,Func<QueryContainerDescriptor<dynamic>, QueryContainer> query,int skip, int limit)
+    public async Task<Tuple<long, string>> QueryDataListAsync(string indexName,Func<QueryContainerDescriptor<dynamic>, QueryContainer> query,int skip, int limit)
     {
         var getDataQuery = new GetDataQuery()
         {

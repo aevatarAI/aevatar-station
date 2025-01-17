@@ -345,7 +345,7 @@ public class ElasticIndexingService : IIndexingService
     }
     
     
-    public async Task<string> GetSortDataDocumentsAsync(string indexName,
+    public async Task<Tuple<long, string>> GetSortDataDocumentsAsync(string indexName,
         Func<QueryContainerDescriptor<dynamic>, QueryContainer> query, int skip = 0, int limit = 1000)
     {
         try
@@ -364,9 +364,10 @@ public class ElasticIndexingService : IIndexingService
                 return null;
             }
 
+            var total = response.Total;
             var documents = response.Hits.Select(hit => hit.Source);
             var documentContent = JsonConvert.SerializeObject(documents);
-            return documentContent;
+            return new Tuple<long, string>(total, documentContent);
         }
         catch (Exception e)
         {
