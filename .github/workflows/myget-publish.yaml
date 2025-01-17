@@ -20,7 +20,8 @@ jobs:
     strategy:
       matrix:
         servicename: [
-          Aevatar.CQRS
+          Aevatar.CQRS,
+          Aevatar.WebHook.SDK
         ]
     steps:
       - name: Checkout code
@@ -42,7 +43,7 @@ jobs:
 
       - name: Restore dependencies
         run: dotnet restore src/${{ matrix.servicename }}/${{ matrix.servicename }}.csproj
-        
+
       - name: Get the version from git tags
         id: get_version
         run: |
