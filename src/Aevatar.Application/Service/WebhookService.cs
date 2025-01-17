@@ -15,6 +15,7 @@ public interface IWebhookService
 {
     Task UploadCodeAsync(string webhookId, string version, byte[]? codeBytes);
     Task<string> GetWebhookCodeAsync(string webhookId, string version);
+    Task DestroyWebhookAsync(string inputWebhookId, string inputVersion);
 }
 
 public class WebhookService: ApplicationService, IWebhookService
@@ -44,6 +45,11 @@ public class WebhookService: ApplicationService, IWebhookService
     {
         var webhookCode = await _clusterClient.GetGrain<ICodeGAgent>(GuidUtil.StringToGuid(webhookId)).GetStateAsync();
         return Convert.ToBase64String(webhookCode.Code);
+    }
+
+    public async Task DestroyWebhookAsync(string inputWebhookId, string inputVersion)
+    {
+        await _webhookDeployManager.DestroyWebHookAsync(inputWebhookId, inputVersion);
     }
 }
 
