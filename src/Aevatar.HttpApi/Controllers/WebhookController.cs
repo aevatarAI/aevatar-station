@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
-using Aevatar.Listener;
 using Aevatar.Service;
+using Aevatar.Webhook;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -21,10 +21,11 @@ public class WebhookController : AevatarController
     }
 
     [HttpPut]
+    [Authorize(Policy = "OnlyAdminAccess")]
     [Route("code/{webhookId}/{version}")]
     [RequestSizeLimit(209715200)]
     [RequestFormLimits(MultipartBodyLengthLimit = 209715200)]
-    public async Task UploadCodeAsync(string webhookId,string version, [FromForm]CreateListenerDto input)
+    public async Task UploadCodeAsync(string webhookId,string version, [FromForm]CreateWebhookDto input)
     {
         byte[] codeBytes = null;
         if (input.Code != null && input.Code.Length > 0)
@@ -39,6 +40,14 @@ public class WebhookController : AevatarController
     public async Task<string> GetWebhookCodeAsync(string webhookId, string version)
     {
         return await  _webhookService.GetWebhookCodeAsync(webhookId,version);
+    }
+    
+    [HttpPost]
+    [Route("destroy")]
+    [Authorize(Policy = "OnlyAdminAccess")]
+    public async Task DestroyAppAsync(DestroyWebhookDto input)
+    {
+        await _webhookService.DestroyWebhookAsync(input.WebhookId, input.Version);
     }
   
 }

@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Http;
 
-namespace Aevatar.Listener;
+namespace Aevatar.Webhook;
 
-public class CreateListenerDto
+public class CreateWebhookDto
+
 {
     public IFormFile Code { get; set; }
+   
 }
