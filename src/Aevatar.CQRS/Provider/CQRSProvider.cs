@@ -50,15 +50,6 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         return document;
     }
 
-    public async Task SendEventCommandAsync(EventBase eventBase)
-    {
-        var command = new SendEventCommand
-        {
-            Event = eventBase
-        };
-        await _mediator.Send(command);
-    }
-
     public async Task<Tuple<long, List<AgentGEventIndex>>> QueryGEventAsync(string eventId, List<string> grainIds,
         int pageNumber, int pageSize)
     {
