@@ -1,18 +1,14 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using Aevatar.Agents.Atomic.Models;
 using Aevatar.AtomicAgent;
 using Aevatar.CombinationAgent;
 using Aevatar.CQRS.Dto;
-using Aevatar.CQRS.Provider;
 using Aevatar.Service;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Nest;
 using Newtonsoft.Json;
 using Volo.Abp;
 
@@ -26,18 +22,13 @@ public class AgentController : AevatarController
 {
     private readonly ILogger<AgentController> _logger;
     private readonly IAgentService  _agentService;
-    private readonly ICQRSProvider _cqrsProvider;
 
     public AgentController(
         ILogger<AgentController> logger, 
-        ICQRSProvider cqrsProvider, 
-
         IAgentService agentService)
     {
         _logger = logger;
         _agentService = agentService;
-        _cqrsProvider = cqrsProvider;
-
     }
     
     [HttpPost("/atomic-agent")]
@@ -129,58 +120,5 @@ public class AgentController : AevatarController
     public async Task<List<AgentParamDto>> GetAllAgent()
     {
         return await _agentService.GetAllAgents();
-    }
-    
-    [HttpPut("/chat-logs")]
-    public async Task<AIChatLogIndex> AddChatLogs(string? groupId)
-    {
-        _logger.LogInformation("AddChatLogs");
-        if (groupId.IsNullOrEmpty())
-        {
-            groupId = Guid.NewGuid().ToString();
-        }
-
-        var chatIndex = new AIChatLogIndex
-        {
-            Id = Guid.NewGuid().ToString(),
-            GroupId = groupId,
-            AgentName = "JudgeAgent",
-            RoleType = "Judge",
-            AgentResponsibility ="",
-            Request = "give a name",
-            Response = "GPT"
-        };
-
-        await _cqrsProvider.SendSaveDataCommandAsync(chatIndex, chatIndex.Id);
-        return chatIndex;
-    }
-    [HttpGet("/chat-logs")]
-    public async Task<Tuple<long,List<AIChatLogIndexDto>>> GetChatLogs(string? agentId, string? groupId, int pageIndex, int pageSize)
-    {
-        _logger.LogInformation("GetChatLogs");
-        var index = "aevatar" + nameof(AIChatLogIndex).ToLower();
-        var filters = new List<Func<QueryContainerDescriptor<object>, QueryContainer>>();
-        if (!agentId.IsNullOrEmpty())
-        {
-            filters.Add(m => m.Term(t => t.Field("id").Value(agentId)) );
-        }
-        
-        if (!groupId.IsNullOrEmpty())
-        {
-            filters.Add(m => m.Term(t => t.Field("groupId").Value(groupId)));
-        }
-
-        var result = await _cqrsProvider.QueryDataListAsync(index,
-            q => q.Bool(b => b.Must(filters)),
-            (pageIndex-1)*pageSize,
-            pageSize
-        );
-        if (result == null || result.Item1 == 0)
-        {
-            return null;
-        }
-        
-        var chatLogs = JsonConvert.DeserializeObject<List<AIChatLogIndexDto>>(result.Item2);
-        return new Tuple<long, List<AIChatLogIndexDto>>(result.Item1, chatLogs);
     }
 }
