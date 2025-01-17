@@ -22,7 +22,7 @@ public class PluginCodeStorageInitializationEvent : InitializationEventBase
     [Id(0)] public byte[] Code { get; set; }
 }
 
-public interface IPluginCodeStorageGAgent: IStateGAgent<PluginCodeStorageGAgentState>
+public interface IPluginCodeStorageGAgent : IStateGAgent<PluginCodeStorageGAgentState>
 {
     Task<byte[]> GetPluginCodeAsync();
 }

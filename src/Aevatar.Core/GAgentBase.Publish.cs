@@ -21,7 +21,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
         Logger.LogInformation("Published event {@Event}, {CorrelationId}", @event, _correlationId);
 
         var eventId = Guid.NewGuid();
-        if (State.Parent.IsDefault)
+        if (State.Parent == null)
         {
             Logger.LogInformation(
                 "Event is the first time appeared to silo: {@Event}", @event);

@@ -2,8 +2,6 @@ using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Orleans.Metadata;
 
 namespace Aevatar.Plugins.Extensions;
 

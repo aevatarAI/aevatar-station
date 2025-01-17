@@ -8,6 +8,7 @@
 
     <ItemGroup>
       <PackageReference Include="Microsoft.Orleans.EventSourcing" />
+      <PackageReference Include="MongoDB.Bson" />
       <PackageReference Include="MongoDB.Driver" />
     </ItemGroup>
 

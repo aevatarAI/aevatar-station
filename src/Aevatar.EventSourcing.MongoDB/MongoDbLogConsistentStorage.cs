@@ -1,13 +1,10 @@
 using System.Diagnostics;
-using Aevatar.Core.Abstractions;
 using Aevatar.EventSourcing.Core.Storage;
 using Aevatar.EventSourcing.MongoDB.Options;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
-using MongoDB.Bson.Serialization.Conventions;
-using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using Orleans.Configuration;
 using Orleans.Storage;
@@ -32,6 +29,9 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
         _mongoDbOptions = options;
         _serviceId = clusterOptions.Value.ServiceId;
         _logger = logger;
+
+        BsonSerializer.RegisterSerializer(new GrainTypeBsonSerializer());
+        BsonSerializer.RegisterSerializer(new IdSpanBsonSerializer());
     }
 
     public async Task<IReadOnlyList<TLogEntry>> ReadAsync<TLogEntry>(string grainTypeName, GrainId grainId,

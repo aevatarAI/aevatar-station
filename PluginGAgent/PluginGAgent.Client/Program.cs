@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Orleans.Configuration;
 using Orleans.Providers.MongoDB.Configuration;
 using PluginGAgent.Grains;
+using System;
 
 var builder = Host.CreateDefaultBuilder(args)
     .UseOrleansClient(client =>
@@ -45,9 +46,23 @@ await host.StartAsync();
 var gAgentFactory = host.Services.GetRequiredService<IGAgentFactory>();
 var pluginManager = host.Services.GetRequiredService<IPluginGAgentManager>();
 
-await AddCodeAsync(pluginManager);
+Console.WriteLine("Select an option:");
+Console.WriteLine("1. Add Plugin GAgents");
+Console.WriteLine("2. Try Execute Plugin GAgents");
+var choice = Console.ReadLine();
 
-//await PerformCommandAsync(gAgentFactory);
+switch (choice)
+{
+    case "1":
+        await AddCodeAsync(pluginManager);
+        break;
+    case "2":
+        await PerformCommandAsync(gAgentFactory);
+        break;
+    default:
+        Console.WriteLine("Invalid choice.");
+        break;
+}
 
 async Task PerformCommandAsync(IGAgentFactory gAgentFactory1)
 {
