@@ -77,12 +77,13 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
         await ConfirmEvents();
     }
     
-    public async Task AddToGroupAsync(string groupId)
+    public async Task AddToGroupAsync(string groupId, string businessAgentId)
     {
         _logger.LogInformation("AddToGroupAsync");
         RaiseEvent(new AddToGroupGEvent()
         {
-            GroupId = groupId
+            GroupId = groupId,
+            BusinessAgentId = businessAgentId
         });
         await ConfirmEvents();
     }
@@ -117,16 +118,13 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
                 State.Properties = "";
                 State.Type = "";
                 State.Name = "";
-                State.Groups = new List<string>();
+                State.Groups = new ();
                 break;
             case AddToGroupGEvent addToGroupGEvent:
-                if (!State.Groups.Contains(addToGroupGEvent.GroupId))
-                {
-                    State.Groups.Add(addToGroupGEvent.GroupId);
-                }
+                State.Groups.TryAdd(addToGroupGEvent.GroupId, addToGroupGEvent.BusinessAgentId);
                 break;
             case RemoveFromGroupGEvent removeFromGroupGEvent:
-                if (State.Groups.Contains(removeFromGroupGEvent.GroupId))
+                if (State.Groups.ContainsKey(removeFromGroupGEvent.GroupId))
                 {
                     State.Groups.Remove(removeFromGroupGEvent.GroupId);
                 }
@@ -141,6 +139,6 @@ public interface IAtomicGAgent : IStateGAgent<AtomicGAgentState>
     Task CreateAgentAsync(AtomicAgentData data);
     Task UpdateAgentAsync(AtomicAgentData data);
     Task DeleteAgentAsync();
-    Task AddToGroupAsync(string groupId);
+    Task AddToGroupAsync(string groupId, string businessAgentId);
     Task RemoveFromGroupAsync(string groupId);
 }
