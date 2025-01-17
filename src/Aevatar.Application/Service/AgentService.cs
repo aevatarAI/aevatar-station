@@ -133,6 +133,7 @@ public class AgentService : ApplicationService, IAgentService
             agentData.Name = updateDto.Name;
         }
 
+        bool propertyChanged = false;
         var newProperties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentData.Properties);
         if (newProperties != null && updateDto.Properties != null)
         {
@@ -145,11 +146,54 @@ public class AgentService : ApplicationService, IAgentService
             }
             
             agentData.Properties = JsonConvert.SerializeObject(newProperties);
+            propertyChanged = true;
         }
         
         await atomicAgent.UpdateAgentAsync(agentData);
         resp.Name = agentData.Name;
         resp.Properties = newProperties;
+        if (!propertyChanged)
+        {
+            return resp;
+        }
+        
+        var agentPropertyDict = await GetInitializedDtos();
+        foreach (var kvp in agentData.Groups)
+        {
+            var businessAgentGuid = ParseGuid(kvp.Value);
+            
+            InitializationEventBase? dto = null;
+                   
+            if (agentPropertyDict.TryGetValue(agentData.Type, out var initializeParam) && !agentData.Properties.IsNullOrEmpty()) 
+            {
+                if (initializeParam != null)
+                {
+                    var properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentData.Properties);
+                    var actualDto = Activator.CreateInstance(initializeParam.DtoType);
+                    dto = (InitializationEventBase)actualDto!;
+                    
+                    foreach (var kvpProperty in properties)
+                    {
+                        var propertyName = kvpProperty.Key; 
+                        var propertyValue = kvpProperty.Value;
+                        var propertyType = initializeParam.Properties.FirstOrDefault(x => x.Name == propertyName)?.Type;
+                        if (propertyType == null)
+                        {
+                            continue;
+                        }
+                        
+                        var propertyInfo = initializeParam.DtoType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+                        object convertedValue = ConvertValue(propertyType, propertyValue);
+                        propertyInfo?.SetValue(dto, convertedValue);
+                        _logger.LogInformation("SetGroupAsync propertyName: {propertyName}, propertyValue: {propertyValue}, propertyType: {propertyType}", propertyName, propertyValue, propertyType);
+                    }
+                }
+            }
+            
+            var businessAgent = await _gAgentFactory.GetGAgentAsync(agentData.Type, businessAgentGuid, initializeDto: dto);
+            _logger.LogInformation("SetGroupAsync businessAgentGuid: {businessAgentGuid}", businessAgentGuid);
+            
+        }
 
         return resp;
     }
@@ -332,7 +376,7 @@ public class AgentService : ApplicationService, IAgentService
 
             var primaryKey = businessAgent.GetPrimaryKey().ToString();
             components.Add(agentId, primaryKey);
-            await atomicAgent.AddToGroupAsync(guid.ToString());
+            await atomicAgent.AddToGroupAsync(guid.ToString(), primaryKey);
         }
 
         return components;
