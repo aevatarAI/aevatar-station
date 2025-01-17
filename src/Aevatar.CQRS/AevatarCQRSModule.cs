@@ -25,8 +25,6 @@ public class AevatarCQRSModule : AbpModule
             context.Services.AddMediatR(typeof(SendEventCommandHandler).Assembly);
             context.Services.AddMediatR(typeof(SaveGEventCommandHandler).Assembly);
             context.Services.AddMediatR(typeof(GetGEventQueryHandler).Assembly);
-            context.Services.AddMediatR(typeof(SaveDataCommandHandler).Assembly);
-            context.Services.AddMediatR(typeof(GetDataQueryHandler).Assembly);
             context.Services.AddSingleton<IIndexingService, ElasticIndexingService>();
             context.Services.AddSingleton<IEventDispatcher, CQRSProvider>();
             context.Services.AddSingleton<ICQRSProvider, CQRSProvider>();
@@ -35,8 +33,6 @@ public class AevatarCQRSModule : AbpModule
             context.Services.AddTransient<SendEventCommandHandler>();
             context.Services.AddTransient<SaveGEventCommandHandler>();
             context.Services.AddTransient<GetGEventQueryHandler>();
-            context.Services.AddTransient<SaveDataCommandHandler>();
-            context.Services.AddTransient<GetDataQueryHandler>();
             var configuration = context.Services.GetConfiguration();
             ConfigureElasticsearch(context, configuration);
 

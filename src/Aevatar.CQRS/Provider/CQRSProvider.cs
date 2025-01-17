@@ -121,28 +121,5 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
     {
         throw new NotImplementedException();
     }
-
-    public async Task<Tuple<long, string>> QueryDataListAsync(string indexName,Func<QueryContainerDescriptor<dynamic>, QueryContainer> query,int skip, int limit)
-    {
-        var getDataQuery = new GetDataQuery()
-        {
-            Index = indexName,
-            Query = query,
-            Skip = skip,
-            Limit = limit
-        };
-
-        var document = await _mediator.Send(getDataQuery);
-        return document;
-    }
-
-    public async Task SendSaveDataCommandAsync(BaseIndex index, string id)
-    {
-        var command = new SaveDataCommand
-        {
-            BaseIndex = index,
-            Id = id
-        };
-        await _mediator.Send(command);
-    }
+    
 }
