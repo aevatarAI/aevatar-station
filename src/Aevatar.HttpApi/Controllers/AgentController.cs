@@ -121,4 +121,10 @@ public class AgentController : AevatarController
     {
         return await _agentService.GetAllAgents();
     }
+    
+    [HttpGet("/run/{combinationId}")]
+    public async Task RunAsync(string combinationId)
+    {
+        await _agentService.RunAgentAsync(combinationId);
+    }
 }

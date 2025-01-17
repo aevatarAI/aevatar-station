@@ -23,4 +23,5 @@ public interface IAgentService
     Task<Tuple<long, List<AgentGEventIndex>>> GetAgentEventLogsAsync(string agentId, int pageIndex, int pageSize);
     
     Task<List<AgentParamDto>> GetAllAgents();
+    Task RunAgentAsync(string agentId);
 }
