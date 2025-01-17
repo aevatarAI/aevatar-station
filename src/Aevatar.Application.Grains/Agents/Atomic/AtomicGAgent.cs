@@ -27,7 +27,7 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
             "Represents an atomic agent responsible for creating other agents such as TwitterGAgent and TelegramGAgent");
     }
     
-    public async Task<AtomicAgentData?> GetAgentAsync()
+    public async Task<AtomicAgentData> GetAgentAsync()
     {
         _logger.LogInformation("GetAgentAsync");
         var agentData = new AtomicAgentData()
@@ -36,11 +36,10 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
             UserAddress = State.UserAddress,
             Type = State.Type,
             Properties = State.Properties,
-            BusinessAgentId = State.BusinessAgentId,
             Name = State.Name,
-            GroupId = State.GroupId
+            Groups = State.Groups
         };
-        return await Task.FromResult(agentData);
+        return agentData;
     }
     
     public async Task CreateAgentAsync(AtomicAgentData data)
@@ -49,10 +48,10 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
         RaiseEvent(new CreateAgentGEvent()
         {
             UserAddress = data.UserAddress,
-            Id = this.GetPrimaryKey(),
+            Id = Guid.NewGuid(),
+            AtomicGAgentId = this.GetPrimaryKey(),
             Type = data.Type,
             Properties = data.Properties,
-            BusinessAgentId = data.BusinessAgentId,
             Name = data.Name
         });
         await ConfirmEvents();
@@ -78,22 +77,70 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
         await ConfirmEvents();
     }
     
-    public async Task SetGroupAsync(string groupId)
+    public async Task AddToGroupAsync(string groupId)
     {
-        _logger.LogInformation("SetUseFlagAsync");
-        RaiseEvent(new RegisterToGroupGEvent()
+        _logger.LogInformation("AddToGroupAsync");
+        RaiseEvent(new AddToGroupGEvent()
         {
             GroupId = groupId
         });
         await ConfirmEvents();
     }
+    
+    public async Task RemoveFromGroupAsync(string groupId)
+    {
+        _logger.LogInformation("RemoveFromGroupAsync");
+        RaiseEvent(new RemoveFromGroupGEvent()
+        {
+            GroupId = groupId
+        });
+        await ConfirmEvents();
+    }
+    
+    protected override void GAgentTransitionState(AtomicGAgentState state, StateLogEventBase<AtomicAgentGEvent> @event)
+    {
+        switch (@event)
+        {
+            case CreateAgentGEvent createAgentGEvent:
+                State.Id = createAgentGEvent.AtomicGAgentId;
+                State.Properties = createAgentGEvent.Properties;
+                State.UserAddress = createAgentGEvent.UserAddress;
+                State.Type = createAgentGEvent.Type;
+                State.Name = createAgentGEvent.Name;
+                break;
+            case UpdateAgentGEvent updateAgentGEvent:
+                State.Properties = updateAgentGEvent.Properties;
+                State.Name = updateAgentGEvent.Name;
+                break;
+            case DeleteAgentGEvent deleteAgentGEvent:
+                State.UserAddress = "";
+                State.Properties = "";
+                State.Type = "";
+                State.Name = "";
+                State.Groups = new List<string>();
+                break;
+            case AddToGroupGEvent addToGroupGEvent:
+                if (!State.Groups.Contains(addToGroupGEvent.GroupId))
+                {
+                    State.Groups.Add(addToGroupGEvent.GroupId);
+                }
+                break;
+            case RemoveFromGroupGEvent removeFromGroupGEvent:
+                if (State.Groups.Contains(removeFromGroupGEvent.GroupId))
+                {
+                    State.Groups.Remove(removeFromGroupGEvent.GroupId);
+                }
+                break;
+        }
+    }
 }
 
 public interface IAtomicGAgent : IStateGAgent<AtomicGAgentState>
 {
-    Task<AtomicAgentData?> GetAgentAsync();
+    Task<AtomicAgentData> GetAgentAsync();
     Task CreateAgentAsync(AtomicAgentData data);
     Task UpdateAgentAsync(AtomicAgentData data);
     Task DeleteAgentAsync();
-    Task SetGroupAsync(string groupId);
+    Task AddToGroupAsync(string groupId);
+    Task RemoveFromGroupAsync(string groupId);
 }

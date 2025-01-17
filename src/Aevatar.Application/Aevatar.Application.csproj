@@ -3,7 +3,7 @@
     <Import Project="..\..\common.props" />
 
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net9.0</TargetFramework>
         <Nullable>enable</Nullable>
         <RootNamespace>Aevatar</RootNamespace>
     </PropertyGroup>
@@ -13,6 +13,8 @@
         <ProjectReference Include="..\Aevatar.Domain\Aevatar.Domain.csproj" />
         <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj" />
         <ProjectReference Include="..\Aevatar.Application.Grains\Aevatar.Application.Grains.csproj" />
+        <ProjectReference Include="..\Aevatar.Kubernetes\Aevatar.Kubernetes.csproj" />
+        <ProjectReference Include="..\Aevatar.WebHook.Deploy\Aevatar.WebHook.Deploy.csproj" />
     </ItemGroup>
 
     <ItemGroup>

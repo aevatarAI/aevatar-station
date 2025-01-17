@@ -1,4 +1,6 @@
 using System.Net.Http.Json;
+using Aevatar.Application.Grains.Agents.Atomic;
+using Aevatar.Application.Grains.Agents.Combination;
 using Aevatar.AtomicAgent;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
@@ -11,24 +13,27 @@ using Orleans.Providers;
 namespace Aevatar.Application.Grains.Subscription;
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
-public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, SubscriptionEvent>, ISubscriptionGAgent
+public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, SubscriptionGEvent>, ISubscriptionGAgent
 {
     private readonly ILogger<SubscriptionGAgent> _logger;
-    public SubscriptionGAgent(ILogger<SubscriptionGAgent> logger) : base(logger)
+    private readonly IClusterClient _clusterClient;
+    public SubscriptionGAgent(ILogger<SubscriptionGAgent> logger, 
+        IClusterClient clusterClient) : base(logger)
     {
         _logger = logger;
+        _clusterClient = clusterClient;
     }
     
     public async Task<EventSubscriptionState> SubscribeAsync(SubscribeEventInputDto input)
     {
-        //todo  group register
-        RaiseEvent(new AddSubscriptionEvent()
+        RaiseEvent(new AddSubscriptionGEvent()
         {
             Id = Guid.NewGuid(),
             Ctime = DateTime.UtcNow,
             AgentId = input.AgentId,
             EventTypes = input.EventTypes.Count > 0 ? input.EventTypes : new List<string> { "ALL" },
             CallbackUrl = input.CallbackUrl,
+            SubscriptionId = this.GetPrimaryKey()
         });
         await ConfirmEvents();
         return State;
@@ -40,8 +45,8 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
         {
            return;
         }
-        //todo  group unregister
-        RaiseEvent(new CancelSubscriptionEvent()
+        
+        RaiseEvent(new CancelSubscriptionGEvent()
         {
             Id = Guid.NewGuid(),
             Ctime = DateTime.UtcNow,
@@ -50,32 +55,80 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
     }
     
     [AllEventHandler]
-    public async Task HandleRequestAllSubscriptionsEventAsync<T>(EventWrapper<T> eventWrapper) where T : EventBase
+    public async Task HandleEventAsync(EventWrapperBase eventWrapperBase) 
     {
-        _logger.LogInformation("EventSubscriptionGAgent HandleRequestAllSubscriptionsEventAsync :" +
-                               JsonConvert.SerializeObject(eventWrapper));
-        if (State.Status.IsNullOrEmpty() && State.Status == "active")
+        if (eventWrapperBase is EventWrapper<EventBase> eventWrapper)
         {
-            if (State.EventTypes.IsNullOrEmpty() || State.EventTypes.Contains( eventWrapper.GetType().Name))
+            _logger.LogInformation("EventSubscriptionGAgent HandleRequestAllSubscriptionsEventAsync :" +
+                                   JsonConvert.SerializeObject(eventWrapper));
+            if (State.Status == "Active" && (State.EventTypes.IsNullOrEmpty() || State.EventTypes.Contains("ALL") || 
+                                             State.EventTypes.Contains( eventWrapper.GetType().Name)))
             {
                 var eventPushRequest = new EventPushRequest();
                 eventPushRequest.AgentId = State.AgentId;
                 eventPushRequest.EventId = eventWrapper.EventId;
                 eventPushRequest.EventType = eventWrapper.Event.GetType().Name;
                 eventPushRequest.Payload = JsonConvert.SerializeObject(eventWrapper.Event);
-                eventPushRequest.AtomicAgent = new AtomicAgentDto()
-                {
-                    //todo query AtomicAgent
-                };
+                eventPushRequest.AtomicAgent = await GetAtomicAgentDtoFromEventGrainId(eventWrapper.PublisherGrainId);
                 using var httpClient = new HttpClient();
                 await httpClient.PostAsJsonAsync(State.CallbackUrl, eventPushRequest);
             }
         }
     }
+    
+    private async Task<AtomicAgentDto> GetAtomicAgentDtoFromEventGrainId(GrainId grainId)
+    {
+        Guid.TryParse(State.AgentId, out Guid combinationGuid);
+        var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(combinationGuid);
+        var combinationData = await combinationAgent.GetCombinationAsync();
+        foreach (var agentId in combinationData.AgentComponent)
+        {
+            var businessGuid = grainId.GetGuidKey().ToString();
+            if (agentId.Value == businessGuid)
+            {
+                Guid.TryParse(agentId.Key, out Guid atomicGuid);
+                var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(atomicGuid);
+                var atomicAgentData = await atomicAgent.GetAgentAsync();
+                var agentDto = new AtomicAgentDto()
+                {
+                    Id = agentId.Key,
+                    Type = atomicAgentData.Type,
+                    Name = atomicAgentData.Name
+                };
+                if (!atomicAgentData.Properties.IsNullOrEmpty())
+                {
+                    agentDto.Properties =
+                        JsonConvert.DeserializeObject<Dictionary<string, object>>(atomicAgentData.Properties);
+                }
+
+                return agentDto;
+            }
+        }
+
+        return new AtomicAgentDto();
+    }
 
     public override async Task<string> GetDescriptionAsync()
     {
         return " a global event subscription and notification management agent";
+    }
+    
+    protected override void GAgentTransitionState(EventSubscriptionState state, StateLogEventBase<SubscriptionGEvent> @event)
+    {
+        switch (@event)
+        {
+            case AddSubscriptionGEvent add:
+                State.Id = add.SubscriptionId;
+                State.AgentId = add.AgentId;
+                State.EventTypes = add.EventTypes;
+                State.CallbackUrl = add.CallbackUrl;
+                State.Status = "Active";
+                State.CreateTime = DateTime.Now;
+                break;
+            case CancelSubscriptionGEvent cancel:
+                State.Status = "Cancelled";
+                break;
+        }
     }
 }
 

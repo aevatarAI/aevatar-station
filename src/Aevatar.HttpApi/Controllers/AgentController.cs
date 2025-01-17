@@ -6,6 +6,7 @@ using Aevatar.CombinationAgent;
 using Aevatar.CQRS.Dto;
 using Aevatar.Service;
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -16,6 +17,7 @@ namespace Aevatar.Controllers;
 [RemoteService]
 [ControllerName("Agent")]
 [Route("api/agent")]
+[Authorize]
 public class AgentController : AevatarController
 {
     private readonly ILogger<AgentController> _logger;
@@ -99,7 +101,7 @@ public class AgentController : AevatarController
     }
     
     [HttpGet("/combination-agents")]
-    public async Task<List<CombinationAgentDto>> GetCombinationAgentList(string userAddress, string groupId, int pageIndex, int pageSize)
+    public async Task<List<CombinationAgentDto>> GetCombinationAgentList(string userAddress, string? groupId, int pageIndex, int pageSize)
     {
         _logger.LogInformation("Get Combination-Agent list: {address} {groupId} {pageIndex} {pageSize}", userAddress,groupId, pageIndex,pageSize);
         var agentDtoList = await _agentService.GetCombinationAgentsAsync(userAddress, groupId, pageIndex, pageSize);
@@ -112,5 +114,11 @@ public class AgentController : AevatarController
         _logger.LogInformation("Get Agent logs : {agentId} {pageIndex} {pageSize}",agentId, pageIndex,pageSize);
         var agentDtoList = await _agentService.GetAgentEventLogsAsync(agentId, pageIndex, pageSize);
         return agentDtoList;
+    }
+    
+    [HttpGet("/all-agents")]
+    public async Task<List<AgentParamDto>> GetAllAgent()
+    {
+        return await _agentService.GetAllAgents();
     }
 }
