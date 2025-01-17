@@ -13,6 +13,11 @@
     </ItemGroup>
 
     <ItemGroup>
+      <None Remove="AppConfigTemplate\appsettings-template.json" />
+      <None Remove="AppConfigTemplate\filebeat-template.yml" />
+    </ItemGroup>
+
+    <ItemGroup>
       <ProjectReference Include="..\Aevatar.WebHook.Deploy\Aevatar.WebHook.Deploy.csproj" />
       <ProjectReference Include="..\Aevatar.Domain.Shared\Aevatar.Domain.Shared.csproj" />
     </ItemGroup>

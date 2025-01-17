@@ -94,6 +94,7 @@ public class DeploymentHelper
             { KubernetesConstants.AppIdLabelKey, appId },
             { KubernetesConstants.AppVersionLabelKey, version },
             { KubernetesConstants.AppPodTypeLabelKey, podType },
+            { KubernetesConstants.AppPodChainIdLabelKey, chainId }
         };
     }
 

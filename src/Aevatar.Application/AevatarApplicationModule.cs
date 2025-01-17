@@ -1,10 +1,12 @@
 ﻿using Aevatar.Application.Grains;
+using Aevatar.Core;
 using Aevatar.CQRS;
 using Aevatar.Kubernetes;
 using Aevatar.Kubernetes.Manager;
 using Aevatar.Options;
 using Aevatar.WebHook.Deploy;
 using Microsoft.Extensions.DependencyInjection;
+using Orleans;
 using Volo.Abp.Account;
 using Volo.Abp.AspNetCore.Mvc.Dapr;
 using Volo.Abp.AutoMapper;
@@ -38,6 +40,9 @@ public class AevatarApplicationModule : AbpModule
         });
         
         var configuration = context.Services.GetConfiguration();
+        Configure<NameContestOptions>(configuration.GetSection("NameContest"));
+        context.Services.AddSingleton<IGAgentFactory>(sp => new GAgentFactory(context.Services.GetRequiredService<IClusterClient>()));
+        context.Services.AddSingleton<IGAgentManager>(sp => new GAgentManager());
         Configure<WebhookDeployOptions>(configuration.GetSection("WebhookDeploy"));
         context.Services.AddTransient<IWebhookDeployManager, KubernetesWebhookManager>();
     }
