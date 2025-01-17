@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+        <Nullable>enable</Nullable>
+        <RootNamespace>Aevatar.AI</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Aevatar.AI.Abstractions\Aevatar.AI.Abstractions.csproj" />
+        <ProjectReference Include="..\Aevatar.Core\Aevatar.Core.csproj" />
+    </ItemGroup>
+</Project>
