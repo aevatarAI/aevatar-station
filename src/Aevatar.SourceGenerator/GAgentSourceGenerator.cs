@@ -1,25 +1,48 @@
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using System.Collections.Immutable;
+using System.Linq;
 using System.Text;
 
 namespace Aevatar.SourceGenerator;
 
-[Generator]
-public class GAgentSourceGenerator : ISourceGenerator
+[Generator(LanguageNames.CSharp)]
+public class GAgentSourceGenerator : IIncrementalGenerator
 {
-    public void Initialize(GeneratorInitializationContext context)
+    public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        context.RegisterForSyntaxNotifications(() => new ArtifactSyntaxReceiver());
+        var classDeclarations = context.SyntaxProvider
+            .CreateSyntaxProvider(
+                predicate: static (s, _) => IsClassDeclarationWithIArtifact(s),
+                transform: static (ctx, _) => GetClassDeclaration(ctx))
+            .Where(static m => m is not null);
+
+        var compilationAndClasses = context.CompilationProvider.Combine(classDeclarations.Collect());
+
+        context.RegisterSourceOutput(compilationAndClasses,
+            static (spc, source) => Execute(source.Left, source.Right, spc));
     }
 
-    public void Execute(GeneratorExecutionContext context)
+    private static bool IsClassDeclarationWithIArtifact(SyntaxNode node)
     {
-        if (context.SyntaxReceiver is not ArtifactSyntaxReceiver receiver)
-            return;
+        return node is ClassDeclarationSyntax classDeclarationSyntax &&
+               (classDeclarationSyntax.BaseList?.Types
+                   .Any(t => t.ToString().StartsWith("IArtifact")) ?? false);
+    }
 
-        foreach (var candidateClass in receiver.CandidateClasses)
+    private static ClassDeclarationSyntax? GetClassDeclaration(GeneratorSyntaxContext context)
+    {
+        var classDeclarationSyntax = (ClassDeclarationSyntax)context.Node;
+        return classDeclarationSyntax;
+    }
+
+    private static void Execute(Compilation compilation, ImmutableArray<ClassDeclarationSyntax?> classes,
+        SourceProductionContext context)
+    {
+        foreach (var candidateClass in classes)
         {
-            var semanticModel = context.Compilation.GetSemanticModel(candidateClass.SyntaxTree);
+            var semanticModel = compilation.GetSemanticModel(candidateClass!.SyntaxTree);
 
             if (semanticModel.GetDeclaredSymbol(candidateClass) is not INamedTypeSymbol classSymbol)
                 continue;
@@ -35,9 +58,11 @@ public class GAgentSourceGenerator : ISourceGenerator
             // TStateLogEvent
             var stateLogEventType = artifactInterface.TypeArguments[1].ToDisplayString();
 
+            var classNamespace = classSymbol.ContainingNamespace.ToDisplayString();
             var generatedClassName = $"{classSymbol.Name}GAgent";
 
             var generatedCode = GenerateGAgentClassCode(
+                classNamespace,
                 generatedClassName,
                 classSymbol.Name,
                 stateType,
@@ -48,13 +73,15 @@ public class GAgentSourceGenerator : ISourceGenerator
         }
     }
 
-    private string GenerateGAgentClassCode(
+    private static string GenerateGAgentClassCode(
+        string classNamespace,
         string className,
         string artifactTypeName,
         string gAgentStateType,
         string gAgentStateLogEventType)
     {
         var generatedCode = Template
+            .Replace("{ClassNamespace}", classNamespace)
             .Replace("{ClassName}", className)
             .Replace("{ArtifactTypeName}", artifactTypeName)
             .Replace("{GAgentStateType}", gAgentStateType)
@@ -70,6 +97,8 @@ using System.Threading.Tasks;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.Logging;
+
+namespace {ClassNamespace};
 
 public class {ClassName} : GAgentBase<{GAgentStateType}, {GAgentStateLogEventType}>
 {
@@ -94,7 +123,7 @@ public class {ClassName} : GAgentBase<{GAgentStateType}, {GAgentStateLogEventTyp
     protected override void GAgentTransitionState({GAgentStateType} state, StateLogEventBase<{GAgentStateLogEventType}> @event)
     {
         base.GAgentTransitionState(state, @event);
-        _artifact.ApplyEvent(@event);
+        _artifact.TransitionState(state, @event);
     }
 }
 ";

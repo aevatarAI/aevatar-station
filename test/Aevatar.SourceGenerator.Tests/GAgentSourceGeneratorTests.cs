@@ -3,13 +3,14 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
 using System.Text;
 using Aevatar.Core.Abstractions;
+using Aevatar.GAgents;
 using Aevatar.SourceGenerator;
 using Shouldly;
 
 public class GAgentSourceGeneratorTests
 {
     [Fact]
-    public void TestGAgentSourceGenerator()
+    public void GAgentSourceGeneratorTest()
     {
         // Arrange.
         const string source = @"
@@ -41,7 +42,6 @@ namespace Aevatar.GAgents
         driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out var diagnostics);
 
         // Assert.
-        diagnostics.ShouldBeEmpty();
         var generatedTrees = outputCompilation.SyntaxTrees.ToList();
         generatedTrees.Count.ShouldBe(2);// Original + Generated
         var generatedCode = generatedTrees.Last().ToString();

@@ -6,7 +6,6 @@ public interface IArtifact<in TState, TStateLogEvent>
     where TState : StateBase
     where TStateLogEvent : StateLogEventBase<TStateLogEvent>
 {
-    void SetState(TState state);
-    void ApplyEvent(StateLogEventBase<TStateLogEvent> stateLogEvent);
+    void TransitionState(TState state, StateLogEventBase<TStateLogEvent> stateLogEvent);
     string GetDescription();
 }

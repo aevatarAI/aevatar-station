@@ -4,16 +4,15 @@
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     </PropertyGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
-        <ProjectReference Include="..\..\src\Aevatar.SourceGenerator\Aevatar.SourceGenerator.csproj" />
+        <ProjectReference Include="..\..\src\Aevatar.Core\Aevatar.Core.csproj" />
+        <ProjectReference Include="..\..\src\Aevatar.SourceGenerator\Aevatar.SourceGenerator.csproj">
+            <OutputItemType>Analyzer</OutputItemType>
+        </ProjectReference>
     </ItemGroup>
-
-    <PropertyGroup>
-        <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-        <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)\SolidityContractStubs</CompilerGeneratedFilesOutputPath>
-    </PropertyGroup>
 
 </Project>
