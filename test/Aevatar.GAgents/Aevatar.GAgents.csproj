@@ -12,7 +12,13 @@
         <ProjectReference Include="..\..\src\Aevatar.Core\Aevatar.Core.csproj" />
         <ProjectReference Include="..\..\src\Aevatar.SourceGenerator\Aevatar.SourceGenerator.csproj">
             <OutputItemType>Analyzer</OutputItemType>
+            <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+            <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
     </ItemGroup>
+
+<!--    <ItemGroup>-->
+<!--        <Compile Include="$(IntermediateOutputPath)\generated\Aevatar.SourceGenerator\Aevatar.SourceGenerator.GAgentSourceGenerator\*.cs" />-->
+<!--    </ItemGroup>-->
 
 </Project>

@@ -1,9 +1,13 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.Logging;
 
 namespace Aevatar.SourceGenerator.Tests;
 
+[GAgent(nameof(TestMyArtifact))]
 public class TestMyArtifactGAgent : GAgentBase<GeneratedGAgentState, GeneratedStateLogEvent>
 {
     private readonly TestMyArtifact _artifact;

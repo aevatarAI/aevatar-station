@@ -2,7 +2,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using System.Collections.Immutable;
-using System.Linq;
 using System.Text;
 
 namespace Aevatar.SourceGenerator;
@@ -12,42 +11,42 @@ public class GAgentSourceGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var classDeclarations = context.SyntaxProvider
+        var typeDeclarations = context.SyntaxProvider
             .CreateSyntaxProvider(
-                predicate: static (s, _) => IsClassDeclarationWithIArtifact(s),
-                transform: static (ctx, _) => GetClassDeclaration(ctx))
+                predicate: static (s, _) => IsTypeDeclarationWithIArtifact(s),
+                transform: static (ctx, _) => GetTypeDeclaration(ctx))
             .Where(static m => m is not null);
 
-        var compilationAndClasses = context.CompilationProvider.Combine(classDeclarations.Collect());
+        var compilationAndTypes = context.CompilationProvider.Combine(typeDeclarations.Collect());
 
-        context.RegisterSourceOutput(compilationAndClasses,
+        context.RegisterSourceOutput(compilationAndTypes,
             static (spc, source) => Execute(source.Left, source.Right, spc));
     }
 
-    private static bool IsClassDeclarationWithIArtifact(SyntaxNode node)
+    private static bool IsTypeDeclarationWithIArtifact(SyntaxNode node)
     {
-        return node is ClassDeclarationSyntax classDeclarationSyntax &&
-               (classDeclarationSyntax.BaseList?.Types
+        return node is TypeDeclarationSyntax typeDeclarationSyntax &&
+               (typeDeclarationSyntax.BaseList?.Types
                    .Any(t => t.ToString().StartsWith("IArtifact")) ?? false);
     }
 
-    private static ClassDeclarationSyntax? GetClassDeclaration(GeneratorSyntaxContext context)
+    private static TypeDeclarationSyntax? GetTypeDeclaration(GeneratorSyntaxContext context)
     {
-        var classDeclarationSyntax = (ClassDeclarationSyntax)context.Node;
-        return classDeclarationSyntax;
+        var typeDeclarationSyntax = (TypeDeclarationSyntax)context.Node;
+        return typeDeclarationSyntax;
     }
 
-    private static void Execute(Compilation compilation, ImmutableArray<ClassDeclarationSyntax?> classes,
+    private static void Execute(Compilation compilation, ImmutableArray<TypeDeclarationSyntax?> types,
         SourceProductionContext context)
     {
-        foreach (var candidateClass in classes)
+        foreach (var candidateType in types)
         {
-            var semanticModel = compilation.GetSemanticModel(candidateClass!.SyntaxTree);
+            var semanticModel = compilation.GetSemanticModel(candidateType!.SyntaxTree);
 
-            if (semanticModel.GetDeclaredSymbol(candidateClass) is not INamedTypeSymbol classSymbol)
+            if (semanticModel.GetDeclaredSymbol(candidateType) is not INamedTypeSymbol typeSymbol)
                 continue;
 
-            var artifactInterface = classSymbol.AllInterfaces
+            var artifactInterface = typeSymbol.AllInterfaces
                 .FirstOrDefault(i => i.OriginalDefinition.Name == "IArtifact");
 
             if (artifactInterface is null || artifactInterface.TypeArguments.Length != 2)
@@ -58,31 +57,39 @@ public class GAgentSourceGenerator : IIncrementalGenerator
             // TStateLogEvent
             var stateLogEventType = artifactInterface.TypeArguments[1].ToDisplayString();
 
-            var classNamespace = classSymbol.ContainingNamespace.ToDisplayString();
-            var generatedClassName = $"{classSymbol.Name}GAgent";
+            var typeNamespace = typeSymbol.ContainingNamespace.ToDisplayString();
+            var typeName = typeSymbol.Name;
+            if (typeSymbol.TypeKind == TypeKind.Interface && typeName.StartsWith("I"))
+            {
+                typeName = typeName.Substring(1);
+            }
+            var generatedTypeName = $"{typeName}GAgent";
 
             var generatedCode = GenerateGAgentClassCode(
-                classNamespace,
-                generatedClassName,
-                classSymbol.Name,
+                typeNamespace,
+                typeName,
+                generatedTypeName,
+                typeSymbol.Name,
                 stateType,
                 stateLogEventType
             );
 
-            context.AddSource($"{generatedClassName}.g.cs", SourceText.From(generatedCode, Encoding.UTF8));
+            context.AddSource($"{generatedTypeName}.g.cs", SourceText.From(generatedCode, Encoding.UTF8));
         }
     }
 
     private static string GenerateGAgentClassCode(
-        string classNamespace,
-        string className,
+        string typeNamespace,
+        string gAgentAlias,
+        string typeName,
         string artifactTypeName,
         string gAgentStateType,
         string gAgentStateLogEventType)
     {
         var generatedCode = Template
-            .Replace("{ClassNamespace}", classNamespace)
-            .Replace("{ClassName}", className)
+            .Replace("{ClassNamespace}", typeNamespace)
+            .Replace("{GAgentAlias}", gAgentAlias)
+            .Replace("{ClassName}", typeName)
             .Replace("{ArtifactTypeName}", artifactTypeName)
             .Replace("{GAgentStateType}", gAgentStateType)
             .Replace("{GAgentStateLogEventType}", gAgentStateLogEventType);
@@ -100,6 +107,7 @@ using Microsoft.Extensions.Logging;
 
 namespace {ClassNamespace};
 
+[GAgent(nameof({GAgentAlias}))]
 public class {ClassName} : GAgentBase<{GAgentStateType}, {GAgentStateLogEventType}>
 {
     private readonly {ArtifactTypeName} _artifact;

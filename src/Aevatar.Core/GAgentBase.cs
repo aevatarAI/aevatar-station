@@ -41,6 +41,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent> : Journ
 
     public async Task ActivateAsync()
     {
+        await Task.Yield();
     }
 
     public async Task RegisterAsync(IGAgent gAgent)

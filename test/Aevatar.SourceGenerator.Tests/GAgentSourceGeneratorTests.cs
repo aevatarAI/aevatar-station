@@ -3,12 +3,19 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
 using System.Text;
 using Aevatar.Core.Abstractions;
-using Aevatar.GAgents;
 using Aevatar.SourceGenerator;
 using Shouldly;
+using Xunit.Abstractions;
 
 public class GAgentSourceGeneratorTests
 {
+    private readonly ITestOutputHelper _output;
+
+    public GAgentSourceGeneratorTests(ITestOutputHelper output)
+    {
+        _output = output;
+    }
+    
     [Fact]
     public void GAgentSourceGeneratorTest()
     {
@@ -18,7 +25,8 @@ using Aevatar.Core.Abstractions;
 
 namespace Aevatar.GAgents
 {
-    public class MyArtifact : IArtifact<GeneratedGAgentState, GeneratedStateLogEvent>
+    public interface IMyArtifact : IArtifact<GeneratedGAgentState, GeneratedStateLogEvent> { }
+    public class MyArtifact : IMyArtifact
     {
         public string GetDescription() => ""MyArtifact Description"";
         public void SetState(GeneratedGAgentState state) { /* custom logic */ }
@@ -46,5 +54,12 @@ namespace Aevatar.GAgents
         generatedTrees.Count.ShouldBe(2);// Original + Generated
         var generatedCode = generatedTrees.Last().ToString();
         generatedCode.ShouldContain("public class MyArtifactGAgent");
+        _output.WriteLine(generatedCode);
+    }
+
+    [Fact]
+    public async Task GeneratedGAgentTest()
+    {
+        // Keep this.
     }
 }

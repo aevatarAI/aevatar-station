@@ -8,7 +8,12 @@ public class GeneratedGAgentState : StateBase;
 [GenerateSerializer]
 public class GeneratedStateLogEvent : StateLogEventBase<GeneratedStateLogEvent>;
 
-public class MyArtifact : IArtifact<GeneratedGAgentState, GeneratedStateLogEvent>
+public interface IMyArtifact : IArtifact<GeneratedGAgentState, GeneratedStateLogEvent>
+{
+    
+}
+
+public class MyArtifact : IMyArtifact
 {
     public string GetDescription() => "MyArtifact Description";
     public void TransitionState(GeneratedGAgentState state, StateLogEventBase<GeneratedStateLogEvent> stateLogEvent) { /* custom logic */ }
