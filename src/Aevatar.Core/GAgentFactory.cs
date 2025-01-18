@@ -46,7 +46,7 @@ public class GAgentFactory : IGAgentFactory
 
     public async Task<IGAgent> GetGAgentAsync(string alias, Guid primaryKey, string ns = "aevatar", InitializationEventBase? initializeDto = null)
     {
-        var gAgent = _clusterClient.GetGrain<IGAgent>(GrainId.Create($"{ns}/{alias}", primaryKey.ToString("N")));
+        var gAgent = _clusterClient.GetGrain<IGAgent>(GrainId.Create($"{ns.ToLower()}/{alias.ToLower()}", primaryKey.ToString("N")));
         await gAgent.ActivateAsync();
         if (initializeDto != null)
         {

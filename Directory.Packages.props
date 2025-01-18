@@ -18,6 +18,7 @@
     <PackageVersion Include="JetBrains.Annotations" Version="2023.3.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="8.0.4" />
     <PackageVersion Include="Microsoft.Extensions.Options" Version="8.0.2" />
+    <PackageVersion Include="Microsoft.Orleans.Serialization.Abstractions" Version="9.0.1" />
     <PackageVersion Include="Microsoft.SemanticKernel" Version="1.33.0" />
     <PackageVersion Include="Microsoft.SemanticKernel.Core" Version="1.33.0" />
     <PackageVersion Include="OpenAI.API" Version="1.0.0" />
@@ -88,6 +89,7 @@
     <PackageVersion Include="DotNetAnalyzers.DocumentationAnalyzers" Version="1.0.0-beta.59" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="4.11.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" />
     <PackageVersion Include="Microsoft.CodeCoverage" Version="17.9.0" />
     <PackageVersion Include="Microsoft.Extensions.AI" Version="9.0.1-preview.1.24570.5" />
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="9.0.1-preview.1.24570.5" />

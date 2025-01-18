@@ -11,8 +11,8 @@ public class GAgentAttribute : Attribute, IGrainTypeProviderAttribute
 
     public GAgentAttribute(string alias, string ns = "aevatar")
     {
-        _alias = alias;
-        _ns = ns;
+        _alias = alias.ToLower();
+        _ns = ns.ToLower();
     }
 
     public GrainType GetGrainType(IServiceProvider services, Type type)
