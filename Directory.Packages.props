@@ -11,9 +11,10 @@
     <PackageVersion Include="AElf.Sdk.CSharp" Version="1.5.0" />
     <PackageVersion Include="AElf.Types" Version="1.5.0" />
     <PackageVersion Include="AElf.OpenTelemetry" Version="8.2.0" />
-    <PackageVersion Include="Aevatar.Core" Version="1.3.2" />
-    <PackageVersion Include="Aevatar.Core.Abstractions" Version="1.3.2" />
-    <PackageVersion Include="Aevatar.EventSourcing.Core" Version="1.3.0" />
+    <PackageVersion Include="Aevatar.Core" Version="1.3.9" />
+    <PackageVersion Include="Aevatar.Core.Abstractions" Version="1.3.9" />
+    <PackageVersion Include="Aevatar.EventSourcing.Core" Version="1.3.9" />
+    <PackageVersion Include="Aevatar.Plugins" Version="1.3.9" />
     <!-- AI and Analysis packages -->
     <PackageVersion Include="AutoGen" Version="0.2.1" />
     <PackageVersion Include="AutoGen.Core" Version="0.2.1" />
@@ -45,7 +46,7 @@
     <PackageVersion Include="Volo.Abp.BackgroundJobs.Domain.Shared" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.BackgroundJobs.MongoDB" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Caching.StackExchangeRedis" Version="$(AbpVersion)" />
-    <PackageVersion Include="Volo.Abp.Core" Version="8.2.0" />
+    <PackageVersion Include="Volo.Abp.Core" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Dapr" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Ddd.Domain" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Emailing" Version="$(AbpVersion)" />
@@ -86,7 +87,6 @@
     <PackageVersion Include="Volo.Abp.Swashbuckle" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.TestBase" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Uow" Version="$(AbpVersion)" />
-    <PackageVersion Include="Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite" Version="3.1.4" />
     <!-- Microsoft packages -->
     <PackageVersion Include="DotNetAnalyzers.DocumentationAnalyzers" Version="1.0.0-beta.59" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="4.11.0" />
