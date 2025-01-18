@@ -373,7 +373,8 @@ public class AgentService : ApplicationService, IAgentService
             
             var businessAgent = await _gAgentFactory.GetGAgentAsync(agentData.Type, initializeDto: dto);
             await combinationAgent.RegisterAsync(businessAgent);
-
+            var eventData = await businessAgent.GetAllSubscribedEventsAsync();
+            await combinationAgent.UpdateSubscribedEventAsync(eventData);
             var primaryKey = businessAgent.GetPrimaryKey().ToString();
             components.Add(agentId, primaryKey);
             await atomicAgent.AddToGroupAsync(guid.ToString(), primaryKey);

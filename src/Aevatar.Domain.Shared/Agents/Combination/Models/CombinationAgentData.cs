@@ -13,4 +13,5 @@ public class CombinationAgentData
     [Id(3)] public string Name { get; set; }
     [Id(4)] public string GroupId { get; set; }
     [Id(5)] public Dictionary<string, string> AgentComponent { get; set; } 
+    [Id(6)] public List<EventDescription> EventInfoList { get; set; }
 }

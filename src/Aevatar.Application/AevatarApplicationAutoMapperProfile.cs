@@ -1,6 +1,7 @@
 ﻿using Aevatar.Application.Grains.Subscription;
 using Aevatar.Subscription;
 using Aevatar.Agents.Atomic.Models;
+using Aevatar.Agents.Combination;
 using Aevatar.Agents.Combination.Models;
 using Aevatar.AtomicAgent;
 using Aevatar.CombinationAgent;
@@ -25,5 +26,8 @@ public class AevatarApplicationAutoMapperProfile : Profile
         CreateMap<EventSubscriptionState, SubscriptionDto>()
             .ForMember(t => t.SubscriptionId, m => m.MapFrom(f => f.Id))
             .ForMember(t => t.CreatedAt, m => m.MapFrom(f => f.CreateTime));
+
+        CreateMap<EventDescription, EventDescriptionDto>()
+            .ForMember(t => t.EventType, m => m.MapFrom(f => f.EventType.Name));
     }
 }

@@ -17,5 +17,22 @@ public class CombinationGAgentState : GroupAgentState
     [Id(3)] public string Name { get; set; }
     [Id(4)] public string GroupId { get; set; }
     [Id(5)] public Dictionary<string, string> AgentComponent { get; set; } //  {atomicId: businessId}
+    [Id(6)] public List<EventDescription> EventInfoList { get; set; } = new();
+}
+
+[GenerateSerializer]
+public class EventDescription
+{
+    [Id(0)] public Type EventType { get; set; }
+    [Id(1)] public string Description { get; set; }
+    [Id(2)] public List<EventProperty> EventProperties { get; set; }
+}
+
+[GenerateSerializer]
+public class EventProperty
+{
+    [Id(0)] public string Name { get; set; }
+    [Id(1)] public string Type { get; set; }
+    [Id(2)] public string Description { get; set; }
 }
 

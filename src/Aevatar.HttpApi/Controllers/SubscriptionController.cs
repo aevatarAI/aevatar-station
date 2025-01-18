@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Aevatar.Agents.Combination;
 using Aevatar.Domain.Grains.Subscription;
 using Aevatar.Service;
 using Aevatar.Subscription;
@@ -14,7 +15,7 @@ namespace Aevatar.Controllers;
 [RemoteService]
 [ControllerName("Subscription")]
 [Route("api/subscription")]
-[Authorize]
+// [Authorize]
 public class SubscriptionController :  AevatarController
 {
     private readonly SubscriptionAppService _subscriptionAppService;
@@ -25,7 +26,7 @@ public class SubscriptionController :  AevatarController
     }
 
     [HttpGet("events")]
-    public async Task<List<EventTypeDto>> GetAvailableEventsAsync([FromQuery] string agentId)
+    public async Task<List<EventDescriptionDto>> GetAvailableEventsAsync([FromQuery] string agentId)
     {
         return await _subscriptionAppService.GetAvailableEventsAsync(agentId);
     }
@@ -46,6 +47,12 @@ public class SubscriptionController :  AevatarController
     public async Task<SubscriptionDto> GetSubscriptionStatusAsync(Guid subscriptionId)
     {
         return await _subscriptionAppService.GetSubscriptionAsync(subscriptionId);
+    }
+    
+    [HttpPost("publish")]
+    public async Task PublishAsync([FromBody] PublishEventDto input)
+    {
+        await _subscriptionAppService.PublishEventAsync(input);
     }
 }
 
