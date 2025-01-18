@@ -7,7 +7,7 @@ namespace Aevatar.Plugins;
 [GenerateSerializer]
 public class TenantPluginCodeGAgentState : StateBase
 {
-    [Id(0)] public List<Guid> CodeStorageGuids { get; set; }
+    [Id(0)] public List<Guid> CodeStorageGuids { get; set; } = [];
 }
 
 [GenerateSerializer]
@@ -16,16 +16,11 @@ public class TenantPluginStateLogEvent : StateLogEventBase<TenantPluginStateLogE
     [Id(0)] public override Guid Id { get; set; } = Guid.NewGuid();
 }
 
-[GenerateSerializer]
-public class AddPluginCodeStateLogEvent : TenantPluginStateLogEvent
-{
-    [Id(0)] public List<Guid> CodeStorageGuids { get; set; }
-}
-
 public interface ITenantPluginCodeGAgent : IStateGAgent<TenantPluginCodeGAgentState>
 {
-    Task AddPluginAsync(Guid codeStorageGuid);
-    Task AddPluginsAsync(IEnumerable<Guid> codeStorageGuid);
+    Task AddPluginAsync(Guid pluginCodeId);
+    Task RemovePluginAsync(Guid pluginCodeId);
+    Task AddPluginsAsync(IEnumerable<Guid> pluginCodeIds);
 }
 
 [GAgent("pluginTenant")]
@@ -44,32 +39,55 @@ public class TenantPluginCodeGAgent(ILogger<TenantPluginCodeGAgent> logger)
         {
             case AddPluginCodeStateLogEvent addPluginCodeStateLogEvent:
                 if (State.CodeStorageGuids.IsNullOrEmpty())
-                {
                     State.CodeStorageGuids = [];
-                }
-
-                State.CodeStorageGuids.AddRange(addPluginCodeStateLogEvent.CodeStorageGuids);
+                State.CodeStorageGuids.AddRange(addPluginCodeStateLogEvent.PluginCodeIds);
+                break;
+            case RemovePluginCodeStateLogEvent removePluginCodeStateLogEvent:
+                if (State.CodeStorageGuids.Contains(removePluginCodeStateLogEvent.PluginCodeId))
+                    State.CodeStorageGuids.Remove(removePluginCodeStateLogEvent.PluginCodeId);
                 break;
         }
 
         base.GAgentTransitionState(state, @event);
     }
 
-    public async Task AddPluginsAsync(IEnumerable<Guid> codeStorageGuids)
+    public async Task RemovePluginAsync(Guid pluginCodeId)
     {
-        RaiseEvent(new AddPluginCodeStateLogEvent
+        RaiseEvent(new RemovePluginCodeStateLogEvent
         {
-            CodeStorageGuids = codeStorageGuids.ToList()
+            PluginCodeId = pluginCodeId
         });
         await ConfirmEvents();
     }
 
-    public async Task AddPluginAsync(Guid codeStorageGuid)
+    public async Task AddPluginsAsync(IEnumerable<Guid> pluginCodeIds)
     {
         RaiseEvent(new AddPluginCodeStateLogEvent
         {
-            CodeStorageGuids = [codeStorageGuid]
+            PluginCodeIds = pluginCodeIds.ToList()
         });
         await ConfirmEvents();
+    }
+
+    public async Task AddPluginAsync(Guid pluginCodeId)
+    {
+        RaiseEvent(new AddPluginCodeStateLogEvent
+        {
+            PluginCodeIds = [pluginCodeId]
+        });
+        await ConfirmEvents();
+    }
+
+
+    [GenerateSerializer]
+    public class AddPluginCodeStateLogEvent : TenantPluginStateLogEvent
+    {
+        [Id(0)] public required List<Guid> PluginCodeIds { get; set; }
+    }
+
+    [GenerateSerializer]
+    public class RemovePluginCodeStateLogEvent : TenantPluginStateLogEvent
+    {
+        [Id(0)] public required Guid PluginCodeId { get; set; }
     }
 }

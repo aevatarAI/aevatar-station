@@ -81,7 +81,7 @@ async Task AddCodeAsync(IPluginGAgentManager pluginGAgentManager)
     var tenantId = "test".ToGuid();
     foreach (var code in plugins.Values)
     {
-        await pluginGAgentManager.AddPluginGAgentAsync(new AddPluginGAgentDto
+        await pluginGAgentManager.AddPluginAsync(new AddPluginDto
         {
             Code = code,
             TenantId = tenantId

@@ -37,7 +37,7 @@ public sealed class PluginGAgentsTests : AevatarGAgentsTestBase
         var tenantId = Guid.NewGuid();
         foreach (var code in codeList)
         {
-            await pluginGAgentManager.AddPluginGAgentAsync(new AddPluginGAgentDto
+            await pluginGAgentManager.AddPluginAsync(new AddPluginDto
             {
                 Code = code,
                 TenantId = tenantId

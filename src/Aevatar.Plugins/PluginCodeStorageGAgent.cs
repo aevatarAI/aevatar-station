@@ -25,7 +25,9 @@ public class PluginCodeStorageInitializationEvent : InitializationEventBase
 public interface IPluginCodeStorageGAgent : IStateGAgent<PluginCodeStorageGAgentState>
 {
     Task<byte[]> GetPluginCodeAsync();
+    Task UpdatePluginCodeAsync(byte[] code);
 }
+
 
 [GAgent("pluginCodeStorage")]
 public class PluginCodeStorageGAgent(ILogger<PluginCodeStorageGAgent> logger)
@@ -45,6 +47,9 @@ public class PluginCodeStorageGAgent(ILogger<PluginCodeStorageGAgent> logger)
             case SetPluginCodeStateLogEvent setPluginCodeStateLogEvent:
                 State.Code = setPluginCodeStateLogEvent.Code;
                 break;
+            case UpdatePluginCodeStateLogEvent updatePluginCodeStateLogEvent:
+                State.Code = updatePluginCodeStateLogEvent.Code;
+                break;
         }
     }
 
@@ -52,6 +57,12 @@ public class PluginCodeStorageGAgent(ILogger<PluginCodeStorageGAgent> logger)
     public class SetPluginCodeStateLogEvent : PluginCodeStorageStateLogEvent
     {
         [Id(0)] public byte[] Code { get; set; }
+    }
+    
+    [GenerateSerializer]
+    public class UpdatePluginCodeStateLogEvent : PluginCodeStorageStateLogEvent
+    {
+        [Id(0)] public required byte[] Code { get; set; }
     }
 
     public override async Task InitializeAsync(PluginCodeStorageInitializationEvent initializationEvent)
@@ -66,5 +77,14 @@ public class PluginCodeStorageGAgent(ILogger<PluginCodeStorageGAgent> logger)
     public Task<byte[]> GetPluginCodeAsync()
     {
         return Task.FromResult(State.Code);
+    }
+
+    public async Task UpdatePluginCodeAsync(byte[] code)
+    {
+        RaiseEvent(new UpdatePluginCodeStateLogEvent
+        {
+            Code = code
+        });
+        await ConfirmEvents();
     }
 }
