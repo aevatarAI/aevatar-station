@@ -3,8 +3,10 @@ using System.Threading.Tasks;
 using Aevatar.AgentPlugins;
 using Aevatar.Common;
 using Aevatar.Controllers;
+using Aevatar.Core.Abstractions;
 using Aevatar.Core.Abstractions.Plugin;
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
@@ -16,14 +18,13 @@ namespace Aevatar;
 public class AgentPluginsController : AevatarController
 {
     private readonly IPluginGAgentManager _pluginGAgentManager;
-
-    public AgentPluginsController(IPluginGAgentManager pluginGAgentManager)
+    public AgentPluginsController(IPluginGAgentManager pluginGAgentManager,IGAgentFactory gAgentFactory)
     {
         _pluginGAgentManager = pluginGAgentManager;
     }
 
     [HttpPut]
-    //[Authorize]
+    [Authorize]
     [Route("AgentPlugin")]
     [RequestSizeLimit(209715200)]
     [RequestFormLimits(MultipartBodyLengthLimit = 209715200)]
@@ -78,7 +79,7 @@ public class AgentPluginsController : AevatarController
 
     private Guid GetTenantId()
     {
-        return GuidUtil.StringToGuid("test");
+        return GuidUtil.StringToGuid(CurrentUser.UserName.IsNullOrEmpty() ? ClientId: CurrentUser.UserName);
     }
 
 }

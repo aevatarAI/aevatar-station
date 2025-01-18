@@ -55,7 +55,6 @@
     <PackageVersion Include="Volo.Abp.EventBus" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.EventBus.Abstractions" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.FeatureManagement.MongoDB" Version="$(AbpVersion)" />
-
     <PackageVersion Include="Volo.Abp.Http.Client.IdentityModel" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Identity.Application" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Identity.Application.Contracts" Version="$(AbpVersion)" />
@@ -82,7 +81,6 @@
     <PackageVersion Include="Volo.Abp.PermissionManagement.HttpApi.Client" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.PermissionManagement.MongoDB" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.MongoDB" Version="$(AbpVersion)" />
-
     <PackageVersion Include="Volo.Abp.SettingManagement.MongoDB" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Swashbuckle" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.TestBase" Version="$(AbpVersion)" />
@@ -121,11 +119,9 @@
     <PackageVersion Include="EphemeralMongo.Core" Version="1.1.3" />
     <PackageVersion Include="EphemeralMongo6.runtime.osx-x64" Version="1.1.3" />
     <PackageVersion Include="MongoDB.Driver.Core.Extensions.DiagnosticSources" Version="1.0.0" />
-
     <PackageVersion Include="MongoDB.Driver" Version="2.29.0" />
     <PackageVersion Include="Orleans.Providers.MongoDB" Version="8.1.0" Condition="'$(MSBuildProjectName)' != 'Aevatar.Silo'" />
     <PackageVersion Include="Orleans.Providers.MongoDB" Version="9.0.0" Condition="'$(MSBuildProjectName)' == 'Aevatar.Silo'" />
-
     <!-- Serilog packages -->
     <PackageVersion Include="Serilog" Version="4.0.2" />
     <PackageVersion Include="Serilog.Extensions.Hosting" Version="8.0.0" />
