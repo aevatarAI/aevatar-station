@@ -1,5 +1,7 @@
+using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Aevatar.Common;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -16,6 +18,7 @@ public interface IUserAppService
 {
     Task ResetPasswordAsync(string userName, string newPassword);
     Task RegisterClientAuthentication(string clientId, string clientSecret);
+    Guid GetCurrentUserId();
 }
 
 [RemoteService(IsEnabled = false)]
@@ -93,4 +96,16 @@ public class UserAppService : IdentityUserAppService, IUserAppService
         }
     }
    
+    public Guid GetCurrentUserId()
+    {
+        var userId = CurrentUser.Id;
+        if (userId != null)
+        {
+            return (Guid)userId;
+        }
+        //
+        // _logger.LogInformation("GetCurrentUserId userId is null");
+        // throw new UserFriendlyException("Invalid userId");
+        return GuidUtil.StringToGuid("user");
+    }
 }

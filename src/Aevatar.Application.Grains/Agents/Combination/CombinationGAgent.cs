@@ -35,7 +35,7 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
         {
             Id = Guid.NewGuid(),
             CombineGAgentId = this.GetPrimaryKey(),
-            UserAddress = data.UserAddress,
+            UserId = data.UserId,
             Name = data.Name,
             GroupId = data.GroupId,
             AgentComponent = data.AgentComponent
@@ -52,7 +52,7 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
             Name = State.Name,
             GroupId = State.GroupId,
             AgentComponent = State.AgentComponent,
-            UserAddress = State.UserAddress,
+            UserId = State.UserId,
             Status = State.Status,
             EventInfoList = State.EventInfoList
         };
@@ -152,40 +152,6 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
         await ConfirmEvents();
     }
     
-    // [EventHandler]
-    // public async Task HandleSubscribedEventAsync(SubscribedEventListEvent eventData)
-    // {
-    //     var allEvents = eventData.Value.Values.SelectMany(list => list).ToList();
-    //     var eventInfoList = new List<EventInfo>();
-    //     foreach (var t in allEvents)
-    //     {
-    //         PropertyInfo[] properties = t.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
-    //         var eventPropertyList = new List<EventProperty>();
-    //         foreach (PropertyInfo property in properties)
-    //         {
-    //             var eventProperty = new EventProperty()
-    //             {
-    //                 Name = property.Name,
-    //                 Type = property.PropertyType.ToString()
-    //             };
-    //             eventPropertyList.Add(eventProperty);
-    //         }
-    //         
-    //         eventInfoList.Add(new EventInfo()
-    //         {
-    //             EventType = t.Name,
-    //             EventProperties = eventPropertyList
-    //         });
-    //     }
-    //     
-    //     _logger.LogInformation("HandleSubscribedEventAsync");
-    //     RaiseEvent(new UpdateSubscribedEventInfoGEvent()
-    //     {
-    //         EventInfoList = eventInfoList
-    //     });
-    //     await ConfirmEvents();
-    //     
-    // }
     
     protected override void GAgentTransitionState(CombinationGAgentState state, StateLogEventBase<CombinationAgentGEvent> @event)
     {
@@ -195,9 +161,10 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
                 State.Id = combineAgentGEvent.CombineGAgentId;
                 State.Name = combineAgentGEvent.Name;
                 State.GroupId = combineAgentGEvent.GroupId;
-                State.UserAddress = combineAgentGEvent.UserAddress;
+                State.UserId = combineAgentGEvent.UserId;
                 State.Status = AgentStatus.Running;
                 State.AgentComponent = combineAgentGEvent.AgentComponent;
+                State.CreateTime = DateTime.Now;
                 break;
             case UpdateCombinationGEvent combineCombinationGEvent:
                 State.Name = combineCombinationGEvent.Name;
@@ -208,7 +175,6 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
                 State.AgentComponent = new ();
                 State.GroupId = "";
                 State.Status = AgentStatus.Deleted;
-                State.UserAddress = "";
                 break;
             case UpdateSubscribedEventInfoGEvent updateSubscribedEventInfoGEvent:
                 State.EventInfoList = updateSubscribedEventInfoGEvent.EventInfoList;

@@ -37,15 +37,18 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
     private readonly IClusterClient _clusterClient;
     private readonly ILogger<SubscriptionAppService> _logger;
     private readonly IObjectMapper _objectMapper;
+    private readonly IUserAppService _userAppService;
     
     public SubscriptionAppService(
         IClusterClient clusterClient,
         IObjectMapper objectMapper,
+        IUserAppService userAppService,
         ILogger<SubscriptionAppService> logger)
     {
         _clusterClient = clusterClient;
         _objectMapper = objectMapper;
         _logger = logger;
+        _userAppService = userAppService;
     }
     
     public async Task<List<EventDescriptionDto>> GetAvailableEventsAsync(string agentId)
@@ -64,8 +67,7 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
       var subscriptionStateAgent =
           _clusterClient.GetGrain<ISubscriptionGAgent>(GuidUtil.StringToGuid(createSubscriptionDto.AgentId));
       
-      var eventData = await subscriptionStateAgent.GetAllSubscribedEventsAsync();
-      
+      input.UserId = _userAppService.GetCurrentUserId();
       var subscriptionState = await subscriptionStateAgent.SubscribeAsync(input);
       
       var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(ParseGuid(input.AgentId));
@@ -78,6 +80,13 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
         var subscriptionStateAgent =
             _clusterClient.GetGrain<ISubscriptionGAgent>(subscriptionId);
         var subscriptionState = await subscriptionStateAgent.GetStateAsync();
+        var currentUserId = _userAppService.GetCurrentUserId();
+        if (subscriptionState.UserId != currentUserId)
+        {
+            _logger.LogInformation("User {userId} is not allowed to cancel subscription {subscriptionId}.", currentUserId, subscriptionId);
+            throw new UserFriendlyException("User is not allowed to cancel subscription");
+        }
+        
         var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(ParseGuid(subscriptionState.AgentId));
         await combinationAgent.UnregisterAsync(subscriptionStateAgent);
         await subscriptionStateAgent.UnsubscribeAsync();
@@ -94,6 +103,13 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
     {
         var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(ParseGuid(dto.AgentId));
         var combinationData = await combinationAgent.GetCombinationAsync();
+        var currentUserId = _userAppService.GetCurrentUserId();
+        if (combinationData.UserId != currentUserId)
+        {
+            _logger.LogInformation("User {userId} is not allowed to publish event {eventType}.", currentUserId, dto.EventType);
+            throw new UserFriendlyException("User is not allowed to publish event");
+        }
+        
         var eventList = combinationData.EventInfoList;
 
         var eventDescription = eventList.Find(i => i.EventType.Name == dto.EventType);

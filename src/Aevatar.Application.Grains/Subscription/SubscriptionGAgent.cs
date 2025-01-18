@@ -34,7 +34,8 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
             AgentId = input.AgentId,
             EventTypes = input.EventTypes.Count > 0 ? input.EventTypes : new List<string> { "ALL" },
             CallbackUrl = input.CallbackUrl,
-            SubscriptionId = this.GetPrimaryKey()
+            SubscriptionId = this.GetPrimaryKey(),
+            UserId = input.UserId
         });
         await ConfirmEvents();
         return State;
@@ -125,6 +126,7 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
                 State.CallbackUrl = add.CallbackUrl;
                 State.Status = "Active";
                 State.CreateTime = DateTime.Now;
+                State.UserId = add.UserId;
                 break;
             case CancelSubscriptionGEvent cancel:
                 State.Status = "Cancelled";

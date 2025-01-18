@@ -33,7 +33,7 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
         var agentData = new AtomicAgentData()
         {
             Id = this.GetPrimaryKey(),
-            UserAddress = State.UserAddress,
+            UserId = State.UserId,
             Type = State.Type,
             Properties = State.Properties,
             Name = State.Name,
@@ -47,7 +47,7 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
         _logger.LogInformation("CreateAgentAsync");
         RaiseEvent(new CreateAgentGEvent()
         {
-            UserAddress = data.UserAddress,
+            UserId = data.UserId,
             Id = Guid.NewGuid(),
             AtomicGAgentId = this.GetPrimaryKey(),
             Type = data.Type,
@@ -105,16 +105,16 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
             case CreateAgentGEvent createAgentGEvent:
                 State.Id = createAgentGEvent.AtomicGAgentId;
                 State.Properties = createAgentGEvent.Properties;
-                State.UserAddress = createAgentGEvent.UserAddress;
+                State.UserId = createAgentGEvent.UserId;
                 State.Type = createAgentGEvent.Type;
                 State.Name = createAgentGEvent.Name;
+                State.CreateTime = DateTime.Now;
                 break;
             case UpdateAgentGEvent updateAgentGEvent:
                 State.Properties = updateAgentGEvent.Properties;
                 State.Name = updateAgentGEvent.Name;
                 break;
             case DeleteAgentGEvent deleteAgentGEvent:
-                State.UserAddress = "";
                 State.Properties = "";
                 State.Type = "";
                 State.Name = "";

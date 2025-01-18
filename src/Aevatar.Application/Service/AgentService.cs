@@ -36,6 +36,7 @@ public class AgentService : ApplicationService, IAgentService
     private readonly IObjectMapper _objectMapper;
     private readonly IGAgentFactory _gAgentFactory;
     private readonly IGAgentManager _gAgentManager;
+    private readonly IUserAppService _userAppService;
     
     private const string GroupAgentName = "GroupAgent";
     private const string IndexSuffix = "index";
@@ -48,7 +49,8 @@ public class AgentService : ApplicationService, IAgentService
         ILogger<AgentService> logger,  
         IObjectMapper objectMapper, 
         IGAgentFactory gAgentFactory, 
-        IGAgentManager gAgentManager)
+        IGAgentManager gAgentManager, 
+        IUserAppService userAppService)
     {
         _clusterClient = clusterClient;
         _cqrsProvider = cqrsProvider;
@@ -56,6 +58,7 @@ public class AgentService : ApplicationService, IAgentService
         _objectMapper = objectMapper;
         _gAgentFactory = gAgentFactory;
         _gAgentManager = gAgentManager;
+        _userAppService = userAppService;
     }
     
     public async Task<AtomicAgentDto> GetAtomicAgentAsync(string id)
@@ -84,7 +87,7 @@ public class AgentService : ApplicationService, IAgentService
     public async Task<AtomicAgentDto> CreateAtomicAgentAsync(CreateAtomicAgentDto createDto)
     {
         CheckCreateParam(createDto);
-        var address = GetCurrentUserAddress();
+        var userId = _userAppService.GetCurrentUserId();
         var guid = Guid.NewGuid();
         var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(guid);
         var agentData = _objectMapper.Map<CreateAtomicAgentDto, AtomicAgentData>(createDto);
@@ -93,7 +96,7 @@ public class AgentService : ApplicationService, IAgentService
             agentData.Properties = JsonConvert.SerializeObject(createDto.Properties);
         }
         
-        agentData.UserAddress = address;
+        agentData.UserId = userId;
         await atomicAgent.CreateAgentAsync(agentData);
         var resp = _objectMapper.Map<CreateAtomicAgentDto, AtomicAgentDto>(createDto);
         resp.Id = guid.ToString();
@@ -244,18 +247,12 @@ public class AgentService : ApplicationService, IAgentService
         
         await atomicAgent.DeleteAgentAsync();
     }
-
-    private string GetCurrentUserAddress()
-    {
-         // todo
-        return "my_address";
-    }
     
     public async Task<CombinationAgentDto> CombineAgentAsync(CombineAgentDto combineAgentDto)
     { 
         CheckCombineParam(combineAgentDto);
         
-        var address = GetCurrentUserAddress();
+        var userId = _userAppService.GetCurrentUserId();
         var guid = Guid.NewGuid();
         var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(guid);
         var status = await combinationAgent.GetStatusAsync();
@@ -269,7 +266,7 @@ public class AgentService : ApplicationService, IAgentService
         var components = await SetGroupAsync(combineAgentDto.AgentComponent, guid);
         var data = _objectMapper.Map<CombineAgentDto, CombinationAgentData>(combineAgentDto);
         data.GroupId = guid.ToString();
-        data.UserAddress = address;
+        data.UserId = userId;
         data.AgentComponent = components;
         await combinationAgent.CombineAgentAsync(data);
 
@@ -474,11 +471,11 @@ public class AgentService : ApplicationService, IAgentService
             throw new UserFriendlyException("agent not exist");
         }
         
-        var address = GetCurrentUserAddress();
-        if (agentData.UserAddress != address)
+        var userId = _userAppService.GetCurrentUserId();
+        if (agentData.UserId != userId)
         {
-            _logger.LogInformation("agent not belong to user, id: {id}, ownerAddress: {ownerAddress}", 
-                guid, agentData.UserAddress);
+            _logger.LogInformation("agent not belong to user, id: {id}, owner: {owner}", 
+                guid, agentData.UserId);
             throw new UserFriendlyException("agent not belong to user");
         }
     }
@@ -493,11 +490,11 @@ public class AgentService : ApplicationService, IAgentService
             throw new UserFriendlyException("combination not exist");
         }
         
-        var address = GetCurrentUserAddress();
-        if (combinationData.UserAddress != address)
+        var userId = _userAppService.GetCurrentUserId();
+        if (combinationData.UserId != userId)
         {
-            _logger.LogInformation("combination not belong to user address: {address}, owner: {owner}", 
-                address, combinationData.UserAddress);
+            _logger.LogInformation("combination not belong to user: {user}, owner: {owner}", 
+                userId, combinationData.UserId);
             throw new UserFriendlyException("combination not belong to user!");
         }
     }
