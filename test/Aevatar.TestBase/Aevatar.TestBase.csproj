@@ -33,6 +33,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\src\Aevatar.ArtifactGAgent\Aevatar.ArtifactGAgent.csproj" />
       <ProjectReference Include="..\..\src\Aevatar.Core\Aevatar.Core.csproj" />
       <ProjectReference Include="..\..\src\Aevatar.EventSourcing.Core\Aevatar.EventSourcing.Core.csproj" />
     </ItemGroup>

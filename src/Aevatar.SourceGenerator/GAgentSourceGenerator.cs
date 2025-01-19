@@ -67,14 +67,14 @@ public class GAgentSourceGenerator : IIncrementalGenerator
 
             var generatedCode = GenerateGAgentClassCode(
                 typeNamespace,
-                typeName,
+                typeName.ToLower(),
                 generatedTypeName,
                 typeSymbol.Name,
                 stateType,
                 stateLogEventType
             );
 
-            context.AddSource($"{generatedTypeName}.g.cs", SourceText.From(generatedCode, Encoding.UTF8));
+            context.AddSource($"{generatedTypeName}.avatar.g.cs", SourceText.From(generatedCode, Encoding.UTF8));
         }
     }
 
@@ -107,8 +107,10 @@ using Microsoft.Extensions.Logging;
 
 namespace {ClassNamespace};
 
-[GAgent(nameof({GAgentAlias}))]
-public class {ClassName} : GAgentBase<{GAgentStateType}, {GAgentStateLogEventType}>
+public interface I{ClassName} : IStateGAgent<{GAgentStateType}>;
+
+[GAgent(""{GAgentAlias}"")]
+public class {ClassName} : GAgentBase<{GAgentStateType}, {GAgentStateLogEventType}>, I{ClassName}, IArtifactGAgent
 {
     private readonly {ArtifactTypeName} _artifact;
 

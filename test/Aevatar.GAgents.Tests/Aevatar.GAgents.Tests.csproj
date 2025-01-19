@@ -27,6 +27,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Aevatar.Core.Tests\Aevatar.Core.Tests.csproj" />
+        <ProjectReference Include="..\Aevatar.GAgents\Aevatar.GAgents.csproj" />
         <ProjectReference Include="..\Aevatar.TestBase\Aevatar.TestBase.csproj" />
     </ItemGroup>
 

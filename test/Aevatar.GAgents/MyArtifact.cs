@@ -10,11 +10,20 @@ public class GeneratedStateLogEvent : StateLogEventBase<GeneratedStateLogEvent>;
 
 public interface IMyArtifact : IArtifact<GeneratedGAgentState, GeneratedStateLogEvent>
 {
-    
+    string TestMethod();
 }
 
 public class MyArtifact : IMyArtifact
 {
     public string GetDescription() => "MyArtifact Description";
-    public void TransitionState(GeneratedGAgentState state, StateLogEventBase<GeneratedStateLogEvent> stateLogEvent) { /* custom logic */ }
+
+    public string TestMethod()
+    {
+        return "Test";
+    }
+
+    public void TransitionState(GeneratedGAgentState state, StateLogEventBase<GeneratedStateLogEvent> stateLogEvent)
+    {
+        /* custom logic */
+    }
 }

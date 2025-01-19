@@ -10,15 +10,10 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
         <ProjectReference Include="..\..\src\Aevatar.Core\Aevatar.Core.csproj" />
-        <ProjectReference Include="..\..\src\Aevatar.SourceGenerator\Aevatar.SourceGenerator.csproj">
-            <OutputItemType>Analyzer</OutputItemType>
-            <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
     </ItemGroup>
 
-<!--    <ItemGroup>-->
-<!--        <Compile Include="$(IntermediateOutputPath)\generated\Aevatar.SourceGenerator\Aevatar.SourceGenerator.GAgentSourceGenerator\*.cs" />-->
-<!--    </ItemGroup>-->
+    <ItemGroup>
+        <PackageReference Include="Aevatar.SourceGenerator" Version="1.0.3" />
+    </ItemGroup>
 
 </Project>

@@ -1,3 +1,4 @@
+using Aevatar.ArtifactGAgent.Extensions;
 using AutoMapper;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -75,7 +76,8 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                 .AddMemoryStreams("Aevatar")
                 .AddMemoryGrainStorage("PubSubStore")
                 .AddMemoryGrainStorageAsDefault()
-                .AddLogStorageBasedLogConsistencyProvider("LogStorage");
+                .AddLogStorageBasedLogConsistencyProvider("LogStorage")
+                .UseArtifactGAgent();
         }
     }
 
