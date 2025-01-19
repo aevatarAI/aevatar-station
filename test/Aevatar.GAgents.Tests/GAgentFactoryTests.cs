@@ -10,12 +10,14 @@ namespace Aevatar.GAgents.Tests;
 public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
 {
     private readonly IGAgentFactory _gAgentFactory;
+    private readonly IClusterClient _clusterClient;
     private readonly IGAgentManager _gAgentManager;
 
     public GAgentFactoryTests()
     {
         _gAgentFactory = GetRequiredService<IGAgentFactory>();
         _gAgentManager = GetRequiredService<IGAgentManager>();
+        _clusterClient = GetRequiredService<IClusterClient>();
     }
 
     [Fact(DisplayName = "Can create GAgent by GrainId.")]
@@ -117,6 +119,14 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
     {
         var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
         availableGAgents.Count.ShouldBeGreaterThan(20);
+    }
+
+    [Fact]
+    public async Task ArtifactGAgentTest()
+    {
+        var myArtifactGAgent = await _gAgentFactory.GetGAgentAsync<IMyArtifactGAgent>(Guid.NewGuid());
+        var description = await myArtifactGAgent.GetDescriptionAsync();
+        description.ShouldNotBeNullOrEmpty();
     }
 
     private async Task<bool> CheckState(IStateGAgent<NaiveTestGAgentState> gAgent)

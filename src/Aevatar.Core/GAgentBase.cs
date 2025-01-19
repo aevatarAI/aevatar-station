@@ -41,6 +41,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent> : Journ
 
     public async Task ActivateAsync()
     {
+        await Task.Yield();
     }
 
     public async Task RegisterAsync(IGAgent gAgent)
@@ -74,9 +75,9 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent> : Journ
         await OnUnregisterAgentAsync(gAgent.GetPrimaryKey());
     }
 
-    public async Task<List<Type>?> GetAllSubscribedEventsAsync(bool includeBaseHandlers = false)
+    public virtual async Task<List<Type>?> GetAllSubscribedEventsAsync(bool includeBaseHandlers = false)
     {
-        var eventHandlerMethods = GetEventHandlerMethods();
+        var eventHandlerMethods = GetEventHandlerMethods(GetType());
         eventHandlerMethods = eventHandlerMethods.Where(m =>
             m.Name != nameof(ForwardEventAsync) && m.Name != AevatarGAgentConstants.InitializeDefaultMethodName);
         var handlingTypes = eventHandlerMethods
@@ -181,7 +182,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent> : Journ
     private async Task BaseOnActivateAsync(CancellationToken cancellationToken)
     {
         // This must be called first to initialize Observers field.
-        await UpdateObserverList();
+        await UpdateObserverList(GetType());
         await UpdateInitializationEventType();
         var streamOfThisGAgent = GetStream(this.GetGrainId().ToString());
         var handles = await streamOfThisGAgent.GetAllSubscriptionHandles();

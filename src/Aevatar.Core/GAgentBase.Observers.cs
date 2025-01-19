@@ -7,10 +7,9 @@ namespace Aevatar.Core;
 
 public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
 {
-    [AggregateExecutionTime]
-    private Task UpdateObserverList()
+    protected virtual Task UpdateObserverList(Type type)
     {
-        var eventHandlerMethods = GetEventHandlerMethods();
+        var eventHandlerMethods = GetEventHandlerMethods(type);
 
         foreach (var eventHandlerMethod in eventHandlerMethods)
         {
@@ -99,14 +98,14 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
         [Id(0)] public required Type InitializationEventType { get; set; }
     }
 
-    private IEnumerable<MethodInfo> GetEventHandlerMethods()
+    protected virtual IEnumerable<MethodInfo> GetEventHandlerMethods(Type type)
     {
-        return GetType()
+        return type
             .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
             .Where(IsEventHandlerMethod);
     }
 
-    private bool IsEventHandlerMethod(MethodInfo methodInfo)
+    protected virtual bool IsEventHandlerMethod(MethodInfo methodInfo)
     {
         return methodInfo.GetParameters().Length == 1 && (
             // Either the method has the EventHandlerAttribute
