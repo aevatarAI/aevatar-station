@@ -1,5 +1,7 @@
+using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Aevatar.Common;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -16,6 +18,7 @@ public interface IUserAppService
 {
     Task ResetPasswordAsync(string userName, string newPassword);
     Task RegisterClientAuthentication(string clientId, string clientSecret);
+    Guid GetCurrentUserId();
 }
 
 [RemoteService(IsEnabled = false)]
@@ -93,4 +96,14 @@ public class UserAppService : IdentityUserAppService, IUserAppService
         }
     }
    
+    public Guid GetCurrentUserId()
+    {
+        if (!CurrentUser.UserName.IsNullOrEmpty())
+        {
+            return GuidUtil.StringToGuid(CurrentUser.UserName);
+        }
+        
+        var clientId =  CurrentUser.GetAllClaims().First(o => o.Type == "client_id").Value;
+        return GuidUtil.StringToGuid(clientId);
+    }
 }

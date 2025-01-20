@@ -9,6 +9,7 @@ using Aevatar.Subscription;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Orleans.Providers;
+using Orleans.Runtime;
 
 namespace Aevatar.Application.Grains.Subscription;
 [StorageProvider(ProviderName = "PubSubStore")]
@@ -33,7 +34,8 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
             AgentId = input.AgentId,
             EventTypes = input.EventTypes.Count > 0 ? input.EventTypes : new List<string> { "ALL" },
             CallbackUrl = input.CallbackUrl,
-            SubscriptionId = this.GetPrimaryKey()
+            SubscriptionId = this.GetPrimaryKey(),
+            UserId = input.UserId
         });
         await ConfirmEvents();
         return State;
@@ -55,7 +57,7 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
     }
     
     [AllEventHandler]
-    public async Task HandleEventAsync(EventWrapperBase eventWrapperBase) 
+    public async Task HandleSubscribedEventAsync(EventWrapperBase eventWrapperBase) 
     {
         if (eventWrapperBase is EventWrapper<EventBase> eventWrapper)
         {
@@ -70,8 +72,15 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
                 eventPushRequest.EventType = eventWrapper.Event.GetType().Name;
                 eventPushRequest.Payload = JsonConvert.SerializeObject(eventWrapper.Event);
                 eventPushRequest.AtomicAgent = await GetAtomicAgentDtoFromEventGrainId(eventWrapper.PublisherGrainId);
-                using var httpClient = new HttpClient();
-                await httpClient.PostAsJsonAsync(State.CallbackUrl, eventPushRequest);
+                try
+                {
+                    using var httpClient = new HttpClient();
+                    await httpClient.PostAsJsonAsync(State.CallbackUrl, eventPushRequest);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "Error sending event to callback url: {url} error: {err}", State.CallbackUrl, e.Message);
+                }
             }
         }
     }
@@ -124,6 +133,7 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
                 State.CallbackUrl = add.CallbackUrl;
                 State.Status = "Active";
                 State.CreateTime = DateTime.Now;
+                State.UserId = add.UserId;
                 break;
             case CancelSubscriptionGEvent cancel:
                 State.Status = "Cancelled";

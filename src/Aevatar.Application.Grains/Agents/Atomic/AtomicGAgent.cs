@@ -33,7 +33,7 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
         var agentData = new AtomicAgentData()
         {
             Id = this.GetPrimaryKey(),
-            UserAddress = State.UserAddress,
+            UserId = State.UserId,
             Type = State.Type,
             Properties = State.Properties,
             Name = State.Name,
@@ -47,7 +47,7 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
         _logger.LogInformation("CreateAgentAsync");
         RaiseEvent(new CreateAgentGEvent()
         {
-            UserAddress = data.UserAddress,
+            UserId = data.UserId,
             Id = Guid.NewGuid(),
             AtomicGAgentId = this.GetPrimaryKey(),
             Type = data.Type,
@@ -77,12 +77,13 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
         await ConfirmEvents();
     }
     
-    public async Task AddToGroupAsync(string groupId)
+    public async Task AddToGroupAsync(string groupId, string businessAgentId)
     {
         _logger.LogInformation("AddToGroupAsync");
         RaiseEvent(new AddToGroupGEvent()
         {
-            GroupId = groupId
+            GroupId = groupId,
+            BusinessAgentId = businessAgentId
         });
         await ConfirmEvents();
     }
@@ -104,29 +105,26 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
             case CreateAgentGEvent createAgentGEvent:
                 State.Id = createAgentGEvent.AtomicGAgentId;
                 State.Properties = createAgentGEvent.Properties;
-                State.UserAddress = createAgentGEvent.UserAddress;
+                State.UserId = createAgentGEvent.UserId;
                 State.Type = createAgentGEvent.Type;
                 State.Name = createAgentGEvent.Name;
+                State.CreateTime = DateTime.Now;
                 break;
             case UpdateAgentGEvent updateAgentGEvent:
                 State.Properties = updateAgentGEvent.Properties;
                 State.Name = updateAgentGEvent.Name;
                 break;
             case DeleteAgentGEvent deleteAgentGEvent:
-                State.UserAddress = "";
                 State.Properties = "";
                 State.Type = "";
                 State.Name = "";
-                State.Groups = new List<string>();
+                State.Groups = new ();
                 break;
             case AddToGroupGEvent addToGroupGEvent:
-                if (!State.Groups.Contains(addToGroupGEvent.GroupId))
-                {
-                    State.Groups.Add(addToGroupGEvent.GroupId);
-                }
+                State.Groups.TryAdd(addToGroupGEvent.GroupId, addToGroupGEvent.BusinessAgentId);
                 break;
             case RemoveFromGroupGEvent removeFromGroupGEvent:
-                if (State.Groups.Contains(removeFromGroupGEvent.GroupId))
+                if (State.Groups.ContainsKey(removeFromGroupGEvent.GroupId))
                 {
                     State.Groups.Remove(removeFromGroupGEvent.GroupId);
                 }
@@ -141,6 +139,6 @@ public interface IAtomicGAgent : IStateGAgent<AtomicGAgentState>
     Task CreateAgentAsync(AtomicAgentData data);
     Task UpdateAgentAsync(AtomicAgentData data);
     Task DeleteAgentAsync();
-    Task AddToGroupAsync(string groupId);
+    Task AddToGroupAsync(string groupId, string businessAgentId);
     Task RemoveFromGroupAsync(string groupId);
 }

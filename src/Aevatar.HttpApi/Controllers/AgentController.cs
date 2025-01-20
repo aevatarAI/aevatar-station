@@ -92,6 +92,7 @@ public class AgentController : AevatarController
         var agentDto = await _agentService.GetCombinationAsync(id);
         return agentDto;
     }
+    
     [HttpGet("/atomic-agents")]
     public async Task<List<AtomicAgentDto>> GetAtomicAgentList(string userAddress, int pageIndex, int pageSize)
     {
@@ -121,4 +122,5 @@ public class AgentController : AevatarController
     {
         return await _agentService.GetAllAgents();
     }
+
 }
