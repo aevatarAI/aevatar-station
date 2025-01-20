@@ -4,23 +4,6 @@ using Orleans.Streams;
 
 namespace Aevatar.Core;
 
-public interface IGAgentFactory
-{
-    Task<IGAgent> GetGAgentAsync(GrainId grainId, InitializationEventBase? initializeDto = null);
-
-    Task<IGAgent> GetGAgentAsync(string alias, Guid primaryKey,
-        string ns = AevatarGAgentConstants.GAgentDefaultNamespace, InitializationEventBase? initializeDto = null);
-
-    Task<IGAgent> GetGAgentAsync(string alias, string ns = AevatarGAgentConstants.GAgentDefaultNamespace,
-        InitializationEventBase? initializeDto = null);
-
-    Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(Guid primaryKey, InitializationEventBase? initializeDto = null)
-        where TGrainInterface : IGAgent;
-
-    Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(InitializationEventBase? initializeDto = null)
-        where TGrainInterface : IGAgent;
-}
-
 public class GAgentFactory : IGAgentFactory
 {
     private readonly IClusterClient _clusterClient;
