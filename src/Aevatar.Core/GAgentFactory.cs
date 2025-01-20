@@ -92,13 +92,13 @@ public class GAgentFactory : IGAgentFactory
         {
             var parts = alias.Split('.');
             alias = parts.Last();
-            ns = parts.SkipLast(1).Aggregate((a, b) => $"{a}/{b}").ToLower();
+            ns = parts.SkipLast(1).Aggregate((a, b) => $"{a}/{b}");
         }
         else if (ns.Contains('.'))
         {
             ns = ns.Replace('.', '/');
         }
 
-        return (alias.ToLower(), ns);
+        return (alias.ToLower(), ns.ToLower());
     }
 }

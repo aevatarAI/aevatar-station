@@ -35,6 +35,6 @@ public sealed class GAgentAttribute : Attribute, IGrainTypeProviderAttribute
             return GrainType.Create($"{ns}/{className}");
         }
 
-        return GrainType.Create($"{_ns}/{_alias}");
+        return GrainType.Create($"{_ns?.ToLower()}/{_alias.ToLower()}");
     }
 }

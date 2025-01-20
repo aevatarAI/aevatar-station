@@ -1,4 +1,5 @@
-﻿using Aevatar.Core;
+﻿using Aevatar.ArtifactGAgents;
+using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Core.Abstractions.Plugin;
 using Aevatar.Core.Tests.TestGAgents;
@@ -11,7 +12,6 @@ using Microsoft.Extensions.Logging;
 using Orleans.Configuration;
 using Orleans.Providers.MongoDB.Configuration;
 using PluginGAgent.Grains;
-using Aevatar.ArtifactGAgents;
 
 var builder = Host.CreateDefaultBuilder(args)
     .UseOrleansClient(client =>
@@ -96,8 +96,7 @@ async Task AddCodeAsync(IPluginGAgentManager pluginGAgentManager)
 async Task TryArtifactGAgentAsync(IGAgentFactory factory)
 {
     var myArtifactGAgent =
-        await factory.GetGAgentAsync(nameof(MyArtifact));
-    //  await factory.GetGAgentAsync("myartifact");
+        await factory.GetGAgentAsync(typeof(MyArtifactGAgent));
     var description = await myArtifactGAgent.GetDescriptionAsync();
     Console.WriteLine(description);
 }
