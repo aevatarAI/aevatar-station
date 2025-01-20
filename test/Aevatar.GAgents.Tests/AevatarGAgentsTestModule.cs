@@ -1,4 +1,6 @@
 using Aevatar.TestBase;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
+using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.AutoMapper;
 using Volo.Abp.EventBus;
 using Volo.Abp.Modularity;
@@ -15,5 +17,6 @@ public class AevatarGAgentsTestModule : AbpModule
     {
         base.ConfigureServices(context);
         Configure<AbpAutoMapperOptions>(options => { options.AddMaps<AevatarGAgentsTestModule>(); });
+        context.Services.AddSingleton(new ApplicationPartManager());
     }
 }

@@ -44,10 +44,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
                         try
                         {
                             var invokeParameter =
-                                new EventWrapper<EventBase>(eventType, eventId, this.GetGrainId())
-                                {
-                                    CorrelationId = _correlationId
-                                };
+                                new EventWrapper<EventBase>(eventType, eventId, this.GetGrainId());
                             var result = eventHandlerMethod.Invoke(this, [invokeParameter]);
                             await (Task)result!;
                         }
@@ -87,9 +84,9 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
         }
 
         var parameterType = initializeMethod.GetParameters()[0].ParameterType;
-        RaiseEvent(new InnerSetInitializeDtoTypeStateLogEvent
+        RaiseEvent(new InnerSetInitializationEventTypeStateLogEvent
         {
-            InitializeDtoType = parameterType
+            InitializationEventType = parameterType
         });
         ConfirmEvents();
 
@@ -97,9 +94,9 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
     }
     
     [GenerateSerializer]
-    public class InnerSetInitializeDtoTypeStateLogEvent : StateLogEventBase<TStateLogEvent>
+    public class InnerSetInitializationEventTypeStateLogEvent : StateLogEventBase<TStateLogEvent>
     {
-        [Id(0)] public Type InitializeDtoType { get; set; }
+        [Id(0)] public required Type InitializationEventType { get; set; }
     }
 
     private IEnumerable<MethodInfo> GetEventHandlerMethods()
@@ -176,6 +173,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
                 {
                     var eventResult = await (dynamic)method.Invoke(this, [eventType])!;
                     eventResult.CorrelationId = _correlationId;
+                    eventResult.PublisherGrainId = this.GetGrainId();
                     var eventWrapper =
                         new EventWrapper<EventBase>(eventResult, eventId, this.GetGrainId());
                     await PublishAsync(eventWrapper);

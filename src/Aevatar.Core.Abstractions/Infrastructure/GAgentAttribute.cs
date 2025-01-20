@@ -4,10 +4,16 @@ using Orleans.Metadata;
 namespace Aevatar.Core.Abstractions;
 
 [AttributeUsage(AttributeTargets.Class, Inherited = true, AllowMultiple = false)]
-public class GAgentAttribute : Attribute, IGrainTypeProviderAttribute
+public sealed class GAgentAttribute : Attribute, IGrainTypeProviderAttribute
 {
     private readonly string _ns;
     private readonly string _alias;
+
+    public GAgentAttribute(string alias)
+    {
+        _alias = alias;
+        _ns = "aevatar";
+    }
 
     public GAgentAttribute(string alias, string ns = "aevatar")
     {

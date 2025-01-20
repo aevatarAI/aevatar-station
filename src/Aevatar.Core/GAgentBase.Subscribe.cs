@@ -22,8 +22,8 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
                 if (State.Parent == clearParentEvent.Parent)
                     State.Parent = default;
                 break;
-            case InnerSetInitializeDtoTypeStateLogEvent setInnerEvent:
-                State.InitializationEventType = setInnerEvent.InitializeDtoType;
+            case InnerSetInitializationEventTypeStateLogEvent setInnerEvent:
+                State.InitializationEventType = setInnerEvent.InitializationEventType;
                 break;
         }
 

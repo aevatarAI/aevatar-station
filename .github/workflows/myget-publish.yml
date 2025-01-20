@@ -22,7 +22,12 @@ jobs:
         servicename: [
           Aevatar.Core,
           Aevatar.Core.Abstractions,
-          Aevatar.EventSourcing.Core
+          Aevatar.EventSourcing.Core,
+          Aevatar.EventSourcing.MongoDB,
+          Aevatar.Plugins,
+          Aevatar.AI.Abstractions,
+          Aevatar.AI.SemanticKernel,
+          Aevatar.AI.AIGAgent
         ]
     steps:
       - name: Checkout code

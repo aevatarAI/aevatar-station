@@ -10,9 +10,9 @@
         <Authors>AElf</Authors>
         <Description>A distributed AI agent-based framework built on Microsoft Orleans for building scalable event-sourced applications.</Description>
         <PackageTags>agent</PackageTags>
-        <RepositoryUrl>https://github.com/AISmartProject/aevatar-framework</RepositoryUrl>
+        <RepositoryUrl>https://github.com/aevatarAI/aevatar-framework</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
-        <PackageProjectUrl>https://github.com/AISmartProject/aevatar-framework</PackageProjectUrl>
+        <PackageProjectUrl>https://github.com/aevatarAI/aevatar-framework</PackageProjectUrl>
     </PropertyGroup>
     
     <ItemGroup>

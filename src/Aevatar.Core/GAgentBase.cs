@@ -9,7 +9,7 @@ using Orleans.Streams;
 
 namespace Aevatar.Core;
 
-[GAgent("base")]
+[GAgent("base2")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 public abstract partial class
@@ -96,7 +96,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent> : Journ
 
     public async Task<GrainId> GetParentAsync()
     {
-        return State.Parent;
+        return State.Parent ?? default;
     }
 
     public virtual Task<Type?> GetInitializationTypeAsync()

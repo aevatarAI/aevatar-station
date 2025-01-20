@@ -5,5 +5,5 @@ namespace Aevatar.Core.Tests.TestStateLogEvents;
 [GenerateSerializer]
 public class MessageStateLogEvent : StateLogEventBase
 {
-    public override Guid Id { get; set; }= Guid.NewGuid();
+    [Id(0)] public Guid Id { get; set; }= Guid.NewGuid();
 }
