@@ -12,9 +12,4 @@ public abstract class AevatarController : AbpControllerBase
     {
         LocalizationResource = typeof(AevatarResource);
     }
-    
-    protected string ClientId
-    {
-        get { return CurrentUser.GetAllClaims().First(o => o.Type == "client_id").Value; }
-    }
 }

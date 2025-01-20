@@ -98,14 +98,12 @@ public class UserAppService : IdentityUserAppService, IUserAppService
    
     public Guid GetCurrentUserId()
     {
-        var userId = CurrentUser.Id;
-        if (userId != null)
+        if (!CurrentUser.UserName.IsNullOrEmpty())
         {
-            return (Guid)userId;
+            return GuidUtil.StringToGuid(CurrentUser.UserName);
         }
-        //
-        // _logger.LogInformation("GetCurrentUserId userId is null");
-        // throw new UserFriendlyException("Invalid userId");
-        return GuidUtil.StringToGuid("user");
+        
+        var clientId =  CurrentUser.GetAllClaims().First(o => o.Type == "client_id").Value;
+        return GuidUtil.StringToGuid(clientId);
     }
 }
