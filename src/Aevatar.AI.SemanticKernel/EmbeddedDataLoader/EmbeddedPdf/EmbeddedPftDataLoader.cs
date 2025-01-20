@@ -22,15 +22,15 @@ internal class EmbeddedPftDataLoader<TKey>(
     ITextEmbeddingGenerationService textEmbeddingGenerationService,
     IChatCompletionService chatCompletionService) : IEmbeddedDataLoader where TKey : notnull
 {
-    public async Task Load(File file, int batchSize, int betweenBatchDelayInMs, CancellationToken cancellationToken)
+    public async Task Load(FileData fileData, int batchSize, int betweenBatchDelayInMs, CancellationToken cancellationToken)
     {
         // Create the collection if it doesn't exist.
         await vectorStoreCollection.CreateCollectionIfNotExistsAsync(cancellationToken).ConfigureAwait(false);
 
         // Load the text and images from the PDF file and split them into batches.
-        if (file.Content != null)
+        if (fileData.Content != null)
         {
-            var sections = LoadTextAndImages(file.Content, cancellationToken);
+            var sections = LoadTextAndImages(fileData.Content, cancellationToken);
             var batches = sections.Chunk(batchSize);
 
             // Process each batch of content items.
@@ -57,9 +57,9 @@ internal class EmbeddedPftDataLoader<TKey>(
                 {
                     Key = uniqueKeyGenerator.GenerateKey(),
                     Text = content.Text,
-                    ReferenceDescription = $"{file.Name}#page={content.PageNumber}",
+                    ReferenceDescription = $"{fileData.Name}#page={content.PageNumber}",
                     //ReferenceLink = $"{new Uri(file.Name).AbsoluteUri}#page={content.PageNumber}",
-                    ReferenceLink = $"{file.Name}#page={content.PageNumber}",
+                    ReferenceLink = $"{fileData.Name}#page={content.PageNumber}",
                     TextEmbedding = await GenerateEmbeddingsWithRetryAsync(textEmbeddingGenerationService, content.Text!,
                         cancellationToken: cancellationToken).ConfigureAwait(false)
                 });
