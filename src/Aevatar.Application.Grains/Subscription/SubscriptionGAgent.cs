@@ -57,7 +57,7 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
     }
     
     [AllEventHandler]
-    public async Task HandleEventAsync(EventWrapperBase eventWrapperBase) 
+    public async Task HandleSubscribedEventAsync(EventWrapperBase eventWrapperBase) 
     {
         if (eventWrapperBase is EventWrapper<EventBase> eventWrapper)
         {
@@ -72,8 +72,15 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
                 eventPushRequest.EventType = eventWrapper.Event.GetType().Name;
                 eventPushRequest.Payload = JsonConvert.SerializeObject(eventWrapper.Event);
                 eventPushRequest.AtomicAgent = await GetAtomicAgentDtoFromEventGrainId(eventWrapper.PublisherGrainId);
-                using var httpClient = new HttpClient();
-                await httpClient.PostAsJsonAsync(State.CallbackUrl, eventPushRequest);
+                try
+                {
+                    using var httpClient = new HttpClient();
+                    await httpClient.PostAsJsonAsync(State.CallbackUrl, eventPushRequest);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "Error sending event to callback url: {url} error: {err}", State.CallbackUrl, e.Message);
+                }
             }
         }
     }

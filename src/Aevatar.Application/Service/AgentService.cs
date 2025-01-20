@@ -12,11 +12,12 @@ using Aevatar.Application.Grains.Agents.Combination;
 using Aevatar.AtomicAgent;
 using Aevatar.CombinationAgent;
 using Aevatar.Common;
-using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
 using Aevatar.CQRS.Provider;
+using Aevatar.Options;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Nest;
 using Newtonsoft.Json;
 using Orleans;
@@ -37,6 +38,7 @@ public class AgentService : ApplicationService, IAgentService
     private readonly IGAgentFactory _gAgentFactory;
     private readonly IGAgentManager _gAgentManager;
     private readonly IUserAppService _userAppService;
+    private readonly IOptionsMonitor<AgentOptions> _agentOptions;
     
     private const string GroupAgentName = "GroupAgent";
     private const string IndexSuffix = "index";
@@ -50,7 +52,8 @@ public class AgentService : ApplicationService, IAgentService
         IObjectMapper objectMapper, 
         IGAgentFactory gAgentFactory, 
         IGAgentManager gAgentManager, 
-        IUserAppService userAppService)
+        IUserAppService userAppService, 
+        IOptionsMonitor<AgentOptions> agentOptions)
     {
         _clusterClient = clusterClient;
         _cqrsProvider = cqrsProvider;
@@ -59,6 +62,7 @@ public class AgentService : ApplicationService, IAgentService
         _gAgentFactory = gAgentFactory;
         _gAgentManager = gAgentManager;
         _userAppService = userAppService;
+        _agentOptions = agentOptions;
     }
     
     public async Task<AtomicAgentDto> GetAtomicAgentAsync(string id)
@@ -536,15 +540,7 @@ public class AgentService : ApplicationService, IAgentService
     
     public async Task<Dictionary<string, AgentInitializedData?>> GetInitializedDtos()
     {
-        var systemAgents = new List<string>()
-        {
-            "GroupGAgent",
-            "PublishingGAgent",
-            "SubscriptionGAgent",
-            "AtomicGAgent",
-            "CombinationGAgent",
-            "CodeGAgent"
-        };
+        var systemAgents = _agentOptions.CurrentValue.SystemAgentList;
         var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
         var validAgent = availableGAgents.Where(a => a.Namespace.StartsWith("Aevatar")).ToList();
         var businessAgent = validAgent.Where(a => !systemAgents.Contains(a.Name)).ToList();
