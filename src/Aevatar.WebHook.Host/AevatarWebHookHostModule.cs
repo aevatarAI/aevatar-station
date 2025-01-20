@@ -27,6 +27,7 @@ public class AevatarListenerHostModule : AbpModule
     {
         var configuration = context.Services.GetConfiguration();
         ConfigureCors(context, configuration);
+        context.Services.AddHealthChecks();
         context.Services.AddSingleton<IGAgentFactory,GAgentFactory>();
     }
 
@@ -71,6 +72,7 @@ public class AevatarListenerHostModule : AbpModule
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapWebhookHandlers(handlers,webhookId);
+            endpoints.MapHealthChecks("/health");
         });
        
         app.UseCors();
