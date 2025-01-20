@@ -9,7 +9,7 @@ public interface IGAgentFactory
 
     Task<IGAgent> GetGAgentAsync(string alias, string ns = AevatarCoreConstants.GAgentDefaultNamespace,
         InitializationEventBase? initializeDto = null);
-
+    
     Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(Guid primaryKey, InitializationEventBase? initializeDto = null)
         where TGrainInterface : IGAgent;
 

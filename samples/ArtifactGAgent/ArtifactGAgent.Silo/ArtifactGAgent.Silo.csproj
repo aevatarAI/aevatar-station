@@ -16,7 +16,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\..\src\Aevatar.ArtifactGAgent\Aevatar.ArtifactGAgent.csproj" />
         <ProjectReference Include="..\..\..\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
-        <ProjectReference Include="..\..\..\test\Aevatar.GAgents\Aevatar.GAgents.csproj" />
+        <ProjectReference Include="..\..\..\test\Aevatar.ArtifactGAgents\Aevatar.ArtifactGAgents.csproj" />
     </ItemGroup>
 
 </Project>

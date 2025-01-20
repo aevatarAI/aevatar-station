@@ -25,7 +25,7 @@
       <ProjectReference Include="..\..\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
       <ProjectReference Include="..\..\src\Aevatar.Core\Aevatar.Core.csproj" />
       <ProjectReference Include="..\..\src\Aevatar.SourceGenerator\Aevatar.SourceGenerator.csproj" />
-      <ProjectReference Include="..\Aevatar.GAgents\Aevatar.GAgents.csproj" />
+      <ProjectReference Include="..\Aevatar.ArtifactGAgents\Aevatar.ArtifactGAgents.csproj" />
     </ItemGroup>
 
 </Project>

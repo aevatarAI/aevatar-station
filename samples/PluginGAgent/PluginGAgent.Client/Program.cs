@@ -11,9 +11,7 @@ using Microsoft.Extensions.Logging;
 using Orleans.Configuration;
 using Orleans.Providers.MongoDB.Configuration;
 using PluginGAgent.Grains;
-using System;
-using Aevatar.GAgents;
-using Aevatar.GAgents.MyArtifactGAgent;
+using Aevatar.ArtifactGAgents;
 
 var builder = Host.CreateDefaultBuilder(args)
     .UseOrleansClient(client =>

@@ -1,7 +1,6 @@
 using System.Net;
 using Aevatar.ArtifactGAgent.Extensions;
 using Aevatar.EventSourcing.MongoDB.Hosting;
-using Aevatar.GAgents.MyArtifactGAgent;
 using Aevatar.Plugins;
 using Aevatar.Plugins.Extensions;
 using Microsoft.Extensions.Configuration;

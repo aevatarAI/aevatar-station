@@ -62,7 +62,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.AI.AIGAgent.Tests",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.SourceGenerator", "src\Aevatar.SourceGenerator\Aevatar.SourceGenerator.csproj", "{E947DE52-730D-4061-9B0D-E16591894F75}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.GAgents", "test\Aevatar.GAgents\Aevatar.GAgents.csproj", "{7329C96D-961F-4886-B91B-83CD69C16216}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.ArtifactGAgents", "test\Aevatar.ArtifactGAgents\Aevatar.ArtifactGAgents.csproj", "{7329C96D-961F-4886-B91B-83CD69C16216}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.SourceGenerator.Tests", "test\Aevatar.SourceGenerator.Tests\Aevatar.SourceGenerator.Tests.csproj", "{4F956E7E-DB16-40DC-BC02-E81F416624D8}"
 EndProject

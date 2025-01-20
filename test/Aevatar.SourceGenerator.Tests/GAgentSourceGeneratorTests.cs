@@ -23,7 +23,7 @@ public class GAgentSourceGeneratorTests
         const string source = @"
 using Aevatar.Core.Abstractions;
 
-namespace Aevatar.GAgents
+namespace Aevatar.ArtifactGAgents
 {
     public interface IMyArtifact : IArtifact<GeneratedGAgentState, GeneratedStateLogEvent> { }
     public class MyArtifact : IMyArtifact

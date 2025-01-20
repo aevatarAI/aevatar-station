@@ -19,20 +19,6 @@ public class GAgentSourceGenerator : IIncrementalGenerator
 
         var compilationAndTypes = context.CompilationProvider.Combine(typeDeclarations.Collect());
 
-        context.RegisterImplementationSourceOutput(typeDeclarations,
-            static (spc, typeDeclaration) =>
-            {
-                var keyword = typeDeclaration.Keyword.Text;
-                var identifier = typeDeclaration.Identifier.Text;
-                if (keyword == "interface" && identifier.StartsWith("I"))
-                {
-                    identifier = identifier.Substring(1);
-                }
-
-                var gAgentBaseInherit = typeDeclaration.BaseList.ToString().Replace("IArtifact", "GAgentBase");
-                var generatedCode = GenerateGAgentAbstractionCode($"{identifier}GAgent", gAgentBaseInherit);
-                spc.AddSource($"{identifier}GAgent.abstraction.g.cs", SourceText.From(generatedCode, Encoding.UTF8));
-            });
         context.RegisterSourceOutput(compilationAndTypes,
             static (spc, source) => Execute(source.Left, source.Right, spc));
     }
@@ -88,20 +74,8 @@ public class GAgentSourceGenerator : IIncrementalGenerator
                 stateLogEventType
             );
 
-            context.AddSource($"{generatedGAgentTypeName}.implementation.g.cs", SourceText.From(generatedCode, Encoding.UTF8));
+            context.AddSource($"{generatedGAgentTypeName}.aevatar.g.cs", SourceText.From(generatedCode, Encoding.UTF8));
         }
-    }
-
-    private static string GenerateGAgentAbstractionCode(
-        string gAgentTypeName,
-        string gAgentBaseInherit)
-    {
-        var generatedCode = AbstractionTemplate
-            .Replace("{ClassNamespace}", $"Aevatar.GAgents.{gAgentTypeName}")
-            .Replace("{ClassName}", gAgentTypeName)
-            .Replace("{GAgentBaseInherit}", gAgentBaseInherit);
-
-        return generatedCode;
     }
 
     private static string GenerateGAgentImplementationCode(
@@ -113,8 +87,8 @@ public class GAgentSourceGenerator : IIncrementalGenerator
         string gAgentStateLogEventType)
     {
         var generatedCode = ImplementationTemplate
-            .Replace("{UsingNamespace}", typeNamespace)
-            .Replace("{ClassNamespace}", $"Aevatar.GAgents.{gAgentTypeName}")
+            .Replace("{ClassNamespace}", typeNamespace)
+            .Replace("{GAgentNamespace}", typeNamespace.ToLower().Replace('.', '/'))
             .Replace("{TypeName}", typeName)
             .Replace("{GAgentAlias}", typeName.ToLower())
             .Replace("{ClassName}", gAgentTypeName)
@@ -125,20 +99,6 @@ public class GAgentSourceGenerator : IIncrementalGenerator
         return generatedCode;
     }
 
-    private const string AbstractionTemplate = @"using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Aevatar.Core;
-using Aevatar.Core.Abstractions;
-
-namespace {ClassNamespace};
-
-public interface I{ClassName} : IGAgent;
-
-public partial class {ClassName} {GAgentBaseInherit}, I{ClassName};
-
-";
-
     private const string ImplementationTemplate = @"using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -146,12 +106,14 @@ using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
-using {UsingNamespace};
+using {ClassNamespace};
 
 namespace {ClassNamespace};
 
-[GAgent(""{GAgentAlias}"")]
-public partial class {ClassName} : IArtifactGAgent
+public interface I{ClassName} : IStateGAgent<{GAgentStateType}>;
+
+[GAgent(""{GAgentAlias}"", ""{GAgentNamespace}"")]
+public class {ClassName} : GAgentBase<{GAgentStateType}, {GAgentStateLogEventType}>, I{ClassName}, IArtifactGAgent
 {
     private readonly {ArtifactTypeName} _artifact;
 
@@ -175,6 +137,15 @@ public partial class {ClassName} : IArtifactGAgent
     {
         base.GAgentTransitionState(state, @event);
         _artifact.TransitionState(state, @event);
+    }
+
+    public override async Task<List<Type>?> GetAllSubscribedEventsAsync(bool includeBaseHandlers = false)
+    {
+        var gAgentEvents = await base.GetAllSubscribedEventsAsync(includeBaseHandlers);
+        var artifactEventHandlerMethods = GetEventHandlerMethods(_artifact.GetType());
+        var handlingTypes = artifactEventHandlerMethods
+            .Select(m => m.GetParameters().First().ParameterType);
+        return handlingTypes.Concat(gAgentEvents!).ToList();
     }
 }
 ";

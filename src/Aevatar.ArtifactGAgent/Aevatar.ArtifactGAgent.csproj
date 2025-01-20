@@ -7,7 +7,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\test\Aevatar.GAgents\Aevatar.GAgents.csproj" />
         <ProjectReference Include="..\Aevatar.Core\Aevatar.Core.csproj" />
     </ItemGroup>
     

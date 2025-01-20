@@ -1,6 +1,7 @@
-﻿using Aevatar.Core;
+﻿using Aevatar.ArtifactGAgent.Extensions;
+using Aevatar.Core;
 using Aevatar.Core.Abstractions;
-using Aevatar.GAgents;
+using Aevatar.ArtifactGAgents;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
@@ -22,7 +23,13 @@ await host.StartAsync();
 
 var gAgentFactory = host.Services.GetRequiredService<IGAgentFactory>();
 var gAgentManager = host.Services.GetRequiredService<IGAgentManager>();
-var allGAgents = gAgentManager.GetAvailableGAgentTypes();
-var myArtifactGAgent = await gAgentFactory.GetGAgentAsync(nameof(MyArtifact));
+var myArtifactGAgent = await gAgentFactory.GetGAgentAsync(typeof(MyArtifact));
 var description = await myArtifactGAgent.GetDescriptionAsync();
-;
+
+Console.WriteLine(description);
+
+var events = await myArtifactGAgent.GetAllSubscribedEventsAsync();
+foreach (var @event in events!.ToList())
+{
+    Console.WriteLine($"Subscribing event: {@event}");
+}
