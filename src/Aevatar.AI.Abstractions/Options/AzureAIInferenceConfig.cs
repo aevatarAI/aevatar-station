@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace Aevatar.AI.Options;
 
@@ -10,12 +9,6 @@ public sealed class AzureAIInferenceConfig
 {
     public const string ConfigSectionName = "AzureAIInference";
 
-    [Required]
-    public List<ModelConfig> Models { get; set; } = [];
-}
-
-public sealed class ModelConfig
-{
     [Required]
     public string ChatDeploymentName { get; set; } = string.Empty;
 

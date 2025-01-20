@@ -54,16 +54,8 @@ public static class AevatarAISemanticKernelExtension
     
     public static IServiceCollection AddAzureAIInference(this IServiceCollection services)
     {
-        services.AddKeyedTransient<IBrain>(AzureAIInferenceConfig.ConfigSectionName + '/', (sp, key) =>
-        {
-            var options = sp.GetRequiredService<IOptions<AzureAIInferenceConfig>>().Value;
-            return new AzureAIInferenceBrain(
-                options.Models.Find(m => m.ChatDeploymentName == key),
-                new Uri(options.Endpoint),
-                new AzureKeyCredential(options.ApiKey)
-            );
-        });
-        
+        services.AddKeyedTransient<IBrain, AzureAIInferenceBrain>(AzureAIInferenceConfig.ConfigSectionName);
+
         return services;
     }
 
