@@ -18,8 +18,8 @@ namespace Aevatar.AI.Brain;
 
 public abstract class BrainBase : IBrain
 {
-    protected Kernel Kernel;
-    protected string PromptTemplate;
+    protected Kernel? Kernel;
+    protected string? PromptTemplate;
     
     protected readonly IKernelBuilderFactory KernelBuilderFactory;
     protected readonly ILogger Logger;
@@ -69,6 +69,18 @@ public abstract class BrainBase : IBrain
 
     public async Task<string?> InvokePromptAsync(string prompt)
     {
+        if(Kernel == null)
+        {
+            Logger.LogError("Kernel is not initialized, please call InitializeAsync first.");
+            return null;
+        }
+        
+        if(PromptTemplate == null)
+        {
+            Logger.LogError("Prompt template is not set, please call InitializeAsync first.");
+            return null;
+        }
+        
         var result = await Kernel.InvokePromptAsync(
             promptTemplate: PromptTemplate,
             arguments: new KernelArguments()
