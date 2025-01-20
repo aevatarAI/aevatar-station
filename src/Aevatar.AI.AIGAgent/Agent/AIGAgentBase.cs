@@ -45,10 +45,10 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
             return false;
         }
 
-        List<File>? fileList = null;
+        List<FileData>? fileList = null;
         if (files != null)
         {
-            fileList = files.Select(f => new File() { Content = f.Content, Type = f.Type, Name = f.Name }).ToList();
+            fileList = files.Select(f => new FileData() { Content = f.Content, Type = f.Type, Name = f.Name }).ToList();
         }
         
         // remove slash from this.GetGrainId().ToString() so that it can be used as the collection name pertaining to the grain

@@ -5,6 +5,15 @@
         <Nullable>enable</Nullable>
         <RootNamespace>Aevatar.AI</RootNamespace>
         <NoWarn>$(NoWarn);SKEXP0001;SKEXP0010;SKEXP0020</NoWarn>
+        <PackageId>Aevatar.AI.SemanticKernel</PackageId>
+        <PackageType>Dependency</PackageType>
+        <Title>aevatar Framework</Title>
+        <Authors>AElf</Authors>
+        <Description>The semantic kernel implementation package to the Aevatar.AI.Abstractions.</Description>
+        <PackageTags>agent</PackageTags>
+        <RepositoryUrl>https://github.com/aevatarAI/aevatar-framework</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageProjectUrl>https://github.com/aevatarAI/aevatar-framework</PackageProjectUrl>
     </PropertyGroup>
 
     <ItemGroup>
