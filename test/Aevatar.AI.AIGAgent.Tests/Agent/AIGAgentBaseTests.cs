@@ -7,7 +7,6 @@ using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Shouldly;
-using File = Aevatar.AI.Brain.File;
 
 namespace Aevatar.AI.AIGAgent.Tests.Agent;
 
@@ -83,7 +82,7 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
             .Setup(x => x.InitializeAsync(
                 It.IsAny<string>(),
                 initializeDto.Instructions,
-                It.IsAny<List<File>>()))
+                It.IsAny<List<FileData>>()))
             .ReturnsAsync(true);
 
         // Act
@@ -96,7 +95,7 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
             x => x.InitializeAsync(
                 It.IsAny<string>(),
                 initializeDto.Instructions,
-                It.IsAny<List<File>>()),
+                It.IsAny<List<FileData>>()),
             Times.Once);
     }
 
@@ -146,7 +145,7 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
             .Setup(x => x.InitializeAsync(
                 It.IsAny<string>(),
                 initializeDto.Instructions,
-                It.IsAny<List<File>>()))
+                It.IsAny<List<FileData>>()))
             .ReturnsAsync(true);
 
         _brainMock

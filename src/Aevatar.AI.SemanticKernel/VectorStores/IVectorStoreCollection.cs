@@ -7,5 +7,5 @@ namespace Aevatar.AI.VectorStores;
 public interface IVectorStoreCollection
 {
     Task InitializeAsync(string collectionName);
-    Task UploadRecordAsync(List<File> files);
+    Task UploadRecordAsync(List<FileData> files);
 }
