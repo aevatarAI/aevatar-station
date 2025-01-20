@@ -10,6 +10,7 @@ using Aevatar.AI.Options;
 using Aevatar.AI.VectorStores;
 using Aevatar.AI.VectorStores.Qdrant;
 using Azure;
+using Azure.AI.Inference;
 using Azure.AI.OpenAI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,6 +48,21 @@ public static class AevatarAISemanticKernelExtension
         });
 
         services.AddKeyedTransient<IBrain, AzureOpenAIBrain>(AzureOpenAIConfig.ConfigSectionName);
+        
+        return services;
+    }
+    
+    public static IServiceCollection AddAzureAIInference(this IServiceCollection services)
+    {
+        services.AddKeyedTransient<IBrain>(AzureAIInferenceConfig.ConfigSectionName + '/', (sp, key) =>
+        {
+            var options = sp.GetRequiredService<IOptions<AzureAIInferenceConfig>>().Value;
+            return new AzureAIInferenceBrain(
+                options.Models.Find(m => m.ChatDeploymentName == key),
+                new Uri(options.Endpoint),
+                new AzureKeyCredential(options.ApiKey)
+            );
+        });
         
         return services;
     }
