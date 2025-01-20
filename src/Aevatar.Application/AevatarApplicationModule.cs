@@ -1,9 +1,11 @@
 ﻿using Aevatar.Application.Grains;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
+using Aevatar.Core.Abstractions.Plugin;
 using Aevatar.CQRS;
 using Aevatar.Kubernetes;
 using Aevatar.Options;
+using Aevatar.Plugins;
 using Aevatar.WebHook.Deploy;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans;
@@ -44,5 +46,6 @@ public class AevatarApplicationModule : AbpModule
         context.Services.AddSingleton<IGAgentFactory>(sp => new GAgentFactory(context.Services.GetRequiredService<IClusterClient>()));
         context.Services.AddSingleton<IGAgentManager>(sp => new GAgentManager());
         Configure<WebhookDeployOptions>(configuration.GetSection("WebhookDeploy"));
+        context.Services.AddSingleton<IPluginGAgentManager, PluginGAgentManager>();
     }
 }
