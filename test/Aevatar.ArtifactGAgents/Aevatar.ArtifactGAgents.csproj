@@ -9,12 +9,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
-        <ProjectReference Include="..\..\src\Aevatar.Core\Aevatar.Core.csproj" />
+        <ProjectReference Include="..\..\src\Aevatar.ArtifactGAgent\Aevatar.ArtifactGAgent.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-        <PackageReference Include="Aevatar.SourceGenerator" Version="1.0.14" />
-    </ItemGroup>
+<!--    <ItemGroup>-->
+<!--        <PackageReference Include="Aevatar.SourceGenerator" Version="1.0.14" />-->
+<!--    </ItemGroup>-->
 
 </Project>

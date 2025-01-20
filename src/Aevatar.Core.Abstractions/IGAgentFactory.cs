@@ -2,17 +2,21 @@ namespace Aevatar.Core.Abstractions;
 
 public interface IGAgentFactory
 {
-    Task<IGAgent> GetGAgentAsync(GrainId grainId, InitializationEventBase? initializeDto = null);
+    Task<IGAgent> GetGAgentAsync(GrainId grainId, InitializationEventBase? initializationEvent = null);
 
     Task<IGAgent> GetGAgentAsync(string alias, Guid primaryKey,
-        string ns = AevatarCoreConstants.GAgentDefaultNamespace, InitializationEventBase? initializeDto = null);
+        string ns = AevatarCoreConstants.GAgentDefaultNamespace, InitializationEventBase? initializationEvent = null);
 
     Task<IGAgent> GetGAgentAsync(string alias, string ns = AevatarCoreConstants.GAgentDefaultNamespace,
-        InitializationEventBase? initializeDto = null);
+        InitializationEventBase? initializationEvent = null);
     
-    Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(Guid primaryKey, InitializationEventBase? initializeDto = null)
+    Task<IGAgent> GetGAgentAsync(Type gAgentType, Guid primaryKey, InitializationEventBase? initializationEvent = null);
+
+    Task<IGAgent> GetGAgentAsync(Type gAgentType, InitializationEventBase? initializationEvent = null);
+
+    Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(Guid primaryKey, InitializationEventBase? initializationEvent = null)
         where TGrainInterface : IGAgent;
 
-    Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(InitializationEventBase? initializeDto = null)
+    Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(InitializationEventBase? initializationEvent = null)
         where TGrainInterface : IGAgent;
 }

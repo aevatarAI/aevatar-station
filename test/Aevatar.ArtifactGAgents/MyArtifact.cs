@@ -1,18 +1,12 @@
 ﻿using Aevatar.Core.Abstractions;
-using Volo.Abp.DependencyInjection;
 
 namespace Aevatar.ArtifactGAgents;
 
 [GenerateSerializer]
-public class GeneratedGAgentState : StateBase;
+public class MyArtifactGAgentState : StateBase;
 
 [GenerateSerializer]
-public class GeneratedStateLogEvent : StateLogEventBase<GeneratedStateLogEvent>;
-
-public interface IMyArtifact : IArtifact<GeneratedGAgentState, GeneratedStateLogEvent>
-{
-    string TestMethod();
-}
+public class MyArtifactStateLogEvent : StateLogEventBase<MyArtifactStateLogEvent>;
 
 [GenerateSerializer]
 public class MyArtifactEvent : EventBase
@@ -20,7 +14,12 @@ public class MyArtifactEvent : EventBase
     [Id(0)] public Dictionary<string, object> Content { get; set; }
 }
 
-public class MyArtifact : IMyArtifact, ISingletonDependency
+public interface IMyArtifact : IArtifact<MyArtifactGAgentState, MyArtifactStateLogEvent>
+{
+    string TestMethod();
+}
+
+public class MyArtifact : IMyArtifact
 {
     public string GetDescription() => "MyArtifact Description, this is for testing.";
 
@@ -35,7 +34,7 @@ public class MyArtifact : IMyArtifact, ISingletonDependency
         return "Test";
     }
 
-    public void TransitionState(GeneratedGAgentState state, StateLogEventBase<GeneratedStateLogEvent> stateLogEvent)
+    public void TransitionState(MyArtifactGAgentState state, StateLogEventBase<MyArtifactStateLogEvent> stateLogEvent)
     {
         /* custom logic */
     }

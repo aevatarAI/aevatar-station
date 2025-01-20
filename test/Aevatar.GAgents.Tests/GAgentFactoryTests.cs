@@ -96,7 +96,7 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
         }
 
         {
-            var gAgent = await _gAgentFactory.GetGAgentAsync("naiveTest", initializeDto: new NaiveGAgentInitialize
+            var gAgent = await _gAgentFactory.GetGAgentAsync("naiveTest", initializationEvent: new NaiveGAgentInitialize
             {
                 InitialGreeting = "Test"
             });
