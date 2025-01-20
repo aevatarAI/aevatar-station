@@ -11,6 +11,7 @@ using Aevatar.Application.Grains.Agents.Atomic;
 using Aevatar.Application.Grains.Agents.Combination;
 using Aevatar.AtomicAgent;
 using Aevatar.CombinationAgent;
+using Aevatar.Common;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
@@ -136,32 +137,24 @@ public class AgentService : ApplicationService, IAgentService
         {
             agentData.Name = updateDto.Name;
         }
-
-        bool propertyChanged = false;
-        var newProperties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentData.Properties);
-        if (newProperties != null && updateDto.Properties != null)
+        
+        if (!updateDto.Properties.IsNullOrEmpty())
         {
-            foreach (var kvp in updateDto.Properties)
-            {
-                if (newProperties.ContainsKey(kvp.Key))
-                {
-                    newProperties[kvp.Key] = kvp.Value;
-                }
-            }
-            
-            agentData.Properties = JsonConvert.SerializeObject(newProperties);
-            propertyChanged = true;
+            agentData.Properties = JsonConvert.SerializeObject(updateDto.Properties);
         }
         
         await atomicAgent.UpdateAgentAsync(agentData);
         resp.Name = agentData.Name;
         resp.GrainId = atomicAgent.GetGrainId();
-        resp.Properties = newProperties;
-        if (!propertyChanged)
+        
+        if (updateDto.Properties.IsNullOrEmpty())
         {
             return resp;
         }
         
+        resp.Properties = updateDto.Properties;
+        
+        // update property in business agent of groups
         var agentPropertyDict = await GetInitializedDtos();
         foreach (var kvp in agentData.Groups)
         {
@@ -173,25 +166,7 @@ public class AgentService : ApplicationService, IAgentService
             {
                 if (initializeParam != null)
                 {
-                    var properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentData.Properties);
-                    var actualDto = Activator.CreateInstance(initializeParam.DtoType);
-                    dto = (InitializationEventBase)actualDto!;
-                    
-                    foreach (var kvpProperty in properties)
-                    {
-                        var propertyName = kvpProperty.Key; 
-                        var propertyValue = kvpProperty.Value;
-                        var propertyType = initializeParam.Properties.FirstOrDefault(x => x.Name == propertyName)?.Type;
-                        if (propertyType == null)
-                        {
-                            continue;
-                        }
-                        
-                        var propertyInfo = initializeParam.DtoType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-                        object convertedValue = ConvertValue(propertyType, propertyValue);
-                        propertyInfo?.SetValue(dto, convertedValue);
-                        _logger.LogInformation("SetGroupAsync propertyName: {propertyName}, propertyValue: {propertyValue}, propertyType: {propertyType}", propertyName, propertyValue, propertyType);
-                    }
+                    dto = SetupInitializedDto(initializeParam, agentData.Properties);
                 }
             }
             
@@ -346,29 +321,12 @@ public class AgentService : ApplicationService, IAgentService
             
             InitializationEventBase? dto = null;
                    
+            // set property in business agent of groups
             if (agentPropertyDict.TryGetValue(agentData.Type, out var initializeParam) && !agentData.Properties.IsNullOrEmpty()) 
             {
                 if (initializeParam != null)
                 {
-                    var properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentData.Properties);
-                    var actualDto = Activator.CreateInstance(initializeParam.DtoType);
-                    dto = (InitializationEventBase)actualDto!;
-                    
-                    foreach (var kvp in properties)
-                    {
-                        var propertyName = kvp.Key; 
-                        var propertyValue = kvp.Value;
-                        var propertyType = initializeParam.Properties.FirstOrDefault(x => x.Name == propertyName)?.Type;
-                        if (propertyType == null)
-                        {
-                            continue;
-                        }
-                        
-                        var propertyInfo = initializeParam.DtoType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-                        object convertedValue = ConvertValue(propertyType, propertyValue);
-                        propertyInfo?.SetValue(dto, convertedValue);
-                        _logger.LogInformation("SetGroupAsync propertyName: {propertyName}, propertyValue: {propertyValue}, propertyType: {propertyType}", propertyName, propertyValue, propertyType);
-                    }
+                    dto = SetupInitializedDto(initializeParam, agentData.Properties);
                 }
             }
             
@@ -576,7 +534,7 @@ public class AgentService : ApplicationService, IAgentService
         }
     }
     
-    public async Task<Dictionary<string, AgentInitializedDto?>> GetInitializedDtos()
+    public async Task<Dictionary<string, AgentInitializedData?>> GetInitializedDtos()
     {
         var systemAgents = new List<string>()
         {
@@ -591,7 +549,7 @@ public class AgentService : ApplicationService, IAgentService
         var validAgent = availableGAgents.Where(a => a.Namespace.StartsWith("Aevatar")).ToList();
         var businessAgent = validAgent.Where(a => !systemAgents.Contains(a.Name)).ToList();
 
-        var dict = new Dictionary<string, AgentInitializedDto?>();
+        var dict = new Dictionary<string, AgentInitializedData?>();
         
         foreach (var type in businessAgent)
         {
@@ -603,9 +561,9 @@ public class AgentService : ApplicationService, IAgentService
                 continue;
             }
             
-            PropertyInfo[] properties = initializeDtoType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
+            PropertyInfo[] properties = initializeDtoType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
 
-            var initializeDto = new AgentInitializedDto
+            var initializeDto = new AgentInitializedData
             {
                 DtoType = initializeDtoType
             };
@@ -651,28 +609,36 @@ public class AgentService : ApplicationService, IAgentService
         }
         return resp;
     }
-    
-    private static object ConvertValue(Type targetType, object value)
+
+    private InitializationEventBase SetupInitializedDto(AgentInitializedData initializedData,  string propertiesString)
     {
-        if (value == null)
+        var properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(propertiesString);
+        var actualDto = Activator.CreateInstance(initializedData.DtoType);
+        var dto = (InitializationEventBase)actualDto!;
+                    
+        foreach (var kvp in properties)
         {
-            return null;
-        }
-        
-        if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(List<>))
-        {
-            var elementType = targetType.GetGenericArguments()[0];
-            var list = Activator.CreateInstance(targetType) as System.Collections.IList;
-
-            foreach (var item in (IEnumerable<object>)value)
+            var propertyName = kvp.Key; 
+            var propertyValue = kvp.Value;
+            var propertyType = initializedData.Properties.FirstOrDefault(x => x.Name == propertyName)?.Type;
+            if (propertyType == null)
             {
-                list.Add(ConvertValue(elementType, item));
+                continue;
             }
-
-            return list;
+                        
+            var propertyInfo = initializedData.DtoType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+            if (propertyInfo == null || !propertyInfo.CanWrite)
+            {
+                _logger.LogInformation("Property {propertyName} not found or cannot be written.", propertyName);
+                throw new UserFriendlyException("property could not be found or cannot be written");
+            }
+            
+            object convertedValue = ReflectionUtil.ConvertValue(propertyType, propertyValue);
+            propertyInfo?.SetValue(dto, convertedValue);
+            _logger.LogInformation("SetGroupAsync propertyName: {propertyName}, propertyValue: {propertyValue}, propertyType: {propertyType}", propertyName, propertyValue, propertyType);
         }
-        
-        return Convert.ChangeType(value, targetType);
+
+        return dto;
     }
     
 }

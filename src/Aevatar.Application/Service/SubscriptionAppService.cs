@@ -135,17 +135,9 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
                 _logger.LogInformation("Property {propertyName} not found or cannot be written.", propertyName);
                 throw new UserFriendlyException("property could not be found or cannot be written");
             }
-
-            try
-            {
-                object? convertedValue = Convert.ChangeType(propertyValue, propInfo.PropertyType);
-                propInfo.SetValue(eventInstance, convertedValue);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogInformation("Failed to convert property value: {propertyName} - {propertyValue} - {ex}", propertyName, propertyValue, ex);
-                throw new UserFriendlyException("property could not be converted");
-            }
+  
+            object? convertedValue = ReflectionUtil.ConvertValue(propInfo.PropertyType, propertyValue);
+            propInfo.SetValue(eventInstance, convertedValue);
         }
         
         await combinationAgent.PublishEventAsync((EventBase)eventInstance);
