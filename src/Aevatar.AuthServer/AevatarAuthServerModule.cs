@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Volo.Abp;
 using Volo.Abp.Account;
 using Volo.Abp.Account.Web;
+using Volo.Abp.AspNetCore.Mvc.Libs;
 using Volo.Abp.AspNetCore.Mvc.UI.Bundling;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite.Bundling;
@@ -90,7 +91,10 @@ public class AevatarAuthServerModule : AbpModule
         
         context.Services.Configure<SignatureGrantOptions>(configuration.GetSection("Signature"));
         context.Services.Configure<ChainOptions>(configuration.GetSection("Chains"));
-
+        Configure<AbpMvcLibsOptions>(options =>
+        {
+            options.CheckLibs = false; 
+        });
         context.Services.Configure<AbpOpenIddictExtensionGrantsOptions>(options =>
         {
             options.Grants.Add(GrantTypeConstants.LOGIN, new LoginGrantHandler());

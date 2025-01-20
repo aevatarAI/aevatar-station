@@ -1,6 +1,7 @@
 using System.Net;
 using Aevatar.Dapr;
 using Aevatar.EventSourcing.MongoDB.Hosting;
+using Aevatar.Plugins.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -70,6 +71,7 @@ public static class OrleansHostExtension
                         options.SupportedNamespacePrefixes.Add("Autofac.Core");
                     })
                     .AddActivityPropagation()
+                    .UsePluginGAgents()
                     .UseDashboard(options =>
                     {
                         options.Username = configSection.GetValue<string>("DashboardUserName");

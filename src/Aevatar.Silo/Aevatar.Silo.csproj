@@ -23,6 +23,7 @@
         <PackageReference Include="Serilog.Sinks.OpenTelemetry" />
         <PackageReference Include="Orleans.Streams.Kafka" />
         <PackageReference Include="Aevatar.EventSourcing.Core" />
+        <PackageReference Include="Aevatar.Plugins" />
     </ItemGroup>
 
     <ItemGroup>
