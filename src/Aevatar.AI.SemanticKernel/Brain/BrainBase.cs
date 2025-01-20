@@ -34,7 +34,7 @@ public abstract class BrainBase : IBrain
 
     protected abstract Task ConfigureKernelBuilder(IKernelBuilder kernelBuilder);
 
-    public async Task<bool> InitializeAsync(string id, string promptTemplate, List<File>? files)
+    public async Task<bool> InitializeAsync(string id, string promptTemplate, List<FileData>? files)
     {
         var kernelBuilder = KernelBuilderFactory.GetKernelBuilder(id);
         await ConfigureKernelBuilder(kernelBuilder);
