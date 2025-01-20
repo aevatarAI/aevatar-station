@@ -18,6 +18,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="Aevatar.Plugins" />
         <PackageReference Include="Azure.AI.TextAnalytics" />
         <PackageReference Include="OpenAI.API" />
         <PackageReference Include="Volo.Abp.Account.Application" />
