@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
-using Aevatar.Agents.Combination.GEvents;
 using Aevatar.Agents.Combination.Models;
 using Aevatar.Agents.Group;
-using Aevatar.Core.Abstractions;
 using Orleans;
 
 namespace Aevatar.Agents.Combination;

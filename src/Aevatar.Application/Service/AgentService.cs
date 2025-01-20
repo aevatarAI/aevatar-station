@@ -78,7 +78,8 @@ public class AgentService : ApplicationService, IAgentService
             Id = id,
             Type = agentData.Type,
             Name = agentData.Name,
-            Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentData.Properties)
+            Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentData.Properties),
+            GrainId = atomicAgent.GetGrainId()
         };
         
         return resp;
@@ -100,6 +101,7 @@ public class AgentService : ApplicationService, IAgentService
         await atomicAgent.CreateAgentAsync(agentData);
         var resp = _objectMapper.Map<CreateAtomicAgentDto, AtomicAgentDto>(createDto);
         resp.Id = guid.ToString();
+        resp.GrainId = atomicAgent.GetGrainId();
         return resp;
     }
 
@@ -154,6 +156,7 @@ public class AgentService : ApplicationService, IAgentService
         
         await atomicAgent.UpdateAgentAsync(agentData);
         resp.Name = agentData.Name;
+        resp.GrainId = atomicAgent.GetGrainId();
         resp.Properties = newProperties;
         if (!propertyChanged)
         {
@@ -274,7 +277,8 @@ public class AgentService : ApplicationService, IAgentService
         {
             Id = guid.ToString(),
             Name = data.Name,
-            AgentComponent = components
+            AgentComponent = components,
+            GrainId = combinationAgent.GetGrainId()
         };
    
         return resp;
@@ -316,7 +320,8 @@ public class AgentService : ApplicationService, IAgentService
         {
             Id = id,
             Name = combinationData.Name,
-            AgentComponent = combinationData.AgentComponent
+            AgentComponent = combinationData.AgentComponent,
+            GrainId = combinationAgent.GetGrainId()
         };
         
         return resp;
@@ -420,7 +425,8 @@ public class AgentService : ApplicationService, IAgentService
         {
             Id = id,
             Name = combinationData.Name,
-            AgentComponent = combinationData.AgentComponent
+            AgentComponent = combinationData.AgentComponent,
+            GrainId = combinationAgent.GetGrainId()
         };
 
         return resp;
