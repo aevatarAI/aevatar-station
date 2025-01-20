@@ -3,6 +3,7 @@ using Aevatar.Core.Abstractions;
 using Aevatar.Core.Tests.TestGAgents;
 using Aevatar.Core.Tests.TestInitializeDtos;
 using Aevatar.Core.Tests.TestStates;
+using Aevatar.GAgents.MyArtifactGAgent;
 using Shouldly;
 
 namespace Aevatar.GAgents.Tests;

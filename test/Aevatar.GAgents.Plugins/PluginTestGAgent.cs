@@ -12,7 +12,7 @@ public class PluginTestGAgentState : StateBase
 
 public class PluginTestStateLogEvent : StateLogEventBase<PluginTestStateLogEvent>
 {
-    [Id(0)] public Guid Id { get; set; }
+    [Id(0)] public override Guid Id { get; set; }
 }
 
 [GenerateSerializer]

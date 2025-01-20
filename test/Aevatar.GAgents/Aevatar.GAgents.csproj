@@ -13,7 +13,12 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Aevatar.SourceGenerator" Version="1.0.3" />
+        <PackageReference Include="Aevatar.SourceGenerator" Version="1.0.10" />
+        <PackageReference Include="Microsoft.Orleans.CodeGenerator" Version="9.0.1" />
     </ItemGroup>
+
+<!--    <ItemGroup>-->
+<!--        <Compile Include="$(IntermediateOutputPath)\generated\*.cs" />-->
+<!--    </ItemGroup>-->
 
 </Project>

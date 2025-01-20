@@ -3,7 +3,6 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
 using System.Text;
 using Aevatar.Core.Abstractions;
-using Aevatar.GAgents;
 using Aevatar.SourceGenerator;
 using Shouldly;
 using Xunit.Abstractions;
@@ -52,9 +51,10 @@ namespace Aevatar.GAgents
 
         // Assert.
         var generatedTrees = outputCompilation.SyntaxTrees.ToList();
-        generatedTrees.Count.ShouldBe(2);// Original + Generated
+        generatedTrees.Count.ShouldBe(3);
         var generatedCode = generatedTrees.Last().ToString();
-        generatedCode.ShouldContain("public class MyArtifactGAgent");
-        _output.WriteLine(generatedCode);
+        _output.WriteLine(generatedTrees[1].ToString());
+        _output.WriteLine(generatedTrees[2].ToString());
+        generatedCode.ShouldContain("public partial class MyArtifactGAgent");
     }
 }

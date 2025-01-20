@@ -10,7 +10,7 @@ namespace Aevatar.SourceGenerator.Tests;
 public interface ITestMyArtifactGAgent : IStateGAgent<GeneratedGAgentState>;
 
 [GAgent(nameof(TestMyArtifact))]
-public class TestMyArtifactGAgent : GAgentBase<GeneratedGAgentState, GeneratedStateLogEvent>, ITestMyArtifactGAgent
+public class TestMyArtifactGAgent : GAgentBase<GeneratedGAgentState, GeneratedStateLogEvent>, ITestMyArtifactGAgent, IGrain
 {
     private readonly TestMyArtifact _artifact;
 

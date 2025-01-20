@@ -19,6 +19,20 @@ public class GAgentSourceGenerator : IIncrementalGenerator
 
         var compilationAndTypes = context.CompilationProvider.Combine(typeDeclarations.Collect());
 
+        context.RegisterImplementationSourceOutput(typeDeclarations,
+            static (spc, typeDeclaration) =>
+            {
+                var keyword = typeDeclaration.Keyword.Text;
+                var identifier = typeDeclaration.Identifier.Text;
+                if (keyword == "interface" && identifier.StartsWith("I"))
+                {
+                    identifier = identifier.Substring(1);
+                }
+
+                var gAgentBaseInherit = typeDeclaration.BaseList.ToString().Replace("IArtifact", "GAgentBase");
+                var generatedCode = GenerateGAgentAbstractionCode($"{identifier}GAgent", gAgentBaseInherit);
+                spc.AddSource($"{identifier}GAgent.abstraction.g.cs", SourceText.From(generatedCode, Encoding.UTF8));
+            });
         context.RegisterSourceOutput(compilationAndTypes,
             static (spc, source) => Execute(source.Left, source.Right, spc));
     }
@@ -63,33 +77,47 @@ public class GAgentSourceGenerator : IIncrementalGenerator
             {
                 typeName = typeName.Substring(1);
             }
-            var generatedTypeName = $"{typeName}GAgent";
+            var generatedGAgentTypeName = $"{typeName}GAgent";
 
-            var generatedCode = GenerateGAgentClassCode(
+            var generatedCode = GenerateGAgentImplementationCode(
                 typeNamespace,
-                typeName.ToLower(),
-                generatedTypeName,
+                typeName,
+                generatedGAgentTypeName,
                 typeSymbol.Name,
                 stateType,
                 stateLogEventType
             );
 
-            context.AddSource($"{generatedTypeName}.avatar.g.cs", SourceText.From(generatedCode, Encoding.UTF8));
+            context.AddSource($"{generatedGAgentTypeName}.implementation.g.cs", SourceText.From(generatedCode, Encoding.UTF8));
         }
     }
 
-    private static string GenerateGAgentClassCode(
+    private static string GenerateGAgentAbstractionCode(
+        string gAgentTypeName,
+        string gAgentBaseInherit)
+    {
+        var generatedCode = AbstractionTemplate
+            .Replace("{ClassNamespace}", $"Aevatar.GAgents.{gAgentTypeName}")
+            .Replace("{ClassName}", gAgentTypeName)
+            .Replace("{GAgentBaseInherit}", gAgentBaseInherit);
+
+        return generatedCode;
+    }
+
+    private static string GenerateGAgentImplementationCode(
         string typeNamespace,
-        string gAgentAlias,
         string typeName,
+        string gAgentTypeName,
         string artifactTypeName,
         string gAgentStateType,
         string gAgentStateLogEventType)
     {
-        var generatedCode = Template
-            .Replace("{ClassNamespace}", typeNamespace)
-            .Replace("{GAgentAlias}", gAgentAlias)
-            .Replace("{ClassName}", typeName)
+        var generatedCode = ImplementationTemplate
+            .Replace("{UsingNamespace}", typeNamespace)
+            .Replace("{ClassNamespace}", $"Aevatar.GAgents.{gAgentTypeName}")
+            .Replace("{TypeName}", typeName)
+            .Replace("{GAgentAlias}", typeName.ToLower())
+            .Replace("{ClassName}", gAgentTypeName)
             .Replace("{ArtifactTypeName}", artifactTypeName)
             .Replace("{GAgentStateType}", gAgentStateType)
             .Replace("{GAgentStateLogEventType}", gAgentStateLogEventType);
@@ -97,26 +125,39 @@ public class GAgentSourceGenerator : IIncrementalGenerator
         return generatedCode;
     }
 
-    private const string Template = @"
-using System;
+    private const string AbstractionTemplate = @"using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Aevatar.Core;
+using Aevatar.Core.Abstractions;
+
+namespace {ClassNamespace};
+
+public interface I{ClassName} : IGAgent;
+
+public partial class {ClassName} {GAgentBaseInherit}, I{ClassName};
+
+";
+
+    private const string ImplementationTemplate = @"using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
+using {UsingNamespace};
 
 namespace {ClassNamespace};
 
-public interface I{ClassName} : IStateGAgent<{GAgentStateType}>;
-
 [GAgent(""{GAgentAlias}"")]
-public class {ClassName} : GAgentBase<{GAgentStateType}, {GAgentStateLogEventType}>, I{ClassName}, IArtifactGAgent
+public partial class {ClassName} : IArtifactGAgent
 {
     private readonly {ArtifactTypeName} _artifact;
 
-    public {ClassName}(ILogger<{ClassName}> logger, {ArtifactTypeName} artifact) : base(logger)
+    public {ClassName}(ILogger<{ClassName}> logger) : base(logger)
     {
-        _artifact = artifact;
+        _artifact = ActivatorUtilities.CreateInstance<{TypeName}>(ServiceProvider);
     }
 
     public override Task<string> GetDescriptionAsync()

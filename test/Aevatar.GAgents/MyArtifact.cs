@@ -1,4 +1,5 @@
 ﻿using Aevatar.Core.Abstractions;
+using Volo.Abp.DependencyInjection;
 
 namespace Aevatar.GAgents;
 
@@ -13,7 +14,7 @@ public interface IMyArtifact : IArtifact<GeneratedGAgentState, GeneratedStateLog
     string TestMethod();
 }
 
-public class MyArtifact : IMyArtifact
+public class MyArtifact : IMyArtifact, ISingletonDependency
 {
     public string GetDescription() => "MyArtifact Description";
 

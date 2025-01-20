@@ -1,7 +1,9 @@
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
+using Aevatar.GAgents.MyArtifactGAgent;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.Extensions.DependencyInjection;
+using Orleans.Configuration;
 
 namespace Aevatar.ArtifactGAgent.Extensions;
 
@@ -10,13 +12,20 @@ public static class OrleansHostExtensions
     public static ISiloBuilder UseArtifactGAgent(this ISiloBuilder siloBuilder)
     {
         return siloBuilder
-            .ConfigureServices(services =>
+            .Configure<GrainTypeOptions>(RegisterArtifactGAgents);
+    }
+    
+    private static void RegisterArtifactGAgents(GrainTypeOptions options)
+    {
+        var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+        foreach (var assembly in assemblies)
+        {
+            var types = assembly.GetTypes()
+                .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(IArtifactGAgent).IsAssignableFrom(t));
+            foreach (var type in types)
             {
-                services.AddSingleton<IGAgentFactory, GAgentFactory>();
-                services.AddSingleton<ApplicationPartManager>();
-                services.AddSingleton<ArtifactGAgentLoader>();
-                services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>>(sp =>
-                    sp.GetRequiredService<ArtifactGAgentLoader>());
-            });
+                options.Classes.Add(type);
+            }
+        }
     }
 }
