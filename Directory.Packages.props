@@ -163,5 +163,6 @@
     <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Qdrant" Version="1.33.0-preview" />
     <PackageVersion Include="Microsoft.SemanticKernel.PromptTemplates.Handlebars" Version="1.32.0" />
     <PackageVersion Include="Microsoft.SemanticKernel.Connectors.AzureAIInference" Version="1.33.0-beta" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Google" Version="1.33.0-alpha" />
   </ItemGroup>
 </Project>

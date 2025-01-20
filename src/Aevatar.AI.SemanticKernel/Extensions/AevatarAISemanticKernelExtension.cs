@@ -58,6 +58,13 @@ public static class AevatarAISemanticKernelExtension
 
         return services;
     }
+    
+    public static IServiceCollection AddGemini(this IServiceCollection services)
+    {
+        services.AddKeyedTransient<IBrain, GeminiBrain>(GeminiConfig.ConfigSectionName);
+
+        return services;
+    }
 
     public static IServiceCollection AddQdrantVectorStore(this IServiceCollection services)
     {
