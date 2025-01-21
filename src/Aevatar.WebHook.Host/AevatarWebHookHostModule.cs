@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Aevatar.Core;
+using Aevatar.Core.Abstractions;
 using Aevatar.Webhook.Extensions;
 using Aevatar.Webhook.SDK.Handler;
 using Microsoft.AspNetCore.Builder;
