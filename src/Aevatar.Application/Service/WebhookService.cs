@@ -13,7 +13,7 @@ namespace Aevatar.Service;
 
 public interface IWebhookService
 {
-    Task UploadCodeAsync(string webhookId, string version, byte[]? codeBytes);
+    Task CreateWebhookAsync(string webhookId, string version, byte[]? codeBytes);
     Task<string> GetWebhookCodeAsync(string webhookId, string version);
     Task DestroyWebhookAsync(string inputWebhookId, string inputVersion);
 }
@@ -31,7 +31,7 @@ public class WebhookService: ApplicationService, IWebhookService
         _webhookDeployOptions = webhookDeployOptions.Value;
     }
 
-    public async Task UploadCodeAsync(string webhookId, string version, byte[]? codeBytes)
+    public async Task CreateWebhookAsync(string webhookId, string version, byte[]? codeBytes)
     {
         if (codeBytes !=null)
         {

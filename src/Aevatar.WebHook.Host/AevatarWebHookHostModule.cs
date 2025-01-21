@@ -17,8 +17,7 @@ namespace Aevatar.Webhook;
 
 [DependsOn(typeof(AbpAutofacModule),
     typeof(AbpAutoMapperModule),
-    typeof(AbpAspNetCoreSerilogModule),
-    typeof(AevatarWebHookTemplateModule)
+    typeof(AbpAspNetCoreSerilogModule)
 )]
 public class AevatarListenerHostModule : AbpModule
 {
@@ -71,7 +70,7 @@ public class AevatarListenerHostModule : AbpModule
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapWebhookHandlers(handlers,webhookId);
-            endpoints.MapHealthChecks("/health");
+            endpoints.MapHealthChecks($"/{webhookId}/health");
         });
        
         app.UseCors();

@@ -32,7 +32,7 @@ public class WebhookController : AevatarController
         {
             codeBytes = input.Code.GetAllBytes();
         }
-         await  _webhookService.UploadCodeAsync(webhookId,version,codeBytes);
+         await  _webhookService.CreateWebhookAsync(webhookId,version,codeBytes);
     }
 
 
