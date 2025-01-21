@@ -3,7 +3,6 @@ using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Core.Abstractions.Plugin;
 using Aevatar.Plugins;
-using Aevatar.ArtifactGAgent.Extensions;
 using Aevatar.Plugins.Extensions;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;

@@ -9,11 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\src\Aevatar.ArtifactGAgent\Aevatar.ArtifactGAgent.csproj" />
+        <ProjectReference Include="..\..\src\Aevatar.Core\Aevatar.Core.csproj" />
     </ItemGroup>
-
-<!--    <ItemGroup>-->
-<!--        <PackageReference Include="Aevatar.SourceGenerator" Version="1.0.14" />-->
-<!--    </ItemGroup>-->
 
 </Project>

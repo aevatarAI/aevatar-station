@@ -22,7 +22,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\..\src\Aevatar.ArtifactGAgent\Aevatar.ArtifactGAgent.csproj" />
         <ProjectReference Include="..\..\..\src\Aevatar.Core\Aevatar.Core.csproj" />
         <ProjectReference Include="..\..\..\src\Aevatar.EventSourcing.MongoDB\Aevatar.EventSourcing.MongoDB.csproj" />
         <ProjectReference Include="..\..\..\src\Aevatar.Plugins\Aevatar.Plugins.csproj" />

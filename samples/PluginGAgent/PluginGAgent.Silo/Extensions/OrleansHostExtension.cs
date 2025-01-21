@@ -1,5 +1,4 @@
 using System.Net;
-using Aevatar.ArtifactGAgent.Extensions;
 using Aevatar.EventSourcing.MongoDB.Hosting;
 using Aevatar.Plugins;
 using Aevatar.Plugins.Extensions;
@@ -84,8 +83,7 @@ public static class OrleansHostExtension
                     })
                     .AddMemoryStreams("Aevatar")
                     .AddMemoryStreams("AISmart")
-                    .UsePluginGAgents()
-                    .UseArtifactGAgent();
+                    .UsePluginGAgents();
             })
             .UseConsoleLifetime();
         

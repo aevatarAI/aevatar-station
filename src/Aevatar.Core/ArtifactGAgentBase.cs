@@ -1,9 +1,8 @@
-using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Aevatar.ArtifactGAgent;
+namespace Aevatar.Core;
 
 [GAgent]
 public class ArtifactGAgentBase<TArtifact, TState, TStateLogEvent>
