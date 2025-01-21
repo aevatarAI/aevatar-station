@@ -135,7 +135,7 @@ public class KubernetesWebhookManager: IWebhookDeployManager, ISingletonDependen
     
     private string GetHealthPath(string appId)
     {
-        return $"/health";
+        return $"/{appId}/health";
     }
 
 
