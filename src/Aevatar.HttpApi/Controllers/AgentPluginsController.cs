@@ -5,6 +5,7 @@ using Aevatar.Common;
 using Aevatar.Controllers;
 using Aevatar.Core.Abstractions;
 using Aevatar.Core.Abstractions.Plugin;
+using Aevatar.Service;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -18,9 +19,13 @@ namespace Aevatar;
 public class AgentPluginsController : AevatarController
 {
     private readonly IPluginGAgentManager _pluginGAgentManager;
-    public AgentPluginsController(IPluginGAgentManager pluginGAgentManager,IGAgentFactory gAgentFactory)
+    private readonly IUserAppService _userAppService;
+    public AgentPluginsController(
+        IPluginGAgentManager pluginGAgentManager, 
+        IUserAppService userAppService)
     {
         _pluginGAgentManager = pluginGAgentManager;
+        _userAppService = userAppService;
     }
 
     [HttpPut]
@@ -39,14 +44,14 @@ public class AgentPluginsController : AevatarController
         return await _pluginGAgentManager.AddPluginAsync(new AddPluginDto
         {
             Code = codeBytes,
-            TenantId = GetTenantId()
+            TenantId = _userAppService.GetCurrentUserId()
         });
     }
     
     [HttpGet("PluginsWithDescription")]
     public async Task<PluginsInformation> GetPluginsWithDescriptionAsync()
     {
-        return await  _pluginGAgentManager.GetPluginsWithDescriptionAsync(GetTenantId());
+        return await  _pluginGAgentManager.GetPluginsWithDescriptionAsync(_userAppService.GetCurrentUserId());
     }
     
     [HttpPost("RemovePluginAsync")]
@@ -54,7 +59,7 @@ public class AgentPluginsController : AevatarController
     {
          await  _pluginGAgentManager.RemovePluginAsync(new RemovePluginDto()
         {
-            TenantId = GetTenantId(),
+            TenantId = _userAppService.GetCurrentUserId(),
             PluginCodeId = removeAgentPluginDto.PluginCodeId
         }
         );
@@ -70,16 +75,11 @@ public class AgentPluginsController : AevatarController
         byte[] codeBytes = input.Code.GetAllBytes();
         await  _pluginGAgentManager.UpdatePluginAsync(new UpdatePluginDto
             {
-                TenantId = GetTenantId(),
+                TenantId = _userAppService.GetCurrentUserId(),
                 PluginCodeId = input.PluginCodeId,
                 Code = codeBytes
             }
         );
     }
-
-    private Guid GetTenantId()
-    {
-        return GuidUtil.StringToGuid(CurrentUser.UserName.IsNullOrEmpty() ? ClientId: CurrentUser.UserName);
-    }
-
+    
 }

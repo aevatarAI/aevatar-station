@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Reflection;
 using Aevatar.Agents.Combination;
 using Aevatar.Agents.Combination.GEvents;
 using Aevatar.Agents.Combination.Models;
@@ -34,7 +35,7 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
         {
             Id = Guid.NewGuid(),
             CombineGAgentId = this.GetPrimaryKey(),
-            UserAddress = data.UserAddress,
+            UserId = data.UserId,
             Name = data.Name,
             GroupId = data.GroupId,
             AgentComponent = data.AgentComponent
@@ -51,8 +52,9 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
             Name = State.Name,
             GroupId = State.GroupId,
             AgentComponent = State.AgentComponent,
-            UserAddress = State.UserAddress,
-            Status = State.Status
+            UserId = State.UserId,
+            Status = State.Status,
+            EventInfoList = State.EventInfoList
         };
         return combinationData;
     }
@@ -104,6 +106,52 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
         --State.RegisteredAgents;
         return Task.CompletedTask;
     }
+
+    public async Task UpdateSubscribedEventAsync(List<Type>? eventTypeList)
+    {
+        if (eventTypeList == null)
+        {
+            return;
+        }
+
+        var originEventList = State.EventInfoList;
+        var eventInfoList = new List<EventDescription>();
+        foreach (var t in eventTypeList)
+        {
+            if (originEventList.Exists(x => x.EventType.Name == t.Name) || eventInfoList.Exists(x => x.EventType.Name == t.Name))
+            {
+                continue;
+            }
+            
+            PropertyInfo[] properties = t.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
+            var eventPropertyList = new List<EventProperty>();
+            foreach (PropertyInfo property in properties)
+            {
+                var eventProperty = new EventProperty()
+                {
+                    Name = property.Name,
+                    Description = property.GetCustomAttribute<DescriptionAttribute>()?.Description ?? property.Name,
+                    Type = property.PropertyType.ToString()
+                };
+                eventPropertyList.Add(eventProperty);
+            }
+            
+            eventInfoList.Add(new EventDescription()
+            {
+                EventType = t,
+                Description = t.GetCustomAttribute<DescriptionAttribute>()?.Description ?? "No description available",
+                EventProperties = eventPropertyList
+            });
+        }
+        
+        originEventList.AddRange(eventInfoList);
+        RaiseEvent(new UpdateSubscribedEventInfoGEvent()
+        {
+            EventInfoList = originEventList
+        });
+        await ConfirmEvents();
+    }
+    
     
     protected override void GAgentTransitionState(CombinationGAgentState state, StateLogEventBase<CombinationAgentGEvent> @event)
     {
@@ -113,9 +161,10 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
                 State.Id = combineAgentGEvent.CombineGAgentId;
                 State.Name = combineAgentGEvent.Name;
                 State.GroupId = combineAgentGEvent.GroupId;
-                State.UserAddress = combineAgentGEvent.UserAddress;
+                State.UserId = combineAgentGEvent.UserId;
                 State.Status = AgentStatus.Running;
                 State.AgentComponent = combineAgentGEvent.AgentComponent;
+                State.CreateTime = DateTime.Now;
                 break;
             case UpdateCombinationGEvent combineCombinationGEvent:
                 State.Name = combineCombinationGEvent.Name;
@@ -126,7 +175,9 @@ public class CombinationGAgent : GAgentBase<CombinationGAgentState, CombinationA
                 State.AgentComponent = new ();
                 State.GroupId = "";
                 State.Status = AgentStatus.Deleted;
-                State.UserAddress = "";
+                break;
+            case UpdateSubscribedEventInfoGEvent updateSubscribedEventInfoGEvent:
+                State.EventInfoList = updateSubscribedEventInfoGEvent.EventInfoList;
                 break;
         }
     }
@@ -141,4 +192,5 @@ public interface ICombinationGAgent : IStateGAgent<CombinationGAgentState>
     Task<AgentStatus> GetStatusAsync();
     Task DeleteCombinationAsync();
     Task PublishEventAsync<T>(T @event) where T : EventBase;
+    Task UpdateSubscribedEventAsync(List<Type>? eventTypeList);
 }

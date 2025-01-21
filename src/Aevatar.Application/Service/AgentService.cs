@@ -11,11 +11,13 @@ using Aevatar.Application.Grains.Agents.Atomic;
 using Aevatar.Application.Grains.Agents.Combination;
 using Aevatar.AtomicAgent;
 using Aevatar.CombinationAgent;
-using Aevatar.Core;
+using Aevatar.Common;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
 using Aevatar.CQRS.Provider;
+using Aevatar.Options;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Nest;
 using Newtonsoft.Json;
 using Orleans;
@@ -35,6 +37,8 @@ public class AgentService : ApplicationService, IAgentService
     private readonly IObjectMapper _objectMapper;
     private readonly IGAgentFactory _gAgentFactory;
     private readonly IGAgentManager _gAgentManager;
+    private readonly IUserAppService _userAppService;
+    private readonly IOptionsMonitor<AgentOptions> _agentOptions;
     
     private const string GroupAgentName = "GroupAgent";
     private const string IndexSuffix = "index";
@@ -47,7 +51,9 @@ public class AgentService : ApplicationService, IAgentService
         ILogger<AgentService> logger,  
         IObjectMapper objectMapper, 
         IGAgentFactory gAgentFactory, 
-        IGAgentManager gAgentManager)
+        IGAgentManager gAgentManager, 
+        IUserAppService userAppService, 
+        IOptionsMonitor<AgentOptions> agentOptions)
     {
         _clusterClient = clusterClient;
         _cqrsProvider = cqrsProvider;
@@ -55,6 +61,8 @@ public class AgentService : ApplicationService, IAgentService
         _objectMapper = objectMapper;
         _gAgentFactory = gAgentFactory;
         _gAgentManager = gAgentManager;
+        _userAppService = userAppService;
+        _agentOptions = agentOptions;
     }
     
     public async Task<AtomicAgentDto> GetAtomicAgentAsync(string id)
@@ -74,7 +82,8 @@ public class AgentService : ApplicationService, IAgentService
             Id = id,
             Type = agentData.Type,
             Name = agentData.Name,
-            Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentData.Properties)
+            Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentData.Properties),
+            GrainId = atomicAgent.GetGrainId()
         };
         
         return resp;
@@ -83,7 +92,7 @@ public class AgentService : ApplicationService, IAgentService
     public async Task<AtomicAgentDto> CreateAtomicAgentAsync(CreateAtomicAgentDto createDto)
     {
         CheckCreateParam(createDto);
-        var address = GetCurrentUserAddress();
+        var userId = _userAppService.GetCurrentUserId();
         var guid = Guid.NewGuid();
         var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(guid);
         var agentData = _objectMapper.Map<CreateAtomicAgentDto, AtomicAgentData>(createDto);
@@ -92,10 +101,11 @@ public class AgentService : ApplicationService, IAgentService
             agentData.Properties = JsonConvert.SerializeObject(createDto.Properties);
         }
         
-        agentData.UserAddress = address;
+        agentData.UserId = userId;
         await atomicAgent.CreateAgentAsync(agentData);
         var resp = _objectMapper.Map<CreateAtomicAgentDto, AtomicAgentDto>(createDto);
         resp.Id = guid.ToString();
+        resp.GrainId = atomicAgent.GetGrainId();
         return resp;
     }
 
@@ -131,24 +141,43 @@ public class AgentService : ApplicationService, IAgentService
         {
             agentData.Name = updateDto.Name;
         }
-
-        var newProperties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentData.Properties);
-        if (newProperties != null && updateDto.Properties != null)
+        
+        if (!updateDto.Properties.IsNullOrEmpty())
         {
-            foreach (var kvp in updateDto.Properties)
-            {
-                if (newProperties.ContainsKey(kvp.Key))
-                {
-                    newProperties[kvp.Key] = kvp.Value;
-                }
-            }
-            
-            agentData.Properties = JsonConvert.SerializeObject(newProperties);
+            agentData.Properties = JsonConvert.SerializeObject(updateDto.Properties);
         }
         
         await atomicAgent.UpdateAgentAsync(agentData);
         resp.Name = agentData.Name;
-        resp.Properties = newProperties;
+        resp.GrainId = atomicAgent.GetGrainId();
+        
+        if (updateDto.Properties.IsNullOrEmpty())
+        {
+            return resp;
+        }
+        
+        resp.Properties = updateDto.Properties;
+        
+        // update property in business agent of groups
+        var agentPropertyDict = await GetInitializedDtos();
+        foreach (var kvp in agentData.Groups)
+        {
+            var businessAgentGuid = ParseGuid(kvp.Value);
+            
+            InitializationEventBase? dto = null;
+                   
+            if (agentPropertyDict.TryGetValue(agentData.Type, out var initializeParam) && !agentData.Properties.IsNullOrEmpty()) 
+            {
+                if (initializeParam != null)
+                {
+                    dto = SetupInitializedDto(initializeParam, agentData.Properties);
+                }
+            }
+            
+            var businessAgent = await _gAgentFactory.GetGAgentAsync(agentData.Type, businessAgentGuid, initializeDto: dto);
+            _logger.LogInformation("SetGroupAsync businessAgentGuid: {businessAgentGuid}", businessAgentGuid);
+            
+        }
 
         return resp;
     }
@@ -199,18 +228,12 @@ public class AgentService : ApplicationService, IAgentService
         
         await atomicAgent.DeleteAgentAsync();
     }
-
-    private string GetCurrentUserAddress()
-    {
-         // todo
-        return "my_address";
-    }
     
     public async Task<CombinationAgentDto> CombineAgentAsync(CombineAgentDto combineAgentDto)
     { 
         CheckCombineParam(combineAgentDto);
         
-        var address = GetCurrentUserAddress();
+        var userId = _userAppService.GetCurrentUserId();
         var guid = Guid.NewGuid();
         var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(guid);
         var status = await combinationAgent.GetStatusAsync();
@@ -224,7 +247,7 @@ public class AgentService : ApplicationService, IAgentService
         var components = await SetGroupAsync(combineAgentDto.AgentComponent, guid);
         var data = _objectMapper.Map<CombineAgentDto, CombinationAgentData>(combineAgentDto);
         data.GroupId = guid.ToString();
-        data.UserAddress = address;
+        data.UserId = userId;
         data.AgentComponent = components;
         await combinationAgent.CombineAgentAsync(data);
 
@@ -232,7 +255,8 @@ public class AgentService : ApplicationService, IAgentService
         {
             Id = guid.ToString(),
             Name = data.Name,
-            AgentComponent = components
+            AgentComponent = components,
+            GrainId = combinationAgent.GetGrainId()
         };
    
         return resp;
@@ -274,7 +298,8 @@ public class AgentService : ApplicationService, IAgentService
         {
             Id = id,
             Name = combinationData.Name,
-            AgentComponent = combinationData.AgentComponent
+            AgentComponent = combinationData.AgentComponent,
+            GrainId = combinationAgent.GetGrainId()
         };
         
         return resp;
@@ -300,38 +325,22 @@ public class AgentService : ApplicationService, IAgentService
             
             InitializationEventBase? dto = null;
                    
+            // set property in business agent of groups
             if (agentPropertyDict.TryGetValue(agentData.Type, out var initializeParam) && !agentData.Properties.IsNullOrEmpty()) 
             {
                 if (initializeParam != null)
                 {
-                    var properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentData.Properties);
-                    var actualDto = Activator.CreateInstance(initializeParam.DtoType);
-                    dto = (InitializationEventBase)actualDto!;
-                    
-                    foreach (var kvp in properties)
-                    {
-                        var propertyName = kvp.Key; 
-                        var propertyValue = kvp.Value;
-                        var propertyType = initializeParam.Properties.FirstOrDefault(x => x.Name == propertyName)?.Type;
-                        if (propertyType == null)
-                        {
-                            continue;
-                        }
-                        
-                        var propertyInfo = initializeParam.DtoType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-                        object convertedValue = ConvertValue(propertyType, propertyValue);
-                        propertyInfo?.SetValue(dto, convertedValue);
-                        _logger.LogInformation("SetGroupAsync propertyName: {propertyName}, propertyValue: {propertyValue}, propertyType: {propertyType}", propertyName, propertyValue, propertyType);
-                    }
+                    dto = SetupInitializedDto(initializeParam, agentData.Properties);
                 }
             }
             
             var businessAgent = await _gAgentFactory.GetGAgentAsync(agentData.Type, initializeDto: dto);
             await combinationAgent.RegisterAsync(businessAgent);
-
+            var eventData = await businessAgent.GetAllSubscribedEventsAsync();
+            await combinationAgent.UpdateSubscribedEventAsync(eventData);
             var primaryKey = businessAgent.GetPrimaryKey().ToString();
             components.Add(agentId, primaryKey);
-            await atomicAgent.AddToGroupAsync(guid.ToString());
+            await atomicAgent.AddToGroupAsync(guid.ToString(), primaryKey);
         }
 
         return components;
@@ -377,7 +386,8 @@ public class AgentService : ApplicationService, IAgentService
         {
             Id = id,
             Name = combinationData.Name,
-            AgentComponent = combinationData.AgentComponent
+            AgentComponent = combinationData.AgentComponent,
+            GrainId = combinationAgent.GetGrainId()
         };
 
         return resp;
@@ -428,11 +438,11 @@ public class AgentService : ApplicationService, IAgentService
             throw new UserFriendlyException("agent not exist");
         }
         
-        var address = GetCurrentUserAddress();
-        if (agentData.UserAddress != address)
+        var userId = _userAppService.GetCurrentUserId();
+        if (agentData.UserId != userId)
         {
-            _logger.LogInformation("agent not belong to user, id: {id}, ownerAddress: {ownerAddress}", 
-                guid, agentData.UserAddress);
+            _logger.LogInformation("agent not belong to user, id: {id}, owner: {owner}", 
+                guid, agentData.UserId);
             throw new UserFriendlyException("agent not belong to user");
         }
     }
@@ -447,11 +457,11 @@ public class AgentService : ApplicationService, IAgentService
             throw new UserFriendlyException("combination not exist");
         }
         
-        var address = GetCurrentUserAddress();
-        if (combinationData.UserAddress != address)
+        var userId = _userAppService.GetCurrentUserId();
+        if (combinationData.UserId != userId)
         {
-            _logger.LogInformation("combination not belong to user address: {address}, owner: {owner}", 
-                address, combinationData.UserAddress);
+            _logger.LogInformation("combination not belong to user: {user}, owner: {owner}", 
+                userId, combinationData.UserId);
             throw new UserFriendlyException("combination not belong to user!");
         }
     }
@@ -528,21 +538,14 @@ public class AgentService : ApplicationService, IAgentService
         }
     }
     
-    public async Task<Dictionary<string, AgentInitializedDto?>> GetInitializedDtos()
+    public async Task<Dictionary<string, AgentInitializedData?>> GetInitializedDtos()
     {
-        var systemAgents = new List<string>()
-        {
-            "GroupGAgent",
-            "PublishingGAgent",
-            "SubscriptionGAgent",
-            "AtomicGAgent",
-            "CombinationGAgent",
-        };
+        var systemAgents = _agentOptions.CurrentValue.SystemAgentList;
         var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
         var validAgent = availableGAgents.Where(a => a.Namespace.StartsWith("Aevatar")).ToList();
         var businessAgent = validAgent.Where(a => !systemAgents.Contains(a.Name)).ToList();
 
-        var dict = new Dictionary<string, AgentInitializedDto?>();
+        var dict = new Dictionary<string, AgentInitializedData?>();
         
         foreach (var type in businessAgent)
         {
@@ -554,9 +557,9 @@ public class AgentService : ApplicationService, IAgentService
                 continue;
             }
             
-            PropertyInfo[] properties = initializeDtoType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
+            PropertyInfo[] properties = initializeDtoType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
 
-            var initializeDto = new AgentInitializedDto
+            var initializeDto = new AgentInitializedData
             {
                 DtoType = initializeDtoType
             };
@@ -602,27 +605,36 @@ public class AgentService : ApplicationService, IAgentService
         }
         return resp;
     }
-    
-    private static object ConvertValue(Type targetType, object value)
+
+    private InitializationEventBase SetupInitializedDto(AgentInitializedData initializedData,  string propertiesString)
     {
-        if (value == null)
+        var properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(propertiesString);
+        var actualDto = Activator.CreateInstance(initializedData.DtoType);
+        var dto = (InitializationEventBase)actualDto!;
+                    
+        foreach (var kvp in properties)
         {
-            return null;
-        }
-        
-        if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(List<>))
-        {
-            var elementType = targetType.GetGenericArguments()[0];
-            var list = Activator.CreateInstance(targetType) as System.Collections.IList;
-
-            foreach (var item in (IEnumerable<object>)value)
+            var propertyName = kvp.Key; 
+            var propertyValue = kvp.Value;
+            var propertyType = initializedData.Properties.FirstOrDefault(x => x.Name == propertyName)?.Type;
+            if (propertyType == null)
             {
-                list.Add(ConvertValue(elementType, item));
+                continue;
             }
-
-            return list;
+                        
+            var propertyInfo = initializedData.DtoType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+            if (propertyInfo == null || !propertyInfo.CanWrite)
+            {
+                _logger.LogInformation("Property {propertyName} not found or cannot be written.", propertyName);
+                throw new UserFriendlyException("property could not be found or cannot be written");
+            }
+            
+            object convertedValue = ReflectionUtil.ConvertValue(propertyType, propertyValue);
+            propertyInfo?.SetValue(dto, convertedValue);
+            _logger.LogInformation("SetGroupAsync propertyName: {propertyName}, propertyValue: {propertyValue}, propertyType: {propertyType}", propertyName, propertyValue, propertyType);
         }
-        
-        return Convert.ChangeType(value, targetType);
+
+        return dto;
     }
+    
 }
