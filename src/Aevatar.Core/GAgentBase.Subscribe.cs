@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Aevatar.Core;
 
-public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
+public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfiguration>
 {
     protected sealed override void TransitionState(TState state, StateLogEventBase<TStateLogEvent> @event)
     {
@@ -22,8 +22,8 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
                 if (State.Parent == clearParentEvent.Parent)
                     State.Parent = default;
                 break;
-            case InnerSetInitializationEventTypeStateLogEvent setInnerEvent:
-                State.InitializationEventType = setInnerEvent.InitializationEventType;
+            case InnerConfigStateLogEvent setInnerEvent:
+                State.ConfigurationType = setInnerEvent.ConfigurationType;
                 break;
         }
 

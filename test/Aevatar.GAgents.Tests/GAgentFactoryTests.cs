@@ -73,13 +73,13 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
         // Arrange & Act.
         var guid = Guid.NewGuid();
         var gAgent = await _gAgentFactory.GetGAgentAsync<IStateGAgent<NaiveTestGAgentState>>(guid,
-            new NaiveGAgentInitialize
+            new NaiveGAgentConfiguration
             {
-                InitialGreeting = "Test"
+                Greeting = "Test"
             });
 
-        var initializeDtoType = await gAgent.GetInitializationTypeAsync();
-        initializeDtoType.ShouldBe(typeof(NaiveGAgentInitialize));
+        var initializeDtoType = await gAgent.GetConfigurationTypeAsync();
+        initializeDtoType.ShouldBe(typeof(NaiveGAgentConfiguration));
 
         await TestHelper.WaitUntilAsync(_ => CheckState(gAgent), TimeSpan.FromSeconds(20));
 
@@ -106,9 +106,9 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
 
         {
             var gAgent = await _gAgentFactory.GetGAgentAsync("naiveTest", "Aevatar.Core.Tests.TestGAgents",
-                initializationEvent: new NaiveGAgentInitialize
+                configuration: new NaiveGAgentConfiguration
                 {
-                    InitialGreeting = "Test"
+                    Greeting = "Test"
                 });
             gAgent.ShouldNotBeNull();
             Should.NotThrow(() => gAgent.GetPrimaryKey());
@@ -141,8 +141,8 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
     {
         var gAgent =
             await _gAgentFactory.GetGAgentAsync(Guid.NewGuid(), "initialize", "Aevatar.Core.Tests.TestGAgents");
-        var initializeDtoType = await gAgent.GetInitializationTypeAsync();
-        initializeDtoType.ShouldBe(typeof(Initialize));
+        var initializeDtoType = await gAgent.GetConfigurationTypeAsync();
+        initializeDtoType.ShouldBe(typeof(Configuration));
     }
 
     [Fact(DisplayName = "The implementation of GetAvailableGAgentTypes works.")]

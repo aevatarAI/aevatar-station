@@ -67,7 +67,14 @@ public interface IGAgent : IGrainWithGuidKey
     /// Get the type of GAgent initialization event.
     /// </summary>
     /// <returns></returns>
-    Task<Type?> GetInitializationTypeAsync();
+    Task<Type?> GetConfigurationTypeAsync();
+
+    /// <summary>
+    /// Config the GAgent.
+    /// </summary>
+    /// <param name="configuration"></param>
+    /// <returns></returns>
+    Task ConfigAsync(ConfigurationBase configuration);
 }
 
 public interface IStateGAgent<TState> : IGAgent

@@ -14,27 +14,27 @@ public class InitializeDtoTestStateLogEvent : StateLogEventBase<InitializeDtoTes
     [Id(0)] public Guid Id { get; set; }
 }
 
-public class Initialize : InitializationEventBase
+public class Configuration : ConfigurationBase
 {
     [Id(0)] public string InitialGreeting { get; set; }
 }
 
 [GAgent("initialize")]
-public class InitializeDtoTestGAgent : GAgentBase<InitializeDtoTestGAgentState,
-    InitializeDtoTestStateLogEvent,EventBase, Initialize>
+public class ConfigurationDtoTestGAgent : GAgentBase<InitializeDtoTestGAgentState,
+    InitializeDtoTestStateLogEvent, EventBase, Configuration>
 {
-    public InitializeDtoTestGAgent(ILogger<InitializeDtoTestGAgent> logger) : base(logger)
+    public ConfigurationDtoTestGAgent(ILogger<ConfigurationDtoTestGAgent> logger) : base(logger)
     {
     }
 
-    public override Task InitializeAsync(Initialize initialize)
+    protected override Task ConfigAsync(Configuration configuration)
     {
         if (State.Content.IsNullOrEmpty())
         {
             State.Content = [];
         }
 
-        State.Content.Add(initialize.InitialGreeting);
+        State.Content.Add(configuration.InitialGreeting);
         return Task.CompletedTask;
     }
 
