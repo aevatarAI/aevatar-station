@@ -56,6 +56,16 @@ public class IngressHelper
                             }
                         }
                     }
+                },
+                Tls = new List<V1IngressTLS>
+                {
+                   new V1IngressTLS
+                   {
+                       Hosts = new List<string>()
+                       {
+                           hostName
+                       }
+                   }
                 }
             }
         };

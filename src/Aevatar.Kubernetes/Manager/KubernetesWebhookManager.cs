@@ -39,7 +39,7 @@ public class KubernetesWebhookManager: IWebhookDeployManager, ISingletonDependen
     {
         //Create query app appsetting config map
         var configMapName =
-            ConfigMapHelper.GetAppSettingConfigMapName(appId, version, KubernetesConstants.AppClientTypeQuery, null);
+            ConfigMapHelper.GetAppSettingConfigMapName(appId, version);
         var appSettingsContent = File.ReadAllText(KubernetesConstants.AppSettingTemplateFilePath);
         appSettingsContent = appSettingsContent.Replace(KubernetesConstants.PlaceHolderAppId, appId);
         appSettingsContent = appSettingsContent.Replace(KubernetesConstants.PlaceHolderVersion, version);
@@ -57,7 +57,7 @@ public class KubernetesWebhookManager: IWebhookDeployManager, ISingletonDependen
 
         //Create query app filebeat config map
         var sideCarConfigName =
-            ConfigMapHelper.GetAppFileBeatConfigMapName(appId, version, KubernetesConstants.AppClientTypeQuery, null);
+            ConfigMapHelper.GetAppFileBeatConfigMapName(appId, version);
         var sideCarConfigContent = File.ReadAllText(KubernetesConstants.AppFileBeatConfigTemplateFilePath);
         sideCarConfigContent = sideCarConfigContent.Replace(KubernetesConstants.PlaceHolderAppId, appId.ToLower());
         sideCarConfigContent = sideCarConfigContent.Replace(KubernetesConstants.PlaceHolderVersion, version.ToLower());
@@ -75,11 +75,11 @@ public class KubernetesWebhookManager: IWebhookDeployManager, ISingletonDependen
 
         //Create query app deployment
         var deploymentName =
-            DeploymentHelper.GetAppDeploymentName(appId, version, KubernetesConstants.AppClientTypeQuery, null);
+            DeploymentHelper.GetAppDeploymentName(appId, version);
         var deploymentLabelName =
-            DeploymentHelper.GetAppDeploymentLabelName(version, KubernetesConstants.AppClientTypeQuery, null);
+            DeploymentHelper.GetAppDeploymentLabelName(appId,version);
         var containerName =
-            ContainerHelper.GetAppContainerName(appId, version, KubernetesConstants.AppClientTypeQuery, null);
+            ContainerHelper.GetAppContainerName(appId, version);
         var targetPort = KubernetesConstants.AppContainerTargetPort;
         var maxSurge = KubernetesConstants.QueryPodMaxSurge;
         var maxUnavailable = KubernetesConstants.QueryPodMaxUnavailable;
@@ -87,9 +87,9 @@ public class KubernetesWebhookManager: IWebhookDeployManager, ISingletonDependen
         var deploymentExists = deployments.Items.Any(item => item.Metadata.Name == deploymentName);
         if (!deploymentExists)
         { 
-            var healthPath = GetHealthPath(appId, version);
+            var healthPath = GetHealthPath(appId);
             var deployment = DeploymentHelper.CreateAppDeploymentWithFileBeatSideCarDefinition(appId, version,
-                KubernetesConstants.AppClientTypeQuery, imageName, deploymentName, deploymentLabelName,
+                 imageName, deploymentName, deploymentLabelName,
                 1, containerName, targetPort, configMapName, sideCarConfigName, _kubernetesOptions.RequestCpuCore, _kubernetesOptions.RequestMemory, 
                 maxSurge, maxUnavailable, healthPath);
             // Create Deployment
@@ -107,7 +107,7 @@ public class KubernetesWebhookManager: IWebhookDeployManager, ISingletonDependen
         {
             var service =
                 ServiceHelper.CreateAppClusterIPServiceDefinition(appId, serviceName, serviceLabelName,
-                    deploymentLabelName, servicePortName, targetPort);
+                    deploymentLabelName, servicePortName, targetPort,targetPort);
             // Create Service
             await _kubernetesClientAdapter.CreateServiceAsync(service, KubernetesConstants.AppNameSpace);
             _logger.LogInformation("[KubernetesAppManager]Service {serviceName} created", serviceName);
@@ -116,8 +116,7 @@ public class KubernetesWebhookManager: IWebhookDeployManager, ISingletonDependen
         //Create query app ingress
         var ingressName = IngressHelper.GetAppIngressName(appId, version);
         var hostName = _kubernetesOptions.HostName;
-        // string rulePath = $"/{appId}";
-        var rulePath = $"/{appId}/{version}";
+        string rulePath = $"/{appId}";
         var ingresses = await _kubernetesClientAdapter.ListIngressAsync(KubernetesConstants.AppNameSpace);
         var ingressExists = ingresses.Items.Any(item => item.Metadata.Name == ingressName);
         if (!ingressExists)
@@ -134,9 +133,9 @@ public class KubernetesWebhookManager: IWebhookDeployManager, ISingletonDependen
     }
   
     
-    private string GetHealthPath(string appId, string version)
+    private string GetHealthPath(string appId)
     {
-        return $"/{appId}/{version}/health";
+        return $"/{appId}/health";
     }
 
 
@@ -147,7 +146,7 @@ public class KubernetesWebhookManager: IWebhookDeployManager, ISingletonDependen
 
         //Delete query app deployment
         var queryTypeAppDeploymentName =
-            DeploymentHelper.GetAppDeploymentName(appId, version, KubernetesConstants.AppClientTypeQuery, null);
+            DeploymentHelper.GetAppDeploymentName(appId, version);
         var queryTypeAppDeploymentExists =
             deployments.Items.Any(item => item.Metadata.Name == queryTypeAppDeploymentName);
         if (queryTypeAppDeploymentExists)
@@ -163,7 +162,7 @@ public class KubernetesWebhookManager: IWebhookDeployManager, ISingletonDependen
 
         //Delete query app appsetting config map
         var queryTypeAppConfigMapName =
-            ConfigMapHelper.GetAppSettingConfigMapName(appId, version, KubernetesConstants.AppClientTypeQuery, null);
+            ConfigMapHelper.GetAppSettingConfigMapName( appId, version);
         var queryTypeAppConfigMapExists =
             configMaps.Items.Any(configMap => configMap.Metadata.Name == queryTypeAppConfigMapName);
         if (queryTypeAppConfigMapExists)
@@ -176,7 +175,7 @@ public class KubernetesWebhookManager: IWebhookDeployManager, ISingletonDependen
 
         //Delete query app filebeat config map
         var queryTypeAppSideCarConfigName =
-            ConfigMapHelper.GetAppFileBeatConfigMapName(appId, version, KubernetesConstants.AppClientTypeQuery, null);
+            ConfigMapHelper.GetAppFileBeatConfigMapName(appId,version);
         var queryTypeAppSideCarConfigExists =
             configMaps.Items.Any(configMap => configMap.Metadata.Name == queryTypeAppSideCarConfigName);
         if (queryTypeAppSideCarConfigExists)
@@ -217,7 +216,7 @@ public class KubernetesWebhookManager: IWebhookDeployManager, ISingletonDependen
     public async Task RestartAppQueryPodsAsync(string appId, string version)
     {
         var queryClientDeploymentName =
-            DeploymentHelper.GetAppDeploymentName(appId, version, KubernetesConstants.AppClientTypeQuery, null);
+            DeploymentHelper.GetAppDeploymentName(appId, version);
         var deployments = await _kubernetesClientAdapter.ListDeploymentAsync(KubernetesConstants.AppNameSpace);
         var queryClientDeploymentExists =
             deployments.Items.Any(item => item.Metadata.Name == queryClientDeploymentName);

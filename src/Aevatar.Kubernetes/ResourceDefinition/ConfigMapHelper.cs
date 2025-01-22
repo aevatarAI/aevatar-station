@@ -4,29 +4,17 @@ namespace Aevatar.Kubernetes.ResourceDefinition;
 
 public class ConfigMapHelper
 {
-    public static string GetAppSettingConfigMapName(string appId, string version, string clientType,
-        string chainId)
+    public static string GetAppSettingConfigMapName(string appId, string version)
     {
         appId = appId.Replace("_", "-");
-        var name = $"appsettings-config-{appId}-{version}-{clientType}";
-        if (!string.IsNullOrWhiteSpace(chainId))
-        {
-            name += $"-{chainId}";
-        }
-
+        var name = $"appsettings-config-{appId}-{version}";
         return name.ToLower();
     }
 
-    public static string GetAppFileBeatConfigMapName(string appId, string version, string clientType,
-        string chainId)
+    public static string GetAppFileBeatConfigMapName(string appId, string version)
     {
         appId = appId.Replace("_", "-");
-        var name =  $"filebeat-config-{appId}-{version}-{clientType}";
-        if (!string.IsNullOrWhiteSpace(chainId))
-        {
-            name += $"-{chainId}";
-        }
-
+        var name =  $"filebeat-config-{appId}-{version}";
         return name.ToLower();
     }
 

@@ -16,7 +16,7 @@ public class ParamDto
 }
 
 
-public class AgentInitializedDto
+public class AgentInitializedData
 {
     public Type DtoType { get; set; }
     public List<PropertyDto> Properties { get; set; }
