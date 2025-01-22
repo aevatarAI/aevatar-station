@@ -37,8 +37,8 @@ public class WebhookService: ApplicationService, IWebhookService
         {
             await _clusterClient.GetGrain<ICodeGAgent>(GuidUtil.StringToGuid(webhookId)).UploadCodeAsync(
                 webhookId,version,codeBytes);
-        }
             await _webhookDeployManager.CreateNewWebHookAsync(webhookId, version,_webhookDeployOptions.WebhookImageName);
+
         }
     }
 
