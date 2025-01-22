@@ -4,11 +4,13 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Web;
+using Aevatar.Webhook.Dto;
 using Aevatar.Webhook.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 using Volo.Abp.Modularity;
 using Volo.Abp.Threading;
 
@@ -74,8 +76,7 @@ public class Startup
             response.EnsureSuccessStatusCode();
 
             var responseBody = await response.Content.ReadAsStringAsync();
-            var base64EncodedData = responseBody.Trim('"');
-            var decodedBytes = Convert.FromBase64String(base64EncodedData);
+            var decodedBytes = Convert.FromBase64String(JsonConvert.DeserializeObject<ApiHostResponse>(responseBody)!.Data);
             return decodedBytes;
         }
     }
