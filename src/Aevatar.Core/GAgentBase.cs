@@ -9,7 +9,7 @@ using Orleans.Streams;
 
 namespace Aevatar.Core;
 
-[GAgent("base2")]
+[GAgent]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 public abstract partial class
@@ -17,13 +17,20 @@ public abstract partial class
     where TState : StateBase, new()
     where TStateLogEvent : StateLogEventBase<TStateLogEvent>;
 
-[GAgent("base")]
+public class TestEvent : EventBase
+{
+    public string Name { get; set; }
+}
+
+[GAgent]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
-public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent> : JournaledGrain<TState, StateLogEventBase<TStateLogEvent>>, IStateGAgent<TState>
+public abstract partial class
+    GAgentBase<TState, TStateLogEvent, TEvent> : JournaledGrain<TState, StateLogEventBase<TStateLogEvent>>,
+    IStateGAgent<TState>
     where TState : StateBase, new()
     where TStateLogEvent : StateLogEventBase<TStateLogEvent>
-    where TEvent: EventBase
+    where TEvent : EventBase
 {
     protected IStreamProvider StreamProvider => this.GetStreamProvider(AevatarCoreConstants.StreamProvider);
 
@@ -149,8 +156,8 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent> : Journ
     internal async Task ForwardEventAsync(EventWrapperBase eventWrapper)
     {
         Logger.LogInformation(
-            $"{this.GetGrainId().ToString()} is forwarding event downwards: {JsonConvert.SerializeObject((EventWrapper<EventBase>)eventWrapper)}");
-        await SendEventDownwardsAsync((EventWrapper<EventBase>)eventWrapper);
+            $"{this.GetGrainId().ToString()} is forwarding event downwards: {JsonConvert.SerializeObject((EventWrapper<TEvent>)eventWrapper)}");
+        await SendEventDownwardsAsync((EventWrapper<TEvent>)eventWrapper);
     }
 
     protected virtual async Task OnRegisterAgentAsync(Guid agentGuid)

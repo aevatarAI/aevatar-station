@@ -18,7 +18,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
             var parameterTypeName = parameterType.Name;
             var observer = new EventWrapperBaseAsyncObserver(async item =>
             {
-                var grainId = (GrainId)item.GetType().GetProperty(nameof(EventWrapper<EventBase>.GrainId))?.GetValue(item)!;
+                var grainId = (GrainId)item.GetType().GetProperty(nameof(EventWrapper<TEvent>.GrainId))?.GetValue(item)!;
                 if (grainId == this.GetGrainId() && eventHandlerMethod.Name != nameof(ForwardEventAsync) &&
                     eventHandlerMethod.Name != AevatarGAgentConstants.InitializeDefaultMethodName)
                 {
@@ -28,9 +28,9 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
 
                 try
                 {
-                    var eventId = (Guid)item.GetType().GetProperty(nameof(EventWrapper<EventBase>.EventId))
+                    var eventId = (Guid)item.GetType().GetProperty(nameof(EventWrapper<TEvent>.EventId))
                         ?.GetValue(item)!;
-                    var eventType = (EventBase)item.GetType().GetProperty(nameof(EventWrapper<EventBase>.Event))
+                    var eventType = (TEvent)item.GetType().GetProperty(nameof(EventWrapper<TEvent>.Event))
                         ?.GetValue(item)!;
 
                     if (parameterType == eventType.GetType())
@@ -43,7 +43,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
                         try
                         {
                             var invokeParameter =
-                                new EventWrapper<EventBase>(eventType, eventId, this.GetGrainId());
+                                new EventWrapper<TEvent>(eventType, eventId, this.GetGrainId());
                             var result = eventHandlerMethod.Invoke(this, [invokeParameter]);
                             await (Task)result!;
                         }
@@ -174,7 +174,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent>
                     eventResult.CorrelationId = _correlationId;
                     eventResult.PublisherGrainId = this.GetGrainId();
                     var eventWrapper =
-                        new EventWrapper<EventBase>(eventResult, eventId, this.GetGrainId());
+                        new EventWrapper<TEvent>(eventResult, eventId, this.GetGrainId());
                     await PublishAsync(eventWrapper);
                 }
                 catch (Exception ex)

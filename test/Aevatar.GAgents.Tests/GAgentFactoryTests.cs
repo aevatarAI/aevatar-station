@@ -1,4 +1,3 @@
-using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Core.Tests.TestGAgents;
 using Aevatar.Core.Tests.TestInitializeDtos;
@@ -14,7 +13,6 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
 {
     private readonly ITestOutputHelper _outputHelper;
     private readonly IGAgentFactory _gAgentFactory;
-    private readonly IClusterClient _clusterClient;
     private readonly IGAgentManager _gAgentManager;
     private readonly GrainTypeResolver _grainTypeResolver;
 
@@ -23,8 +21,8 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
         _outputHelper = outputHelper;
         _gAgentFactory = GetRequiredService<IGAgentFactory>();
         _gAgentManager = GetRequiredService<IGAgentManager>();
-        _clusterClient = GetRequiredService<IClusterClient>();
-        _grainTypeResolver = _clusterClient.ServiceProvider.GetRequiredService<GrainTypeResolver>();
+        var clusterClient = GetRequiredService<IClusterClient>();
+        _grainTypeResolver = clusterClient.ServiceProvider.GetRequiredService<GrainTypeResolver>();
     }
 
     [Fact(DisplayName = "Can create GAgent by GrainId.")]
