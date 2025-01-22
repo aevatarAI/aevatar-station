@@ -3,21 +3,28 @@ using Aevatar.Core.Abstractions;
 using Aevatar.Core.Tests.TestGAgents;
 using Aevatar.Core.Tests.TestInitializeDtos;
 using Aevatar.Core.Tests.TestStates;
+using Microsoft.Extensions.DependencyInjection;
+using Orleans.Metadata;
 using Shouldly;
+using Xunit.Abstractions;
 
 namespace Aevatar.GAgents.Tests;
 
 public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
 {
+    private readonly ITestOutputHelper _outputHelper;
     private readonly IGAgentFactory _gAgentFactory;
     private readonly IClusterClient _clusterClient;
     private readonly IGAgentManager _gAgentManager;
+    private readonly GrainTypeResolver _grainTypeResolver;
 
-    public GAgentFactoryTests()
+    public GAgentFactoryTests(ITestOutputHelper outputHelper)
     {
+        _outputHelper = outputHelper;
         _gAgentFactory = GetRequiredService<IGAgentFactory>();
         _gAgentManager = GetRequiredService<IGAgentManager>();
         _clusterClient = GetRequiredService<IClusterClient>();
+        _grainTypeResolver = _clusterClient.ServiceProvider.GetRequiredService<GrainTypeResolver>();
     }
 
     [Fact(DisplayName = "Can create GAgent by GrainId.")]
@@ -143,8 +150,30 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
     [Fact(DisplayName = "The implementation of GetAvailableGAgentTypes works.")]
     public async Task GetAvailableGAgentTypesTest()
     {
-        var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
-        availableGAgents.Count.ShouldBeGreaterThan(20);
+        var availableGAgentTypes = _gAgentManager.GetAvailableGAgentTypes();
+        availableGAgentTypes.Count.ShouldBeGreaterThan(20);
+        foreach (var gAgentType in availableGAgentTypes)
+        {
+            var gAgentGrainType = _grainTypeResolver.GetGrainType(gAgentType);
+            _outputHelper.WriteLine($"{gAgentType}: {gAgentGrainType}");
+        }
+    }
+
+    [Fact(DisplayName = "The implementation of GetAvailableGAgentGrainTypes works.")]
+    public async Task GetAvailableGAgentGrainTypesTest()
+    {
+        var availableGAgentGrainTypes = _gAgentManager.GetAvailableGAgentGrainTypes();
+        availableGAgentGrainTypes.Count.ShouldBeGreaterThan(20);
+        foreach (var grainType in availableGAgentGrainTypes.Select(gAgentGrainType => gAgentGrainType.ToString()))
+        {
+            _outputHelper.WriteLine(grainType);
+            if (grainType!.StartsWith("test"))
+            {
+                var grainId = GrainId.Create(grainType, Guid.NewGuid().ToString());
+                var gAgent = await _gAgentFactory.GetGAgentAsync(grainId);
+                await CheckSubscribedEventsAsync(gAgent);
+            }
+        }
     }
 
     private async Task<bool> CheckState(IStateGAgent<NaiveTestGAgentState> gAgent)

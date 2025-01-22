@@ -3,6 +3,7 @@ using Aevatar.Core.Abstractions;
 using Aevatar.Plugins;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.Extensions.DependencyInjection;
+using Orleans.Metadata;
 using Volo.Abp;
 using Volo.Abp.Auditing;
 using Volo.Abp.Autofac;
@@ -27,7 +28,7 @@ public class AevatarTestBaseModule : AbpModule
         context.Services.AddSingleton<IClusterClient>(sp => context.Services.GetRequiredService<ClusterFixture>().Cluster.Client);
         context.Services.AddSingleton<IGrainFactory>(sp => context.Services.GetRequiredService<ClusterFixture>().Cluster.GrainFactory);
         context.Services.AddSingleton<IGAgentFactory>(sp => new GAgentFactory(context.Services.GetRequiredService<ClusterFixture>().Cluster.Client));
-        context.Services.AddSingleton<IGAgentManager>(sp => new GAgentManager());
+        context.Services.AddSingleton<IGAgentManager>(sp => new GAgentManager(context.Services.GetRequiredService<ClusterFixture>().Cluster.Client));
         // context.Services.AddSingleton<IPluginGAgentManager>(sp =>
         //     new PluginGAgentManager(context.Services.GetRequiredService<ApplicationPartManager>(),
         //         context.Services.GetRequiredService<IGAgentFactory>(), null));
