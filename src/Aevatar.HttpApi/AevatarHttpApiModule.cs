@@ -19,6 +19,7 @@ public class AevatarHttpApiModule : AbpModule
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
         ConfigureLocalization();
+      
     }
 
     private void ConfigureLocalization()

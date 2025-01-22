@@ -9,10 +9,7 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.Orleans.Client" />
         <PackageReference Include="Orleans.Providers.MongoDB" />
-    </ItemGroup>
-    
-    <ItemGroup>
-        <ProjectReference Include="..\Aevatar.Webhook.Template\Aevatar.Webhook.Template.csproj" />
+        <ProjectReference Include="..\Aevatar.WebHook.SDK\Aevatar.WebHook.SDK.csproj" />
     </ItemGroup>
     
 </Project>

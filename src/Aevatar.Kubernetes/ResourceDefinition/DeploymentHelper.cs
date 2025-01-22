@@ -4,16 +4,10 @@ namespace Aevatar.Kubernetes.ResourceDefinition;
 
 public class DeploymentHelper
 {
-    public static string GetAppDeploymentName(string appId, string version, string clientType,
-        string chainId)
+    public static string GetAppDeploymentName(string appId, string version)
     {
         appId = appId.Replace("_", "-");
-        var name = $"deployment-{appId}-{version}-{clientType}";
-        if (!string.IsNullOrWhiteSpace(chainId))
-        {
-            name += $"-{chainId}";
-        }
-
+        var name = $"deployment-{appId}-{version}";
         return name.ToLower();
     }
 
@@ -22,17 +16,10 @@ public class DeploymentHelper
     /// </summary>
     /// <param name="appId"></param>
     /// <param name="version"></param>
-    /// <param name="clientType"></param>
-    /// <param name="chainId"></param>
     /// <returns></returns>
-    public static string GetAppDeploymentLabelName(string version, string clientType,
-        string chainId)
+    public static string GetAppDeploymentLabelName(string appId, string version)
     {
-        var name = $"deployment-{version}-{clientType}";
-        if (!string.IsNullOrWhiteSpace(chainId))
-        {
-            name += $"-{chainId}";
-        }
+        var name = $"deployment-{appId}-{version}";
 
         return name.ToLower();
     }
@@ -50,11 +37,11 @@ public class DeploymentHelper
     /// <param name="sideCarConfigMapName"></param>
     /// <returns></returns>
     public static V1Deployment CreateAppDeploymentWithFileBeatSideCarDefinition(string appId, string version,
-        string clientType, string chainId, string imageName, string deploymentName, string deploymentLabelName,
+        string imageName, string deploymentName, string deploymentLabelName,
         int replicasCount, string containerName, int containerPort, string configMapName, string sideCarConfigMapName, 
         string requestCpu, string requestMemory, string maxSurge, string maxUnavailable, string readinessProbeHealthPath = null)
     {
-        var labels = CreateLabels(deploymentLabelName, appId, version, clientType, chainId);
+        var labels = CreateLabels(deploymentLabelName, appId, version);
         var deployment = new V1Deployment
         {
             Metadata = new V1ObjectMeta
@@ -73,6 +60,7 @@ public class DeploymentHelper
                     Spec = new V1PodSpec
                     {
                         Affinity = CreateNodeAffinity(),
+                        Tolerations = CreateNodeTolerations(),
                         Containers = CreateContainers(imageName, containerName, containerPort,
                             requestCpu, requestMemory, readinessProbeHealthPath),
                         Volumes = CreatePodTemplateVolumes(configMapName, sideCarConfigMapName)
@@ -84,17 +72,15 @@ public class DeploymentHelper
         return deployment;
     }
 
-    private static Dictionary<string, string> CreateLabels(string deploymentLabelName, string appId, string version,
-        string podType, string chainId)
+    private static Dictionary<string, string> CreateLabels(string deploymentLabelName, string appId, string version)
     {
         return new Dictionary<string, string>
         {
             { KubernetesConstants.AppLabelKey, deploymentLabelName },
             { KubernetesConstants.MonitorLabelKey, appId },
             { KubernetesConstants.AppIdLabelKey, appId },
-            { KubernetesConstants.AppVersionLabelKey, version },
-            { KubernetesConstants.AppPodTypeLabelKey, podType },
-            { KubernetesConstants.AppPodChainIdLabelKey, chainId }
+            { KubernetesConstants.AppVersionLabelKey, version }
+          //  { KubernetesConstants.AppPodTypeLabelKey, podType }
         };
     }
 
@@ -109,6 +95,17 @@ public class DeploymentHelper
                 MaxUnavailable = maxUnavailable
             }
         };
+    }
+
+    private static IList<V1Toleration> CreateNodeTolerations()
+    {
+        return [new V1Toleration
+        {
+            Effect = "NoSchedule",
+            Key = "kubernetes.io/dedicated",
+            OperatorProperty = "Equal",
+            Value = "ai"
+        }];
     }
 
     private static V1Affinity CreateNodeAffinity()
@@ -153,7 +150,7 @@ public class DeploymentHelper
         {
             Name = containerName,
             Image = imageName,
-            Command = new List<string> { "dotnet", "Aevatar.App.Host.dll" },
+            Command = new List<string> { "dotnet", "Aevatar.WebHook.Host.dll" },
             Ports = new List<V1ContainerPort> { new V1ContainerPort(containerPort) },
             VolumeMounts = CreateMainContainerVolumeMounts(),
             Resources = CreateResources(requestCpu, requestMemory),

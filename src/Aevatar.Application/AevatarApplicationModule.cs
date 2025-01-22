@@ -4,6 +4,7 @@ using Aevatar.Core.Abstractions;
 using Aevatar.Core.Abstractions.Plugin;
 using Aevatar.CQRS;
 using Aevatar.Kubernetes;
+using Aevatar.Kubernetes.Manager;
 using Aevatar.Options;
 using Aevatar.Plugins;
 using Aevatar.WebHook.Deploy;
@@ -48,5 +49,6 @@ public class AevatarApplicationModule : AbpModule
         Configure<WebhookDeployOptions>(configuration.GetSection("WebhookDeploy"));
         Configure<AgentOptions>(configuration.GetSection("Agent"));
         context.Services.AddSingleton<IPluginGAgentManager, PluginGAgentManager>();
+        context.Services.AddTransient<IWebhookDeployManager, KubernetesWebhookManager>();
     }
 }
