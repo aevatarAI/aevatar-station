@@ -27,7 +27,7 @@ public class NaiveTestGAgent : GAgentBase<NaiveTestGAgentState, NaiveTestStateLo
         return Task.FromResult("This is a naive test GAgent");
     }
 
-    protected override async Task ConfigAsync(NaiveGAgentConfiguration configuration)
+    protected override async Task PerformConfigAsync(NaiveGAgentConfiguration configuration)
     {
         if (State.Content.IsNullOrEmpty())
         {

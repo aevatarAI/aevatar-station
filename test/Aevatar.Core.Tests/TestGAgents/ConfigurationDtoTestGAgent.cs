@@ -27,7 +27,7 @@ public class ConfigurationDtoTestGAgent : GAgentBase<InitializeDtoTestGAgentStat
     {
     }
 
-    protected override Task ConfigAsync(Configuration configuration)
+    protected override Task PerformConfigAsync(Configuration configuration)
     {
         if (State.Content.IsNullOrEmpty())
         {

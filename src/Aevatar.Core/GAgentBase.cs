@@ -123,11 +123,11 @@ public abstract partial class
     {
         if (configuration is TConfiguration config)
         {
-            await ConfigAsync(config);
+            await PerformConfigAsync(config);
         }
     }
 
-    protected virtual Task ConfigAsync(TConfiguration configuration)
+    protected virtual Task PerformConfigAsync(TConfiguration configuration)
     {
         return Task.CompletedTask;
     }

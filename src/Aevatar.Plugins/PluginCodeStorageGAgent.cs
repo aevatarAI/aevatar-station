@@ -65,7 +65,7 @@ public class PluginCodeStorageGAgent(ILogger<PluginCodeStorageGAgent> logger)
         [Id(0)] public required byte[] Code { get; set; }
     }
 
-    protected override async Task ConfigAsync(PluginCodeStorageConfiguration configuration)
+    protected override async Task PerformConfigAsync(PluginCodeStorageConfiguration configuration)
     {
         RaiseEvent(new SetPluginCodeStateLogEvent
         {
