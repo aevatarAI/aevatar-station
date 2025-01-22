@@ -86,5 +86,6 @@ public static class OrleansHostExtension
                     .UsePluginGAgents();
             })
             .UseConsoleLifetime();
+        
     }
 }

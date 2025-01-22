@@ -13,62 +13,71 @@ public class GAgentFactory : IGAgentFactory
     {
         _clusterClient = clusterClient;
         _streamProvider =
-            _clusterClient.ServiceProvider.GetRequiredKeyedService<IStreamProvider>(AevatarCoreConstants.StreamProvider);
+            _clusterClient.ServiceProvider.GetRequiredKeyedService<IStreamProvider>(AevatarCoreConstants
+                .StreamProvider);
     }
 
-    public async Task<IGAgent> GetGAgentAsync(GrainId grainId, InitializationEventBase? initializeDto = null)
+    public async Task<IGAgent> GetGAgentAsync(GrainId grainId, InitializationEventBase? initializationEvent = null)
     {
         var gAgent = _clusterClient.GetGrain<IGAgent>(grainId);
-        if (initializeDto != null)
-        {
-            await InitializeAsync(gAgent, new EventWrapper<EventBase>(initializeDto, Guid.NewGuid(), grainId));
-        }
-
+        await InitializeGAgentAsync(gAgent, initializationEvent);
         return gAgent;
     }
 
-    public async Task<IGAgent> GetGAgentAsync(string alias, Guid primaryKey, string ns = "aevatar", InitializationEventBase? initializeDto = null)
+    public async Task<IGAgent> GetGAgentAsync(Guid primaryKey, string alias, string ns,
+        InitializationEventBase? initializationEvent = null)
     {
-        var gAgent = _clusterClient.GetGrain<IGAgent>(GrainId.Create($"{ns}/{alias}", primaryKey.ToString("N")));
-        await gAgent.ActivateAsync();
-        if (initializeDto != null)
-        {
-            await InitializeAsync(gAgent,
-                new EventWrapper<EventBase>(initializeDto, Guid.NewGuid(), gAgent.GetGrainId()));
-        }
-
+        var gAgent =
+            _clusterClient.GetGrain<IGAgent>(GrainId.Create($"{ns}/{alias}",
+                primaryKey.ToString("N")));
+        await InitializeGAgentAsync(gAgent, initializationEvent);
         return gAgent;
     }
 
-    public async Task<IGAgent> GetGAgentAsync(string alias, string ns = "aevatar", InitializationEventBase? initializeDto = null)
+    public async Task<IGAgent> GetGAgentAsync(string alias, string ns,
+        InitializationEventBase? initializationEvent = null)
     {
-        return await GetGAgentAsync(alias, Guid.NewGuid(), ns, initializeDto);
+        return await GetGAgentAsync(Guid.NewGuid(), alias, ns, initializationEvent);
     }
 
-    public async Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(Guid primaryKey, InitializationEventBase? initializeDto = null)
+    public async Task<IGAgent> GetGAgentAsync(Guid primaryKey, Type gAgentType,
+        InitializationEventBase? initializationEvent = null)
+    {
+        return await GetGAgentAsync(primaryKey, gAgentType.Name, gAgentType.Namespace!,
+            initializationEvent: initializationEvent);
+    }
+
+    public async Task<IGAgent> GetGAgentAsync(Type gAgentType, InitializationEventBase? initializationEvent = null)
+    {
+        return await GetGAgentAsync(gAgentType.Name, ns: gAgentType.Namespace!,
+            initializationEvent: initializationEvent);
+    }
+
+    public async Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(Guid primaryKey,
+        InitializationEventBase? initializationEvent = null)
         where TGrainInterface : IGAgent
     {
         var gAgent = _clusterClient.GetGrain<TGrainInterface>(primaryKey);
-        if (initializeDto != null)
-        {
-            await InitializeAsync(gAgent,
-                new EventWrapper<EventBase>(initializeDto, Guid.NewGuid(), gAgent.GetGrainId()));
-        }
-
+        await InitializeGAgentAsync(gAgent, initializationEvent);
         return gAgent;
     }
 
-    public Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(InitializationEventBase? initializeDto = null)
+    public Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(InitializationEventBase? initializationEvent = null)
         where TGrainInterface : IGAgent
     {
-        var guid = Guid.NewGuid();
-        return GetGAgentAsync<TGrainInterface>(guid, initializeDto);
+        return GetGAgentAsync<TGrainInterface>(Guid.NewGuid(), initializationEvent);
     }
 
-    private async Task InitializeAsync(IGAgent gAgent, EventWrapperBase eventWrapper)
+    private async Task InitializeGAgentAsync(IGAgent gAgent, InitializationEventBase? initializationEvent)
     {
-        var streamId = StreamId.Create(AevatarCoreConstants.StreamNamespace, gAgent.GetGrainId().ToString());
-        var stream = _streamProvider.GetStream<EventWrapperBase>(streamId);
-        await stream.OnNextAsync(eventWrapper);
+        // Must activate the GAgent before sending events.
+        await gAgent.ActivateAsync();
+        if (initializationEvent != null)
+        {
+            var eventWrapper = new EventWrapper<EventBase>(initializationEvent, Guid.NewGuid(), gAgent.GetGrainId());
+            var streamId = StreamId.Create(AevatarCoreConstants.StreamNamespace, gAgent.GetGrainId().ToString());
+            var stream = _streamProvider.GetStream<EventWrapperBase>(streamId);
+            await stream.OnNextAsync(eventWrapper);
+        }
     }
 }

@@ -1,4 +1,5 @@
-﻿using Aevatar.Core;
+﻿using Aevatar.ArtifactGAgents;
+using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Core.Abstractions.Plugin;
 using Aevatar.Core.Tests.TestGAgents;
@@ -11,7 +12,6 @@ using Microsoft.Extensions.Logging;
 using Orleans.Configuration;
 using Orleans.Providers.MongoDB.Configuration;
 using PluginGAgent.Grains;
-using System;
 
 var builder = Host.CreateDefaultBuilder(args)
     .UseOrleansClient(client =>
@@ -49,6 +49,7 @@ var pluginManager = host.Services.GetRequiredService<IPluginGAgentManager>();
 Console.WriteLine("Select an option:");
 Console.WriteLine("1. Add Plugin GAgents");
 Console.WriteLine("2. Try Execute Plugin GAgents");
+Console.WriteLine("3. Try Get Artifact GAgent");
 var choice = Console.ReadLine();
 
 switch (choice)
@@ -59,6 +60,9 @@ switch (choice)
     case "2":
         await PerformCommandAsync(gAgentFactory);
         break;
+    case "3":
+        await TryArtifactGAgentAsync(gAgentFactory);
+        break;
     default:
         Console.WriteLine("Invalid choice.");
         break;
@@ -67,8 +71,8 @@ switch (choice)
 async Task PerformCommandAsync(IGAgentFactory gAgentFactory1)
 {
     var publishingGAgent = await gAgentFactory1.GetGAgentAsync<IPublishingGAgent>();
-    var commander = await gAgentFactory1.GetGAgentAsync("commander");
-    var worker = await gAgentFactory1.GetGAgentAsync("worker");
+    var commander = await gAgentFactory1.GetGAgentAsync("commander", "pluginTest");
+    var worker = await gAgentFactory1.GetGAgentAsync("worker", "pluginTest");
     await publishingGAgent.RegisterAsync(commander);
     await commander.RegisterAsync(worker);
     await publishingGAgent.PublishEventAsync(new Command { Content = "test" });
@@ -87,4 +91,12 @@ async Task AddCodeAsync(IPluginGAgentManager pluginGAgentManager)
             TenantId = tenantId
         });
     }
+}
+
+async Task TryArtifactGAgentAsync(IGAgentFactory factory)
+{
+    var myArtifactGAgent =
+        await factory.GetGAgentAsync(typeof(MyArtifactGAgent));
+    var description = await myArtifactGAgent.GetDescriptionAsync();
+    Console.WriteLine(description);
 }

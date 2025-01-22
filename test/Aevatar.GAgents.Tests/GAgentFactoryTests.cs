@@ -10,12 +10,14 @@ namespace Aevatar.GAgents.Tests;
 public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
 {
     private readonly IGAgentFactory _gAgentFactory;
+    private readonly IClusterClient _clusterClient;
     private readonly IGAgentManager _gAgentManager;
 
     public GAgentFactoryTests()
     {
         _gAgentFactory = GetRequiredService<IGAgentFactory>();
         _gAgentManager = GetRequiredService<IGAgentManager>();
+        _clusterClient = GetRequiredService<IClusterClient>();
     }
 
     [Fact(DisplayName = "Can create GAgent by GrainId.")]
@@ -45,7 +47,8 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
             var gAgent = await _gAgentFactory.GetGAgentAsync<IStateGAgent<NaiveTestGAgentState>>();
             gAgent.ShouldNotBeNull();
             Should.NotThrow(() => gAgent.GetPrimaryKey());
-            gAgent.GetGrainId().ShouldBe(GrainId.Create("aevatar/naiveTest", gAgent.GetPrimaryKey().ToString("N")));
+            gAgent.GetGrainId().ShouldBe(GrainId.Create("Aevatar.Core.Tests.TestGAgents/naiveTest",
+                gAgent.GetPrimaryKey().ToString("N")));
             await CheckSubscribedEventsAsync(gAgent);
         }
 
@@ -53,7 +56,8 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
             var gAgent = await _gAgentFactory.GetGAgentAsync<IPublishingGAgent>();
             gAgent.ShouldNotBeNull();
             Should.NotThrow(() => gAgent.GetPrimaryKey());
-            gAgent.GetGrainId().ShouldBe(GrainId.Create("aevatar/publishing", gAgent.GetPrimaryKey().ToString("N")));
+            gAgent.GetGrainId().ShouldBe(GrainId.Create("Aevatar.Core.Tests.TestGAgents/publishing",
+                gAgent.GetPrimaryKey().ToString("N")));
             await CheckSubscribedEventsAsync(gAgent);
         }
     }
@@ -77,7 +81,8 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
         // Assert.
         Should.NotThrow(() => gAgent.GetPrimaryKey());
         await CheckSubscribedEventsAsync(gAgent);
-        gAgent.GetGrainId().ShouldBe(GrainId.Create("aevatar/naiveTest", gAgent.GetPrimaryKey().ToString("N")));
+        gAgent.GetGrainId().ShouldBe(GrainId.Create("Aevatar.Core.Tests.TestGAgents/naiveTest",
+            gAgent.GetPrimaryKey().ToString("N")));
         var gAgentState = await gAgent.GetStateAsync();
         gAgentState.Content.Count.ShouldBe(1);
         gAgentState.Content.First().ShouldBe("Test");
@@ -87,27 +92,50 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
     public async Task CreateGAgentByAliasTest()
     {
         {
-            var gAgent = await _gAgentFactory.GetGAgentAsync("naiveTest", Guid.NewGuid());
+            var gAgent =
+                await _gAgentFactory.GetGAgentAsync(Guid.NewGuid(), "naiveTest", "Aevatar.Core.Tests.TestGAgents");
             gAgent.ShouldNotBeNull();
             Should.NotThrow(() => gAgent.GetPrimaryKey());
             await CheckSubscribedEventsAsync(gAgent);
         }
 
         {
-            var gAgent = await _gAgentFactory.GetGAgentAsync("naiveTest", initializeDto: new NaiveGAgentInitialize
-            {
-                InitialGreeting = "Test"
-            });
+            var gAgent = await _gAgentFactory.GetGAgentAsync("naiveTest", "Aevatar.Core.Tests.TestGAgents",
+                initializationEvent: new NaiveGAgentInitialize
+                {
+                    InitialGreeting = "Test"
+                });
+            gAgent.ShouldNotBeNull();
+            Should.NotThrow(() => gAgent.GetPrimaryKey());
+            await CheckSubscribedEventsAsync(gAgent);
+        }
+
+        {
+            var gAgent = await _gAgentFactory.GetGAgentAsync("groupTest", "test");
             gAgent.ShouldNotBeNull();
             Should.NotThrow(() => gAgent.GetPrimaryKey());
             await CheckSubscribedEventsAsync(gAgent);
         }
     }
 
+    [Fact(DisplayName = "Can create GAgent by GAgent type.")]
+    public async Task CreateGAgentByGAgentType()
+    {
+        var guid = Guid.NewGuid();
+        var gAgent1 = await _gAgentFactory.GetGAgentAsync(guid, nameof(FatalEventHandlerTestGAgent),
+            typeof(FatalEventHandlerTestGAgent).Namespace!);
+        var gAgent2 = await _gAgentFactory.GetGAgentAsync(guid, typeof(FatalEventHandlerTestGAgent));
+        gAgent1.GetPrimaryKey().ShouldBe(guid);
+        gAgent2.GetPrimaryKey().ShouldBe(guid);
+        await CheckSubscribedEventsAsync(gAgent1);
+        await CheckSubscribedEventsAsync(gAgent2);
+    }
+
     [Fact(DisplayName = "The implementation of GetInitializeDtoTypeAsync works.")]
     public async Task GetInitializeDtoTypeTest()
     {
-        var gAgent = await _gAgentFactory.GetGAgentAsync("initialize", Guid.NewGuid());
+        var gAgent =
+            await _gAgentFactory.GetGAgentAsync(Guid.NewGuid(), "initialize", "Aevatar.Core.Tests.TestGAgents");
         var initializeDtoType = await gAgent.GetInitializationTypeAsync();
         initializeDtoType.ShouldBe(typeof(Initialize));
     }

@@ -13,7 +13,7 @@ public interface ILogViewAdaptorTestGAgent
 public class LogViewAdaptorTestGAgent
     : GAgentBase<LogViewAdaptorTestGState, LogViewAdaptorTestStateLogEvent>, ILogViewAdaptorTestGAgent
 {
-    public LogViewAdaptorTestGAgent(ILogger logger) : base(logger)
+    public LogViewAdaptorTestGAgent(ILogger<LogViewAdaptorTestGAgent> logger) : base(logger)
     {
     }
 

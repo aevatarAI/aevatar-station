@@ -6,16 +6,20 @@ namespace Aevatar.Core.Abstractions;
 [AttributeUsage(AttributeTargets.Class, Inherited = true, AllowMultiple = false)]
 public sealed class GAgentAttribute : Attribute, IGrainTypeProviderAttribute
 {
-    private readonly string _ns;
-    private readonly string _alias;
+    private readonly string? _ns;
+    private readonly string? _alias;
+
+    public GAgentAttribute()
+    {
+
+    }
 
     public GAgentAttribute(string alias)
     {
         _alias = alias;
-        _ns = "aevatar";
     }
 
-    public GAgentAttribute(string alias, string ns = "aevatar")
+    public GAgentAttribute(string alias, string ns)
     {
         _alias = alias;
         _ns = ns;
@@ -23,6 +27,16 @@ public sealed class GAgentAttribute : Attribute, IGrainTypeProviderAttribute
 
     public GrainType GetGrainType(IServiceProvider services, Type type)
     {
+        if (_alias == null) // Use ctor with 0 parameters.
+        {
+            return GrainType.Create($"{type.Namespace}/{type.Name}");
+        }
+
+        if (_ns == null)
+        {
+            return GrainType.Create($"{type.Namespace}/{_alias}");
+        }
+
         return GrainType.Create($"{_ns}/{_alias}");
     }
 }

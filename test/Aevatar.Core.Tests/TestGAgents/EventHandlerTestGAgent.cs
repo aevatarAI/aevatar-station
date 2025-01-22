@@ -15,7 +15,7 @@ public class EventHandlerTestStateLogEvent : StateLogEventBase<EventHandlerTestS
 [GAgent("eventHandlerTest", "test")]
 public class EventHandlerTestGAgent : GAgentBase<EventHandlerTestGAgentState, EventHandlerTestStateLogEvent>
 {
-    public EventHandlerTestGAgent(ILogger logger) : base(logger)
+    public EventHandlerTestGAgent(ILogger<EventHandlerTestGAgent> logger) : base(logger)
     {
     }
 

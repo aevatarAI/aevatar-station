@@ -3,6 +3,7 @@ using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Core.Abstractions.Plugin;
 using Aevatar.Plugins;
+using Aevatar.Plugins.Extensions;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.Extensions.Configuration;
@@ -84,7 +85,7 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                 .AddMemoryGrainStorage("PubSubStore")
                 .AddMemoryGrainStorageAsDefault()
                 .AddLogStorageBasedLogConsistencyProvider("LogStorage");
-
+            
             // Load external grain assemblies
             var pluginDirectory = new DefaultPluginDirectoryProvider().GetDirectory();
             var pluginAssemblies = Directory.GetFiles(pluginDirectory, "*.dll")
