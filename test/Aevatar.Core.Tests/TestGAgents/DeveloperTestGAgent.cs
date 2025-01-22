@@ -12,7 +12,7 @@ public class DeveloperTestGAgentState : NaiveTestGAgentState;
 [GAgent("developer", "test")]
 public class DeveloperTestGAgent : GAgentBase<DeveloperTestGAgentState, NaiveTestStateLogEvent>, IDeveloperTestGAgent
 {
-    public DeveloperTestGAgent(ILogger<MarketingLeaderTestGAgent> logger) : base(logger)
+    public DeveloperTestGAgent(ILogger<DeveloperTestGAgent> logger) : base(logger)
     {
     }
 

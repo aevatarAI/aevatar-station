@@ -22,7 +22,7 @@ public class Command : EventBase
     [Id(0)] public string Content { get; set; }
 }
 
-[GAgent("commander")]
+[GAgent("commander", "pluginTest")]
 public class CommanderGAgent : GAgentBase<CommanderGAgentState, CommanderStateLogEvent>
 {
     public CommanderGAgent(ILogger<CommanderGAgent> logger) : base(logger)

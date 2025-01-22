@@ -17,7 +17,7 @@ public class WorkerStateLogEvent : StateLogEventBase<WorkerStateLogEvent>
 
 }
 
-[GAgent("worker")]
+[GAgent("worker", "pluginTest")]
 public class WorkerGAgent : GAgentBase<WorkerGAgentState, WorkerStateLogEvent>
 {
     public WorkerGAgent(ILogger<WorkerGAgent> logger) : base(logger)

@@ -46,7 +46,7 @@ Console.WriteLine();
 
 {
     Console.WriteLine("Get GAgent from Type:");
-    var myArtifactGAgent = await gAgentFactory.GetGAgentAsync(typeof(MyArtifactGAgent), Guid.NewGuid());
+    var myArtifactGAgent = await gAgentFactory.GetGAgentAsync(Guid.NewGuid(), typeof(MyArtifactGAgent));
     var description = await myArtifactGAgent.GetDescriptionAsync();
     Console.WriteLine(description);
 }

@@ -71,8 +71,8 @@ switch (choice)
 async Task PerformCommandAsync(IGAgentFactory gAgentFactory1)
 {
     var publishingGAgent = await gAgentFactory1.GetGAgentAsync<IPublishingGAgent>();
-    var commander = await gAgentFactory1.GetGAgentAsync("commander");
-    var worker = await gAgentFactory1.GetGAgentAsync("worker");
+    var commander = await gAgentFactory1.GetGAgentAsync("commander", "pluginTest");
+    var worker = await gAgentFactory1.GetGAgentAsync("worker", "pluginTest");
     await publishingGAgent.RegisterAsync(commander);
     await commander.RegisterAsync(worker);
     await publishingGAgent.PublishEventAsync(new Command { Content = "test" });

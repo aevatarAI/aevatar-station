@@ -24,34 +24,33 @@ public class GAgentFactory : IGAgentFactory
         return gAgent;
     }
 
-    public async Task<IGAgent> GetGAgentAsync(string alias, Guid primaryKey, string ns = "aevatar",
+    public async Task<IGAgent> GetGAgentAsync(Guid primaryKey, string alias, string ns,
         InitializationEventBase? initializationEvent = null)
     {
-        var (normalizedAlias, normalizedNs) = NormalizeAliasAndNamespace(alias, ns);
         var gAgent =
-            _clusterClient.GetGrain<IGAgent>(GrainId.Create($"{normalizedNs}/{normalizedAlias}",
+            _clusterClient.GetGrain<IGAgent>(GrainId.Create($"{ns}/{alias}",
                 primaryKey.ToString("N")));
-        await gAgent.ActivateAsync();
         await InitializeGAgentAsync(gAgent, initializationEvent);
         return gAgent;
     }
 
-    public async Task<IGAgent> GetGAgentAsync(string alias, string ns = "aevatar",
+    public async Task<IGAgent> GetGAgentAsync(string alias, string ns,
         InitializationEventBase? initializationEvent = null)
     {
-        var (normalizedAlias, normalizedNs) = NormalizeAliasAndNamespace(alias, ns);
-        return await GetGAgentAsync(normalizedAlias, Guid.NewGuid(), normalizedNs, initializationEvent);
+        return await GetGAgentAsync(Guid.NewGuid(), alias, ns, initializationEvent);
     }
 
-    public async Task<IGAgent> GetGAgentAsync(Type gAgentType, Guid primaryKey,
+    public async Task<IGAgent> GetGAgentAsync(Guid primaryKey, Type gAgentType,
         InitializationEventBase? initializationEvent = null)
     {
-        return await GetGAgentAsync(gAgentType.FullName!, primaryKey, initializationEvent: initializationEvent);
+        return await GetGAgentAsync(primaryKey, gAgentType.Name, gAgentType.Namespace!,
+            initializationEvent: initializationEvent);
     }
 
     public async Task<IGAgent> GetGAgentAsync(Type gAgentType, InitializationEventBase? initializationEvent = null)
     {
-        return await GetGAgentAsync(gAgentType.FullName!, initializationEvent: initializationEvent);
+        return await GetGAgentAsync(gAgentType.Name, ns: gAgentType.Namespace!,
+            initializationEvent: initializationEvent);
     }
 
     public async Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(Guid primaryKey,
@@ -71,6 +70,8 @@ public class GAgentFactory : IGAgentFactory
 
     private async Task InitializeGAgentAsync(IGAgent gAgent, InitializationEventBase? initializationEvent)
     {
+        // Must activate the GAgent before sending events.
+        await gAgent.ActivateAsync();
         if (initializationEvent != null)
         {
             var eventWrapper = new EventWrapper<EventBase>(initializationEvent, Guid.NewGuid(), gAgent.GetGrainId());
@@ -78,27 +79,5 @@ public class GAgentFactory : IGAgentFactory
             var stream = _streamProvider.GetStream<EventWrapperBase>(streamId);
             await stream.OnNextAsync(eventWrapper);
         }
-    }
-
-    /// <summary>
-    /// Normalize alias and namespace.
-    /// </summary>
-    /// <param name="alias"></param>
-    /// <param name="ns"></param>
-    /// <returns></returns>
-    private (string alias, string ns) NormalizeAliasAndNamespace(string alias, string ns)
-    {
-        if (alias.Contains('.'))
-        {
-            var parts = alias.Split('.');
-            alias = parts.Last();
-            ns = parts.SkipLast(1).Aggregate((a, b) => $"{a}/{b}");
-        }
-        else if (ns.Contains('.'))
-        {
-            ns = ns.Replace('.', '/');
-        }
-
-        return (alias.ToLower(), ns.ToLower());
     }
 }

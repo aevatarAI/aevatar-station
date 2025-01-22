@@ -17,24 +17,26 @@ public sealed class GAgentAttribute : Attribute, IGrainTypeProviderAttribute
     public GAgentAttribute(string alias)
     {
         _alias = alias;
-        _ns = "aevatar";
     }
 
-    public GAgentAttribute(string alias, string ns = "aevatar")
+    public GAgentAttribute(string alias, string ns)
     {
-        _alias = alias.ToLower();
-        _ns = ns.ToLower();
+        _alias = alias;
+        _ns = ns;
     }
 
     public GrainType GetGrainType(IServiceProvider services, Type type)
     {
         if (_alias == null) // Use ctor with 0 parameters.
         {
-            var className = type.Name.ToLower();
-            var ns = type.Namespace!.ToLower().Replace('.', '/');
-            return GrainType.Create($"{ns}/{className}");
+            return GrainType.Create($"{type.Namespace}/{type.Name}");
         }
 
-        return GrainType.Create($"{_ns?.ToLower()}/{_alias.ToLower()}");
+        if (_ns == null)
+        {
+            return GrainType.Create($"{type.Namespace}/{_alias}");
+        }
+
+        return GrainType.Create($"{_ns}/{_alias}");
     }
 }
