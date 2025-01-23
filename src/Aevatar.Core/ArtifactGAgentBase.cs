@@ -1,12 +1,11 @@
 using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Aevatar.Core;
 
 [GAgent]
-public abstract class ArtifactGAgentBase<TArtifact, TState, TStateLogEvent>(ILogger logger)
-    : ArtifactGAgentBase<TArtifact, TState, TStateLogEvent, EventBase, ConfigurationBase>(logger)
+public abstract class ArtifactGAgentBase<TArtifact, TState, TStateLogEvent>
+    : ArtifactGAgentBase<TArtifact, TState, TStateLogEvent, EventBase, ConfigurationBase>
     where TArtifact : IArtifact<TState, TStateLogEvent>
     where TState : StateBase, new()
     where TStateLogEvent : StateLogEventBase<TStateLogEvent>;
@@ -22,7 +21,7 @@ public abstract class ArtifactGAgentBase<TArtifact, TState, TStateLogEvent, TEve
 {
     private readonly TArtifact _artifact;
 
-    public ArtifactGAgentBase(ILogger logger) : base(logger)
+    public ArtifactGAgentBase()
     {
         _artifact = ActivatorUtilities.CreateInstance<TArtifact>(ServiceProvider);
     }

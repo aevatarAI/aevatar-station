@@ -23,10 +23,6 @@ public class Configuration : ConfigurationBase
 public class ConfigurationDtoTestGAgent : GAgentBase<InitializeDtoTestGAgentState,
     InitializeDtoTestStateLogEvent, EventBase, Configuration>
 {
-    public ConfigurationDtoTestGAgent(ILogger<ConfigurationDtoTestGAgent> logger) : base(logger)
-    {
-    }
-
     protected override Task PerformConfigAsync(Configuration configuration)
     {
         if (State.Content.IsNullOrEmpty())

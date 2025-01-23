@@ -71,32 +71,6 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
         return Task.CompletedTask;
     }
 
-    private Task UpdateConfigurationTypeAsync()
-    {
-        var configMethod = GetType()
-            .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
-            .SingleOrDefault(IsConfigMethod);
-        if (configMethod == null)
-        {
-            return Task.CompletedTask;
-        }
-
-        var parameterType = configMethod.GetParameters()[0].ParameterType;
-        RaiseEvent(new InnerConfigStateLogEvent
-        {
-            ConfigurationType = parameterType
-        });
-        ConfirmEvents();
-
-        return Task.CompletedTask;
-    }
-    
-    [GenerateSerializer]
-    public class InnerConfigStateLogEvent : StateLogEventBase<TStateLogEvent>
-    {
-        [Id(0)] public required Type ConfigurationType { get; set; }
-    }
-
     protected virtual IEnumerable<MethodInfo> GetEventHandlerMethods(Type type)
     {
         return type
@@ -121,13 +95,6 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
             // Or the method is for GAgent initialization
             || (methodInfo.Name == AevatarGAgentConstants.ConfigDefaultMethodName &&
                 typeof(EventBase).IsAssignableFrom(methodInfo.GetParameters()[0].ParameterType)));
-    }
-
-    private bool IsConfigMethod(MethodInfo methodInfo)
-    {
-        return methodInfo.GetParameters().Length == 1 &&
-               methodInfo.Name == AevatarGAgentConstants.ConfigDefaultMethodName &&
-               typeof(EventBase).IsAssignableFrom(methodInfo.GetParameters()[0].ParameterType);
     }
 
     private async Task HandleMethodInvocationAsync(MethodInfo method, ParameterInfo parameter, EventBase eventType,

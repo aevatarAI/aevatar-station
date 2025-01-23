@@ -13,7 +13,18 @@ public static class OrleansHostExtensions
             {
                 services.AddSingleton<IGAgentManager, GAgentManager>();
                 services.AddSingleton<IGAgentFactory, GAgentFactory>();
+                services.AddTransient<IGrainActivator, LoggerInjectionGrainActivator>();
             })
             .UseAevatarPlugins();
+    }
+    
+    public static IClientBuilder UseAevatar(this IClientBuilder builder)
+    {
+        return builder.ConfigureServices(services =>
+        {
+            services.AddSingleton<IGAgentManager, GAgentManager>();
+            services.AddSingleton<IGAgentFactory, GAgentFactory>();
+            services.AddTransient<IGrainActivator, LoggerInjectionGrainActivator>();
+        });
     }
 }

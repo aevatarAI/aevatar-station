@@ -129,6 +129,12 @@ public class PluginGAgentManager : IPluginGAgentManager, ILifecycleParticipant<I
 
     private async Task OnStart(CancellationToken cancellationToken)
     {
-        await LoadPluginGAgentsAsync(_options.TenantId);
+        var tenantId = _options.TenantId;
+        if (tenantId == Guid.Empty)
+        {
+            return;
+        }
+
+        await LoadPluginGAgentsAsync(tenantId);
     }
 }

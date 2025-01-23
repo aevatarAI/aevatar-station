@@ -2,6 +2,7 @@ using System.Reflection;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Core.Abstractions.Plugin;
+using Aevatar.Extensions;
 using Aevatar.Plugins;
 using Aevatar.Plugins.Extensions;
 using AutoMapper;
@@ -84,25 +85,8 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                 .AddMemoryStreams("Aevatar")
                 .AddMemoryGrainStorage("PubSubStore")
                 .AddMemoryGrainStorageAsDefault()
+                .UseAevatar()
                 .AddLogStorageBasedLogConsistencyProvider("LogStorage");
-            
-            // Load external grain assemblies
-            var pluginDirectory = new DefaultPluginDirectoryProvider().GetDirectory();
-            var pluginAssemblies = Directory.GetFiles(pluginDirectory, "*.dll")
-                .Select(Assembly.LoadFrom)
-                .ToList();
-
-            hostBuilder.ConfigureServices(services =>
-            {
-                var foo = services.FirstOrDefault(service => service.ServiceType == typeof(ApplicationPartManager));
-                if (foo?.ImplementationInstance is ApplicationPartManager partManager)
-                {
-                    foreach (var assembly in pluginAssemblies)
-                    {
-                        partManager.ApplicationParts.Add(new AssemblyPart(assembly));
-                    }
-                }
-            });
         }
     }
 
@@ -114,6 +98,7 @@ public class ClusterFixture : IDisposable, ISingletonDependency
     private class TestClientBuilderConfigurator : IClientBuilderConfigurator
     {
         public void Configure(IConfiguration configuration, IClientBuilder clientBuilder) => clientBuilder
-            .AddMemoryStreams("Aevatar");
+            .AddMemoryStreams("Aevatar")
+            .UseAevatar();
     }
 }

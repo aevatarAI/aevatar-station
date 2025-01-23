@@ -7,7 +7,4 @@ namespace Aevatar.ArtifactGAgents;
 [GAgent]
 public class MyArtifactGAgent : ArtifactGAgentBase<MyArtifact, MyArtifactGAgentState, MyArtifactStateLogEvent>
 {
-    public MyArtifactGAgent(ILogger<MyArtifactGAgent> logger) : base(logger)
-    {
-    }
 }

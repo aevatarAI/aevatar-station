@@ -13,8 +13,8 @@ namespace Aevatar.Core;
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 public abstract class
-    GAgentBase<TState, TStateLogEvent>(ILogger logger)
-    : GAgentBase<TState, TStateLogEvent, EventBase, ConfigurationBase>(logger)
+    GAgentBase<TState, TStateLogEvent>
+    : GAgentBase<TState, TStateLogEvent, EventBase, ConfigurationBase>
     where TState : StateBase, new()
     where TStateLogEvent : StateLogEventBase<TStateLogEvent>;
 
@@ -22,8 +22,8 @@ public abstract class
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 public abstract class
-    GAgentBase<TState, TStateLogEvent, TEvent>(ILogger logger)
-    : GAgentBase<TState, TStateLogEvent, TEvent, ConfigurationBase>(logger)
+    GAgentBase<TState, TStateLogEvent, TEvent>
+    : GAgentBase<TState, TStateLogEvent, TEvent, ConfigurationBase>
     where TState : StateBase, new()
     where TStateLogEvent : StateLogEventBase<TStateLogEvent>
     where TEvent : EventBase;
@@ -41,16 +41,15 @@ public abstract partial class
 {
     protected IStreamProvider StreamProvider => this.GetStreamProvider(AevatarCoreConstants.StreamProvider);
 
-    protected readonly ILogger Logger;
+    protected ILogger Logger { get; set; }
 
     private readonly List<EventWrapperBaseAsyncObserver> _observers = [];
 
     private IEventDispatcher? EventDispatcher { get; set; }
 
-    protected GAgentBase(ILogger logger)
+    protected GAgentBase()
     {
-        Logger = logger;
-        EventDispatcher = ServiceProvider.GetService<IEventDispatcher>();
+        EventDispatcher = ServiceProvider?.GetService<IEventDispatcher>();
     }
 
     public async Task ActivateAsync()
@@ -199,14 +198,15 @@ public abstract partial class
 
     public sealed override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
+        await base.OnActivateAsync(cancellationToken);
         await BaseOnActivateAsync(cancellationToken);
         await OnGAgentActivateAsync(cancellationToken);
     }
 
     protected virtual Task OnGAgentActivateAsync(CancellationToken cancellationToken)
     {
-        return Task.CompletedTask;
         // Derived classes can override this method.
+        return Task.CompletedTask;
     }
 
 
@@ -214,7 +214,6 @@ public abstract partial class
     {
         // This must be called first to initialize Observers field.
         await UpdateObserverListAsync(GetType());
-        await UpdateConfigurationTypeAsync();
         await InitializeOrResumeStreamAsync();
     }
 

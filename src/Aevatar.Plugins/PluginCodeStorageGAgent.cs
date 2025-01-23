@@ -30,9 +30,9 @@ public interface IPluginCodeStorageGAgent : IStateGAgent<PluginCodeStorageGAgent
 
 
 [GAgent("pluginCodeStorage")]
-public class PluginCodeStorageGAgent(ILogger<PluginCodeStorageGAgent> logger)
+public class PluginCodeStorageGAgent
     : GAgentBase<PluginCodeStorageGAgentState, PluginCodeStorageStateLogEvent, EventBase,
-        PluginCodeStorageConfiguration>(logger), IPluginCodeStorageGAgent
+        PluginCodeStorageConfiguration>, IPluginCodeStorageGAgent
 {
     public override Task<string> GetDescriptionAsync()
     {

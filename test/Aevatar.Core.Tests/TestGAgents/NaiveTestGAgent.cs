@@ -18,10 +18,6 @@ public class NaiveTestStateLogEvent : StateLogEventBase<NaiveTestStateLogEvent>
 [GAgent("naiveTest")]
 public class NaiveTestGAgent : GAgentBase<NaiveTestGAgentState, NaiveTestStateLogEvent,EventBase, NaiveGAgentConfiguration>
 {
-    public NaiveTestGAgent(ILogger<NaiveTestGAgent> logger) : base(logger)
-    {
-    }
-
     public override Task<string> GetDescriptionAsync()
     {
         return Task.FromResult("This is a naive test GAgent");
