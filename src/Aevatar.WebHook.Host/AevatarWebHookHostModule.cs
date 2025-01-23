@@ -24,31 +24,8 @@ public class AevatarListenerHostModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
-        var configuration = context.Services.GetConfiguration();
-        ConfigureCors(context, configuration);
         context.Services.AddHealthChecks();
         context.Services.AddSingleton<IGAgentFactory,GAgentFactory>();
-    }
-
-    private void ConfigureCors(ServiceConfigurationContext context, IConfiguration configuration)
-    {
-        context.Services.AddCors(options =>
-        {
-            options.AddDefaultPolicy(builder =>
-            {
-                builder
-                    .WithOrigins(
-                        configuration["App:CorsOrigins"]
-                            .Split(",", StringSplitOptions.RemoveEmptyEntries)
-                            .Select(o => o.RemovePostFix("/"))
-                            .ToArray()
-                    )
-                    .WithAbpExposedHeaders()
-                    .SetIsOriginAllowedToAllowWildcardSubdomains()
-                    .AllowAnyHeader()
-                    .AllowAnyMethod();
-            });
-        });
     }
     
     public void ConfigureServices(IServiceCollection services)
@@ -73,8 +50,6 @@ public class AevatarListenerHostModule : AbpModule
             endpoints.MapWebhookHandlers(handlers,webhookId);
             endpoints.MapHealthChecks($"/{webhookId}/health");
         });
-       
-        app.UseCors();
     }
        
     public override void OnApplicationShutdown(ApplicationShutdownContext context)
