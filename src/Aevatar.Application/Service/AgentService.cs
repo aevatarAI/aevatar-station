@@ -4,12 +4,8 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Aevatar.Agent;
-using Aevatar.Agents.Atomic;
-using Aevatar.Agents.Atomic.Models;
 using Aevatar.Agents.Creator.Models;
-using Aevatar.Application.Grains.Agents.Atomic;
 using Aevatar.Application.Grains.Agents.Creator;
-using Aevatar.AtomicAgent;
 using Aevatar.Common;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
@@ -41,10 +37,8 @@ public class AgentService : ApplicationService, IAgentService
     private readonly IOptionsMonitor<AgentOptions> _agentOptions;
     private readonly GrainTypeResolver _grainTypeResolver;
     
-    private const string GroupAgentName = "GroupAgent";
     private const string IndexSuffix = "index";
     private const string IndexPrefix = "aevatar";
-    private List<AgentTypeDto> _businessAgents;
 
     public AgentService(
         IClusterClient clusterClient, 
@@ -68,170 +62,37 @@ public class AgentService : ApplicationService, IAgentService
         _grainTypeResolver = grainTypeResolver;
     }
     
-    public async Task<AtomicAgentDto> GetAtomicAgentAsync(string id)
-    {
-        var validGuid = ParseGuid(id);
-        var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(validGuid);
-        var agentData = await atomicAgent.GetAgentAsync();
-        
-        if (agentData.Properties.IsNullOrEmpty())
-        {
-            _logger.LogInformation("GetAgentAsync agentProperty is null: {id}", id);
-            throw new UserFriendlyException("agent not exist");
-        }
+    
 
-        var resp = new AtomicAgentDto()
-        {
-            Id = id,
-            Type = agentData.Type,
-            Name = agentData.Name,
-            Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentData.Properties),
-            GrainId = atomicAgent.GetGrainId()
-        };
-        
-        return resp;
-    }
-
-    public async Task<AtomicAgentDto> CreateAtomicAgentAsync(CreateAtomicAgentDto createDto)
-    {
-        CheckCreateParam(createDto);
-        var userId = _userAppService.GetCurrentUserId();
-        var guid = Guid.NewGuid();
-        var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(guid);
-        var agentData = _objectMapper.Map<CreateAtomicAgentDto, AtomicAgentData>(createDto);
-        if (!createDto.Properties.IsNullOrEmpty())
-        {
-            agentData.Properties = JsonConvert.SerializeObject(createDto.Properties);
-        }
-        
-        agentData.UserId = userId;
-        await atomicAgent.CreateAgentAsync(agentData);
-        var resp = _objectMapper.Map<CreateAtomicAgentDto, AtomicAgentDto>(createDto);
-        resp.Id = guid.ToString();
-        resp.GrainId = atomicAgent.GetGrainId();
-        return resp;
-    }
-
-    private void CheckCreateParam(CreateAtomicAgentDto createDto)
-    {
-        if (createDto.Type.IsNullOrEmpty())
-        {
-            _logger.LogInformation("CreateAtomicAgentAsync type is null");
-            throw new UserFriendlyException("type is null");
-        }
-        
-        if (createDto.Name.IsNullOrEmpty())
-        {
-            _logger.LogInformation("CreateAtomicAgentAsync name is null");
-            throw new UserFriendlyException("name is null");
-        }
-    }
-
-    public async Task<AtomicAgentDto> UpdateAtomicAgentAsync(string id, UpdateAtomicAgentDto updateDto)
-    {
-        var validGuid = ParseGuid(id);
-        await CheckAtomicAgentValid(validGuid);
-        
-        var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(validGuid);
-        var agentData = await atomicAgent.GetAgentAsync();
-        var resp = new AtomicAgentDto()
-        {
-            Id = id,
-            Type = agentData.Type
-        };
-        
-        if (!updateDto.Name.IsNullOrEmpty())
-        {
-            agentData.Name = updateDto.Name;
-        }
-        
-        if (!updateDto.Properties.IsNullOrEmpty())
-        {
-            agentData.Properties = JsonConvert.SerializeObject(updateDto.Properties);
-        }
-        
-        await atomicAgent.UpdateAgentAsync(agentData);
-        resp.Name = agentData.Name;
-        resp.GrainId = atomicAgent.GetGrainId();
-        
-        if (updateDto.Properties.IsNullOrEmpty())
-        {
-            return resp;
-        }
-        
-        resp.Properties = updateDto.Properties;
-        
-        // update property in business agent of groups
-        var agentTypeDataMap = await GetAgentTypeDataMap();
-        foreach (var kvp in agentData.Groups)
-        {
-            var businessAgentGuid = ParseGuid(kvp.Value);
-            
-            ConfigurationBase? dto = null;
-                   
-            if (agentTypeDataMap.TryGetValue(agentData.Type, out var agentTypeData) && !agentData.Properties.IsNullOrEmpty()) 
-            {
-                if (agentTypeData != null && agentTypeData.InitializationData != null)
-                {
-                    dto = SetupInitializedConfig(agentTypeData.InitializationData, agentData.Properties);
-                }
-            }
-            
-            // todo 
-            // var businessAgent = await _gAgentFactory.GetGAgentAsync(businessAgentGuid, agentData.Type, initializationEvent: dto);
-            // _logger.LogInformation("SetGroupAsync businessAgentGuid: {businessAgentGuid}", businessAgentGuid);
-            
-        }
-
-        return resp;
-    }
-
-    public async Task<List<AtomicAgentDto>> GetAtomicAgentsAsync(string userAddress, int pageIndex, int pageSize)
-    {
-        if (userAddress.IsNullOrEmpty())
-        {
-            _logger.LogInformation("GetAgentAsync Invalid userAddress: {userAddress}", userAddress);
-            throw new UserFriendlyException("Invalid userAddress");
-        }
-
-        if (pageIndex <= 0 || pageSize <= 1)
-        {
-            _logger.LogInformation("GetAgentAsync Invalid pageIndex: {pageIndex} pageSize:{pageSize}", pageIndex, pageSize);
-            throw new UserFriendlyException("Invalid pageIndex pageSize");
-        }
-
-        var index = IndexPrefix + nameof(AtomicGAgentState).ToLower() + IndexSuffix;
-        var result = await _cqrsProvider.QueryStateAsync(index,
-            q => q.Term(t => t.Field("userAddress").Value(userAddress)), 
-            (pageIndex-1)*pageSize,
-            pageSize
-        );
-        if (result == null)
-        {
-            return null;
-        }
-        
-        var atomicGAgentStateDtoList = JsonConvert.DeserializeObject<List<AtomicGAgentStateDto>>(result);
-
-        return atomicGAgentStateDtoList.Select(stateDto => new AtomicAgentDto { Id = stateDto.Id.ToString(), Type = stateDto.Type, Name = stateDto.Name, Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(stateDto.Properties) }).ToList();
-    }
-
-    public async Task DeleteAtomicAgentAsync(string id)
-    {
-        var validGuid = ParseGuid(id);
-        await CheckAtomicAgentValid(validGuid);
-        
-        var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(validGuid);
-        var agentData = await atomicAgent.GetAgentAsync();
-        
-        if (!agentData.Groups.IsNullOrEmpty())
-        {
-            _logger.LogInformation("agent in group: {group}", agentData.Groups);
-            throw new UserFriendlyException("agent in group!");
-        }
-        
-        await atomicAgent.DeleteAgentAsync();
-    }
+    // public async Task<List<AtomicAgentDto>> GetAtomicAgentsAsync(string userAddress, int pageIndex, int pageSize)
+    // {
+    //     if (userAddress.IsNullOrEmpty())
+    //     {
+    //         _logger.LogInformation("GetAgentAsync Invalid userAddress: {userAddress}", userAddress);
+    //         throw new UserFriendlyException("Invalid userAddress");
+    //     }
+    //
+    //     if (pageIndex <= 0 || pageSize <= 1)
+    //     {
+    //         _logger.LogInformation("GetAgentAsync Invalid pageIndex: {pageIndex} pageSize:{pageSize}", pageIndex, pageSize);
+    //         throw new UserFriendlyException("Invalid pageIndex pageSize");
+    //     }
+    //
+    //     var index = IndexPrefix + nameof(AtomicGAgentState).ToLower() + IndexSuffix;
+    //     var result = await _cqrsProvider.QueryStateAsync(index,
+    //         q => q.Term(t => t.Field("userAddress").Value(userAddress)), 
+    //         (pageIndex-1)*pageSize,
+    //         pageSize
+    //     );
+    //     if (result == null)
+    //     {
+    //         return null;
+    //     }
+    //     
+    //     var atomicGAgentStateDtoList = JsonConvert.DeserializeObject<List<AtomicGAgentStateDto>>(result);
+    //
+    //     return atomicGAgentStateDtoList.Select(stateDto => new AtomicAgentDto { Id = stateDto.Id.ToString(), Type = stateDto.Type, Name = stateDto.Name, Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(stateDto.Properties) }).ToList();
+    // }
     
 
     private Guid ParseGuid(string id)
@@ -243,26 +104,7 @@ public class AgentService : ApplicationService, IAgentService
         }
         return validGuid;
     }
-
-    private async Task CheckAtomicAgentValid(Guid guid)
-    {
-        var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(guid);
-        var agentData = await atomicAgent.GetAgentAsync();
-        if (agentData.Type.IsNullOrEmpty())
-        {
-            _logger.LogInformation("agent not exist, id: {id}", guid);
-            throw new UserFriendlyException("agent not exist");
-        }
-        
-        var userId = _userAppService.GetCurrentUserId();
-        if (agentData.UserId != userId)
-        {
-            _logger.LogInformation("agent not belong to user, id: {id}, owner: {owner}", 
-                guid, agentData.UserId);
-            throw new UserFriendlyException("agent not belong to user");
-        }
-    }
-
+    
     // public async Task<List<CombinationAgentDto>> GetCombinationAgentsAsync(string userAddress, string groupId, int pageIndex, int pageSize)
     // {
     //     if (userAddress.IsNullOrEmpty())

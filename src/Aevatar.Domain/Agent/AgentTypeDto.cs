@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Aevatar.AtomicAgent;
+namespace Aevatar.Agent;
 
 public class AgentTypeDto
 {
@@ -35,4 +35,3 @@ public class PropertyData
     public string Name { get; set; }
     public Type Type { get; set; }
 }
-

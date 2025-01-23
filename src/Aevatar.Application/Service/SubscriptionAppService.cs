@@ -20,7 +20,7 @@ namespace Aevatar.Service;
 
 public interface ISubscriptionAppService
 {
-    Task<List<EventDescriptionDto>> GetAvailableEventsAsync(string agentId);
+    Task<List<EventDescriptionDto>> GetAvailableEventsAsync(Guid agentId);
     Task<SubscriptionDto> SubscribeAsync(CreateSubscriptionDto createSubscriptionDto);
     Task CancelSubscriptionAsync(Guid subscriptionId);
     Task<SubscriptionDto> GetSubscriptionAsync(Guid subscriptionId);
@@ -35,22 +35,25 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
     private readonly ILogger<SubscriptionAppService> _logger;
     private readonly IObjectMapper _objectMapper;
     private readonly IUserAppService _userAppService;
+    private readonly IGAgentFactory _gAgentFactory;
     
     public SubscriptionAppService(
         IClusterClient clusterClient,
         IObjectMapper objectMapper,
         IUserAppService userAppService,
+        IGAgentFactory gAgentFactory,
         ILogger<SubscriptionAppService> logger)
     {
         _clusterClient = clusterClient;
         _objectMapper = objectMapper;
         _logger = logger;
         _userAppService = userAppService;
+        _gAgentFactory = gAgentFactory;
     }
     
-    public async Task<List<EventDescriptionDto>> GetAvailableEventsAsync(string agentId)
+    public async Task<List<EventDescriptionDto>> GetAvailableEventsAsync(Guid agentId)
     {
-        var agent = _clusterClient.GetGrain<ICreatorGAgent>(ParseGuid(agentId));
+        var agent = _clusterClient.GetGrain<ICreatorGAgent>(agentId);
         var agentState = await agent.GetAgentAsync();
         var dto = _objectMapper.Map<List<EventDescription>, List<EventDescriptionDto>>(agentState.EventInfoList);
         return dto;
@@ -62,13 +65,15 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
 
       var  input = _objectMapper.Map<CreateSubscriptionDto, SubscribeEventInputDto>(createSubscriptionDto);
       var subscriptionStateAgent =
-          _clusterClient.GetGrain<ISubscriptionGAgent>(GuidUtil.StringToGuid(createSubscriptionDto.AgentId));
+          _clusterClient.GetGrain<ISubscriptionGAgent>(GuidUtil.StringToGuid(createSubscriptionDto.AgentId.ToString()));
       
       input.UserId = _userAppService.GetCurrentUserId();
       var subscriptionState = await subscriptionStateAgent.SubscribeAsync(input);
       
-      var agent = _clusterClient.GetGrain<ICreatorGAgent>(ParseGuid(input.AgentId));
-      await agent.RegisterAsync(subscriptionStateAgent);
+      var agent = _clusterClient.GetGrain<ICreatorGAgent>(input.AgentId);
+      var agentState = await agent.GetAgentAsync();
+      var businessAgent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
+      await businessAgent.RegisterAsync(subscriptionStateAgent);
       return _objectMapper.Map<EventSubscriptionState, SubscriptionDto>(subscriptionState);
     }
 
@@ -84,7 +89,7 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
             throw new UserFriendlyException("User is not allowed to cancel subscription");
         }
         
-        var agent = _clusterClient.GetGrain<ICreatorGAgent>(ParseGuid(subscriptionState.AgentId));
+        var agent = _clusterClient.GetGrain<ICreatorGAgent>(subscriptionState.AgentId);
         await agent.UnregisterAsync(subscriptionStateAgent);
         await subscriptionStateAgent.UnsubscribeAsync();
     }
@@ -109,7 +114,7 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
         
         var eventList = agentState.EventInfoList;
 
-        var eventDescription = eventList.Find(i => i.EventType.Name == dto.EventType);
+        var eventDescription = eventList.Find(i => i.EventType.FullName == dto.EventType);
         if (eventDescription == null)
         {
             _logger.LogInformation("Type {type} could not be found.", dto.EventType);
@@ -140,7 +145,9 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
             propInfo.SetValue(eventInstance, convertedValue);
         }
         
+        var businessAgent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
         await agent.PublishEventAsync((EventBase)eventInstance);
+        
     }
     
     private Guid ParseGuid(string id)

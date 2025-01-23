@@ -13,7 +13,7 @@ namespace Aevatar.Controllers;
 [RemoteService]
 [ControllerName("Subscription")]
 [Route("api/subscription")]
-[Authorize]
+// [Authorize]
 public class SubscriptionController :  AevatarController
 {
     private readonly SubscriptionAppService _subscriptionAppService;
@@ -24,7 +24,7 @@ public class SubscriptionController :  AevatarController
     }
 
     [HttpGet("events")]
-    public async Task<List<EventDescriptionDto>> GetAvailableEventsAsync([FromQuery] string agentId)
+    public async Task<List<EventDescriptionDto>> GetAvailableEventsAsync([FromQuery] Guid agentId)
     {
         return await _subscriptionAppService.GetAvailableEventsAsync(agentId);
     }

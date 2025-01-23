@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Agent;
-using Aevatar.AtomicAgent;
 using Aevatar.CQRS.Dto;
 using Aevatar.Service;
 using Asp.Versioning;
