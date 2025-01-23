@@ -1,6 +1,6 @@
 using System.Net.Http.Json;
 using Aevatar.Application.Grains.Agents.Atomic;
-using Aevatar.Application.Grains.Agents.Combination;
+using Aevatar.Application.Grains.Agents.Creator;
 using Aevatar.AtomicAgent;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
@@ -9,7 +9,6 @@ using Aevatar.Subscription;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Orleans.Providers;
-using Orleans.Runtime;
 
 namespace Aevatar.Application.Grains.Subscription;
 [StorageProvider(ProviderName = "PubSubStore")]
@@ -71,7 +70,7 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
                 eventPushRequest.EventId = eventWrapper.EventId;
                 eventPushRequest.EventType = eventWrapper.Event.GetType().Name;
                 eventPushRequest.Payload = JsonConvert.SerializeObject(eventWrapper.Event);
-                eventPushRequest.AtomicAgent = await GetAtomicAgentDtoFromEventGrainId(eventWrapper.PublisherGrainId);
+                // eventPushRequest.AtomicAgent = await GetAtomicAgentDtoFromEventGrainId(eventWrapper.PublisherGrainId);
                 try
                 {
                     using var httpClient = new HttpClient();
@@ -85,37 +84,37 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
         }
     }
     
-    private async Task<AtomicAgentDto> GetAtomicAgentDtoFromEventGrainId(GrainId grainId)
-    {
-        Guid.TryParse(State.AgentId, out Guid combinationGuid);
-        var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(combinationGuid);
-        var combinationData = await combinationAgent.GetCombinationAsync();
-        foreach (var agentId in combinationData.AgentComponent)
-        {
-            var businessGuid = grainId.GetGuidKey().ToString();
-            if (agentId.Value == businessGuid)
-            {
-                Guid.TryParse(agentId.Key, out Guid atomicGuid);
-                var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(atomicGuid);
-                var atomicAgentData = await atomicAgent.GetAgentAsync();
-                var agentDto = new AtomicAgentDto()
-                {
-                    Id = agentId.Key,
-                    Type = atomicAgentData.Type,
-                    Name = atomicAgentData.Name
-                };
-                if (!atomicAgentData.Properties.IsNullOrEmpty())
-                {
-                    agentDto.Properties =
-                        JsonConvert.DeserializeObject<Dictionary<string, object>>(atomicAgentData.Properties);
-                }
-
-                return agentDto;
-            }
-        }
-
-        return new AtomicAgentDto();
-    }
+    // private async Task<AtomicAgentDto> GetAtomicAgentDtoFromEventGrainId(GrainId grainId)
+    // {
+    //     Guid.TryParse(State.AgentId, out Guid combinationGuid);
+    //     var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(combinationGuid);
+    //     var combinationData = await combinationAgent.GetCombinationAsync();
+    //     foreach (var agentId in combinationData.AgentComponent)
+    //     {
+    //         var businessGuid = grainId.GetGuidKey().ToString();
+    //         if (agentId.Value == businessGuid)
+    //         {
+    //             Guid.TryParse(agentId.Key, out Guid atomicGuid);
+    //             var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(atomicGuid);
+    //             var atomicAgentData = await atomicAgent.GetAgentAsync();
+    //             var agentDto = new AtomicAgentDto()
+    //             {
+    //                 Id = agentId.Key,
+    //                 Type = atomicAgentData.Type,
+    //                 Name = atomicAgentData.Name
+    //             };
+    //             if (!atomicAgentData.Properties.IsNullOrEmpty())
+    //             {
+    //                 agentDto.Properties =
+    //                     JsonConvert.DeserializeObject<Dictionary<string, object>>(atomicAgentData.Properties);
+    //             }
+    //
+    //             return agentDto;
+    //         }
+    //     }
+    //
+    //     return new AtomicAgentDto();
+    // }
 
     public override async Task<string> GetDescriptionAsync()
     {

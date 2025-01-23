@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Aevatar.Agents.Combination;
-using Aevatar.Domain.Grains.Subscription;
 using Aevatar.Service;
 using Aevatar.Subscription;
 using Asp.Versioning;

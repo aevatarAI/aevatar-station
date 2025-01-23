@@ -3,14 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Aevatar.Agent;
 using Aevatar.Agents.Atomic;
 using Aevatar.Agents.Atomic.Models;
-using Aevatar.Agents.Combination;
-using Aevatar.Agents.Combination.Models;
+using Aevatar.Agents.Creator.Models;
 using Aevatar.Application.Grains.Agents.Atomic;
-using Aevatar.Application.Grains.Agents.Combination;
+using Aevatar.Application.Grains.Agents.Creator;
 using Aevatar.AtomicAgent;
-using Aevatar.CombinationAgent;
 using Aevatar.Common;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
@@ -18,9 +17,10 @@ using Aevatar.CQRS.Provider;
 using Aevatar.Options;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Nest;
 using Newtonsoft.Json;
 using Orleans;
+using Orleans.Metadata;
+using Orleans.Runtime;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.ObjectMapping;
@@ -39,11 +39,12 @@ public class AgentService : ApplicationService, IAgentService
     private readonly IGAgentManager _gAgentManager;
     private readonly IUserAppService _userAppService;
     private readonly IOptionsMonitor<AgentOptions> _agentOptions;
+    private readonly GrainTypeResolver _grainTypeResolver;
     
     private const string GroupAgentName = "GroupAgent";
     private const string IndexSuffix = "index";
     private const string IndexPrefix = "aevatar";
-    private List<AgentParamDto> _businessAgents;
+    private List<AgentTypeDto> _businessAgents;
 
     public AgentService(
         IClusterClient clusterClient, 
@@ -53,7 +54,8 @@ public class AgentService : ApplicationService, IAgentService
         IGAgentFactory gAgentFactory, 
         IGAgentManager gAgentManager, 
         IUserAppService userAppService, 
-        IOptionsMonitor<AgentOptions> agentOptions)
+        IOptionsMonitor<AgentOptions> agentOptions, 
+        GrainTypeResolver grainTypeResolver)
     {
         _clusterClient = clusterClient;
         _cqrsProvider = cqrsProvider;
@@ -63,6 +65,7 @@ public class AgentService : ApplicationService, IAgentService
         _gAgentManager = gAgentManager;
         _userAppService = userAppService;
         _agentOptions = agentOptions;
+        _grainTypeResolver = grainTypeResolver;
     }
     
     public async Task<AtomicAgentDto> GetAtomicAgentAsync(string id)
@@ -159,23 +162,24 @@ public class AgentService : ApplicationService, IAgentService
         resp.Properties = updateDto.Properties;
         
         // update property in business agent of groups
-        var agentPropertyDict = await GetInitializedDtos();
+        var agentTypeDataMap = await GetAgentTypeDataMap();
         foreach (var kvp in agentData.Groups)
         {
             var businessAgentGuid = ParseGuid(kvp.Value);
             
-            InitializationEventBase? dto = null;
+            ConfigurationBase? dto = null;
                    
-            if (agentPropertyDict.TryGetValue(agentData.Type, out var initializeParam) && !agentData.Properties.IsNullOrEmpty()) 
+            if (agentTypeDataMap.TryGetValue(agentData.Type, out var agentTypeData) && !agentData.Properties.IsNullOrEmpty()) 
             {
-                if (initializeParam != null)
+                if (agentTypeData != null && agentTypeData.InitializationData != null)
                 {
-                    dto = SetupInitializedDto(initializeParam, agentData.Properties);
+                    dto = SetupInitializedConfig(agentTypeData.InitializationData, agentData.Properties);
                 }
             }
             
-            var businessAgent = await _gAgentFactory.GetGAgentAsync(agentData.Type, businessAgentGuid, initializeDto: dto);
-            _logger.LogInformation("SetGroupAsync businessAgentGuid: {businessAgentGuid}", businessAgentGuid);
+            // todo 
+            // var businessAgent = await _gAgentFactory.GetGAgentAsync(businessAgentGuid, agentData.Type, initializationEvent: dto);
+            // _logger.LogInformation("SetGroupAsync businessAgentGuid: {businessAgentGuid}", businessAgentGuid);
             
         }
 
@@ -229,194 +233,6 @@ public class AgentService : ApplicationService, IAgentService
         await atomicAgent.DeleteAgentAsync();
     }
     
-    public async Task<CombinationAgentDto> CombineAgentAsync(CombineAgentDto combineAgentDto)
-    { 
-        CheckCombineParam(combineAgentDto);
-        
-        var userId = _userAppService.GetCurrentUserId();
-        var guid = Guid.NewGuid();
-        var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(guid);
-        var status = await combinationAgent.GetStatusAsync();
-        if (status == AgentStatus.Running || status == AgentStatus.Stopped)
-        {
-            _logger.LogInformation("CombineAgentAsync agent exist, name: {name} status: {status}", 
-                combineAgentDto.Name, status);
-            throw new UserFriendlyException("agent already exist");
-        }
-        
-        var components = await SetGroupAsync(combineAgentDto.AgentComponent, guid);
-        var data = _objectMapper.Map<CombineAgentDto, CombinationAgentData>(combineAgentDto);
-        data.GroupId = guid.ToString();
-        data.UserId = userId;
-        data.AgentComponent = components;
-        await combinationAgent.CombineAgentAsync(data);
-
-        var resp = new CombinationAgentDto
-        {
-            Id = guid.ToString(),
-            Name = data.Name,
-            AgentComponent = components,
-            GrainId = combinationAgent.GetGrainId()
-        };
-   
-        return resp;
-    }
-
-    private void CheckCombineParam(CombineAgentDto combineAgentDto)
-    {
-        if (combineAgentDto.AgentComponent.IsNullOrEmpty())
-        {
-            _logger.LogInformation("CombineAgentAsync agentComponent is null, name: {name}", combineAgentDto.Name);
-            throw new UserFriendlyException("agentComponent is null");
-        }
-        
-        if (combineAgentDto.Name.IsNullOrEmpty())
-        {
-            _logger.LogInformation("CombineAgentAsync name is null, name: {name}", combineAgentDto.Name);
-            throw new UserFriendlyException("name is null");
-        }
-    }
-    
-    public async Task<CombinationAgentDto> GetCombinationAsync(string id)
-    {
-        var validGuid = ParseGuid(id);
-        var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(validGuid);
-        var combinationData = await combinationAgent.GetCombinationAsync();
-        if (combinationData == null || combinationData.Status == AgentStatus.Undefined)
-        {
-            _logger.LogInformation("GetCombinationAsync combinationData is null: {id}", id);
-            throw new UserFriendlyException("combination not exist");
-        }
-        
-        if (combinationData.Status == AgentStatus.Deleted)
-        {
-            _logger.LogInformation("GetCombinationAsync combinationData is deleted: {id}", id);
-            throw new UserFriendlyException("combination deleted");
-        }
-
-        var resp = new CombinationAgentDto()
-        {
-            Id = id,
-            Name = combinationData.Name,
-            AgentComponent = combinationData.AgentComponent,
-            GrainId = combinationAgent.GetGrainId()
-        };
-        
-        return resp;
-    }
-    
-    private async Task<Dictionary<string, string>> SetGroupAsync(List<string> agentComponent, Guid guid)
-    {
-        var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(guid);
-  
-        foreach (var agentId in agentComponent)
-        {
-            var validGuid = ParseGuid(agentId);
-            await CheckAtomicAgentValid(validGuid);
-        }
-        
-        var agentPropertyDict = await GetInitializedDtos();
-        var components = new Dictionary<string, string>();
-        foreach (var agentId in agentComponent)
-        {
-            var validGuid = ParseGuid(agentId);
-            var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(validGuid);
-            var agentData = await atomicAgent.GetAgentAsync();
-            
-            InitializationEventBase? dto = null;
-                   
-            // set property in business agent of groups
-            if (agentPropertyDict.TryGetValue(agentData.Type, out var initializeParam) && !agentData.Properties.IsNullOrEmpty()) 
-            {
-                if (initializeParam != null)
-                {
-                    dto = SetupInitializedDto(initializeParam, agentData.Properties);
-                }
-            }
-            
-            var businessAgent = await _gAgentFactory.GetGAgentAsync(agentData.Type, initializeDto: dto);
-            await combinationAgent.RegisterAsync(businessAgent);
-            var eventData = await businessAgent.GetAllSubscribedEventsAsync();
-            await combinationAgent.UpdateSubscribedEventAsync(eventData);
-            var primaryKey = businessAgent.GetPrimaryKey().ToString();
-            components.Add(agentId, primaryKey);
-            await atomicAgent.AddToGroupAsync(guid.ToString(), primaryKey);
-        }
-
-        return components;
-    }
-    
-    public async Task<CombinationAgentDto> UpdateCombinationAsync(string id, UpdateCombinationDto updateDto)
-    {
-        var validGuid = ParseGuid(id);
-        await CheckCombinationValid(validGuid);
-        var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(validGuid);
-        var combinationData = await combinationAgent.GetCombinationAsync();
-        
-        if (!updateDto.Name.IsNullOrEmpty())
-        {
-            combinationData.Name = updateDto.Name;
-        }
-
-        if (!updateDto.AgentComponent.IsNullOrEmpty())
-        {
-            var oldAgentList = combinationData.AgentComponent.Keys.ToList();
-            var newAgentList = updateDto.AgentComponent;
-            
-            var newIncludedAgent = updateDto.AgentComponent.Where(i => !oldAgentList.Contains(i)).ToList();
-            _logger.LogInformation("UpdateCombinationAsync newIncludedAgent: {newIncludedAgent}", newIncludedAgent);
-            var newComponents = await SetGroupAsync(newIncludedAgent, validGuid);
-             
-            var excludedAgent = combinationData.AgentComponent.Where(kv => !newAgentList.Contains(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value);
-            _logger.LogInformation("UpdateCombinationAsync excludeAgent: {excludedAgent}", excludedAgent);
-            await ExcludeFromGroupAsync(excludedAgent, validGuid);
-            
-            var currentComponents =  combinationData.AgentComponent.Where(kv => !excludedAgent.ContainsKey(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value);
-            foreach (var component in newComponents)
-            {
-                currentComponents[component.Key] = component.Value;
-            }
-            combinationData.AgentComponent = currentComponents;
-            _logger.LogInformation("UpdateCombinationAsync currentComponents: {currentComponents}", combinationData.AgentComponent);
-        }
-        
-        await combinationAgent.UpdateCombinationAsync(combinationData);
-        
-        var resp = new CombinationAgentDto
-        {
-            Id = id,
-            Name = combinationData.Name,
-            AgentComponent = combinationData.AgentComponent,
-            GrainId = combinationAgent.GetGrainId()
-        };
-
-        return resp;
-    }
-    
-    private async Task ExcludeFromGroupAsync(Dictionary<string, string> excludedAgent, Guid guid)
-    {
-        var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(guid);
-        foreach (var agentId in excludedAgent.Keys.ToList())
-        {
-            var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(Guid.Parse(agentId));
-            await atomicAgent.RemoveFromGroupAsync(guid.ToString());
-            var agentData = await atomicAgent.GetAgentAsync();
-            var businessAgentGuid = ParseGuid(excludedAgent[agentId]);
-            var businessAgent = await _gAgentFactory.GetGAgentAsync(agentData.Type, businessAgentGuid);
-            await combinationAgent.UnregisterAsync(businessAgent);
-        }
-    }
-
-    public async Task DeleteCombinationAsync(string id)
-    {
-        var validGuid = ParseGuid(id);
-        await CheckCombinationValid(validGuid);
-        
-        var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(validGuid);
-        var combinationData = await combinationAgent.GetCombinationAsync();
-        await ExcludeFromGroupAsync(combinationData.AgentComponent, validGuid);
-        await combinationAgent.DeleteCombinationAsync();
-    }
 
     private Guid ParseGuid(string id)
     {
@@ -446,60 +262,41 @@ public class AgentService : ApplicationService, IAgentService
             throw new UserFriendlyException("agent not belong to user");
         }
     }
-    
-    private async Task CheckCombinationValid(Guid guid)
-    {
-        var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(guid);
-        var combinationData = await combinationAgent.GetCombinationAsync();
-        if (combinationData.AgentComponent.IsNullOrEmpty())
-        {
-            _logger.LogInformation("combinationData is null: {id}", guid);
-            throw new UserFriendlyException("combination not exist");
-        }
-        
-        var userId = _userAppService.GetCurrentUserId();
-        if (combinationData.UserId != userId)
-        {
-            _logger.LogInformation("combination not belong to user: {user}, owner: {owner}", 
-                userId, combinationData.UserId);
-            throw new UserFriendlyException("combination not belong to user!");
-        }
-    }
 
-    public async Task<List<CombinationAgentDto>> GetCombinationAgentsAsync(string userAddress, string groupId, int pageIndex, int pageSize)
-    {
-        if (userAddress.IsNullOrEmpty())
-        {
-            _logger.LogInformation("GetAgentAsync Invalid userAddress: {userAddress} ", userAddress);
-            throw new UserFriendlyException("Invalid userAddress");
-        }
-        if (pageIndex <= 0 || pageSize <= 1)
-        {
-            _logger.LogInformation("GetAgentAsync Invalid pageIndex: {pageIndex} pageSize:{pageSize}", pageIndex, pageSize);
-            throw new UserFriendlyException("Invalid pageIndex pageSize");
-        }
-        
-        var index = IndexPrefix + nameof(CombinationGAgentState).ToLower() + IndexSuffix;
-        var filters = new List<Func<QueryContainerDescriptor<object>, QueryContainer>> { m => m.Term(t => t.Field("userAddress").Value(userAddress)) };
-        if (!groupId.IsNullOrEmpty())
-        {
-            filters.Add(m => m.Term(t => t.Field("groupId").Value(groupId)));
-        }
-
-        var result = await _cqrsProvider.QueryStateAsync(index,
-            q => q.Bool(b => b.Must(filters)),
-            (pageIndex-1)*pageSize,
-            pageSize
-        );
-        if (result == null)
-        {
-            return null;
-        }
-        
-        var combinationGAgentStateDtoList = JsonConvert.DeserializeObject<List<CombinationGAgentStateDto>>(result);
-    
-        return combinationGAgentStateDtoList.Select(stateDto => new CombinationAgentDto { Id = stateDto.Id.ToString(), Name = stateDto.Name, AgentComponent = JsonConvert.DeserializeObject<Dictionary<string, string>>(stateDto.AgentComponent) }).ToList();
-    }
+    // public async Task<List<CombinationAgentDto>> GetCombinationAgentsAsync(string userAddress, string groupId, int pageIndex, int pageSize)
+    // {
+    //     if (userAddress.IsNullOrEmpty())
+    //     {
+    //         _logger.LogInformation("GetAgentAsync Invalid userAddress: {userAddress} ", userAddress);
+    //         throw new UserFriendlyException("Invalid userAddress");
+    //     }
+    //     if (pageIndex <= 0 || pageSize <= 1)
+    //     {
+    //         _logger.LogInformation("GetAgentAsync Invalid pageIndex: {pageIndex} pageSize:{pageSize}", pageIndex, pageSize);
+    //         throw new UserFriendlyException("Invalid pageIndex pageSize");
+    //     }
+    //     
+    //     var index = IndexPrefix + nameof(CombinationGAgentState).ToLower() + IndexSuffix;
+    //     var filters = new List<Func<QueryContainerDescriptor<object>, QueryContainer>> { m => m.Term(t => t.Field("userAddress").Value(userAddress)) };
+    //     if (!groupId.IsNullOrEmpty())
+    //     {
+    //         filters.Add(m => m.Term(t => t.Field("groupId").Value(groupId)));
+    //     }
+    //
+    //     var result = await _cqrsProvider.QueryStateAsync(index,
+    //         q => q.Bool(b => b.Must(filters)),
+    //         (pageIndex-1)*pageSize,
+    //         pageSize
+    //     );
+    //     if (result == null)
+    //     {
+    //         return null;
+    //     }
+    //     
+    //     var combinationGAgentStateDtoList = JsonConvert.DeserializeObject<List<CombinationGAgentStateDto>>(result);
+    //
+    //     return combinationGAgentStateDtoList.Select(stateDto => new CombinationAgentDto { Id = stateDto.Id.ToString(), Name = stateDto.Name, AgentComponent = JsonConvert.DeserializeObject<Dictionary<string, string>>(stateDto.AgentComponent) }).ToList();
+    // }
 
     public async Task<Tuple<long, List<AgentGEventIndex>>> GetAgentEventLogsAsync(string agentId, int pageNumber, int pageSize)
     {
@@ -522,7 +319,7 @@ public class AgentService : ApplicationService, IAgentService
 
     private async Task BuildGroupTreeAsync(string agentId, List<string> result)
     {
-        var gAgent = _clusterClient.GetGrain<ICombinationGAgent>(Guid.Parse(agentId));
+        var gAgent = _clusterClient.GetGrain<ICreatorGAgent>(Guid.Parse(agentId));
         var childrenAgentIds = await gAgent.GetChildrenAsync();
         if (childrenAgentIds.IsNullOrEmpty())
         {
@@ -538,67 +335,82 @@ public class AgentService : ApplicationService, IAgentService
         }
     }
     
-    public async Task<Dictionary<string, AgentInitializedData?>> GetInitializedDtos()
+    public async Task<Dictionary<string, AgentTypeData?>> GetAgentTypeDataMap()
     {
         var systemAgents = _agentOptions.CurrentValue.SystemAgentList;
         var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
         var validAgent = availableGAgents.Where(a => a.Namespace.StartsWith("Aevatar")).ToList();
-        var businessAgent = validAgent.Where(a => !systemAgents.Contains(a.Name)).ToList();
+        var businessAgentTypes = validAgent.Where(a => !systemAgents.Contains(a.Name)).ToList();
 
-        var dict = new Dictionary<string, AgentInitializedData?>();
+        var dict = new Dictionary<string, AgentTypeData?>();
         
-        foreach (var type in businessAgent)
+        foreach (var agentType in businessAgentTypes)
         {
-            var agent = await _gAgentFactory.GetGAgentAsync(type.Name);
-            var initializeDtoType = await agent.GetInitializationTypeAsync();
-            if (initializeDtoType == null)
+            var grainType = _grainTypeResolver.GetGrainType(agentType).ToString();
+            if (grainType != null)
             {
-                dict[type.Name] = null;
-                continue;
-            }
-            
-            PropertyInfo[] properties = initializeDtoType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-
-            var initializeDto = new AgentInitializedData
-            {
-                DtoType = initializeDtoType
-            };
-            
-            var propertyDtos = new List<PropertyDto>();
-            foreach (PropertyInfo property in properties)
-            {
-                var propertyDto = new PropertyDto()
+                var agentTypeData = new AgentTypeData
                 {
-                    Name = property.Name,
-                    Type = property.PropertyType
+                    FullName = agentType.FullName,
                 };
-                propertyDtos.Add(propertyDto);
+                var grainId = GrainId.Create(grainType, Guid.NewGuid().ToString());
+                var agent = await _gAgentFactory.GetGAgentAsync(grainId);
+                var initializeDtoType = await agent.GetConfigurationTypeAsync();
+                if (initializeDtoType == null || initializeDtoType.IsAbstract)
+                {
+                    dict[grainType] = agentTypeData;
+                    continue;
+                }
+            
+                PropertyInfo[] properties = initializeDtoType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+            
+                var initializationData = new InitializationData
+                {
+                    DtoType = initializeDtoType
+                };
+            
+                var propertyDtos = new List<PropertyData>();
+                foreach (PropertyInfo property in properties)
+                {
+                    var propertyDto = new PropertyData()
+                    {
+                        Name = property.Name,
+                        Type = property.PropertyType
+                    };
+                    propertyDtos.Add(propertyDto);
+                }
+                initializationData.Properties = propertyDtos;
+                agentTypeData.InitializationData = initializationData;
+                dict[grainType] = agentTypeData;
             }
-            initializeDto.Properties = propertyDtos;
-            dict[type.Name] = initializeDto;
         }
 
         return dict;
     }
     
-    public async Task<List<AgentParamDto>> GetAllAgents()
+    public async Task<List<AgentTypeDto>> GetAllAgents()
     {
-        var propertyDtos = await GetInitializedDtos();
-        var resp = new List<AgentParamDto>();
+        var propertyDtos = await GetAgentTypeDataMap();
+        var resp = new List<AgentTypeDto>();
         foreach (var kvp in propertyDtos)
         {
-            var paramDto = new AgentParamDto
+            var paramDto = new AgentTypeDto
             {
-                AgentType = kvp.Key
+                AgentType = kvp.Key,
+                FullName = kvp.Value?.FullName ?? kvp.Key,
             };
             
-            if (kvp.Value != null)
+            if (kvp.Value != null )
             {
-                paramDto.AgentParams = kvp.Value.Properties.Select(p => new ParamDto
+                paramDto.FullName = kvp.Value.FullName ?? "";
+                if (kvp.Value.InitializationData != null)
                 {
-                    Name = p.Name,
-                    Type = p.Type.ToString()
-                }).ToList();
+                    paramDto.AgentParams = kvp.Value.InitializationData.Properties.Select(p => new ParamDto
+                    {
+                        Name = p.Name,
+                        Type = p.Type.ToString()
+                    }).ToList();
+                }
             }
             
             resp.Add(paramDto);
@@ -606,23 +418,23 @@ public class AgentService : ApplicationService, IAgentService
         return resp;
     }
 
-    private InitializationEventBase SetupInitializedDto(AgentInitializedData initializedData,  string propertiesString)
+    private ConfigurationBase SetupInitializedConfig(InitializationData initializationData,  string propertiesString)
     {
         var properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(propertiesString);
-        var actualDto = Activator.CreateInstance(initializedData.DtoType);
-        var dto = (InitializationEventBase)actualDto!;
+        var actualDto = Activator.CreateInstance(initializationData.DtoType);
+        var config = (ConfigurationBase)actualDto!;
                     
         foreach (var kvp in properties)
         {
             var propertyName = kvp.Key; 
             var propertyValue = kvp.Value;
-            var propertyType = initializedData.Properties.FirstOrDefault(x => x.Name == propertyName)?.Type;
+            var propertyType = initializationData.Properties.FirstOrDefault(x => x.Name == propertyName)?.Type;
             if (propertyType == null)
             {
                 continue;
             }
                         
-            var propertyInfo = initializedData.DtoType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+            var propertyInfo = initializationData.DtoType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
             if (propertyInfo == null || !propertyInfo.CanWrite)
             {
                 _logger.LogInformation("Property {propertyName} not found or cannot be written.", propertyName);
@@ -630,11 +442,268 @@ public class AgentService : ApplicationService, IAgentService
             }
             
             object convertedValue = ReflectionUtil.ConvertValue(propertyType, propertyValue);
-            propertyInfo?.SetValue(dto, convertedValue);
+            propertyInfo?.SetValue(config, convertedValue);
             _logger.LogInformation("SetGroupAsync propertyName: {propertyName}, propertyValue: {propertyValue}, propertyType: {propertyType}", propertyName, propertyValue, propertyType);
         }
 
-        return dto;
+        return config;
+    }
+
+    public async Task<AgentDto> CreateAgentAsync(CreateAgentInputDto dto)
+    {
+        // CheckCreateParam(createDto);
+        var userId = _userAppService.GetCurrentUserId();
+        var guid = Guid.NewGuid();
+        var agentData = new AgentData
+        {
+            UserId = userId,
+            AgentType = dto.AgentType,
+            Properties = JsonConvert.SerializeObject(dto.Properties),
+            Name = dto.Name
+        };
+        
+        var initializationParam = JsonConvert.SerializeObject(dto.Properties);
+        var grainId = await InitializeBusinessAgent(guid, dto.AgentType, initializationParam);
+        var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
+        agentData.BusinessAgentGrainId = grainId;
+        await creatorAgent.CreateAgentAsync(agentData);
+        
+        var resp = new AgentDto
+        {
+            Id = guid,
+            AgentType = dto.AgentType,
+            Name = dto.Name,
+            GrainId = grainId,
+            Properties = dto.Properties
+        };
+        
+        return resp;
+        
+        // return await Task.FromResult(new AgentDto());
+    }
+
+    private async Task<GrainId> InitializeBusinessAgent(Guid primaryKey, string agentType, string agentProperties)
+    {
+        var agentTypeDataMap = await GetAgentTypeDataMap();
+        ConfigurationBase? config = null;
+        
+        if (agentTypeDataMap.TryGetValue(agentType, out var agentTypeData) && !agentProperties.IsNullOrEmpty()) 
+        {
+            if (agentTypeData != null && agentTypeData.InitializationData != null)
+            {
+                config = SetupInitializedConfig(agentTypeData.InitializationData, agentProperties);
+            }
+        }
+        
+        var grainId = GrainId.Create(agentType, primaryKey.ToString("N"));
+        var businessAgent = await _gAgentFactory.GetGAgentAsync(grainId, config);
+        return businessAgent.GetGrainId();
+    }
+    
+    public async Task<AgentDto> UpdateAgentAsync(Guid guid, UpdateAgentInputDto dto)
+    {
+        // var guid = ParseGuid(id);
+        var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
+        var agentState = await creatorAgent.GetAgentAsync();
+
+        EnsureUserAuthorized(agentState.UserId);
+        
+        await creatorAgent.UpdateAgentAsync(dto);
+        var businessAgent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
+
+        if (!dto.Properties.IsNullOrEmpty())
+        {
+            var updatedParam = JsonConvert.SerializeObject(dto.Properties);
+            var agentTypeDataMap = await GetAgentTypeDataMap();
+            ConfigurationBase? config = null;
+            if (agentTypeDataMap.TryGetValue(agentState.AgentType, out var agentTypeData) && !updatedParam.IsNullOrEmpty()) 
+            {
+                if (agentTypeData != null && agentTypeData.InitializationData != null)
+                {
+                    config = SetupInitializedConfig(agentTypeData.InitializationData, updatedParam);
+                }
+            }
+
+            if (config != null)
+            {
+                await businessAgent.ConfigAsync(config);
+            }
+            else
+            {
+                _logger.LogError("no properties to be updated, id: {id}", guid);
+            }
+        }
+        
+        var resp = new AgentDto
+        {
+            Id = guid,
+            AgentType = agentState.AgentType,
+            Name = dto.Name,
+            GrainId = agentState.BusinessAgentGrainId,
+            Properties = dto.Properties
+        };
+       
+        return resp;
+    }
+
+    public async Task<AgentDto> GetAgentAsync(Guid guid)
+    {
+        var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
+        var agentState = await creatorAgent.GetAgentAsync();
+
+        EnsureUserAuthorized(agentState.UserId);
+        
+        var resp = new AgentDto
+        {
+            Id = guid,
+            AgentType = agentState.AgentType,
+            Name = agentState.Name,
+            GrainId = agentState.BusinessAgentGrainId,
+            Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentState.Properties)
+        };
+        
+        return resp;
+    }
+    
+    public async Task<SubAgentDto> AddSubAgentAsync(Guid guid, AddSubAgentDto addSubAgentDto)
+    {
+        // var guid = ParseGuid(id);
+        var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
+        var agentState = await creatorAgent.GetAgentAsync();
+        
+        EnsureUserAuthorized(agentState.UserId);
+        
+        var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
+        
+        var subAgentGrainIds = new List<GrainId>();
+        foreach (var subAgentGuid in addSubAgentDto.SubAgents)
+        {
+            var subAgent = _clusterClient.GetGrain<ICreatorGAgent>(subAgentGuid);
+            var subAgentState = await subAgent.GetAgentAsync();
+            EnsureUserAuthorized(subAgentState.UserId);
+            
+            subAgentGrainIds.Add(subAgentState.BusinessAgentGrainId);
+        }
+
+        var subAgentGuids = new List<Guid>();
+        foreach (var grainId in subAgentGrainIds)
+        {
+            var businessAgent = await _gAgentFactory.GetGAgentAsync(grainId);
+            await agent.RegisterAsync(businessAgent);
+            subAgentGuids.Add(businessAgent.GetPrimaryKey());
+            
+            var eventData = await businessAgent.GetAllSubscribedEventsAsync();
+            await creatorAgent.UpdateAvailableEventsAsync(eventData);
+        }
+        
+        var resp = new SubAgentDto
+        {
+            SubAgents = subAgentGuids
+        };
+
+        return resp;
+    }
+    
+    private void EnsureUserAuthorized(Guid userId)
+    {
+        var currentUserId = _userAppService.GetCurrentUserId();
+        if (currentUserId != userId)
+        {
+            _logger.LogInformation("User {userId} is not allowed.", currentUserId); 
+            throw new UserFriendlyException("You are not the owner of this agent");
+        }
+        
+    }
+    
+    public async Task<SubAgentDto> RemoveSubAgentAsync(Guid guid, RemoveSubAgentDto removeSubAgentDto)
+    {
+        // var guid = ParseGuid(id);
+        var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
+        var agentState = await creatorAgent.GetAgentAsync();
+        
+        EnsureUserAuthorized(agentState.UserId);
+        
+        var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
+        
+        var subAgentGrainIds = await agent.GetChildrenAsync();
+        var remainSubAgentGuids = new List<Guid>();
+        foreach (var subAgentGrainId in subAgentGrainIds)
+        {
+            var subAgent = await _gAgentFactory.GetGAgentAsync(subAgentGrainId);
+            var subAgentGuid = subAgent.GetPrimaryKey();
+
+            if (removeSubAgentDto.RemovedSubAgents.Contains(subAgentGuid))
+            {
+                await agent.UnregisterAsync(subAgent);
+            }
+            else
+            {
+                remainSubAgentGuids.Add(subAgentGuid);
+            }
+        }
+        
+        return new SubAgentDto
+        {
+            SubAgents = remainSubAgentGuids
+        };
+    }
+
+    public async Task<AgentRelationshipDto> GetAgentRelationshipAsync(Guid guid)
+    {
+        var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
+        var agentState = await creatorAgent.GetAgentAsync();
+        var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
+        
+        var subAgentGrainIds = await agent.GetChildrenAsync();
+        var parentGrainId = await agent.GetParentAsync();
+        return new AgentRelationshipDto
+        {
+            Parent = parentGrainId.IsDefault ? null : parentGrainId.GetGuidKey(),
+            SubAgents = subAgentGrainIds.Select(x => x.GetGuidKey()).ToList()
+        };
+    }
+    
+    
+    public async Task RemoveAllSubAgentAsync(Guid guid)
+    {
+        var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
+        var agentState = await creatorAgent.GetAgentAsync();
+        
+        EnsureUserAuthorized(agentState.UserId);
+        
+        var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
+        var subAgentGrainIds = await agent.GetChildrenAsync();
+
+        foreach (var subAgentGrainId in subAgentGrainIds)
+        {
+            var subAgent = await _gAgentFactory.GetGAgentAsync(subAgentGrainId);
+            await agent.UnregisterAsync(subAgent);
+        }
+    }
+
+    public async Task DeleteAgentAsync(Guid guid)
+    {
+        var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
+        var agentState = await creatorAgent.GetAgentAsync();
+        
+        EnsureUserAuthorized(agentState.UserId);
+        
+        var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
+        var subAgentGrainIds = await agent.GetChildrenAsync();
+        if (!subAgentGrainIds.IsNullOrEmpty())
+        {
+            _logger.LogInformation("Agent {agentId} has subagents, please remove them first.", guid);
+            throw new UserFriendlyException("Agent has subagents, please remove them first.");
+        }
+        
+        var parentGrainId = await agent.GetParentAsync();
+        if (!parentGrainId.IsDefault)
+        {
+            var parentAgent = await _gAgentFactory.GetGAgentAsync(parentGrainId);
+            await parentAgent.UnregisterAsync(agent);
+        }
+
+        await creatorAgent.DeleteAgentAsync();
     }
     
 }

@@ -3,9 +3,10 @@ using System.Collections.Generic;
 
 namespace Aevatar.AtomicAgent;
 
-public class AgentParamDto
+public class AgentTypeDto
 {
     public string AgentType { get; set; }
+    public string FullName { get; set; }
     public List<ParamDto> AgentParams { get; set; }
 }
 
@@ -16,13 +17,20 @@ public class ParamDto
 }
 
 
-public class AgentInitializedData
+public class InitializationData
 {
     public Type DtoType { get; set; }
-    public List<PropertyDto> Properties { get; set; }
+    public List<PropertyData> Properties { get; set; }
 }
 
-public class PropertyDto
+
+public class AgentTypeData
+{
+    public string? FullName { get; set; }
+    public InitializationData? InitializationData { get; set; } 
+}
+
+public class PropertyData
 {
     public string Name { get; set; }
     public Type Type { get; set; }

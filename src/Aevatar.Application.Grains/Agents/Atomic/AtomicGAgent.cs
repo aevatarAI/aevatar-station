@@ -45,7 +45,7 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
     public async Task CreateAgentAsync(AtomicAgentData data)
     {
         _logger.LogInformation("CreateAgentAsync");
-        RaiseEvent(new CreateAgentGEvent()
+        RaiseEvent(new OldCreateAgentGEvent()
         {
             UserId = data.UserId,
             Id = Guid.NewGuid(),
@@ -60,7 +60,7 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
     public async Task UpdateAgentAsync(AtomicAgentData data)
     {
         _logger.LogInformation("UpdateAgentAsync");
-        RaiseEvent(new UpdateAgentGEvent()
+        RaiseEvent(new OldUpdateAgentGEvent()
         {
             Properties = data.Properties,
             Name = data.Name
@@ -97,12 +97,23 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
         });
         await ConfirmEvents();
     }
+
+    public async Task PublishEventAsync<T>(T @event) where T : EventBase
+    {
+        if (@event == null)
+        {
+            throw new ArgumentNullException(nameof(@event));
+        }
+
+        Logger.LogInformation( "publish event: {event}", @event);
+        await PublishAsync(@event);
+    }
     
     protected override void GAgentTransitionState(AtomicGAgentState state, StateLogEventBase<AtomicAgentGEvent> @event)
     {
         switch (@event)
         {
-            case CreateAgentGEvent createAgentGEvent:
+            case OldCreateAgentGEvent createAgentGEvent:
                 State.Id = createAgentGEvent.AtomicGAgentId;
                 State.Properties = createAgentGEvent.Properties;
                 State.UserId = createAgentGEvent.UserId;
@@ -110,7 +121,7 @@ public class AtomicGAgent : GAgentBase<AtomicGAgentState, AtomicAgentGEvent>, IA
                 State.Name = createAgentGEvent.Name;
                 State.CreateTime = DateTime.Now;
                 break;
-            case UpdateAgentGEvent updateAgentGEvent:
+            case OldUpdateAgentGEvent updateAgentGEvent:
                 State.Properties = updateAgentGEvent.Properties;
                 State.Name = updateAgentGEvent.Name;
                 break;

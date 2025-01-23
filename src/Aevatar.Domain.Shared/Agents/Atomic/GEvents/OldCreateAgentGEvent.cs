@@ -4,7 +4,7 @@ using Orleans;
 namespace Aevatar.Agents.Atomic.GEvents;
 
 [GenerateSerializer]
-public class CreateAgentGEvent : AtomicAgentGEvent
+public class OldCreateAgentGEvent : AtomicAgentGEvent
 {
     [Id(0)] public override Guid Id { get; set; }
     [Id(1)] public Guid UserId { get; set; }

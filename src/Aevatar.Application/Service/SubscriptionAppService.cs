@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
-using Aevatar.Agents.Combination;
-using Aevatar.Application.Grains.Agents.Combination;
+using Aevatar.Agents.Creator;
+using Aevatar.Application.Grains.Agents.Creator;
 using Aevatar.Application.Grains.Subscription;
 using Aevatar.Common;
 using Aevatar.Core.Abstractions;
@@ -50,9 +50,9 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
     
     public async Task<List<EventDescriptionDto>> GetAvailableEventsAsync(string agentId)
     {
-        var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(ParseGuid(agentId));
-        var combinationData = await combinationAgent.GetCombinationAsync();
-        var dto = _objectMapper.Map<List<EventDescription>, List<EventDescriptionDto>>(combinationData.EventInfoList);
+        var agent = _clusterClient.GetGrain<ICreatorGAgent>(ParseGuid(agentId));
+        var agentState = await agent.GetAgentAsync();
+        var dto = _objectMapper.Map<List<EventDescription>, List<EventDescriptionDto>>(agentState.EventInfoList);
         return dto;
     }
     
@@ -67,8 +67,8 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
       input.UserId = _userAppService.GetCurrentUserId();
       var subscriptionState = await subscriptionStateAgent.SubscribeAsync(input);
       
-      var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(ParseGuid(input.AgentId));
-      await combinationAgent.RegisterAsync(subscriptionStateAgent);
+      var agent = _clusterClient.GetGrain<ICreatorGAgent>(ParseGuid(input.AgentId));
+      await agent.RegisterAsync(subscriptionStateAgent);
       return _objectMapper.Map<EventSubscriptionState, SubscriptionDto>(subscriptionState);
     }
 
@@ -84,8 +84,8 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
             throw new UserFriendlyException("User is not allowed to cancel subscription");
         }
         
-        var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(ParseGuid(subscriptionState.AgentId));
-        await combinationAgent.UnregisterAsync(subscriptionStateAgent);
+        var agent = _clusterClient.GetGrain<ICreatorGAgent>(ParseGuid(subscriptionState.AgentId));
+        await agent.UnregisterAsync(subscriptionStateAgent);
         await subscriptionStateAgent.UnsubscribeAsync();
     }
 
@@ -98,16 +98,16 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
 
     public async Task PublishEventAsync(PublishEventDto dto)
     {
-        var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(ParseGuid(dto.AgentId));
-        var combinationData = await combinationAgent.GetCombinationAsync();
+        var agent = _clusterClient.GetGrain<ICreatorGAgent>(dto.AgentId);
+        var agentState = await agent.GetAgentAsync();
         var currentUserId = _userAppService.GetCurrentUserId();
-        if (combinationData.UserId != currentUserId)
+        if (agentState.UserId != currentUserId)
         {
             _logger.LogInformation("User {userId} is not allowed to publish event {eventType}.", currentUserId, dto.EventType);
             throw new UserFriendlyException("User is not allowed to publish event");
         }
         
-        var eventList = combinationData.EventInfoList;
+        var eventList = agentState.EventInfoList;
 
         var eventDescription = eventList.Find(i => i.EventType.Name == dto.EventType);
         if (eventDescription == null)
@@ -140,7 +140,7 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
             propInfo.SetValue(eventInstance, convertedValue);
         }
         
-        await combinationAgent.PublishEventAsync((EventBase)eventInstance);
+        await agent.PublishEventAsync((EventBase)eventInstance);
     }
     
     private Guid ParseGuid(string id)
