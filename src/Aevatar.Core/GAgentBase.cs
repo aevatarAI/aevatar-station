@@ -32,8 +32,8 @@ public abstract class
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 public abstract partial class
-    GAgentBase<TState, TStateLogEvent, TEvent, TConfiguration> : JournaledGrain<TState, StateLogEventBase<TStateLogEvent>>,
-    IStateGAgent<TState>
+    GAgentBase<TState, TStateLogEvent, TEvent, TConfiguration> 
+    : JournaledGrain<TState, StateLogEventBase<TStateLogEvent>>, IStateGAgent<TState>
     where TState : StateBase, new()
     where TStateLogEvent : StateLogEventBase<TStateLogEvent>
     where TEvent : EventBase
@@ -92,7 +92,7 @@ public abstract partial class
     {
         var eventHandlerMethods = GetEventHandlerMethods(GetType());
         eventHandlerMethods = eventHandlerMethods.Where(m =>
-            m.Name != nameof(ForwardEventAsync) && m.Name != AevatarGAgentConstants.ConfigDefaultMethodName);
+            m.Name != nameof(ForwardEventAsync) && m.Name != nameof(PerformConfigAsync));
         var handlingTypes = eventHandlerMethods
             .Select(m => m.GetParameters().First().ParameterType);
         if (!includeBaseHandlers)

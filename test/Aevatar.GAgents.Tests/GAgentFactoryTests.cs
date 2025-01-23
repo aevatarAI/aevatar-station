@@ -67,8 +67,8 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
         }
     }
 
-    [Fact(DisplayName = "Can create GAgent and execute InitializeAsync method.")]
-    public async Task CreateGAgentWithInitializeMethodTest()
+    [Fact(DisplayName = "Can create GAgent and execute PerformConfigAsync method.")]
+    public async Task CreateGAgentWithConfigurationTest()
     {
         // Arrange & Act.
         var guid = Guid.NewGuid();
@@ -78,8 +78,8 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
                 Greeting = "Test"
             });
 
-        var initializeDtoType = await gAgent.GetConfigurationTypeAsync();
-        initializeDtoType.ShouldBe(typeof(NaiveGAgentConfiguration));
+        var configurationType = await gAgent.GetConfigurationTypeAsync();
+        configurationType.ShouldBe(typeof(NaiveGAgentConfiguration));
 
         await TestHelper.WaitUntilAsync(_ => CheckState(gAgent), TimeSpan.FromSeconds(20));
 
@@ -140,7 +140,7 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
     public async Task GetInitializeDtoTypeTest()
     {
         var gAgent =
-            await _gAgentFactory.GetGAgentAsync(Guid.NewGuid(), "initialize", "Aevatar.Core.Tests.TestGAgents");
+            await _gAgentFactory.GetGAgentAsync(Guid.NewGuid(), "configurationTest", "Aevatar.Core.Tests.TestGAgents");
         var initializeDtoType = await gAgent.GetConfigurationTypeAsync();
         initializeDtoType.ShouldBe(typeof(Configuration));
     }
