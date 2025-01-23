@@ -22,9 +22,6 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
                 if (State.Parent == clearParentEvent.Parent)
                     State.Parent = default;
                 break;
-            case InnerConfigStateLogEvent setInnerEvent:
-                State.ConfigurationType = setInnerEvent.ConfigurationType;
-                break;
         }
 
         GAgentTransitionState(state, @event);

@@ -15,7 +15,7 @@ public sealed class GAgentBaseTests : AevatarGAgentsTestBase
         _grainFactory = GetRequiredService<IGrainFactory>();
     }
     
-    [Fact]
+    [Fact(DisplayName = "Can use ConfigAsync method to config GAgent.")]
     public async Task ConfigurationTest()
     {
         var guid = Guid.NewGuid();
@@ -37,7 +37,7 @@ public sealed class GAgentBaseTests : AevatarGAgentsTestBase
         configurationType.ShouldBe(typeof(Configuration));
     }
 
-    [Fact]
+    [Fact(DisplayName = "Simulated complicated pipeline works.")]
     public async Task ComplicatedEventHandleTest()
     {
         var guid = Guid.NewGuid();

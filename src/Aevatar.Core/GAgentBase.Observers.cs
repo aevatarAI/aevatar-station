@@ -19,7 +19,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
             {
                 var grainId = (GrainId)item.GetType().GetProperty(nameof(EventWrapper<TEvent>.GrainId))?.GetValue(item)!;
                 if (grainId == this.GetGrainId() && eventHandlerMethod.Name != nameof(ForwardEventAsync) &&
-                    eventHandlerMethod.Name != AevatarGAgentConstants.ConfigDefaultMethodName)
+                    eventHandlerMethod.Name != nameof(PerformConfigAsync))
                 {
                     // Skip the event if it is sent by itself.
                     return;
@@ -71,32 +71,6 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
         return Task.CompletedTask;
     }
 
-    private Task UpdateConfigurationTypeAsync()
-    {
-        var configMethod = GetType()
-            .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
-            .SingleOrDefault(IsConfigMethod);
-        if (configMethod == null)
-        {
-            return Task.CompletedTask;
-        }
-
-        var parameterType = configMethod.GetParameters()[0].ParameterType;
-        RaiseEvent(new InnerConfigStateLogEvent
-        {
-            ConfigurationType = parameterType
-        });
-        ConfirmEvents();
-
-        return Task.CompletedTask;
-    }
-    
-    [GenerateSerializer]
-    public class InnerConfigStateLogEvent : StateLogEventBase<TStateLogEvent>
-    {
-        [Id(0)] public required Type ConfigurationType { get; set; }
-    }
-
     protected virtual IEnumerable<MethodInfo> GetEventHandlerMethods(Type type)
     {
         return type
@@ -114,20 +88,14 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
             ((methodInfo.GetCustomAttribute<EventHandlerAttribute>() != null ||
               methodInfo.Name == AevatarGAgentConstants.EventHandlerDefaultMethodName) &&
              methodInfo.GetParameters()[0].ParameterType != typeof(EventWrapperBase) &&
-             typeof(EventBase).IsAssignableFrom(methodInfo.GetParameters()[0].ParameterType))
+             typeof(TEvent).IsAssignableFrom(methodInfo.GetParameters()[0].ParameterType))
             // Or the method has the AllEventHandlerAttribute and the parameter is EventWrapperBase
             || (methodInfo.GetCustomAttribute<AllEventHandlerAttribute>() != null &&
                 methodInfo.GetParameters()[0].ParameterType == typeof(EventWrapperBase))
             // Or the method is for GAgent initialization
-            || (methodInfo.Name == AevatarGAgentConstants.ConfigDefaultMethodName &&
-                typeof(EventBase).IsAssignableFrom(methodInfo.GetParameters()[0].ParameterType)));
-    }
-
-    private bool IsConfigMethod(MethodInfo methodInfo)
-    {
-        return methodInfo.GetParameters().Length == 1 &&
-               methodInfo.Name == AevatarGAgentConstants.ConfigDefaultMethodName &&
-               typeof(EventBase).IsAssignableFrom(methodInfo.GetParameters()[0].ParameterType);
+            || (methodInfo.Name == nameof(PerformConfigAsync) &&
+                typeof(ConfigurationBase).IsAssignableFrom(methodInfo.GetParameters()[0].ParameterType))
+        );
     }
 
     private async Task HandleMethodInvocationAsync(MethodInfo method, ParameterInfo parameter, EventBase eventType,

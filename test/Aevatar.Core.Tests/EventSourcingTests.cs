@@ -58,7 +58,7 @@ public class EventSourcingTests : GAgentTestKitBase
             logViewGAgentState.Content.Count.ShouldBe(3);
         }
 
-        const int minimum = 2;
+        const int minimum = 1; // SetParent or AddChildren event.
         // Asset: Check the log storage.
         InMemoryLogConsistentStorage.Storage.Count.ShouldBeGreaterThanOrEqualTo(3);
         InMemoryLogConsistentStorage.Storage.ShouldContainKey(GetStreamName(logViewGAgent.GetGrainId()));
