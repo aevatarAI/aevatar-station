@@ -149,14 +149,4 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
         await agent.PublishEventAsync((EventBase)eventInstance);
         
     }
-    
-    private Guid ParseGuid(string id)
-    {
-        if (!Guid.TryParse(id, out Guid validGuid))
-        {
-            _logger.LogInformation("Invalid id: {id}", id);
-            throw new UserFriendlyException("Invalid id");
-        }
-        return validGuid;
-    }
 }

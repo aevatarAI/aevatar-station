@@ -344,7 +344,6 @@ public class AgentService : ApplicationService, IAgentService
     
     public async Task<AgentDto> UpdateAgentAsync(Guid guid, UpdateAgentInputDto dto)
     {
-        // var guid = ParseGuid(id);
         var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
         var agentState = await creatorAgent.GetAgentAsync();
 
@@ -409,7 +408,6 @@ public class AgentService : ApplicationService, IAgentService
     
     public async Task<SubAgentDto> AddSubAgentAsync(Guid guid, AddSubAgentDto addSubAgentDto)
     {
-        // var guid = ParseGuid(id);
         var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
         var agentState = await creatorAgent.GetAgentAsync();
         
@@ -459,7 +457,6 @@ public class AgentService : ApplicationService, IAgentService
     
     public async Task<SubAgentDto> RemoveSubAgentAsync(Guid guid, RemoveSubAgentDto removeSubAgentDto)
     {
-        // var guid = ParseGuid(id);
         var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
         var agentState = await creatorAgent.GetAgentAsync();
         
