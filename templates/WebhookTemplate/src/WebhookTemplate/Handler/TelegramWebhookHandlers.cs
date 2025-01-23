@@ -13,7 +13,7 @@ public class TelegramWebhookHandler : IWebhookHandler
         _logger = logger;
     }
 
-    public string RelativePath => "/api/webhooks/telegram";
+    public string RelativePath => "api/webhooks/telegram";
     
     public string HttpMethod => "POST";
 
