@@ -6,7 +6,9 @@ using Aevatar.Options;
 using Aevatar.WebHook.Deploy;
 using Microsoft.Extensions.Options;
 using Orleans;
+using Volo.Abp;
 using Volo.Abp.Application.Services;
+using Volo.Abp.Auditing;
 
 namespace Aevatar.Service;
 
@@ -18,6 +20,8 @@ public interface IWebhookService
     Task DestroyWebhookAsync(string inputWebhookId, string inputVersion);
 }
 
+[RemoteService(IsEnabled = false)]
+[DisableAuditing]
 public class WebhookService: ApplicationService, IWebhookService
 {
     private readonly IClusterClient _clusterClient;
