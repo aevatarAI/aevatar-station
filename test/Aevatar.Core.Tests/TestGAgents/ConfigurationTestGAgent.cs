@@ -4,26 +4,28 @@ using Microsoft.Extensions.Logging;
 namespace Aevatar.Core.Tests.TestGAgents;
 
 [GenerateSerializer]
-public class InitializeDtoTestGAgentState : StateBase
+public class ConfigurationTestGAgentState : StateBase
 {
     [Id(0)]  public List<string> Content { get; set; }
 }
 
-public class InitializeDtoTestStateLogEvent : StateLogEventBase<InitializeDtoTestStateLogEvent>
+[GenerateSerializer]
+public class ConfigurationTestStateLogEvent : StateLogEventBase<ConfigurationTestStateLogEvent>
 {
     [Id(0)] public Guid Id { get; set; }
 }
 
+[GenerateSerializer]
 public class Configuration : ConfigurationBase
 {
     [Id(0)] public string InitialGreeting { get; set; }
 }
 
 [GAgent("initialize")]
-public class ConfigurationDtoTestGAgent : GAgentBase<InitializeDtoTestGAgentState,
-    InitializeDtoTestStateLogEvent, EventBase, Configuration>
+public class ConfigurationTestGAgent : GAgentBase<ConfigurationTestGAgentState,
+    ConfigurationTestStateLogEvent, EventBase, Configuration>
 {
-    public ConfigurationDtoTestGAgent(ILogger<ConfigurationDtoTestGAgent> logger) : base(logger)
+    public ConfigurationTestGAgent(ILogger<ConfigurationTestGAgent> logger) : base(logger)
     {
     }
 

@@ -14,6 +14,28 @@ public sealed class GAgentBaseTests : AevatarGAgentsTestBase
     {
         _grainFactory = GetRequiredService<IGrainFactory>();
     }
+    
+    [Fact]
+    public async Task ConfigurationTest()
+    {
+        var guid = Guid.NewGuid();
+        // Arrange.
+        var configurationTestGAgent = _grainFactory.GetGrain<IStateGAgent<ConfigurationTestGAgentState>>(guid);
+        var configuration = new Configuration
+        {
+            InitialGreeting = "Hello world"
+        };
+
+        // Act.
+        await configurationTestGAgent.ConfigAsync(configuration);
+        var configurationType = await configurationTestGAgent.GetConfigurationTypeAsync();
+
+        // Assert.
+        var state = await configurationTestGAgent.GetStateAsync();
+        state.Content.Count.ShouldBe(1);
+        state.Content[0].ShouldBe("Hello world");
+        configurationType.ShouldBe(typeof(Configuration));
+    }
 
     [Fact]
     public async Task ComplicatedEventHandleTest()
