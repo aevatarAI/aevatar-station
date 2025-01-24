@@ -1,5 +1,6 @@
 ﻿using System.Linq.Expressions;
 using Aevatar;
+using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.EventSourcing.Core;
 using Aevatar.EventSourcing.Core.Hosting;

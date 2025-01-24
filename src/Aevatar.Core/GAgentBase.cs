@@ -41,7 +41,7 @@ public abstract partial class
 {
     protected IStreamProvider StreamProvider => this.GetStreamProvider(AevatarCoreConstants.StreamProvider);
 
-    public ILogger Logger { get; set; }
+    protected ILogger Logger { get; set; }
 
     private readonly List<EventWrapperBaseAsyncObserver> _observers = [];
 
