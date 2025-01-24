@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using DefaultGrainActivator = Orleans.Runtime.DefaultGrainActivator;
 
 namespace Aevatar;
@@ -22,11 +23,12 @@ public class AevatarGrainActivator : IGrainActivator
         return grain;
     }
 
-    private void InjectLogger(object grain)
+    public void InjectLogger(object grain)
     {
         var grainType = grain.GetType();
         var loggerFactory = _serviceProvider.GetRequiredService<ILoggerFactory>();
-        var logger = loggerFactory.CreateLogger(grainType);
+        // ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
+        var logger = loggerFactory.CreateLogger(grainType) ?? NullLogger.Instance;
 
         var loggerProperty = grainType.GetProperty("Logger");
         if (loggerProperty != null && loggerProperty.CanWrite)

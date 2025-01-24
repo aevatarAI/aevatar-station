@@ -49,7 +49,7 @@ public abstract partial class
 
     protected GAgentBase()
     {
-        EventDispatcher = ServiceProvider?.GetService<IEventDispatcher>();
+        EventDispatcher = ServiceProvider.GetService<IEventDispatcher>();
     }
 
     public async Task ActivateAsync()
