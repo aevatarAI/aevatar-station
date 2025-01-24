@@ -1,13 +1,23 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using DefaultGrainActivator = Orleans.Runtime.DefaultGrainActivator;
 
 namespace Aevatar;
 
-public sealed class LoggerInjectionGrainActivator(IServiceProvider serviceProvider) : IGrainActivator
+public class AevatarGrainActivator : IGrainActivator
 {
+    private readonly IServiceProvider _serviceProvider;
+    private readonly IGrainActivator _defaultActivator;
+
+    public AevatarGrainActivator(IServiceProvider serviceProvider, Type grainClass)
+    {
+        _serviceProvider = serviceProvider;
+        _defaultActivator = new DefaultGrainActivator(serviceProvider, grainClass);
+    }
+
     public object CreateInstance(IGrainContext context)
     {
-        var grain = ActivatorUtilities.CreateInstance(serviceProvider, context.GrainInstance!.GetType());
+        var grain = _defaultActivator.CreateInstance(context);
         InjectLogger(grain);
         return grain;
     }
@@ -15,7 +25,7 @@ public sealed class LoggerInjectionGrainActivator(IServiceProvider serviceProvid
     private void InjectLogger(object grain)
     {
         var grainType = grain.GetType();
-        var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+        var loggerFactory = _serviceProvider.GetRequiredService<ILoggerFactory>();
         var logger = loggerFactory.CreateLogger(grainType);
 
         var loggerProperty = grainType.GetProperty("Logger");

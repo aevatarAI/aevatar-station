@@ -26,6 +26,7 @@ public class DeveloperTestGAgent : GAgentBase<DeveloperTestGAgentState, NaiveTes
 
         State.Content.Add(eventData.Description);
 
+        Logger.LogInformation("TEST");
         return new NewFeatureCompletedTestEvent
         {
             PullRequestUrl = $"PR for {eventData.Description}"

@@ -29,9 +29,6 @@ public class AevatarTestBaseModule : AbpModule
         context.Services.AddSingleton<IGrainFactory>(sp => context.Services.GetRequiredService<ClusterFixture>().Cluster.GrainFactory);
         context.Services.AddSingleton<IGAgentFactory>(sp => new GAgentFactory(context.Services.GetRequiredService<ClusterFixture>().Cluster.Client));
         context.Services.AddSingleton<IGAgentManager>(sp => new GAgentManager(context.Services.GetRequiredService<ClusterFixture>().Cluster.Client));
-        // context.Services.AddSingleton<IPluginGAgentManager>(sp =>
-        //     new PluginGAgentManager(context.Services.GetRequiredService<ApplicationPartManager>(),
-        //         context.Services.GetRequiredService<IGAgentFactory>(), null));
         Configure<AbpAutoMapperOptions>(options => { options.AddMaps<AevatarTestBaseModule>(); });
     }
 }
