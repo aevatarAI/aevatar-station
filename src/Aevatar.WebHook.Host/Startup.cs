@@ -47,8 +47,6 @@ public class Startup
     {
         var cultureInfo = CultureInfo.InvariantCulture;
         CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
-        
-        app.UseCors();
         app.InitializeApplication();
     }
     
