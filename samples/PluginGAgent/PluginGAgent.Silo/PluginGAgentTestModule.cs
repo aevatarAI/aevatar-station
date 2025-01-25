@@ -1,3 +1,4 @@
+using Aevatar;
 using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
@@ -11,7 +12,8 @@ namespace PluginGAgent.Silo;
 [DependsOn(
     typeof(AbpAspNetCoreSerilogModule),
     typeof(AbpAutofacModule),
-    typeof(AbpAutoMapperModule)
+    typeof(AbpAutoMapperModule),
+    typeof(AevatarModule)
 )]
 public class PluginGAgentTestModule : AbpModule
 {

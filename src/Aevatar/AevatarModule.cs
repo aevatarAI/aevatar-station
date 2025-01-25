@@ -13,10 +13,13 @@ namespace Aevatar;
 )]
 public class AevatarModule : AbpModule
 {
+    public override void PreConfigureServices(ServiceConfigurationContext context)
+    {
+        context.Services.AddConventionalRegistrar(new AevatarDefaultConventionalRegistrar());
+    }
+
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
         Configure<AbpAutoMapperOptions>(options => { options.AddMaps<AevatarModule>(); });
-        context.Services.AddSingleton<IGAgentManager, GAgentManager>();
-        context.Services.AddSingleton<IGAgentFactory, GAgentFactory>();
     }
 }
