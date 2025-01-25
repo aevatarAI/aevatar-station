@@ -21,6 +21,7 @@ using Microsoft.Extensions.Options;
 using Nest;
 using Newtonsoft.Json;
 using Orleans;
+using Orleans.Runtime;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.ObjectMapping;
@@ -190,7 +191,7 @@ public class AgentService : ApplicationService, IAgentService
             throw new UserFriendlyException("Invalid userAddress");
         }
 
-        if (pageIndex <= 0 || pageSize <= 1)
+        if (pageIndex <= 0 || pageSize < 1)
         {
             _logger.LogInformation("GetAgentAsync Invalid pageIndex: {pageIndex} pageSize:{pageSize}", pageIndex, pageSize);
             throw new UserFriendlyException("Invalid pageIndex pageSize");
@@ -473,7 +474,7 @@ public class AgentService : ApplicationService, IAgentService
             _logger.LogInformation("GetAgentAsync Invalid userAddress: {userAddress} ", userAddress);
             throw new UserFriendlyException("Invalid userAddress");
         }
-        if (pageIndex <= 0 || pageSize <= 1)
+        if (pageIndex <= 0 || pageSize < 1)
         {
             _logger.LogInformation("GetAgentAsync Invalid pageIndex: {pageIndex} pageSize:{pageSize}", pageIndex, pageSize);
             throw new UserFriendlyException("Invalid pageIndex pageSize");
@@ -529,7 +530,7 @@ public class AgentService : ApplicationService, IAgentService
             return;
         }
 
-        var childrenIds = childrenAgentIds.Select(s => s.Key.ToString()).ToList();
+        var childrenIds = childrenAgentIds.Select(s => s.GetGuidKey().ToString()).ToList();
         result.AddRange(childrenIds);
 
         foreach (var childrenId in childrenIds)

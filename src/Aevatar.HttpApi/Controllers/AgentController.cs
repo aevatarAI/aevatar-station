@@ -22,7 +22,7 @@ public class AgentController : AevatarController
 {
     private readonly ILogger<AgentController> _logger;
     private readonly IAgentService  _agentService;
-    
+
     public AgentController(
         ILogger<AgentController> logger, 
         IAgentService agentService)
