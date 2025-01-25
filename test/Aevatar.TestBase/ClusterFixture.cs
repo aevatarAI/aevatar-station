@@ -102,6 +102,7 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                         grainTypeMap = grainTypeMap.Add(grainType, type);
                     }
                     services.AddSingleton(grainTypeMap);
+                    services.AddSingleton<IEventDispatcher, DefaultEventDispatcher>();
                 })
                 .UseAevatar()
                 .AddMemoryStreams("Aevatar")

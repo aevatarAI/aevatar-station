@@ -1,4 +1,6 @@
 using System.Reflection;
+using System.Reflection;
+using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -20,6 +22,7 @@ public class AevatarGrainActivator : IGrainActivator
     {
         var grain = _defaultActivator.CreateInstance(context);
         InjectLogger(grain);
+        InjectEventDispatcher(grain);
         return grain;
     }
 
@@ -34,6 +37,18 @@ public class AevatarGrainActivator : IGrainActivator
         if (loggerProperty != null && loggerProperty.CanWrite)
         {
             loggerProperty.SetValue(grain, logger);
+        }
+    }
+
+    private void InjectEventDispatcher(object grain)
+    {
+        var grainType = grain.GetType();
+        var eventDispatcher = _serviceProvider.GetRequiredService<IEventDispatcher>();
+
+        var eventDispatcherProperty = grainType.GetProperty("EventDispatcher", BindingFlags.Instance | BindingFlags.NonPublic);
+        if (eventDispatcherProperty != null && eventDispatcherProperty.CanWrite)
+        {
+            eventDispatcherProperty.SetValue(grain, eventDispatcher);
         }
     }
 

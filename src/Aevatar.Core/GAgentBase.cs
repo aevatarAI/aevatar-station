@@ -45,12 +45,7 @@ public abstract partial class
 
     private readonly List<EventWrapperBaseAsyncObserver> _observers = [];
 
-    private IEventDispatcher? EventDispatcher { get; set; }
-
-    protected GAgentBase()
-    {
-        EventDispatcher = ServiceProvider.GetService<IEventDispatcher>();
-    }
+    protected IEventDispatcher? EventDispatcher { get; set; }
 
     public async Task ActivateAsync()
     {
