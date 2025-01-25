@@ -84,7 +84,7 @@ public static class OrleansHostExtension
                     })
                     .AddMemoryStreams("Aevatar")
                     .AddMemoryStreams("AISmart")
-                    .UseAevatar();
+                    .UseAevatar<PluginGAgentTestModule>();
             })
             .UseConsoleLifetime();
         

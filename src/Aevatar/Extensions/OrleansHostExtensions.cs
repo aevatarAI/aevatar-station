@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Volo.Abp;
+using Volo.Abp.Modularity;
 
 namespace Aevatar.Extensions;
 
@@ -14,25 +15,29 @@ public static class OrleansHostExtensions
 {
     public static ISiloBuilder UseAevatar(this ISiloBuilder builder)
     {
-        var abpApplication = AbpApplicationFactory.Create<AevatarModule>(options =>
-        {
-            options.UseAutofac();
-        });
-        abpApplication.Initialize();
-
         return builder.ConfigureServices(services =>
             {
                 services.AddSingleton<IGAgentManager, GAgentManager>();
                 services.AddSingleton<IGAgentFactory, GAgentFactory>();
                 services.AddSingleton<IConfigureGrainTypeComponents, ConfigureAevatarGrainActivator>();
-                var autofacContainer = abpApplication.ServiceProvider.GetRequiredService<ILifetimeScope>();
-                services.AddSingleton(autofacContainer);
+            })
+            .UseAevatarPlugins();
+    }
+
+    public static ISiloBuilder UseAevatar<TAbpModule>(this ISiloBuilder builder) where TAbpModule : AbpModule
+    {
+        var abpApplication = AbpApplicationFactory.Create<TAbpModule>();
+        abpApplication.Initialize();
+
+        return builder
+            .UseAevatar()
+            .ConfigureServices(services =>
+            {
                 foreach (var service in abpApplication.Services)
                 {
                     services.Add(service);
                 }
-            })
-            .UseAevatarPlugins();
+            });
     }
 
     public static IHostBuilder UseAevatar(this IHostBuilder builder)
