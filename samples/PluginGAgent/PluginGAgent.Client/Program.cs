@@ -3,6 +3,7 @@ using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Core.Abstractions.Plugin;
 using Aevatar.Core.Tests.TestGAgents;
+using Aevatar.Extensions;
 using Aevatar.Plugins;
 using Aevatar.Plugins.Extensions;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
@@ -29,16 +30,11 @@ var builder = Host.CreateDefaultBuilder(args)
                 options.ClusterId = "AISmartSiloCluster";
                 options.ServiceId = "AISmartBasicService";
             })
-            .AddMemoryStreams(AevatarCoreConstants.StreamProvider);
+            .AddMemoryStreams(AevatarCoreConstants.StreamProvider)
+            .UseAevatar();
     })
     .ConfigureLogging(logging => logging.AddConsole())
-    .UseConsoleLifetime()
-    .ConfigureServices(services =>
-    {
-        services.AddSingleton<IGAgentFactory, GAgentFactory>();
-        services.AddSingleton<ApplicationPartManager>();
-        services.AddSingleton<IPluginGAgentManager, PluginGAgentManager>();
-    });
+    .UseConsoleLifetime();
 
 using var host = builder.Build();
 await host.StartAsync();

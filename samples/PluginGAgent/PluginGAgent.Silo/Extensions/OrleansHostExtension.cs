@@ -83,7 +83,6 @@ public static class OrleansHostExtension
                         options.Database = configSection.GetValue<string>("DataBase");
                     })
                     .AddMemoryStreams("Aevatar")
-                    .AddMemoryStreams("AISmart")
                     .UseAevatar<PluginGAgentTestModule>();
             })
             .UseConsoleLifetime();

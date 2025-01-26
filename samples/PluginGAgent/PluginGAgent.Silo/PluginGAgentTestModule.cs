@@ -21,8 +21,7 @@ public class PluginGAgentTestModule : AbpModule
     {
         Configure<AbpAutoMapperOptions>(options => { options.AddMaps<PluginGAgentTestModule>(); });
         context.Services.AddHostedService<PluginGAgentTestHostedService>();
-        var configuration = context.Services.GetConfiguration();
-        context.Services.AddSerilog(loggerConfiguration => {},
+        context.Services.AddSerilog(_ => {},
             true, writeToProviders: true);
         context.Services.AddHttpClient();
         context.Services.AddSingleton<IEventDispatcher, DefaultEventDispatcher>();

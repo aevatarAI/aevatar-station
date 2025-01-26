@@ -14,13 +14,16 @@ public static class OrleansHostExtensions
 {
     public static ISiloBuilder UseAevatar(this ISiloBuilder builder)
     {
+        var abpApplication = AbpApplicationFactory.Create<AevatarModule>();
+        abpApplication.Initialize();
+
         return builder.ConfigureServices(services =>
             {
-                services.AddSingleton<IGAgentManager, GAgentManager>();
-                services.AddSingleton<IGAgentFactory, GAgentFactory>();
-                services.AddSingleton<IConfigureGrainTypeComponents, ConfigureAevatarGrainActivator>();
-            })
-            .UseAevatarPlugins();
+                foreach (var service in abpApplication.Services)
+                {
+                    services.Add(service);
+                }
+            }).UseAevatarPlugins();
     }
 
     public static ISiloBuilder UseAevatar<TAbpModule>(this ISiloBuilder builder) where TAbpModule : AbpModule
@@ -38,13 +41,18 @@ public static class OrleansHostExtensions
                 }
             });
     }
-    
+
     public static IClientBuilder UseAevatar(this IClientBuilder builder)
     {
+        var abpApplication = AbpApplicationFactory.Create<AevatarModule>();
+        abpApplication.Initialize();
+
         return builder.ConfigureServices(services =>
         {
-            services.AddConventionalRegistrar(new AevatarDefaultConventionalRegistrar());
-            services.AddSingleton<IConfigureGrainTypeComponents, ConfigureAevatarGrainActivator>();
-        });
+            foreach (var service in abpApplication.Services)
+            {
+                services.Add(service);
+            }
+        }).UseAevatarPlugins();
     }
 }

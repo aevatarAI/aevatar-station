@@ -1,5 +1,6 @@
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
+using Aevatar.Core.Abstractions.Plugin;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -15,6 +16,15 @@ public static class OrleansHostExtensions
             services.AddSingleton<PluginGAgentManager>();
             services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>>(sp =>
                 sp.GetRequiredService<PluginGAgentManager>());
+        });
+    }
+
+    public static IClientBuilder UseAevatarPlugins(this IClientBuilder clientBuilder)
+    {
+        return clientBuilder.ConfigureServices(services =>
+        {
+            services.AddSingleton<ApplicationPartManager>();
+            services.AddSingleton<IPluginGAgentManager, PluginGAgentManager>();
         });
     }
 }
