@@ -52,5 +52,9 @@
     <EmbeddedResource Remove="Logs\**" />
     <None Remove="Logs\**" />
   </ItemGroup>
-
+  <ItemGroup>
+    <Content Include="WebhookConfigTemplate/filebeat-template.yml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>

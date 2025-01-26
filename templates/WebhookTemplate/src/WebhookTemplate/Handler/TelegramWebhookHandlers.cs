@@ -1,10 +1,8 @@
-using System.IO;
-using System.Threading.Tasks;
 using Aevatar.Webhook.SDK.Handler;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
-namespace Aevatar.Webhook.Handler;
+namespace Aevatar.Webhook.Template.Handler;
 
 public class TelegramWebhookHandler : IWebhookHandler
 {
@@ -15,7 +13,7 @@ public class TelegramWebhookHandler : IWebhookHandler
         _logger = logger;
     }
 
-    public string RelativePath => "/api/webhooks/telegram";
+    public string RelativePath => "api/webhooks/telegram";
     
     public string HttpMethod => "POST";
 

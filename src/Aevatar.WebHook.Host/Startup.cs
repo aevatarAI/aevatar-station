@@ -4,11 +4,15 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Web;
+using Aevatar.Webhook.Dto;
+using Aevatar.Webhook.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 using Volo.Abp.Modularity;
+using Volo.Abp.Threading;
 
 namespace Aevatar.Webhook;
 
@@ -32,8 +36,8 @@ public class Startup
     {
         services.AddApplicationAsync<T>(options =>
         {
-          //  var code = AsyncHelper.RunSync(async () => await GetPluginCodeAsync());
-          //  options.PlugInSources.AddCode(code);
+            var code = AsyncHelper.RunSync(async () => await GetPluginCodeAsync());
+            options.PlugInSources.AddCode(code);
         });
     }
     
@@ -43,15 +47,13 @@ public class Startup
     {
         var cultureInfo = CultureInfo.InvariantCulture;
         CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
-        
-        app.UseCors();
         app.InitializeApplication();
     }
     
     private async Task<byte[]> GetPluginCodeAsync()
     {
-        var appId = _configuration["AppInfo:AppId"];
-        var version = _configuration["AppInfo:Version"];
+        var webhookId = _configuration["Webhook:WebhookId"];
+        var version = _configuration["Webhook:Version"];
         var apiServiceUrl = _configuration["ApiHostUrl"];
 
         if (apiServiceUrl.IsNullOrEmpty())
@@ -67,13 +69,12 @@ public class Startup
             httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
             var requestUrl =
-                $"api/apps/code?appId={HttpUtility.UrlEncode(appId)}&version={HttpUtility.UrlEncode(version)}";
+                $"api/webhook/code?webhookId={HttpUtility.UrlEncode(webhookId)}&version={HttpUtility.UrlEncode(version)}";
             var response = await httpClient.GetAsync(requestUrl);
             response.EnsureSuccessStatusCode();
 
             var responseBody = await response.Content.ReadAsStringAsync();
-            var base64EncodedData = responseBody.Trim('"');
-            var decodedBytes = Convert.FromBase64String(base64EncodedData);
+            var decodedBytes = Convert.FromBase64String(JsonConvert.DeserializeObject<ApiHostResponse>(responseBody)!.Data);
             return decodedBytes;
         }
     }

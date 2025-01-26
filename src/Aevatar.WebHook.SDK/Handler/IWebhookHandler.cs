@@ -12,6 +12,6 @@ public interface IWebhookHandler
         
         public string GetFullPath(string webhookId)
         { 
-           return $"{webhookId}/{RelativePath}";
+           return $"/{webhookId}/{RelativePath}";
         }
 }

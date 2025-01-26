@@ -1,0 +1,21 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{2C2403CA-2D7B-498B-AE1A-63DB204C8248}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Webhook.Template", "src\WebhookTemplate\Aevatar.Webhook.Template.csproj", "{67BD0506-E790-4F65-8E07-33532CEFF354}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{67BD0506-E790-4F65-8E07-33532CEFF354}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67BD0506-E790-4F65-8E07-33532CEFF354}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67BD0506-E790-4F65-8E07-33532CEFF354}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67BD0506-E790-4F65-8E07-33532CEFF354}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{67BD0506-E790-4F65-8E07-33532CEFF354} = {2C2403CA-2D7B-498B-AE1A-63DB204C8248}
+	EndGlobalSection
+EndGlobal

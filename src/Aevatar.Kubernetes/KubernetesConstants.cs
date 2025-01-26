@@ -7,7 +7,7 @@ public class KubernetesConstants
      public const string CoreApiVersion = "v1";
      public const string NginxIngressClassName = "nginx";
      //resource definition
-     public const string NodeAffinityValue = "Aevatar-app";
+     public const string NodeAffinityValue = "ai";
      public static string AppNameSpace { get; private set; }
      public const string AppLabelKey = "app";
      public const string AppIdLabelKey = "app-id";
@@ -26,22 +26,14 @@ public class KubernetesConstants
      public const string FileBeatContainerName = "filebeat-sidecar";
      
      //manager
-     public const string AppClientTypeQuery = "Query";
-     public const string AppSettingTemplateFilePath = "AppConfigTemplate/appsettings-template.json";
-     public const string AppFileBeatConfigTemplateFilePath = "AppConfigTemplate/filebeat-template.yml";
-     public const string PlaceHolderAppId = "[AppId]";
+     public const string AppSettingTemplateFilePath = "WebhookConfigTemplate/appsettings-template.json";
+     public const string AppFileBeatConfigTemplateFilePath = "WebhookConfigTemplate/filebeat-template.yml";
+     public const string PlaceHolderAppId = "[WebhookId]";
      public const string PlaceHolderVersion = "[Version]";
-     public const string PlaceHolderClientType = "[ClientType]";
-     public const string PlaceHolderChainId = "[ChainId]";
      public const string PlaceHolderNameSpace = "[NameSpace]";
      public const int AppContainerTargetPort = 8308;
-     public const string FullPodMaxSurge = "0";
-     public const string FullPodMaxUnavailable = "1";
      public const string QueryPodMaxSurge = "50%";
      public const string QueryPodMaxUnavailable = "0";
-     public const string PlaceHolderEventBusClientName = "[EventBusClientName]";
-     public const string PlaceHolderEventBusExchangeName = "[EventBusExchangeName]";
-     
      //Prometheus
      public const string MonitorLabelKey = "monitor";
      public const string MonitorGroup = "monitoring.coreos.com";
@@ -50,6 +42,6 @@ public class KubernetesConstants
      
      public static void Initialize(IConfiguration configuration)
      {
-          AppNameSpace = configuration["Kubernetes:AppNameSpace"] ?? "Aevatar-app";
+          AppNameSpace = configuration["Kubernetes:AppNameSpace"] ?? "Aevatar-webhook";
      }
 }

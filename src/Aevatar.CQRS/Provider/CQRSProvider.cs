@@ -50,15 +50,6 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         return document;
     }
 
-    public async Task SendEventCommandAsync(EventBase eventBase)
-    {
-        var command = new SendEventCommand
-        {
-            Event = eventBase
-        };
-        await _mediator.Send(command);
-    }
-
     public async Task<Tuple<long, List<AgentGEventIndex>>> QueryGEventAsync(string eventId, List<string> grainIds,
         int pageNumber, int pageSize)
     {
@@ -90,6 +81,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         var tuple = await _mediator.Send(getStateQuery);
         return tuple;
     }
+    
 
     public async Task PublishAsync(Guid eventId, GrainId grainId, StateLogEventBase eventBase)
     {
@@ -120,4 +112,5 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
     {
         throw new NotImplementedException();
     }
+    
 }
