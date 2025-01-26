@@ -145,7 +145,6 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
             propInfo.SetValue(eventInstance, convertedValue);
         }
         
-        var businessAgent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
         await agent.PublishEventAsync((EventBase)eventInstance);
         
     }

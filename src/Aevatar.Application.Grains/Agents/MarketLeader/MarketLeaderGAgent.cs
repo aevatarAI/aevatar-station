@@ -1,14 +1,10 @@
-using System.ComponentModel;
 using Aevatar.Application.Grains.Agents.Investment;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.Logging;
-using Orleans.Providers;
 
 namespace Aevatar.Application.Grains.Agents.MarketLeader;
-[Description("Marketing department，I can handle tasks related to the marketing department.")]
-[StorageProvider(ProviderName = "PubSubStore")]
-[LogConsistencyProvider(ProviderName = "LogStorage")]
+
 [GAgent("MyAgent", "MyNs")]
 public class MarketLeaderGAgent : GAgentBase<MarketLeaderAgentState, MarketLeaderGEvent>, IMarketLeaderGAgent
 {

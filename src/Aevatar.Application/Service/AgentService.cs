@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Aevatar.Agent;
 using Aevatar.Agents.Creator.Models;
 using Aevatar.Application.Grains.Agents.Creator;
+using Aevatar.Application.Grains.Subscription;
 using Aevatar.Common;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
@@ -19,7 +20,6 @@ using Orleans.Metadata;
 using Orleans.Runtime;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
-using Volo.Abp.ObjectMapping;
 
 namespace Aevatar.Service;
 
@@ -30,7 +30,6 @@ public class AgentService : ApplicationService, IAgentService
     private readonly IClusterClient _clusterClient;
     private readonly ICQRSProvider _cqrsProvider;
     private readonly ILogger<AgentService> _logger;
-    private readonly IObjectMapper _objectMapper;
     private readonly IGAgentFactory _gAgentFactory;
     private readonly IGAgentManager _gAgentManager;
     private readonly IUserAppService _userAppService;
@@ -43,8 +42,7 @@ public class AgentService : ApplicationService, IAgentService
     public AgentService(
         IClusterClient clusterClient, 
         ICQRSProvider cqrsProvider, 
-        ILogger<AgentService> logger,  
-        IObjectMapper objectMapper, 
+        ILogger<AgentService> logger,
         IGAgentFactory gAgentFactory, 
         IGAgentManager gAgentManager, 
         IUserAppService userAppService, 
@@ -54,7 +52,6 @@ public class AgentService : ApplicationService, IAgentService
         _clusterClient = clusterClient;
         _cqrsProvider = cqrsProvider;
         _logger = logger;
-        _objectMapper = objectMapper;
         _gAgentFactory = gAgentFactory;
         _gAgentManager = gAgentManager;
         _userAppService = userAppService;
@@ -293,7 +290,7 @@ public class AgentService : ApplicationService, IAgentService
 
     public async Task<AgentDto> CreateAgentAsync(CreateAgentInputDto dto)
     {
-        // CheckCreateParam(createDto);
+        CheckCreateParam(dto);
         var userId = _userAppService.GetCurrentUserId();
         var guid = Guid.NewGuid();
         var agentData = new AgentData
@@ -305,9 +302,9 @@ public class AgentService : ApplicationService, IAgentService
         };
         
         var initializationParam = JsonConvert.SerializeObject(dto.Properties);
-        var grainId = await InitializeBusinessAgent(guid, dto.AgentType, initializationParam);
+        var businessAgent = await InitializeBusinessAgent(guid, dto.AgentType, initializationParam);
         var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
-        agentData.BusinessAgentGrainId = grainId;
+        agentData.BusinessAgentGrainId = businessAgent.GetGrainId();
         await creatorAgent.CreateAgentAsync(agentData);
         
         var resp = new AgentDto
@@ -315,16 +312,30 @@ public class AgentService : ApplicationService, IAgentService
             Id = guid,
             AgentType = dto.AgentType,
             Name = dto.Name,
-            GrainId = grainId,
+            GrainId = businessAgent.GetGrainId(),
             Properties = dto.Properties
         };
         
-        return resp;
         
-        // return await Task.FromResult(new AgentDto());
+        return resp;
     }
 
-    private async Task<GrainId> InitializeBusinessAgent(Guid primaryKey, string agentType, string agentProperties)
+    private void CheckCreateParam(CreateAgentInputDto createDto)
+    {
+        if (createDto.AgentType.IsNullOrEmpty())
+        {
+            _logger.LogInformation("CreateAgentAsync type is null");
+            throw new UserFriendlyException("Agent type is null");
+        }
+        
+        if (createDto.Name.IsNullOrEmpty())
+        {
+            _logger.LogInformation("CreateAgentAsync name is null");
+            throw new UserFriendlyException("name is null");
+        }
+    }
+    
+    private async Task<IGAgent> InitializeBusinessAgent(Guid primaryKey, string agentType, string agentProperties)
     {
         var agentTypeDataMap = await GetAgentTypeDataMap();
         ConfigurationBase? config = null;
@@ -339,7 +350,7 @@ public class AgentService : ApplicationService, IAgentService
         
         var grainId = GrainId.Create(agentType, primaryKey.ToString("N"));
         var businessAgent = await _gAgentFactory.GetGAgentAsync(grainId, config);
-        return businessAgent.GetGrainId();
+        return businessAgent;
     }
     
     public async Task<AgentDto> UpdateAgentAsync(Guid guid, UpdateAgentInputDto dto)
@@ -415,26 +426,53 @@ public class AgentService : ApplicationService, IAgentService
         
         var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
         
-        var subAgentGrainIds = new List<GrainId>();
+        // check if all sub agent can be added 
+        var newSubAgentGrainIds = new List<GrainId>();
         foreach (var subAgentGuid in addSubAgentDto.SubAgents)
         {
             var subAgent = _clusterClient.GetGrain<ICreatorGAgent>(subAgentGuid);
             var subAgentState = await subAgent.GetAgentAsync();
             EnsureUserAuthorized(subAgentState.UserId);
             
-            subAgentGrainIds.Add(subAgentState.BusinessAgentGrainId);
+            newSubAgentGrainIds.Add(subAgentState.BusinessAgentGrainId);
         }
-
-        var subAgentGuids = new List<Guid>();
-        foreach (var grainId in subAgentGrainIds)
+        
+        var allEventsHandled = agentState.EventInfoList.Select(x => x.EventType).ToList();
+        var subAgentGrainIds = await GetSubAgentGrainIds(agent);
+        
+        // add parent events and make creator agent child of business agent in order to publish events
+        var children = await agent.GetChildrenAsync();
+        if (children.IsNullOrEmpty())
         {
+            await agent.RegisterAsync(creatorAgent);
+            var parentEventData =  await agent.GetAllSubscribedEventsAsync();
+            if (parentEventData != null)
+            {
+                allEventsHandled.AddRange(parentEventData);
+            }
+        }
+        
+        // register sub agent and add their events to parent agent
+        var subAgentGuids = subAgentGrainIds.Select(x => x.GetGuidKey()).ToList();
+        foreach (var grainId in newSubAgentGrainIds)
+        {
+            if (subAgentGrainIds.Contains(grainId))
+            {
+                continue;
+            }
+            
             var businessAgent = await _gAgentFactory.GetGAgentAsync(grainId);
             await agent.RegisterAsync(businessAgent);
-            subAgentGuids.Add(businessAgent.GetPrimaryKey());
+            subAgentGuids.Add(grainId.GetGuidKey());
             
-            var eventData = await businessAgent.GetAllSubscribedEventsAsync();
-            await creatorAgent.UpdateAvailableEventsAsync(eventData);
+            var eventsHandledByAgent = await businessAgent.GetAllSubscribedEventsAsync();
+            if (eventsHandledByAgent != null)
+            {
+                var eventsToAdd = eventsHandledByAgent.Except(allEventsHandled).ToList(); 
+                allEventsHandled.AddRange(eventsToAdd);
+            }
         }
+        await creatorAgent.UpdateAvailableEventsAsync(allEventsHandled);
         
         var resp = new SubAgentDto
         {
@@ -464,7 +502,14 @@ public class AgentService : ApplicationService, IAgentService
         
         var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
         
-        var subAgentGrainIds = await agent.GetChildrenAsync();
+        var subAgentGrainIds = await GetSubAgentGrainIds(agent);
+        var allEventsHandled = new List<Type>();
+        var parentEventData =  await agent.GetAllSubscribedEventsAsync();
+        if (parentEventData != null)
+        {
+            allEventsHandled.AddRange(parentEventData);
+        }
+        
         var remainSubAgentGuids = new List<Guid>();
         foreach (var subAgentGrainId in subAgentGrainIds)
         {
@@ -478,8 +523,15 @@ public class AgentService : ApplicationService, IAgentService
             else
             {
                 remainSubAgentGuids.Add(subAgentGuid);
+                var eventsHandledByAgent = await subAgent.GetAllSubscribedEventsAsync();
+                if (eventsHandledByAgent != null)
+                {
+                    var eventsToAdd = eventsHandledByAgent.Except(allEventsHandled).ToList(); 
+                    allEventsHandled.AddRange(eventsToAdd);
+                }
             }
         }
+        await creatorAgent.UpdateAvailableEventsAsync(allEventsHandled);
         
         return new SubAgentDto
         {
@@ -493,12 +545,15 @@ public class AgentService : ApplicationService, IAgentService
         var agentState = await creatorAgent.GetAgentAsync();
         var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
         
-        var subAgentGrainIds = await agent.GetChildrenAsync();
+      
         var parentGrainId = await agent.GetParentAsync();
+        var subAgentGrainIds = await GetSubAgentGrainIds(agent);
+        var subAgentGuids = subAgentGrainIds.Select(x => x.GetGuidKey()).ToList();
+        
         return new AgentRelationshipDto
         {
             Parent = parentGrainId.IsDefault ? null : parentGrainId.GetGuidKey(),
-            SubAgents = subAgentGrainIds.Select(x => x.GetGuidKey()).ToList()
+            SubAgents = subAgentGuids
         };
     }
     
@@ -508,16 +563,29 @@ public class AgentService : ApplicationService, IAgentService
         var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
         var agentState = await creatorAgent.GetAgentAsync();
         
-        EnsureUserAuthorized(agentState.UserId);
-        
         var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
-        var subAgentGrainIds = await agent.GetChildrenAsync();
+        var subAgentGrainIds = await GetSubAgentGrainIds(agent);
+        await RemoveSubAgentAsync(guid,
+            new RemoveSubAgentDto { RemovedSubAgents = subAgentGrainIds.Select(x => x.GetGuidKey()).ToList() });
+    }
 
-        foreach (var subAgentGrainId in subAgentGrainIds)
+    private async Task<List<GrainId>> GetSubAgentGrainIds(IGAgent agent)
+    {
+        var children = await agent.GetChildrenAsync();
+        var subAgentGrainIds = new List<GrainId>();
+        var creatorGAgentType = _grainTypeResolver.GetGrainType(typeof(CreatorGAgent));
+        var subscriptionGAgentType = _grainTypeResolver.GetGrainType(typeof(SubscriptionGAgent));
+        foreach (var grainId in children)
         {
-            var subAgent = await _gAgentFactory.GetGAgentAsync(subAgentGrainId);
-            await agent.UnregisterAsync(subAgent);
+            var grainType = grainId.Type;
+            if (grainType == creatorGAgentType || grainType == subscriptionGAgentType)
+            {
+                continue;
+            }
+            subAgentGrainIds.Add(grainId);
         }
+
+        return subAgentGrainIds;
     }
 
     public async Task DeleteAgentAsync(Guid guid)
@@ -540,9 +608,16 @@ public class AgentService : ApplicationService, IAgentService
         {
             var parentAgent = await _gAgentFactory.GetGAgentAsync(parentGrainId);
             await parentAgent.UnregisterAsync(agent);
+            await creatorAgent.DeleteAgentAsync();
         }
+        else
+        {
+            _logger.LogInformation("Agent {agentId} has parent, please remove from it first.", guid);
+            throw new UserFriendlyException("Agent has parent, please remove from it first.");
+        }
+        
 
-        await creatorAgent.DeleteAgentAsync();
+       
     }
     
 }

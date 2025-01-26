@@ -75,16 +75,10 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
             return;
         }
 
-        var originEventList = State.EventInfoList;
-        var eventInfoList = new List<EventDescription>();
+        var eventDescriptionList = new List<EventDescription>();
         foreach (var t in eventTypeList)
         {
-            if (originEventList.Exists(x => x.EventType.Name == t.Name) || eventInfoList.Exists(x => x.EventType.Name == t.Name))
-            {
-                continue;
-            }
-            
-            PropertyInfo[] properties = t.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
+            PropertyInfo[] properties = t.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
             var eventPropertyList = new List<EventProperty>();
             foreach (PropertyInfo property in properties)
             {
@@ -97,7 +91,7 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
                 eventPropertyList.Add(eventProperty);
             }
             
-            eventInfoList.Add(new EventDescription()
+            eventDescriptionList.Add(new EventDescription()
             {
                 EventType = t,
                 Description = t.GetCustomAttribute<DescriptionAttribute>()?.Description ?? "No description available",
@@ -105,10 +99,9 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
             });
         }
         
-        originEventList.AddRange(eventInfoList);
         RaiseEvent(new UpdateAvailableEventsGEvent()
         {
-            EventInfoList = originEventList
+            EventInfoList = eventDescriptionList
         });
         await ConfirmEvents();
     }

@@ -1,16 +1,10 @@
-using System.ComponentModel;
-using System.Threading.Tasks;
 using Aevatar.Application.Grains.Agents.Investment.Dtos;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.Logging;
-using Orleans.Providers;
 
 namespace Aevatar.Application.Grains.Agents.Investment;
 
-[Description("Investment department,")]
-[StorageProvider(ProviderName = "PubSubStore")]
-[LogConsistencyProvider(ProviderName = "LogStorage")]
 [GAgent("InvestmentGAgent")]
 public class InvestmentGAgent : GAgentBase<InvestmentAgentState, InvestmentLogEvent, EventBase, InvestmentConfiguration>, IInvestmentStateGAgent
 {
