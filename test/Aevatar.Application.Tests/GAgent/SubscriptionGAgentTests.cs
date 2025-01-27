@@ -26,7 +26,7 @@ public class SubscriptionGAgentTests : AevatarApplicationTestBase
       var eventSubscription =  await _clusterClient.GetGrain<ISubscriptionGAgent>(Guid.NewGuid()).SubscribeAsync(
             new SubscribeEventInputDto
             {
-                AgentId = "2132",
+                AgentId = Guid.NewGuid(),
                 EventTypes = new List<string>()
                 {
                     "Created", "Updated"
