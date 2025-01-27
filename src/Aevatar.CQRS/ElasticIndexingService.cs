@@ -28,7 +28,7 @@ public class ElasticIndexingService : IIndexingService
         _elasticClient = elasticClient;
     }
 
-    public  void CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase
+    public void CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase
     {
         var indexName = IndexPrefix + stateBase.GetType().Name.ToLower() + IndexSuffix;
         var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
@@ -39,7 +39,7 @@ public class ElasticIndexingService : IIndexingService
 
         var createIndexResponse = _elasticClient.Indices.Create(indexName, c => c
             .Map<T>(m => m
-                .Dynamic(false) 
+                .Dynamic(false)
                 .Properties(props =>
                 {
                     var type = stateBase.GetType();
@@ -94,12 +94,14 @@ public class ElasticIndexingService : IIndexingService
         );
         if (!createIndexResponse.IsValid)
         {
-            _logger.LogError("Error creating state index. indexName:{indexName}  {error}", indexName,
-                createIndexResponse.ServerError?.Error);
+            _logger.LogError("Error creating state index. indexName:{indexName},error:{error},DebugInfo:{DebugInfo}",
+                indexName,
+                createIndexResponse.ServerError?.Error,
+                JsonConvert.SerializeObject(createIndexResponse.DebugInformation));
         }
         else
         {
-            _logger.LogError("Successfully created state index . indexName:{indexName}", indexName);
+            _logger.LogInformation("Successfully created state index . indexName:{indexName}", indexName);
         }
     }
 
@@ -135,37 +137,43 @@ public class ElasticIndexingService : IIndexingService
 
         if (!response.IsValid)
         {
-            _logger.LogInformation("State {indexName} save Error, indexing document error:{error}: ", indexName,
-                response.ServerError);
+            _logger.LogError(
+                "Save State Error, indexing document error,indexName:{indexName} error:{error}, DebugInfo{DebugInfo} ",
+                indexName,
+                response.ServerError, JsonConvert.SerializeObject(response.DebugInformation));
         }
         else
         {
-            _logger.LogInformation("State {indexName} save Successfully.", indexName);
+            _logger.LogInformation("Save State Successfully. indexName:{indexName}", indexName);
         }
     }
 
-    public async Task<string> GetStateIndexDocumentsAsync(string indexName, Func<QueryContainerDescriptor<dynamic>, QueryContainer> query, int skip = DefaultSkip, int limit =  DefaultLimit)
+    public async Task<string> GetStateIndexDocumentsAsync(string indexName,
+        Func<QueryContainerDescriptor<dynamic>, QueryContainer> query, int skip = DefaultSkip, int limit = DefaultLimit)
     {
         try
         {
-            var response = await _elasticClient.SearchAsync<dynamic>(s=>s
+            var response = await _elasticClient.SearchAsync<dynamic>(s => s
                 .Index(indexName)
                 .Query(query)
                 .From(skip)
-                .Size(limit)); 
-            
+                .Size(limit));
+
             if (!response.IsValid)
             {
-                _logger.LogError("{indexName} documents query fail: {reason}", indexName, response.ServerError?.Error.Reason);
+                _logger.LogError(
+                    "state documents query fail, indexName:{indexName} error:{error} ,DebugInfo{DebugInfo}", indexName,
+                    response.ServerError?.Error.Reason, JsonConvert.SerializeObject(response.DebugInformation));
                 return null;
             }
+
             var documents = response.Hits.Select(hit => hit.Source);
             var documentContent = JsonConvert.SerializeObject(documents);
             return documentContent;
         }
         catch (Exception e)
         {
-            _logger.LogError(e,"{indexName} documents query Exception: {reason}", indexName);
+            _logger.LogError(e, "state documents query Exception,indexName:{indexName}", indexName);
             throw;
         }
     }
@@ -181,7 +189,7 @@ public class ElasticIndexingService : IIndexingService
 
         var createIndexResponse = _elasticClient.Indices.Create(indexName, c => c
             .Map<T>(m => m
-                .Dynamic(false) 
+                .Dynamic(false)
                 .Properties(props =>
                 {
                     var type = baseIndex.GetType();
@@ -236,16 +244,18 @@ public class ElasticIndexingService : IIndexingService
         );
         if (!createIndexResponse.IsValid)
         {
-            _logger.LogError("Error creating index. indexName:{indexName}  {error}", indexName,
-                createIndexResponse.ServerError?.Error);
+            _logger.LogError("Error creating index. indexName:{indexName},error:{error},DebugInfo{DebugInfo}",
+                indexName,
+                createIndexResponse.ServerError?.Error,
+                JsonConvert.SerializeObject(createIndexResponse.DebugInformation));
         }
         else
         {
-            _logger.LogError("Successfully created index . indexName:{indexName}", indexName);
+            _logger.LogInformation("Successfully created index . indexName:{indexName}", indexName);
         }
     }
 
-    public async Task SaveOrUpdateGEventIndexAsync<T>(string id, T baseIndex) where T : BaseIndex
+    public async Task SaveOrUpdateIndexAsync<T>(string id, T baseIndex) where T : BaseIndex
     {
         var indexName = IndexPrefix + baseIndex.GetType().Name.ToLower();
         var properties = baseIndex.GetType().GetProperties();
@@ -277,33 +287,12 @@ public class ElasticIndexingService : IIndexingService
 
         if (!response.IsValid)
         {
-            _logger.LogInformation("Index: {indexName} save Error, indexing document error:{error}: ", indexName,
-                response.ServerError);
+            _logger.LogError("Index save Error, indexName:{indexName} error:{error},DebugInfo:{DebugInfo} ", indexName,
+                response.ServerError, JsonConvert.SerializeObject(response.DebugInformation));
         }
         else
         {
-            _logger.LogInformation("Index: {indexName} save Successfully.", indexName);
-        }
-    }
-
-    public async Task<string> QueryEventIndexAsync(string id, string indexName)
-    {
-        try
-        {
-            var response = await _elasticClient.GetAsync<dynamic>(id, g => g.Index(indexName));
-            var source = response.Source;
-            if (source == null)
-            {
-                return "";
-            }
-
-            var documentContent = JsonConvert.SerializeObject(source);
-            return documentContent;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e,"{indexName} ,id:{id}QueryEventIndexAsync fail.", indexName, id);
-            throw;
+            _logger.LogInformation("Index save Successfully, indexName: {indexName} ", indexName);
         }
     }
 
@@ -344,13 +333,45 @@ public class ElasticIndexingService : IIndexingService
                 return new Tuple<long, List<TEntity>>(result.Total, result.Documents.ToList());
             }
 
-            _logger.LogError("{indexName} Search fail. error:{error}", indexName, result.ServerError?.Error);
+            _logger.LogError("{indexName} Search fail. error:{error}, DebugInfo{DebugInfo}", indexName,
+                result.ServerError?.Error, JsonConvert.SerializeObject(result.DebugInformation));
             return null;
-
         }
         catch (Exception e)
         {
             _logger.LogError(e, "{indexName} Search Exception.", indexName);
+            throw;
+        }
+    }
+    
+    
+    public async Task<Tuple<long, string>> GetSortDataDocumentsAsync(string indexName,
+        Func<QueryContainerDescriptor<dynamic>, QueryContainer> query, int skip = 0, int limit = 1000)
+    {
+        try
+        {
+            var response = await _elasticClient.SearchAsync<dynamic>(s => s
+                .Index(indexName)
+                .Query(query)
+                .From(skip)
+                .Size(limit));
+
+            if (!response.IsValid)
+            {
+                _logger.LogError(
+                    "index documents query fail, indexName:{indexName} error:{error} ,DebugInfo{DebugInfo}", indexName,
+                    response.ServerError?.Error.Reason, JsonConvert.SerializeObject(response.DebugInformation));
+                return null;
+            }
+
+            var total = response.Total;
+            var documents = response.Hits.Select(hit => hit.Source);
+            var documentContent = JsonConvert.SerializeObject(documents);
+            return new Tuple<long, string>(total, documentContent);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "index documents query Exception,indexName:{indexName}", indexName);
             throw;
         }
     }

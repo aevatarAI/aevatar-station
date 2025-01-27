@@ -1,4 +1,5 @@
 using Aevatar.CQRS.Provider;
+using Aevatar.Cqrs.Tests.Cqrs.Dto;
 using Aevatar.GAgent.Dto;
 using Newtonsoft.Json;
 using Shouldly;

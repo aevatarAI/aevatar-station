@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
-using Aevatar.Agents.Combination;
-using Aevatar.Application.Grains.Agents.Combination;
+using Aevatar.Agents.Creator;
+using Aevatar.Application.Grains.Agents.Creator;
 using Aevatar.Application.Grains.Subscription;
 using Aevatar.Common;
 using Aevatar.Core.Abstractions;
@@ -20,7 +20,7 @@ namespace Aevatar.Service;
 
 public interface ISubscriptionAppService
 {
-    Task<List<EventDescriptionDto>> GetAvailableEventsAsync(string agentId);
+    Task<List<EventDescriptionDto>> GetAvailableEventsAsync(Guid agentId);
     Task<SubscriptionDto> SubscribeAsync(CreateSubscriptionDto createSubscriptionDto);
     Task CancelSubscriptionAsync(Guid subscriptionId);
     Task<SubscriptionDto> GetSubscriptionAsync(Guid subscriptionId);
@@ -35,24 +35,27 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
     private readonly ILogger<SubscriptionAppService> _logger;
     private readonly IObjectMapper _objectMapper;
     private readonly IUserAppService _userAppService;
+    private readonly IGAgentFactory _gAgentFactory;
     
     public SubscriptionAppService(
         IClusterClient clusterClient,
         IObjectMapper objectMapper,
         IUserAppService userAppService,
+        IGAgentFactory gAgentFactory,
         ILogger<SubscriptionAppService> logger)
     {
         _clusterClient = clusterClient;
         _objectMapper = objectMapper;
         _logger = logger;
         _userAppService = userAppService;
+        _gAgentFactory = gAgentFactory;
     }
     
-    public async Task<List<EventDescriptionDto>> GetAvailableEventsAsync(string agentId)
+    public async Task<List<EventDescriptionDto>> GetAvailableEventsAsync(Guid agentId)
     {
-        var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(ParseGuid(agentId));
-        var combinationData = await combinationAgent.GetCombinationAsync();
-        var dto = _objectMapper.Map<List<EventDescription>, List<EventDescriptionDto>>(combinationData.EventInfoList);
+        var agent = _clusterClient.GetGrain<ICreatorGAgent>(agentId);
+        var agentState = await agent.GetAgentAsync();
+        var dto = _objectMapper.Map<List<EventDescription>, List<EventDescriptionDto>>(agentState.EventInfoList);
         return dto;
     }
     
@@ -62,13 +65,15 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
 
       var  input = _objectMapper.Map<CreateSubscriptionDto, SubscribeEventInputDto>(createSubscriptionDto);
       var subscriptionStateAgent =
-          _clusterClient.GetGrain<ISubscriptionGAgent>(GuidUtil.StringToGuid(createSubscriptionDto.AgentId));
+          _clusterClient.GetGrain<ISubscriptionGAgent>(GuidUtil.StringToGuid(createSubscriptionDto.AgentId.ToString()));
       
       input.UserId = _userAppService.GetCurrentUserId();
       var subscriptionState = await subscriptionStateAgent.SubscribeAsync(input);
       
-      var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(ParseGuid(input.AgentId));
-      await combinationAgent.RegisterAsync(subscriptionStateAgent);
+      var agent = _clusterClient.GetGrain<ICreatorGAgent>(input.AgentId);
+      var agentState = await agent.GetAgentAsync();
+      var businessAgent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
+      await businessAgent.RegisterAsync(subscriptionStateAgent);
       return _objectMapper.Map<EventSubscriptionState, SubscriptionDto>(subscriptionState);
     }
 
@@ -84,8 +89,8 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
             throw new UserFriendlyException("User is not allowed to cancel subscription");
         }
         
-        var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(ParseGuid(subscriptionState.AgentId));
-        await combinationAgent.UnregisterAsync(subscriptionStateAgent);
+        var agent = _clusterClient.GetGrain<ICreatorGAgent>(subscriptionState.AgentId);
+        await agent.UnregisterAsync(subscriptionStateAgent);
         await subscriptionStateAgent.UnsubscribeAsync();
     }
 
@@ -98,18 +103,18 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
 
     public async Task PublishEventAsync(PublishEventDto dto)
     {
-        var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(ParseGuid(dto.AgentId));
-        var combinationData = await combinationAgent.GetCombinationAsync();
+        var agent = _clusterClient.GetGrain<ICreatorGAgent>(dto.AgentId);
+        var agentState = await agent.GetAgentAsync();
         var currentUserId = _userAppService.GetCurrentUserId();
-        if (combinationData.UserId != currentUserId)
+        if (agentState.UserId != currentUserId)
         {
             _logger.LogInformation("User {userId} is not allowed to publish event {eventType}.", currentUserId, dto.EventType);
             throw new UserFriendlyException("User is not allowed to publish event");
         }
         
-        var eventList = combinationData.EventInfoList;
+        var eventList = agentState.EventInfoList;
 
-        var eventDescription = eventList.Find(i => i.EventType.Name == dto.EventType);
+        var eventDescription = eventList.Find(i => i.EventType.FullName == dto.EventType);
         if (eventDescription == null)
         {
             _logger.LogInformation("Type {type} could not be found.", dto.EventType);
@@ -140,16 +145,7 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
             propInfo.SetValue(eventInstance, convertedValue);
         }
         
-        await combinationAgent.PublishEventAsync((EventBase)eventInstance);
-    }
-    
-    private Guid ParseGuid(string id)
-    {
-        if (!Guid.TryParse(id, out Guid validGuid))
-        {
-            _logger.LogInformation("Invalid id: {id}", id);
-            throw new UserFriendlyException("Invalid id");
-        }
-        return validGuid;
+        await agent.PublishEventAsync((EventBase)eventInstance);
+        
     }
 }

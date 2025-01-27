@@ -151,7 +151,6 @@ public class AevatarAuthServerModule : AbpModule
         Configure<AppUrlOptions>(options =>
         {
             options.Applications["MVC"].RootUrl = configuration["App:SelfUrl"];
-            options.RedirectAllowedUrls.AddRange(configuration["App:RedirectAllowedUrls"]?.Split(',') ?? Array.Empty<string>());
 
             options.Applications["Angular"].RootUrl = configuration["App:ClientUrl"];
             options.Applications["Angular"].Urls[AccountUrlNames.PasswordReset] = "account/reset-password";
@@ -168,25 +167,6 @@ public class AevatarAuthServerModule : AbpModule
         });
 
         var dataProtectionBuilder = context.Services.AddDataProtection().SetApplicationName("AevatarAuthServer");
-
-        context.Services.AddCors(options =>
-        {
-            options.AddDefaultPolicy(builder =>
-            {
-                builder
-                    .WithOrigins(
-                        configuration["App:CorsOrigins"]?
-                            .Split(",", StringSplitOptions.RemoveEmptyEntries)
-                            .Select(o => o.RemovePostFix("/"))
-                            .ToArray() ?? Array.Empty<string>()
-                    )
-                    .WithAbpExposedHeaders()
-                    .SetIsOriginAllowedToAllowWildcardSubdomains()
-                    .AllowAnyHeader()
-                    .AllowAnyMethod()
-                    .AllowCredentials();
-            });
-        });
     }
 
     public override void OnApplicationInitialization(ApplicationInitializationContext context)
@@ -209,7 +189,6 @@ public class AevatarAuthServerModule : AbpModule
         app.UseCorrelationId();
         app.UseStaticFiles();
         app.UseRouting();
-        app.UseCors();
         app.UseAuthentication();
         app.UseAbpOpenIddictValidation();
 

@@ -26,6 +26,6 @@ public class SaveGEventCommandHandler : IRequestHandler<SaveGEventCommand>
 
     private async Task SaveIndexAsync(SaveGEventCommand request)
     {
-        await _indexingService.SaveOrUpdateGEventIndexAsync(request.Id.ToString(), request.AgentGEventIndex);
+        await _indexingService.SaveOrUpdateIndexAsync(request.Id.ToString(), request.AgentGEventIndex);
     }
 }

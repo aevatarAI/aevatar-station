@@ -71,7 +71,7 @@ public static class OrleansHostExtension
                         options.SupportedNamespacePrefixes.Add("Autofac.Core");
                     })
                     .AddActivityPropagation()
-                    .UsePluginGAgents()
+                    // .UsePluginGAgents()
                     .UseDashboard(options =>
                     {
                         options.Username = configSection.GetValue<string>("DashboardUserName");
