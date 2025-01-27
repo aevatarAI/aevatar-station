@@ -1,9 +1,18 @@
 using Aevatar.Core.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
+using Orleans.Metadata;
 
 namespace Aevatar.Core;
 
 public class GAgentManager : IGAgentManager
 {
+    private readonly GrainTypeResolver _grainTypeResolver;
+
+    public GAgentManager(IClusterClient clusterClient)
+    {
+        _grainTypeResolver = clusterClient.ServiceProvider.GetRequiredService<GrainTypeResolver>();
+    }
+
     public List<Type> GetAvailableGAgentTypes()
     {
         var gAgentType = typeof(IGAgent);
@@ -18,5 +27,12 @@ public class GAgentManager : IGAgentManager
         }
 
         return gAgentTypes;
+    }
+
+    public List<GrainType> GetAvailableGAgentGrainTypes()
+    {
+        var types = GetAvailableGAgentTypes();
+        var grainTypes = types.Select(_grainTypeResolver.GetGrainType);
+        return grainTypes.ToList();
     }
 }

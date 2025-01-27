@@ -5,11 +5,19 @@ using Microsoft.Extensions.Logging;
 namespace Aevatar.Core;
 
 [GAgent]
-public class ArtifactGAgentBase<TArtifact, TState, TStateLogEvent>
-    : GAgentBase<TState, TStateLogEvent>, IArtifactGAgent
+public abstract class ArtifactGAgentBase<TArtifact, TState, TStateLogEvent>(ILogger logger)
+    : ArtifactGAgentBase<TArtifact, TState, TStateLogEvent, EventBase>(logger)
+    where TArtifact : IArtifact<TState, TStateLogEvent>
+    where TState : StateBase, new()
+    where TStateLogEvent : StateLogEventBase<TStateLogEvent>;
+
+[GAgent]
+public abstract class ArtifactGAgentBase<TArtifact, TState, TStateLogEvent, TEvent>
+    : GAgentBase<TState, TStateLogEvent, TEvent>
     where TArtifact : IArtifact<TState, TStateLogEvent>
     where TState : StateBase, new()
     where TStateLogEvent : StateLogEventBase<TStateLogEvent>
+    where TEvent : EventBase
 {
     private readonly TArtifact _artifact;
 

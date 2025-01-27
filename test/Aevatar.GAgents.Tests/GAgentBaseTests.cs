@@ -6,9 +6,9 @@ using Shouldly;
 
 namespace Aevatar.GAgents.Tests;
 
-public class GAgentBaseTests : AevatarGAgentsTestBase
+public sealed class GAgentBaseTests : AevatarGAgentsTestBase
 {
-    protected readonly IGrainFactory _grainFactory;
+    private readonly IGrainFactory _grainFactory;
 
     public GAgentBaseTests()
     {
