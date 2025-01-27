@@ -26,14 +26,14 @@ public class SubscriptionGAgentTests : AevatarApplicationTestBase
       var eventSubscription =  await _clusterClient.GetGrain<ISubscriptionGAgent>(Guid.NewGuid()).SubscribeAsync(
             new SubscribeEventInputDto
             {
-                AgentId = "2132",
+                AgentId = Guid.NewGuid(),
                 EventTypes = new List<string>()
                 {
                     "Created", "Updated"
                 },
                 CallbackUrl = "http://127.0.0.1"
             });
-      eventSubscription.AgentId.ShouldNotBeNullOrEmpty();
+      eventSubscription.AgentId.ShouldNotBe(Guid.Empty);
       eventSubscription.CallbackUrl.ShouldNotBeNullOrEmpty();
       eventSubscription.Status.ShouldBe("Active");
     }
@@ -48,7 +48,7 @@ public class SubscriptionGAgentTests : AevatarApplicationTestBase
         await _clusterClient.GetGrain<ISubscriptionGAgent>(subscriptionId).SubscribeAsync(
             new SubscribeEventInputDto
             {
-                AgentId = "2132",
+                AgentId = Guid.NewGuid(),
                 EventTypes = new List<string>()
                 {
                     "Created", "Updated"

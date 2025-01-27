@@ -1,7 +1,6 @@
 using System.Net.Http.Json;
-using Aevatar.Application.Grains.Agents.Atomic;
-using Aevatar.Application.Grains.Agents.Combination;
-using Aevatar.AtomicAgent;
+using Aevatar.Agent;
+using Aevatar.Application.Grains.Agents.Creator;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Domain.Grains.Subscription;
@@ -9,7 +8,6 @@ using Aevatar.Subscription;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Orleans.Providers;
-using Orleans.Runtime;
 
 namespace Aevatar.Application.Grains.Subscription;
 [StorageProvider(ProviderName = "PubSubStore")]
@@ -71,7 +69,7 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
                 eventPushRequest.EventId = eventWrapper.EventId;
                 eventPushRequest.EventType = eventWrapper.Event.GetType().Name;
                 eventPushRequest.Payload = JsonConvert.SerializeObject(eventWrapper.Event);
-                eventPushRequest.AtomicAgent = await GetAtomicAgentDtoFromEventGrainId(eventWrapper.PublisherGrainId);
+                eventPushRequest.AgentData = await GetAtomicAgentDtoFromEventGrainId(eventWrapper.PublisherGrainId);
                 try
                 {
                     using var httpClient = new HttpClient();
@@ -85,36 +83,18 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
         }
     }
     
-    private async Task<AtomicAgentDto> GetAtomicAgentDtoFromEventGrainId(GrainId grainId)
+    private async Task<AgentDto> GetAtomicAgentDtoFromEventGrainId(GrainId grainId)
     {
-        Guid.TryParse(State.AgentId, out Guid combinationGuid);
-        var combinationAgent = _clusterClient.GetGrain<ICombinationGAgent>(combinationGuid);
-        var combinationData = await combinationAgent.GetCombinationAsync();
-        foreach (var agentId in combinationData.AgentComponent)
+        var guid = grainId.GetGuidKey();
+        var agent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
+        var agentState = await agent.GetAgentAsync();
+        
+        return new AgentDto
         {
-            var businessGuid = grainId.GetGuidKey().ToString();
-            if (agentId.Value == businessGuid)
-            {
-                Guid.TryParse(agentId.Key, out Guid atomicGuid);
-                var atomicAgent = _clusterClient.GetGrain<IAtomicGAgent>(atomicGuid);
-                var atomicAgentData = await atomicAgent.GetAgentAsync();
-                var agentDto = new AtomicAgentDto()
-                {
-                    Id = agentId.Key,
-                    Type = atomicAgentData.Type,
-                    Name = atomicAgentData.Name
-                };
-                if (!atomicAgentData.Properties.IsNullOrEmpty())
-                {
-                    agentDto.Properties =
-                        JsonConvert.DeserializeObject<Dictionary<string, object>>(atomicAgentData.Properties);
-                }
-
-                return agentDto;
-            }
-        }
-
-        return new AtomicAgentDto();
+            Id = guid,
+            AgentType = agentState.AgentType,
+            Name = agentState.Name,
+        };
     }
 
     public override async Task<string> GetDescriptionAsync()

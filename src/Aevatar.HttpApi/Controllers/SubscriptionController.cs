@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Aevatar.Agents.Combination;
-using Aevatar.Domain.Grains.Subscription;
 using Aevatar.Service;
 using Aevatar.Subscription;
 using Asp.Versioning;
@@ -26,7 +24,7 @@ public class SubscriptionController :  AevatarController
     }
 
     [HttpGet("events")]
-    public async Task<List<EventDescriptionDto>> GetAvailableEventsAsync([FromQuery] string agentId)
+    public async Task<List<EventDescriptionDto>> GetAvailableEventsAsync([FromQuery] Guid agentId)
     {
         return await _subscriptionAppService.GetAvailableEventsAsync(agentId);
     }

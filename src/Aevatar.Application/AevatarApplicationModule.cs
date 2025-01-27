@@ -45,7 +45,7 @@ public class AevatarApplicationModule : AbpModule
         var configuration = context.Services.GetConfiguration();
         Configure<NameContestOptions>(configuration.GetSection("NameContest"));
         context.Services.AddSingleton<IGAgentFactory>(sp => new GAgentFactory(context.Services.GetRequiredService<IClusterClient>()));
-        context.Services.AddSingleton<IGAgentManager>(sp => new GAgentManager());
+        context.Services.AddSingleton<IGAgentManager>(sp => new GAgentManager(context.Services.GetRequiredService<IClusterClient>()));
         Configure<WebhookDeployOptions>(configuration.GetSection("WebhookDeploy"));
         Configure<AgentOptions>(configuration.GetSection("Agent"));
         context.Services.AddSingleton<IPluginGAgentManager, PluginGAgentManager>();

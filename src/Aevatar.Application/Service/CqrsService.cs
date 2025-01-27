@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Aevatar.Agents.Atomic;
-using Aevatar.Agents.Atomic.Models;
-using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
 using Aevatar.CQRS.Provider;
 using Newtonsoft.Json;
