@@ -17,13 +17,15 @@ public static class OrleansHostExtensions
         var abpApplication = AbpApplicationFactory.Create<AevatarModule>();
         abpApplication.Initialize();
 
-        return builder.ConfigureServices(services =>
+        return builder
+            .UseAevatarPlugins()
+            .ConfigureServices(services =>
             {
                 foreach (var service in abpApplication.Services)
                 {
                     services.Add(service);
                 }
-            }).UseAevatarPlugins();
+            });
     }
 
     public static ISiloBuilder UseAevatar<TAbpModule>(this ISiloBuilder builder) where TAbpModule : AbpModule
@@ -47,12 +49,14 @@ public static class OrleansHostExtensions
         var abpApplication = AbpApplicationFactory.Create<AevatarModule>();
         abpApplication.Initialize();
 
-        return builder.ConfigureServices(services =>
+        return builder
+            .UseAevatarPlugins()
+            .ConfigureServices(services =>
         {
             foreach (var service in abpApplication.Services)
             {
                 services.Add(service);
             }
-        }).UseAevatarPlugins();
+        });
     }
 }
