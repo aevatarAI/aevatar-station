@@ -4,7 +4,7 @@
         <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
         <Nullable>enable</Nullable>
         <RootNamespace>Aevatar.AI</RootNamespace>
-        <NoWarn>$(NoWarn);SKEXP0001;SKEXP0010;SKEXP0020</NoWarn>
+        <NoWarn>$(NoWarn);SKEXP0001;SKEXP0010;SKEXP0020;SKEXP0070</NoWarn>
         <PackageId>Aevatar.AI.SemanticKernel</PackageId>
         <PackageType>Dependency</PackageType>
         <Title>aevatar Framework</Title>
@@ -22,6 +22,8 @@
         <PackageReference Include="Microsoft.SemanticKernel.Connectors.Qdrant" />
         <PackageReference Include="Microsoft.SemanticKernel.PromptTemplates.Handlebars" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
+        <PackageReference Include="Microsoft.SemanticKernel.Connectors.AzureAIInference" />
+        <PackageReference Include="Microsoft.SemanticKernel.Connectors.Google" />
         <PackageReference Include="PdfPig" />
     </ItemGroup>
 
