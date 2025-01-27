@@ -1,6 +1,6 @@
-using Aevatar.Agents.Atomic.Models;
+using Aevatar.Agents.Creator.Models;
 
-namespace Aevatar.GAgent.Dto;
+namespace Aevatar.Cqrs.Tests.Cqrs.Dto;
 public class CqrsTestAgentStateDto :BaseStateDto
 {
     public  string Id { get; set; }

@@ -1,5 +1,4 @@
 using System;
-using Aevatar.Agents.Combination.Models;
 using Aevatar.Code.GEvents;
 using Aevatar.Core.Abstractions;
 using Orleans;
