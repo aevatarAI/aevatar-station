@@ -10,13 +10,16 @@ public class AevatarDefaultConventionalRegistrar : DefaultConventionalRegistrar
 
     protected override ServiceLifetime? GetServiceLifetimeFromClassHierarchy(Type type)
     {
-        //Get ABP lifetime from ABP interface, ITransientDependency,ISingletonDependency or IScopedDependency
+        // Get ABP lifetime from ABP interface, ITransientDependency, ISingletonDependency or IScopedDependency
         var lifeTime = base.GetServiceLifetimeFromClassHierarchy(type);
-        if (lifeTime != null) return null;
+        if (lifeTime != null)
+        {
+            return null;
+        }
 
-        //if no lifetime interface was found, try to get class with the same interface,
-        //HelloService -> IHelloService
-        //HelloManager -> IHelloManager
+        // If no lifetime interface was found, try to get class with the same interface,
+        // HelloService -> IHelloService
+        // HelloManager -> IHelloManager
         var interfaceName = "I" + type.Name;
 
         if (type.GetInterfaces().Any(p => p.Name == interfaceName))

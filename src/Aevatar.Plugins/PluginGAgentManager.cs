@@ -119,6 +119,10 @@ public class PluginGAgentManager : IPluginGAgentManager, ILifecycleParticipant<I
         var tenantGrainState = new GrainState<ViewStateSnapshotWithMetadata<TenantPluginCodeGAgentState>>();
         var tenantGrainId = GrainId.Create("Aevatar.Plugins/pluginTenant", tenantId.ToString("N"));
         await grainStorage.ReadStateAsync(typeof(TenantPluginCodeGAgent).FullName, tenantGrainId, tenantGrainState);
+        if (tenantGrainState.State == null)
+        {
+            return assemblies;
+        }
         var tenantState = tenantGrainState.State.Snapshot;
         if (tenantState.CodeStorageGuids.IsNullOrEmpty()) return new List<Assembly>();
 

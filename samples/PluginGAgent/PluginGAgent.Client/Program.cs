@@ -25,27 +25,22 @@ await host.StartAsync();
 
 var gAgentFactory = host.Services.GetRequiredService<IGAgentFactory>();
 var gAgentManager = host.Services.GetRequiredService<IGAgentManager>();
-var pluginManager = host.Services.GetRequiredService<IPluginGAgentManager>();
 
 Console.WriteLine("Select an option:");
-Console.WriteLine("1. Add Plugin GAgents");
-Console.WriteLine("2. Try Execute Plugin GAgents");
-Console.WriteLine("3. Try Get Artifact GAgent");
-Console.WriteLine("4. Show all candidate GAgents");
+Console.WriteLine("1. Try Execute Plugin GAgents");
+Console.WriteLine("2. Try Get Artifact GAgent");
+Console.WriteLine("3. Show all candidate GAgents");
 var choice = Console.ReadLine();
 
 switch (choice)
 {
     case "1":
-        await AddCodeAsync(pluginManager);
-        break;
-    case "2":
         await PerformCommandAsync(gAgentFactory);
         break;
-    case "3":
+    case "2":
         await TryArtifactGAgentAsync(gAgentFactory);
         break;
-    case "4":
+    case "3":
         ListCandidateGAgents(gAgentManager);
         break;
     default:
@@ -61,21 +56,6 @@ async Task PerformCommandAsync(IGAgentFactory factory)
     await publishingGAgent.RegisterAsync(commander);
     await commander.RegisterAsync(worker);
     await publishingGAgent.PublishEventAsync(new Command { Content = "test" });
-}
-
-async Task AddCodeAsync(IPluginGAgentManager pluginGAgentManager)
-{
-    var plugins = await PluginLoader.LoadPluginsAsync("plugins");
-
-    var tenantId = "test".ToGuid();
-    foreach (var code in plugins.Values)
-    {
-        await pluginGAgentManager.AddPluginAsync(new AddPluginDto
-        {
-            Code = code,
-            TenantId = tenantId
-        });
-    }
 }
 
 async Task TryArtifactGAgentAsync(IGAgentFactory factory)

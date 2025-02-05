@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json;
 using Orleans.EventSourcing;
 using Orleans.Providers;
@@ -41,11 +42,16 @@ public abstract partial class
 {
     protected IStreamProvider StreamProvider => this.GetStreamProvider(AevatarCoreConstants.StreamProvider);
 
-    protected ILogger Logger { get; set; }
+    public ILogger Logger { get; set; } = NullLogger.Instance;
 
     private readonly List<EventWrapperBaseAsyncObserver> _observers = [];
 
-    protected IEventDispatcher? EventDispatcher { get; set; }
+    private IEventDispatcher? EventDispatcher { get; set; }
+
+    protected GAgentBase()
+    {
+        EventDispatcher = ServiceProvider.GetService<IEventDispatcher>();
+    }
 
     public async Task ActivateAsync()
     {

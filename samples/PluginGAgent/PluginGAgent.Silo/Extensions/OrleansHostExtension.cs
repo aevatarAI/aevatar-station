@@ -24,10 +24,6 @@ public static class OrleansHostExtension
                 siloBuilder
                     .UseLocalhostClustering()
                     .UseMongoDBClient("mongodb://localhost:27017/?maxPoolSize=555")
-                    .Configure<PluginGAgentLoadOptions>(options =>
-                    {
-                        options.TenantId = "test".ToGuid();
-                    })
                     .AddMongoDBGrainStorage("PubSubStore", options =>
                     {
                         options.CollectionPrefix = "StreamStorage";
@@ -41,42 +37,7 @@ public static class OrleansHostExtension
                         options.Database = "AISmartDb";
                     })
                     .AddMemoryStreams("Aevatar")
-                    .UseAevatar<PluginGAgentTestModule>()
-                    .ConfigureServices(services =>
-                    {
-                        var assemblyDict = PluginLoader.LoadPluginsAsync("plugins").Result;
-                        // foreach (var assembly in assemblyDict.Values)
-                        // {
-                        //     services.AddAssembly(Assembly.Load(assembly));
-                        // }
-
-                        // services.Configure<GrainTypeOptions>(options =>
-                        // {
-                        //     foreach (var code in assemblyDict.Values)
-                        //     {
-                        //         var assembly = Assembly.Load(code);
-                        //         foreach (var type in assembly.GetExportedTypes()
-                        //                      .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(IGAgent).IsAssignableFrom(t)))
-                        //         {
-                        //             options.Classes.Add(type);
-                        //         }
-                        //     }
-                        // });
-
-                        // services.AddSerializer(options =>
-                        // {
-                        //     foreach (var code in assemblyDict.Values)
-                        //     {
-                        //         var assembly = Assembly.Load(code);
-                        //         var exportedTypes = assembly.GetExportedTypes();
-                        //         foreach (var exportedType in exportedTypes)
-                        //         {
-                        //             options.AddAssembly(exportedType.Assembly);
-                        //         }
-                        //     }
-                        //     
-                        // });
-                    });
+                    .UseAevatar<PluginGAgentTestModule>();
             })
             .UseConsoleLifetime();
     }

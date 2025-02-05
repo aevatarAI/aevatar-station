@@ -1,10 +1,13 @@
+using System.Reflection;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
+using Aevatar.Plugins;
 using Aevatar.Plugins.Extensions;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Orleans.Serialization;
 using Volo.Abp;
 using Volo.Abp.Modularity;
 
@@ -18,13 +21,14 @@ public static class OrleansHostExtensions
         abpApplication.Initialize();
 
         return builder
-            .UseAevatarPlugins()
             .ConfigureServices(services =>
             {
                 foreach (var service in abpApplication.Services)
                 {
                     services.Add(service);
                 }
+
+                LoadPlugins(services);
             });
     }
 
@@ -43,6 +47,22 @@ public static class OrleansHostExtensions
                 }
             });
     }
+    
+    private static void LoadPlugins(IServiceCollection services)
+    {
+        var configuration = services.GetConfiguration();
+        var pluginConfig = configuration.GetSection("Plugins");
+        var pluginDirectory = pluginConfig["Directory"];
+        if (pluginDirectory.IsNullOrEmpty()) return;
+        var pluginCodes = PluginLoader.LoadPlugins(pluginDirectory);
+        services.AddSerializer(options =>
+        {
+            foreach (var assembly in pluginCodes.Select(Assembly.Load))
+            {
+                options.AddAssembly(assembly);
+            }
+        });
+    }
 
     public static IClientBuilder UseAevatar(this IClientBuilder builder)
     {
@@ -50,7 +70,6 @@ public static class OrleansHostExtensions
         abpApplication.Initialize();
 
         return builder
-            .UseAevatarPlugins()
             .ConfigureServices(services =>
         {
             foreach (var service in abpApplication.Services)
