@@ -16,21 +16,22 @@ using Aevatar.AI.Brain;
 
 namespace Aevatar.AI.EmbeddedDataLoader.EmbeddedPdf;
 
-internal class EmbeddedPftDataLoader<TKey>(
-    UniqueKeyGenerator<TKey> uniqueKeyGenerator,
-    IVectorStoreRecordCollection<TKey, TextSnippet<TKey>> vectorStoreCollection,
+internal class EmbeddedPftDataLoader(
+    // UniqueKeyGenerator<TKey> uniqueKeyGenerator,
+    IVectorStoreRecordCollection<string, TextSnippet<string>> vectorStoreCollection,
     ITextEmbeddingGenerationService textEmbeddingGenerationService,
-    IChatCompletionService chatCompletionService) : IEmbeddedDataLoader where TKey : notnull
+    IChatCompletionService chatCompletionService) : IEmbeddedDataLoader
 {
-    public async Task Load(FileData fileData, int batchSize, int betweenBatchDelayInMs, CancellationToken cancellationToken)
+    public async Task Load(BrainContent brainContent, int batchSize, int maxChunkLength, int betweenBatchDelayInMs,
+        CancellationToken cancellationToken)
     {
         // Create the collection if it doesn't exist.
         await vectorStoreCollection.CreateCollectionIfNotExistsAsync(cancellationToken).ConfigureAwait(false);
 
         // Load the text and images from the PDF file and split them into batches.
-        if (fileData.Content != null)
+        if (brainContent.Content != null)
         {
-            var sections = LoadTextAndImages(fileData.Content, cancellationToken);
+            var sections = LoadTextAndImages(brainContent.Content, cancellationToken);
             var batches = sections.Chunk(batchSize);
 
             // Process each batch of content items.
@@ -50,17 +51,20 @@ internal class EmbeddedPftDataLoader<TKey>(
                         cancellationToken).ConfigureAwait(false);
                     return new RawContent { Text = textFromImage, PageNumber = content.PageNumber };
                 });
+
                 var textContent = await Task.WhenAll(textContentTasks).ConfigureAwait(false);
 
                 // Map each paragraph to a TextSnippet and generate an embedding for it.
-                var recordTasks = textContent.Select(async content => new TextSnippet<TKey>
+                var recordTasks = textContent.Select(async content => new TextSnippet<string>
                 {
-                    Key = uniqueKeyGenerator.GenerateKey(),
+                    Key = $"{brainContent.Name}-{content.PageNumber}",
                     Text = content.Text,
-                    ReferenceDescription = $"{fileData.Name}#page={content.PageNumber}",
+                    ReferenceDescription = $"{brainContent.Name}#page={content.PageNumber}",
                     //ReferenceLink = $"{new Uri(file.Name).AbsoluteUri}#page={content.PageNumber}",
-                    ReferenceLink = $"{fileData.Name}#page={content.PageNumber}",
-                    TextEmbedding = await GenerateEmbeddingsWithRetryAsync(textEmbeddingGenerationService, content.Text!,
+                    ReferenceLink = $"{brainContent.Name}#page={content.PageNumber}",
+                    TextEmbedding = await EmbeddingHelper.GenerateEmbeddingsWithRetryAsync(
+                        textEmbeddingGenerationService,
+                        content.Text!,
                         cancellationToken: cancellationToken).ConfigureAwait(false)
                 });
 
@@ -77,7 +81,7 @@ internal class EmbeddedPftDataLoader<TKey>(
             }
         }
     }
-        
+
     private static IEnumerable<RawContent> LoadTextAndImages(byte[] fileBytes, CancellationToken cancellationToken)
     {
         using (var document = PdfDocument.Open(fileBytes))
@@ -116,41 +120,6 @@ internal class EmbeddedPftDataLoader<TKey>(
     }
 
     /// <summary>
-    /// Add a simple retry mechanism to embedding generation.
-    /// </summary>
-    /// <param name="textEmbeddingGenerationService">The embedding generation service.</param>
-    /// <param name="text">The text to generate the embedding for.</param>
-    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to monitor for cancellation requests.</param>
-    /// <returns>The generated embedding.</returns>
-    private static async Task<ReadOnlyMemory<float>> GenerateEmbeddingsWithRetryAsync(ITextEmbeddingGenerationService textEmbeddingGenerationService, string text, CancellationToken cancellationToken)
-    {
-        var tries = 0;
-
-        while (true)
-        {
-            try
-            {
-                return await textEmbeddingGenerationService.GenerateEmbeddingAsync(text, cancellationToken: cancellationToken).ConfigureAwait(false);
-            }
-            catch (HttpOperationException ex) when (ex.StatusCode == HttpStatusCode.TooManyRequests)
-            {
-                tries++;
-
-                if (tries < 3)
-                {
-                    Console.WriteLine($"Failed to generate embedding. Error: {ex}");
-                    Console.WriteLine("Retrying embedding generation...");
-                    await Task.Delay(10_000, cancellationToken).ConfigureAwait(false);
-                }
-                else
-                {
-                    throw;
-                }
-            }
-        }
-    }
-
-    /// <summary>
     /// Add a simple retry mechanism to image to text.
     /// </summary>
     /// <param name="chatCompletionService">The chat completion service to use for generating text from images.</param>
@@ -173,7 +142,9 @@ internal class EmbeddedPftDataLoader<TKey>(
                     new TextContent("What’s in this image?"),
                     new ImageContent(imageBytes, "image/png"),
                 ]);
-                var result = await chatCompletionService.GetChatMessageContentsAsync(chatHistory, cancellationToken: cancellationToken).ConfigureAwait(false);
+                var result = await chatCompletionService
+                    .GetChatMessageContentsAsync(chatHistory, cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
                 return string.Join("\n", result.Select(x => x.Content));
             }
             catch (HttpOperationException ex) when (ex.StatusCode == HttpStatusCode.TooManyRequests)

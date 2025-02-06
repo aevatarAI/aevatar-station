@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -35,7 +36,7 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
         return await InitializeBrainAsync(initializeDto.LLM, initializeDto.Instructions, initializeDto.Files);
     }
 
-    private async Task<bool> InitializeBrainAsync(string LLM, string promptTemplate, IReadOnlyCollection<FileDto>? files = null)
+    private async Task<bool> InitializeBrainAsync(string LLM, string promptTemplate, IReadOnlyCollection<BrainContentDto>? files = null)
     {
         _brain = _brainFactory.GetBrain(LLM);
         
@@ -45,10 +46,10 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
             return false;
         }
 
-        List<FileData>? fileList = null;
+        List<BrainContent>? fileList = null;
         if (files != null)
         {
-            fileList = files.Select(f => new FileData() { Content = f.Content, Type = f.Type, Name = f.Name }).ToList();
+            fileList = files.Select(f => f.ConvertToBrainContent()).ToList();
         }
         
         // remove slash from this.GetGrainId().ToString() so that it can be used as the collection name pertaining to the grain

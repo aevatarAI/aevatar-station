@@ -22,7 +22,7 @@ internal class QdrantVectorStoreCollection : IVectorStoreCollection
         return Task.CompletedTask;
     }
 
-    public Task UploadRecordAsync(List<FileData> files)
+    public Task UploadRecordAsync(List<BrainContent> files)
     {
         throw new System.NotImplementedException();
     }

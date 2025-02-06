@@ -20,7 +20,7 @@ public abstract class BrainBase : IBrain
 {
     protected Kernel? Kernel;
     protected string? PromptTemplate;
-    
+
     protected readonly IKernelBuilderFactory KernelBuilderFactory;
     protected readonly ILogger Logger;
     protected readonly IOptions<RagConfig> RagConfig;
@@ -34,7 +34,7 @@ public abstract class BrainBase : IBrain
 
     protected abstract Task ConfigureKernelBuilder(IKernelBuilder kernelBuilder);
 
-    public async Task<bool> InitializeAsync(string id, string promptTemplate, List<FileData>? files)
+    public async Task<bool> InitializeAsync(string id, string promptTemplate, List<BrainContent>? files)
     {
         var kernelBuilder = KernelBuilderFactory.GetKernelBuilder(id);
         await ConfigureKernelBuilder(kernelBuilder);
@@ -45,7 +45,7 @@ public abstract class BrainBase : IBrain
             var ragConfig = RagConfig.Value;
             foreach (var file in files)
             {
-                var dataLoader = Kernel.Services.GetKeyedService<IEmbeddedDataLoader>(file.Type);
+                var dataLoader = Kernel.Services.GetKeyedService<IEmbeddedDataLoader>(file.Type.ToString());
                 if (dataLoader == null)
                 {
                     Logger.LogWarning("Data loader not found for file type {FileType}", file.Type);
@@ -53,7 +53,7 @@ public abstract class BrainBase : IBrain
                 }
 
                 await dataLoader.Load(file,
-                    ragConfig.DataLoadingBatchSize,
+                    ragConfig.DataLoadingBatchSize, ragConfig.MaxChunkCount,
                     ragConfig.DataLoadingBetweenBatchDelayInMilliseconds,
                     new CancellationToken());
             }
@@ -61,7 +61,7 @@ public abstract class BrainBase : IBrain
 
         var ts = Kernel.GetRequiredService<VectorStoreTextSearch<TextSnippet<Guid>>>();
         Kernel.Plugins.Add(ts.CreateWithGetTextSearchResults("SearchPlugin"));
-        
+
         PromptTemplate = promptTemplate;
 
         return true;
@@ -69,18 +69,18 @@ public abstract class BrainBase : IBrain
 
     public async Task<string?> InvokePromptAsync(string prompt)
     {
-        if(Kernel == null)
+        if (Kernel == null)
         {
             Logger.LogError("Kernel is not initialized, please call InitializeAsync first.");
             return null;
         }
-        
-        if(PromptTemplate == null)
+
+        if (PromptTemplate == null)
         {
             Logger.LogError("Prompt template is not set, please call InitializeAsync first.");
             return null;
         }
-        
+
         var result = await Kernel.InvokePromptAsync(
             promptTemplate: PromptTemplate,
             arguments: new KernelArguments()
@@ -89,7 +89,7 @@ public abstract class BrainBase : IBrain
             },
             templateFormat: AevatarAIConstants.AevatarAITemplateFormat,
             promptTemplateFactory: new HandlebarsPromptTemplateFactory());
-        
+
         return result.GetValue<string>();
     }
-} 
+}

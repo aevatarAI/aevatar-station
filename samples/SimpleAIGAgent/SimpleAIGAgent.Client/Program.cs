@@ -25,19 +25,14 @@ await host.StartAsync();
 var knowledgeConfig = host.Services.GetRequiredService<IOptions<KnowledgeConfig>>().Value;
 IClusterClient client = host.Services.GetRequiredService<IClusterClient>();
 
-List<FileDto> fileDtoList = [];
+List<BrainContentDto> fileDtoList = [];
 // load a pdf files into byte arrays
 if (knowledgeConfig.PdfFilePaths != null)
 {
     foreach (var pdfFilePath in knowledgeConfig.PdfFilePaths)
     {
         var pdfBytes = File.ReadAllBytes(pdfFilePath);
-        fileDtoList.Add(new FileDto()
-        {
-            Content = pdfBytes,
-            Type = "pdf",
-            Name = Path.GetFileName(pdfFilePath)
-        });
+        fileDtoList.Add(new BrainContentDto(Path.GetFileName(pdfFilePath), pdfBytes));
     }
 }
 

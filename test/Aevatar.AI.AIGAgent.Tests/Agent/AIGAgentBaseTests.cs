@@ -17,7 +17,7 @@ public class TestAIGAgentStateLogEvent : StateLogEventBase<TestAIGAgentStateLogE
 [GenerateSerializer]
 public class TestAIGAgentState : AIGAgentStateBase
 {
-    [Id(0)]  public List<string> Content { get; set; }
+    [Id(0)] public List<string> Content { get; set; }
 }
 
 public class TestAIGAgent : AIGAgentBase<TestAIGAgentState, TestAIGAgentStateLogEvent>
@@ -64,13 +64,9 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
         {
             LLM = "gpt-4",
             Instructions = "Test instructions",
-            Files = new List<FileDto>
+            Files = new List<BrainContentDto>
             {
-                new() { 
-                    Content = System.Text.Encoding.UTF8.GetBytes("content"), 
-                    Type = "text", 
-                    Name = "test.txt" 
-                }
+                new("test", System.Text.Encoding.UTF8.GetBytes("content"))
             }
         };
 
@@ -82,7 +78,7 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
             .Setup(x => x.InitializeAsync(
                 It.IsAny<string>(),
                 initializeDto.Instructions,
-                It.IsAny<List<FileData>>()))
+                It.IsAny<List<BrainContent>>()))
             .ReturnsAsync(true);
 
         // Act
@@ -95,7 +91,7 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
             x => x.InitializeAsync(
                 It.IsAny<string>(),
                 initializeDto.Instructions,
-                It.IsAny<List<FileData>>()),
+                It.IsAny<List<BrainContent>>()),
             Times.Once);
     }
 
@@ -107,7 +103,7 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
         {
             LLM = "invalid-model",
             Instructions = "Test instructions",
-            Files = new List<FileDto>()
+            Files = new List<BrainContentDto>()
         };
 
         _brainFactoryMock
@@ -134,7 +130,7 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
         {
             LLM = "gpt-4",
             Instructions = "Test instructions",
-            Files = new List<FileDto>()
+            Files = new List<BrainContentDto>()
         };
 
         _brainFactoryMock
@@ -145,7 +141,7 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
             .Setup(x => x.InitializeAsync(
                 It.IsAny<string>(),
                 initializeDto.Instructions,
-                It.IsAny<List<FileData>>()))
+                It.IsAny<List<BrainContent>>()))
             .ReturnsAsync(true);
 
         _brainMock
@@ -171,4 +167,4 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
         // Assert
         result.ShouldBeNull();
     }
-} 
+}

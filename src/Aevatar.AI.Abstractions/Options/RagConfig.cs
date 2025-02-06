@@ -25,6 +25,9 @@ public class RagConfig
     public int DataLoadingBatchSize { get; set; } = 2;
 
     [Required]
+    public int MaxChunkCount { get; set; } = 500;
+    
+    [Required]
     public int DataLoadingBetweenBatchDelayInMilliseconds { get; set; } = 0;
 
     [Required]
