@@ -3,6 +3,7 @@ using Aevatar.AI.Brain;
 using Aevatar.AI.Common;
 using Aevatar.AI.EmbeddedDataLoader;
 using Aevatar.AI.EmbeddedDataLoader.EmbeddedPdf;
+using Aevatar.AI.Embeddings;
 using Aevatar.AI.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
@@ -33,6 +34,8 @@ internal class QdrantVectorStore : IVectorStore
         //add the embedded data loaders here
         kernelBuilder.Services.AddKeyedTransient<IEmbeddedDataLoader, EmbeddedPftDataLoader>(BrainContentType.Pdf.ToString());
         kernelBuilder.Services.AddKeyedTransient<IEmbeddedDataLoader, EmbeddedStringDataLoader>(BrainContentType.String.ToString());
+
+        kernelBuilder.Services.AddTransient<IChunk, ChunkAsSentence>();
         // kernelBuilder.Services.AddSingleton(new UniqueKeyGenerator<Guid>(() => Guid.NewGuid()));
     }
 
