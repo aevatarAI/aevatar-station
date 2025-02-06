@@ -1,4 +1,5 @@
 using System;
+using System.Security.Cryptography;
 using Aevatar.AI.Brain;
 using Aevatar.AI.Common;
 using Aevatar.AI.EmbeddedDataLoader;
@@ -8,6 +9,7 @@ using Aevatar.AI.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Data;
+using System.Text;
 using Qdrant.Client;
 
 namespace Aevatar.AI.VectorStores.Qdrant;
@@ -36,6 +38,18 @@ internal class QdrantVectorStore : IVectorStore
         kernelBuilder.Services.AddKeyedTransient<IEmbeddedDataLoader, EmbeddedStringDataLoader>(BrainContentType.String.ToString());
 
         kernelBuilder.Services.AddTransient<IChunk, ChunkAsSentence>();
+        
+        kernelBuilder.Services.AddSingleton<UniqueKeyGenerator<Guid>>(sp =>
+        {
+            return new UniqueKeyGenerator<Guid>((input) =>
+            {
+                using var md5 = MD5.Create();
+                byte[] hash = md5.ComputeHash(Encoding.UTF8.GetBytes(input));
+
+                return new Guid(hash);
+            });
+        });
+
         // kernelBuilder.Services.AddSingleton(new UniqueKeyGenerator<Guid>(() => Guid.NewGuid()));
     }
 

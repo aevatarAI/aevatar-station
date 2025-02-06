@@ -17,8 +17,8 @@ using Aevatar.AI.Brain;
 namespace Aevatar.AI.EmbeddedDataLoader.EmbeddedPdf;
 
 internal class EmbeddedPftDataLoader(
-    // UniqueKeyGenerator<TKey> uniqueKeyGenerator,
-    IVectorStoreRecordCollection<string, TextSnippet<string>> vectorStoreCollection,
+    UniqueKeyGenerator<Guid> uniqueKeyGenerator,
+    IVectorStoreRecordCollection<Guid, TextSnippet<Guid>> vectorStoreCollection,
     ITextEmbeddingGenerationService textEmbeddingGenerationService,
     IChatCompletionService chatCompletionService) : IEmbeddedDataLoader
 {
@@ -55,9 +55,9 @@ internal class EmbeddedPftDataLoader(
                 var textContent = await Task.WhenAll(textContentTasks).ConfigureAwait(false);
 
                 // Map each paragraph to a TextSnippet and generate an embedding for it.
-                var recordTasks = textContent.Select(async content => new TextSnippet<string>
+                var recordTasks = textContent.Select(async content => new TextSnippet<Guid>
                 {
-                    Key = $"{brainContent.Name}-{content.PageNumber}",
+                    Key = uniqueKeyGenerator.GenerateKey($"{brainContent.Name}-{content.PageNumber}"),
                     Text = content.Text,
                     ReferenceDescription = $"{brainContent.Name}#page={content.PageNumber}",
                     //ReferenceLink = $"{new Uri(file.Name).AbsoluteUri}#page={content.PageNumber}",

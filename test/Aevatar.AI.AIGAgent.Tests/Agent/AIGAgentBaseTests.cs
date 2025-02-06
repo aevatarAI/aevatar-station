@@ -105,7 +105,7 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
             Instructions = "Test instructions",
             Files = new List<BrainContentDto>()
         };
-
+        
         _brainFactoryMock
             .Setup(x => x.GetBrain(initializeDto.LLM))
             .Returns((IBrain?)null);

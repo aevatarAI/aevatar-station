@@ -15,13 +15,14 @@ using Microsoft.SemanticKernel.Embeddings;
 namespace Aevatar.AI.EmbeddedDataLoader;
 
 internal class EmbeddedStringDataLoader(
-    // UniqueKeyGenerator<TKey> uniqueKeyGenerator,
-    IVectorStoreRecordCollection<string, TextSnippet<string>> vectorStoreCollection,
+    UniqueKeyGenerator<Guid> uniqueKeyGenerator,
+    IVectorStoreRecordCollection<Guid, TextSnippet<Guid>> vectorStoreCollection,
     ITextEmbeddingGenerationService textEmbeddingGenerationService,
     IChunk chunk,
-    IChatCompletionService chatCompletionService) : IEmbeddedDataLoader 
+    IChatCompletionService chatCompletionService) : IEmbeddedDataLoader
 {
-    public async Task Load(BrainContent brainContent, int batchSize, int maxChunkLength, int betweenBatchDelayInMs, CancellationToken cancellationToken)
+    public async Task Load(BrainContent brainContent, int batchSize, int maxChunkLength, int betweenBatchDelayInMs,
+        CancellationToken cancellationToken)
     {
         // Create the collection if it doesn't exist.
         await vectorStoreCollection.CreateCollectionIfNotExistsAsync(cancellationToken).ConfigureAwait(false);
@@ -37,15 +38,15 @@ internal class EmbeddedStringDataLoader(
         var stringRawList = new List<StringRawData>();
         for (var i = 0; i < chunkList.Count(); i++)
         {
-            stringRawList.Add(new StringRawData(){Text= chunkList[i], ChunkNum = i});
+            stringRawList.Add(new StringRawData() { Text = chunkList[i], ChunkNum = i });
         }
 
         var batches = stringRawList.Chunk(batchSize);
         foreach (var batch in batches)
         {
-            var recordTasks = batch.Select(async content => new TextSnippet<string>
+            var recordTasks = batch.Select(async content => new TextSnippet<Guid>
             {
-                Key = $"{brainContent.Name}-{content.ChunkNum}",
+                Key = uniqueKeyGenerator.GenerateKey($"{brainContent.Name}-{content.ChunkNum}"),
                 Text = content.Text,
                 ReferenceDescription = $"{brainContent.Name}#Chunk={content.ChunkNum}",
                 ReferenceLink = $"{brainContent.Name}#Chunk={content.ChunkNum}",
@@ -53,7 +54,7 @@ internal class EmbeddedStringDataLoader(
                     content.Text!,
                     cancellationToken: cancellationToken).ConfigureAwait(false)
             });
-            
+
             var records = await Task.WhenAll(recordTasks).ConfigureAwait(false);
             var upsertKeys =
                 vectorStoreCollection.UpsertBatchAsync(records, cancellationToken: cancellationToken);
@@ -61,15 +62,15 @@ internal class EmbeddedStringDataLoader(
             {
                 Console.WriteLine($"Upserted record '{key}' into VectorDB");
             }
-            
+
             await Task.Delay(betweenBatchDelayInMs, cancellationToken).ConfigureAwait(false);
         }
     }
-    
-    
+
+
     private class StringRawData
     {
         public string? Text { get; init; }
         public int ChunkNum { get; init; }
-    } 
+    }
 }
