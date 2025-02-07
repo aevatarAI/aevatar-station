@@ -153,8 +153,7 @@ public class DeploymentHelper
             Command = new List<string> { "dotnet", "Aevatar.WebHook.Host.dll" },
             Ports = new List<V1ContainerPort> { new V1ContainerPort(containerPort) },
             VolumeMounts = CreateMainContainerVolumeMounts(),
-            Resources = CreateResources(requestCpu, requestMemory),
-            // ReadinessProbe = CreateQueryPodReadinessProbe(readinessProbeHealthPath, containerPort)
+            Resources = CreateResources(requestCpu, requestMemory)
         };
         // Add a ready probe only if the readinessProbeHealthPath is provided
         if (!string.IsNullOrEmpty(readinessProbeHealthPath)) 

@@ -14,6 +14,7 @@
     <PackageVersion Include="Aevatar.Core" Version="1.3.14" />
     <PackageVersion Include="Aevatar.Core.Abstractions" Version="1.3.14" />
     <PackageVersion Include="Aevatar.EventSourcing.Core" Version="1.3.14" />
+    <PackageVersion Include="Aevatar.EventSourcing.MongoDB" Version="1.3.14" />
     <PackageVersion Include="Aevatar.Plugins" Version="1.3.14" />
     <!-- AI and Analysis packages -->
     <PackageVersion Include="AutoGen" Version="0.2.1" />
