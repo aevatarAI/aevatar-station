@@ -15,6 +15,7 @@ on:
           - Aevatar.DbMigrator
           - Aevatar.AuthServer
           - Aevatar.WebHook.Host
+          - Aevatar.Daipp.Silo
 
 env:
   DOTNET_INSTALL_DIR: "./.dotnet"

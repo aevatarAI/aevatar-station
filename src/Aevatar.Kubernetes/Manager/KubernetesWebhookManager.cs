@@ -286,7 +286,18 @@ private async Task EnsureIngressAsync(
             KubernetesConstants.QueryPodMaxSurge, 
             KubernetesConstants.QueryPodMaxUnavailable, 
             "");
+        
+        await EnsurePhaAsync(appId, version);
         return "";
+    }
+
+    private async Task EnsurePhaAsync(string appId, string version)
+    {
+        var hpa = await _kubernetesClientAdapter.ReadNamespacedHorizontalPodAutoscalerAsync(appId, version);
+        if (hpa == null)
+        {
+            await _kubernetesClientAdapter.CreateNamespacedHorizontalPodAutoscalerAsync(HPAHelper.CreateHPA(appId, version), KubernetesConstants.AppNameSpace);
+        }
     }
 
     public async Task DestroyAippAsync(string appId, string version)
