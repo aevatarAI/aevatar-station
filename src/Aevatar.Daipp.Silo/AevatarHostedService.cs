@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Volo.Abp;
 
-namespace Aevatar.Silo;
+namespace Aevatar.Daipp.Silo;
 
 public class AevatarHostedService : IHostedService
 {

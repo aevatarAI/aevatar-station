@@ -1,11 +1,11 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Aevatar.Silo;
 using Aevatar.Silo.Extensions;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Serilog;
-using Serilog.Sinks.OpenTelemetry;
 
-namespace Aevatar.Silo;
+namespace Aevatar.Daipp.Silo;
 
 public class Program
 {
@@ -41,7 +41,7 @@ public class Program
         Host.CreateDefaultBuilder(args)
             .ConfigureServices((hostcontext, services) =>
             {
-                services.AddApplication<SiloModule>();
+                services.AddApplication<SiloDaippModule>();
             })
             .UseOrleansConfiguration()
             .UseAutofac()

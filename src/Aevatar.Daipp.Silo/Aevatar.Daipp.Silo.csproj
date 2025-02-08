@@ -28,6 +28,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\Aevatar.CQRS\Aevatar.CQRS.csproj" />
         <ProjectReference Include="..\Aevatar.MongoDB\Aevatar.MongoDB.csproj" />
     </ItemGroup>
 
