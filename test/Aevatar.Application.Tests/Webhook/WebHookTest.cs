@@ -22,7 +22,7 @@ public class WebHookTests : AevatarApplicationTestBase
         byte[] codeBytes = "21323".GetBytes();
         await _webhookService.CreateWebhookAsync(webhookId,version,codeBytes);
         var code = await _webhookService.GetWebhookCodeAsync(webhookId, version);
-        code.ShouldBeNullOrEmpty();
+        code.ShouldNotBeNullOrEmpty();
     }
     
     [Fact]
@@ -31,6 +31,6 @@ public class WebHookTests : AevatarApplicationTestBase
         string webhookId = "telegram";
         string version = "1";
         await CreateWebhookTestAsync();
-        await _webhookService.GetWebhookCodeAsync(webhookId, version);
+        await _webhookService.DestroyWebhookAsync(webhookId, version);
     }
 }
