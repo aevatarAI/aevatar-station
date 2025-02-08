@@ -6,7 +6,7 @@ public interface IWebhookDeployManager
     Task DestroyWebHookAsync(string appId, string version);
     Task RestartWebHookAsync(string appId,string version);
     
-    Task<string> CreateNewAippAsync(string appId, string version, string imageName);
-    Task DestroyAippAsync(string appId, string version);
-    Task RestartAippAsync(string appId,string version);
+    Task<string> CreateNewDaippAsync(string appId, string version, string imageName);
+    Task DestroyDaippAsync(string appId, string version);
+    Task RestartDaippAsync(string appId,string version);
 }

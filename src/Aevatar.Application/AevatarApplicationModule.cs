@@ -50,5 +50,6 @@ public class AevatarApplicationModule : AbpModule
         Configure<AgentOptions>(configuration.GetSection("Agent"));
         context.Services.AddSingleton<IPluginGAgentManager, PluginGAgentManager>();
         context.Services.AddTransient<IWebhookDeployManager, KubernetesWebhookManager>();
+        Configure<DaippDeployOptions>(configuration.GetSection("DaippDeploy"));
     }
 }

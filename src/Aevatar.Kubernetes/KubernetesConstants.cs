@@ -31,6 +31,8 @@ public class KubernetesConstants
      public const string PlaceHolderAppId = "[WebhookId]";
      public const string PlaceHolderVersion = "[Version]";
      public const string PlaceHolderNameSpace = "[NameSpace]";
+     public static readonly List<string> WebhookCommand = new() { "dotnet", "Aevatar.WebHook.Host.dll" };
+
      public const int WebhookContainerTargetPort = 8308;
      public const string QueryPodMaxSurge = "50%";
      public const string QueryPodMaxUnavailable = "0";
@@ -41,6 +43,7 @@ public class KubernetesConstants
      public const string AippPlaceHolderAppId = "[AippId]";
      public const string AippPlaceHolderVersion = "[Version]";
      public const string AippPlaceHolderNameSpace = "[NameSpace]";
+     public static readonly List<string> AippCommand = new() { "dotnet", "Aevatar.Daipp.Silo.dll" };
      public const  int   AippContainerContainerPort = 10001;
      public const string AippQueryPodMaxSurge = "50%";
      public const string AippQueryPodMaxUnavailable = "0";

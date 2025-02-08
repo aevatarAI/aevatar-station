@@ -17,17 +17,17 @@ public class DefaultWebhookDeployManager : IWebhookDeployManager
         return;
     }
 
-    public async Task<string> CreateNewAippAsync(string appId, string version, string imageName)
+    public async Task<string> CreateNewDaippAsync(string appId, string version, string imageName)
     {
         return string.Empty;
     }
 
-    public async Task DestroyAippAsync(string appId, string version)
+    public async Task DestroyDaippAsync(string appId, string version)
     {
         return;
     }
 
-    public async Task RestartAippAsync(string appId, string version)
+    public async Task RestartDaippAsync(string appId, string version)
     {
         return;
     }

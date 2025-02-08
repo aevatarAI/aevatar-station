@@ -59,6 +59,7 @@ public class KubernetesWebhookManager: IWebhookDeployManager, ISingletonDependen
         await EnsureDeploymentAsync(
             appId, version, imageName, 
             deploymentName, deploymentLabelName, containerName, 
+            KubernetesConstants.WebhookCommand,
             1, 
             KubernetesConstants.WebhookContainerTargetPort, 
             KubernetesConstants.QueryPodMaxSurge, 
@@ -116,8 +117,8 @@ private static string GetAippConfigContent(string appId, string version, string 
 
 private async Task EnsureDeploymentAsync(
     string appId, string version, string imageName, string deploymentName, 
-    string deploymentLabelName, string containerName, int replicas, 
-    int containerPort, string maxSurge, string maxUnavailable, string healthPath)
+    string deploymentLabelName, string containerName,List<string> command,int replicas, 
+    int containerPort, string maxSurge, string maxUnavailable, string healthPath,bool isSilo = false)
 {
     var deployments = await _kubernetesClientAdapter.ListDeploymentAsync(KubernetesConstants.AppNameSpace);
     if (!deployments.Items.Any(item => item.Metadata.Name == deploymentName))
@@ -126,10 +127,10 @@ private async Task EnsureDeploymentAsync(
         var sideCarConfigName = ConfigMapHelper.GetAppFileBeatConfigMapName(appId, version);
 
         var deployment = DeploymentHelper.CreateAppDeploymentWithFileBeatSideCarDefinition(
-            appId, version, imageName, deploymentName, deploymentLabelName, replicas, containerName,
+            appId, version, imageName, deploymentName, deploymentLabelName, command,replicas, containerName,
             containerPort, configMapName, sideCarConfigName, 
             _kubernetesOptions.RequestCpuCore, _kubernetesOptions.RequestMemory, 
-            maxSurge, maxUnavailable, healthPath);
+            maxSurge, maxUnavailable, isSilo, healthPath);
 
         await _kubernetesClientAdapter.CreateDeploymentAsync(deployment, KubernetesConstants.AppNameSpace);
         _logger.LogInformation("[KubernetesAppManager] Deployment {deploymentName} created", deploymentName);
@@ -258,7 +259,7 @@ private async Task EnsureIngressAsync(
         await RestartDeploymentAsync(deploymentName);
     }
 
-    public async Task<string> CreateNewAippAsync(string appId, string version, string imageName)
+    public async Task<string> CreateNewDaippAsync(string appId, string version, string imageName)
     {
         await EnsureConfigMapAsync(
             appId, 
@@ -281,13 +282,14 @@ private async Task EnsureIngressAsync(
         await EnsureDeploymentAsync(
             appId, version, imageName, 
             deploymentName, deploymentLabelName, containerName, 
+            KubernetesConstants.AippCommand,
             1, 
             KubernetesConstants.WebhookContainerTargetPort, 
             KubernetesConstants.QueryPodMaxSurge, 
             KubernetesConstants.QueryPodMaxUnavailable, 
-            "");
+            "",true);
         
-        await EnsurePhaAsync(appId, version);
+       // await EnsurePhaAsync(appId, version);
         return "";
     }
 
@@ -300,7 +302,7 @@ private async Task EnsureIngressAsync(
         }
     }
 
-    public async Task DestroyAippAsync(string appId, string version)
+    public async Task DestroyDaippAsync(string appId, string version)
     {
         // Delete Deployment
         var deploymentName = DeploymentHelper.GetAppDeploymentName(appId, version);
@@ -315,7 +317,7 @@ private async Task EnsureIngressAsync(
         await EnsureConfigMapDeletedAsync(sideCarConfigMapName);
     }
 
-    public async Task RestartAippAsync(string appId, string version)
+    public async Task RestartDaippAsync(string appId, string version)
     {
         var deploymentName = DeploymentHelper.GetAppDeploymentName(appId, version);
         await RestartDeploymentAsync(deploymentName);
