@@ -65,8 +65,6 @@ public static class AevatarAISemanticKernelExtension
     public static IServiceCollection AddQdrantVectorStore(this IServiceCollection services)
     {
         services.AddKeyedTransient<IVectorStore, QdrantVectorStore>(QdrantConfig.ConfigSectionName);
-
-        services.AddKeyedTransient<IVectorStore, QdrantVectorStore>(QdrantConfig.ConfigSectionName);
         // Register Qdrant configuration options
         // services.AddOptions<QdrantConfig>()
         //     .Configure<IConfiguration>((settings, configuration) =>

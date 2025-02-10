@@ -14,14 +14,14 @@ using Microsoft.SemanticKernel.Embeddings;
 
 namespace Aevatar.AI.EmbeddedDataLoader;
 
-internal class EmbeddedStringDataLoader(
+internal class EmbeddedStringDataSaver(
     UniqueKeyGenerator<Guid> uniqueKeyGenerator,
     IVectorStoreRecordCollection<Guid, TextSnippet<Guid>> vectorStoreCollection,
     ITextEmbeddingGenerationService textEmbeddingGenerationService,
     IChunk chunk,
-    IChatCompletionService chatCompletionService) : IEmbeddedDataLoader
+    IChatCompletionService chatCompletionService) : IEmbeddedDataSaver
 {
-    public async Task Load(BrainContent brainContent, int batchSize, int maxChunkLength, int betweenBatchDelayInMs,
+    public async Task StoreAsync(BrainContent brainContent, int batchSize, int maxChunkLength, int betweenBatchDelayInMs,
         CancellationToken cancellationToken)
     {
         // Create the collection if it doesn't exist.

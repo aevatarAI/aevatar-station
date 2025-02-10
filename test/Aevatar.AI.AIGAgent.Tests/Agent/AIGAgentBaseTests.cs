@@ -26,9 +26,10 @@ public class TestAIGAgent : AIGAgentBase<TestAIGAgentState, TestAIGAgentStateLog
     {
     }
 
-    public Task<string?> PublicInvokePromptAsync(string prompt)
+    public async Task<string?> PublicInvokePromptAsync(string prompt)
     {
-        return InvokePromptAsync(prompt);
+        var result = await ChatWithHistory(prompt);
+        return result?[0].Content;
     }
 
     public override Task<string> GetDescriptionAsync()
@@ -64,10 +65,6 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
         {
             LLM = "gpt-4",
             Instructions = "Test instructions",
-            Files = new List<BrainContentDto>
-            {
-                new("test", System.Text.Encoding.UTF8.GetBytes("content"))
-            }
         };
 
         _brainFactoryMock
@@ -75,11 +72,9 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
             .Returns(_brainMock.Object);
 
         _brainMock
-            .Setup(x => x.InitializeAsync(
+            .Setup(x => x.InitBrainAsync(
                 It.IsAny<string>(),
-                initializeDto.Instructions,
-                It.IsAny<List<BrainContent>>()))
-            .ReturnsAsync(true);
+                initializeDto.Instructions,false));
 
         // Act
         var result = await _agent.InitializeAsync(initializeDto);
@@ -88,10 +83,9 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
         result.ShouldBeTrue();
         _brainFactoryMock.Verify(x => x.GetBrain(initializeDto.LLM), Times.Once);
         _brainMock.Verify(
-            x => x.InitializeAsync(
+            x => x.InitBrainAsync(
                 It.IsAny<string>(),
-                initializeDto.Instructions,
-                It.IsAny<List<BrainContent>>()),
+                initializeDto.Instructions,false),
             Times.Once);
     }
 
@@ -102,10 +96,9 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
         var initializeDto = new InitializeDto
         {
             LLM = "invalid-model",
-            Instructions = "Test instructions",
-            Files = new List<BrainContentDto>()
+            Instructions = "Test instructions"
         };
-        
+
         _brainFactoryMock
             .Setup(x => x.GetBrain(initializeDto.LLM))
             .Returns((IBrain?)null);
@@ -129,24 +122,21 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
         var initializeDto = new InitializeDto
         {
             LLM = "gpt-4",
-            Instructions = "Test instructions",
-            Files = new List<BrainContentDto>()
+            Instructions = "Test instructions"
         };
 
         _brainFactoryMock
             .Setup(x => x.GetBrain(initializeDto.LLM))
             .Returns(_brainMock.Object);
 
-        _brainMock
-            .Setup(x => x.InitializeAsync(
-                It.IsAny<string>(),
-                initializeDto.Instructions,
-                It.IsAny<List<BrainContent>>()))
-            .ReturnsAsync(true);
+        // _brainMock
+        //     .Setup(x => x.InitBrainAsync(
+        //         It.IsAny<string>(),
+        //         initializeDto.Instructions);
 
         _brainMock
-            .Setup(x => x.InvokePromptAsync(prompt))
-            .ReturnsAsync(expectedResponse);
+            .Setup(x => x.ChatWithHistoryAsync(null, prompt))
+            .ShouldNotBeNull();
 
         await _agent.InitializeAsync(initializeDto);
 
@@ -155,7 +145,7 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
 
         // Assert
         result.ShouldBe(expectedResponse);
-        _brainMock.Verify(x => x.InvokePromptAsync(prompt), Times.Once);
+        _brainMock.Verify(x => x.ChatWithHistoryAsync(null, prompt), Times.Once);
     }
 
     [Fact]

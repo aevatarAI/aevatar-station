@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Aevatar.AI.Common;
@@ -10,7 +12,9 @@ using Aevatar.AI.Options;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Data;
 using Microsoft.SemanticKernel.PromptTemplates.Handlebars;
 
@@ -24,6 +28,8 @@ public abstract class BrainBase : IBrain
     protected readonly IKernelBuilderFactory KernelBuilderFactory;
     protected readonly ILogger Logger;
     protected readonly IOptions<RagConfig> RagConfig;
+    protected bool IfSupportKnowledge = false;
+    protected string Description = string.Empty;
 
     protected BrainBase(IKernelBuilderFactory kernelBuilderFactory, ILogger logger, IOptions<RagConfig> ragConfig)
     {
@@ -34,62 +40,197 @@ public abstract class BrainBase : IBrain
 
     protected abstract Task ConfigureKernelBuilder(IKernelBuilder kernelBuilder);
 
-    public async Task<bool> InitializeAsync(string id, string promptTemplate, List<BrainContent>? files)
+    public async Task InitBrainAsync(string id, string description, bool ifSupportKnowledge = false)
     {
+        IfSupportKnowledge = ifSupportKnowledge;
+        Description = description;
         var kernelBuilder = KernelBuilderFactory.GetKernelBuilder(id);
+
         await ConfigureKernelBuilder(kernelBuilder);
         Kernel = kernelBuilder.Build();
+        //
+        // if (ifSupportKnowledge)
+        // {
+        //     var ts = Kernel.GetRequiredService<VectorStoreTextSearch<TextSnippet<Guid>>>();
+        //     Kernel.Plugins.Add(ts.CreateWithGetTextSearchResults("SearchPlugin"));
+        // }
+    }
 
-        if (files != null)
+    public async Task<bool> UpsertKnowledgeAsync(List<BrainContent>? files)
+    {
+        if (IfSupportKnowledge == false)
         {
-            var ragConfig = RagConfig.Value;
-            foreach (var file in files)
-            {
-                var dataLoader = Kernel.Services.GetKeyedService<IEmbeddedDataLoader>(file.Type.ToString());
-                if (dataLoader == null)
-                {
-                    Logger.LogWarning("Data loader not found for file type {FileType}", file.Type);
-                    continue;
-                }
-
-                await dataLoader.Load(file,
-                    ragConfig.DataLoadingBatchSize, ragConfig.MaxChunkCount,
-                    ragConfig.DataLoadingBetweenBatchDelayInMilliseconds,
-                    new CancellationToken());
-            }
+            return false;
         }
 
-        var ts = Kernel.GetRequiredService<VectorStoreTextSearch<TextSnippet<Guid>>>();
-        Kernel.Plugins.Add(ts.CreateWithGetTextSearchResults("SearchPlugin"));
+        if (Kernel == null)
+        {
+            return false;
+        }
 
-        PromptTemplate = promptTemplate;
+        if (files == null || !files.Any())
+        {
+            return true;
+        }
+
+        var ragConfig = RagConfig.Value;
+        foreach (var file in files)
+        {
+            var dataLoader = Kernel.Services.GetKeyedService<IEmbeddedDataSaver>(file.Type.ToString());
+            if (dataLoader == null)
+            {
+                Logger.LogWarning("Data loader not found for file type {FileType}", file.Type);
+                continue;
+            }
+
+            await dataLoader.StoreAsync(file,
+                ragConfig.DataLoadingBatchSize, ragConfig.MaxChunkCount,
+                ragConfig.DataLoadingBetweenBatchDelayInMilliseconds,
+                new CancellationToken());
+        }
 
         return true;
     }
 
-    public async Task<string?> InvokePromptAsync(string prompt)
-    {
+    // public async Task<string?> ChatAsync(string content)
+    // {
+    //     if (Kernel == null)
+    //     {
+    //         Logger.LogError("Kernel is not initialized, please call InitializeAsync first.");
+    //         return null;
+    //     }
+    //
+    //     var result = await Kernel.InvokePromptAsync(
+    //         promptTemplate: ContestConstant.KnowledgePrompt,
+    //         arguments: new KernelArguments()
+    //         {
+    //             { "prompt", content },
+    //         },
+    //         templateFormat: AevatarAIConstants.AevatarAITemplateFormat,
+    //         promptTemplateFactory: new HandlebarsPromptTemplateFactory());
+    //
+    //     return result.GetValue<string>();
+    // }
+
+    public async Task<List<ChatMessage>> ChatWithHistoryAsync(List<ChatMessage>? history, string content)
+    {  
+        var result = new List<ChatMessage>();
+        
         if (Kernel == null)
         {
-            Logger.LogError("Kernel is not initialized, please call InitializeAsync first.");
-            return null;
+            return result;
         }
 
-        if (PromptTemplate == null)
+        var requestContent = content;
+        var chatHistory = GetChatHistory(history);
+        if (IfSupportKnowledge)
         {
-            Logger.LogError("Prompt template is not set, please call InitializeAsync first.");
-            return null;
+            var supplementList = await LoadAsync(content);
+            requestContent = SupplementPrompt(supplementList, content);
         }
 
-        var result = await Kernel.InvokePromptAsync(
-            promptTemplate: PromptTemplate,
-            arguments: new KernelArguments()
-            {
-                { "prompt", prompt },
-            },
-            templateFormat: AevatarAIConstants.AevatarAITemplateFormat,
-            promptTemplateFactory: new HandlebarsPromptTemplateFactory());
+        chatHistory.Add(new ChatMessageContent(AuthorRole.User, requestContent));
 
-        return result.GetValue<string>();
+        var chatService = Kernel.GetRequiredService<IChatCompletionService>();
+        var response = await chatService.GetChatMessageContentsAsync(chatHistory);
+
+        result.AddRange(response.Select(item => new ChatMessage() { ChatRole = ConvertToChatRole(item.Role), Content = item.Content }));
+
+        return result;
+    }
+
+    private ChatHistory GetChatHistory(List<ChatMessage>? historyList)
+    {
+        var result = new ChatHistory(Description);
+        if (historyList == null || !historyList.Any())
+        {
+            return result;
+        }
+
+        foreach (var history in historyList)
+        {
+            result.Add(new ChatMessageContent(ConvertToAuthorRole(history.ChatRole), history.Content));
+        }
+
+        return result;
+    }
+
+    private AuthorRole ConvertToAuthorRole(ChatRole chatRole)
+    {
+        switch (chatRole)
+        {
+            case ChatRole.System:
+                return AuthorRole.System;
+            case ChatRole.Assistant:
+                return AuthorRole.Assistant;
+            default:
+                return AuthorRole.User;
+        }
+    }
+
+    private ChatRole ConvertToChatRole(AuthorRole authorRole)
+    {
+        if (authorRole == AuthorRole.System)
+        {
+            return ChatRole.System;
+        }
+
+        return authorRole == AuthorRole.Assistant ? ChatRole.Assistant : ChatRole.User;
+    }
+
+    private async Task<List<TextSnippet<Guid>>> LoadAsync(string input)
+    {
+        var result = new List<TextSnippet<Guid>>();
+        if (Kernel == null)
+        {
+            return result;
+        }
+
+        var searchCollection = Kernel.Services.GetRequiredService<IVectorizableTextSearch<TextSnippet<Guid>>>();
+        var searchResults = await searchCollection.VectorizableTextSearchAsync(input);
+        if (searchResults.TotalCount == 0)
+        {
+            return result;
+        }
+
+        await foreach (var textSnippet in searchResults.Results)
+        {
+            result.Add(textSnippet.Record);
+            if (result.Count >= 10)
+            {
+                return result;
+            }
+        }
+
+        return result;
+    }
+
+    private string SupplementPrompt(List<TextSnippet<Guid>> textSnippetList, string content)
+    {
+        if (textSnippetList.Any()!)
+        {
+            return content;
+        }
+
+        var supplementInfo = new StringBuilder();
+        supplementInfo.AppendLine("The following is additional information about the user's question.");
+
+        foreach (var item in textSnippetList)
+        {
+            supplementInfo.AppendLine($"## {item.Text}");
+            if (string.IsNullOrWhiteSpace(item.ReferenceDescription) == false)
+            {
+                supplementInfo.AppendLine($"    Reference Description:{item.ReferenceDescription}");
+            }
+
+            if (string.IsNullOrWhiteSpace(item.ReferenceLink) == false)
+            {
+                supplementInfo.AppendLine($"    Reference Link:{item.ReferenceLink}");
+            }
+        }
+
+        supplementInfo.AppendLine($"The user's question is:{content} ");
+
+        return supplementInfo.ToString();
     }
 }

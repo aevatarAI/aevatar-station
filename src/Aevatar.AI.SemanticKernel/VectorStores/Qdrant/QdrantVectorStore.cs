@@ -34,8 +34,8 @@ internal class QdrantVectorStore : IVectorStore
         kernelBuilder.Services.AddSingleton<IVectorStoreCollection, QdrantVectorStoreCollection>();
         
         //add the embedded data loaders here
-        kernelBuilder.Services.AddKeyedTransient<IEmbeddedDataLoader, EmbeddedPftDataLoader>(BrainContentType.Pdf.ToString());
-        kernelBuilder.Services.AddKeyedTransient<IEmbeddedDataLoader, EmbeddedStringDataLoader>(BrainContentType.String.ToString());
+        kernelBuilder.Services.AddKeyedTransient<IEmbeddedDataSaver, EmbeddedPftDataSaver>(BrainContentType.Pdf.ToString());
+        kernelBuilder.Services.AddKeyedTransient<IEmbeddedDataSaver, EmbeddedStringDataSaver>(BrainContentType.String.ToString());
 
         kernelBuilder.Services.AddTransient<IChunk, ChunkAsSentence>();
         

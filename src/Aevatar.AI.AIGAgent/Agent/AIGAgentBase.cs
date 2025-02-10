@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Aevatar.AI.Brain;
 using Aevatar.AI.BrainFactory;
+using Aevatar.AI.Common;
 using Aevatar.AI.Dtos;
 using Aevatar.AI.State;
 using Aevatar.Core;
@@ -21,7 +22,7 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
 {
     private readonly IBrainFactory _brainFactory;
     private IBrain? _brain = null;
-    
+
     public AIGAgentBase(ILogger logger) : base(logger)
     {
         _brainFactory = ServiceProvider.GetRequiredService<IBrainFactory>();
@@ -32,37 +33,45 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
         //save state
         await AddLLMAsync(initializeDto.LLM);
         await AddPromptTemplateAsync(initializeDto.Instructions);
-        
-        return await InitializeBrainAsync(initializeDto.LLM, initializeDto.Instructions, initializeDto.Files);
+
+        return await InitializeBrainAsync(initializeDto.LLM, initializeDto.Instructions, initializeDto.IfNeedKnowledge);
     }
 
-    private async Task<bool> InitializeBrainAsync(string LLM, string promptTemplate, IReadOnlyCollection<BrainContentDto>? files = null)
+    public async Task<bool> UploadKnowledge(List<BrainContentDto>? knowledgeList)
+    {
+        if (_brain == null)
+        {
+            return false;
+        }
+
+        if (knowledgeList == null || !knowledgeList.Any())
+        {
+            return true;
+        }
+
+        List<BrainContent> fileList = knowledgeList.Select(f => f.ConvertToBrainContent()).ToList();
+        return await _brain.UpsertKnowledgeAsync(fileList);
+    }
+
+    private async Task<bool> InitializeBrainAsync(string LLM, string systemMessage, bool ifSupportKnowledge = false)
     {
         _brain = _brainFactory.GetBrain(LLM);
-        
-        if(_brain == null)
+
+        if (_brain == null)
         {
             Logger.LogError("Failed to initialize brain. {@LLM}", LLM);
             return false;
         }
 
-        List<BrainContent>? fileList = null;
-        if (files != null)
-        {
-            fileList = files.Select(f => f.ConvertToBrainContent()).ToList();
-        }
-        
         // remove slash from this.GetGrainId().ToString() so that it can be used as the collection name pertaining to the grain
         var grainId = this.GetGrainId().ToString().Replace("/", "");
-        
-        var result = await _brain.InitializeAsync(
-            grainId,
-            promptTemplate, 
-            fileList);
 
-        return result;
+        await _brain.InitBrainAsync(grainId,
+            systemMessage, ifSupportKnowledge);
+
+        return true;
     }
-    
+
     private async Task AddLLMAsync(string LLM)
     {
         if (State.LLM == LLM)
@@ -77,13 +86,13 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
         });
         await ConfirmEvents();
     }
-    
+
     [GenerateSerializer]
     public class SetLLMStateLogEvent : StateLogEventBase<TStateLogEvent>
     {
         [Id(0)] public required string LLM { get; set; }
     }
-    
+
     private async Task AddPromptTemplateAsync(string promptTemplate)
     {
         RaiseEvent(new SetPromptTemplateStateLogEvent
@@ -92,18 +101,18 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
         });
         await ConfirmEvents();
     }
-    
+
     [GenerateSerializer]
     public class SetPromptTemplateStateLogEvent : StateLogEventBase<TStateLogEvent>
     {
         [Id(0)] public required string PromptTemplate { get; set; }
     }
 
-    protected async Task<string?> InvokePromptAsync(string prompt)
+    protected async Task<List<ChatMessage>?> ChatWithHistory(string prompt, List<ChatMessage>? history = null)
     {
-        return await _brain?.InvokePromptAsync(prompt)!;
+        return await _brain?.ChatWithHistoryAsync(history, prompt)!;
     }
-    
+
     protected virtual async Task OnAIGAgentActivateAsync(CancellationToken cancellationToken)
     {
         // Derived classes can override this method.
@@ -112,16 +121,16 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
     protected sealed override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)
     {
         await base.OnGAgentActivateAsync(cancellationToken);
-        
+
         // setup brain
-        if(State.LLM != string.Empty)
+        if (State.LLM != string.Empty)
         {
             await InitializeBrainAsync(State.LLM, State.PromptTemplate);
         }
-        
+
         await OnAIGAgentActivateAsync(cancellationToken);
     }
-    
+
     protected sealed override void GAgentTransitionState(TState state, StateLogEventBase<TStateLogEvent> @event)
     {
         switch (@event)
@@ -137,7 +146,7 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
         AIGAgentTransitionState(state, @event);
         // TransitionState(state, @event);
     }
-    
+
     protected virtual void AIGAgentTransitionState(TState state, StateLogEventBase<TStateLogEvent> @event)
     {
         // Derived classes can override this method.

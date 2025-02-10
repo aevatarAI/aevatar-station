@@ -16,13 +16,13 @@ using Aevatar.AI.Brain;
 
 namespace Aevatar.AI.EmbeddedDataLoader.EmbeddedPdf;
 
-internal class EmbeddedPftDataLoader(
+internal class EmbeddedPftDataSaver(
     UniqueKeyGenerator<Guid> uniqueKeyGenerator,
     IVectorStoreRecordCollection<Guid, TextSnippet<Guid>> vectorStoreCollection,
     ITextEmbeddingGenerationService textEmbeddingGenerationService,
-    IChatCompletionService chatCompletionService) : IEmbeddedDataLoader
+    IChatCompletionService chatCompletionService) : IEmbeddedDataSaver
 {
-    public async Task Load(BrainContent brainContent, int batchSize, int maxChunkLength, int betweenBatchDelayInMs,
+    public async Task StoreAsync(BrainContent brainContent, int batchSize, int maxChunkLength, int betweenBatchDelayInMs,
         CancellationToken cancellationToken)
     {
         // Create the collection if it doesn't exist.

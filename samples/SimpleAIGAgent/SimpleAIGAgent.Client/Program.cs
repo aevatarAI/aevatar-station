@@ -36,14 +36,14 @@ if (knowledgeConfig.PdfFilePaths != null)
     }
 }
 
-fileDtoList.Add(new BrainContentDto("Lebron James", "LeBron James is an American professional basketball player, widely regarded as one of the greatest players in NBA history. Born on December 30, 1984, he currently plays for the Los Angeles Lakers as a forward. James is known for his all-around skills, exceptional basketball IQ, and leadership on and off the court. He has won multiple NBA championships and MVP awards. Additionally, he is actively involved in philanthropy, founding the \"I PROMISE\" School, which focuses on education and community development to support underprivileged children and families."));
+fileDtoList.Add(new BrainContentDto("Lebron James",
+    "LeBron James is an American professional basketball player, widely regarded as one of the greatest players in NBA history. Born on December 30, 1984, he currently plays for the Los Angeles Lakers as a forward. James is known for his all-around skills, exceptional basketball IQ, and leadership on and off the court. He has won multiple NBA championships and MVP awards. Additionally, he is actively involved in philanthropy, founding the \"I PROMISE\" School, which focuses on education and community development to support underprivileged children and families."));
 
 //var chatAgentId = Guid.NewGuid();
 var chatAgentId = GrainId.Parse("chataigagent/792b1cb87bad4f759fcde3fe51ff55bc");
 var chatAgent = client.GetGrain<IChatAIGAgent>(chatAgentId);
 await chatAgent.InitializeAsync(new InitializeDto()
 {
-    Files = fileDtoList,
     Instructions = @"
             Please use this information to answer the question:
             {{#with (SearchPlugin-GetTextSearchResults prompt)}}
@@ -59,8 +59,11 @@ await chatAgent.InitializeAsync(new InitializeDto()
 
             Question: {{prompt}}
             ",
-    LLM = "AzureOpenAI"
+    LLM = "AzureOpenAI",
+    IfNeedKnowledge = true,
 });
+
+await chatAgent.UploadKnowledge(fileDtoList);
 
 Console.ForegroundColor = ConsoleColor.Green;
 Console.WriteLine("Assistant > Press enter with no prompt to exit.");

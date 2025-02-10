@@ -7,7 +7,7 @@ namespace Aevatar.AI.EmbeddedDataLoader;
 /// <summary>
 /// Interface for loading data into a data store.
 /// </summary>
-internal interface IEmbeddedDataLoader
+internal interface IEmbeddedDataSaver
 {
     /// <summary>
     /// Load a file into the data store.
@@ -18,5 +18,5 @@ internal interface IEmbeddedDataLoader
     /// <param name="maxChunkLength">the max length of chunk</param>
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> to monitor for cancellation requests.</param>
     /// <returns>An async task that completes when the loading is complete.</returns>
-    Task Load(BrainContent brainContent, int batchSize, int maxChunkLength, int betweenBatchDelayInMs, CancellationToken cancellationToken);
+    Task StoreAsync(BrainContent brainContent, int batchSize, int maxChunkLength, int betweenBatchDelayInMs, CancellationToken cancellationToken);
 }
