@@ -16,6 +16,7 @@ on:
           - Aevatar.AuthServer
           - Aevatar.WebHook.Host
           - Aevatar.Daipp.Silo
+          - Aevatar.Daipp.Client
 
 env:
   DOTNET_INSTALL_DIR: "./.dotnet"

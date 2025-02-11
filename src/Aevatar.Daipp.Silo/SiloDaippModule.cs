@@ -1,7 +1,6 @@
 using AElf.OpenTelemetry;
-using Aevatar.CQRS;
+using Aevatar.Application.Grains;
 using Aevatar.Domain.Grains;
-using Aevatar.Silo;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using Volo.Abp.AspNetCore.Serilog;
@@ -16,10 +15,9 @@ namespace Aevatar.Daipp.Silo;
     typeof(AbpAspNetCoreSerilogModule),
     typeof(AbpAutofacModule),
     typeof(OpenTelemetryModule),
-    typeof(AbpEventBusModule),
-    typeof(AevatarCQRSModule)
+    typeof(AbpEventBusModule)
 )]
-public class SiloDaippModule : AbpModule, IDomainGrainsModule
+public class SiloDaippModule : AIApplicationGrainsModule, IDomainGrainsModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {

@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Aevatar.Webhook.Extensions;
-using Microsoft.AspNetCore.Hosting;
+using Aevatar.Daipp.Client.Extensions;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Events;
 
-namespace Aevatar.Webhook;
+namespace Aevatar.Daipp.Client;
 
 public class Program
 {
@@ -34,12 +35,27 @@ public class Program
 
         try
         {
-            Log.Information("Starting Aevatar.Daipp.Client.");
-            await CreateHostBuilder(args).Build().RunAsync();
+            Log.Information("Starting Daipp.Client.");
+            var builder = WebApplication.CreateBuilder(args);
+            builder.Host
+                .UseOrleansClientConfigration()
+                .ConfigureDefaults(args)
+                .UseAutofac()
+                .UseSerilog();
+            await builder.AddApplicationAsync<AevatarDaippClientModule>();
+            var app = builder.Build();
+            await app.InitializeApplicationAsync();
+            
+            await app.RunAsync();
             return 0;
         }
         catch (Exception ex)
         {
+            if (ex is HostAbortedException)
+            {
+                throw;
+            }
+
             Log.Fatal(ex, "Host terminated unexpectedly!");
             return 1;
         }
@@ -47,13 +63,5 @@ public class Program
         {
             Log.CloseAndFlush();
         }
-    }
-    
-    private static IHostBuilder CreateHostBuilder(string[] args)
-    {
-        return OrleansHostExtensions.UseOrleansClient(Host.CreateDefaultBuilder(args))
-            .UseAutofac()
-            .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); })
-            .UseSerilog();
     }
 }

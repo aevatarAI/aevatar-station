@@ -17,7 +17,7 @@ public class DefaultWebhookDeployManager : IWebhookDeployManager
         return;
     }
 
-    public async Task<string> CreateNewDaippAsync(string appId, string version, string imageName)
+    public async Task<string> CreateNewDaippAsync(string appId, string version)
     {
         return string.Empty;
     }

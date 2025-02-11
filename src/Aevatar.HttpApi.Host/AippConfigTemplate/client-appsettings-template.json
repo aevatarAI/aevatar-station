@@ -1,0 +1,57 @@
+{
+    "ConnectionStrings": {
+        "Default": "mongodb://aevatar:P056xqZeSkg678Gp@mongo-0.mongo.dapp-factory-shared.svc,mongo-1.mongo.dapp-factory-shared.svc,mongo-2.mongo.dapp-factory-shared.svc/AevatarServerStaging?authSource=AevatarServerStaging&replicaSet=rs0"
+    },
+    "Kestrel":{
+        "EndPoints":{
+            "Http":{
+                "Url":"http://*:8308/"
+            }
+        }
+    },
+    "Orleans": {
+        "ClusterId": "AevatarSiloCluster",
+        "ServiceId": "AevatarBasicService",
+        "MongoDBClient": "mongodb://aevatar:P056xqZeSkg678Gp@mongo-0.mongo.dapp-factory-shared.svc,mongo-1.mongo.dapp-factory-shared.svc,mongo-2.mongo.dapp-factory-shared.svc/AevatarDbStaging?authSource=AevatarDbStaging&replicaSet=rs0&maxPoolSize=555",
+        "DataBase": "AevatarDbStaging"
+    },
+    "ElasticUris": {
+        "Uris": [
+            "http://127.0.0.1:9200"
+        ]
+    },
+    "OpenTelemetry": {
+        "CollectorEndpoint": "http://localhost:4315",
+        "ServiceName": "Aevatar.HttpApi.Host",
+        "ServiceVersion": "1.0.0"
+    },
+    "Agent": {
+        "SystemAgentList": [
+            "GroupGAgent",
+            "PublishingGAgent",
+            "SubscriptionGAgent",
+            "AtomicGAgent",
+            "CombinationGAgent",
+            "CodeGAgent",
+            "TenantPluginCodeGAgent",
+            "PluginCodeStorageGAgent"
+        ]
+    },
+    "Daiapp": {
+        "DaiappId": "[AippId]-client"
+    },
+    "Serilog": {
+        "Properties": {
+            "Application": "Aevatar.Daipp.Client",
+            "Environment": "Development"
+        },
+        "WriteTo": [
+            {
+                "Name": "Console",
+                "Args": {
+                    "formatter": "Serilog.Formatting.Compact.RenderedCompactJsonFormatter, Serilog.Formatting.Compact"
+                }
+            }
+        ]
+    }
+}

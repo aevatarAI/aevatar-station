@@ -15,19 +15,23 @@ public class KubernetesWebhookManager: IWebhookDeployManager, ISingletonDependen
     private readonly KubernetesOptions _kubernetesOptions;
     private readonly ILogger<KubernetesWebhookManager> _logger;
     private readonly IKubernetesClientAdapter _kubernetesClientAdapter;
-
+    private readonly DaippDeployOptions _daippDeployOptions;
     public KubernetesWebhookManager(ILogger<KubernetesWebhookManager> logger,
         IKubernetesClientAdapter kubernetesClientAdapter,
-        IOptionsSnapshot<KubernetesOptions> kubernetesOptions)
+        IOptionsSnapshot<KubernetesOptions> kubernetesOptions,
+        IOptionsSnapshot<DaippDeployOptions> daippDeployOptions)
     {
         _logger = logger;
         _kubernetesClientAdapter = kubernetesClientAdapter;
         _kubernetesOptions = kubernetesOptions.Value;
+        _daippDeployOptions = daippDeployOptions.Value;
     }
 
     public async Task<string> CreateNewWebHookAsync(string appId, string version, string imageName)
     {
-        return await CreatePodAsync(appId, version, imageName);
+        return await CreatePodAsync(appId, version, imageName,
+            GetWebhookConfigContent(appId, version, KubernetesConstants.WebhookSettingTemplateFilePath),
+            KubernetesConstants.WebhookCommand);
     }
 
     public async Task DestroyWebHookAsync(string appId, string version)
@@ -35,14 +39,14 @@ public class KubernetesWebhookManager: IWebhookDeployManager, ISingletonDependen
         await DestroyPodsAsync(appId, version);
     }
     
-    private async Task<string> CreatePodAsync(string appId, string version, string imageName)
+    private async Task<string> CreatePodAsync(string appId, string version, string imageName,string config,List<string> Command )
     {
         // Ensure ConfigMaps (AppSettings and SideCar Configs) are created
         await EnsureConfigMapAsync(
             appId, 
             version, 
             ConfigMapHelper.GetAppSettingConfigMapName, 
-            GetWebhookConfigContent(appId, version, KubernetesConstants.WebhookSettingTemplateFilePath), 
+            config, 
             ConfigMapHelper.CreateAppSettingConfigMapDefinition);
 
         await EnsureConfigMapAsync(
@@ -59,12 +63,12 @@ public class KubernetesWebhookManager: IWebhookDeployManager, ISingletonDependen
         await EnsureDeploymentAsync(
             appId, version, imageName, 
             deploymentName, deploymentLabelName, containerName, 
-            KubernetesConstants.WebhookCommand,
+            Command,
             1, 
             KubernetesConstants.WebhookContainerTargetPort, 
             KubernetesConstants.QueryPodMaxSurge, 
             KubernetesConstants.QueryPodMaxUnavailable, 
-            GetHealthPath(appId));
+            GetHealthPath());
 
         // Ensure Service is created
         string serviceName = ServiceHelper.GetAppServiceName(appId, version);
@@ -106,7 +110,7 @@ private static string GetWebhookConfigContent(string appId, string version, stri
     return configContent;
 }
 
-private static string GetAippConfigContent(string appId, string version, string templateFilePath)
+private static string GetAippSiloConfigContent(string appId, string version, string templateFilePath)
 {
     string configContent = File.ReadAllText(templateFilePath)
         .Replace(KubernetesConstants.AippPlaceHolderAppId, appId.ToLower())
@@ -171,9 +175,9 @@ private async Task EnsureIngressAsync(
         _logger.LogInformation("[KubernetesAppManager] Ingress {ingressName} created", ingressName);
     }
 }
-    private string GetHealthPath(string appId)
+    private string GetHealthPath()
     {
-        return $"/{appId}/health";
+        return "/health";
     }
 
 
@@ -259,20 +263,31 @@ private async Task EnsureIngressAsync(
         await RestartDeploymentAsync(deploymentName);
     }
 
-    public async Task<string> CreateNewDaippAsync(string appId, string version, string imageName)
+    public async Task<string> CreateNewDaippAsync(string appId, string version)
+    {
+        await CreateDaippSiloAsync(appId+"-silo", version, _daippDeployOptions.DaippSiloImageName);
+
+        // await EnsurePhaAsync(appId, version);
+       await CreatePodAsync(appId+"-client", version, _daippDeployOptions.DaippClientImageName,
+           GetAippSiloConfigContent(appId, version, KubernetesConstants.AippClientSettingTemplateFilePath),
+           KubernetesConstants.AippClientCommand);
+        return "";
+    }
+
+    private async Task CreateDaippSiloAsync(string appId, string version, string imageName)
     {
         await EnsureConfigMapAsync(
             appId, 
             version, 
             ConfigMapHelper.GetAppSettingConfigMapName,
-            GetAippConfigContent(appId,version,KubernetesConstants.AippSettingTemplateFilePath),
+            GetAippSiloConfigContent(appId,version,KubernetesConstants.AippSiloSettingTemplateFilePath),
             ConfigMapHelper.CreateAppSettingConfigMapDefinition);
 
         await EnsureConfigMapAsync(
             appId, 
             version, 
             ConfigMapHelper.GetAppFileBeatConfigMapName, 
-            GetAippConfigContent(appId,version,KubernetesConstants.AippFileBeatConfigTemplateFilePath),
+            GetAippSiloConfigContent(appId,version,KubernetesConstants.AippFileBeatConfigTemplateFilePath),
             ConfigMapHelper.CreateFileBeatConfigMapDefinition);
 
         // Ensure Deployment is created
@@ -282,15 +297,12 @@ private async Task EnsureIngressAsync(
         await EnsureDeploymentAsync(
             appId, version, imageName, 
             deploymentName, deploymentLabelName, containerName, 
-            KubernetesConstants.AippCommand,
+            KubernetesConstants.AippSiloCommand,
             1, 
             KubernetesConstants.WebhookContainerTargetPort, 
             KubernetesConstants.QueryPodMaxSurge, 
             KubernetesConstants.QueryPodMaxUnavailable, 
             "",true);
-        
-       // await EnsurePhaAsync(appId, version);
-        return "";
     }
 
     private async Task EnsurePhaAsync(string appId, string version)
@@ -303,6 +315,12 @@ private async Task EnsureIngressAsync(
     }
 
     public async Task DestroyDaippAsync(string appId, string version)
+    {
+        await DestroyDaippSiloAsync(appId + "-silo", version);
+        await DestroyPodsAsync(appId + "-client", version);
+    }
+
+    private async Task DestroyDaippSiloAsync(string appId, string version)
     {
         // Delete Deployment
         var deploymentName = DeploymentHelper.GetAppDeploymentName(appId, version);

@@ -38,13 +38,14 @@ public class KubernetesConstants
      public const string QueryPodMaxUnavailable = "0";
      
      //Aipp manager
-     public const string AippSettingTemplateFilePath = "AippConfigTemplate/appsettings-template.json";
+     public const string AippSiloSettingTemplateFilePath = "AippConfigTemplate/silo-appsettings-template.json";
+     public const string AippClientSettingTemplateFilePath = "AippConfigTemplate/client-appsettings-template.json";
      public const string AippFileBeatConfigTemplateFilePath = "AippConfigTemplate/filebeat-template.yml";
      public const string AippPlaceHolderAppId = "[AippId]";
      public const string AippPlaceHolderVersion = "[Version]";
      public const string AippPlaceHolderNameSpace = "[NameSpace]";
-     public static readonly List<string> AippCommand = new() { "dotnet", "Aevatar.Daipp.Silo.dll" };
-     public const  int   AippContainerContainerPort = 10001;
+     public static readonly List<string> AippSiloCommand = new() { "dotnet", "Aevatar.Daipp.Silo.dll" };
+     public static readonly List<string> AippClientCommand = new() { "dotnet", "Aevatar.Daipp.Client.dll" };
      public const string AippQueryPodMaxSurge = "50%";
      public const string AippQueryPodMaxUnavailable = "0";
      //Prometheus

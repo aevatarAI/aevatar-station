@@ -1,7 +1,5 @@
 using System;
 using System.Threading.Tasks;
-using Aevatar.Application.Grains.Agents.Code;
-using Aevatar.Common;
 using Aevatar.Options;
 using Aevatar.WebHook.Deploy;
 using Microsoft.Extensions.Options;
@@ -32,7 +30,7 @@ public class DaippService: ApplicationService, IDaippService
 
     public async Task CreateDaippAsync(string daippId, string version)
     {
-        await _DaippDeployManager.CreateNewDaippAsync(daippId, version,_DaippDeployOptions.DaippImageName);
+        await _DaippDeployManager.CreateNewDaippAsync(daippId, version);
     }
 
     public async Task DestroyDaippAsync(string inputDaippId, string inputVersion)

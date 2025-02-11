@@ -63,6 +63,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Kubernetes", "src\A
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Daipp.Silo", "src\Aevatar.Daipp.Silo\Aevatar.Daipp.Silo.csproj", "{21354E16-C86C-4908-A645-D72FF2397025}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Daipp.Client", "src\Aevatar.Daipp.Client\Aevatar.Daipp.Client.csproj", "{03686C62-CF8E-4081-8B7A-55E7B0AC1CDF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.HttpApi.Admin", "src\Aevatar.HttpApi.Admin\Aevatar.HttpApi.Admin.csproj", "{292876C9-DE19-41D5-9F77-1EEB024D1228}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -181,6 +185,14 @@ Global
 		{21354E16-C86C-4908-A645-D72FF2397025}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{21354E16-C86C-4908-A645-D72FF2397025}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{21354E16-C86C-4908-A645-D72FF2397025}.Release|Any CPU.Build.0 = Release|Any CPU
+		{03686C62-CF8E-4081-8B7A-55E7B0AC1CDF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{03686C62-CF8E-4081-8B7A-55E7B0AC1CDF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{03686C62-CF8E-4081-8B7A-55E7B0AC1CDF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{03686C62-CF8E-4081-8B7A-55E7B0AC1CDF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{292876C9-DE19-41D5-9F77-1EEB024D1228}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{292876C9-DE19-41D5-9F77-1EEB024D1228}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{292876C9-DE19-41D5-9F77-1EEB024D1228}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{292876C9-DE19-41D5-9F77-1EEB024D1228}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -214,6 +226,8 @@ Global
 		{0CE6D780-9322-4718-B233-AA7646BD70EF} = {CA9AC87F-097E-4F15-8393-4BC07735A5B0}
 		{889426DC-3443-4DB1-ABC4-9CB4571B90FD} = {CA9AC87F-097E-4F15-8393-4BC07735A5B0}
 		{21354E16-C86C-4908-A645-D72FF2397025} = {CA9AC87F-097E-4F15-8393-4BC07735A5B0}
+		{03686C62-CF8E-4081-8B7A-55E7B0AC1CDF} = {CA9AC87F-097E-4F15-8393-4BC07735A5B0}
+		{292876C9-DE19-41D5-9F77-1EEB024D1228} = {CA9AC87F-097E-4F15-8393-4BC07735A5B0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {28315BFD-90E7-4E14-A2EA-F3D23AF4126F}
