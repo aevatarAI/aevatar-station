@@ -44,21 +44,22 @@ var chatAgentId = GrainId.Parse("chataigagent/792b1cb87bad4f759fcde3fe51ff55bc")
 var chatAgent = client.GetGrain<IChatAIGAgent>(chatAgentId);
 await chatAgent.InitializeAsync(new InitializeDto()
 {
-    Instructions = @"
-            Please use this information to answer the question:
-            {{#with (SearchPlugin-GetTextSearchResults prompt)}}
-              {{#each this}}
-                Name: {{Name}}
-                Value: {{Value}}
-                Link: {{Link}}
-                -----------------
-              {{/each}}
-            {{/with}}
-
-            Include citations to the relevant information where it is referenced in the response.
-
-            Question: {{prompt}}
-            ",
+//     Instructions = @"
+//             Please use this information to answer the question:
+//             {{#with (SearchPlugin-GetTextSearchResults prompt)}}
+//               {{#each this}}
+//                 Name: {{Name}}
+//                 Value: {{Value}}
+//                 Link: {{Link}}
+//                 -----------------
+//               {{/each}}
+//             {{/with}}
+//
+//             Include citations to the relevant information where it is referenced in the response.
+//
+//             Question: {{prompt}}
+//             ",
+    Instructions = "you are a nba player",
     LLM = "AzureOpenAI",
     IfNeedKnowledge = true,
 });

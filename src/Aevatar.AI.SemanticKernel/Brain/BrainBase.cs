@@ -40,7 +40,7 @@ public abstract class BrainBase : IBrain
 
     protected abstract Task ConfigureKernelBuilder(IKernelBuilder kernelBuilder);
 
-    public async Task InitBrainAsync(string id, string description, bool ifSupportKnowledge = false)
+    public async Task InitAsync(string id, string description, bool ifSupportKnowledge = false)
     {
         IfSupportKnowledge = ifSupportKnowledge;
         Description = description;
@@ -112,10 +112,10 @@ public abstract class BrainBase : IBrain
     //     return result.GetValue<string>();
     // }
 
-    public async Task<List<ChatMessage>> ChatWithHistoryAsync(List<ChatMessage>? history, string content)
-    {  
+    public async Task<List<ChatMessage>> ChatAsync(string content, List<ChatMessage>? history)
+    {
         var result = new List<ChatMessage>();
-        
+
         if (Kernel == null)
         {
             return result;
@@ -134,7 +134,8 @@ public abstract class BrainBase : IBrain
         var chatService = Kernel.GetRequiredService<IChatCompletionService>();
         var response = await chatService.GetChatMessageContentsAsync(chatHistory);
 
-        result.AddRange(response.Select(item => new ChatMessage() { ChatRole = ConvertToChatRole(item.Role), Content = item.Content }));
+        result.AddRange(response.Select(item => new ChatMessage()
+            { ChatRole = ConvertToChatRole(item.Role), Content = item.Content }));
 
         return result;
     }
@@ -186,8 +187,8 @@ public abstract class BrainBase : IBrain
             return result;
         }
 
-        var searchCollection = Kernel.Services.GetRequiredService<IVectorizableTextSearch<TextSnippet<Guid>>>();
-        var searchResults = await searchCollection.VectorizableTextSearchAsync(input);
+        var searchCollection = Kernel.Services.GetRequiredService<VectorStoreTextSearch<TextSnippet<Guid>>>();
+        var searchResults = await searchCollection.GetTextSearchResultsAsync(input);
         if (searchResults.TotalCount == 0)
         {
             return result;
@@ -195,7 +196,13 @@ public abstract class BrainBase : IBrain
 
         await foreach (var textSnippet in searchResults.Results)
         {
-            result.Add(textSnippet.Record);
+            result.Add(new TextSnippet<Guid>
+            {
+                Text = textSnippet.Value,
+                ReferenceDescription = textSnippet.Name,
+                ReferenceLink = textSnippet.Link,
+                Key = default
+            });
             if (result.Count >= 10)
             {
                 return result;
@@ -207,7 +214,7 @@ public abstract class BrainBase : IBrain
 
     private string SupplementPrompt(List<TextSnippet<Guid>> textSnippetList, string content)
     {
-        if (textSnippetList.Any()!)
+        if (!textSnippetList.Any())
         {
             return content;
         }

@@ -7,8 +7,9 @@ namespace Aevatar.AI.Brain;
 
 public interface IBrain
 {
-    Task InitBrainAsync(string id, string description, bool ifSupportKnowledge = false);
+    Task InitAsync(string id, string description, bool ifSupportKnowledge = false);
+
     Task<bool> UpsertKnowledgeAsync(List<BrainContent>? files = null);
-    // Task<string?> ChatAsync(string content);
-    Task<List<ChatMessage>> ChatWithHistoryAsync(List<ChatMessage>? history, string content);
+
+    Task<List<ChatMessage>> ChatAsync(string content, List<ChatMessage>? history = null);
 }
