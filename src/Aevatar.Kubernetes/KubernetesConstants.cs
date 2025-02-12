@@ -44,7 +44,7 @@ public class KubernetesConstants
      public const string AippPlaceHolderAppId = "[AippId]";
      public const string AippPlaceHolderVersion = "[Version]";
      public const string AippPlaceHolderNameSpace = "[NameSpace]";
-     public static readonly List<string> AippSiloCommand = new() { "dotnet", "Aevatar.Daipp.Silo.dll" };
+     public static readonly List<string> AippSiloCommand = new() { "dotnet", "Aevatar.Silo.dll" };
      public static readonly List<string> AippClientCommand = new() { "dotnet", "Aevatar.Daipp.Client.dll" };
      public const string AippQueryPodMaxSurge = "50%";
      public const string AippQueryPodMaxUnavailable = "0";
