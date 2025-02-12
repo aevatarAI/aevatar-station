@@ -194,6 +194,8 @@ public class AgentService : ApplicationService, IAgentService
                 };
                 var grainId = GrainId.Create(grainType, Guid.NewGuid().ToString());
                 var agent = await _gAgentFactory.GetGAgentAsync(grainId);
+                agentTypeData.Description = await agent.GetDescriptionAsync();
+                
                 var initializeDtoType = await agent.GetConfigurationTypeAsync();
                 if (initializeDtoType == null || initializeDtoType.IsAbstract)
                 {
@@ -237,6 +239,7 @@ public class AgentService : ApplicationService, IAgentService
             {
                 AgentType = kvp.Key,
                 FullName = kvp.Value?.FullName ?? kvp.Key,
+                Description = kvp.Value?.Description ?? ""
             };
             
             if (kvp.Value != null )

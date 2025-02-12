@@ -17,6 +17,8 @@ using Volo.Abp.Dapr;
 using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
 using Volo.Abp.PermissionManagement;
+using Aevatar.AI.Extensions;
+using Aevatar.AI.Options;
 
 namespace Aevatar;
 
@@ -50,5 +52,9 @@ public class AevatarApplicationModule : AbpModule
         Configure<AgentOptions>(configuration.GetSection("Agent"));
         context.Services.AddSingleton<IPluginGAgentManager, PluginGAgentManager>();
         context.Services.AddTransient<IWebhookDeployManager, KubernetesWebhookManager>();
+        
+        Configure<AzureOpenAIConfig>(configuration.GetSection("AIServices:AzureOpenAI"));
+        context.Services.AddSemanticKernel()
+            .AddAzureOpenAI();
     }
 }

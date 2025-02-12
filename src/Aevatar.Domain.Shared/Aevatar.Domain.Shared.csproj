@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="Aevatar.Core.Abstractions" />
+    <PackageReference Include="Aevatar.AI.AIGAgent" />
     <PackageReference Include="Volo.Abp.Dapr" />
     <PackageReference Include="Volo.Abp.AspNetCore.Mvc.Dapr.EventBus" />
     <PackageReference Include="Volo.Abp.Identity.Domain.Shared" />

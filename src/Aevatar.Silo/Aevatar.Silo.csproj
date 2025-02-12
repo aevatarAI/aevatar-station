@@ -24,6 +24,7 @@
         <PackageReference Include="Orleans.Streams.Kafka" />
         <PackageReference Include="Aevatar.EventSourcing.Core" />
         <PackageReference Include="Aevatar.Plugins" />
+        <PackageReference Include="Aevatar.AI.SemanticKernel" />
     </ItemGroup>
 
     <ItemGroup>
