@@ -40,7 +40,7 @@ public class CqrsProviderTest : AevatarApplicationTestBase
                 { "key2", "value2" },
                 { "key3", "value3" }}
         };
-        await _cqrsProvider.PublishAsync(cqrsTestAgentState,grainId.ToString());
+        await _cqrsProvider.PublishAsync(cqrsTestAgentState,GrainId.Create("test",grainId.ToString()));
         
         //query state index query by eventId
         var indexName = IndexPrefix + nameof(CqrsTestAgentState).ToLower() + IndexSuffix;
@@ -60,7 +60,7 @@ public class CqrsProviderTest : AevatarApplicationTestBase
         //query state index query by groupId
         var grainId2 = Guid.NewGuid();
         cqrsTestAgentState.Id = grainId2;
-        await _cqrsProvider.PublishAsync(cqrsTestAgentState,grainId2.ToString());
+        await _cqrsProvider.PublishAsync(cqrsTestAgentState,GrainId.Create("test",grainId2.ToString()));
         await Task.Delay(1000);
         var result2 = await _cqrsProvider.QueryStateAsync(indexName,
             q => q.Term(t => t.Field("id").Value(grainId2)), 

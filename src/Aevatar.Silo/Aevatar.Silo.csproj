@@ -23,12 +23,12 @@
         <PackageReference Include="Serilog.Sinks.OpenTelemetry" />
         <PackageReference Include="Orleans.Streams.Kafka" />
         <PackageReference Include="Aevatar.EventSourcing.Core" />
+        <PackageReference Include="Aevatar.EventSourcing.MongoDB" />
         <PackageReference Include="Aevatar.Plugins" />
         <PackageReference Include="Aevatar.AI.SemanticKernel" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Aevatar.EventSourcing.MongoDB\Aevatar.EventSourcing.MongoDB.csproj" />
         <ProjectReference Include="..\Aevatar.MongoDB\Aevatar.MongoDB.csproj" />
         <ProjectReference Include="..\Aevatar.Domain.Grains\Aevatar.Domain.Grains.csproj" />
         <ProjectReference Include="..\Aevatar.Application.Grains\Aevatar.Application.Grains.csproj" />

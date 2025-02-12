@@ -29,7 +29,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
     {
         var command = new SaveStateCommand
         {
-            Id = grainId.GetGuidKey().ToString(),
+            Id = grainId.Key.ToString(),
             State = state
         };
         await _mediator.Send(command);
