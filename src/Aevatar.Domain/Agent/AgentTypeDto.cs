@@ -8,6 +8,7 @@ public class AgentTypeDto
     public string AgentType { get; set; }
     public string FullName { get; set; }
     public List<ParamDto> AgentParams { get; set; }
+    public string Description { get; set; }
 }
 
 public class ParamDto
@@ -28,6 +29,7 @@ public class AgentTypeData
 {
     public string? FullName { get; set; }
     public InitializationData? InitializationData { get; set; } 
+    public string Description { get; set; }
 }
 
 public class PropertyData
