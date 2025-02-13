@@ -173,7 +173,7 @@ public abstract partial class
     }
 
     [AllEventHandler]
-    internal virtual async Task ForwardEventAsync(EventWrapperBase eventWrapper)
+    protected virtual async Task ForwardEventAsync(EventWrapperBase eventWrapper)
     {
         Logger.LogInformation(
             $"{this.GetGrainId().ToString()} is forwarding event downwards: {JsonConvert.SerializeObject((EventWrapper<TEvent>)eventWrapper)}");

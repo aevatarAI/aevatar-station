@@ -9,7 +9,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Orleans.Serialization;
 using Volo.Abp;
+using Volo.Abp.Authorization;
 using Volo.Abp.Modularity;
+using Volo.Abp.PermissionManagement;
 
 namespace Aevatar.Extensions;
 
@@ -21,6 +23,7 @@ public static class OrleansHostExtensions
         abpApplication.Initialize();
 
         return builder
+            .AddIncomingGrainCallFilter<PermissionCheckFilter>()
             .ConfigureServices(services =>
             {
                 foreach (var service in abpApplication.Services)
@@ -29,6 +32,11 @@ public static class OrleansHostExtensions
                 }
 
                 LoadPlugins(services);
+
+                // services.AddApplication<AbpPermissionManagementApplicationModule>(options =>
+                // {
+                //     options.UseAutofac();
+                // });
             });
     }
 

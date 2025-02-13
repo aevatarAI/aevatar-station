@@ -7,22 +7,30 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Orleans.Serialization;
 using Volo.Abp;
+using Volo.Abp.Authorization;
 using Volo.Abp.Autofac;
 using Volo.Abp.AutoMapper;
+using Volo.Abp.Identity;
+using Volo.Abp.Identity.MongoDB;
 using Volo.Abp.Modularity;
+using Volo.Abp.PermissionManagement;
+using Volo.Abp.PermissionManagement.MongoDB;
 
 namespace Aevatar;
 
 [DependsOn(
     typeof(AbpAutofacModule),
-    typeof(AbpAutoMapperModule)
+    typeof(AbpAutoMapperModule),
+    typeof(AbpPermissionManagementApplicationModule),
+    typeof(AbpPermissionManagementMongoDbModule),
+    typeof(AbpIdentityApplicationModule),
+    typeof(AbpIdentityMongoDbModule)
 )]
 public class AevatarModule : AbpModule
 {
     public override void PreConfigureServices(ServiceConfigurationContext context)
     {
         context.Services.AddConventionalRegistrar(new AevatarDefaultConventionalRegistrar());
-
     }
 
     public override void ConfigureServices(ServiceConfigurationContext context)
