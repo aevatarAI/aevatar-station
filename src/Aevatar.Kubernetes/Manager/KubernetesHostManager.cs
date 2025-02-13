@@ -31,7 +31,7 @@ public class KubernetesHostManager: IHostDeployManager, ISingletonDependency
     {
         return await CreatePodAsync(appId, version, imageName,
             GetWebhookConfigContent(appId, version, KubernetesConstants.WebhookSettingTemplateFilePath),
-            KubernetesConstants.WebhookCommand);
+            KubernetesConstants.WebhookCommand,_kubernetesOptions.WebhookHostName);
     }
 
     public async Task DestroyWebHookAsync(string appId, string version)
@@ -39,7 +39,8 @@ public class KubernetesHostManager: IHostDeployManager, ISingletonDependency
         await DestroyPodsAsync(appId, version);
     }
     
-    private async Task<string> CreatePodAsync(string appId, string version, string imageName,string config,List<string> Command )
+    private async Task<string> CreatePodAsync(string appId, string version, string imageName, string config,
+        List<string> Command, string hostName)
     {
         // Ensure ConfigMaps (AppSettings and SideCar Configs) are created
         await EnsureConfigMapAsync(
@@ -64,7 +65,7 @@ public class KubernetesHostManager: IHostDeployManager, ISingletonDependency
             appId, version, imageName, 
             deploymentName, deploymentLabelName, containerName, 
             Command,
-            1, 
+            _kubernetesOptions.AppPodReplicas, 
             KubernetesConstants.WebhookContainerTargetPort, 
             KubernetesConstants.QueryPodMaxSurge, 
             KubernetesConstants.QueryPodMaxUnavailable, 
@@ -79,7 +80,6 @@ public class KubernetesHostManager: IHostDeployManager, ISingletonDependency
 
         // Ensure Ingress is created
         string rulePath = $"/{appId}".ToLower(); 
-        var hostName = _kubernetesOptions.HostName;
         await EnsureIngressAsync(appId, version,hostName, rulePath, serviceName, KubernetesConstants.WebhookContainerTargetPort);
 
         return hostName.TrimEnd('/') + rulePath;
@@ -279,7 +279,7 @@ private async Task EnsureIngressAsync(
         // await EnsurePhaAsync(appId, version);
        await CreatePodAsync(appId+"-client", version, _HostDeployOptions.HostClientImageName,
            GetHostSiloConfigContent(appId, version, KubernetesConstants.HostClientSettingTemplateFilePath),
-           KubernetesConstants.HostClientCommand);
+           KubernetesConstants.HostClientCommand,_kubernetesOptions.DeveloperHostName);
         return "";
     }
 
@@ -307,7 +307,7 @@ private async Task EnsureIngressAsync(
             appId, version, imageName, 
             deploymentName, deploymentLabelName, containerName, 
             KubernetesConstants.HostSiloCommand,
-            1, 
+            _kubernetesOptions.AppPodReplicas, 
             KubernetesConstants.WebhookContainerTargetPort, 
             KubernetesConstants.QueryPodMaxSurge, 
             KubernetesConstants.QueryPodMaxUnavailable, 
