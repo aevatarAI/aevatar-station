@@ -27,22 +27,22 @@ setup.template.settings:
 
 setup.template.enabled: true
 setup.template.overwrite: true
-setup.template.name: "[NameSpace]-[AippId]-[Version]-log-index-template"
-setup.template.pattern: "[NameSpace]-[AippId]-[Version]-log-index-*"
+setup.template.name: "[NameSpace]-[HostId]-[Version]-log-index-template"
+setup.template.pattern: "[NameSpace]-[HostId]-[Version]-log-index-*"
 
 #setup.ilm.enabled: false
 
 setup.ilm.enabled: true
-setup.ilm.rollover_alias: "[NameSpace]-[AippId]-[Version]-log-index"
+setup.ilm.rollover_alias: "[NameSpace]-[HostId]-[Version]-log-index"
 setup.ilm.pattern: "{now/d}-000001"
 setup.ilm.policy_name: "[NameSpace]-filebeat-log-policy"
 
 output.elasticsearch:
   hosts: [
           "http://localhost:9200"]
-  index: "[NameSpace]-[AippId]-[Version]-log-index-%{+yyyy-MM-dd}"
-  # username: "your_username"
-  # password: "your_password"
+  index: "[NameSpace]-[HostId]-[Version]-log-index-%{+yyyy-MM-dd}"
+  username: "beat_to_es"
+  password: "aelf12#$"
   
 processors:
   - drop_fields:

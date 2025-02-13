@@ -61,7 +61,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.WebHook.Deploy", "s
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Kubernetes", "src\Aevatar.Kubernetes\Aevatar.Kubernetes.csproj", "{889426DC-3443-4DB1-ABC4-9CB4571B90FD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Daipp.Client", "src\Aevatar.Daipp.Client\Aevatar.Daipp.Client.csproj", "{03686C62-CF8E-4081-8B7A-55E7B0AC1CDF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Developer.Host", "src\Aevatar.Developer.Host\Aevatar.Developer.Host.csproj", "{03686C62-CF8E-4081-8B7A-55E7B0AC1CDF}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.HttpApi.Admin", "src\Aevatar.HttpApi.Admin\Aevatar.HttpApi.Admin.csproj", "{292876C9-DE19-41D5-9F77-1EEB024D1228}"
 EndProject

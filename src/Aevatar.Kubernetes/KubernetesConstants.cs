@@ -37,17 +37,17 @@ public class KubernetesConstants
      public const string QueryPodMaxSurge = "50%";
      public const string QueryPodMaxUnavailable = "0";
      
-     //Aipp manager
-     public const string AippSiloSettingTemplateFilePath = "AippConfigTemplate/silo-appsettings-template.json";
-     public const string AippClientSettingTemplateFilePath = "AippConfigTemplate/client-appsettings-template.json";
-     public const string AippFileBeatConfigTemplateFilePath = "AippConfigTemplate/filebeat-template.yml";
-     public const string AippPlaceHolderAppId = "[AippId]";
-     public const string AippPlaceHolderVersion = "[Version]";
-     public const string AippPlaceHolderNameSpace = "[NameSpace]";
-     public static readonly List<string> AippSiloCommand = new() { "dotnet", "Aevatar.Silo.dll" };
-     public static readonly List<string> AippClientCommand = new() { "dotnet", "Aevatar.Daipp.Client.dll" };
-     public const string AippQueryPodMaxSurge = "50%";
-     public const string AippQueryPodMaxUnavailable = "0";
+     //Host manager
+     public const string HostSiloSettingTemplateFilePath = "HostConfigTemplate/silo-appsettings-template.json";
+     public const string HostClientSettingTemplateFilePath = "HostConfigTemplate/client-appsettings-template.json";
+     public const string HostFileBeatConfigTemplateFilePath = "HostConfigTemplate/filebeat-template.yml";
+     public const string HostPlaceHolderAppId = "[HostId]";
+     public const string HostPlaceHolderVersion = "[Version]";
+     public const string HostPlaceHolderNameSpace = "[NameSpace]";
+     public static readonly List<string> HostSiloCommand = new() { "dotnet", "Aevatar.Silo.dll" };
+     public static readonly List<string> HostClientCommand = new() { "dotnet", "Aevatar.Developer.Host.dll" };
+     public const string HostQueryPodMaxSurge = "50%";
+     public const string HostQueryPodMaxUnavailable = "0";
      //Prometheus
      public const string MonitorLabelKey = "monitor";
      public const string MonitorGroup = "monitoring.coreos.com";

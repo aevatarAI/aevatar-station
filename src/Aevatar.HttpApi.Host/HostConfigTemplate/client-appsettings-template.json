@@ -38,11 +38,11 @@
         ]
     },
     "Daiapp": {
-        "DaiappId": "[AippId]-client"
+        "DaiappId": "[HostId]-client"
     },
     "Serilog": {
         "Properties": {
-            "Application": "Aevatar.Daipp.Client",
+            "Application": "Aevatar.Developer.Host",
             "Environment": "Development"
         },
         "WriteTo": [

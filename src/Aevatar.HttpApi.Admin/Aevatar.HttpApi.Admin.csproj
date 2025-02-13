@@ -5,7 +5,7 @@
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
-    <RootNamespace>Aevatar</RootNamespace>
+    <RootNamespace>Aevatar.Admin</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

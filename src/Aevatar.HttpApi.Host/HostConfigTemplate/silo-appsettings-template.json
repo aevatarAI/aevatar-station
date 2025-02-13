@@ -1,7 +1,7 @@
 {
     "Serilog": {
         "Properties": {
-            "Application": "[AippId].Silo",
+            "Application": "[HostId].Silo",
             "Environment": "Staging"
         },
         "MinimumLevel": {
@@ -33,8 +33,8 @@
         ]
     },
     "Orleans": {
-        "ClusterId": "[AippId]SiloCluster",
-        "ServiceId": "[AippId]BasicService",
+        "ClusterId": "[HostId]SiloCluster",
+        "ServiceId": "[HostId]BasicService",
         "IsRunningInKubernetes": true,
         "AdvertisedIP": "127.0.0.1",
         "GatewayPort": 20001,
@@ -56,12 +56,12 @@
     },
     "OpenTelemetry": {
         "CollectorEndpoint": "http://otel-collector-testnet-collector.observability:4315",
-        "ServiceName": "[AippId].Silo",
+        "ServiceName": "[HostId].Silo",
         "ServiceVersion": "1.0.0"
     },
     "OrleansStream" : {
         "Provider": "Kafka",
-        "Brokers": ["kafka-cluster-kafka-bootstrap:9092"],
+        "Brokers": ["kafka-cluster-kafka-bootstrap.aismart-testnet:9092"],
         "Partitions": 1,
         "ReplicationFactor": 3,
         "MessageMaxBytes": 104857600,
@@ -69,10 +69,10 @@
     },
     "ElasticUris": {
         "Uris": [
-            "http://aismart-elasticsearch-testnet-es-http:9200"
+            "http://aismart-elasticsearch-testnet-es-http.aismart-testnet:9200"
         ]
     },
     "Redis": {
-        "Configuration": "aismart-redis-testnet-redis"
+        "Configuration": "aismart-redis-testnet-redis.aismart-testnet"
     }
 }

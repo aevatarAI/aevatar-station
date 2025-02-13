@@ -1,9 +1,7 @@
 using System;
 using System.IO;
-using Aevatar.Core;
-using Aevatar.Core.Abstractions;
-using Aevatar.Core.Abstractions.Plugin;
-using Aevatar.Plugins;
+using AElf.OpenTelemetry;
+using Aevatar.MongoDB;
 using AutoResponseWrapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
@@ -11,33 +9,40 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.OpenApi.Models;
 using Volo.Abp;
+using Volo.Abp.Account.Web;
+using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
-using Volo.Abp.AutoMapper;
 using Volo.Abp.Modularity;
+using Volo.Abp.Swashbuckle;
 using Volo.Abp.VirtualFileSystem;
 
-namespace Aevatar.Daipp.Client;
+namespace Aevatar.Developer.Host;
 
-[DependsOn(typeof(AbpAutofacModule),
-    typeof(AbpAutoMapperModule),
+[DependsOn(
+    typeof(AevatarHttpApiModule),
+    typeof(AbpAutofacModule),
+    typeof(AevatarApplicationModule),
+    typeof(AevatarMongoDbModule),
+    typeof(AbpAspNetCoreMvcUiLeptonXLiteThemeModule),
+    typeof(AbpAccountWebOpenIddictModule),
     typeof(AbpAspNetCoreSerilogModule),
-    typeof(AevatarHttpApiModule)
+    typeof(AbpSwashbuckleModule),
+    typeof(OpenTelemetryModule)
 )]
-public class AevatarDaippClientModule : AbpModule
+public class AevatarDeveloperHostModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
-        context.Services.AddSingleton<IPluginGAgentManager, PluginGAgentManager>();
         context.Services.AddHealthChecks();
-        context.Services.AddSingleton<IGAgentFactory,GAgentFactory>();
-        context.Services.AddControllers();
         context.Services.AddAutoResponseWrapper();
         var configuration = context.Services.GetConfiguration();
         ConfigureAuthentication(context,configuration);
-      //  ConfigureVirtualFileSystem(context);
+        ConfigureVirtualFileSystem(context);
+        ConfigureSwaggerServices(context, configuration);
         context.Services.AddMvc(options =>
         {
             options.Filters.Add(new IgnoreAntiforgeryTokenAttribute());
@@ -79,6 +84,36 @@ public class AevatarDaippClientModule : AbpModule
         }
     }
 
+    private static void ConfigureSwaggerServices(ServiceConfigurationContext context, IConfiguration configuration)
+    {
+        context.Services.AddAbpSwaggerGen(options =>
+            {
+                options.SwaggerDoc("v1", new OpenApiInfo { Title = "Aevatar API", Version = "v1" });
+                // options.DocumentFilter<HideApisFilter>();
+                options.DocInclusionPredicate((docName, description) => true);
+                options.CustomSchemaIds(type => type.FullName);
+                options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme()
+                {
+                    Name = "Authorization",
+                    Scheme = "bearer",
+                    Description = "Specify the authorization token.",
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.Http,
+                });
+
+                options.AddSecurityRequirement(new OpenApiSecurityRequirement()
+                {
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+                        },
+                        new string[] { }
+                    }
+                });
+            }
+        );
+    }
     public override void OnPreApplicationInitialization(ApplicationInitializationContext context)
     {
 
@@ -111,8 +146,16 @@ public class AevatarDaippClientModule : AbpModule
         app.UseDynamicClaims();
         app.UseEndpoints(endpoints =>
         {
-            endpoints.MapControllers();
             endpoints.MapHealthChecks("/health");
+        });
+        app.UseSwagger();
+        app.UseAbpSwaggerUI(c =>
+        {
+            c.SwaggerEndpoint("/swagger/v1/swagger.json", "Aevatar API");
+
+            var configuration = context.ServiceProvider.GetRequiredService<IConfiguration>();
+            c.OAuthClientId(configuration["AuthServer:SwaggerClientId"]);
+            c.OAuthScopes("Aevatar");
         });
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();

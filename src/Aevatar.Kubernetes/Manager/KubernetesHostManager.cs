@@ -9,22 +9,22 @@ using Volo.Abp.DependencyInjection;
 
 namespace Aevatar.Kubernetes.Manager;
 
-public class KubernetesWebhookManager: IWebhookDeployManager, ISingletonDependency
+public class KubernetesHostManager: IHostDeployManager, ISingletonDependency
 {
     // private readonly k8s.Kubernetes _k8sClient;
     private readonly KubernetesOptions _kubernetesOptions;
-    private readonly ILogger<KubernetesWebhookManager> _logger;
+    private readonly ILogger<KubernetesHostManager> _logger;
     private readonly IKubernetesClientAdapter _kubernetesClientAdapter;
-    private readonly DaippDeployOptions _daippDeployOptions;
-    public KubernetesWebhookManager(ILogger<KubernetesWebhookManager> logger,
+    private readonly HostDeployOptions _HostDeployOptions;
+    public KubernetesHostManager(ILogger<KubernetesHostManager> logger,
         IKubernetesClientAdapter kubernetesClientAdapter,
         IOptionsSnapshot<KubernetesOptions> kubernetesOptions,
-        IOptionsSnapshot<DaippDeployOptions> daippDeployOptions)
+        IOptionsSnapshot<HostDeployOptions> HostDeployOptions)
     {
         _logger = logger;
         _kubernetesClientAdapter = kubernetesClientAdapter;
         _kubernetesOptions = kubernetesOptions.Value;
-        _daippDeployOptions = daippDeployOptions.Value;
+        _HostDeployOptions = HostDeployOptions.Value;
     }
 
     public async Task<string> CreateNewWebHookAsync(string appId, string version, string imageName)
@@ -110,12 +110,12 @@ private static string GetWebhookConfigContent(string appId, string version, stri
     return configContent;
 }
 
-private static string GetAippSiloConfigContent(string appId, string version, string templateFilePath)
+private static string GetHostSiloConfigContent(string appId, string version, string templateFilePath)
 {
     string configContent = File.ReadAllText(templateFilePath)
-        .Replace(KubernetesConstants.AippPlaceHolderAppId, appId.ToLower())
-        .Replace(KubernetesConstants.AippPlaceHolderVersion, version.ToLower())
-        .Replace(KubernetesConstants.AippPlaceHolderNameSpace, KubernetesConstants.AppNameSpace.ToLower());
+        .Replace(KubernetesConstants.HostPlaceHolderAppId, appId.ToLower())
+        .Replace(KubernetesConstants.HostPlaceHolderVersion, version.ToLower())
+        .Replace(KubernetesConstants.HostPlaceHolderNameSpace, KubernetesConstants.AppNameSpace.ToLower());
     return configContent;
 }
 
@@ -177,7 +177,7 @@ private async Task EnsureIngressAsync(
 }
     private string GetHealthPath()
     {
-        return "/health";
+        return "";
     }
 
 
@@ -263,31 +263,31 @@ private async Task EnsureIngressAsync(
         await RestartDeploymentAsync(deploymentName);
     }
 
-    public async Task<string> CreateNewDaippAsync(string appId, string version)
+    public async Task<string> CreateHostAsync(string appId, string version)
     {
-        await CreateDaippSiloAsync(appId+"-silo", version, _daippDeployOptions.DaippSiloImageName);
+        await CreateHostSiloAsync(appId+"-silo", version, _HostDeployOptions.HostSiloImageName);
 
         // await EnsurePhaAsync(appId, version);
-       await CreatePodAsync(appId+"-client", version, _daippDeployOptions.DaippClientImageName,
-           GetAippSiloConfigContent(appId, version, KubernetesConstants.AippClientSettingTemplateFilePath),
-           KubernetesConstants.AippClientCommand);
+       await CreatePodAsync(appId+"-client", version, _HostDeployOptions.HostClientImageName,
+           GetHostSiloConfigContent(appId, version, KubernetesConstants.HostClientSettingTemplateFilePath),
+           KubernetesConstants.HostClientCommand);
         return "";
     }
 
-    private async Task CreateDaippSiloAsync(string appId, string version, string imageName)
+    private async Task CreateHostSiloAsync(string appId, string version, string imageName)
     {
         await EnsureConfigMapAsync(
             appId, 
             version, 
             ConfigMapHelper.GetAppSettingConfigMapName,
-            GetAippSiloConfigContent(appId,version,KubernetesConstants.AippSiloSettingTemplateFilePath),
+            GetHostSiloConfigContent(appId,version,KubernetesConstants.HostSiloSettingTemplateFilePath),
             ConfigMapHelper.CreateAppSettingConfigMapDefinition);
 
         await EnsureConfigMapAsync(
             appId, 
             version, 
             ConfigMapHelper.GetAppFileBeatConfigMapName, 
-            GetAippSiloConfigContent(appId,version,KubernetesConstants.AippFileBeatConfigTemplateFilePath),
+            GetHostSiloConfigContent(appId,version,KubernetesConstants.HostFileBeatConfigTemplateFilePath),
             ConfigMapHelper.CreateFileBeatConfigMapDefinition);
 
         // Ensure Deployment is created
@@ -297,7 +297,7 @@ private async Task EnsureIngressAsync(
         await EnsureDeploymentAsync(
             appId, version, imageName, 
             deploymentName, deploymentLabelName, containerName, 
-            KubernetesConstants.AippSiloCommand,
+            KubernetesConstants.HostSiloCommand,
             1, 
             KubernetesConstants.WebhookContainerTargetPort, 
             KubernetesConstants.QueryPodMaxSurge, 
@@ -314,13 +314,13 @@ private async Task EnsureIngressAsync(
         }
     }
 
-    public async Task DestroyDaippAsync(string appId, string version)
+    public async Task DestroyHostAsync(string appId, string version)
     {
-        await DestroyDaippSiloAsync(appId + "-silo", version);
+        await DestroyHostSiloAsync(appId + "-silo", version);
         await DestroyPodsAsync(appId + "-client", version);
     }
 
-    private async Task DestroyDaippSiloAsync(string appId, string version)
+    private async Task DestroyHostSiloAsync(string appId, string version)
     {
         // Delete Deployment
         var deploymentName = DeploymentHelper.GetAppDeploymentName(appId, version);
@@ -335,7 +335,7 @@ private async Task EnsureIngressAsync(
         await EnsureConfigMapDeletedAsync(sideCarConfigMapName);
     }
 
-    public async Task RestartDaippAsync(string appId, string version)
+    public async Task RestartHostAsync(string appId, string version)
     {
         var deploymentName = DeploymentHelper.GetAppDeploymentName(appId, version);
         await RestartDeploymentAsync(deploymentName);

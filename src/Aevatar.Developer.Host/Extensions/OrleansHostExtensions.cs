@@ -7,7 +7,7 @@ using Orleans.Hosting;
 using Orleans.Providers.MongoDB.Configuration;
 using Orleans.Serialization;
 
-namespace Aevatar.Daipp.Client.Extensions;
+namespace Aevatar.Developer.Host.Extensions;
 
 public static class OrleansHostExtensions
 {

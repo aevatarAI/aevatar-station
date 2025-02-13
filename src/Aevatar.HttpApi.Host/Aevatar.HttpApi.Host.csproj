@@ -51,7 +51,7 @@
     <Content Remove="Logs\**" />
     <EmbeddedResource Remove="Logs\**" />
     <None Remove="Logs\**" />
-    <Content Update="AippConfigTemplate\filebeat-template.yml">
+    <Content Update="HostConfigTemplate\filebeat-template.yml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

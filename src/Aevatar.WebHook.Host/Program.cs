@@ -34,7 +34,7 @@ public class Program
 
         try
         {
-            Log.Information("Starting Aevatar.Daipp.Client.");
+            Log.Information("Starting Aevatar.Developer.Host.");
             await CreateHostBuilder(args).Build().RunAsync();
             return 0;
         }

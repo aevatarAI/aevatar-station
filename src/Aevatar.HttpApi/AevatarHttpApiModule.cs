@@ -1,5 +1,6 @@
 ﻿using Localization.Resources.AbpUi;
 using Aevatar.Localization;
+using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.Account;
 using Volo.Abp.Identity;
 using Volo.Abp.Localization;
@@ -19,7 +20,6 @@ public class AevatarHttpApiModule : AbpModule
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
         ConfigureLocalization();
-      
     }
 
     private void ConfigureLocalization()

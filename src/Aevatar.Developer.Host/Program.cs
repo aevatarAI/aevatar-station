@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Aevatar.Daipp.Client.Extensions;
+using Aevatar.Developer.Host.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,7 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Events;
 
-namespace Aevatar.Daipp.Client;
+namespace Aevatar.Developer.Host;
 
 public class Program
 {
@@ -35,14 +35,14 @@ public class Program
 
         try
         {
-            Log.Information("Starting Daipp.Client.");
+            Log.Information("Starting Developer.Host.");
             var builder = WebApplication.CreateBuilder(args);
             builder.Host
                 .UseOrleansClientConfigration()
                 .ConfigureDefaults(args)
                 .UseAutofac()
                 .UseSerilog();
-            await builder.AddApplicationAsync<AevatarDaippClientModule>();
+            await builder.AddApplicationAsync<AevatarDeveloperHostModule>();
             var app = builder.Build();
             await app.InitializeApplicationAsync();
             
