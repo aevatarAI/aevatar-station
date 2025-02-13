@@ -30,7 +30,14 @@ public class UserController :  AevatarController
         await _developerService.CreateHostAsync(clientId, "1");
     }
     
-    [Route("destroyHost")]
+    [HttpPost("CreateHost")]
+    //[Authorize(Policy = "OnlyAdminAccess")]
+    public virtual async Task CreateHost(string clientId)
+    {
+        await _developerService.CreateHostAsync(clientId, "1");
+    }
+    
+    [HttpPost("destroyHost")]
     public async Task DestroyHostAsync(string clientId)
     {
         await _developerService.DestroyHostAsync(clientId, "1");

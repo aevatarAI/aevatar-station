@@ -124,20 +124,25 @@ private async Task EnsureDeploymentAsync(
     string deploymentLabelName, string containerName,List<string> command,int replicas, 
     int containerPort, string maxSurge, string maxUnavailable, string healthPath,bool isSilo = false)
 {
+    
+    var configMapName = ConfigMapHelper.GetAppSettingConfigMapName(appId, version);
+    var sideCarConfigName = ConfigMapHelper.GetAppFileBeatConfigMapName(appId, version);
+
+    var deployment = DeploymentHelper.CreateAppDeploymentWithFileBeatSideCarDefinition(
+        appId, version, imageName, deploymentName, deploymentLabelName, command,replicas, containerName,
+        containerPort, configMapName, sideCarConfigName, 
+        _kubernetesOptions.RequestCpuCore, _kubernetesOptions.RequestMemory, 
+        maxSurge, maxUnavailable, isSilo, healthPath);
     var deployments = await _kubernetesClientAdapter.ListDeploymentAsync(KubernetesConstants.AppNameSpace);
+    
     if (!deployments.Items.Any(item => item.Metadata.Name == deploymentName))
     {
-        var configMapName = ConfigMapHelper.GetAppSettingConfigMapName(appId, version);
-        var sideCarConfigName = ConfigMapHelper.GetAppFileBeatConfigMapName(appId, version);
-
-        var deployment = DeploymentHelper.CreateAppDeploymentWithFileBeatSideCarDefinition(
-            appId, version, imageName, deploymentName, deploymentLabelName, command,replicas, containerName,
-            containerPort, configMapName, sideCarConfigName, 
-            _kubernetesOptions.RequestCpuCore, _kubernetesOptions.RequestMemory, 
-            maxSurge, maxUnavailable, isSilo, healthPath);
-
         await _kubernetesClientAdapter.CreateDeploymentAsync(deployment, KubernetesConstants.AppNameSpace);
         _logger.LogInformation("[KubernetesAppManager] Deployment {deploymentName} created", deploymentName);
+    }
+    else
+    {       
+        await _kubernetesClientAdapter.ReplaceNamespacedDeploymentAsync(deployment, deploymentName,KubernetesConstants.AppNameSpace);
     }
 }
 

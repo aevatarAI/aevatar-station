@@ -18,8 +18,8 @@ public class Program
             .AddJsonFile("appsettings.json")
             .Build();
         
-        var webhookId = configuration["Webhook:WebhookId"];
-        var version = configuration["Webhook:Version"];
+        var hostId = configuration["Host:HostId"];
+        var version = configuration["Host:Version"];
         Log.Logger = new LoggerConfiguration()
 #if DEBUG
             .MinimumLevel.Debug()
@@ -28,7 +28,7 @@ public class Program
 #endif
             .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
             .Enrich.FromLogContext()
-            .Enrich.WithProperty("WebhookId", webhookId)
+            .Enrich.WithProperty("HostId", hostId)
             .Enrich.WithProperty("Version", version)
             .ReadFrom.Configuration(configuration)
             .CreateLogger();
