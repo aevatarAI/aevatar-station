@@ -93,11 +93,15 @@ public class KubernetesHostManager: IHostDeployManager, ISingletonDependency
 {
     string configMapName = getConfigMapNameFunc(appId, version);
     var configMaps = await _kubernetesClientAdapter.ListConfigMapAsync(KubernetesConstants.AppNameSpace);
+    var configMap = createConfigMapDefinitionFunc(configMapName, configContent);
     if (!configMaps.Items.Any(configMap => configMap.Metadata.Name == configMapName))
     {
-        var configMap = createConfigMapDefinitionFunc(configMapName, configContent);
         await _kubernetesClientAdapter.CreateConfigMapAsync(configMap, KubernetesConstants.AppNameSpace);
         _logger.LogInformation("[KubernetesAppManager] ConfigMap {configMapName} created", configMapName);
+    }
+    else
+    {
+        await _kubernetesClientAdapter.ReplaceNamespacedConfigMapAsync(configMap, configMapName,KubernetesConstants.AppNameSpace);
     }
 }
 
