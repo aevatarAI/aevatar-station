@@ -1,4 +1,5 @@
-﻿using Aevatar.ArtifactGAgents;
+﻿using Aevatar;
+using Aevatar.ArtifactGAgents;
 using Aevatar.Core.Abstractions;
 using Aevatar.Core.Abstractions.Plugin;
 using Aevatar.Core.Tests.TestGAgents;
@@ -30,6 +31,7 @@ Console.WriteLine("Select an option:");
 Console.WriteLine("1. Try Execute Plugin GAgents");
 Console.WriteLine("2. Try Get Artifact GAgent");
 Console.WriteLine("3. Show all candidate GAgents");
+Console.WriteLine("4. Call PermissionGAgent");
 var choice = Console.ReadLine();
 
 switch (choice)
@@ -42,6 +44,9 @@ switch (choice)
         break;
     case "3":
         ListCandidateGAgents(gAgentManager);
+        break;
+    case "4":
+        CallPermissionGAgent(gAgentFactory);
         break;
     default:
         Console.WriteLine("Invalid choice.");
@@ -81,4 +86,15 @@ void ListCandidateGAgents(IGAgentManager manager)
     {
         Console.WriteLine(type.FullName);
     }
+}
+
+async Task CallPermissionGAgent(IGAgentFactory factory)
+{
+    RequestContext.Set("CurrentUser", new UserContext
+    {
+        UserId = "TestUser".ToGuid(),
+        Role = "User"
+    });
+    var permissionGAgent = await factory.GetGAgentAsync<IPermissionGAgent>();
+    await permissionGAgent.DoSomethingAsync();
 }

@@ -32,11 +32,6 @@ public static class OrleansHostExtensions
                 }
 
                 LoadPlugins(services);
-
-                // services.AddApplication<AbpPermissionManagementApplicationModule>(options =>
-                // {
-                //     options.UseAutofac();
-                // });
             });
     }
 

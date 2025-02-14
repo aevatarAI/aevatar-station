@@ -30,7 +30,8 @@ public sealed class GAgentPermissionTests : AevatarGAgentsTestBase, IAsyncLifeti
 
     public async Task InitializeAsync()
     {
-        await _permissionManager.SetAsync("DoSomething", "User", "TestUser".ToGuid().ToString(), true);
+        var userId = "TestUser".ToGuid().ToString();
+        await _permissionManager.SetAsync("DoSomething", "User", userId, true);
     }
 
     public Task DisposeAsync()

@@ -1,18 +1,10 @@
-﻿using System.Reflection;
-using Aevatar.Core;
+﻿using Aevatar.Core;
 using Aevatar.Core.Abstractions;
-using Aevatar.Core.Abstractions.Plugin;
-using Aevatar.Plugins;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Orleans.Serialization;
-using Volo.Abp;
-using Volo.Abp.Authorization;
 using Volo.Abp.Autofac;
 using Volo.Abp.AutoMapper;
-using Volo.Abp.Identity;
-using Volo.Abp.Identity.MongoDB;
 using Volo.Abp.Modularity;
+using Volo.Abp.MongoDB;
 using Volo.Abp.PermissionManagement;
 using Volo.Abp.PermissionManagement.MongoDB;
 
@@ -21,10 +13,9 @@ namespace Aevatar;
 [DependsOn(
     typeof(AbpAutofacModule),
     typeof(AbpAutoMapperModule),
+    typeof(AbpMongoDbModule),
     typeof(AbpPermissionManagementApplicationModule),
-    typeof(AbpPermissionManagementMongoDbModule),
-    typeof(AbpIdentityApplicationModule),
-    typeof(AbpIdentityMongoDbModule)
+    typeof(AbpPermissionManagementMongoDbModule)
 )]
 public class AevatarModule : AbpModule
 {

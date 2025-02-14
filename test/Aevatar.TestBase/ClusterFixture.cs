@@ -104,7 +104,7 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                     services.AddSingleton(grainTypeMap);
                     services.AddSingleton<IEventDispatcher, DefaultEventDispatcher>();
                 })
-                .UseAevatar<AevatarTestBaseModule>()
+                .UseAevatar()
                 .AddMemoryStreams("Aevatar")
                 .AddMemoryGrainStorage("PubSubStore")
                 .AddMemoryGrainStorageAsDefault()

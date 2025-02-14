@@ -1,9 +1,9 @@
+using System.Reflection;
+using System.Security.Claims;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
-using Microsoft.Extensions.Logging;
 using Volo.Abp.Authorization.Permissions;
-using Volo.Abp.Identity;
-using Volo.Abp.PermissionManagement;
+using Volo.Abp.Security.Claims;
 
 namespace Aevatar;
 
@@ -31,11 +31,38 @@ public class AccountGAgent : GAgentBase<AccountGAgentState, AccountStateLogEvent
 
     public async Task PublishEventAsync<T>(T @event) where T : EventBase
     {
-        if (@event == null)
-        {
-            throw new ArgumentNullException(nameof(@event));
-        }
+        ArgumentNullException.ThrowIfNull(@event);
 
+        var permissionAttribute = @event.GetType().GetCustomAttribute<PermissionAttribute>();
+
+        if (permissionAttribute != null)
+        {
+            if (RequestContext.Get("CurrentUser") is not UserContext currentUser) return;
+
+            var claimsPrincipal = new ClaimsPrincipal(
+                new ClaimsIdentity([
+                    new Claim(AbpClaimTypes.UserId, currentUser.UserId.ToString()),
+                    new Claim(AbpClaimTypes.Role, currentUser.Role)
+                ], "Bearer"));
+
+            if (claimsPrincipal.Identity is not { IsAuthenticated: true })
+            {
+                throw new UnauthorizedAccessException("User is not authenticated.");
+            }
+
+            var isGranted = await _permissionChecker.IsGrantedAsync(
+                claimsPrincipal,
+                permissionAttribute.Name
+            );
+
+            if (isGranted)
+            {
+                throw new UnauthorizedAccessException(
+                    $"Required permission '{permissionAttribute.Name}' is not granted."
+                );
+            }
+        }
+        
         await PublishAsync(@event);
     }
 }

@@ -11,7 +11,8 @@ namespace Aevatar.TestBase;
 
 [DependsOn(
     typeof(AbpAutofacModule),
-    typeof(AbpTestBaseModule)
+    typeof(AbpTestBaseModule),
+    typeof(AevatarModule)
 )]
 public class AevatarTestBaseModule : AbpModule
 {

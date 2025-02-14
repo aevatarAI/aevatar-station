@@ -26,8 +26,8 @@ public class PermissionCheckFilter : IIncomingGrainCallFilter
 
             var claimsPrincipal = new ClaimsPrincipal(
                 new ClaimsIdentity([
-                    new Claim(AbpClaimTypes.UserId, currentUser!.UserId.ToString()),
-                    new Claim(ClaimTypes.Role, currentUser.Role)
+                    new Claim(AbpClaimTypes.UserId, currentUser.UserId.ToString()),
+                    new Claim(AbpClaimTypes.Role, currentUser.Role)
                 ], "Bearer"));
 
             if (claimsPrincipal.Identity is not { IsAuthenticated: true })

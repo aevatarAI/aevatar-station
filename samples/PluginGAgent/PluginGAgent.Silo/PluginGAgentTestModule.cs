@@ -14,8 +14,7 @@ namespace PluginGAgent.Silo;
 [DependsOn(
     typeof(AbpAspNetCoreSerilogModule),
     typeof(AbpAutofacModule),
-    typeof(AbpAutoMapperModule),
-    typeof(AevatarModule)
+    typeof(AbpAutoMapperModule)
 )]
 public class PluginGAgentTestModule : AbpModule
 {
