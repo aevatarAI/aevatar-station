@@ -25,13 +25,13 @@ public interface IWebhookService
 public class WebhookService: ApplicationService, IWebhookService
 {
     private readonly IClusterClient _clusterClient;
-    private readonly IWebhookDeployManager _webhookDeployManager;
+    private readonly IHostDeployManager _hostDeployManager;
     private readonly WebhookDeployOptions _webhookDeployOptions;
-    public WebhookService(IClusterClient clusterClient,IWebhookDeployManager webhookDeployManager,
+    public WebhookService(IClusterClient clusterClient,IHostDeployManager hostDeployManager,
         IOptions<WebhookDeployOptions> webhookDeployOptions)
     {
         _clusterClient = clusterClient;
-        _webhookDeployManager = webhookDeployManager;
+        _hostDeployManager = hostDeployManager;
         _webhookDeployOptions = webhookDeployOptions.Value;
     }
 
@@ -41,7 +41,7 @@ public class WebhookService: ApplicationService, IWebhookService
         {
             await _clusterClient.GetGrain<ICodeGAgent>(GuidUtil.StringToGuid(webhookId)).UploadCodeAsync(
                 webhookId,version,codeBytes);
-            await _webhookDeployManager.CreateNewWebHookAsync(webhookId, version,_webhookDeployOptions.WebhookImageName);
+            await _hostDeployManager.CreateNewWebHookAsync(webhookId, version,_webhookDeployOptions.WebhookImageName);
 
         }
     }
@@ -54,7 +54,7 @@ public class WebhookService: ApplicationService, IWebhookService
 
     public async Task DestroyWebhookAsync(string inputWebhookId, string inputVersion)
     {
-        await _webhookDeployManager.DestroyWebHookAsync(inputWebhookId, inputVersion);
+        await _hostDeployManager.DestroyWebHookAsync(inputWebhookId, inputVersion);
     }
 }
 

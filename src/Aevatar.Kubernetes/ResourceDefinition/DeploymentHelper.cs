@@ -27,21 +27,36 @@ public class DeploymentHelper
     /// <summary>
     /// 
     /// </summary>
+    /// <param name="appId"></param>
+    /// <param name="version"></param>
     /// <param name="imageName"></param>
     /// <param name="deploymentName"></param>
     /// <param name="deploymentLabelName">must be no more than 63 characters</param>
+    /// <param name="command"></param>
     /// <param name="replicasCount"></param>
     /// <param name="containerName"></param>
     /// <param name="containerPort"></param>
     /// <param name="configMapName"></param>
     /// <param name="sideCarConfigMapName"></param>
+    /// <param name="requestCpu"></param>
+    /// <param name="requestMemory"></param>
+    /// <param name="maxSurge"></param>
+    /// <param name="maxUnavailable"></param>
+    /// <param name="isSilo"></param>
+    /// <param name="readinessProbeHealthPath"></param>
     /// <returns></returns>
     public static V1Deployment CreateAppDeploymentWithFileBeatSideCarDefinition(string appId, string version,
-        string imageName, string deploymentName, string deploymentLabelName,
-        int replicasCount, string containerName, int containerPort, string configMapName, string sideCarConfigMapName, 
-        string requestCpu, string requestMemory, string maxSurge, string maxUnavailable, string readinessProbeHealthPath = null)
+        string imageName, string deploymentName, string deploymentLabelName, List<string> command,
+        int replicasCount, string containerName, int containerPort, string configMapName, string sideCarConfigMapName,
+        string requestCpu, string requestMemory, string maxSurge, string maxUnavailable,
+        bool isSilo, string readinessProbeHealthPath = null)
     {
         var labels = CreateLabels(deploymentLabelName, appId, version);
+        V1EnvVar[] env = null;
+        if (isSilo)
+        {
+            env = GetV1Env(appId);
+        }
         var deployment = new V1Deployment
         {
             Metadata = new V1ObjectMeta
@@ -61,8 +76,8 @@ public class DeploymentHelper
                     {
                         Affinity = CreateNodeAffinity(),
                         Tolerations = CreateNodeTolerations(),
-                        Containers = CreateContainers(imageName, containerName, containerPort,
-                            requestCpu, requestMemory, readinessProbeHealthPath),
+                        Containers = CreateContainers(imageName, containerName, command,containerPort,
+                            requestCpu, requestMemory, readinessProbeHealthPath, env),
                         Volumes = CreatePodTemplateVolumes(configMapName, sideCarConfigMapName)
                     }
                 }
@@ -142,26 +157,28 @@ public class DeploymentHelper
         };
     }
     
-    private static List<V1Container> CreateContainers(string imageName, string containerName, int containerPort, 
-        string requestCpu, string requestMemory, string readinessProbeHealthPath)
+    private static List<V1Container> CreateContainers(string imageName, string containerName, List<string> command,
+        int containerPort,
+        string requestCpu, string requestMemory, string readinessProbeHealthPath, V1EnvVar[] env)
     {
         // Main container
         var mainContainer = new V1Container
         {
             Name = containerName,
             Image = imageName,
-            Command = new List<string> { "dotnet", "Aevatar.WebHook.Host.dll" },
+            Command = command ,
             Ports = new List<V1ContainerPort> { new V1ContainerPort(containerPort) },
             VolumeMounts = CreateMainContainerVolumeMounts(),
             Resources = CreateResources(requestCpu, requestMemory),
-            // ReadinessProbe = CreateQueryPodReadinessProbe(readinessProbeHealthPath, containerPort)
         };
-        // Add a ready probe only if the readinessProbeHealthPath is provided
+        if (env != null) 
+        {
+            mainContainer.Env = env;
+        }
         if (!string.IsNullOrEmpty(readinessProbeHealthPath)) 
         {
             mainContainer.ReadinessProbe = CreateQueryPodReadinessProbe(readinessProbeHealthPath, containerPort);
         }
-        
         // Filebeat side car container
         var sideCarContainer = new V1Container
         {
@@ -180,7 +197,48 @@ public class DeploymentHelper
             mainContainer, sideCarContainer
         };
     }
-    
+
+    private static V1EnvVar[] GetV1Env(string appId) {
+        return new V1EnvVar[]
+        {
+            new V1EnvVar("ORLEANS_SERVICE_ID", $"{appId}BasicService"),
+            new V1EnvVar("ORLEANS_CLUSTER_ID", $"{appId}SiloCluster"),
+            new V1EnvVar
+            {
+                Name = "POD_NAMESPACE",
+                ValueFrom = new V1EnvVarSource
+                {
+                    FieldRef = new V1ObjectFieldSelector
+                    {
+                        FieldPath = "metadata.namespace"
+                    }
+                }
+            },
+            new V1EnvVar
+            {
+                Name = "POD_NAME",
+                ValueFrom = new V1EnvVarSource
+                {
+                    FieldRef = new V1ObjectFieldSelector
+                    {
+                        FieldPath = "metadata.name"
+                    }
+                }
+            },
+            new V1EnvVar
+            {
+                Name = "POD_IP",
+                ValueFrom = new V1EnvVarSource
+                {
+                    FieldRef = new V1ObjectFieldSelector
+                    {
+                        FieldPath = "status.podIP"
+                    }
+                }
+            }
+        };
+    }
+
     public static V1ResourceRequirements CreateResources(string requestCpu, string requestMemory)
     {
         return new V1ResourceRequirements

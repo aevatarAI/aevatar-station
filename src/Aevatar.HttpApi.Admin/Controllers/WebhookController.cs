@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Aevatar.Controllers;
 using Aevatar.Service;
 using Aevatar.Webhook;
 using Asp.Versioning;
@@ -7,7 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 
-namespace Aevatar.Controllers;
+namespace Aevatar.Admin.Controllers;
 
 [RemoteService]
 [ControllerName("App")]

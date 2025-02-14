@@ -49,6 +49,7 @@ public class AevatarApplicationModule : AbpModule
         Configure<WebhookDeployOptions>(configuration.GetSection("WebhookDeploy"));
         Configure<AgentOptions>(configuration.GetSection("Agent"));
         context.Services.AddSingleton<IPluginGAgentManager, PluginGAgentManager>();
-        context.Services.AddTransient<IWebhookDeployManager, KubernetesWebhookManager>();
+        context.Services.AddTransient<IHostDeployManager, KubernetesHostManager>();
+        Configure<HostDeployOptions>(configuration.GetSection("HostDeploy"));
     }
 }

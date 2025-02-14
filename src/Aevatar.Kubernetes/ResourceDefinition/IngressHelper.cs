@@ -22,7 +22,7 @@ public class IngressHelper
                 NamespaceProperty = KubernetesConstants.AppNameSpace,
                 Annotations = new Dictionary<string, string>
                 {
-                    // { "nginx.ingress.kubernetes.io/rewrite-target", "/" }
+                    { "nginx.ingress.kubernetes.io/rewrite-target", "/$2" }
                 }
             },
             Spec = new V1IngressSpec
@@ -39,8 +39,8 @@ public class IngressHelper
                             {
                                 new V1HTTPIngressPath
                                 {
-                                    Path = rulePath,
-                                    PathType = "Prefix",
+                                    Path = $"{rulePath}(/|$)(.*)",
+                                    PathType = "ImplementationSpecific",
                                     Backend = new V1IngressBackend
                                     {
                                         Service = new V1IngressServiceBackend

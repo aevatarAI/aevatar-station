@@ -1,26 +1,18 @@
 using System;
 using System.IO;
-using System.Linq;
 using AElf.OpenTelemetry;
+using Aevatar.MongoDB;
 using AutoResponseWrapper;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Aevatar.MongoDB;
-using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite;
-using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite.Bundling;
 using Microsoft.OpenApi.Models;
-using Aevatar.Application.Grains;
-using Aevatar.Domain.Grains;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Account.Web;
-using Volo.Abp.AspNetCore.Mvc;
-using Volo.Abp.AspNetCore.Mvc.UI.Bundling;
+using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
@@ -28,10 +20,10 @@ using Volo.Abp.Modularity;
 using Volo.Abp.Swashbuckle;
 using Volo.Abp.VirtualFileSystem;
 
-namespace Aevatar;
+namespace Aevatar.Developer.Host;
 
 [DependsOn(
-    typeof(AevatarHttpApiAdminModule),
+    typeof(AevatarHttpApiModule),
     typeof(AbpAutofacModule),
     typeof(AevatarApplicationModule),
     typeof(AevatarMongoDbModule),
@@ -41,39 +33,20 @@ namespace Aevatar;
     typeof(AbpSwashbuckleModule),
     typeof(OpenTelemetryModule)
 )]
-public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrainsModule
+public class AevatarDeveloperHostModule : AbpModule
 {
-    public override void PreConfigureServices(ServiceConfigurationContext context)
-    {
-        PreConfigure<IdentityBuilder>(builder =>
-        {
-            builder.AddDefaultTokenProviders();
-        });
-    }
-
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
+        context.Services.AddHealthChecks();
+        context.Services.AddAutoResponseWrapper();
         var configuration = context.Services.GetConfiguration();
-        var hostingEnvironment = context.Services.GetHostingEnvironment();
-
-        ConfigureAuthentication(context, configuration);
-        ConfigureBundles();
-       // ConfigureUrls(configuration);
-        ConfigureConventionalControllers();
+        ConfigureAuthentication(context,configuration);
         ConfigureVirtualFileSystem(context);
-        ConfigureAutoResponseWrapper(context);
         ConfigureSwaggerServices(context, configuration);
-        //context.Services.AddDaprClient();
-        
         context.Services.AddMvc(options =>
         {
             options.Filters.Add(new IgnoreAntiforgeryTokenAttribute());
         });
-    }
-
-    private static void ConfigureAutoResponseWrapper(ServiceConfigurationContext context)
-    {
-        context.Services.AddAutoResponseWrapper();
     }
     
     private void ConfigureAuthentication(ServiceConfigurationContext context, IConfiguration configuration)
@@ -85,26 +58,8 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
                 options.RequireHttpsMetadata = Convert.ToBoolean(configuration["AuthServer:RequireHttpsMetadata"]);
                 options.Audience = "Aevatar";
             });
-        context.Services.AddAuthorization(options =>
-        {
-            options.AddPolicy("OnlyAdminAccess", policy =>
-                policy.RequireRole("admin"));
-        });
     }
-
-    private void ConfigureBundles()
-    {
-        Configure<AbpBundlingOptions>(options =>
-        {
-            options.StyleBundles.Configure(
-                LeptonXLiteThemeBundles.Styles.Global,
-                bundle =>
-                {
-                    bundle.AddFiles("/global-styles.css");
-                }
-            );
-        });
-    }
+    
     private void ConfigureVirtualFileSystem(ServiceConfigurationContext context)
     {
         var hostingEnvironment = context.Services.GetHostingEnvironment();
@@ -127,14 +82,6 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
                         $"..{Path.DirectorySeparatorChar}Aevatar.Application"));
             });
         }
-    }
-
-    private void ConfigureConventionalControllers()
-    {
-        Configure<AbpAspNetCoreMvcOptions>(options =>
-        {
-            options.ConventionalControllers.Create(typeof(AevatarApplicationModule).Assembly);
-        });
     }
 
     private static void ConfigureSwaggerServices(ServiceConfigurationContext context, IConfiguration configuration)
@@ -167,6 +114,10 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
             }
         );
     }
+    public override void OnPreApplicationInitialization(ApplicationInitializationContext context)
+    {
+
+    }
 
     public override void OnApplicationInitialization(ApplicationInitializationContext context)
     {
@@ -193,7 +144,10 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
 
         app.UseUnitOfWork();
         app.UseDynamicClaims();
-        app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapHealthChecks("/health");
+        });
         app.UseSwagger();
         app.UseAbpSwaggerUI(c =>
         {
@@ -203,9 +157,13 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
             c.OAuthClientId(configuration["AuthServer:SwaggerClientId"]);
             c.OAuthScopes("Aevatar");
         });
-        
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();
         app.UseConfiguredEndpoints();
+    }
+       
+    public override void OnApplicationShutdown(ApplicationShutdownContext context)
+    {
+
     }
 }

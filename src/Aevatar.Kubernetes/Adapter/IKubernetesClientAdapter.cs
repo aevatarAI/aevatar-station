@@ -79,4 +79,12 @@ public interface IKubernetesClientAdapter
         CancellationToken cancellationToken = default(CancellationToken));
 
     Task<PodMetricsList> GetKubernetesPodsMetricsByNamespaceAsync(string namespaceParameter);
+
+    public Task<V2HorizontalPodAutoscaler> ReadNamespacedHorizontalPodAutoscalerAsync(string name,
+        string namespaceParameter, CancellationToken cancellationToken = default(CancellationToken));
+
+    public Task<V2HorizontalPodAutoscaler> CreateNamespacedHorizontalPodAutoscalerAsync(V2HorizontalPodAutoscaler body,
+        string namespaceParameter, CancellationToken cancellationToken = default(CancellationToken));
+
+
 }

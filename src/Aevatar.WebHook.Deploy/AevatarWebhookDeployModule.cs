@@ -8,6 +8,6 @@ public class AevatarWebhookDeployModule : AbpModule
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
         var services = context.Services;
-        services.AddTransient(typeof(IWebhookDeployManager), typeof(DefaultWebhookDeployManager));
+        services.AddTransient(typeof(IHostDeployManager), typeof(DefaultHostDeployManager));
     }
 }

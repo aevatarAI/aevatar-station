@@ -1,5 +1,6 @@
 using Aevatar.Kubernetes.ResourceDefinition;
 using k8s;
+using k8s.Autorest;
 using k8s.Models;
 using Volo.Abp.DependencyInjection;
 
@@ -202,5 +203,24 @@ public class KubernetesClientAdapter : IKubernetesClientAdapter, ISingletonDepen
     public async Task<PodMetricsList> GetKubernetesPodsMetricsByNamespaceAsync(string namespaceParameter)
     {
         return await _k8sClient.GetKubernetesPodsMetricsByNamespaceAsync(namespaceParameter);
+    }
+    
+    public async Task<V2HorizontalPodAutoscaler> ReadNamespacedHorizontalPodAutoscalerAsync(string name,string namespaceParameter, CancellationToken cancellationToken = default(CancellationToken))
+    {
+        try
+        {
+            return await _k8sClient.AutoscalingV2.ReadNamespacedHorizontalPodAutoscalerAsync(name, namespaceParameter,
+                    cancellationToken: cancellationToken);
+        }
+        catch (HttpOperationException ex) when (ex.Response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+    }
+    
+    public async Task<V2HorizontalPodAutoscaler> CreateNamespacedHorizontalPodAutoscalerAsync( V2HorizontalPodAutoscaler body,string namespaceParameter, CancellationToken cancellationToken = default(CancellationToken))
+    {
+            return await _k8sClient.AutoscalingV2.CreateNamespacedHorizontalPodAutoscalerAsync(body, namespaceParameter,
+                cancellationToken: cancellationToken);
     }
 }
