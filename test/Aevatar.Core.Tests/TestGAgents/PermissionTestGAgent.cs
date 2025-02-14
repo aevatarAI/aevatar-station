@@ -1,4 +1,5 @@
 using Aevatar.Core.Abstractions;
+using Aevatar.PermissionManagement;
 using Microsoft.Extensions.Logging;
 
 namespace Aevatar.Core.Tests.TestGAgents;

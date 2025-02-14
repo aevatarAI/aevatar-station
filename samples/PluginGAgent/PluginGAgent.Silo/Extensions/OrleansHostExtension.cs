@@ -1,5 +1,6 @@
 using Aevatar.EventSourcing.MongoDB.Hosting;
 using Aevatar.Extensions;
+using Aevatar.PermissionManagement.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
@@ -28,7 +29,8 @@ public static class OrleansHostExtension
                         options.Database = "AevatarDb";
                     })
                     .AddMemoryStreams("Aevatar")
-                    .UseAevatar<PluginGAgentTestModule>();
+                    .UseAevatar<PluginGAgentTestModule>()
+                    .UseAevatarPermissionManagement();
             })
             .UseConsoleLifetime();
     }

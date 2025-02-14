@@ -1,9 +1,7 @@
 ﻿using Aevatar.Core.Abstractions;
 using Aevatar.Extensions;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Volo.Abp.PermissionManagement;
 
 var builder = Host.CreateDefaultBuilder(args)
     .UseOrleans(silo =>
@@ -19,7 +17,5 @@ var builder = Host.CreateDefaultBuilder(args)
     .UseConsoleLifetime();
 
 using var host = builder.Build();
-
-var permissionManager = host.Services.GetRequiredService<IPermissionManager>();
 
 await host.RunAsync();

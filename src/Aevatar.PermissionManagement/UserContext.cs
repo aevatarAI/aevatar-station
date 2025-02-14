@@ -1,4 +1,6 @@
-namespace Aevatar;
+using Orleans;
+
+namespace Aevatar.PermissionManagement;
 
 [GenerateSerializer]
 public class UserContext

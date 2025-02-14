@@ -74,6 +74,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "PermissionManagementSample"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PermissionManagementSample.Silo", "samples\PermissionManagementSample\PermissionManagementSample.Silo\PermissionManagementSample.Silo.csproj", "{F24CF4D5-D18F-42CB-9F47-BAE3BCF4C1E7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.PermissionManagement", "src\Aevatar.PermissionManagement\Aevatar.PermissionManagement.csproj", "{CFECE7AD-4344-475D-8322-DFBEC2972B6E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -114,6 +116,7 @@ Global
 		{16CBB0B8-F21E-425E-991C-8E2E6871A87C} = {94D0A422-54BA-48E4-9AAA-4C59BFF72F06}
 		{4100F37D-CAFD-434C-99DB-4C2835292E23} = {78519A39-0189-4978-9529-F9C6F361D8F2}
 		{F24CF4D5-D18F-42CB-9F47-BAE3BCF4C1E7} = {4100F37D-CAFD-434C-99DB-4C2835292E23}
+		{CFECE7AD-4344-475D-8322-DFBEC2972B6E} = {94D0A422-54BA-48E4-9AAA-4C59BFF72F06}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{70485291-29F6-4FBA-BFE3-3F400184B3C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -232,5 +235,9 @@ Global
 		{F24CF4D5-D18F-42CB-9F47-BAE3BCF4C1E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F24CF4D5-D18F-42CB-9F47-BAE3BCF4C1E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F24CF4D5-D18F-42CB-9F47-BAE3BCF4C1E7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CFECE7AD-4344-475D-8322-DFBEC2972B6E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CFECE7AD-4344-475D-8322-DFBEC2972B6E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CFECE7AD-4344-475D-8322-DFBEC2972B6E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CFECE7AD-4344-475D-8322-DFBEC2972B6E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

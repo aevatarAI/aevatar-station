@@ -33,12 +33,6 @@ foreach (var gAgent in allGAgents)
     Console.WriteLine(gAgent.FullName);
 }
 
-var accountGAgent = await gAgentFactory.GetGAgentAsync<IAccountGAgent>();
-await accountGAgent.PublishEventAsync(new NaiveTestEvent
-{
-
-});
-
 Console.WriteLine();
 
 {

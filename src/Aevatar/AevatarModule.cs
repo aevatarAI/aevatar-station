@@ -4,18 +4,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.Autofac;
 using Volo.Abp.AutoMapper;
 using Volo.Abp.Modularity;
-using Volo.Abp.MongoDB;
-using Volo.Abp.PermissionManagement;
-using Volo.Abp.PermissionManagement.MongoDB;
 
 namespace Aevatar;
 
 [DependsOn(
     typeof(AbpAutofacModule),
-    typeof(AbpAutoMapperModule),
-    typeof(AbpMongoDbModule),
-    typeof(AbpPermissionManagementApplicationModule),
-    typeof(AbpPermissionManagementMongoDbModule)
+    typeof(AbpAutoMapperModule)
 )]
 public class AevatarModule : AbpModule
 {

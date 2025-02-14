@@ -1,5 +1,6 @@
 using Aevatar.Core.Abstractions;
 using Aevatar.Core.Tests.TestGAgents;
+using Aevatar.PermissionManagement;
 using Aevatar.Plugins.Extensions;
 using Volo.Abp.PermissionManagement;
 
