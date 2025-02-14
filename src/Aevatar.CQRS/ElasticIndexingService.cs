@@ -164,11 +164,16 @@ public class ElasticIndexingService : IIndexingService
                 _logger.LogError(
                     "state documents query fail, indexName:{indexName} error:{error} ,DebugInfo{DebugInfo}", indexName,
                     response.ServerError?.Error.Reason, JsonConvert.SerializeObject(response.DebugInformation));
-                return null;
+                return "";
             }
 
-            var documents = response.Hits.Select(hit => hit.Source);
-            var documentContent = JsonConvert.SerializeObject(documents);
+            var documents = response.Hits.Select(hit => hit.Source).ToList();
+            if (documents.Count == 0)
+            {
+                return "";
+            }
+            
+            var documentContent = JsonConvert.SerializeObject(documents.FirstOrDefault());
             return documentContent;
         }
         catch (Exception e)
