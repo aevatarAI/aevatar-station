@@ -45,6 +45,7 @@ public class CqrsService : ApplicationService,ICqrsService
 
     public async Task<AgentStateDto> QueryStateAsync(string stateName, Guid guid)
     {
+        stateName = stateName.ToLower();
         var stopwatch = Stopwatch.StartNew();
         var data = await _cqrsProvider.QueryAgentStateAsync(stateName, guid);
         stopwatch.Stop();

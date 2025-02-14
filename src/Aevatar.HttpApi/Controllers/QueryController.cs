@@ -22,18 +22,18 @@ public class QueryController : AevatarController
     }
     
     [HttpGet("logs")]
-    public async Task<AgentEventLogsDto> GetEventLogs([FromQuery] Guid? guid, string agentType, int pageIndex, int pageSize)
+    public async Task<AgentEventLogsDto> GetEventLogs([FromQuery] Guid? id, string agentType, int pageIndex = 0, int pageSize = 20)
     {
         
-        var resp = await _cqrsService.QueryGEventAsync(guid, agentType, pageIndex, pageSize);
+        var resp = await _cqrsService.QueryGEventAsync(id, agentType, pageIndex, pageSize);
         return resp;
     }
     
     [HttpGet("state")]
-    public async Task<AgentStateDto> GetStates([FromQuery] string stateName, Guid guid)
+    public async Task<AgentStateDto> GetStates([FromQuery] string stateName, Guid id)
     {
         
-        var resp = await _cqrsService.QueryStateAsync(stateName, guid);
+        var resp = await _cqrsService.QueryStateAsync(stateName, id);
         return resp;
     }
     

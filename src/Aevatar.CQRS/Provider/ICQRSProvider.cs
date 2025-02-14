@@ -14,5 +14,5 @@ public interface ICQRSProvider : IEventDispatcher
     Task<Tuple<long, List<AgentGEventIndex>>> QueryGEventAsync(string eventId, List<string> grainIds, int pageNumber, int pageSize);
     
     Task<Tuple<long, List<AgentGEventIndex>>> QueryAgentGEventAsync(Guid? primaryKey, string agentType, int pageNumber, int pageSize);
-    Task<string> QueryAgentStateAsync(string indexName, Guid primaryKey);
+    Task<string> QueryAgentStateAsync(string stateName, Guid primaryKey);
 }

@@ -116,7 +116,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         return tuple;
     }
 
-    public async Task<string> QueryAgentStateAsync(string indexName, Guid primaryKey)
+    public async Task<string> QueryAgentStateAsync(string stateName, Guid primaryKey)
     {
         var mustQuery = new List<Func<QueryContainerDescriptor<dynamic>, QueryContainer>>
         {
@@ -128,7 +128,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         
         var getStateQuery = new GetStateQuery()
         {
-            Index = indexName,
+            Index = CqrsConstant.IndexPrefix + stateName + CqrsConstant.IndexSuffix,
             Query = Filter,
             Skip = 0,
             Limit = 1
