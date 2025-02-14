@@ -22,9 +22,7 @@ public class PermissionCheckFilter : IIncomingGrainCallFilter
 
         if (permissionAttribute != null)
         {
-            var currentUser = RequestContext.Get("CurrentUser") as UserContext;
-
-            if (currentUser == null) return;
+            if (RequestContext.Get("CurrentUser") is not UserContext currentUser) return;
 
             var claimsPrincipal = new ClaimsPrincipal(
                 new ClaimsIdentity([

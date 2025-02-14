@@ -1,7 +1,7 @@
 // ReSharper disable once CheckNamespace
 namespace Aevatar.Core.Abstractions;
 
-[AttributeUsage(AttributeTargets.Method, Inherited = false)]
+[AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]
 public class PermissionAttribute : Attribute
 {
     public string Name { get; }
