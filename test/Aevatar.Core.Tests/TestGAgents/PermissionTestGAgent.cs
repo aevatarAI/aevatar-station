@@ -29,7 +29,7 @@ public class PermissionGAgent : GAgentBase<PermissionGAgentState, PermissionStat
         return Task.FromResult("This is a GAgent for testing permissions.");
     }
 
-    [Permission("DoSomething")]
+    [Permission("DoSomething", "Only for testing.")]
     public Task DoSomethingAsync()
     {
         Logger.LogInformation("DoSomethingAsync called.");
