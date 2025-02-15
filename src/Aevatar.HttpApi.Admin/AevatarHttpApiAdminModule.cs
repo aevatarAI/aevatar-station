@@ -12,7 +12,8 @@ namespace Aevatar;
     typeof(AevatarApplicationContractsModule),
     typeof(AbpAccountHttpApiModule),
     typeof(AbpIdentityHttpApiModule),
-    typeof(AbpPermissionManagementHttpApiModule)
+    typeof(AbpPermissionManagementHttpApiModule),
+    typeof(AevatarHttpApiModule)
     )]
 public class AevatarHttpApiAdminModule : AbpModule
 {

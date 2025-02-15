@@ -44,8 +44,13 @@ public class KubernetesConstants
      public const string HostPlaceHolderAppId = "[HostId]";
      public const string HostPlaceHolderVersion = "[Version]";
      public const string HostPlaceHolderNameSpace = "[NameSpace]";
+     public const string HostSilo = "silo";
+     public const string HostClient = "client";
+     public const string HostClientCors = "[Cors]";
+     
      public static readonly List<string> HostSiloCommand = new() { "dotnet", "Aevatar.Silo.dll" };
      public static readonly List<string> HostClientCommand = new() { "dotnet", "Aevatar.Developer.Host.dll" };
+     
      public const string HostQueryPodMaxSurge = "50%";
      public const string HostQueryPodMaxUnavailable = "0";
      //Prometheus

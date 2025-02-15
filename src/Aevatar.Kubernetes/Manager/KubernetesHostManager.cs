@@ -2,6 +2,7 @@ using Aevatar.Kubernetes.Adapter;
 using Aevatar.Kubernetes.ResourceDefinition;
 using Aevatar.Options;
 using Aevatar.WebHook.Deploy;
+using JetBrains.Annotations;
 using k8s.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -120,6 +121,19 @@ private static string GetHostSiloConfigContent(string appId, string version, str
         .Replace(KubernetesConstants.HostPlaceHolderAppId, appId.ToLower())
         .Replace(KubernetesConstants.HostPlaceHolderVersion, version.ToLower())
         .Replace(KubernetesConstants.HostPlaceHolderNameSpace, KubernetesConstants.AppNameSpace.ToLower());
+    return configContent;
+}
+
+private static string GetHostClientConfigContent(string appId, string version, string templateFilePath,[CanBeNull] List<string> corsUrls)
+{
+    string configContent = File.ReadAllText(templateFilePath)
+        .Replace(KubernetesConstants.HostPlaceHolderAppId, appId.ToLower())
+        .Replace(KubernetesConstants.HostPlaceHolderVersion, version.ToLower())
+        .Replace(KubernetesConstants.HostPlaceHolderNameSpace, KubernetesConstants.AppNameSpace.ToLower());
+    if (corsUrls != null)
+    {
+        configContent = configContent.Replace(KubernetesConstants.HostClientCors, string.Join(",", corsUrls));
+    }
     return configContent;
 }
 
@@ -272,15 +286,20 @@ private async Task EnsureIngressAsync(
         await RestartDeploymentAsync(deploymentName);
     }
 
-    public async Task<string> CreateHostAsync(string appId, string version)
+    public async Task<string> CreateHostAsync(string appId, string version, List<string> corsUrls)
     {
-        await CreateHostSiloAsync(appId+"-silo", version, _HostDeployOptions.HostSiloImageName);
+        await CreateHostSiloAsync(GetHostName(appId,KubernetesConstants.HostSilo), version, _HostDeployOptions.HostSiloImageName);
 
         // await EnsurePhaAsync(appId, version);
-       await CreatePodAsync(appId+"-client", version, _HostDeployOptions.HostClientImageName,
-           GetHostSiloConfigContent(appId, version, KubernetesConstants.HostClientSettingTemplateFilePath),
+       await CreatePodAsync(GetHostName(appId,KubernetesConstants.HostClient), version, _HostDeployOptions.HostClientImageName,
+           GetHostClientConfigContent(appId, version, KubernetesConstants.HostClientSettingTemplateFilePath,corsUrls),
            KubernetesConstants.HostClientCommand,_kubernetesOptions.DeveloperHostName);
         return "";
+    }
+
+    private string GetHostName(string appId,string appType)
+    {
+        return $"{appId}-{appType}";
     }
 
     private async Task CreateHostSiloAsync(string appId, string version, string imageName)
@@ -325,8 +344,8 @@ private async Task EnsureIngressAsync(
 
     public async Task DestroyHostAsync(string appId, string version)
     {
-        await DestroyHostSiloAsync(appId + "-silo", version);
-        await DestroyPodsAsync(appId + "-client", version);
+        await DestroyHostSiloAsync(GetHostName(appId,KubernetesConstants.HostSilo), version);
+        await DestroyPodsAsync(GetHostName(appId,KubernetesConstants.HostClient), version);
     }
 
     private async Task DestroyHostSiloAsync(string appId, string version)

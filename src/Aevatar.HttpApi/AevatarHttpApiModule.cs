@@ -1,4 +1,5 @@
-﻿using Localization.Resources.AbpUi;
+﻿using Aevatar.Developer.Logger;
+using Localization.Resources.AbpUi;
 using Aevatar.Localization;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.Account;
@@ -13,7 +14,8 @@ namespace Aevatar;
     typeof(AevatarApplicationContractsModule),
     typeof(AbpAccountHttpApiModule),
     typeof(AbpIdentityHttpApiModule),
-    typeof(AbpPermissionManagementHttpApiModule)
+    typeof(AbpPermissionManagementHttpApiModule),
+    typeof(AevatarDeveloperLoggerModule)
     )]
 public class AevatarHttpApiModule : AbpModule
 {

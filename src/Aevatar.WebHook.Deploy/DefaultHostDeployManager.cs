@@ -17,7 +17,7 @@ public class DefaultHostDeployManager : IHostDeployManager
         return;
     }
 
-    public async Task<string> CreateHostAsync(string appId, string version)
+    public async Task<string> CreateHostAsync(string appId, string version, List<string> corsUrls)
     {
         return string.Empty;
     }

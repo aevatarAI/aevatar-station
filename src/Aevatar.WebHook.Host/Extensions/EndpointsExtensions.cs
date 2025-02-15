@@ -41,10 +41,17 @@ public static class EndpointsExtensions
     {
         try
         {
-            await webhook.HandleAsync(context.Request);
+           var result = await webhook.HandleAsync(context.Request);
 
             context.Response.ContentType = "application/json";
-            await context.Response.WriteAsync($"Webhook {webhook.RelativePath} successfully processed.");
+            if (result != null)
+            {
+                await context.Response.WriteAsJsonAsync(result);   
+            }
+            else
+            {
+                await context.Response.WriteAsync($"Webhook {webhook.RelativePath} successfully processed.");
+            }
         }
         catch (Exception ex)
         {

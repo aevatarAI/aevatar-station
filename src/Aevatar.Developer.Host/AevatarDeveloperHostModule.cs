@@ -1,10 +1,12 @@
 using System;
 using System.IO;
+using System.Linq;
 using AElf.OpenTelemetry;
 using Aevatar.MongoDB;
 using AutoResponseWrapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -42,6 +44,7 @@ public class AevatarDeveloperHostModule : AbpModule
         var configuration = context.Services.GetConfiguration();
         ConfigureAuthentication(context,configuration);
         ConfigureVirtualFileSystem(context);
+        ConfigureCors(context, configuration);
         ConfigureSwaggerServices(context, configuration);
         context.Services.AddMvc(options =>
         {
@@ -82,6 +85,26 @@ public class AevatarDeveloperHostModule : AbpModule
                         $"..{Path.DirectorySeparatorChar}Aevatar.Application"));
             });
         }
+    }
+    
+    private void ConfigureCors(ServiceConfigurationContext context, IConfiguration configuration)
+    {
+        context.Services.AddCors(options =>
+        {
+            options.AddDefaultPolicy(builder =>
+            {
+                builder
+                    .WithOrigins(configuration["App:CorsOrigins"]?
+                        .Split(",", StringSplitOptions.RemoveEmptyEntries)
+                        .Select(o => o.RemovePostFix("/"))
+                        .ToArray() ?? Array.Empty<string>())
+                    .WithAbpExposedHeaders()
+                    .SetIsOriginAllowedToAllowWildcardSubdomains()
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
+            });
+        });
     }
 
     private static void ConfigureSwaggerServices(ServiceConfigurationContext context, IConfiguration configuration)
@@ -139,9 +162,10 @@ public class AevatarDeveloperHostModule : AbpModule
         app.UseCorrelationId();
         app.UseStaticFiles();
         app.UseRouting();
+        app.UseCors();
         app.UseAuthentication();
         app.UseAuthorization();
-
+        
         app.UseUnitOfWork();
         app.UseDynamicClaims();
         app.UseEndpoints(endpoints =>
