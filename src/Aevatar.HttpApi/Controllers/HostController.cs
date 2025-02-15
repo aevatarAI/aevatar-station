@@ -16,7 +16,7 @@ namespace Aevatar.Controllers;
 [RemoteService]
 [ControllerName("Host")]
 [Route("api/host")]
-//[Authorize]
+[Authorize]
 public class HostController
 {
     private readonly ILogService _logService;

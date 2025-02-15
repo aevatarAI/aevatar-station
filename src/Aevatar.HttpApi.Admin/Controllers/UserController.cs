@@ -24,22 +24,22 @@ public class UserController :  AevatarController
     }
 
     [HttpPost("registerClient")]
-    //   [Authorize(Policy = "OnlyAdminAccess")]
-    public virtual async Task RegisterClientAuthentication(string clientId, string clientSecret, List<string> corsUrls)
+    [Authorize(Policy = "OnlyAdminAccess")]
+    public async Task RegisterClientAuthentication(string clientId, string clientSecret, string corsUrls)
     {
         await _userAppService.RegisterClientAuthentication(clientId, clientSecret);
         await _developerService.CreateHostAsync(clientId, "1",corsUrls);
     }
     
     [HttpPost("CreateHost")]
-   // [Authorize(Policy = "OnlyAdminAccess")]
-    public virtual async Task CreateHost(string clientId,List<string> corsUrls)
+    [Authorize(Policy = "OnlyAdminAccess")]
+    public  async Task CreateHost(string clientId,string corsUrls)
     {
         await _developerService.CreateHostAsync(clientId, "1",corsUrls);
     }
     
     [HttpPost("destroyHost")]
-   // [Authorize(Policy = "OnlyAdminAccess")]
+    [Authorize(Policy = "OnlyAdminAccess")]
     public async Task DestroyHostAsync(string clientId)
     {
         await _developerService.DestroyHostAsync(clientId, "1");

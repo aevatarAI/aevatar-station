@@ -8,7 +8,7 @@ namespace Aevatar.Service;
 
 public interface IDeveloperService
 {
-    Task CreateHostAsync(string HostId, string version, List<string> corsUrls);
+    Task CreateHostAsync(string HostId, string version, string corsUrls);
     Task DestroyHostAsync(string inputHostId, string inputVersion);
 }
 
@@ -21,7 +21,7 @@ public class DeveloperService: ApplicationService, IDeveloperService
         _hostDeployManager = hostDeployManager;
     }
 
-    public async Task CreateHostAsync(string HostId, string version, List<string> corsUrls)
+    public async Task CreateHostAsync(string HostId, string version, string corsUrls)
     {
         await _hostDeployManager.CreateHostAsync(HostId, version,corsUrls);
     }

@@ -6,7 +6,7 @@ public interface IHostDeployManager
     Task DestroyWebHookAsync(string appId, string version);
     Task RestartWebHookAsync(string appId,string version);
     
-    Task<string> CreateHostAsync(string appId, string version, List<string> corsUrls);
+    Task<string> CreateHostAsync(string appId, string version, string corsUrls);
     Task DestroyHostAsync(string appId, string version);
     Task RestartHostAsync(string appId,string version);
 }

@@ -124,7 +124,7 @@ private static string GetHostSiloConfigContent(string appId, string version, str
     return configContent;
 }
 
-private static string GetHostClientConfigContent(string appId, string version, string templateFilePath,[CanBeNull] List<string> corsUrls)
+private static string GetHostClientConfigContent(string appId, string version, string templateFilePath,[CanBeNull] string corsUrls)
 {
     string configContent = File.ReadAllText(templateFilePath)
         .Replace(KubernetesConstants.HostPlaceHolderAppId, appId.ToLower())
@@ -132,7 +132,7 @@ private static string GetHostClientConfigContent(string appId, string version, s
         .Replace(KubernetesConstants.HostPlaceHolderNameSpace, KubernetesConstants.AppNameSpace.ToLower());
     if (corsUrls != null)
     {
-        configContent = configContent.Replace(KubernetesConstants.HostClientCors, string.Join(",", corsUrls));
+        configContent = configContent.Replace(KubernetesConstants.HostClientCors, corsUrls);
     }
     return configContent;
 }
@@ -286,7 +286,7 @@ private async Task EnsureIngressAsync(
         await RestartDeploymentAsync(deploymentName);
     }
 
-    public async Task<string> CreateHostAsync(string appId, string version, List<string> corsUrls)
+    public async Task<string> CreateHostAsync(string appId, string version, string corsUrls)
     {
         await CreateHostSiloAsync(GetHostName(appId,KubernetesConstants.HostSilo), version, _HostDeployOptions.HostSiloImageName);
 
