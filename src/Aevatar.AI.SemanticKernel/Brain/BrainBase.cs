@@ -40,7 +40,7 @@ public abstract class BrainBase : IBrain
 
     protected abstract Task ConfigureKernelBuilder(IKernelBuilder kernelBuilder);
 
-    public async Task InitAsync(string id, string description, bool ifSupportKnowledge = false)
+    public async Task InitializeAsync(string id, string description, bool ifSupportKnowledge = false)
     {
         IfSupportKnowledge = ifSupportKnowledge;
         Description = description;
@@ -112,7 +112,7 @@ public abstract class BrainBase : IBrain
     //     return result.GetValue<string>();
     // }
 
-    public async Task<List<ChatMessage>> ChatAsync(string content, List<ChatMessage>? history)
+    public async Task<List<ChatMessage>> InvokePromptAsync(string content, List<ChatMessage>? history)
     {
         var result = new List<ChatMessage>();
 

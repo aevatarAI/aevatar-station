@@ -66,7 +66,7 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
         // remove slash from this.GetGrainId().ToString() so that it can be used as the collection name pertaining to the grain
         var grainId = this.GetGrainId().ToString().Replace("/", "");
 
-        await _brain.InitAsync(grainId, systemMessage, ifSupportKnowledge);
+        await _brain.InitializeAsync(grainId, systemMessage, ifSupportKnowledge);
 
         return true;
     }
@@ -109,7 +109,7 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
 
     protected async Task<List<ChatMessage>?> ChatWithHistory(string prompt, List<ChatMessage>? history = null)
     {
-        return await _brain?.ChatAsync(prompt, history)!;
+        return await _brain?.InvokePromptAsync(prompt, history)!;
     }
 
     protected virtual async Task OnAIGAgentActivateAsync(CancellationToken cancellationToken)

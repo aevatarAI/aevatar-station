@@ -72,7 +72,7 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
             .Returns(_brainMock.Object);
 
         _brainMock
-            .Setup(x => x.InitAsync(
+            .Setup(x => x.InitializeAsync(
                 It.IsAny<string>(),
                 initializeDto.Instructions, false));
 
@@ -83,7 +83,7 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
         result.ShouldBeTrue();
         _brainFactoryMock.Verify(x => x.GetBrain(initializeDto.LLM), Times.Once);
         _brainMock.Verify(
-            x => x.InitAsync(
+            x => x.InitializeAsync(
                 It.IsAny<string>(),
                 initializeDto.Instructions, false),
             Times.Once);
@@ -135,7 +135,7 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
         //         initializeDto.Instructions);
 
         _brainMock
-            .Setup(x => x.ChatAsync(prompt, null))
+            .Setup(x => x.InvokePromptAsync(prompt, null))
             .ShouldNotBeNull();
 
         await _agent.InitializeAsync(initializeDto);
@@ -145,7 +145,7 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
 
         // Assert
         result.ShouldBe(expectedResponse);
-        _brainMock.Verify(x => x.ChatAsync(prompt, null), Times.Once);
+        _brainMock.Verify(x => x.InvokePromptAsync(prompt, null), Times.Once);
     }
 
     [Fact]

@@ -34,9 +34,3 @@ public class BrainContent
         Name = name;
     }
 }
-
-public enum BrainContentType
-{
-    Pdf,
-    String
-}
