@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.WebHook.Deploy;
 using Volo.Abp.Application.Services;
@@ -7,7 +8,7 @@ namespace Aevatar.Service;
 
 public interface IDeveloperService
 {
-    Task CreateHostAsync(string HostId, string version);
+    Task CreateHostAsync(string HostId, string version, string corsUrls);
     Task DestroyHostAsync(string inputHostId, string inputVersion);
 }
 
@@ -20,9 +21,9 @@ public class DeveloperService: ApplicationService, IDeveloperService
         _hostDeployManager = hostDeployManager;
     }
 
-    public async Task CreateHostAsync(string HostId, string version)
+    public async Task CreateHostAsync(string HostId, string version, string corsUrls)
     {
-        await _hostDeployManager.CreateHostAsync(HostId, version);
+        await _hostDeployManager.CreateHostAsync(HostId, version,corsUrls);
     }
 
     public async Task DestroyHostAsync(string inputHostId, string inputVersion)

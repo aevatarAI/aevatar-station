@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Controllers;
 using Aevatar.Service;
@@ -24,17 +25,17 @@ public class UserController :  AevatarController
     
     [HttpPost("registerClient")]
     [Authorize(Policy = "OnlyAdminAccess")]
-    public virtual async Task RegisterClientAuthentication(string clientId,string clientSecret)
+    public async Task RegisterClientAuthentication(string clientId, string clientSecret, string corsUrls)
     {
         await _userAppService.RegisterClientAuthentication(clientId, clientSecret);
-        await _developerService.CreateHostAsync(clientId, "1");
+        await _developerService.CreateHostAsync(clientId, "1",corsUrls);
     }
     
     [HttpPost("CreateHost")]
     [Authorize(Policy = "OnlyAdminAccess")]
-    public virtual async Task CreateHost(string clientId)
+    public  async Task CreateHost(string clientId,string corsUrls)
     {
-        await _developerService.CreateHostAsync(clientId, "1");
+        await _developerService.CreateHostAsync(clientId, "1",corsUrls);
     }
     
     [HttpPost("destroyHost")]

@@ -31,6 +31,7 @@ public class Program
             .Enrich.WithProperty("HostId", hostId)
             .Enrich.WithProperty("Version", version)
             .ReadFrom.Configuration(configuration)
+            .WriteTo.Async(c => c.Console())
             .CreateLogger();
 
         try

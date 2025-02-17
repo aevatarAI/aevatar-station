@@ -39,10 +39,10 @@ setup.ilm.policy_name: "[NameSpace]-filebeat-log-policy"
 
 output.elasticsearch:
   hosts: [
-          "http://localhost:9200"]
+    "http://localhost:9200" ]
   index: "[NameSpace]-[HostId]-[Version]-log-index-%{+yyyy-MM-dd}"
-  username: "beat_to_es"
-  password: "aelf12#$"
+  # username: "your_username"
+  # password: "your_password"
   
 processors:
   - drop_fields:

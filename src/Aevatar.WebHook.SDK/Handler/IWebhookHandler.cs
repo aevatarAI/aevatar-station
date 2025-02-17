@@ -6,7 +6,7 @@ public interface IWebhookHandler
 {
         string RelativePath  { get; }
         
-        Task HandleAsync(HttpRequest request);
+        Task<Object> HandleAsync(HttpRequest request);
         
         string HttpMethod { get; }
         

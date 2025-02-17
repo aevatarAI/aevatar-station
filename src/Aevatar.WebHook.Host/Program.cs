@@ -30,6 +30,7 @@ public class Program
             .Enrich.WithProperty("WebhookId", webhookId)
             .Enrich.WithProperty("Version", version)
             .ReadFrom.Configuration(configuration)
+            .WriteTo.Async(c => c.Console())
             .CreateLogger();
 
         try
