@@ -59,84 +59,6 @@ public class AgentService : ApplicationService, IAgentService
         _grainTypeResolver = grainTypeResolver;
     }
     
-    
-
-    // public async Task<List<AtomicAgentDto>> GetAtomicAgentsAsync(string userAddress, int pageIndex, int pageSize)
-    // {
-    //     if (userAddress.IsNullOrEmpty())
-    //     {
-    //         _logger.LogInformation("GetAgentAsync Invalid userAddress: {userAddress}", userAddress);
-    //         throw new UserFriendlyException("Invalid userAddress");
-    //     }
-    //
-    //     if (pageIndex <= 0 || pageSize <= 1)
-    //     {
-    //         _logger.LogInformation("GetAgentAsync Invalid pageIndex: {pageIndex} pageSize:{pageSize}", pageIndex, pageSize);
-    //         throw new UserFriendlyException("Invalid pageIndex pageSize");
-    //     }
-    //
-    //     var index = IndexPrefix + nameof(AtomicGAgentState).ToLower() + IndexSuffix;
-    //     var result = await _cqrsProvider.QueryStateAsync(index,
-    //         q => q.Term(t => t.Field("userAddress").Value(userAddress)), 
-    //         (pageIndex-1)*pageSize,
-    //         pageSize
-    //     );
-    //     if (result == null)
-    //     {
-    //         return null;
-    //     }
-    //     
-    //     var atomicGAgentStateDtoList = JsonConvert.DeserializeObject<List<AtomicGAgentStateDto>>(result);
-    //
-    //     return atomicGAgentStateDtoList.Select(stateDto => new AtomicAgentDto { Id = stateDto.Id.ToString(), Type = stateDto.Type, Name = stateDto.Name, Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(stateDto.Properties) }).ToList();
-    // }
-    
-
-    private Guid ParseGuid(string id)
-    {
-        if (!Guid.TryParse(id, out Guid validGuid))
-        {
-            _logger.LogInformation("Invalid id: {id}", id);
-            throw new UserFriendlyException("Invalid id");
-        }
-        return validGuid;
-    }
-    
-    // public async Task<List<CombinationAgentDto>> GetCombinationAgentsAsync(string userAddress, string groupId, int pageIndex, int pageSize)
-    // {
-    //     if (userAddress.IsNullOrEmpty())
-    //     {
-    //         _logger.LogInformation("GetAgentAsync Invalid userAddress: {userAddress} ", userAddress);
-    //         throw new UserFriendlyException("Invalid userAddress");
-    //     }
-    //     if (pageIndex <= 0 || pageSize <= 1)
-    //     {
-    //         _logger.LogInformation("GetAgentAsync Invalid pageIndex: {pageIndex} pageSize:{pageSize}", pageIndex, pageSize);
-    //         throw new UserFriendlyException("Invalid pageIndex pageSize");
-    //     }
-    //     
-    //     var index = IndexPrefix + nameof(CombinationGAgentState).ToLower() + IndexSuffix;
-    //     var filters = new List<Func<QueryContainerDescriptor<object>, QueryContainer>> { m => m.Term(t => t.Field("userAddress").Value(userAddress)) };
-    //     if (!groupId.IsNullOrEmpty())
-    //     {
-    //         filters.Add(m => m.Term(t => t.Field("groupId").Value(groupId)));
-    //     }
-    //
-    //     var result = await _cqrsProvider.QueryStateAsync(index,
-    //         q => q.Bool(b => b.Must(filters)),
-    //         (pageIndex-1)*pageSize,
-    //         pageSize
-    //     );
-    //     if (result == null)
-    //     {
-    //         return null;
-    //     }
-    //     
-    //     var combinationGAgentStateDtoList = JsonConvert.DeserializeObject<List<CombinationGAgentStateDto>>(result);
-    //
-    //     return combinationGAgentStateDtoList.Select(stateDto => new CombinationAgentDto { Id = stateDto.Id.ToString(), Name = stateDto.Name, AgentComponent = JsonConvert.DeserializeObject<Dictionary<string, string>>(stateDto.AgentComponent) }).ToList();
-    // }
-
     public async Task<Tuple<long, List<AgentGEventIndex>>> GetAgentEventLogsAsync(string agentId, int pageNumber, int pageSize)
     {
         if (!Guid.TryParse(agentId, out var validGuid))
@@ -313,7 +235,8 @@ public class AgentService : ApplicationService, IAgentService
             AgentType = dto.AgentType,
             Name = dto.Name,
             GrainId = businessAgent.GetGrainId(),
-            Properties = dto.Properties
+            Properties = dto.Properties,
+            AgentGuid  = businessAgent.GetPrimaryKey()
         };
         
         
@@ -411,7 +334,8 @@ public class AgentService : ApplicationService, IAgentService
             AgentType = agentState.AgentType,
             Name = agentState.Name,
             GrainId = agentState.BusinessAgentGrainId,
-            Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentState.Properties)
+            Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentState.Properties),
+            AgentGuid = agentState.BusinessAgentGrainId.GetGuidKey()
         };
         
         return resp;

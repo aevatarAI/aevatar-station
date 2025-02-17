@@ -11,4 +11,5 @@ public class AgentDto
     public string Name { get; set; }
     public Dictionary<string, object>? Properties { get; set; }
     public GrainId GrainId { get; set; }
+    public Guid AgentGuid { get; set; }
 }
