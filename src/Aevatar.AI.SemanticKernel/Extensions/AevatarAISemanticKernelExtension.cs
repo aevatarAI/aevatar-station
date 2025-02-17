@@ -28,12 +28,6 @@ public static class AevatarAISemanticKernelExtension
 
     public static IServiceCollection AddAzureOpenAI(this IServiceCollection services)
     {
-        // services.AddOptions<AzureOpenAIConfig>()
-        //     .Configure<IConfiguration>((settings, configuration) =>
-        //     {
-        //         configuration.GetSection(AzureOpenAIConfig.ConfigSectionName).Bind(settings);
-        //     });
-
         services.AddKeyedSingleton<AzureOpenAIClient>(AzureOpenAIConfig.ConfigSectionName, (sp, key) =>
         {
             var options = sp.GetRequiredService<IOptions<AzureOpenAIConfig>>().Value;

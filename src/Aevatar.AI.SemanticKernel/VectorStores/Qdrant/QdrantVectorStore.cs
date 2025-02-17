@@ -51,7 +51,6 @@ internal class QdrantVectorStore : IVectorStore
             });
         });
 
-        // kernelBuilder.Services.AddSingleton(new UniqueKeyGenerator<Guid>(() => Guid.NewGuid()));
     }
 
     public void RegisterVectorStoreTextSearch(IKernelBuilder kernelBuilder)

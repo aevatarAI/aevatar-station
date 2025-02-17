@@ -92,26 +92,6 @@ public abstract class BrainBase : IBrain
         return true;
     }
 
-    // public async Task<string?> ChatAsync(string content)
-    // {
-    //     if (Kernel == null)
-    //     {
-    //         Logger.LogError("Kernel is not initialized, please call InitializeAsync first.");
-    //         return null;
-    //     }
-    //
-    //     var result = await Kernel.InvokePromptAsync(
-    //         promptTemplate: ContestConstant.KnowledgePrompt,
-    //         arguments: new KernelArguments()
-    //         {
-    //             { "prompt", content },
-    //         },
-    //         templateFormat: AevatarAIConstants.AevatarAITemplateFormat,
-    //         promptTemplateFactory: new HandlebarsPromptTemplateFactory());
-    //
-    //     return result.GetValue<string>();
-    // }
-
     public async Task<List<ChatMessage>> InvokePromptAsync(string content, List<ChatMessage>? history)
     {
         var result = new List<ChatMessage>();
