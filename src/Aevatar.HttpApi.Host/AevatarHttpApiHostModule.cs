@@ -211,7 +211,7 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         app.UseAbpSerilogEnrichers();
         app.UseConfiguredEndpoints();
         var logService = context.ServiceProvider.GetRequiredService<ILogService>();
-        AsyncHelper.RunSync(async ()=> await logService.CreateFileBeatLogILMPolicyAsync(KubernetesConstants.AppNameSpace + "-" +
-            KubernetesConstants.FileBeatLogILMPolicyName));
+      //  AsyncHelper.RunSync(async ()=> await logService.CreateFileBeatLogILMPolicyAsync(KubernetesConstants.AppNameSpace + "-" +
+       //     KubernetesConstants.FileBeatLogILMPolicyName));
     }
 }
