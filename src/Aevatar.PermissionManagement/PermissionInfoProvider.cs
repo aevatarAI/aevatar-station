@@ -38,6 +38,7 @@ public class PermissionInfoProvider : IPermissionInfoProvider, ITransientDepende
                     Type = gAgentType.FullName!,
                     GrainType = _grainTypeResolver.GetGrainType(gAgentType).ToString()!,
                     Name = permissionAttribute.Name,
+                    GroupName = permissionAttribute.GroupName ?? string.Empty,
                     DisplayName = permissionAttribute.DisplayName ?? string.Empty
                 }));
         }

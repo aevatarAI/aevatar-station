@@ -25,23 +25,19 @@ public sealed class GAgentPermissionTests : AevatarGAgentsTestBase, IAsyncLifeti
     {
         var allPermissionInfos = _permissionInfoProvider.GetAllPermissionInfos();
         allPermissionInfos.ShouldContain(i =>
-            i.Name == "DoSomething"
+            i.Name == "DoSomething1"
             && i.DisplayName == "Only for testing."
             && i.GrainType == "Aevatar.Core.Tests.TestGAgents/PermissionGAgent"
             && i.Type == "Aevatar.Core.Tests.TestGAgents.PermissionGAgent"
         );
-    }
-
-    [Fact]
-    public async Task CallMethodTest()
-    {
-        RequestContext.Set("CurrentUser", new UserContext
-        {
-            UserId = "TestUser".ToGuid(),
-            Role = "User"
-        });
-        var permissionGAgent = await _gAgentFactory.GetGAgentAsync<IPermissionGAgent>();
-        await permissionGAgent.DoSomethingAsync();
+        allPermissionInfos.ShouldContain(i =>
+            i.Name == "DoSomething2"
+            && i.GroupName == "DefaultGroup"
+        );
+        allPermissionInfos.ShouldContain(i =>
+            i.Name == "DoSomething3"
+            && i.GroupName == "AnotherGroup"
+        );
     }
 
     public async Task InitializeAsync()

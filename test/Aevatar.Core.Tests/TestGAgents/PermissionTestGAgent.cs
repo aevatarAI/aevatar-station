@@ -18,7 +18,9 @@ public class PermissionStateLogEvent : StateLogEventBase<PermissionStateLogEvent
 
 public interface IPermissionGAgent : IGAgent
 {
-    Task DoSomethingAsync();
+    Task DoSomething1Async();
+    Task DoSomething2Async();
+    Task DoSomething3Async();
 }
 
 [GAgent]
@@ -29,10 +31,21 @@ public class PermissionGAgent : GAgentBase<PermissionGAgentState, PermissionStat
         return Task.FromResult("This is a GAgent for testing permissions.");
     }
 
-    [Permission("DoSomething", "Only for testing.")]
-    public Task DoSomethingAsync()
+    [Permission("DoSomething1", displayName: "Only for testing.")]
+    public Task DoSomething1Async()
     {
-        Logger.LogInformation("DoSomethingAsync called.");
+        return Task.CompletedTask;
+    }
+    
+    [Permission("DoSomething2", groupName: "DefaultGroup")]
+    public Task DoSomething2Async()
+    {
+        return Task.CompletedTask;
+    }
+
+    [Permission("DoSomething3", groupName: "AnotherGroup")]
+    public Task DoSomething3Async()
+    {
         return Task.CompletedTask;
     }
 }
