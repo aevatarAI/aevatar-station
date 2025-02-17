@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Aevatar.AI.Common;
 using Aevatar.AI.EmbeddedDataLoader;
+using Aevatar.AI.ExtractContent;
 using Aevatar.AI.KernelBuilderFactory;
 using Aevatar.AI.Model;
 using Aevatar.AI.Options;
@@ -48,12 +49,6 @@ public abstract class BrainBase : IBrain
 
         await ConfigureKernelBuilder(kernelBuilder);
         Kernel = kernelBuilder.Build();
-        //
-        // if (ifSupportKnowledge)
-        // {
-        //     var ts = Kernel.GetRequiredService<VectorStoreTextSearch<TextSnippet<Guid>>>();
-        //     Kernel.Plugins.Add(ts.CreateWithGetTextSearchResults("SearchPlugin"));
-        // }
     }
 
     public async Task<bool> UpsertKnowledgeAsync(List<BrainContent>? files)
@@ -76,17 +71,22 @@ public abstract class BrainBase : IBrain
         var ragConfig = RagConfig.Value;
         foreach (var file in files)
         {
-            var dataLoader = Kernel.Services.GetKeyedService<IEmbeddedDataSaver>(file.Type.ToString());
-            if (dataLoader == null)
+            var contentExtract = Kernel.Services.GetRequiredKeyedService<IExtractContent>(file.Type.ToString());
+            var cancelToken = new CancellationToken();
+            var extractContentList = await contentExtract.Extract(file, cancelToken);
+            if (extractContentList.Count == 0)
             {
-                Logger.LogWarning("Data loader not found for file type {FileType}", file.Type);
                 continue;
             }
 
-            await dataLoader.StoreAsync(file,
-                ragConfig.DataLoadingBatchSize, ragConfig.MaxChunkCount,
-                ragConfig.DataLoadingBetweenBatchDelayInMilliseconds,
-                new CancellationToken());
+            foreach (var extractContent in extractContentList)
+            {
+                var dataLoader = Kernel.Services.GetRequiredService<IEmbeddedDataSaverProvider>();
+                await dataLoader.StoreAsync(extractContent.Name, extractContent.Content,
+                    ragConfig.DataLoadingBatchSize, ragConfig.MaxChunkCount,
+                    ragConfig.DataLoadingBetweenBatchDelayInMilliseconds,
+                    new CancellationToken());
+            }
         }
 
         return true;

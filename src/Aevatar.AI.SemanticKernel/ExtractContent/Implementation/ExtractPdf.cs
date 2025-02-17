@@ -4,82 +4,38 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Aevatar.AI.Common;
-using Aevatar.AI.Model;
-using Microsoft.Extensions.VectorData;
+using Aevatar.AI.Brain;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Embeddings;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.PageSegmenter;
-using Aevatar.AI.Brain;
 
-namespace Aevatar.AI.EmbeddedDataLoader.EmbeddedPdf;
+namespace Aevatar.AI.ExtractContent;
 
-internal class EmbeddedPftDataSaver(
-    UniqueKeyGenerator<Guid> uniqueKeyGenerator,
-    IVectorStoreRecordCollection<Guid, TextSnippet<Guid>> vectorStoreCollection,
-    ITextEmbeddingGenerationService textEmbeddingGenerationService,
-    IChatCompletionService chatCompletionService) : IEmbeddedDataSaver
+public class ExtractPdf(IChatCompletionService chatCompletionService) : IExtractContent
 {
-    public async Task StoreAsync(BrainContent brainContent, int batchSize, int maxChunkLength, int betweenBatchDelayInMs,
-        CancellationToken cancellationToken)
+    public async Task<List<ExtractResult>> Extract(BrainContent brainContent, CancellationToken cancellationToken)
     {
-        // Create the collection if it doesn't exist.
-        await vectorStoreCollection.CreateCollectionIfNotExistsAsync(cancellationToken).ConfigureAwait(false);
-
-        // Load the text and images from the PDF file and split them into batches.
-        if (brainContent.Content != null)
+        var sections = LoadTextAndImages(brainContent.Content, cancellationToken);
+        var result = new List<ExtractResult>();
+        foreach (var section in sections)
         {
-            var sections = LoadTextAndImages(brainContent.Content, cancellationToken);
-            var batches = sections.Chunk(batchSize);
-
-            // Process each batch of content items.
-            foreach (var batch in batches)
+            var sectionName = $"{brainContent.Name}-{section.PageNumber}";
+            if (section.Text != null)
             {
-                // Convert any images to text.
-                var textContentTasks = batch.Select(async content =>
-                {
-                    if (content.Text != null)
-                    {
-                        return content;
-                    }
-
-                    var textFromImage = await ConvertImageToTextWithRetryAsync(
-                        chatCompletionService,
-                        content.Image!.Value,
-                        cancellationToken).ConfigureAwait(false);
-                    return new RawContent { Text = textFromImage, PageNumber = content.PageNumber };
-                });
-
-                var textContent = await Task.WhenAll(textContentTasks).ConfigureAwait(false);
-
-                // Map each paragraph to a TextSnippet and generate an embedding for it.
-                var recordTasks = textContent.Select(async content => new TextSnippet<Guid>
-                {
-                    Key = uniqueKeyGenerator.GenerateKey($"{brainContent.Name}-{content.PageNumber}"),
-                    Text = content.Text,
-                    ReferenceDescription = $"{brainContent.Name}#page={content.PageNumber}",
-                    //ReferenceLink = $"{new Uri(file.Name).AbsoluteUri}#page={content.PageNumber}",
-                    ReferenceLink = $"{brainContent.Name}#page={content.PageNumber}",
-                    TextEmbedding = await EmbeddingHelper.GenerateEmbeddingsWithRetryAsync(
-                        textEmbeddingGenerationService,
-                        content.Text!,
-                        cancellationToken: cancellationToken).ConfigureAwait(false)
-                });
-
-                // Upsert the records into the vector store.
-                var records = await Task.WhenAll(recordTasks).ConfigureAwait(false);
-                var upsertedKeys =
-                    vectorStoreCollection.UpsertBatchAsync(records, cancellationToken: cancellationToken);
-                await foreach (var key in upsertedKeys.ConfigureAwait(false))
-                {
-                    Console.WriteLine($"Upserted record '{key}' into VectorDB");
-                }
-
-                await Task.Delay(betweenBatchDelayInMs, cancellationToken).ConfigureAwait(false);
+                result.Add(new ExtractResult()
+                    { Name = sectionName, Content = section.Text });
+                continue;
             }
+
+            var textFromImage = await ConvertImageToTextWithRetryAsync(
+                chatCompletionService,
+                section.Image!.Value,
+                cancellationToken).ConfigureAwait(false);
+            result.Add(new ExtractResult(){Name = sectionName, Content = textFromImage});
         }
+
+        return result;
     }
 
     private static IEnumerable<RawContent> LoadTextAndImages(byte[] fileBytes, CancellationToken cancellationToken)

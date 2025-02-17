@@ -6,31 +6,24 @@ namespace Aevatar.AI.Brain;
 
 public class BrainContent
 {
-    public byte[]? Content { get; } = null;
+    public byte[] Content { get; }
     public BrainContentType Type { get; }
     public string Name { get; } = string.Empty;
 
-    /// <summary>
-    /// used for create pdf file
-    /// </summary>
-    /// <param name="name"></param>
-    /// <param name="content"></param>
-    public BrainContent(string name, byte[]? content)
+    public BrainContent(string name, BrainContentType contentType, byte[] content)
     {
-        Type = BrainContentType.Pdf;
+        Type = contentType;
         Content = content;
         Name = name;
     }
 
-    /// <summary>
-    /// used for create string content
-    /// </summary>
-    /// <param name="name"></param>
-    /// <param name="content"></param>
-    public BrainContent(string name, string content)
+    public static byte[] ConvertStringToBytes(string content)
     {
-        Type = BrainContentType.String;
-        Content = Encoding.UTF8.GetBytes(content);
-        Name = name;
+        return Encoding.UTF8.GetBytes(content);
+    }
+
+    public static string ConvertBytesToString(byte[] bytes)
+    {
+        return Encoding.UTF8.GetString(bytes);
     }
 }

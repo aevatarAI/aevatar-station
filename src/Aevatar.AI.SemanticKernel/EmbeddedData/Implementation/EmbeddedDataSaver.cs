@@ -1,40 +1,35 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Aevatar.AI.Brain;
 using Aevatar.AI.Common;
 using Aevatar.AI.Embeddings;
 using Aevatar.AI.Model;
 using Microsoft.Extensions.VectorData;
-using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Embeddings;
 
 namespace Aevatar.AI.EmbeddedDataLoader;
 
-internal class EmbeddedStringDataSaver(
+internal class EmbeddedDataSaverProvider(
     UniqueKeyGenerator<Guid> uniqueKeyGenerator,
     IVectorStoreRecordCollection<Guid, TextSnippet<Guid>> vectorStoreCollection,
     ITextEmbeddingGenerationService textEmbeddingGenerationService,
-    IChunk chunk,
-    IChatCompletionService chatCompletionService) : IEmbeddedDataSaver
+    IChunk chunk) : IEmbeddedDataSaverProvider
 {
-    public async Task StoreAsync(BrainContent brainContent, int batchSize, int maxChunkLength, int betweenBatchDelayInMs,
+    public async Task StoreAsync(string name, string content, int batchSize, int maxChunkLength,
+        int betweenBatchDelayInMs,
         CancellationToken cancellationToken)
     {
         // Create the collection if it doesn't exist.
         await vectorStoreCollection.CreateCollectionIfNotExistsAsync(cancellationToken).ConfigureAwait(false);
 
-        if (brainContent.Content == null)
+        if (string.IsNullOrEmpty(content))
         {
             return;
         }
 
-        var originalStr = Encoding.UTF8.GetString(brainContent.Content);
-
-        var chunkList = (await chunk.Chunk(originalStr)).ToList();
+        var chunkList = (await chunk.Chunk(content)).ToList();
         var stringRawList = new List<StringRawData>();
         for (var i = 0; i < chunkList.Count(); i++)
         {
@@ -46,10 +41,10 @@ internal class EmbeddedStringDataSaver(
         {
             var recordTasks = batch.Select(async content => new TextSnippet<Guid>
             {
-                Key = uniqueKeyGenerator.GenerateKey($"{brainContent.Name}-{content.ChunkNum}"),
+                Key = uniqueKeyGenerator.GenerateKey($"{name}-{content.ChunkNum}"),
                 Text = content.Text,
-                ReferenceDescription = $"{brainContent.Name}#Chunk={content.ChunkNum}",
-                ReferenceLink = $"{brainContent.Name}#Chunk={content.ChunkNum}",
+                ReferenceDescription = $"{name}#Chunk={content.ChunkNum}",
+                ReferenceLink = $"{name}#Chunk={content.ChunkNum}",
                 TextEmbedding = await EmbeddingHelper.GenerateEmbeddingsWithRetryAsync(textEmbeddingGenerationService,
                     content.Text!,
                     cancellationToken: cancellationToken).ConfigureAwait(false)

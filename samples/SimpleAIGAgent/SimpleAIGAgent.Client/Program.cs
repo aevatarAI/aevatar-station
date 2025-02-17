@@ -1,4 +1,5 @@
-﻿using Aevatar.AI.Dtos;
+﻿using Aevatar.AI.Brain;
+using Aevatar.AI.Dtos;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,7 +33,7 @@ if (knowledgeConfig.PdfFilePaths != null)
     foreach (var pdfFilePath in knowledgeConfig.PdfFilePaths)
     {
         var pdfBytes = File.ReadAllBytes(pdfFilePath);
-        fileDtoList.Add(new BrainContentDto(Path.GetFileName(pdfFilePath), pdfBytes));
+        fileDtoList.Add(new BrainContentDto(Path.GetFileName(pdfFilePath), BrainContentType.Pdf, pdfBytes));
     }
 }
 

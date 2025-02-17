@@ -8,40 +8,26 @@ namespace Aevatar.AI.Dtos;
 [GenerateSerializer]
 public class BrainContentDto
 {
-    [Id(0)] public byte[]? PdfContent { get; } = null;
-    [Id(1)] public string StringContent { get; } = string.Empty;
+    [Id(0)] public byte[] Content { get; }
     [Id(2)] public BrainContentType Type { get; }
     [Id(3)] public string Name { get; }
 
-    /// <summary>
-    /// create pdf content
-    /// </summary>
-    /// <param name="name"></param>
-    /// <param name="pdfContent"></param>
-    public BrainContentDto(string name, byte[]? pdfContent)
+    public BrainContentDto(string name, BrainContentType contentType, byte[] content)
     {
         Name = name;
-        Type = BrainContentType.Pdf;
-        PdfContent = pdfContent;
+        Type = contentType;
+        Content = content;
     }
 
-    public BrainContentDto(string name, string stringContent)
+    public BrainContentDto(string name, string content)
     {
         Name = name;
         Type = BrainContentType.String;
-        StringContent = stringContent;
+        Content = BrainContent.ConvertStringToBytes(content);
     }
 
     public BrainContent ConvertToBrainContent()
     {
-        switch (Type)
-        {
-            case BrainContentType.Pdf:
-                return new BrainContent(Name, PdfContent);
-            case BrainContentType.String:
-                return new BrainContent(Name, StringContent);
-            default:
-                throw new ParseException("FileDto not found BrainContentType", 0);
-        }
+        return new BrainContent(Name, Type, Content);
     }
 }
