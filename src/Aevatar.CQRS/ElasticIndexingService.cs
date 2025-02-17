@@ -16,8 +16,6 @@ public class ElasticIndexingService : IIndexingService
 {
     private readonly IElasticClient _elasticClient;
     private readonly ILogger<ElasticIndexingService> _logger;
-    private const string IndexSuffix = "index";
-    private const string IndexPrefix = "aevatar";
     private const string CTime = "cTime";
     private const int DefaultSkip = 0;
     private const int DefaultLimit = 1000;
@@ -30,7 +28,7 @@ public class ElasticIndexingService : IIndexingService
 
     public void CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase
     {
-        var indexName = IndexPrefix + stateBase.GetType().Name.ToLower() + IndexSuffix;
+        var indexName = CqrsConstant.IndexPrefix + stateBase.GetType().Name.ToLower() + CqrsConstant.IndexSuffix;
         var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
         if (indexExistsResponse.Exists)
         {
@@ -107,7 +105,7 @@ public class ElasticIndexingService : IIndexingService
 
     public async Task SaveOrUpdateStateIndexAsync<T>(string id, T stateBase) where T : StateBase
     {
-        var indexName = IndexPrefix + stateBase.GetType().Name.ToLower() + IndexSuffix;
+        var indexName = CqrsConstant.IndexPrefix + stateBase.GetType().Name.ToLower() + CqrsConstant.IndexSuffix;
         var properties = stateBase.GetType().GetProperties();
         var document = new Dictionary<string, object>();
 
@@ -164,11 +162,16 @@ public class ElasticIndexingService : IIndexingService
                 _logger.LogError(
                     "state documents query fail, indexName:{indexName} error:{error} ,DebugInfo{DebugInfo}", indexName,
                     response.ServerError?.Error.Reason, JsonConvert.SerializeObject(response.DebugInformation));
-                return null;
+                return "";
             }
 
-            var documents = response.Hits.Select(hit => hit.Source);
-            var documentContent = JsonConvert.SerializeObject(documents);
+            var documents = response.Hits.Select(hit => hit.Source).ToList();
+            if (documents.Count == 0)
+            {
+                return "";
+            }
+            
+            var documentContent = JsonConvert.SerializeObject(documents.FirstOrDefault());
             return documentContent;
         }
         catch (Exception e)
@@ -180,7 +183,7 @@ public class ElasticIndexingService : IIndexingService
 
     public void CheckExistOrCreateIndex<T>(T baseIndex) where T : BaseIndex
     {
-        var indexName = IndexPrefix + baseIndex.GetType().Name.ToLower();
+        var indexName = CqrsConstant.IndexPrefix + baseIndex.GetType().Name.ToLower();
         var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
         if (indexExistsResponse.Exists)
         {
@@ -257,7 +260,7 @@ public class ElasticIndexingService : IIndexingService
 
     public async Task SaveOrUpdateIndexAsync<T>(string id, T baseIndex) where T : BaseIndex
     {
-        var indexName = IndexPrefix + baseIndex.GetType().Name.ToLower();
+        var indexName = CqrsConstant.IndexPrefix + baseIndex.GetType().Name.ToLower();
         var properties = baseIndex.GetType().GetProperties();
         var document = new Dictionary<string, object>();
 
@@ -303,7 +306,7 @@ public class ElasticIndexingService : IIndexingService
         int skip = DefaultSkip, string? index = null) where TEntity : class
 
     {
-        var indexName = index ?? IndexPrefix + typeof(TEntity).Name.ToLower();
+        var indexName = index ?? CqrsConstant.IndexPrefix + typeof(TEntity).Name.ToLower();
         try
         {
             Func<SearchDescriptor<TEntity>, ISearchRequest> selector;

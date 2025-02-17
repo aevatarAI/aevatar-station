@@ -106,7 +106,6 @@ public class AevatarDeveloperHostModule : AbpModule
             });
         });
     }
-
     private static void ConfigureSwaggerServices(ServiceConfigurationContext context, IConfiguration configuration)
     {
         context.Services.AddAbpSwaggerGen(options =>
@@ -165,7 +164,7 @@ public class AevatarDeveloperHostModule : AbpModule
         app.UseCors();
         app.UseAuthentication();
         app.UseAuthorization();
-        
+
         app.UseUnitOfWork();
         app.UseDynamicClaims();
         app.UseEndpoints(endpoints =>

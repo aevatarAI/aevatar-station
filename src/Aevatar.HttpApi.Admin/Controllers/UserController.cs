@@ -22,7 +22,7 @@ public class UserController :  AevatarController
         _userAppService = userAppService;
         _developerService = developerService;
     }
-
+    
     [HttpPost("registerClient")]
     [Authorize(Policy = "OnlyAdminAccess")]
     public async Task RegisterClientAuthentication(string clientId, string clientSecret, string corsUrls)

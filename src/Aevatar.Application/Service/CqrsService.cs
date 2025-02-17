@@ -1,13 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
+using Aevatar.CQRS;
 using Aevatar.CQRS.Dto;
 using Aevatar.CQRS.Provider;
 using Newtonsoft.Json;
 using Volo.Abp.Application.Services;
 using Volo.Abp.ObjectMapping;
 using Microsoft.Extensions.Logging;
-using JsonException = System.Text.Json.JsonException;
+using Volo.Abp;
 
 namespace Aevatar.Service;
 
@@ -25,17 +27,40 @@ public class CqrsService : ApplicationService,ICqrsService
 
     }
     
-    public async Task<Tuple<long, List<AgentGEventIndex>>> QueryGEventAsync(string eventId, List<string> groupIds, int pageNumber, int pageSize)
+    
+    public async Task<AgentEventLogsDto> QueryGEventAsync(Guid? guid, string agentType, int pageIndex, int pageSize)
     {
-        try
+        var stopwatch = Stopwatch.StartNew();
+        var data = await _cqrsProvider.QueryAgentGEventAsync(guid, agentType, pageIndex, pageSize);
+        stopwatch.Stop();
+        
+        _logger.LogInformation("QueryGEventAsync, agentType: {agentType}, guid: {guid}, cost: {time}", agentType, guid, stopwatch.ElapsedMilliseconds);
+            
+        return new AgentEventLogsDto
         {
-            var resp = await _cqrsProvider.QueryGEventAsync(eventId, groupIds, pageNumber, pageSize);
-            return resp;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "QueryGEventAsync error eventId:{eventId} id:{groupIds} pageNumber:{pageNumber} pageSize:{pageSize}", eventId, JsonConvert.SerializeObject(groupIds), pageNumber, pageSize);
-            throw;
-        }
+            TotalCount = data.Item1,
+            Items = _objectMapper.Map<List<AgentGEventIndex>, List<AgentEventDto>>(data.Item2)
+        };
     }
+
+    public async Task<AgentStateDto> QueryStateAsync(string stateName, Guid guid)
+    {
+        stateName = stateName.ToLower();
+        var stopwatch = Stopwatch.StartNew();
+        var data = await _cqrsProvider.QueryAgentStateAsync(stateName, guid);
+        stopwatch.Stop();
+        
+        _logger.LogInformation("QueryStateAsync, index: {stateName}, guid: {guid}, cost: {time}", stateName, guid, stopwatch.ElapsedMilliseconds);
+        if (data.IsNullOrEmpty())
+        {
+            _logger.LogError("state not exist for name: {name} and guid: {guid}", stateName, guid);
+            throw new UserFriendlyException("state not exist");
+        }
+
+        return new AgentStateDto
+        {
+            State = JsonConvert.DeserializeObject<Dictionary<string, object>>(data)
+        };
+    }
+    
 }
