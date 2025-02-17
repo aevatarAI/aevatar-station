@@ -25,15 +25,34 @@ public class KubernetesConstants
      public const string FileBeatLogILMPolicyName = "filebeat-log-policy";
      public const string FileBeatContainerName = "filebeat-sidecar";
      
-     //manager
-     public const string AppSettingTemplateFilePath = "WebhookConfigTemplate/appsettings-template.json";
-     public const string AppFileBeatConfigTemplateFilePath = "WebhookConfigTemplate/filebeat-template.yml";
+     //webhook manager
+     public const string WebhookSettingTemplateFilePath = "WebhookConfigTemplate/appsettings-template.json";
+     public const string WebhookFileBeatConfigTemplateFilePath = "WebhookConfigTemplate/filebeat-template.yml";
      public const string PlaceHolderAppId = "[WebhookId]";
      public const string PlaceHolderVersion = "[Version]";
      public const string PlaceHolderNameSpace = "[NameSpace]";
-     public const int AppContainerTargetPort = 8308;
+     public static readonly List<string> WebhookCommand = new() { "dotnet", "Aevatar.WebHook.Host.dll" };
+
+     public const int WebhookContainerTargetPort = 8308;
      public const string QueryPodMaxSurge = "50%";
      public const string QueryPodMaxUnavailable = "0";
+     
+     //Host manager
+     public const string HostSiloSettingTemplateFilePath = "HostConfigTemplate/silo-appsettings-template.json";
+     public const string HostClientSettingTemplateFilePath = "HostConfigTemplate/client-appsettings-template.json";
+     public const string HostFileBeatConfigTemplateFilePath = "HostConfigTemplate/filebeat-template.yml";
+     public const string HostPlaceHolderAppId = "[HostId]";
+     public const string HostPlaceHolderVersion = "[Version]";
+     public const string HostPlaceHolderNameSpace = "[NameSpace]";
+     public const string HostSilo = "silo";
+     public const string HostClient = "client";
+     public const string HostClientCors = "[Cors]";
+     
+     public static readonly List<string> HostSiloCommand = new() { "dotnet", "Aevatar.Silo.dll" };
+     public static readonly List<string> HostClientCommand = new() { "dotnet", "Aevatar.Developer.Host.dll" };
+     
+     public const string HostQueryPodMaxSurge = "50%";
+     public const string HostQueryPodMaxUnavailable = "0";
      //Prometheus
      public const string MonitorLabelKey = "monitor";
      public const string MonitorGroup = "monitoring.coreos.com";

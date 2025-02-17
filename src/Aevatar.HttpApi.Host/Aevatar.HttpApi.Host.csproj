@@ -42,8 +42,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Aevatar.Application\Aevatar.Application.csproj" />
+    <ProjectReference Include="..\Aevatar.HttpApi.Admin\Aevatar.HttpApi.Admin.csproj" />
     <ProjectReference Include="..\Aevatar.MongoDB\Aevatar.MongoDB.csproj" />
-    <ProjectReference Include="..\Aevatar.HttpApi\Aevatar.HttpApi.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -51,10 +51,5 @@
     <Content Remove="Logs\**" />
     <EmbeddedResource Remove="Logs\**" />
     <None Remove="Logs\**" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="WebhookConfigTemplate/filebeat-template.yml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 </Project>

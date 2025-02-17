@@ -1,6 +1,8 @@
 ﻿using Aevatar.Application.Grains.Subscription;
 using Aevatar.Subscription;
 using Aevatar.Agents.Creator;
+using Aevatar.CQRS;
+using Aevatar.CQRS.Dto;
 using Aevatar.Domain.Grains.Subscription;
 using AutoMapper;
 
@@ -19,5 +21,6 @@ public class AevatarApplicationAutoMapperProfile : Profile
 
         CreateMap<EventDescription, EventDescriptionDto>()
             .ForMember(t => t.EventType, m => m.MapFrom(f => f.EventType.FullName));
+        CreateMap<AgentGEventIndex, AgentEventDto>();
     }
 }

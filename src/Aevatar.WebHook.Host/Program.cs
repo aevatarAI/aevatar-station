@@ -30,11 +30,12 @@ public class Program
             .Enrich.WithProperty("WebhookId", webhookId)
             .Enrich.WithProperty("Version", version)
             .ReadFrom.Configuration(configuration)
+            .WriteTo.Async(c => c.Console())
             .CreateLogger();
 
         try
         {
-            Log.Information("Starting Aevatar.WebHook.Host.");
+            Log.Information("Starting Aevatar.Developer.Host.");
             await CreateHostBuilder(args).Build().RunAsync();
             return 0;
         }

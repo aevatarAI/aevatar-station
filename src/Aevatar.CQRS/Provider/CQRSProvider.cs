@@ -62,7 +62,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
 
         if (!grainIds.IsNullOrEmpty())
         {
-            mustQuery.Add(q => q.Terms(i => i.Field(f => f.GrainId).Terms(grainIds)));
+            mustQuery.Add(q => q.Terms(i => i.Field(f => f.AgentPrimaryKey).Terms(grainIds)));
         }
 
         QueryContainer Filter(QueryContainerDescriptor<AgentGEventIndex> f) => f.Bool(b => b.Must(mustQuery));
@@ -81,6 +81,62 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         var tuple = await _mediator.Send(getStateQuery);
         return tuple;
     }
+
+    public async Task<Tuple<long, List<AgentGEventIndex>>> QueryAgentGEventAsync(Guid? primaryKey, string agentType,
+        int pageNumber, int pageSize)
+    {
+        var mustQuery = new List<Func<QueryContainerDescriptor<AgentGEventIndex>, QueryContainer>>();
+
+        if (primaryKey != null)
+        {
+            mustQuery.Add(q => q.Term(i =>
+                i.Field(f => f.AgentPrimaryKey).Value(primaryKey)));
+        }
+
+        if (!agentType.IsNullOrEmpty())
+        {
+            mustQuery.Add(q => q.Term(i =>
+                i.Field(f => f.AgentGrainType).Value(agentType)));
+        }
+        
+        QueryContainer Filter(QueryContainerDescriptor<AgentGEventIndex> f) => f.Bool(b => b.Must(mustQuery));
+
+        var sorting = new Func<SortDescriptor<AgentGEventIndex>, IPromise<IList<ISort>>>(s =>
+            s.Ascending(t => t.Ctime));
+
+        var getStateQuery = new GetGEventQuery()
+        {
+            Query = Filter,
+            Sort = sorting,
+            Skip = pageNumber * pageSize,
+            Limit = pageSize
+        };
+
+        var tuple = await _mediator.Send(getStateQuery);
+        return tuple;
+    }
+
+    public async Task<string> QueryAgentStateAsync(string stateName, Guid primaryKey)
+    {
+        var mustQuery = new List<Func<QueryContainerDescriptor<dynamic>, QueryContainer>>
+        {
+            q => q.Term(i =>
+                i.Field("_id").Value(primaryKey))
+        };
+        
+        QueryContainer Filter(QueryContainerDescriptor<dynamic> f) => f.Bool(b => b.Must(mustQuery));
+        
+        var getStateQuery = new GetStateQuery()
+        {
+            Index = CqrsConstant.IndexPrefix + stateName + CqrsConstant.IndexSuffix,
+            Query = Filter,
+            Skip = 0,
+            Limit = 1
+        };
+    
+        var document = await _mediator.Send(getStateQuery);
+        return document;
+    }
     
 
     public async Task PublishAsync(Guid eventId, GrainId grainId, StateLogEventBase eventBase)
@@ -91,13 +147,25 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         {
             eventId = Guid.NewGuid();
         }
+
+        if (eventBase.Ctime == DateTime.MinValue)
+        {
+            eventBase.Ctime = DateTime.UtcNow;
+        }
+
+        if (eventBase.Id == Guid.Empty)
+        {
+            eventBase.Id = eventId;
+        }
+        
         var agentGEventIndex = new AgentGEventIndex()
         {
             Id = eventId,
-            GrainId = agentGrainId,
-            GrainType = grainType.ToString(),
+            AgentPrimaryKey = grainId.GetGuidKey(),
+            AgentGrainType = grainType.ToString(),
             Ctime = DateTime.UtcNow,
-            EventJson = JsonConvert.SerializeObject(eventBase)
+            EventJson = JsonConvert.SerializeObject(eventBase),
+            EventName = eventBase.GetType().Name
         };
 
         var command = new SaveGEventCommand
