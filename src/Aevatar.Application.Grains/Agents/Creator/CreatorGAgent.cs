@@ -15,7 +15,7 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
 {
     private readonly ILogger<CreatorGAgent> _logger;
 
-    public CreatorGAgent(ILogger<CreatorGAgent> logger) : base(logger)
+    public CreatorGAgent(ILogger<CreatorGAgent> logger) 
     {
         _logger = logger;
     }

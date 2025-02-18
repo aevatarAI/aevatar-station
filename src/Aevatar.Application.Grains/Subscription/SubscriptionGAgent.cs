@@ -17,7 +17,7 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
     private readonly ILogger<SubscriptionGAgent> _logger;
     private readonly IClusterClient _clusterClient;
     public SubscriptionGAgent(ILogger<SubscriptionGAgent> logger, 
-        IClusterClient clusterClient) : base(logger)
+        IClusterClient clusterClient)
     {
         _logger = logger;
         _clusterClient = clusterClient;
