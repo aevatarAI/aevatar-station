@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Orleans.Runtime" />
+        <PackageReference Include="Volo.Abp.Authorization" />
+        <PackageReference Include="Volo.Abp.Authorization.Abstractions" />
+        <PackageReference Include="Volo.Abp.Core" />
+        <PackageReference Include="Volo.Abp.Autofac" />
+        <PackageReference Include="Volo.Abp.AutoMapper" />
+        <PackageReference Include="Volo.Abp.Identity.Application" />
+        <PackageReference Include="Volo.Abp.Identity.MongoDB" />
+        <PackageReference Include="Volo.Abp.PermissionManagement.Application" />
+        <PackageReference Include="Volo.Abp.PermissionManagement.MongoDB" />
+        <PackageReference Include="Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -17,6 +17,8 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Orleans.Runtime" />
+        <PackageReference Include="Volo.Abp.Authorization" />
+        <PackageReference Include="Volo.Abp.Authorization.Abstractions" />
         <PackageReference Include="Volo.Abp.Core" />
         <PackageReference Include="Volo.Abp.Autofac" />
         <PackageReference Include="Volo.Abp.AutoMapper" />

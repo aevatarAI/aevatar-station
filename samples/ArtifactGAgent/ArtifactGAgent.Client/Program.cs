@@ -1,17 +1,21 @@
-﻿using Aevatar.Core;
+﻿using System.Security.Claims;
+using Aevatar;
+using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.ArtifactGAgents;
+using Aevatar.Core.Tests.TestEvents;
+using Aevatar.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
+using Volo.Abp.Security.Claims;
 
 IHostBuilder builder = Host.CreateDefaultBuilder(args)
     .UseOrleansClient(client =>
     {
         client.UseLocalhostClustering()
             .AddMemoryStreams(AevatarCoreConstants.StreamProvider);
-        client.Services.AddSingleton<IGAgentFactory, GAgentFactory>();
-        client.Services.AddSingleton<IGAgentManager, GAgentManager>();
+        client.UseAevatar();
     })
     .ConfigureLogging(logging => logging.AddConsole())
     .UseConsoleLifetime();
@@ -51,3 +55,4 @@ Console.WriteLine();
     Console.WriteLine(description);
 }
 
+Console.ReadKey();

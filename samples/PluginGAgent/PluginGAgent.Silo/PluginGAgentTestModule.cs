@@ -1,11 +1,15 @@
+using System.Reflection;
+using Aevatar;
+using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
-using PluginGAgent.Silo;
+using Orleans.Serialization;
 using Serilog;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
 using Volo.Abp.AutoMapper;
 using Volo.Abp.Modularity;
-namespace AISmart.Silo;
+
+namespace PluginGAgent.Silo;
 
 [DependsOn(
     typeof(AbpAspNetCoreSerilogModule),
@@ -18,9 +22,9 @@ public class PluginGAgentTestModule : AbpModule
     {
         Configure<AbpAutoMapperOptions>(options => { options.AddMaps<PluginGAgentTestModule>(); });
         context.Services.AddHostedService<PluginGAgentTestHostedService>();
-        var configuration = context.Services.GetConfiguration();
-        context.Services.AddSerilog(loggerConfiguration => {},
+        context.Services.AddSerilog(_ => {},
             true, writeToProviders: true);
         context.Services.AddHttpClient();
+        context.Services.AddSingleton<IEventDispatcher, DefaultEventDispatcher>();
     }
 }
