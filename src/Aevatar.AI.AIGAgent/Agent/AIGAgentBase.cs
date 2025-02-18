@@ -34,7 +34,7 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
         await AddLLMAsync(initializeDto.LLM);
         await AddPromptTemplateAsync(initializeDto.Instructions);
 
-        return await InitializeBrainAsync(initializeDto.LLM, initializeDto.Instructions, initializeDto.IfNeedKnowledge);
+        return await InitializeBrainAsync(initializeDto.LLM, initializeDto.Instructions, State.IfUpsertKnowledge);
     }
 
     public async Task<bool> UploadKnowledge(List<BrainContentDto>? knowledgeList)
@@ -47,6 +47,12 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
         if (knowledgeList == null || !knowledgeList.Any())
         {
             return true;
+        }
+
+        if (State.IfUpsertKnowledge == false)
+        {
+            RaiseEvent(new SetUpsertKnowledgeFlag());
+            await ConfirmEvents();
         }
 
         List<BrainContent> fileList = knowledgeList.Select(f => f.ConvertToBrainContent()).ToList();
@@ -66,7 +72,7 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
         // remove slash from this.GetGrainId().ToString() so that it can be used as the collection name pertaining to the grain
         var grainId = this.GetGrainId().ToString().Replace("/", "");
 
-        await _brain.InitializeAsync(grainId, systemMessage, ifSupportKnowledge);
+        await _brain.InitializeAsync(grainId, systemMessage);
 
         return true;
     }
@@ -92,6 +98,11 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
         [Id(0)] public required string LLM { get; set; }
     }
 
+    [GenerateSerializer]
+    public class SetUpsertKnowledgeFlag : StateLogEventBase<TStateLogEvent>
+    {
+    }
+
     private async Task AddPromptTemplateAsync(string promptTemplate)
     {
         RaiseEvent(new SetPromptTemplateStateLogEvent
@@ -109,7 +120,7 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
 
     protected async Task<List<ChatMessage>?> ChatWithHistory(string prompt, List<ChatMessage>? history = null)
     {
-        return await _brain?.InvokePromptAsync(prompt, history)!;
+        return await _brain?.InvokePromptAsync(prompt, history, State.IfUpsertKnowledge)!;
     }
 
     protected virtual async Task OnAIGAgentActivateAsync(CancellationToken cancellationToken)
@@ -139,6 +150,9 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
                 break;
             case SetPromptTemplateStateLogEvent setPromptTemplateStateLogEvent:
                 State.PromptTemplate = setPromptTemplateStateLogEvent.PromptTemplate;
+                break;
+            case SetUpsertKnowledgeFlag setUpsertKnowledgeFlag:
+                State.IfUpsertKnowledge = true;
                 break;
         }
 

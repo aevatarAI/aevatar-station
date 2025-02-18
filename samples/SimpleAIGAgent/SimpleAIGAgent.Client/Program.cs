@@ -62,7 +62,6 @@ await chatAgent.InitializeAsync(new InitializeDto()
 //             ",
     Instructions = "you are a nba player",
     LLM = "AzureOpenAI",
-    IfNeedKnowledge = true,
 });
 
 await chatAgent.UploadKnowledge(fileDtoList);

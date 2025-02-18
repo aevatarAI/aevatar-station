@@ -13,11 +13,9 @@ using Aevatar.AI.Options;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Data;
-using Microsoft.SemanticKernel.PromptTemplates.Handlebars;
 
 namespace Aevatar.AI.Brain;
 
@@ -29,7 +27,6 @@ public abstract class BrainBase : IBrain
     protected readonly IKernelBuilderFactory KernelBuilderFactory;
     protected readonly ILogger Logger;
     protected readonly IOptions<RagConfig> RagConfig;
-    protected bool IfSupportKnowledge = false;
     protected string Description = string.Empty;
 
     protected BrainBase(IKernelBuilderFactory kernelBuilderFactory, ILogger logger, IOptions<RagConfig> ragConfig)
@@ -41,9 +38,8 @@ public abstract class BrainBase : IBrain
 
     protected abstract Task ConfigureKernelBuilder(IKernelBuilder kernelBuilder);
 
-    public async Task InitializeAsync(string id, string description, bool ifSupportKnowledge = false)
+    public async Task InitializeAsync(string id, string description)
     {
-        IfSupportKnowledge = ifSupportKnowledge;
         Description = description;
         var kernelBuilder = KernelBuilderFactory.GetKernelBuilder(id);
 
@@ -53,11 +49,6 @@ public abstract class BrainBase : IBrain
 
     public async Task<bool> UpsertKnowledgeAsync(List<BrainContent>? files)
     {
-        if (IfSupportKnowledge == false)
-        {
-            return false;
-        }
-
         if (Kernel == null)
         {
             return false;
@@ -92,7 +83,7 @@ public abstract class BrainBase : IBrain
         return true;
     }
 
-    public async Task<List<ChatMessage>> InvokePromptAsync(string content, List<ChatMessage>? history)
+    public async Task<List<ChatMessage>> InvokePromptAsync(string content, List<ChatMessage>? history, bool ifUseKnowledge = false)
     {
         var result = new List<ChatMessage>();
 
@@ -103,7 +94,7 @@ public abstract class BrainBase : IBrain
 
         var requestContent = content;
         var chatHistory = GetChatHistory(history);
-        if (IfSupportKnowledge)
+        if (ifUseKnowledge)
         {
             var supplementList = await LoadAsync(content);
             requestContent = SupplementPrompt(supplementList, content);
