@@ -55,7 +55,7 @@ public class DeploymentHelper
         V1EnvVar[] env = null;
         if (isSilo)
         {
-            env = GetV1Env(appId);
+            env = GetV1Env(RemoveSuffix(appId.ToLower(),"-"+KubernetesConstants.HostSilo));
         }
         var deployment = new V1Deployment
         {
@@ -97,6 +97,15 @@ public class DeploymentHelper
             { KubernetesConstants.AppVersionLabelKey, version }
           //  { KubernetesConstants.AppPodTypeLabelKey, podType }
         };
+    }
+    
+    public static string RemoveSuffix(string str, string suffix)
+    {
+        if (str.EndsWith(suffix))
+        {
+            return str.Substring(0, str.Length - suffix.Length);
+        }
+        return str;
     }
 
     private static V1DeploymentStrategy CreateStrategy(string maxSurge, string maxUnavailable)
