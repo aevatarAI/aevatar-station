@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Aevatar.Developer.Logger;
 using Aevatar.Developer.Logger.Entities;
 using Aevatar.Kubernetes;
+using Aevatar.Kubernetes.Enum;
 using Aevatar.Options;
 using Aevetar.Developer.Logger.Entities;
 using Asp.Versioning;
@@ -31,9 +32,9 @@ public class HostController
     }
     
     [HttpGet("log")]
-    public async Task<List<HostLogIndex>> GetLatestRealTimeLogs(string appId,int offset)
+    public async Task<List<HostLogIndex>> GetLatestRealTimeLogs(string appId,HostTypeEnum hostType,int offset)
     {
-        var indexName = _logService.GetHostLogIndexAliasName(_kubernetesOptions.AppNameSpace, appId + "-"+KubernetesConstants.HostClient, "1");
+        var indexName = _logService.GetHostLogIndexAliasName(_kubernetesOptions.AppNameSpace, appId + "-"+hostType.ToString().ToLower(), "1");
         return await _logService.GetHostLatestLogAsync(indexName, offset);
     }
 }
