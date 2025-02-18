@@ -28,7 +28,8 @@ jobs:
           Aevatar.Plugins,
           Aevatar.AI.Abstractions,
           Aevatar.AI.SemanticKernel,
-          Aevatar.AI.AIGAgent
+          Aevatar.AI.AIGAgent,
+          Aevatar.SignalR
         ]
     steps:
       - name: Checkout code
