@@ -4,6 +4,7 @@ using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Core.Abstractions.Plugin;
 using Aevatar.Extensions;
+using Aevatar.PermissionManagement.Extensions;
 using Aevatar.Plugins;
 using Aevatar.Plugins.Extensions;
 using AutoMapper;
@@ -105,6 +106,7 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                     services.AddSingleton<IEventDispatcher, DefaultEventDispatcher>();
                 })
                 .UseAevatar()
+                .UseAevatarPermissionManagement()
                 .AddMemoryStreams("Aevatar")
                 .AddMemoryGrainStorage("PubSubStore")
                 .AddMemoryGrainStorageAsDefault()

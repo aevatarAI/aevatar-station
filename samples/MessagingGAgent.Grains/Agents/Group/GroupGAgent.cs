@@ -18,13 +18,13 @@ public class GroupGAgent : GAgentBase<GroupAgentState, GroupStateLogEvent>, IGro
         return Task.FromResult("An agent to inform other agents when a social event is published.");
     }
 
-    protected override Task OnRegisterAgentAsync(Guid agentGuid)
+    protected override Task OnRegisterAgentAsync(GrainId agentGuid)
     {
         ++State.RegisteredAgents;
         return Task.CompletedTask;
     }
 
-    protected override Task OnUnregisterAgentAsync(Guid agentGuid)
+    protected override Task OnUnregisterAgentAsync(GrainId agentGuid)
     {
         --State.RegisteredAgents;
         return Task.CompletedTask;

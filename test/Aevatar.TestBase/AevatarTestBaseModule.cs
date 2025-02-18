@@ -1,5 +1,6 @@
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
+using Aevatar.PermissionManagement;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp;
 using Volo.Abp.Auditing;
@@ -11,7 +12,9 @@ namespace Aevatar.TestBase;
 
 [DependsOn(
     typeof(AbpAutofacModule),
-    typeof(AbpTestBaseModule)
+    typeof(AbpTestBaseModule),
+    typeof(AevatarModule),
+    typeof(AevatarPermissionManagementModule)
 )]
 public class AevatarTestBaseModule : AbpModule
 {

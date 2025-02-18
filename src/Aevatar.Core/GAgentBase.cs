@@ -69,7 +69,7 @@ public abstract partial class
 
         await AddChildAsync(gAgent.GetGrainId());
         await gAgent.SubscribeToAsync(this);
-        await OnRegisterAgentAsync(guid);
+        await OnRegisterAgentAsync(gAgent.GetGrainId());
     }
 
     public Task SubscribeToAsync(IGAgent gAgent)
@@ -86,7 +86,7 @@ public abstract partial class
     {
         await RemoveChildAsync(gAgent.GetGrainId());
         await gAgent.UnsubscribeFromAsync(this);
-        await OnUnregisterAgentAsync(gAgent.GetPrimaryKey());
+        await OnUnregisterAgentAsync(gAgent.GetGrainId());
     }
 
     public virtual Task<List<Type>?> GetAllSubscribedEventsAsync(bool includeBaseHandlers = false)
@@ -173,19 +173,19 @@ public abstract partial class
     }
 
     [AllEventHandler]
-    internal async Task ForwardEventAsync(EventWrapperBase eventWrapper)
+    protected virtual async Task ForwardEventAsync(EventWrapperBase eventWrapper)
     {
         Logger.LogInformation(
             $"{this.GetGrainId().ToString()} is forwarding event downwards: {JsonConvert.SerializeObject((EventWrapper<TEvent>)eventWrapper)}");
         await SendEventDownwardsAsync((EventWrapper<TEvent>)eventWrapper);
     }
 
-    protected virtual Task OnRegisterAgentAsync(Guid agentGuid)
+    protected virtual Task OnRegisterAgentAsync(GrainId agentGuid)
     {
         return Task.CompletedTask;
     }
 
-    protected virtual Task OnUnregisterAgentAsync(Guid agentGuid)
+    protected virtual Task OnUnregisterAgentAsync(GrainId agentGuid)
     {
         return Task.CompletedTask;
     }

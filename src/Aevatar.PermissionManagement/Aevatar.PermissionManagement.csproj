@@ -4,15 +4,6 @@
         <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <PackageType>Dependency</PackageType>
-        <PackageId>Aevatar</PackageId>
-        <Title>aevatar Framework</Title>
-        <Authors>AElf</Authors>
-        <Description>A distributed AI agent-based framework built on Microsoft Orleans for building scalable event-sourced applications.</Description>
-        <PackageTags>agent</PackageTags>
-        <RepositoryUrl>https://github.com/aevatarAI/aevatar-framework</RepositoryUrl>
-        <RepositoryType>git</RepositoryType>
-        <PackageProjectUrl>https://github.com/aevatarAI/aevatar-framework</PackageProjectUrl>
     </PropertyGroup>
 
     <ItemGroup>
@@ -22,10 +13,15 @@
         <PackageReference Include="Volo.Abp.Core" />
         <PackageReference Include="Volo.Abp.Autofac" />
         <PackageReference Include="Volo.Abp.AutoMapper" />
+        <PackageReference Include="Volo.Abp.Identity.Application" />
+        <PackageReference Include="Volo.Abp.Identity.MongoDB" />
+        <PackageReference Include="Volo.Abp.PermissionManagement.Application" />
+        <PackageReference Include="Volo.Abp.PermissionManagement.MongoDB" />
+        <PackageReference Include="Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Aevatar.Plugins\Aevatar.Plugins.csproj" />
+      <ProjectReference Include="..\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
     </ItemGroup>
 
 </Project>
