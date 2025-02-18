@@ -288,7 +288,7 @@ private async Task EnsureIngressAsync(
 
     public async Task<string> CreateHostAsync(string appId, string version, string corsUrls)
     {
-        await CreateHostSiloAsync(GetHostName(appId,KubernetesConstants.HostSilo), version, _HostDeployOptions.HostSiloImageName);
+        await CreateHostSiloAsync(appId , version, _HostDeployOptions.HostSiloImageName,GetHostSiloConfigContent(appId,version,KubernetesConstants.HostSiloSettingTemplateFilePath));
 
         // await EnsurePhaAsync(appId, version);
        await CreatePodAsync(GetHostName(appId,KubernetesConstants.HostClient), version, _HostDeployOptions.HostClientImageName,
@@ -302,13 +302,13 @@ private async Task EnsureIngressAsync(
         return $"{appId}-{appType}";
     }
 
-    private async Task CreateHostSiloAsync(string appId, string version, string imageName)
+    private async Task CreateHostSiloAsync(string appId, string version, string imageName, string hostSiloConfigContent)
     {
         await EnsureConfigMapAsync(
             appId, 
             version, 
             ConfigMapHelper.GetAppSettingConfigMapName,
-            GetHostSiloConfigContent(appId,version,KubernetesConstants.HostSiloSettingTemplateFilePath),
+            hostSiloConfigContent,
             ConfigMapHelper.CreateAppSettingConfigMapDefinition);
 
         await EnsureConfigMapAsync(
