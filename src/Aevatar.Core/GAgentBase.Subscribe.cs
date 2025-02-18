@@ -25,7 +25,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
         }
 
         GAgentTransitionState(state, @event);
-        base.TransitionState(state, @event);
+        //base.TransitionState(state, @event);
     }
 
     protected virtual void GAgentTransitionState(TState state, StateLogEventBase<TStateLogEvent> @event)

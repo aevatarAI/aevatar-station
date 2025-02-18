@@ -8,7 +8,7 @@ namespace Aevatar.SignalR.Clients;
 
 /// <inheritdoc cref="ISignalRClientGAgent"/>
 internal sealed class SignalRClientGAgent : GAgentBase<SignalRClientGAgentState, SignalRClientGAgentStateLogEvent,
-    EventBase, SignalRGAgentConfiguration>, ISignalRClientGAgent
+    EventBase, SignalRClientGAgentConfiguration>, ISignalRClientGAgent
 {
     private const int MaxFailAttempts = 3;
     
@@ -41,7 +41,7 @@ internal sealed class SignalRClientGAgent : GAgentBase<SignalRClientGAgentState,
         }
     }
 
-    protected override async Task PerformConfigAsync(SignalRGAgentConfiguration configuration)
+    protected override async Task PerformConfigAsync(SignalRClientGAgentConfiguration configuration)
     {
         _hubName = configuration.HubType;
         _connectionId = configuration.ConnectionId;

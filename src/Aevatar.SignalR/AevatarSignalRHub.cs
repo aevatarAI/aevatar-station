@@ -28,7 +28,10 @@ public class AevatarSignalRHub<TEvent> : Hub, IAevatarSignalRHub where TEvent : 
         }
 
         var parentGAgent = await _gAgentFactory.GetGAgentAsync(parentGAgentGrainId);
-        var signalRGAgent = await _gAgentFactory.GetGAgentAsync<ISignalRGAgent<TEvent>>();
+        var signalRGAgent = await _gAgentFactory.GetGAgentAsync<ISignalRGAgent<TEvent>>(new SignalRGAgentConfiguration
+        {
+            ConnectionId = Context?.ConnectionId ?? string.Empty
+        });
         await parentGAgent.RegisterAsync(signalRGAgent);
         await signalRGAgent.PublishEventAsync(@event!);
     }

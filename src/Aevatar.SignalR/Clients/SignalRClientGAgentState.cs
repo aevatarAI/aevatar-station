@@ -5,7 +5,7 @@ namespace Aevatar.SignalR.Clients;
 
 [DebuggerDisplay("{DebuggerDisplay,nq}")]
 [GenerateSerializer]
-internal sealed class SignalRClientGAgentState : StateBase
+public sealed class SignalRClientGAgentState : StateBase
 {
     private string DebuggerDisplay => $"ServerId: '{ServerId}'";
 

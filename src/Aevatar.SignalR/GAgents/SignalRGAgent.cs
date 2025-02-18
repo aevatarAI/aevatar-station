@@ -1,9 +1,6 @@
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.SignalR.Core;
-using Microsoft.Extensions.Logging;
-using Orleans.Streams;
-using RulesEngine.Models;
 
 namespace Aevatar.SignalR.GAgents;
 
@@ -33,14 +30,14 @@ public class SignalRGAgentConfiguration : ConfigurationBase
 }
 
 [GAgent]
-public abstract class SignalRGAgentBase<TEvent> :
+public class SignalRGAgent<TEvent> :
     GAgentBase<SignalRGAgentState, SignalRStateLogEvent, EventBase, SignalRGAgentConfiguration>,
     ISignalRGAgent<TEvent> where TEvent : EventBase
 {
     private readonly IGAgentFactory _gAgentFactory;
     private HubContext<AevatarSignalRHub<TEvent>> _hubContext = default!;
 
-    public SignalRGAgentBase(IGrainFactory grainFactory, IGAgentFactory gAgentFactory)
+    public SignalRGAgent(IGrainFactory grainFactory, IGAgentFactory gAgentFactory)
     {
         _gAgentFactory = gAgentFactory;
         _hubContext = new HubContext<AevatarSignalRHub<TEvent>>(grainFactory);
@@ -54,6 +51,11 @@ public abstract class SignalRGAgentBase<TEvent> :
     public async Task PublishEventAsync(TEvent @event)
     {
         await PublishAsync(@event);
+        RaiseEvent(new SetCorrelationIdStateLogEvent
+        {
+            CorrelationId = @event.CorrelationId!.Value
+        });
+        await ConfirmEvents();
     }
 
     // [AllEventHandler]
@@ -79,7 +81,6 @@ public abstract class SignalRGAgentBase<TEvent> :
         {
             Filter = configuration.Filter,
             ConnectionId = configuration.ConnectionId,
-            CorrelationId = configuration.CorrelationId
         });
         await ConfirmEvents();
     }
@@ -97,13 +98,18 @@ public abstract class SignalRGAgentBase<TEvent> :
         await parentGAgent.UnregisterAsync(this);
     }
 
-    protected override void GAgentTransitionState(SignalRGAgentState state, StateLogEventBase<SignalRStateLogEvent> @event)
+    protected override void GAgentTransitionState(SignalRGAgentState state,
+        StateLogEventBase<SignalRStateLogEvent> @event)
     {
-        if (@event is InitializeSignalRStateLogEvent initializeSignalRStateLogEvent)
+        switch (@event)
         {
-            State.ConnectionId = initializeSignalRStateLogEvent.ConnectionId;
-            State.CorrelationId = initializeSignalRStateLogEvent.CorrelationId;
-            State.Filter = initializeSignalRStateLogEvent.Filter;
+            case InitializeSignalRStateLogEvent initializeSignalRStateLogEvent:
+                State.ConnectionId = initializeSignalRStateLogEvent.ConnectionId;
+                State.Filter = initializeSignalRStateLogEvent.Filter;
+                break;
+            case SetCorrelationIdStateLogEvent setCorrelationIdStateLogEvent:
+                State.CorrelationId = setCorrelationIdStateLogEvent.CorrelationId;
+                break;
         }
     }
 
@@ -112,6 +118,11 @@ public abstract class SignalRGAgentBase<TEvent> :
     {
         [Id(0)] public string Filter { get; set; } = string.Empty;
         [Id(1)] public string ConnectionId { get; set; } = string.Empty;
-        [Id(2)] public Guid? CorrelationId { get; set; }
+    }
+
+    [GenerateSerializer]
+    public class SetCorrelationIdStateLogEvent : SignalRStateLogEvent
+    {
+        [Id(0)] public Guid CorrelationId { get; set; }
     }
 }
