@@ -22,8 +22,8 @@ public abstract class AIGAgentBase<TState, TStateLogEvent> : GAgentBase<TState, 
 {
     private readonly IBrainFactory _brainFactory;
     private IBrain? _brain = null;
-
-    public AIGAgentBase(ILogger logger) : base(logger)
+  
+    public AIGAgentBase()
     {
         _brainFactory = ServiceProvider.GetRequiredService<IBrainFactory>();
     }

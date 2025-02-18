@@ -22,11 +22,7 @@ public class TestAIGAgentState : AIGAgentStateBase
 
 public class TestAIGAgent : AIGAgentBase<TestAIGAgentState, TestAIGAgentStateLogEvent>
 {
-    public TestAIGAgent(ILogger logger) : base(logger)
-    {
-    }
-
-    public async Task<string?> PublicInvokePromptAsync(string prompt)
+    public Task<string?> PublicInvokePromptAsync(string prompt)
     {
         var result = await ChatWithHistory(prompt);
         return result?[0].Content;
@@ -54,7 +50,6 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
         //Service.AddSingleton(_brainFactoryMock.Object);
 
         // Create the agent with the real service provider
-        _agent = new TestAIGAgent(_loggerMock.Object);
     }
 
     [Fact]
