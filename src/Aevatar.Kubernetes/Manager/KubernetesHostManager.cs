@@ -288,7 +288,8 @@ private async Task EnsureIngressAsync(
 
     public async Task<string> CreateHostAsync(string appId, string version, string corsUrls)
     {
-        await CreateHostSiloAsync(appId , version, _HostDeployOptions.HostSiloImageName,GetHostSiloConfigContent(appId,version,KubernetesConstants.HostSiloSettingTemplateFilePath));
+        await CreateHostSiloAsync(GetHostName(appId,KubernetesConstants.HostSilo) , version, _HostDeployOptions.HostSiloImageName,
+            GetHostSiloConfigContent(appId,version,KubernetesConstants.HostSiloSettingTemplateFilePath));
 
         // await EnsurePhaAsync(appId, version);
        await CreatePodAsync(GetHostName(appId,KubernetesConstants.HostClient), version, _HostDeployOptions.HostClientImageName,
