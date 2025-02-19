@@ -6,12 +6,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
 
-IHostBuilder builder = Host.CreateDefaultBuilder(args)
+var builder = Host.CreateDefaultBuilder(args)
     .UseOrleansClient(client =>
     {
         client.UseLocalhostClustering()
-            .AddMemoryStreams(AevatarCoreConstants.StreamProvider);
-        client.UseAevatar();
+            .AddMemoryStreams(AevatarCoreConstants.StreamProvider)
+            .UseAevatar();
     })
     .ConfigureLogging(logging => logging.AddConsole())
     .UseConsoleLifetime();

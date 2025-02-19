@@ -8,9 +8,18 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\..\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
       <ProjectReference Include="..\..\..\src\Aevatar.Core\Aevatar.Core.csproj" />
       <ProjectReference Include="..\..\..\src\Aevatar.SignalR\Aevatar.SignalR.csproj" />
       <ProjectReference Include="..\..\..\src\Aevatar\Aevatar.csproj" />
+      <ProjectReference Include="..\..\..\test\Aevatar.Core.Tests\Aevatar.Core.Tests.csproj" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Orleans.Core" Version="9.1.2" />
+        <PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="9.1.2" />
+        <PackageReference Include="Microsoft.Orleans.Server" Version="9.1.2" />
+        <PackageReference Include="Microsoft.Orleans.Streaming" Version="9.1.2" />
     </ItemGroup>
 
 </Project>

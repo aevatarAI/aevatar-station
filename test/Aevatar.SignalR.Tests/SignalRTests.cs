@@ -2,8 +2,10 @@ using Aevatar.Core.Abstractions;
 using Aevatar.Core.Tests.TestEvents;
 using Aevatar.Core.Tests.TestGAgents;
 using Aevatar.Core.Tests.TestStates;
+using Aevatar.SignalR.Tests.Extensions;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR.Protocol;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Shouldly;
@@ -42,20 +44,29 @@ public sealed class SignalRTests : AevatarSignalRTestBase
         var connection = SignalRTestHelper.CreateHubConnectionContext(client.Connection);
         await _hubLifetimeManager.OnConnectedAsync(connection);
 
-        await _hubLifetimeManager.SendConnectionAsync(connection.ConnectionId, "PublishEventAsync",
-        [
-            signalRTestGAgent.GetGrainId(), typeof(NaiveTestEvent).FullName!,
+        var hub = new AevatarSignalRHub(_gAgentFactory);
+        await hub.PublishEventAsync(signalRTestGAgent.GetGrainId(), typeof(NaiveTestEvent).FullName!,
             JsonConvert.SerializeObject(new NaiveTestEvent
             {
                 Greeting = "Hello, World!"
-            })
-        ]);
+            }));
 
+        // await _hubLifetimeManager.SendConnectionAsync(connection.ConnectionId, "PublishEventAsync",
+        // [
+        //     signalRTestGAgent.GetGrainId(), typeof(NaiveTestEvent).FullName!,
+        //     JsonConvert.SerializeObject(new NaiveTestEvent
+        //     {
+        //         Greeting = "Hello, World!"
+        //     })
+        // ]);
+        //
         // await client.SendInvocationAsync("PublishEventAsync", signalRTestGAgent.GetGrainId(), typeof(NaiveTestEvent).FullName!,
         //     JsonConvert.SerializeObject(new NaiveTestEvent
         //     {
         //         Greeting = "Hello, World!"
         //     }));
+
+        var message = Assert.IsType<InvocationMessage>(await client.ReadAsync().OrTimeout());
 
         {
             var children = await groupGAgent.GetChildrenAsync();

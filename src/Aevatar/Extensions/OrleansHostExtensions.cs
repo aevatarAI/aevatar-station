@@ -7,6 +7,7 @@ using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Orleans.Metadata;
 using Orleans.Serialization;
 using Volo.Abp;
 using Volo.Abp.Modularity;
@@ -45,6 +46,7 @@ public static class OrleansHostExtensions
                 {
                     services.Add(service);
                 }
+                services.AddSingleton<IGrainTypeProviderAttribute, GAgentAttribute>();
             });
     }
     

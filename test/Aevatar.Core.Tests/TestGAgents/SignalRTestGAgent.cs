@@ -1,25 +1,19 @@
 using Aevatar.Core.Abstractions;
 using Aevatar.Core.Tests.TestEvents;
 using Aevatar.SignalR;
-using Microsoft.Extensions.Logging;
 
 namespace Aevatar.Core.Tests.TestGAgents;
 
 [GenerateSerializer]
-
-public class SignalRTestGAgentState : StateBase
-{
-
-}
+public class SignalRTestGAgentState : StateBase;
 
 [GenerateSerializer]
-public class SignalRTestStateLogEvent : StateLogEventBase<SignalRTestStateLogEvent>
-{
+public class SignalRTestStateLogEvent : StateLogEventBase<SignalRTestStateLogEvent>;
 
-}
+public interface ISignalRTestGAgent : IStateGAgent<SignalRTestGAgentState>;
 
-[GAgent("signalR", "test")]
-public class SignalRTestGAgent : GAgentBase<SignalRTestGAgentState, SignalRTestStateLogEvent>
+[GAgent("signalR")]
+public class SignalRTestGAgent : GAgentBase<SignalRTestGAgentState, SignalRTestStateLogEvent>, ISignalRTestGAgent
 {
     public override Task<string> GetDescriptionAsync()
     {

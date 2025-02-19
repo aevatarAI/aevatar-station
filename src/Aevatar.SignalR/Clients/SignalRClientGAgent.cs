@@ -37,7 +37,8 @@ internal sealed class SignalRClientGAgent : GAgentBase<SignalRClientGAgentState,
         {
             // We will listen to this stream to know if the server is disconnected (silo goes down) so that we can enact client disconnected procedure.
             var serverDisconnectedStream = _streamProvider.GetServerDisconnectionStream(State.ServerId);
-            var serverDisconnectedSubscription = (await serverDisconnectedStream.GetAllSubscriptionHandles())[0];
+            var handlers = await serverDisconnectedStream.GetAllSubscriptionHandles();
+            var serverDisconnectedSubscription = handlers[0];
             await serverDisconnectedSubscription.ResumeAsync((serverId, _) => OnDisconnect("server-disconnected"));
         }
     }

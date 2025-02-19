@@ -1,12 +1,11 @@
 using Aevatar.Core.Abstractions;
 using Aevatar.SignalR.GAgents;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Aevatar.SignalR;
 
 // ReSharper disable InconsistentNaming
-[Authorize]
+// [Authorize]
 public class AevatarSignalRHub : Hub, IAevatarSignalRHub
 {
     private readonly IGAgentFactory _gAgentFactory;
@@ -39,5 +38,17 @@ public class AevatarSignalRHub : Hub, IAevatarSignalRHub
         });
         await parentGAgent.RegisterAsync(signalRGAgent);
         await signalRGAgent.PublishEventAsync(@event);
+    }
+
+    public override async Task OnConnectedAsync()
+    {
+        await base.OnConnectedAsync();
+        await Groups.AddToGroupAsync(Context.ConnectionId, Guid.Empty.ToString());
+    }
+
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        await base.OnDisconnectedAsync(exception);
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, Guid.Empty.ToString());
     }
 }

@@ -3,7 +3,7 @@ using Aevatar.Core.Tests.TestEvents;
 using Microsoft.AspNetCore.SignalR.Client;
 using Newtonsoft.Json;
 
-var hubUrl = "http://localhost:5000/aevatarHub";
+var hubUrl = "http://localhost:5001/aevatarHub";
 var connection = new HubConnectionBuilder()
     .WithUrl(hubUrl)
     .WithAutomaticReconnect() 
@@ -18,15 +18,16 @@ try
 {
     await connection.StartAsync();
     Console.WriteLine($"Init status: {connection.State}");
-
-    var grainType = "Aevatar.Core.Tests.TestEvents";
-    var grainKey = "console-test-key".ToGuid().ToString("N");
-    var eventData = JsonConvert.SerializeObject(new
+    var eventJson = JsonConvert.SerializeObject(new
     {
         Greeting = "Test message"
     });
 
-    await SendEventWithRetry(connection, grainType, grainKey, eventData);
+    await SendEventWithRetry(connection,
+        "Aevatar.Core.Tests.TestGAgents.signalR",
+        "test".ToGuid().ToString("N"),
+        typeof(NaiveTestEvent).FullName!,
+        eventJson);
 
     Console.WriteLine("✅ Success");
 }
@@ -41,10 +42,11 @@ finally
 
 Console.ReadLine();
 
-async Task SendEventWithRetry(HubConnection conn, string type, string key, string data)
+async Task SendEventWithRetry(HubConnection conn, string grainType, string grainKey, string eventTypeName, string eventJson)
 {
+    var grainId = GrainId.Create(grainType, grainKey);
     const int maxRetries = 3;
-    int retryCount = 0;
+    var retryCount = 0;
 
     while (retryCount < maxRetries)
     {
@@ -56,7 +58,7 @@ async Task SendEventWithRetry(HubConnection conn, string type, string key, strin
                 await conn.StartAsync();
             }
 
-            await conn.InvokeAsync("PublishEventAsync", type, key, typeof(NaiveTestEvent).FullName!, data);
+            await connection.InvokeAsync("PublishEventAsync", grainId, eventTypeName, eventJson);
             return;
         }
         catch (Exception ex)

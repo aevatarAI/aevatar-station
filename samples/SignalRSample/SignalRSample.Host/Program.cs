@@ -2,6 +2,7 @@
 using Aevatar.Extensions;
 using Aevatar.SignalR;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SignalRSample.Host;
@@ -19,13 +20,18 @@ builder.Host.UseOrleans(silo =>
         .RegisterHub<AevatarSignalRHub>();
 });
 
-builder.Services
-    .AddSignalR()
-    .AddOrleans();
+builder.WebHost.UseKestrel((_, kestrelOptions) =>
+{
+    kestrelOptions.ListenLocalhost(5001);
+});
+
+builder.Services.AddSignalR().AddOrleans();
+
+builder.Services.AddHostedService<HostedService>();
 
 var app = builder.Build();
-app.UseStaticFiles();
-app.UseDefaultFiles();
 
+app.UseRouting();
+app.UseAuthorization();
 app.MapHub<AevatarSignalRHub>("/aevatarHub");
 await app.RunAsync();
