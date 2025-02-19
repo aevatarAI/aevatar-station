@@ -2,6 +2,7 @@ using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.SignalR.Core;
 using Microsoft.AspNetCore;
+using Newtonsoft.Json;
 
 namespace Aevatar.SignalR.GAgents;
 
@@ -79,7 +80,8 @@ public class SignalRGAgent :
             return;
         }
 
-        await _hubContext.Client(State.ConnectionId).Send(SignalROrleansConstants.MethodName, @event);
+        await _hubContext.Client(State.ConnectionId)
+            .Send(SignalROrleansConstants.MethodName, JsonConvert.SerializeObject(@event));
         var parentGAgentGrainId = await GetParentAsync();
         var parentGAgent = await _gAgentFactory.GetGAgentAsync(parentGAgentGrainId);
         await parentGAgent.UnregisterAsync(this);

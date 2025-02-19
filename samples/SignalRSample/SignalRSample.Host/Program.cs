@@ -12,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseOrleans(silo =>
 {
     silo.AddMemoryStreams(AevatarCoreConstants.StreamProvider)
+        .AddMemoryStreams(SignalROrleansConstants.StreamProvider)
         .AddMemoryGrainStorage("PubSubStore")
         .AddLogStorageBasedLogConsistencyProvider("LogStorage")
         .UseLocalhostClustering()

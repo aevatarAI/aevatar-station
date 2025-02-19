@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
-using Orleans.Runtime;
 using Aevatar.SignalR;
 
 // ReSharper disable once CheckNamespace

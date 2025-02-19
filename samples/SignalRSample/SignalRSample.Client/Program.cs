@@ -37,7 +37,7 @@ catch (Exception ex)
 }
 finally
 {
-    await connection.DisposeAsync();
+    //await connection.DisposeAsync();
 }
 
 Console.ReadLine();
