@@ -1,11 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Aevatar.AI.Common;
 
 namespace Aevatar.AI.Brain;
 
 public interface IBrain
 {
-    Task<bool> InitializeAsync(string id, string promptTemplate, List<FileData>? files = null);
-    Task<string?> InvokePromptAsync(string prompt);
+    Task InitializeAsync(string id, string description);
+
+    Task<bool> UpsertKnowledgeAsync(List<BrainContent>? files = null);
+
+    Task<List<ChatMessage>> InvokePromptAsync(string content, List<ChatMessage>? history = null,
+        bool ifUseKnowledge = false);
 }

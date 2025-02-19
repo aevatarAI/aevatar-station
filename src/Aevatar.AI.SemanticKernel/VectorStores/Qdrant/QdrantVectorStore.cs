@@ -1,11 +1,15 @@
 using System;
+using System.Security.Cryptography;
+using Aevatar.AI.Brain;
 using Aevatar.AI.Common;
 using Aevatar.AI.EmbeddedDataLoader;
-using Aevatar.AI.EmbeddedDataLoader.EmbeddedPdf;
+using Aevatar.AI.Embeddings;
 using Aevatar.AI.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Data;
+using System.Text;
+using Aevatar.AI.ExtractContent;
 using Qdrant.Client;
 
 namespace Aevatar.AI.VectorStores.Qdrant;
@@ -30,9 +34,23 @@ internal class QdrantVectorStore : IVectorStore
         kernelBuilder.Services.AddSingleton<IVectorStoreCollection, QdrantVectorStoreCollection>();
         
         //add the embedded data loaders here
-        kernelBuilder.Services.AddKeyedTransient<IEmbeddedDataLoader, EmbeddedPftDataLoader<Guid>>("pdf");
+        kernelBuilder.Services.AddTransient<IEmbeddedDataSaverProvider, EmbeddedDataSaverProvider>();
+
+        kernelBuilder.Services.AddTransient<IChunk, ChunkAsSentence>();
+        kernelBuilder.Services.AddKeyedSingleton<IExtractContent, ExtractPdf>(BrainContentType.Pdf.ToString());
+        kernelBuilder.Services.AddKeyedSingleton<IExtractContent, ExtractString>(BrainContentType.String.ToString());
         
-        kernelBuilder.Services.AddSingleton(new UniqueKeyGenerator<Guid>(() => Guid.NewGuid()));
+        kernelBuilder.Services.AddSingleton<UniqueKeyGenerator<Guid>>(sp =>
+        {
+            return new UniqueKeyGenerator<Guid>((input) =>
+            {
+                using var md5 = MD5.Create();
+                byte[] hash = md5.ComputeHash(Encoding.UTF8.GetBytes(input));
+
+                return new Guid(hash);
+            });
+        });
+
     }
 
     public void RegisterVectorStoreTextSearch(IKernelBuilder kernelBuilder)

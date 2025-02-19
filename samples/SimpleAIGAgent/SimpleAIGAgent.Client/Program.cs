@@ -1,4 +1,5 @@
-﻿using Aevatar.AI.Dtos;
+﻿using Aevatar.AI.Brain;
+using Aevatar.AI.Dtos;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,45 +26,45 @@ await host.StartAsync();
 var knowledgeConfig = host.Services.GetRequiredService<IOptions<KnowledgeConfig>>().Value;
 IClusterClient client = host.Services.GetRequiredService<IClusterClient>();
 
-List<FileDto> fileDtoList = [];
+List<BrainContentDto> fileDtoList = [];
 // load a pdf files into byte arrays
 if (knowledgeConfig.PdfFilePaths != null)
 {
     foreach (var pdfFilePath in knowledgeConfig.PdfFilePaths)
     {
         var pdfBytes = File.ReadAllBytes(pdfFilePath);
-        fileDtoList.Add(new FileDto()
-        {
-            Content = pdfBytes,
-            Type = "pdf",
-            Name = Path.GetFileName(pdfFilePath)
-        });
+        fileDtoList.Add(new BrainContentDto(Path.GetFileName(pdfFilePath), BrainContentType.Pdf, pdfBytes));
     }
 }
+
+fileDtoList.Add(new BrainContentDto("Lebron James",
+    "LeBron James is an American professional basketball player, widely regarded as one of the greatest players in NBA history. Born on December 30, 1984, he currently plays for the Los Angeles Lakers as a forward. James is known for his all-around skills, exceptional basketball IQ, and leadership on and off the court. He has won multiple NBA championships and MVP awards. Additionally, he is actively involved in philanthropy, founding the \"I PROMISE\" School, which focuses on education and community development to support underprivileged children and families."));
 
 //var chatAgentId = Guid.NewGuid();
 var chatAgentId = GrainId.Parse("chataigagent/792b1cb87bad4f759fcde3fe51ff55bc");
 var chatAgent = client.GetGrain<IChatAIGAgent>(chatAgentId);
 await chatAgent.InitializeAsync(new InitializeDto()
 {
-    Files = fileDtoList,
-    Instructions = @"
-            Please use this information to answer the question:
-            {{#with (SearchPlugin-GetTextSearchResults prompt)}}
-              {{#each this}}
-                Name: {{Name}}
-                Value: {{Value}}
-                Link: {{Link}}
-                -----------------
-              {{/each}}
-            {{/with}}
-
-            Include citations to the relevant information where it is referenced in the response.
-
-            Question: {{prompt}}
-            ",
-    LLM = "AzureOpenAI"
+//     Instructions = @"
+//             Please use this information to answer the question:
+//             {{#with (SearchPlugin-GetTextSearchResults prompt)}}
+//               {{#each this}}
+//                 Name: {{Name}}
+//                 Value: {{Value}}
+//                 Link: {{Link}}
+//                 -----------------
+//               {{/each}}
+//             {{/with}}
+//
+//             Include citations to the relevant information where it is referenced in the response.
+//
+//             Question: {{prompt}}
+//             ",
+    Instructions = "you are a nba player",
+    LLM = "AzureOpenAI",
 });
+
+await chatAgent.UploadKnowledge(fileDtoList);
 
 Console.ForegroundColor = ConsoleColor.Green;
 Console.WriteLine("Assistant > Press enter with no prompt to exit.");

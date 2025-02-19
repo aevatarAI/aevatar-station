@@ -17,14 +17,15 @@ public class TestAIGAgentStateLogEvent : StateLogEventBase<TestAIGAgentStateLogE
 [GenerateSerializer]
 public class TestAIGAgentState : AIGAgentStateBase
 {
-    [Id(0)]  public List<string> Content { get; set; }
+    [Id(0)] public List<string> Content { get; set; }
 }
 
 public class TestAIGAgent : AIGAgentBase<TestAIGAgentState, TestAIGAgentStateLogEvent>
 {
     public Task<string?> PublicInvokePromptAsync(string prompt)
     {
-        return InvokePromptAsync(prompt);
+        var result = await ChatWithHistory(prompt);
+        return result?[0].Content;
     }
 
     public override Task<string> GetDescriptionAsync()
@@ -59,14 +60,6 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
         {
             LLM = "gpt-4",
             Instructions = "Test instructions",
-            Files = new List<FileDto>
-            {
-                new() { 
-                    Content = System.Text.Encoding.UTF8.GetBytes("content"), 
-                    Type = "text", 
-                    Name = "test.txt" 
-                }
-            }
         };
 
         _brainFactoryMock
@@ -76,9 +69,7 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
         _brainMock
             .Setup(x => x.InitializeAsync(
                 It.IsAny<string>(),
-                initializeDto.Instructions,
-                It.IsAny<List<FileData>>()))
-            .ReturnsAsync(true);
+                initializeDto.Instructions));
 
         // Act
         var result = await _agent.InitializeAsync(initializeDto);
@@ -89,8 +80,7 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
         _brainMock.Verify(
             x => x.InitializeAsync(
                 It.IsAny<string>(),
-                initializeDto.Instructions,
-                It.IsAny<List<FileData>>()),
+                initializeDto.Instructions),
             Times.Once);
     }
 
@@ -101,8 +91,7 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
         var initializeDto = new InitializeDto
         {
             LLM = "invalid-model",
-            Instructions = "Test instructions",
-            Files = new List<FileDto>()
+            Instructions = "Test instructions"
         };
 
         _brainFactoryMock
@@ -128,24 +117,21 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
         var initializeDto = new InitializeDto
         {
             LLM = "gpt-4",
-            Instructions = "Test instructions",
-            Files = new List<FileDto>()
+            Instructions = "Test instructions"
         };
 
         _brainFactoryMock
             .Setup(x => x.GetBrain(initializeDto.LLM))
             .Returns(_brainMock.Object);
 
-        _brainMock
-            .Setup(x => x.InitializeAsync(
-                It.IsAny<string>(),
-                initializeDto.Instructions,
-                It.IsAny<List<FileData>>()))
-            .ReturnsAsync(true);
+        // _brainMock
+        //     .Setup(x => x.InitBrainAsync(
+        //         It.IsAny<string>(),
+        //         initializeDto.Instructions);
 
         _brainMock
-            .Setup(x => x.InvokePromptAsync(prompt))
-            .ReturnsAsync(expectedResponse);
+            .Setup(x => x.InvokePromptAsync(prompt, null, false))
+            .ShouldNotBeNull();
 
         await _agent.InitializeAsync(initializeDto);
 
@@ -154,7 +140,7 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
 
         // Assert
         result.ShouldBe(expectedResponse);
-        _brainMock.Verify(x => x.InvokePromptAsync(prompt), Times.Once);
+        _brainMock.Verify(x => x.InvokePromptAsync(prompt, null, false), Times.Once);
     }
 
     [Fact]
@@ -166,4 +152,4 @@ public class AIGAgentBaseTests : AevatarGAgentsTestBase
         // Assert
         result.ShouldBeNull();
     }
-} 
+}

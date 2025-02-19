@@ -7,7 +7,7 @@ namespace SimpleAIGAgent.Grains.Agents.Chat;
 
 public interface IChatAIGAgent : IAIGAgent, IGAgent
 {
-    Task<string> ChatAsync(string message);
+    Task<string?> ChatAsync(string message);
 }
 
 public class ChatAIGAgent : AIGAgentBase<ChatAIGStateBase, ChatAIStateLogEvent>, IChatAIGAgent
@@ -17,15 +17,16 @@ public class ChatAIGAgent : AIGAgentBase<ChatAIGStateBase, ChatAIStateLogEvent>,
         return Task.FromResult("Agent for chatting with user.");
     }
 
-    public async Task<string> ChatAsync(string message)
+    public async Task<string?> ChatAsync(string message)
     {
-        return await InvokePromptAsync(message) ?? string.Empty;
+        var result = await ChatWithHistory(message);
+        return result?[0].Content;
     }
 
     [EventHandler]
     public async Task OnChatAIEvent(ChatEvent @event)
     {
-        var result = await InvokePromptAsync(@event.Message);
+        var result = await ChatAsync(@event.Message);
         Logger.LogInformation("Chat output: {Result}", result);
     }
 }
