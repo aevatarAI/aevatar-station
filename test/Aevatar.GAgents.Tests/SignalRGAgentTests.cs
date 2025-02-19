@@ -13,18 +13,18 @@ namespace Aevatar.GAgents.Tests;
 public sealed class SignalRGAgentTests : AevatarGAgentsTestBase
 {
     private readonly IGAgentFactory _gAgentFactory;
-    private readonly AevatarSignalRHub<NaiveTestEvent> _signalRHub;
+    private readonly AevatarSignalRHub _signalRHub;
 
     public SignalRGAgentTests()
     {
         _gAgentFactory = GetRequiredService<IGAgentFactory>();
-        _signalRHub = new AevatarSignalRHub<NaiveTestEvent>(_gAgentFactory);
+        _signalRHub = new AevatarSignalRHub(_gAgentFactory);
     }
 
     [Fact]
     public async Task SignalRGAgentTest()
     {
-        var signalRGAgent = await _gAgentFactory.GetGAgentAsync<ISignalRGAgent<NaiveTestEvent>>(
+        var signalRGAgent = await _gAgentFactory.GetGAgentAsync<ISignalRGAgent>(
             new SignalRGAgentConfiguration
             {
                 ConnectionId = "test-connection-id"
@@ -44,14 +44,11 @@ public sealed class SignalRGAgentTests : AevatarGAgentsTestBase
             Greeting = "Hello, SignalR!"
         };
 
-        await _signalRHub.PublishEventAsync("Aevatar.Core.Tests.TestGAgents/naiveTest",
-            naiveGAgent.GetPrimaryKey().ToString("N"),
+        await _signalRHub.PublishEventAsync(naiveGAgent.GetGrainId(), typeof(NaiveTestEvent).FullName!,
             JsonConvert.SerializeObject(naiveTestEvent));
 
         var children = await groupGAgent.GetChildrenAsync();
         children.Count.ShouldBe(2);
-        children.Last().Type
-            .ShouldBe(GrainType.Create(
-                "Aevatar.SignalR.GAgents/SignalRGAgent`1[[Aevatar.Core.Tests.TestEvents.NaiveTestEvent,Aevatar.Core.Tests]]"));
+        children.Last().Type.ShouldBe(GrainType.Create("Aevatar.SignalR.GAgents/SignalRGAgent"));
     }
 }

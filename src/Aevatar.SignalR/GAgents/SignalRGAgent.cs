@@ -1,6 +1,7 @@
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.SignalR.Core;
+using Microsoft.AspNetCore;
 
 namespace Aevatar.SignalR.GAgents;
 
@@ -30,17 +31,17 @@ public class SignalRGAgentConfiguration : ConfigurationBase
 }
 
 [GAgent]
-public class SignalRGAgent<TEvent> :
+public class SignalRGAgent :
     GAgentBase<SignalRGAgentState, SignalRStateLogEvent, EventBase, SignalRGAgentConfiguration>,
-    ISignalRGAgent<TEvent> where TEvent : EventBase
+    ISignalRGAgent
 {
     private readonly IGAgentFactory _gAgentFactory;
-    private HubContext<AevatarSignalRHub<TEvent>> _hubContext = default!;
+    private HubContext<AevatarSignalRHub> _hubContext = default!;
 
     public SignalRGAgent(IGrainFactory grainFactory, IGAgentFactory gAgentFactory)
     {
         _gAgentFactory = gAgentFactory;
-        _hubContext = new HubContext<AevatarSignalRHub<TEvent>>(grainFactory);
+        _hubContext = new HubContext<AevatarSignalRHub>(grainFactory);
     }
 
     public override Task<string> GetDescriptionAsync()
@@ -48,7 +49,7 @@ public class SignalRGAgent<TEvent> :
         return Task.FromResult("SignalR Publisher.");
     }
 
-    public async Task PublishEventAsync(TEvent @event)
+    public async Task PublishEventAsync<T>(T @event) where T : EventBase
     {
         await PublishAsync(@event);
         RaiseEvent(new SetCorrelationIdStateLogEvent
@@ -92,6 +93,7 @@ public class SignalRGAgent<TEvent> :
         {
             return;
         }
+
         await _hubContext.Client(State.ConnectionId).Send(SignalROrleansConstants.MethodName, @event);
         var parentGAgentGrainId = await GetParentAsync();
         var parentGAgent = await _gAgentFactory.GetGAgentAsync(parentGAgentGrainId);

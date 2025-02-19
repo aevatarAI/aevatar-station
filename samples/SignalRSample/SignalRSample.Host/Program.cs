@@ -16,7 +16,7 @@ builder.Host.UseOrleans(silo =>
         .UseLocalhostClustering()
         .UseAevatar()
         .UseSignalR()
-        .RegisterHub<AevatarSignalRHub<TestEvent>>();
+        .RegisterHub<AevatarSignalRHub>();
 });
 
 builder.Services
@@ -27,5 +27,5 @@ var app = builder.Build();
 app.UseStaticFiles();
 app.UseDefaultFiles();
 
-app.MapHub<AevatarSignalRHub<TestEvent>>("/aevatarHub");
+app.MapHub<AevatarSignalRHub>("/aevatarHub");
 await app.RunAsync();

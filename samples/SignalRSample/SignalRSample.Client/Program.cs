@@ -7,7 +7,6 @@ var connection = new HubConnectionBuilder()
     .WithAutomaticReconnect() 
     .Build();
 
-// ----------------- 监听事件（可选） -----------------
 connection.On<string>("ReceiveResponse", (message) =>
 {
     Console.WriteLine($"[Event] {message}");
@@ -15,11 +14,9 @@ connection.On<string>("ReceiveResponse", (message) =>
 
 try
 {
-    // 首次启动连接
     await connection.StartAsync();
-    Console.WriteLine($"初始状态: {connection.State}");
+    Console.WriteLine($"Init status: {connection.State}");
 
-    // --------------- 发送测试事件（带状态检查）---------------
     var grainType = "TestGrain";
     var grainKey = "console-test-key";
     var eventData = JsonConvert.SerializeObject(new
@@ -27,14 +24,13 @@ try
         Message = "Test message"
     });
 
-    // 安全的发送逻辑
     await SendEventWithRetry(connection, grainType, grainKey, eventData);
 
-    Console.WriteLine("✅ 事件发送成功");
+    Console.WriteLine("✅ Success");
 }
 catch (Exception ex)
 {
-    Console.WriteLine($"❌ 全局异常: {ex.Message}");
+    Console.WriteLine($"❌ Abnormal: {ex.Message}");
 }
 finally
 {
@@ -43,7 +39,6 @@ finally
 
 Console.ReadLine();
 
-// ----------------- 带重试的事件发送方法 -----------------
 async Task SendEventWithRetry(HubConnection conn, string type, string key, string data)
 {
     const int maxRetries = 3;
@@ -53,25 +48,24 @@ async Task SendEventWithRetry(HubConnection conn, string type, string key, strin
     {
         try
         {
-            // 检查连接状态
             if (conn.State != HubConnectionState.Connected)
             {
-                Console.WriteLine("连接已断开，正在重连...");
+                Console.WriteLine("Connection broke, retrying...");
                 await conn.StartAsync();
             }
 
             await conn.InvokeAsync("PublishEventAsync", type, key, data);
-            return; // 发送成功则退出
+            return;
         }
         catch (Exception ex)
         {
             retryCount++;
-            Console.WriteLine($"❌ 发送失败（重试 {retryCount}/{maxRetries}）: {ex.Message}");
+            Console.WriteLine($"❌ Failed（Retry {retryCount}/{maxRetries}）: {ex.Message}");
             if (retryCount >= maxRetries)
             {
-                throw; // 抛出异常由外层处理
+                throw;
             }
-            await Task.Delay(1000 * retryCount); // 延迟重试
+            await Task.Delay(1000 * retryCount);
         }
     }
 }

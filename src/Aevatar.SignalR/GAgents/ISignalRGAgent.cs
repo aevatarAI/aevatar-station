@@ -2,7 +2,7 @@ using Aevatar.Core.Abstractions;
 
 namespace Aevatar.SignalR.GAgents;
 
-public interface ISignalRGAgent<in TEvent> : IGAgent where TEvent : EventBase
+public interface ISignalRGAgent : IGAgent
 {
-    Task PublishEventAsync(TEvent @event);
+    Task PublishEventAsync<T>(T @event) where T : EventBase;
 }
