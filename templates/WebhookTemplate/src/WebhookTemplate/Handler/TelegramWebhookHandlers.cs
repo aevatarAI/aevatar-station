@@ -17,7 +17,7 @@ public class TelegramWebhookHandler : IWebhookHandler
     
     public string HttpMethod => "POST";
 
-    public async Task HandleAsync(HttpRequest request)
+    public async Task<object> HandleAsync(HttpRequest request)
     {
         var headers = request.Headers;
         var token = headers["X-Telegram-Bot-Api-Secret-Token"].ToString();
@@ -25,6 +25,7 @@ public class TelegramWebhookHandler : IWebhookHandler
         using var reader = new StreamReader(request.Body);
         var bodyString = await reader.ReadToEndAsync();
         _logger.LogInformation("Receive update message from telegram.{message}", bodyString);
+        return bodyString;
     }
 
    

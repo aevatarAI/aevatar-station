@@ -17,7 +17,7 @@ public class PublishingAgentState : StateBase
 [GAgent("publish")]
 public class PublishingGAgent : GAgentBase<PublishingAgentState, PublishingGEvent>, IPublishingGAgent
 {
-    public PublishingGAgent(ILogger<PublishingGAgent> logger) : base(logger)
+    public PublishingGAgent() 
     {
     }
 

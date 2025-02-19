@@ -46,7 +46,7 @@ public class AgentController : AevatarController
     //     return agentDtoList;
     // }
     
-    [HttpGet("/agent-logs")]
+    [HttpGet("agent-logs")]
     public async Task<Tuple<long, List<AgentGEventIndex>>> GetAgentLogs(string agentId, int pageIndex, int pageSize)
     {
         _logger.LogInformation("Get Agent logs : {agentId} {pageIndex} {pageSize}",agentId, pageIndex,pageSize);
@@ -54,13 +54,13 @@ public class AgentController : AevatarController
         return agentDtoList;
     }
     
-    [HttpGet("/all-agents")]
+    [HttpGet("all-agents")]
     public async Task<List<AgentTypeDto>> GetAllAgent()
     {
         return await _agentService.GetAllAgents();
     }
     
-    [HttpPost("/agent")]
+    [HttpPost("agent")]
     public async Task<AgentDto> CreateAgent([FromBody] CreateAgentInputDto createAgentInputDto)
     {
         _logger.LogInformation("Create Agent: {agent}", JsonConvert.SerializeObject(createAgentInputDto));
