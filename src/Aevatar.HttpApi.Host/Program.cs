@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Aevatar.Extensions;
+using Aevatar.SignalR;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.OpenTelemetry;
@@ -29,7 +30,7 @@ public class Program
             await builder.AddApplicationAsync<AevatarHttpApiHostModule>();
             var app = builder.Build();
             await app.InitializeApplicationAsync();
-            
+            app.MapHub<AevatarSignalRHub>("api/agent/aevatarHub");
             await app.RunAsync();
             return 0;
         }
