@@ -7,10 +7,10 @@ using Aevatar.SignalR.GAgents;
 using Newtonsoft.Json;
 using Shouldly;
 
-namespace Aevatar.GAgents.Tests;
+namespace Aevatar.SignalR.Tests;
 
 // ReSharper disable InconsistentNaming
-public sealed class SignalRGAgentTests : AevatarGAgentsTestBase
+public sealed class SignalRGAgentTests : AevatarSignalRTestBase
 {
     private readonly IGAgentFactory _gAgentFactory;
     private readonly AevatarSignalRHub _signalRHub;

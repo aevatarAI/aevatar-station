@@ -23,11 +23,7 @@ public class SignalRStateLogEvent : StateLogEventBase<SignalRStateLogEvent>
 [GenerateSerializer]
 public class SignalRGAgentConfiguration : ConfigurationBase
 {
-    /// <summary>
-    /// TODO: Not useful for now.
-    /// </summary>
-    [Id(0)] public string Filter { get; set; } = string.Empty;
-    [Id(1)] public string ConnectionId { get; set; } = string.Empty;
+    [Id(0)] public string ConnectionId { get; set; } = string.Empty;
 }
 
 [GAgent]
@@ -36,7 +32,7 @@ public class SignalRGAgent :
     ISignalRGAgent
 {
     private readonly IGAgentFactory _gAgentFactory;
-    private HubContext<AevatarSignalRHub> _hubContext = default!;
+    private readonly HubContext<AevatarSignalRHub> _hubContext;
 
     public SignalRGAgent(IGrainFactory grainFactory, IGAgentFactory gAgentFactory)
     {
@@ -59,36 +55,25 @@ public class SignalRGAgent :
         await ConfirmEvents();
     }
 
-    // [AllEventHandler]
-    // public async Task ResponseToSignalRAsync(EventWrapperBase eventWrapperBase)
-    // {
-    //     var eventWrapper = (EventWrapper<EventBase>)eventWrapperBase;
-    //     var filter = State.Filter;
-    //     if (!filter.IsNullOrEmpty())
-    //     {
-    //         var workflow = Newtonsoft.Json.JsonConvert.DeserializeObject<Workflow>(filter);
-    //         var rulesEngine = new RulesEngine.RulesEngine([workflow]);
-    //         var validateResult = await rulesEngine.ExecuteAllRulesAsync("EventWrapperFilter");
-    //         if (validateResult.First().IsSuccess)
-    //         {
-    //             _hubContext.Group()
-    //         }
-    //     }
-    // }
-
     protected override async Task PerformConfigAsync(SignalRGAgentConfiguration configuration)
     {
         RaiseEvent(new InitializeSignalRStateLogEvent
         {
-            Filter = configuration.Filter,
             ConnectionId = configuration.ConnectionId,
         });
         await ConfirmEvents();
     }
 
-    [EventHandler]
-    public async Task ResponseToSignalRAsync(ResponseToPublisherEventBase @event)
+    [AllEventHandler]
+    public async Task ResponseToSignalRAsync(EventWrapperBase eventWrapperBase)
     {
+        var eventWrapper = (EventWrapper<EventBase>)eventWrapperBase;
+        var @event = eventWrapper.Event;
+        if (!@event.GetType().IsSubclassOf(typeof(ResponseToPublisherEventBase)))
+        {
+            return;
+        }
+
         if (@event.CorrelationId != State.CorrelationId)
         {
             return;
@@ -107,7 +92,6 @@ public class SignalRGAgent :
         {
             case InitializeSignalRStateLogEvent initializeSignalRStateLogEvent:
                 State.ConnectionId = initializeSignalRStateLogEvent.ConnectionId;
-                State.Filter = initializeSignalRStateLogEvent.Filter;
                 break;
             case SetCorrelationIdStateLogEvent setCorrelationIdStateLogEvent:
                 State.CorrelationId = setCorrelationIdStateLogEvent.CorrelationId;
@@ -118,8 +102,7 @@ public class SignalRGAgent :
     [GenerateSerializer]
     public class InitializeSignalRStateLogEvent : SignalRStateLogEvent
     {
-        [Id(0)] public string Filter { get; set; } = string.Empty;
-        [Id(1)] public string ConnectionId { get; set; } = string.Empty;
+        [Id(0)] public string ConnectionId { get; set; } = string.Empty;
     }
 
     [GenerateSerializer]

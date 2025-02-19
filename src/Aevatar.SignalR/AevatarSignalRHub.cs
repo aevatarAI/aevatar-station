@@ -21,12 +21,6 @@ public class AevatarSignalRHub : Hub, IAevatarSignalRHub
         await PerformPublishEventAsync(grainId, eventTypeName, eventJson);
     }
 
-    public async Task PublishEventAsync(string grainType, string grainKey, string eventTypeName, string eventJson)
-    {
-        var grainId = GrainId.Create(grainType, grainKey);
-        await PerformPublishEventAsync(grainId, eventTypeName, eventJson);
-    }
-
     private async Task PerformPublishEventAsync(GrainId grainId, string eventTypeName, string eventJson)
     {
         var serializer = new EventDeserializer();

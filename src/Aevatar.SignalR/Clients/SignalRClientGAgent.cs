@@ -1,5 +1,6 @@
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
+using Aevatar.SignalR.GAgents;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.SignalR.Protocol;
 using Orleans.Streams;
@@ -43,20 +44,24 @@ internal sealed class SignalRClientGAgent : GAgentBase<SignalRClientGAgentState,
 
     protected override async Task PerformConfigAsync(SignalRClientGAgentConfiguration configuration)
     {
-        _hubName = configuration.HubType;
-        _connectionId = configuration.ConnectionId;
+        _hubName = configuration.HubType ?? _hubName;
+        _connectionId = configuration.ConnectionId ?? _connectionId;
 
         RaiseEvent(new SetSignalRInfoStateLogEvent
         {
-            ServerId = configuration.ServerId,
-            HubType = configuration.HubType,
-            ConnectionId = configuration.ConnectionId
+            HubType = _hubName,
+            ConnectionId = _connectionId
         });
         await ConfirmEvents();
     }
 
     public async Task OnConnect(Guid serverId)
     {
+        RaiseEvent(new SetServerIdStateLogEvent
+        {
+            ServerId = serverId,
+        });
+        await ConfirmEvents();
         var serverDisconnectedStream = _streamProvider.GetServerDisconnectionStream(serverId);
         _serverDisconnectedSubscription =
             await serverDisconnectedStream.SubscribeAsync(_ => OnDisconnect("server-disconnected"));
@@ -115,8 +120,27 @@ internal sealed class SignalRClientGAgent : GAgentBase<SignalRClientGAgentState,
     [GenerateSerializer]
     public class SetSignalRInfoStateLogEvent : SignalRClientGAgentStateLogEvent
     {
+        [Id(0)] public required string HubType { get; set; }
+        [Id(1)] public required string ConnectionId { get; set; }
+    }
+    
+    [GenerateSerializer]
+    public class SetServerIdStateLogEvent : SignalRClientGAgentStateLogEvent
+    {
         [Id(0)] public required Guid ServerId { get; set; }
-        [Id(1)] public required string HubType { get; set; }
-        [Id(2)] public required string ConnectionId { get; set; }
+    }
+
+    protected override void GAgentTransitionState(SignalRClientGAgentState state, StateLogEventBase<SignalRClientGAgentStateLogEvent> @event)
+    {
+        switch (@event)
+        {
+            case SetSignalRInfoStateLogEvent setSignalRInfoStateLogEvent:
+                State.HubType = setSignalRInfoStateLogEvent.HubType;
+                State.ConnectionId = setSignalRInfoStateLogEvent.ConnectionId;
+                break;
+            case SetServerIdStateLogEvent setServerIdStateLogEvent:
+                State.ServerId = setServerIdStateLogEvent.ServerId;
+                break;
+        }
     }
 }

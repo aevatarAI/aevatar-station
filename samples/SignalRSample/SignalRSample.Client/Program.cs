@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.SignalR.Client;
+﻿using Aevatar.Core.Abstractions.Extensions;
+using Aevatar.Core.Tests.TestEvents;
+using Microsoft.AspNetCore.SignalR.Client;
 using Newtonsoft.Json;
 
 var hubUrl = "http://localhost:5000/aevatarHub";
@@ -17,11 +19,11 @@ try
     await connection.StartAsync();
     Console.WriteLine($"Init status: {connection.State}");
 
-    var grainType = "TestGrain";
-    var grainKey = "console-test-key";
+    var grainType = "Aevatar.Core.Tests.TestEvents";
+    var grainKey = "console-test-key".ToGuid().ToString("N");
     var eventData = JsonConvert.SerializeObject(new
     {
-        Message = "Test message"
+        Greeting = "Test message"
     });
 
     await SendEventWithRetry(connection, grainType, grainKey, eventData);
@@ -54,7 +56,7 @@ async Task SendEventWithRetry(HubConnection conn, string type, string key, strin
                 await conn.StartAsync();
             }
 
-            await conn.InvokeAsync("PublishEventAsync", type, key, data);
+            await conn.InvokeAsync("PublishEventAsync", type, key, typeof(NaiveTestEvent).FullName!, data);
             return;
         }
         catch (Exception ex)

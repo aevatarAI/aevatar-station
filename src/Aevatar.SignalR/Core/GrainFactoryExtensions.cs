@@ -8,15 +8,16 @@ namespace Orleans;
 
 public static class GrainFactoryExtensions
 {
-    public static HubContext<THub> GetHub<THub>(this IGrainFactory grainFactory) where THub : Hub
-    {
-        return new HubContext<THub>(grainFactory);
-    }
-
     internal static ISignalRClientGAgent GetClientGrain(this IGrainFactory factory, string hubName, string connectionId)
     {
         var key = new SignalRClientKey { HubType = hubName, ConnectionId = connectionId }.ToGrainPrimaryKey();
-        return factory.GetGrain<ISignalRClientGAgent>(key);
+        var grain = factory.GetGrain<ISignalRClientGAgent>(key);
+        grain.ConfigAsync(new SignalRClientGAgentConfiguration
+        {
+            ConnectionId = connectionId,
+            HubType = hubName
+        });
+        return grain;
     }
 
     internal static IConnectionGroupGrain GetGroupGrain(this IGrainFactory factory, string hubName, string groupName)
