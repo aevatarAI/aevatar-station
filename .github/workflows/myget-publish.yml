@@ -25,10 +25,7 @@ jobs:
           Aevatar.Core.Abstractions,
           Aevatar.EventSourcing.Core,
           Aevatar.EventSourcing.MongoDB,
-          Aevatar.Plugins,
-          Aevatar.AI.Abstractions,
-          Aevatar.AI.SemanticKernel,
-          Aevatar.AI.AIGAgent
+          Aevatar.Plugins
         ]
     steps:
       - name: Checkout code
