@@ -1,9 +1,6 @@
 using Aevatar.Core.Abstractions;
-using Aevatar.Core.Tests.TestEvents;
-using Aevatar.Core.Tests.TestGAgents;
-using Aevatar.Core.Tests.TestStates;
-using Aevatar.SignalR;
 using Aevatar.SignalR.GAgents;
+using Aevatar.SignalR.Tests.GAgents;
 using Newtonsoft.Json;
 using Shouldly;
 

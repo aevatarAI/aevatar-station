@@ -16,6 +16,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.TestBase", "test\Ae
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SignalRSample.GAgents", "samples\SignalRSample.GAgents\SignalRSample.GAgents.csproj", "{E63EF7F3-9E72-4696-9259-E5926CB07965}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.SignalR.Tests", "test\Aevatar.SignalR.Tests\Aevatar.SignalR.Tests.csproj", "{897C9AA3-B3AB-4654-9BC1-8BC595F62782}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,7 @@ Global
 		{29F84730-5945-4D60-8E05-8B722040EFF2} = {341E13EA-1D2D-4A80-A093-76F5CBECD154}
 		{F04B0D80-E094-47F7-ACB2-18E679725851} = {322706BF-7370-4032-AF65-E24DCB7FD25F}
 		{E63EF7F3-9E72-4696-9259-E5926CB07965} = {341E13EA-1D2D-4A80-A093-76F5CBECD154}
+		{897C9AA3-B3AB-4654-9BC1-8BC595F62782} = {322706BF-7370-4032-AF65-E24DCB7FD25F}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{7F701DA5-59A6-492E-BFAC-C6C834818CA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -49,5 +52,9 @@ Global
 		{E63EF7F3-9E72-4696-9259-E5926CB07965}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E63EF7F3-9E72-4696-9259-E5926CB07965}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E63EF7F3-9E72-4696-9259-E5926CB07965}.Release|Any CPU.Build.0 = Release|Any CPU
+		{897C9AA3-B3AB-4654-9BC1-8BC595F62782}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{897C9AA3-B3AB-4654-9BC1-8BC595F62782}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{897C9AA3-B3AB-4654-9BC1-8BC595F62782}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{897C9AA3-B3AB-4654-9BC1-8BC595F62782}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

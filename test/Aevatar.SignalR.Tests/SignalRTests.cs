@@ -1,9 +1,6 @@
 using Aevatar.Core.Abstractions;
-using Aevatar.Core.Tests.TestEvents;
-using Aevatar.Core.Tests.TestGAgents;
-using Aevatar.Core.Tests.TestStates;
 using Aevatar.SignalR.Tests.Extensions;
-using Microsoft.AspNetCore.Connections;
+using Aevatar.SignalR.Tests.GAgents;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Protocol;
 using Microsoft.Extensions.Logging;
