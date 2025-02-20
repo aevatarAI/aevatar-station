@@ -100,7 +100,7 @@ public class AgentService : ApplicationService, IAgentService
     {
         var systemAgents = _agentOptions.CurrentValue.SystemAgentList;
         var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
-        var validAgent = availableGAgents.Where(a => a.Namespace.StartsWith("Aevatar")).ToList();
+        var validAgent = availableGAgents.Where(a => !a.Namespace.StartsWith("OrleansCodeGen")).ToList();
         var businessAgentTypes = validAgent.Where(a => !systemAgents.Contains(a.Name)).ToList();
 
         var dict = new Dictionary<string, AgentTypeData?>();

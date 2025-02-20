@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Aevatar.SignalR;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Aevatar.Silo.Extensions;
@@ -23,7 +24,9 @@ public class Program
         try
         {
             Log.Information("Starting Silo");
-            await CreateHostBuilder(args).RunConsoleAsync();
+            var builder = CreateHostBuilder(args);
+            var app = builder.Build();
+            await app.RunAsync();
             return 0;
         }
         catch (Exception ex)
