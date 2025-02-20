@@ -25,8 +25,6 @@
         <PackageReference Include="Aevatar.EventSourcing.Core" />
         <PackageReference Include="Aevatar.EventSourcing.MongoDB" />
         <PackageReference Include="Aevatar.Plugins" />
-        <PackageReference Include="XWorkerAgent"/>
-        <PackageReference Include="Aevatar.GAgents.SocialGAgent"/>
     </ItemGroup>
 
     <ItemGroup>

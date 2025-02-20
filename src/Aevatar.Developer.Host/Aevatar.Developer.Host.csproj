@@ -28,8 +28,6 @@
         <PackageReference Include="MongoDB.Driver" />
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
         <PackageReference Include="Microsoft.CodeAnalysis.Common" />
-        <PackageReference Include="XWorkerAgent"/>
-        <PackageReference Include="Aevatar.GAgents.SocialGAgent"/>
     </ItemGroup>
 
     <ItemGroup>
