@@ -6,7 +6,6 @@ namespace Aevatar.Core.Abstractions;
 [AttributeUsage(AttributeTargets.Class, Inherited = true, AllowMultiple = false)]
 public sealed class GAgentAttribute : Attribute, IGrainTypeProviderAttribute
 {
-    private const char Separator = '.';
     private readonly string? _ns;
     private readonly string? _alias;
 
@@ -30,14 +29,14 @@ public sealed class GAgentAttribute : Attribute, IGrainTypeProviderAttribute
     {
         if (_alias == null) // Use ctor with 0 parameters.
         {
-            return GrainType.Create($"{type.Namespace}{Separator}{type.Name}");
+            return GrainType.Create($"{type.Namespace}{AevatarCoreConstants.GAgentNamespaceSeparator}{type.Name}");
         }
 
         if (_ns == null)
         {
-            return GrainType.Create($"{type.Namespace}{Separator}{_alias}");
+            return GrainType.Create($"{type.Namespace}{AevatarCoreConstants.GAgentNamespaceSeparator}{_alias}");
         }
 
-        return GrainType.Create($"{_ns}{Separator}{_alias}");
+        return GrainType.Create($"{_ns}{AevatarCoreConstants.GAgentNamespaceSeparator}{_alias}");
     }
 }

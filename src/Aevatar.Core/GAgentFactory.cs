@@ -9,8 +9,6 @@ public class GAgentFactory : IGAgentFactory
     private readonly IClusterClient _clusterClient;
     private readonly IStreamProvider _streamProvider;
 
-    private const char Separator = '.';
-
     public GAgentFactory(IClusterClient clusterClient)
     {
         _clusterClient = clusterClient;
@@ -30,7 +28,7 @@ public class GAgentFactory : IGAgentFactory
         ConfigurationBase? configuration = null)
     {
         var gAgent =
-            _clusterClient.GetGrain<IGAgent>(GrainId.Create($"{ns}{Separator}{alias}",
+            _clusterClient.GetGrain<IGAgent>(GrainId.Create($"{ns}{AevatarCoreConstants.GAgentNamespaceSeparator}{alias}",
                 primaryKey.ToString("N")));
         await ConfigGAgentAsync(gAgent, configuration);
         return gAgent;
