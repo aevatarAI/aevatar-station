@@ -8,7 +8,7 @@ namespace PluginGAgent.Silo;
 
 public class Program
 {
-    public async static Task<int> Main(string[] args)
+    public static async Task<int> Main(string[] args)
     {
         var configuration = new ConfigurationBuilder()
             .AddJsonFile("appsettings.json")
@@ -38,10 +38,7 @@ public class Program
 
     internal static IHostBuilder CreateHostBuilder(string[] args) =>
         Host.CreateDefaultBuilder(args)
-            .ConfigureServices((hostcontext, services) =>
-            {
-                services.AddApplication<PluginGAgentTestModule>();
-            })
+            .ConfigureServices((_, services) => { services.AddApplication<PluginGAgentTestModule>(); })
             .UseOrleansConfiguration()
             .UseAutofac()
             .UseSerilog();

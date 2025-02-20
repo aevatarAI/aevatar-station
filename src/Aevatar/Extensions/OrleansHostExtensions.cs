@@ -1,10 +1,5 @@
 using System.Reflection;
-using Aevatar.Core;
-using Aevatar.Core.Abstractions;
 using Aevatar.Plugins;
-using Aevatar.Plugins.Extensions;
-using Autofac;
-using Autofac.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Orleans.Metadata;
@@ -46,7 +41,6 @@ public static class OrleansHostExtensions
                 {
                     services.Add(service);
                 }
-                services.AddSingleton<IGrainTypeProviderAttribute, GAgentAttribute>();
             });
     }
     

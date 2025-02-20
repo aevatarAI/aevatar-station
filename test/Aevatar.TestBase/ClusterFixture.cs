@@ -1,6 +1,9 @@
 using System.Collections.Immutable;
 using Aevatar.Core.Abstractions;
 using Aevatar.Extensions;
+using Aevatar.PermissionManagement.Extensions;
+using Aevatar.Plugins;
+using Aevatar.Plugins.Extensions;
 using Aevatar.SignalR;
 using AutoMapper;
 using Microsoft.AspNetCore.SignalR;
@@ -105,6 +108,7 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                 })
                 .RegisterHub<AevatarSignalRHub>()
                 .UseAevatar()
+                .UseAevatarPermissionManagement()
                 .AddMemoryStreams("Aevatar")
                 .AddMemoryStreams("AevatarSignalR")
                 .AddMemoryGrainStorage("PubSubStore")

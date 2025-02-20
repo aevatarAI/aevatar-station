@@ -24,6 +24,7 @@
     <ItemGroup>
       <ProjectReference Include="..\..\src\Aevatar.Core\Aevatar.Core.csproj" />
       <ProjectReference Include="..\..\src\Aevatar.SignalR\Aevatar.SignalR.csproj" />
+      <ProjectReference Include="..\..\src\Aevatar.PermissionManagement\Aevatar.PermissionManagement.csproj" />
       <ProjectReference Include="..\OrleansTestKit\OrleansTestKit.csproj" />
     </ItemGroup>
 

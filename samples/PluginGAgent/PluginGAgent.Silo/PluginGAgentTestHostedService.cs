@@ -1,5 +1,9 @@
+using Aevatar.Core.Abstractions.Extensions;
+using Aevatar.Plugins.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Volo.Abp;
+using Volo.Abp.PermissionManagement;
 
 namespace PluginGAgent.Silo;
 
@@ -16,10 +20,12 @@ public class PluginGAgentTestHostedService : IHostedService
         _serviceProvider = serviceProvider;
     }
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
-        _application.Initialize(_serviceProvider);
-        return Task.CompletedTask;
+        await _application.InitializeAsync(_serviceProvider);
+        var permissionManager = _serviceProvider.GetRequiredService<IPermissionManager>();
+        var userId = "TestUser".ToGuid().ToString();
+        await permissionManager.SetAsync("DoSomething", "User", userId, true);
     }
 
     public Task StopAsync(CancellationToken cancellationToken)

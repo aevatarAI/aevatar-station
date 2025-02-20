@@ -1,10 +1,14 @@
-﻿using Aevatar.Core;
+﻿using System.Security.Claims;
+using Aevatar;
+using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.ArtifactGAgents;
+using Aevatar.Core.Tests.TestEvents;
 using Aevatar.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
+using Volo.Abp.Security.Claims;
 
 var builder = Host.CreateDefaultBuilder(args)
     .UseOrleansClient(client =>
