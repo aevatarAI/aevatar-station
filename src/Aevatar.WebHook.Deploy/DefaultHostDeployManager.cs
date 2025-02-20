@@ -31,4 +31,9 @@ public class DefaultHostDeployManager : IHostDeployManager
     {
         return;
     }
+
+    public Task UpdateDockerImageAsync(string appId, string version, string newImage)
+    {
+        return;
+    }
 }
