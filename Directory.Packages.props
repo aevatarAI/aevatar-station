@@ -19,6 +19,9 @@
     <PackageVersion Include="Aevatar.EventSourcing.MongoDB" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.Plugins" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.EventSourcing.MongoDB" Version="$(AevatarVerion)" />
+    <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="1.1.1" />
+    <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="1.1.1" />
+    <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="1.1.1" />
     <PackageVersion Include="Aevatar.SignalR" Version="$(AevatarVerion)" />
     <!-- AI and Analysis packages -->
     <PackageVersion Include="AutoGen" Version="0.2.1" />
