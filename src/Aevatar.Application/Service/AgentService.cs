@@ -343,6 +343,7 @@ public class AgentService : ApplicationService, IAgentService
     
     public async Task<SubAgentDto> AddSubAgentAsync(Guid guid, AddSubAgentDto addSubAgentDto)
     {
+        _logger.LogInformation("Add sub Agent: {agent}", JsonConvert.SerializeObject(addSubAgentDto));
         var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
         var agentState = await creatorAgent.GetAgentAsync();
         
