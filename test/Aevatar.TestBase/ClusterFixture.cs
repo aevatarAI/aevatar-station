@@ -106,6 +106,7 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                 .RegisterHub<AevatarSignalRHub>()
                 .UseAevatar()
                 .AddMemoryStreams("Aevatar")
+                .AddMemoryStreams("AevatarSignalR")
                 .AddMemoryGrainStorage("PubSubStore")
                 .AddMemoryGrainStorageAsDefault()
                 .AddLogStorageBasedLogConsistencyProvider("LogStorage");

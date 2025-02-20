@@ -41,7 +41,7 @@ public class EventSourcingTests : GAgentTestKitBase
         // Assert.
         {
             var logViewGAgentState = await logViewGAgent.GetStateAsync();
-            await TestHelper.WaitUntilAsync(_ => CheckCount(logViewGAgentState, 2));
+            await TestHelper.WaitUntilAsync(_ => CheckCount(logViewGAgent, 2));
             logViewGAgentState.Content.Count.ShouldBe(2);
         }
 
@@ -54,7 +54,7 @@ public class EventSourcingTests : GAgentTestKitBase
         // Assert.
         {
             var logViewGAgentState = await logViewGAgent.GetStateAsync();
-            await TestHelper.WaitUntilAsync(_ => CheckCount(logViewGAgentState, 3));
+            await TestHelper.WaitUntilAsync(_ => CheckCount(logViewGAgent, 3));
             logViewGAgentState.Content.Count.ShouldBe(3);
         }
 
@@ -69,8 +69,9 @@ public class EventSourcingTests : GAgentTestKitBase
         InMemoryLogConsistentStorage.Storage[GetStreamName(publishingGAgent.GetGrainId())].Count.ShouldBe(minimum);
     }
 
-    private async Task<bool> CheckCount(LogViewAdaptorTestGState state, int expectedCount)
+    private async Task<bool> CheckCount(LogViewAdaptorTestGAgent gAgent, int expectedCount)
     {
+        var state = await gAgent.GetStateAsync();
         return state.Content.Count == expectedCount;
     }
 
