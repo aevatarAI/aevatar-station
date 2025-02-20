@@ -1,6 +1,7 @@
 using System.Net;
 using Aevatar.Dapr;
 using Aevatar.EventSourcing.MongoDB.Hosting;
+using Aevatar.Extensions;
 using Aevatar.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -138,6 +139,8 @@ public static class OrleansHostExtension
                 {
                     siloBuilder.AddMemoryStreams("Aevatar");
                 }
+
+                siloBuilder.UseAevatar();
                 siloBuilder.UseSignalR(); 
                 siloBuilder.RegisterHub<AevatarSignalRHub>();
             })
