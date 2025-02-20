@@ -392,8 +392,16 @@ public class AgentService : ApplicationService, IAgentService
             var eventsHandledByAgent = await businessAgent.GetAllSubscribedEventsAsync();
             if (eventsHandledByAgent != null)
             {
+                _logger.LogInformation("all events for agent {agentId}, events: {events}", 
+                    grainId.GetGuidKey(), JsonConvert.SerializeObject(eventsHandledByAgent));
                 var eventsToAdd = eventsHandledByAgent.Except(allEventsHandled).ToList(); 
+                _logger.LogInformation("Adding events for agent {agentId}, events: {events}", 
+                    grainId.GetGuidKey(), JsonConvert.SerializeObject(eventsToAdd));
                 allEventsHandled.AddRange(eventsToAdd);
+            }
+            else
+            {
+                _logger.LogInformation("No events handled by agent {agentId}", grainId.GetGuidKey());
             }
         }
         await creatorAgent.UpdateAvailableEventsAsync(allEventsHandled);
