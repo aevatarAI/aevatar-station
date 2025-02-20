@@ -40,9 +40,8 @@ public class EventSourcingTests : GAgentTestKitBase
 
         // Assert.
         {
-            var logViewGAgentState = await logViewGAgent.GetStateAsync();
             await TestHelper.WaitUntilAsync(_ => CheckCount(logViewGAgent, 2));
-            logViewGAgentState.Content.Count.ShouldBe(2);
+            (await logViewGAgent.GetStateAsync()).Content.Count.ShouldBe(2);
         }
 
         // Act: Third event.
@@ -53,9 +52,8 @@ public class EventSourcingTests : GAgentTestKitBase
 
         // Assert.
         {
-            var logViewGAgentState = await logViewGAgent.GetStateAsync();
             await TestHelper.WaitUntilAsync(_ => CheckCount(logViewGAgent, 3));
-            logViewGAgentState.Content.Count.ShouldBe(3);
+            (await logViewGAgent.GetStateAsync()).Content.Count.ShouldBe(3);
         }
 
         const int minimum = 1; // SetParent or AddChildren event.

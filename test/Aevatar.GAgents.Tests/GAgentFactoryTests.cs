@@ -1,7 +1,6 @@
 using Aevatar.Core.Abstractions;
 using Aevatar.Core.Tests.TestGAgents;
 using Aevatar.Core.Tests.TestInitializeDtos;
-using Aevatar.Core.Tests.TestStates;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Metadata;
 using Shouldly;

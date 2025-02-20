@@ -2,11 +2,7 @@ using System.Collections.Immutable;
 using Aevatar.Core.Abstractions;
 using Aevatar.Extensions;
 using Aevatar.PermissionManagement.Extensions;
-using Aevatar.Plugins;
-using Aevatar.Plugins.Extensions;
-using Aevatar.SignalR;
 using AutoMapper;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -102,11 +98,7 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                     }
                     services.AddSingleton(grainTypeMap);
                     services.AddSingleton<IEventDispatcher, DefaultEventDispatcher>();
-                    services.AddSingleton(typeof(HubLifetimeManager<>), typeof(OrleansHubLifetimeManager<>));
-                    services.AddTransient<AevatarSignalRHub>();
-                    services.AddTransient<IAevatarSignalRHub, AevatarSignalRHub>();
                 })
-                .RegisterHub<AevatarSignalRHub>()
                 .UseAevatar()
                 .UseAevatarPermissionManagement()
                 .AddMemoryStreams("Aevatar")

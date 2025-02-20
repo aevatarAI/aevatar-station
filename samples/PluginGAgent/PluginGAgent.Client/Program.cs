@@ -1,5 +1,4 @@
-﻿using Aevatar;
-using Aevatar.ArtifactGAgents;
+﻿using Aevatar.ArtifactGAgents;
 using Aevatar.Core.Abstractions;
 using Aevatar.Core.Abstractions.Extensions;
 using Aevatar.Core.Abstractions.Plugin;
