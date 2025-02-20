@@ -12,13 +12,13 @@ public static class StreamExtensions
     /// Gets the OrleansSignalR stream provider.
     /// </summary>
     public static IStreamProvider GetOrleansSignalRStreamProvider(this IClusterClient client)
-        => client.GetStreamProvider(SignalROrleansConstants.StreamProvider);
+        => client.GetStreamProvider(AevatarCoreConstants.StreamProvider);
 
     /// <summary>
     /// Gets the OrleansSignalR stream provider.
     /// </summary>
     public static IStreamProvider GetOrleansSignalRStreamProvider(this IGrainBase grain)
-        => grain.GetStreamProvider(SignalROrleansConstants.StreamProvider);
+        => grain.GetStreamProvider(AevatarCoreConstants.StreamProvider);
 
     /// <summary>
     ///  Gets a stream that you can listen on to receive the server disconnection (silo shutdown) event
