@@ -9,4 +9,7 @@ public interface IHostDeployManager
     Task<string> CreateHostAsync(string appId, string version, string corsUrls);
     Task DestroyHostAsync(string appId, string version);
     Task RestartHostAsync(string appId,string version);
+
+    public Task UpdateDockerImageAsync(string appId, string version, string newImage);
+
 }
