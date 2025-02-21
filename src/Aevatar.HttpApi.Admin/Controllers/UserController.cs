@@ -3,13 +3,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Controllers;
 using Aevatar.Kubernetes.Enum;
-using Aevatar.Options;
 using Aevatar.Service;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Volo.Abp;
 
 namespace Aevatar.Admin.Controllers;
@@ -22,16 +20,13 @@ public class UserController :  AevatarController
 {
     private readonly IUserAppService _userAppService;
     private readonly IDeveloperService _developerService;
-    private readonly HostDeployOptions _hostDeployOptions;
     private readonly ILogger<UserController> _logger;
     public UserController(IUserAppService userAppService,
-        IOptionsSnapshot<HostDeployOptions> hostDeployOptions,
         IDeveloperService developerService,
         ILogger<UserController> logger)
     {
         _userAppService = userAppService;
         _developerService = developerService;
-        _hostDeployOptions = hostDeployOptions.Value;
         _logger = logger;
     }
     
@@ -68,7 +63,7 @@ public class UserController :  AevatarController
             throw new UserFriendlyException("unSupport client");
         }
         await _developerService.UpdateDockerImageAsync(clientId + "-" + hostType, "1",
-            _hostDeployOptions.DockerImagePrefix + imageName);
+            imageName);
     }
     
     [Authorize(Policy = "OnlyAdminAccess")]
@@ -76,6 +71,6 @@ public class UserController :  AevatarController
     public async Task UpdateDockerImageByAdminAsync(string hostId,HostTypeEnum hostType,string imageName)
     {
         await _developerService.UpdateDockerImageAsync(hostId + "-" + hostType, "1",
-            _hostDeployOptions.DockerImagePrefix + imageName);
+            imageName);
     }
 }
