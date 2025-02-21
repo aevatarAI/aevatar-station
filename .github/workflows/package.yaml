@@ -17,7 +17,7 @@ env:
 
 concurrency:
   group: workflow-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   publish:
