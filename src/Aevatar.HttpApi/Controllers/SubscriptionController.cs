@@ -6,6 +6,7 @@ using Aevatar.Subscription;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Volo.Abp;
 
 namespace Aevatar.Controllers;
@@ -17,15 +18,20 @@ namespace Aevatar.Controllers;
 public class SubscriptionController :  AevatarController
 {
     private readonly SubscriptionAppService _subscriptionAppService;
+    private readonly ILogger<SubscriptionController> _logger;
 
-    public SubscriptionController(SubscriptionAppService subscriptionAppService)
+    public SubscriptionController(
+        SubscriptionAppService subscriptionAppService, 
+        ILogger<SubscriptionController> logger )
     {
         _subscriptionAppService = subscriptionAppService;
+        _logger = logger;
     }
 
     [HttpGet("events")]
     public async Task<List<EventDescriptionDto>> GetAvailableEventsAsync([FromQuery] Guid agentId)
     {
+        _logger.LogInformation("Get Available Events, id: {id}", agentId);   
         return await _subscriptionAppService.GetAvailableEventsAsync(agentId);
     }
 
