@@ -9,12 +9,7 @@ on:
         default: 'Aevatar.HttpApi.Host'
         type: choice
         options:
-          - Aevatar.Worker
-          - Aevatar.HttpApi.Host
           - Aevatar.Silo
-          - Aevatar.DbMigrator
-          - Aevatar.AuthServer
-          - Aevatar.WebHook.Host
           - Aevatar.Developer.Host
 
 env:
