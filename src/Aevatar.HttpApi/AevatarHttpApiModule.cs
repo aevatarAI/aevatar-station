@@ -22,9 +22,7 @@ public class AevatarHttpApiModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
-        var configuration = context.Services.GetConfiguration();
         ConfigureLocalization();
-        Configure<HostOptions>(configuration.GetSection("Host"));
     }
 
     private void ConfigureLocalization()
