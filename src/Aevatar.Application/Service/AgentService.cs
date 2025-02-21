@@ -325,7 +325,8 @@ public class AgentService : ApplicationService, IAgentService
     {
         var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
         var agentState = await creatorAgent.GetAgentAsync();
-
+        _logger.LogInformation("GetAgentAsync id: {id} state: {state}", guid, JsonConvert.SerializeObject(agentState));
+        
         EnsureUserAuthorized(agentState.UserId);
         
         var resp = new AgentDto
@@ -343,6 +344,7 @@ public class AgentService : ApplicationService, IAgentService
     
     public async Task<SubAgentDto> AddSubAgentAsync(Guid guid, AddSubAgentDto addSubAgentDto)
     {
+        _logger.LogInformation("Add sub Agent: {agent}", JsonConvert.SerializeObject(addSubAgentDto));
         var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
         var agentState = await creatorAgent.GetAgentAsync();
         
@@ -392,8 +394,16 @@ public class AgentService : ApplicationService, IAgentService
             var eventsHandledByAgent = await businessAgent.GetAllSubscribedEventsAsync();
             if (eventsHandledByAgent != null)
             {
+                _logger.LogInformation("all events for agent {agentId}, events: {events}", 
+                    grainId.GetGuidKey(), JsonConvert.SerializeObject(eventsHandledByAgent));
                 var eventsToAdd = eventsHandledByAgent.Except(allEventsHandled).ToList(); 
+                _logger.LogInformation("Adding events for agent {agentId}, events: {events}", 
+                    grainId.GetGuidKey(), JsonConvert.SerializeObject(eventsToAdd));
                 allEventsHandled.AddRange(eventsToAdd);
+            }
+            else
+            {
+                _logger.LogInformation("No events handled by agent {agentId}", grainId.GetGuidKey());
             }
         }
         await creatorAgent.UpdateAvailableEventsAsync(allEventsHandled);

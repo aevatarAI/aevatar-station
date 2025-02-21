@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Aevatar.Agent;
 using Aevatar.CQRS.Dto;
 using Aevatar.Service;
+using Aevatar.Subscription;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,30 +22,17 @@ public class AgentController : AevatarController
 {
     private readonly ILogger<AgentController> _logger;
     private readonly IAgentService  _agentService;
+    private readonly SubscriptionAppService _subscriptionAppService;
 
     public AgentController(
         ILogger<AgentController> logger, 
+        SubscriptionAppService subscriptionAppService, 
         IAgentService agentService)
     {
         _logger = logger;
         _agentService = agentService;
+        _subscriptionAppService = subscriptionAppService;
     }
-    
-    // [HttpGet("/atomic-agents")]
-    // public async Task<List<AtomicAgentDto>> GetAtomicAgentList(string userAddress, int pageIndex, int pageSize)
-    // {
-    //     _logger.LogInformation("Get Atomic-Agent list: {address}", userAddress);
-    //     var agentDto = await _agentService.GetAtomicAgentsAsync(userAddress, pageIndex, pageSize);
-    //     return agentDto;
-    // }
-    //
-    // [HttpGet("/combination-agents")]
-    // public async Task<List<CombinationAgentDto>> GetCombinationAgentList(string userAddress, string? groupId, int pageIndex, int pageSize)
-    // {
-    //     _logger.LogInformation("Get Combination-Agent list: {address} {groupId} {pageIndex} {pageSize}", userAddress,groupId, pageIndex,pageSize);
-    //     var agentDtoList = await _agentService.GetCombinationAgentsAsync(userAddress, groupId, pageIndex, pageSize);
-    //     return agentDtoList;
-    // }
     
     [HttpGet("agent-logs")]
     public async Task<Tuple<long, List<AgentGEventIndex>>> GetAgentLogs(string agentId, int pageIndex, int pageSize)
@@ -60,7 +48,7 @@ public class AgentController : AevatarController
         return await _agentService.GetAllAgents();
     }
     
-    [HttpPost("agent")]
+    [HttpPost]
     public async Task<AgentDto> CreateAgent([FromBody] CreateAgentInputDto createAgentInputDto)
     {
         _logger.LogInformation("Create Agent: {agent}", JsonConvert.SerializeObject(createAgentInputDto));
@@ -68,7 +56,7 @@ public class AgentController : AevatarController
         return agentDto;
     }
     
-    [HttpGet]
+    [HttpGet("{guid}")]
     public async Task<AgentDto> GetAgent(Guid guid)
     {
         _logger.LogInformation("Create Agent: {guid}", guid);
@@ -120,5 +108,11 @@ public class AgentController : AevatarController
     {
         _logger.LogInformation("Delete Agent: {agent}", guid);
         await _agentService.DeleteAgentAsync(guid);
+    }
+    
+    [HttpPost("publishEvent")]
+    public async Task PublishAsync([FromBody] PublishEventDto input)
+    {
+        await _subscriptionAppService.PublishEventAsync(input);
     }
 }
