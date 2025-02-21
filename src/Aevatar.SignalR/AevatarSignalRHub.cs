@@ -1,11 +1,12 @@
 using Aevatar.Core.Abstractions;
 using Aevatar.SignalR.GAgents;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Aevatar.SignalR;
 
 // ReSharper disable InconsistentNaming
-// [Authorize]
+[Authorize]
 public class AevatarSignalRHub : Hub, IAevatarSignalRHub
 {
     private readonly IGAgentFactory _gAgentFactory;
