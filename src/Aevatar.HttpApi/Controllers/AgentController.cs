@@ -56,7 +56,7 @@ public class AgentController : AevatarController
         return agentDto;
     }
     
-    [HttpGet]
+    [HttpGet("{guid}")]
     public async Task<AgentDto> GetAgent(Guid guid)
     {
         _logger.LogInformation("Create Agent: {guid}", guid);

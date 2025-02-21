@@ -28,6 +28,7 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
     
     public async Task<CreatorGAgentState> GetAgentAsync()
     {
+        _logger.LogInformation("GetAgentAsync {state}", JsonConvert.SerializeObject(State));
         return State;
     }
     
@@ -69,9 +70,11 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
     }
     
     public async Task UpdateAvailableEventsAsync(List<Type>? eventTypeList)
-    {
+    {   
+        _logger.LogInformation("UpdateAvailableEventsAsync {list}", JsonConvert.SerializeObject(eventTypeList));
         if (eventTypeList == null)
         {
+            _logger.LogInformation("UpdateAvailableEventsAsync No eventTypeList");
             return;
         }
 
@@ -104,6 +107,7 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
             EventInfoList = eventDescriptionList
         });
         await ConfirmEvents();
+        _logger.LogInformation("UpdateAvailableEventsAsync Finish {list}", JsonConvert.SerializeObject(eventDescriptionList));
     }
     
     public async Task PublishEventAsync<T>(T @event) where T : EventBase
