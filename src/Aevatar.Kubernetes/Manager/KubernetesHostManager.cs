@@ -105,6 +105,45 @@ public class KubernetesHostManager: IHostDeployManager, ISingletonDependency
         await _kubernetesClientAdapter.ReplaceNamespacedConfigMapAsync(configMap, configMapName,KubernetesConstants.AppNameSpace);
     }
 }
+  
+public async Task UpdateDockerImageAsync(string appId, string version, string newImage)
+    {
+        var deployments = await _kubernetesClientAdapter.ListDeploymentAsync(KubernetesConstants.AppNameSpace);
+        var deploymentName =
+            DeploymentHelper.GetAppDeploymentName(appId, version);
+        var deploymentExists = deployments.Items.Any(item => item.Metadata.Name == deploymentName);
+        if (deploymentExists)
+        {
+            var deployment =
+                await _kubernetesClientAdapter.ReadNamespacedDeploymentAsync(deploymentName,
+                    KubernetesConstants.AppNameSpace);
+            // Add or update annotations to trigger rolling updates
+            var annotations = deployment.Spec.Template.Metadata.Annotations ?? new Dictionary<string, string>();
+            annotations["kubectl.kubernetes.io/restartedAt"] = DateTime.UtcNow.ToString("s");
+            deployment.Spec.Template.Metadata.Annotations = annotations;
+            //Update container image 
+            var containers = deployment.Spec.Template.Spec.Containers;
+            var containerName =
+                ContainerHelper.GetAppContainerName(appId, version);
+
+            var container = containers.FirstOrDefault(c => c.Name == containerName);
+            if (container != null)
+            {
+                container.Image = newImage;
+                await _kubernetesClientAdapter.ReplaceNamespacedDeploymentAsync(deployment, deploymentName,
+                    KubernetesConstants.AppNameSpace);
+                _logger.LogInformation($"Updated deployment {deploymentName} to use image {newImage}");
+            }
+            else
+            {
+                _logger.LogError($"Container {containerName} not found in deployment {deploymentName}");
+            }
+        }
+        else
+        {
+            _logger.LogError($"Deployment {deploymentName} does not exist!");
+        }
+    }  
 
 private static string GetWebhookConfigContent(string appId, string version, string templateFilePath)
 {
