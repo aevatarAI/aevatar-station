@@ -107,6 +107,8 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
     {
         var agent = _clusterClient.GetGrain<ICreatorGAgent>(dto.AgentId);
         var agentState = await agent.GetAgentAsync();
+        _logger.LogInformation("PublishEventAsync id: {id} state: {state}", dto.AgentId, JsonConvert.SerializeObject(agentState));
+        
         var currentUserId = _userAppService.GetCurrentUserId();
         if (agentState.UserId != currentUserId)
         {

@@ -28,11 +28,11 @@ public class SubscriptionController :  AevatarController
         _logger = logger;
     }
 
-    [HttpGet("events")]
-    public async Task<List<EventDescriptionDto>> GetAvailableEventsAsync([FromQuery] Guid agentId)
+    [HttpGet("events/{guid}")]
+    public async Task<List<EventDescriptionDto>> GetAvailableEventsAsync(Guid guid)
     {
-        _logger.LogInformation("Get Available Events, id: {id}", agentId);   
-        return await _subscriptionAppService.GetAvailableEventsAsync(agentId);
+        _logger.LogInformation("Get Available Events, id: {id}", guid);   
+        return await _subscriptionAppService.GetAvailableEventsAsync(guid);
     }
 
     [HttpPost]
