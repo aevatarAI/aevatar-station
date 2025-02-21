@@ -10,6 +10,7 @@ using Aevatar.Core.Abstractions;
 using Aevatar.Domain.Grains.Subscription;
 using Aevatar.Subscription;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using Orleans;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
@@ -55,6 +56,7 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
     {
         var agent = _clusterClient.GetGrain<ICreatorGAgent>(agentId);
         var agentState = await agent.GetAgentAsync();
+        _logger.LogInformation("GetAvailableEventsAsync id: {id} state: {state}", agentId, JsonConvert.SerializeObject(agentState));
         var dto = _objectMapper.Map<List<EventDescription>, List<EventDescriptionDto>>(agentState.EventInfoList);
         return dto;
     }
