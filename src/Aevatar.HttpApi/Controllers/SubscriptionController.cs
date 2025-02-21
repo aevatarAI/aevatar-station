@@ -47,11 +47,6 @@ public class SubscriptionController :  AevatarController
         return await _subscriptionAppService.GetSubscriptionAsync(subscriptionId);
     }
     
-    [HttpPost("publish")]
-    public async Task PublishAsync([FromBody] PublishEventDto input)
-    {
-        await _subscriptionAppService.PublishEventAsync(input);
-    }
 }
 
 
