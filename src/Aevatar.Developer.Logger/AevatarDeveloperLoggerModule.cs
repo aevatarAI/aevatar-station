@@ -18,7 +18,7 @@ public class AevatarDeveloperLoggerModule: AbpModule
         context.Services.AddSingleton<ElasticClient>(provider =>
         {
             var options = provider.GetRequiredService<IOptions<LogElasticSearchOptions>>().Value;
-            if (options == null)
+            if (options.Uris == null)
             {
                 throw new Exception("the config of [LogElasticSearch] is missing.");
             }
