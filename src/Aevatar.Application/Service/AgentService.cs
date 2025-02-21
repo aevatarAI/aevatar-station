@@ -214,7 +214,7 @@ public class AgentService : ApplicationService, IAgentService
     {
         CheckCreateParam(dto);
         var userId = _userAppService.GetCurrentUserId();
-        var guid = Guid.NewGuid();
+        var guid = dto.AgentId ?? Guid.NewGuid();
         var agentData = new AgentData
         {
             UserId = userId,

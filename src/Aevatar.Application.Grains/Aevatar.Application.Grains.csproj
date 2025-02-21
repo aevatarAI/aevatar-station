@@ -13,6 +13,7 @@
         <PackageReference Include="AElf.OpenTelemetry" />
         <PackageReference Include="Volo.Abp.AutoMapper" />
         <PackageReference Include="Volo.Abp.EventBus.Abstractions" />
+        <PackageReference Include="Aevatar.SignalR" />
         <PackageReference Include="Aevatar.GAgents.AIGAgent" />
         <PackageReference Include="Aevatar.GAgents.SemanticKernel"  />
         <PackageReference Include="Aevatar.GAgents.AI.Abstractions"/>
