@@ -52,6 +52,8 @@
     <PackageVersion Include="Volo.Abp.Caching.StackExchangeRedis" Version="8.2.0" />
     <PackageVersion Include="Volo.Abp.Core" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Dapr" Version="$(AbpVersion)" />
+    <PackageVersion Include="Volo.Abp.Data" Version="9.0.3" />
+    <PackageVersion Include="Volo.Abp.Ddd.Application" Version="9.0.3" />
     <PackageVersion Include="Volo.Abp.Ddd.Domain" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Emailing" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.EntityFrameworkCore" Version="$(AbpVersion)" />
@@ -68,6 +70,7 @@
     <PackageVersion Include="Volo.Abp.Identity.HttpApi" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Identity.HttpApi.Client" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Identity.MongoDB" Version="$(AbpVersion)" />
+    <PackageVersion Include="Volo.Abp.MongoDB" Version="9.0.3" />
     <PackageVersion Include="Volo.Abp.ObjectExtending" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.ObjectMapping" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.OpenIddict.AspNetCore" Version="$(AbpVersion)" />
