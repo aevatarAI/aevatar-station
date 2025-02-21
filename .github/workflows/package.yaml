@@ -132,6 +132,11 @@ jobs:
       - name: Conditionally Call UpdateDockerImage endpoint
         run: |
           echo "Calling UpdateDockerImage for hostType=${{ env.hostType }} with imageName=${{ steps.meta.outputs.tags }}"
-          curl -X POST "https://station-staging.aevatar.ai/api/users/updateDockerImage?hostType=${{ env.hostType }}&imageName=${{ steps.meta.outputs.tags }}" \
-          -H "Authorization: Bearer ${{ env.access_token }}" \
+
+          curl -X 'POST' "https://station-staging.aevatar.ai/api/users/updateDockerImage?hostType=${{ env.hostType }}&imageName=$(echo '${{ steps.meta.outputs.tags }}' | sed 's/:/%3A/g')" \
+            -H "accept: */*" \
+            -H "Authorization: Bearer ${{ env.access_token }}" \
+            -H "X-Requested-With: XMLHttpRequest" \
+            -d ''
+
           echo "Docker image updated successfully."
