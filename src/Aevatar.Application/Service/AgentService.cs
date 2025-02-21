@@ -325,7 +325,8 @@ public class AgentService : ApplicationService, IAgentService
     {
         var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
         var agentState = await creatorAgent.GetAgentAsync();
-
+        _logger.LogInformation("GetAgentAsync id: {id} state: {state}", guid, JsonConvert.SerializeObject(agentState));
+        
         EnsureUserAuthorized(agentState.UserId);
         
         var resp = new AgentDto
