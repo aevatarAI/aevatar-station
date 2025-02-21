@@ -2,10 +2,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Developer.Logger;
 using Aevatar.Developer.Logger.Entities;
-using Aevatar.Kubernetes;
 using Aevatar.Kubernetes.Enum;
 using Aevatar.Options;
-using Aevetar.Developer.Logger.Entities;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,10 +20,11 @@ public class HostController
 {
     private readonly ILogService _logService;
     private readonly KubernetesOptions _kubernetesOptions;
-    
+
     public HostController(
         ILogService logService, 
-        IOptionsSnapshot<KubernetesOptions> kubernetesOptions)
+        IOptionsSnapshot<KubernetesOptions> kubernetesOptions
+      )
     {
         _logService = logService;
         _kubernetesOptions = kubernetesOptions.Value;
@@ -37,4 +36,7 @@ public class HostController
         var indexName = _logService.GetHostLogIndexAliasName(_kubernetesOptions.AppNameSpace, appId + "-"+hostType.ToString().ToLower(), "1");
         return await _logService.GetHostLatestLogAsync(indexName, offset);
     }
+   
+    
+    
 }

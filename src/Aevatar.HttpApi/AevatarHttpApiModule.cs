@@ -1,6 +1,7 @@
 ﻿using Aevatar.Developer.Logger;
 using Localization.Resources.AbpUi;
 using Aevatar.Localization;
+using Aevatar.Options;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.Account;
 using Volo.Abp.Identity;
