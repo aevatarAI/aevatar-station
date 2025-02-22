@@ -119,7 +119,7 @@ public static class OrleansHostExtension
                 var streamProvider = configuration.GetSection("OrleansStream:Provider").Get<string>();
                 if (streamProvider == "Kafka")
                 {
-                    siloBuilder.AddKafka($"Aevatar")
+                    siloBuilder.AddKafka("Aevatar")
                         .WithOptions(options =>
                         {
                             options.BrokerList = configuration.GetSection("OrleansStream:Brokers").Get<List<string>>();
@@ -129,7 +129,7 @@ public static class OrleansHostExtension
                             var partitions = configuration.GetSection("OrleansStream:Partitions").Get<int>();
                             var replicationFactor =
                                 configuration.GetSection("OrleansStream:ReplicationFactor").Get<short>();
-                            var topic = configuration.GetSection("OrleansStream:Topic").Get<string>();
+                            var topic = configuration.GetSection("Aevatar:StreamNamespace").Get<string>();
                             topic = topic.IsNullOrEmpty() ? CommonConstants.StreamNamespace : topic;
                             options.AddTopic(topic, new TopicCreationConfig
                             {
