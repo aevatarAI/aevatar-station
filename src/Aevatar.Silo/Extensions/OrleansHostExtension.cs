@@ -25,6 +25,7 @@ public static class OrleansHostExtension
         return hostBuilder.UseOrleans((context, siloBuilder) =>
             {
                 var configuration = context.Configuration;
+                var hostId = configuration.GetValue<string>("Host:HostId");
                 var configSection = context.Configuration.GetSection("Orleans");
                 var isRunningInKubernetes = configSection.GetValue<bool>("IsRunningInKubernetes");
                 var advertisedIP = isRunningInKubernetes
@@ -55,7 +56,8 @@ public static class OrleansHostExtension
                         })
                     .AddMongoDBGrainStorage("Default", (MongoDBGrainStorageOptions op) =>
                     {
-                        op.CollectionPrefix = "GrainStorage";
+                      
+                        op.CollectionPrefix = hostId.IsNullOrEmpty() ? "GrainStorage" :$"Grain{hostId}";
                         op.DatabaseName = configSection.GetValue<string>("DataBase");
                     })
                     .UseMongoDBReminders(options =>
@@ -94,7 +96,7 @@ public static class OrleansHostExtension
                     .AddMongoDBGrainStorage("PubSubStore", options =>
                     {
                         // Config PubSubStore Storage for Persistent Stream 
-                        options.CollectionPrefix = "StreamStorage";
+                        options.CollectionPrefix = hostId.IsNullOrEmpty() ? "StreamStorage" :$"Stream{hostId}";
                         options.DatabaseName = configSection.GetValue<string>("DataBase");
                     })
                     .ConfigureLogging(logging => { logging.SetMinimumLevel(LogLevel.Debug).AddConsole(); });
