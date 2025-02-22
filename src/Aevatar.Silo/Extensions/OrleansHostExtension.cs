@@ -119,11 +119,11 @@ public static class OrleansHostExtension
                 var streamProvider = configuration.GetSection("OrleansStream:Provider").Get<string>();
                 if (streamProvider == "Kafka")
                 {
-                    siloBuilder.AddKafka("Aevatar")
+                    siloBuilder.AddKafka($"Aevatar{hostId}")
                         .WithOptions(options =>
                         {
                             options.BrokerList = configuration.GetSection("OrleansStream:Brokers").Get<List<string>>();
-                            options.ConsumerGroupId = "Aevatar";
+                            options.ConsumerGroupId = $"Aevatar{hostId}";
                             options.ConsumeMode = ConsumeMode.LastCommittedMessage;
 
                             var partitions = configuration.GetSection("OrleansStream:Partitions").Get<int>();
