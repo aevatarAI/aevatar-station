@@ -11,7 +11,7 @@
         <PackageReference Include="Microsoft.Orleans.Sdk" />
         <PackageReference Include="AElf.OpenTelemetry" />
         <PackageReference Include="Volo.Abp.Ddd.Domain" />
-        <PackageReference Include="Microsoft.SourceLink.GitHub "/>
+        <PackageReference Include="Microsoft.SourceLink.GitHub"/>
         <PackageReference Include="EchoListen.GAgent.TwitterListenerGAgent"/>
     </ItemGroup>
 
