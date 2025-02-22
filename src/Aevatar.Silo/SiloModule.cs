@@ -25,6 +25,6 @@ public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
         context.Services.AddSerilog(loggerConfiguration => {},
             true, writeToProviders: true);
         context.Services.AddHttpClient();
-        context.Services.AddSignalR().AddOrleans();
+       // context.Services.AddSignalR().AddOrleans();
     }
 }

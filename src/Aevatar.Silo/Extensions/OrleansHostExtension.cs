@@ -4,7 +4,7 @@ using Aevatar.EventSourcing.MongoDB.Hosting;
 using Aevatar.GAgents.AI.Options;
 using Aevatar.GAgents.SemanticKernel.Extensions;
 using Aevatar.Extensions;
-using Aevatar.SignalR;
+//using Aevatar.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -147,8 +147,8 @@ public static class OrleansHostExtension
                     siloBuilder.AddMemoryStreams("Aevatar");
                 }
                 siloBuilder.UseAevatar();
-                siloBuilder.UseSignalR(); 
-                siloBuilder.RegisterHub<AevatarSignalRHub>();
+              //  siloBuilder.UseSignalR(); 
+              //  siloBuilder.RegisterHub<AevatarSignalRHub>();
             }).ConfigureServices((context, services) =>
             {
                 services.Configure<AzureOpenAIConfig>(context.Configuration.GetSection("AIServices:AzureOpenAI"));

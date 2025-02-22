@@ -49,6 +49,6 @@ public class AevatarApplicationModule : AbpModule
         Configure<AgentOptions>(configuration.GetSection("Agent"));
         context.Services.AddTransient<IHostDeployManager, KubernetesHostManager>();
         Configure<HostDeployOptions>(configuration.GetSection("HostDeploy"));
-        context.Services.AddSignalR().AddOrleans();
+       // context.Services.AddSignalR().AddOrleans();
     }
 }

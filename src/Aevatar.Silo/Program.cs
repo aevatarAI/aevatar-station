@@ -1,4 +1,4 @@
-﻿using Aevatar.SignalR;
+﻿//using Aevatar.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
