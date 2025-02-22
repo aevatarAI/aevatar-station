@@ -25,8 +25,7 @@ jobs:
           Aevatar.Core.Abstractions,
           Aevatar.EventSourcing.Core,
           Aevatar.EventSourcing.MongoDB,
-          Aevatar.PermissionManagement,
-          Aevatar.SignalR
+          Aevatar.PermissionManagement
         ]
     steps:
       - name: Checkout code
