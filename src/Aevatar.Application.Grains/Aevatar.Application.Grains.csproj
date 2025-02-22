@@ -17,7 +17,8 @@
         <PackageReference Include="Aevatar.GAgents.AIGAgent" />
         <PackageReference Include="Aevatar.GAgents.SemanticKernel"  />
         <PackageReference Include="Aevatar.GAgents.AI.Abstractions"/>
-        <PackageReference Include="TwitterListenerGAgent"/>
+        <PackageReference Include="EchoListen.GAgent.TwitterListenerGAgent"/>
+        <PackageReference Include="EchoListen.GAgent.Basic"/>
     </ItemGroup>
 
     <ItemGroup>
