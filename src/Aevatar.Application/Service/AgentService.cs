@@ -372,6 +372,7 @@ public class AgentService : ApplicationService, IAgentService
         {
             await agent.RegisterAsync(creatorAgent);
             var parentEventData =  await agent.GetAllSubscribedEventsAsync();
+            _logger.LogInformation("Add praent Agent: {agent}", JsonConvert.SerializeObject(parentEventData));
             if (parentEventData != null)
             {
                 allEventsHandled.AddRange(parentEventData);
