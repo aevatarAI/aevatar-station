@@ -1,14 +1,9 @@
-using System.Reflection;
-using Aevatar.Plugins;
-using Aevatar.Plugins.Repositories;
+using Aevatar.Plugins.Extensions;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Orleans.Metadata;
 using Orleans.Serialization;
 using Volo.Abp;
 using Volo.Abp.Modularity;
 using Volo.Abp.Threading;
-using Volo.Abp.Uow;
 
 namespace Aevatar.Extensions;
 
@@ -49,22 +44,7 @@ public static class OrleansHostExtensions
 
     private static async Task LoadPluginsAsync(IServiceCollection services, IAbpApplicationWithInternalServiceProvider application)
     {
-        var unitOfWorkManager = application.Services.GetRequiredService<IUnitOfWorkManager>();
-        using var uow = unitOfWorkManager.Begin(requiresNew: true);
-        var configuration = application.Services.GetConfiguration();
-        var pluginConfig = configuration.GetSection("Plugins");
-        var tenantId = pluginConfig["TenantId"];
-        if (tenantId.IsNullOrEmpty()) return;
-        var tenantPluginCodeRepository = application.Services.GetRequiredService<ITenantPluginCodeRepository>();
-        var tenantIdGuid = Guid.Parse(tenantId);
-        var pluginCodeGAgentPrimaryKeys =
-            await tenantPluginCodeRepository.GetGAgentPrimaryKeysByTenantIdAsync(tenantIdGuid);
-        if (pluginCodeGAgentPrimaryKeys == null) return;
-        var pluginCodeStorageRepository = application.Services.GetRequiredService<IPluginCodeStorageRepository>();
-        var pluginCodes =
-            await pluginCodeStorageRepository.GetPluginCodesByGAgentPrimaryKeys(pluginCodeGAgentPrimaryKeys);
-        var assemblies = pluginCodes.Select(Assembly.Load).DistinctBy(assembly => assembly.FullName);
-        await uow.CompleteAsync();
+        var assemblies = await application.GetTenantPluginAssemblyListAsync();
         services.AddSerializer(options =>
         {
             foreach (var assembly in assemblies)

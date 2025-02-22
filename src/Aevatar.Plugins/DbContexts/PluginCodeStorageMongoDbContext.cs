@@ -1,27 +1,21 @@
 using Aevatar.Plugins.Entities;
 using MongoDB.Driver;
 using Volo.Abp.Data;
-using Volo.Abp.DependencyInjection;
 using Volo.Abp.MongoDB;
 
 namespace Aevatar.Plugins.DbContexts;
 
 [ConnectionStringName("Default")]
-public class PluginCodeStorageMongoDbContext : AbpMongoDbContext
+public class PluginCodeStorageMongoDbContext(IServiceProvider serviceProvider)
+    : AevatarMongoDbContextBase(serviceProvider)
 {
     public IMongoCollection<PluginCodeStorageSnapshotDocument> PluginCodeStorage
     {
         get
         {
-            ModelSource = new MongoModelSource();
-            ModelSource.GetModel(this);
+            InitializeModelSource();
             return Collection<PluginCodeStorageSnapshotDocument>();
         }
-    }
-
-    public PluginCodeStorageMongoDbContext(IServiceProvider serviceProvider)
-    {
-        LazyServiceProvider = new AbpLazyServiceProvider(serviceProvider);
     }
 
     protected override void CreateModel(IMongoModelBuilder modelBuilder)

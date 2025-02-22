@@ -3,7 +3,6 @@ using Aevatar.Core.Abstractions;
 using Aevatar.Core.Abstractions.Plugin;
 using Aevatar.EventSourcing.Core.Snapshot;
 using Aevatar.Plugins.GAgents;
-using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -11,20 +10,18 @@ using Orleans.Storage;
 
 namespace Aevatar.Plugins;
 
-public class PluginGAgentManager : IPluginGAgentManager, ILifecycleParticipant<ISiloLifecycle>
+public class PluginGAgentManager : IPluginGAgentManager
 {
     protected readonly ILogger<PluginGAgentManager> Logger;
 
-    private readonly ApplicationPartManager _applicationPartManager;
     private readonly IGAgentFactory _gAgentFactory;
     private readonly IServiceProvider _serviceProvider;
     private readonly PluginGAgentLoadOptions _options;
 
-    public PluginGAgentManager(ApplicationPartManager applicationPartManager, IGAgentFactory gAgentFactory,
+    public PluginGAgentManager(IGAgentFactory gAgentFactory,
         IOptions<PluginGAgentLoadOptions> options, ILogger<PluginGAgentManager> logger,
         IServiceProvider serviceProvider)
     {
-        _applicationPartManager = applicationPartManager;
         _gAgentFactory = gAgentFactory;
         Logger = logger;
         _serviceProvider = serviceProvider;
@@ -140,41 +137,5 @@ public class PluginGAgentManager : IPluginGAgentManager, ILifecycleParticipant<I
         }
 
         return assemblies;
-    }
-
-    private async Task LoadPluginGAgentsAsync(Guid tenantId)
-    {
-        var assemblies = await GetPluginAssembliesAsync(tenantId);
-        foreach (var assembly in assemblies)
-        {
-            _applicationPartManager.ApplicationParts.Add(new AssemblyPart(assembly));
-            Logger.LogInformation("Loaded assembly: {Assembly}", assembly.FullName);
-        }
-    }
-
-    public void Participate(ISiloLifecycle lifecycle)
-    {
-        lifecycle.Subscribe(
-            nameof(PluginGAgentManager),
-            ServiceLifecycleStage.First,
-            OnStart
-        );
-    }
-
-    private async Task OnStart(CancellationToken cancellationToken)
-    {
-        if (_options.TenantId == Guid.Empty) return;
-        await LoadPluginGAgentsAsync(_options.TenantId);
-
-        foreach (var part in _applicationPartManager.ApplicationParts.OfType<AssemblyPart>())
-        {
-            foreach (var type in part.Types)
-            {
-                if (typeof(IGAgent).IsAssignableFrom(type))
-                {
-                    Logger.LogInformation("Registered GAgent: {GrainType}", type.FullName);
-                }
-            }
-        }
     }
 }

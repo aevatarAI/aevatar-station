@@ -18,8 +18,7 @@ var builder = Host.CreateDefaultBuilder(args)
         client.UseLocalhostClustering()
             .UseMongoDBClient("mongodb://localhost:27017/?maxPoolSize=555")
             .AddMemoryStreams(AevatarCoreConstants.StreamProvider)
-            .UseAevatar()
-            .UseAevatarPlugins();
+            .UseAevatar();
     })
     .ConfigureLogging(logging => logging.AddConsole())
     .UseConsoleLifetime();

@@ -10,10 +10,7 @@ public class PluginCodeStorageGAgentState : StateBase
 }
 
 [GenerateSerializer]
-public class PluginCodeStorageStateLogEvent : StateLogEventBase<PluginCodeStorageStateLogEvent>
-{
-    
-}
+public class PluginCodeStorageStateLogEvent : StateLogEventBase<PluginCodeStorageStateLogEvent>;
 
 [GenerateSerializer]
 public class PluginCodeStorageConfiguration : ConfigurationBase
