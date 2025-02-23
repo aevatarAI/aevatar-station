@@ -26,6 +26,7 @@
         <PackageReference Include="Aevatar.EventSourcing.MongoDB" />
         <PackageReference Include="Aevatar.Plugins" />
         <PackageReference Include="Aevatar" />
+        <PackageReference Include="Aevatar.SignalR" />
     </ItemGroup>
 
     <ItemGroup>

@@ -4,6 +4,8 @@ using Aevatar.EventSourcing.MongoDB.Hosting;
 using Aevatar.GAgents.AI.Options;
 using Aevatar.GAgents.SemanticKernel.Extensions;
 using Aevatar.Extensions;
+using Aevatar.SignalR;
+using Microsoft.AspNetCore.SignalR;
 //using Aevatar.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -56,8 +58,8 @@ public static class OrleansHostExtension
                         })
                     .AddMongoDBGrainStorage("Default", (MongoDBGrainStorageOptions op) =>
                     {
-                      
-                        op.CollectionPrefix = hostId.IsNullOrEmpty() ? "GrainStorage" :$"Grain{hostId}";
+
+                        op.CollectionPrefix = hostId.IsNullOrEmpty() ? "GrainStorage" : $"Grain{hostId}";
                         op.DatabaseName = configSection.GetValue<string>("DataBase");
                     })
                     .UseMongoDBReminders(options =>
@@ -96,7 +98,7 @@ public static class OrleansHostExtension
                     .AddMongoDBGrainStorage("PubSubStore", options =>
                     {
                         // Config PubSubStore Storage for Persistent Stream 
-                        options.CollectionPrefix = hostId.IsNullOrEmpty() ? "StreamStorage" :$"Stream{hostId}";
+                        options.CollectionPrefix = hostId.IsNullOrEmpty() ? "StreamStorage" : $"Stream{hostId}";
                         options.DatabaseName = configSection.GetValue<string>("DataBase");
                     })
                     .ConfigureLogging(logging => { logging.SetMinimumLevel(LogLevel.Debug).AddConsole(); });
@@ -146,20 +148,23 @@ public static class OrleansHostExtension
                 {
                     siloBuilder.AddMemoryStreams("Aevatar");
                 }
-               // siloBuilder.UseAevatar();
-               // siloBuilder.UseSignalR(); 
-               // siloBuilder.RegisterHub<AevatarSignalRHub>();
+
+                siloBuilder.UseAevatar()
+                    .UseSignalR()
+                    .RegisterHub<AevatarSignalRHub>();
             }).ConfigureServices((context, services) =>
             {
                 services.Configure<AzureOpenAIConfig>(context.Configuration.GetSection("AIServices:AzureOpenAI"));
                 services.Configure<QdrantConfig>(context.Configuration.GetSection("VectorStores:Qdrant"));
-                services.Configure<AzureOpenAIEmbeddingsConfig>(context.Configuration.GetSection("AIServices:AzureOpenAIEmbeddings"));
+                services.Configure<AzureOpenAIEmbeddingsConfig>(
+                    context.Configuration.GetSection("AIServices:AzureOpenAIEmbeddings"));
                 services.Configure<RagConfig>(context.Configuration.GetSection("Rag"));
 
                 services.AddSemanticKernel()
                     .AddAzureOpenAI()
                     .AddQdrantVectorStore()
                     .AddAzureOpenAITextEmbedding();
+                services.AddSingleton(typeof(HubLifetimeManager<>), typeof(OrleansHubLifetimeManager<>));
             })
             .UseConsoleLifetime();
     }
