@@ -2,8 +2,6 @@ using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.PermissionManagement;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Moq;
 using Volo.Abp;
 using Volo.Abp.Auditing;
 using Volo.Abp.Autofac;
@@ -23,7 +21,6 @@ public class AevatarTestBaseModule : AbpModule
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
         Configure<AbpAuditingOptions>(options => { options.IsEnabled = false; });
-        // Configure<AevatarOptions>(options => { options.StreamNamespace = "AINamespace"; });
         context.Services.AddSingleton<ClusterFixture>();
         context.Services.AddSingleton<IClusterClient>(sp => context.Services.GetRequiredService<ClusterFixture>().Cluster.Client);
         context.Services.AddSingleton<IGrainFactory>(sp => context.Services.GetRequiredService<ClusterFixture>().Cluster.GrainFactory);
