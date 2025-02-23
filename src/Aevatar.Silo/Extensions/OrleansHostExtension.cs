@@ -146,7 +146,7 @@ public static class OrleansHostExtension
                 {
                     siloBuilder.AddMemoryStreams("Aevatar");
                 }
-               // siloBuilder.UseAevatar();
+                siloBuilder.UseAevatar();
                // siloBuilder.UseSignalR(); 
                // siloBuilder.RegisterHub<AevatarSignalRHub>();
             }).ConfigureServices((context, services) =>
