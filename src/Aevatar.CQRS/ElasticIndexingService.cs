@@ -183,10 +183,13 @@ public class ElasticIndexingService : IIndexingService
 
     public void CheckExistOrCreateIndex<T>(T baseIndex) where T : BaseIndex
     {
+        _logger.LogInformation("CheckExistOrCreateIndex, indexName:{indexName}", baseIndex.GetType().Name.ToLower());
+        
         var indexName = CqrsConstant.IndexPrefix + baseIndex.GetType().Name.ToLower();
         var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
         if (indexExistsResponse.Exists)
         {
+            _logger.LogInformation("Index already exists. indexName:{indexName}", indexName);
             return;
         }
 
@@ -260,6 +263,8 @@ public class ElasticIndexingService : IIndexingService
 
     public async Task SaveOrUpdateIndexAsync<T>(string id, T baseIndex) where T : BaseIndex
     {
+        _logger.LogInformation("SaveOrUpdateIndexAsync, indexName:{indexName}", baseIndex.GetType().Name.ToLower());
+        
         var indexName = CqrsConstant.IndexPrefix + baseIndex.GetType().Name.ToLower();
         var properties = baseIndex.GetType().GetProperties();
         var document = new Dictionary<string, object>();
