@@ -127,7 +127,9 @@ public static class OrleansHostExtension
                             var partitions = configuration.GetSection("OrleansStream:Partitions").Get<int>();
                             var replicationFactor =
                                 configuration.GetSection("OrleansStream:ReplicationFactor").Get<short>();
-                            options.AddTopic(CommonConstants.StreamNamespace, new TopicCreationConfig
+                            var topic = configuration.GetSection("Aevatar:StreamNamespace").Get<string>();
+                            topic = topic.IsNullOrEmpty() ? CommonConstants.StreamNamespace : topic;
+                            options.AddTopic(topic, new TopicCreationConfig
                             {
                                 AutoCreate = true,
                                 Partitions = partitions,
