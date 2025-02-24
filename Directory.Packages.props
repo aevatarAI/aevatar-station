@@ -174,8 +174,8 @@
     <PackageVersion Include="Mongo2Go" Version="3.1.3" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.2" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client.Core" Version="9.0.2" />
-    <PackageVersion Include="EchoListen.GAgent.Basic" Version="0.0.11-alpha" />
-    <PackageVersion Include="EchoListen.GAgent.TwitterListenerGAgent" Version="0.0.11-alpha" />
-    <PackageVersion Include="EchoListen.GAgent.ControllerGAgent" Version="0.0.11-alpha" />
+    <PackageVersion Include="EchoListen.GAgent.Basic" Version="0.0.12-alpha" />
+    <PackageVersion Include="EchoListen.GAgent.TwitterListenerGAgent" Version="0.0.12-alpha" />
+    <PackageVersion Include="EchoListen.GAgent.ControllerGAgent" Version="0.0.12-alpha" />
   </ItemGroup>
 </Project>
