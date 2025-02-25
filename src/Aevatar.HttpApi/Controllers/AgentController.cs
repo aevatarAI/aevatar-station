@@ -48,7 +48,7 @@ public class AgentController : AevatarController
         return await _agentService.GetAllAgents();
     }
 
-    [HttpGet("all-agents")]
+    [HttpGet("agent-list")]
     public async Task<List<AgentInstanceDto>> GetAllAgentInstance(int pageIndex = 0, int pageSize = 20)
     {
         return await _agentService.GetAllAgentInstances(pageIndex, pageSize);
