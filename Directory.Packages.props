@@ -4,6 +4,7 @@
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVerion>9.0.1</OrleansVerion>
     <AevatarVerion>1.4.8</AevatarVerion>
+    <AevatarGAgentVerion>1.1.12</AevatarGAgentVerion>
   </PropertyGroup>
   <ItemGroup>
     <!-- AElf packages -->
@@ -18,9 +19,11 @@
     <PackageVersion Include="Aevatar.EventSourcing.Core" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.Plugins" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.EventSourcing.MongoDB" Version="$(AevatarVerion)" />
-    <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="1.1.9" />
-    <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="1.1.9" />
-    <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="1.1.9" />
+    <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="$(AevatarGAgentVerion)" />
+    <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="$(AevatarGAgentVerion)" />
+    <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="$(AevatarGAgentVerion)" />
+    <PackageVersion Include="Aevatar.GAgents.SocialGAgent" Version="$(AevatarGAgentVerion)" />
+    <PackageVersion Include="Aevatar.GAgents.Twitter" Version="$(AevatarGAgentVerion)" />
     <PackageVersion Include="Aevatar.SignalR" Version="1.5.1" />
     <!-- AI and Analysis packages -->
     <PackageVersion Include="AutoGen" Version="0.2.1" />
@@ -174,8 +177,6 @@
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.2" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client.Core" Version="9.0.2" />
     <PackageVersion Include="XWorkerAgent" Version="0.0.20" />
-    <PackageVersion Include="Aevatar.GAgents.SocialGAgent" Version="1.1.9" />
-    <PackageVersion Include="Aevatar.GAgents.Twitter" Version="1.1.9" />
 
   </ItemGroup>
 </Project>
