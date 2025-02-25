@@ -2,6 +2,8 @@ using AElf.OpenTelemetry;
 using Aevatar.Domain.Grains;
 using Microsoft.Extensions.DependencyInjection;
 using Aevatar.Application.Grains;
+using Aevatar.GAgents.SocialChat;
+using Aevatar.GAgents.Twitter;
 using Serilog;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
@@ -12,7 +14,9 @@ namespace Aevatar.Silo;
 [DependsOn(
     typeof(AbpAspNetCoreSerilogModule),
     typeof(AbpAutofacModule),
-    typeof(OpenTelemetryModule)
+    typeof(OpenTelemetryModule),
+    typeof(AevatarGAgentsTwitterModule),
+    typeof(AISmartGAgentSocialGAgentModule)
 )]
 public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
 {
