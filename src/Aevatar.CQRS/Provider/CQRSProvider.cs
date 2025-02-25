@@ -146,7 +146,44 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         var document = await _mediator.Send(getStateQuery);
         return document;
     }
-    
+
+    public async Task<Tuple<long, List<TargetT>>> GetUserInstanceAgent<SourceT,TargetT>(Guid userId, int pageIndex, int pageSize)
+    {
+        _logger.LogInformation("CQRSProvider query user instance agents,UserId:{userId}", userId);
+        var mustQuery = new List<Func<QueryContainerDescriptor<dynamic>, QueryContainer>>
+        {
+            q => q.Term(i =>
+                i.Field("userId").Value(userId.ToString()))
+        };
+
+        var index = CqrsConstant.IndexPrefix + typeof(SourceT).Name.ToLower() + CqrsConstant.IndexSuffix;
+        QueryContainer Filter(QueryContainerDescriptor<dynamic> f) => f.Bool(b => b.Must(mustQuery));
+        var queryResponse = await _mediator.Send(new GetUserInstanceAgentsQuery()
+        {
+            Index = index,
+            Skip = pageIndex * pageSize,
+            Query = Filter,
+            Limit = pageSize,
+        });
+
+        if (queryResponse.Item2.IsNullOrWhiteSpace())
+        {
+            return new Tuple<long, List<TargetT>>(0, new List<TargetT>());
+        }
+
+        var documentList = JsonConvert.DeserializeObject<List<TargetT>>(queryResponse.Item2);
+        if (documentList != null)
+        {
+            return new Tuple<long, List<TargetT>>(queryResponse.Item1, documentList);
+        }
+
+        _logger.LogWarning(
+            "CQRSProvider query user instance agents documentList == null, UserId:{userId}, document string:{documents}",
+            userId, queryResponse.Item2);
+
+        return new Tuple<long, List<TargetT>>(0, new List<TargetT>());
+    }
+
 
     public async Task PublishAsync(Guid eventId, GrainId grainId, StateLogEventBase eventBase)
     {

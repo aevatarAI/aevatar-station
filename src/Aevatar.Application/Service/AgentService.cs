@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Aevatar.Agent;
+using Aevatar.Agents.Creator;
 using Aevatar.Agents.Creator.Models;
 using Aevatar.Application.Grains.Agents.Creator;
 using Aevatar.Application.Grains.Subscription;
@@ -241,6 +242,24 @@ public class AgentService : ApplicationService, IAgentService
         
         
         return resp;
+    }
+
+    public async Task<List<AgentInstanceDto>> GetAllAgentInstances(int pageIndex, int pageSize)
+    {
+        var result = new List<AgentInstanceDto>();
+        var currentUserId = _userAppService.GetCurrentUserId();
+        var response = await _cqrsProvider.GetUserInstanceAgent<CreatorGAgentState, AgentInstanceDto>(currentUserId, pageIndex, pageSize);
+        if (response.Item1 == 0)
+        {
+            return result;
+        }
+
+        // result.AddRange(response.Item2.Select(state => new AgentInstanceDto()
+        // {
+        //     Id = state.BusinessAgentGrainId.GetGuidKey(), Name = state.Name, Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(state.Properties), Type = state.AgentType,
+        // }));
+
+        return response.Item2;
     }
 
     private void CheckCreateParam(CreateAgentInputDto createDto)
