@@ -8,7 +8,6 @@ using Aevatar.Options;
 using Aevatar.WebHook.Deploy;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans;
-using Orleans.Hosting;
 using Volo.Abp.Account;
 using Volo.Abp.AspNetCore.Mvc.Dapr;
 using Volo.Abp.AutoMapper;
@@ -49,6 +48,6 @@ public class AevatarApplicationModule : AbpModule
         Configure<AgentOptions>(configuration.GetSection("Agent"));
         context.Services.AddTransient<IHostDeployManager, KubernetesHostManager>();
         Configure<HostDeployOptions>(configuration.GetSection("HostDeploy"));
-        context.Services.AddSignalR().AddOrleans();
+       
     }
 }
