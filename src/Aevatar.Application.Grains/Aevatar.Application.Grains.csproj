@@ -20,7 +20,7 @@
         <PackageReference Include="Aevatar.GAgents.SemanticKernel"/>
         <PackageReference Include="Aevatar.GAgents.Twitter"/>
         <PackageReference Include="Aevatar.GAgents.AI.Abstractions"/>
-        <!--        <PackageReference Include="XWorkerAgent" />-->
+        <PackageReference Include="XWorkerAgent"/>
         <PackageReference Include="Aevatar.GAgents.SocialGAgent"/>
     </ItemGroup>
 
