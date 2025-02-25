@@ -4,6 +4,7 @@ using Aevatar.EventSourcing.MongoDB.Hosting;
 using Aevatar.GAgents.AI.Options;
 using Aevatar.GAgents.SemanticKernel.Extensions;
 using Aevatar.Extensions;
+using Aevatar.SignalR;
 //using Aevatar.SignalR;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
