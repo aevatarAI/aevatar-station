@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Orleans.Hosting;
 using Serilog;
 using Serilog.Events;
 
@@ -43,6 +44,7 @@ public class Program
                 .ConfigureDefaults(args)
                 .UseAutofac()
                 .UseSerilog();
+            builder.Services.AddSignalR().AddOrleans();
             await builder.AddApplicationAsync<AevatarDeveloperHostModule>();
             var app = builder.Build();
             await app.InitializeApplicationAsync();
