@@ -38,6 +38,7 @@ public class CqrsServiceTest : AevatarApplicationTestBase
         services.AddMediatR(typeof(SendEventCommandHandler).Assembly);
         services.AddMediatR(typeof(SaveGEventCommandHandler).Assembly);
         services.AddMediatR(typeof(GetGEventQueryHandler).Assembly);
+        services.AddMediatR(typeof(GetUserInstanceAgentsHandler).Assembly);
 
         services.AddSingleton<IEventDispatcher,CQRSProvider>();
         services.AddSingleton<ICQRSProvider,CQRSProvider>();

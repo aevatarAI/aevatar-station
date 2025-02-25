@@ -157,13 +157,14 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         var mustQuery = new List<Func<QueryContainerDescriptor<dynamic>, QueryContainer>>
         {
             q => q.Term(i =>
-                i.Field("user").Value(userId.ToString()))
+                i.Field("userId").Value(userId.ToString()))
         };
 
+        var index = CqrsConstant.IndexPrefix + typeof(T).Name.ToLower() + CqrsConstant.IndexSuffix;
         QueryContainer Filter(QueryContainerDescriptor<dynamic> f) => f.Bool(b => b.Must(mustQuery));
         var queryResponse = await _mediator.Send(new GetUserInstanceAgentsQuery()
         {
-            Index = CqrsConstant.IndexPrefix + typeof(T).Name.ToLower() + CqrsConstant.IndexSuffix,
+            Index = index,
             Skip = pageIndex * pageSize,
             Query = Filter,
             Limit = pageSize,

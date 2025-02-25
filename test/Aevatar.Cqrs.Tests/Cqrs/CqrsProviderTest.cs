@@ -1,3 +1,5 @@
+using Aevatar.Agents.Creator;
+using Aevatar.Application.Grains.Agents.Creator;
 using Aevatar.CQRS.Provider;
 using Aevatar.Cqrs.Tests.Cqrs.Dto;
 using Aevatar.GAgent.Dto;
@@ -135,6 +137,33 @@ public class CqrsProviderTest : AevatarApplicationTestBase
         tupleResult.Item2[1].EventJson.ShouldContain(User2Address);
 
     }
-    
-   
+
+    [Fact]
+    public async Task QueryUserInstallAgentTest()
+    {
+        var userId = Guid.NewGuid();
+        var userIdString = userId.ToString();
+        List<CreatorGAgentState> creatorList = new List<CreatorGAgentState>();
+        for (var i = 0; i < 3; i++)
+        {
+            creatorList.Add(new CreatorGAgentState()
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                AgentType = "TestAgent",
+                Name = "TestAgentName",
+                Properties = JsonConvert.SerializeObject(new Dictionary<string,object>(){{"Name","you"}}),
+                BusinessAgentGrainId = GrainId.Create(nameof(creatorList), Guid.NewGuid().ToString().Replace("-","")),
+            });
+        }
+
+        foreach (var item in creatorList)
+        {
+            await _cqrsProvider.PublishAsync(item, GrainId.Create(nameof(CreatorGAgent).ToLower(),item.Id.ToString().Replace("-","")));
+        }
+        
+        var indexName = IndexPrefix + nameof(CreatorGAgentState).ToLower() + IndexSuffix;
+        var stationList = await _cqrsProvider.GetUserInstanceAgent<CreatorGAgentState>(userId, 0, 10);
+        stationList.Item1.ShouldNotBe(0);
+    }
 }
