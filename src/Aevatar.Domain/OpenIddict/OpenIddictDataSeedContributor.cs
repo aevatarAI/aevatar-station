@@ -35,6 +35,8 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
     private readonly IStringLocalizer<OpenIddictResponse> L;
     private readonly IdentityUserManager _identityUserManager;
     private readonly UsersOptions _usersOptions;
+    private readonly IPermissionManager _permissionManager;
+
     public OpenIddictDataSeedContributor(
         IConfiguration configuration,
         IOpenIddictApplicationRepository openIddictApplicationRepository,
@@ -44,7 +46,8 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
         IPermissionDataSeeder permissionDataSeeder,
         IdentityUserManager identityUserManager,
         IOptionsSnapshot<UsersOptions> userOptions,
-        IStringLocalizer<OpenIddictResponse> l )
+        IStringLocalizer<OpenIddictResponse> l ,
+        IPermissionManager permissionManager)
     {
         _configuration = configuration;
         _openIddictApplicationRepository = openIddictApplicationRepository;
@@ -55,6 +58,7 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
         L = l;
         _identityUserManager = identityUserManager;
         _usersOptions = userOptions.Value;
+        _permissionManager = permissionManager;
     }
 
     [UnitOfWork]
@@ -87,6 +91,14 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
             {
                 throw new Exception("Failed to set admin password: " + result.Errors.Select(e => e.Description).Aggregate((errors, error) => errors + ", " + error));
             }
+
+            /*var permissions = await _permissionManager.GetAllForClientAsync();
+
+            // 默认分配所有权限给 admin 角色
+            foreach (var permission in permissions)
+            {
+                await _permissionManager.SetForUserAsync(adminUser.Id,permission.Name,true);
+            }*/
         }
     }
 
