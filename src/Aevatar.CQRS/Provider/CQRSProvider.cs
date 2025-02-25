@@ -151,7 +151,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         return document;
     }
 
-    public async Task<Tuple<long, List<T>>> GetUserInstanceAgent<T>(Guid userId, int pageIndex, int pageSize)
+    public async Task<Tuple<long, List<TargetT>>> GetUserInstanceAgent<SourceT,TargetT>(Guid userId, int pageIndex, int pageSize)
     {
         _logger.LogInformation("CQRSProvider query user instance agents,UserId:{userId}", userId);
         var mustQuery = new List<Func<QueryContainerDescriptor<dynamic>, QueryContainer>>
@@ -160,7 +160,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
                 i.Field("userId").Value(userId.ToString()))
         };
 
-        var index = CqrsConstant.IndexPrefix + typeof(T).Name.ToLower() + CqrsConstant.IndexSuffix;
+        var index = CqrsConstant.IndexPrefix + typeof(SourceT).Name.ToLower() + CqrsConstant.IndexSuffix;
         QueryContainer Filter(QueryContainerDescriptor<dynamic> f) => f.Bool(b => b.Must(mustQuery));
         var queryResponse = await _mediator.Send(new GetUserInstanceAgentsQuery()
         {
@@ -172,20 +172,20 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
 
         if (queryResponse.Item2.IsNullOrWhiteSpace())
         {
-            return new Tuple<long, List<T>>(0, new List<T>());
+            return new Tuple<long, List<TargetT>>(0, new List<TargetT>());
         }
 
-        var documentList = JsonConvert.DeserializeObject<List<T>>(queryResponse.Item2);
+        var documentList = JsonConvert.DeserializeObject<List<TargetT>>(queryResponse.Item2);
         if (documentList != null)
         {
-            return new Tuple<long, List<T>>(queryResponse.Item1, documentList);
+            return new Tuple<long, List<TargetT>>(queryResponse.Item1, documentList);
         }
 
         _logger.LogWarning(
             "CQRSProvider query user instance agents documentList == null, UserId:{userId}, document string:{documents}",
             userId, queryResponse.Item2);
 
-        return new Tuple<long, List<T>>(0, new List<T>());
+        return new Tuple<long, List<TargetT>>(0, new List<TargetT>());
     }
 
 

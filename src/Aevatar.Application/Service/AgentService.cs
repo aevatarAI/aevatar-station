@@ -257,18 +257,18 @@ public class AgentService : ApplicationService, IAgentService
     {
         var result = new List<AgentInstanceDto>();
         var currentUserId = _userAppService.GetCurrentUserId();
-        var response = await _cqrsProvider.GetUserInstanceAgent<CreatorGAgentState>(currentUserId, pageIndex, pageSize);
+        var response = await _cqrsProvider.GetUserInstanceAgent<CreatorGAgentState, AgentInstanceDto>(currentUserId, pageIndex, pageSize);
         if (response.Item1 == 0)
         {
             return result;
         }
 
-        result.AddRange(response.Item2.Select(state => new AgentInstanceDto()
-        {
-            Id = state.BusinessAgentGrainId.GetGuidKey(), Name = state.Name, Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(state.Properties), Type = state.AgentType,
-        }));
+        // result.AddRange(response.Item2.Select(state => new AgentInstanceDto()
+        // {
+        //     Id = state.BusinessAgentGrainId.GetGuidKey(), Name = state.Name, Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(state.Properties), Type = state.AgentType,
+        // }));
 
-        return result;
+        return response.Item2;
     }
 
     private void CheckCreateParam(CreateAgentInputDto createDto)
