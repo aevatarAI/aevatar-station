@@ -33,6 +33,7 @@
     <PackageReference Include="MongoDB.Driver" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
     <PackageReference Include="Microsoft.CodeAnalysis.Common" />
+    <PackageReference Include="Aevatar.SignalR" />
 
   </ItemGroup>
 

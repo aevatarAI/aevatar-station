@@ -5,7 +5,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Aevatar.Extensions;
+using Aevatar.SignalR;
 //using Aevatar.SignalR;
+using Orleans.Hosting;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.OpenTelemetry;
@@ -27,10 +29,11 @@ public class Program
                 .ConfigureDefaults(args)
                 .UseAutofac()
                 .UseSerilog();
+            builder.Services.AddSignalR().AddOrleans();
             await builder.AddApplicationAsync<AevatarHttpApiHostModule>();
             var app = builder.Build();
             await app.InitializeApplicationAsync();
-           // app.MapHub<AevatarSignalRHub>("api/agent/aevatarHub");
+            app.MapHub<AevatarSignalRHub>("api/agent/aevatarHub");
             await app.RunAsync();
             return 0;
         }
