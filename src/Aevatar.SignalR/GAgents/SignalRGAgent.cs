@@ -1,6 +1,8 @@
+using System.Threading.Channels;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.SignalR.Core;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace Aevatar.SignalR.GAgents;
@@ -13,10 +15,7 @@ public class SignalRGAgentState : StateBase
 }
 
 [GenerateSerializer]
-public class SignalRStateLogEvent : StateLogEventBase<SignalRStateLogEvent>
-{
-
-}
+public class SignalRStateLogEvent : StateLogEventBase<SignalRStateLogEvent>;
 
 [GenerateSerializer]
 public class SignalRGAgentConfiguration : ConfigurationBase
@@ -29,18 +28,78 @@ public class SignalRGAgent :
     GAgentBase<SignalRGAgentState, SignalRStateLogEvent, EventBase, SignalRGAgentConfiguration>,
     ISignalRGAgent
 {
-    private readonly IGAgentFactory _gAgentFactory;
     private readonly HubContext<AevatarSignalRHub> _hubContext;
+
+    private Channel<string> _signalRMessageChannel;
 
     public SignalRGAgent(IGrainFactory grainFactory, IGAgentFactory gAgentFactory)
     {
-        _gAgentFactory = gAgentFactory;
         _hubContext = new HubContext<AevatarSignalRHub>(grainFactory);
     }
 
     public override Task<string> GetDescriptionAsync()
     {
         return Task.FromResult("SignalR Publisher.");
+    }
+
+    protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)
+    {
+        _signalRMessageChannel = Channel.CreateUnbounded<string>();
+        StartProcessingQueue();
+    }
+
+    private void StartProcessingQueue()
+    {
+        var reader = _signalRMessageChannel.Reader;
+        Task.Run(async () =>
+        {
+            while (await reader.WaitToReadAsync())
+            {
+                while (reader.TryRead(out var msg))
+                {
+                    await SendWithRetryAsync(msg);
+                }
+            }
+        });
+    }
+
+    private async Task SendWithRetryAsync(string message)
+    {
+        const int maxRetries = 3;
+        for (var i = 0; i < maxRetries; i++)
+        {
+            try
+            {
+                var connectionIdList = State.ConnectionIds;
+                foreach (var (connectionId, fireAndForget) in connectionIdList)
+                {
+                    await _hubContext.Client(connectionId)
+                        .Send(SignalROrleansConstants.MethodName, JsonConvert.SerializeObject(message));
+                    if (fireAndForget)
+                    {
+                        RaiseEvent(new RemoveConnectionIdStateLogEvent
+                        {
+                            ConnectionId = connectionId
+                        });
+                        await ConfirmEvents();
+                    }
+                }
+
+                return;
+            }
+            catch (Exception ex)
+            {
+                if (i >= maxRetries - 1)
+                    Logger.LogError(ex, $"Message failed after {maxRetries} retries.");
+                else
+                    await Task.Delay(1000 * (i + 1));
+            }
+        }
+    }
+
+    private async Task EnqueueMessageAsync(string message)
+    {
+        await _signalRMessageChannel.Writer.WriteAsync(message);
     }
 
     public async Task PublishEventAsync<T>(T @event, string connectionId) where T : EventBase
@@ -84,25 +143,12 @@ public class SignalRGAgent :
 
         var @event = (ResponseToPublisherEventBase)eventWrapper.Event;
 
-        if (State.ConnectionIdMap.TryGetValue(@event.CorrelationId!.Value, out var cid))
+        if (State.ConnectionIdMap.TryGetValue(@event.CorrelationId!.Value, out var connectionId))
         {
-            @event.ConnectionId = cid;
+            @event.ConnectionId = connectionId;
         }
 
-        var connectionIdList = State.ConnectionIds;
-        foreach (var (connectionId, fireAndForget) in connectionIdList)
-        {
-            await _hubContext.Client(connectionId)
-                .Send(SignalROrleansConstants.MethodName, JsonConvert.SerializeObject(@event));
-            if (fireAndForget)
-            {
-                RaiseEvent(new RemoveConnectionIdStateLogEvent
-                {
-                    ConnectionId = connectionId
-                });
-                await ConfirmEvents();
-            }
-        }
+        await EnqueueMessageAsync(JsonConvert.SerializeObject(@event));
     }
 
     protected override void GAgentTransitionState(SignalRGAgentState state,
