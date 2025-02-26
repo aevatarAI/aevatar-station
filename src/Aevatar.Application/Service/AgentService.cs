@@ -301,6 +301,11 @@ public class AgentService : ApplicationService, IAgentService
                     $"[AgentService][InitializeBusinessAgent][config ]---{JsonConvert.SerializeObject(agentTypeData)}--{JsonConvert.SerializeObject(config)} -- {JsonConvert.SerializeObject(agentProperties)}");
             }
         }
+        else
+        {
+            _logger.LogError(
+                $"[AgentService][InitializeBusinessAgent] agentTypeDataMap.TryGetValue == false, agentDataMap:{JsonConvert.SerializeObject(agentTypeData)} agenttype:{agentType} properties:{agentProperties}");
+        }
 
         var grainId = GrainId.Create(agentType, primaryKey.ToString("N"));
         var businessAgent = await _gAgentFactory.GetGAgentAsync(grainId, config);
