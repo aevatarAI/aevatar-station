@@ -109,12 +109,12 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
         var agentState = await agent.GetAgentAsync();
         _logger.LogInformation("PublishEventAsync id: {id} state: {state}", dto.AgentId, JsonConvert.SerializeObject(agentState));
         
-        var currentUserId = _userAppService.GetCurrentUserId();
+        /*var currentUserId = _userAppService.GetCurrentUserId();
         if (agentState.UserId != currentUserId)
         {
             _logger.LogInformation("User {userId} is not allowed to publish event {eventType}.", currentUserId, dto.EventType);
             throw new UserFriendlyException("User is not allowed to publish event");
-        }
+        }*/
         
         var eventList = agentState.EventInfoList;
 
