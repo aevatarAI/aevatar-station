@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using Nest;
 using Newtonsoft.Json;
 using Orleans.Runtime;
@@ -14,10 +15,12 @@ namespace Aevatar.CQRS.Provider;
 public class CQRSProvider : ICQRSProvider, ISingletonDependency
 {
     private readonly IMediator _mediator;
-
-    public CQRSProvider(IMediator mediator)
+    private readonly ILogger<CQRSProvider> _logger;
+    
+    public CQRSProvider(IMediator mediator, ILogger<CQRSProvider> logger)
     {
         _mediator = mediator;
+        _logger = logger;
     }
 
     public Task PublishAsync(StateBase state, string grainId)
@@ -27,6 +30,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
 
     public async Task PublishAsync(StateBase state, GrainId grainId)
     {
+        _logger.LogInformation("CQRSProvider Publish State grainId:{grainId}", grainId);
         var command = new SaveStateCommand
         {
             Id = grainId.GetGuidKey().ToString(),
@@ -38,6 +42,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
     public async Task<string> QueryStateAsync(string indexName,
         Func<QueryContainerDescriptor<dynamic>, QueryContainer> query, int skip, int limit)
     {
+        _logger.LogInformation("CQRSProvider QueryStateAsync indexName:{indexName}", indexName);
         var getStateQuery = new GetStateQuery()
         {
             Index = indexName,
@@ -53,6 +58,8 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
     public async Task<Tuple<long, List<AgentGEventIndex>>> QueryGEventAsync(string eventId, List<string> grainIds,
         int pageNumber, int pageSize)
     {
+        _logger.LogInformation("CQRSProvider QueryGEventAsync eventId:{eventId}, grainIds:{grainIds}", eventId, grainIds);
+        
         var mustQuery = new List<Func<QueryContainerDescriptor<AgentGEventIndex>, QueryContainer>>();
         if (!eventId.IsNullOrEmpty())
         {
@@ -85,6 +92,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
     public async Task<Tuple<long, List<AgentGEventIndex>>> QueryAgentGEventAsync(Guid? primaryKey, string agentType,
         int pageNumber, int pageSize)
     {
+        _logger.LogInformation("CQRSProvider QueryAgentGEventAsync primaryKey:{primaryKey}, agentType:{agentType}", primaryKey, agentType);
         var mustQuery = new List<Func<QueryContainerDescriptor<AgentGEventIndex>, QueryContainer>>();
 
         if (primaryKey != null)
@@ -118,6 +126,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
 
     public async Task<string> QueryAgentStateAsync(string stateName, Guid primaryKey)
     {
+        _logger.LogInformation("CQRSProvider QueryAgentStateAsync stateName:{stateName}, primaryKey:{primaryKey}", stateName, primaryKey);
         var mustQuery = new List<Func<QueryContainerDescriptor<dynamic>, QueryContainer>>
         {
             q => q.Term(i =>
@@ -137,11 +146,48 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         var document = await _mediator.Send(getStateQuery);
         return document;
     }
-    
+
+    public async Task<Tuple<long, List<TargetT>>> GetUserInstanceAgent<SourceT,TargetT>(Guid userId, int pageIndex, int pageSize)
+    {
+        _logger.LogInformation("CQRSProvider query user instance agents,UserId:{userId}", userId);
+        var mustQuery = new List<Func<QueryContainerDescriptor<dynamic>, QueryContainer>>
+        {
+            q => q.Term(i =>
+                i.Field("userId").Value(userId.ToString()))
+        };
+
+        var index = CqrsConstant.IndexPrefix + typeof(SourceT).Name.ToLower() + CqrsConstant.IndexSuffix;
+        QueryContainer Filter(QueryContainerDescriptor<dynamic> f) => f.Bool(b => b.Must(mustQuery));
+        var queryResponse = await _mediator.Send(new GetUserInstanceAgentsQuery()
+        {
+            Index = index,
+            Skip = pageIndex * pageSize,
+            Query = Filter,
+            Limit = pageSize,
+        });
+
+        if (queryResponse.Item2.IsNullOrWhiteSpace())
+        {
+            return new Tuple<long, List<TargetT>>(0, new List<TargetT>());
+        }
+
+        var documentList = JsonConvert.DeserializeObject<List<TargetT>>(queryResponse.Item2);
+        if (documentList != null)
+        {
+            return new Tuple<long, List<TargetT>>(queryResponse.Item1, documentList);
+        }
+
+        _logger.LogWarning(
+            "CQRSProvider query user instance agents documentList == null, UserId:{userId}, document string:{documents}",
+            userId, queryResponse.Item2);
+
+        return new Tuple<long, List<TargetT>>(0, new List<TargetT>());
+    }
+
 
     public async Task PublishAsync(Guid eventId, GrainId grainId, StateLogEventBase eventBase)
     {
-        var agentGrainId = Guid.Parse(grainId.Key.ToString());
+        _logger.LogInformation("CQRSProvider Publish event grainId:{grainId}", grainId);
         var grainType = grainId.Type;
         if (eventId == Guid.Empty)
         {
@@ -167,7 +213,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
             EventJson = JsonConvert.SerializeObject(eventBase),
             EventName = eventBase.GetType().Name
         };
-
+        
         var command = new SaveGEventCommand
         {
             Id = eventId == null ? Guid.NewGuid() : eventId,
