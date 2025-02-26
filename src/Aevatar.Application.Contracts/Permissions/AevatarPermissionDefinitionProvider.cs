@@ -11,7 +11,7 @@ public class AevatarPermissionDefinitionProvider : PermissionDefinitionProvider
         // Agent Management
         var agentManagementGroup = context.AddGroup(AevatarPermissions.GroupName, L("Permission:AgentManagement"));
         agentManagementGroup.AddPermission(AevatarPermissions.Agent.ViewLogs, L("Permission:ViewLogs"));
-        agentManagementGroup.AddPermission(AevatarPermissions.Agent.ViewAll, L("Permission:ViewAll"));
+        agentManagementGroup.AddPermission(AevatarPermissions.Agent.ViewAllType, L("Permission:ViewAll"));
         agentManagementGroup.AddPermission(AevatarPermissions.Agent.Create, L("Permission:Create"));
         agentManagementGroup.AddPermission(AevatarPermissions.Agent.View, L("Permission:View"));
         agentManagementGroup.AddPermission(AevatarPermissions.Agent.Update, L("Permission:Update"));

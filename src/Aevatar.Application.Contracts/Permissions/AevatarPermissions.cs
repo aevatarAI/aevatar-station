@@ -8,7 +8,8 @@ namespace Aevatar.Permissions
         public static class Agent
         {
             public const string ViewLogs = GroupName + ".ViewLogs";
-            public const string ViewAll = GroupName + ".ViewAll";
+            public const string ViewAllType = GroupName + ".ViewAllType";
+            public const string ViewList = GroupName + ".ViewList";
             public const string Create = GroupName + ".Create";
             public const string View = GroupName + ".View";
             public const string Update = GroupName + ".Update";

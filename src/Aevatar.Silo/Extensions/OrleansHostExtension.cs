@@ -4,6 +4,7 @@ using Aevatar.EventSourcing.MongoDB.Hosting;
 using Aevatar.GAgents.AI.Options;
 using Aevatar.GAgents.SemanticKernel.Extensions;
 using Aevatar.Extensions;
+using Aevatar.PermissionManagement.Extensions;
 using Aevatar.SignalR;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
@@ -147,7 +148,9 @@ public static class OrleansHostExtension
                 {
                     siloBuilder.AddMemoryStreams("Aevatar");
                 }
+
                 siloBuilder.UseAevatar()
+                    .UseAevatarPermissionManagement()
                     .UseSignalR()
                     .RegisterHub<AevatarSignalRHub>();
             }).ConfigureServices((context, services) =>
