@@ -54,7 +54,7 @@ async Task SendEventWithRetry(HubConnection conn, string grainType, string grain
                 await conn.StartAsync();
             }
 
-            await connection.InvokeAsync("PublishEventAsync", grainId, eventTypeName, eventJson);
+            await connection.InvokeAsync("SubscribeAsync", grainId, eventTypeName, eventJson);
             return;
         }
         catch (Exception ex)
