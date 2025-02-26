@@ -24,7 +24,6 @@ public class HostedService : IHostedService
             await gAgentFactory.GetGAgentAsync<IStateGAgent<SignalRTestGAgentState>>("test".ToGuid());
 
         await groupGAgent.RegisterAsync(signalRTestGAgent);
-
     }
 
     public Task StopAsync(CancellationToken cancellationToken)

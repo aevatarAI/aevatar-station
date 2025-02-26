@@ -94,7 +94,7 @@ public class AevatarSignalRHub : Hub, IAevatarSignalRHub
         var connectionId = GetConnectionId();
         if (!connectionId.IsNullOrEmpty())
         {
-            var signalRGAgent = await _gAgentFactory.GetGAgentAsync<ISignalRGAgent>();
+            var signalRGAgent = await _gAgentFactory.GetGAgentAsync<ISignalRGAgent>(signalRGAgentGrainId.GetGuidKey());
             await signalRGAgent.RemoveConnectionIdAsync(connectionId);
         }
     }

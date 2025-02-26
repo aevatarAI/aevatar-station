@@ -14,31 +14,63 @@ connection.On<string>("ReceiveResponse", (message) =>
     Console.WriteLine($"[Event] {message}");
 });
 
-try
+await connection.StartAsync();
+Console.WriteLine($"Init status: {connection.State}");
+
+Console.WriteLine("Select an option:");
+Console.WriteLine("1. Publish Event to aevatar GAgent - Fire and Forget");
+Console.WriteLine("2. Subscribe aevatar GAgent");
+Console.WriteLine("3. Unsubscribe aevatar GAgent");
+var choice = Console.ReadLine();
+
+while (true)
 {
-    await connection.StartAsync();
-    Console.WriteLine($"Init status: {connection.State}");
-    var eventJson = JsonConvert.SerializeObject(new
+    switch (choice)
     {
-        Greeting = "Test message"
-    });
-
-    await SendEventWithRetry(connection,
-        "SignalRSample.GAgents.signalR",
-        "test".ToGuid().ToString("N"),
-        typeof(NaiveTestEvent).FullName!,
-        eventJson);
-
-    Console.WriteLine("✅ Success");
+        case "1":
+            await PublishEventAsync("PublishEventAsync");
+            break;
+        case "2":
+            await PublishEventAsync("SubscribeAsync");
+            break;
+        case "3":
+            Console.WriteLine("Enter grainId:");
+            var grainIdString = Console.ReadLine();
+            var grainId = GrainId.Parse(grainIdString!);
+            await connection.InvokeAsync("UnsubscribeAsync", grainId);
+            break;
+        default:
+            Console.WriteLine("Invalid choice.");
+            break;
+    }
+    
+    choice = Console.ReadLine();
 }
-catch (Exception ex)
+
+async Task PublishEventAsync(string methodName)
 {
-    Console.WriteLine($"❌ Abnormal: {ex.Message}");
+    try
+    {
+        var eventJson = JsonConvert.SerializeObject(new
+        {
+            Greeting = "Test message"
+        });
+
+        await SendEventWithRetry(connection, methodName,
+            "SignalRSample.GAgents.signalR",
+            "test".ToGuid().ToString("N"),
+            typeof(NaiveTestEvent).FullName!,
+            eventJson);
+
+        Console.WriteLine("✅ Success");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Abnormal: {ex.Message}");
+    }
 }
 
-Console.ReadLine();
-
-async Task SendEventWithRetry(HubConnection conn, string grainType, string grainKey, string eventTypeName, string eventJson)
+async Task SendEventWithRetry(HubConnection conn, string methodName, string grainType, string grainKey, string eventTypeName, string eventJson)
 {
     var grainId = GrainId.Create(grainType, grainKey);
     const int maxRetries = 3;
@@ -54,7 +86,7 @@ async Task SendEventWithRetry(HubConnection conn, string grainType, string grain
                 await conn.StartAsync();
             }
 
-            await connection.InvokeAsync("SubscribeAsync", grainId, eventTypeName, eventJson);
+            await connection.InvokeAsync(methodName, grainId, eventTypeName, eventJson);
             return;
         }
         catch (Exception ex)
