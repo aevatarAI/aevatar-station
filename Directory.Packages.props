@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVerion>9.0.1</OrleansVerion>
-    <AevatarVerion>1.4.8</AevatarVerion>
+    <AevatarVerion>1.4.9</AevatarVerion>
   </PropertyGroup>
   <ItemGroup>
     <!-- AElf packages -->
@@ -18,9 +18,9 @@
     <PackageVersion Include="Aevatar.EventSourcing.Core" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.Plugins" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.EventSourcing.MongoDB" Version="$(AevatarVerion)" />
-    <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="1.1.8" />
-    <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="1.1.8" />
-    <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="1.1.8" />
+    <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="1.1.16" />
+    <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="1.1.16" />
+    <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="1.1.16" />
     <PackageVersion Include="Aevatar.SignalR" Version="1.5.1" />
     <!-- AI and Analysis packages -->
     <PackageVersion Include="AutoGen" Version="0.2.1" />
