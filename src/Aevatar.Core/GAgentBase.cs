@@ -47,12 +47,12 @@ public abstract partial class
 
     private readonly List<EventWrapperBaseAsyncObserver> _observers = [];
 
-    private IEventDispatcher? EventDispatcher { get; set; }
+    private IEnumerable<IEventDispatcher?> EventDispatchers { get; set; }
     private readonly AevatarOptions _aevatarOptions;
 
     protected GAgentBase()
     {
-        EventDispatcher = ServiceProvider.GetService<IEventDispatcher>();
+        EventDispatchers = ServiceProvider.GetService<IEnumerable<IEventDispatcher>>() ?? [];
         _aevatarOptions = ServiceProvider.GetRequiredService<IOptionsSnapshot<AevatarOptions>>().Value;
     }
 
@@ -264,15 +264,18 @@ public abstract partial class
     {
         await HandleStateChangedAsync();
         //TODO:  need optimize use kafka,ensure Es written successfully
-        if (EventDispatcher != null)
+        foreach (var eventDispatcher in EventDispatchers)
         {
-            await EventDispatcher.PublishAsync(State, this.GetGrainId());
+            if (eventDispatcher != null)
+            {
+                await eventDispatcher.PublishAsync(State, this.GetGrainId());
+            }
         }
     }
 
     protected sealed override async void RaiseEvent<T>(T @event)
     {
-        Logger.LogInformation("base raiseEvent info:{info}", JsonConvert.SerializeObject(@event));
+        Logger.LogDebug("base raiseEvent info:{info}", JsonConvert.SerializeObject(@event));
         base.RaiseEvent(@event);
         InternalRaiseEventAsync(@event).ContinueWith(task =>
         {
@@ -287,10 +290,13 @@ public abstract partial class
     {
         await HandleRaiseEventAsync();
         //TODO:  need optimize use kafka,ensure Es written successfully
-        var gEvent = @event as StateLogEventBase;
-        if (EventDispatcher != null)
+        var stateLogEvent = @event as StateLogEventBase;
+        foreach (var eventDispatcher in EventDispatchers)
         {
-            await EventDispatcher.PublishAsync(gEvent!.Id, this.GetGrainId(), gEvent);
+            if (eventDispatcher != null)
+            {
+                await eventDispatcher.PublishAsync(stateLogEvent!.Id, this.GetGrainId(), stateLogEvent);
+            }
         }
     }
 
