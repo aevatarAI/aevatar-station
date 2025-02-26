@@ -314,7 +314,12 @@ public class AgentService : ApplicationService, IAgentService
         }
 
         var grainId = GrainId.Create(agentType, primaryKey.ToString("N"));
-        var businessAgent = await _gAgentFactory.GetGAgentAsync(grainId, config);
+        var businessAgent = await _gAgentFactory.GetGAgentAsync(grainId);
+        if (config != null)
+        {
+            await businessAgent.ConfigAsync(config);
+        }
+
         return businessAgent;
     }
 
