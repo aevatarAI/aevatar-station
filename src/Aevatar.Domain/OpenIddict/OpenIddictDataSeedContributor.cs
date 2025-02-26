@@ -34,6 +34,7 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
     private readonly IPermissionDataSeeder _permissionDataSeeder;
     private readonly IStringLocalizer<OpenIddictResponse> L;
     private readonly IdentityUserManager _identityUserManager;
+    private readonly IdentityRoleManager _roleManager;
     private readonly UsersOptions _usersOptions;
     private readonly IPermissionManager _permissionManager;
 
@@ -47,7 +48,8 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
         IdentityUserManager identityUserManager,
         IOptionsSnapshot<UsersOptions> userOptions,
         IStringLocalizer<OpenIddictResponse> l ,
-        IPermissionManager permissionManager)
+        IPermissionManager permissionManager,
+        IdentityRoleManager roleManager)
     {
         _configuration = configuration;
         _openIddictApplicationRepository = openIddictApplicationRepository;
@@ -59,6 +61,7 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
         _identityUserManager = identityUserManager;
         _usersOptions = userOptions.Value;
         _permissionManager = permissionManager;
+        _roleManager = roleManager;
     }
 
     [UnitOfWork]
@@ -91,14 +94,43 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
             {
                 throw new Exception("Failed to set admin password: " + result.Errors.Select(e => e.Description).Aggregate((errors, error) => errors + ", " + error));
             }
+            await SeedPermissionsFromConfigurationAsync();
+        }
+    }
+    
+    private async Task SeedPermissionsFromConfigurationAsync()
+    {
+        var permissionMappings = _configuration.GetSection("PermissionMappings").Get<Dictionary<string, List<string>>>();
+        if (permissionMappings == null) return;
 
-            /*var permissions = await _permissionManager.GetAllForClientAsync();
-
-            // 默认分配所有权限给 admin 角色
+        foreach (var mapping in permissionMappings)
+        {
+            var roleName = mapping.Key;
+            var permissions = mapping.Value;
+           
+            var role = await _roleManager.RoleExistsAsync(roleName);
+            if (!role)
+            {
+                var identityRole = new IdentityRole(Guid.NewGuid(), roleName);
+                identityRole.IsPublic = true;
+                identityRole.IsStatic = true;
+                var result = await _roleManager.CreateAsync(identityRole);
+                if (!result.Succeeded)
+                {
+                    throw new Exception($"Failed to create role '{roleName}': " +
+                                        $"{string.Join(", ", result.Errors.Select(e => e.Description))}");
+                }
+            }
+            var latestRole = await _roleManager.FindByNameAsync(roleName);
             foreach (var permission in permissions)
             {
-                await _permissionManager.SetForUserAsync(adminUser.Id,permission.Name,true);
-            }*/
+                await _permissionManager.SetAsync(
+                    permission,
+                    RolePermissionValueProvider.ProviderName ,
+                    roleName,
+                    true 
+                );
+            }
         }
     }
 
