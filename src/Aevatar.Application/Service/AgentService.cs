@@ -291,20 +291,26 @@ public class AgentService : ApplicationService, IAgentService
     {
         var agentTypeDataMap = await GetAgentTypeDataMap();
         ConfigurationBase? config = null;
-
+        _logger.LogError(
+            $"[AgentService][InitializeBusinessAgent] step0 agenttype:{agentType} properties:{agentProperties}");
         if (agentTypeDataMap.TryGetValue(agentType, out var agentTypeData) && !agentProperties.IsNullOrEmpty())
         {
             if (agentTypeData != null && agentTypeData.InitializationData != null)
             {
                 config = SetupInitializedConfig(agentTypeData.InitializationData, agentProperties);
                 _logger.LogError(
-                    $"[AgentService][InitializeBusinessAgent][config ]---{JsonConvert.SerializeObject(agentTypeData)}--{JsonConvert.SerializeObject(config)} -- {JsonConvert.SerializeObject(agentProperties)}");
+                    $"[AgentService][InitializeBusinessAgent][config ] step1 ---{JsonConvert.SerializeObject(agentTypeData)}--{JsonConvert.SerializeObject(config)} -- {JsonConvert.SerializeObject(agentProperties)}");
+            }
+            else
+            {
+                _logger.LogError(
+                    $"[AgentService][InitializeBusinessAgent][config ]  step 2 ---{JsonConvert.SerializeObject(agentTypeData)}--{JsonConvert.SerializeObject(config)} -- {JsonConvert.SerializeObject(agentProperties)}");
             }
         }
         else
         {
             _logger.LogError(
-                $"[AgentService][InitializeBusinessAgent] agentTypeDataMap.TryGetValue == false, agentDataMap:{JsonConvert.SerializeObject(agentTypeData)} agenttype:{agentType} properties:{agentProperties}");
+                $"[AgentService][InitializeBusinessAgent]  stepe3, agentDataMap:{JsonConvert.SerializeObject(agentTypeData)} agenttype:{agentType} properties:{agentProperties}");
         }
 
         var grainId = GrainId.Create(agentType, primaryKey.ToString("N"));
