@@ -44,7 +44,6 @@ public class Program
                 .ConfigureDefaults(args)
                 .UseAutofac()
                 .UseSerilog();
-
             builder.Services.AddSignalR().AddOrleans();
             await builder.AddApplicationAsync<AevatarDeveloperHostModule>();
             var app = builder.Build();

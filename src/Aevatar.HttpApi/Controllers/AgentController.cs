@@ -17,7 +17,7 @@ namespace Aevatar.Controllers;
 [RemoteService]
 [ControllerName("Agent")]
 [Route("api/agent")]
-[Authorize]
+// [Authorize]
 public class AgentController : AevatarController
 {
     private readonly ILogger<AgentController> _logger;
