@@ -98,7 +98,6 @@ public class UserAppService : IdentityUserAppService, IUserAppService
    
     public Guid GetCurrentUserId()
     {
-        return Guid.Parse("31deccf2-69cf-44ec-b21d-48b0f4982c10");
         if (!CurrentUser.UserName.IsNullOrEmpty())
         {
             return GuidUtil.StringToGuid(CurrentUser.UserName);
