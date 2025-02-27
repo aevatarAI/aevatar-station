@@ -47,12 +47,12 @@ public abstract partial class
 
     private readonly List<EventWrapperBaseAsyncObserver> _observers = [];
 
-    private IEnumerable<IEventDispatcher?> EventDispatchers { get; set; }
+    private IEventDispatcher? EventDispatcher { get; set; }
     private readonly AevatarOptions _aevatarOptions;
 
     protected GAgentBase()
     {
-        EventDispatchers = ServiceProvider.GetService<IEnumerable<IEventDispatcher>>() ?? [];
+        EventDispatcher = ServiceProvider.GetService<IEventDispatcher>();
         _aevatarOptions = ServiceProvider.GetRequiredService<IOptionsSnapshot<AevatarOptions>>().Value;
     }
 
@@ -264,12 +264,9 @@ public abstract partial class
     {
         await HandleStateChangedAsync();
         //TODO:  need optimize use kafka,ensure Es written successfully
-        foreach (var eventDispatcher in EventDispatchers)
+        if (EventDispatcher != null)
         {
-            if (eventDispatcher != null)
-            {
-                await eventDispatcher.PublishAsync(State, this.GetGrainId());
-            }
+            await EventDispatcher.PublishAsync(State, this.GetGrainId());
         }
     }
 
@@ -291,12 +288,9 @@ public abstract partial class
         await HandleRaiseEventAsync();
         //TODO:  need optimize use kafka,ensure Es written successfully
         var stateLogEvent = @event as StateLogEventBase;
-        foreach (var eventDispatcher in EventDispatchers)
+        if (EventDispatcher != null)
         {
-            if (eventDispatcher != null)
-            {
-                await eventDispatcher.PublishAsync(stateLogEvent!.Id, this.GetGrainId(), stateLogEvent);
-            }
+            await EventDispatcher.PublishAsync(stateLogEvent!.Id, this.GetGrainId(), stateLogEvent);
         }
     }
 
