@@ -12,4 +12,5 @@ public class AgentDto
     public Dictionary<string, object>? Properties { get; set; }
     public GrainId GrainId { get; set; }
     public Guid AgentGuid { get; set; }
+    public string PropertyJsonSchema { get; set; }
 }
