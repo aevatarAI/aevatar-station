@@ -31,11 +31,11 @@ public class AevatarAuthorizationMiddlewareResultHandler : IAuthorizationMiddlew
           
             var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var roles = user.FindAll(AbpClaimTypes.Role).Select(c => c.Value).ToArray();
-            /*RequestContext.Set("CurrentUser", new UserContext
+            RequestContext.Set("CurrentUser", new UserContext
             {
                 UserId = userId.ToGuid(),
-                Roles = roles
-            });*/
+                Roles = roles,
+            });
         }
         await _defaultHandler.HandleAsync(next, context, policy, authorizeResult);
     }
