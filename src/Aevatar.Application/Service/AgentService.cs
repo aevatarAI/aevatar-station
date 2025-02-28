@@ -613,8 +613,7 @@ public class AgentService : ApplicationService, IAgentService
         {
             if (subAgentGrainIds.Any())
             {
-                var parentAgent = await _gAgentFactory.GetGAgentAsync(subAgentGrainIds[0]);
-                await parentAgent.UnregisterAsync(agent);
+                await agent.UnregisterAsync(creatorAgent);
             }
 
             await creatorAgent.DeleteAgentAsync();
