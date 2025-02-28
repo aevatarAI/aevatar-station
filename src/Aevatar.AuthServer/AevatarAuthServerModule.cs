@@ -80,7 +80,6 @@ public class AevatarAuthServerModule : AbpModule
         {
             builder.Configure(openIddictServerOptions =>
             {
-                openIddictServerOptions.GrantTypes.Add(GrantTypeConstants.LOGIN);
                 openIddictServerOptions.GrantTypes.Add(GrantTypeConstants.SIGNATURE);
             });
         });
@@ -98,7 +97,6 @@ public class AevatarAuthServerModule : AbpModule
         });
         context.Services.Configure<AbpOpenIddictExtensionGrantsOptions>(options =>
         {
-            options.Grants.Add(GrantTypeConstants.LOGIN, new LoginGrantHandler());
             options.Grants.Add(GrantTypeConstants.SIGNATURE, new SignatureGrantHandler());
         });
 
