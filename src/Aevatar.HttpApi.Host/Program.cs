@@ -1,11 +1,15 @@
 ﻿using System;
+using System.IdentityModel.Tokens.Jwt;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Aevatar.Extensions;
+using Aevatar.Handler;
 using Aevatar.SignalR;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Orleans.Hosting;
 using Serilog;
 using Serilog.Events;
@@ -29,6 +33,8 @@ public class Program
                 .UseAutofac()
                 .UseSerilog();
             builder.Services.AddSignalR().AddOrleans();
+            builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, AevatarAuthorizationMiddlewareResultHandler>();
+            builder.Services.AddSingleton<IClaimsTransformation , AevatartClaimsTransformer>();
             await builder.AddApplicationAsync<AevatarHttpApiHostModule>();
             var app = builder.Build();
             await app.InitializeApplicationAsync();

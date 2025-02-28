@@ -46,7 +46,8 @@ namespace Aevatar.AuthServer;
     typeof(AbpPermissionManagementEntityFrameworkCoreModule),
     typeof(AbpAuthorizationModule),
     typeof(AbpOpenIddictDomainModule),
-    typeof(AevatarMongoDbModule)
+    typeof(AevatarMongoDbModule),
+    typeof(AevatarApplicationContractsModule)
     )]
 public class AevatarAuthServerModule : AbpModule
 {
@@ -163,9 +164,9 @@ public class AevatarAuthServerModule : AbpModule
 
         Configure<AbpDistributedCacheOptions>(options =>
         {
-            options.KeyPrefix = ":Auth:";
+            options.KeyPrefix = "Aevatar:";
         });
-
+      
         var dataProtectionBuilder = context.Services.AddDataProtection().SetApplicationName("AevatarAuthServer");
     }
 
@@ -192,7 +193,7 @@ public class AevatarAuthServerModule : AbpModule
         app.UseAuthentication();
         app.UseAbpOpenIddictValidation();
 
-        app.UseMultiTenancy();
+        //app.UseMultiTenancy();
         
         app.UseUnitOfWork();
         app.UseAuthorization();

@@ -60,16 +60,24 @@ public class LoginGrantHandler: ITokenExtensionGrant
                     [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "invalid name or password"
                 }));
         }
+        var identityRoleManager = context.HttpContext.RequestServices.GetRequiredService<IdentityRoleManager>();
+        var roleNames = new List<string>();
+        foreach (var userRole in identityUser.Roles)
+        {
+          var role = await identityRoleManager.GetByIdAsync(userRole.RoleId);
+          roleNames.Add(role.Name);
+        }
+        var userClaimsPrincipalFactory = context.HttpContext.RequestServices
+            .GetRequiredService<Microsoft.AspNetCore.Identity.IUserClaimsPrincipalFactory<IdentityUser>>();
+        var claimsPrincipal = await userClaimsPrincipalFactory.CreateAsync(identityUser);
+        claimsPrincipal.SetClaim(OpenIddictConstants.Claims.Role, string.Join(",", roleNames));
+        claimsPrincipal.SetScopes(context.Request.GetScopes());
+        claimsPrincipal.SetResources(await GetResourcesAsync(context.Request.GetScopes(), scopeManager));
+        claimsPrincipal.SetAudiences("Aevatar");
 
-        var principal = await signInManager.CreateUserPrincipalAsync(identityUser);
+        await abpOpenIddictClaimDestinationsManager.HandleAsync(context.Request, claimsPrincipal);
 
-        principal.SetScopes(context.Request.GetScopes());
-        principal.SetResources(await GetResourcesAsync(context.Request.GetScopes(), scopeManager));
-        principal.SetAudiences("Aevatar");
-
-        await abpOpenIddictClaimDestinationsManager.HandleAsync(context.Request, principal);
-
-        return new SignInResult(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme, principal);
+        return new SignInResult(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme, claimsPrincipal);
     }
 
     protected virtual async Task<IEnumerable<string>> GetResourcesAsync(ImmutableArray<string> scopes,

@@ -1,10 +1,8 @@
 using System;
 using System.IO;
-using System.Linq;
 using AElf.OpenTelemetry;
 using AutoResponseWrapper;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Cors;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -13,12 +11,13 @@ using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite.Bundling;
 using Microsoft.OpenApi.Models;
 using Aevatar.Application.Grains;
-using Aevatar.Developer.Logger;
 using Aevatar.Domain.Grains;
-using Aevatar.Kubernetes;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using StackExchange.Redis;
 using Volo.Abp;
 using Volo.Abp.Account.Web;
 using Volo.Abp.AspNetCore.Mvc;
@@ -27,6 +26,8 @@ using Volo.Abp.AspNetCore.Mvc.UI.Bundling;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
+using Volo.Abp.Caching;
+using Volo.Abp.Caching.StackExchangeRedis;
 using Volo.Abp.Modularity;
 using Volo.Abp.Swashbuckle;
 using Volo.Abp.Threading;
@@ -36,6 +37,7 @@ namespace Aevatar;
 
 [DependsOn(
     typeof(AevatarHttpApiAdminModule),
+    typeof(AbpCachingStackExchangeRedisModule),
     typeof(AbpAutofacModule),
     typeof(AevatarApplicationModule),
     typeof(AevatarMongoDbModule),
@@ -71,12 +73,29 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         ConfigureVirtualFileSystem(context);
         ConfigureAutoResponseWrapper(context);
         ConfigureSwaggerServices(context, configuration);
+        ConfigureDataProtection(context, configuration, hostingEnvironment);
+        ConfigCache(context, configuration);
         //context.Services.AddDaprClient();
         
         context.Services.AddMvc(options =>
         {
             options.Filters.Add(new IgnoreAntiforgeryTokenAttribute());
         });
+    }
+    private void ConfigureDataProtection(
+        ServiceConfigurationContext context,
+        IConfiguration configuration,
+        IWebHostEnvironment hostingEnvironment)
+    {
+        var dataProtectionBuilder = context.Services.AddDataProtection().SetApplicationName("AevatarAuthServer");
+    }
+
+    private void ConfigCache(ServiceConfigurationContext context,IConfiguration configuration)
+    {
+        var redisOptions = ConfigurationOptions.Parse(configuration["Redis:Configuration"]);
+        context.Services.AddSingleton<IConnectionMultiplexer>(provider => ConnectionMultiplexer.Connect(redisOptions));
+        Configure<AbpDistributedCacheOptions>(options => { options.KeyPrefix = "Aevatar:"; });
+
     }
 
     private static void ConfigureAutoResponseWrapper(ServiceConfigurationContext context)
@@ -215,8 +234,5 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();
         app.UseConfiguredEndpoints();
-        var logService = context.ServiceProvider.GetRequiredService<ILogService>();
-      //  AsyncHelper.RunSync(async ()=> await logService.CreateFileBeatLogILMPolicyAsync(KubernetesConstants.AppNameSpace + "-" +
-       //     KubernetesConstants.FileBeatLogILMPolicyName));
     }
 }
