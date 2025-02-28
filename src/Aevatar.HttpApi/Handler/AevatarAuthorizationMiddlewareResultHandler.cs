@@ -7,6 +7,7 @@ using Aevatar.PermissionManagement;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.Http;
+using OpenIddict.Abstractions;
 using Orleans.Runtime;
 using Volo.Abp.PermissionManagement;
 using Volo.Abp.Security.Claims;
@@ -29,8 +30,8 @@ public class AevatarAuthorizationMiddlewareResultHandler : IAuthorizationMiddlew
         if (user.Identity!.IsAuthenticated)
         {
           
-            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var roles = user.FindAll(AbpClaimTypes.Role).Select(c => c.Value).ToArray();
+            var userId = user.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
+            var roles = user.FindAll(OpenIddictConstants.Claims.Role).Select(c => c.Value).ToArray();
             RequestContext.Set("CurrentUser", new UserContext
             {
                 UserId = userId.ToGuid(),

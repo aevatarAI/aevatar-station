@@ -34,7 +34,6 @@ public class Program
                 .UseSerilog();
             builder.Services.AddSignalR().AddOrleans();
             builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, AevatarAuthorizationMiddlewareResultHandler>();
-            builder.Services.AddSingleton<IClaimsTransformation , AevatartClaimsTransformer>();
             await builder.AddApplicationAsync<AevatarHttpApiHostModule>();
             var app = builder.Build();
             await app.InitializeApplicationAsync();
