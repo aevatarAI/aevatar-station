@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices.JavaScript;
 using System.Threading.Tasks;
 using Aevatar.Agent;
 using Aevatar.Agents.Creator;
@@ -13,7 +12,9 @@ using Aevatar.Common;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
 using Aevatar.CQRS.Provider;
+using Aevatar.Exceptions;
 using Aevatar.Options;
+using Aevatar.Schema;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -36,6 +37,7 @@ public class AgentService : ApplicationService, IAgentService
     private readonly IUserAppService _userAppService;
     private readonly IOptionsMonitor<AgentOptions> _agentOptions;
     private readonly GrainTypeResolver _grainTypeResolver;
+    private readonly ISchemaProvider _schemaProvider;
 
     private const string IndexSuffix = "index";
     private const string IndexPrefix = "aevatar";
@@ -48,7 +50,8 @@ public class AgentService : ApplicationService, IAgentService
         IGAgentManager gAgentManager,
         IUserAppService userAppService,
         IOptionsMonitor<AgentOptions> agentOptions,
-        GrainTypeResolver grainTypeResolver)
+        GrainTypeResolver grainTypeResolver,
+        ISchemaProvider schemaProvider)
     {
         _clusterClient = clusterClient;
         _cqrsProvider = cqrsProvider;
@@ -58,6 +61,7 @@ public class AgentService : ApplicationService, IAgentService
         _userAppService = userAppService;
         _agentOptions = agentOptions;
         _grainTypeResolver = grainTypeResolver;
+        _schemaProvider = schemaProvider;
     }
 
     public async Task<Tuple<long, List<AgentGEventIndex>>> GetAgentEventLogsAsync(string agentId, int pageNumber,
@@ -177,6 +181,10 @@ public class AgentService : ApplicationService, IAgentService
                         Name = p.Name,
                         Type = p.Type.ToString()
                     }).ToList();
+
+                    paramDto.PropertyJsonSchema =
+                        JsonConvert.SerializeObject(
+                            _schemaProvider.GetTypeSchema(kvp.Value.InitializationData.DtoType));
                 }
             }
 
@@ -186,11 +194,20 @@ public class AgentService : ApplicationService, IAgentService
         return resp;
     }
 
-    private ConfigurationBase SetupInitializedConfig(InitializationData initializationData, string propertiesString)
+    private ConfigurationBase SetupInitializedConfig(InitializationData initializationData,
+        string propertiesString)
     {
         var properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(propertiesString);
         var actualDto = Activator.CreateInstance(initializationData.DtoType);
+
         var config = (ConfigurationBase)actualDto!;
+        var schema = _schemaProvider.GetTypeSchema(config.GetType());
+        var validateResponse = schema.Validate(propertiesString);
+        if (validateResponse.Count > 0)
+        {
+            var validateDic = _schemaProvider.ConvertValidateError(validateResponse);
+            throw new ParameterValidateException(validateDic);
+        }
 
         foreach (var kvp in properties)
         {
@@ -235,6 +252,7 @@ public class AgentService : ApplicationService, IAgentService
 
         var initializationParam = JsonConvert.SerializeObject(dto.Properties);
         var businessAgent = await InitializeBusinessAgent(guid, dto.AgentType, initializationParam);
+
         var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
         agentData.BusinessAgentGrainId = businessAgent.GetGrainId();
         await creatorAgent.CreateAgentAsync(agentData);
@@ -249,7 +267,6 @@ public class AgentService : ApplicationService, IAgentService
             AgentGuid = businessAgent.GetPrimaryKey()
         };
 
-
         return resp;
     }
 
@@ -257,7 +274,9 @@ public class AgentService : ApplicationService, IAgentService
     {
         var result = new List<AgentInstanceDto>();
         var currentUserId = _userAppService.GetCurrentUserId();
-        var response = await _cqrsProvider.GetUserInstanceAgent<CreatorGAgentState>(currentUserId, pageIndex, pageSize);
+        var response =
+            await _cqrsProvider.GetUserInstanceAgent<CreatorGAgentState, AgentInstanceSQRSDto>(currentUserId, pageIndex,
+                pageSize);
         if (response.Item1 == 0)
         {
             return result;
@@ -265,7 +284,11 @@ public class AgentService : ApplicationService, IAgentService
 
         result.AddRange(response.Item2.Select(state => new AgentInstanceDto()
         {
-            Id = state.BusinessAgentGrainId.GetGuidKey(), Name = state.Name, Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(state.Properties), Type = state.AgentType,
+            Id = state.Id, Name = state.Name,
+            Properties = state.Properties == null
+                ? null
+                : JsonConvert.DeserializeObject<Dictionary<string, object>>(state.Properties),
+            AgentType = state.AgentType,
         }));
 
         return result;
@@ -286,7 +309,8 @@ public class AgentService : ApplicationService, IAgentService
         }
     }
 
-    private async Task<IGAgent> InitializeBusinessAgent(Guid primaryKey, string agentType, string agentProperties)
+    private async Task<IGAgent> InitializeBusinessAgent(Guid primaryKey, string agentType,
+        string agentProperties)
     {
         var agentTypeDataMap = await GetAgentTypeDataMap();
         ConfigurationBase? config = null;
@@ -300,7 +324,12 @@ public class AgentService : ApplicationService, IAgentService
         }
 
         var grainId = GrainId.Create(agentType, primaryKey.ToString("N"));
-        var businessAgent = await _gAgentFactory.GetGAgentAsync(grainId, config);
+        var businessAgent = await _gAgentFactory.GetGAgentAsync(grainId);
+        if (config != null)
+        {
+            await businessAgent.ConfigAsync(config);
+        }
+
         return businessAgent;
     }
 
@@ -367,6 +396,16 @@ public class AgentService : ApplicationService, IAgentService
             Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentState.Properties),
             AgentGuid = agentState.BusinessAgentGrainId.GetGuidKey()
         };
+
+        var agentTypeDataMap = await GetAgentTypeDataMap();
+        if (agentTypeDataMap.TryGetValue(agentState.AgentType, out var agentTypeData))
+        {
+            if (agentTypeData != null && agentTypeData.InitializationData != null)
+            {
+                resp.PropertyJsonSchema =
+                    _schemaProvider.GetTypeSchema(agentTypeData.InitializationData.DtoType).ToJson();
+            }
+        }
 
         return resp;
     }

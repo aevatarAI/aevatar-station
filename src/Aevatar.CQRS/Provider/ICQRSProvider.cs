@@ -17,5 +17,5 @@ public interface ICQRSProvider : IEventDispatcher
   
     Task<string> QueryAgentStateAsync(string stateName, Guid primaryKey);
 
-    Task<Tuple<long, List<T>>> GetUserInstanceAgent<T>(Guid userId, int pageIndex, int pageSize);
+    Task<Tuple<long, List<TargetT>>> GetUserInstanceAgent<SourceT,TargetT>(Guid userId, int pageIndex, int pageSize);
 }

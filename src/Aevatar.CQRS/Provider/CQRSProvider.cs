@@ -9,7 +9,6 @@ using Nest;
 using Newtonsoft.Json;
 using Orleans.Runtime;
 using Volo.Abp.DependencyInjection;
-using YamlDotNet.Serialization;
 
 namespace Aevatar.CQRS.Provider;
 
@@ -17,7 +16,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
 {
     private readonly IMediator _mediator;
     private readonly ILogger<CQRSProvider> _logger;
-
+    
     public CQRSProvider(IMediator mediator, ILogger<CQRSProvider> logger)
     {
         _mediator = mediator;
@@ -59,9 +58,8 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
     public async Task<Tuple<long, List<AgentGEventIndex>>> QueryGEventAsync(string eventId, List<string> grainIds,
         int pageNumber, int pageSize)
     {
-        _logger.LogInformation("CQRSProvider QueryGEventAsync eventId:{eventId}, grainIds:{grainIds}", eventId,
-            grainIds);
-
+        _logger.LogInformation("CQRSProvider QueryGEventAsync eventId:{eventId}, grainIds:{grainIds}", eventId, grainIds);
+        
         var mustQuery = new List<Func<QueryContainerDescriptor<AgentGEventIndex>, QueryContainer>>();
         if (!eventId.IsNullOrEmpty())
         {
@@ -94,8 +92,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
     public async Task<Tuple<long, List<AgentGEventIndex>>> QueryAgentGEventAsync(Guid? primaryKey, string agentType,
         int pageNumber, int pageSize)
     {
-        _logger.LogInformation("CQRSProvider QueryAgentGEventAsync primaryKey:{primaryKey}, agentType:{agentType}",
-            primaryKey, agentType);
+        _logger.LogInformation("CQRSProvider QueryAgentGEventAsync primaryKey:{primaryKey}, agentType:{agentType}", primaryKey, agentType);
         var mustQuery = new List<Func<QueryContainerDescriptor<AgentGEventIndex>, QueryContainer>>();
 
         if (primaryKey != null)
@@ -109,7 +106,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
             mustQuery.Add(q => q.Term(i =>
                 i.Field(f => f.AgentGrainType).Value(agentType)));
         }
-
+        
         QueryContainer Filter(QueryContainerDescriptor<AgentGEventIndex> f) => f.Bool(b => b.Must(mustQuery));
 
         var sorting = new Func<SortDescriptor<AgentGEventIndex>, IPromise<IList<ISort>>>(s =>
@@ -129,16 +126,15 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
 
     public async Task<string> QueryAgentStateAsync(string stateName, Guid primaryKey)
     {
-        _logger.LogInformation("CQRSProvider QueryAgentStateAsync stateName:{stateName}, primaryKey:{primaryKey}",
-            stateName, primaryKey);
+        _logger.LogInformation("CQRSProvider QueryAgentStateAsync stateName:{stateName}, primaryKey:{primaryKey}", stateName, primaryKey);
         var mustQuery = new List<Func<QueryContainerDescriptor<dynamic>, QueryContainer>>
         {
             q => q.Term(i =>
                 i.Field("_id").Value(primaryKey))
         };
-
+        
         QueryContainer Filter(QueryContainerDescriptor<dynamic> f) => f.Bool(b => b.Must(mustQuery));
-
+        
         var getStateQuery = new GetStateQuery()
         {
             Index = CqrsConstant.IndexPrefix + stateName + CqrsConstant.IndexSuffix,
@@ -146,12 +142,12 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
             Skip = 0,
             Limit = 1
         };
-
+    
         var document = await _mediator.Send(getStateQuery);
         return document;
     }
 
-    public async Task<Tuple<long, List<T>>> GetUserInstanceAgent<T>(Guid userId, int pageIndex, int pageSize)
+    public async Task<Tuple<long, List<TargetT>>> GetUserInstanceAgent<SourceT,TargetT>(Guid userId, int pageIndex, int pageSize)
     {
         _logger.LogInformation("CQRSProvider query user instance agents,UserId:{userId}", userId);
         var mustQuery = new List<Func<QueryContainerDescriptor<dynamic>, QueryContainer>>
@@ -160,7 +156,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
                 i.Field("userId").Value(userId.ToString()))
         };
 
-        var index = CqrsConstant.IndexPrefix + typeof(T).Name.ToLower() + CqrsConstant.IndexSuffix;
+        var index = CqrsConstant.IndexPrefix + typeof(SourceT).Name.ToLower() + CqrsConstant.IndexSuffix;
         QueryContainer Filter(QueryContainerDescriptor<dynamic> f) => f.Bool(b => b.Must(mustQuery));
         var queryResponse = await _mediator.Send(new GetUserInstanceAgentsQuery()
         {
@@ -172,20 +168,20 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
 
         if (queryResponse.Item2.IsNullOrWhiteSpace())
         {
-            return new Tuple<long, List<T>>(0, new List<T>());
+            return new Tuple<long, List<TargetT>>(0, new List<TargetT>());
         }
 
-        var documentList = JsonConvert.DeserializeObject<List<T>>(queryResponse.Item2);
+        var documentList = JsonConvert.DeserializeObject<List<TargetT>>(queryResponse.Item2);
         if (documentList != null)
         {
-            return new Tuple<long, List<T>>(queryResponse.Item1, documentList);
+            return new Tuple<long, List<TargetT>>(queryResponse.Item1, documentList);
         }
 
         _logger.LogWarning(
             "CQRSProvider query user instance agents documentList == null, UserId:{userId}, document string:{documents}",
             userId, queryResponse.Item2);
 
-        return new Tuple<long, List<T>>(0, new List<T>());
+        return new Tuple<long, List<TargetT>>(0, new List<TargetT>());
     }
 
 
@@ -207,7 +203,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         {
             eventBase.Id = eventId;
         }
-
+        
         var agentGEventIndex = new AgentGEventIndex()
         {
             Id = eventId,
@@ -217,7 +213,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
             EventJson = JsonConvert.SerializeObject(eventBase),
             EventName = eventBase.GetType().Name
         };
-
+        
         var command = new SaveGEventCommand
         {
             Id = eventId == null ? Guid.NewGuid() : eventId,
@@ -230,4 +226,5 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
     {
         throw new NotImplementedException();
     }
+    
 }

@@ -4,6 +4,7 @@
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVerion>9.0.1</OrleansVerion>
     <AevatarVerion>1.4.10</AevatarVerion>
+    <AevatarGAgentsVerion>1.2.1</AevatarGAgentsVerion>
   </PropertyGroup>
   <ItemGroup>
     <!-- AElf packages -->
@@ -17,11 +18,11 @@
     <PackageVersion Include="Aevatar.Core.Abstractions" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.EventSourcing.Core" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.Plugins" Version="$(AevatarVerion)" />
-    <PackageVersion Include="Aevatar.EventSourcing.MongoDB" Version="$(AevatarVerion)" />
-    <PackageVersion Include="Aevatar.PermissionManagement" Version="$(AevatarVerion)" />
-    <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="1.1.8" />
-    <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="1.1.8" />
-    <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="1.1.8" />
+    <PackageVersion Include="Aevatar.EventSourcing.MongoDB" Version="$(AevatarVerion)" />    
+      <PackageVersion Include="Aevatar.PermissionManagement" Version="$(AevatarVerion)" />
+      <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="$(AevatarGAgentsVerion)" />
+    <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="$(AevatarGAgentsVerion)" />
+    <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="$(AevatarGAgentsVerion)" />
     <PackageVersion Include="Aevatar.SignalR" Version="1.5.1" />
     <!-- AI and Analysis packages -->
     <PackageVersion Include="AutoGen" Version="0.2.1" />
@@ -30,6 +31,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="9.0.0" />
     <PackageVersion Include="Microsoft.SemanticKernel" Version="1.32.0" />
     <PackageVersion Include="Microsoft.SemanticKernel.Core" Version="1.32.0" />
+    <PackageVersion Include="NJsonSchema" Version="11.1.0" />
     <PackageVersion Include="OpenAI.API" Version="1.0.0" />
     <PackageVersion Include="Orleans.SyncWork" Version="8.1.12" />
     <PackageVersion Include="Serilog.Formatting.Compact" Version="2.0.0" />
