@@ -153,11 +153,6 @@ public class AevatarDeveloperHostModule : AbpModule
 
         app.UseAbpRequestLocalization();
 
-        if (!env.IsDevelopment())
-        {
-            app.UseErrorPage();
-        }
-
         app.UseCorrelationId();
         app.UseStaticFiles();
         app.UseRouting();
