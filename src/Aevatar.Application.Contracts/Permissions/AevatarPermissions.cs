@@ -2,11 +2,14 @@ namespace Aevatar.Permissions
 {
     public static class AevatarPermissions
     {
-        public const string GroupName = "AgentManagement";
-
+        public const string BasicUser = "basicUser";
+        public const string DeveloperManager = "developerManager";
+        public const string AdminGroup = "AdminManagement";
+        public const string AdminPolicy = AdminGroup+".AdminPolicy";
         // Permissions for Agent Management
         public static class Agent
         {
+            public const string GroupName = "AgentManagement";
             public const string ViewLogs = GroupName + ".ViewLogs";
             public const string ViewAllType = GroupName + ".ViewAllType";
             public const string ViewList = GroupName + ".ViewList";

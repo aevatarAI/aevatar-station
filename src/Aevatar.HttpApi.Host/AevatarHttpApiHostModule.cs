@@ -113,11 +113,6 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
                 options.Audience = "Aevatar";
                 options.MapInboundClaims = false;
             });
-        context.Services.AddAuthorization(options =>
-        {
-            options.AddPolicy("OnlyAdminAccess", policy =>
-                policy.RequireRole("admin"));
-        });
     }
 
     private void ConfigureBundles()

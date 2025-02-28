@@ -17,12 +17,6 @@ namespace Aevatar.Handler;
 public class AevatarAuthorizationMiddlewareResultHandler : IAuthorizationMiddlewareResultHandler
 {
     private readonly AuthorizationMiddlewareResultHandler _defaultHandler = new AuthorizationMiddlewareResultHandler();
-    private readonly IPermissionManager _permissionManager; 
-    
-    public AevatarAuthorizationMiddlewareResultHandler(IPermissionManager permissionManager)
-    {
-        _permissionManager = permissionManager;
-    }
     public  async Task HandleAsync(RequestDelegate next, HttpContext context, AuthorizationPolicy policy, PolicyAuthorizationResult authorizeResult)
     {
 
@@ -32,11 +26,14 @@ public class AevatarAuthorizationMiddlewareResultHandler : IAuthorizationMiddlew
           
             var userId = user.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
             var roles = user.FindAll(OpenIddictConstants.Claims.Role).Select(c => c.Value).ToArray();
-            RequestContext.Set("CurrentUser", new UserContext
+            if (userId!= null)
             {
-                UserId = userId.ToGuid(),
-                Roles = roles,
-            });
+                RequestContext.Set("CurrentUser", new UserContext
+                {
+                    UserId = userId.ToGuid(),
+                    Roles = roles,
+                });
+            }
         }
         await _defaultHandler.HandleAsync(next, context, policy, authorizeResult);
     }

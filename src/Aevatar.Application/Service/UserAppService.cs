@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Common;
+using Aevatar.Permissions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -10,6 +11,7 @@ using Volo.Abp;
 using Volo.Abp.Auditing;
 using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.Identity;
+using Volo.Abp.PermissionManagement;
 
 namespace Aevatar.Service;
 
@@ -27,6 +29,8 @@ public class UserAppService : IdentityUserAppService, IUserAppService
 {
     private readonly IOpenIddictApplicationManager _applicationManager;
     private readonly ILogger<UserAppService> _logger;
+    private readonly IPermissionManager _permissionManager;
+
     public UserAppService(
         IdentityUserManager userManager,
         IIdentityUserRepository userRepository,
@@ -34,11 +38,13 @@ public class UserAppService : IdentityUserAppService, IUserAppService
         IOptions<IdentityOptions> identityOptions,
         IOpenIddictApplicationManager applicationManager,
         ILogger<UserAppService> logger,
-        IPermissionChecker permissionChecker)
+        IPermissionChecker permissionChecker,
+        IPermissionManager permissionManager)
         : base(userManager, userRepository, roleRepository, identityOptions, permissionChecker)
     {
         _applicationManager = applicationManager;
         _logger = logger;
+        _permissionManager = permissionManager;
     }
 
 
@@ -49,11 +55,12 @@ public class UserAppService : IdentityUserAppService, IUserAppService
             throw new UserFriendlyException("A app with the same ID already exists.");
         }
 
-        await _applicationManager.CreateAsync(new OpenIddictApplicationDescriptor
+
+        var openIddictApplicationDescriptor = new OpenIddictApplicationDescriptor
         {
             ClientId = clientId,
             ClientSecret = clientSecret,
-            ConsentType=OpenIddictConstants.ConsentTypes.Implicit,
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
             ClientType = OpenIddictConstants.ClientTypes.Confidential,
             DisplayName = "Aevatar Client",
             Permissions =
@@ -62,10 +69,17 @@ public class UserAppService : IdentityUserAppService, IUserAppService
                 OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
                 OpenIddictConstants.Permissions.Prefixes.Scope + "Aevatar",
                 OpenIddictConstants.Permissions.ResponseTypes.IdToken
-                
-            }
-            
-        });
+            },
+        };
+        var permissions= await  _permissionManager.GetAllAsync(RolePermissionValueProvider.ProviderName, AevatarPermissions.DeveloperManager);
+        
+        foreach (var permission in permissions)
+        {
+            await _permissionManager.SetForClientAsync(clientId,permission.Name,true);
+        }
+
+        await _applicationManager.CreateAsync(openIddictApplicationDescriptor);
+      
     }
 
     public async Task ResetPasswordAsync(string userName, string newPassword)

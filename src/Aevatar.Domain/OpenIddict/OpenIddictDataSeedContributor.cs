@@ -102,7 +102,7 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
     {
         var permissionMappings = _configuration.GetSection("PermissionMappings").Get<Dictionary<string, List<string>>>();
         if (permissionMappings == null) return;
-
+        int count = 0;
         foreach (var mapping in permissionMappings)
         {
             var roleName = mapping.Key;
@@ -114,6 +114,11 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
                 var identityRole = new IdentityRole(Guid.NewGuid(), roleName);
                 identityRole.IsPublic = true;
                 identityRole.IsStatic = true;
+                if (count == 0 )
+                {
+                    identityRole.IsDefault = true;
+                }
+                count++;
                 var result = await _roleManager.CreateAsync(identityRole);
                 if (!result.Succeeded)
                 {

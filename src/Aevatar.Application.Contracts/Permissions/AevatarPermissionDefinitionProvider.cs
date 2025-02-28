@@ -8,8 +8,11 @@ public class AevatarPermissionDefinitionProvider : PermissionDefinitionProvider
 {
     public override void Define(IPermissionDefinitionContext context)
     {
+        var adminManagement = context.AddGroup(AevatarPermissions.AdminGroup, L("Permission:AdminManagement"));
+        adminManagement.AddPermission(AevatarPermissions.AdminPolicy, L("Permission:AdminPolicy"));
+
         // Agent Management
-        var agentManagementGroup = context.AddGroup(AevatarPermissions.GroupName, L("Permission:AgentManagement"));
+        var agentManagementGroup = context.AddGroup(AevatarPermissions.Agent.GroupName, L("Permission:AgentManagement"));
         agentManagementGroup.AddPermission(AevatarPermissions.Agent.ViewLogs, L("Permission:ViewLogs"));
         agentManagementGroup.AddPermission(AevatarPermissions.Agent.ViewAllType, L("Permission:ViewAll"));
         agentManagementGroup.AddPermission(AevatarPermissions.Agent.Create, L("Permission:Create"));
