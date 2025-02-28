@@ -183,8 +183,7 @@ public class AgentService : ApplicationService, IAgentService
                     }).ToList();
 
                     paramDto.PropertyJsonSchema =
-                        JsonConvert.SerializeObject(
-                            _schemaProvider.GetTypeSchema(kvp.Value.InitializationData.DtoType));
+                            _schemaProvider.GetTypeSchema(kvp.Value.InitializationData.DtoType).ToJson();
                 }
             }
 
