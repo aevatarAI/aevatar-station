@@ -601,17 +601,21 @@ public class AgentService : ApplicationService, IAgentService
 
         var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
         var subAgentGrainIds = await agent.GetChildrenAsync();
-        if (!subAgentGrainIds.IsNullOrEmpty())
+        if (!subAgentGrainIds.IsNullOrEmpty() &&
+            (subAgentGrainIds.Count > 1 || subAgentGrainIds[0] != creatorAgent.GetGrainId()))
         {
             _logger.LogInformation("Agent {agentId} has subagents, please remove them first.", guid);
             throw new UserFriendlyException("Agent has subagents, please remove them first.");
         }
 
         var parentGrainId = await agent.GetParentAsync();
-        if (!parentGrainId.IsDefault)
+        if (parentGrainId.IsDefault)
         {
-            var parentAgent = await _gAgentFactory.GetGAgentAsync(parentGrainId);
-            await parentAgent.UnregisterAsync(agent);
+            if (subAgentGrainIds.Any())
+            {
+                await agent.UnregisterAsync(creatorAgent);
+            }
+
             await creatorAgent.DeleteAgentAsync();
         }
         else
