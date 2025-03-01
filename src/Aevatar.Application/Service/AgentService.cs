@@ -321,7 +321,6 @@ public class AgentService : ApplicationService, IAgentService
 
         EnsureUserAuthorized(agentState.UserId);
 
-        await creatorAgent.UpdateAgentAsync(dto);
         var businessAgent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
 
         if (!dto.Properties.IsNullOrEmpty())
@@ -341,6 +340,7 @@ public class AgentService : ApplicationService, IAgentService
             if (config != null)
             {
                 await businessAgent.ConfigAsync(config);
+                await creatorAgent.UpdateAgentAsync(new UpdateAgentInput(){Name = dto.Name, Properties = JsonConvert.SerializeObject(dto.Properties)});
             }
             else
             {
