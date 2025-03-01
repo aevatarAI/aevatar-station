@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Extensions;
 using Aevatar.PermissionManagement.Extensions;
@@ -98,6 +99,7 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                     }
                     services.AddSingleton(grainTypeMap);
                     services.AddSingleton<IEventDispatcher, DefaultEventDispatcher>();
+                    services.AddSingleton<IStateDispatcher, StateDispatcher>();
                 })
                 .UseAevatar()
                 .UseAevatarPermissionManagement()

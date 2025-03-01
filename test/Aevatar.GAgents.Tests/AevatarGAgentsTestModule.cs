@@ -1,3 +1,5 @@
+using Aevatar.Core;
+using Aevatar.Core.Abstractions;
 using Aevatar.TestBase;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.Extensions.DependencyInjection;

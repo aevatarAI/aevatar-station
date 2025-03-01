@@ -31,16 +31,34 @@ public class PermissionInfoProvider : IPermissionInfoProvider, ITransientDepende
 
         foreach (var gAgentType in gAgentTypes)
         {
-            var methods = gAgentType.GetMethods();
-            permissionInfos.AddRange(methods.Select(method => method.GetCustomAttribute<PermissionAttribute>())
-                .OfType<PermissionAttribute>().Select(permissionAttribute => new PermissionInfo
+            var grainType = _grainTypeResolver.GetGrainType(gAgentType).ToString()!;
+
+            var classAttributes = gAgentType.GetCustomAttributes<PermissionAttribute>(inherit: true);
+            permissionInfos.AddRange(
+                classAttributes.Select(attr => new PermissionInfo
                 {
                     Type = gAgentType.FullName!,
-                    GrainType = _grainTypeResolver.GetGrainType(gAgentType).ToString()!,
-                    Name = permissionAttribute.Name,
-                    GroupName = permissionAttribute.GroupName ?? string.Empty,
-                    DisplayName = permissionAttribute.DisplayName ?? string.Empty
-                }));
+                    GrainType = grainType,
+                    Name = attr.Name,
+                    GroupName = attr.GroupName ?? string.Empty,
+                    DisplayName = attr.DisplayName ?? string.Empty
+                })
+            );
+
+            var methods =
+                gAgentType.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+            permissionInfos.AddRange(
+                methods
+                    .SelectMany(method => method.GetCustomAttributes<PermissionAttribute>(inherit: true))
+                    .Select(attr => new PermissionInfo
+                    {
+                        Type = gAgentType.FullName!,
+                        GrainType = grainType,
+                        Name = attr.Name,
+                        GroupName = attr.GroupName ?? string.Empty,
+                        DisplayName = attr.DisplayName ?? string.Empty
+                    })
+            );
         }
 
         return permissionInfos;
