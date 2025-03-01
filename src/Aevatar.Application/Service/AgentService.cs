@@ -197,7 +197,6 @@ public class AgentService : ApplicationService, IAgentService
     private ConfigurationBase SetupInitializedConfig(InitializationData initializationData,
         string propertiesString)
     {
-        var properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(propertiesString);
         var actualDto = Activator.CreateInstance(initializationData.DtoType);
 
         var config = (ConfigurationBase)actualDto!;
@@ -209,31 +208,12 @@ public class AgentService : ApplicationService, IAgentService
             throw new ParameterValidateException(validateDic);
         }
 
-        foreach (var kvp in properties)
+        config = JsonConvert.DeserializeObject(propertiesString, initializationData.DtoType) as ConfigurationBase;
+        if (config == null)
         {
-            var propertyName = kvp.Key;
-            var propertyValue = kvp.Value;
-            var propertyType = initializationData.Properties.FirstOrDefault(x => x.Name == propertyName)?.Type;
-            if (propertyType == null)
-            {
-                continue;
-            }
-
-            var propertyInfo = initializationData.DtoType.GetProperty(propertyName,
-                BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-            if (propertyInfo == null || !propertyInfo.CanWrite)
-            {
-                _logger.LogInformation("Property {propertyName} not found or cannot be written.", propertyName);
-                throw new UserFriendlyException("property could not be found or cannot be written");
-            }
-
-            object convertedValue = ReflectionUtil.ConvertValue(propertyType, propertyValue);
-            propertyInfo?.SetValue(config, convertedValue);
-            _logger.LogInformation(
-                "SetGroupAsync propertyName: {propertyName}, propertyValue: {propertyValue}, propertyType: {propertyType}",
-                propertyName, propertyValue, propertyType);
+            throw new BusinessException("[AgentService][SetupInitializedConfig] config convert error");
         }
-
+        
         return config;
     }
 
