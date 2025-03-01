@@ -184,7 +184,6 @@ public class AgentService : ApplicationService, IAgentService
 
                     paramDto.PropertyJsonSchema =
                         _schemaProvider.GetTypeSchema(kvp.Value.InitializationData.DtoType).ToJson();
-                    _logger.LogError($"[GetAllAgents] paramDto.PropertyJsonSchema-->{paramDto.PropertyJsonSchema}");
                 }
             }
 
@@ -231,7 +230,6 @@ public class AgentService : ApplicationService, IAgentService
         };
 
         var initializationParam = JsonConvert.SerializeObject(dto.Properties);
-        _logger.LogInformation($"[CreateAgentAsync] initializationParam-->{initializationParam}");
         var businessAgent = await InitializeBusinessAgent(guid, dto.AgentType, initializationParam);
 
         var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
