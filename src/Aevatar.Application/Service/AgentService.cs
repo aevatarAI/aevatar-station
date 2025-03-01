@@ -183,7 +183,8 @@ public class AgentService : ApplicationService, IAgentService
                     }).ToList();
 
                     paramDto.PropertyJsonSchema =
-                            _schemaProvider.GetTypeSchema(kvp.Value.InitializationData.DtoType).ToJson();
+                        _schemaProvider.GetTypeSchema(kvp.Value.InitializationData.DtoType).ToJson();
+                    _logger.LogError($"[GetAllAgents] paramDto.PropertyJsonSchema-->{paramDto.PropertyJsonSchema}");
                 }
             }
 
@@ -249,7 +250,8 @@ public class AgentService : ApplicationService, IAgentService
             Name = dto.Name
         };
 
-        var initializationParam = JsonConvert.SerializeObject( dto.Properties);
+        var initializationParam = JsonConvert.SerializeObject(dto.Properties);
+        _logger.LogInformation($"[CreateAgentAsync] initializationParam-->{initializationParam}");
         var businessAgent = await InitializeBusinessAgent(guid, dto.AgentType, initializationParam);
 
         var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
