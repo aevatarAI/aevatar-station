@@ -249,7 +249,7 @@ public class AgentService : ApplicationService, IAgentService
             Name = dto.Name
         };
 
-        var initializationParam = JsonConvert.SerializeObject(dto.Properties);
+        var initializationParam = JsonConvert.SerializeObject( dto.Properties);
         var businessAgent = await InitializeBusinessAgent(guid, dto.AgentType, initializationParam);
 
         var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
