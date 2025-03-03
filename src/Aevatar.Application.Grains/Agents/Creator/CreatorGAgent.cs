@@ -48,13 +48,13 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
         await ConfirmEvents();
     }
     
-    public async Task UpdateAgentAsync(UpdateAgentInputDto dto)
+    public async Task UpdateAgentAsync(UpdateAgentInput dto)
     {
         _logger.LogInformation("UpdateAgentAsync");
         RaiseEvent(new UpdateAgentGEvent()
         {
             Id = Guid.NewGuid(),
-            Properties = JsonConvert.SerializeObject(dto.Properties),
+            Properties = dto.Properties,
             Name = dto.Name
         });
         await ConfirmEvents();
@@ -156,7 +156,7 @@ public interface ICreatorGAgent : IStateGAgent<CreatorGAgentState>
 {
     Task<CreatorGAgentState> GetAgentAsync();
     Task CreateAgentAsync(AgentData agentData);
-    Task UpdateAgentAsync(UpdateAgentInputDto dto);
+    Task UpdateAgentAsync(UpdateAgentInput dto);
     Task DeleteAgentAsync();
     Task PublishEventAsync<T>(T @event) where T : EventBase;
     Task UpdateAvailableEventsAsync(List<Type>? eventTypeList);
