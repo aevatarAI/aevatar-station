@@ -10,5 +10,8 @@ namespace Aevatar.PermissionManagement;
 )]
 public class AevatarPermissionManagementModule : AbpModule
 {
-    
+    public override void ConfigureServices(ServiceConfigurationContext context)
+    {
+        
+    }
 }

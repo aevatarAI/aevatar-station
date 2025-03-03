@@ -2,21 +2,22 @@ using System.Reflection;
 using System.Security.Authentication;
 using System.Security.Claims;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Volo.Abp.Authorization.Permissions;
-using Volo.Abp.PermissionManagement;
 using Volo.Abp.Security.Claims;
 
 namespace Aevatar.PermissionManagement;
-//        var classPermissionAttribute = context.Grain.GetType().GetCustomAttribute<PermissionAttribute>();
 
 public class PermissionCheckFilter : IIncomingGrainCallFilter
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger<PermissionCheckFilter> _logger;
     private IPermissionChecker _permissionChecker;
 
-    public PermissionCheckFilter(IServiceProvider serviceProvider)
+    public PermissionCheckFilter(IServiceProvider serviceProvider, ILogger<PermissionCheckFilter> logger)
     {
         _serviceProvider = serviceProvider;
+        _logger = logger;
     }
 
     public async Task Invoke(IIncomingGrainCallContext context)
@@ -34,6 +35,7 @@ public class PermissionCheckFilter : IIncomingGrainCallFilter
         if (allPermissionNames.Count == 0)
         {
             await context.Invoke();
+            _logger.LogInformation("No permission required for method {MethodName}", method.Name);
             return;
         }
 
@@ -47,6 +49,8 @@ public class PermissionCheckFilter : IIncomingGrainCallFilter
 
         var principal = BuildClaimsPrincipal(currentUser);
 
+        _logger.LogInformation("Start permission checking.");
+
         foreach (var permissionName in allPermissionNames)
         {
             if (!await checker.IsGrantedAsync(principal, permissionName))
@@ -54,6 +58,8 @@ public class PermissionCheckFilter : IIncomingGrainCallFilter
                 throw new AuthenticationException($"Missing required permission: {permissionName}");
             }
         }
+
+        _logger.LogInformation("End permission checking.");
 
         await context.Invoke();
     }
