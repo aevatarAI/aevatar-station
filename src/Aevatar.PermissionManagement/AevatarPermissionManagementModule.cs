@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.Modularity;
 using Volo.Abp.PermissionManagement;
 using Volo.Abp.PermissionManagement.MongoDB;
@@ -12,6 +13,6 @@ public class AevatarPermissionManagementModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
-        
+        context.Services.AddTransient<IPermissionInfoProvider, PermissionInfoProvider>();
     }
 }

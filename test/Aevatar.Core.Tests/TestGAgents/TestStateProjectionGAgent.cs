@@ -23,7 +23,7 @@ public class TestStateProjectionGAgent : StateProjectionGAgentBase<GroupGAgentSt
         return Task.FromResult("This is a GAgent for testing state projection gagent base.");
     }
 
-    protected override async Task HandleStateAsync(GroupGAgentState projectionState)
+    protected override async Task HandleStateAsync(StateWrapper<GroupGAgentState> projectionState)
     {
         RaiseEvent(new CallStateHandlerStateLogEvent());
         await ConfirmEvents();

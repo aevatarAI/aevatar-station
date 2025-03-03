@@ -18,8 +18,8 @@ public class StateDispatcher : IStateDispatcher
 
     public async Task PublishAsync<TState>(GrainId grainId, TState state) where TState : StateBase
     {
-        var streamId = StreamId.Create(_aevatarOptions.StreamNamespace, typeof(TState).FullName!);
-        var stream = _streamProvider.GetStream<TState>(streamId);
-        await stream.OnNextAsync(state);
+        var streamId = StreamId.Create(_aevatarOptions.StreamNamespace, typeof(StateWrapper<TState>).FullName!);
+        var stream = _streamProvider.GetStream<StateWrapper<TState>>(streamId);
+        await stream.OnNextAsync(new StateWrapper<TState>(grainId, state));
     }
 }

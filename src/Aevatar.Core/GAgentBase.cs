@@ -317,9 +317,9 @@ public abstract partial class
         return StreamProvider.GetStream<EventWrapperBase>(streamId);
     }
 
-    private IAsyncStream<TState> GetStateProjectionStream()
+    private IAsyncStream<StateWrapper<TState>> GetStateProjectionStream()
     {
-        var streamId = StreamId.Create(AevatarOptions.StreamNamespace, typeof(TState).FullName!);
-        return StreamProvider.GetStream<TState>(streamId);
+        var streamId = StreamId.Create(AevatarOptions.StreamNamespace, typeof(StateWrapper<TState>).FullName!);
+        return StreamProvider.GetStream<StateWrapper<TState>>(streamId);
     }
 }

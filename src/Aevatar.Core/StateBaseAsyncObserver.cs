@@ -3,18 +3,18 @@ using Orleans.Streams;
 
 namespace Aevatar.Core;
 
-public class StateBaseAsyncObserver : IAsyncObserver<StateBase>
+public class StateBaseAsyncObserver : IAsyncObserver<StateWrapperBase>
 {
-    private readonly Func<StateBase, Task> _func;
+    private readonly Func<StateWrapperBase, Task> _func;
 
     public Guid GAgentGuid { get; set; }
 
-    public StateBaseAsyncObserver(Func<StateBase, Task> func)
+    public StateBaseAsyncObserver(Func<StateWrapperBase, Task> func)
     {
         _func = func;
     }
 
-    public async Task OnNextAsync(StateBase item, StreamSequenceToken? token = null)
+    public async Task OnNextAsync(StateWrapperBase item, StreamSequenceToken? token = null)
     {
         await _func(item);
     }

@@ -29,6 +29,6 @@ public class AevatarGAgentsTestModule : AbpModule
             options.DefinitionProviders.Add<TestPermissionDefinitionProvider>();
         });
         Configure<AbpAutoMapperOptions>(options => { options.AddMaps<AevatarGAgentsTestModule>(); });
-        context.Services.AddSingleton<IPermissionGrantRepository, MockPermissionGrantRepository>();
+        context.Services.AddTransient<IPermissionGrantRepository, MockPermissionGrantRepository>();
     }
 }

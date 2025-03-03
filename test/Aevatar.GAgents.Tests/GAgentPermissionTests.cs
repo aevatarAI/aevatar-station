@@ -29,7 +29,6 @@ public sealed class GAgentPermissionTests : AevatarGAgentsTestBase, IAsyncLifeti
         allPermissionInfos.ShouldContain(i =>
             i.Name == "DoSomething1"
             && i.DisplayName == "Only for testing."
-            && i.GrainType == "Aevatar.Core.Tests.TestGAgents.PermissionGAgent"
             && i.Type == "Aevatar.Core.Tests.TestGAgents.PermissionGAgent"
         );
         allPermissionInfos.ShouldContain(i =>

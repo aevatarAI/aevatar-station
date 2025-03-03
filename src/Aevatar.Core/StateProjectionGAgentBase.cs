@@ -26,7 +26,7 @@ public abstract class StateProjectionGAgentBase<TProjectionState, TState, TState
     where TConfiguration : ConfigurationBase
 {
     private readonly List<StateBaseAsyncObserver> _stateObservers = [];
-    private readonly List<StreamSubscriptionHandle<TProjectionState>> _subscription = [];
+    private readonly List<StreamSubscriptionHandle<StateWrapper<TProjectionState>>> _subscription = [];
 
     protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)
     {
@@ -44,7 +44,7 @@ public abstract class StateProjectionGAgentBase<TProjectionState, TState, TState
         await base.OnDeactivateAsync(reason, cancellationToken);
     }
 
-    protected abstract Task HandleStateAsync(TProjectionState projectionState);
+    protected abstract Task HandleStateAsync(StateWrapper<TProjectionState> projectionStateWrapper);
 
     private async Task UpdateStateLogEventObserverListAsync()
     {
@@ -82,12 +82,12 @@ public abstract class StateProjectionGAgentBase<TProjectionState, TState, TState
         return methodInfo.GetParameters().Length == 1 &&
                (methodInfo.GetCustomAttribute<StateLogEventHandlerAttribute>() != null ||
                 methodInfo.Name == AevatarGAgentConstants.StateHandlerDefaultMethodName) &&
-               methodInfo.GetParameters()[0].ParameterType == typeof(TProjectionState);
+               methodInfo.GetParameters()[0].ParameterType == typeof(StateWrapper<TProjectionState>);
     }
 
-    private IAsyncStream<TProjectionState> GetStateProjectionStream()
+    private IAsyncStream<StateWrapper<TProjectionState>> GetStateProjectionStream()
     {
-        var streamId = StreamId.Create(AevatarOptions.StreamNamespace, typeof(TProjectionState).FullName!);
-        return StreamProvider.GetStream<TProjectionState>(streamId);
+        var streamId = StreamId.Create(AevatarOptions.StreamNamespace, typeof(StateWrapper<TProjectionState>).FullName!);
+        return StreamProvider.GetStream<StateWrapper<TProjectionState>>(streamId);
     }
 }
