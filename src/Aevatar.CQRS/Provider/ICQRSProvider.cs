@@ -9,8 +9,6 @@ namespace Aevatar.CQRS.Provider;
 
 public interface ICQRSProvider : IEventDispatcher
 {
-    void SetProjectName(string projectName);
-
     string GetIndexName(string name);
     
     Task<string> QueryStateAsync(string indexName,Func<QueryContainerDescriptor<dynamic>, QueryContainer> query,int skip, int limit);

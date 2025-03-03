@@ -59,11 +59,4 @@ public class AevatarApplicationModule : AbpModule
         Configure<HostDeployOptions>(configuration.GetSection("HostDeploy"));
         context.Services.Configure<HostOptions>(configuration.GetSection("Host"));
     }
-    
-    public override void OnApplicationInitialization(ApplicationInitializationContext context)
-    {
-        var cqrsProvider = context.ServiceProvider.GetRequiredService<ICQRSProvider>();
-        var hostId = context.GetConfiguration().GetValue<string>("Host:HostId");
-        cqrsProvider.SetProjectName(hostId);
-    }
 }
