@@ -9,6 +9,10 @@ namespace Aevatar.CQRS.Provider;
 
 public interface ICQRSProvider : IEventDispatcher
 {
+    void SetProjectName(string projectName);
+
+    string GetIndexName(string name);
+    
     Task<string> QueryStateAsync(string indexName,Func<QueryContainerDescriptor<dynamic>, QueryContainer> query,int skip, int limit);
     
     Task<Tuple<long, List<AgentGEventIndex>>> QueryGEventAsync(string eventId, List<string> grainIds, int pageNumber, int pageSize);
