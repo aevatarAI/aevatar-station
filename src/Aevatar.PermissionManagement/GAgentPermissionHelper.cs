@@ -1,12 +1,11 @@
 using System.Reflection;
 using Aevatar.Core.Abstractions;
-using Volo.Abp.DependencyInjection;
 
 namespace Aevatar.PermissionManagement;
 
-public class PermissionInfoProvider : IPermissionInfoProvider, ITransientDependency
+public static class GAgentPermissionHelper
 {
-    public List<PermissionInfo> GetAllPermissionInfos()
+    public static List<PermissionInfo> GetAllPermissionInfos()
     {
         var permissionInfos = new List<PermissionInfo>();
         var agentType = typeof(IGAgent);

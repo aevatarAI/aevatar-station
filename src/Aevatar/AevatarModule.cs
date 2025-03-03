@@ -36,6 +36,5 @@ public class AevatarModule : AbpModule
         context.Services.AddTransient<IGAgentFactory, GAgentFactory>();
         context.Services.AddTransient<IPluginGAgentManager, PluginGAgentManager>();
         context.Services.AddSingleton<IConfigureGrainTypeComponents, ConfigureAevatarGrainActivator>();
-        context.Services.AddTransient<IPermissionInfoProvider, PermissionInfoProvider>();
     }
 }

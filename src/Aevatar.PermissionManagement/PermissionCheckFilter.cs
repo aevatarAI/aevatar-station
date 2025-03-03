@@ -35,7 +35,6 @@ public class PermissionCheckFilter : IIncomingGrainCallFilter
         if (allPermissionNames.Count == 0)
         {
             await context.Invoke();
-            _logger.LogInformation("No permission required for method {MethodName}", method.Name);
             return;
         }
 
@@ -49,7 +48,7 @@ public class PermissionCheckFilter : IIncomingGrainCallFilter
 
         var principal = BuildClaimsPrincipal(currentUser);
 
-        _logger.LogInformation("Start permission checking.");
+        _logger.LogInformation("Start permission checking for method {MethodName}", method.Name);
 
         foreach (var permissionName in allPermissionNames)
         {
@@ -59,7 +58,7 @@ public class PermissionCheckFilter : IIncomingGrainCallFilter
             }
         }
 
-        _logger.LogInformation("End permission checking.");
+        _logger.LogInformation("End permission checking of method {MethodName}", method.Name);
 
         await context.Invoke();
     }
