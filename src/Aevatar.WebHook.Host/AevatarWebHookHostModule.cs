@@ -26,6 +26,8 @@ public class AevatarListenerHostModule : AbpModule
     {
         context.Services.AddHealthChecks();
         context.Services.AddSingleton<IGAgentFactory,GAgentFactory>();
+        
+        context.Services.AddHealthChecks();
     }
     
     public void ConfigureServices(IServiceCollection services)
@@ -43,6 +45,7 @@ public class AevatarListenerHostModule : AbpModule
         var app = context.GetApplicationBuilder();
         var handlers = context.ServiceProvider.GetServices<IWebhookHandler>();
         app.UseRouting();
+        app.UseHealthChecks("/health");
         var configuration = context.GetConfiguration();
         var webhookId = configuration["Webhook:WebhookId"];
         app.UseEndpoints(endpoints =>
