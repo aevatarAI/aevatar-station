@@ -1,4 +1,5 @@
 using Aevatar.Localization;
+using Aevatar.PermissionManagement;
 using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.Localization;
 
@@ -49,6 +50,12 @@ public class AevatarPermissionDefinitionProvider : PermissionDefinitionProvider
         subscriptionManagementGroup.AddPermission(AevatarPermissions.SubscriptionManagent.CreateSubscription, L("Permission:CreateSubscription"));
         subscriptionManagementGroup.AddPermission(AevatarPermissions.SubscriptionManagent.CancelSubscription, L("Permission:CancelSubscription"));
         subscriptionManagementGroup.AddPermission(AevatarPermissions.SubscriptionManagent.ViewSubscriptionStatus, L("Permission:ViewSubscription"));
+        var permissionInfos = GAgentPermissionHelper.GetAllPermissionInfos();
+        var group = context.AddGroup("GAgents");
+        foreach (var permissionInfo in permissionInfos)
+        {
+            group.AddPermission(permissionInfo.Name, L(permissionInfo.Name));
+        }
     }
 
     private static LocalizableString L(string name)
