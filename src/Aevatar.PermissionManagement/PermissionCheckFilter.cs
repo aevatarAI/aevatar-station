@@ -54,7 +54,11 @@ public class PermissionCheckFilter : IIncomingGrainCallFilter
         {
             if (!await checker.IsGrantedAsync(principal, permissionName))
             {
-                throw new AuthenticationException($"Missing required permission: {permissionName}");
+                throw new AuthenticationException(
+                    $"Missing required permission: {permissionName}, " +
+                    $"userId: {currentUser.UserId.ToString()}, " +
+                    $"userName: {currentUser.UserName}, " +
+                    $"clientId: {currentUser.ClientId}");
             }
         }
 
