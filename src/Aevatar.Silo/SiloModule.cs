@@ -2,6 +2,8 @@ using AElf.OpenTelemetry;
 using Aevatar.Domain.Grains;
 using Microsoft.Extensions.DependencyInjection;
 using Aevatar.Application.Grains;
+using Aevatar.Options;
+using Microsoft.CodeAnalysis.Options;
 using Serilog;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
@@ -26,5 +28,6 @@ public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
             true, writeToProviders: true);
         context.Services.AddHttpClient();
         context.Services.AddSignalR().AddOrleans();
+        context.Services.Configure<HostOptions>(context.Services.GetConfiguration().GetSection("Host"));
     }
 }

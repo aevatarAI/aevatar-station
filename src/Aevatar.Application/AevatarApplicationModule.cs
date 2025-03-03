@@ -57,7 +57,7 @@ public class AevatarApplicationModule : AbpModule
         Configure<AgentOptions>(configuration.GetSection("Agent"));
         context.Services.AddTransient<IHostDeployManager, KubernetesHostManager>();
         Configure<HostDeployOptions>(configuration.GetSection("HostDeploy"));
-       
+        context.Services.Configure<HostOptions>(configuration.GetSection("Host"));
     }
     
     public override void OnApplicationInitialization(ApplicationInitializationContext context)

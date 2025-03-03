@@ -47,15 +47,6 @@ public class Program
                 services.AddApplication<SiloModule>();
             })
             .UseOrleansConfiguration()
-            .UseOrleans(silo =>
-            {
-                silo.ConfigureServices(services =>
-                {
-                    services.AddSingleton<Initialization>();
-                });
-                
-                silo.AddStartupTask<Initialization>();
-            })
             .UseAutofac()
             .UseSerilog();
 }

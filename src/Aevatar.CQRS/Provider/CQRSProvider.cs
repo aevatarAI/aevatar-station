@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
+using Aevatar.Options;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Nest;
 using Newtonsoft.Json;
 using Orleans.Runtime;
@@ -16,12 +18,14 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
 {
     private readonly IMediator _mediator;
     private readonly ILogger<CQRSProvider> _logger;
+    private readonly IOptions<HostOptions> _options;
     private string _projectName = null;
 
-    public CQRSProvider(IMediator mediator, ILogger<CQRSProvider> logger)
+    public CQRSProvider(IMediator mediator, ILogger<CQRSProvider> logger, IOptions<HostOptions> hostOptions)
     {
         _mediator = mediator;
         _logger = logger;
+        _options = hostOptions;
     }
 
     public Task PublishAsync(StateBase state, string grainId)
@@ -242,7 +246,6 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
 
     public string GetIndexName(string index)
     {
-        var indexName = _projectName.IsNullOrEmpty() ? "" : _projectName;
-        return $"{indexName}-{CqrsConstant.IndexPrefix}{index}{CqrsConstant.IndexSuffix}".ToLower();
+        return $"{_options.Value.HostId}-{CqrsConstant.IndexPrefix}{index}{CqrsConstant.IndexSuffix}".ToLower();
     }
 }
