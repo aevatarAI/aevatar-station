@@ -5,6 +5,7 @@
     <OrleansVerion>9.0.1</OrleansVerion>
     <AevatarVerion>1.4.9</AevatarVerion>
     <AevatarGAgentsVerion>1.2.1</AevatarGAgentsVerion>
+    <EchoListenGAgentsVersion>v0.0.14-alpha</EchoListenGAgentsVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- AElf packages -->
@@ -22,7 +23,17 @@
     <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="$(AevatarGAgentsVerion)" />
     <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="$(AevatarGAgentsVerion)" />
     <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="$(AevatarGAgentsVerion)" />
+    <PackageVersion Include="Aevatar.GAgents.Telegram" Version="$(AevatarGAgentsVerion)" />
     <PackageVersion Include="Aevatar.SignalR" Version="1.5.1" />
+    
+    <!-- EchoListen -->
+    <PackageVersion Include="EchoListen.GAgent.Basic" Version="$(EchoListenGAgentsVersion)" />
+    <PackageVersion Include="EchoListen.GAgent.ControllerGAgent" Version="$(EchoListenGAgentsVersion)" />
+    <PackageVersion Include="EchoListen.GAgent.SmartWalletListenerGAgent" Version="$(EchoListenGAgentsVersion)" />
+    <PackageVersion Include="EchoListen.GAgent.TwitterListenerGAgent" Version="$(EchoListenGAgentsVersion)" />
+    <PackageVersion Include="EchoListen.GAgent.TokenListenerGAgent" Version="$(EchoListenGAgentsVersion)" />
+    <PackageVersion Include="EchoListen.GAgent.SummarizerAIGAgent" Version="$(EchoListenGAgentsVersion)" />
+    
     <!-- AI and Analysis packages -->
     <PackageVersion Include="AutoGen" Version="0.2.1" />
     <PackageVersion Include="AutoGen.Core" Version="0.2.1" />
@@ -177,8 +188,5 @@
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.2" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client.Core" Version="9.0.2" />
     <PackageVersion Include="MineAiFun.GAgents" Version="1.1.13" />
-    <PackageVersion Include="EchoListen.GAgent.Basic" Version="0.0.12-alpha" />
-    <PackageVersion Include="EchoListen.GAgent.TwitterListenerGAgent" Version="0.0.12-alpha" />
-    <PackageVersion Include="EchoListen.GAgent.ControllerGAgent" Version="0.0.12-alpha" />
   </ItemGroup>
 </Project>

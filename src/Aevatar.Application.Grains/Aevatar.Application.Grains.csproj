@@ -19,8 +19,12 @@
         <PackageReference Include="Aevatar.GAgents.AI.Abstractions"/>
         <PackageReference Include="MineAiFun.GAgents"/>
         <PackageReference Include="EchoListen.GAgent.Basic"/>
-        <PackageReference Include="EchoListen.GAgent.TwitterListenerGAgent"/>
         <PackageReference Include="EchoListen.GAgent.ControllerGAgent"/>
+        <PackageReference Include="EchoListen.GAgent.SmartWalletListenerGAgent"/>
+        <PackageReference Include="EchoListen.GAgent.TwitterListenerGAgent"/>
+        <PackageReference Include="EchoListen.GAgent.TokenListenerGAgent"/>
+        <PackageReference Include="EchoListen.GAgent.SummarizerAIGAgent"/>
+        <PackageReference Include="Aevatar.GAgents.Telegram" />
     </ItemGroup>
 
     <ItemGroup>
