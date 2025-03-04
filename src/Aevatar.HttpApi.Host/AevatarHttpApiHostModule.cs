@@ -69,6 +69,8 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
 
         context.Services.AddMvc(options => { options.Filters.Add(new IgnoreAntiforgeryTokenAttribute()); })
             .AddNewtonsoftJson();
+        
+        context.Services.AddHealthChecks();
     }
 
     private static void ConfigureAutoResponseWrapper(ServiceConfigurationContext context)
@@ -201,6 +203,7 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
             c.OAuthClientId(configuration["AuthServer:SwaggerClientId"]);
             c.OAuthScopes("Aevatar");
         });
+        app.UseHealthChecks("/health");
 
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();
