@@ -23,15 +23,17 @@ public class SignalRTestGAgent : GAgentBase<SignalRTestGAgentState, SignalRTestS
     [EventHandler]
     public async Task HandleEventAsync(NaiveTestEvent eventData)
     {
-        await PublishAsync(new SignalRResponseEvent
+        await PublishAsync(new SignalRResponseEvent<string>
         {
-            Message = eventData.Greeting
+            Message = eventData.Greeting,
+            Data = "test"
         });
     }
 }
 
 [GenerateSerializer]
-public class SignalRResponseEvent : ResponseToPublisherEventBase
+public class SignalRResponseEvent<T> : ResponseToPublisherEventBase
 {
     [Id(0)] public string Message { get; set; }
+    [Id(1)] public T Data { get; set; }
 }

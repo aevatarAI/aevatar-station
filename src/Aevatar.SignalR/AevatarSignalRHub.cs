@@ -3,6 +3,7 @@ using Aevatar.Core.Abstractions;
 using Aevatar.SignalR.GAgents;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 
 namespace Aevatar.SignalR;
 
@@ -11,36 +12,45 @@ namespace Aevatar.SignalR;
 public class AevatarSignalRHub : Hub, IAevatarSignalRHub
 {
     private readonly IGAgentFactory _gAgentFactory;
+    private readonly ILogger<AevatarSignalRHub> _logger;
 
-    public AevatarSignalRHub(IGAgentFactory gAgentFactory)
+    public AevatarSignalRHub(IGAgentFactory gAgentFactory, ILogger<AevatarSignalRHub> logger)
     {
         _gAgentFactory = gAgentFactory;
+        _logger = logger;
     }
 
     public async Task<GrainId?> PublishEventAsync(GrainId grainId, string eventTypeName, string eventJson)
     {
+        _logger.LogInformation($"PublishEventAsync: {grainId} \n{eventTypeName} \n{eventJson}");
         using var _ = new ActivityScope(nameof(PublishEventAsync));
 
         var (parentGAgent, signalRGAgent) = await InitializeGroupMembers(grainId);
         if (parentGAgent == null || signalRGAgent == null) return null;
 
         var connectionId = GetConnectionId();
+        _logger.LogInformation($"ConnectionId: {connectionId}");
         await AddConnectionIdIfNeeded(signalRGAgent, connectionId, true);
         await parentGAgent.RegisterAsync(signalRGAgent);
+        _logger.LogInformation($"{signalRGAgent.GetGrainId().ToString()} registered.");
         await signalRGAgent.PublishEventAsync(DeserializeEvent(eventTypeName, eventJson), connectionId);
         return signalRGAgent.GetGrainId();
     }
 
     public async Task<GrainId?> SubscribeAsync(GrainId grainId, string eventTypeName, string eventJson)
     {
+        _logger.LogInformation($"SubscribeAsync: {grainId} \n{eventTypeName} \n{eventJson}");
+
         using var _ = new ActivityScope(nameof(SubscribeAsync));
 
         var (parentGAgent, signalRGAgent) = await InitializeGroupMembers(grainId);
         if (parentGAgent == null || signalRGAgent == null) return null;
 
         var connectionId = GetConnectionId();
+        _logger.LogInformation($"ConnectionId: {connectionId}");
         await AddConnectionIdIfNeeded(signalRGAgent, connectionId, false);
         await parentGAgent.RegisterAsync(signalRGAgent);
+        _logger.LogInformation($"{signalRGAgent.GetGrainId().ToString()} registered.");
         await signalRGAgent.PublishEventAsync(DeserializeEvent(eventTypeName, eventJson), connectionId);
         return signalRGAgent.GetGrainId();
     }

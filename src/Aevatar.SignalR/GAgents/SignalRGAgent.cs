@@ -135,6 +135,7 @@ public class SignalRGAgent :
     [AllEventHandler]
     public async Task ResponseToSignalRAsync(EventWrapperBase eventWrapperBase)
     {
+        Logger.LogInformation($"ResponseToSignalRAsync: {eventWrapperBase}");
         var eventWrapper = (EventWrapper<EventBase>)eventWrapperBase;
         if (!eventWrapper.Event.GetType().IsSubclassOf(typeof(ResponseToPublisherEventBase)))
         {

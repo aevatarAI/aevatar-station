@@ -29,10 +29,11 @@ public class MyGAgent : GAgentBase<MyGAgentState, MyStateLogEvent>
     {
         // Some logic.
 
-        await PublishAsync(new LoginResponse
+        await PublishAsync(new LoginResponse<string>
         {
             Success = true,
-            SessionId = Guid.NewGuid()
+            SessionId = Guid.NewGuid(),
+            Data = "test"
         });
     }
 }
@@ -45,8 +46,9 @@ public class UserLoginEvent : EventBase
 }
 
 [GenerateSerializer]
-public class LoginResponse : ResponseToPublisherEventBase
+public class LoginResponse<T> : ResponseToPublisherEventBase
 {
     [Id(0)] public bool Success { get; set; }
     [Id(1)] public Guid SessionId { get; set; }
+    [Id(2)] public T Data { get; set; }
 }

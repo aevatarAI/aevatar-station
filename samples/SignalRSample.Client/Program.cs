@@ -86,7 +86,8 @@ async Task SendEventWithRetry(HubConnection conn, string methodName, string grai
                 await conn.StartAsync();
             }
 
-            await connection.InvokeAsync(methodName, grainId, eventTypeName, eventJson);
+            var signalRGAgentGrainId = await connection.InvokeAsync<GrainId>(methodName, grainId, eventTypeName, eventJson);
+            Console.WriteLine($"SignalRGAgentGrainId: {signalRGAgentGrainId.ToString()}");
             return;
         }
         catch (Exception ex)
