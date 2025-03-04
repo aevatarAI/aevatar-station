@@ -1,5 +1,6 @@
 using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Orleans.Streams;
 
 namespace Aevatar.Core;
@@ -7,14 +8,10 @@ namespace Aevatar.Core;
 public class GAgentFactory : IGAgentFactory
 {
     private readonly IClusterClient _clusterClient;
-    private readonly IStreamProvider _streamProvider;
 
     public GAgentFactory(IClusterClient clusterClient)
     {
         _clusterClient = clusterClient;
-        _streamProvider =
-            _clusterClient.ServiceProvider.GetRequiredKeyedService<IStreamProvider>(AevatarCoreConstants
-                .StreamProvider);
     }
 
     public async Task<IGAgent> GetGAgentAsync(GrainId grainId, ConfigurationBase? configuration = null)
@@ -74,10 +71,7 @@ public class GAgentFactory : IGAgentFactory
         await gAgent.ActivateAsync();
         if (configuration != null)
         {
-            var eventWrapper = new EventWrapper<EventBase>(configuration, Guid.NewGuid(), gAgent.GetGrainId());
-            var streamId = StreamId.Create(AevatarCoreConstants.StreamNamespace, gAgent.GetGrainId().ToString());
-            var stream = _streamProvider.GetStream<EventWrapperBase>(streamId);
-            await stream.OnNextAsync(eventWrapper);
+            await gAgent.ConfigAsync(configuration);
         }
     }
 }
