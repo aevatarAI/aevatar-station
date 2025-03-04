@@ -284,7 +284,8 @@ public abstract partial class
         await HandleStateChangedAsync();
         if (StateDispatcher != null)
         {
-            await StateDispatcher.PublishAsync(this.GetGrainId(), State);
+            await StateDispatcher.PublishAsync(this.GetGrainId(),
+                new StateWrapper<TState>(this.GetGrainId(), State, Version));
         }
     }
 

@@ -46,6 +46,8 @@ public abstract class StateProjectionGAgentBase<TProjectionState, TState, TState
 
     protected abstract Task HandleStateAsync(StateWrapper<TProjectionState> projectionStateWrapper);
 
+    protected int ProjectStateVersion { get; set; }
+
     private async Task UpdateStateLogEventObserverListAsync()
     {
         var stateHandlerMethods = GetStateHandlerMethods(GetType());
@@ -53,9 +55,19 @@ public abstract class StateProjectionGAgentBase<TProjectionState, TState, TState
         {
             var observer = new StateBaseAsyncObserver(async item =>
             {
+                var version = (int)item.GetType().GetProperty(nameof(StateWrapper<TProjectionState>.Version))?.GetValue(item)!;
+                if (ProjectStateVersion >= version)
+                {
+                    return;
+                }
+
+                ProjectStateVersion = version;
                 var result = stateLogEventHandlerMethod.Invoke(this, [item]);
                 await (Task)result!;
-            });
+            })
+            {
+                GAgentGuid = this.GetPrimaryKey()
+            };
             _stateObservers.Add(observer);
         }
     }
