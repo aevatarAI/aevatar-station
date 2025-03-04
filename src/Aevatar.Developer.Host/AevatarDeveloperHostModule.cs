@@ -49,7 +49,8 @@ public class AevatarDeveloperHostModule : AbpModule
         context.Services.AddMvc(options =>
         {
             options.Filters.Add(new IgnoreAntiforgeryTokenAttribute());
-        });
+        })
+        .AddNewtonsoftJson();
     }
     
     private void ConfigureAuthentication(ServiceConfigurationContext context, IConfiguration configuration)
@@ -152,11 +153,6 @@ public class AevatarDeveloperHostModule : AbpModule
         }
 
         app.UseAbpRequestLocalization();
-
-        if (!env.IsDevelopment())
-        {
-            app.UseErrorPage();
-        }
 
         app.UseCorrelationId();
         app.UseStaticFiles();

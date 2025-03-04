@@ -5,10 +5,10 @@ using Aevatar.CQRS;
 using Aevatar.Kubernetes;
 using Aevatar.Kubernetes.Manager;
 using Aevatar.Options;
+using Aevatar.Schema;
 using Aevatar.WebHook.Deploy;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans;
-using Orleans.Hosting;
 using Volo.Abp.Account;
 using Volo.Abp.AspNetCore.Mvc.Dapr;
 using Volo.Abp.AutoMapper;
@@ -45,10 +45,11 @@ public class AevatarApplicationModule : AbpModule
         Configure<NameContestOptions>(configuration.GetSection("NameContest"));
         context.Services.AddSingleton<IGAgentFactory>(sp => new GAgentFactory(context.Services.GetRequiredService<IClusterClient>()));
         context.Services.AddSingleton<IGAgentManager>(sp => new GAgentManager(context.Services.GetRequiredService<IClusterClient>()));
+        context.Services.AddSingleton<ISchemaProvider, SchemaProvider>();
         Configure<WebhookDeployOptions>(configuration.GetSection("WebhookDeploy"));
         Configure<AgentOptions>(configuration.GetSection("Agent"));
         context.Services.AddTransient<IHostDeployManager, KubernetesHostManager>();
         Configure<HostDeployOptions>(configuration.GetSection("HostDeploy"));
-        context.Services.AddSignalR().AddOrleans();
+       
     }
 }

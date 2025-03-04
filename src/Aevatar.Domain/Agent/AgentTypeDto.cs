@@ -8,6 +8,7 @@ public class AgentTypeDto
     public string AgentType { get; set; }
     public string FullName { get; set; }
     public List<ParamDto> AgentParams { get; set; }
+    public string PropertyJsonSchema { get; set; }
 }
 
 public class ParamDto

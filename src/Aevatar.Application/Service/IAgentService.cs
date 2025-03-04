@@ -13,6 +13,7 @@ public interface IAgentService
     Task<List<AgentTypeDto>> GetAllAgents();
     
     Task<AgentDto> CreateAgentAsync(CreateAgentInputDto dto);
+    Task<List<AgentInstanceDto>> GetAllAgentInstances(int pageIndex, int pageSize);
     Task<AgentDto> GetAgentAsync(Guid guid);
     Task<AgentDto> UpdateAgentAsync(Guid guid, UpdateAgentInputDto dto);
     Task<SubAgentDto> AddSubAgentAsync(Guid guid, AddSubAgentDto addSubAgentDto);
