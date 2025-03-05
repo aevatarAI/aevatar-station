@@ -238,6 +238,6 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
 
     public string GetIndexName(string index)
     {
-        return $"{_options.Value.HostId}-{CqrsConstant.IndexPrefix}{index}{CqrsConstant.IndexSuffix}".ToLower();
+        return $"{CqrsConstant.IndexPrefix}-{_options.Value.HostId}-{index}{CqrsConstant.IndexSuffix}".ToLower();
     }
 }
