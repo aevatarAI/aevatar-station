@@ -51,24 +51,18 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
 {
     public override void PreConfigureServices(ServiceConfigurationContext context)
     {
-        PreConfigure<IdentityBuilder>(builder =>
-        {
-            builder.AddDefaultTokenProviders();
-        });
+        PreConfigure<IdentityBuilder>(builder => { builder.AddDefaultTokenProviders(); });
     }
 
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
-        Configure<AbpMvcLibsOptions>(options =>
-        {
-            options.CheckLibs = false;
-        });
+        Configure<AbpMvcLibsOptions>(options => { options.CheckLibs = false; });
         var configuration = context.Services.GetConfiguration();
         var hostingEnvironment = context.Services.GetHostingEnvironment();
 
         ConfigureAuthentication(context, configuration);
         ConfigureBundles();
-       // ConfigureUrls(configuration);
+        // ConfigureUrls(configuration);
         ConfigureConventionalControllers();
         ConfigureVirtualFileSystem(context);
         ConfigureAutoResponseWrapper(context);
@@ -76,11 +70,11 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         ConfigureDataProtection(context, configuration, hostingEnvironment);
         ConfigCache(context, configuration);
         //context.Services.AddDaprClient();
+
+        context.Services.AddMvc(options => { options.Filters.Add(new IgnoreAntiforgeryTokenAttribute()); })
+            .AddNewtonsoftJson();
         
-        context.Services.AddMvc(options =>
-        {
-            options.Filters.Add(new IgnoreAntiforgeryTokenAttribute());
-        });
+        context.Services.AddHealthChecks();
     }
     private void ConfigureDataProtection(
         ServiceConfigurationContext context,
@@ -102,7 +96,7 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
     {
         context.Services.AddAutoResponseWrapper();
     }
-    
+
     private void ConfigureAuthentication(ServiceConfigurationContext context, IConfiguration configuration)
     {
         context.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -121,13 +115,11 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         {
             options.StyleBundles.Configure(
                 LeptonXLiteThemeBundles.Styles.Global,
-                bundle =>
-                {
-                    bundle.AddFiles("/global-styles.css");
-                }
+                bundle => { bundle.AddFiles("/global-styles.css"); }
             );
         });
     }
+
     private void ConfigureVirtualFileSystem(ServiceConfigurationContext context)
     {
         var hostingEnvironment = context.Services.GetHostingEnvironment();
@@ -226,7 +218,8 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
             c.OAuthClientId(configuration["AuthServer:SwaggerClientId"]);
             c.OAuthScopes("Aevatar");
         });
-        
+        app.UseHealthChecks("/health");
+
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();
         app.UseConfiguredEndpoints();

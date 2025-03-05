@@ -166,6 +166,8 @@ public class AevatarAuthServerModule : AbpModule
         });
       
         var dataProtectionBuilder = context.Services.AddDataProtection().SetApplicationName("AevatarAuthServer");
+        
+        context.Services.AddHealthChecks();
     }
 
     public override void OnApplicationInitialization(ApplicationInitializationContext context)
@@ -184,6 +186,8 @@ public class AevatarAuthServerModule : AbpModule
         {
             app.UseErrorPage();
         }
+        
+        app.UseHealthChecks("/health");
 
         app.UseCorrelationId();
         app.UseStaticFiles();

@@ -109,7 +109,7 @@ public class AgentController : AevatarController
     [Authorize(Policy = AevatarPermissions.Agent.Update)]
     public async Task<AgentDto> UpdateAgent(Guid guid, [FromBody] UpdateAgentInputDto updateAgentInputDto)
     {
-        _logger.LogInformation("Update Agent: {agent}", JsonConvert.SerializeObject(updateAgentInputDto));
+        _logger.LogInformation("Update Agent--1: {agent}", JsonConvert.SerializeObject(updateAgentInputDto));
         var agentDto = await _agentService.UpdateAgentAsync(guid, updateAgentInputDto);
         return agentDto;
     }
