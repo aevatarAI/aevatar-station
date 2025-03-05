@@ -44,14 +44,6 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         await _mediator.Send(command);
     }
 
-    public void SetProjectName(string projectName)
-    {
-        if (_projectName.IsNullOrEmpty() && projectName.IsNullOrEmpty() == false)
-        {
-            _projectName = projectName;
-        }
-    }
-
     public async Task<string> QueryStateAsync(string indexName,
         Func<QueryContainerDescriptor<dynamic>, QueryContainer> query, int skip, int limit)
     {
