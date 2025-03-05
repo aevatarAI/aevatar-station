@@ -73,10 +73,12 @@ public class SignalRGAgent :
                 var connectionIdList = State.ConnectionIds;
                 foreach (var (connectionId, fireAndForget) in connectionIdList)
                 {
+                    Logger.LogDebug("Sending message to connectionId: {ConnectionId}", connectionId);
                     await _hubContext.Client(connectionId)
                         .Send(SignalROrleansConstants.MethodName, JsonConvert.SerializeObject(message));
                     if (fireAndForget)
                     {
+                        Logger.LogDebug("Cleaning up connectionId: {ConnectionId}", connectionId);
                         RaiseEvent(new RemoveConnectionIdStateLogEvent
                         {
                             ConnectionId = connectionId
