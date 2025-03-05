@@ -48,6 +48,9 @@ internal sealed class ClientGrain : IGrainBase, IClientGrain
         // We know we have already been connected if the "ServerId" parameter is set.
         if (ServerId != default)
         {
+            _logger.LogDebug("Resuming connection on {hubName} for connection {connectionId} to server {serverId}.",
+                _hubName, _connectionId, ServerId);
+            
             // We will listen to this stream to know if the server is disconnected (silo goes down) so that we can enact client disconnected procedure.
             var serverDisconnectedStream = _streamProvider.GetServerDisconnectionStream(_clientState.State.ServerId);
             var _serverDisconnectedSubscription = (await serverDisconnectedStream.GetAllSubscriptionHandles())[0];
