@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
+using Aevatar.CQRS.Provider;
 using Microsoft.Extensions.Logging;
 using Nest;
 using Newtonsoft.Json;
@@ -19,16 +20,19 @@ public class ElasticIndexingService : IIndexingService
     private const string CTime = "cTime";
     private const int DefaultSkip = 0;
     private const int DefaultLimit = 1000;
+    private readonly ICQRSProvider _cqrsProvider;
 
-    public ElasticIndexingService(ILogger<ElasticIndexingService> logger, IElasticClient elasticClient)
+    public ElasticIndexingService(ILogger<ElasticIndexingService> logger, IElasticClient elasticClient,
+        ICQRSProvider cqrsProvider)
     {
         _logger = logger;
         _elasticClient = elasticClient;
+        _cqrsProvider = cqrsProvider;
     }
 
     public void CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase
     {
-        var indexName = CqrsConstant.IndexPrefix + stateBase.GetType().Name.ToLower() + CqrsConstant.IndexSuffix;
+        var indexName = _cqrsProvider.GetIndexName(stateBase.GetType().Name.ToLower());
         var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
         if (indexExistsResponse.Exists)
         {
@@ -105,7 +109,7 @@ public class ElasticIndexingService : IIndexingService
 
     public async Task SaveOrUpdateStateIndexAsync<T>(string id, T stateBase) where T : StateBase
     {
-        var indexName = CqrsConstant.IndexPrefix + stateBase.GetType().Name.ToLower() + CqrsConstant.IndexSuffix;
+        var indexName = _cqrsProvider.GetIndexName(stateBase.GetType().Name.ToLower());
         var properties = stateBase.GetType().GetProperties();
         var document = new Dictionary<string, object>();
 
@@ -170,7 +174,7 @@ public class ElasticIndexingService : IIndexingService
             {
                 return "";
             }
-            
+
             var documentContent = JsonConvert.SerializeObject(documents.FirstOrDefault());
             return documentContent;
         }
@@ -184,8 +188,8 @@ public class ElasticIndexingService : IIndexingService
     public void CheckExistOrCreateIndex<T>(T baseIndex) where T : BaseIndex
     {
         _logger.LogInformation("CheckExistOrCreateIndex, indexName:{indexName}", baseIndex.GetType().Name.ToLower());
-        
-        var indexName = CqrsConstant.IndexPrefix + baseIndex.GetType().Name.ToLower();
+
+        var indexName = _cqrsProvider.GetIndexName(baseIndex.GetType().Name.ToLower());
         var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
         if (indexExistsResponse.Exists)
         {
@@ -264,8 +268,8 @@ public class ElasticIndexingService : IIndexingService
     public async Task SaveOrUpdateIndexAsync<T>(string id, T baseIndex) where T : BaseIndex
     {
         _logger.LogInformation("SaveOrUpdateIndexAsync, indexName:{indexName}", baseIndex.GetType().Name.ToLower());
-        
-        var indexName = CqrsConstant.IndexPrefix + baseIndex.GetType().Name.ToLower();
+
+        var indexName = _cqrsProvider.GetIndexName(baseIndex.GetType().Name.ToLower());
         var properties = baseIndex.GetType().GetProperties();
         var document = new Dictionary<string, object>();
 
@@ -311,7 +315,7 @@ public class ElasticIndexingService : IIndexingService
         int skip = DefaultSkip, string? index = null) where TEntity : class
 
     {
-        var indexName = index ?? CqrsConstant.IndexPrefix + typeof(TEntity).Name.ToLower();
+        var indexName = index ?? _cqrsProvider.GetIndexName(typeof(TEntity).Name.ToLower());
         try
         {
             Func<SearchDescriptor<TEntity>, ISearchRequest> selector;
@@ -351,8 +355,8 @@ public class ElasticIndexingService : IIndexingService
             throw;
         }
     }
-    
-    
+
+
     public async Task<Tuple<long, string>> GetSortDataDocumentsAsync(string indexName,
         Func<QueryContainerDescriptor<dynamic>, QueryContainer> query, int skip = 0, int limit = 1000)
     {
