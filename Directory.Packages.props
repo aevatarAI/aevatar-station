@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVerion>9.0.1</OrleansVerion>
-    <AevatarVersion>1.4.6</AevatarVersion>
+    <AevatarVersion>1.4.11-permission.4</AevatarVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Aevatar packages -->

@@ -18,6 +18,7 @@
         <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Microsoft.Orleans.Streaming" />
+        <PackageReference Include="Orleans.Providers.MongoDB" />
     </ItemGroup>
 
 </Project>

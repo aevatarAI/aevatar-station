@@ -41,7 +41,7 @@ public sealed class SignalRTests : AevatarSignalRTestBase
         var connection = SignalRTestHelper.CreateHubConnectionContext(client.Connection);
         await _hubLifetimeManager.OnConnectedAsync(connection);
 
-        var hub = new AevatarSignalRHub(_gAgentFactory);
+        var hub = new AevatarSignalRHub(_gAgentFactory, null);
         await hub.PublishEventAsync(signalRTestGAgent.GetGrainId(), typeof(NaiveTestEvent).FullName!,
             JsonConvert.SerializeObject(new NaiveTestEvent
             {
