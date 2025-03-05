@@ -16,10 +16,10 @@ public class StateDispatcher : IStateDispatcher
         _aevatarOptions = clusterClient.ServiceProvider.GetRequiredService<IOptions<AevatarOptions>>().Value;
     }
 
-    public async Task PublishAsync<TState>(GrainId grainId, TState state) where TState : StateBase
+    public async Task PublishAsync<TState>(GrainId grainId, StateWrapper<TState> stateWrapper) where TState : StateBase
     {
         var streamId = StreamId.Create(_aevatarOptions.StreamNamespace, typeof(StateWrapper<TState>).FullName!);
         var stream = _streamProvider.GetStream<StateWrapper<TState>>(streamId);
-        await stream.OnNextAsync(new StateWrapper<TState>(grainId, state));
+        await stream.OnNextAsync(stateWrapper);
     }
 }
