@@ -4,15 +4,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
+using Aevatar.CQRS;
 using Aevatar.CQRS.Dto;
+using Aevatar.Query;
 using Microsoft.Extensions.Logging;
 using Nest;
 using Newtonsoft.Json;
 using Orleans.Runtime;
+using Volo.Abp;
+using Volo.Abp.Application.Dtos;
+using Volo.Abp.Application.Services;
 
-namespace Aevatar.CQRS;
+namespace Aevatar;
 
-public class ElasticIndexingService : IIndexingService
+[RemoteService(IsEnabled = false)]
+public class ElasticIndexingService : ApplicationService, IIndexingService
 {
     private readonly IElasticClient _elasticClient;
     private readonly ILogger<ElasticIndexingService> _logger;
@@ -383,4 +389,40 @@ public class ElasticIndexingService : IIndexingService
             throw;
         }
     }
+    
+    public async Task<PagedResultDto<Dictionary<string, object>>> QueryWithLuceneAsync(LuceneQueryDto queryDto)
+    {
+        _logger.LogInformation("[Lucene Query] Index: {Index}, Query: {QueryString}", queryDto.Index, queryDto.QueryString);
+        var sortDescriptor = new SortDescriptor<Dictionary<string, object>>();
+        foreach (var sortField in queryDto.SortFields)
+        {
+            var parts = sortField.Split(':');
+            if (parts.Length == 2)
+            {
+                var fieldName = parts[0].Trim();
+                var sortOrder = parts[1].Trim().ToLower() == "desc" ? SortOrder.Descending : SortOrder.Ascending;
+                sortDescriptor = sortDescriptor.Field(f => f.Field(fieldName).Order(sortOrder));
+            }
+        }
+        
+        var searchDescriptor = new SearchDescriptor<Dictionary<string, object>>()
+        .Index(queryDto.Index)
+        .Query(q => q.QueryString(qs => qs.Query(queryDto.QueryString)))
+        .From(queryDto.From)
+        .Size(queryDto.Size)
+        .Sort(ss => sortDescriptor);
+        
+        var response = await _elasticClient.SearchAsync<Dictionary<string, object>>(searchDescriptor);
+        if (!response.IsValid)
+        {
+            _logger.LogError("Elasticsearch query failed: {info}", response.DebugInformation);
+            throw new UserFriendlyException("Elasticsearch query failed");
+        }
+
+        var resultList = response.Documents.ToList();
+        _logger.LogInformation("[Lucene Query] Index: {Index}, Query: {QueryString}, result: {Result}", queryDto.Index, queryDto.QueryString, resultList);
+
+        return new PagedResultDto<Dictionary<string, object>>(response.Total, resultList);
+    }
+
 }
