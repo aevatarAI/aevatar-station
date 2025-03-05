@@ -2,10 +2,13 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
-using Microsoft.Extensions.Logging;
+using Orleans.Providers;
 
 namespace Aevatar.Application.Grains.Agents.TestAgent;
 
+[Description("AgentTest")]
+[StorageProvider(ProviderName = "PubSubStore")]
+[LogConsistencyProvider(ProviderName = "LogStorage")]
 public class AgentTest : GAgentBase<FrontAgentState, FrontTestEvent, EventBase>, IFrontAgentTest
 {
     public override Task<string> GetDescriptionAsync()
