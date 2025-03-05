@@ -62,6 +62,9 @@ internal sealed class ClientGrain : IGrainBase, IClientGrain
 
         _clientState.State.ServerId = serverId;
         await _clientState.WriteStateAsync();
+        
+        _logger.LogDebug("Connected connection on {hubName} for connection {connectionId} to server {serverId}.",
+            _hubName, _connectionId, _clientState.State.ServerId);
     }
 
     public async Task OnDisconnect(string? reason = null)
@@ -87,8 +90,8 @@ internal sealed class ClientGrain : IGrainBase, IClientGrain
     {
         if (ServerId != default)
         {
-            _logger.LogDebug("Sending message on {hubName}.{message.Target} to connection {connectionId}",
-                _hubName, message.Target, _connectionId);
+            _logger.LogDebug("Sending message on {hubName}.{message.Target} to connection {connectionId} on server {serverId}.",
+                _hubName, message.Target, _connectionId, ServerId);
 
             // Routes the message to the silo (server) where the client is actually connected.
             await _streamProvider.GetServerStream(ServerId).OnNextAsync(new ClientMessage(_hubName, _connectionId, message));
