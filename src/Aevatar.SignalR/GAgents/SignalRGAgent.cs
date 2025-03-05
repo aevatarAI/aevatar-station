@@ -139,6 +139,7 @@ public class SignalRGAgent :
         var eventWrapper = (EventWrapper<EventBase>)eventWrapperBase;
         if (!eventWrapper.Event.GetType().IsSubclassOf(typeof(ResponseToPublisherEventBase)))
         {
+            Logger.LogDebug("Event is not a ResponseToPublisherEventBase");
             return;
         }
 
@@ -147,6 +148,10 @@ public class SignalRGAgent :
         if (State.ConnectionIdMap.TryGetValue(@event.CorrelationId!.Value, out var connectionId))
         {
             @event.ConnectionId = connectionId;
+        }
+        else
+        {
+            Logger.LogInformation("Cannot find corresponding connectionId for correlationId: {@CorrelationId}", @event.CorrelationId);
         }
 
         await EnqueueMessageAsync(JsonConvert.SerializeObject(@event));
