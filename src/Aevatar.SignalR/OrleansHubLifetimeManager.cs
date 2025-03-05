@@ -33,6 +33,8 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
         _serverId = Guid.NewGuid();
         _logger = logger;
         _clusterClient = clusterClient;
+        
+        _logger.LogDebug("Created Orleans HubLifetimeManager {hubName} (serverId: {serverId})", _hubName, _serverId);
     }
 
     private Task HeartbeatCheck()
@@ -109,6 +111,10 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
             _connections.Add(connection);
 
             var client = _clusterClient.GetClientGrain(_hubName, connection.ConnectionId);
+            
+            _logger.LogDebug("Handle connection {connectionId} on hub {hubName} (serverId: {serverId})",
+                connection.ConnectionId, _hubName, _serverId);
+            
             await client.OnConnect(_serverId);
 
             if (connection!.User!.Identity!.IsAuthenticated)
@@ -253,6 +259,8 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
 
     public void Dispose()
     {
+        _logger.LogDebug("Disposing Orleans HubLifetimeManager {hubName} (serverId: {serverId})", _hubName, _serverId);
+        
         _timer?.Dispose();
 
         var toUnsubscribe = new List<Task>();
@@ -286,6 +294,8 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
 
     public void Participate(ISiloLifecycle lifecycle)
     {
+        _logger.LogDebug("Participating in the lifecycle of the silo.");
+        
         lifecycle.Subscribe(
            observerName: nameof(OrleansHubLifetimeManager<THub>),
            stage: ServiceLifecycleStage.Active,
