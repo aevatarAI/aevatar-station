@@ -71,6 +71,7 @@ jobs:
             Aevatar.Silo,
             Aevatar.AuthServer,
             Aevatar.WebHook.Host,
+            Aevatar.DbMigrator
           ]
     permissions:
       contents: read
