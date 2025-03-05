@@ -261,9 +261,7 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
 
     public void Dispose()
     {
-        _logger.LogDebug("Disposing Orleans HubLifetimeManager {hubName} (serverId: {serverId})", _hubName, _serverId);
-        
-        _timer?.Dispose();
+         _timer?.Dispose();
 
         var toUnsubscribe = new List<Task>();
         if (_serverStream is not null)
@@ -296,8 +294,6 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
 
     public void Participate(ISiloLifecycle lifecycle)
     {
-        _logger.LogDebug("Participating in the lifecycle of the silo.");
-        
         lifecycle.Subscribe(
            observerName: nameof(OrleansHubLifetimeManager<THub>),
            stage: ServiceLifecycleStage.Active,
