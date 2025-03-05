@@ -107,6 +107,9 @@ public class SignalRGAgent :
     public async Task PublishEventAsync<T>(T @event, string connectionId) where T : EventBase
     {
         await PublishAsync(@event);
+        
+        Logger.LogDebug("Mapping correlationId to connectionId: {@CorrelationId} {ConnectionId}", @event.CorrelationId!.Value, connectionId);
+        
         RaiseEvent(new MapCorrelationIdToConnectionIdStateLogEvent
         {
             CorrelationId = @event.CorrelationId!.Value,
