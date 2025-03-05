@@ -150,6 +150,7 @@ public static class OrleansHostExtension
                 siloBuilder.UseAevatar()
                     .UseSignalR()
                     .RegisterHub<AevatarSignalRHub>();
+                
             }).ConfigureServices((context, services) =>
             {
                 services.Configure<AzureOpenAIConfig>(context.Configuration.GetSection("AIServices:AzureOpenAI"));
