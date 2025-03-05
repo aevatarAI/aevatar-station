@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Aevatar.Core.Abstractions.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Protocol;
 using Orleans.Streams;
@@ -30,7 +31,8 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
         _hubName = hubType.IsInterface && hubType.Name[0] == 'I'
             ? hubType.Name[1..]
             : hubType.Name;
-        _serverId = Guid.NewGuid();
+        var serverId = "SomeServerId";
+        _serverId = serverId.ToGuid();
         _logger = logger;
         _clusterClient = clusterClient;
         
