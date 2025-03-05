@@ -25,6 +25,7 @@ jobs:
             Aevatar.Silo,
             Aevatar.AuthServer,
             Aevatar.WebHook.Host,
+            Aevatar.DbMigrator
           ]
     steps:
       - name: Checkout code
