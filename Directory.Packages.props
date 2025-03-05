@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVerion>9.0.1</OrleansVerion>
-    <AevatarVerion>1.4.11-permission.1</AevatarVerion>
+    <AevatarVerion>1.4.11-permission.5</AevatarVerion>
     <AevatarGAgentsVerion>1.2.1</AevatarGAgentsVerion>
   </PropertyGroup>
   <ItemGroup>
@@ -23,7 +23,7 @@
     <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="$(AevatarGAgentsVerion)" />
     <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="$(AevatarGAgentsVerion)" />
     <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="$(AevatarGAgentsVerion)" />
-    <PackageVersion Include="Aevatar.SignalR" Version="1.5.1" />
+    <PackageVersion Include="Aevatar.SignalR" Version="1.5.3" />
     <!-- AI and Analysis packages -->
     <PackageVersion Include="AutoGen" Version="0.2.1" />
     <PackageVersion Include="AutoGen.Core" Version="0.2.1" />

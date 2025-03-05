@@ -75,7 +75,10 @@ public class UserAppService : IdentityUserAppService, IUserAppService
         
         foreach (var permission in permissions)
         {
-            await _permissionManager.SetForClientAsync(clientId,permission.Name,true);
+            if (permission.IsGranted)
+            {
+                await _permissionManager.SetForClientAsync(clientId,permission.Name,true);
+            }
         }
 
         await _applicationManager.CreateAsync(openIddictApplicationDescriptor);

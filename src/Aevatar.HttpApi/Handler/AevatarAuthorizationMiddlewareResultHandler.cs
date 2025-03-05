@@ -27,11 +27,11 @@ public class AevatarAuthorizationMiddlewareResultHandler : IAuthorizationMiddlew
             var userId = user.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
             var roles = user.FindAll(OpenIddictConstants.Claims.Role).Select(c => c.Value).ToArray();
             var clientId = user.FindFirst(OpenIddictConstants.Claims.ClientId)?.Value;
-            if (userId!= null)
+            
             {
                 RequestContext.Set("CurrentUser", new UserContext
                 {
-                    UserId = userId.ToGuid(),
+                    UserId = !userId.IsNullOrEmpty() ? userId.ToGuid(): Guid.Empty,
                     Roles = roles,
                     ClientId= clientId,
                 });
