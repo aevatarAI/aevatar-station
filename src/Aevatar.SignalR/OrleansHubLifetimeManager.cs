@@ -41,8 +41,12 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
             _hubName, _serverId);
     }
 
-    private Task HeartbeatCheck()
-      => _clusterClient.GetServerDirectoryGrain().Heartbeat(_serverId);
+    private async Task HeartbeatCheck()
+    {
+        _logger.LogInformation("Heartbeat check for Orleans HubLifetimeManager {hubName} (serverId: {serverId})",
+            _hubName, _serverId);
+        _clusterClient.GetServerDirectoryGrain().Heartbeat(_serverId);
+    }
 
     private async Task EnsureStreamSetup()
     {

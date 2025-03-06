@@ -11,7 +11,7 @@
       <ProjectReference Include="..\..\src\Aevatar.SignalR\Aevatar.SignalR.csproj" />
       <ProjectReference Include="..\SignalRSample.GAgents\SignalRSample.GAgents.csproj" />
     </ItemGroup>
-    
+
     <ItemGroup>
         <PackageReference Include="Aevatar" />
         <PackageReference Include="Aevatar.Core.Abstractions" />
@@ -19,6 +19,20 @@
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Microsoft.Orleans.Streaming" />
         <PackageReference Include="Orleans.Providers.MongoDB" />
+        <PackageReference Include="Orleans.Streams.Kafka" />
+        <PackageReference Include="MongoDB.Driver.Core.Extensions.DiagnosticSources" />
+        <PackageReference Include="AElf.OpenTelemetry" />
+        <PackageReference Include="AutoResponseWrapper" />
+        <PackageReference Include="MongoDB.Driver" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+        <PackageReference Include="Microsoft.CodeAnalysis.Common" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="appsettings.json" />
+      <Content Include="appsettings.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
     </ItemGroup>
 
 </Project>

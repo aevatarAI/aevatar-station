@@ -97,7 +97,19 @@ internal sealed class ClientGrain : IGrainBase, IClientGrain
                 _hubName, message.Target, _connectionId, ServerId);
 
             // Routes the message to the silo (server) where the client is actually connected.
-            await _streamProvider.GetServerStream(ServerId).OnNextAsync(new ClientMessage(_hubName, _connectionId, message));
+            var stream = _streamProvider.GetServerStream(ServerId);
+
+            var handles = await stream.GetAllSubscriptionHandles();
+            _logger.LogInformation("handles count: {Count}", handles.Count);
+
+            foreach (var handle in handles)
+            {
+                _logger.LogInformation("handle on stream {ProviderName}, {HandleId}", handle.ProviderName, handle.HandleId);
+            }
+            
+            _logger.LogInformation("StreamId: {streamId}", stream.StreamId.ToString());
+
+            await stream.OnNextAsync(new ClientMessage(_hubName, _connectionId, message));
 
             Interlocked.Exchange(ref _failAttempts, 0);
         }

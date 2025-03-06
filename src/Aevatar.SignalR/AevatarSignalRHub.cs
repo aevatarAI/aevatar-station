@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using Aevatar.Core.Abstractions;
 using Aevatar.SignalR.GAgents;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 
