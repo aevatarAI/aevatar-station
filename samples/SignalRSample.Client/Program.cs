@@ -1,11 +1,19 @@
 ﻿using Aevatar.Core.Abstractions.Extensions;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using SignalRSample.GAgents;
 
-const string hubUrl = "http://localhost:5001/aevatarHub";
+var configuration = new ConfigurationBuilder()
+    .AddJsonFile("appsettings.json")
+    .AddJsonFile("appsettings.secrets.json", optional: true)
+    .Build();
+
+var signalRConfig = configuration.GetSection("SignalR");
+var hubUrl = signalRConfig["HubUrl"];
+
 var connection = new HubConnectionBuilder()
-    .WithUrl(hubUrl)
+    .WithUrl(hubUrl!)
     .WithAutomaticReconnect() 
     .Build();
 

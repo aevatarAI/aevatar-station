@@ -16,7 +16,6 @@
         <PackageReference Include="Microsoft.Orleans.Client" />
         <PackageReference Include="Microsoft.Extensions.Logging.Console" />
         <PackageReference Include="Microsoft.Extensions.Hosting" />
-        <PackageReference Include="Orleans.Providers.MongoDB" />
     </ItemGroup>
 
     <ItemGroup>
@@ -25,8 +24,18 @@
     </ItemGroup>
 
     <ItemGroup>
+        <None Remove="appsettings.json" />
+        <Content Include="appsettings.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+
+    <ItemGroup>
       <Content Include="..\..\.dockerignore">
         <Link>.dockerignore</Link>
+      </Content>
+      <Content Update="appsettings.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
     </ItemGroup>
 
