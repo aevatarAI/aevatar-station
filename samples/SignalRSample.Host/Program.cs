@@ -75,7 +75,7 @@ builder.Host.UseOrleans(silo =>
 
 builder.WebHost.UseKestrel((_, kestrelOptions) =>
 {
-    kestrelOptions.ListenLocalhost(5001);
+    kestrelOptions.ListenAnyIP( 5000);
 });
 
 builder.Services.AddSignalR().AddOrleans();
