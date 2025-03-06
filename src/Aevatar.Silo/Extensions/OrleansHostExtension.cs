@@ -130,7 +130,7 @@ public static class OrleansHostExtension
                             var partitions = configuration.GetSection("OrleansStream:Partitions").Get<int>();
                             var replicationFactor =
                                 configuration.GetSection("OrleansStream:ReplicationFactor").Get<short>();
-                            var topics = configuration.GetSection("Aevatar:StreamNamespace").Get<string>();
+                            var topics = configuration.GetSection("OrleansStream:Topics").Get<string>();
                             topics = topics.IsNullOrEmpty() ? CommonConstants.StreamNamespace : topics;
                             foreach (var topic in topics.Split(','))
                             {
