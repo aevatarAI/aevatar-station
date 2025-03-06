@@ -25,6 +25,7 @@
         <PackageReference Include="AElf.Client" />
         <PackageReference Include="AElf.Types" />
         <PackageReference Include="AElf.Sdk.CSharp" />
+        <PackageReference Include="NEST" />
     </ItemGroup>
 
 </Project>
