@@ -27,37 +27,7 @@ await connection.StartAsync();
 await PublishEventAsync("PublishEventAsync");
 await PublishEventAsync("SubscribeAsync");
 
-Console.WriteLine($"Init status: {connection.State}");
-
-Console.WriteLine("Select an option:");
-Console.WriteLine("1. Publish Event to aevatar GAgent - Fire and Forget");
-Console.WriteLine("2. Subscribe aevatar GAgent");
-Console.WriteLine("3. Unsubscribe aevatar GAgent");
-var choice = Console.ReadLine();
-
-while (true)
-{
-    switch (choice)
-    {
-        case "1":
-            await PublishEventAsync("PublishEventAsync");
-            break;
-        case "2":
-            await PublishEventAsync("SubscribeAsync");
-            break;
-        case "3":
-            Console.WriteLine("Enter grainId:");
-            var grainIdString = Console.ReadLine();
-            var grainId = GrainId.Parse(grainIdString!);
-            await connection.InvokeAsync("UnsubscribeAsync", grainId);
-            break;
-        default:
-            Console.WriteLine("Invalid choice.");
-            break;
-    }
-    
-    choice = Console.ReadLine();
-}
+await Task.Delay(60000);
 
 async Task PublishEventAsync(string methodName)
 {
