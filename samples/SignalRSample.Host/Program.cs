@@ -21,8 +21,7 @@ var configuration = new ConfigurationBuilder()
 
 builder.Host.UseOrleans(silo =>
 {
-    silo.AddMemoryStreams(AevatarCoreConstants.StreamProvider)
-        .AddMemoryGrainStorage("PubSubStore")
+    silo.AddMemoryGrainStorage("PubSubStore")
         .AddLogStorageBasedLogConsistencyProvider("LogStorage")
         .UseLocalhostClustering()
         .ConfigureServices(services =>
