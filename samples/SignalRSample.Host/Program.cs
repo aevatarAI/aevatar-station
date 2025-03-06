@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using SignalRSample.Host;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,6 +27,7 @@ builder.Host.UseOrleans(silo =>
         {
             services.AddTransient<IGAgentFactory, GAgentFactory>();
         })
+        .ConfigureLogging(logging => { logging.SetMinimumLevel(LogLevel.Information).AddConsole(); })
         .UseAevatarPermissionManagement()
         .UseAevatar()
         .UseSignalR()

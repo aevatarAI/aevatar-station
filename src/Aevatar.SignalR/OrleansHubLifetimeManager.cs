@@ -10,7 +10,7 @@ namespace Aevatar.SignalR;
 public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, ILifecycleParticipant<ISiloLifecycle>,
     IDisposable where THub : Hub
 {
-    private readonly Guid _serverId;
+    private Guid _serverId;
     private readonly ILogger _logger;
     private readonly string _hubName;
     private readonly IClusterClient _clusterClient;
@@ -31,12 +31,14 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
         _hubName = hubType.IsInterface && hubType.Name[0] == 'I'
             ? hubType.Name[1..]
             : hubType.Name;
-        var serverId = "SomeServerId";
+
+        const string serverId = "SomeServerId";
         _serverId = serverId.ToGuid();
         _logger = logger;
         _clusterClient = clusterClient;
-        
-        _logger.LogDebug("Created Orleans HubLifetimeManager {hubName} (serverId: {serverId})", _hubName, _serverId);
+
+        _logger.LogDebug("Created Orleans HubLifetimeManager {hubName} (serverId : {serverId})",
+            _hubName, _serverId);
     }
 
     private Task HeartbeatCheck()
@@ -44,8 +46,13 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
 
     private async Task EnsureStreamSetup()
     {
+        _logger.LogInformation("Ensuring stream setup for Orleans HubLifetimeManager {hubName} (serverId: {serverId})",
+            _hubName, _serverId);
+
         if (_streamProvider is not null)
             return;
+
+        _serverId = _serverId == Guid.Empty ? Guid.NewGuid() : _serverId;
 
         await _streamSetupLock.WaitAsync();
 
@@ -247,7 +254,7 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
 
     private Task SendLocal(HubConnectionContext connection, InvocationMessage hubMessage)
     {
-        _logger.LogDebug(
+        _logger.LogInformation(
             "Sending local message to connection {connectionId} on hub {hubName} (serverId: {serverId})",
             connection.ConnectionId, _hubName, _serverId);
         return connection.WriteAsync(hubMessage).AsTask();
@@ -261,7 +268,10 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
 
     public void Dispose()
     {
-         _timer?.Dispose();
+        _logger.LogDebug("Disposing Orleans HubLifetimeManager {hubName} (serverId: {serverId})",
+            _hubName, _serverId);
+
+        _timer?.Dispose();
 
         var toUnsubscribe = new List<Task>();
         if (_serverStream is not null)
@@ -294,6 +304,7 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
 
     public void Participate(ISiloLifecycle lifecycle)
     {
+        _logger.LogInformation("Participating in the lifecycle of the silo.");
         lifecycle.Subscribe(
            observerName: nameof(OrleansHubLifetimeManager<THub>),
            stage: ServiceLifecycleStage.Active,
