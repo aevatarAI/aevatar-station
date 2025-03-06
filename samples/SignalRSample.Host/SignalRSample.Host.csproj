@@ -19,11 +19,7 @@
         <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Microsoft.Orleans.Streaming" />
-        <PackageReference Include="Orleans.Providers.MongoDB" />
         <PackageReference Include="Orleans.Streams.Kafka" />
-        <PackageReference Include="MongoDB.Driver.Core.Extensions.DiagnosticSources" />
-        <PackageReference Include="AElf.OpenTelemetry" />
-        <PackageReference Include="AutoResponseWrapper" />
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
         <PackageReference Include="Microsoft.CodeAnalysis.Common" />
     </ItemGroup>
