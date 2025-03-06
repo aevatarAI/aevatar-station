@@ -9,7 +9,6 @@ using Nest;
 using Newtonsoft.Json;
 using Orleans.Runtime;
 using Volo.Abp.DependencyInjection;
-
 namespace Aevatar.CQRS.Provider;
 
 public class CQRSProvider : ICQRSProvider, ISingletonDependency
@@ -22,13 +21,12 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         _mediator = mediator;
         _logger = logger;
     }
-
-    public Task PublishAsync(StateBase state, string grainId)
+    public Task PublishAsync(string grainId, StateBase state)
     {
         throw new NotImplementedException();
     }
 
-    public async Task PublishAsync(StateBase state, GrainId grainId)
+    public async Task PublishAsync(GrainId grainId, StateBase state)
     {
         _logger.LogInformation("CQRSProvider Publish State grainId:{grainId}", grainId);
         var command = new SaveStateCommand
@@ -226,5 +224,14 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
     {
         throw new NotImplementedException();
     }
-    
+
+    public Task PublishAsync<TState>(GrainId grainId, TState state) where TState : StateBase
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task PublishAsync<TStateLogEvent>(Guid eventId, GrainId grainId, TStateLogEvent stateLogEvent) where TStateLogEvent : StateLogEventBase
+    {
+        throw new NotImplementedException();
+    }
 }
