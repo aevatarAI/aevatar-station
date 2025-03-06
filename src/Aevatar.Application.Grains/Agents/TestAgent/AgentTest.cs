@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
+using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
 namespace Aevatar.Application.Grains.Agents.TestAgent;
@@ -19,6 +20,7 @@ public class AgentTest : GAgentBase<FrontAgentState, FrontTestEvent, EventBase>,
     [EventHandler]
     public async Task HandleFrontTestCreateEvent(FrontTestCreateEvent @event)
     {
+        Logger.LogInformation( "FrontTestCreateEvent: {name}", @event.Name);
         RaiseEvent(new FrontTestCreateSEvent
         {
             Id = Guid.NewGuid(),
