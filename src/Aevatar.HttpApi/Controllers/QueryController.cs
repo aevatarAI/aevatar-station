@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Aevatar.CQRS;
 using Aevatar.Query;
 using Aevatar.Service;
+using Aevatar.Validator;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
@@ -44,9 +45,16 @@ public class QueryController : AevatarController
     }
     
     [HttpGet("es")]
-    public async Task<PagedResultDto<Dictionary<string, object>>> GetLogs(
+    public async Task<PagedResultDto<Dictionary<string, object>>> QueryEs(
         [FromQuery] LuceneQueryDto request)
     {
+        var validator = new LuceneQueryValidator();
+        var result = validator.Validate(request);
+        if (!result.IsValid)
+        {
+            throw new UserFriendlyException(result.Errors[0].ErrorMessage);
+        }
+            
         var resp = await _indexingService.QueryWithLuceneAsync(request);
         return resp;
     }

@@ -11,7 +11,7 @@ public class LuceneQueryDto
     [Required]
     public string QueryString { get; set; } 
 
-    public int From { get; set; } = 0; 
-    public int Size { get; set; } = 10;
+    public int PageIndex { get; set; } = 0; 
+    public int PageSize { get; set; } = 10;
     public List<string> SortFields { get; set; } = new List<string>();  
 }

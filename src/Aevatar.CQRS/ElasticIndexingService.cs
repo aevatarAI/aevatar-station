@@ -405,11 +405,14 @@ public class ElasticIndexingService : ApplicationService, IIndexingService
             }
         }
         
+        var from = queryDto.PageIndex * queryDto.PageSize;
+        var size = queryDto.PageSize;
+        
         var searchDescriptor = new SearchDescriptor<Dictionary<string, object>>()
         .Index(queryDto.Index)
-        .Query(q => q.QueryString(qs => qs.Query(queryDto.QueryString)))
-        .From(queryDto.From)
-        .Size(queryDto.Size)
+        .Query(q => q.QueryString(qs => qs.Query(queryDto.QueryString).AllowLeadingWildcard(false)))
+        .From(from)
+        .Size(size)
         .Sort(ss => sortDescriptor);
         
         var response = await _elasticClient.SearchAsync<Dictionary<string, object>>(searchDescriptor);
