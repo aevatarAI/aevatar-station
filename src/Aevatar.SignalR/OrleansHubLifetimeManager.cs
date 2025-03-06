@@ -50,7 +50,11 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
             _hubName, _serverId);
 
         if (_streamProvider is not null)
+        {
+            _logger.LogDebug("Stream setup already complete for Orleans HubLifetimeManager {hubName} (serverId: {serverId})",
+                _hubName, _serverId);
             return;
+        }
 
         _serverId = _serverId == Guid.Empty ? Guid.NewGuid() : _serverId;
 
@@ -108,6 +112,8 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
     private Task ProcessServerMessage(ClientMessage clientMessage)
     {
         var connection = _connections[clientMessage.ConnectionId];
+        _logger.LogDebug("Processing server message for connection {connectionId} on hub {hubName} (serverId: {serverId}) with connection available: {connectionAvailable}",
+            clientMessage.ConnectionId, _hubName, _serverId, connection != null);
         return connection == null ? Task.CompletedTask : SendLocal(connection, clientMessage.Message);
     }
 
