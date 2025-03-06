@@ -5,6 +5,7 @@
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     </PropertyGroup>
 
     <ItemGroup>
@@ -22,5 +23,16 @@
         <ProjectReference Include="..\..\src\Aevatar.SignalR\Aevatar.SignalR.csproj" />
         <ProjectReference Include="..\SignalRSample.GAgents\SignalRSample.GAgents.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="..\..\.dockerignore">
+        <Link>.dockerignore</Link>
+      </Content>
+    </ItemGroup>
+
+    <PropertyGroup>
+        <RestoreSources>https://www.myget.org/F/aelf-project-dev/api/v3/index.json;https://api.nuget.org/v3/index.json
+        </RestoreSources>
+    </PropertyGroup>
 
 </Project>
