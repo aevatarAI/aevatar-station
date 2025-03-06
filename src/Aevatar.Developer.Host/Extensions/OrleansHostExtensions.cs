@@ -9,6 +9,7 @@ using Orleans.Hosting;
 using Orleans.Providers.MongoDB.Configuration;
 using Orleans.Serialization;
 using Orleans.Streams.Kafka.Config;
+using Serilog;
 
 namespace Aevatar.Developer.Host.Extensions;
 
@@ -42,8 +43,10 @@ public static class OrleansHostExtensions
                 .AddActivityPropagation();
                 
             var streamProvider = config.GetSection("OrleansStream:Provider").Get<string>();
-            if (streamProvider == "Kafka")
+            Log.Information("Stream Provider: {streamProvider}", streamProvider);
+            if (string.Equals("kafka", streamProvider, StringComparison.CurrentCultureIgnoreCase))
             {
+                Log.Information("Using Kafka as stream provider.");
                 clientBuilder
                     .AddKafka("Aevatar")
                     .WithOptions(options =>
@@ -63,6 +66,8 @@ public static class OrleansHostExtensions
                             Partitions = partitions,
                             ReplicationFactor = replicationFactor
                         });
+                        
+                        Log.Information("Kafka Options: {@options}", options);
                     })
                     .AddJson()
                     .Build();
