@@ -77,10 +77,12 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
                 _ => Task.Run(HeartbeatCheck), null, TimeSpan.FromSeconds(0),
                 TimeSpan.FromMinutes(SignalROrleansConstants.ServerHeartbeatPulseInMinutes));
 
-            await Task.WhenAll(
-                _allStream.SubscribeAsync((msg, _) => ProcessAllMessage(msg)),
-                _serverStream.SubscribeAsync((msg, _) => ProcessServerMessage(msg))
-            );
+            var allStreamHandle = await _allStream.SubscribeAsync((msg, _) => ProcessAllMessage(msg));
+            _logger.LogDebug("Subscribed to all stream: StreamId - {streamId}, HandleId - {handleId}, ProviderName - {providerName}",
+                allStreamHandle.StreamId, allStreamHandle.HandleId, allStreamHandle.ProviderName);
+            var serverStreamHandle = await _serverStream.SubscribeAsync((msg, _) => ProcessServerMessage(msg));
+            _logger.LogDebug("Subscribed to server stream: StreamId - {streamId}, HandleId - {handleId}, ProviderName - {providerName}",
+                serverStreamHandle.StreamId, serverStreamHandle.HandleId, serverStreamHandle.ProviderName);
 
             _logger.LogInformation(
                 "Initialized complete: Orleans HubLifetimeManager {hubName} (serverId: {serverId})",
