@@ -109,7 +109,8 @@ internal sealed class ClientGrain : IGrainBase, IClientGrain
             
             _logger.LogInformation("StreamId: {streamId}", stream.StreamId.ToString());
 
-            await stream.OnNextAsync(new ClientMessage(_hubName, _connectionId, message));
+            var notification = new ClientNotification(SignalROrleansConstants.MethodName, message.Arguments);
+            await stream.OnNextAsync(new ClientMessage(_hubName, _connectionId, notification));
 
             Interlocked.Exchange(ref _failAttempts, 0);
         }

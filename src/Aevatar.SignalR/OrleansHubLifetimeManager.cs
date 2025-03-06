@@ -111,7 +111,7 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
                 continue;
 
             if (allMessage.ExcludedIds == null || !allMessage.ExcludedIds.Contains(connection.ConnectionId))
-                allTasks.Add(SendLocal(connection, payload));
+                allTasks.Add(SendLocal(connection, new ClientNotification(payload.Target, payload.Arguments)));
         }
 
         return Task.WhenAll(allTasks);
@@ -195,7 +195,10 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
         var message = new InvocationMessage(methodName, args);
 
         var connection = _connections[connectionId];
-        if (connection != null) return SendLocal(connection, message);
+        if (connection != null)
+        {
+            return SendLocal(connection, new ClientNotification(methodName, args));
+        }
 
         return SendExternal(connectionId, message);
     }
@@ -266,12 +269,13 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
         return group.Remove(connectionId);
     }
 
-    private Task SendLocal(HubConnectionContext connection, InvocationMessage hubMessage)
+    private Task SendLocal(HubConnectionContext connection, ClientNotification notification)
     {
         _logger.LogInformation(
             "Sending local message to connection {connectionId} on hub {hubName} (serverId: {serverId})",
             connection.ConnectionId, _hubName, _serverId);
-        return connection.WriteAsync(hubMessage).AsTask();
+        return connection.WriteAsync(new InvocationMessage(SignalROrleansConstants.MethodName, notification.Args))
+            .AsTask();
     }
 
     private Task SendExternal(string connectionId, InvocationMessage hubMessage)
