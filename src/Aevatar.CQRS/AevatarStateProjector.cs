@@ -5,10 +5,11 @@ using Aevatar.CQRS.Provider;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
+using Volo.Abp.DependencyInjection;
 
 namespace Aevatar.CQRS;
 
-public class AevatarStateProjector: IStateProjector
+public class AevatarStateProjector: IStateProjector, ISingletonDependency
 {
     
     private readonly IMediator _mediator;

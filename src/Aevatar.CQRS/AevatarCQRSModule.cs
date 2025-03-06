@@ -29,6 +29,7 @@ public class AevatarCQRSModule : AbpModule
             context.Services.AddSingleton<IIndexingService, ElasticIndexingService>();
             context.Services.AddSingleton<IEventDispatcher, CQRSProvider>();
             context.Services.AddSingleton<ICQRSProvider, CQRSProvider>();
+            context.Services.AddSingleton<IStateProjector, AevatarStateProjector>();
             context.Services.AddTransient<SaveStateCommandHandler>();
             context.Services.AddTransient<GetStateQueryHandler>();
             context.Services.AddTransient<SendEventCommandHandler>();
