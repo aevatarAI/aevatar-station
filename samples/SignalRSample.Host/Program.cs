@@ -48,14 +48,20 @@ builder.Host.UseOrleans(silo =>
                 var partitions = configuration.GetSection("OrleansStream:Partitions").Get<int>();
                 var replicationFactor =
                     configuration.GetSection("OrleansStream:ReplicationFactor").Get<short>();
-                var topic = configuration.GetSection("Aevatar:StreamNamespace").Get<string>();
+                var topic = configuration.GetSection("OrleansStream:Topic").Get<string>();
                 topic = topic.IsNullOrEmpty() ? "Aevatar" : topic;
-                options.AddTopic(topic, new TopicCreationConfig
+
+                var topics = new List<string>
+                    { "SERVER_DISCONNECT_STREAM", "SERVER_STREAM", "CLIENT_DISCONNECT_STREAM", "ALL_STREAM", topic };
+                foreach (var tpc in topics)
                 {
-                    AutoCreate = true,
-                    Partitions = partitions,
-                    ReplicationFactor = replicationFactor
-                });
+                    options.AddTopic(tpc, new TopicCreationConfig
+                    {
+                        AutoCreate = true,
+                        Partitions = partitions,
+                        ReplicationFactor = replicationFactor
+                    });
+                }
             })
             .AddJson()
             .AddLoggingTracker()

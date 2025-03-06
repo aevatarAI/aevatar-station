@@ -15,6 +15,10 @@ connection.On<string>("ReceiveResponse", (message) =>
 });
 
 await connection.StartAsync();
+
+await PublishEventAsync("PublishEventAsync");
+await PublishEventAsync("SubscribeAsync");
+
 Console.WriteLine($"Init status: {connection.State}");
 
 Console.WriteLine("Select an option:");
