@@ -58,15 +58,17 @@ public static class OrleansHostExtensions
                         var partitions = config.GetSection("OrleansStream:Partitions").Get<int>();
                         var replicationFactor =
                             config.GetSection("OrleansStream:ReplicationFactor").Get<short>();
-                        var topic = config.GetSection("OrleansStream:Topic").Get<string>();
-                        topic = topic.IsNullOrEmpty() ? CommonConstants.StreamNamespace : topic;
-                        options.AddTopic(topic, new TopicCreationConfig
+                        var topics = config.GetSection("OrleansStream:Topics").Get<string>();
+                        topics = topics.IsNullOrEmpty() ? CommonConstants.StreamNamespace : topics;
+                        foreach (var topic in topics.Split(','))
                         {
-                            AutoCreate = true,
-                            Partitions = partitions,
-                            ReplicationFactor = replicationFactor
-                        });
-                        
+                            options.AddTopic(topic.Trim(), new TopicCreationConfig
+                            {
+                                AutoCreate = true,
+                                Partitions = partitions,
+                                ReplicationFactor = replicationFactor
+                            });
+                        }
                         Log.Information("Kafka Options: {@options}", options);
                     })
                     .AddJson()
