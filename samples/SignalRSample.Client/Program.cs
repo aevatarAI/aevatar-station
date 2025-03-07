@@ -29,6 +29,8 @@ await PublishEventAsync("SubscribeAsync");
 
 await Task.Delay(60000);
 
+Console.ReadLine();
+
 async Task PublishEventAsync(string methodName)
 {
     try
