@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Protocol;
+using Newtonsoft.Json;
 using Orleans.Streams;
 
 namespace Aevatar.SignalR;
@@ -274,7 +275,8 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
         _logger.LogInformation(
             "Sending local message to connection {connectionId} on hub {hubName} (serverId: {serverId})",
             connection.ConnectionId, _hubName, _serverId);
-        return connection.WriteAsync(new InvocationMessage(SignalROrleansConstants.MethodName, notification.Args))
+        var parameter = notification.Args.Select(JsonConvert.SerializeObject).ToArray();
+        return connection.WriteAsync(new InvocationMessage(SignalROrleansConstants.MethodName, parameter))
             .AsTask();
     }
 

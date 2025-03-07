@@ -30,9 +30,9 @@ public class SignalRGAgent :
 {
     private readonly HubContext<AevatarSignalRHub> _hubContext;
 
-    private Channel<string> _signalRMessageChannel;
+    private Channel<object> _signalRMessageChannel;
 
-    public SignalRGAgent(IGrainFactory grainFactory, IGAgentFactory gAgentFactory)
+    public SignalRGAgent(IGrainFactory grainFactory)
     {
         _hubContext = new HubContext<AevatarSignalRHub>(grainFactory);
     }
@@ -44,7 +44,7 @@ public class SignalRGAgent :
 
     protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)
     {
-        _signalRMessageChannel = Channel.CreateUnbounded<string>();
+        _signalRMessageChannel = Channel.CreateUnbounded<object>();
         StartProcessingQueue();
     }
 
@@ -63,7 +63,7 @@ public class SignalRGAgent :
         });
     }
 
-    private async Task SendWithRetryAsync(string message)
+    private async Task SendWithRetryAsync(object message)
     {
         const int maxRetries = 3;
         for (var i = 0; i < maxRetries; i++)
@@ -73,9 +73,10 @@ public class SignalRGAgent :
                 var connectionIdList = State.ConnectionIds;
                 foreach (var (connectionId, fireAndForget) in connectionIdList)
                 {
-                    Logger.LogDebug("Sending message to connectionId: {ConnectionId}", connectionId);
+                    Logger.LogInformation("Sending message to connectionId: {ConnectionId}, Message {Message}", connectionId,
+                        message);
                     await _hubContext.Client(connectionId)
-                        .Send(SignalROrleansConstants.MethodName, JsonConvert.SerializeObject(message));
+                        .Send(SignalROrleansConstants.MethodName, message);
                     if (fireAndForget)
                     {
                         Logger.LogDebug("Cleaning up connectionId: {ConnectionId}", connectionId);
@@ -99,7 +100,7 @@ public class SignalRGAgent :
         }
     }
 
-    private async Task EnqueueMessageAsync(string message)
+    private async Task EnqueueMessageAsync(object message)
     {
         await _signalRMessageChannel.Writer.WriteAsync(message);
     }
@@ -159,7 +160,7 @@ public class SignalRGAgent :
             Logger.LogInformation("Cannot find corresponding connectionId for correlationId: {@CorrelationId}", @event.CorrelationId);
         }
 
-        await EnqueueMessageAsync(JsonConvert.SerializeObject(@event));
+        await EnqueueMessageAsync(@event);
     }
 
     protected override void GAgentTransitionState(SignalRGAgentState state,
