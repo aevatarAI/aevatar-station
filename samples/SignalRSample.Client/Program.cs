@@ -27,9 +27,10 @@ await connection.StartAsync();
 await PublishEventAsync("PublishEventAsync");
 await PublishEventAsync("SubscribeAsync");
 
-await Task.Delay(60000);
-
-Console.ReadLine();
+while (true)
+{
+    await Task.Delay(1000);
+}
 
 async Task PublishEventAsync(string methodName)
 {

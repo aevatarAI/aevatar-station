@@ -33,7 +33,8 @@ builder.Host.UseOrleans(silo =>
         .UseAevatar()
         .UseSignalR()
         .RegisterHub<AevatarSignalRHub>();
-
+    silo.Services.AddSingleton<IStateDispatcher, StateDispatcher>();
+    silo.Services.AddSingleton<IStateProjector, TestStateProjector>();
     silo.AddLogStorageBasedLogConsistencyProvider("LogStorage");
     var streamProvider = configuration.GetSection("OrleansStream:Provider").Get<string>();
     if (streamProvider == "Kafka")
