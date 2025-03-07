@@ -34,13 +34,10 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
             ? hubType.Name[1..]
             : hubType.Name;
 
-        const string serverId = "SomeServerId";
-        _serverId = serverId.ToGuid();
         _logger = logger;
         _clusterClient = clusterClient;
 
-        _logger.LogDebug("Created Orleans HubLifetimeManager {hubName} (serverId : {serverId})",
-            _hubName, _serverId);
+        _logger.LogDebug("Created Orleans HubLifetimeManager {hubName})", _hubName);
     }
 
     private async Task HeartbeatCheck()
@@ -52,9 +49,6 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
 
     private async Task EnsureStreamSetup()
     {
-        _logger.LogInformation("Ensuring stream setup for Orleans HubLifetimeManager {hubName} (serverId: {serverId})",
-            _hubName, _serverId);
-
         if (_streamProvider is not null)
         {
             _logger.LogDebug("Stream setup already complete for Orleans HubLifetimeManager {hubName} (serverId: {serverId})",
