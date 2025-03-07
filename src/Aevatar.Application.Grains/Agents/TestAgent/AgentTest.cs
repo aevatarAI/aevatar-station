@@ -12,6 +12,13 @@ namespace Aevatar.Application.Grains.Agents.TestAgent;
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 public class AgentTest : GAgentBase<FrontAgentState, FrontTestEvent, EventBase>, IFrontAgentTest
 {
+    
+    private readonly ILogger<AgentTest> _logger;
+
+    public AgentTest(ILogger<AgentTest> logger) 
+    {
+        _logger = logger;
+    }
     public override Task<string> GetDescriptionAsync()
     {
         return Task.FromResult("this is used for front test");
@@ -20,7 +27,7 @@ public class AgentTest : GAgentBase<FrontAgentState, FrontTestEvent, EventBase>,
     [EventHandler]
     public async Task HandleFrontTestCreateEvent(FrontTestCreateEvent @event)
     {
-        Logger.LogInformation( "FrontTestCreateEvent: {name}", @event.Name);
+        _logger.LogInformation( "FrontTestCreateEvent: {name}", @event.Name);
         RaiseEvent(new FrontTestCreateSEvent
         {
             Id = Guid.NewGuid(),

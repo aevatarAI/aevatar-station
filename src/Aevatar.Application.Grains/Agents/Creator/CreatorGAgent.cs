@@ -117,7 +117,7 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
             throw new ArgumentNullException(nameof(@event));
         }
 
-        Logger.LogInformation( "publish event: {event}", @event);
+        _logger.LogInformation( "publish event: {event}", @event);
         await PublishAsync(@event);
     }
     
