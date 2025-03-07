@@ -22,7 +22,7 @@
     <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="$(AevatarGAgentsVerion)" />
     <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="$(AevatarGAgentsVerion)" />
     <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="$(AevatarGAgentsVerion)" />
-    <PackageVersion Include="Aevatar.SignalR" Version="1.5.4-notification.0" />
+    <PackageVersion Include="Aevatar.SignalR" Version="1.5.4-notification.1" />
     <!-- AI and Analysis packages -->
     <PackageVersion Include="AutoGen" Version="0.2.1" />
     <PackageVersion Include="AutoGen.Core" Version="0.2.1" />
