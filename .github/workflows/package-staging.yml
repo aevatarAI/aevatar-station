@@ -18,6 +18,8 @@ concurrency:
 jobs:
   publish-build-and-push-image:
     runs-on: aismart-runner
+    outputs:
+      short_sha: ${{ steps.vars.outputs.short_sha }} 
     strategy:
       matrix:
         servicename:
