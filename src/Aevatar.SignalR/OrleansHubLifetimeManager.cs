@@ -1,4 +1,5 @@
 ﻿using Aevatar.Core.Abstractions.Extensions;
+using Aevatar.SignalR.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Protocol;
@@ -112,7 +113,7 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
                 continue;
 
             if (allMessage.ExcludedIds == null || !allMessage.ExcludedIds.Contains(connection.ConnectionId))
-                allTasks.Add(SendLocal(connection, new ClientNotification(payload.Target, payload.Arguments)));
+                allTasks.Add(SendLocal(connection, new ClientNotification(payload.Target, payload.Arguments!.ToStrings())));
         }
 
         return Task.WhenAll(allTasks);
@@ -198,7 +199,7 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
         var connection = _connections[connectionId];
         if (connection != null)
         {
-            return SendLocal(connection, new ClientNotification(methodName, args));
+            return SendLocal(connection, new ClientNotification(methodName, args!.ToStrings()));
         }
 
         return SendExternal(connectionId, message);
@@ -275,8 +276,8 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
         _logger.LogInformation(
             "Sending local message to connection {connectionId} on hub {hubName} (serverId: {serverId})",
             connection.ConnectionId, _hubName, _serverId);
-        var parameter = notification.Args.Select(JsonConvert.SerializeObject).ToArray();
-        return connection.WriteAsync(new InvocationMessage(SignalROrleansConstants.MethodName, parameter))
+        // ReSharper disable once CoVariantArrayConversion
+        return connection.WriteAsync(new InvocationMessage(SignalROrleansConstants.MethodName, notification.Arguments))
             .AsTask();
     }
 

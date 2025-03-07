@@ -1,8 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.SignalR.Protocol;
-using Orleans.Runtime;
 using Orleans.Streams;
-using Orleans.Concurrency;
+using Aevatar.SignalR.Extensions;
 
 namespace Aevatar.SignalR.Clients;
 
@@ -99,17 +98,7 @@ internal sealed class ClientGrain : IGrainBase, IClientGrain
             // Routes the message to the silo (server) where the client is actually connected.
             var stream = _streamProvider.GetServerStream(ServerId);
 
-            var handles = await stream.GetAllSubscriptionHandles();
-            _logger.LogInformation("handles count: {Count}", handles.Count);
-
-            foreach (var handle in handles)
-            {
-                _logger.LogInformation("handle on stream {ProviderName}, {HandleId}", handle.ProviderName, handle.HandleId);
-            }
-            
-            _logger.LogInformation("StreamId: {streamId}", stream.StreamId.ToString());
-
-            var notification = new ClientNotification(SignalROrleansConstants.MethodName, message.Arguments!);
+            var notification = new ClientNotification(SignalROrleansConstants.MethodName, message.Arguments!.ToStrings());
             await stream.OnNextAsync(new ClientMessage(_hubName, _connectionId, notification));
 
             Interlocked.Exchange(ref _failAttempts, 0);
