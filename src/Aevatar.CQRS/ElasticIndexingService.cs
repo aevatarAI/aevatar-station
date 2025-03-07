@@ -15,11 +15,12 @@ using Orleans.Runtime;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
+using Volo.Abp.DependencyInjection;
 
 namespace Aevatar;
 
-[RemoteService(IsEnabled = false)]
-public class ElasticIndexingService : ApplicationService, IIndexingService
+
+public class ElasticIndexingService :  IIndexingService,ISingletonDependency
 {
     private readonly IElasticClient _elasticClient;
     private readonly ILogger<ElasticIndexingService> _logger;
