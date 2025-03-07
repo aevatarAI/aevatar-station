@@ -4,15 +4,15 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Aevatar.Core;
 
 [GAgent]
-public abstract class ArtifactGAgentBase<TArtifact, TState, TStateLogEvent>
-    : ArtifactGAgentBase<TArtifact, TState, TStateLogEvent, EventBase, ConfigurationBase>
+public class ArtifactGAgent<TArtifact, TState, TStateLogEvent>
+    : ArtifactGAgent<TArtifact, TState, TStateLogEvent, EventBase, ConfigurationBase>
     where TArtifact : IArtifact<TState, TStateLogEvent>
     where TState : StateBase, new()
     where TStateLogEvent : StateLogEventBase<TStateLogEvent>;
 
 [GAgent]
-public abstract class ArtifactGAgentBase<TArtifact, TState, TStateLogEvent, TEvent, TConfiguration>
-    : GAgentBase<TState, TStateLogEvent, TEvent, TConfiguration>
+public class ArtifactGAgent<TArtifact, TState, TStateLogEvent, TEvent, TConfiguration>
+    : GAgentBase<TState, TStateLogEvent, TEvent, TConfiguration>, IArtifactGAgent<TArtifact, TState, TStateLogEvent>
     where TArtifact : IArtifact<TState, TStateLogEvent>
     where TState : StateBase, new()
     where TStateLogEvent : StateLogEventBase<TStateLogEvent>
@@ -21,9 +21,14 @@ public abstract class ArtifactGAgentBase<TArtifact, TState, TStateLogEvent, TEve
 {
     private readonly TArtifact _artifact;
 
-    public ArtifactGAgentBase()
+    public ArtifactGAgent()
     {
         _artifact = ActivatorUtilities.CreateInstance<TArtifact>(ServiceProvider);
+    }
+
+    public Task<TArtifact> GetArtifactAsync()
+    {
+        return Task.FromResult(_artifact);
     }
 
     public override Task<string> GetDescriptionAsync()

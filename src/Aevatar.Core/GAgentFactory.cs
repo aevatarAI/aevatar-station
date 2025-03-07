@@ -71,6 +71,11 @@ public class GAgentFactory : IGAgentFactory
         return GetGAgentAsync<TGrainInterface>(Guid.NewGuid(), configuration);
     }
 
+    public async Task<IArtifactGAgent<TArtifact, TState, TStateLogEvent>> GetArtifactGAgentAsync<TArtifact, TState, TStateLogEvent>(ConfigurationBase? configuration = null) where TArtifact : IArtifact<TState, TStateLogEvent>, new() where TState : StateBase, new() where TStateLogEvent : StateLogEventBase<TStateLogEvent>
+    {
+        return await GetGAgentAsync<IArtifactGAgent<TArtifact, TState, TStateLogEvent>>(configuration);
+    }
+
     private async Task ConfigGAgentAsync(IGAgent gAgent, ConfigurationBase? configuration)
     {
         // Must activate the GAgent before sending events.

@@ -20,4 +20,10 @@ public interface IGAgentFactory
 
     Task<TGrainInterface> GetGAgentAsync<TGrainInterface>(ConfigurationBase? configuration = null)
         where TGrainInterface : IGAgent;
+    
+    Task<IArtifactGAgent<TArtifact, TState, TStateLogEvent>> 
+        GetArtifactGAgentAsync<TArtifact, TState, TStateLogEvent>(ConfigurationBase? configuration = null)
+        where TArtifact : IArtifact<TState, TStateLogEvent>, new()
+        where TState : StateBase, new()
+        where TStateLogEvent : StateLogEventBase<TStateLogEvent>;
 }
