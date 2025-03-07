@@ -100,7 +100,6 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                     }
                     services.AddSingleton(grainTypeMap);
                     services.AddSingleton<IEventDispatcher, DefaultEventDispatcher>();
-                    services.AddSingleton<IStateDispatcher, StateDispatcher>();
                     services.AddSingleton<IStateProjector, TestStateProjector>();
                 })
                 .UseAevatar()
