@@ -2,6 +2,7 @@ using AElf.OpenTelemetry;
 using Aevatar.Domain.Grains;
 using Microsoft.Extensions.DependencyInjection;
 using Aevatar.Application.Grains;
+using Aevatar.Neo4JStore;
 using Aevatar.Options;
 using Microsoft.CodeAnalysis.Options;
 using Serilog;
@@ -14,7 +15,8 @@ namespace Aevatar.Silo;
 [DependsOn(
     typeof(AbpAspNetCoreSerilogModule),
     typeof(AbpAutofacModule),
-    typeof(OpenTelemetryModule)
+    typeof(OpenTelemetryModule),
+    typeof(AevatarNeo4JStoreModule)
 )]
 public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
 {
