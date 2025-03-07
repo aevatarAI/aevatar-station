@@ -33,7 +33,8 @@ public class AevatarStateProjector: IStateProjector, ISingletonDependency
 
             var command = new SaveStateCommand
             {
-                Id = grainId.GetGuidKey().ToString(),
+                Id = grainId.GetGuidKey().
+                    ToString("N"),
                 State = wrapperState
             };
 
