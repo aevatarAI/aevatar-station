@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
@@ -13,23 +14,34 @@ public class AevatarStateProjector: IStateProjector, ISingletonDependency
 {
     
     private readonly IMediator _mediator;
-    private readonly ILogger<CQRSProvider> _logger;
+    private readonly ILogger<AevatarStateProjector> _logger;
     
-    public AevatarStateProjector(IMediator mediator, ILogger<CQRSProvider> logger)
+    public AevatarStateProjector(IMediator mediator, ILogger<AevatarStateProjector> logger)
     {
         _mediator = mediator;
         _logger = logger;
     }
     public async Task ProjectAsync<T>(T state) where T : StateWrapperBase
     {
-        var wrapper = state as StateWrapper<StateBase>;
-        var grainId = wrapper.GrainId;
-        var wrapperState = wrapper.State;
-        var command = new SaveStateCommand
+        if (state.GetType().IsGenericType && 
+            state.GetType().GetGenericTypeDefinition() == typeof(StateWrapper<>) &&
+            typeof(StateBase).IsAssignableFrom(state.GetType().GetGenericArguments()[0]))
         {
-            Id = grainId.GetGuidKey().ToString(),
-            State = wrapperState
-        };
-        await _mediator.Send(command);
+            dynamic wrapper = state;
+            GrainId grainId = wrapper.GrainId;
+            StateBase wrapperState = wrapper.State;
+
+            var command = new SaveStateCommand
+            {
+                Id = grainId.GetGuidKey().ToString(),
+                State = wrapperState
+            };
+
+            await _mediator.Send(command);
+        }
+        else
+        {
+            throw new InvalidOperationException($"Invalid state type: {state.GetType().Name}. Expected StateWrapper<T> where T : StateBase.");
+        }
     }
 }

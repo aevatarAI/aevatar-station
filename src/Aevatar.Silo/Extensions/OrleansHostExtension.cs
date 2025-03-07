@@ -1,4 +1,7 @@
 using System.Net;
+using Aevatar.Core;
+using Aevatar.Core.Abstractions;
+using Aevatar.CQRS;
 using Aevatar.Dapr;
 using Aevatar.EventSourcing.MongoDB.Hosting;
 using Aevatar.GAgents.AI.Options;
@@ -158,6 +161,8 @@ public static class OrleansHostExtension
                 services.Configure<AzureOpenAIEmbeddingsConfig>(context.Configuration.GetSection("AIServices:AzureOpenAIEmbeddings"));
                 services.Configure<RagConfig>(context.Configuration.GetSection("Rag"));
                 services.AddSingleton(typeof(HubLifetimeManager<>), typeof(OrleansHubLifetimeManager<>));
+                services.AddSingleton<IStateProjector, AevatarStateProjector>();
+                services.AddSingleton<IStateDispatcher, StateDispatcher>();
                 services.AddSemanticKernel()
                     .AddAzureOpenAI()
                     .AddAzureDeepSeek()
