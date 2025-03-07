@@ -126,7 +126,6 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
                                         $"{string.Join(", ", result.Errors.Select(e => e.Description))}");
                 }
             }
-            var latestRole = await _roleManager.FindByNameAsync(roleName);
             foreach (var permission in permissions)
             {
                 await _permissionManager.SetAsync(
