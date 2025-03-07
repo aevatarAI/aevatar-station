@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  publish:
+  publish-build-and-push-image:
     runs-on: aismart-runner
     strategy:
       matrix:
@@ -78,7 +78,7 @@ jobs:
           cache-to: type=gha,mode=max
   dispatch:
     runs-on: aismart-runner
-    needs: build-and-push-image
+    needs: publish-build-and-push-image
     steps:
       - name: Deploy
         uses: actions/github-script@v6
@@ -92,6 +92,6 @@ jobs:
               ref: 'main',
               inputs: {
                 env: 'staging',
-                commit_sha: 'sha-${{ needs.build-and-push-image.outputs.short_sha }}',
+                commit_sha: 'sha-${{ needs.publish-build-and-push-image.outputs.short_sha }}',
               }
             })
