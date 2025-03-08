@@ -1,7 +1,4 @@
-using Aevatar.Neo4JStore.Options;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Neo4j.Driver;
 using Volo.Abp.AutoMapper;
 using Volo.Abp.Modularity;
