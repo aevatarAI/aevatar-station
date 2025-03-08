@@ -116,13 +116,13 @@ public class AgentService : ApplicationService, IAgentService
         _logger.LogInformation("CreateAgentAsync GetAgentTypeDataMap businessAgentTypes {businessAgentTypesCount}",businessAgentTypes.Count);
 
         var dict = new Dictionary<string, AgentTypeData?>();
-        stopwatch = Stopwatch.StartNew();
+       
         foreach (var agentType in businessAgentTypes)
         {
-           
+            stopwatch = Stopwatch.StartNew();
             var grainType = _grainTypeResolver.GetGrainType(agentType).ToString();
-          
-
+            _logger.LogInformation("CreateAgentAsync GetAgentTypeDataMap GetGrainType agentType {agentType} ,{Time}",agentType.Name,stopwatch.ElapsedMilliseconds);
+            stopwatch.Stop();
             if (grainType != null)
             {
                 var agentTypeData = new AgentTypeData
@@ -163,8 +163,6 @@ public class AgentService : ApplicationService, IAgentService
                 dict[grainType] = agentTypeData;
             }
         }
-        stopwatch.Stop();
-        _logger.LogInformation("CreateAgentAsync GetAgentTypeDataMap GetGrainType {Time}",stopwatch.ElapsedMilliseconds);
         return dict;
     }
 
