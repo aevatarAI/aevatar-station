@@ -11,6 +11,7 @@ using Nest;
 using Newtonsoft.Json;
 using Orleans.Runtime;
 using Volo.Abp.DependencyInjection;
+
 namespace Aevatar.CQRS.Provider;
 
 public class CQRSProvider : ICQRSProvider, ISingletonDependency
@@ -26,6 +27,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         _logger = logger;
         _options = hostOptions;
     }
+
     public Task PublishAsync(string grainId, StateBase state)
     {
         throw new NotImplementedException();
@@ -141,15 +143,19 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
 
         QueryContainer Filter(QueryContainerDescriptor<dynamic> f) => f.Bool(b => b.Must(mustQuery));
 
+        var index = GetIndexName(stateName);
+        _logger.LogInformation($"[QueryAgentStateAsync] statenaem:{stateName},primaryKey:{primaryKey}, index:{index}");
         var getStateQuery = new GetStateQuery()
         {
-            Index = GetIndexName(stateName),
+            Index = index,
             Query = Filter,
             Skip = 0,
             Limit = 1
         };
 
         var document = await _mediator.Send(getStateQuery);
+        
+        _logger.LogInformation($"[QueryAgentStateAsync] document:{document}");
         return document;
     }
 
@@ -244,7 +250,8 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         throw new NotImplementedException();
     }
 
-    public Task PublishAsync<TStateLogEvent>(Guid eventId, GrainId grainId, TStateLogEvent stateLogEvent) where TStateLogEvent : StateLogEventBase
+    public Task PublishAsync<TStateLogEvent>(Guid eventId, GrainId grainId, TStateLogEvent stateLogEvent)
+        where TStateLogEvent : StateLogEventBase
     {
         throw new NotImplementedException();
     }
