@@ -30,7 +30,7 @@ public class AevatarStateProjector: IStateProjector, ISingletonDependency
             dynamic wrapper = state;
             GrainId grainId = wrapper.GrainId;
             StateBase wrapperState = wrapper.State;
-
+            _logger.LogDebug("AevatarStateProjector GrainId {GrainId}",grainId.ToString());
             var command = new SaveStateCommand
             {
                 Id = grainId.GetGuidKey().
