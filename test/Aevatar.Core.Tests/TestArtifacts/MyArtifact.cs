@@ -1,6 +1,6 @@
 ﻿using Aevatar.Core.Abstractions;
 
-namespace Aevatar.ArtifactGAgents;
+namespace Aevatar.Core.Tests.TestArtifacts;
 
 [GenerateSerializer]
 public class MyArtifactGAgentState : StateBase;

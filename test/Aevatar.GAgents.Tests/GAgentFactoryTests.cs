@@ -1,5 +1,5 @@
-using Aevatar.ArtifactGAgents;
 using Aevatar.Core.Abstractions;
+using Aevatar.Core.Tests.TestArtifacts;
 using Aevatar.Core.Tests.TestGAgents;
 using Aevatar.Core.Tests.TestInitializeDtos;
 using Microsoft.Extensions.DependencyInjection;
@@ -174,7 +174,7 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "Can create ArtifactGAgent.")]
     public async Task GetArtifactGAgentTest()
     {
         {
