@@ -107,15 +107,22 @@ public class AgentService : ApplicationService, IAgentService
     public async Task<Dictionary<string, AgentTypeData?>> GetAgentTypeDataMap()
     {
         var systemAgents = _agentOptions.CurrentValue.SystemAgentList;
+        Stopwatch stopwatch = Stopwatch.StartNew();
         var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
+        stopwatch.Stop();
+        _logger.LogInformation("CreateAgentAsync GetAgentTypeDataMap GetAvailableGAgentTypes {Time}",stopwatch.ElapsedMilliseconds);
         var validAgent = availableGAgents.Where(a => !a.Namespace.StartsWith("OrleansCodeGen")).ToList();
         var businessAgentTypes = validAgent.Where(a => !systemAgents.Contains(a.Name)).ToList();
+        _logger.LogInformation("CreateAgentAsync GetAgentTypeDataMap businessAgentTypes {businessAgentTypesCount}",businessAgentTypes.Count);
 
         var dict = new Dictionary<string, AgentTypeData?>();
-
+        stopwatch = Stopwatch.StartNew();
         foreach (var agentType in businessAgentTypes)
         {
+           
             var grainType = _grainTypeResolver.GetGrainType(agentType).ToString();
+          
+
             if (grainType != null)
             {
                 var agentTypeData = new AgentTypeData
@@ -156,7 +163,8 @@ public class AgentService : ApplicationService, IAgentService
                 dict[grainType] = agentTypeData;
             }
         }
-
+        stopwatch.Stop();
+        _logger.LogInformation("CreateAgentAsync GetAgentTypeDataMap GetGrainType {Time}",stopwatch.ElapsedMilliseconds);
         return dict;
     }
 
