@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -218,8 +219,15 @@ public class AgentService : ApplicationService, IAgentService
 
     public async Task<AgentDto> CreateAgentAsync(CreateAgentInputDto dto)
     {
+        Stopwatch stopwatch = Stopwatch.StartNew();
         CheckCreateParam(dto);
+        stopwatch.Stop();
+        _logger.LogInformation("CreateAgentAsync CheckCreateParam {Time}",stopwatch.ElapsedMilliseconds);
+        stopwatch = Stopwatch.StartNew();
         var userId = _userAppService.GetCurrentUserId();
+        stopwatch.Stop();
+        _logger.LogInformation("CreateAgentAsync GetCurrentUserId {Time}",stopwatch.ElapsedMilliseconds);
+       
         var guid = dto.AgentId ?? Guid.NewGuid();
         var agentData = new AgentData
         {
@@ -230,12 +238,16 @@ public class AgentService : ApplicationService, IAgentService
         };
 
         var initializationParam = JsonConvert.SerializeObject(dto.Properties);
+        stopwatch = Stopwatch.StartNew();
         var businessAgent = await InitializeBusinessAgent(guid, dto.AgentType, initializationParam);
-
+        stopwatch.Stop();
+        _logger.LogInformation("CreateAgentAsync InitializeBusinessAgent {Time}",stopwatch.ElapsedMilliseconds);
+        stopwatch = Stopwatch.StartNew();
         var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
         agentData.BusinessAgentGrainId = businessAgent.GetGrainId();
         await creatorAgent.CreateAgentAsync(agentData);
-
+        stopwatch.Stop();
+        _logger.LogInformation("CreateAgentAsync CreateAgentAsync {Time}",stopwatch.ElapsedMilliseconds);
         var resp = new AgentDto
         {
             Id = guid,
