@@ -19,8 +19,7 @@ using Volo.Abp.DependencyInjection;
 
 namespace Aevatar;
 
-
-public class ElasticIndexingService :  IIndexingService,ISingletonDependency
+public class ElasticIndexingService : IIndexingService, ISingletonDependency
 {
     private readonly IElasticClient _elasticClient;
     private readonly ILogger<ElasticIndexingService> _logger;
@@ -162,6 +161,7 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
     {
         try
         {
+            _logger.LogDebug($"[GetStateIndexDocumentsAsync] indexName:{indexName}, skip:{skip}, limit:{limit}");
             var response = await _elasticClient.SearchAsync<dynamic>(s => s
                 .Index(indexName)
                 .Query(query)
@@ -179,6 +179,7 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
             var documents = response.Hits.Select(hit => hit.Source).ToList();
             if (documents.Count == 0)
             {
+                _logger.LogDebug($"[GetStateIndexDocumentsAsync] documents.Count = 0");
                 return "";
             }
 
@@ -394,10 +395,11 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
             throw;
         }
     }
-    
+
     public async Task<PagedResultDto<Dictionary<string, object>>> QueryWithLuceneAsync(LuceneQueryDto queryDto)
     {
-        _logger.LogInformation("[Lucene Query] Index: {Index}, Query: {QueryString}", queryDto.Index, queryDto.QueryString);
+        _logger.LogInformation("[Lucene Query] Index: {Index}, Query: {QueryString}", queryDto.Index,
+            queryDto.QueryString);
         var sortDescriptor = new SortDescriptor<Dictionary<string, object>>();
         foreach (var sortField in queryDto.SortFields)
         {
@@ -409,17 +411,17 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
                 sortDescriptor = sortDescriptor.Field(f => f.Field(fieldName).Order(sortOrder));
             }
         }
-        
+
         var from = queryDto.PageIndex * queryDto.PageSize;
         var size = queryDto.PageSize;
-        
+
         var searchDescriptor = new SearchDescriptor<Dictionary<string, object>>()
-        .Index(queryDto.Index)
-        .Query(q => q.QueryString(qs => qs.Query(queryDto.QueryString).AllowLeadingWildcard(false)))
-        .From(from)
-        .Size(size)
-        .Sort(ss => sortDescriptor);
-        
+            .Index(queryDto.Index)
+            .Query(q => q.QueryString(qs => qs.Query(queryDto.QueryString).AllowLeadingWildcard(false)))
+            .From(from)
+            .Size(size)
+            .Sort(ss => sortDescriptor);
+
         var response = await _elasticClient.SearchAsync<Dictionary<string, object>>(searchDescriptor);
         if (!response.IsValid)
         {
@@ -428,9 +430,9 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
         }
 
         var resultList = response.Documents.ToList();
-        _logger.LogInformation("[Lucene Query] Index: {Index}, Query: {QueryString}, result: {Result}", queryDto.Index, queryDto.QueryString, resultList);
+        _logger.LogInformation("[Lucene Query] Index: {Index}, Query: {QueryString}, result: {Result}", queryDto.Index,
+            queryDto.QueryString, resultList);
 
         return new PagedResultDto<Dictionary<string, object>>(response.Total, resultList);
     }
-
 }
