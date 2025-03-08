@@ -138,7 +138,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         var mustQuery = new List<Func<QueryContainerDescriptor<dynamic>, QueryContainer>>
         {
             q => q.Term(i =>
-                i.Field("_id").Value(primaryKey))
+                i.Field("_id").Value(primaryKey.ToString().Replace("-", "")))
         };
 
         QueryContainer Filter(QueryContainerDescriptor<dynamic> f) => f.Bool(b => b.Must(mustQuery));
