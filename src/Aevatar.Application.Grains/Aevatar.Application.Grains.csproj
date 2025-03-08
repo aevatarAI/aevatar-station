@@ -18,6 +18,7 @@
         <PackageReference Include="Aevatar.GAgents.SemanticKernel"  />
         <PackageReference Include="Aevatar.GAgents.AI.Abstractions"/>
         <PackageReference Include="MineAiFun.GAgents"/>
+        <PackageReference Include="Aevatar.GAgents.GraphRetrievalAgent" />
     </ItemGroup>
 
     <ItemGroup>
@@ -25,5 +26,6 @@
         <ProjectReference Include="..\Aevatar.CQRS\Aevatar.CQRS.csproj" />
         <ProjectReference Include="..\Aevatar.Domain.Grains\Aevatar.Domain.Grains.csproj" />
         <ProjectReference Include="..\Aevatar.Domain\Aevatar.Domain.csproj" />
+        <ProjectReference Include="..\Aevatar.Neo4JStore\Aevatar.Neo4JStore.csproj" />
     </ItemGroup>
 </Project>
