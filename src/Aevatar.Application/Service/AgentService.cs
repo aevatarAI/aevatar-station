@@ -303,9 +303,12 @@ public class AgentService : ApplicationService, IAgentService
     private async Task<IGAgent> InitializeBusinessAgent(Guid primaryKey, string agentType,
         string agentProperties)
     {
+        Stopwatch  stopwatch = Stopwatch.StartNew();
         var agentTypeDataMap = await GetAgentTypeDataMap();
+        stopwatch.Stop();
+        _logger.LogInformation("CreateAgentAsync InitializeBusinessAgent GetAgentTypeDataMap{Time}",stopwatch.ElapsedMilliseconds);
         ConfigurationBase? config = null;
-
+        stopwatch = Stopwatch.StartNew();
         if (agentTypeDataMap.TryGetValue(agentType, out var agentTypeData) && !agentProperties.IsNullOrEmpty())
         {
             if (agentTypeData != null && agentTypeData.InitializationData != null)
@@ -313,14 +316,20 @@ public class AgentService : ApplicationService, IAgentService
                 config = SetupInitializedConfig(agentTypeData.InitializationData, agentProperties);
             }
         }
-
+        stopwatch.Stop();
+        _logger.LogInformation("CreateAgentAsync InitializeBusinessAgent SetupInitializedConfig{Time}",stopwatch.ElapsedMilliseconds);
         var grainId = GrainId.Create(agentType, primaryKey.ToString("N"));
+        stopwatch = Stopwatch.StartNew();
         var businessAgent = await _gAgentFactory.GetGAgentAsync(grainId);
+        stopwatch.Stop();
+        _logger.LogInformation("CreateAgentAsync InitializeBusinessAgent GetGAgentAsync{Time}",stopwatch.ElapsedMilliseconds);
+        stopwatch = Stopwatch.StartNew();
         if (config != null)
         {
             await businessAgent.ConfigAsync(config);
         }
-
+        stopwatch.Stop();
+        _logger.LogInformation("CreateAgentAsync InitializeBusinessAgent ConfigAsync{Time}",stopwatch.ElapsedMilliseconds);
         return businessAgent;
     }
 
