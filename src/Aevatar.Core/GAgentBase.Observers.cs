@@ -1,6 +1,5 @@
 using System.Buffers;
 using System.Collections.Concurrent;
-using System.Linq.Expressions;
 using System.Reflection;
 using Aevatar.Core.Abstractions;
 using Aevatar.Core.Abstractions.Exceptions;
@@ -11,12 +10,7 @@ namespace Aevatar.Core;
 
 public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfiguration>
 {
-    private static readonly ConcurrentDictionary<Type, MethodInfo[]> HandlerCache = new();
-    private static readonly ConcurrentDictionary<MethodInfo, HandlerMetadata> MethodMetadataCache = new();
-
-    private delegate Task MethodInvoker(object target, TEvent eventWrapper);
-
-    private delegate Task<EventBase> ResponseHandlerInvoker(object target, EventBase eventBase);
+    private readonly ConcurrentDictionary<Type, MethodInfo[]> _handlerCache = new();
 
     protected virtual Task UpdateObserverListAsync(Type type)
     {
@@ -28,7 +22,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
             var count = 0;
             foreach (var method in handlerMethods)
             {
-                var (parameterType, isResponseHandler) = GetMethodMetadata(method);
+                var (parameterType, isResponseHandler) = method.AnalysisMethodMetadata();
                 var observer = CreateMethodObserver(method, parameterType, isResponseHandler);
                 observers[count++] = observer;
             }
@@ -48,7 +42,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
 
     private MethodInfo[] GetCachedHandlerMethods(Type type)
     {
-        return HandlerCache.GetOrAdd(type, t =>
+        return _handlerCache.GetOrAdd(type, t =>
         {
             var methods = t.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
 
@@ -58,15 +52,6 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
                 .OrderBy(m => m.GetCustomAttribute<EventHandlerAttribute>()?.Priority ?? 0)
                 .ToArray();
         });
-    }
-
-    private static (Type, bool) GetMethodMetadata(MethodInfo method)
-    {
-        var paramInfo = method.GetParameters()[0];
-        var paramType = paramInfo.ParameterType;
-        var isResponse = paramInfo.ParameterType.BaseType is { IsGenericType: true } &&
-                         paramInfo.ParameterType.BaseType.GetGenericTypeDefinition() == typeof(EventWithResponseBase<>);
-        return (paramType, isResponse);
     }
 
     private EventWrapperBaseAsyncObserver CreateMethodObserver(
@@ -119,13 +104,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
 
     private bool ShouldSkipEvent(EventWrapper<TEvent> eventWrapper, MethodInfo method)
     {
-        return eventWrapper.GrainId == this.GetGrainId() && !IsSelfHandlingAllowed(method);
-    }
-
-    private static bool IsSelfHandlingAllowed(MethodInfo method)
-    {
-        return (method.GetCustomAttribute<EventHandlerAttribute>()?.AllowSelfHandling ??
-                method.GetCustomAttribute<AllEventHandlerAttribute>()?.AllowSelfHandling) ?? false;
+        return eventWrapper.GrainId == this.GetGrainId() && !method.IsSelfHandlingAllowed();
     }
 
     private async Task HandleEventWrapper(
@@ -161,20 +140,6 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
         method.Invoke(this, [ev]);
     }
 
-    private async Task HandleWrappedEvent(MethodInfo method, EventWrapper<TEvent> wrapper)
-    {
-        var parameterType = method.GetParameters()[0].ParameterType;
-        var arg = parameterType == typeof(EventWrapper<TEvent>)
-            ? wrapper
-            : Activator.CreateInstance(
-                method.GetParameters()[0].ParameterType,
-                wrapper.Event,
-                wrapper.EventId,
-                wrapper.GrainId);
-
-        await (Task)method.Invoke(this, [arg])!;
-    }
-
     private async Task HandleEventWrapperBase(MethodInfo method, EventWrapper<TEvent> wrapperBase)
     {
         await (Task)method.Invoke(this, [wrapperBase])!;
@@ -201,20 +166,8 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
         await PublishAsync(responseWrapper);
     }
 
-    private ResponseHandlerInvoker CompileResponseInvoker(MethodInfo method)
-    {
-        var targetParam = Expression.Parameter(typeof(object));
-        var eventParam = Expression.Parameter(typeof(EventBase));
-        var castTarget = Expression.Convert(targetParam, GetType());
-        var castEvent = Expression.Convert(eventParam, method.GetParameters()[0].ParameterType);
-        var call = Expression.Call(castTarget, method, castEvent);
-        var castResult = Expression.Convert(call, typeof(Task<EventBase>));
-        var lambda = Expression.Lambda<ResponseHandlerInvoker>(castResult, targetParam, eventParam);
-        return lambda.Compile();
-    }
-
     protected virtual IEnumerable<MethodInfo> GetEventHandlerMethods(Type type) =>
-        HandlerCache.GetOrAdd(type, t =>
+        _handlerCache.GetOrAdd(type, t =>
             t.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
                 .Where(IsEventHandlerMethod)
                 .ToArray());
@@ -242,11 +195,5 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
         bool IsDefaultHandler(MethodInfo m) =>
             m.Name == AevatarGAgentConstants.EventHandlerDefaultMethodName &&
             !paramType.IsAbstract;
-    }
-
-    private class HandlerMetadata
-    {
-        public MethodInvoker? Invoker { get; init; }
-        public ResponseHandlerInvoker? ResponseInvoker { get; init; }
     }
 }
