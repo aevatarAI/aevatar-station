@@ -8,16 +8,10 @@ namespace Aevatar.Core;
 public class GAgentFactory : IGAgentFactory
 {
     private readonly IClusterClient _clusterClient;
-    private readonly AevatarOptions _aevatarOptions;
-    private readonly IStreamProvider _streamProvider;
 
     public GAgentFactory(IClusterClient clusterClient)
     {
         _clusterClient = clusterClient;
-        _aevatarOptions = _clusterClient.ServiceProvider.GetRequiredService<IOptions<AevatarOptions>>().Value;
-        _streamProvider =
-            _clusterClient.ServiceProvider.GetRequiredKeyedService<IStreamProvider>(AevatarCoreConstants
-                .StreamProvider);
     }
 
     public async Task<IGAgent> GetGAgentAsync(GrainId grainId, ConfigurationBase? configuration = null)
