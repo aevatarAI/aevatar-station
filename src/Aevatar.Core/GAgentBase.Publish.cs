@@ -47,7 +47,11 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
 
     private async Task SendEventUpwardsAsync<T>(EventWrapper<T> eventWrapper) where T : EventBase
     {
-        var stream = GetEventBaseStream(State.Parent.ToString());
+        if (State.Parent == null)
+        {
+            return;
+        }
+        var stream = GetEventBaseStream(State.Parent.Value);
         await stream.OnNextAsync(eventWrapper);
     }
 
@@ -55,7 +59,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
     {
         Logger.LogInformation(
             $"{this.GetGrainId().ToString()} is sending event to self: {JsonConvert.SerializeObject(eventWrapper)}");
-        var streamOfThisGAgent = GetEventBaseStream(this.GetGrainId().ToString());
+        var streamOfThisGAgent = GetEventBaseStream(this.GetGrainId());
         await streamOfThisGAgent.OnNextAsync(eventWrapper);
     }
 
@@ -72,7 +76,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
         {
             var gAgent = GrainFactory.GetGrain<IGAgent>(grainId);
             await gAgent.ActivateAsync();
-            var stream = GetEventBaseStream(grainId.ToString());
+            var stream = GetEventBaseStream(grainId);
             await stream.OnNextAsync(eventWrapper);
         }
     }

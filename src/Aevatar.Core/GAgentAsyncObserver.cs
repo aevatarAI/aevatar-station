@@ -5,9 +5,9 @@ namespace Aevatar.Core;
 
 public class GAgentAsyncObserver : IAsyncObserver<EventWrapperBase>
 {
-    private readonly List<EventWrapperBaseAsyncObserver> _observers;
+    private readonly IEnumerable<EventWrapperBaseAsyncObserver> _observers;
 
-    public GAgentAsyncObserver(List<EventWrapperBaseAsyncObserver> observers)
+    public GAgentAsyncObserver(IEnumerable<EventWrapperBaseAsyncObserver> observers)
     {
         _observers = observers;
     }
