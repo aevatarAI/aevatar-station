@@ -40,9 +40,6 @@ public class AgentService : ApplicationService, IAgentService
     private readonly GrainTypeResolver _grainTypeResolver;
     private readonly ISchemaProvider _schemaProvider;
 
-    private const string IndexSuffix = "index";
-    private const string IndexPrefix = "aevatar";
-
     public AgentService(
         IClusterClient clusterClient,
         ICQRSProvider cqrsProvider,
@@ -104,7 +101,7 @@ public class AgentService : ApplicationService, IAgentService
         }
     }
 
-    public async Task<Dictionary<string, AgentTypeData?>> GetAgentTypeDataMap()
+    private async Task<Dictionary<string, AgentTypeData?>> GetAgentTypeDataMap()
     {
         var systemAgents = _agentOptions.CurrentValue.SystemAgentList;
         Stopwatch stopwatch = Stopwatch.StartNew();
@@ -129,7 +126,7 @@ public class AgentService : ApplicationService, IAgentService
                 {
                     FullName = agentType.FullName,
                 };
-                var grainId = GrainId.Create(grainType, Guid.NewGuid().ToString());
+                var grainId = GrainId.Create(grainType, GuidUtil.GuidToGrainKey(GuidUtil.StringToGuid("AgentDefaultId"))); // make sure only one agent instance for each type
                 var agent = await _gAgentFactory.GetGAgentAsync(grainId);
                 var initializeDtoType = await agent.GetConfigurationTypeAsync();
                 if (initializeDtoType == null || initializeDtoType.IsAbstract)
@@ -142,7 +139,7 @@ public class AgentService : ApplicationService, IAgentService
                     initializeDtoType.GetProperties(BindingFlags.Public | BindingFlags.Instance |
                                                     BindingFlags.DeclaredOnly);
 
-                var initializationData = new InitializationData
+                var initializationData = new Configuration
                 {
                     DtoType = initializeDtoType
                 };
@@ -163,9 +160,42 @@ public class AgentService : ApplicationService, IAgentService
                 dict[grainType] = agentTypeData;
             }
         }
+
         return dict;
     }
 
+    private async Task<Configuration?> GetAgentConfigurationAsync(IGAgent agent)
+    {
+        var configurationType = await agent.GetConfigurationTypeAsync();
+        if (configurationType == null || configurationType.IsAbstract)
+        {
+            return null;
+        }
+
+        PropertyInfo[] properties =
+            configurationType.GetProperties(BindingFlags.Public | BindingFlags.Instance |
+                                            BindingFlags.DeclaredOnly);
+
+        var configuration = new Configuration
+        {
+            DtoType = configurationType
+        };
+
+        var propertyDtos = new List<PropertyData>();
+        foreach (PropertyInfo property in properties)
+        {
+            var propertyDto = new PropertyData()
+            {
+                Name = property.Name,
+                Type = property.PropertyType
+            };
+            propertyDtos.Add(propertyDto);
+        }
+
+        configuration.Properties = propertyDtos;
+        return configuration;
+    }
+    
     public async Task<List<AgentTypeDto>> GetAllAgents()
     {
         var propertyDtos = await GetAgentTypeDataMap();
@@ -200,10 +230,10 @@ public class AgentService : ApplicationService, IAgentService
         return resp;
     }
 
-    private ConfigurationBase SetupInitializedConfig(InitializationData initializationData,
+    private ConfigurationBase SetupConfigurationData(Configuration configuration,
         string propertiesString)
     {
-        var actualDto = Activator.CreateInstance(initializationData.DtoType);
+        var actualDto = Activator.CreateInstance(configuration.DtoType);
 
         var config = (ConfigurationBase)actualDto!;
         var schema = _schemaProvider.GetTypeSchema(config.GetType());
@@ -214,7 +244,7 @@ public class AgentService : ApplicationService, IAgentService
             throw new ParameterValidateException(validateDic);
         }
 
-        config = JsonConvert.DeserializeObject(propertiesString, initializationData.DtoType) as ConfigurationBase;
+        config = JsonConvert.DeserializeObject(propertiesString, configuration.DtoType) as ConfigurationBase;
         if (config == null)
         {
             throw new BusinessException("[AgentService][SetupInitializedConfig] config convert error");
@@ -310,32 +340,25 @@ public class AgentService : ApplicationService, IAgentService
         string agentProperties)
     {
         Stopwatch  stopwatch = Stopwatch.StartNew();
-        var agentTypeDataMap = await GetAgentTypeDataMap();
-        stopwatch.Stop();
-        _logger.LogInformation("CreateAgentAsync InitializeBusinessAgent GetAgentTypeDataMap{Time}",stopwatch.ElapsedMilliseconds);
-        ConfigurationBase? config = null;
-        stopwatch = Stopwatch.StartNew();
-        if (agentTypeDataMap.TryGetValue(agentType, out var agentTypeData) && !agentProperties.IsNullOrEmpty())
-        {
-            if (agentTypeData != null && agentTypeData.InitializationData != null)
-            {
-                config = SetupInitializedConfig(agentTypeData.InitializationData, agentProperties);
-            }
-        }
-        stopwatch.Stop();
-        _logger.LogInformation("CreateAgentAsync InitializeBusinessAgent SetupInitializedConfig{Time}",stopwatch.ElapsedMilliseconds);
-        var grainId = GrainId.Create(agentType, primaryKey.ToString("N"));
-        stopwatch = Stopwatch.StartNew();
+        var grainId = GrainId.Create(agentType, GuidUtil.GuidToGrainKey(primaryKey));
         var businessAgent = await _gAgentFactory.GetGAgentAsync(grainId);
         stopwatch.Stop();
         _logger.LogInformation("CreateAgentAsync InitializeBusinessAgent GetGAgentAsync{Time}",stopwatch.ElapsedMilliseconds);
+        
         stopwatch = Stopwatch.StartNew();
-        if (config != null)
-        {
-            await businessAgent.ConfigAsync(config);
-        }
+        var initializationData = await GetAgentConfigurationAsync(businessAgent);
         stopwatch.Stop();
-        _logger.LogInformation("CreateAgentAsync InitializeBusinessAgent ConfigAsync{Time}",stopwatch.ElapsedMilliseconds);
+        _logger.LogInformation("CreateAgentAsync InitializeBusinessAgent GetAgentConfigurationAsync{Time}",stopwatch.ElapsedMilliseconds);
+        
+        if (initializationData != null && !agentProperties.IsNullOrEmpty())
+        {
+            stopwatch = Stopwatch.StartNew();
+            var config = SetupConfigurationData(initializationData, agentProperties);
+            await businessAgent.ConfigAsync(config);
+            stopwatch.Stop();
+            _logger.LogInformation("CreateAgentAsync InitializeBusinessAgent ConfigAsync{Time}",stopwatch.ElapsedMilliseconds);
+        }
+        
         return businessAgent;
     }
 
@@ -351,21 +374,17 @@ public class AgentService : ApplicationService, IAgentService
         if (!dto.Properties.IsNullOrEmpty())
         {
             var updatedParam = JsonConvert.SerializeObject(dto.Properties);
-            var agentTypeDataMap = await GetAgentTypeDataMap();
-            ConfigurationBase? config = null;
-            if (agentTypeDataMap.TryGetValue(agentState.AgentType, out var agentTypeData) &&
-                !updatedParam.IsNullOrEmpty())
+            var configuration = await GetAgentConfigurationAsync(businessAgent);
+            if (configuration != null && !updatedParam.IsNullOrEmpty())
             {
-                if (agentTypeData != null && agentTypeData.InitializationData != null)
-                {
-                    config = SetupInitializedConfig(agentTypeData.InitializationData, updatedParam);
-                }
-            }
-
-            if (config != null)
-            {
+                var config = SetupConfigurationData(configuration, updatedParam);
                 await businessAgent.ConfigAsync(config);
-                await creatorAgent.UpdateAgentAsync(new UpdateAgentInput(){Name = dto.Name, Properties = JsonConvert.SerializeObject(dto.Properties)});
+                await creatorAgent.UpdateAgentAsync(new UpdateAgentInput
+                {
+                    Name = dto.Name, 
+                    Properties = JsonConvert.SerializeObject(dto.Properties)
+                });
+            
             }
             else
             {
@@ -402,15 +421,13 @@ public class AgentService : ApplicationService, IAgentService
             Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentState.Properties),
             AgentGuid = agentState.BusinessAgentGrainId.GetGuidKey()
         };
-
-        var agentTypeDataMap = await GetAgentTypeDataMap();
-        if (agentTypeDataMap.TryGetValue(agentState.AgentType, out var agentTypeData))
+        
+        var businessAgent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
+        
+        var configuration = await GetAgentConfigurationAsync(businessAgent);
+        if (configuration != null)
         {
-            if (agentTypeData != null && agentTypeData.InitializationData != null)
-            {
-                resp.PropertyJsonSchema =
-                    _schemaProvider.GetTypeSchema(agentTypeData.InitializationData.DtoType).ToJson();
-            }
+            resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration.DtoType).ToJson();
         }
 
         return resp;
