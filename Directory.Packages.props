@@ -159,6 +159,13 @@
     <PackageVersion Include="xunit.extensibility.core" Version="2.7.0" />
     <PackageVersion Include="xunit.extensibility.execution" Version="2.7.0" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.5.7" />
+    <!-- Aspire packages -->
+    <PackageVersion Include="Aspire.Hosting" Version="9.1.0" />
+    <PackageVersion Include="Aspire.Hosting.MongoDB" Version="9.1.0" />
+    <PackageVersion Include="Aspire.Hosting.Redis" Version="9.1.0" />
+    <PackageVersion Include="Aspire.Hosting.Kafka" Version="9.1.0" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.1.0" />
+    <PackageVersion Include="Aspire.Hosting.Elasticsearch" Version="9.1.0-preview.1.25121.10" />
     <!-- Other packages -->
     <PackageVersion Include="OrleansDashboard" Version="8.2.0" />
     <PackageVersion Include="AutoResponseWrapper" Version="1.1.3" />
