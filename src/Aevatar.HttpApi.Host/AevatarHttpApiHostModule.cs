@@ -16,6 +16,7 @@ using Aevatar.Application.Grains;
 using Aevatar.Developer.Logger;
 using Aevatar.Domain.Grains;
 using Aevatar.Kubernetes;
+using Aevatar.Plugins;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -43,7 +44,9 @@ namespace Aevatar;
     typeof(AbpAccountWebOpenIddictModule),
     typeof(AbpAspNetCoreSerilogModule),
     typeof(AbpSwashbuckleModule),
-    typeof(OpenTelemetryModule)
+    typeof(OpenTelemetryModule),
+    typeof(AevatarPluginsModule),
+    typeof(AevatarModule)
 )]
 public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrainsModule
 {
