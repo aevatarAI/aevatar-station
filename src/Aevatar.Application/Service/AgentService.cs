@@ -107,10 +107,10 @@ public class AgentService : ApplicationService, IAgentService
         Stopwatch stopwatch = Stopwatch.StartNew();
         var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
         stopwatch.Stop();
-        _logger.LogInformation("CreateAgentAsync GetAgentTypeDataMap GetAvailableGAgentTypes {Time}",stopwatch.ElapsedMilliseconds);
+        _logger.LogInformation("GetAgentTypeDataMap GetAvailableGAgentTypes {Time}",stopwatch.ElapsedMilliseconds);
         var validAgent = availableGAgents.Where(a => !a.Namespace.StartsWith("OrleansCodeGen")).ToList();
         var businessAgentTypes = validAgent.Where(a => !systemAgents.Contains(a.Name)).ToList();
-        _logger.LogInformation("CreateAgentAsync GetAgentTypeDataMap businessAgentTypes {businessAgentTypesCount}",businessAgentTypes.Count);
+        _logger.LogInformation("GetAgentTypeDataMap businessAgentTypes {businessAgentTypesCount}",businessAgentTypes.Count);
 
         var dict = new Dictionary<string, AgentTypeData?>();
        
@@ -118,7 +118,7 @@ public class AgentService : ApplicationService, IAgentService
         {
             stopwatch = Stopwatch.StartNew();
             var grainType = _grainTypeResolver.GetGrainType(agentType).ToString();
-            _logger.LogInformation("CreateAgentAsync GetAgentTypeDataMap GetGrainType agentType {agentType} ,{Time}",agentType.Name,stopwatch.ElapsedMilliseconds);
+            _logger.LogInformation("GetAgentTypeDataMap GetGrainType agentType {agentType} ,{Time}",agentType.Name,stopwatch.ElapsedMilliseconds);
             stopwatch.Stop();
             if (grainType != null)
             {
