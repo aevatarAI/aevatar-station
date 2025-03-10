@@ -26,6 +26,11 @@ public class Program
             Log.Information("Starting Silo");
             var builder = CreateHostBuilder(args);
             var app = builder.Build();
+            
+            ThreadPool.GetMinThreads(out int minWorker, out int minIo);
+            ThreadPool.GetAvailableThreads(out int availWorker, out int availIo);
+            Log.Information($"Silo MinThreads: Worker={minWorker}, IO={minIo}");
+            Log.Information($"Silo AvailableThreads: Worker={availWorker}, IO={availIo}");
             await app.RunAsync();
             return 0;
         }
