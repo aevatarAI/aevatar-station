@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Orleans;
@@ -34,6 +35,10 @@ public static class OrleansHostExtensions
                     options.SupportedNamespacePrefixes.Add("Volo.Abp");
                     options.SupportedNamespacePrefixes.Add("Newtonsoft.Json");
                     options.SupportedNamespacePrefixes.Add("MongoDB.Driver");
+                })
+                .ConfigureServices(services =>
+                {
+                    ThreadPool.SetMinThreads(workerThreads: 100, completionPortThreads: 100);
                 })
                 .AddMemoryStreams("Aevatar")
                 .AddActivityPropagation();

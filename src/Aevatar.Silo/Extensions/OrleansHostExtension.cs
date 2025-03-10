@@ -168,6 +168,7 @@ public static class OrleansHostExtension
                     .AddAzureDeepSeek()
                     .AddQdrantVectorStore()
                     .AddAzureOpenAITextEmbedding();
+                ThreadPool.SetMinThreads(workerThreads: 100, completionPortThreads: 100);
             })
             .UseConsoleLifetime();
     }
