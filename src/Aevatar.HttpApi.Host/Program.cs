@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
@@ -33,6 +34,11 @@ public class Program
             var app = builder.Build();
             await app.InitializeApplicationAsync();
             app.MapHub<AevatarSignalRHub>("api/agent/aevatarHub");
+            
+            ThreadPool.GetMinThreads(out int minWorker, out int minIo);
+            ThreadPool.GetAvailableThreads(out int availWorker, out int availIo);
+            Log.Information($"Client MinThreads: Worker={minWorker}, IO={minIo}");
+            Log.Information($"Client AvailableThreads: Worker={availWorker}, IO={availIo}");
             await app.RunAsync();
             return 0;
         }
