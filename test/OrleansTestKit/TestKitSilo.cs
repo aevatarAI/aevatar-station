@@ -76,6 +76,14 @@ public sealed class TestKitSilo
         _grainCreator = new TestGrainCreator(GrainRuntime, ReminderRegistry, TestGrainStorage, ServiceProvider);
 
         ServiceProvider.AddService<IGrainStorage>(TestGrainStorage);
+        
+        var aevatarOptionsManager = new Mock<IOptions<AevatarOptions>>();
+        aevatarOptionsManager.Setup(m => m.Value).Returns(new AevatarOptions
+        {
+            StreamNamespace = "Aevatar"
+        });
+        ServiceProvider.AddService(aevatarOptionsManager.Object);
+
         var provider = new ServiceCollection()
             .AddSingleton<GrainTypeResolver>()
             .AddSingleton<IGrainTypeProvider, AttributeGrainTypeProvider>()

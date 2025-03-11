@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Aevatar.Core.Abstractions;
+using Aevatar.Core.Abstractions.Projections;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -53,7 +54,7 @@ public abstract partial class
     protected GAgentBase()
     {
         StateDispatcher = ServiceProvider.GetService<IStateDispatcher>();
-        AevatarOptions = ServiceProvider.GetRequiredService<IOptionsSnapshot<AevatarOptions>>().Value;
+        AevatarOptions = ServiceProvider.GetRequiredService<IOptions<AevatarOptions>>().Value;
     }
 
     public async Task ActivateAsync()
@@ -218,7 +219,7 @@ public abstract partial class
         // This must be called first to initialize Observers field.
         await UpdateObserverListAsync(GetType());
         await InitializeOrResumeEventBaseStreamAsync();
-        await InitializeOrResumeStateProjectionStreamAsync();
+        await ActivateProjectionGrainAsync();
     }
 
     private async Task InitializeOrResumeEventBaseStreamAsync()
@@ -239,23 +240,10 @@ public abstract partial class
         }
     }
 
-    private async Task InitializeOrResumeStateProjectionStreamAsync()
+    private async Task ActivateProjectionGrainAsync()
     {
-        var projectionStream = GetStateProjectionStream();
-        var handles = await projectionStream.GetAllSubscriptionHandles();
-        var projectors = ServiceProvider.GetRequiredService<IEnumerable<IStateProjector>>();
-        var asyncObserver = new StateProjectionAsyncObserver(projectors);
-        if (handles.Count > 0)
-        {
-            foreach (var handle in handles)
-            {
-                await handle.ResumeAsync(asyncObserver);
-            }
-        }
-        else
-        {
-            await projectionStream.SubscribeAsync(asyncObserver);
-        }
+        var projectionGrain = GrainFactory.GetGrain<IProjectionGrain<TState>>(Guid.Empty);
+        await projectionGrain.ActivateAsync();
     }
 
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
@@ -316,11 +304,5 @@ public abstract partial class
     {
         var streamId = StreamId.Create(AevatarOptions.StreamNamespace, grainIdString);
         return StreamProvider.GetStream<EventWrapperBase>(streamId);
-    }
-
-    private IAsyncStream<StateWrapper<TState>> GetStateProjectionStream()
-    {
-        var streamId = StreamId.Create(AevatarOptions.StreamNamespace, typeof(StateWrapper<TState>).FullName!);
-        return StreamProvider.GetStream<StateWrapper<TState>>(streamId);
     }
 }
