@@ -4,7 +4,7 @@ using Volo.Abp.MongoDB;
 
 namespace Aevatar.ApiKeys;
 
-public class ApiKeysMongoDbContext:AbpMongoDbContext
+public class ApiKeysMongoDbContext : AbpMongoDbContext
 {
     public IMongoCollection<ApiKeyInfo> ApiKeyInfoCollection => Collection<ApiKeyInfo>();
 }

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Aevatar.Agent;
 using Aevatar.ApiKeys;
 using Aevatar.Service;
 using Asp.Versioning;
@@ -13,8 +12,8 @@ using Volo.Abp;
 namespace Aevatar.Controllers;
 
 [RemoteService]
-[ControllerName("Agent")]
-[Microsoft.AspNetCore.Components.Route("api/apikey")]
+[ControllerName("ApiKey")]
+[Route("api/apikey")]
 [Authorize]
 public class ApiKeyController : AevatarController
 {
@@ -43,7 +42,7 @@ public class ApiKeyController : AevatarController
     {
         await _apiKeyService.DeleteAsync(guid);
     }
-
+    
     [HttpPut("{guid}")]
     public async Task ModifyApiKeyName(Guid guid, [FromBody] ModifyApiKeyNameDto modifyApiKeyNameDto)
     {

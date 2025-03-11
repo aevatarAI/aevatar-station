@@ -25,15 +25,15 @@ public class ProjectApiKeyService : ApplicationService, IProjectApiKeyService
     private readonly IApiKeysRepository _apiKeysRepository;
     private readonly ILogger<ProjectApiKeyService> _logger;
     private readonly IUserAppService _appService;
-    private readonly IIdentityUserRepository _userRepository ;
+    private readonly IdentityUserManager _identityUserManager;
 
     public ProjectApiKeyService(IApiKeysRepository apiKeysRepository, ILogger<ProjectApiKeyService> logger,
-        UserAppService appService, IIdentityUserRepository userRepository)
+        UserAppService appService, IdentityUserManager identityUserManager)
     {
         _apiKeysRepository = apiKeysRepository;
         _logger = logger;
         _appService = appService;
-        _userRepository = userRepository;
+        _identityUserManager = identityUserManager;
     }
 
 
@@ -50,18 +50,15 @@ public class ProjectApiKeyService : ApplicationService, IProjectApiKeyService
 
         var random = new Random();
         var randNum = random.Next(0, 1000000000);
-        var apikey = MD5Util.CalculateMD5($"{projectId.ToString()}-{keyName}-{randNum}");
+        var apikeyStr = MD5Util.CalculateMD5($"{projectId.ToString()}-{keyName}-{randNum}");
 
         var creator = _appService.GetCurrentUserId();
-        var apiKey = new ApiKeyInfo()
+        var apiKey = new ApiKeyInfo(Guid.NewGuid(), projectId, keyName, apikeyStr)
         {
-            CreatorId = creator,
             CreationTime = DateTime.Now,
-            ProjectId = projectId,
-            ApiKey = apikey,
-            ApiKeyName = keyName,
+            CreatorId = creator,
         };
-
+        
         await _apiKeysRepository.InsertAsync(apiKey);
     }
 
@@ -69,25 +66,30 @@ public class ProjectApiKeyService : ApplicationService, IProjectApiKeyService
     {
         // todo:validate delete rights
         _logger.LogDebug($"[ProjectApiKeyService][DeleteAsync] apiKeyId:{apiKeyId}");
-
-        await _apiKeysRepository.DeleteAsync(f => f.Id == apiKeyId);
+        await _apiKeysRepository.HardDeleteAsync(f => f.Id == apiKeyId);
     }
 
     public async Task ModifyApiKeyAsync(Guid apiKeyId, string keyName)
     {
         // todo:validate modify rights
         _logger.LogDebug($"[ProjectApiKeyService][ModifyApiKeyAsync] apiKeyId:{apiKeyId}, keyName:{keyName}");
-
-        var apiKeyInfo = await _apiKeysRepository.FirstOrDefaultAsync(f => f.Id == apiKeyId);
+        
+        var apiKeyInfo = await _apiKeysRepository.GetAsync(apiKeyId);
         if (apiKeyInfo == null)
         {
             throw new BusinessException(message: "ApiKey not exist");
         }
 
+        if (await _apiKeysRepository.CheckProjectApiKeyNameExist(apiKeyInfo.ProjectId, keyName))
+        {
+            throw new BusinessException(message: "key name has exist");
+        }
+        
         if (apiKeyInfo.ApiKeyName == keyName)
         {
             throw new BusinessException(message: "ApiKey is the same ");
         }
+        
 
         apiKeyInfo.ApiKeyName = keyName;
 
@@ -102,7 +104,7 @@ public class ProjectApiKeyService : ApplicationService, IProjectApiKeyService
         var result = new List<ApiKeyListResponseDto>();
         foreach (var item in apiKeyList)
         {
-            var creatorInfo = await _userRepository.GetAsync((Guid)item.CreatorId!);
+            var creatorInfo = await _identityUserManager.GetByIdAsync((Guid)item.CreatorId!);
             
             result.Add(new ApiKeyListResponseDto()
             {

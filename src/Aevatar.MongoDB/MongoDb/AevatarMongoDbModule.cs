@@ -1,4 +1,7 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Aevatar.ApiKey;
+using Aevatar.ApiKeys;
+using Amazon.Runtime.Internal.Util;
+using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.AuditLogging.MongoDB;
 using Volo.Abp.BackgroundJobs.MongoDB;
 using Volo.Abp.FeatureManagement.MongoDB;
@@ -25,8 +28,15 @@ public class AevatarMongoDbModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
+        
         //Example only, remove if not needed
         context.Services.AddMongoDbContext<AevatarMongoDbContext>(options =>
+        {
+            options.AddDefaultRepositories();
+        });
+
+        context.Services.AddTransient<IApiKeysRepository, ApiKeyMongoRepository>();
+        context.Services.AddMongoDbContext<ApiKeysMongoDbContext>(options =>
         {
             options.AddDefaultRepositories();
         });
