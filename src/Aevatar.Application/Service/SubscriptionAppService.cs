@@ -151,8 +151,6 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
             throw new UserFriendlyException("event could not be found");
         }
         
-        var eventType = eventDescription.EventType;
-        
         var propertiesString = JsonConvert.SerializeObject(dto.EventProperties);
         var eventInstance = JsonConvert.DeserializeObject(propertiesString, eventDescription.EventType) as EventBase;
 
@@ -161,29 +159,6 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
             _logger.LogInformation("Event {type} could not be instantiated with param {param}", dto.EventType, propertiesString);
             throw new UserFriendlyException("event could not be instantiated");
         }
-        
-        // object? eventInstance = Activator.CreateInstance(eventType);
-        // if (eventInstance == null)
-        // {
-        //     _logger.LogInformation("Type {type} could not be instantiated.", dto.EventType);
-        //     throw new UserFriendlyException("event could not be instantiated");
-        // }
-        //
-        // foreach (var property in dto.EventProperties)
-        // {
-        //     string propertyName = property.Key;
-        //     object propertyValue = property.Value;
-        //     
-        //     PropertyInfo? propInfo = eventType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
-        //     if (propInfo == null || !propInfo.CanWrite)
-        //     {
-        //         _logger.LogInformation("Property {propertyName} not found or cannot be written.", propertyName);
-        //         throw new UserFriendlyException("property could not be found or cannot be written");
-        //     }
-        //
-        //     object? convertedValue = ReflectionUtil.ConvertValue(propInfo.PropertyType, propertyValue);
-        //     propInfo.SetValue(eventInstance, convertedValue);
-        // }
         
         await agent.PublishEventAsync(eventInstance);
         
