@@ -26,6 +26,7 @@ public static class OrleansClientExtension
                 {
                     options.DatabaseName = config["Orleans:DataBase"];
                     options.Strategy = MongoDBMembershipStrategy.SingleDocument;
+                    options.CollectionPrefix = "OrleansAevatar";
                 })
                 .Configure<ClusterOptions>(options =>
                 {
