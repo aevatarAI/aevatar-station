@@ -61,6 +61,7 @@ public class AevatarDeveloperHostModule : AbpModule
                 options.Authority = configuration["AuthServer:Authority"];
                 options.RequireHttpsMetadata = Convert.ToBoolean(configuration["AuthServer:RequireHttpsMetadata"]);
                 options.Audience = "Aevatar";
+                options.MapInboundClaims = false;
             });
     }
     
@@ -153,7 +154,7 @@ public class AevatarDeveloperHostModule : AbpModule
         }
 
         app.UseAbpRequestLocalization();
-
+      
         app.UseCorrelationId();
         app.UseStaticFiles();
         app.UseRouting();
