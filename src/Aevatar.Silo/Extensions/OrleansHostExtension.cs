@@ -162,8 +162,6 @@ public static class OrleansHostExtension
                 services.Configure<RagConfig>(context.Configuration.GetSection("Rag"));
                 services.AddSingleton(typeof(HubLifetimeManager<>), typeof(OrleansHubLifetimeManager<>));
                 services.AddSemanticKernel()
-                    .AddAzureOpenAI()
-                    .AddAzureDeepSeek()
                     .AddQdrantVectorStore()
                     .AddAzureOpenAITextEmbedding();
             })
