@@ -1,7 +1,6 @@
 using System.Reflection;
 using System.Security.Authentication;
 using System.Security.Claims;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.Security.Claims;
@@ -44,7 +43,7 @@ public class PermissionCheckFilter : IIncomingGrainCallFilter
 
         var principal = BuildClaimsPrincipal(currentUser);
 
-        _logger.LogInformation("Start permission checking for method {MethodName}", method.Name);
+        _logger.LogInformation("Start permission checking for method {MethodName}, permission name is {PermissionName}", method.Name, allPermissionNames.FirstOrDefault());
 
         foreach (var permissionName in allPermissionNames)
         {
