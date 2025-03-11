@@ -23,7 +23,7 @@ public sealed class GAgentPermissionTests : AevatarGAgentsTestBase
     {
         var allPermissionInfos = GAgentPermissionHelper.GetAllPermissionInfos();
         allPermissionInfos.ShouldContain(i =>
-            i.Name == "DoSomething1"
+            i.Name == "AbpIdentity.Roles.Create"
             && i.DisplayName == "Only for testing."
             && i.Type == "Aevatar.Core.Tests.TestGAgents.PermissionGAgent"
         );

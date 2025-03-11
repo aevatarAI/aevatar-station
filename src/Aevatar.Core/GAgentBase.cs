@@ -54,7 +54,7 @@ public abstract partial class
     protected GAgentBase()
     {
         StateDispatcher = ServiceProvider.GetService<IStateDispatcher>();
-        AevatarOptions = ServiceProvider.GetRequiredService<IOptionsSnapshot<AevatarOptions>>().Value;
+        AevatarOptions = ServiceProvider.GetRequiredService<IOptions<AevatarOptions>>().Value;
     }
 
     public async Task ActivateAsync()
