@@ -5,6 +5,7 @@ using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
 using Aevatar.CQRS.Provider;
+using Aevatar.Email;
 using Aevatar.Kubernetes;
 using Aevatar.Kubernetes.Manager;
 using Aevatar.Options;
@@ -23,6 +24,8 @@ using Volo.Abp.PermissionManagement;
 using Volo.Abp.Users;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Volo.Abp.Emailing;
+using Volo.Abp.VirtualFileSystem;
 
 namespace Aevatar;
 
@@ -48,6 +51,11 @@ public class AevatarApplicationModule : AbpModule
             options.AddMaps<AevatarApplicationModule>();
         });
         
+        Configure<AbpVirtualFileSystemOptions>(options =>
+        {
+            options.FileSets.AddEmbedded<AevatarApplicationModule>();
+        });
+        
         var configuration = context.Services.GetConfiguration();
         Configure<NameContestOptions>(configuration.GetSection("NameContest"));
         context.Services.AddSingleton<IGAgentFactory>(sp => new GAgentFactory(context.Services.GetRequiredService<IClusterClient>()));
@@ -58,5 +66,8 @@ public class AevatarApplicationModule : AbpModule
         context.Services.AddTransient<IHostDeployManager, KubernetesHostManager>();
         Configure<HostDeployOptions>(configuration.GetSection("HostDeploy"));
         context.Services.Configure<HostOptions>(configuration.GetSection("Host"));
+        
+        Configure<AwsEmailOptions>(configuration.GetSection("AwsEmail"));
+        context.Services.AddSingleton<IEmailSender, AwsEmailSender>();
     }
 }
