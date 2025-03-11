@@ -47,6 +47,7 @@ public static class OrleansHostExtension
                     {
                         options.DatabaseName = configSection.GetValue<string>("DataBase");
                         options.Strategy = MongoDBMembershipStrategy.SingleDocument;
+                        options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" :$"Orleans{hostId}";;
                     })
                     .Configure<JsonGrainStateSerializerOptions>(options => options.ConfigureJsonSerializerSettings =
                         settings =>
@@ -57,20 +58,22 @@ public static class OrleansHostExtension
                         })
                     .AddMongoDBGrainStorage("Default", (MongoDBGrainStorageOptions op) =>
                     {
-                      
-                        op.CollectionPrefix = hostId.IsNullOrEmpty() ? "GrainStorage" :$"Grain{hostId}";
+                        op.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" :$"Orleans{hostId}";
                         op.DatabaseName = configSection.GetValue<string>("DataBase");
                     })
                     .UseMongoDBReminders(options =>
                     {
                         options.DatabaseName = configSection.GetValue<string>("DataBase");
                         options.CreateShardKeyForCosmos = false;
+                        options.CollectionPrefix = hostId.IsNullOrEmpty() ? "Orleans" :$"Orleans{hostId}";;
                     })
+                    
                     .Configure<ClusterOptions>(options =>
                     {
                         options.ClusterId = clusterId;
                         options.ServiceId = serviceId;
                     })
+                    
                     .Configure<ExceptionSerializationOptions>(options =>
                     {
                         options.SupportedNamespacePrefixes.Add("Volo.Abp");
