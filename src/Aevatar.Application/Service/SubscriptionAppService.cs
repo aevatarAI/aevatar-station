@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Reflection;
 using System.Threading.Tasks;
-using Aevatar.Agents.Creator;
 using Aevatar.Application.Grains.Agents.Creator;
 using Aevatar.Application.Grains.Subscription;
 using Aevatar.Common;
@@ -57,9 +57,35 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
         var agent = _clusterClient.GetGrain<ICreatorGAgent>(agentId);
         var agentState = await agent.GetAgentAsync();
         _logger.LogInformation("GetAvailableEventsAsync id: {id} state: {state}", agentId, JsonConvert.SerializeObject(agentState));
-        var dto = _objectMapper.Map<List<EventDescription>, List<EventDescriptionDto>>(agentState.EventInfoList);
-        return dto;
+        
+        var eventDescriptionList = new List<EventDescriptionDto>();
+        foreach (var evt in agentState.EventInfoList)
+        {
+            var eventType = evt.EventType;
+            PropertyInfo[] properties = eventType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
+            var eventPropertyList = new List<EventProperty>();
+            foreach (PropertyInfo property in properties)
+            {
+                var eventProperty = new EventProperty()
+                {
+                    Name = property.Name,
+                    Description = property.GetCustomAttribute<DescriptionAttribute>()?.Description ?? property.Name,
+                    Type = property.PropertyType.ToString()
+                };
+                eventPropertyList.Add(eventProperty);
+            }
+            
+            eventDescriptionList.Add(new EventDescriptionDto()
+            {
+                EventType = eventType.FullName ?? eventType.Name,
+                Description = evt.Description,
+                EventProperties = eventPropertyList
+            });
+        }
+        
+        return eventDescriptionList;
     }
+    
     
 
     public async Task<SubscriptionDto> SubscribeAsync(CreateSubscriptionDto createSubscriptionDto)
@@ -126,30 +152,40 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
         }
         
         var eventType = eventDescription.EventType;
-        object? eventInstance = Activator.CreateInstance(eventType);
+        
+        var propertiesString = JsonConvert.SerializeObject(dto.EventProperties);
+        var eventInstance = JsonConvert.DeserializeObject(propertiesString, eventDescription.EventType) as EventBase;
+
         if (eventInstance == null)
         {
-            _logger.LogInformation("Type {type} could not be instantiated.", dto.EventType);
+            _logger.LogInformation("Event {type} could not be instantiated with param {param}", dto.EventType, propertiesString);
             throw new UserFriendlyException("event could not be instantiated");
         }
         
-        foreach (var property in dto.EventProperties)
-        {
-            string propertyName = property.Key;
-            object propertyValue = property.Value;
-            
-            PropertyInfo? propInfo = eventType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
-            if (propInfo == null || !propInfo.CanWrite)
-            {
-                _logger.LogInformation("Property {propertyName} not found or cannot be written.", propertyName);
-                throw new UserFriendlyException("property could not be found or cannot be written");
-            }
-  
-            object? convertedValue = ReflectionUtil.ConvertValue(propInfo.PropertyType, propertyValue);
-            propInfo.SetValue(eventInstance, convertedValue);
-        }
+        // object? eventInstance = Activator.CreateInstance(eventType);
+        // if (eventInstance == null)
+        // {
+        //     _logger.LogInformation("Type {type} could not be instantiated.", dto.EventType);
+        //     throw new UserFriendlyException("event could not be instantiated");
+        // }
+        //
+        // foreach (var property in dto.EventProperties)
+        // {
+        //     string propertyName = property.Key;
+        //     object propertyValue = property.Value;
+        //     
+        //     PropertyInfo? propInfo = eventType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+        //     if (propInfo == null || !propInfo.CanWrite)
+        //     {
+        //         _logger.LogInformation("Property {propertyName} not found or cannot be written.", propertyName);
+        //         throw new UserFriendlyException("property could not be found or cannot be written");
+        //     }
+        //
+        //     object? convertedValue = ReflectionUtil.ConvertValue(propInfo.PropertyType, propertyValue);
+        //     propInfo.SetValue(eventInstance, convertedValue);
+        // }
         
-        await agent.PublishEventAsync((EventBase)eventInstance);
+        await agent.PublishEventAsync(eventInstance);
         
     }
 }
