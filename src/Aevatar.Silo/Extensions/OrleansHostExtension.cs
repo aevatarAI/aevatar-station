@@ -170,8 +170,6 @@ public static class OrleansHostExtension
                // services.AddSingleton<IStateProjector, AevatarStateProjector>();
               //  services.AddSingleton<IStateDispatcher, StateDispatcher>();
                 services.AddSemanticKernel()
-                    .AddAzureOpenAI()
-                    .AddAzureDeepSeek()
                     .AddQdrantVectorStore()
                     .AddAzureOpenAITextEmbedding();
                 ThreadPool.SetMinThreads(workerThreads: 100, completionPortThreads: 100);

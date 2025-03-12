@@ -8,7 +8,7 @@ using Aevatar.Query;
 using Aevatar.Service;
 using Microsoft.AspNetCore.Authorization;
 using Aevatar.Validator;
-using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -20,8 +20,7 @@ public class QueryController : AevatarController
     private readonly ICqrsService _cqrsService;
     private readonly IIndexingService _indexingService;
 
-    public QueryController(
-        ICqrsService cqrsService, 
+    public QueryController(ICqrsService cqrsService, 
         IIndexingService indexingService)
     {
         _cqrsService = cqrsService;
