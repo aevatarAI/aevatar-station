@@ -22,14 +22,29 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
             var count = 0;
             foreach (var method in handlerMethods)
             {
-                var (parameterType, isResponseHandler) = method.AnalysisMethodMetadata();
-                var observer = CreateMethodObserver(method, parameterType, isResponseHandler);
-                observers[count++] = observer;
+                try
+                {
+                    var (parameterType, isResponseHandler) = method.AnalysisMethodMetadata();
+                    var observer = CreateMethodObserver(method, parameterType, isResponseHandler);
+                    observers[count++] = observer;
+                }
+                catch (ReflectionTypeLoadException ex)
+                {
+                    Logger.LogCritical(ex, "Metadata analysis failed for method {Method}", method.Name);
+                    throw new InvalidOperationException($"Type load error in {method.Name}", ex);
+                }
             }
 
             foreach (var observer in observers.Take(count))
             {
-                _observers.Add(observer);
+                try
+                {
+                    _observers.Add(observer);
+                }
+                catch (ArgumentNullException ex)
+                {
+                    Logger.LogWarning(ex, "Attempted to add null observer for {Type}", type.Name);
+                }
             }
         }
         finally
@@ -42,16 +57,32 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
 
     private MethodInfo[] GetCachedHandlerMethods(Type type)
     {
-        return _handlerCache.GetOrAdd(type, t =>
+        try
         {
-            var methods = t.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-
-            return methods.AsParallel()
-                .WithDegreeOfParallelism(Environment.ProcessorCount)
-                .Where(IsEventHandlerMethod)
-                .OrderBy(m => m.GetCustomAttribute<EventHandlerAttribute>()?.Priority ?? 0)
-                .ToArray();
-        });
+            return _handlerCache.GetOrAdd(type, t =>
+            {
+                try
+                {
+                    var methods = t.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+                    return methods.AsParallel()
+                        .WithDegreeOfParallelism(Math.Max(1, Environment.ProcessorCount - 1))
+                        .Where(IsEventHandlerMethod)
+                        .OrderBy(m => m.GetCustomAttribute<EventHandlerAttribute>()?.Priority ?? 0)
+                        .ToArray();
+                }
+                catch (ArgumentNullException ex)
+                {
+                    Logger.LogError(ex, "Type metadata resolution failed for {Type}", t.Name);
+                    return Array.Empty<MethodInfo>();
+                }
+            });
+        }
+        catch (Exception ex) when (ex is ArgumentNullException or OverflowException)
+        {
+            Logger.LogCritical(ex, "Handler cache corruption detected");
+            _handlerCache.Clear();
+            throw;
+        }
     }
 
     private EventWrapperBaseAsyncObserver CreateMethodObserver(
@@ -61,39 +92,59 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
     {
         return new EventWrapperBaseAsyncObserver(async item =>
         {
-            var eventId = (Guid)item.GetType().GetProperty(nameof(EventWrapper<TEvent>.EventId))
-                ?.GetValue(item)!;
-            var eventType = (TEvent)item.GetType().GetProperty(nameof(EventWrapper<TEvent>.Event))
-                ?.GetValue(item)!;
-            var grainId = (GrainId)item.GetType().GetProperty(nameof(EventWrapper<TEvent>.GrainId))
-                ?.GetValue(item)!;
-
-            var eventWrapper = new EventWrapper<TEvent>(eventType, eventId, grainId);
-
-            if (ShouldSkipEvent(eventWrapper, method))
-                return;
-
-            _correlationId = eventWrapper.Event.CorrelationId;
-
             try
             {
-                await HandleEventWrapper(
-                    method,
-                    parameterType,
-                    eventWrapper,
-                    isResponseHandler
-                );
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex,
-                    "Event handling failed | Method:{Method} | EventId:{EventId}",
-                    method.Name,
-                    eventWrapper.EventId);
+                var eventId = (Guid)item.GetType().GetProperty(nameof(EventWrapper<TEvent>.EventId))
+                    ?.GetValue(item)!;
+                var eventType = (TEvent)item.GetType().GetProperty(nameof(EventWrapper<TEvent>.Event))
+                    ?.GetValue(item)!;
+                var grainId = (GrainId)item.GetType().GetProperty(nameof(EventWrapper<TEvent>.GrainId))
+                    ?.GetValue(item)!;
 
-                throw new EventHandlingException(
-                    $"Error processing {eventWrapper.Event.GetType().Name} with {method.Name}",
-                    ex);
+                var eventWrapper = new EventWrapper<TEvent>(eventType, eventId, grainId);
+
+                if (ShouldSkipEvent(eventWrapper, method))
+                    return;
+
+                _correlationId = eventWrapper.Event.CorrelationId;
+
+                try
+                {
+                    await HandleEventWrapper(
+                        method,
+                        parameterType,
+                        eventWrapper,
+                        isResponseHandler
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex,
+                        "Event handling failed | Method:{Method} | EventId:{EventId}",
+                        method.Name,
+                        eventWrapper.EventId);
+
+                    await PublishAsync(new EventHandlerExceptionEvent
+                    {
+                        GrainId = this.GetGrainId(),
+                        HandleEventType = parameterType,
+                        ExceptionMessage = ex.Message
+                    });
+
+                    throw new EventHandlingException(
+                        $"Error processing {eventWrapper.Event.GetType().Name} with {method.Name}",
+                        ex);
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                Logger.LogCritical(ex, "Unhandled event processing error");
+                await PublishAsync(new GAgentBaseExceptionEvent
+                {
+                    GrainId = this.GetGrainId(),
+                    ExceptionMessage = ex.Message
+                });
+                throw;
             }
         })
         {
@@ -137,12 +188,32 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
 
     private async Task HandleEvent(MethodInfo method, TEvent ev)
     {
-        method.Invoke(this, [ev]);
+        try
+        {
+            method.Invoke(this, new object[] { ev! });
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw new EventHandlingException(method.Name, ex.InnerException ?? ex);
+        }
+        catch (ArgumentException ex)
+        {
+            Logger.LogError(ex, "Parameter mismatch in {Method}", method.Name);
+            throw;
+        }
     }
 
     private async Task HandleEventWrapperBase(MethodInfo method, EventWrapper<TEvent> wrapperBase)
     {
-        await (Task)method.Invoke(this, [wrapperBase])!;
+        try
+        {
+            await (Task)method.Invoke(this, [wrapperBase])!;
+        }
+        catch (InvalidCastException ex)
+        {
+            Logger.LogError(ex, "Invalid return type from {Method}", method.Name);
+            throw new InvalidOperationException("Handler returned non-task result", ex);
+        }
     }
 
     private async Task HandleEventWithResponse(
@@ -150,8 +221,21 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
         EventBase ev,
         Guid eventId)
     {
-        var eventResult = await (dynamic)method.Invoke(this, [ev])!;
-        await PublishResponse(eventResult, eventId);
+        try
+        {
+            dynamic result = method.Invoke(this, [ev])!;
+            if (result is not Task<EventBase> taskResult)
+            {
+                throw new InvalidOperationException("Response handler must return Task<EventBase>");
+            }
+
+            var eventResult = await taskResult.ConfigureAwait(false);
+            await PublishResponse(eventResult, eventId);
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw new EventHandlingException(method.Name, ex.InnerException ?? ex);
+        }
     }
 
     private async Task PublishResponse(EventBase result, Guid eventId)

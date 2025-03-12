@@ -132,6 +132,7 @@ public abstract partial class
     }
 
     [EventHandler]
+    // ReSharper disable once UnusedMember.Global
     public async Task<SubscribedEventListEvent> HandleRequestAllSubscriptionsEventAsync(
         RequestAllSubscriptionsEvent request)
     {
