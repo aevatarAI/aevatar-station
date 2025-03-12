@@ -271,7 +271,7 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
             "Sending local message to connection {connectionId} on hub {hubName} (serverId: {serverId})",
             connection.ConnectionId, _hubName, _serverId);
         // ReSharper disable once CoVariantArrayConversion
-        return connection.WriteAsync(new InvocationMessage(SignalROrleansConstants.MethodName, notification.Arguments))
+        return connection.WriteAsync(new InvocationMessage(SignalROrleansConstants.ResponseMethodName, notification.Arguments))
             .AsTask();
     }
 
