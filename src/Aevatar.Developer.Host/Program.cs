@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Aevatar.Developer.Host.Extensions;
+using Aevatar.Handler;
 using Aevatar.SignalR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,6 +47,7 @@ public class Program
                 .UseAutofac()
                 .UseSerilog();
             builder.Services.AddSignalR().AddOrleans();
+            builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, AevatarAuthorizationMiddlewareResultHandler>();
             await builder.AddApplicationAsync<AevatarDeveloperHostModule>();
             var app = builder.Build();
             await app.InitializeApplicationAsync();
