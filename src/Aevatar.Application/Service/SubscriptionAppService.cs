@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Aevatar.Application.Grains.Agents.Creator;
@@ -12,6 +13,7 @@ using Aevatar.Subscription;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Orleans;
+using Orleans.Metadata;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Auditing;
@@ -37,24 +39,29 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
     private readonly IObjectMapper _objectMapper;
     private readonly IUserAppService _userAppService;
     private readonly IGAgentFactory _gAgentFactory;
+    private readonly GrainTypeResolver _grainTypeResolver;
     
     public SubscriptionAppService(
         IClusterClient clusterClient,
         IObjectMapper objectMapper,
         IUserAppService userAppService,
         IGAgentFactory gAgentFactory,
-        ILogger<SubscriptionAppService> logger)
+        ILogger<SubscriptionAppService> logger, 
+        GrainTypeResolver grainTypeResolver)
     {
         _clusterClient = clusterClient;
         _objectMapper = objectMapper;
         _logger = logger;
         _userAppService = userAppService;
         _gAgentFactory = gAgentFactory;
+        _grainTypeResolver = grainTypeResolver;
     }
     
     public async Task<List<EventDescriptionDto>> GetAvailableEventsAsync(Guid agentId)
     {
         var agent = _clusterClient.GetGrain<ICreatorGAgent>(agentId);
+        await RefreshEventListAsync(agent);
+        
         var agentState = await agent.GetAgentAsync();
         _logger.LogInformation("GetAvailableEventsAsync id: {id} state: {state}", agentId, JsonConvert.SerializeObject(agentState));
         
@@ -86,8 +93,6 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
         return eventDescriptionList;
     }
     
-    
-
     public async Task<SubscriptionDto> SubscribeAsync(CreateSubscriptionDto createSubscriptionDto)
     {
 
@@ -143,24 +148,68 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
         }*/
         
         var eventList = agentState.EventInfoList;
-
         var eventDescription = eventList.Find(i => i.EventType.FullName == dto.EventType);
+
         if (eventDescription == null)
         {
-            _logger.LogInformation("Type {type} could not be found.", dto.EventType);
-            throw new UserFriendlyException("event could not be found");
+            _logger.LogInformation("Type {type} could not be found, refresh event list", dto.EventType);
+            await RefreshEventListAsync(agent);
+            agentState = await agent.GetAgentAsync();
+            eventList = agentState.EventInfoList;
+            eventDescription = eventList.Find(i => i.EventType.FullName == dto.EventType);
+            if (eventDescription == null)
+            {
+                _logger.LogError("Type {type} could not be found.", dto.EventType);
+                throw new UserFriendlyException("event could not be found");
+            }
         }
         
         var propertiesString = JsonConvert.SerializeObject(dto.EventProperties);
         var eventInstance = JsonConvert.DeserializeObject(propertiesString, eventDescription.EventType) as EventBase;
-
+        
         if (eventInstance == null)
         {
-            _logger.LogInformation("Event {type} could not be instantiated with param {param}", dto.EventType, propertiesString);
+            _logger.LogError("Event {type} could not be instantiated with param {param}", dto.EventType, propertiesString);
             throw new UserFriendlyException("event could not be instantiated");
         }
         
         await agent.PublishEventAsync(eventInstance);
         
+    }
+    
+    private async Task RefreshEventListAsync(ICreatorGAgent creatorAgent)
+    {
+        var agentState = await creatorAgent.GetAgentAsync();
+        var totalEventList = new List<Type>();
+        
+        var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
+        var eventsHandledBySelf = await agent.GetAllSubscribedEventsAsync();
+        if (eventsHandledBySelf != null)
+        {
+            totalEventList.AddRange(eventsHandledBySelf);
+        }
+        
+        var children = await agent.GetChildrenAsync();
+        var creatorGAgentType = _grainTypeResolver.GetGrainType(typeof(CreatorGAgent));
+        var subscriptionGAgentType = _grainTypeResolver.GetGrainType(typeof(SubscriptionGAgent));
+        foreach (var grainId in children)
+        {
+            var grainType = grainId.Type;
+            if (grainType == creatorGAgentType || grainType == subscriptionGAgentType)
+            {
+                continue;
+            }
+
+            var childAgent = await _gAgentFactory.GetGAgentAsync(grainId);
+
+            var eventsHandledByAgent = await childAgent.GetAllSubscribedEventsAsync();
+            if (eventsHandledByAgent != null)
+            {
+                var eventsToAdd = eventsHandledByAgent.Except(totalEventList).ToList();
+                totalEventList.AddRange(eventsToAdd);
+            }
+        }
+        
+        await creatorAgent.UpdateAvailableEventsAsync(totalEventList);
     }
 }
