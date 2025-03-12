@@ -18,7 +18,7 @@ public class ParamDto
 }
 
 
-public class InitializationData
+public class Configuration
 {
     public Type DtoType { get; set; }
     public List<PropertyData> Properties { get; set; }
@@ -28,7 +28,7 @@ public class InitializationData
 public class AgentTypeData
 {
     public string? FullName { get; set; }
-    public InitializationData? InitializationData { get; set; } 
+    public Configuration? InitializationData { get; set; } 
 }
 
 public class PropertyData
