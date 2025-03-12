@@ -167,6 +167,7 @@ public static class OrleansHostExtension
                 services.Configure<AzureOpenAIEmbeddingsConfig>(context.Configuration.GetSection("AIServices:AzureOpenAIEmbeddings"));
                 services.Configure<RagConfig>(context.Configuration.GetSection("Rag"));
                 services.AddSingleton(typeof(HubLifetimeManager<>), typeof(OrleansHubLifetimeManager<>));
+                services.AddSingleton<IGAgentFactory,GAgentFactory>();
                // services.AddSingleton<IStateProjector, AevatarStateProjector>();
               //  services.AddSingleton<IStateDispatcher, StateDispatcher>();
                 services.AddSemanticKernel()
