@@ -60,7 +60,6 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
     public async Task<List<EventDescriptionDto>> GetAvailableEventsAsync(Guid agentId)
     {
         var agent = _clusterClient.GetGrain<ICreatorGAgent>(agentId);
-        await RefreshEventListAsync(agent);
         
         var agentState = await agent.GetAgentAsync();
         _logger.LogInformation("GetAvailableEventsAsync id: {id} state: {state}", agentId, JsonConvert.SerializeObject(agentState));
