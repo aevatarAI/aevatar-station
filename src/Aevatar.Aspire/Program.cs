@@ -1,11 +1,4 @@
-﻿using Aspire.Hosting;
-using Aspire.Hosting.MongoDB;
-using Aspire.Hosting.Redis;
-using Aspire.Hosting.Elasticsearch;
-using System;
-using System.IO;
-using System.Collections.Generic;
-using System.Threading;
+﻿using System.Diagnostics;
 
 // Set required environment variables before creating the builder
 Environment.SetEnvironmentVariable("DOTNET_DASHBOARD_OTLP_ENDPOINT_URL", "http://localhost:14317");
@@ -62,10 +55,9 @@ var httpApiHost = builder.AddProject("httpapi", "../Aevatar.HttpApi.Host/Aevatar
     .WithEnvironment("MongoDB__ConnectionString", "{mongodb.connectionString}")
     .WithEnvironment("Elasticsearch__Url", "http://{elasticsearch.bindings.es.host}:{elasticsearch.bindings.es.port}")
     .WithEnvironment("AuthServer__Authority", "{authserver.bindings.https.url}")
-    // Configure to launch swagger on startup
-    .WithEnvironment("ASPNETCORE_URLS", "http://localhost:7002")
-    .WithEnvironment("ASPNETCORE_LAUNCH_BROWSER", "true")
-    .WithEnvironment("ASPNETCORE_LAUNCH_URL", "swagger")
+    // Configure Swagger as default page with auto-launch
+    .WithEnvironment("SwaggerUI__RoutePrefix", "")
+    .WithEnvironment("SwaggerUI__DefaultModelsExpandDepth", "-1")
     .WithHttpEndpoint(port: 7002, name: "httpapi-http");
 
 // Add Aevatar.Developer.Host project with its dependencies
@@ -82,10 +74,9 @@ var developerHost = builder.AddProject("developerhost", "../Aevatar.Developer.Ho
     .WithEnvironment("MongoDB__ConnectionString", "{mongodb.connectionString}")
     .WithEnvironment("Elasticsearch__Url", "http://{elasticsearch.bindings.es.host}:{elasticsearch.bindings.es.port}")
     .WithEnvironment("AuthServer__Authority", "{authserver.bindings.https.url}")
-    // Configure to launch swagger on startup
-    .WithEnvironment("ASPNETCORE_URLS", "http://localhost:7003")
-    .WithEnvironment("ASPNETCORE_LAUNCH_BROWSER", "true")
-    .WithEnvironment("ASPNETCORE_LAUNCH_URL", "swagger")
+    // Configure Swagger as default page with auto-launch
+    .WithEnvironment("SwaggerUI__RoutePrefix", "")
+    .WithEnvironment("SwaggerUI__DefaultModelsExpandDepth", "-1")
     .WithHttpEndpoint(port: 7003, name: "developerhost-http");
 
 // Add Aevatar.Silo (Orleans) project with its dependencies
@@ -156,6 +147,33 @@ try
     
     // The rest of the app will auto-start based on the WaitFor dependencies
     Console.WriteLine("Starting application components...");
+    
+    // Start a timer to open Swagger UIs after services are ready
+    System.Timers.Timer launchTimer = new System.Timers.Timer(30000); // 20 seconds
+    launchTimer.Elapsed += (sender, e) => 
+    {
+        launchTimer.Stop();
+        try 
+        {
+            Console.WriteLine("Opening Swagger UIs in browser...");
+            var psi = new ProcessStartInfo
+            {
+                FileName = "open",
+                Arguments = "http://localhost:7002",
+                UseShellExecute = true
+            };
+            Process.Start(psi);
+            
+            psi.Arguments = "http://localhost:7003";
+            Process.Start(psi);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to open browser: {ex.Message}");
+        }
+    };
+    launchTimer.AutoReset = false;
+    launchTimer.Start();
     
     // Run the application
     app.Run();
