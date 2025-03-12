@@ -39,6 +39,13 @@ public class UserController :  AevatarController
         await _developerService.CreateHostAsync(clientId, "1",corsUrls);
     }
     
+    [HttpPost("grantClientPermissions")]
+    [Authorize(Policy = AevatarPermissions.AdminPolicy)]
+    public async Task GrantClientPermissionsAsync(string clientId)
+    {
+        await _userAppService.GrantClientPermissionsAsync(clientId);
+    }
+    
     [HttpPost("CreateHost")]
     [Authorize(Policy = AevatarPermissions.AdminPolicy)]
     public  async Task CreateHost(string clientId,string corsUrls)
