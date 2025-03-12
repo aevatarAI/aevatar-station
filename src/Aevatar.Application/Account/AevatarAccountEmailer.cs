@@ -80,7 +80,7 @@ public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependenc
         
         await _emailSender.SendAsync(
             user.Email,
-            _stringLocalizer["PasswordReset"],
+            "PasswordReset",
             emailContent
         );
     }
