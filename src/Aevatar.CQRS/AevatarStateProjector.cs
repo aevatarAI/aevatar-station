@@ -19,7 +19,7 @@ public class AevatarStateProjector : IStateProjector, ISingletonDependency
     private readonly IDistributedCache _distributedcache;
     private readonly Dictionary<string, SaveStateCommand> _commandCache = new(); 
     private readonly object _lock = new();
-    private readonly int _batchSize = 5;
+    private readonly int _batchSize = 1;
     private  int _writeSize = 0;
     private readonly TimeSpan _batchTimeout = TimeSpan.FromSeconds(1); 
     private DateTime _lastBatchFlushTime = DateTime.UtcNow;
