@@ -37,7 +37,8 @@ namespace Aevatar;
     typeof(AIApplicationGrainsModule),
     typeof(AevatarCQRSModule),
     typeof(AevatarWebhookDeployModule),
-    typeof(AevatarKubernetesModule)
+    typeof(AevatarKubernetesModule),
+    typeof(AbpAutoMapperModule)
 )]
 public class AevatarApplicationModule : AbpModule
 {
