@@ -1,3 +1,4 @@
+using System.Linq;
 using Aevatar.Localization;
 using Aevatar.PermissionManagement;
 using Volo.Abp.Authorization.Permissions;
@@ -53,8 +54,12 @@ public class AevatarPermissionDefinitionProvider : PermissionDefinitionProvider
         var permissionInfos = GAgentPermissionHelper.GetAllPermissionInfos();
         var group = context.AddGroup("GAgents");
         foreach (var permissionInfo in permissionInfos)
+            
         {
-            group.AddPermission(permissionInfo.Name, L(permissionInfo.Name));
+            if (context.GetPermissionOrNull(permissionInfo.Name) == null)
+            {
+                group.AddPermission(permissionInfo.Name, L(permissionInfo.Name));
+            }
         }
     }
 
