@@ -6,7 +6,6 @@ using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
 using Aevatar.CQRS.Provider;
-using Aevatar.Email;
 using Aevatar.Kubernetes;
 using Aevatar.Kubernetes.Manager;
 using Aevatar.Options;

@@ -21,6 +21,8 @@ public interface IUserAppService
     Task ResetPasswordAsync(string userName, string newPassword);
     Task RegisterClientAuthentication(string clientId, string clientSecret);
     Guid GetCurrentUserId();
+    Task  GrantClientPermissionsAsync(string clientId);
+
 }
 
 [RemoteService(IsEnabled = false)]
@@ -71,8 +73,17 @@ public class UserAppService : IdentityUserAppService, IUserAppService
                 OpenIddictConstants.Permissions.ResponseTypes.IdToken
             },
         };
+        await SetClientPermissionsAsync(clientId);
+
+        await _applicationManager.CreateAsync(openIddictApplicationDescriptor);
+      
+    }
+  
+
+    private async Task SetClientPermissionsAsync(string clientId)
+    {
         var permissions= await  _permissionManager.GetAllAsync(RolePermissionValueProvider.ProviderName, AevatarPermissions.DeveloperManager);
-        
+
         foreach (var permission in permissions)
         {
             if (permission.IsGranted)
@@ -80,9 +91,6 @@ public class UserAppService : IdentityUserAppService, IUserAppService
                 await _permissionManager.SetForClientAsync(clientId,permission.Name,true);
             }
         }
-
-        await _applicationManager.CreateAsync(openIddictApplicationDescriptor);
-      
     }
 
     public async Task ResetPasswordAsync(string userName, string newPassword)
@@ -122,5 +130,10 @@ public class UserAppService : IdentityUserAppService, IUserAppService
         
         var clientId =  CurrentUser.GetAllClaims().First(o => o.Type == "client_id").Value;
         return GuidUtil.StringToGuid(clientId);
+    }
+
+    public async Task GrantClientPermissionsAsync(string clientId)
+    {
+        await SetClientPermissionsAsync(clientId);
     }
 }
