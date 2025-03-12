@@ -3,8 +3,8 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVerion>9.0.1</OrleansVerion>
-    <AevatarVerion>1.4.9</AevatarVerion>
-    <AevatarGAgentsVerion>1.2.1</AevatarGAgentsVerion>
+    <AevatarVerion>1.4.11-permission.5</AevatarVerion>
+    <AevatarGAgentsVerion>1.3.5</AevatarGAgentsVerion>
   </PropertyGroup>
   <ItemGroup>
     <!-- AElf packages -->
@@ -19,10 +19,11 @@
     <PackageVersion Include="Aevatar.EventSourcing.Core" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.Plugins" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.EventSourcing.MongoDB" Version="$(AevatarVerion)" />
+    <PackageVersion Include="Aevatar.PermissionManagement" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="$(AevatarGAgentsVerion)" />
     <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="$(AevatarGAgentsVerion)" />
     <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="$(AevatarGAgentsVerion)" />
-    <PackageVersion Include="Aevatar.SignalR" Version="1.5.1" />
+    <PackageVersion Include="Aevatar.SignalR" Version="1.5.3" />
     <!-- AI and Analysis packages -->
     <PackageVersion Include="AutoGen" Version="0.2.1" />
     <PackageVersion Include="AutoGen.Core" Version="0.2.1" />
@@ -82,6 +83,7 @@
     <PackageVersion Include="Volo.Abp.OpenIddict.Domain.Shared" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.OpenIddict.EntityFrameworkCore" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.OpenIddict.MongoDB" Version="$(AbpVersion)" />
+    <PackageVersion Include="Volo.Abp.TenantManagement.MongoDB" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.PermissionManagement.Application" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.PermissionManagement.Application.Contracts" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.PermissionManagement.Domain.Identity" Version="$(AbpVersion)" />

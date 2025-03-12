@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Aevatar;
 using Aevatar.Core.Abstractions;
 using Aevatar.Application.Grains;
 using Aevatar.CQRS;

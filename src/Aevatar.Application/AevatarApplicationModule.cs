@@ -1,7 +1,10 @@
-﻿using Aevatar.Application.Grains;
+﻿using System;
+using System.Linq;
+using Aevatar.Application.Grains;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
+using Aevatar.CQRS.Provider;
 using Aevatar.Kubernetes;
 using Aevatar.Kubernetes.Manager;
 using Aevatar.Options;
@@ -9,6 +12,7 @@ using Aevatar.Schema;
 using Aevatar.WebHook.Deploy;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans;
+using Volo.Abp;
 using Volo.Abp.Account;
 using Volo.Abp.AspNetCore.Mvc.Dapr;
 using Volo.Abp.AutoMapper;
@@ -16,6 +20,9 @@ using Volo.Abp.Dapr;
 using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
 using Volo.Abp.PermissionManagement;
+using Volo.Abp.Users;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 
 namespace Aevatar;
 
@@ -50,6 +57,6 @@ public class AevatarApplicationModule : AbpModule
         Configure<AgentOptions>(configuration.GetSection("Agent"));
         context.Services.AddTransient<IHostDeployManager, KubernetesHostManager>();
         Configure<HostDeployOptions>(configuration.GetSection("HostDeploy"));
-       
+        context.Services.Configure<HostOptions>(configuration.GetSection("Host"));
     }
 }

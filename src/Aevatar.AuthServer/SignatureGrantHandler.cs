@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Aevatar.OpenIddict;
+using Aevatar.Permissions;
 using Aevatar.Provider;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
@@ -68,17 +69,27 @@ public class SignatureGrantHandler: ITokenExtensionGrant, ITransientDependency
         {
             user = new IdentityUser(Guid.NewGuid(), walletAddress, email: Guid.NewGuid().ToString("N") + "@ABP.IO");
             await userManager.CreateAsync(user);
+            await userManager.SetRolesAsync(user,
+            [AevatarPermissions.BasicUser]);
         }
+        var identityUser = await userManager.FindByNameAsync(walletAddress);
+        var identityRoleManager = context.HttpContext.RequestServices.GetRequiredService<IdentityRoleManager>();
+        var roleNames = new List<string>();
+        foreach (var userRole in identityUser.Roles)
+        {
+            var role = await identityRoleManager.GetByIdAsync(userRole.RoleId);
+            roleNames.Add(role.Name);
+        }
+
         
         var userClaimsPrincipalFactory = context.HttpContext.RequestServices
             .GetRequiredService<Microsoft.AspNetCore.Identity.IUserClaimsPrincipalFactory<IdentityUser>>();
         var claimsPrincipal = await userClaimsPrincipalFactory.CreateAsync(user);
-        
+        claimsPrincipal.SetClaim(OpenIddictConstants.Claims.Subject, user.Id.ToString());
+        claimsPrincipal.SetClaim(OpenIddictConstants.Claims.Role, string.Join(",",roleNames));
         claimsPrincipal.SetScopes(context.Request.GetScopes());
         claimsPrincipal.SetResources(await GetResourcesAsync(context, claimsPrincipal.GetScopes()));
         claimsPrincipal.SetAudiences("Aevatar");
-
-        
         await context.HttpContext.RequestServices.GetRequiredService<AbpOpenIddictClaimsPrincipalManager>()
             .HandleAsync(context.Request, claimsPrincipal);
 

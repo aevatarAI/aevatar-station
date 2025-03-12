@@ -14,4 +14,9 @@ public class GuidUtil
             return new Guid(hash);
         }
     }
+
+    public static string GuidToGrainKey(Guid primaryKey)
+    {
+        return primaryKey.ToString("N");
+    }
 }
