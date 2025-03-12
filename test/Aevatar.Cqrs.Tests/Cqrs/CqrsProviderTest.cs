@@ -46,7 +46,7 @@ public class CqrsProviderTest : AevatarApplicationTestBase
                 { "key3", "value3" }
             }
         };
-        await _cqrsProvider.PublishAsync(cqrsTestAgentState, GrainId.Create("test", grainId.ToString()));
+        await _cqrsProvider.PublishAsync(GrainId.Create("test", grainId.ToString()),cqrsTestAgentState );
 
         //query state index query by eventId
         var indexName = IndexPrefix + nameof(CqrsTestAgentState).ToLower() + IndexSuffix;
@@ -66,7 +66,7 @@ public class CqrsProviderTest : AevatarApplicationTestBase
         //query state index query by groupId
         var grainId2 = Guid.NewGuid();
         cqrsTestAgentState.Id = grainId2;
-        await _cqrsProvider.PublishAsync(cqrsTestAgentState, GrainId.Create("test", grainId2.ToString()));
+        await _cqrsProvider.PublishAsync(GrainId.Create("test", grainId2.ToString()),cqrsTestAgentState);
         await Task.Delay(1000);
         var result2 = await _cqrsProvider.QueryStateAsync(indexName,
             q => q.Term(t => t.Field("id").Value(grainId2)),
@@ -163,8 +163,7 @@ public class CqrsProviderTest : AevatarApplicationTestBase
 
         foreach (var item in creatorList)
         {
-            await _cqrsProvider.PublishAsync(item,
-                GrainId.Create(nameof(CreatorGAgent).ToLower(), item.Id.ToString().Replace("-", "")));
+            await _cqrsProvider.PublishAsync( GrainId.Create(nameof(CreatorGAgent).ToLower(), item.Id.ToString().Replace("-", "")),item);
         }
 
         var indexName = IndexPrefix + nameof(CreatorGAgentState).ToLower() + IndexSuffix;

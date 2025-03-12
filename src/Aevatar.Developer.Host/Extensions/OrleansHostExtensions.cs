@@ -21,6 +21,7 @@ public static class OrleansHostExtensions
         {
             var config = context.Configuration;
             var configSection = context.Configuration.GetSection("Orleans");
+            var hostId = context.Configuration.GetValue<string>("Host:HostId");
             if (configSection == null)
                 throw new ArgumentNullException(nameof(configSection), "The Orleans config node is missing");
             clientBuilder.UseMongoDBClient(configSection.GetValue<string>("MongoDBClient"))
@@ -28,6 +29,7 @@ public static class OrleansHostExtensions
                 {
                     options.DatabaseName = configSection.GetValue<string>("DataBase");
                     options.Strategy = MongoDBMembershipStrategy.SingleDocument;
+                    options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" :$"Orleans{hostId}";
                 })
                 .Configure<ClusterOptions>(options =>
                 {

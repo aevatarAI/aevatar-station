@@ -7,6 +7,7 @@ using Aevatar.EventSourcing.MongoDB.Hosting;
 using Aevatar.GAgents.AI.Options;
 using Aevatar.GAgents.SemanticKernel.Extensions;
 using Aevatar.Extensions;
+using Aevatar.PermissionManagement.Extensions;
 using Aevatar.SignalR;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
@@ -50,6 +51,7 @@ public static class OrleansHostExtension
                     {
                         options.DatabaseName = configSection.GetValue<string>("DataBase");
                         options.Strategy = MongoDBMembershipStrategy.SingleDocument;
+                        options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" :$"Orleans{hostId}";;
                     })
                     .Configure<JsonGrainStateSerializerOptions>(options => options.ConfigureJsonSerializerSettings =
                         settings =>
@@ -60,20 +62,22 @@ public static class OrleansHostExtension
                         })
                     .AddMongoDBGrainStorage("Default", (MongoDBGrainStorageOptions op) =>
                     {
-                      
-                        op.CollectionPrefix = hostId.IsNullOrEmpty() ? "GrainStorage" :$"Grain{hostId}";
+                        op.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" :$"Orleans{hostId}";
                         op.DatabaseName = configSection.GetValue<string>("DataBase");
                     })
                     .UseMongoDBReminders(options =>
                     {
                         options.DatabaseName = configSection.GetValue<string>("DataBase");
                         options.CreateShardKeyForCosmos = false;
+                        options.CollectionPrefix = hostId.IsNullOrEmpty() ? "Orleans" :$"Orleans{hostId}";;
                     })
+                    
                     .Configure<ClusterOptions>(options =>
                     {
                         options.ClusterId = clusterId;
                         options.ServiceId = serviceId;
                     })
+                    
                     .Configure<ExceptionSerializationOptions>(options =>
                     {
                         options.SupportedNamespacePrefixes.Add("Volo.Abp");
@@ -153,7 +157,9 @@ public static class OrleansHostExtension
                 {
                     siloBuilder.AddMemoryStreams("Aevatar");
                 }
+
                 siloBuilder.UseAevatar()
+                    .UseAevatarPermissionManagement()
                     .UseSignalR()
                     .RegisterHub<AevatarSignalRHub>();
                 
@@ -167,9 +173,8 @@ public static class OrleansHostExtension
                 services.AddSingleton(typeof(HubLifetimeManager<>), typeof(OrleansHubLifetimeManager<>));
                 services.AddSingleton<IStateProjector, AevatarStateProjector>();
                 services.AddSingleton<IStateDispatcher, StateDispatcher>();
+                services.AddSingleton<IGAgentFactory,GAgentFactory>();
                 services.AddSemanticKernel()
-                    .AddAzureOpenAI()
-                    .AddAzureDeepSeek()
                     .AddQdrantVectorStore()
                     .AddAzureOpenAITextEmbedding();
             })
