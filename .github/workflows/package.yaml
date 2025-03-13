@@ -99,7 +99,7 @@ jobs:
           hostType="-1"
           if [ "${{ github.event.inputs.servicename }}" = "Aevatar.Silo" ]; then
             hostType="0"
-          elif [ "${{ github.event.inputs.servicename }}" = "Aevatar.Developer.Host" ]; then
+          elif [ "${{ github.event.inputs.servicename }}" = "Aevatar.HttpApi.Host" ]; then
             hostType="1"
           fi
           echo "hostType=$hostType" >> $GITHUB_ENV
