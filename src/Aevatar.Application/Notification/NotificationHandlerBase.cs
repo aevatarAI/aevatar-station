@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace Aevatar.Notification;
 
-public abstract class NotificationHandlerBase<T> : INotificationHandler<T>
+public abstract class NotificationHandlerBase<T> : INotificationHandler<T> where T : class
 {
     public abstract NotificationTypeEnum Type { get; }
     public abstract T ConvertInput(string input);
