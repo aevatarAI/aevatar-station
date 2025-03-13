@@ -13,7 +13,7 @@ namespace Aevatar.Controllers;
 [ControllerName("Notification")]
 [Route("api/notification")]
 [Authorize]
-public class NotificationController
+public class NotificationController: AevatarController
 {
     private readonly INotificationService _notificationService;
 
@@ -31,13 +31,19 @@ public class NotificationController
     [HttpPost("/withdraw/{guid}")]
     public async Task Withdraw(Guid guid)
     {
-        await _notificationService.WithdrawAsync(guid);
+        if (await _notificationService.WithdrawAsync(guid))
+        {
+            throw new BusinessException("handle withdraw fail");
+        }
     }
 
     [HttpPost("/response")]
     public async Task Response([FromBody]NotificationResponseDto responseDto)
     {
-        await _notificationService.Response(responseDto.Id, responseDto.Status);
+        if (await _notificationService.Response(responseDto.Id, responseDto.Status))
+        {
+            throw new BusinessException("handle notification fail");
+        }
     }
     
     [HttpGet]

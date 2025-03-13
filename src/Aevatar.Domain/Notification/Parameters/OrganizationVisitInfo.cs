@@ -1,8 +1,8 @@
 using System;
 
-namespace Aevatar.Notification;
+namespace Aevatar.Notification.Parameters;
 
-public class OrganizationVisitInfoDto
+public class OrganizationVisitInfo
 {
     public Guid OrganizationId { get; set; }
     public int Role { get; set; }

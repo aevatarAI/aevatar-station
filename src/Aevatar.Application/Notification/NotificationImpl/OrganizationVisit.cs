@@ -1,23 +1,25 @@
 using System.Threading.Tasks;
+using Aevatar.Notification.Parameters;
+using Newtonsoft.Json;
 
 namespace Aevatar.Notification.NotificationImpl;
 
-public class OrganizationVisit:NotificationHandlerBase<OrganizationVisitInfoDto>
+public class OrganizationVisit : NotificationHandlerBase<OrganizationVisitInfo>
 {
     public override NotificationTypeEnum Type => NotificationTypeEnum.OrganizationInvitation;
-    
-    public override OrganizationVisitInfoDto ConvertInput(string input)
+
+    public override OrganizationVisitInfo ConvertInput(string input)
     {
-        throw new System.NotImplementedException();
+        return JsonConvert.DeserializeObject<OrganizationVisitInfo>(input);
     }
 
-    public override Task<string> GetContentForShowAsync(OrganizationVisitInfoDto input)
+    public override Task<string> GetContentForShowAsync(OrganizationVisitInfo input)
     {
-        throw new System.NotImplementedException();
+        return Task.FromResult("you notification message");
     }
 
-    public override Task HandleAgreeAsync(OrganizationVisitInfoDto input)
+    public override Task HandleAgreeAsync(OrganizationVisitInfo input)
     {
-        throw new System.NotImplementedException();
+        return Task.CompletedTask;
     }
 }

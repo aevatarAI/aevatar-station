@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Volo.Abp.DependencyInjection;
@@ -26,31 +25,31 @@ public class NotificationProcessorFactory : INotificationHandlerFactory
         _serviceProvider = serviceProvider;
         _logger = logger;
 
-        var assembly = Assembly.GetExecutingAssembly();
-        var implementations = assembly.GetTypes()
-            .Where(type => !type.IsAbstract && !type.IsInterface &&
-                           type.GetGenericTypeDefinition() == typeof(INotificationHandler<>))
-            .SelectMany(type => type.GetInterfaces()
-                .Where(i => i.IsGenericType)
-                .Select(i => new
-                {
-                    Generaric = type.GetGenericArguments()[0], Type = type
-                }))
-            .ToList();
+        var handlerTypes = Assembly.GetExecutingAssembly().GetTypes()
+            .Where(t =>
+                t.IsClass &&
+                !t.IsAbstract &&
+                t.GetInterfaces().Any(item =>
+                    item.IsGenericType && item.GetGenericTypeDefinition() == typeof(INotificationHandler<>))
+            );
 
-        foreach (var item in implementations)
+
+        foreach (var item in handlerTypes)
         {
             var instance =
-                ActivatorUtilities.GetServiceOrCreateInstance(_serviceProvider, item.Type) as INotificationHandlerType;
+                ActivatorUtilities.GetServiceOrCreateInstance(_serviceProvider, item) as INotificationHandlerType;
             if (instance == null)
             {
                 _logger.LogError(
-                    $"[NotificationProcessor] Constructor ActivatorUtilities.GetServiceOrCreateInstance error:{item.Type.FullName}");
+                    $"[NotificationProcessor] Constructor ActivatorUtilities.GetServiceOrCreateInstance error:{item.FullName}");
                 continue;
             }
 
-            _typeDic.TryAdd(instance.Type, item.Type);
-            _typeToGeneratorDic.TryAdd(item.Type, item.Generaric);
+            _typeDic.TryAdd(instance.Type, item);
+            
+            var inheritInterface  = item.GetInterfaces().First(w => w.IsGenericType && w.GetGenericTypeDefinition() == typeof(INotificationHandler<>));
+            var genericType = inheritInterface.GetGenericArguments()[0];
+            _typeToGeneratorDic.TryAdd(item, genericType);
         }
     }
 
@@ -70,7 +69,7 @@ public class NotificationProcessorFactory : INotificationHandlerFactory
         return new NotificationWrapper(handlerType, generatorType, instance,
             _serviceProvider.GetRequiredService<ILogger<NotificationWrapper>>());
     }
-    
+
     private Tuple<Type, object?> GetHandlerInstance(NotificationTypeEnum type)
     {
         if (_typeDic.TryGetValue(type, out var handlerType) == false)
@@ -83,5 +82,4 @@ public class NotificationProcessorFactory : INotificationHandlerFactory
         return new Tuple<Type, object?>(handlerType,
             ActivatorUtilities.GetServiceOrCreateInstance(_serviceProvider, handlerType));
     }
-
 }

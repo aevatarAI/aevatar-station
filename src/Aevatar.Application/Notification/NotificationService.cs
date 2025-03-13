@@ -4,6 +4,7 @@ using System.Linq;
 using System.Security.Authentication;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using Volo.Abp;
 using Volo.Abp.Identity;
 using Volo.Abp.ObjectMapping;
@@ -71,12 +72,13 @@ public class NotificationService : AevatarAppService, INotificationService
             throw new ArgumentException("Argument Error");
         }
 
-        // check target exist
-        await _userManager.GetByIdAsync(target);
+        // todo: check target exist
+        // await _userManager.GetByIdAsync(target);
+
         var notification = new NotificationInfo()
         {
             Type = notificationTypeEnum,
-            Input = parameter,
+            Input = JsonConvert.DeserializeObject<Dictionary<string, object>>(input)!,
             Content = content,
             Receiver = target,
             Status = NotificationStatusEnum.None,

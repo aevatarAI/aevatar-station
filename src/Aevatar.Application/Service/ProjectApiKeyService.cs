@@ -52,7 +52,7 @@ public class ProjectApiKeyService : ApplicationService, IProjectApiKeyService
         var randNum = random.Next(0, 1000000000);
         var apikeyStr = MD5Util.CalculateMD5($"{projectId.ToString()}-{keyName}-{randNum}");
 
-        var creator = _appService.GetCurrentUserId();
+        var creator = CurrentUser.Id;
         var apiKey = new ApiKeyInfo(Guid.NewGuid(), projectId, keyName, apikeyStr)
         {
             CreationTime = DateTime.Now,
