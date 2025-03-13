@@ -212,7 +212,7 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         app.UseSwagger();
         app.UseAbpSwaggerUI(c =>
         {
-            c.SwaggerEndpoint("/swagger/v1/swagger.json", "Aevatar API");
+            c.SwaggerEndpoint("/developer-client/swagger/v1/swagger.json", "Aevatar API");
 
             var configuration = context.ServiceProvider.GetRequiredService<IConfiguration>();
             c.OAuthClientId(configuration["AuthServer:SwaggerClientId"]);
