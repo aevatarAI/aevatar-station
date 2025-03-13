@@ -86,9 +86,9 @@ public class UserAppService : IdentityUserAppService, IUserAppService
         _logger.LogInformation("permissions count {Count} clientId {clientId}",permissions.Count,clientId);
         foreach (var permission in permissions)
         {
+            _logger.LogInformation("add permission {Permission} ,isGrant {IsGranted}",permission.Name,permission.IsGranted);
             if (permission.IsGranted)
             {
-                _logger.LogDebug("add permission {Permission}",permission.Name);
                 await _permissionManager.SetForClientAsync(clientId,permission.Name,true);
             }
         }
