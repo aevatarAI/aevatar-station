@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Aevatar.CQRS;
+namespace Aevatar.Query;
 
 public class AgentStateDto
 {

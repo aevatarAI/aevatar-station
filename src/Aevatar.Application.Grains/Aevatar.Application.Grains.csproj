@@ -8,18 +8,18 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="AutoGen.Core"/>
-        <PackageReference Include="Microsoft.Orleans.Sdk"/>
-        <PackageReference Include="AElf.OpenTelemetry"/>
-        <PackageReference Include="Volo.Abp.AutoMapper"/>
-        <PackageReference Include="Volo.Abp.EventBus.Abstractions"/>
-        <!--
-                <PackageReference Include="Aevatar.SignalR" />
-        -->
-        <PackageReference Include="Aevatar.GAgents.AIGAgent"/>
-        <PackageReference Include="Aevatar.GAgents.SemanticKernel"/>
-        <PackageReference Include="Aevatar.GAgents.Twitter"/>
+        <PackageReference Include="Aevatar.PermissionManagement" />
+        <PackageReference Include="AutoGen.Core" />
+        <PackageReference Include="Microsoft.Orleans.Sdk" />
+        <PackageReference Include="AElf.OpenTelemetry" />
+        <PackageReference Include="Volo.Abp.AutoMapper" /> 
+        <PackageReference Include="Volo.Abp.EventBus.Abstractions" />
+        <PackageReference Include="Aevatar.SignalR" />
+        <PackageReference Include="Aevatar.GAgents.AIGAgent" />
+        <PackageReference Include="Aevatar.GAgents.SemanticKernel"  />
         <PackageReference Include="Aevatar.GAgents.AI.Abstractions"/>
+        <PackageReference Include="MineAiFun.GAgents"/>
+        <PackageReference Include="Aevatar.GAgents.Twitter"/>
         <PackageReference Include="XWorkerAgent"/>
         <PackageReference Include="TelegramWorkerAgent"/>
         <PackageReference Include="Aevatar.GAgents.SocialGAgent"/>

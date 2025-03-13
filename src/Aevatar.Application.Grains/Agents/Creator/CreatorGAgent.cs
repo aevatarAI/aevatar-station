@@ -48,13 +48,13 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
         await ConfirmEvents();
     }
     
-    public async Task UpdateAgentAsync(UpdateAgentInputDto dto)
+    public async Task UpdateAgentAsync(UpdateAgentInput dto)
     {
         _logger.LogInformation("UpdateAgentAsync");
         RaiseEvent(new UpdateAgentGEvent()
         {
             Id = Guid.NewGuid(),
-            Properties = JsonConvert.SerializeObject(dto.Properties),
+            Properties = dto.Properties,
             Name = dto.Name
         });
         await ConfirmEvents();
@@ -81,24 +81,10 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
         var eventDescriptionList = new List<EventDescription>();
         foreach (var t in eventTypeList)
         {
-            PropertyInfo[] properties = t.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
-            var eventPropertyList = new List<EventProperty>();
-            foreach (PropertyInfo property in properties)
-            {
-                var eventProperty = new EventProperty()
-                {
-                    Name = property.Name,
-                    Description = property.GetCustomAttribute<DescriptionAttribute>()?.Description ?? property.Name,
-                    Type = property.PropertyType.ToString()
-                };
-                eventPropertyList.Add(eventProperty);
-            }
-            
             eventDescriptionList.Add(new EventDescription()
             {
                 EventType = t,
-                Description = t.GetCustomAttribute<DescriptionAttribute>()?.Description ?? "No description available",
-                EventProperties = eventPropertyList
+                Description = t.GetCustomAttribute<DescriptionAttribute>()?.Description ?? "No description",
             });
         }
         
@@ -156,7 +142,7 @@ public interface ICreatorGAgent : IStateGAgent<CreatorGAgentState>
 {
     Task<CreatorGAgentState> GetAgentAsync();
     Task CreateAgentAsync(AgentData agentData);
-    Task UpdateAgentAsync(UpdateAgentInputDto dto);
+    Task UpdateAgentAsync(UpdateAgentInput dto);
     Task DeleteAgentAsync();
     Task PublishEventAsync<T>(T @event) where T : EventBase;
     Task UpdateAvailableEventsAsync(List<Type>? eventTypeList);

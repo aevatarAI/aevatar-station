@@ -8,6 +8,7 @@ public class AgentTypeDto
     public string AgentType { get; set; }
     public string FullName { get; set; }
     public List<ParamDto> AgentParams { get; set; }
+    public string PropertyJsonSchema { get; set; }
 }
 
 public class ParamDto
@@ -17,7 +18,7 @@ public class ParamDto
 }
 
 
-public class InitializationData
+public class Configuration
 {
     public Type DtoType { get; set; }
     public List<PropertyData> Properties { get; set; }
@@ -27,7 +28,7 @@ public class InitializationData
 public class AgentTypeData
 {
     public string? FullName { get; set; }
-    public InitializationData? InitializationData { get; set; } 
+    public Configuration? InitializationData { get; set; } 
 }
 
 public class PropertyData

@@ -53,7 +53,8 @@ public class AevatarDeveloperHostModule : AbpModule
         context.Services.AddMvc(options =>
         {
             options.Filters.Add(new IgnoreAntiforgeryTokenAttribute());
-        });
+        })
+        .AddNewtonsoftJson();
     }
     
     private void ConfigureAuthentication(ServiceConfigurationContext context, IConfiguration configuration)
@@ -64,14 +65,7 @@ public class AevatarDeveloperHostModule : AbpModule
                 options.Authority = configuration["AuthServer:Authority"];
                 options.RequireHttpsMetadata = Convert.ToBoolean(configuration["AuthServer:RequireHttpsMetadata"]);
                 options.Audience = "Aevatar";
-                options.Events = new JwtBearerEvents
-                {
-                    OnChallenge = context =>
-                    {
-                        context.Response.StatusCode = 401;
-                        return Task.CompletedTask;
-                    }
-                };
+                options.MapInboundClaims = false;
             });
     }
     
@@ -164,7 +158,6 @@ public class AevatarDeveloperHostModule : AbpModule
         }
 
         app.UseAbpRequestLocalization();
-
         app.UseCorrelationId();
         app.UseStaticFiles();
         app.UseRouting();

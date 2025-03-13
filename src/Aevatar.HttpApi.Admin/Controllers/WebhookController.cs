@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Aevatar.Controllers;
+using Aevatar.Permissions;
 using Aevatar.Service;
 using Aevatar.Webhook;
 using Asp.Versioning;
@@ -22,7 +23,7 @@ public class WebhookController : AevatarController
     }
 
     [HttpPut]
-    [Authorize(Policy = "OnlyAdminAccess")]
+    [Authorize(Policy = AevatarPermissions.AdminPolicy)]
     [Route("code/{webhookId}/{version}")]
     [RequestSizeLimit(209715200)]
     [RequestFormLimits(MultipartBodyLengthLimit = 209715200)]
@@ -45,7 +46,7 @@ public class WebhookController : AevatarController
     
     [HttpPost]
     [Route("destroy")]
-    [Authorize(Policy = "OnlyAdminAccess")]
+    [Authorize(Policy = AevatarPermissions.AdminPolicy)]
     public async Task DestroyAppAsync(DestroyWebhookDto input)
     {
         await _webhookService.DestroyWebhookAsync(input.WebhookId, input.Version);
