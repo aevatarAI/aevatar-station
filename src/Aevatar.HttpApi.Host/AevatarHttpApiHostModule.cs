@@ -205,7 +205,7 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         app.UseRouting();
         app.UseAuthentication();
         app.UseAuthorization();
-
+        app.UsePathBase("/developer-client");
         app.UseUnitOfWork();
         app.UseDynamicClaims();
         app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
