@@ -28,7 +28,7 @@ public class QueryController : AevatarController
     }
 
     [HttpGet("logs")]
-    [Authorize(Policy = AevatarPermissions.CqrsManagement.Logs)] 
+    [Authorize] 
     public async Task<AgentEventLogsDto> GetEventLogs([FromQuery] Guid? id, string agentType, int pageIndex = 0, int pageSize = 20)
     {
         var resp = await _cqrsService.QueryGEventAsync(id, agentType, pageIndex, pageSize);
@@ -36,7 +36,7 @@ public class QueryController : AevatarController
     }
 
     [HttpGet("state")]
-    [Authorize(Policy = AevatarPermissions.CqrsManagement.States)] 
+    [Authorize] 
     public async Task<AgentStateDto> GetStates([FromQuery] string stateName, Guid id)
     {
         var resp = await _cqrsService.QueryStateAsync(stateName, id);

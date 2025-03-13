@@ -24,7 +24,7 @@ public class SubscriptionController : AevatarController
     }
 
     [HttpGet("events/{guid}")]
-    [Authorize(Policy = AevatarPermissions.EventManagement.View)] 
+    [Authorize] 
     public async Task<List<EventDescriptionDto>> GetAvailableEventsAsync(Guid guid)
     {
         _logger.LogInformation("Get Available Events, id: {id}", guid);   
@@ -32,21 +32,21 @@ public class SubscriptionController : AevatarController
     }
 
     [HttpPost]
-    [Authorize(Policy = AevatarPermissions.SubscriptionManagent.CreateSubscription)] 
+    [Authorize] 
     public async Task<SubscriptionDto> SubscribeAsync([FromBody] CreateSubscriptionDto input)
     {
         return await _subscriptionAppService.SubscribeAsync(input);
     }
 
     [HttpDelete("{subscriptionId:guid}")]
-    [Authorize(Policy = AevatarPermissions.SubscriptionManagent.CancelSubscription)] 
+    [Authorize] 
     public async Task CancelSubscriptionAsync(Guid subscriptionId)
     {
         await _subscriptionAppService.CancelSubscriptionAsync(subscriptionId);
     }
 
     [HttpGet("{subscriptionId:guid}")]
-    [Authorize(Policy = AevatarPermissions.SubscriptionManagent.ViewSubscriptionStatus)] 
+    [Authorize] 
     public async Task<SubscriptionDto> GetSubscriptionStatusAsync(Guid subscriptionId)
     {
         return await _subscriptionAppService.GetSubscriptionAsync(subscriptionId);
