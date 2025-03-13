@@ -18,7 +18,7 @@ public static class OrleansClientExtension
         return hostBuilder.UseOrleansClient((context, clientBuilder) =>
         {
             var config = context.Configuration;
-
+            var hostId = context.Configuration.GetValue<string>("Host:HostId");
             clientBuilder
                 .AddActivityPropagation()
                 .UseMongoDBClient(config["Orleans:MongoDBClient"])
@@ -26,7 +26,7 @@ public static class OrleansClientExtension
                 {
                     options.DatabaseName = config["Orleans:DataBase"];
                     options.Strategy = MongoDBMembershipStrategy.SingleDocument;
-                    options.CollectionPrefix = "OrleansAevatar";
+                    options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" :$"Orleans{hostId}";
                 })
                 .Configure<ClusterOptions>(options =>
                 {
