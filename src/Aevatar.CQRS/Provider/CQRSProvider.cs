@@ -11,6 +11,7 @@ using Nest;
 using Newtonsoft.Json;
 using Orleans.Runtime;
 using Volo.Abp.DependencyInjection;
+
 namespace Aevatar.CQRS.Provider;
 
 public class CQRSProvider : ICQRSProvider, ISingletonDependency
@@ -26,6 +27,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         _logger = logger;
         _options = hostOptions;
     }
+
     public Task PublishAsync(string grainId, StateBase state)
     {
         throw new NotImplementedException();
@@ -136,7 +138,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         var mustQuery = new List<Func<QueryContainerDescriptor<dynamic>, QueryContainer>>
         {
             q => q.Term(i =>
-                i.Field("_id").Value(primaryKey))
+                i.Field("_id").Value(primaryKey.ToString().Replace("-", "")))
         };
 
         QueryContainer Filter(QueryContainerDescriptor<dynamic> f) => f.Bool(b => b.Must(mustQuery));
@@ -244,7 +246,8 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         throw new NotImplementedException();
     }
 
-    public Task PublishAsync<TStateLogEvent>(Guid eventId, GrainId grainId, TStateLogEvent stateLogEvent) where TStateLogEvent : StateLogEventBase
+    public Task PublishAsync<TStateLogEvent>(Guid eventId, GrainId grainId, TStateLogEvent stateLogEvent)
+        where TStateLogEvent : StateLogEventBase
     {
         throw new NotImplementedException();
     }

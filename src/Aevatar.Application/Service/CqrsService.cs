@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Aevatar.CQRS;
 using Aevatar.CQRS.Dto;
 using Aevatar.CQRS.Provider;
+using Aevatar.Query;
 using Newtonsoft.Json;
 using Volo.Abp.Application.Services;
 using Volo.Abp.ObjectMapping;

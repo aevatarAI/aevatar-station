@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using Aevatar.Agents.Creator;
 using Aevatar.Application.Grains.Agents.Creator;
 using Aevatar.Application.Grains.Subscription;
 using Aevatar.Common;
@@ -12,6 +13,7 @@ using Aevatar.Subscription;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Orleans;
+using Orleans.Metadata;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Auditing;
@@ -37,31 +39,59 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
     private readonly IObjectMapper _objectMapper;
     private readonly IUserAppService _userAppService;
     private readonly IGAgentFactory _gAgentFactory;
+    private readonly GrainTypeResolver _grainTypeResolver;
     
     public SubscriptionAppService(
         IClusterClient clusterClient,
         IObjectMapper objectMapper,
         IUserAppService userAppService,
         IGAgentFactory gAgentFactory,
-        ILogger<SubscriptionAppService> logger)
+        ILogger<SubscriptionAppService> logger, 
+        GrainTypeResolver grainTypeResolver)
     {
         _clusterClient = clusterClient;
         _objectMapper = objectMapper;
         _logger = logger;
         _userAppService = userAppService;
         _gAgentFactory = gAgentFactory;
+        _grainTypeResolver = grainTypeResolver;
     }
     
     public async Task<List<EventDescriptionDto>> GetAvailableEventsAsync(Guid agentId)
     {
         var agent = _clusterClient.GetGrain<ICreatorGAgent>(agentId);
+        
         var agentState = await agent.GetAgentAsync();
         _logger.LogInformation("GetAvailableEventsAsync id: {id} state: {state}", agentId, JsonConvert.SerializeObject(agentState));
-        var dto = _objectMapper.Map<List<EventDescription>, List<EventDescriptionDto>>(agentState.EventInfoList);
-        return dto;
+        
+        var eventDescriptionList = new List<EventDescriptionDto>();
+        foreach (var evt in agentState.EventInfoList)
+        {
+            var eventType = evt.EventType;
+            PropertyInfo[] properties = eventType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
+            var eventPropertyList = new List<EventProperty>();
+            foreach (PropertyInfo property in properties)
+            {
+                var eventProperty = new EventProperty()
+                {
+                    Name = property.Name,
+                    Description = property.GetCustomAttribute<DescriptionAttribute>()?.Description ?? property.Name,
+                    Type = property.PropertyType.ToString()
+                };
+                eventPropertyList.Add(eventProperty);
+            }
+            
+            eventDescriptionList.Add(new EventDescriptionDto()
+            {
+                EventType = eventType.FullName ?? eventType.Name,
+                Description = evt.Description,
+                EventProperties = eventPropertyList
+            });
+        }
+        
+        return eventDescriptionList;
     }
     
-
     public async Task<SubscriptionDto> SubscribeAsync(CreateSubscriptionDto createSubscriptionDto)
     {
 
@@ -117,39 +147,68 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
         }*/
         
         var eventList = agentState.EventInfoList;
-
         var eventDescription = eventList.Find(i => i.EventType.FullName == dto.EventType);
+
         if (eventDescription == null)
         {
-            _logger.LogInformation("Type {type} could not be found.", dto.EventType);
-            throw new UserFriendlyException("event could not be found");
+            _logger.LogInformation("Type {type} could not be found, refresh event list", dto.EventType);
+            await RefreshEventListAsync(agent);
+            agentState = await agent.GetAgentAsync();
+            eventList = agentState.EventInfoList;
+            eventDescription = eventList.Find(i => i.EventType.FullName == dto.EventType);
+            if (eventDescription == null)
+            {
+                _logger.LogError("Type {type} could not be found.", dto.EventType);
+                throw new UserFriendlyException("event could not be found");
+            }
         }
         
-        var eventType = eventDescription.EventType;
-        object? eventInstance = Activator.CreateInstance(eventType);
+        var propertiesString = JsonConvert.SerializeObject(dto.EventProperties);
+        var eventInstance = JsonConvert.DeserializeObject(propertiesString, eventDescription.EventType) as EventBase;
+        
         if (eventInstance == null)
         {
-            _logger.LogInformation("Type {type} could not be instantiated.", dto.EventType);
+            _logger.LogError("Event {type} could not be instantiated with param {param}", dto.EventType, propertiesString);
             throw new UserFriendlyException("event could not be instantiated");
         }
         
-        foreach (var property in dto.EventProperties)
+        await agent.PublishEventAsync(eventInstance);
+        
+    }
+    
+    private async Task RefreshEventListAsync(ICreatorGAgent creatorAgent)
+    {
+        var agentState = await creatorAgent.GetAgentAsync();
+        var totalEventList = new List<Type>();
+        
+        var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
+        var eventsHandledBySelf = await agent.GetAllSubscribedEventsAsync();
+        if (eventsHandledBySelf != null)
         {
-            string propertyName = property.Key;
-            object propertyValue = property.Value;
-            
-            PropertyInfo? propInfo = eventType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
-            if (propInfo == null || !propInfo.CanWrite)
-            {
-                _logger.LogInformation("Property {propertyName} not found or cannot be written.", propertyName);
-                throw new UserFriendlyException("property could not be found or cannot be written");
-            }
-  
-            object? convertedValue = ReflectionUtil.ConvertValue(propInfo.PropertyType, propertyValue);
-            propInfo.SetValue(eventInstance, convertedValue);
+            totalEventList.AddRange(eventsHandledBySelf);
         }
         
-        await agent.PublishEventAsync((EventBase)eventInstance);
+        var children = await agent.GetChildrenAsync();
+        var creatorGAgentType = _grainTypeResolver.GetGrainType(typeof(CreatorGAgent));
+        var subscriptionGAgentType = _grainTypeResolver.GetGrainType(typeof(SubscriptionGAgent));
+        foreach (var grainId in children)
+        {
+            var grainType = grainId.Type;
+            if (grainType == creatorGAgentType || grainType == subscriptionGAgentType)
+            {
+                continue;
+            }
+
+            var childAgent = await _gAgentFactory.GetGAgentAsync(grainId);
+
+            var eventsHandledByAgent = await childAgent.GetAllSubscribedEventsAsync();
+            if (eventsHandledByAgent != null)
+            {
+                var eventsToAdd = eventsHandledByAgent.Except(totalEventList).ToList();
+                totalEventList.AddRange(eventsToAdd);
+            }
+        }
         
+        await creatorAgent.UpdateAvailableEventsAsync(totalEventList);
     }
 }
