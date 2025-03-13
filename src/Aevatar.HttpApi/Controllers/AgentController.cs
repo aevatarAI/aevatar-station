@@ -106,7 +106,7 @@ public class AgentController : AevatarController
     }
 
     [HttpPut("{guid}")]
-    [Authorize]
+    [Authorize(Policy = AevatarPermissions.Agent.Update)]
     public async Task<AgentDto> UpdateAgent(Guid guid, [FromBody] UpdateAgentInputDto updateAgentInputDto)
     {
         _logger.LogInformation("Update Agent--1: {agent}", JsonConvert.SerializeObject(updateAgentInputDto));
