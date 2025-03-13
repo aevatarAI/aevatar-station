@@ -8,6 +8,7 @@ using Orleans;
 using Orleans.Configuration;
 using Orleans.Hosting;
 using Orleans.Providers.MongoDB.Configuration;
+using Orleans.Serialization;
 
 namespace Aevatar.Extensions;
 
@@ -17,27 +18,30 @@ public static class OrleansClientExtension
     {
         return hostBuilder.UseOrleansClient((context, clientBuilder) =>
         {
-            var config = context.Configuration;
+            var configSection = context.Configuration.GetSection("Orleans");
             var hostId = context.Configuration.GetValue<string>("Host:HostId");
-            clientBuilder
-                .AddActivityPropagation()
-                .UseMongoDBClient(config["Orleans:MongoDBClient"])
+            if (configSection == null)
+                throw new ArgumentNullException(nameof(configSection), "The Orleans config node is missing");
+            clientBuilder.UseMongoDBClient(configSection.GetValue<string>("MongoDBClient"))
                 .UseMongoDBClustering(options =>
                 {
-                    options.DatabaseName = config["Orleans:DataBase"];
+                    options.DatabaseName = configSection.GetValue<string>("DataBase");
                     options.Strategy = MongoDBMembershipStrategy.SingleDocument;
                     options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" :$"Orleans{hostId}";
                 })
                 .Configure<ClusterOptions>(options =>
                 {
-                    options.ClusterId = config["Orleans:ClusterId"];
-                    options.ServiceId = config["Orleans:ServiceId"];
+                    options.ClusterId = configSection.GetValue<string>("ClusterId");
+                    options.ServiceId = configSection.GetValue<string>("ServiceId");
                 })
-                .Configure<ClientMessagingOptions>(options =>
+                .Configure<ExceptionSerializationOptions>(options =>
                 {
-                    options.ResponseTimeout = TimeSpan.FromMinutes(60);
+                    options.SupportedNamespacePrefixes.Add("Volo.Abp");
+                    options.SupportedNamespacePrefixes.Add("Newtonsoft.Json");
+                    options.SupportedNamespacePrefixes.Add("MongoDB.Driver");
                 })
-                .AddMemoryStreams("Aevatar");
+                .AddMemoryStreams("Aevatar")
+                .AddActivityPropagation();
         });
     }
 }
