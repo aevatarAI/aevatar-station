@@ -166,12 +166,41 @@ public class SignalRGAgent :
         });
     }
 
-    // [AllEventHandler]
-    // public async Task ResponseErrorToSignalRAsync(EventWrapperBase eventWrapperBase)
-    // {
-    //     Logger.LogInformation($"ResponseErrorToSignalRAsync: {eventWrapperBase}");
-    //
-    // }
+    [EventHandler]
+    public async Task HandleExceptionEventAsync(EventHandlerExceptionEvent @event)
+    {
+        Logger.LogInformation($"HandleExceptionEventAsync: {@event}");
+
+        if (State.ConnectionIdMap.TryGetValue(@event.CorrelationId!.Value, out var connectionId))
+        {
+            var response = new AevatarSignalRResponse<ResponseToPublisherEventBase>
+            {
+                IsSuccess = false,
+                ErrorType = ErrorType.EventHandler,
+                ErrorMessage = $"GrainId: {@event.GrainId}, ExceptionMessage: {@event.ExceptionMessage}",
+                ConnectionId = connectionId
+            };
+            await EnqueueMessageAsync(response);
+        }
+    }
+
+    [EventHandler]
+    public async Task GAgentBaseExceptionEventAsync(GAgentBaseExceptionEvent @event)
+    {
+        Logger.LogInformation($"GAgentBaseExceptionEventAsync: {@event}");
+
+        if (State.ConnectionIdMap.TryGetValue(@event.CorrelationId!.Value, out var connectionId))
+        {
+            var response = new AevatarSignalRResponse<ResponseToPublisherEventBase>
+            {
+                IsSuccess = false,
+                ErrorType = ErrorType.Framework,
+                ErrorMessage = $"GrainId: {@event.GrainId}, ExceptionMessage: {@event.ExceptionMessage}",
+                ConnectionId = connectionId
+            };
+            await EnqueueMessageAsync(response);
+        }
+    }
 
     protected override void GAgentTransitionState(SignalRGAgentState state,
         StateLogEventBase<SignalRStateLogEvent> @event)

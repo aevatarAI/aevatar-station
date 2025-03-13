@@ -29,7 +29,6 @@ builder.Host.UseOrleans(silo =>
             services.AddTransient<IGAgentFactory, GAgentFactory>();
         })
         .ConfigureLogging(logging => { logging.SetMinimumLevel(LogLevel.Information).AddConsole(); })
-        .UseAevatarPermissionManagement()
         .UseAevatar()
         .UseSignalR()
         .RegisterHub<AevatarSignalRHub>();

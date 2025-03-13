@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVerion>9.0.1</OrleansVerion>
-    <AevatarVersion>1.4.11-alpha.2</AevatarVersion>
+    <AevatarVersion>1.4.12-optimize.5</AevatarVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Aevatar packages -->
@@ -12,13 +12,13 @@
     <PackageVersion Include="Aevatar.Core.Abstractions" Version="$(AevatarVersion)" />
     <PackageVersion Include="Aevatar.EventSourcing.Core" Version="$(AevatarVersion)" />
     <PackageVersion Include="Aevatar.EventSourcing.MongoDB" Version="$(AevatarVersion)" />
+    <PackageVersion Include="Aevatar.PermissionManagement" Version="$(AevatarVersion)" />
     <!-- AElf packages -->
     <PackageVersion Include="AElf.Client" Version="1.1.0" />
     <PackageVersion Include="AElf.ExceptionHandler.ABP" Version="8.2.8" />
     <PackageVersion Include="AElf.Sdk.CSharp" Version="1.5.0" />
     <PackageVersion Include="AElf.Types" Version="1.5.0" />
     <PackageVersion Include="AElf.OpenTelemetry" Version="8.2.0" />
-    <PackageVersion Include="Aevatar.PermissionManagement" Version="1.4.11-permission.4" />
     <!-- AI and Analysis packages -->
     <PackageVersion Include="AutoGen" Version="0.2.1" />
     <PackageVersion Include="AutoGen.Core" Version="0.2.1" />
