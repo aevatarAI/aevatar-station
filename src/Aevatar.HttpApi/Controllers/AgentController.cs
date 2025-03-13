@@ -30,7 +30,8 @@ public class AgentController : AevatarController
     }
 
     [HttpGet("agent-logs")]
-    [Authorize(Policy = AevatarPermissions.Agent.ViewLogs)] 
+    // [Authorize(Policy = AevatarPermissions.Agent.ViewLogs)]
+    [Authorize]
     public async Task<Tuple<long, List<AgentGEventIndex>>> GetAgentLogs(string agentId, int pageIndex, int pageSize)
     {
         _logger.LogInformation("Get Agent logs : {agentId} {pageIndex} {pageSize}", agentId, pageIndex, pageSize);
@@ -39,21 +40,24 @@ public class AgentController : AevatarController
     }
 
     [HttpGet("agent-type-info-list")]
-    [Authorize(Policy = AevatarPermissions.Agent.ViewAllType)]
+    // [Authorize(Policy = AevatarPermissions.Agent.ViewAllType)]
+    [Authorize]
     public async Task<List<AgentTypeDto>> GetAllAgent()
     {
         return await _agentService.GetAllAgents();
     }
 
     [HttpGet("agent-list")]
-    [Authorize(Policy = AevatarPermissions.Agent.ViewList)]
+    // [Authorize(Policy = AevatarPermissions.Agent.ViewList)]
+    [Authorize]
     public async Task<List<AgentInstanceDto>> GetAllAgentInstance(int pageIndex = 0, int pageSize = 20)
     {
         return await _agentService.GetAllAgentInstances(pageIndex, pageSize);
     }
 
     [HttpPost]
-    [Authorize(Policy = AevatarPermissions.Agent.Create)]
+    // [Authorize(Policy = AevatarPermissions.Agent.Create)]
+    [Authorize]
     public async Task<AgentDto> CreateAgent([FromBody] CreateAgentInputDto createAgentInputDto)
     {
         _logger.LogInformation("Create Agent: {agent}", JsonConvert.SerializeObject(createAgentInputDto));
@@ -62,7 +66,8 @@ public class AgentController : AevatarController
     }
 
     [HttpGet("{guid}")]
-    [Authorize(Policy = AevatarPermissions.Agent.View)]
+    // [Authorize(Policy = AevatarPermissions.Agent.View)]
+    [Authorize]
     public async Task<AgentDto> GetAgent(Guid guid)
     {
         _logger.LogInformation("Get Agent: {guid}", guid);
@@ -71,7 +76,8 @@ public class AgentController : AevatarController
     }
 
     [HttpGet("{guid}/relationship")]
-    [Authorize(Policy = AevatarPermissions.Relationship.ViewRelationship)]
+    // [Authorize(Policy = AevatarPermissions.Relationship.ViewRelationship)]
+    [Authorize]
     public async Task<AgentRelationshipDto> GetAgentRelationship(Guid guid)
     {
         _logger.LogInformation("Get Agent Relationship");
@@ -80,7 +86,8 @@ public class AgentController : AevatarController
     }
 
     [HttpPost("{guid}/add-subagent")]
-    [Authorize(Policy = AevatarPermissions.Relationship.AddSubAgent)]
+    // [Authorize(Policy = AevatarPermissions.Relationship.AddSubAgent)]
+    [Authorize]
     public async Task<SubAgentDto> AddSubAgent(Guid guid, [FromBody] AddSubAgentDto addSubAgentDto)
     {
         _logger.LogInformation("Add sub Agent: {agent}", JsonConvert.SerializeObject(addSubAgentDto));
@@ -89,7 +96,8 @@ public class AgentController : AevatarController
     }
 
     [HttpPost("{guid}/remove-subagent")]
-    [Authorize(Policy = AevatarPermissions.Relationship.RemoveSubAgent)]
+    // [Authorize(Policy = AevatarPermissions.Relationship.RemoveSubAgent)]
+    [Authorize]
     public async Task<SubAgentDto> RemoveSubAgent(Guid guid, [FromBody] RemoveSubAgentDto removeSubAgentDto)
     {
         _logger.LogInformation("remove sub Agent: {agent}", JsonConvert.SerializeObject(removeSubAgentDto));
@@ -98,7 +106,8 @@ public class AgentController : AevatarController
     }
 
     [HttpPost("{guid}/remove-all-subagent")]
-    [Authorize(Policy = AevatarPermissions.Relationship.RemoveAllSubAgents)]
+    // [Authorize(Policy = AevatarPermissions.Relationship.RemoveAllSubAgents)]
+    [Authorize]
     public async Task RemoveAllSubAgent(Guid guid)
     {
         _logger.LogInformation("remove sub Agent: {guid}", guid);
@@ -106,7 +115,8 @@ public class AgentController : AevatarController
     }
 
     [HttpPut("{guid}")]
-    [Authorize(Policy = AevatarPermissions.Agent.Update)]
+    // [Authorize(Policy = AevatarPermissions.Agent.Update)]
+    [Authorize]
     public async Task<AgentDto> UpdateAgent(Guid guid, [FromBody] UpdateAgentInputDto updateAgentInputDto)
     {
         _logger.LogInformation("Update Agent--1: {agent}", JsonConvert.SerializeObject(updateAgentInputDto));
@@ -115,7 +125,8 @@ public class AgentController : AevatarController
     }
 
     [HttpDelete("{guid}")]
-    [Authorize(Policy = AevatarPermissions.Agent.Delete)]
+    // [Authorize(Policy = AevatarPermissions.Agent.Delete)]
+    [Authorize]
     public async Task DeleteAgent(Guid guid)
     {
         _logger.LogInformation("Delete Agent: {guid}", guid);
@@ -123,7 +134,8 @@ public class AgentController : AevatarController
     }
 
     [HttpPost("publishEvent")]
-    [Authorize(Policy = AevatarPermissions.EventManagement.Publish)]
+    // [Authorize(Policy = AevatarPermissions.EventManagement.Publish)]
+    [Authorize]
     public async Task PublishAsync([FromBody] PublishEventDto input)
     {
         await _subscriptionAppService.PublishEventAsync(input);
