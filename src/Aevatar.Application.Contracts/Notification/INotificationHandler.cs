@@ -9,7 +9,7 @@ public interface INotificationHandlerType
     NotificationTypeEnum Type { get; }
 }
 
-public interface INotificationHandler<T> : INotificationHandlerType
+public interface INotificationHandler<T> : INotificationHandlerType where T : class
 {
     T ConvertInput(string input);
     Task<string> GetContentForShowAsync(T input);
