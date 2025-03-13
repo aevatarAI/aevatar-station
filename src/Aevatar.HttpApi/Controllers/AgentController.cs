@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Volo.Abp.PermissionManagement;
 
 [Route("api/agent")]
 public class AgentController : AevatarController
@@ -18,15 +19,18 @@ public class AgentController : AevatarController
     private readonly ILogger<AgentController> _logger;
     private readonly IAgentService _agentService;
     private readonly SubscriptionAppService _subscriptionAppService;
+    private readonly IPermissionManager _permissionManager;
 
     public AgentController(
         ILogger<AgentController> logger,
         SubscriptionAppService subscriptionAppService,
-        IAgentService agentService)
+        IAgentService agentService,
+        IPermissionManager permissionManager)
     {
         _logger = logger;
         _agentService = agentService;
         _subscriptionAppService = subscriptionAppService;
+        _permissionManager = permissionManager;
     }
 
     [HttpGet("agent-logs")]
@@ -39,9 +43,11 @@ public class AgentController : AevatarController
     }
 
     [HttpGet("agent-type-info-list")]
-    [Authorize(Policy = AevatarPermissions.Agent.ViewAllType)]
+    [Authorize]
     public async Task<List<AgentTypeDto>> GetAllAgent()
     {
+        var permission = await _permissionManager.GetForClientAsync("Test","AgentManagement.ViewAllType");
+        _logger.LogInformation("permission " + permission.IsGranted);
         return await _agentService.GetAllAgents();
     }
 
