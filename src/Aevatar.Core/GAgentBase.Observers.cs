@@ -169,13 +169,13 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
             case { } ev when parameterType.BaseType == typeof(EventBase):
                 await HandleEvent(method, ev);
                 break;
+            
+            case not null when parameterType == typeof(EventWrapperBase):
+                await HandleEventWrapperBase(method, eventWrapper);
+                break;
 
             case { } ev when isResponseHandler:
                 await HandleEventWithResponse(method, ev, eventWrapper.EventId);
-                break;
-
-            case not null when parameterType == typeof(EventWrapperBase):
-                await HandleEventWrapperBase(method, eventWrapper);
                 break;
 
             default:
@@ -190,7 +190,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
     {
         try
         {
-            method.Invoke(this, new object[] { ev! });
+            method.Invoke(this, [ev]);
         }
         catch (TargetInvocationException ex)
         {
@@ -224,12 +224,12 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
         try
         {
             dynamic result = method.Invoke(this, [ev])!;
-            if (result is not Task<EventBase> taskResult)
+            if (result is not Task<EventBase> && !typeof(EventBase).IsAssignableFrom(result.GetType().GetGenericArguments()[0]))
             {
-                throw new InvalidOperationException("Response handler must return Task<EventBase>");
+                throw new InvalidOperationException("Response handler must return Task<EventBase or its derived type>");
             }
 
-            var eventResult = await taskResult.ConfigureAwait(false);
+            var eventResult = await result;
             await PublishResponse(eventResult, eventId);
         }
         catch (TargetInvocationException ex)
