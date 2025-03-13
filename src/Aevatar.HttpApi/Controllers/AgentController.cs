@@ -19,18 +19,15 @@ public class AgentController : AevatarController
     private readonly ILogger<AgentController> _logger;
     private readonly IAgentService _agentService;
     private readonly SubscriptionAppService _subscriptionAppService;
-    private readonly IPermissionManager _permissionManager;
 
     public AgentController(
         ILogger<AgentController> logger,
         SubscriptionAppService subscriptionAppService,
-        IAgentService agentService,
-        IPermissionManager permissionManager)
+        IAgentService agentService)
     {
         _logger = logger;
         _agentService = agentService;
         _subscriptionAppService = subscriptionAppService;
-        _permissionManager = permissionManager;
     }
 
     [HttpGet("agent-logs")]
@@ -43,11 +40,9 @@ public class AgentController : AevatarController
     }
 
     [HttpGet("agent-type-info-list")]
-    [Authorize]
+    [Authorize(Policy = AevatarPermissions.Agent.ViewAllType)]
     public async Task<List<AgentTypeDto>> GetAllAgent()
     {
-        var permission = await _permissionManager.GetForClientAsync("Test","AgentManagement.ViewAllType");
-        _logger.LogInformation("permission " + permission.IsGranted);
         return await _agentService.GetAllAgents();
     }
 
