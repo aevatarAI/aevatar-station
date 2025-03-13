@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Aevatar.Core.Abstractions;
+using Aevatar.Core.Abstractions.Projections;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -248,7 +249,7 @@ public abstract partial class
         var initTasks = new[]
         {
             InitializeOrResumeEventBaseStreamAsync(),
-            InitializeOrResumeStateProjectionStreamAsync()
+            ActivateProjectionGrainAsync()
         };
         await Task.WhenAll(initTasks);
     }
@@ -260,12 +261,10 @@ public abstract partial class
         await ResumeOrSubscribeAsync(streamOfThisGAgent, asyncObserver);
     }
 
-    private async Task InitializeOrResumeStateProjectionStreamAsync()
+    private async Task ActivateProjectionGrainAsync()
     {
-        var projectionStream = GetStateProjectionStream();
-        var projectors = ServiceProvider.GetRequiredService<IEnumerable<IStateProjector>>();
-        var asyncObserver = new StateProjectionAsyncObserver(projectors);
-        await ResumeOrSubscribeAsync(projectionStream, asyncObserver);
+        var projectionGrain = GrainFactory.GetGrain<IProjectionGrain<TState>>(Guid.Empty);
+        await projectionGrain.ActivateAsync();
     }
 
     private async Task ResumeOrSubscribeAsync<T>(IAsyncStream<T> stream, IAsyncObserver<T> observer)
