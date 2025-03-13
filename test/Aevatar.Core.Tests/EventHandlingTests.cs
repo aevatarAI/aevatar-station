@@ -182,4 +182,26 @@ public class EventHandlingTests : GAgentTestKitBase
         state.SubscriptionInfo[typeof(EventHandlerWithResponseTestGAgent)].Count.ShouldBe(1);
         state.SubscriptionInfo[typeof(SubscribeTestGAgent)].Count.ShouldBe(1);
     }
+
+    [Fact(DisplayName = "Exception from event handlers can be handled.")]
+    public async Task ExceptionHandlingTest()
+    {
+        // Arrange.
+        var eventHandlerTestGAgent = await Silo.CreateGrainAsync<EventHandlerTestGAgent>(Guid.NewGuid());
+        var testGAgent = await Silo.CreateGrainAsync<ExceptionHandlingTestGAgent>(Guid.NewGuid());
+        var groupGAgent = await CreateGroupGAgentAsync(eventHandlerTestGAgent, testGAgent);
+        var publishingGAgent = await CreatePublishingGAgentAsync(groupGAgent);
+
+        AddProbesByGrainId(eventHandlerTestGAgent, testGAgent, groupGAgent, publishingGAgent);
+
+        // Act.
+        await publishingGAgent.PublishEventAsync(new NaiveTestEvent
+        {
+            Greeting = "Hello world"
+        });
+
+        // Assert.
+        var state = await testGAgent.GetStateAsync();
+        state.ErrorMessages.Count.ShouldBe(1);
+    }
 }

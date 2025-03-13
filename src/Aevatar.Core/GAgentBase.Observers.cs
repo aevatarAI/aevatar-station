@@ -117,7 +117,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
                         isResponseHandler
                     );
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is EventHandlingException)
                 {
                     Logger.LogError(ex,
                         "Event handling failed | Method:{Method} | EventId:{EventId}",
@@ -130,20 +130,24 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
                         HandleEventType = parameterType,
                         ExceptionMessage = ex.Message
                     });
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex,
+                        "Framework error occured | Method:{Method} | EventId:{EventId}",
+                        method.Name,
+                        eventWrapper.EventId);
 
-                    throw new EventHandlingException(
-                        $"Error processing {eventWrapper.Event.GetType().Name} with {method.Name}",
-                        ex);
+                    await PublishAsync(new GAgentBaseExceptionEvent
+                    {
+                        GrainId = this.GetGrainId(),
+                        ExceptionMessage = ex.Message
+                    });
                 }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 Logger.LogCritical(ex, "Unhandled event processing error");
-                await PublishAsync(new GAgentBaseExceptionEvent
-                {
-                    GrainId = this.GetGrainId(),
-                    ExceptionMessage = ex.Message
-                });
                 throw;
             }
         })
@@ -194,7 +198,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
         }
         catch (TargetInvocationException ex)
         {
-            throw new EventHandlingException(method.Name, ex.InnerException ?? ex);
+            throw new EventHandlingException(ex.InnerException?.ToString() ?? ex.ToString(), ex.InnerException ?? ex);
         }
         catch (ArgumentException ex)
         {
@@ -213,6 +217,10 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
         {
             Logger.LogError(ex, "Invalid return type from {Method}", method.Name);
             throw new InvalidOperationException("Handler returned non-task result", ex);
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw new EventHandlingException(ex.InnerException?.ToString() ?? ex.ToString(), ex.InnerException ?? ex);
         }
     }
 
@@ -234,7 +242,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
         }
         catch (TargetInvocationException ex)
         {
-            throw new EventHandlingException(method.Name, ex.InnerException ?? ex);
+            throw new EventHandlingException(ex.InnerException?.ToString() ?? ex.ToString(), ex.InnerException ?? ex);
         }
     }
 
