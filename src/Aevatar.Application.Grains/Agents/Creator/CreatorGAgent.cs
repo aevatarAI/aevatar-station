@@ -123,6 +123,8 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
     
     protected override void GAgentTransitionState(CreatorGAgentState state, StateLogEventBase<CreatorAgentGEvent> @event)
     {
+        _logger.LogInformation("GAgentTransitionState state {state} event {event}", 
+            JsonConvert.SerializeObject(State), JsonConvert.SerializeObject(@event));
         switch (@event)
         {
             case CreateAgentGEvent createAgentGEvent:
