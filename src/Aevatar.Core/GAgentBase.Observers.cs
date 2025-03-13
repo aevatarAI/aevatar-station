@@ -128,7 +128,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
                     {
                         GrainId = this.GetGrainId(),
                         HandleEventType = parameterType,
-                        ExceptionMessage = ex.Message
+                        ExceptionMessage = ex.ToString()
                     });
                 }
                 catch (Exception ex)
@@ -141,7 +141,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
                     await PublishAsync(new GAgentBaseExceptionEvent
                     {
                         GrainId = this.GetGrainId(),
-                        ExceptionMessage = ex.Message
+                        ExceptionMessage = ex.ToString()
                     });
                 }
             }
@@ -194,16 +194,17 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
     {
         try
         {
-            method.Invoke(this, [ev]);
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw new EventHandlingException(ex.InnerException?.ToString() ?? ex.ToString(), ex.InnerException ?? ex);
+            await (Task)method.Invoke(this, [ev])!;
         }
         catch (ArgumentException ex)
         {
             Logger.LogError(ex, "Parameter mismatch in {Method}", method.Name);
             throw;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while invoking {Method}", method.Name);
+            throw new EventHandlingException(ex.InnerException?.ToString() ?? ex.ToString(), ex.InnerException ?? ex);
         }
     }
 
@@ -218,8 +219,9 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
             Logger.LogError(ex, "Invalid return type from {Method}", method.Name);
             throw new InvalidOperationException("Handler returned non-task result", ex);
         }
-        catch (TargetInvocationException ex)
+        catch (Exception ex)
         {
+            Logger.LogError(ex, "Error while invoking {Method}", method.Name);
             throw new EventHandlingException(ex.InnerException?.ToString() ?? ex.ToString(), ex.InnerException ?? ex);
         }
     }
@@ -240,8 +242,9 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
             var eventResult = await result;
             await PublishResponse(eventResult, eventId);
         }
-        catch (TargetInvocationException ex)
+        catch (Exception ex)
         {
+            Logger.LogError(ex, "Error while invoking {Method}", method.Name);
             throw new EventHandlingException(ex.InnerException?.ToString() ?? ex.ToString(), ex.InnerException ?? ex);
         }
     }
