@@ -183,5 +183,6 @@
     <PackageVersion Include="MineAiFun.GAgents" Version="1.1.13" />
     <PackageVersion Include="XWorkerAgent" Version="0.0.28" />
     <PackageVersion Include="TelegramWorkerAgent" Version="0.0.14" />
+    <PackageVersion Include="AevatarTemplate.TelegramGAgents.IntelligentSorting.IntelligentSortingGAgent" Version="0.0.14" />
   </ItemGroup>
 </Project>
