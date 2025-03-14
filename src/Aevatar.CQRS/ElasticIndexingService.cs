@@ -38,18 +38,47 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
     }
 
     public void CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase
+{
+    var indexName = _cqrsProvider.GetIndexName(stateBase.GetType().Name.ToLower());
+    var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
+    if (indexExistsResponse.Exists)
     {
-        var indexName = _cqrsProvider.GetIndexName(stateBase.GetType().Name.ToLower());
-        var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
-        if (indexExistsResponse.Exists)
-        {
-            return;
-        }
-
-        var createIndexResponse = _elasticClient.Indices.Create(indexName, c => c
-            .Map<T>(m => m
-                .Dynamic(false)
-                .Properties(props =>
+        return;
+    }
+    var createIndexResponse = _elasticClient.Indices.Create(indexName, c => c
+        .Map<T>(m => m
+            .Dynamic(DynamicMapping.Strict) 
+            
+            .DynamicTemplates(dt => dt
+                .DynamicTemplate("numbers_as_integer", t => t
+                    .MatchMappingType("long")
+                    .Mapping(f => 
+                    {
+                        return new NumberProperty (NumberType.Long);
+                    })
+                )
+                .DynamicTemplate("strings_as_text", t => t
+                    .MatchMappingType("string")
+                    .Mapping(_ => new TextProperty { 
+                        Fields = new Properties { { "keyword", new KeywordProperty() } } 
+                    })
+                ).DynamicTemplate("numbers_as_float", t => t
+                        .MatchMappingType("double")
+                        .Mapping(f => 
+                        {
+                            return new NumberProperty(NumberType.Float);
+                        })
+                    )
+                .DynamicTemplate("objects_as_nested", t => t
+                    .MatchMappingType("object")
+                    .Mapping(f => new ObjectProperty { Dynamic = true })
+                ).
+              DynamicTemplate("nested_objects_array", t => t
+            .PathMatch("*") 
+            .MatchMappingType("object") 
+            .Mapping(f => new NestedProperty())
+        )
+            ).Properties(props =>
                 {
                     var type = stateBase.GetType();
                     foreach (var property in type.GetProperties())
@@ -59,13 +88,6 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
                         {
                             props.Keyword(k => k
                                 .Name(propertyName)
-                            );
-                        }
-                        else if (property.PropertyType == typeof(int) || property.PropertyType == typeof(long))
-                        {
-                            props.Number(n => n
-                                .Name(propertyName)
-                                .Type(NumberType.Long)
                             );
                         }
                         else if (property.PropertyType == typeof(DateTime))
@@ -93,26 +115,26 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
                             );
                         }
                     }
-
                     props.Date(d => d
                         .Name(CTime)
                     );
                     return props;
                 })
-            )
-        );
-        if (!createIndexResponse.IsValid)
-        {
-            _logger.LogError("Error creating state index. indexName:{indexName},error:{error},DebugInfo:{DebugInfo}",
-                indexName,
-                createIndexResponse.ServerError?.Error,
-                JsonConvert.SerializeObject(createIndexResponse.DebugInformation));
-        }
-        else
-        {
-            _logger.LogInformation("Successfully created state index . indexName:{indexName}", indexName);
-        }
+        )
+    );
+
+    if (!createIndexResponse.IsValid)
+    {
+        _logger.LogError("Error creating state index. indexName:{indexName},error:{error},DebugInfo:{DebugInfo}",
+            indexName,
+            createIndexResponse.ServerError?.Error,
+            JsonConvert.SerializeObject(createIndexResponse.DebugInformation));
     }
+    else
+    {
+        _logger.LogInformation("Successfully created state index. indexName:{indexName}", indexName);
+    }
+}
 
     public async Task SaveOrUpdateStateIndexAsync<T>(string id, T stateBase) where T : StateBase
     {
@@ -124,7 +146,7 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
         {
             var value = property.GetValue(stateBase);
             var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
-            if (value is IList or IDictionary or GrainId)
+            if (value is IDictionary or GrainId)
             {
                 document[propertyName] = JsonConvert.SerializeObject(value);
             }
@@ -241,12 +263,6 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
                         else if (property.PropertyType == typeof(bool))
                         {
                             props.Boolean(b => b
-                                .Name(propertyName)
-                            );
-                        }
-                        else
-                        {
-                            props.Text(o => o
                                 .Name(propertyName)
                             );
                         }
