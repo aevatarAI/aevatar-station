@@ -35,16 +35,13 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
                 }
             }
 
-            foreach (var observer in observers.Take(count))
+            try
             {
-                try
-                {
-                    _observers.Add(observer);
-                }
-                catch (ArgumentNullException ex)
-                {
-                    Logger.LogWarning(ex, "Attempted to add null observer for {Type}", type.Name);
-                }
+                _observers.AddRange(observers.Take(count));
+            }
+            catch (ArgumentNullException ex)
+            {
+                Logger.LogWarning(ex, "Attempted to add null observer for {Type}", type.Name);
             }
         }
         finally
@@ -92,63 +89,73 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
     {
         return new EventWrapperBaseAsyncObserver(async item =>
         {
-            try
+            using (Logger.BeginScope(new Dictionary<string, object>
+                   {
+                       ["GrainId"] = this.GetGrainId(),
+                       ["EventWrapperBase"] = item
+                   }))
             {
-                var eventId = (Guid)item.GetType().GetProperty(nameof(EventWrapper<TEvent>.EventId))
-                    ?.GetValue(item)!;
-                var eventType = (TEvent)item.GetType().GetProperty(nameof(EventWrapper<TEvent>.Event))
-                    ?.GetValue(item)!;
-                var grainId = (GrainId)item.GetType().GetProperty(nameof(EventWrapper<TEvent>.GrainId))
-                    ?.GetValue(item)!;
-
-                var eventWrapper = new EventWrapper<TEvent>(eventType, eventId, grainId);
-
-                if (ShouldSkipEvent(eventWrapper, method))
-                    return;
-
-                _correlationId = eventWrapper.Event.CorrelationId;
-
                 try
                 {
-                    await HandleEventWrapper(
-                        method,
-                        parameterType,
-                        eventWrapper,
-                        isResponseHandler
-                    );
-                }
-                catch (Exception ex) when (ex is EventHandlingException)
-                {
-                    Logger.LogError(ex,
-                        "Event handling failed | Method:{Method} | EventId:{EventId}",
-                        method.Name,
-                        eventWrapper.EventId);
+                    var eventId = (Guid)item.GetType().GetProperty(nameof(EventWrapper<TEvent>.EventId))
+                        ?.GetValue(item)!;
+                    var eventType = (TEvent)item.GetType().GetProperty(nameof(EventWrapper<TEvent>.Event))
+                        ?.GetValue(item)!;
+                    var grainId = (GrainId)item.GetType().GetProperty(nameof(EventWrapper<TEvent>.GrainId))
+                        ?.GetValue(item)!;
 
-                    await PublishAsync(new EventHandlerExceptionEvent
-                    {
-                        GrainId = this.GetGrainId(),
-                        HandleEventType = parameterType,
-                        ExceptionMessage = ex.ToString()
-                    });
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex,
-                        "Framework error occured | Method:{Method} | EventId:{EventId}",
-                        method.Name,
-                        eventWrapper.EventId);
+                    var eventWrapper = new EventWrapper<TEvent>(eventType, eventId, grainId);
 
-                    await PublishAsync(new GAgentBaseExceptionEvent
+                    Logger.LogInformation("Handling event {EventWrapper} in method {MethodName}", eventWrapper,
+                        method.Name);
+
+                    if (ShouldSkipEvent(eventWrapper, method))
+                        return;
+
+                    _correlationId = eventWrapper.Event.CorrelationId;
+
+                    try
                     {
-                        GrainId = this.GetGrainId(),
-                        ExceptionMessage = ex.ToString()
-                    });
+                        await HandleEventWrapper(
+                            method,
+                            parameterType,
+                            eventWrapper,
+                            isResponseHandler
+                        );
+                    }
+                    catch (Exception ex) when (ex is EventHandlingException)
+                    {
+                        Logger.LogError(ex,
+                            "Event handling failed | Method:{Method} | EventId:{EventId}",
+                            method.Name,
+                            eventWrapper.EventId);
+
+                        await PublishAsync(new EventHandlerExceptionEvent
+                        {
+                            GrainId = this.GetGrainId(),
+                            HandleEventType = parameterType,
+                            ExceptionMessage = ex.ToString()
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex,
+                            "Framework error occured | Method:{Method} | EventId:{EventId}",
+                            method.Name,
+                            eventWrapper.EventId);
+
+                        await PublishAsync(new GAgentBaseExceptionEvent
+                        {
+                            GrainId = this.GetGrainId(),
+                            ExceptionMessage = ex.ToString()
+                        });
+                    }
                 }
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                Logger.LogCritical(ex, "Unhandled event processing error");
-                throw;
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    Logger.LogCritical(ex, "Unhandled event processing error");
+                    throw;
+                }
             }
         })
         {
