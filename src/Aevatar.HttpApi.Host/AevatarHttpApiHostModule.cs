@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using AElf.OpenTelemetry;
 using AutoResponseWrapper;
 using Microsoft.AspNetCore.Builder;
@@ -12,7 +11,6 @@ using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite.Bundling;
 using Microsoft.OpenApi.Models;
 using Aevatar.Application.Grains;
 using Aevatar.Domain.Grains;
-using Aevatar.Hubs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
@@ -201,11 +199,6 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
             app.UseErrorPage();
         }
 
-        app.UseEndpoints(endpoints =>
-        {
-            endpoints.MapHub<StationSignalRHub>("/notification");
-        });
-        
         app.UseCorrelationId();
         app.UseStaticFiles();
         app.UseRouting();

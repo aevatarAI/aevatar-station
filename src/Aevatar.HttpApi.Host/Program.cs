@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Aevatar.Extensions;
 using Aevatar.Handler;
+using Aevatar.Hubs;
 using Aevatar.SignalR;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -38,6 +39,7 @@ public class Program
             var app = builder.Build();
             await app.InitializeApplicationAsync();
             app.MapHub<AevatarSignalRHub>("api/agent/aevatarHub");
+            app.MapHub<StationSignalRHub>("api/notification");
             await app.RunAsync();
             return 0;
         }
