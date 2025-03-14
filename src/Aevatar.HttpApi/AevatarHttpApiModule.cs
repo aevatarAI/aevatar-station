@@ -8,6 +8,7 @@ using Volo.Abp.Identity;
 using Volo.Abp.Localization;
 using Volo.Abp.Modularity;
 using Volo.Abp.PermissionManagement.HttpApi;
+using Volo.Abp.AspNetCore.SignalR;
 
 namespace Aevatar;
 
