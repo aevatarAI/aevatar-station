@@ -225,6 +225,20 @@ public class ElasticIndexingService : ApplicationService, IIndexingService
                                 .Type(NumberType.Long)
                             );
                         }
+                        else if (property.PropertyType == typeof(float))
+                        {
+                            props.Number(n => n
+                                .Name(propertyName)
+                                .Type(NumberType.Float)
+                            );
+                        }
+                        else if (property.PropertyType == typeof(double) || property.PropertyType == typeof(decimal))
+                        {
+                            props.Number(n => n
+                                .Name(propertyName)
+                                .Type(NumberType.Double)
+                            );
+                        }
                         else if (property.PropertyType == typeof(DateTime))
                         {
                             props.Date(d => d
