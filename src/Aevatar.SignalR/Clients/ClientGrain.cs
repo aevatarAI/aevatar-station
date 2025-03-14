@@ -98,7 +98,7 @@ internal sealed class ClientGrain : IGrainBase, IClientGrain
             // Routes the message to the silo (server) where the client is actually connected.
             var stream = _streamProvider.GetServerStream(ServerId);
 
-            var notification = new ClientNotification(SignalROrleansConstants.MethodName, message.Arguments!.ToStrings());
+            var notification = new ClientNotification(SignalROrleansConstants.ResponseMethodName, message.Arguments!.ToStrings());
             await stream.OnNextAsync(new ClientMessage(_hubName, _connectionId, notification));
 
             Interlocked.Exchange(ref _failAttempts, 0);

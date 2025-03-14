@@ -3,7 +3,6 @@ using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.SignalR.Core;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Aevatar.SignalR.GAgents;
 
@@ -30,7 +29,7 @@ public class SignalRGAgent :
 {
     private readonly HubContext<AevatarSignalRHub> _hubContext;
 
-    private Channel<object> _signalRMessageChannel;
+    private Channel<ResponseToPublisherEventBase> _signalRMessageChannel;
 
     public SignalRGAgent(IGrainFactory grainFactory)
     {
@@ -44,7 +43,7 @@ public class SignalRGAgent :
 
     protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)
     {
-        _signalRMessageChannel = Channel.CreateUnbounded<object>();
+        _signalRMessageChannel = Channel.CreateUnbounded<ResponseToPublisherEventBase>();
         StartProcessingQueue();
     }
 
@@ -76,7 +75,7 @@ public class SignalRGAgent :
                     Logger.LogInformation("Sending message to connectionId: {ConnectionId}, Message {Message}", connectionId,
                         message);
                     await _hubContext.Client(connectionId)
-                        .Send(SignalROrleansConstants.MethodName, message);
+                        .Send(SignalROrleansConstants.ResponseMethodName, message);
                     if (fireAndForget)
                     {
                         Logger.LogDebug("Cleaning up connectionId: {ConnectionId}", connectionId);
@@ -100,7 +99,7 @@ public class SignalRGAgent :
         }
     }
 
-    private async Task EnqueueMessageAsync(object message)
+    private async Task EnqueueMessageAsync(ResponseToPublisherEventBase message)
     {
         await _signalRMessageChannel.Writer.WriteAsync(message);
     }
@@ -160,7 +159,47 @@ public class SignalRGAgent :
             Logger.LogInformation("Cannot find corresponding connectionId for correlationId: {@CorrelationId}", @event.CorrelationId);
         }
 
-        await EnqueueMessageAsync(@event);
+        await EnqueueMessageAsync(new AevatarSignalRResponse<ResponseToPublisherEventBase>
+        {
+            IsSuccess = true,
+            Response = @event
+        });
+    }
+
+    [EventHandler]
+    public async Task HandleExceptionEventAsync(EventHandlerExceptionEvent @event)
+    {
+        Logger.LogInformation($"HandleExceptionEventAsync: {@event}");
+
+        if (State.ConnectionIdMap.TryGetValue(@event.CorrelationId!.Value, out var connectionId))
+        {
+            var response = new AevatarSignalRResponse<ResponseToPublisherEventBase>
+            {
+                IsSuccess = false,
+                ErrorType = ErrorType.EventHandler,
+                ErrorMessage = $"GrainId: {@event.GrainId}, ExceptionMessage: {@event.ExceptionMessage}",
+                ConnectionId = connectionId
+            };
+            await EnqueueMessageAsync(response);
+        }
+    }
+
+    [EventHandler]
+    public async Task GAgentBaseExceptionEventAsync(GAgentBaseExceptionEvent @event)
+    {
+        Logger.LogInformation($"GAgentBaseExceptionEventAsync: {@event}");
+
+        if (State.ConnectionIdMap.TryGetValue(@event.CorrelationId!.Value, out var connectionId))
+        {
+            var response = new AevatarSignalRResponse<ResponseToPublisherEventBase>
+            {
+                IsSuccess = false,
+                ErrorType = ErrorType.Framework,
+                ErrorMessage = $"GrainId: {@event.GrainId}, ExceptionMessage: {@event.ExceptionMessage}",
+                ConnectionId = connectionId
+            };
+            await EnqueueMessageAsync(response);
+        }
     }
 
     protected override void GAgentTransitionState(SignalRGAgentState state,
