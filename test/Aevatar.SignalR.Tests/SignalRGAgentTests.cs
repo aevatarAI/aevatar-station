@@ -15,7 +15,7 @@ public sealed class SignalRGAgentTests : AevatarSignalRTestBase
     public SignalRGAgentTests()
     {
         _gAgentFactory = GetRequiredService<IGAgentFactory>();
-        _signalRHub = new AevatarSignalRHub(_gAgentFactory);
+        _signalRHub = new AevatarSignalRHub(_gAgentFactory, null);
     }
 
     [Fact]

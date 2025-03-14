@@ -1,3 +1,4 @@
+using System.Reflection;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.SignalR;
@@ -23,15 +24,25 @@ public class SignalRTestGAgent : GAgentBase<SignalRTestGAgentState, SignalRTestS
     [EventHandler]
     public async Task HandleEventAsync(NaiveTestEvent eventData)
     {
-        await PublishAsync(new SignalRResponseEvent
+        //throw new Exception("Hey, something wrong here.");
+
+        await PublishAsync(new SignalRResponseEvent<string>
         {
-            Message = eventData.Greeting
+            Message = eventData.Greeting,
+            Data = "test"
         });
+    }
+
+    [EventHandler]
+    public async Task HandleWithExceptionAsync(NaiveTestEvent eventData)
+    {
+        throw new Exception("Hey, something wrong here123.");
     }
 }
 
 [GenerateSerializer]
-public class SignalRResponseEvent : ResponseToPublisherEventBase
+public class SignalRResponseEvent<T> : ResponseToPublisherEventBase
 {
     [Id(0)] public string Message { get; set; }
+    [Id(1)] public T Data { get; set; }
 }

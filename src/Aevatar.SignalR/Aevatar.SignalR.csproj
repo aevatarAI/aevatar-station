@@ -11,7 +11,11 @@
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Microsoft.Orleans.Streaming" />
         <PackageReference Include="Microsoft.Orleans.Core" />
-        <PackageReference Include="RulesEngine" />
     </ItemGroup>
+
+    <PropertyGroup>
+        <RestoreSources>https://www.myget.org/F/aelf-project-dev/api/v3/index.json;https://api.nuget.org/v3/index.json
+        </RestoreSources>
+    </PropertyGroup>
     
 </Project>

@@ -1,6 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Aevatar.Core.Abstractions.Extensions;
+using Aevatar.SignalR.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Protocol;
+using Newtonsoft.Json;
 using Orleans.Streams;
 
 namespace Aevatar.SignalR;
@@ -9,7 +12,7 @@ namespace Aevatar.SignalR;
 public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, ILifecycleParticipant<ISiloLifecycle>,
     IDisposable where THub : Hub
 {
-    private readonly Guid _serverId;
+    private Guid _serverId;
     private readonly ILogger _logger;
     private readonly string _hubName;
     private readonly IClusterClient _clusterClient;
@@ -30,18 +33,30 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
         _hubName = hubType.IsInterface && hubType.Name[0] == 'I'
             ? hubType.Name[1..]
             : hubType.Name;
-        _serverId = Guid.NewGuid();
+
         _logger = logger;
         _clusterClient = clusterClient;
+
+        _logger.LogDebug("Created Orleans HubLifetimeManager {hubName})", _hubName);
     }
 
-    private Task HeartbeatCheck()
-      => _clusterClient.GetServerDirectoryGrain().Heartbeat(_serverId);
+    private async Task HeartbeatCheck()
+    {
+        _logger.LogInformation("Heartbeat check for Orleans HubLifetimeManager {hubName} (serverId: {serverId})",
+            _hubName, _serverId);
+        _clusterClient.GetServerDirectoryGrain().Heartbeat(_serverId);
+    }
 
     private async Task EnsureStreamSetup()
     {
         if (_streamProvider is not null)
+        {
+            _logger.LogDebug("Stream setup already complete for Orleans HubLifetimeManager {hubName} (serverId: {serverId})",
+                _hubName, _serverId);
             return;
+        }
+
+        _serverId = _serverId == Guid.Empty ? Guid.NewGuid() : _serverId;
 
         await _streamSetupLock.WaitAsync();
 
@@ -62,10 +77,14 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
                 _ => Task.Run(HeartbeatCheck), null, TimeSpan.FromSeconds(0),
                 TimeSpan.FromMinutes(SignalROrleansConstants.ServerHeartbeatPulseInMinutes));
 
-            await Task.WhenAll(
-                _allStream.SubscribeAsync((msg, _) => ProcessAllMessage(msg)),
-                _serverStream.SubscribeAsync((msg, _) => ProcessServerMessage(msg))
-            );
+            var allMessageObserver = new AllMessageObserver(ProcessAllMessage);
+            var allStreamHandle = await _allStream.SubscribeAsync(allMessageObserver);
+            _logger.LogDebug("Subscribed to all stream: StreamId - {streamId}, HandleId - {handleId}, ProviderName - {providerName}",
+                allStreamHandle.StreamId, allStreamHandle.HandleId, allStreamHandle.ProviderName);
+            var clientMessageObserver = new ClientMessageObserver(ProcessServerMessage);
+            var serverStreamHandle = await _serverStream.SubscribeAsync(clientMessageObserver);
+            _logger.LogDebug("Subscribed to server stream: StreamId - {streamId}, HandleId - {handleId}, ProviderName - {providerName}",
+                serverStreamHandle.StreamId, serverStreamHandle.HandleId, serverStreamHandle.ProviderName);
 
             _logger.LogInformation(
                 "Initialized complete: Orleans HubLifetimeManager {hubName} (serverId: {serverId})",
@@ -88,7 +107,7 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
                 continue;
 
             if (allMessage.ExcludedIds == null || !allMessage.ExcludedIds.Contains(connection.ConnectionId))
-                allTasks.Add(SendLocal(connection, payload));
+                allTasks.Add(SendLocal(connection, new ClientNotification(payload.Target, payload.Arguments!.ToStrings())));
         }
 
         return Task.WhenAll(allTasks);
@@ -97,6 +116,8 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
     private Task ProcessServerMessage(ClientMessage clientMessage)
     {
         var connection = _connections[clientMessage.ConnectionId];
+        _logger.LogDebug("Processing server message for connection {connectionId} on hub {hubName} (serverId: {serverId}) with connection available: {connectionAvailable}",
+            clientMessage.ConnectionId, _hubName, _serverId, connection != null);
         return connection == null ? Task.CompletedTask : SendLocal(connection, clientMessage.Message);
     }
 
@@ -109,6 +130,10 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
             _connections.Add(connection);
 
             var client = _clusterClient.GetClientGrain(_hubName, connection.ConnectionId);
+            
+            _logger.LogDebug("Handle connection {connectionId} on hub {hubName} (serverId: {serverId})",
+                connection.ConnectionId, _hubName, _serverId);
+            
             await client.OnConnect(_serverId);
 
             if (connection!.User!.Identity!.IsAuthenticated)
@@ -166,7 +191,10 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
         var message = new InvocationMessage(methodName, args);
 
         var connection = _connections[connectionId];
-        if (connection != null) return SendLocal(connection, message);
+        if (connection != null)
+        {
+            return SendLocal(connection, new ClientNotification(methodName, args!.ToStrings()));
+        }
 
         return SendExternal(connectionId, message);
     }
@@ -237,12 +265,14 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
         return group.Remove(connectionId);
     }
 
-    private Task SendLocal(HubConnectionContext connection, InvocationMessage hubMessage)
+    private Task SendLocal(HubConnectionContext connection, ClientNotification notification)
     {
-        _logger.LogDebug(
+        _logger.LogInformation(
             "Sending local message to connection {connectionId} on hub {hubName} (serverId: {serverId})",
             connection.ConnectionId, _hubName, _serverId);
-        return connection.WriteAsync(hubMessage).AsTask();
+        // ReSharper disable once CoVariantArrayConversion
+        return connection.WriteAsync(new InvocationMessage(SignalROrleansConstants.ResponseMethodName, notification.Arguments))
+            .AsTask();
     }
 
     private Task SendExternal(string connectionId, InvocationMessage hubMessage)
@@ -253,6 +283,9 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
 
     public void Dispose()
     {
+        _logger.LogDebug("Disposing Orleans HubLifetimeManager {hubName} (serverId: {serverId})",
+            _hubName, _serverId);
+
         _timer?.Dispose();
 
         var toUnsubscribe = new List<Task>();
@@ -286,6 +319,7 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
 
     public void Participate(ISiloLifecycle lifecycle)
     {
+        _logger.LogInformation("Participating in the lifecycle of the silo.");
         lifecycle.Subscribe(
            observerName: nameof(OrleansHubLifetimeManager<THub>),
            stage: ServiceLifecycleStage.Active,

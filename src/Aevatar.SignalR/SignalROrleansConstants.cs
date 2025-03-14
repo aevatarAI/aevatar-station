@@ -13,5 +13,6 @@ public static class SignalROrleansConstants
     /// </summary>
     internal const int ServerHeartbeatPulseInMinutes = 30;
 
-    public const string MethodName = "ReceiveResponse";
+    public const string ResponseMethodName = "ReceiveResponse";
+    public const string AllResponseMethodName = "ReceiveAll";
 }
