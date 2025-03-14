@@ -19,8 +19,7 @@ using Volo.Abp.DependencyInjection;
 
 namespace Aevatar;
 
-
-public class ElasticIndexingService :  IIndexingService,ISingletonDependency
+public class ElasticIndexingService : IIndexingService, ISingletonDependency
 {
     private readonly IElasticClient _elasticClient;
     private readonly ILogger<ElasticIndexingService> _logger;
@@ -38,47 +37,41 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
     }
 
     public void CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase
-{
-    var indexName = _cqrsProvider.GetIndexName(stateBase.GetType().Name.ToLower());
-    var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
-    if (indexExistsResponse.Exists)
     {
-        return;
-    }
-    var createIndexResponse = _elasticClient.Indices.Create(indexName, c => c
-        .Map<T>(m => m
-            .Dynamic(DynamicMapping.Strict) 
-            
-            .DynamicTemplates(dt => dt
-                .DynamicTemplate("numbers_as_integer", t => t
-                    .MatchMappingType("long")
-                    .Mapping(f => 
-                    {
-                        return new NumberProperty (NumberType.Long);
-                    })
-                )
-                .DynamicTemplate("strings_as_text", t => t
-                    .MatchMappingType("string")
-                    .Mapping(_ => new TextProperty { 
-                        Fields = new Properties { { "keyword", new KeywordProperty() } } 
-                    })
-                ).DynamicTemplate("numbers_as_float", t => t
-                        .MatchMappingType("double")
-                        .Mapping(f => 
-                        {
-                            return new NumberProperty(NumberType.Float);
-                        })
+        var indexName = _cqrsProvider.GetIndexName(stateBase.GetType().Name.ToLower());
+        var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
+        if (indexExistsResponse.Exists)
+        {
+            return;
+        }
+
+        var createIndexResponse = _elasticClient.Indices.Create(indexName, c => c
+            .Map<T>(m => m
+                .Dynamic(DynamicMapping.Strict)
+                .DynamicTemplates(dt => dt
+                    .DynamicTemplate("numbers_as_integer", t => t
+                        .MatchMappingType("long")
+                        .Mapping(f => { return new NumberProperty(NumberType.Long); })
                     )
-                .DynamicTemplate("objects_as_nested", t => t
-                    .MatchMappingType("object")
-                    .Mapping(f => new ObjectProperty { Dynamic = true })
-                ).
-              DynamicTemplate("nested_objects_array", t => t
-            .PathMatch("*") 
-            .MatchMappingType("object") 
-            .Mapping(f => new NestedProperty())
-        )
-            ).Properties(props =>
+                    .DynamicTemplate("strings_as_text", t => t
+                        .MatchMappingType("string")
+                        .Mapping(_ => new TextProperty
+                        {
+                            Fields = new Properties { { "keyword", new KeywordProperty() } }
+                        })
+                    ).DynamicTemplate("numbers_as_float", t => t
+                        .MatchMappingType("double")
+                        .Mapping(f => { return new NumberProperty(NumberType.Float); })
+                    )
+                    .DynamicTemplate("objects_as_nested", t => t
+                        .MatchMappingType("object")
+                        .Mapping(f => new ObjectProperty { Dynamic = true })
+                    ).DynamicTemplate("nested_objects_array", t => t
+                        .PathMatch("*")
+                        .MatchMappingType("object")
+                        .Mapping(f => new NestedProperty())
+                    )
+                ).Properties(props =>
                 {
                     var type = stateBase.GetType();
                     foreach (var property in type.GetProperties())
@@ -115,26 +108,27 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
                             );
                         }
                     }
+
                     props.Date(d => d
                         .Name(CTime)
                     );
                     return props;
                 })
-        )
-    );
+            )
+        );
 
-    if (!createIndexResponse.IsValid)
-    {
-        _logger.LogError("Error creating state index. indexName:{indexName},error:{error},DebugInfo:{DebugInfo}",
-            indexName,
-            createIndexResponse.ServerError?.Error,
-            JsonConvert.SerializeObject(createIndexResponse.DebugInformation));
+        if (!createIndexResponse.IsValid)
+        {
+            _logger.LogError("Error creating state index. indexName:{indexName},error:{error},DebugInfo:{DebugInfo}",
+                indexName,
+                createIndexResponse.ServerError?.Error,
+                JsonConvert.SerializeObject(createIndexResponse.DebugInformation));
+        }
+        else
+        {
+            _logger.LogInformation("Successfully created state index. indexName:{indexName}", indexName);
+        }
     }
-    else
-    {
-        _logger.LogInformation("Successfully created state index. indexName:{indexName}", indexName);
-    }
-}
 
     public async Task SaveOrUpdateStateIndexAsync<T>(string id, T stateBase) where T : StateBase
     {
@@ -410,10 +404,11 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
             throw;
         }
     }
-    
+
     public async Task<PagedResultDto<Dictionary<string, object>>> QueryWithLuceneAsync(LuceneQueryDto queryDto)
     {
-        _logger.LogInformation("[Lucene Query] Index: {Index}, Query: {QueryString}", queryDto.Index, queryDto.QueryString);
+        _logger.LogInformation("[Lucene Query] Index: {Index}, Query: {QueryString}", queryDto.Index,
+            queryDto.QueryString);
         var sortDescriptor = new SortDescriptor<Dictionary<string, object>>();
         foreach (var sortField in queryDto.SortFields)
         {
@@ -425,17 +420,17 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
                 sortDescriptor = sortDescriptor.Field(f => f.Field(fieldName).Order(sortOrder));
             }
         }
-        
+
         var from = queryDto.PageIndex * queryDto.PageSize;
         var size = queryDto.PageSize;
-        
+
         var searchDescriptor = new SearchDescriptor<Dictionary<string, object>>()
-        .Index(queryDto.Index)
-        .Query(q => q.QueryString(qs => qs.Query(queryDto.QueryString).AllowLeadingWildcard(false)))
-        .From(from)
-        .Size(size)
-        .Sort(ss => sortDescriptor);
-        
+            .Index(queryDto.Index)
+            .Query(q => q.QueryString(qs => qs.Query(queryDto.QueryString).AllowLeadingWildcard(false)))
+            .From(from)
+            .Size(size)
+            .Sort(ss => sortDescriptor);
+
         var response = await _elasticClient.SearchAsync<Dictionary<string, object>>(searchDescriptor);
         if (!response.IsValid)
         {
@@ -444,9 +439,9 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
         }
 
         var resultList = response.Documents.ToList();
-        _logger.LogInformation("[Lucene Query] Index: {Index}, Query: {QueryString}, result: {Result}", queryDto.Index, queryDto.QueryString, resultList);
+        _logger.LogInformation("[Lucene Query] Index: {Index}, Query: {QueryString}, result: {Result}", queryDto.Index,
+            queryDto.QueryString, resultList);
 
         return new PagedResultDto<Dictionary<string, object>>(response.Total, resultList);
     }
-
 }
