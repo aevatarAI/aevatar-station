@@ -47,29 +47,18 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
 
         var createIndexResponse = _elasticClient.Indices.Create(indexName, c => c
             .Map<T>(m => m
-                .Dynamic(DynamicMapping.Strict)
                 .DynamicTemplates(dt => dt
                     .DynamicTemplate("numbers_as_integer", t => t
                         .MatchMappingType("long")
                         .Mapping(f => { return new NumberProperty(NumberType.Long); })
                     )
-                    .DynamicTemplate("strings_as_text", t => t
-                        .MatchMappingType("string")
-                        .Mapping(_ => new TextProperty
-                        {
-                            Fields = new Properties { { "keyword", new KeywordProperty() } }
-                        })
-                    ).DynamicTemplate("numbers_as_float", t => t
+                    .DynamicTemplate("numbers_as_float", t => t
                         .MatchMappingType("double")
-                        .Mapping(f => { return new NumberProperty(NumberType.Float); })
+                        .Mapping(f => { return new NumberProperty(NumberType.Double); })
                     )
                     .DynamicTemplate("objects_as_nested", t => t
                         .MatchMappingType("object")
                         .Mapping(f => new ObjectProperty { Dynamic = true })
-                    ).DynamicTemplate("nested_objects_array", t => t
-                        .PathMatch("*")
-                        .MatchMappingType("object")
-                        .Mapping(f => new NestedProperty())
                     )
                 ).Properties(props =>
                 {
@@ -95,15 +84,15 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                                 .Name(propertyName)
                             );
                         }
-                        else if (property.PropertyType == typeof(bool))
+                        else if (property.PropertyType == typeof(Type))
                         {
-                            props.Boolean(b => b
+                            props.Text(o => o
                                 .Name(propertyName)
                             );
                         }
-                        else
+                        else if (property.PropertyType == typeof(bool))
                         {
-                            props.Text(o => o
+                            props.Boolean(b => b
                                 .Name(propertyName)
                             );
                         }
