@@ -14,6 +14,7 @@
         <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj" />
         <ProjectReference Include="..\Aevatar.Application.Grains\Aevatar.Application.Grains.csproj" />
         <ProjectReference Include="..\Aevatar.Kubernetes\Aevatar.Kubernetes.csproj" />
+        <ProjectReference Include="..\Aevatar.MongoDB\Aevatar.MongoDB.csproj" />
         <ProjectReference Include="..\Aevatar.WebHook.Deploy\Aevatar.WebHook.Deploy.csproj" />
     </ItemGroup>
 

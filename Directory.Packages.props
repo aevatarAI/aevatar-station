@@ -32,6 +32,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="9.0.0" />
     <PackageVersion Include="Microsoft.SemanticKernel" Version="1.32.0" />
     <PackageVersion Include="Microsoft.SemanticKernel.Core" Version="1.32.0" />
+    <PackageVersion Include="MongoDB.Bson" Version="2.29.0" />
     <PackageVersion Include="NJsonSchema" Version="11.1.0" />
     <PackageVersion Include="OpenAI.API" Version="1.0.0" />
     <PackageVersion Include="Orleans.SyncWork" Version="8.1.12" />
