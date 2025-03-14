@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Authentication;
 using System.Threading.Tasks;
+using Aevatar.SignalR;
+using Aevatar.SignalR.SignalRMessage;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Volo.Abp;
@@ -26,16 +28,18 @@ public class NotificationService : AevatarAppService, INotificationService
     private readonly INotificationRepository _notificationRepository;
     private readonly IdentityUserManager _userManager;
     private readonly IObjectMapper _objectMapper;
+    private readonly IHubService _hubService;
 
     public NotificationService(INotificationHandlerFactory notificationHandlerFactory,
         ILogger<NotificationService> logger, INotificationRepository notificationRepository,
-        IdentityUserManager userManager, IObjectMapper objectMapper)
+        IdentityUserManager userManager, IObjectMapper objectMapper, IHubService hubService)
     {
         _notificationHandlerFactory = notificationHandlerFactory;
         _logger = logger;
         _notificationRepository = notificationRepository;
         _userManager = userManager;
         _objectMapper = objectMapper;
+        _hubService = hubService;
     }
 
     public async Task<bool> CreateAsync(NotificationTypeEnum notificationTypeEnum, Guid target, string? targetEmail,
@@ -122,6 +126,9 @@ public class NotificationService : AevatarAppService, INotificationService
         // todo: update Transaction
         notification.Status = NotificationStatusEnum.Withdraw;
         await _notificationRepository.UpdateAsync(notification);
+
+        await _hubService.ResponseAsync(notification.Receiver,
+            new NotificationResponse() { Data = { Id = notificationId, status = NotificationStatusEnum.Withdraw } });
         return true;
     }
 
@@ -153,6 +160,9 @@ public class NotificationService : AevatarAppService, INotificationService
         notification.Status = status;
 
         await _notificationRepository.UpdateAsync(notification);
+        
+        await _hubService.ResponseAsync(notification.Receiver,
+            new NotificationResponse() { Data = { Id = notificationId, status = status } });
         return true;
     }
 
