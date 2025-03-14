@@ -13,7 +13,7 @@ namespace Aevatar.Controllers;
 [ControllerName("Notification")]
 [Route("api/notification")]
 [Authorize]
-public class NotificationController: AevatarController
+public class NotificationController : AevatarController
 {
     private readonly INotificationService _notificationService;
 
@@ -21,13 +21,14 @@ public class NotificationController: AevatarController
     {
         _notificationService = notificationService;
     }
-    
+
     [HttpPost]
     public async Task CreateApiKey([FromBody] CreateNotificationDto createDto)
     {
-        await _notificationService.CreateAsync(createDto.Type, createDto.Target, createDto.Content);
+        await _notificationService.CreateAsync(createDto.Type, createDto.Target, createDto.TargetEmail,
+            createDto.Content);
     }
-    
+
     [HttpPost("/withdraw/{guid}")]
     public async Task Withdraw(Guid guid)
     {
@@ -38,17 +39,17 @@ public class NotificationController: AevatarController
     }
 
     [HttpPost("/response")]
-    public async Task Response([FromBody]NotificationResponseDto responseDto)
+    public async Task Response([FromBody] NotificationResponseDto responseDto)
     {
         if (await _notificationService.Response(responseDto.Id, responseDto.Status))
         {
             throw new BusinessException("handle notification fail");
         }
     }
-    
+
     [HttpGet]
     public async Task<List<NotificationDto>> GetList(int pageIndex, int pageSize)
     {
-        return await _notificationService.GetNotificationList(pageIndex,pageSize);
+        return await _notificationService.GetNotificationList(pageIndex, pageSize);
     }
 }

@@ -46,7 +46,8 @@ namespace Aevatar.AuthServer;
     typeof(AbpPermissionManagementEntityFrameworkCoreModule),
     typeof(AbpAuthorizationModule),
     typeof(AbpOpenIddictDomainModule),
-    typeof(AevatarMongoDbModule)
+    typeof(AevatarMongoDbModule),
+    typeof(AevatarApplicationContractsModule)
     )]
 public class AevatarAuthServerModule : AbpModule
 {
@@ -79,7 +80,6 @@ public class AevatarAuthServerModule : AbpModule
         {
             builder.Configure(openIddictServerOptions =>
             {
-                openIddictServerOptions.GrantTypes.Add(GrantTypeConstants.LOGIN);
                 openIddictServerOptions.GrantTypes.Add(GrantTypeConstants.SIGNATURE);
             });
         });
@@ -97,7 +97,6 @@ public class AevatarAuthServerModule : AbpModule
         });
         context.Services.Configure<AbpOpenIddictExtensionGrantsOptions>(options =>
         {
-            options.Grants.Add(GrantTypeConstants.LOGIN, new LoginGrantHandler());
             options.Grants.Add(GrantTypeConstants.SIGNATURE, new SignatureGrantHandler());
         });
 
@@ -163,9 +162,9 @@ public class AevatarAuthServerModule : AbpModule
 
         Configure<AbpDistributedCacheOptions>(options =>
         {
-            options.KeyPrefix = ":Auth:";
+            options.KeyPrefix = "Aevatar:";
         });
-
+      
         var dataProtectionBuilder = context.Services.AddDataProtection().SetApplicationName("AevatarAuthServer");
         
         context.Services.AddHealthChecks();
@@ -196,7 +195,7 @@ public class AevatarAuthServerModule : AbpModule
         app.UseAuthentication();
         app.UseAbpOpenIddictValidation();
 
-        app.UseMultiTenancy();
+        //app.UseMultiTenancy();
         
         app.UseUnitOfWork();
         app.UseAuthorization();

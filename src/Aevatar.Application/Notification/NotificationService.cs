@@ -13,7 +13,7 @@ namespace Aevatar.Notification;
 
 public interface INotificationService
 {
-    Task<bool> CreateAsync(NotificationTypeEnum notificationTypeEnum, Guid target, string input);
+    Task<bool> CreateAsync(NotificationTypeEnum notificationTypeEnum, Guid target, string? targetEmail, string input);
     Task<bool> WithdrawAsync(Guid notificationId);
     Task<bool> Response(Guid notificationId, NotificationStatusEnum status);
     Task<List<NotificationDto>> GetNotificationList(int pageIndex, int pageSize);
@@ -38,8 +38,29 @@ public class NotificationService : AevatarAppService, INotificationService
         _objectMapper = objectMapper;
     }
 
-    public async Task<bool> CreateAsync(NotificationTypeEnum notificationTypeEnum, Guid target, string input)
+    public async Task<bool> CreateAsync(NotificationTypeEnum notificationTypeEnum, Guid target, string? targetEmail,
+        string input)
     {
+        if (target == Guid.Empty && targetEmail.IsNullOrEmpty())
+        {
+            _logger.LogError(
+                $"[NotificationService][CreateAsync] creator error notificationTypeEnum:{notificationTypeEnum.ToString()} , input:{input}");
+            throw new ArgumentException("target member error");
+        }
+
+        if (target == Guid.Empty && targetEmail.IsNullOrEmpty() == false)
+        {
+            var targetUserInfo = await _userManager.FindByEmailAsync(targetEmail);
+            if (targetUserInfo == null)
+            {
+                _logger.LogError(
+                    $"[NotificationService][CreateAsync] creator email not found create email:{targetEmail} , input:{input}");
+                throw new ArgumentException("creator not found");
+            }
+
+            target = targetUserInfo.Id;
+        }
+
         _logger.LogDebug(
             $"[NotificationService][CreateAsync] notificationTypeEnum:{notificationTypeEnum.ToString()} targetMember:{target}, input:{input}");
         if (CurrentUser.Id == target)
@@ -72,8 +93,7 @@ public class NotificationService : AevatarAppService, INotificationService
             throw new ArgumentException("Argument Error");
         }
 
-        // todo: check target exist
-        // await _userManager.GetByIdAsync(target);
+        await _userManager.GetByIdAsync(target);
 
         var notification = new NotificationInfo()
         {

@@ -27,4 +27,8 @@
         <PackageReference Include="AElf.OpenTelemetry" />
     </ItemGroup>
 
+    <ItemGroup>
+      <EmbeddedResource Include="Account\Templates\RegisterCode.tpl" />
+    </ItemGroup>
+
 </Project>
