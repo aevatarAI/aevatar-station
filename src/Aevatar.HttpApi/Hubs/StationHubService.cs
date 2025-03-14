@@ -8,12 +8,12 @@ using JsonConvert = Newtonsoft.Json.JsonConvert;
 
 namespace Aevatar.Hubs;
 
-public class AevatarHubService : IHubService, ISingletonDependency
+public class StationHubService : IHubService, ISingletonDependency
 {
-    private readonly IHubContext<AevatarSignalHub> _hubContext;
-    private readonly ILogger<AevatarHubService> _logger;
+    private readonly IHubContext<StationSignalRHub> _hubContext;
+    private readonly ILogger<StationHubService> _logger;
 
-    public AevatarHubService(ILogger<AevatarHubService> logger)
+    public StationHubService(ILogger<StationHubService> logger)
     {
         _logger = logger;
     }
@@ -22,9 +22,9 @@ public class AevatarHubService : IHubService, ISingletonDependency
     {
         try
         {
-            _logger.LogDebug($"[AevatarHubService][ResponseAsync] userId:{userId.ToString()} , message:{JsonConvert.SerializeObject(message)} start");
+            _logger.LogDebug($"[StationHubService][ResponseAsync] userId:{userId.ToString()} , message:{JsonConvert.SerializeObject(message)} start");
             await _hubContext.Clients.Users(userId.ToString()).SendAsync(message.MessageType, message.Data);
-            _logger.LogDebug($"[AevatarHubService][ResponseAsync] userId:{userId.ToString()} , message:{JsonConvert.SerializeObject(message)} end");
+            _logger.LogDebug($"[StationHubService][ResponseAsync] userId:{userId.ToString()} , message:{JsonConvert.SerializeObject(message)} end");
         }
         catch (Exception e)
         {

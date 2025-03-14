@@ -9,11 +9,11 @@ using LoggerExtensions = DnsClient.Internal.LoggerExtensions;
 namespace Aevatar.Hubs;
 
 [Authorize]
-public class AevatarSignalHub : AbpHub
+public class StationSignalRHub : AbpHub
 {
-    private readonly ILogger<AevatarSignalHub> _logger;
+    private readonly ILogger<StationSignalRHub> _logger;
 
-    public AevatarSignalHub(ILogger<AevatarSignalHub> logger)
+    public StationSignalRHub(ILogger<StationSignalRHub> logger)
     {
         _logger = logger;
     }
