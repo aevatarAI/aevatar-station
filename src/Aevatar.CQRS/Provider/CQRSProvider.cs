@@ -65,7 +65,6 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
     {
         _logger.LogInformation("CQRSProvider QueryGEventAsync eventId:{eventId}, grainIds:{grainIds}", eventId,
             grainIds);
-
         var mustQuery = new List<Func<QueryContainerDescriptor<AgentGEventIndex>, QueryContainer>>();
         if (!eventId.IsNullOrEmpty())
         {
@@ -226,7 +225,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
             EventJson = JsonConvert.SerializeObject(eventBase),
             EventName = eventBase.GetType().Name
         };
-
+        
         var command = new SaveGEventCommand
         {
             Id = eventId == null ? Guid.NewGuid() : eventId,
