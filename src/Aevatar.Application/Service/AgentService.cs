@@ -187,7 +187,7 @@ public class AgentService : ApplicationService, IAgentService
         configuration.Properties = propertyDtos;
         return configuration;
     }
-    
+
     public async Task<List<AgentTypeDto>> GetAllAgents()
     {
         var propertyDtos = await GetAgentTypeDataMap();
@@ -258,7 +258,7 @@ public class AgentService : ApplicationService, IAgentService
             Name = dto.Name
         };
 
-        var initializationParam = JsonConvert.SerializeObject(dto.Properties);
+        var initializationParam = dto.Properties.IsNullOrEmpty() ? string.Empty : JsonConvert.SerializeObject(dto.Properties);
         var businessAgent = await InitializeBusinessAgent(guid, dto.AgentType, initializationParam);
 
         var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);

@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVerion>9.0.1</OrleansVerion>
-    <AevatarVerion>1.4.11-permission.1</AevatarVerion>
+    <AevatarVerion>1.4.11-alpha.2</AevatarVerion>
     <AevatarGAgentsVerion>1.3.5</AevatarGAgentsVerion>
   </PropertyGroup>
   <ItemGroup>
@@ -19,10 +19,15 @@
     <PackageVersion Include="Aevatar.EventSourcing.Core" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.Plugins" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.EventSourcing.MongoDB" Version="$(AevatarVerion)" />
+
+    <PackageVersion Include="Aevatar.PermissionManagement" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="$(AevatarGAgentsVerion)" />
     <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="$(AevatarGAgentsVerion)" />
     <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="$(AevatarGAgentsVerion)" />
-    <PackageVersion Include="Aevatar.SignalR" Version="1.5.1" />
+    <PackageVersion Include="Aevatar.SignalR" Version="1.5.3" />
+    <PackageVersion Include="Aevatar.GAgents.SocialGAgent" Version="$(AevatarGAgentVerion)" />
+    <PackageVersion Include="Aevatar.GAgents.Twitter" Version="$(AevatarGAgentVerion)" />
+
     <!-- AI and Analysis packages -->
     <PackageVersion Include="AutoGen" Version="0.2.1" />
     <PackageVersion Include="AutoGen.Core" Version="0.2.1" />
@@ -83,6 +88,7 @@
     <PackageVersion Include="Volo.Abp.OpenIddict.Domain.Shared" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.OpenIddict.EntityFrameworkCore" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.OpenIddict.MongoDB" Version="$(AbpVersion)" />
+    <PackageVersion Include="Volo.Abp.TenantManagement.MongoDB" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.PermissionManagement.Application" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.PermissionManagement.Application.Contracts" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.PermissionManagement.Domain.Identity" Version="$(AbpVersion)" />
@@ -172,11 +178,12 @@
     <PackageVersion Include="NEST" Version="7.17.5" />
     <PackageVersion Include="GraphQL.Client" Version="6.1.0" />
     <PackageVersion Include="GraphQL.Client.Serializer.Newtonsoft" Version="6.1.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="4.11.0" />
     <PackageVersion Include="KubernetesClient" Version="13.0.11" />
     <PackageVersion Include="Mongo2Go" Version="3.1.3" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.2" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client.Core" Version="9.0.2" />
     <PackageVersion Include="MineAiFun.GAgents" Version="1.1.13" />
+    <PackageVersion Include="XWorkerAgent" Version="0.0.28" />
+    <PackageVersion Include="TelegramWorkerAgent" Version="0.0.8" />
   </ItemGroup>
 </Project>

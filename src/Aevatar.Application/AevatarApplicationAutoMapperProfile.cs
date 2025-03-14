@@ -23,9 +23,6 @@ public class AevatarApplicationAutoMapperProfile : Profile
         CreateMap<EventSubscriptionState, SubscriptionDto>()
             .ForMember(t => t.SubscriptionId, m => m.MapFrom(f => f.Id))
             .ForMember(t => t.CreatedAt, m => m.MapFrom(f => f.CreateTime));
-
-        CreateMap<EventDescription, EventDescriptionDto>()
-            .ForMember(t => t.EventType, m => m.MapFrom(f => f.EventType.FullName));
         CreateMap<AgentGEventIndex, AgentEventDto>();
     }
 }

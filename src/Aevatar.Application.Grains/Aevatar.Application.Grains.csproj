@@ -8,6 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Aevatar.PermissionManagement" />
         <PackageReference Include="AutoGen.Core" />
         <PackageReference Include="Microsoft.Orleans.Sdk" />
         <PackageReference Include="AElf.OpenTelemetry" />
@@ -18,12 +19,16 @@
         <PackageReference Include="Aevatar.GAgents.SemanticKernel"  />
         <PackageReference Include="Aevatar.GAgents.AI.Abstractions"/>
         <PackageReference Include="MineAiFun.GAgents"/>
+        <PackageReference Include="Aevatar.GAgents.Twitter"/>
+        <PackageReference Include="XWorkerAgent"/>
+        <PackageReference Include="TelegramWorkerAgent"/>
+        <PackageReference Include="Aevatar.GAgents.SocialGAgent"/>
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj" />
-        <ProjectReference Include="..\Aevatar.CQRS\Aevatar.CQRS.csproj" />
-        <ProjectReference Include="..\Aevatar.Domain.Grains\Aevatar.Domain.Grains.csproj" />
-        <ProjectReference Include="..\Aevatar.Domain\Aevatar.Domain.csproj" />
+        <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj"/>
+        <ProjectReference Include="..\Aevatar.CQRS\Aevatar.CQRS.csproj"/>
+        <ProjectReference Include="..\Aevatar.Domain.Grains\Aevatar.Domain.Grains.csproj"/>
+        <ProjectReference Include="..\Aevatar.Domain\Aevatar.Domain.csproj"/>
     </ItemGroup>
 </Project>
