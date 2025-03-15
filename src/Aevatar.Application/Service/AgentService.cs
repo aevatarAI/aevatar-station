@@ -104,15 +104,22 @@ public class AgentService : ApplicationService, IAgentService
     private async Task<Dictionary<string, AgentTypeData?>> GetAgentTypeDataMap()
     {
         var systemAgents = _agentOptions.CurrentValue.SystemAgentList;
+        Stopwatch stopwatch = Stopwatch.StartNew();
         var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
+        stopwatch.Stop();
+        _logger.LogInformation("GetAgentTypeDataMap GetAvailableGAgentTypes {Time}",stopwatch.ElapsedMilliseconds);
         var validAgent = availableGAgents.Where(a => !a.Namespace.StartsWith("OrleansCodeGen")).ToList();
         var businessAgentTypes = validAgent.Where(a => !systemAgents.Contains(a.Name)).ToList();
+        _logger.LogInformation("GetAgentTypeDataMap businessAgentTypes {businessAgentTypesCount}",businessAgentTypes.Count);
 
         var dict = new Dictionary<string, AgentTypeData?>();
-
+       
         foreach (var agentType in businessAgentTypes)
         {
+            stopwatch = Stopwatch.StartNew();
             var grainType = _grainTypeResolver.GetGrainType(agentType).ToString();
+            _logger.LogInformation("GetAgentTypeDataMap GetGrainType agentType {agentType} ,{Time}",agentType.Name,stopwatch.ElapsedMilliseconds);
+            stopwatch.Stop();
             if (grainType != null)
             {
                 var agentTypeData = new AgentTypeData
@@ -248,8 +255,15 @@ public class AgentService : ApplicationService, IAgentService
 
     public async Task<AgentDto> CreateAgentAsync(CreateAgentInputDto dto)
     {
+        Stopwatch stopwatch = Stopwatch.StartNew();
         CheckCreateParam(dto);
+        stopwatch.Stop();
+        _logger.LogInformation("CreateAgentAsync CheckCreateParam {Time}",stopwatch.ElapsedMilliseconds);
+        stopwatch = Stopwatch.StartNew();
         var userId = _userAppService.GetCurrentUserId();
+        stopwatch.Stop();
+        _logger.LogInformation("CreateAgentAsync GetCurrentUserId {Time}",stopwatch.ElapsedMilliseconds);
+       
         var guid = dto.AgentId ?? Guid.NewGuid();
         var agentData = new AgentData
         {
@@ -260,12 +274,16 @@ public class AgentService : ApplicationService, IAgentService
         };
 
         var initializationParam = JsonConvert.SerializeObject(dto.Properties);
+        stopwatch = Stopwatch.StartNew();
         var businessAgent = await InitializeBusinessAgent(guid, dto.AgentType, initializationParam);
-
+        stopwatch.Stop();
+        _logger.LogInformation("CreateAgentAsync InitializeBusinessAgent {Time}",stopwatch.ElapsedMilliseconds);
+        stopwatch = Stopwatch.StartNew();
         var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
         agentData.BusinessAgentGrainId = businessAgent.GetGrainId();
         await creatorAgent.CreateAgentAsync(agentData);
-
+        stopwatch.Stop();
+        _logger.LogInformation("CreateAgentAsync CreateAgentAsync {Time}",stopwatch.ElapsedMilliseconds);
         var resp = new AgentDto
         {
             Id = guid,
@@ -321,15 +339,24 @@ public class AgentService : ApplicationService, IAgentService
     private async Task<IGAgent> InitializeBusinessAgent(Guid primaryKey, string agentType,
         string agentProperties)
     {
+        Stopwatch  stopwatch = Stopwatch.StartNew();
         var grainId = GrainId.Create(agentType, GuidUtil.GuidToGrainKey(primaryKey));
         var businessAgent = await _gAgentFactory.GetGAgentAsync(grainId);
-
+        stopwatch.Stop();
+        _logger.LogInformation("CreateAgentAsync InitializeBusinessAgent GetGAgentAsync{Time}",stopwatch.ElapsedMilliseconds);
+        
+        stopwatch = Stopwatch.StartNew();
         var initializationData = await GetAgentConfigurationAsync(businessAgent);
+        stopwatch.Stop();
+        _logger.LogInformation("CreateAgentAsync InitializeBusinessAgent GetAgentConfigurationAsync{Time}",stopwatch.ElapsedMilliseconds);
+        
         if (initializationData != null && !agentProperties.IsNullOrEmpty())
         {
+            stopwatch = Stopwatch.StartNew();
             var config = SetupConfigurationData(initializationData, agentProperties);
             await businessAgent.ConfigAsync(config);
-            
+            stopwatch.Stop();
+            _logger.LogInformation("CreateAgentAsync InitializeBusinessAgent ConfigAsync{Time}",stopwatch.ElapsedMilliseconds);
         }
         
         return businessAgent;
