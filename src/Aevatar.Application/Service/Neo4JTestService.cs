@@ -20,7 +20,7 @@ public interface INeo4JTestService
 }
 
 
-[RemoteService(IsEnabled = true)]
+[RemoteService(IsEnabled = false)]
 public class Neo4JTestService : ApplicationService, INeo4JTestService
 {
     private readonly IDriver _driver;
