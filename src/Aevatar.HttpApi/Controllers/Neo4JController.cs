@@ -25,4 +25,10 @@ public class Neo4JController : AevatarController
     {
         await _neo4JTestService.StoreDataWithAgentAsync();
     }
+    
+    [HttpGet("get-data")]
+    public async Task<string> GetData([FromQuery] string name)
+    {
+        return await _neo4JTestService.GetData(name);
+    }
 }

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Application.Grains.Agents.Sports;
@@ -17,6 +16,7 @@ public interface INeo4JTestService
 {
     Task<string> TestConnectionAsync();
     Task StoreDataWithAgentAsync();
+    Task<string> GetData(string name);
 }
 
 
@@ -99,5 +99,12 @@ public class Neo4JTestService : ApplicationService, INeo4JTestService
         };
 
         await gAgent.CreateDataAsync(new[] { club1, club2, player }, relationships);
+    }
+    
+    public async Task<string> GetData(string name)
+    {
+        var gAgent = _clusterClient.GetGrain<ISportsGAgent>(GuidUtil.StringToGuid("test"));
+        var res = await gAgent.GetClubPlayers(name);
+        return res == null ? "No Data" : string.Join(",", res);
     }
 }
