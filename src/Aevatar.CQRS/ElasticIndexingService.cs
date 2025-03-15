@@ -90,6 +90,12 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                                 .Name(propertyName)
                             );
                         }
+                        else if (property.PropertyType == typeof(GrainId))
+                        {
+                            props.Text(o => o
+                                .Name(propertyName)
+                            );
+                        }
                         else if (property.PropertyType == typeof(bool))
                         {
                             props.Boolean(b => b
