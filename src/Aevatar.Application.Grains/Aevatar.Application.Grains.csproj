@@ -23,7 +23,6 @@
         <PackageReference Include="XWorkerAgent"/>
         <PackageReference Include="TelegramWorkerAgent"/>
         <PackageReference Include="Aevatar.GAgents.SocialGAgent"/>
-        <PackageReference Include="AevatarTemplate.TelegramGAgents.IntelligentSorting.IntelligentSortingGAgent"/>
     </ItemGroup>
 
     <ItemGroup>
