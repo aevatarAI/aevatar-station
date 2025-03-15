@@ -158,9 +158,10 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         if (!response.IsValid)
         {
             _logger.LogError(
-                "Save State Error, indexing document error,indexName:{indexName} error:{error}, DebugInfo{DebugInfo} ",
+                "Save State Error, indexing document error,indexName:{indexName} error:{error}, DebugInfo{DebugInfo},param {params}",
                 indexName,
-                response.ServerError, JsonConvert.SerializeObject(response.DebugInformation));
+                response.ServerError, JsonConvert.SerializeObject(response.DebugInformation),
+                JsonConvert.SerializeObject(document));
         }
         else
         {
