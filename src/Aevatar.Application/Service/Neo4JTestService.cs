@@ -38,7 +38,8 @@ public class Neo4JTestService : ApplicationService, INeo4JTestService
 
     public async Task<string> TestConnectionAsync()
     {
-        _logger.LogInformation("Testing Neo4j Connection, uri {url}", _configuration["Neo4j:Uri"]);
+        _logger.LogInformation("Testing Neo4j Connection, uri {url} {user} {pwd}", 
+            _configuration["Neo4j:Uri"], _configuration["Neo4j:User"], _configuration["Neo4j:Password"]);
         await using var session = _driver.AsyncSession();
         var result = await session.RunAsync("RETURN 'Neo4j Connection Successful' AS message");
         var record = await result.SingleAsync();
