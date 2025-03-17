@@ -40,6 +40,17 @@ public class Program
             await app.InitializeApplicationAsync();
             app.MapHub<AevatarSignalRHub>("api/agent/aevatarHub");
             app.MapHub<StationSignalRHub>("api/notification");
+            
+            app.UseCors(option =>
+            {
+                // todo: use remove to config
+                // option.WithOrigins();
+                option.AllowAnyOrigin();
+                option.AllowAnyHeader();
+                option.AllowAnyMethod();
+                option.AllowCredentials();
+            });
+            
             await app.RunAsync();
             return 0;
         }
