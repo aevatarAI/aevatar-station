@@ -61,6 +61,21 @@ public class AevatarPermissionDefinitionProvider : PermissionDefinitionProvider
                 group.AddPermission(permissionInfo.Name, L(permissionInfo.Name));
             }
         }
+        
+        var developerPlatformGroup = context.AddGroup(AevatarPermissions.DeveloperPlatform);
+        
+        var organizationsPermission = developerPlatformGroup.AddPermission(AevatarPermissions.Organizations.Default, L("Permission:Organizations"));
+        organizationsPermission.AddChild(AevatarPermissions.Organizations.Create, L("Permission:Organizations.Create"));
+        organizationsPermission.AddChild(AevatarPermissions.Organizations.Edit, L("Permission:Organizations.Edit"));
+        organizationsPermission.AddChild(AevatarPermissions.Organizations.Delete, L("Permission:Organizations.Delete"));
+        
+        var organizationMembersPermission = developerPlatformGroup.AddPermission(AevatarPermissions.OrganizationMembers.Default, L("Permission:OrganizationMembers"));
+        organizationMembersPermission.AddChild(AevatarPermissions.OrganizationMembers.Manage, L("Permission:OrganizationMembers.Manage"));
+        
+        var apiKeysPermission = developerPlatformGroup.AddPermission(AevatarPermissions.ApiKeys.Default, L("Permission:ApiKeys"));
+        apiKeysPermission.AddChild(AevatarPermissions.ApiKeys.Create, L("Permission:ApiKeys.Create"));
+        apiKeysPermission.AddChild(AevatarPermissions.ApiKeys.Edit, L("Permission:ApiKeys.Edit"));
+        apiKeysPermission.AddChild(AevatarPermissions.ApiKeys.Delete, L("Permission:ApiKeys.Delete"));
     }
 
     private static LocalizableString L(string name)
