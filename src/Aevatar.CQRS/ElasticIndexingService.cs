@@ -90,6 +90,12 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                                 .Name(propertyName)
                             );
                         }
+                        else if (property.PropertyType == typeof(GrainId))
+                        {
+                            props.Text(o => o
+                                .Name(propertyName)
+                            );
+                        }
                         else if (property.PropertyType == typeof(bool))
                         {
                             props.Boolean(b => b
@@ -129,7 +135,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         {
             var value = property.GetValue(stateBase);
             var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
-            if (value is IDictionary or GrainId)
+            if (value is GrainId || string.Equals(propertyName, "children"))
             {
                 document[propertyName] = JsonConvert.SerializeObject(value);
             }
@@ -152,9 +158,10 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         if (!response.IsValid)
         {
             _logger.LogError(
-                "Save State Error, indexing document error,indexName:{indexName} error:{error}, DebugInfo{DebugInfo} ",
+                "Save State Error, indexing document error,indexName:{indexName} error:{error}, DebugInfo{DebugInfo},param {params}",
                 indexName,
-                response.ServerError, JsonConvert.SerializeObject(response.DebugInformation));
+                response.ServerError, JsonConvert.SerializeObject(response.DebugInformation),
+                JsonConvert.SerializeObject(document));
         }
         else
         {
