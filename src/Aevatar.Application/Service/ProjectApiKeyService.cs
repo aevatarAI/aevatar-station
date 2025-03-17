@@ -6,10 +6,8 @@ using Aevatar.ApiKeys;
 using Aevatar.Common;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
-using Volo.Abp.Application.Services;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
-using Volo.Abp.Identity;
 
 namespace Aevatar.Service;
 
