@@ -20,6 +20,7 @@ public interface IProjectApiKeyService
     Task<List<ApiKeyListResponseDto>> GetApiKeysAsync(Guid projectId);
 }
 
+[RemoteService(false)]
 public class ProjectApiKeyService : ApplicationService, IProjectApiKeyService
 {
     private readonly IApiKeysRepository _apiKeysRepository;

@@ -21,6 +21,7 @@ public interface INotificationService
     Task<List<NotificationDto>> GetNotificationList(int pageIndex, int pageSize);
 }
 
+[RemoteService(false)]
 public class NotificationService : AevatarAppService, INotificationService
 {
     private readonly INotificationHandlerFactory _notificationHandlerFactory;
