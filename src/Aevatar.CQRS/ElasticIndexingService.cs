@@ -135,7 +135,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         {
             var value = property.GetValue(stateBase);
             var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
-            if (value is IDictionary or GrainId)
+            if (value is GrainId || string.Equals(propertyName, "children"))
             {
                 document[propertyName] = JsonConvert.SerializeObject(value);
             }
