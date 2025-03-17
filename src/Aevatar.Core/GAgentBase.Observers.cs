@@ -15,9 +15,10 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
             var parameter = eventHandlerMethod.GetParameters()[0];
             var parameterType = parameter.ParameterType;
             var parameterTypeName = parameterType.Name;
-            var observer = new EventWrapperBaseAsyncObserver(async item =>
+            var observer = EventWrapperBaseAsyncObserver.Create(async item =>
             {
-                var grainId = (GrainId)item.GetType().GetProperty(nameof(EventWrapper<TEvent>.GrainId))?.GetValue(item)!;
+                var grainId =
+                    (GrainId)item.GetType().GetProperty(nameof(EventWrapper<TEvent>.GrainId))?.GetValue(item)!;
                 if (grainId == this.GetGrainId() && eventHandlerMethod.Name != nameof(ForwardEventAsync) &&
                     eventHandlerMethod.Name != nameof(PerformConfigAsync))
                 {
@@ -60,11 +61,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
                     Logger.LogError(ex, "Error invoking method {MethodName} with event type {EventType}",
                         eventHandlerMethod.Name, parameterTypeName);
                 }
-            })
-            {
-                MethodName = eventHandlerMethod.Name,
-                ParameterTypeName = parameterTypeName
-            };
+            }, ServiceProvider, eventHandlerMethod.Name, parameterTypeName);
 
             _observers.Add(observer);
         }

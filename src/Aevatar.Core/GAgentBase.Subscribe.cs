@@ -23,9 +23,15 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
                     State.Parent = default;
                 break;
         }
-
+        
         GAgentTransitionState(state, @event);
+        
+        Logger.LogInformation("GrainId {GrainId}: State before transition: {@State}", this.GetGrainId().ToString(), State);
+        
         base.TransitionState(state, @event);
+        
+        // print out the state after transition
+        Logger.LogDebug("GrainId {GrainId}: State after transition: {@State}", this.GetGrainId().ToString(), State);
     }
 
     protected virtual void GAgentTransitionState(TState state, StateLogEventBase<TStateLogEvent> @event)
