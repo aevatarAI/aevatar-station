@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OrleansCodeGen.Orleans.EventSourcing.LogStorage;
 using Volo.Abp;
+using Volo.Abp.Identity;
 
 namespace Aevatar.Controllers;
 
@@ -18,23 +19,40 @@ namespace Aevatar.Controllers;
 public class ApiKeyController : AevatarController
 {
     private readonly IProjectApiKeyService _apiKeyService;
+    private readonly IdentityUserManager _identityUserManager;
 
-    public ApiKeyController(IProjectApiKeyService apiKeyService)
+
+    public ApiKeyController(IProjectApiKeyService apiKeyService, IdentityUserManager identityUserManager)
     {
         _apiKeyService = apiKeyService;
+        _identityUserManager = identityUserManager;
     }
 
 
     [HttpPost]
     public async Task CreateApiKey(CreateApiKeyDto createDto)
     {
-        await _apiKeyService.CreateAsync(createDto.ProjectId, createDto.KeyName);
+        await _apiKeyService.CreateAsync(createDto.ProjectId, createDto.KeyName, CurrentUser.Id);
     }
 
     [HttpGet("{guid}")]
     public async Task<List<ApiKeyListResponseDto>> GetApiKeys(Guid guid)
     {
-        return await _apiKeyService.GetApiKeysAsync(guid);
+        var result = new List<ApiKeyListResponseDto>();
+        foreach (var item in await _apiKeyService.GetApiKeysAsync(guid))
+        {
+            var creatorInfo = await _identityUserManager.GetByIdAsync((Guid)item.CreatorId!);
+            result.Add(new ApiKeyListResponseDto()
+            {
+                ApiKey = item.ApiKey,
+                ApiKeyName = item.ApiKeyName,
+                CreateTime = item.CreationTime,
+                CreatorName = creatorInfo.Name,
+                ProjectId = item.ProjectId,
+            });
+        }
+
+        return result;
     }
 
     [HttpDelete("{guid}")]
@@ -42,7 +60,7 @@ public class ApiKeyController : AevatarController
     {
         await _apiKeyService.DeleteAsync(guid);
     }
-    
+
     [HttpPut("{guid}")]
     public async Task ModifyApiKeyName(Guid guid, [FromBody] ModifyApiKeyNameDto modifyApiKeyNameDto)
     {

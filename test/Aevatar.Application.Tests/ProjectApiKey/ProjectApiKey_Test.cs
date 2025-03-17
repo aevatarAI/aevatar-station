@@ -51,11 +51,8 @@ public sealed class ProjectApiKey_Test : AevatarApplicationTestBase
         _identityUserManager.Setup(s => s.GetByIdAsync(_currentUserId))
             .ReturnsAsync(new IdentityUser(_currentUserId, "A", "2222@gmail.com"));
 
-        var projectApiKeyService = new ProjectApiKeyService(_apiKeysRepository.Object, _logger.Object, _identityUserManager.Object);
-        await projectApiKeyService.CreateAsync(_projectId, _firstApiKeyName);
-        //
-        // var exist = await _apiKeysRepository.CheckProjectApiKeyNameExist(_projectId, apiKeyName);
-        // exist.ShouldBeTrue();
+        var projectApiKeyService = new ProjectApiKeyService(_apiKeysRepository.Object, _logger.Object);
+        await projectApiKeyService.CreateAsync(_projectId, _firstApiKeyName,_currentUserId);
     }
 
 

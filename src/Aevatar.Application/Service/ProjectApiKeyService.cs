@@ -7,6 +7,7 @@ using Aevatar.Common;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
+using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
 
@@ -14,28 +15,25 @@ namespace Aevatar.Service;
 
 public interface IProjectApiKeyService
 {
-    Task CreateAsync(Guid projectId, string keyName);
+    Task CreateAsync(Guid projectId, string keyName, Guid? currentUserId);
     Task DeleteAsync(Guid apiKeyId);
     Task ModifyApiKeyAsync(Guid apiKeyId, string keyName);
-    Task<List<ApiKeyListResponseDto>> GetApiKeysAsync(Guid projectId);
+    Task<List<ApiKeyInfo>> GetApiKeysAsync(Guid projectId);
 }
 
-public class ProjectApiKeyService : ApplicationService, IProjectApiKeyService
+public class ProjectApiKeyService : IProjectApiKeyService, ITransientDependency
 {
     private readonly IApiKeysRepository _apiKeysRepository;
     private readonly ILogger<ProjectApiKeyService> _logger;
-    private readonly IdentityUserManager _identityUserManager;
 
-    public ProjectApiKeyService(IApiKeysRepository apiKeysRepository, ILogger<ProjectApiKeyService> logger,
-        IdentityUserManager identityUserManager)
+    public ProjectApiKeyService(IApiKeysRepository apiKeysRepository, ILogger<ProjectApiKeyService> logger)
     {
         _apiKeysRepository = apiKeysRepository;
         _logger = logger;
-        _identityUserManager = identityUserManager;
     }
 
 
-    public async Task CreateAsync(Guid projectId, string keyName)
+    public async Task CreateAsync(Guid projectId, string keyName, Guid? currentUserId)
     {
         // todo:validate create rights
 
@@ -50,11 +48,10 @@ public class ProjectApiKeyService : ApplicationService, IProjectApiKeyService
         var randNum = random.Next(0, 1000000000);
         var apikeyStr = MD5Util.CalculateMD5($"{projectId.ToString()}-{keyName}-{randNum}");
 
-        var creator = CurrentUser.Id;
         var apiKey = new ApiKeyInfo(Guid.NewGuid(), projectId, keyName, apikeyStr)
         {
             CreationTime = DateTime.Now,
-            CreatorId = creator,
+            CreatorId = currentUserId,
         };
 
        await _apiKeysRepository.InsertAsync(apiKey);
@@ -94,26 +91,12 @@ public class ProjectApiKeyService : ApplicationService, IProjectApiKeyService
         await _apiKeysRepository.UpdateAsync(apiKeyInfo);
     }
 
-    public async Task<List<ApiKeyListResponseDto>> GetApiKeysAsync(Guid projectId)
+    public async Task<List<ApiKeyInfo>> GetApiKeysAsync(Guid projectId)
     {
         // todo:validate GetApiKeysAsync rights
 
         var apiKeyList = await _apiKeysRepository.GetProjectApiKeys(projectId, 10, 0);
-        var result = new List<ApiKeyListResponseDto>();
-        foreach (var item in apiKeyList)
-        {
-            var creatorInfo = await _identityUserManager.GetByIdAsync((Guid)item.CreatorId!);
-
-            result.Add(new ApiKeyListResponseDto()
-            {
-                ApiKey = item.ApiKey,
-                ApiKeyName = item.ApiKeyName,
-                CreateTime = item.CreationTime,
-                ProjectId = item.ProjectId,
-                CreatorName = creatorInfo.Name,
-            });
-        }
-
-        return result;
+       
+        return apiKeyList;
     }
 }
