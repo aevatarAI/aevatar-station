@@ -18,7 +18,7 @@ public interface INotificationService
 {
     Task<bool> CreateAsync(NotificationTypeEnum notificationTypeEnum, Guid? creator, Guid target, string input);
     Task<bool> WithdrawAsync(Guid? creator, Guid notificationId);
-    Task<bool> Response(Guid notificationId, Guid? creator, NotificationStatusEnum status);
+    Task<bool> Response(Guid notificationId, Guid? receiver, NotificationStatusEnum status);
     Task<List<NotificationDto>> GetNotificationList(Guid? creator, int pageIndex, int pageSize);
 }
 
@@ -100,14 +100,18 @@ public class NotificationService : INotificationService, ITransientDependency
         await _notificationRepository.UpdateAsync(notification);
 
         await _hubService.ResponseAsync(notification.Receiver,
-            new NotificationResponse() { Data = { Id = notificationId, status = NotificationStatusEnum.Withdraw } });
+            new NotificationResponse()
+            {
+                Data = new NotificationResponseMessage()
+                    { Id = notificationId, status = NotificationStatusEnum.Withdraw }
+            });
         return true;
     }
 
-    public async Task<bool> Response(Guid notificationId, Guid? creator, NotificationStatusEnum status)
+    public async Task<bool> Response(Guid notificationId, Guid? receiver, NotificationStatusEnum status)
     {
         var notification = await _notificationRepository.GetAsync(notificationId);
-        if (notification.Receiver != creator)
+        if (notification.Receiver != receiver)
         {
             _logger.LogError(
                 $"[NotificationService][Response] notification.Receiver != CurrentUser.Id notificationId:{notificationId}");
@@ -134,7 +138,8 @@ public class NotificationService : INotificationService, ITransientDependency
         await _notificationRepository.UpdateAsync(notification);
 
         await _hubService.ResponseAsync(notification.Receiver,
-            new NotificationResponse() { Data = { Id = notificationId, status = status } });
+            new NotificationResponse()
+                { Data = new NotificationResponseMessage() { Id = notificationId, status = status } });
         return true;
     }
 

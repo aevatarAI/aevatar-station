@@ -21,13 +21,16 @@ public sealed class Notification_Test : AevatarApplicationTestBase
     private readonly IObjectMapper _objectMapper;
     private readonly Mock<IHubService> _hubService;
     private readonly NotificationService _notificationService;
-    private readonly NotificationStatusEnum _notificationStatusEnum = NotificationStatusEnum.Agree;
+    private static readonly NotificationStatusEnum _notificationStatusEnum = NotificationStatusEnum.Agree;
     private readonly Guid _creator = Guid.Parse("fb63293b-fdde-4730-b10a-e95c373797c2");
     private readonly Guid _receiveId = Guid.Parse("da63293b-fdde-4730-b10a-e95c37379703");
-    private readonly Guid _notificationId = Guid.Parse("1263293b-fdde-4730-b10a-e95c37379743");
+    private static readonly Guid _notificationId = Guid.Parse("1263293b-fdde-4730-b10a-e95c37379743");
     private readonly NotificationInfo _notificationInfo;
     private readonly CancellationToken _cancellation;
     private readonly string _input = "{\"OrganizationId\":\"3fa85f64-5717-4562-b3fc-2c963f66afa6\", \"Role\":1}";
+
+    private readonly NotificationResponse _notificationResponse = new NotificationResponse()
+        { Data = new NotificationResponseMessage() { Id = _notificationId, status = _notificationStatusEnum } };
 
     public Notification_Test()
     {
@@ -41,8 +44,7 @@ public sealed class Notification_Test : AevatarApplicationTestBase
         _notificationService = new NotificationService(_notificationHandlerFactory, _logger.Object,
             _notificationRepository.Object, _objectMapper, _hubService.Object);
 
-        _hubService.Setup(f => f.ResponseAsync(_receiveId,
-                new NotificationResponse() { Data = { Id = _notificationId, status = _notificationStatusEnum } }))
+        _hubService.Setup(f => f.ResponseAsync(_receiveId, _notificationResponse))
             .Returns(Task.CompletedTask);
 
         _notificationInfo = new NotificationInfo()
@@ -61,8 +63,36 @@ public sealed class Notification_Test : AevatarApplicationTestBase
     public async Task CreatNotification_Test()
     {
         _notificationRepository.Setup(s => s.InsertAsync(_notificationInfo, false, _cancellation));
+
         var response = await _notificationService.CreateAsync(NotificationTypeEnum.OrganizationInvitation, _creator,
             _receiveId, _input);
+
+        response.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task WithdrawAsync_Test()
+    {
+        _notificationRepository.Setup(s => s.GetAsync(_notificationId, true, _cancellation))
+            .ReturnsAsync(_notificationInfo);
+        _notificationRepository.Setup(s => s.UpdateAsync(_notificationInfo, false, _cancellation))
+            .ReturnsAsync(_notificationInfo);
+
+        var response = await _notificationService.WithdrawAsync(_creator, _notificationId);
+
+        response.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task ResponseAsync_Test()
+    {
+        _notificationRepository.Setup(s => s.GetAsync(_notificationId, true, _cancellation))
+            .ReturnsAsync(_notificationInfo);
+        _notificationRepository.Setup(s => s.UpdateAsync(_notificationInfo, false, _cancellation))
+            .ReturnsAsync(_notificationInfo);
+
+        var response = await _notificationService.Response(_notificationId, _receiveId, NotificationStatusEnum.Agree);
+
         response.ShouldBeTrue();
     }
 }
