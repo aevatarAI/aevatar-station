@@ -24,15 +24,13 @@ public class ProjectApiKeyService : ApplicationService, IProjectApiKeyService
 {
     private readonly IApiKeysRepository _apiKeysRepository;
     private readonly ILogger<ProjectApiKeyService> _logger;
-    private readonly IUserAppService _appService;
     private readonly IdentityUserManager _identityUserManager;
 
     public ProjectApiKeyService(IApiKeysRepository apiKeysRepository, ILogger<ProjectApiKeyService> logger,
-        UserAppService appService, IdentityUserManager identityUserManager)
+        IdentityUserManager identityUserManager)
     {
         _apiKeysRepository = apiKeysRepository;
         _logger = logger;
-        _appService = appService;
         _identityUserManager = identityUserManager;
     }
 
@@ -58,8 +56,8 @@ public class ProjectApiKeyService : ApplicationService, IProjectApiKeyService
             CreationTime = DateTime.Now,
             CreatorId = creator,
         };
-        
-        await _apiKeysRepository.InsertAsync(apiKey);
+
+       await _apiKeysRepository.InsertAsync(apiKey);
     }
 
     public async Task DeleteAsync(Guid apiKeyId)
@@ -73,7 +71,7 @@ public class ProjectApiKeyService : ApplicationService, IProjectApiKeyService
     {
         // todo:validate modify rights
         _logger.LogDebug($"[ProjectApiKeyService][ModifyApiKeyAsync] apiKeyId:{apiKeyId}, keyName:{keyName}");
-        
+
         var apiKeyInfo = await _apiKeysRepository.GetAsync(apiKeyId);
         if (apiKeyInfo == null)
         {
@@ -84,12 +82,12 @@ public class ProjectApiKeyService : ApplicationService, IProjectApiKeyService
         {
             throw new BusinessException(message: "key name has exist");
         }
-        
+
         if (apiKeyInfo.ApiKeyName == keyName)
         {
             throw new BusinessException(message: "ApiKey is the same ");
         }
-        
+
 
         apiKeyInfo.ApiKeyName = keyName;
 
@@ -99,13 +97,13 @@ public class ProjectApiKeyService : ApplicationService, IProjectApiKeyService
     public async Task<List<ApiKeyListResponseDto>> GetApiKeysAsync(Guid projectId)
     {
         // todo:validate GetApiKeysAsync rights
-        
+
         var apiKeyList = await _apiKeysRepository.GetProjectApiKeys(projectId, 10, 0);
         var result = new List<ApiKeyListResponseDto>();
         foreach (var item in apiKeyList)
         {
             var creatorInfo = await _identityUserManager.GetByIdAsync((Guid)item.CreatorId!);
-            
+
             result.Add(new ApiKeyListResponseDto()
             {
                 ApiKey = item.ApiKey,
