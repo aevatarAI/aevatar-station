@@ -202,6 +202,8 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         app.UseCorrelationId();
         app.UseStaticFiles();
         app.UseRouting();
+        
+        app.UseCors();
         app.UseAuthentication();
         app.UseAuthorization();
         // app.UsePathBase("/developer-client");
