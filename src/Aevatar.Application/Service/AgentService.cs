@@ -195,7 +195,7 @@ public class AgentService : ApplicationService, IAgentService
         configuration.Properties = propertyDtos;
         return configuration;
     }
-    
+
     public async Task<List<AgentTypeDto>> GetAllAgents()
     {
         var propertyDtos = await GetAgentTypeDataMap();

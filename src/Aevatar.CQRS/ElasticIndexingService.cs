@@ -19,8 +19,7 @@ using Volo.Abp.DependencyInjection;
 
 namespace Aevatar;
 
-
-public class ElasticIndexingService :  IIndexingService,ISingletonDependency
+public class ElasticIndexingService : IIndexingService, ISingletonDependency
 {
     private readonly IElasticClient _elasticClient;
     private readonly ILogger<ElasticIndexingService> _logger;
@@ -48,8 +47,20 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
 
         var createIndexResponse = _elasticClient.Indices.Create(indexName, c => c
             .Map<T>(m => m
-                .Dynamic(false)
-                .Properties(props =>
+                .DynamicTemplates(dt => dt
+                    .DynamicTemplate("numbers_as_integer", t => t
+                        .MatchMappingType("long")
+                        .Mapping(f => { return new NumberProperty(NumberType.Long); })
+                    )
+                    .DynamicTemplate("numbers_as_float", t => t
+                        .MatchMappingType("double")
+                        .Mapping(f => { return new NumberProperty(NumberType.Double); })
+                    )
+                    .DynamicTemplate("objects_as_nested", t => t
+                        .MatchMappingType("object")
+                        .Mapping(f => new ObjectProperty { Dynamic = true })
+                    )
+                ).Properties(props =>
                 {
                     var type = stateBase.GetType();
                     foreach (var property in type.GetProperties())
@@ -59,13 +70,6 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
                         {
                             props.Keyword(k => k
                                 .Name(propertyName)
-                            );
-                        }
-                        else if (property.PropertyType == typeof(int) || property.PropertyType == typeof(long))
-                        {
-                            props.Number(n => n
-                                .Name(propertyName)
-                                .Type(NumberType.Long)
                             );
                         }
                         else if (property.PropertyType == typeof(DateTime))
@@ -80,15 +84,15 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
                                 .Name(propertyName)
                             );
                         }
-                        else if (property.PropertyType == typeof(bool))
+                        else if (property.PropertyType == typeof(Type))
                         {
-                            props.Boolean(b => b
+                            props.Text(o => o
                                 .Name(propertyName)
                             );
                         }
-                        else
+                        else if (property.PropertyType == typeof(bool))
                         {
-                            props.Text(o => o
+                            props.Boolean(b => b
                                 .Name(propertyName)
                             );
                         }
@@ -101,6 +105,7 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
                 })
             )
         );
+
         if (!createIndexResponse.IsValid)
         {
             _logger.LogError("Error creating state index. indexName:{indexName},error:{error},DebugInfo:{DebugInfo}",
@@ -110,7 +115,7 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
         }
         else
         {
-            _logger.LogInformation("Successfully created state index . indexName:{indexName}", indexName);
+            _logger.LogInformation("Successfully created state index. indexName:{indexName}", indexName);
         }
     }
 
@@ -124,7 +129,7 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
         {
             var value = property.GetValue(stateBase);
             var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
-            if (value is IList or IDictionary or GrainId)
+            if (value is IDictionary or GrainId)
             {
                 document[propertyName] = JsonConvert.SerializeObject(value);
             }
@@ -226,6 +231,20 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
                                 .Type(NumberType.Long)
                             );
                         }
+                        else if (property.PropertyType == typeof(float))
+                        {
+                            props.Number(n => n
+                                .Name(propertyName)
+                                .Type(NumberType.Float)
+                            );
+                        }
+                        else if (property.PropertyType == typeof(double) || property.PropertyType == typeof(decimal))
+                        {
+                            props.Number(n => n
+                                .Name(propertyName)
+                                .Type(NumberType.Double)
+                            );
+                        }
                         else if (property.PropertyType == typeof(DateTime))
                         {
                             props.Date(d => d
@@ -241,12 +260,6 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
                         else if (property.PropertyType == typeof(bool))
                         {
                             props.Boolean(b => b
-                                .Name(propertyName)
-                            );
-                        }
-                        else
-                        {
-                            props.Text(o => o
                                 .Name(propertyName)
                             );
                         }
@@ -394,10 +407,11 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
             throw;
         }
     }
-    
+
     public async Task<PagedResultDto<Dictionary<string, object>>> QueryWithLuceneAsync(LuceneQueryDto queryDto)
     {
-        _logger.LogInformation("[Lucene Query] Index: {Index}, Query: {QueryString}", queryDto.Index, queryDto.QueryString);
+        _logger.LogInformation("[Lucene Query] Index: {Index}, Query: {QueryString}", queryDto.Index,
+            queryDto.QueryString);
         var sortDescriptor = new SortDescriptor<Dictionary<string, object>>();
         foreach (var sortField in queryDto.SortFields)
         {
@@ -409,17 +423,17 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
                 sortDescriptor = sortDescriptor.Field(f => f.Field(fieldName).Order(sortOrder));
             }
         }
-        
+
         var from = queryDto.PageIndex * queryDto.PageSize;
         var size = queryDto.PageSize;
-        
+
         var searchDescriptor = new SearchDescriptor<Dictionary<string, object>>()
-        .Index(queryDto.Index)
-        .Query(q => q.QueryString(qs => qs.Query(queryDto.QueryString).AllowLeadingWildcard(false)))
-        .From(from)
-        .Size(size)
-        .Sort(ss => sortDescriptor);
-        
+            .Index(queryDto.Index)
+            .Query(q => q.QueryString(qs => qs.Query(queryDto.QueryString).AllowLeadingWildcard(false)))
+            .From(from)
+            .Size(size)
+            .Sort(ss => sortDescriptor);
+
         var response = await _elasticClient.SearchAsync<Dictionary<string, object>>(searchDescriptor);
         if (!response.IsValid)
         {
@@ -428,9 +442,9 @@ public class ElasticIndexingService :  IIndexingService,ISingletonDependency
         }
 
         var resultList = response.Documents.ToList();
-        _logger.LogInformation("[Lucene Query] Index: {Index}, Query: {QueryString}, result: {Result}", queryDto.Index, queryDto.QueryString, resultList);
+        _logger.LogInformation("[Lucene Query] Index: {Index}, Query: {QueryString}, result: {Result}", queryDto.Index,
+            queryDto.QueryString, resultList);
 
         return new PagedResultDto<Dictionary<string, object>>(response.Total, resultList);
     }
-
 }
