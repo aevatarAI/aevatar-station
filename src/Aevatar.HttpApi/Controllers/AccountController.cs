@@ -178,7 +178,7 @@ public class AccountController : AevatarController
             claimsPrincipal);
         
         _logger.LogInformation("LoginCallback Redirect");
-        return Redirect($"https://auth-station-staging.aevatar.ai/connect/authorize?response_type=code&client_id=AevatarAuthServer&redirect_uri=http://localhost:8001/redirect_page_after_login&scope=Aevatar");
+        return Redirect($"https://auth-station-staging.aevatar.ai/connect/authorize?response_type=code&client_id=AevatarAuthServer&redirect_uri=https://localhost:44376&scope=Aevatar");
         
         // return SignIn(claimsPrincipal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
