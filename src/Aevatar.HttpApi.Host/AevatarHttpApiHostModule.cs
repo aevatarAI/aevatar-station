@@ -118,6 +118,7 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
                 options.ClientId = configuration["Authentication:Google:ClientId"];
                 options.ClientSecret = configuration["Authentication:Google:ClientSecret"];
                 options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.CallbackPath = "/quantumgpt-client/signin-google";
             })
             .AddCookie();
     }
