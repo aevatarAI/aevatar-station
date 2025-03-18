@@ -5,7 +5,7 @@ using Aevatar.GAgents.AIGAgent.Dtos;
 using Aevatar.GAgents.ChatAgent.Dtos;
 using Aevatar.GAgents.ChatAgent.GAgent;
 
-namespace Aevatar.Application.Grains.Agents.ChatGAgentManager.ChatAgent;
+namespace Aevatar.Application.Grains.Agents.ChatManager.Chat;
 
 public class QuantumChatGAgent : ChatGAgentBase<QuantumChatState, QuantumChatEventLog, EventBase, ChatConfigDto>, IQuantumChat
 {

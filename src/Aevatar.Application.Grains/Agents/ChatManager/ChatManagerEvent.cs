@@ -3,7 +3,7 @@ using Aevatar.GAgents.AI.Common;
 using Aevatar.SignalR;
 using Nest;
 
-namespace Aevatar.Application.Grains.Agents.ChatGAgentManager;
+namespace Aevatar.Application.Grains.Agents.ChatManager;
 
 [GenerateSerializer]
 public class RequestQuantumChatEvent:EventBase

@@ -1,4 +1,4 @@
-using Aevatar.Application.Grains.Agents.ChatGAgentManager.ChatAgent;
+using Aevatar.Application.Grains.Agents.ChatManager.Chat;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
@@ -8,7 +8,7 @@ using Aevatar.GAgents.ChatAgent.Dtos;
 using Json.Schema.Generation;
 using Orleans.Providers;
 
-namespace Aevatar.Application.Grains.Agents.ChatGAgentManager;
+namespace Aevatar.Application.Grains.Agents.ChatManager;
 
 [Description("manage chat agent")]
 [StorageProvider(ProviderName = "PubSubStore")]

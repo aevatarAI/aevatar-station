@@ -2,7 +2,7 @@ using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
 
-namespace Aevatar.Application.Grains.Agents.ChatGAgentManager;
+namespace Aevatar.Application.Grains.Agents.ChatManager;
 
 public interface IChatManagerGAgent : IGAgent
 {

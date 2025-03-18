@@ -1,7 +1,7 @@
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AIGAgent.State;
 
-namespace Aevatar.Application.Grains.Agents.ChatGAgentManager;
+namespace Aevatar.Application.Grains.Agents.ChatManager;
 
 [GenerateSerializer]
 public class ChatManagerGAgentState : AIGAgentStateBase

@@ -1,8 +1,8 @@
-namespace Aevatar.Application.Grains.Agents.ChatGAgentManager;
 
+namespace Aevatar.Application.Grains.Agents.ChatManager;
 
 [GenerateSerializer]
-public class SessionInfo
+public class SessionInfoDto
 {
     [Id(0)] public Guid SessionId { get; set; }
     [Id(1)] public string Title { get; set; }
