@@ -7,6 +7,7 @@ using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
 using Volo.Abp.AutoMapper;
 using Volo.Abp.Modularity;
+using Volo.Abp.PermissionManagement;
 
 namespace PluginGAgent.Silo;
 
@@ -14,7 +15,7 @@ namespace PluginGAgent.Silo;
     typeof(AbpAspNetCoreSerilogModule),
     typeof(AbpAutofacModule),
     typeof(AbpAutoMapperModule),
-    typeof(AevatarPermissionManagementModule),
+    // typeof(AevatarPermissionManagementModule),
     typeof(AevatarModule)
 )]
 public class PluginGAgentTestModule : AbpModule
@@ -27,5 +28,9 @@ public class PluginGAgentTestModule : AbpModule
             true, writeToProviders: true);
         context.Services.AddHttpClient();
         context.Services.AddSingleton<IEventDispatcher, DefaultEventDispatcher>();
+        // Configure<PermissionManagementOptions>(options =>
+        // {
+        //     options.IsDynamicPermissionStoreEnabled = true;
+        // });
     }
 }
