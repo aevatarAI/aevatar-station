@@ -216,6 +216,7 @@ public class AevatarAuthServerModule : AbpModule
         app.UseCorrelationId();
         app.UseStaticFiles();
         app.UseRouting();
+        app.UseCors("CrossSubdomain"); 
         app.UseAuthentication();
         app.UseAbpOpenIddictValidation();
 
