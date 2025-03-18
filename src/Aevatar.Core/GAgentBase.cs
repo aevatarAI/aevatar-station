@@ -75,9 +75,9 @@ public abstract partial class
         await OnRegisterAgentAsync(gAgent.GetGrainId());
     }
 
-    public Task SubscribeToAsync(IGAgent gAgent)
+    public async Task SubscribeToAsync(IGAgent gAgent)
     {
-        return SetParentAsync(gAgent.GetGrainId());
+        await SetParentAsync(gAgent.GetGrainId());
     }
 
     public Task UnsubscribeFromAsync(IGAgent gAgent)
@@ -114,7 +114,7 @@ public abstract partial class
 
     public Task<GrainId> GetParentAsync()
     {
-        return Task.FromResult(State.Parent ?? default);
+        return Task.FromResult(State.Parent);
     }
 
     public virtual Task<Type?> GetConfigurationTypeAsync()
