@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
 using OpenIddict.Server.AspNetCore;
@@ -29,6 +30,15 @@ public class GoogleLoginRequest
 [Route("api/account")]
 public class AccountController : AevatarController
 {
+    private readonly ILogger<AccountController> _logger;
+    
+    public AccountController(
+        ILogger<AccountController> logger)
+    {
+        _logger = logger;
+    }
+    
+    
     [HttpGet("login-google")]
     public IActionResult ExternalLogin()
     {
@@ -113,6 +123,7 @@ public class AccountController : AevatarController
     [HttpGet("LoginCallback")]
     public async Task<IActionResult> LoginCallback()
     {
+        _logger.LogInformation("LoginCallback being");
         var result = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         
         var email = result.Principal.FindFirst(ClaimTypes.Email)?.Value;
@@ -132,12 +143,14 @@ public class AccountController : AevatarController
         
         if (user == null)
         {
+            _logger.LogInformation("LoginCallback Create User");
             user = new IdentityUser(Guid.NewGuid(), email, email: Guid.NewGuid().ToString("N") + "@ABP.IO");
             await userManager.CreateAsync(user);
             await userManager.SetRolesAsync(user,
                 [AevatarPermissions.BasicUser]);
         }
         var identityUser = await userManager.FindByNameAsync(email);
+        _logger.LogInformation("LoginCallback Found User");
         var identityRoleManager = HttpContext.RequestServices.GetRequiredService<IdentityRoleManager>();
         var roleNames = new List<string>();
         foreach (var userRole in identityUser.Roles)
@@ -162,6 +175,7 @@ public class AccountController : AevatarController
             IdentityConstants.ApplicationScheme, 
             claimsPrincipal);
         
+        _logger.LogInformation("LoginCallback Redirect");
         return Redirect($"https://auth-station-staging.aevatar.ai/connect/authorize?response_type=code&client_id=AevatarAuthServer&redirect_uri=http://localhost:8001/rsedirect_page_after_login&scope=Aevatar");
         
         // return SignIn(claimsPrincipal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
