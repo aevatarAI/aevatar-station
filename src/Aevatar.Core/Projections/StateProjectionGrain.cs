@@ -38,7 +38,7 @@ public class StateProjectionGrain<TState> : Grain, IProjectionGrain<TState>
         var projectionStream = GetStateProjectionStream();
         var handles = await projectionStream.GetAllSubscriptionHandles();
         var projectors = ServiceProvider.GetRequiredService<IEnumerable<IStateProjector>>();
-        var asyncObserver = new StateProjectionAsyncObserver(projectors);
+        var asyncObserver = StateProjectionAsyncObserver.Create(projectors, ServiceProvider);
         if (handles.Count > 0)
         {
             _logger.LogInformation("Resuming state projection stream for {TState} with handle count of {Count}", typeof(TState).Name, handles.Count);
