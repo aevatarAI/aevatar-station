@@ -167,6 +167,30 @@ public class AevatarAuthServerModule : AbpModule
       
         var dataProtectionBuilder = context.Services.AddDataProtection().SetApplicationName("AevatarAuthServer");
         
+        
+        context.Services.ConfigureApplicationCookie(options =>
+        {
+            options.Cookie.SameSite = SameSiteMode.None;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            options.Cookie.Domain = ".aevatar.ai";
+            // options.Cookie.Name = "ae_auth";
+        });
+
+        // CORS策略
+        context.Services.AddCors(options =>
+        {
+            options.AddPolicy("CrossSubdomain", builder =>
+            {
+                builder.WithOrigins(
+                        "https://auth-station-staging.aevatar.ai",
+                        "https://station-developer-staging.aevatar.ai"
+                    )
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials()
+                    .SetPreflightMaxAge(TimeSpan.FromHours(1));
+            });
+        });
         context.Services.AddHealthChecks();
     }
 
