@@ -359,6 +359,11 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
                     application.RedirectUris.Add(uri);
                 }
             }
+
+            // if (Uri.TryCreate("http://localhost:8001/api/account/callback", UriKind.Absolute, out var uri2))
+            // {
+            //     application.RedirectUris.Add(uri2);
+            // }
         }
 
         if (postLogoutRedirectUri != null)
