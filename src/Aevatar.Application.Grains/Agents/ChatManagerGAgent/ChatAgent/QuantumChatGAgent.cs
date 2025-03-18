@@ -7,7 +7,7 @@ using Aevatar.GAgents.ChatAgent.GAgent;
 
 namespace Aevatar.Application.Grains.Agents.ChatGAgentManager.ChatAgent;
 
-public class QuantumChat : ChatGAgentBase<QuantumChatState, QuantumChatEventLog, EventBase, ChatConfigDto>, IQuantumChat
+public class QuantumChatGAgent : ChatGAgentBase<QuantumChatState, QuantumChatEventLog, EventBase, ChatConfigDto>, IQuantumChat
 {
     public async Task<string> QuantumChatAsync(string llm, string message,
         ExecutionPromptSettings? promptSettings = null)
