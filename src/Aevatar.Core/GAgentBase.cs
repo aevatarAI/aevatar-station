@@ -114,7 +114,7 @@ public abstract partial class
 
     public Task<GrainId> GetParentAsync()
     {
-        return Task.FromResult(State.Parent);
+        return Task.FromResult(State.Parent ?? default);
     }
 
     public virtual Task<Type?> GetConfigurationTypeAsync()
