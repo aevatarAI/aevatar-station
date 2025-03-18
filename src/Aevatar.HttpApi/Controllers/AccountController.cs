@@ -42,6 +42,7 @@ public class AccountController : AevatarController
     [HttpGet("login-google")]
     public IActionResult ExternalLogin()
     {
+        _logger.LogInformation("ExternalLogin");
         var redirectUrl = Url.Action("LoginCallback", "Account");
         var properties = new AuthenticationProperties { RedirectUri = redirectUrl };
         return Challenge(properties, GoogleDefaults.AuthenticationScheme);
