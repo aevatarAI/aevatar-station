@@ -87,7 +87,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
         Type parameterType,
         bool isResponseHandler)
     {
-        return new EventWrapperBaseAsyncObserver(async item =>
+        return EventWrapperBaseAsyncObserver.Create(async item =>
         {
             using (Logger.BeginScope(new Dictionary<string, object>
                    {
@@ -157,11 +157,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
                     throw;
                 }
             }
-        })
-        {
-            MethodName = method.Name,
-            ParameterTypeName = parameterType.Name
-        };
+        }, ServiceProvider, method.Name, parameterType.Name);
     }
 
     private bool ShouldSkipEvent(EventWrapper<TEvent> eventWrapper, MethodInfo method)
