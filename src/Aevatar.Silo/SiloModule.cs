@@ -19,6 +19,7 @@ namespace Aevatar.Silo;
     typeof(AbpAspNetCoreSerilogModule),
     typeof(AbpAutofacModule),
     typeof(OpenTelemetryModule),
+    typeof(AevatarModule),
     typeof(AevatarPermissionManagementModule)
 )]
 public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
