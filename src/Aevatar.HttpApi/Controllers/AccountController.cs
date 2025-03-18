@@ -122,7 +122,7 @@ public class AccountController : AevatarController
     }
 
     
-    [HttpGet("LoginCallback")]
+    [HttpGet("login-callback")]
     public async Task<IActionResult> LoginCallback()
     {
         _logger.LogInformation("LoginCallback being");
