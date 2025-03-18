@@ -6,6 +6,7 @@ using AElf.OpenTelemetry;
 using Aevatar.MongoDB;
 using AutoResponseWrapper;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors;
@@ -69,7 +70,12 @@ public class AevatarDeveloperHostModule : AbpModule
                 options.MapInboundClaims = false;
             });
         
-        context.Services.AddAuthentication()
+        context.Services.AddAuthentication(
+                options =>
+                {
+                    options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                    options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
+                })
             .AddGoogle(options =>
             {
                 options.ClientId = configuration["Authentication:Google:ClientId"];
