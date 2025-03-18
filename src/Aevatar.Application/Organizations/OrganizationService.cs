@@ -138,6 +138,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         );
         await RoleManager.CreateAsync(role);
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Organizations.Default, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.OrganizationMembers.Default, true);
 
         return role.Id;
     }
@@ -199,16 +200,33 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         }
         else
         {
-            var organization = await OrganizationUnitRepository.GetAsync(organizationId);
-            var role = FindOrganizationRole(organization, user);
-            if (role.HasValue)
+            var children = await OrganizationUnitManager.FindChildrenAsync(organizationId, true);
+            foreach (var child in children)
             {
-                user.RemoveRole(role.Value);
-                await IdentityUserManager.UpdateAsync(user);
+                await RemoveMemberAsync(child, user.Id);
             }
-
-            await IdentityUserManager.RemoveFromOrganizationUnitAsync(user.Id, organizationId);
+            
+            var organization = await OrganizationUnitRepository.GetAsync(organizationId);
+            await RemoveMemberAsync(organization, user.Id);
         }
+    }
+
+    private async Task RemoveMemberAsync(OrganizationUnit organization, Guid userId)
+    {
+        var user = await IdentityUserManager.GetByIdAsync(userId);
+        if (!user.IsInOrganizationUnit(organization.Id))
+        {
+            return;
+        }
+
+        var role = FindOrganizationRole(organization, user);
+        if (role.HasValue)
+        {
+            user.RemoveRole(role.Value);
+            await IdentityUserManager.UpdateAsync(user);
+        }
+
+        await IdentityUserManager.RemoveFromOrganizationUnitAsync(user.Id, organization.Id);
     }
 
     public virtual async Task SetMemberRoleAsync(Guid organizationId, SetOrganizationMemberRoleDto input)
