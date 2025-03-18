@@ -164,6 +164,7 @@ public static class OrleansHostExtension
                 services.Configure<AzureOpenAIConfig>(context.Configuration.GetSection("AIServices:AzureOpenAI"));
                 services.Configure<AzureDeepSeekConfig>(context.Configuration.GetSection("AIServices:DeepSeek"));
                 services.Configure<QdrantConfig>(context.Configuration.GetSection("VectorStores:Qdrant"));
+                services.Configure<SystemLLMConfigOptions>(context.Configuration);
                 services.Configure<AzureOpenAIEmbeddingsConfig>(context.Configuration.GetSection("AIServices:AzureOpenAIEmbeddings"));
                 services.Configure<RagConfig>(context.Configuration.GetSection("Rag"));
                 services.AddSingleton(typeof(HubLifetimeManager<>), typeof(OrleansHubLifetimeManager<>));

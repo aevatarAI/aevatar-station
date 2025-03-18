@@ -13,6 +13,7 @@ namespace Aevatar.Application.Grains.Agents.ChatGAgentManager;
 [Description("manage chat agent")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
+[GAgent(nameof(ChatGAgentManager))]
 public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManageEventLog, EventBase, ManagerConfigDto>,
     IChatManagerGAgent
 {
@@ -21,8 +22,59 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         return Task.FromResult("Chat GAgent Manager");
     }
 
+    [EventHandler]
+    public async Task HandleEventAsync(RequestQuantumChatEvent @event)
+    {
+        var response = await ChatWithSessionAsync(@event.SessionId, @event.SystemLLM, @event.Content);
+        await PublishAsync(new ResponseQuantumChat()
+        {
+            Response = response
+        });
+    }
+
+    [EventHandler]
+    public async Task HandleEventAsync(RequestQuantumSessionListEvent @event)
+    {
+        var response = await GetSessionListAsync();
+        await PublishAsync(new ResponseQuantumSessionList()
+        {
+            SessionList = response,
+        });
+    }
+
+    [EventHandler]
+    public async Task HandleEventAsync(RequestSessionChatHistoryEvent @event)
+    {
+        var response = await GetSessionMessageListAsync(@event.SessionId);
+        await PublishAsync(new ResponseSessionChatHistory()
+        {
+            ChatHistory = response
+        });
+    }
+
+    [EventHandler]
+    public async Task HandleEventAsync(RequestDeleteSessionEvent @event)
+    {
+        await DeleteSessionAsync(@event.SessionId);
+        await PublishAsync(new ResponseDeleteSession()
+        {
+            IfSuccess = true
+        });
+    }
+
+    [EventHandler]
+    public async Task HandleEventAsync(RequestRenameSessionEvent @event)
+    {
+        await RenameSessionAsync(@event.SessionId, @event.Title);
+        await PublishAsync(new ResponseRenameSession()
+        {
+            SessionId = @event.SessionId,
+            Title = @event.Title,
+        });
+    }
+
     public async Task<string> ChatWithSessionAsync(Guid sessionId, string sysmLLM, string content,
-        ExecutionPromptSettings promptSettings = null, CancellationToken cancellationToken = default)
+        ExecutionPromptSettings promptSettings = null)
     {
         var sessionInfo = State.GetSession(sessionId);
         IQuantumChat quantumChat = GrainFactory.GetGrain<IQuantumChat>(sessionId);
@@ -31,10 +83,10 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             await quantumChat.ConfigAsync(new ChatConfigDto()
             {
                 Instructions = "You are an intelligent robot. Please answer the user's questions", MaxHistoryCount = 32,
-                LLMConfig = new LLMConfigDto() { }
+                LLMConfig = new LLMConfigDto() { SystemLLM = sysmLLM }
             });
 
-            var titleList = await ChatWithHistory(content, cancellationToken: cancellationToken);
+            var titleList = await ChatWithHistory(content);
             var title = titleList is { Count: > 0 }
                 ? titleList[0].Content!
                 : string.Join(" ", content.Split(" ").Take(4));
