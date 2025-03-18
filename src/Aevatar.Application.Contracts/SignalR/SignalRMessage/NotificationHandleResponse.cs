@@ -6,7 +6,7 @@ namespace Aevatar.SignalR.SignalRMessage;
 public class NotificationResponse:ISignalRMessage<NotificationResponseMessage>
 {
     public string MessageType => "NotificationAction";
-    public NotificationResponseMessage Data { get; }
+    public NotificationResponseMessage Data { get; set; }
 }
 
 public class NotificationResponseMessage

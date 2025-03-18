@@ -3,6 +3,7 @@ using Moq;
 using Nest;
 using Aevatar;
 using Aevatar.CQRS;
+using Aevatar.CQRS.Provider;
 using Aevatar.Query;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
@@ -13,6 +14,7 @@ public class ElasticServiceTests
     private readonly Mock<IElasticClient> _mockElasticClient;
     private readonly Mock<ILogger<ElasticIndexingService>> _mockLogger;
     private readonly IIndexingService _elasticService;
+    private readonly ICQRSProvider _cqrsProvider;
 
     public ElasticServiceTests()
     {
@@ -21,7 +23,8 @@ public class ElasticServiceTests
         
         _elasticService = new ElasticIndexingService(
             _mockLogger.Object,
-            _mockElasticClient.Object
+            _mockElasticClient.Object,
+            _cqrsProvider
             );
     }
 
@@ -33,8 +36,8 @@ public class ElasticServiceTests
         {
             Index = "test-index",
             QueryString = "level:ERROR",
-            From = 0,
-            Size = 10,
+            // From = 0,
+            // Size = 10,
             SortFields = new List<string> { "timestamp:desc" }
         };
 
