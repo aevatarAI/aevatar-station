@@ -5,6 +5,7 @@ using Aevatar.Options;
 using Localization.Resources.AbpUi;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Identity;
 using Volo.Abp;
 using Volo.Abp.Account;
 using Volo.Abp.Account.Web;
@@ -58,6 +59,7 @@ public class AevatarAuthServerModule : AbpModule
         {
             builder.AddServer(options =>
             {
+                options.SetAuthorizationCodeLifetime(TimeSpan.FromMinutes(10));
                 options.UseAspNetCore().DisableTransportSecurityRequirement();
                 options.SetIssuer(new Uri(configuration["AuthServer:IssuerUri"]!));
                 // options.IgnoreGrantTypePermissions();
