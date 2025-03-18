@@ -43,7 +43,8 @@ public class AccountController : AevatarController
     public IActionResult ExternalLogin()
     {
         _logger.LogInformation("ExternalLogin");
-        var redirectUrl = Url.Action("LoginCallback", "Account");
+        // var redirectUrl = Url.Action("LoginCallback", "Account");
+        var redirectUrl = "https://station-developer-staging.aevatar.ai/quantumgpt-client/api/account/login-callback";
         var properties = new AuthenticationProperties { RedirectUri = redirectUrl };
         return Challenge(properties, GoogleDefaults.AuthenticationScheme);
     }
@@ -177,7 +178,7 @@ public class AccountController : AevatarController
             claimsPrincipal);
         
         _logger.LogInformation("LoginCallback Redirect");
-        return Redirect($"https://auth-station-staging.aevatar.ai/connect/authorize?response_type=code&client_id=AevatarAuthServer&redirect_uri=http://localhost:8001/rsedirect_page_after_login&scope=Aevatar");
+        return Redirect($"https://auth-station-staging.aevatar.ai/connect/authorize?response_type=code&client_id=AevatarAuthServer&redirect_uri=http://localhost:8001/redirect_page_after_login&scope=Aevatar");
         
         // return SignIn(claimsPrincipal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
