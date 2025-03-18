@@ -24,6 +24,9 @@ public class OrganizationService : AevatarAppService, IOrganizationService
     protected readonly IPermissionDefinitionManager PermissionDefinitionManager;
     protected readonly IRepository<IdentityUser, Guid> UserRepository;
 
+    protected const string OwnerRoleName = "Owner";
+    protected const string ReaderRoleName = "Reader";
+
     public OrganizationService(OrganizationUnitManager organizationUnitManager, IdentityUserManager identityUserManager,
         IRepository<OrganizationUnit, Guid> organizationUnitRepository, IdentityRoleManager roleManager,
         IPermissionManager permissionManager, IOrganizationPermissionChecker permissionChecker,
@@ -110,7 +113,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
     {
         var role = new IdentityRole(
             GuidGenerator.Create(),
-            organizationId.ToString() + "_Owner"
+            GetOrganizationRoleName(organizationId, OwnerRoleName)
         );
         await RoleManager.CreateAsync(role);
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Organizations.Default, true);
@@ -131,7 +134,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
     {
         var role = new IdentityRole(
             GuidGenerator.Create(),
-            organizationId.ToString() + "_Reader"
+            GetOrganizationRoleName(organizationId, ReaderRoleName)
         );
         await RoleManager.CreateAsync(role);
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Organizations.Default, true);
@@ -309,5 +312,24 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         }
 
         return null;
+    }
+
+    protected virtual async Task<bool> IsOrganizationOwonerAsync(Guid organizationId,Guid userId)
+    {
+        var organization = await OrganizationUnitRepository.GetAsync(organizationId);
+        var user = await IdentityUserManager.GetByIdAsync(userId);
+        var roleId = FindOrganizationRole(organization, user);
+        if (!roleId.HasValue)
+        {
+            return false;
+        }
+
+        var role = await RoleManager.FindByIdAsync(roleId.Value.ToString());
+        return role.Name == GetOrganizationRoleName(organizationId, OwnerRoleName);
+    }
+
+    protected virtual string GetOrganizationRoleName(Guid organizationId, string roleName)
+    {
+        return $"{organizationId.ToString()}_{roleName}";
     }
 }
