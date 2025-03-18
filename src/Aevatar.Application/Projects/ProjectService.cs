@@ -113,4 +113,16 @@ public class ProjectService : OrganizationService, IProjectService
         organizationDto.MemberCount = members.Count;
         return organizationDto;
     }
+    
+    protected override async Task AddMemberAsync(Guid organizationId, IdentityUser user, Guid? roleId)
+    {
+        if (!roleId.HasValue)
+        {
+            throw new UserFriendlyException("Must set a user role.");
+        }
+        
+        user.AddRole(roleId.Value);
+        await IdentityUserManager.UpdateAsync(user);
+        await IdentityUserManager.AddToOrganizationUnitAsync(user.Id, organizationId);
+    }
 }

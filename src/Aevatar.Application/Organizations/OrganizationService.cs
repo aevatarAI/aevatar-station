@@ -194,21 +194,36 @@ public class OrganizationService : AevatarAppService, IOrganizationService
 
         if (input.Join)
         {
-            user.AddRole(input.RoleId.Value);
-            await IdentityUserManager.UpdateAsync(user);
-            await IdentityUserManager.AddToOrganizationUnitAsync(user.Id, organizationId);
+            await AddMemberAsync(organizationId, user, input.RoleId);
         }
         else
         {
-            var children = await OrganizationUnitManager.FindChildrenAsync(organizationId, true);
-            foreach (var child in children)
-            {
-                await RemoveMemberAsync(child, user.Id);
-            }
-            
-            var organization = await OrganizationUnitRepository.GetAsync(organizationId);
-            await RemoveMemberAsync(organization, user.Id);
+            await RemoveMemberAsync(organizationId, user);
         }
+    }
+
+    protected virtual async Task AddMemberAsync(Guid organizationId, IdentityUser user, Guid? roleId)
+    {
+        // TODO: invite user
+        if (roleId.HasValue)
+        {
+            user.AddRole(roleId.Value);
+            await IdentityUserManager.UpdateAsync(user);
+        }
+        
+        await IdentityUserManager.AddToOrganizationUnitAsync(user.Id, organizationId);
+    }
+    
+    protected virtual async Task RemoveMemberAsync(Guid organizationId, IdentityUser user)
+    {
+        var children = await OrganizationUnitManager.FindChildrenAsync(organizationId, true);
+        foreach (var child in children)
+        {
+            await RemoveMemberAsync(child, user.Id);
+        }
+            
+        var organization = await OrganizationUnitRepository.GetAsync(organizationId);
+        await RemoveMemberAsync(organization, user.Id);
     }
 
     private async Task RemoveMemberAsync(OrganizationUnit organization, Guid userId)
