@@ -156,7 +156,7 @@ public class AccountController : AevatarController
                 [AevatarPermissions.BasicUser]);
         }
         var identityUser = await userManager.FindByNameAsync(email);
-        _logger.LogInformation("LoginCallback Found User");
+        _logger.LogInformation("LoginCallback Found User {email}", email);
         var identityRoleManager = HttpContext.RequestServices.GetRequiredService<IdentityRoleManager>();
         var roleNames = new List<string>();
         foreach (var userRole in identityUser.Roles)
