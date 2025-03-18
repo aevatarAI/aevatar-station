@@ -30,7 +30,7 @@ public sealed class Notification_Test : AevatarApplicationTestBase
     private readonly string _input = "{\"OrganizationId\":\"3fa85f64-5717-4562-b3fc-2c963f66afa6\", \"Role\":1}";
 
     private readonly NotificationResponse _notificationResponse = new NotificationResponse()
-        { Data = new NotificationResponseMessage() { Id = _notificationId, status = _notificationStatusEnum } };
+        { Data = new NotificationResponseMessage() { Id = _notificationId, Status = _notificationStatusEnum } };
 
     public Notification_Test()
     {

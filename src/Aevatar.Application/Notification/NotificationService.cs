@@ -99,12 +99,20 @@ public class NotificationService : INotificationService, ITransientDependency
         notification.Status = NotificationStatusEnum.Withdraw;
         await _notificationRepository.UpdateAsync(notification);
 
+        await _hubService.ResponseAsync((Guid)notification.CreatorId!,
+            new NotificationResponse()
+            {
+                Data = new NotificationResponseMessage()
+                    { Id = notificationId, Status = NotificationStatusEnum.Withdraw }
+            });
+
         await _hubService.ResponseAsync(notification.Receiver,
             new NotificationResponse()
             {
                 Data = new NotificationResponseMessage()
-                    { Id = notificationId, status = NotificationStatusEnum.Withdraw }
+                    { Id = notificationId, Status = NotificationStatusEnum.Withdraw }
             });
+
         return true;
     }
 
@@ -139,7 +147,7 @@ public class NotificationService : INotificationService, ITransientDependency
 
         await _hubService.ResponseAsync(notification.Receiver,
             new NotificationResponse()
-                { Data = new NotificationResponseMessage() { Id = notificationId, status = status } });
+                { Data = new NotificationResponseMessage() { Id = notificationId, Status = status } });
         return true;
     }
 

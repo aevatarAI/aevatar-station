@@ -13,9 +13,10 @@ public class StationHubService : IHubService, ISingletonDependency
     private readonly IHubContext<StationSignalRHub> _hubContext;
     private readonly ILogger<StationHubService> _logger;
 
-    public StationHubService(ILogger<StationHubService> logger)
+    public StationHubService(ILogger<StationHubService> logger, IHubContext<StationSignalRHub> hubContext)
     {
         _logger = logger;
+        _hubContext = hubContext;
     }
 
     public async Task ResponseAsync<T>(Guid userId, ISignalRMessage<T> message)
@@ -23,7 +24,9 @@ public class StationHubService : IHubService, ISingletonDependency
         try
         {
             _logger.LogDebug($"[StationHubService][ResponseAsync] userId:{userId.ToString()} , message:{JsonConvert.SerializeObject(message)} start");
+
             await _hubContext.Clients.Users(userId.ToString()).SendAsync(message.MessageType, message.Data);
+            
             _logger.LogDebug($"[StationHubService][ResponseAsync] userId:{userId.ToString()} , message:{JsonConvert.SerializeObject(message)} end");
         }
         catch (Exception e)
