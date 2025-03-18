@@ -50,7 +50,7 @@ public class ProjectService : OrganizationService, IProjectService
     {
         var role = new IdentityRole(
             GuidGenerator.Create(),
-            organizationId.ToString() + "_Reader"
+            GetOrganizationRoleName(organizationId, ReaderRoleName)
         );
         await RoleManager.CreateAsync(role);
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Organizations.Default, true);
@@ -72,11 +72,12 @@ public class ProjectService : OrganizationService, IProjectService
     public async Task<ListResultDto<ProjectDto>> GetListAsync(GetProjectListDto input)
     {
         List<OrganizationUnit> organizations;
-        if (CurrentUser.IsInRole(AevatarConsts.AdminRoleName))
+        if (CurrentUser.IsInRole(AevatarConsts.AdminRoleName) ||
+            await IsOrganizationOwonerAsync(input.OrganizationId, CurrentUser.Id.Value))
         {
             organizations = await OrganizationUnitManager.FindChildrenAsync(input.OrganizationId, true);
             organizations = organizations.Where(o =>
-                o.TryGetExtraPropertyValue<OrganizationType>(AevatarConsts.OrganizationTypeKey,out var type) &&
+                o.TryGetExtraPropertyValue<OrganizationType>(AevatarConsts.OrganizationTypeKey, out var type) &&
                 type == OrganizationType.Project).ToList();
         }
         else
