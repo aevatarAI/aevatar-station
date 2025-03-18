@@ -184,7 +184,7 @@ public class AccountController : AevatarController
        
         var redirectUrl = _googleLoginOptions.RedirectUrl;
         _logger.LogInformation("LoginCallback Redirect {url}", redirectUrl);
-        return Redirect($"http://aevatar-authserver-svc.aismart-testnet:8082/connect/authorize?response_type=code&client_id=AevatarAuthServer&redirect_uri={redirectUrl}&scope=Aevatar");
+        return Redirect($"https://auth-station-staging.aevatar.ai/connect/authorize?response_type=code&client_id=AevatarAuthServer&redirect_uri={redirectUrl}&scope=Aevatar");
         
         // return SignIn(claimsPrincipal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
