@@ -162,7 +162,7 @@ public class AccountController : AevatarController
             IdentityConstants.ApplicationScheme, 
             claimsPrincipal);
         
-        return Redirect($"http://localhost:8082/connect/authorize?response_type=code&client_id=AevatarAuthServer&redirect_uri=http://localhost:8001/api/account/callback&scope=Aevatar");
+        return Redirect($"https://auth-station-staging.aevatar.ai/connect/authorize?response_type=code&client_id=AevatarAuthServer&redirect_uri=http://localhost:8001/rsedirect_page_after_login&scope=Aevatar");
         
         // return SignIn(claimsPrincipal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
