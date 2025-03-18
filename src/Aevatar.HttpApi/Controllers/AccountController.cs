@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Aevatar.Options;
 using Aevatar.Permissions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -11,6 +12,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
 using OpenIddict.Server.AspNetCore;
@@ -31,11 +33,13 @@ public class GoogleLoginRequest
 public class AccountController : AevatarController
 {
     private readonly ILogger<AccountController> _logger;
+    private readonly GoogleLoginOptions _googleLoginOptions;
     
     public AccountController(
-        ILogger<AccountController> logger)
+        ILogger<AccountController> logger, IOptionsSnapshot<GoogleLoginOptions> googleLoginOptions)
     {
         _logger = logger;
+        _googleLoginOptions = googleLoginOptions.Value;
     }
     
     
@@ -177,8 +181,10 @@ public class AccountController : AevatarController
             IdentityConstants.ApplicationScheme, 
             claimsPrincipal);
         
-        _logger.LogInformation("LoginCallback Redirect");
-        return Redirect($"https://auth-station-staging.aevatar.ai/connect/authorize?response_type=code&client_id=AevatarAuthServer&redirect_uri=https://localhost:44376&scope=Aevatar");
+       
+        var redirectUrl = _googleLoginOptions.RedirectUrl;
+        _logger.LogInformation("LoginCallback Redirect {url}", redirectUrl);
+        return Redirect($"https://auth-station-staging.aevatar.ai/connect/authorize?response_type=code&client_id=AevatarAuthServer&redirect_uri={redirectUrl}&scope=Aevatar");
         
         // return SignIn(claimsPrincipal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }

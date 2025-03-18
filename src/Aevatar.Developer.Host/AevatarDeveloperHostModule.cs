@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using AElf.OpenTelemetry;
 using Aevatar.MongoDB;
+using Aevatar.Options;
 using AutoResponseWrapper;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
@@ -52,6 +53,7 @@ public class AevatarDeveloperHostModule : AbpModule
         ConfigureVirtualFileSystem(context);
         ConfigureCors(context, configuration);
         ConfigureSwaggerServices(context, configuration);
+        Configure<GoogleLoginOptions>(configuration.GetSection("GoogleLogin"));
         context.Services.AddMvc(options =>
         {
             options.Filters.Add(new IgnoreAntiforgeryTokenAttribute());

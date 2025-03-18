@@ -12,6 +12,7 @@ using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite.Bundling;
 using Microsoft.OpenApi.Models;
 using Aevatar.Application.Grains;
 using Aevatar.Domain.Grains;
+using Aevatar.Options;
 using Google.Apis.Auth.AspNetCore3;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -63,7 +64,8 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         Configure<AbpMvcLibsOptions>(options => { options.CheckLibs = false; });
         var configuration = context.Services.GetConfiguration();
         var hostingEnvironment = context.Services.GetHostingEnvironment();
-
+        
+        Configure<GoogleLoginOptions>(configuration.GetSection("GoogleLogin"));
         ConfigureAuthentication(context, configuration);
         ConfigureBundles();
         // ConfigureUrls(configuration);
