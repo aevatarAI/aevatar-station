@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -59,6 +60,13 @@ public class AevatarDeveloperHostModule : AbpModule
             options.Filters.Add(new IgnoreAntiforgeryTokenAttribute());
         })
         .AddNewtonsoftJson();
+        context.Services.ConfigureApplicationCookie(options =>
+        {
+            options.Cookie.SameSite = SameSiteMode.None; // 允许跨站
+            // options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // 必须HTTPS
+            options.Cookie.Domain = ".aevatar.ai"; // 主域共享Cookie
+            // options.Cookie.Name = "ae_auth"; // 明确命名Cookie
+        });
     }
     
     private void ConfigureAuthentication(ServiceConfigurationContext context, IConfiguration configuration)
