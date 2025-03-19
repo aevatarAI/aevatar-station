@@ -65,7 +65,6 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         var configuration = context.Services.GetConfiguration();
         var hostingEnvironment = context.Services.GetHostingEnvironment();
         
-        Configure<GoogleLoginOptions>(configuration.GetSection("GoogleLogin"));
         ConfigureAuthentication(context, configuration);
         ConfigureBundles();
         // ConfigureUrls(configuration);
@@ -113,16 +112,6 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
                 options.Audience = "Aevatar";
                 options.MapInboundClaims = false;
             });
-
-        context.Services.AddAuthentication()
-            .AddGoogle(options =>
-            {
-                options.ClientId = configuration["Authentication:Google:ClientId"];
-                options.ClientSecret = configuration["Authentication:Google:ClientSecret"];
-                options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                // options.CallbackPath = "/quantumgpt-client/signin-google";
-            })
-            .AddCookie();
     }
 
     private void ConfigureBundles()
