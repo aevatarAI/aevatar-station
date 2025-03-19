@@ -29,7 +29,7 @@ public static class OrleansHostExtensions
                 {
                     options.DatabaseName = configSection.GetValue<string>("DataBase");
                     options.Strategy = MongoDBMembershipStrategy.SingleDocument;
-                    options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" :$"Orleans{hostId}";
+                    options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" : $"Orleans{hostId}";
                 })
                 .Configure<ClusterOptions>(options =>
                 {
@@ -43,7 +43,7 @@ public static class OrleansHostExtensions
                     options.SupportedNamespacePrefixes.Add("MongoDB.Driver");
                 })
                 .AddActivityPropagation();
-                
+
             var streamProvider = config.GetSection("OrleansStream:Provider").Get<string>();
             Log.Information("Stream Provider: {streamProvider}", streamProvider);
             if (string.Equals("kafka", streamProvider, StringComparison.CurrentCultureIgnoreCase))
@@ -53,6 +53,8 @@ public static class OrleansHostExtensions
                     .AddKafka("Aevatar")
                     .WithOptions(options =>
                     {
+                        var orleansStream = config.GetSection("OrleansStream");
+                        Log.Debug($"orleansStream config-->{orleansStream}");
                         Log.Debug("Step 1");
                         options.BrokerList = config.GetSection("OrleansStream:Brokers").Get<List<string>>();
                         options.ConsumerGroupId = "Aevatar";
@@ -75,6 +77,7 @@ public static class OrleansHostExtensions
                                 ReplicationFactor = replicationFactor
                             });
                         }
+
                         Log.Information("Kafka Options: {@options}", options);
                     })
                     .AddJson()
