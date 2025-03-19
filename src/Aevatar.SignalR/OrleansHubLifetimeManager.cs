@@ -34,6 +34,7 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
             ? hubType.Name[1..]
             : hubType.Name;
 
+        _serverId = "Test".ToGuid();
         _logger = logger;
         _clusterClient = clusterClient;
 
