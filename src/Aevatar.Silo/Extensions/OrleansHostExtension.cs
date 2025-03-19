@@ -167,7 +167,6 @@ public static class OrleansHostExtension
                 services.Configure<QdrantConfig>(context.Configuration.GetSection("VectorStores:Qdrant"));
                 services.Configure<SystemLLMConfigOptions>(context.Configuration);
                 services.Configure<AzureOpenAIEmbeddingsConfig>(context.Configuration.GetSection("AIServices:AzureOpenAIEmbeddings"));
-                services.Configure<QuantumOptions>(context.Configuration.GetSection("QuantumChat"));
                 services.Configure<RagConfig>(context.Configuration.GetSection("Rag"));
                 services.AddSingleton(typeof(HubLifetimeManager<>), typeof(OrleansHubLifetimeManager<>));
                 services.AddSingleton<IStateProjector, AevatarStateProjector>();

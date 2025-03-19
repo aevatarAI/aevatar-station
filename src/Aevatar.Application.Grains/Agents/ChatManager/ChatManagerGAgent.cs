@@ -1,4 +1,6 @@
 using Aevatar.Application.Grains.Agents.ChatManager.Chat;
+using Aevatar.Application.Grains.Agents.ChatManager.Common;
+using Aevatar.Application.Grains.Agents.ChatManager.ConfigAgent;
 using Aevatar.Application.Grains.Agents.ChatManager.Options;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AI.Common;
@@ -20,13 +22,6 @@ namespace Aevatar.Application.Grains.Agents.ChatManager;
 public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManageEventLog>,
     IChatManagerGAgent
 {
-    private readonly QuantumOptions _options;
-
-    public ChatGAgentManager(IOptions<QuantumOptions> options)
-    {
-        _options = options.Value;
-    }
-
     public override Task<string> GetDescriptionAsync()
     {
         return Task.FromResult("Chat GAgent Manager");
@@ -44,6 +39,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         {
             Logger.LogError(e, $"[ChatGAgentManager][RequestCreateQuantumChatEvent] handle error:{e.ToString()}");
         }
+
         await PublishAsync(new ResponseCreateQuantum()
         {
             SessionId = sessionId
@@ -116,11 +112,12 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
 
     public async Task<Guid> CreateSessionAsync(string systemLLM, string prompt)
     {
+        var configuration = GetConfiguration();
         IQuantumChat quantumChat = GrainFactory.GetGrain<IQuantumChat>(Guid.NewGuid());
         await quantumChat.ConfigAsync(new ChatConfigDto()
         {
-            Instructions = prompt, MaxHistoryCount = 32,
-            LLMConfig = new LLMConfigDto() { SystemLLM = systemLLM }
+            Instructions = await configuration.GetPrompt(), MaxHistoryCount = 32,
+            LLMConfig = new LLMConfigDto() { SystemLLM = await configuration.GetSystemLLM() }
         });
 
         RaiseEvent(new CreateSessionInfoEventLog()
@@ -159,7 +156,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             await ConfirmEvents();
         }
 
-        var response = await quantumChat.QuantumChatAsync(sysmLLM, content, promptSettings);
+        var configuration = GetConfiguration();
+        var response = await quantumChat.QuantumChatAsync(await configuration.GetSystemLLM(), content, promptSettings);
         return new Tuple<string, string>(response, title);
     }
 
@@ -246,15 +244,23 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
 
     protected override async Task OnAIGAgentActivateAsync(CancellationToken cancellationToken)
     {
-        if (State.SystemLLM != _options.SystemLLM)
+        var configuration = GetConfiguration();
+
+        var llm = await configuration.GetSystemLLM();
+        if (State.SystemLLM != llm)
         {
             await InitializeAsync(new InitializeDto()
             {
                 Instructions = "Please summarize the following content briefly, with no more than 8 words.",
-                LLMConfig = new LLMConfigDto() { SystemLLM = _options.SystemLLM }
+                LLMConfig = new LLMConfigDto() { SystemLLM = await configuration.GetSystemLLM() }
             });
         }
 
         await base.OnAIGAgentActivateAsync(cancellationToken);
+    }
+
+    private IConfigurationGAgent GetConfiguration()
+    {
+        return GrainFactory.GetGrain<IConfigurationGAgent>(CommonHelper.GetSessionManagerConfigurationId());
     }
 }
