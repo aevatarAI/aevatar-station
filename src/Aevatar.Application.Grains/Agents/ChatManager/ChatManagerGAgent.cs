@@ -192,7 +192,6 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
     {
         RaiseEvent(new CreateManagerEventLog()
         {
-            UserId = configuration.UserId,
             MaxSession = configuration.MaxSession,
         });
 
