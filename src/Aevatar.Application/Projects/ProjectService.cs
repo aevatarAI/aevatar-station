@@ -27,23 +27,25 @@ public class ProjectService : OrganizationService, IProjectService
 
     public async Task<ProjectDto> CreateAsync(CreateProjectDto input)
     {
+        var organization = await OrganizationUnitRepository.GetAsync(input.OrganizationId);
+        
         var displayName = input.DisplayName.Trim();
-        var organizationUnit = new OrganizationUnit(
+        var project = new OrganizationUnit(
             GuidGenerator.Create(),
             displayName,
-            parentId:input.OrganizationId
+            parentId:organization.Id
         );
         
-        var ownerRoleId = await AddOwnerRoleAsync(organizationUnit.Id);
-        var readerRoleId = await AddReaderRoleAsync(organizationUnit.Id);
+        var ownerRoleId = await AddOwnerRoleAsync(project.Id);
+        var readerRoleId = await AddReaderRoleAsync(project.Id);
 
-        organizationUnit.ExtraProperties[AevatarConsts.OrganizationTypeKey] = OrganizationType.Project;
-        organizationUnit.ExtraProperties[AevatarConsts.OrganizationRoleKey] = new List<Guid> { ownerRoleId, readerRoleId };
-        organizationUnit.ExtraProperties[AevatarConsts.ProjectDomainNameKey] = input.DomainName;
+        project.ExtraProperties[AevatarConsts.OrganizationTypeKey] = OrganizationType.Project;
+        project.ExtraProperties[AevatarConsts.OrganizationRoleKey] = new List<Guid> { ownerRoleId, readerRoleId };
+        project.ExtraProperties[AevatarConsts.ProjectDomainNameKey] = input.DomainName;
 
-        await OrganizationUnitManager.CreateAsync(organizationUnit);
+        await OrganizationUnitManager.CreateAsync(project);
         
-        return  ObjectMapper.Map<OrganizationUnit, ProjectDto>(organizationUnit);
+        return  ObjectMapper.Map<OrganizationUnit, ProjectDto>(project);
     }
     
     protected override async Task<Guid> AddReaderRoleAsync(Guid organizationId)
