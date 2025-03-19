@@ -91,10 +91,10 @@ public class ResponseRenameSession : ResponseToPublisherEventBase
 [GenerateSerializer]
 public enum ResponseType
 {
-    ChatResponse = 0,
-    SessionListResponse = 1,
-    SessionChatHistory = 2,
-    SessionDelete = 2,
-    SessionRename = 3,
-    CreateSession = 4,
+    CreateSession = 1,
+    ChatResponse = 2,
+    SessionListResponse = 3,
+    SessionChatHistory = 4,
+    SessionDelete = 5,
+    SessionRename = 6,
 }
