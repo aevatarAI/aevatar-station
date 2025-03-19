@@ -15,16 +15,20 @@ using Volo.Abp.OpenIddict.ExtensionGrantTypes;
 public class GoogleGrantHandler : ITokenExtensionGrant
 {
     private readonly IConfiguration _configuration;
-    private readonly IdentityUserManager _userManager;
     private ILogger<GoogleGrantHandler> _logger;
 
     public string Name => GrantTypeConstants.GOOGLE;
     
+    public GoogleGrantHandler(
+        IConfiguration configuration)
+    {
+        _configuration = configuration;
+    }
 
     public async Task<IActionResult> HandleAsync(ExtensionGrantContext context)
     {
         _logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<GoogleGrantHandler>>();
-        // 1. 获取Google ID Token
+  
         var idToken = context.Request.GetParameter("id_token").ToString();
         _logger.LogInformation("GoogleGrantHandler.HandleAsync: idToken: {idToken}", idToken);
         if (string.IsNullOrEmpty(idToken))
@@ -39,10 +43,13 @@ public class GoogleGrantHandler : ITokenExtensionGrant
                         "Missing id_token parameter"
                 }));
         }
-
-        // 2. 验证Google Token
+        
+        var clientId = _configuration["Google:ClientId"];
+        _logger.LogInformation("GoogleGrantHandler.HandleAsync: clientId: {clientId}", clientId);
+        
         var payload = await ValidateGoogleTokenAsync(idToken);
         _logger.LogInformation("GoogleGrantHandler.HandleAsync: payload: {payload}", payload);
+        
         if (payload == null)
         {
             return new ForbidResult(
@@ -55,13 +62,9 @@ public class GoogleGrantHandler : ITokenExtensionGrant
                         "Invalid Google token"
                 }));
         }
-
-        // 3. 创建或获取本地用户（复用与Signature相同的逻辑）
-        var email = payload.Email;
-        // var user = await _userManager.FindByEmailAsync(email) 
-        //     ?? await CreateUserAsync(email);
-        _logger.LogInformation("GoogleGrantHandler.HandleAsync: email: {email}", email);
         
+        var email = payload.Email;
+        _logger.LogInformation("GoogleGrantHandler.HandleAsync: email: {email}", email);
         var userManager = context.HttpContext.RequestServices.GetRequiredService<IdentityUserManager>();
 
         var user = await userManager.FindByNameAsync(email);
@@ -80,8 +83,8 @@ public class GoogleGrantHandler : ITokenExtensionGrant
             var role = await identityRoleManager.GetByIdAsync(userRole.RoleId);
             roleNames.Add(role.Name);
         }
-
-        // 4. 生成ClaimsPrincipal（保持与Signature相同）
+        
+        
         var userClaimsPrincipalFactory = context.HttpContext.RequestServices
             .GetRequiredService<Microsoft.AspNetCore.Identity.IUserClaimsPrincipalFactory<IdentityUser>>();
         var claimsPrincipal = await userClaimsPrincipalFactory.CreateAsync(user);
@@ -100,7 +103,8 @@ public class GoogleGrantHandler : ITokenExtensionGrant
     {
         try
         {
-            var clientId = "664186607150-8b7sufft3mdp77pvoa2mts0hm2t1s7ed.apps.googleusercontent.com";
+            // var clientId = "664186607150-8b7sufft3mdp77pvoa2mts0hm2t1s7ed.apps.googleusercontent.com";
+            var clientId = _configuration["Google:ClientId"];
             var settings = new GoogleJsonWebSignature.ValidationSettings
             {
                 Audience = new[] { clientId }
@@ -113,22 +117,7 @@ public class GoogleGrantHandler : ITokenExtensionGrant
             return null;
         }
     }
-
-    private async Task<IdentityUser> CreateUserAsync(string email)
-    {
-        var user = new IdentityUser(Guid.NewGuid(), email, email: email);
-        await _userManager.CreateAsync(user);
-        await _userManager.AddToRoleAsync(user, AevatarPermissions.BasicUser);
-        return user;
-    }
-
-    // private async Task<ClaimsPrincipal> CreateUserPrincipalAsync(IdentityUser user)
-    // {
-    //     var principal = await _userManager.CreateUserPrincipalAsync(user);
-    //     principal.SetScopes(context.Request.GetScopes());
-    //     principal.SetResources(await GetResourcesAsync(context.Request.Scopes));
-    //     return principal;
-    // }
+    
     
     private async Task<IEnumerable<string>> GetResourcesAsync(ExtensionGrantContext context,
         ImmutableArray<string> scopes)
