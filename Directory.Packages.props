@@ -182,6 +182,6 @@
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client.Core" Version="9.0.2" />
     <PackageVersion Include="MineAiFun.GAgents" Version="1.1.13" />
     <PackageVersion Include="XWorkerAgent" Version="0.0.28" />
-    <PackageVersion Include="TelegramWorkerAgent" Version="0.0.55" />
+    <PackageVersion Include="TelegramWorkerAgent" Version="0.0.56" />
   </ItemGroup>
 </Project>
