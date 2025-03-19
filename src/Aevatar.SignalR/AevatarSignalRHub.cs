@@ -62,9 +62,20 @@ public class AevatarSignalRHub : Hub, IAevatarSignalRHub
     {
         var targetGAgent = await _gAgentFactory.GetGAgentAsync(grainId);
         var parentGrainId = await targetGAgent.GetParentAsync();
-        if (parentGrainId.IsDefault) return (null, null);
+        if (parentGrainId.IsDefault)
+        {
+            var signalRParentGAgent = await _gAgentFactory.GetGAgentAsync<ISignalRGAgent>();
+            var gAgent = await _gAgentFactory.GetGAgentAsync(grainId);
+            await signalRParentGAgent.RegisterAsync(gAgent);
+            return (signalRParentGAgent, signalRParentGAgent);
+        }
 
         var parentGAgent = await _gAgentFactory.GetGAgentAsync(parentGrainId);
+        if (parentGrainId.Type == GrainTypeCache.Get(typeof(SignalRGAgent)))
+        {
+            return (parentGAgent, await _gAgentFactory.GetGAgentAsync<ISignalRGAgent>(parentGrainId.GetGuidKey()));
+        }
+
         var signalRGAgent = await GetOrCreateSignalRGAgentAsync(parentGAgent);
         return (parentGAgent, signalRGAgent);
     }

@@ -19,11 +19,11 @@ public class HostedService : IHostedService
     {
         using var scope = _serviceProvider.CreateScope();
         var gAgentFactory = scope.ServiceProvider.GetRequiredService<IGAgentFactory>();
-        var groupGAgent = await gAgentFactory.GetGAgentAsync<IStateGAgent<GroupGAgentState>>();
+        // var groupGAgent = await gAgentFactory.GetGAgentAsync<IStateGAgent<GroupGAgentState>>();
         var signalRTestGAgent =
             await gAgentFactory.GetGAgentAsync<IStateGAgent<SignalRTestGAgentState>>("test".ToGuid());
 
-        await groupGAgent.RegisterAsync(signalRTestGAgent);
+        // await groupGAgent.RegisterAsync(signalRTestGAgent);
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
