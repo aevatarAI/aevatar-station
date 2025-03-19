@@ -12,4 +12,5 @@ public interface IChatManagerGAgent : IGAgent
     Task<List<ChatMessage>> GetSessionMessageListAsync(Guid sessionId);
     Task DeleteSessionAsync(Guid sessionId);
     Task RenameSessionAsync(Guid sessionId, string title);
+    Task ClearAllAsync();
 }

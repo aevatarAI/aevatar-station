@@ -111,6 +111,18 @@ public class ResponseRenameSession : ResponseToPublisherEventBase
 }
 
 [GenerateSerializer]
+public class RequestClearAllEvent : EventBase
+{
+}
+
+[GenerateSerializer]
+public class ResponseClearAll : ResponseToPublisherEventBase
+{
+    [Id(0)] public ResponseType ResponseType { get; set; } = ResponseType.ClearAll;
+    [Id(1)] public bool Success { get; set; }
+}
+
+[GenerateSerializer]
 public enum ResponseType
 {
     CreateSession = 1,
@@ -119,4 +131,5 @@ public enum ResponseType
     SessionChatHistory = 4,
     SessionDelete = 5,
     SessionRename = 6,
+    ClearAll = 7,
 }

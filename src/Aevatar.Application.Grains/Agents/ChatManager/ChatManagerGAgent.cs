@@ -196,6 +196,30 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         Logger.LogDebug($"[ChatGAgentManager][RequestRenameSessionEvent] end:{JsonConvert.SerializeObject(@event)}");
     }
 
+    [EventHandler]
+    public async Task HandleEventAsync(RequestClearAllEvent @event)
+    {
+        Logger.LogDebug($"[ChatGAgentManager][RequestClearAllEvent] start:{JsonConvert.SerializeObject(@event)}");
+        
+        bool success = false;
+        try
+        {
+            await ClearAllAsync();
+            success = true;
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, $"[ChatGAgentManager][RequestClearAllEvent] handle error:{e.ToString()}");
+        }
+
+        await PublishAsync(new ResponseClearAll()
+        {
+            Success = success
+        });
+
+        Logger.LogDebug($"[ChatGAgentManager][RequestClearAllEvent] end:{JsonConvert.SerializeObject(@event)}");
+    }
+
     public async Task<Guid> CreateSessionAsync(string systemLLM, string prompt)
     {
         var configuration = GetConfiguration();
@@ -348,6 +372,13 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         await ConfirmEvents();
     }
 
+    public async Task ClearAllAsync()
+    {
+        // Record the event to clear all sessions
+        RaiseEvent(new ClearAllEventLog());
+        await ConfirmEvents();
+    }
+
     protected override void AIGAgentTransitionState(ChatManagerGAgentState state,
         StateLogEventBase<ChatManageEventLog> @event)
     {
@@ -366,6 +397,9 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             case RenameTitleEventLog @renameTitleEventLog:
                 var sessionInfo = State.SessionInfoList.First(f => f.SessionId == @renameTitleEventLog.SessionId);
                 sessionInfo.Title = renameTitleEventLog.Title;
+                break;
+            case ClearAllEventLog:
+                State.SessionInfoList.Clear();
                 break;
         }
     }
