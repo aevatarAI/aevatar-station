@@ -100,11 +100,12 @@ public class GoogleGrantHandler : ITokenExtensionGrant
     {
         try
         {
+            var clientId = "664186607150-8b7sufft3mdp77pvoa2mts0hm2t1s7ed.apps.googleusercontent.com";
             var settings = new GoogleJsonWebSignature.ValidationSettings
             {
-                Audience = new[] { _configuration["Google:ClientId"] }
+                Audience = new[] { clientId }
             };
-            return await GoogleJsonWebSignature.ValidateAsync(idToken);
+            return await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
         }
         catch (Exception ex)
         {
