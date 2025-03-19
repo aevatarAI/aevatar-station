@@ -8,6 +8,7 @@ using Aevatar.CQRS;
 using Aevatar.CQRS.Dto;
 using Aevatar.Query;
 using Aevatar.CQRS.Provider;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Nest;
 using Newtonsoft.Json;
@@ -27,21 +28,32 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
     private const int DefaultSkip = 0;
     private const int DefaultLimit = 1000;
     private readonly ICQRSProvider _cqrsProvider;
+    private readonly IMemoryCache _cache;
 
     public ElasticIndexingService(ILogger<ElasticIndexingService> logger, IElasticClient elasticClient,
-        ICQRSProvider cqrsProvider)
+        ICQRSProvider cqrsProvider, IMemoryCache cache)
     {
         _logger = logger;
         _elasticClient = elasticClient;
         _cqrsProvider = cqrsProvider;
+        _cache = cache;
     }
 
     public void CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase
     {
         var indexName = _cqrsProvider.GetIndexName(stateBase.GetType().Name.ToLower());
+        if (_cache.TryGetValue(indexName, out bool? _))
+        {
+            return;
+        }
+
         var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
         if (indexExistsResponse.Exists)
         {
+            _cache.Set(indexName, true, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24)
+            });
             return;
         }
 
