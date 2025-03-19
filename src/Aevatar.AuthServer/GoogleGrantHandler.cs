@@ -20,15 +20,15 @@ public class GoogleGrantHandler : ITokenExtensionGrant
     public string Name => GrantTypeConstants.GOOGLE;
     
     public GoogleGrantHandler(
-        IConfiguration configuration)
+        IConfiguration configuration, 
+        ILogger<GoogleGrantHandler> logger)
     {
         _configuration = configuration;
+        _logger = logger;
     }
 
     public async Task<IActionResult> HandleAsync(ExtensionGrantContext context)
     {
-        _logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<GoogleGrantHandler>>();
-  
         var idToken = context.Request.GetParameter("id_token").ToString();
         _logger.LogInformation("GoogleGrantHandler.HandleAsync: idToken: {idToken}", idToken);
         if (string.IsNullOrEmpty(idToken))
@@ -103,7 +103,6 @@ public class GoogleGrantHandler : ITokenExtensionGrant
     {
         try
         {
-            // var clientId = "664186607150-8b7sufft3mdp77pvoa2mts0hm2t1s7ed.apps.googleusercontent.com";
             var clientId = _configuration["Google:ClientId"];
             var settings = new GoogleJsonWebSignature.ValidationSettings
             {
