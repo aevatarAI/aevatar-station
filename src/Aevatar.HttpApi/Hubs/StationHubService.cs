@@ -23,11 +23,15 @@ public class StationHubService : IHubService, ISingletonDependency
     {
         try
         {
-            _logger.LogDebug($"[StationHubService][ResponseAsync] userId:{userId.ToString()} , message:{JsonConvert.SerializeObject(message)} start");
+            _logger.LogDebug(
+                $"[StationHubService][ResponseAsync] userId:{userId.ToString()} , message:{JsonConvert.SerializeObject(message)} start");
+            var userProxy = _hubContext.Clients.User(userId.ToString());
+            await userProxy.SendAsync(message.MessageType, message.Data);
+            // await _hubContext.Clients.Users(userId.ToString())
+            //     .SendAsync(message.MessageType, message.Data);
 
-            await _hubContext.Clients.Users(userId.ToString()).SendAsync(message.MessageType, message.Data);
-            
-            _logger.LogDebug($"[StationHubService][ResponseAsync] userId:{userId.ToString()} , message:{JsonConvert.SerializeObject(message)} end");
+            _logger.LogDebug(
+                $"[StationHubService][ResponseAsync] userId:{userId.ToString()} , message:{JsonConvert.SerializeObject(message)} end");
         }
         catch (Exception e)
         {
