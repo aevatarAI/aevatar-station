@@ -53,8 +53,6 @@ public static class OrleansHostExtensions
                     .AddKafka("Aevatar")
                     .WithOptions(options =>
                     {
-                        var orleansStream = config.GetSection("OrleansStream");
-                        Log.Debug($"orleansStream config-->{orleansStream}");
                         Log.Debug("Step 1");
                         options.BrokerList = config.GetSection("OrleansStream:Brokers").Get<List<string>>();
                         options.ConsumerGroupId = "Aevatar";
@@ -66,18 +64,21 @@ public static class OrleansHostExtensions
                             config.GetSection("OrleansStream:ReplicationFactor").Get<short>();
                         Log.Debug($"Step 3--->{replicationFactor}");
                         var topics = config.GetSection("OrleansStream:Topics").Get<string>();
-                        Log.Debug($"Step 4--->topic:{topics}");
+                        Log.Debug($"Step 4--->topics:{topics}");
                         topics = topics.IsNullOrEmpty() ? CommonConstants.StreamNamespace : topics;
                         foreach (var topic in topics.Split(','))
                         {
+                            Log.Debug($"Step 5--->start topic:{topic}");
                             options.AddTopic(topic.Trim(), new TopicCreationConfig
                             {
                                 AutoCreate = true,
                                 Partitions = partitions,
                                 ReplicationFactor = replicationFactor
                             });
+                            Log.Debug($"Step 5--->end topic:{topic}");
                         }
 
+                        Log.Debug("Step 6");
                         Log.Information("Kafka Options: {@options}", options);
                     })
                     .AddJson()
