@@ -81,6 +81,7 @@ public class AevatarAuthServerModule : AbpModule
             builder.Configure(openIddictServerOptions =>
             {
                 openIddictServerOptions.GrantTypes.Add(GrantTypeConstants.SIGNATURE);
+                openIddictServerOptions.GrantTypes.Add(GrantTypeConstants.GOOGLE);
             });
         });
     }
