@@ -7,7 +7,7 @@ namespace Aevatar.CQRS.Handler;
 
 public class SaveStateCommandHandler : IRequestHandler<SaveStateCommand>
 {
-    private readonly IIndexingService  _indexingService ;
+    private readonly IIndexingService _indexingService;
 
     public SaveStateCommandHandler(
         IIndexingService indexingService
@@ -16,11 +16,10 @@ public class SaveStateCommandHandler : IRequestHandler<SaveStateCommand>
         _indexingService = indexingService;
     }
 
-    public async Task<Unit> Handle(SaveStateCommand request, CancellationToken cancellationToken)
+    public async Task Handle(SaveStateCommand request, CancellationToken cancellationToken)
     {
         _indexingService.CheckExistOrCreateStateIndex(request.State);
         await SaveIndexAsync(request);
-        return Unit.Value;
     }
 
     private async Task SaveIndexAsync(SaveStateCommand request)
