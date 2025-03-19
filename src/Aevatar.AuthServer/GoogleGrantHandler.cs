@@ -106,8 +106,9 @@ public class GoogleGrantHandler : ITokenExtensionGrant
             };
             return await GoogleJsonWebSignature.ValidateAsync(idToken);
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "GoogleGrantHandler.ValidateGoogleTokenAsync: {ex} msg {msg}", ex, ex.ToString());
             return null;
         }
     }
