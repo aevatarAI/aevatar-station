@@ -1,13 +1,13 @@
 using Aevatar.Application.Grains.Agents.ChatManager.Chat;
 using Aevatar.Application.Grains.Agents.ChatManager.Common;
 using Aevatar.Application.Grains.Agents.ChatManager.ConfigAgent;
-using Aevatar.Application.Grains.Agents.ChatManager.Options;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
 using Aevatar.GAgents.AIGAgent.Agent;
 using Aevatar.GAgents.AIGAgent.Dtos;
 using Aevatar.GAgents.ChatAgent.Dtos;
+using Aevatar.Sender;
 using Json.Schema.Generation;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -31,7 +31,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
     [EventHandler]
     public async Task HandleEventAsync(RequestCreateQuantumChatEvent @event)
     {
-        Logger.LogDebug($"[ChatGAgentManager][RequestCreateQuantumChatEvent] start:{JsonConvert.SerializeObject(@event)}");
+        Logger.LogDebug(
+            $"[ChatGAgentManager][RequestCreateQuantumChatEvent] start:{JsonConvert.SerializeObject(@event)}");
         var sessionId = Guid.Empty;
         try
         {
@@ -46,8 +47,9 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         {
             SessionId = sessionId
         });
-        
-        Logger.LogDebug($"[ChatGAgentManager][RequestCreateQuantumChatEvent] end :{JsonConvert.SerializeObject(@event)}");
+
+        Logger.LogDebug(
+            $"[ChatGAgentManager][RequestCreateQuantumChatEvent] end :{JsonConvert.SerializeObject(@event)}");
     }
 
     [EventHandler]
@@ -72,34 +74,38 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             Response = content,
             NewTitle = title,
         });
-        
+
         Logger.LogDebug($"[ChatGAgentManager][RequestQuantumChatEvent] end:{JsonConvert.SerializeObject(@event)}");
     }
 
     [EventHandler]
     public async Task HandleEventAsync(RequestQuantumSessionListEvent @event)
     {
-        Logger.LogDebug($"[ChatGAgentManager][RequestQuantumSessionListEvent] start:{JsonConvert.SerializeObject(@event)}");
+        Logger.LogDebug(
+            $"[ChatGAgentManager][RequestQuantumSessionListEvent] start:{JsonConvert.SerializeObject(@event)}");
         var response = await GetSessionListAsync();
         await PublishAsync(new ResponseQuantumSessionList()
         {
             SessionList = response,
         });
-        
-        Logger.LogDebug($"[ChatGAgentManager][RequestQuantumSessionListEvent] end:{JsonConvert.SerializeObject(@event)}");
+
+        Logger.LogDebug(
+            $"[ChatGAgentManager][RequestQuantumSessionListEvent] end:{JsonConvert.SerializeObject(@event)}");
     }
 
     [EventHandler]
     public async Task HandleEventAsync(RequestSessionChatHistoryEvent @event)
     {
-        Logger.LogDebug($"[ChatGAgentManager][RequestSessionChatHistoryEvent] start:{JsonConvert.SerializeObject(@event)}");
+        Logger.LogDebug(
+            $"[ChatGAgentManager][RequestSessionChatHistoryEvent] start:{JsonConvert.SerializeObject(@event)}");
         var response = await GetSessionMessageListAsync(@event.SessionId);
         await PublishAsync(new ResponseSessionChatHistory()
         {
             ChatHistory = response
         });
-        
-        Logger.LogDebug($"[ChatGAgentManager][RequestSessionChatHistoryEvent] end:{JsonConvert.SerializeObject(@event)}");
+
+        Logger.LogDebug(
+            $"[ChatGAgentManager][RequestSessionChatHistoryEvent] end:{JsonConvert.SerializeObject(@event)}");
     }
 
     [EventHandler]
@@ -111,7 +117,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         {
             IfSuccess = true
         });
-        
+
         Logger.LogDebug($"[ChatGAgentManager][RequestDeleteSessionEvent] end:{JsonConvert.SerializeObject(@event)}");
     }
 
@@ -125,7 +131,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             SessionId = @event.SessionId,
             Title = @event.Title,
         });
-        
+
         Logger.LogDebug($"[ChatGAgentManager][RequestRenameSessionEvent] end:{JsonConvert.SerializeObject(@event)}");
     }
 
@@ -273,6 +279,13 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
                 Instructions = "Please summarize the following content briefly, with no more than 8 words.",
                 LLMConfig = new LLMConfigDto() { SystemLLM = await configuration.GetSystemLLM() }
             });
+        }
+
+        var childrenList = await GetChildrenAsync();
+        if (childrenList.Count == 0)
+        {
+            var parent = GrainFactory.GetGrain<IPublishingGAgent>(Guid.NewGuid());
+            await RegisterAsync(parent);
         }
 
         await base.OnAIGAgentActivateAsync(cancellationToken);
