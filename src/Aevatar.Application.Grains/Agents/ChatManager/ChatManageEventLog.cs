@@ -8,13 +8,6 @@ public class ChatManageEventLog : StateLogEventBase<ChatManageEventLog>
 }
 
 [GenerateSerializer]
-public class CreateManagerEventLog : ChatManageEventLog
-{
-    [Id(0)] public Guid UserId { get; set; }
-    [Id(1)] public int MaxSession { get; set; }
-}
-
-[GenerateSerializer]
 public class CreateSessionInfoEventLog : ChatManageEventLog
 {
     [Id(0)] public Guid SessionId { get; set; }
