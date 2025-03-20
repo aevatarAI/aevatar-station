@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Aevatar.Notification;
 using Aevatar.Organizations;
 using Aevatar.Permissions;
 using Volo.Abp;
@@ -19,9 +20,10 @@ public class ProjectService : OrganizationService, IProjectService
     public ProjectService(OrganizationUnitManager organizationUnitManager, IdentityUserManager identityUserManager,
         IRepository<OrganizationUnit, Guid> organizationUnitRepository, IdentityRoleManager roleManager,
         IPermissionManager permissionManager, IOrganizationPermissionChecker permissionChecker,
-        IPermissionDefinitionManager permissionDefinitionManager, IRepository<IdentityUser, Guid> userRepository) :
+        IPermissionDefinitionManager permissionDefinitionManager, IRepository<IdentityUser, Guid> userRepository,
+        INotificationService notificationService) :
         base(organizationUnitManager, identityUserManager, organizationUnitRepository, roleManager, permissionManager,
-            permissionChecker, permissionDefinitionManager, userRepository)
+            permissionChecker, permissionDefinitionManager, userRepository, notificationService)
     {
     }
 
