@@ -18,7 +18,8 @@ namespace Aevatar;
     typeof(AevatarApplicationContractsModule),
     typeof(AbpIdentityHttpApiModule),
     typeof(AbpPermissionManagementHttpApiModule),
-    typeof(AevatarDeveloperLoggerModule)
+    typeof(AevatarDeveloperLoggerModule),
+    typeof(AbpAspNetCoreSignalRModule)
     )]
 public class AevatarHttpApiModule : AbpModule
 {
