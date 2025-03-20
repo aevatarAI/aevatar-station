@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Common;
+using Aevatar.Permissions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -10,6 +11,7 @@ using Volo.Abp;
 using Volo.Abp.Auditing;
 using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.Identity;
+using Volo.Abp.PermissionManagement;
 
 namespace Aevatar.Service;
 
@@ -19,6 +21,8 @@ public interface IUserAppService
     Task ResetPasswordAsync(string userName, string newPassword);
     Task RegisterClientAuthentication(string clientId, string clientSecret);
     Guid GetCurrentUserId();
+    Task  GrantClientPermissionsAsync(string clientId);
+
 }
 
 [RemoteService(IsEnabled = false)]
@@ -27,6 +31,8 @@ public class UserAppService : IdentityUserAppService, IUserAppService
 {
     private readonly IOpenIddictApplicationManager _applicationManager;
     private readonly ILogger<UserAppService> _logger;
+    private readonly IPermissionManager _permissionManager;
+
     public UserAppService(
         IdentityUserManager userManager,
         IIdentityUserRepository userRepository,
@@ -34,11 +40,13 @@ public class UserAppService : IdentityUserAppService, IUserAppService
         IOptions<IdentityOptions> identityOptions,
         IOpenIddictApplicationManager applicationManager,
         ILogger<UserAppService> logger,
-        IPermissionChecker permissionChecker)
+        IPermissionChecker permissionChecker,
+        IPermissionManager permissionManager)
         : base(userManager, userRepository, roleRepository, identityOptions, permissionChecker)
     {
         _applicationManager = applicationManager;
         _logger = logger;
+        _permissionManager = permissionManager;
     }
 
 
@@ -49,11 +57,12 @@ public class UserAppService : IdentityUserAppService, IUserAppService
             throw new UserFriendlyException("A app with the same ID already exists.");
         }
 
-        await _applicationManager.CreateAsync(new OpenIddictApplicationDescriptor
+
+        var openIddictApplicationDescriptor = new OpenIddictApplicationDescriptor
         {
             ClientId = clientId,
             ClientSecret = clientSecret,
-            ConsentType=OpenIddictConstants.ConsentTypes.Implicit,
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
             ClientType = OpenIddictConstants.ClientTypes.Confidential,
             DisplayName = "Aevatar Client",
             Permissions =
@@ -62,10 +71,27 @@ public class UserAppService : IdentityUserAppService, IUserAppService
                 OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
                 OpenIddictConstants.Permissions.Prefixes.Scope + "Aevatar",
                 OpenIddictConstants.Permissions.ResponseTypes.IdToken
-                
+            },
+        };
+        await SetClientPermissionsAsync(clientId);
+
+        await _applicationManager.CreateAsync(openIddictApplicationDescriptor);
+      
+    }
+  
+
+    private async Task SetClientPermissionsAsync(string clientId)
+    {
+        var permissions= await  _permissionManager.GetAllAsync(RolePermissionValueProvider.ProviderName, AevatarPermissions.DeveloperManager);
+        _logger.LogInformation("permissions count {Count} clientId {clientId}",permissions.Count,clientId);
+        foreach (var permission in permissions)
+        {
+            _logger.LogInformation("add permission {Permission} ,isGrant {IsGranted}",permission.Name,permission.IsGranted);
+            if (permission.IsGranted)
+            {
+                await _permissionManager.SetForClientAsync(clientId,permission.Name,true);
             }
-            
-        });
+        }
     }
 
     public async Task ResetPasswordAsync(string userName, string newPassword)
@@ -105,5 +131,10 @@ public class UserAppService : IdentityUserAppService, IUserAppService
         
         var clientId =  CurrentUser.GetAllClaims().First(o => o.Type == "client_id").Value;
         return GuidUtil.StringToGuid(clientId);
+    }
+
+    public async Task GrantClientPermissionsAsync(string clientId)
+    {
+        await SetClientPermissionsAsync(clientId);
     }
 }

@@ -34,7 +34,10 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
     private readonly IPermissionDataSeeder _permissionDataSeeder;
     private readonly IStringLocalizer<OpenIddictResponse> L;
     private readonly IdentityUserManager _identityUserManager;
+    private readonly IdentityRoleManager _roleManager;
     private readonly UsersOptions _usersOptions;
+    private readonly IPermissionManager _permissionManager;
+
     public OpenIddictDataSeedContributor(
         IConfiguration configuration,
         IOpenIddictApplicationRepository openIddictApplicationRepository,
@@ -44,7 +47,9 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
         IPermissionDataSeeder permissionDataSeeder,
         IdentityUserManager identityUserManager,
         IOptionsSnapshot<UsersOptions> userOptions,
-        IStringLocalizer<OpenIddictResponse> l )
+        IStringLocalizer<OpenIddictResponse> l ,
+        IPermissionManager permissionManager,
+        IdentityRoleManager roleManager)
     {
         _configuration = configuration;
         _openIddictApplicationRepository = openIddictApplicationRepository;
@@ -55,6 +60,8 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
         L = l;
         _identityUserManager = identityUserManager;
         _usersOptions = userOptions.Value;
+        _permissionManager = permissionManager;
+        _roleManager = roleManager;
     }
 
     [UnitOfWork]
@@ -86,6 +93,47 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
             if (!result.Succeeded)
             {
                 throw new Exception("Failed to set admin password: " + result.Errors.Select(e => e.Description).Aggregate((errors, error) => errors + ", " + error));
+            }
+            await SeedPermissionsFromConfigurationAsync();
+        }
+    }
+    
+    private async Task SeedPermissionsFromConfigurationAsync()
+    {
+        var permissionMappings = _configuration.GetSection("PermissionMappings").Get<Dictionary<string, List<string>>>();
+        if (permissionMappings == null) return;
+        int count = 0;
+        foreach (var mapping in permissionMappings)
+        {
+            var roleName = mapping.Key;
+            var permissions = mapping.Value;
+           
+            var role = await _roleManager.RoleExistsAsync(roleName);
+            if (!role)
+            {
+                var identityRole = new IdentityRole(Guid.NewGuid(), roleName);
+                identityRole.IsPublic = true;
+                identityRole.IsStatic = true;
+                if (count == 0 )
+                {
+                    identityRole.IsDefault = true;
+                }
+                count++;
+                var result = await _roleManager.CreateAsync(identityRole);
+                if (!result.Succeeded)
+                {
+                    throw new Exception($"Failed to create role '{roleName}': " +
+                                        $"{string.Join(", ", result.Errors.Select(e => e.Description))}");
+                }
+            }
+            foreach (var permission in permissions)
+            {
+                await _permissionManager.SetAsync(
+                    permission,
+                    RolePermissionValueProvider.ProviderName ,
+                    roleName,
+                    true 
+                );
             }
         }
     }
@@ -126,7 +174,8 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
         if (!authServerClientId.IsNullOrWhiteSpace())
         {
             var authServerRootUrl = configurationSection["AevatarAuthServer:RootUrl"]?.TrimEnd('/');
-
+            var redirectUri = configurationSection["AevatarAuthServer:RedirectUri"];
+            
             await CreateApplicationAsync(
                 name: authServerClientId!,
                 type: OpenIddictConstants.ClientTypes.Public,
@@ -140,10 +189,11 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
                     OpenIddictConstants.GrantTypes.ClientCredentials,
                     OpenIddictConstants.GrantTypes.RefreshToken,
                     GrantTypeConstants.SIGNATURE,
-                    GrantTypeConstants.LOGIN
+                    GrantTypeConstants.LOGIN,
+                    GrantTypeConstants.GOOGLE
                 },
                 scopes: commonScopes,
-                redirectUri: authServerRootUrl,
+                redirectUri: redirectUri,
                 clientUri: authServerRootUrl,
                 postLogoutRedirectUri: authServerRootUrl
             );
@@ -299,6 +349,19 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
 
         if (redirectUri != null)
         {
+            if (!clientUri.IsNullOrEmpty())
+            {
+                if (!Uri.TryCreate(clientUri, UriKind.Absolute, out var uri) || !uri.IsWellFormedOriginalString())
+                {
+                    throw new BusinessException(L["InvalidRedirectUri", clientUri]);
+                }
+
+                if (application.RedirectUris.All(x => x != uri))
+                {
+                    application.RedirectUris.Add(uri);
+                }
+            }
+            
             if (!redirectUri.IsNullOrEmpty())
             {
                 if (!Uri.TryCreate(redirectUri, UriKind.Absolute, out var uri) || !uri.IsWellFormedOriginalString())

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Controllers;
 using Aevatar.Kubernetes.Enum;
+using Aevatar.Permissions;
 using Aevatar.Service;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
@@ -31,22 +32,29 @@ public class UserController :  AevatarController
     }
     
     [HttpPost("registerClient")]
-    [Authorize(Policy = "OnlyAdminAccess")]
+    [Authorize(Policy = AevatarPermissions.AdminPolicy)]
     public async Task RegisterClientAuthentication(string clientId, string clientSecret, string corsUrls)
     {
         await _userAppService.RegisterClientAuthentication(clientId, clientSecret);
         await _developerService.CreateHostAsync(clientId, "1",corsUrls);
     }
     
+    [HttpPost("grantClientPermissions")]
+    [Authorize(Policy = AevatarPermissions.AdminPolicy)]
+    public async Task GrantClientPermissionsAsync(string clientId)
+    {
+        await _userAppService.GrantClientPermissionsAsync(clientId);
+    }
+    
     [HttpPost("CreateHost")]
-    [Authorize(Policy = "OnlyAdminAccess")]
+    [Authorize(Policy = AevatarPermissions.AdminPolicy)]
     public  async Task CreateHost(string clientId,string corsUrls)
     {
         await _developerService.CreateHostAsync(clientId, "1",corsUrls);
     }
     
     [HttpPost("destroyHost")]
-    [Authorize(Policy = "OnlyAdminAccess")]
+    [Authorize(Policy = AevatarPermissions.AdminPolicy)]
     public async Task DestroyHostAsync(string clientId)
     {
         await _developerService.DestroyHostAsync(clientId, "1");

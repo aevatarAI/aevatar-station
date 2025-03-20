@@ -8,6 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Aevatar.PermissionManagement" />
         <PackageReference Include="AutoGen.Core" />
         <PackageReference Include="Microsoft.Orleans.Sdk" />
         <PackageReference Include="AElf.OpenTelemetry" />
