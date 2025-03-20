@@ -2,24 +2,19 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Application.Grains.Agents.ChatManager;
-using Aevatar.CQRS.Dto;
 using Aevatar.GAgents.AI.Common;
-using Aevatar.GAgents.AI.Options;
-using Aevatar.Permissions;
 using Aevatar.Quantum;
 using Aevatar.Service;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MongoDB.Driver;
 using Volo.Abp;
-using Volo.Abp.Users;
 
 namespace Aevatar.Controllers;
 
 [RemoteService]
 [ControllerName("Quantum")]
-[Microsoft.AspNetCore.Components.Route("api/quantum")]
+[Route("api/quantum")]
 [Authorize]
 public class QuantumChatController : AevatarController
 {
