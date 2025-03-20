@@ -2,7 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Aevatar.Notification;
+using Aevatar.Notification.Parameters;
 using Aevatar.Permissions;
+using Newtonsoft.Json;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Authorization.Permissions;
@@ -23,6 +26,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
     protected readonly IOrganizationPermissionChecker PermissionChecker;
     protected readonly IPermissionDefinitionManager PermissionDefinitionManager;
     protected readonly IRepository<IdentityUser, Guid> UserRepository;
+    protected readonly INotificationService _notificationService;
 
     protected const string OwnerRoleName = "Owner";
     protected const string ReaderRoleName = "Reader";
@@ -30,7 +34,8 @@ public class OrganizationService : AevatarAppService, IOrganizationService
     public OrganizationService(OrganizationUnitManager organizationUnitManager, IdentityUserManager identityUserManager,
         IRepository<OrganizationUnit, Guid> organizationUnitRepository, IdentityRoleManager roleManager,
         IPermissionManager permissionManager, IOrganizationPermissionChecker permissionChecker,
-        IPermissionDefinitionManager permissionDefinitionManager, IRepository<IdentityUser, Guid> userRepository)
+        IPermissionDefinitionManager permissionDefinitionManager, IRepository<IdentityUser, Guid> userRepository,
+        INotificationService notificationService)
     {
         OrganizationUnitManager = organizationUnitManager;
         IdentityUserManager = identityUserManager;
@@ -40,6 +45,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         PermissionChecker = permissionChecker;
         PermissionDefinitionManager = permissionDefinitionManager;
         UserRepository = userRepository;
+        _notificationService = notificationService;
     }
 
     public virtual async Task<ListResultDto<OrganizationDto>> GetListAsync(GetOrganizationListDto input)
@@ -194,21 +200,40 @@ public class OrganizationService : AevatarAppService, IOrganizationService
 
         if (input.Join)
         {
-            user.AddRole(input.RoleId.Value);
-            await IdentityUserManager.UpdateAsync(user);
-            await IdentityUserManager.AddToOrganizationUnitAsync(user.Id, organizationId);
+            await AddMemberAsync(organizationId, user, input.RoleId);
         }
         else
         {
-            var children = await OrganizationUnitManager.FindChildrenAsync(organizationId, true);
-            foreach (var child in children)
-            {
-                await RemoveMemberAsync(child, user.Id);
-            }
-            
-            var organization = await OrganizationUnitRepository.GetAsync(organizationId);
-            await RemoveMemberAsync(organization, user.Id);
+            await RemoveMemberAsync(organizationId, user);
         }
+    }
+
+    protected virtual async Task AddMemberAsync(Guid organizationId, IdentityUser user, Guid? roleId)
+    {
+        await _notificationService.CreateAsync(
+            NotificationTypeEnum.OrganizationInvitation,
+            CurrentUser.Id.Value,
+            user.Id,
+            JsonConvert.SerializeObject(new OrganizationVisitInfo
+            {
+                OrganizationId = organizationId,
+                RoleId = roleId.Value,
+                UserId = user.Id
+            }));
+
+        await IdentityUserManager.AddToOrganizationUnitAsync(user.Id, organizationId);
+    }
+
+    protected virtual async Task RemoveMemberAsync(Guid organizationId, IdentityUser user)
+    {
+        var children = await OrganizationUnitManager.FindChildrenAsync(organizationId, true);
+        foreach (var child in children)
+        {
+            await RemoveMemberAsync(child, user.Id);
+        }
+            
+        var organization = await OrganizationUnitRepository.GetAsync(organizationId);
+        await RemoveMemberAsync(organization, user.Id);
     }
 
     private async Task RemoveMemberAsync(OrganizationUnit organization, Guid userId)
