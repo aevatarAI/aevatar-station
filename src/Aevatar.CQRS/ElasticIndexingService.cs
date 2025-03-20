@@ -58,7 +58,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
 
                         if (propType == typeof(string))
                         {
-                            props.Keyword(k => k.Name(propertyName));
+                            props.Text(t => t.Name(propertyName)).Keyword(k => k.Name(propertyName).IgnoreAbove(256));
                         }
                         else if (propType == typeof(short) || propType == typeof(int) || propType == typeof(long))
                         {
@@ -91,8 +91,8 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                 })
                 .DynamicTemplates(dt => dt
                     .DynamicTemplate("force_strings", t => t
-                            .PathMatch("*")
-                            .Mapping(f => new KeywordProperty()) // 强制转为 keyword 类型
+                        .PathMatch("*")
+                        .Mapping(m => m.Text(tt => tt))
                     )
                 )
             )
