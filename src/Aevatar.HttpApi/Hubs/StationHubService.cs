@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.SignalR;
 using Microsoft.AspNetCore.SignalR;
@@ -19,23 +21,23 @@ public class StationHubService : IHubService, ISingletonDependency
         _hubContext = hubContext;
     }
 
-    public async Task ResponseAsync<T>(Guid userId, ISignalRMessage<T> message)
+    public async Task ResponseAsync<T>(List<Guid> userIds, ISignalRMessage<T> message)
     {
         try
         {
             _logger.LogDebug(
-                $"[StationHubService][ResponseAsync] userId:{userId.ToString()} , message:{JsonConvert.SerializeObject(message)} start");
-            var userProxy = _hubContext.Clients.User(userId.ToString());
+                $"[StationHubService][ResponseAsync] userId:{userIds} , message:{JsonConvert.SerializeObject(message)} start");
+            var userProxy = _hubContext.Clients.Users(userIds.Select(s => s.ToString()));
             await userProxy.SendAsync(message.MessageType, message.Data);
             // await _hubContext.Clients.Users(userId.ToString())
             //     .SendAsync(message.MessageType, message.Data);
 
             _logger.LogDebug(
-                $"[StationHubService][ResponseAsync] userId:{userId.ToString()} , message:{JsonConvert.SerializeObject(message)} end");
+                $"[StationHubService][ResponseAsync] userId:{userIds} , message:{JsonConvert.SerializeObject(message)} end");
         }
         catch (Exception e)
         {
-            _logger.LogError(e, $"Signalr response failed.{userId.ToString()}");
+            _logger.LogError(e, $"Signalr response failed.{userIds}");
         }
     }
 }

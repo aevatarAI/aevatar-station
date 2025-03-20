@@ -216,9 +216,10 @@ public class OrganizationService : AevatarAppService, IOrganizationService
             user.Id,
             JsonConvert.SerializeObject(new OrganizationVisitInfo
             {
+                Creator = CurrentUser.Id.Value,
                 OrganizationId = organizationId,
                 RoleId = roleId.Value,
-                UserId = user.Id
+                Vistor = user.Id
             }));
 
         await IdentityUserManager.AddToOrganizationUnitAsync(user.Id, organizationId);

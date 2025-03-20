@@ -82,8 +82,13 @@ public class NotificationService : INotificationService, ITransientDependency
             CreatorId = creator,
         };
 
-        await _notificationRepository.InsertAsync(notification);
-
+        notification = await _notificationRepository.InsertAsync(notification);
+        await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
+            new NotificationResponse()
+            {
+                Data = new NotificationResponseMessage()
+                    { Id = notification.Id, Status = NotificationStatusEnum.None }
+            });
         return true;
     }
 
@@ -99,14 +104,7 @@ public class NotificationService : INotificationService, ITransientDependency
         notification.Status = NotificationStatusEnum.Withdraw;
         await _notificationRepository.UpdateAsync(notification);
 
-        await _hubService.ResponseAsync((Guid)notification.CreatorId!,
-            new NotificationResponse()
-            {
-                Data = new NotificationResponseMessage()
-                    { Id = notificationId, Status = NotificationStatusEnum.Withdraw }
-            });
-
-        await _hubService.ResponseAsync(notification.Receiver,
+        await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
             new NotificationResponse()
             {
                 Data = new NotificationResponseMessage()
@@ -145,7 +143,7 @@ public class NotificationService : INotificationService, ITransientDependency
 
         await _notificationRepository.UpdateAsync(notification);
 
-        await _hubService.ResponseAsync(notification.Receiver,
+        await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
             new NotificationResponse()
                 { Data = new NotificationResponseMessage() { Id = notificationId, Status = status } });
         return true;
