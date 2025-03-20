@@ -2,7 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Aevatar.Notification;
+using Aevatar.Notification.Parameters;
 using Aevatar.Permissions;
+using Newtonsoft.Json;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Authorization.Permissions;
@@ -23,6 +26,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
     protected readonly IOrganizationPermissionChecker PermissionChecker;
     protected readonly IPermissionDefinitionManager PermissionDefinitionManager;
     protected readonly IRepository<IdentityUser, Guid> UserRepository;
+    protected readonly INotificationService _notificationService;
 
     protected const string OwnerRoleName = "Owner";
     protected const string ReaderRoleName = "Reader";
@@ -30,7 +34,8 @@ public class OrganizationService : AevatarAppService, IOrganizationService
     public OrganizationService(OrganizationUnitManager organizationUnitManager, IdentityUserManager identityUserManager,
         IRepository<OrganizationUnit, Guid> organizationUnitRepository, IdentityRoleManager roleManager,
         IPermissionManager permissionManager, IOrganizationPermissionChecker permissionChecker,
-        IPermissionDefinitionManager permissionDefinitionManager, IRepository<IdentityUser, Guid> userRepository)
+        IPermissionDefinitionManager permissionDefinitionManager, IRepository<IdentityUser, Guid> userRepository,
+        INotificationService notificationService)
     {
         OrganizationUnitManager = organizationUnitManager;
         IdentityUserManager = identityUserManager;
@@ -40,6 +45,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         PermissionChecker = permissionChecker;
         PermissionDefinitionManager = permissionDefinitionManager;
         UserRepository = userRepository;
+        _notificationService = notificationService;
     }
 
     public virtual async Task<ListResultDto<OrganizationDto>> GetListAsync(GetOrganizationListDto input)
@@ -204,16 +210,20 @@ public class OrganizationService : AevatarAppService, IOrganizationService
 
     protected virtual async Task AddMemberAsync(Guid organizationId, IdentityUser user, Guid? roleId)
     {
-        // TODO: invite user
-        if (roleId.HasValue)
-        {
-            user.AddRole(roleId.Value);
-            await IdentityUserManager.UpdateAsync(user);
-        }
-        
+        await _notificationService.CreateAsync(
+            NotificationTypeEnum.OrganizationInvitation,
+            CurrentUser.Id.Value,
+            user.Id,
+            JsonConvert.SerializeObject(new OrganizationVisitInfo
+            {
+                OrganizationId = organizationId,
+                RoleId = roleId.Value,
+                UserId = user.Id
+            }));
+
         await IdentityUserManager.AddToOrganizationUnitAsync(user.Id, organizationId);
     }
-    
+
     protected virtual async Task RemoveMemberAsync(Guid organizationId, IdentityUser user)
     {
         var children = await OrganizationUnitManager.FindChildrenAsync(organizationId, true);
