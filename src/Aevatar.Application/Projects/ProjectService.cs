@@ -9,6 +9,7 @@ using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.EventBus.Distributed;
 using Volo.Abp.Identity;
 using Volo.Abp.PermissionManagement;
 
@@ -21,23 +22,23 @@ public class ProjectService : OrganizationService, IProjectService
         IRepository<OrganizationUnit, Guid> organizationUnitRepository, IdentityRoleManager roleManager,
         IPermissionManager permissionManager, IOrganizationPermissionChecker permissionChecker,
         IPermissionDefinitionManager permissionDefinitionManager, IRepository<IdentityUser, Guid> userRepository,
-        INotificationService notificationService) :
+        IDistributedEventBus distributedEvent) :
         base(organizationUnitManager, identityUserManager, organizationUnitRepository, roleManager, permissionManager,
-            permissionChecker, permissionDefinitionManager, userRepository, notificationService)
+            permissionChecker, permissionDefinitionManager, userRepository, distributedEvent)
     {
     }
 
     public async Task<ProjectDto> CreateAsync(CreateProjectDto input)
     {
         var organization = await OrganizationUnitRepository.GetAsync(input.OrganizationId);
-        
+
         var displayName = input.DisplayName.Trim();
         var project = new OrganizationUnit(
             GuidGenerator.Create(),
             displayName,
-            parentId:organization.Id
+            parentId: organization.Id
         );
-        
+
         var ownerRoleId = await AddOwnerRoleAsync(project.Id);
         var readerRoleId = await AddReaderRoleAsync(project.Id);
 
@@ -46,10 +47,10 @@ public class ProjectService : OrganizationService, IProjectService
         project.ExtraProperties[AevatarConsts.ProjectDomainNameKey] = input.DomainName;
 
         await OrganizationUnitManager.CreateAsync(project);
-        
-        return  ObjectMapper.Map<OrganizationUnit, ProjectDto>(project);
+
+        return ObjectMapper.Map<OrganizationUnit, ProjectDto>(project);
     }
-    
+
     protected override async Task<Guid> AddReaderRoleAsync(Guid organizationId)
     {
         var role = new IdentityRole(
@@ -117,14 +118,14 @@ public class ProjectService : OrganizationService, IProjectService
         organizationDto.MemberCount = members.Count;
         return organizationDto;
     }
-    
+
     protected override async Task AddMemberAsync(Guid organizationId, IdentityUser user, Guid? roleId)
     {
         if (!roleId.HasValue)
         {
             throw new UserFriendlyException("Must set a user role.");
         }
-        
+
         user.AddRole(roleId.Value);
         await IdentityUserManager.UpdateAsync(user);
         await IdentityUserManager.AddToOrganizationUnitAsync(user.Id, organizationId);

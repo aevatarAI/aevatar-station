@@ -11,7 +11,6 @@ public class OrganizationVisit : NotificationHandlerBase<OrganizationVisitInfo>
     private readonly IOrganizationService _organizationService;
     private readonly IdentityUserManager _userManager;
 
-
     public OrganizationVisit(IOrganizationService organizationService, IdentityUserManager userManager)
     {
         _organizationService = organizationService;

@@ -20,10 +20,7 @@ using Volo.Abp.Dapr;
 using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
 using Volo.Abp.PermissionManagement;
-using Volo.Abp.Users;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
-using Volo.Abp.Emailing;
+using Volo.Abp.EventBus;
 using Volo.Abp.VirtualFileSystem;
 
 namespace Aevatar;
@@ -40,7 +37,8 @@ namespace Aevatar;
     typeof(AevatarCQRSModule),
     typeof(AevatarWebhookDeployModule),
     typeof(AevatarKubernetesModule),
-    typeof(AbpAutoMapperModule)
+    typeof(AbpAutoMapperModule),
+    typeof(AbpEventBusModule)
 )]
 public class AevatarApplicationModule : AbpModule
 {

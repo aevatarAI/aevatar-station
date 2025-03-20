@@ -79,7 +79,7 @@ public class NotificationController : AevatarController
     [HttpPost("/response")]
     public async Task Response([FromBody] NotificationResponseDto responseDto)
     {
-        if (await _notificationService.Response(responseDto.Id, CurrentUser.Id, responseDto.Status))
+        if (await _notificationService.Response(responseDto.Id, CurrentUser.Id, responseDto.Status) == false)
         {
             throw new BusinessException("handle notification fail");
         }
