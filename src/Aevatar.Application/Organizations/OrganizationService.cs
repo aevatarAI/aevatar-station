@@ -213,6 +213,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
     protected virtual async Task AddMemberAsync(Guid organizationId, IdentityUser user, Guid? roleId)
     {
         await IdentityUserManager.AddToOrganizationUnitAsync(user.Id, organizationId);
+        await CurrentUnitOfWork.SaveChangesAsync();
         
         await _distributedEvent.PublishAsync(new NotificationCreatForEventBusDto()
         {
@@ -226,7 +227,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
                 RoleId = roleId.Value,
                 Vistor = user.Id
             })
-        }, false);
+        });
     }
 
     protected virtual async Task RemoveMemberAsync(Guid organizationId, IdentityUser user)
