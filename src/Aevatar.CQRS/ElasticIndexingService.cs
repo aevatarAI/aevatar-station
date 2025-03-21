@@ -137,46 +137,64 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         }
     }
 
-    public async Task SaveOrUpdateStateIndexAsync<T>(string id, T stateBase) where T : StateBase
+    public async Task SaveOrUpdateStateIndexBatchAsync(IEnumerable<SaveStateCommand> commands)
     {
-        var indexName = _cqrsProvider.GetIndexName(stateBase.GetType().Name.ToLower());
-        var properties = stateBase.GetType().GetProperties();
-        var document = new Dictionary<string, object>();
+        // Prepare a bulk descriptor for batch indexing
+        var bulkDescriptor = new BulkDescriptor();
 
-        foreach (var property in properties)
+        foreach (var command in commands)
         {
-            var value = property.GetValue(stateBase);
-            var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
-            if (value is GrainId || string.Equals(propertyName, "children"))
+            var stateBase = command.State;
+            var id = command.Id;
+
+            var indexName = _cqrsProvider.GetIndexName(stateBase.GetType().Name.ToLower());
+            var properties = stateBase.GetType().GetProperties();
+            var document = new Dictionary<string, object>();
+
+            foreach (var property in properties)
             {
-                document[propertyName] = JsonConvert.SerializeObject(value);
-            }
-            else
-            {
-                if (value != null)
+                var value = property.GetValue(stateBase);
+                var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
+
+                if (value is GrainId || string.Equals(propertyName, "children"))
                 {
-                    document.Add(propertyName, value);
+                    document[propertyName] = JsonConvert.SerializeObject(value);
+                }
+                else
+                {
+                    if (value != null)
+                    {
+                        document.Add(propertyName, value);
+                    }
                 }
             }
+
+            document.Add(CTime, DateTime.UtcNow);
+
+            // Add a bulk index operation for this document
+            bulkDescriptor.Index<object>(op => op
+                .Index(indexName)
+                .Id(id)
+                .Document(document)
+            );
         }
 
-        document.Add(CTime, DateTime.UtcNow);
+        // Execute the bulk operation
+        var bulkResponse = await _elasticClient.BulkAsync(bulkDescriptor);
 
-        var response = await _elasticClient.IndexAsync(document, i => i
-            .Index(indexName)
-            .Id(id)
-        );
-
-        if (!response.IsValid)
+        // Handle response
+        if (!bulkResponse.IsValid)
         {
             _logger.LogError(
-                "Save State Error, indexing document error,indexName:{indexName} error:{error}, DebugInfo{DebugInfo} ",
-                indexName,
-                response.ServerError, JsonConvert.SerializeObject(response.DebugInformation));
+                "Save State Batch Error, indexing documents error. Errors: {Errors}, DebugInfo: {DebugInfo}",
+                JsonConvert.SerializeObject(bulkResponse.ItemsWithErrors),
+                JsonConvert.SerializeObject(bulkResponse.DebugInformation)
+            );
         }
         else
         {
-            _logger.LogInformation("Save State Successfully. indexName:{indexName}", indexName);
+            _logger.LogInformation("Save State Batch Successfully. Indexed {Count} documents.",
+                bulkResponse.Items.Count);
         }
     }
 

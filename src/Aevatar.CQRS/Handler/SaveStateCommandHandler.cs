@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Aevatar.CQRS.Dto;
@@ -5,25 +6,31 @@ using MediatR;
 
 namespace Aevatar.CQRS.Handler;
 
-public class SaveStateCommandHandler : IRequestHandler<SaveStateCommand>
+public class SaveStateBatchCommandHandler : IRequestHandler<SaveStateBatchCommand>
 {
     private readonly IIndexingService _indexingService;
 
-    public SaveStateCommandHandler(
+    public SaveStateBatchCommandHandler(
         IIndexingService indexingService
     )
     {
         _indexingService = indexingService;
     }
 
-    public async Task Handle(SaveStateCommand request, CancellationToken cancellationToken)
+    public async Task Handle(SaveStateBatchCommand request, CancellationToken cancellationToken)
     {
-        _indexingService.CheckExistOrCreateStateIndex(request.State);
-        await SaveIndexAsync(request);
+        foreach (var stateCommand in request.Commands)
+        {
+            // Check or create the necessary index for each state
+            _indexingService.CheckExistOrCreateStateIndex(stateCommand.State);
+        }
+
+        // Save all indices in a single operation for batch processing
+        await SaveIndicesAsync(request.Commands);
     }
 
-    private async Task SaveIndexAsync(SaveStateCommand request)
+    private async Task SaveIndicesAsync(IEnumerable<SaveStateCommand> commands)
     {
-        await _indexingService.SaveOrUpdateStateIndexAsync(request.Id, request.State);
+        await _indexingService.SaveOrUpdateStateIndexBatchAsync(commands);
     }
 }

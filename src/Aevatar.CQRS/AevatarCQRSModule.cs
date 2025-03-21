@@ -20,22 +20,13 @@ public class AevatarCQRSModule : AbpModule
         Configure<AbpAutoMapperOptions>(options => { options.AddMaps<AevatarCQRSModule>(); });
         context.Services.AddAutoMapper(typeof(AISmartCQRSAutoMapperProfile).Assembly);
         context.Services.AddMediatR(cfg =>
-            cfg.RegisterServicesFromAssembly(typeof(SaveStateCommandHandler).Assembly)
+            cfg.RegisterServicesFromAssembly(typeof(SaveStateBatchCommandHandler).Assembly)
         );
         context.Services.AddMediatR(cfg =>
             cfg.RegisterServicesFromAssembly(typeof(SaveGEventCommandHandler).Assembly)
         );
         context.Services.AddMediatR(cfg =>
-            cfg.RegisterServicesFromAssembly(typeof(GetStateQueryHandler).Assembly)
-        );
-        context.Services.AddMediatR(cfg =>
             cfg.RegisterServicesFromAssembly(typeof(SendEventCommandHandler).Assembly)
-        );
-        context.Services.AddMediatR(cfg =>
-            cfg.RegisterServicesFromAssembly(typeof(GetGEventQueryHandler).Assembly)
-        );
-        context.Services.AddMediatR(cfg =>
-            cfg.RegisterServicesFromAssembly(typeof(GetUserInstanceAgentsHandler).Assembly)
         );
         context.Services.AddSingleton<IIndexingService, ElasticIndexingService>();
         context.Services.AddSingleton<IEventDispatcher, CQRSProvider>();
