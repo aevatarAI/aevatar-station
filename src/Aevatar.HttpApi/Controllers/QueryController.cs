@@ -59,7 +59,7 @@ public class QueryController : AevatarController
     
     [HttpGet("userId")]
     [Authorize]
-    public Task<Guid> QueryEs()
+    public Task<Guid> GetUserId()
     {
         return Task.FromResult((Guid)CurrentUser.Id!);
     }
