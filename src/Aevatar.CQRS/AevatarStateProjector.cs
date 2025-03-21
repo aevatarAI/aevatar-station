@@ -43,7 +43,7 @@ public class AevatarStateProjector : IStateProjector, ISingletonDependency
             {
                 Id = grainId.ToString(),
                 GuidKey = grainId.GetGuidKey().
-                    ToString("N"),
+                    ToString(),
                 State = wrapperState,
                 Version = version
             };
