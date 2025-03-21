@@ -9,9 +9,12 @@ using Volo.Abp.DependencyInjection;
 using Volo.Abp.Identity;
 using Volo.Abp.OpenIddict.ExtensionGrantTypes;
 using System.Security.Cryptography;
+using System.Text;
+using System.Text.RegularExpressions;
 using Aevatar.OpenIddict;
 using Aevatar.Permissions;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Volo.Abp.OpenIddict;
 
@@ -40,18 +43,25 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
             
             _logger.LogInformation("AppleGrantHandler.HandleAsync source: {source} idToken: {idToken}", 
                 source, idToken);
-
+            
+            var aud = source == "ios" ? _configuration["Apple:NativeClientId"] : _configuration["Apple:WebClientId"];
             if (string.IsNullOrEmpty(idToken))
             {
                 if (string.IsNullOrEmpty(code))
                 {
+                    _logger.LogInformation("Missing both id_token and code");
                     return ErrorResult("Missing both id_token and code");
                 }
+                
+                idToken = await ExchangeCodeForTokenAsync(code, aud);
+                _logger.LogInformation("AppleGrantHandler.HandleAsync ExchangeCodeForTokenAsync code: {idToken} aud: {aud} token: {token}", code, aud, idToken);
 
-                idToken = await ExchangeCodeForToken(code);
+                if (idToken.IsNullOrEmpty())
+                {
+                    return ErrorResult("Code invalid or expired");
+                }
             }
-
-            var aud = source == "ios" ? _configuration["Apple:NativeClientId"] : _configuration["Apple:WebClientId"];
+            
             var (isValid, principal) = await ValidateAppleToken(idToken, aud);
             if (!isValid)
             {
@@ -83,7 +93,6 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
                 roleNames.Add(role.Name);
             }
 
-
             var userClaimsPrincipalFactory = context.HttpContext.RequestServices
                 .GetRequiredService<Microsoft.AspNetCore.Identity.IUserClaimsPrincipalFactory<IdentityUser>>();
             var claimsPrincipal = await userClaimsPrincipalFactory.CreateAsync(user);
@@ -104,12 +113,7 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
         }
     }
 
-    private async Task<string> ExchangeCodeForToken(string code)
-    {
-        throw new NotImplementedException("Code exchange not implemented");
-    }
-
-    private async Task<(bool IsValid, ClaimsPrincipal Principal)> ValidateAppleToken(string idToken, string audience)
+    private async Task<(bool IsValid, ClaimsPrincipal? Principal)> ValidateAppleToken(string idToken, string audience)
     {
         try
         {
@@ -122,7 +126,7 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
             _logger.LogInformation("AppleGrantHandler.ValidateAppleToken: kid: {kid} required aud: {audience} actual aud: {aud}", 
                 kid, audience, aud);
 
-            var key = await NewGetApplePublicKeysAsync(kid);
+            var key = await GetApplePublicKeysAsync(kid);
             var validationParameters = new TokenValidationParameters
             {
                 ValidIssuer = "https://appleid.apple.com",
@@ -146,8 +150,7 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
         }
     }
     
-
-    private async Task<SecurityKey> NewGetApplePublicKeysAsync(string kid)
+    private async Task<SecurityKey> GetApplePublicKeysAsync(string kid)
     {
         using var client = new HttpClient();
         var keysResponse = await client.GetStringAsync("https://appleid.apple.com/auth/keys");
@@ -194,12 +197,6 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
         };
     }
 
-
-    private string GenerateTemporaryUsername()
-    {
-        return $"apple_user_{Guid.NewGuid():N}";
-    }
-
     private ForbidResult ErrorResult(string errorDescription)
     {
         return new ForbidResult(
@@ -230,36 +227,90 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
 
         return resources;
     }
-
-    private string GenerateClientSecret()
+    
+    private async Task<string> ExchangeCodeForTokenAsync(string code, string clientId)
     {
-        var privateKey = File.ReadAllText("_privateKeyPath"); 
-        using var rsa = RSA.Create();
-        rsa.ImportFromPem(privateKey.ToCharArray());
-
-        var credentials = new SigningCredentials(
-            new RsaSecurityKey(rsa) { KeyId = "_keyId" },
-            SecurityAlgorithms.RsaSha256);
-
-        var now = DateTime.UtcNow;
-
-        var securityTokenDescriptor = new SecurityTokenDescriptor
+        var clientSecret =  GenerateClientSecret(clientId);
+        using var client = new HttpClient();
+        
+        var body = new List<KeyValuePair<string, string>>
         {
-            Audience = "https://appleid.apple.com", 
-            Issuer = "_teamId", 
-            Expires = now.AddMinutes(30), 
-            NotBefore = now,
-            Subject = new ClaimsIdentity(new[]
-            {
-                new Claim("sub", "_clientId") 
-            }),
-            SigningCredentials = credentials
+            new KeyValuePair<string, string>("grant_type", "authorization_code"),
+            new KeyValuePair<string, string>("code", code),
+            new KeyValuePair<string, string>("redirect_uri", _configuration["Apple:RedirectUri"]),
+            new KeyValuePair<string, string>("client_id", clientId),
+            new KeyValuePair<string, string>("client_secret", clientSecret),
         };
-
-        var tokenHandler = new JwtSecurityTokenHandler();
-        return tokenHandler.CreateEncodedJwt(securityTokenDescriptor);
+        
+        var response = await client.PostAsync("https://appleid.apple.com/auth/token", new FormUrlEncodedContent(body));
+        
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogError("Token exchange failed. StatusCode: {StatusCode}, Response: {ResponseBody}",
+                response.StatusCode,
+                await response.Content.ReadAsStringAsync());
+            return "";
+        }
+        
+        var json = await response.Content.ReadAsStringAsync();
+        var tokenResp = JsonConvert.DeserializeObject<TokenResponse>(json);
+        return tokenResp.IdToken;
     }
     
+    private string GenerateClientSecret(string clientId)
+    {
+        var key =  Regex.Replace(_configuration["Apple:Pk"], @"\t|\n|\r", "");
+        using var algorithm = ECDsa.Create();
+        algorithm.ImportPkcs8PrivateKey(Convert.FromBase64String(key), out _);
+
+        var now = DateTime.UtcNow;
+        var header = new
+        {
+            alg = "ES256", 
+            kid = _configuration["Apple:KeyId"]   
+        };
+        
+        var payload = new
+        {
+            iss = _configuration["Apple:TeamId"], 
+            iat = new DateTimeOffset(now).ToUnixTimeSeconds(), 
+            exp = new DateTimeOffset(now.AddMinutes(30)).ToUnixTimeSeconds(),
+            aud = "https://appleid.apple.com", 
+            sub = clientId 
+        };
+        
+        var encodedHeader = Base64UrlEncode(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(header)));
+        var encodedPayload = Base64UrlEncode(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(payload)));
+        
+        var stringToSign = $"{encodedHeader}.{encodedPayload}";
+        var signature = algorithm.SignData(Encoding.UTF8.GetBytes(stringToSign), HashAlgorithmName.SHA256);
+        var encodedSignature = Base64UrlEncode(signature);
+       
+        return $"{encodedHeader}.{encodedPayload}.{encodedSignature}";
+    }
+    
+    private static string Base64UrlEncode(byte[] input)
+    {
+        return Convert.ToBase64String(input)
+            .Replace("+", "-")
+            .Replace("/", "_")
+            .TrimEnd('=');
+    }
+    
+    public class TokenResponse
+    {
+        [JsonProperty("access_token")]
+        public string? AccessToken { get; set; }
+
+        [JsonProperty("id_token")]
+        public string? IdToken { get; set; }
+
+        [JsonProperty("expires_in")]
+        public int ExpiresIn { get; set; }
+
+        [JsonProperty("token_type")]
+        public string? TokenType { get; set; }
+    }
 
     private class AppleUserInfo
     {
