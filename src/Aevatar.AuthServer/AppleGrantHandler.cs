@@ -1,9 +1,6 @@
-using System;
-using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Security.Claims;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
@@ -11,37 +8,28 @@ using OpenIddict.Server.AspNetCore;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Identity;
 using Volo.Abp.OpenIddict.ExtensionGrantTypes;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Caching.Memory;
-using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.RegularExpressions;
+using Aevatar.OpenIddict;
 using Aevatar.Permissions;
 using Microsoft.AspNetCore.Mvc;
-using MongoDB.Bson.Serialization.IdGenerators;
 using Newtonsoft.Json;
-using Volo.Abp;
+using Newtonsoft.Json.Linq;
 using Volo.Abp.OpenIddict;
 
 public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
 {
-    private readonly IHttpClientFactory _httpClientFactory;
-    private readonly IMemoryCache _cache;
     private readonly IConfiguration _configuration;
-    private readonly IdentityUserManager _userManager;
     private readonly ILogger<AppleGrantHandler> _logger;
 
-    public string Name => "apple_login";
+    public string Name => GrantTypeConstants.APPLE;
 
     public AppleGrantHandler(
-        IHttpClientFactory httpClientFactory,
-        IMemoryCache cache,
         IConfiguration configuration,
-        IdentityUserManager userManager,
         ILogger<AppleGrantHandler> logger)
     {
-        _httpClientFactory = httpClientFactory;
-        _cache = cache;
         _configuration = configuration;
-        _userManager = userManager;
         _logger = logger;
     }
 
@@ -49,44 +37,54 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
     {
         try
         {
-            // 1. 获取认证参数
             var code = context.Request.GetParameter("code")?.ToString();
             var idToken = context.Request.GetParameter("id_token")?.ToString();
-
-            if (string.IsNullOrEmpty(idToken) // 优先使用id_token
+            var source = context.Request.GetParameter("source")?.ToString();
+            
+            _logger.LogInformation("AppleGrantHandler.HandleAsync source: {source} idToken: {idToken}", 
+                source, idToken);
+            
+            var aud = source == "ios" ? _configuration["Apple:NativeClientId"] : _configuration["Apple:WebClientId"];
+            if (string.IsNullOrEmpty(idToken))
             {
                 if (string.IsNullOrEmpty(code))
                 {
+                    _logger.LogInformation("Missing both id_token and code");
                     return ErrorResult("Missing both id_token and code");
                 }
                 
-                // 使用code换取id_token（需要实现）
-                idToken = await ExchangeCodeForToken(code);
-            }
+                idToken = await ExchangeCodeForTokenAsync(code, aud);
+                _logger.LogInformation("AppleGrantHandler.HandleAsync ExchangeCodeForTokenAsync code: {idToken} aud: {aud} token: {token}", code, aud, idToken);
 
-            // 2. 验证Apple身份令牌
-            var (isValid, principal) = await ValidateAppleToken(idToken);
+                if (idToken.IsNullOrEmpty())
+                {
+                    return ErrorResult("Code invalid or expired");
+                }
+            }
+            
+            var (isValid, principal) = await ValidateAppleToken(idToken, aud);
             if (!isValid)
             {
-                return ErrorResult("Invalid Apple token");
+                return ErrorResult("Invalid APPLE token");
             }
 
-            // 3. 提取用户信息
             var appleUser = ExtractAppleUser(principal);
 
             var email = appleUser.Email;
             _logger.LogInformation("AppleGrantHandler.HandleAsync: email: {email}", email);
             var userManager = context.HttpContext.RequestServices.GetRequiredService<IdentityUserManager>();
 
-            var user = await userManager.FindByNameAsync(email);
+            var name = email + "@" + GrantTypeConstants.APPLE;
+            var user = await userManager.FindByNameAsync(name);
             if (user == null)
             {
-                user = new IdentityUser(Guid.NewGuid(), email, email: Guid.NewGuid().ToString("N") + "@ABP.IO");
+                user = new IdentityUser(Guid.NewGuid(), name, email: Guid.NewGuid().ToString("N") + "@ABP.IO");
                 await userManager.CreateAsync(user);
-                await userManager.SetRolesAsync(user,
+                await userManager.SetRolesAsync(user, 
                     [AevatarPermissions.BasicUser]);
             }
-            var identityUser = await userManager.FindByNameAsync(email);
+
+            var identityUser = await userManager.FindByNameAsync(name);
             var identityRoleManager = context.HttpContext.RequestServices.GetRequiredService<IdentityRoleManager>();
             var roleNames = new List<string>();
             foreach (var userRole in identityUser.Roles)
@@ -94,13 +92,12 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
                 var role = await identityRoleManager.GetByIdAsync(userRole.RoleId);
                 roleNames.Add(role.Name);
             }
-        
-        
+
             var userClaimsPrincipalFactory = context.HttpContext.RequestServices
                 .GetRequiredService<Microsoft.AspNetCore.Identity.IUserClaimsPrincipalFactory<IdentityUser>>();
             var claimsPrincipal = await userClaimsPrincipalFactory.CreateAsync(user);
             claimsPrincipal.SetClaim(OpenIddictConstants.Claims.Subject, user.Id.ToString());
-            claimsPrincipal.SetClaim(OpenIddictConstants.Claims.Role, string.Join(",",roleNames));
+            claimsPrincipal.SetClaim(OpenIddictConstants.Claims.Role, string.Join(",", roleNames));
             claimsPrincipal.SetScopes(context.Request.GetScopes());
             claimsPrincipal.SetResources(await GetResourcesAsync(context, claimsPrincipal.GetScopes()));
             claimsPrincipal.SetAudiences("Aevatar");
@@ -111,32 +108,34 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Apple login failed");
+            _logger.LogError(ex, "APPLE login failed");
             return ErrorResult("Internal server error");
         }
     }
 
-    #region Private Methods
-    
-    private async Task<string> ExchangeCodeForToken(string code)
-    {
-        // 实现使用code换取id_token的逻辑（需要Apple服务端密钥）
-        throw new NotImplementedException("Code exchange not implemented");
-    }
-
-    private async Task<(bool IsValid, ClaimsPrincipal Principal)> ValidateAppleToken(string idToken)
+    private async Task<(bool IsValid, ClaimsPrincipal? Principal)> ValidateAppleToken(string idToken, string audience)
     {
         try
         {
-            var keys = await GetApplePublicKeysAsync();
+            var tokenHandler = new JwtSecurityTokenHandler();
+            
+            var jwtToken = tokenHandler.ReadJwtToken(idToken);
+            var kid = jwtToken.Header["kid"]?.ToString();
+            var aud = jwtToken.Audiences.FirstOrDefault();
+            
+            _logger.LogInformation("AppleGrantHandler.ValidateAppleToken: kid: {kid} required aud: {audience} actual aud: {aud}", 
+                kid, audience, aud);
+
+            var key = await GetApplePublicKeysAsync(kid);
             var validationParameters = new TokenValidationParameters
             {
                 ValidIssuer = "https://appleid.apple.com",
-                ValidAudience = _configuration["Apple:ClientId"],
-                IssuerSigningKeys = keys,
+                ValidAudience = audience,
+                IssuerSigningKey = key,
                 ValidateLifetime = true,
                 ValidateAudience = true,
-                ValidateIssuer = true
+                ValidateIssuer = true,
+                ValidateIssuerSigningKey = true
             };
 
             var handler = new JwtSecurityTokenHandler();
@@ -145,26 +144,36 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Apple token validation failed");
+            _logger.LogWarning(ex, "APPLE token validation failed");
+            _logger.LogError( "AppleGrantHandler.ValidateAppleToken failed, msg: {msg}", ex.Message);
             return (false, null);
         }
     }
-
-    private async Task<IEnumerable<SecurityKey>> GetApplePublicKeysAsync()
+    
+    private async Task<SecurityKey> GetApplePublicKeysAsync(string kid)
     {
-        const string cacheKey = "ApplePublicKeys";
-        
-        return await _cache.GetOrCreateAsync(cacheKey, async entry =>
+        using var client = new HttpClient();
+        var keysResponse = await client.GetStringAsync("https://appleid.apple.com/auth/keys");
+        var keys = JObject.Parse(keysResponse)["keys"];
+
+        foreach (var key in keys)
         {
-            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10); // 缓存10分钟
-            
-            var client = _httpClientFactory.CreateClient();
-            var response = await client.GetAsync("https://appleid.apple.com/auth/keys");
-            var json = await response.Content.ReadAsStringAsync();
-            
-            var jwks = JsonConvert.DeserializeObject<JsonWebKeySet>(json);
-            return jwks.Keys;
-        });
+            if (key["kid"]?.ToString() == kid)
+            {
+                var modulus = Base64UrlEncoder.DecodeBytes(key["n"].ToString());
+                var exponent = Base64UrlEncoder.DecodeBytes(key["e"].ToString());
+                
+                var rsaParameters = new RSAParameters
+                {
+                    Modulus = modulus,
+                    Exponent = exponent
+                };
+                
+                return new RsaSecurityKey(rsaParameters);
+            }
+        }
+
+        throw new SecurityTokenException($"No public key found for kid: {kid}");
     }
 
     private AppleUserInfo ExtractAppleUser(ClaimsPrincipal principal)
@@ -173,8 +182,7 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
         var firstName = principal.FindFirstValue(ClaimTypes.GivenName);
         var lastName = principal.FindFirstValue(ClaimTypes.Surname);
         var sub = principal.FindFirstValue(ClaimTypes.NameIdentifier);
-
-        // 处理Apple的匿名邮箱
+        
         if (email?.EndsWith("@privaterelay.appleid.com") == true)
         {
             email = $"{sub}@apple.privaterelay.com";
@@ -189,86 +197,120 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
         };
     }
 
-    private async Task<IdentityUser> FindOrCreateUserAsync(AppleUserInfo appleUser)
-    {
-        var user = await _userManager.FindByLoginAsync("Apple", appleUser.SubjectId);
-        if (user != null) return user;
-
-        // 创建新用户
-        user = new IdentityUser(
-            GuidGenerator.Create(),
-            userName: appleUser.Email ?? GenerateTemporaryUsername(),
-            email: appleUser.Email
-        )
-        {
-            Name = $"{appleUser.FirstName} {appleUser.LastName}".Trim(),
-            EmailConfirmed = appleUser.Email != null
-        };
-
-        var result = await _userManager.CreateAsync(user);
-        if (!result.Succeeded)
-        {
-            throw new UserFriendlyException($"User creation failed: {string.Join(",", result.Errors)}");
-        }
-
-        // 添加外部登录
-        await _userManager.AddLoginAsync(user, new UserLoginInfo(
-            loginProvider: "Apple",
-            providerKey: appleUser.SubjectId,
-            displayName: "Apple"
-        ));
-
-        return user;
-    }
-
-    private async Task<ClaimsPrincipal> CreateClaimsPrincipalAsync(
-        IdentityUser user, 
-        ExtensionGrantContext context)
-    {
-        var principal = await _userManager.CreateUserPrincipalAsync(user);
-        
-        // 添加OpenIddict所需声明
-        principal.SetScopes(context.Request.GetScopes());
-        principal.SetResources(await GetResourcesAsync(context));
-        principal.SetClaim(OpenIddictConstants.Claims.Subject, user.Id.ToString());
-
-        return principal;
-    }
-
-    private string GenerateTemporaryUsername()
-    {
-        return $"apple_user_{Guid.NewGuid():N}";
-    }
-
     private ForbidResult ErrorResult(string errorDescription)
     {
         return new ForbidResult(
             new[] { OpenIddictServerAspNetCoreDefaults.AuthenticationScheme },
             properties: new AuthenticationProperties(new Dictionary<string, string>
             {
-                [OpenIddictServerAspNetCoreConstants.Properties.Error] = 
+                [OpenIddictServerAspNetCoreConstants.Properties.Error] =
                     OpenIddictConstants.Errors.InvalidRequest,
-                [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = 
+                [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
                     errorDescription
             }));
     }
 
-    private async Task<IEnumerable<string>> GetResourcesAsync(ExtensionGrantContext context)
+    private async Task<IEnumerable<string>> GetResourcesAsync(ExtensionGrantContext context,
+        ImmutableArray<string> scopes)
     {
-        var scopeManager = context.HttpContext.RequestServices
-            .GetRequiredService<IOpenIddictScopeManager>();
-        
         var resources = new List<string>();
-        await foreach (var resource in scopeManager.ListResourcesAsync(context.Request.GetScopes()))
+        if (!scopes.Any())
+        {
+            return resources;
+        }
+
+        await foreach (var resource in context.HttpContext.RequestServices.GetRequiredService<IOpenIddictScopeManager>()
+                           .ListResourcesAsync(scopes))
         {
             resources.Add(resource);
         }
+
         return resources;
     }
+    
+    private async Task<string> ExchangeCodeForTokenAsync(string code, string clientId)
+    {
+        var clientSecret =  GenerateClientSecret(clientId);
+        using var client = new HttpClient();
+        
+        var body = new List<KeyValuePair<string, string>>
+        {
+            new KeyValuePair<string, string>("grant_type", "authorization_code"),
+            new KeyValuePair<string, string>("code", code),
+            new KeyValuePair<string, string>("redirect_uri", _configuration["Apple:RedirectUri"]),
+            new KeyValuePair<string, string>("client_id", clientId),
+            new KeyValuePair<string, string>("client_secret", clientSecret),
+        };
+        
+        var response = await client.PostAsync("https://appleid.apple.com/auth/token", new FormUrlEncodedContent(body));
+        
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogError("Token exchange failed. StatusCode: {StatusCode}, Response: {ResponseBody}",
+                response.StatusCode,
+                await response.Content.ReadAsStringAsync());
+            return "";
+        }
+        
+        var json = await response.Content.ReadAsStringAsync();
+        var tokenResp = JsonConvert.DeserializeObject<TokenResponse>(json);
+        return tokenResp.IdToken;
+    }
+    
+    private string GenerateClientSecret(string clientId)
+    {
+        var key =  Regex.Replace(_configuration["Apple:Pk"], @"\t|\n|\r", "");
+        using var algorithm = ECDsa.Create();
+        algorithm.ImportPkcs8PrivateKey(Convert.FromBase64String(key), out _);
 
-    #endregion
+        var now = DateTime.UtcNow;
+        var header = new
+        {
+            alg = "ES256", 
+            kid = _configuration["Apple:KeyId"]   
+        };
+        
+        var payload = new
+        {
+            iss = _configuration["Apple:TeamId"], 
+            iat = new DateTimeOffset(now).ToUnixTimeSeconds(), 
+            exp = new DateTimeOffset(now.AddMinutes(30)).ToUnixTimeSeconds(),
+            aud = "https://appleid.apple.com", 
+            sub = clientId 
+        };
+        
+        var encodedHeader = Base64UrlEncode(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(header)));
+        var encodedPayload = Base64UrlEncode(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(payload)));
+        
+        var stringToSign = $"{encodedHeader}.{encodedPayload}";
+        var signature = algorithm.SignData(Encoding.UTF8.GetBytes(stringToSign), HashAlgorithmName.SHA256);
+        var encodedSignature = Base64UrlEncode(signature);
+       
+        return $"{encodedHeader}.{encodedPayload}.{encodedSignature}";
+    }
+    
+    private static string Base64UrlEncode(byte[] input)
+    {
+        return Convert.ToBase64String(input)
+            .Replace("+", "-")
+            .Replace("/", "_")
+            .TrimEnd('=');
+    }
+    
+    public class TokenResponse
+    {
+        [JsonProperty("access_token")]
+        public string? AccessToken { get; set; }
 
-    #region Helper Classes
+        [JsonProperty("id_token")]
+        public string? IdToken { get; set; }
+
+        [JsonProperty("expires_in")]
+        public int ExpiresIn { get; set; }
+
+        [JsonProperty("token_type")]
+        public string? TokenType { get; set; }
+    }
 
     private class AppleUserInfo
     {
@@ -277,6 +319,4 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
         public string FirstName { get; set; }
         public string LastName { get; set; }
     }
-
-    #endregion
 }

@@ -191,6 +191,7 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
                     GrantTypeConstants.SIGNATURE,
                     GrantTypeConstants.LOGIN,
                     GrantTypeConstants.GOOGLE,
+                    GrantTypeConstants.APPLE
                 },
                 scopes: commonScopes,
                 redirectUri: redirectUri,
