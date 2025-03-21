@@ -30,7 +30,7 @@ public class AevatarStateProjector : IStateProjector, ISingletonDependency
         _ = ProcessCommandsAsync();
     }
 
-    public async Task ProjectAsync<T>(T state) where T : StateWrapperBase
+    public Task ProjectAsync<T>(T state) where T : StateWrapperBase
     {
         if (IsValidStateWrapper(state))
         {
@@ -54,6 +54,8 @@ public class AevatarStateProjector : IStateProjector, ISingletonDependency
                 (id, existing) => command.Version > existing.Version ? command : existing
             );
         }
+
+        return Task.CompletedTask;
     }
 
     private async Task ProcessCommandsAsync()
