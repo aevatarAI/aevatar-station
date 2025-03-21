@@ -48,15 +48,31 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         }
 
         var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
-        if (indexExistsResponse.Exists)
+        if (!indexExistsResponse.Exists)
         {
-            _cache.Set(indexName, true, new MemoryCacheEntryOptions
+            var createIndexResponse = CreateIndexAsync(stateBase, indexName);
+
+            if (!createIndexResponse.IsValid)
             {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24)
-            });
-            return;
+                _logger.LogError(
+                    "Error creating state index. indexName:{indexName},error:{error},DebugInfo:{DebugInfo}",
+                    indexName,
+                    createIndexResponse.ServerError?.Error,
+                    JsonConvert.SerializeObject(createIndexResponse.DebugInformation));
+                return;
+            }
+
+            _logger.LogInformation("Successfully created state index. indexName:{indexName}", indexName);
         }
 
+        _cache.Set(indexName, true, new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24)
+        });
+    }
+
+    private CreateIndexResponse CreateIndexAsync<T>(T stateBase, string indexName) where T : StateBase
+    {
         var createIndexResponse = _elasticClient.Indices.Create(indexName, c => c
             .Map<T>(m => m
                 .DynamicTemplates(dt => dt
@@ -123,18 +139,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                 })
             )
         );
-
-        if (!createIndexResponse.IsValid)
-        {
-            _logger.LogError("Error creating state index. indexName:{indexName},error:{error},DebugInfo:{DebugInfo}",
-                indexName,
-                createIndexResponse.ServerError?.Error,
-                JsonConvert.SerializeObject(createIndexResponse.DebugInformation));
-        }
-        else
-        {
-            _logger.LogInformation("Successfully created state index. indexName:{indexName}", indexName);
-        }
+        return createIndexResponse;
     }
 
     public async Task SaveOrUpdateStateIndexBatchAsync(IEnumerable<SaveStateCommand> commands)

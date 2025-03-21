@@ -28,6 +28,15 @@ public class AevatarCQRSModule : AbpModule
         context.Services.AddMediatR(cfg =>
             cfg.RegisterServicesFromAssembly(typeof(SendEventCommandHandler).Assembly)
         );
+        context.Services.AddMediatR(cfg =>
+            cfg.RegisterServicesFromAssembly(typeof(GetStateQueryHandler).Assembly)
+        );
+        context.Services.AddMediatR(cfg =>
+            cfg.RegisterServicesFromAssembly(typeof(GetGEventQueryHandler).Assembly)
+        );
+        context.Services.AddMediatR(cfg =>
+            cfg.RegisterServicesFromAssembly(typeof(GetUserInstanceAgentsHandler).Assembly)
+        );
         context.Services.AddSingleton<IIndexingService, ElasticIndexingService>();
         context.Services.AddSingleton<IEventDispatcher, CQRSProvider>();
         context.Services.AddSingleton<ICQRSProvider, CQRSProvider>();
