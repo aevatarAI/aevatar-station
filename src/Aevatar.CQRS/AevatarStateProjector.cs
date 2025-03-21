@@ -2,7 +2,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
@@ -19,12 +18,11 @@ public class AevatarStateProjector : IStateProjector, ISingletonDependency
     private readonly IMediator _mediator;
     private readonly ILogger<AevatarStateProjector> _logger;
     private readonly ProjectorBatchOptions _batchOptions;
-    private readonly SemaphoreSlim _batchTrigger = new(0);
 
     public AevatarStateProjector(
         IMediator mediator,
         ILogger<AevatarStateProjector> logger,
-        IOptions<ProjectorBatchOptions> options)
+        IOptionsSnapshot<ProjectorBatchOptions> options)
     {
         _mediator = mediator;
         _logger = logger;
@@ -54,34 +52,29 @@ public class AevatarStateProjector : IStateProjector, ISingletonDependency
                 command,
                 (id, existing) => command.Version > existing.Version ? command : existing
             );
-
-            if (_latestCommands.Count >= _batchOptions.BatchSize)
-            {
-                _batchTrigger.Release();
-            }
         }
     }
 
     private async Task ProcessCommandsAsync()
     {
-        var timer = new PeriodicTimer(TimeSpan.FromSeconds(_batchOptions.BatchTimeoutSeconds));
-
         while (true)
         {
             try
             {
-                var timeoutTask = ConvertValueTask(timer.WaitForNextTickAsync());
-                var batchSizeTask = _batchTrigger.WaitAsync();
-                await Task.WhenAny(timeoutTask, batchSizeTask);
+                if (_latestCommands.Count < _batchOptions.BatchSize)
+                {
+                    await Task.Delay(_batchOptions.BatchTimeoutSeconds * 1000);
+                }
+
                 var currentBatch = _latestCommands.Values
-                    .OrderBy(c => c.Version)
+                    .OrderByDescending(c => c.Version)
                     .Take(_batchOptions.BatchSize)
                     .ToList();
 
                 if (currentBatch.Count > 0)
                 {
                     _logger.LogInformation("latestCommands count :{Count} ", _latestCommands.Count);
-                    _ = SendBatchAsync(currentBatch);
+                    await SendBatchAsync(currentBatch);
                     CleanProcessedCommands(currentBatch);
                 }
             }
@@ -112,18 +105,6 @@ public class AevatarStateProjector : IStateProjector, ISingletonDependency
                typeof(StateBase).IsAssignableFrom(state.GetType().GetGenericArguments()[0]);
     }
 
-    private async Task<Task> ConvertValueTask(ValueTask<bool> valueTask)
-    {
-        try
-        {
-            return await valueTask.AsTask() ? Task.CompletedTask : Task.FromCanceled(new CancellationToken(true));
-        }
-        catch (OperationCanceledException)
-        {
-            return Task.FromCanceled(new CancellationToken(true));
-        }
-    }
-
     private async Task SendBatchAsync(List<SaveStateCommand> batch)
     {
         try
@@ -148,7 +129,12 @@ public class AevatarStateProjector : IStateProjector, ISingletonDependency
             await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, i)));
             try
             {
-                await SendBatchAsync(batch);
+                var validCommands = batch
+                    .Where(c => _latestCommands.TryGetValue(c.Id, out var latest) && latest.Version == c.Version)
+                    .ToList();
+
+                if (validCommands.Count == 0) return;
+                await SendBatchAsync(validCommands);
                 return;
             }
             catch

@@ -3,8 +3,8 @@ using System.Linq;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Handler;
 using Aevatar.CQRS.Provider;
+using Aevatar.Options;
 using Elasticsearch.Net;
-using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Nest;
@@ -33,6 +33,7 @@ public class AevatarCQRSModule : AbpModule
         context.Services.AddSingleton<ICQRSProvider, CQRSProvider>();
         var configuration = context.Services.GetConfiguration();
         ConfigureElasticsearch(context, configuration);
+        Configure<ProjectorBatchOptions>(configuration.GetSection("ProjectorBatch"));
     }
 
     private static void ConfigureElasticsearch(
