@@ -70,10 +70,4 @@ public class QuantumChatController : AevatarController
     {
         await _quantumService.RenameSessionAsync((Guid)CurrentUser.Id!, request.SessionId, request.Title);
     }
-
-    [HttpGet("user-id")]
-    public Task<Guid> GetUserId()
-    {
-        return Task.FromResult((Guid)CurrentUser.Id!);
-    }
 }

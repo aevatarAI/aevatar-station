@@ -56,4 +56,11 @@ public class QueryController : AevatarController
         var resp = await _indexingService.QueryWithLuceneAsync(request);
         return resp;
     }
+    
+    [HttpGet("user-id")]
+    [Authorize]
+    public Task<Guid> GetUserId()
+    {
+        return Task.FromResult((Guid)CurrentUser.Id!);
+    }
 }
