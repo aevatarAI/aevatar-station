@@ -37,7 +37,7 @@ public class NotificationController : AevatarController
         {
             _logger.LogError(
                 $"[NotificationService][CreateAsync] creator error notificationTypeEnum:{createDto.Type.ToString()} , input:{createDto.Content}");
-            throw new ArgumentException("target member error");
+            throw new UserFriendlyException("target member error");
         }
 
         var target = createDto.Target;
@@ -48,7 +48,7 @@ public class NotificationController : AevatarController
             {
                 _logger.LogError(
                     $"[NotificationService][CreateAsync] creator email not found create email:{createDto.TargetEmail} , input:{createDto.Content}");
-                throw new ArgumentException("creator not found");
+                throw new UserFriendlyException("creator not found");
             }
 
             target = targetUserInfo.Id;
@@ -58,7 +58,7 @@ public class NotificationController : AevatarController
         {
             _logger.LogError(
                 $"[NotificationService][CreateAsync]  Creator == target notificationTypeEnum:{createDto.Type.ToString()} targetMember:{target}, input:{createDto.Content}");
-            throw new ArgumentException("Creator equal target");
+            throw new UserFriendlyException("Creator equal target");
         }
 
         // check target exist
@@ -67,21 +67,21 @@ public class NotificationController : AevatarController
         await _notificationService.CreateAsync(createDto.Type, CurrentUser.Id, target, createDto.Content);
     }
 
-    [HttpPost("/withdraw/{guid}")]
+    [HttpPost("withdraw/{guid}")]
     public async Task Withdraw(Guid guid)
     {
         if (await _notificationService.WithdrawAsync(CurrentUser.Id, guid))
         {
-            throw new BusinessException("handle withdraw fail");
+            throw new UserFriendlyException("handle withdraw fail");
         }
     }
 
-    [HttpPost("/response")]
+    [HttpPost("response")]
     public async Task Response([FromBody] NotificationResponseDto responseDto)
     {
         if (await _notificationService.Response(responseDto.Id, CurrentUser.Id, responseDto.Status) == false)
         {
-            throw new BusinessException("handle notification fail");
+            throw new UserFriendlyException("handle notification fail");
         }
     }
 
