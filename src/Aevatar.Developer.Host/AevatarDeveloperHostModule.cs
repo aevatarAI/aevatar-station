@@ -80,20 +80,20 @@ public class AevatarDeveloperHostModule : AbpModule
                 options.MapInboundClaims = false;
             });
         
-        context.Services.AddAuthentication(
-                options =>
-                {
-                    options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                    options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
-                })
-            .AddGoogle(options =>
-            {
-                options.ClientId = configuration["Authentication:Google:ClientId"];
-                options.ClientSecret = configuration["Authentication:Google:ClientSecret"];
-                options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                // options.CallbackPath = "/quantumgpt-client/signin-google";
-            })
-            .AddCookie();
+        // context.Services.AddAuthentication(
+        //         options =>
+        //         {
+        //             options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        //             options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
+        //         })
+        //     .AddGoogle(options =>
+        //     {
+        //         options.ClientId = configuration["Authentication:Google:ClientId"];
+        //         options.ClientSecret = configuration["Authentication:Google:ClientSecret"];
+        //         options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        //         // options.CallbackPath = "/quantumgpt-client/signin-google";
+        //     })
+        //     .AddCookie();
     }
     
     private void ConfigureVirtualFileSystem(ServiceConfigurationContext context)
