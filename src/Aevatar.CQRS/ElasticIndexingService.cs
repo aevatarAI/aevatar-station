@@ -150,7 +150,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         foreach (var command in commands)
         {
             var stateBase = command.State;
-            var id = command.Id;
+            var id = command.GuidKey;
 
             var indexName = _cqrsProvider.GetIndexName(stateBase.GetType().Name.ToLower());
             var properties = stateBase.GetType().GetProperties();
