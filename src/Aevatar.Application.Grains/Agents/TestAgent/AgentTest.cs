@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
+using Json.Schema.Generation;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
