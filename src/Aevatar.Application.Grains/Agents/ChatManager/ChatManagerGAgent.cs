@@ -29,10 +29,10 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
     }
 
     [EventHandler]
-    public async Task HandleEventAsync(RequestCreateQuantumChatEvent @event)
+    public async Task HandleEventAsync(RequestCreateGodChatEvent @event)
     {
         Logger.LogDebug(
-            $"[ChatGAgentManager][RequestCreateQuantumChatEvent] start:{JsonConvert.SerializeObject(@event)}");
+            $"[ChatGAgentManager][RequestCreateGodChatEvent] start:{JsonConvert.SerializeObject(@event)}");
         var sessionId = Guid.Empty;
         try
         {
@@ -40,22 +40,22 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         }
         catch (Exception e)
         {
-            Logger.LogError(e, $"[ChatGAgentManager][RequestCreateQuantumChatEvent] handle error:{e.ToString()}");
+            Logger.LogError(e, $"[ChatGAgentManager][RequestCreateGodChatEvent] handle error:{e.ToString()}");
         }
 
-        await PublishAsync(new ResponseCreateQuantum()
+        await PublishAsync(new ResponseCreateGod()
         {
             SessionId = sessionId
         });
 
         Logger.LogDebug(
-            $"[ChatGAgentManager][RequestCreateQuantumChatEvent] end :{JsonConvert.SerializeObject(@event)}");
+            $"[ChatGAgentManager][RequestCreateGodChatEvent] end :{JsonConvert.SerializeObject(@event)}");
     }
 
     [EventHandler]
-    public async Task HandleEventAsync(RequestQuantumChatEvent @event)
+    public async Task HandleEventAsync(RequestGodChatEvent @event)
     {
-        Logger.LogDebug($"[ChatGAgentManager][RequestQuantumChatEvent] start:{JsonConvert.SerializeObject(@event)}");
+        Logger.LogDebug($"[ChatGAgentManager][RequestGodChatEvent] start:{JsonConvert.SerializeObject(@event)}");
         var title = "";
         var content = "";
         try
@@ -66,31 +66,31 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         }
         catch (Exception e)
         {
-            Logger.LogError(e, $"[ChatGAgentManager][RequestQuantumChatEvent] handle error:{e.ToString()}");
+            Logger.LogError(e, $"[ChatGAgentManager][RequestGodChatEvent] handle error:{e.ToString()}");
         }
 
-        await PublishAsync(new ResponseQuantumChat()
+        await PublishAsync(new ResponseGodChat()
         {
             Response = content,
             NewTitle = title,
         });
 
-        Logger.LogDebug($"[ChatGAgentManager][RequestQuantumChatEvent] end:{JsonConvert.SerializeObject(@event)}");
+        Logger.LogDebug($"[ChatGAgentManager][RequestGodChatEvent] end:{JsonConvert.SerializeObject(@event)}");
     }
 
     [EventHandler]
-    public async Task HandleEventAsync(RequestQuantumSessionListEvent @event)
+    public async Task HandleEventAsync(RequestGodSessionListEvent @event)
     {
         Logger.LogDebug(
-            $"[ChatGAgentManager][RequestQuantumSessionListEvent] start:{JsonConvert.SerializeObject(@event)}");
+            $"[ChatGAgentManager][RequestGodSessionListEvent] start:{JsonConvert.SerializeObject(@event)}");
         var response = await GetSessionListAsync();
-        await PublishAsync(new ResponseQuantumSessionList()
+        await PublishAsync(new ResponseGodSessionList()
         {
             SessionList = response,
         });
 
         Logger.LogDebug(
-            $"[ChatGAgentManager][RequestQuantumSessionListEvent] end:{JsonConvert.SerializeObject(@event)}");
+            $"[ChatGAgentManager][RequestGodSessionListEvent] end:{JsonConvert.SerializeObject(@event)}");
     }
 
     [EventHandler]
@@ -138,8 +138,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
     public async Task<Guid> CreateSessionAsync(string systemLLM, string prompt)
     {
         var configuration = GetConfiguration();
-        IQuantumChat quantumChat = GrainFactory.GetGrain<IQuantumChat>(Guid.NewGuid());
-        await quantumChat.ConfigAsync(new ChatConfigDto()
+        IGodChat godChat = GrainFactory.GetGrain<IGodChat>(Guid.NewGuid());
+        await godChat.ConfigAsync(new ChatConfigDto()
         {
             Instructions = await configuration.GetPrompt(), MaxHistoryCount = 32,
             LLMConfig = new LLMConfigDto() { SystemLLM = await configuration.GetSystemLLM() }
@@ -147,18 +147,18 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
 
         RaiseEvent(new CreateSessionInfoEventLog()
         {
-            SessionId = quantumChat.GetPrimaryKey(),
+            SessionId = godChat.GetPrimaryKey(),
             Title = ""
         });
 
-        return quantumChat.GetPrimaryKey();
+        return godChat.GetPrimaryKey();
     }
 
     public async Task<Tuple<string, string>> ChatWithSessionAsync(Guid sessionId, string sysmLLM, string content,
         ExecutionPromptSettings promptSettings = null)
     {
         var sessionInfo = State.GetSession(sessionId);
-        IQuantumChat quantumChat = GrainFactory.GetGrain<IQuantumChat>(sessionId);
+        IGodChat godChat = GrainFactory.GetGrain<IGodChat>(sessionId);
         if (sessionInfo == null)
         {
             return new Tuple<string, string>("", "");
@@ -182,7 +182,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         }
 
         var configuration = GetConfiguration();
-        var response = await quantumChat.QuantumChatAsync(await configuration.GetSystemLLM(), content, promptSettings);
+        var response = await godChat.GodChatAsync(await configuration.GetSystemLLM(), content, promptSettings);
         return new Tuple<string, string>(response, title);
     }
 
@@ -209,8 +209,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             return new List<ChatMessage>();
         }
 
-        var quantumChat = GrainFactory.GetGrain<IQuantumChat>(sessionInfo.SessionId);
-        return await quantumChat.GetChatMessageAsync();
+        var godChat = GrainFactory.GetGrain<IGodChat>(sessionInfo.SessionId);
+        return await godChat.GetChatMessageAsync();
     }
 
     public async Task DeleteSessionAsync(Guid sessionId)

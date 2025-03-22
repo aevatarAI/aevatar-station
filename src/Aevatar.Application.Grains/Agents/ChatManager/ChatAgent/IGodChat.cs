@@ -4,8 +4,8 @@ using Aevatar.GAgents.AI.Options;
 
 namespace Aevatar.Application.Grains.Agents.ChatManager.Chat;
 
-public interface IQuantumChat : IGAgent
+public interface IGodChat : IGAgent
 {
-    Task<string> QuantumChatAsync(string llm, string message, ExecutionPromptSettings? promptSettings = null);
+    Task<string> GodChatAsync(string llm, string message, ExecutionPromptSettings? promptSettings = null);
     Task<List<ChatMessage>> GetChatMessageAsync();
 }

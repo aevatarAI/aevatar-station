@@ -7,9 +7,9 @@ using Aevatar.GAgents.ChatAgent.GAgent;
 
 namespace Aevatar.Application.Grains.Agents.ChatManager.Chat;
 
-public class QuantumChatGAgent : ChatGAgentBase<QuantumChatState, QuantumChatEventLog, EventBase, ChatConfigDto>, IQuantumChat
+public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, EventBase, ChatConfigDto>, IGodChat
 {
-    public async Task<string> QuantumChatAsync(string llm, string message,
+    public async Task<string> GodChatAsync(string llm, string message,
         ExecutionPromptSettings? promptSettings = null)
     {
         if (State.SystemLLM != llm)

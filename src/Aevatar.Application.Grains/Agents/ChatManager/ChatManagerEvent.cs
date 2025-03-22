@@ -1,26 +1,26 @@
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.SignalR;
-using Nest;
+
 
 namespace Aevatar.Application.Grains.Agents.ChatManager;
 
 [GenerateSerializer]
-public class RequestCreateQuantumChatEvent : EventBase
+public class RequestCreateGodChatEvent : EventBase
 {
     [Id(0)] public string SystemLLM { get; set; }
     [Id(1)] public string Prompt { get; set; }
 }
 
 [GenerateSerializer]
-public class ResponseCreateQuantum : ResponseToPublisherEventBase
+public class ResponseCreateGod : ResponseToPublisherEventBase
 {
     [Id(0)] public ResponseType ResponseType { get; set; } = ResponseType.CreateSession;
     [Id(1)] public Guid SessionId { get; set; }
 }
 
 [GenerateSerializer]
-public class RequestQuantumChatEvent : EventBase
+public class RequestGodChatEvent : EventBase
 {
     [Id(0)] public Guid SessionId { get; set; }
     [Id(1)] public string SystemLLM { get; set; }
@@ -28,7 +28,7 @@ public class RequestQuantumChatEvent : EventBase
 }
 
 [GenerateSerializer]
-public class ResponseQuantumChat : ResponseToPublisherEventBase
+public class ResponseGodChat : ResponseToPublisherEventBase
 {
     [Id(0)] public ResponseType ResponseType { get; set; } = ResponseType.ChatResponse;
     [Id(1)] public string Response { get; set; }
@@ -36,12 +36,12 @@ public class ResponseQuantumChat : ResponseToPublisherEventBase
 }
 
 [GenerateSerializer]
-public class RequestQuantumSessionListEvent : EventBase
+public class RequestGodSessionListEvent : EventBase
 {
 }
 
 [GenerateSerializer]
-public class ResponseQuantumSessionList : ResponseToPublisherEventBase
+public class ResponseGodSessionList : ResponseToPublisherEventBase
 {
     [Id(0)] public ResponseType ResponseType { get; set; } = ResponseType.SessionListResponse;
     [Id(1)] public List<SessionInfoDto> SessionList { get; set; }
