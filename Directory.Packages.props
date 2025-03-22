@@ -27,8 +27,8 @@
     <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="$(AevatarGAgentsVerion)" />
     <PackageVersion Include="Aevatar.GAgents.Telegram" Version="$(AevatarGAgentsVerion)" />
     <PackageVersion Include="Aevatar.SignalR" Version="1.5.3" />
-    <PackageVersion Include="Aevatar.GAgents.SocialGAgent" Version="$(AevatarGAgentVerion)" />
-    <PackageVersion Include="Aevatar.GAgents.Twitter" Version="$(AevatarGAgentVerion)" />
+    <PackageVersion Include="Aevatar.GAgents.SocialGAgent" Version="$(AevatarGAgentsVerion)" />
+    <PackageVersion Include="Aevatar.GAgents.Twitter" Version="$(AevatarGAgentsVerion)" />
     
     <!-- EchoListen -->
     <PackageVersion Include="EchoListen.GAgent.Basic" Version="$(EchoListenGAgentsVersion)" />
