@@ -13,7 +13,6 @@ public class AgentInstanceSQRSDto
     [Id(2)]public string AgentType { get; set; }
     [Id(3)] public string? Properties { get; set; }
 }
-
 public class AgentInstanceDto
 {
     public Guid Id { get; set; }

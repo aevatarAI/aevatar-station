@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
+using Aevatar.Options;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Nest;
 using Newtonsoft.Json;
 using Orleans.Runtime;
@@ -16,19 +18,22 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
 {
     private readonly IMediator _mediator;
     private readonly ILogger<CQRSProvider> _logger;
-    
-    public CQRSProvider(IMediator mediator, ILogger<CQRSProvider> logger)
+    private readonly IOptions<HostOptions> _options;
+    private string _projectName = null;
+
+    public CQRSProvider(IMediator mediator, ILogger<CQRSProvider> logger, IOptions<HostOptions> hostOptions)
     {
         _mediator = mediator;
         _logger = logger;
+        _options = hostOptions;
     }
 
-    public Task PublishAsync(StateBase state, string grainId)
+    public Task PublishAsync(string grainId, StateBase state)
     {
         throw new NotImplementedException();
     }
 
-    public async Task PublishAsync(StateBase state, GrainId grainId)
+    public async Task PublishAsync(GrainId grainId, StateBase state)
     {
         _logger.LogInformation("CQRSProvider Publish State grainId:{grainId}", grainId);
         var command = new SaveStateCommand
@@ -58,8 +63,8 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
     public async Task<Tuple<long, List<AgentGEventIndex>>> QueryGEventAsync(string eventId, List<string> grainIds,
         int pageNumber, int pageSize)
     {
-        _logger.LogInformation("CQRSProvider QueryGEventAsync eventId:{eventId}, grainIds:{grainIds}", eventId, grainIds);
-        
+        _logger.LogInformation("CQRSProvider QueryGEventAsync eventId:{eventId}, grainIds:{grainIds}", eventId,
+            grainIds);
         var mustQuery = new List<Func<QueryContainerDescriptor<AgentGEventIndex>, QueryContainer>>();
         if (!eventId.IsNullOrEmpty())
         {
@@ -92,7 +97,8 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
     public async Task<Tuple<long, List<AgentGEventIndex>>> QueryAgentGEventAsync(Guid? primaryKey, string agentType,
         int pageNumber, int pageSize)
     {
-        _logger.LogInformation("CQRSProvider QueryAgentGEventAsync primaryKey:{primaryKey}, agentType:{agentType}", primaryKey, agentType);
+        _logger.LogInformation("CQRSProvider QueryAgentGEventAsync primaryKey:{primaryKey}, agentType:{agentType}",
+            primaryKey, agentType);
         var mustQuery = new List<Func<QueryContainerDescriptor<AgentGEventIndex>, QueryContainer>>();
 
         if (primaryKey != null)
@@ -106,7 +112,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
             mustQuery.Add(q => q.Term(i =>
                 i.Field(f => f.AgentGrainType).Value(agentType)));
         }
-        
+
         QueryContainer Filter(QueryContainerDescriptor<AgentGEventIndex> f) => f.Bool(b => b.Must(mustQuery));
 
         var sorting = new Func<SortDescriptor<AgentGEventIndex>, IPromise<IList<ISort>>>(s =>
@@ -126,28 +132,30 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
 
     public async Task<string> QueryAgentStateAsync(string stateName, Guid primaryKey)
     {
-        _logger.LogInformation("CQRSProvider QueryAgentStateAsync stateName:{stateName}, primaryKey:{primaryKey}", stateName, primaryKey);
+        _logger.LogInformation("CQRSProvider QueryAgentStateAsync stateName:{stateName}, primaryKey:{primaryKey}",
+            stateName, primaryKey);
         var mustQuery = new List<Func<QueryContainerDescriptor<dynamic>, QueryContainer>>
         {
             q => q.Term(i =>
                 i.Field("_id").Value(primaryKey))
         };
-        
+
         QueryContainer Filter(QueryContainerDescriptor<dynamic> f) => f.Bool(b => b.Must(mustQuery));
-        
+
         var getStateQuery = new GetStateQuery()
         {
-            Index = CqrsConstant.IndexPrefix + stateName + CqrsConstant.IndexSuffix,
+            Index = GetIndexName(stateName),
             Query = Filter,
             Skip = 0,
             Limit = 1
         };
-    
+
         var document = await _mediator.Send(getStateQuery);
         return document;
     }
 
-    public async Task<Tuple<long, List<TargetT>>> GetUserInstanceAgent<SourceT,TargetT>(Guid userId, int pageIndex, int pageSize)
+    public async Task<Tuple<long, List<TargetT>>> GetUserInstanceAgent<SourceT, TargetT>(Guid userId, int pageIndex,
+        int pageSize)
     {
         _logger.LogInformation("CQRSProvider query user instance agents,UserId:{userId}", userId);
         var mustQuery = new List<Func<QueryContainerDescriptor<dynamic>, QueryContainer>>
@@ -156,7 +164,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
                 i.Field("userId").Value(userId.ToString()))
         };
 
-        var index = CqrsConstant.IndexPrefix + typeof(SourceT).Name.ToLower() + CqrsConstant.IndexSuffix;
+        var index = GetIndexName(typeof(SourceT).Name.ToLower());
         QueryContainer Filter(QueryContainerDescriptor<dynamic> f) => f.Bool(b => b.Must(mustQuery));
         var queryResponse = await _mediator.Send(new GetUserInstanceAgentsQuery()
         {
@@ -203,7 +211,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         {
             eventBase.Id = eventId;
         }
-        
+
         var agentGEventIndex = new AgentGEventIndex()
         {
             Id = eventId,
@@ -226,5 +234,20 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
     {
         throw new NotImplementedException();
     }
-    
+
+    public string GetIndexName(string index)
+    {
+        return $"{CqrsConstant.IndexPrefix}-{_options.Value.HostId}-{index}{CqrsConstant.IndexSuffix}".ToLower();
+    }
+
+    public Task PublishAsync<TState>(GrainId grainId, TState state) where TState : StateBase
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task PublishAsync<TStateLogEvent>(Guid eventId, GrainId grainId, TStateLogEvent stateLogEvent)
+        where TStateLogEvent : StateLogEventBase
+    {
+        throw new NotImplementedException();
+    }
 }

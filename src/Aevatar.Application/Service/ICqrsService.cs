@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Aevatar.CQRS;
+using Aevatar.Query;
 
 namespace Aevatar.Service;
 

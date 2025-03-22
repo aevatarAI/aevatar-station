@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using AElf.OpenTelemetry;
 using Aevatar.MongoDB;
 using AutoResponseWrapper;
@@ -14,9 +15,12 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using Volo.Abp;
 using Volo.Abp.Account.Web;
+using Volo.Abp.AspNetCore.ExceptionHandling;
+using Volo.Abp.AspNetCore.Mvc;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared;
 using Volo.Abp.AspNetCore.Serilog;
+using Volo.Abp.Authorization;
 using Volo.Abp.Autofac;
 using Volo.Abp.Modularity;
 using Volo.Abp.Swashbuckle;
@@ -61,6 +65,7 @@ public class AevatarDeveloperHostModule : AbpModule
                 options.Authority = configuration["AuthServer:Authority"];
                 options.RequireHttpsMetadata = Convert.ToBoolean(configuration["AuthServer:RequireHttpsMetadata"]);
                 options.Audience = "Aevatar";
+                options.MapInboundClaims = false;
             });
     }
     
@@ -153,7 +158,6 @@ public class AevatarDeveloperHostModule : AbpModule
         }
 
         app.UseAbpRequestLocalization();
-
         app.UseCorrelationId();
         app.UseStaticFiles();
         app.UseRouting();

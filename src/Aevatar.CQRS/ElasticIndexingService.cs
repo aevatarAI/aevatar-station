@@ -4,31 +4,42 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
+using Aevatar.CQRS;
 using Aevatar.CQRS.Dto;
+using Aevatar.Query;
+using Aevatar.CQRS.Provider;
 using Microsoft.Extensions.Logging;
 using Nest;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using Orleans.Runtime;
+using Volo.Abp;
+using Volo.Abp.Application.Dtos;
+using Volo.Abp.Application.Services;
+using Volo.Abp.DependencyInjection;
 
-namespace Aevatar.CQRS;
+namespace Aevatar;
 
-public class ElasticIndexingService : IIndexingService
+public class ElasticIndexingService : IIndexingService, ISingletonDependency
 {
     private readonly IElasticClient _elasticClient;
     private readonly ILogger<ElasticIndexingService> _logger;
     private const string CTime = "cTime";
     private const int DefaultSkip = 0;
     private const int DefaultLimit = 1000;
+    private readonly ICQRSProvider _cqrsProvider;
 
-    public ElasticIndexingService(ILogger<ElasticIndexingService> logger, IElasticClient elasticClient)
+    public ElasticIndexingService(ILogger<ElasticIndexingService> logger, IElasticClient elasticClient,
+        ICQRSProvider cqrsProvider)
     {
         _logger = logger;
         _elasticClient = elasticClient;
+        _cqrsProvider = cqrsProvider;
     }
 
     public void CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase
     {
-        var indexName = CqrsConstant.IndexPrefix + stateBase.GetType().Name.ToLower() + CqrsConstant.IndexSuffix;
+        var indexName = _cqrsProvider.GetIndexName(stateBase.GetType().Name.ToLower());
         var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
         if (indexExistsResponse.Exists)
         {
@@ -36,60 +47,57 @@ public class ElasticIndexingService : IIndexingService
         }
 
         var createIndexResponse = _elasticClient.Indices.Create(indexName, c => c
-            .Map<T>(m => m
-                .Dynamic(false)
+            .Map<T>(m => m.Dynamic()
                 .Properties(props =>
                 {
-                    var type = stateBase.GetType();
+                    var type = typeof(T);
                     foreach (var property in type.GetProperties())
                     {
                         var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
-                        if (property.PropertyType == typeof(string))
+                        var propType = property.PropertyType;
+
+                        if (propType == typeof(string))
                         {
-                            props.Keyword(k => k
-                                .Name(propertyName)
-                            );
+                            props.Text(t => t.Name(propertyName)).Keyword(k => k.Name(propertyName).IgnoreAbove(256));
                         }
-                        else if (property.PropertyType == typeof(int) || property.PropertyType == typeof(long))
+                        else if (propType == typeof(short) || propType == typeof(int) || propType == typeof(long))
                         {
-                            props.Number(n => n
-                                .Name(propertyName)
-                                .Type(NumberType.Long)
-                            );
+                            props.Number(n => n.Name(propertyName).Type(NumberType.Long));
                         }
-                        else if (property.PropertyType == typeof(DateTime))
+                        else if (propType == typeof(float))
                         {
-                            props.Date(d => d
-                                .Name(propertyName)
-                            );
+                            props.Number(n => n.Name(propertyName).Type(NumberType.Float));
                         }
-                        else if (property.PropertyType == typeof(Guid))
+                        else if (propType == typeof(double) || propType == typeof(decimal))
                         {
-                            props.Keyword(k => k
-                                .Name(propertyName)
-                            );
+                            props.Number(n => n.Name(propertyName).Type(NumberType.Double));
                         }
-                        else if (property.PropertyType == typeof(bool))
+                        else if (propType == typeof(DateTime))
                         {
-                            props.Boolean(b => b
-                                .Name(propertyName)
-                            );
+                            props.Date(d => d.Name(propertyName));
                         }
-                        else
+                        else if (propType == typeof(bool))
                         {
-                            props.Text(o => o
-                                .Name(propertyName)
-                            );
+                            props.Boolean(b => b.Name(propertyName));
+                        }
+                        else if (propType == typeof(Guid))
+                        {
+                            props.Keyword(k => k.Name(propertyName));
                         }
                     }
 
-                    props.Date(d => d
-                        .Name(CTime)
-                    );
+                    props.Date(d => d.Name(CTime));
                     return props;
                 })
+                .DynamicTemplates(dt => dt
+                    .DynamicTemplate("force_strings", t => t
+                        .PathMatch("*")
+                        .Mapping(m => m.Text(tt => tt))
+                    )
+                )
             )
         );
+
         if (!createIndexResponse.IsValid)
         {
             _logger.LogError("Error creating state index. indexName:{indexName},error:{error},DebugInfo:{DebugInfo}",
@@ -99,13 +107,28 @@ public class ElasticIndexingService : IIndexingService
         }
         else
         {
-            _logger.LogInformation("Successfully created state index . indexName:{indexName}", indexName);
+            _logger.LogInformation("Successfully created state index. indexName:{indexName}", indexName);
         }
+    }
+
+    private static bool IsBasicType(Type type)
+    {
+        Type underlyingType = Nullable.GetUnderlyingType(type) ?? type;
+
+        if (underlyingType.IsPrimitive)
+            return true;
+
+        if (underlyingType == typeof(string) ||
+            underlyingType == typeof(DateTime) ||
+            underlyingType == typeof(decimal) ||
+            underlyingType == typeof(Guid))
+            return true;
+        return false;
     }
 
     public async Task SaveOrUpdateStateIndexAsync<T>(string id, T stateBase) where T : StateBase
     {
-        var indexName = CqrsConstant.IndexPrefix + stateBase.GetType().Name.ToLower() + CqrsConstant.IndexSuffix;
+        var indexName = _cqrsProvider.GetIndexName(stateBase.GetType().Name.ToLower());
         var properties = stateBase.GetType().GetProperties();
         var document = new Dictionary<string, object>();
 
@@ -113,16 +136,22 @@ public class ElasticIndexingService : IIndexingService
         {
             var value = property.GetValue(stateBase);
             var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
-            if (value is IList or IDictionary or GrainId)
+            if (value == null)
             {
-                document[propertyName] = JsonConvert.SerializeObject(value);
+                continue;
+            }
+
+            if (!IsBasicType(property.PropertyType))
+            {
+                document[propertyName] = JsonConvert.SerializeObject(value, new JsonSerializerSettings
+                {
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                    ContractResolver = new CamelCasePropertyNamesContractResolver()
+                });
             }
             else
             {
-                if (value != null)
-                {
-                    document.Add(propertyName, value);
-                }
+                document.Add(propertyName, value);
             }
         }
 
@@ -170,7 +199,7 @@ public class ElasticIndexingService : IIndexingService
             {
                 return "";
             }
-            
+
             var documentContent = JsonConvert.SerializeObject(documents.FirstOrDefault());
             return documentContent;
         }
@@ -184,8 +213,8 @@ public class ElasticIndexingService : IIndexingService
     public void CheckExistOrCreateIndex<T>(T baseIndex) where T : BaseIndex
     {
         _logger.LogInformation("CheckExistOrCreateIndex, indexName:{indexName}", baseIndex.GetType().Name.ToLower());
-        
-        var indexName = CqrsConstant.IndexPrefix + baseIndex.GetType().Name.ToLower();
+
+        var indexName = _cqrsProvider.GetIndexName(baseIndex.GetType().Name.ToLower());
         var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
         if (indexExistsResponse.Exists)
         {
@@ -215,6 +244,20 @@ public class ElasticIndexingService : IIndexingService
                                 .Type(NumberType.Long)
                             );
                         }
+                        else if (property.PropertyType == typeof(float))
+                        {
+                            props.Number(n => n
+                                .Name(propertyName)
+                                .Type(NumberType.Float)
+                            );
+                        }
+                        else if (property.PropertyType == typeof(double) || property.PropertyType == typeof(decimal))
+                        {
+                            props.Number(n => n
+                                .Name(propertyName)
+                                .Type(NumberType.Double)
+                            );
+                        }
                         else if (property.PropertyType == typeof(DateTime))
                         {
                             props.Date(d => d
@@ -230,12 +273,6 @@ public class ElasticIndexingService : IIndexingService
                         else if (property.PropertyType == typeof(bool))
                         {
                             props.Boolean(b => b
-                                .Name(propertyName)
-                            );
-                        }
-                        else
-                        {
-                            props.Text(o => o
                                 .Name(propertyName)
                             );
                         }
@@ -264,8 +301,8 @@ public class ElasticIndexingService : IIndexingService
     public async Task SaveOrUpdateIndexAsync<T>(string id, T baseIndex) where T : BaseIndex
     {
         _logger.LogInformation("SaveOrUpdateIndexAsync, indexName:{indexName}", baseIndex.GetType().Name.ToLower());
-        
-        var indexName = CqrsConstant.IndexPrefix + baseIndex.GetType().Name.ToLower();
+
+        var indexName = _cqrsProvider.GetIndexName(baseIndex.GetType().Name.ToLower());
         var properties = baseIndex.GetType().GetProperties();
         var document = new Dictionary<string, object>();
 
@@ -311,7 +348,7 @@ public class ElasticIndexingService : IIndexingService
         int skip = DefaultSkip, string? index = null) where TEntity : class
 
     {
-        var indexName = index ?? CqrsConstant.IndexPrefix + typeof(TEntity).Name.ToLower();
+        var indexName = index ?? _cqrsProvider.GetIndexName(typeof(TEntity).Name.ToLower());
         try
         {
             Func<SearchDescriptor<TEntity>, ISearchRequest> selector;
@@ -351,8 +388,8 @@ public class ElasticIndexingService : IIndexingService
             throw;
         }
     }
-    
-    
+
+
     public async Task<Tuple<long, string>> GetSortDataDocumentsAsync(string indexName,
         Func<QueryContainerDescriptor<dynamic>, QueryContainer> query, int skip = 0, int limit = 1000)
     {
@@ -382,5 +419,45 @@ public class ElasticIndexingService : IIndexingService
             _logger.LogError(e, "index documents query Exception,indexName:{indexName}", indexName);
             throw;
         }
+    }
+
+    public async Task<PagedResultDto<Dictionary<string, object>>> QueryWithLuceneAsync(LuceneQueryDto queryDto)
+    {
+        _logger.LogInformation("[Lucene Query] Index: {Index}, Query: {QueryString}", queryDto.Index,
+            queryDto.QueryString);
+        var sortDescriptor = new SortDescriptor<Dictionary<string, object>>();
+        foreach (var sortField in queryDto.SortFields)
+        {
+            var parts = sortField.Split(':');
+            if (parts.Length == 2)
+            {
+                var fieldName = parts[0].Trim();
+                var sortOrder = parts[1].Trim().ToLower() == "desc" ? SortOrder.Descending : SortOrder.Ascending;
+                sortDescriptor = sortDescriptor.Field(f => f.Field(fieldName).Order(sortOrder));
+            }
+        }
+
+        var from = queryDto.PageIndex * queryDto.PageSize;
+        var size = queryDto.PageSize;
+
+        var searchDescriptor = new SearchDescriptor<Dictionary<string, object>>()
+            .Index(queryDto.Index)
+            .Query(q => q.QueryString(qs => qs.Query(queryDto.QueryString).AllowLeadingWildcard(false)))
+            .From(from)
+            .Size(size)
+            .Sort(ss => sortDescriptor);
+
+        var response = await _elasticClient.SearchAsync<Dictionary<string, object>>(searchDescriptor);
+        if (!response.IsValid)
+        {
+            _logger.LogError("Elasticsearch query failed: {info}", response.DebugInformation);
+            throw new UserFriendlyException("Elasticsearch query failed");
+        }
+
+        var resultList = response.Documents.ToList();
+        _logger.LogInformation("[Lucene Query] Index: {Index}, Query: {QueryString}, result: {Result}", queryDto.Index,
+            queryDto.QueryString, resultList);
+
+        return new PagedResultDto<Dictionary<string, object>>(response.Total, resultList);
     }
 }
