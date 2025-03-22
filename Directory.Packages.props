@@ -23,7 +23,7 @@
     <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="$(AevatarGAgentVerion)" />
     <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="$(AevatarGAgentVerion)" />
     <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="$(AevatarGAgentVerion)" />
-    <PackageVersion Include="Aevatar.SignalR" Version="1.5.4-alpha.0" />
+    <PackageVersion Include="Aevatar.SignalR" Version="1.5.5-parent.1" />
     <PackageVersion Include="Aevatar.GAgents.SocialGAgent" Version="$(AevatarGAgentVerion)" />
     <PackageVersion Include="Aevatar.GAgents.Twitter" Version="$(AevatarGAgentVerion)" />
     <PackageVersion Include="Aevatar.GAgents.ChatAgent" Version="$(AevatarGAgentVerion)" />
@@ -31,6 +31,7 @@
     <PackageVersion Include="AutoGen" Version="0.2.1" />
     <PackageVersion Include="AutoGen.Core" Version="0.2.1" />
     <PackageVersion Include="Azure.AI.TextAnalytics" Version="5.3.0" />
+    <PackageVersion Include="FluentValidation" Version="12.0.0-preview1" />
     <PackageVersion Include="Google.Apis.Auth" Version="1.69.0" />
     <PackageVersion Include="Google.Apis.Auth.AspNetCore3" Version="1.69.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.Google" Version="9.0.3" />
@@ -135,7 +136,6 @@
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.6" />
     <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="9.0.0" />
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="System.Configuration.ConfigurationManager" Version="8.0.0" />
     <!-- MongoDB packages -->
     <PackageVersion Include="EphemeralMongo.Core" Version="1.1.3" />

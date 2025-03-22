@@ -60,13 +60,13 @@ public class AevatarDeveloperHostModule : AbpModule
             options.Filters.Add(new IgnoreAntiforgeryTokenAttribute());
         })
         .AddNewtonsoftJson();
-        context.Services.ConfigureApplicationCookie(options =>
-        {
-            options.Cookie.SameSite = SameSiteMode.None; // 允许跨站
-            // options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // 必须HTTPS
-            options.Cookie.Domain = ".aevatar.ai"; // 主域共享Cookie
-            // options.Cookie.Name = "ae_auth"; // 明确命名Cookie
-        });
+        // context.Services.ConfigureApplicationCookie(options =>
+        // {
+        //     options.Cookie.SameSite = SameSiteMode.None; // 允许跨站
+        //     // options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // 必须HTTPS
+        //     options.Cookie.Domain = ".aevatar.ai"; // 主域共享Cookie
+        //     // options.Cookie.Name = "ae_auth"; // 明确命名Cookie
+        // });
     }
     
     private void ConfigureAuthentication(ServiceConfigurationContext context, IConfiguration configuration)
@@ -80,20 +80,20 @@ public class AevatarDeveloperHostModule : AbpModule
                 options.MapInboundClaims = false;
             });
         
-        context.Services.AddAuthentication(
-                options =>
-                {
-                    options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                    options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
-                })
-            .AddGoogle(options =>
-            {
-                options.ClientId = configuration["Authentication:Google:ClientId"];
-                options.ClientSecret = configuration["Authentication:Google:ClientSecret"];
-                options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                // options.CallbackPath = "/quantumgpt-client/signin-google";
-            })
-            .AddCookie();
+        // context.Services.AddAuthentication(
+        //         options =>
+        //         {
+        //             options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        //             options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
+        //         })
+        //     .AddGoogle(options =>
+        //     {
+        //         options.ClientId = configuration["Authentication:Google:ClientId"];
+        //         options.ClientSecret = configuration["Authentication:Google:ClientSecret"];
+        //         options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        //         // options.CallbackPath = "/quantumgpt-client/signin-google";
+        //     })
+        //     .AddCookie();
     }
     
     private void ConfigureVirtualFileSystem(ServiceConfigurationContext context)

@@ -280,14 +280,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
                 LLMConfig = new LLMConfigDto() { SystemLLM = await configuration.GetSystemLLM() }
             });
         }
-
-        var childrenList = await GetChildrenAsync();
-        if (childrenList.Count == 0)
-        {
-            var parent = GrainFactory.GetGrain<IPublishingGAgent>(Guid.NewGuid());
-            await RegisterAsync(parent);
-        }
-
+        
         await base.OnAIGAgentActivateAsync(cancellationToken);
     }
 
