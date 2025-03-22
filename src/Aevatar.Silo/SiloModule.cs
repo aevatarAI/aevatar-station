@@ -7,6 +7,7 @@ using Aevatar.Options;
 using Microsoft.CodeAnalysis.Options;
 using Aevatar.PermissionManagement;
 using Aevatar.GAgents.Telegram;
+using Aevatar.Neo4JStore;
 using EchoListen.GAgent.SmartWalletListenerGAgent;
 using EchoListen.GAgent.SummarizerAIGAgent;
 using EchoListen.GAgent.TokenListenerGAgent;
@@ -30,7 +31,8 @@ namespace Aevatar.Silo;
     typeof(AevatarGAgentsTelegramModule),
     typeof(SmartWalletListenerGAgentModule),
     typeof(TokenListenerGAgentModule),
-    typeof(SummarizerAIGAgentModule)
+    typeof(SummarizerAIGAgentModule),
+    typeof(AevatarNeo4JStoreModule)
 )]
 public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
 {
