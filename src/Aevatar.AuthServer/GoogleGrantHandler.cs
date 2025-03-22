@@ -67,15 +67,16 @@ public class GoogleGrantHandler : ITokenExtensionGrant
         _logger.LogInformation("GoogleGrantHandler.HandleAsync: email: {email}", email);
         var userManager = context.HttpContext.RequestServices.GetRequiredService<IdentityUserManager>();
 
-        var user = await userManager.FindByNameAsync(email);
+        var name = email + "@" + GrantTypeConstants.GOOGLE;
+        var user = await userManager.FindByNameAsync(name);
         if (user == null)
         {
-            user = new IdentityUser(Guid.NewGuid(), email, email: Guid.NewGuid().ToString("N") + "@ABP.IO");
+            user = new IdentityUser(Guid.NewGuid(), name, email: Guid.NewGuid().ToString("N") + "@ABP.IO");
             await userManager.CreateAsync(user);
             await userManager.SetRolesAsync(user,
                 [AevatarPermissions.BasicUser]);
         }
-        var identityUser = await userManager.FindByNameAsync(email);
+        var identityUser = await userManager.FindByNameAsync(name);
         var identityRoleManager = context.HttpContext.RequestServices.GetRequiredService<IdentityRoleManager>();
         var roleNames = new List<string>();
         foreach (var userRole in identityUser.Roles)
