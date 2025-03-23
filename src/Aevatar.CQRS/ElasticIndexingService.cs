@@ -56,10 +56,11 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
             if (!createIndexResponse.IsValid)
             {
                 _logger.LogError(
-                    "Error creating state index. indexName:{indexName},error:{error},DebugInfo:{DebugInfo}",
+                    "Error creating state index. indexName:{indexName},error:{error},DebugInfo:{DebugInfo}, createIndexResponse.Acknowledged:{Acknowledged}",
                     indexName,
                     createIndexResponse.ServerError?.Error,
-                    JsonConvert.SerializeObject(createIndexResponse.DebugInformation));
+                    JsonConvert.SerializeObject(createIndexResponse.DebugInformation),
+                    createIndexResponse.Acknowledged);
                 return;
             }
 
