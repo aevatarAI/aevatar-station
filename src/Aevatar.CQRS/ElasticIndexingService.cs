@@ -128,11 +128,6 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         return createIndexResponse;
     }
 
-    public async Task SaveOrUpdateStateIndexBatchAsync(IEnumerable<SaveStateCommand> commands)
-    {
-        // Prepare a bulk descriptor for batch indexing
-        var bulkDescriptor = new BulkDescriptor();
-
     private static bool IsBasicType(Type type)
     {
         Type underlyingType = Nullable.GetUnderlyingType(type) ?? type;
@@ -148,11 +143,10 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         return false;
     }
 
-    public async Task SaveOrUpdateStateIndexAsync<T>(string id, T stateBase) where T : StateBase
+    public async Task SaveOrUpdateStateIndexBatchAsync(IEnumerable<SaveStateCommand> commands)
     {
-        var indexName = _cqrsProvider.GetIndexName(stateBase.GetType().Name.ToLower());
-        var properties = stateBase.GetType().GetProperties();
-        var document = new Dictionary<string, object>();
+        // Prepare a bulk descriptor for batch indexing
+        var bulkDescriptor = new BulkDescriptor();
         foreach (var command in commands)
         {
             var stateBase = command.State;
@@ -168,24 +162,23 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                 var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
 
                 if (value == null)
-            {
-                continue;
-            }
+                {
+                    continue;
+                }
 
-            if (!IsBasicType(property.PropertyType))
+                if (!IsBasicType(property.PropertyType))
                 {
                     document[propertyName] = JsonConvert.SerializeObject(value, new JsonSerializerSettings
-                {
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                ContractResolver = new CamelCasePropertyNamesContractResolver()
-                    });
-            }
-            else
                     {
-                        document.Add(propertyName, value);
-                    }
+                        ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                        ContractResolver = new CamelCasePropertyNamesContractResolver()
+                    });
                 }
-            
+                else
+                {
+                    document.Add(propertyName, value);
+                }
+            }
 
             document.Add(CTime, DateTime.UtcNow);
 
