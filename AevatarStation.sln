@@ -67,9 +67,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.HttpApi.Admin", "sr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Developer.Logger", "src\Aevatar.Developer.Logger\Aevatar.Developer.Logger.csproj", "{51838FE4-56BD-4B45-BD2A-F4BDF94DB190}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Aspire", "src\Aevatar.Aspire\Aevatar.Aspire.csproj", "{A12473D1-EA4F-41D9-814E-F55F811839E8}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Neo4JStore", "src\Aevatar.Neo4JStore\Aevatar.Neo4JStore.csproj", "{ED3FF01D-A9E4-45F2-85B1-1591D2C9BD61}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Aspire", "src\Aevatar.Aspire\Aevatar.Aspire.csproj", "{A12473D1-EA4F-41D9-814E-F55F811839E8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

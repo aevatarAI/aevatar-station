@@ -136,14 +136,17 @@ public static class OrleansHostExtension
                             var partitions = configuration.GetSection("OrleansStream:Partitions").Get<int>();
                             var replicationFactor =
                                 configuration.GetSection("OrleansStream:ReplicationFactor").Get<short>();
-                            var topic = configuration.GetSection("Aevatar:StreamNamespace").Get<string>();
-                            topic = topic.IsNullOrEmpty() ? CommonConstants.StreamNamespace : topic;
-                            options.AddTopic(topic, new TopicCreationConfig
+                            var topics = configuration.GetSection("OrleansStream:Topics").Get<string>();
+                            topics = topics.IsNullOrEmpty() ? CommonConstants.StreamNamespace : topics;
+                            foreach (var topic in topics.Split(','))
                             {
-                                AutoCreate = true,
-                                Partitions = partitions,
-                                ReplicationFactor = replicationFactor
-                            });
+                                options.AddTopic(topic.Trim(), new TopicCreationConfig
+                                {
+                                    AutoCreate = true,
+                                    Partitions = partitions,
+                                    ReplicationFactor = replicationFactor
+                                });
+                            }
                         })
                         .AddJson()
                         .AddLoggingTracker()

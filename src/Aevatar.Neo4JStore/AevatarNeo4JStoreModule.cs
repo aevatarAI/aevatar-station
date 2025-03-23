@@ -1,3 +1,5 @@
+using Aevatar.Neo4JStore.Options;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Neo4j.Driver;
 using Volo.Abp.AutoMapper;
@@ -15,12 +17,21 @@ public class AevatarNeo4JStoreModule : AbpModule
         });
         
         var configuration = context.Services.GetConfiguration();
+        var configurationSection = configuration.GetSection("Neo4j");
+        context.Services.Configure<Neo4JConfigOptions>(configuration.GetSection("Neo4j"));
+        
+        var options = new Neo4JConfigOptions();
+        configurationSection.Bind(options);
         context.Services.AddSingleton<IDriver>(_ => GraphDatabase.Driver(
-            configuration["Neo4j:Uri"],
-            AuthTokens.Basic(
-                configuration["Neo4j:User"],
-                configuration["Neo4j:Password"]
+                options.Uri,
+                AuthTokens.Basic(
+                    options.User,
+                    options.Password),
+                o => o.WithMaxConnectionPoolSize(options.MaxConnectionPoolSize)
+                    .WithConnectionTimeout(TimeSpan.FromMilliseconds(options.ConnectionTimeout))
+                    .WithConnectionAcquisitionTimeout(TimeSpan.FromMilliseconds(options.ConnectionAcquisitionTimeout))
+                    .WithMaxConnectionLifetime(TimeSpan.FromMilliseconds(options.MaxConnectionLifetime))
             )
-        ));
+        );
     }
 }
