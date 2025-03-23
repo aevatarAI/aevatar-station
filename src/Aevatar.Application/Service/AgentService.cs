@@ -269,7 +269,7 @@ public class AgentService : ApplicationService, IAgentService
         {
             UserId = userId,
             AgentType = dto.AgentType,
-            Properties = JsonConvert.SerializeObject(dto.Properties),
+            Properties = !dto.Properties.IsNullOrEmpty()?JsonConvert.SerializeObject(dto.Properties):"",
             Name = dto.Name
         };
 
