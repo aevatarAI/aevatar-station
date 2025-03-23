@@ -188,6 +188,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                 .Id(id)
                 .Document(document)
             );
+            _logger.LogInformation("SaveOrUpdateStateIndexBatchAsync id {id}", id);
         }
 
         // Execute the bulk operation

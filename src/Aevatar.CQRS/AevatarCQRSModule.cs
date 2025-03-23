@@ -60,8 +60,9 @@ public class AevatarCQRSModule : AbpModule
             var settings =
                 new ConnectionSettings(new StaticConnectionPool(uris.Select(uri => new Uri(uri)).ToArray()))
                     .DefaultFieldNameInferrer(fieldName =>
-                        char.ToLowerInvariant(fieldName[0]) + fieldName[1..]);
-
+                        char.ToLowerInvariant(fieldName[0]) + fieldName[1..])
+                    .DisableDirectStreaming()
+                    .EnableDebugMode();
             return new ElasticClient(settings);
         });
     }
