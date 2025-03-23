@@ -56,11 +56,10 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
             if (!createIndexResponse.IsValid)
             {
                 _logger.LogError(
-                    "Error creating state index. indexName:{indexName},error:{error},DebugInfo:{DebugInfo}, createIndexResponse.Acknowledged:{Acknowledged}",
+                    "Error creating state index. indexName:{indexName},error:{error},DebugInfo:{DebugInfo}",
                     indexName,
                     createIndexResponse.ServerError?.Error,
-                    JsonConvert.SerializeObject(createIndexResponse.DebugInformation),
-                    createIndexResponse.Acknowledged);
+                    JsonConvert.SerializeObject(createIndexResponse.DebugInformation));
                 return;
             }
 
@@ -112,10 +111,6 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                         else if (propType == typeof(Guid))
                         {
                             props.Keyword(k => k.Name(propertyName));
-                        }
-                        else
-                        {
-                            props.Text(k => k.Name(propertyName));
                         }
                     }
 
@@ -193,17 +188,23 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                 .Id(id)
                 .Document(document)
             );
-            _logger.LogInformation("SaveOrUpdateStateIndexBatchAsync id {id}", id);
+            var response = await _elasticClient.IndexAsync(document, i => i
+                .Index(indexName)
+                .Id(id));
+            if (response.IsValid)
+            {
+                _logger.LogInformation("SaveOrUpdateStateIndexBatchAsync id {id} success", id);
+            }
         }
 
-        // Execute the bulk operation
+        /*// Execute the bulk operation
         var bulkResponse = await _elasticClient.BulkAsync(bulkDescriptor);
 
         // Handle response
         if (!bulkResponse.IsValid)
         {
             _logger.LogError(
-                "Save State Batch Error, indexing documents error. Errors: {Errors}, DebugInfo: {DebugInfo}",
+                "Save State Batch Error, indexing documents error. Errors: {Errors}, DebugInfo: {DebugInfo}, createIndexResponse.Acknowledged:{{Acknowledged}}",
                 JsonConvert.SerializeObject(bulkResponse.ItemsWithErrors),
                 JsonConvert.SerializeObject(bulkResponse.DebugInformation)
             );
@@ -212,7 +213,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         {
             _logger.LogInformation("Save State Batch Successfully. Indexed {Count} documents.",
                 bulkResponse.Items.Count);
-        }
+        }*/
     }
 
     public async Task<string> GetStateIndexDocumentsAsync(string indexName,
