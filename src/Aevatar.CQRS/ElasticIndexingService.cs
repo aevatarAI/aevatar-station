@@ -112,6 +112,10 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                         {
                             props.Keyword(k => k.Name(propertyName));
                         }
+                        else
+                        {
+                            props.Text(k => k.Name(propertyName));
+                        }
                     }
 
                     props.Date(d => d.Name(CTime));
