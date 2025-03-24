@@ -109,42 +109,56 @@ public class AevatarStateProjector : IStateProjector, ISingletonDependency
 
     private async Task SendBatchAsync(List<SaveStateCommand> batch)
     {
-        try
-        {
-            var batchCommand = new SaveStateBatchCommand();
-            batchCommand.Commands = batch;
-            await _mediator.Send(batchCommand);
-            _logger.LogInformation("Sent {Count} commands", batch.Count);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Batch send failed");
+        const int maxRetries = 3;
+        int retryCount = 0;
+        List<SaveStateCommand> remainingCommands = new(batch);
 
-            await RetryBatchAsync(batch, maxRetries: 3);
-        }
-    }
-
-    private async Task RetryBatchAsync(List<SaveStateCommand> batch, int maxRetries)
-    {
-        for (int i = 0; i < maxRetries; i++)
+        while (retryCount < maxRetries && remainingCommands.Count > 0)
         {
-            await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, i)));
             try
             {
-                var validCommands = batch
-                    .Where(c => _latestCommands.TryGetValue(c.Id, out var latest) && latest.Version == c.Version)
-                    .ToList();
-
-                if (validCommands.Count == 0) return;
-                await SendBatchAsync(validCommands);
+                var batchCommand = new SaveStateBatchCommand { Commands = remainingCommands };
+                await _mediator.Send(batchCommand);
+                _logger.LogInformation("Successfully sent {Count} commands", remainingCommands.Count);
                 return;
             }
-            catch
+            catch (Exception ex)
             {
-                _logger.LogWarning("Retry {RetryCount}/3 failed", i + 1);
+                retryCount++;
+                _logger.LogWarning(ex, "Batch send failed (Attempt {RetryCount}/{MaxRetries})", retryCount, maxRetries);
+
+                remainingCommands = GetValidCommands(remainingCommands);
+
+                if (remainingCommands.Count == 0)
+                {
+                    _logger.LogInformation("All commands expired or succeeded");
+                    return;
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, retryCount)));
             }
         }
 
-        _logger.LogError("Batch failed after {Retries} retries", maxRetries);
+        _logger.LogError("Failed to send {Count} commands after {Retries} retries", remainingCommands.Count,
+            maxRetries);
+    }
+
+    private List<SaveStateCommand> GetValidCommands(List<SaveStateCommand> commands)
+    {
+        var validCommands = new List<SaveStateCommand>();
+        foreach (var cmd in commands)
+        {
+            if (_latestCommands.TryGetValue(cmd.Id, out var latest) && latest.Version == cmd.Version)
+            {
+                validCommands.Add(cmd);
+            }
+            else
+            {
+                _logger.LogDebug("Command {Id} v{Version} expired, latest is v{LatestVersion}",
+                    cmd.Id, cmd.Version, latest?.Version ?? -1);
+            }
+        }
+
+        return validCommands;
     }
 }
