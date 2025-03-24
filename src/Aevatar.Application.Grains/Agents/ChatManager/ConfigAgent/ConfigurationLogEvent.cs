@@ -25,3 +25,9 @@ public class SetPromptLogEvent : ConfigurationLogEvent
 {
     [Id(0)] public string Prompt { get; set; }
 }
+
+[GenerateSerializer]
+public class SetStreamingModeEnabledLogEvent : ConfigurationLogEvent
+{
+    [Id(0)] public bool StreamingModeEnabled { get; set; }
+}

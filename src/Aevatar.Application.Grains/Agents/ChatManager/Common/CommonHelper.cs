@@ -16,6 +16,6 @@ public class CommonHelper
 
     public static Guid GetSessionManagerConfigurationId()
     {
-        return StringToGuid("GetSessionManagerConfigurationId");
+        return StringToGuid("GetStreamSessionManagerConfigurationId3");
     }
 }

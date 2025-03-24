@@ -14,3 +14,9 @@ public class SetPromptEvent : EventBase
 {
     [Id(0)] public string Prompt { get; set; }
 }
+
+[GenerateSerializer]
+public class SetStreamingModeEnabledEvent : EventBase
+{
+    [Id(0)] public bool StreamingModeEnabled { get; set; }
+}

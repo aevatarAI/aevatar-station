@@ -36,6 +36,28 @@ public class ResponseGodChat : ResponseToPublisherEventBase
 }
 
 [GenerateSerializer]
+public class RequestStreamGodChatEvent : EventBase
+{
+    [Id(0)] public Guid SessionId { get; set; }
+    [Id(1)] public string SystemLLM { get; set; }
+    [Id(2)] public string Content { get; set; }
+    
+}
+
+[GenerateSerializer]
+public class ResponseStreamGodChat : ResponseToPublisherEventBase
+{
+    [Id(0)] public ResponseType ResponseType { get; set; } = ResponseType.ChatResponse;
+    [Id(1)] public string Response { get; set; }
+    [Id(2)] public string NewTitle { get; set; }
+    [Id(3)] public string ChatId { get; set; }
+    [Id(4)] public bool IsLastChunk { get; set; }
+    
+    [Id(5)]
+    public int SerialNumber { get; set; }
+}
+
+[GenerateSerializer]
 public class RequestGodSessionListEvent : EventBase
 {
 }
