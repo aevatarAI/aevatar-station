@@ -283,7 +283,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         }
 
         var configuration = GetConfiguration();
-        await godChat.GodStreamChatAsync(await configuration.GetSystemLLM(), content, chatId,promptSettings);
+        await godChat.GodStreamChatAsync(await configuration.GetSystemLLM(), await configuration.GetStreamingModeEnabled(),content, chatId,promptSettings);
     }
 
     public Task<List<SessionInfoDto>> GetSessionListAsync()
@@ -372,7 +372,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         var configuration = GetConfiguration();
 
         var llm = await configuration.GetSystemLLM();
-        if (State.SystemLLM != llm)
+        var streamingModeEnabled = await configuration.GetStreamingModeEnabled();
+        if (State.SystemLLM != llm || State.StreamingModeEnabled != streamingModeEnabled)
         {
             await InitializeAsync(new InitializeDto()
             {

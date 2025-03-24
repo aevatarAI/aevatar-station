@@ -29,10 +29,10 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         return string.Empty;
     }
 
-    public async Task<string> GodStreamChatAsync(string llm, string message, String chatId,
+    public async Task<string> GodStreamChatAsync(string llm, bool streamingModeEnabled,string message, String chatId,
         ExecutionPromptSettings? promptSettings = null)
     {
-        if (State.SystemLLM != llm)
+        if (State.SystemLLM != llm || State.StreamingModeEnabled != streamingModeEnabled)
         {
             await InitializeAsync(new InitializeDto()
             {
