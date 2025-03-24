@@ -3,6 +3,7 @@ using Aevatar.Domain.Grains;
 using Microsoft.Extensions.DependencyInjection;
 using Aevatar.Application.Grains;
 using Aevatar.GAgents.AI.Options;
+using Aevatar.GAgents.Common;
 using Aevatar.Options;
 using Microsoft.CodeAnalysis.Options;
 using Aevatar.PermissionManagement;
@@ -32,7 +33,8 @@ namespace Aevatar.Silo;
     typeof(SmartWalletListenerGAgentModule),
     typeof(TokenListenerGAgentModule),
     typeof(SummarizerAIGAgentModule),
-    typeof(AevatarNeo4JStoreModule)
+    typeof(AevatarNeo4JStoreModule),
+    typeof(AevatarGAgentsCommonModule)
 )]
 public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
 {

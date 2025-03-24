@@ -42,6 +42,7 @@
         <PackageReference Include="EchoListen.GAgent.SummarizerAIGAgent"/>
         <PackageReference Include="Aevatar.GAgents.Telegram" />
         <PackageReference Include="Neo4j.Driver"/>
+        <PackageReference Include="Aevatar.GAgents.Basic"/>
     </ItemGroup>
 
     <ItemGroup>

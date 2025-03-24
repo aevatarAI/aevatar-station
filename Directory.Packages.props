@@ -22,6 +22,7 @@
     <PackageVersion Include="Aevatar.EventSourcing.MongoDB" Version="$(AevatarVerion)" />
 
     <PackageVersion Include="Aevatar.PermissionManagement" Version="$(AevatarVerion)" />
+    <PackageVersion Include="Aevatar.GAgents.Basic" Version="$(AevatarGAgentsVerion)" />
     <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="$(AevatarGAgentsVerion)" />
     <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="$(AevatarGAgentsVerion)" />
     <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="$(AevatarGAgentsVerion)" />
