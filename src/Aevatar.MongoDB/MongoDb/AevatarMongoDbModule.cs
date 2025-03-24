@@ -36,10 +36,6 @@ public class AevatarMongoDbModule : AbpModule
         });
 
         context.Services.AddTransient<IApiKeysRepository, ApiKeyMongoRepository>();
-        context.Services.AddMongoDbContext<ApiKeysMongoDbContext>(options =>
-        {
-            options.AddDefaultRepositories();
-        });
 
         Configure<AbpUnitOfWorkDefaultOptions>(options =>
         {

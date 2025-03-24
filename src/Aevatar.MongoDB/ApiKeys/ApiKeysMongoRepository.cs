@@ -10,10 +10,10 @@ using Volo.Abp.MongoDB;
 
 namespace Aevatar.ApiKeys;
 
-public class ApiKeyMongoRepository : MongoDbRepository<ApiKeysMongoDbContext, ApiKeyInfo, Guid>, IApiKeysRepository,
+public class ApiKeyMongoRepository : MongoDbRepository<AbpMongoDbContext, ApiKeyInfo, Guid>, IApiKeysRepository,
     ITransientDependency
 {
-    public ApiKeyMongoRepository(IMongoDbContextProvider<ApiKeysMongoDbContext> dbContextProvider) : base(
+    public ApiKeyMongoRepository(IMongoDbContextProvider<AbpMongoDbContext> dbContextProvider) : base(
         dbContextProvider)
     {
     }
