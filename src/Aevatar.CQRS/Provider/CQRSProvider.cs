@@ -65,7 +65,6 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
     {
         _logger.LogInformation("CQRSProvider QueryGEventAsync eventId:{eventId}, grainIds:{grainIds}", eventId,
             grainIds);
-
         var mustQuery = new List<Func<QueryContainerDescriptor<AgentGEventIndex>, QueryContainer>>();
         if (!eventId.IsNullOrEmpty())
         {
@@ -138,7 +137,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         var mustQuery = new List<Func<QueryContainerDescriptor<dynamic>, QueryContainer>>
         {
             q => q.Term(i =>
-                i.Field("_id").Value(primaryKey.ToString().Replace("-", "")))
+                i.Field("_id").Value(primaryKey))
         };
 
         QueryContainer Filter(QueryContainerDescriptor<dynamic> f) => f.Bool(b => b.Must(mustQuery));
@@ -175,7 +174,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
             Limit = pageSize,
         });
 
-        if (queryResponse.Item2.IsNullOrWhiteSpace())
+        if (queryResponse == null || queryResponse.Item2.IsNullOrWhiteSpace())
         {
             return new Tuple<long, List<TargetT>>(0, new List<TargetT>());
         }
