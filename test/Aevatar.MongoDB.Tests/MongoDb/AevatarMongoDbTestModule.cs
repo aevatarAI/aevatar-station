@@ -1,6 +1,7 @@
 ﻿using System;
 using Volo.Abp.Data;
 using Volo.Abp.Modularity;
+using Volo.Abp.Uow;
 
 namespace Aevatar.MongoDB;
 
@@ -15,6 +16,11 @@ public class AevatarMongoDbTestModule : AbpModule
         Configure<AbpDbConnectionOptions>(options =>
         {
             options.ConnectionStrings.Default = AevatarMongoDbFixture.GetRandomConnectionString();
+        });
+        
+        Configure<AbpUnitOfWorkDefaultOptions>(options =>
+        {
+            options.TransactionBehavior = UnitOfWorkTransactionBehavior.Disabled;
         });
     }
 }
