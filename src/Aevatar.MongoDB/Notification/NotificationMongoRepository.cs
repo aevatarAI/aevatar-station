@@ -4,9 +4,9 @@ using Volo.Abp.MongoDB;
 
 namespace Aevatar.Notification;
 
-public class NotificationMongoRepository : MongoDbRepository<AbpMongoDbContext, NotificationInfo, Guid>, INotificationRepository
+public class NotificationMongoRepository : MongoDbRepository<NotificationDbContext, NotificationInfo, Guid>, INotificationRepository
 {
-    public NotificationMongoRepository(IMongoDbContextProvider<AbpMongoDbContext> dbContextProvider) : base(dbContextProvider)
+    public NotificationMongoRepository(IMongoDbContextProvider<NotificationDbContext> dbContextProvider) : base(dbContextProvider)
     {
     }
 }
