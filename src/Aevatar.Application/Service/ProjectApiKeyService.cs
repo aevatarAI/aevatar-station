@@ -11,14 +11,6 @@ using Volo.Abp.Domain.Repositories;
 
 namespace Aevatar.Service;
 
-public interface IProjectApiKeyService
-{
-    Task CreateAsync(Guid projectId, string keyName, Guid? currentUserId);
-    Task DeleteAsync(Guid apiKeyId);
-    Task ModifyApiKeyAsync(Guid apiKeyId, string keyName);
-    Task<List<ApiKeyInfo>> GetApiKeysAsync(Guid projectId);
-}
-
 public class ProjectApiKeyService : IProjectApiKeyService, ITransientDependency
 {
     private readonly IApiKeysRepository _apiKeysRepository;
@@ -91,8 +83,6 @@ public class ProjectApiKeyService : IProjectApiKeyService, ITransientDependency
 
     public async Task<List<ApiKeyInfo>> GetApiKeysAsync(Guid projectId)
     {
-        // todo:validate GetApiKeysAsync rights
-
         var apiKeyList = await _apiKeysRepository.GetProjectApiKeys(projectId, 10, 0);
        
         return apiKeyList;

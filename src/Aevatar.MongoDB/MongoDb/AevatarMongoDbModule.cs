@@ -1,7 +1,6 @@
 ﻿using Aevatar.ApiKey;
 using Aevatar.ApiKeys;
 using Aevatar.Notification;
-using Amazon.Runtime.Internal.Util;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.AuditLogging.MongoDB;
 using Volo.Abp.BackgroundJobs.MongoDB;
@@ -33,7 +32,6 @@ public class AevatarMongoDbModule : AbpModule
         context.Services.AddMongoDbContext<AevatarMongoDbContext>(options => { options.AddDefaultRepositories(); });
 
         context.Services.AddTransient<IApiKeysRepository, ApiKeyMongoRepository>();
-        context.Services.AddMongoDbContext<ApiKeysMongoDbContext>(options => { options.AddDefaultRepositories(); });
         context.Services.AddTransient<INotificationRepository, NotificationMongoRepository>();
         Configure<AbpUnitOfWorkDefaultOptions>(options =>
         {
