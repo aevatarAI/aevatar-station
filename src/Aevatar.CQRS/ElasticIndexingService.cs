@@ -12,6 +12,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Nest;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using Orleans.Runtime;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -74,79 +75,78 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
     private CreateIndexResponse CreateIndexAsync<T>(T stateBase, string indexName) where T : StateBase
     {
         var createIndexResponse = _elasticClient.Indices.Create(indexName, c => c
-            .Map<T>(m => m
-                .DynamicTemplates(dt => dt
-                    .DynamicTemplate("numbers_as_integer", t => t
-                        .MatchMappingType("long")
-                        .Mapping(f => { return new NumberProperty(NumberType.Long); })
-                    )
-                    .DynamicTemplate("numbers_as_float", t => t
-                        .MatchMappingType("double")
-                        .Mapping(f => { return new NumberProperty(NumberType.Double); })
-                    )
-                    .DynamicTemplate("objects_as_nested", t => t
-                        .MatchMappingType("object")
-                        .Mapping(f => new ObjectProperty { Dynamic = true })
-                    )
-                ).Properties(props =>
+            .Map<T>(m => m.Dynamic()
+                .Properties(props =>
                 {
-                    var type = stateBase.GetType();
+                    var type = typeof(T);
                     foreach (var property in type.GetProperties())
                     {
                         var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
-                        if (property.PropertyType == typeof(string))
+                        var propType = property.PropertyType;
+
+                        if (propType == typeof(string))
                         {
-                            props.Keyword(k => k
-                                .Name(propertyName)
-                            );
+                            props.Text(t => t.Name(propertyName)).Keyword(k => k.Name(propertyName).IgnoreAbove(256));
                         }
-                        else if (property.PropertyType == typeof(DateTime))
+                        else if (propType == typeof(short) || propType == typeof(int) || propType == typeof(long))
                         {
-                            props.Date(d => d
-                                .Name(propertyName)
-                            );
+                            props.Number(n => n.Name(propertyName).Type(NumberType.Long));
                         }
-                        else if (property.PropertyType == typeof(Guid))
+                        else if (propType == typeof(float))
                         {
-                            props.Keyword(k => k
-                                .Name(propertyName)
-                            );
+                            props.Number(n => n.Name(propertyName).Type(NumberType.Float));
                         }
-                        else if (property.PropertyType == typeof(Type))
+                        else if (propType == typeof(double) || propType == typeof(decimal))
                         {
-                            props.Text(o => o
-                                .Name(propertyName)
-                            );
+                            props.Number(n => n.Name(propertyName).Type(NumberType.Double));
                         }
-                        else if (property.PropertyType == typeof(GrainId))
+                        else if (propType == typeof(DateTime))
                         {
-                            props.Text(o => o
-                                .Name(propertyName)
-                            );
+                            props.Date(d => d.Name(propertyName));
                         }
-                        else if (property.PropertyType == typeof(bool))
+                        else if (propType == typeof(bool))
                         {
-                            props.Boolean(b => b
-                                .Name(propertyName)
-                            );
+                            props.Boolean(b => b.Name(propertyName));
+                        }
+                        else if (propType == typeof(Guid))
+                        {
+                            props.Keyword(k => k.Name(propertyName));
                         }
                     }
 
-                    props.Date(d => d
-                        .Name(CTime)
-                    );
+                    props.Date(d => d.Name(CTime));
                     return props;
                 })
+                .DynamicTemplates(dt => dt
+                    .DynamicTemplate("force_strings", t => t
+                        .PathMatch("*")
+                        .Mapping(m => m.Text(tt => tt))
+                    )
+                )
             )
         );
         return createIndexResponse;
     }
+    
+    private static bool IsBasicType(Type type)
+    {
+        Type underlyingType = Nullable.GetUnderlyingType(type) ?? type;
 
+        if (underlyingType.IsPrimitive)
+            return true;
+
+        if (underlyingType == typeof(string) ||
+            underlyingType == typeof(DateTime) ||
+            underlyingType == typeof(decimal) ||
+            underlyingType == typeof(Guid))
+            return true;
+        return false;
+    }
+    
     public async Task SaveOrUpdateStateIndexBatchAsync(IEnumerable<SaveStateCommand> commands)
     {
         // Prepare a bulk descriptor for batch indexing
         var bulkDescriptor = new BulkDescriptor();
-
         foreach (var command in commands)
         {
             var stateBase = command.State;
@@ -161,18 +161,25 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                 var value = property.GetValue(stateBase);
                 var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
 
-                if (value is GrainId || string.Equals(propertyName, "children"))
+                if (value == null)
+            {
+                continue;
+            }
+
+            if (!IsBasicType(property.PropertyType))
                 {
-                    document[propertyName] = JsonConvert.SerializeObject(value);
-                }
-                else
+                    document[propertyName] = JsonConvert.SerializeObject(value, new JsonSerializerSettings
                 {
-                    if (value != null)
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+                    });
+            }
+            else
                     {
                         document.Add(propertyName, value);
                     }
                 }
-            }
+            
 
             document.Add(CTime, DateTime.UtcNow);
 
