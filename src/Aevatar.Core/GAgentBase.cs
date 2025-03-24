@@ -216,34 +216,58 @@ public abstract partial class
 
     private async Task BaseOnActivateAsync(CancellationToken cancellationToken)
     {
-        // This must be called first to initialize Observers field.
-        await UpdateObserverListAsync(GetType());
-        await InitializeOrResumeEventBaseStreamAsync();
-        await ActivateProjectionGrainAsync();
+        try
+        {
+            // This must be called first to initialize Observers field.
+            await UpdateObserverListAsync(GetType());
+            await InitializeOrResumeEventBaseStreamAsync();
+            await ActivateProjectionGrainAsync();
+        }
+        catch (Exception e)
+        {
+            Logger.LogError($"Error in BaseOnActivateAsync: {e}");
+            throw;
+        }
     }
 
     private async Task InitializeOrResumeEventBaseStreamAsync()
     {
-        var streamOfThisGAgent = GetEventBaseStream(this.GetGrainId().ToString());
-        var handles = await streamOfThisGAgent.GetAllSubscriptionHandles();
-        var asyncObserver = new GAgentAsyncObserver(_observers);
-        if (handles.Count > 0)
+        try
         {
-            foreach (var handle in handles)
+            var streamOfThisGAgent = GetEventBaseStream(this.GetGrainId().ToString());
+            var handles = await streamOfThisGAgent.GetAllSubscriptionHandles();
+            var asyncObserver = new GAgentAsyncObserver(_observers);
+            if (handles.Count > 0)
             {
-                await handle.ResumeAsync(asyncObserver);
+                foreach (var handle in handles)
+                {
+                    await handle.ResumeAsync(asyncObserver);
+                }
+            }
+            else
+            {
+                await streamOfThisGAgent.SubscribeAsync(asyncObserver);
             }
         }
-        else
+        catch (Exception e)
         {
-            await streamOfThisGAgent.SubscribeAsync(asyncObserver);
+            Logger.LogError($"Error in InitializeOrResumeEventBaseStreamAsync: {e}");
+            throw;
         }
     }
 
     private async Task ActivateProjectionGrainAsync()
     {
-        var projectionGrain = GrainFactory.GetGrain<IProjectionGrain<TState>>(Guid.Empty);
-        await projectionGrain.ActivateAsync();
+        try
+        {
+            var projectionGrain = GrainFactory.GetGrain<IProjectionGrain<TState>>(Guid.Empty);
+            await projectionGrain.ActivateAsync();
+        }
+        catch (Exception e)
+        {
+            Logger.LogError($"Error in ActivateProjectionGrainAsync: {e}");
+            throw;
+        }
     }
 
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
