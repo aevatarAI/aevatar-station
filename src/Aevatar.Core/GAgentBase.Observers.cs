@@ -35,16 +35,13 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
                 }
             }
 
-            foreach (var observer in observers.Take(count))
+            try
             {
-                try
-                {
-                    _observers.Add(observer);
-                }
-                catch (ArgumentNullException ex)
-                {
-                    Logger.LogWarning(ex, "Attempted to add null observer for {Type}", type.Name);
-                }
+                _observers.AddRange(observers.Take(count));
+            }
+            catch (ArgumentNullException ex)
+            {
+                Logger.LogWarning(ex, "Attempted to add null observer for {Type}", type.Name);
             }
         }
         finally
@@ -90,7 +87,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
         Type parameterType,
         bool isResponseHandler)
     {
-        return new EventWrapperBaseAsyncObserver(async item =>
+        return EventWrapperBaseAsyncObserver.Create(async item =>
         {
             using (Logger.BeginScope(new Dictionary<string, object>
                    {
@@ -160,11 +157,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
                     throw;
                 }
             }
-        })
-        {
-            MethodName = method.Name,
-            ParameterTypeName = parameterType.Name
-        };
+        }, ServiceProvider, method.Name, parameterType.Name);
     }
 
     private bool ShouldSkipEvent(EventWrapper<TEvent> eventWrapper, MethodInfo method)

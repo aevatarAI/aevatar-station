@@ -49,7 +49,7 @@ public abstract partial class
 
     public ILogger Logger { get; set; } = NullLogger.Instance;
 
-    private readonly ConcurrentBag<EventWrapperBaseAsyncObserver> _observers = [];
+    private readonly List<EventWrapperBaseAsyncObserver> _observers = [];
 
     private IStateDispatcher? StateDispatcher { get; set; }
     protected AevatarOptions? AevatarOptions { get; private set; }
@@ -72,9 +72,9 @@ public abstract partial class
         await OnRegisterAgentAsync(gAgent.GetGrainId());
     }
 
-    public Task SubscribeToAsync(IGAgent gAgent)
+    public async Task SubscribeToAsync(IGAgent gAgent)
     {
-        return SetParentAsync(gAgent.GetGrainId());
+        await SetParentAsync(gAgent.GetGrainId());
     }
 
     public Task UnsubscribeFromAsync(IGAgent gAgent)
@@ -142,8 +142,10 @@ public abstract partial class
 
     private async Task<SubscribedEventListEvent> GetGroupSubscribedEventListEvent()
     {
-        var gAgentList = State.Children.Distinct().Select(grainId =>
-            GrainFactory.GetGrain<IGAgent>(grainId)).ToList();
+        var gAgentList = State.Children
+            .Distinct()
+            .Select(grainId => GrainFactory.GetGrain<IGAgent>(grainId))
+            .ToList();
 
         if (gAgentList.IsNullOrEmpty())
         {
@@ -156,33 +158,20 @@ public abstract partial class
 
         if (gAgentList.Any(grain => grain == null))
         {
-            // Only happened on test environment.
             throw new InvalidOperationException($"Null grains detected in GAgent List. Count: {gAgentList.Count}");
         }
 
-        var subscriptionMap = new ConcurrentDictionary<Type, List<Type>>();
+        var subscriptionMap = new Dictionary<Type, List<Type>>();
 
-        using var throttler = new SemaphoreSlim(initialCount: 10);
-        var queryTasks = gAgentList.Select(async gAgent =>
+        foreach (var gAgent in gAgentList)
         {
-            // ReSharper disable AccessToDisposedClosure
-            await throttler.WaitAsync();
-            try
-            {
-                subscriptionMap[gAgent.GetType()] =
-                    await gAgent.GetAllSubscribedEventsAsync() ?? [];
-            }
-            finally
-            {
-                throttler.Release();
-            }
-        });
-
-        await Task.WhenAll(queryTasks);
+            var events = await gAgent.GetAllSubscribedEventsAsync() ?? [];
+            subscriptionMap[gAgent.GetType()] = events;
+        }
 
         return new SubscribedEventListEvent
         {
-            Value = subscriptionMap.ToDictionary(kv => kv.Key, kv => kv.Value),
+            Value = subscriptionMap,
             GAgentType = GetType()
         };
     }
