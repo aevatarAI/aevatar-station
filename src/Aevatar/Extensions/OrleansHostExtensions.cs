@@ -1,7 +1,9 @@
+using Aevatar.Core;
 using Aevatar.Plugins.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Orleans.Serialization;
+using Orleans.SyncWork;
 using Volo.Abp;
 using Volo.Abp.Modularity;
 using Volo.Abp.Threading;
@@ -23,6 +25,9 @@ public static class OrleansHostExtensions
                 {
                     services.Add(abpApplication.Services);
                 }
+
+                services.AddSingleton(_ =>
+                    new LimitedConcurrencyLevelTaskScheduler(AevatarGAgentConstants.MaxSyncWorkConcurrency));
             });
     }
 
