@@ -49,6 +49,7 @@ public class ApiKeyController : AevatarController
             var creatorInfo = await _identityUserManager.GetByIdAsync((Guid)item.CreatorId!);
             result.Add(new ApiKeyListResponseDto()
             {
+                Id = item.Id,
                 ApiKey = item.ApiKey,
                 ApiKeyName = item.ApiKeyName,
                 CreateTime = item.CreationTime,
