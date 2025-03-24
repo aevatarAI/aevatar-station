@@ -46,7 +46,7 @@ public class AgentController : AevatarController
     }
 
     [HttpGet("agent-list")]
-    [Authorize(Policy = AevatarPermissions.Agent.ViewList)]
+    [Authorize(Policy = AevatarPermissions.Agent.ViewAllType)]
     public async Task<List<AgentInstanceDto>> GetAllAgentInstance(int pageIndex = 0, int pageSize = 20)
     {
         return await _agentService.GetAllAgentInstances(pageIndex, pageSize);
