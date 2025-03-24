@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <Import Project="..\..\common.props" />
+
+    <PropertyGroup>
+        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <RootNamespace>Aevatar.HttpApi.Tests</RootNamespace>
+        <CollectCoverage>true</CollectCoverage>
+        <CoverletOutputFormat>cobertura</CoverletOutputFormat>
+        <CoverletOutput>./TestResults/</CoverletOutput>
+        <ExcludeByFile>**/*.g.cs</ExcludeByFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\Aevatar.HttpApi\Aevatar.HttpApi.csproj" />
+        <ProjectReference Include="..\..\src\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj" />
+        <ProjectReference Include="..\..\src\Aevatar.Domain.Shared\Aevatar.Domain.Shared.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Orleans.TestingHost" />
+        <PackageReference Include="AutoGen"/>
+        <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
+        <PackageReference Include="Azure.AI.TextAnalytics" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+<!--        <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />-->
+        <PackageReference Include="Volo.Abp.EntityFrameworkCore" />
+        <PackageReference Include="Volo.Abp.PermissionManagement.EntityFrameworkCore" />
+        <PackageReference Include="xunit" />
+        <PackageReference Include="xunit.runner.visualstudio" >
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="coverlet.collector" >
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="Moq"  />
+        <PackageReference Include="Volo.Abp.Core"  />
+        <PackageReference Include="Volo.Abp.TestBase" />
+        <PackageReference Include="Volo.Abp.Authorization" />
+        <PackageReference Include="Volo.Abp.Identity.Domain"  />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Update="appsettings.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        </Content>
+    </ItemGroup>
+
+
+</Project>

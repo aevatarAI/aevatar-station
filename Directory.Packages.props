@@ -19,7 +19,6 @@
     <PackageVersion Include="Aevatar.EventSourcing.Core" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.Plugins" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.EventSourcing.MongoDB" Version="$(AevatarVerion)" />
-
     <PackageVersion Include="Aevatar.PermissionManagement" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="$(AevatarGAgentsVerion)" />
     <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="$(AevatarGAgentsVerion)" />
@@ -27,7 +26,6 @@
     <PackageVersion Include="Aevatar.SignalR" Version="1.5.3" />
     <PackageVersion Include="Aevatar.GAgents.SocialGAgent" Version="$(AevatarGAgentVerion)" />
     <PackageVersion Include="Aevatar.GAgents.Twitter" Version="$(AevatarGAgentVerion)" />
-
     <!-- AI and Analysis packages -->
     <PackageVersion Include="AutoGen" Version="0.2.1" />
     <PackageVersion Include="AutoGen.Core" Version="0.2.1" />

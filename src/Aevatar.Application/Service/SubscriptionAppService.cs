@@ -40,7 +40,11 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
     private readonly IUserAppService _userAppService;
     private readonly IGAgentFactory _gAgentFactory;
     private readonly GrainTypeResolver _grainTypeResolver;
-    
+
+    public SubscriptionAppService()
+    {
+    }
+
     public SubscriptionAppService(
         IClusterClient clusterClient,
         IObjectMapper objectMapper,
