@@ -8,8 +8,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Aevatar.GAgents.ChatAgent" />
         <PackageReference Include="Aevatar.PermissionManagement" />
         <PackageReference Include="AutoGen.Core" />
+        <PackageReference Include="Microsoft.Extensions.Options" />
         <PackageReference Include="Microsoft.Orleans.Sdk" />
         <PackageReference Include="AElf.OpenTelemetry" />
         <PackageReference Include="Volo.Abp.AutoMapper" /> 
@@ -21,9 +23,10 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj"/>
-        <ProjectReference Include="..\Aevatar.CQRS\Aevatar.CQRS.csproj"/>
-        <ProjectReference Include="..\Aevatar.Domain.Grains\Aevatar.Domain.Grains.csproj"/>
-        <ProjectReference Include="..\Aevatar.Domain\Aevatar.Domain.csproj"/>
+        <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj" />
+        <ProjectReference Include="..\Aevatar.CQRS\Aevatar.CQRS.csproj" />
+        <ProjectReference Include="..\Aevatar.Domain.Grains\Aevatar.Domain.Grains.csproj" />
+        <ProjectReference Include="..\Aevatar.Domain\Aevatar.Domain.csproj" />
+        <ProjectReference Include="..\Aevatar.Neo4JStore\Aevatar.Neo4JStore.csproj" />
     </ItemGroup>
 </Project>
