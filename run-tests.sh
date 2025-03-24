@@ -20,7 +20,7 @@ fi
 
 # === Clean Up ===
 echo "Cleaning the solution..."
-dotnet clean "$SOLUTION_DIR"
+#dotnet clean "$SOLUTION_DIR"
 
 # === Build Solution ===
 echo "Building the solution..."
@@ -60,6 +60,7 @@ for PROJECT in $TEST_PROJECTS; do
         --configuration Release \
         --results-directory "$PROJECT_RESULTS_DIR" \
         --collect:"XPlat Code Coverage" \
+        --settings ./CodeCoverage.runsettings \
         /p:ExcludeByFile="**/*.g.cs"
     
     if [ $? -ne 0 ]; then

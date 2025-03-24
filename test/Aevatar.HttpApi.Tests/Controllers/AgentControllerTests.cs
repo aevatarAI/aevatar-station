@@ -1,6 +1,7 @@
 using Aevatar.Agent;
 using Aevatar.CQRS.Dto;
 using Aevatar.Service;
+using Aevatar.Subscription;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -109,5 +110,131 @@ public class AgentControllerTests
 
         // Assert
         _agentServiceMock.Verify(x => x.DeleteAgentAsync(guid), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetAllAgent_ShouldReturnAllAgentTypes()
+    {
+        // Arrange
+        var expectedAgents = new List<AgentTypeDto>
+        {
+            new AgentTypeDto(),
+            new AgentTypeDto()
+        };
+
+        _agentServiceMock.Setup(x => x.GetAllAgents())
+            .ReturnsAsync(expectedAgents);
+
+        // Act
+        var result = await _controller.GetAllAgent();
+
+        // Assert
+        Assert.Equal(expectedAgents, result);
+        _agentServiceMock.Verify(x => x.GetAllAgents(), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetAllAgentInstance_ShouldReturnAllInstances()
+    {
+        // Arrange
+        var pageIndex = 0;
+        var pageSize = 20;
+        var expectedInstances = new List<AgentInstanceDto>
+        {
+            new AgentInstanceDto(),
+            new AgentInstanceDto()
+        };
+
+        _agentServiceMock.Setup(x => x.GetAllAgentInstances(pageIndex, pageSize))
+            .ReturnsAsync(expectedInstances);
+
+        // Act
+        var result = await _controller.GetAllAgentInstance(pageIndex, pageSize);
+
+        // Assert
+        Assert.Equal(expectedInstances, result);
+        _agentServiceMock.Verify(x => x.GetAllAgentInstances(pageIndex, pageSize), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetAgentRelationship_ShouldReturnRelationship()
+    {
+        // Arrange
+        var guid = Guid.NewGuid();
+        var expectedRelationship = new AgentRelationshipDto();
+
+        _agentServiceMock.Setup(x => x.GetAgentRelationshipAsync(guid))
+            .ReturnsAsync(expectedRelationship);
+
+        // Act
+        var result = await _controller.GetAgentRelationship(guid);
+
+        // Assert
+        Assert.Equal(expectedRelationship, result);
+        _agentServiceMock.Verify(x => x.GetAgentRelationshipAsync(guid), Times.Once);
+    }
+
+    [Fact]
+    public async Task AddSubAgent_ShouldAddAndReturnSubAgent()
+    {
+        // Arrange
+        var guid = Guid.NewGuid();
+        var input = new AddSubAgentDto();
+        var expectedSubAgent = new SubAgentDto();
+
+        _agentServiceMock.Setup(x => x.AddSubAgentAsync(guid, input))
+            .ReturnsAsync(expectedSubAgent);
+
+        // Act
+        var result = await _controller.AddSubAgent(guid, input);
+
+        // Assert
+        Assert.Equal(expectedSubAgent, result);
+        _agentServiceMock.Verify(x => x.AddSubAgentAsync(guid, input), Times.Once);
+    }
+
+    [Fact]
+    public async Task RemoveSubAgent_ShouldRemoveAndReturnSubAgent()
+    {
+        // Arrange
+        var guid = Guid.NewGuid();
+        var input = new RemoveSubAgentDto();
+        var expectedSubAgent = new SubAgentDto();
+
+        _agentServiceMock.Setup(x => x.RemoveSubAgentAsync(guid, input))
+            .ReturnsAsync(expectedSubAgent);
+
+        // Act
+        var result = await _controller.RemoveSubAgent(guid, input);
+
+        // Assert
+        Assert.Equal(expectedSubAgent, result);
+        _agentServiceMock.Verify(x => x.RemoveSubAgentAsync(guid, input), Times.Once);
+    }
+
+    [Fact]
+    public async Task RemoveAllSubAgent_ShouldCallRemoveAllService()
+    {
+        // Arrange
+        var guid = Guid.NewGuid();
+
+        // Act
+        await _controller.RemoveAllSubAgent(guid);
+
+        // Assert
+        _agentServiceMock.Verify(x => x.RemoveAllSubAgentAsync(guid), Times.Once);
+    }
+
+    [Fact]
+    public async Task PublishAsync_ShouldCallPublishEventService()
+    {
+        // Arrange
+        var input = new PublishEventDto();
+
+        // Act
+        // await _controller.PublishAsync(input);
+
+        // Assert
+        // _subscriptionAppServiceMock.Verify(x => x.PublishEventAsync(input), Times.Once);
     }
 }

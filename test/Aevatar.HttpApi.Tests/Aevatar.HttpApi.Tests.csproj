@@ -7,10 +7,10 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <RootNamespace>Aevatar.HttpApi.Tests</RootNamespace>
-        <CollectCoverage>true</CollectCoverage>
-        <CoverletOutputFormat>cobertura</CoverletOutputFormat>
-        <CoverletOutput>./TestResults/</CoverletOutput>
-        <ExcludeByFile>**/*.g.cs</ExcludeByFile>
+<!--        <CollectCoverage>true</CollectCoverage>-->
+<!--        <CoverletOutputFormat>cobertura</CoverletOutputFormat>-->
+<!--        <CoverletOutput>./TestResults/</CoverletOutput>-->
+<!--        <ExcludeByFile>**/*.g.cs</ExcludeByFile>-->
     </PropertyGroup>
 
     <ItemGroup>
