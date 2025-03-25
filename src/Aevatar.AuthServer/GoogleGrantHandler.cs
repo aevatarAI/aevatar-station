@@ -57,7 +57,7 @@ public class GoogleGrantHandler : ITokenExtensionGrant
         }
         else
         {
-            clientId = _configuration["Google:WebClientId"];
+            clientId = _configuration["Google:ClientId"];
         }
         
         if (string.IsNullOrEmpty(clientId))
@@ -78,7 +78,7 @@ public class GoogleGrantHandler : ITokenExtensionGrant
         
         _logger.LogInformation("GoogleGrantHandler.HandleAsync: clientId: {clientId}", clientId);
         
-        var payload = await ValidateGoogleTokenAsync(idToken);
+        var payload = await ValidateGoogleTokenAsync(idToken, clientId);
         _logger.LogInformation("GoogleGrantHandler.HandleAsync: payload: {payload}", payload);
         
         if (payload == null)
@@ -131,11 +131,10 @@ public class GoogleGrantHandler : ITokenExtensionGrant
         return new SignInResult(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme, claimsPrincipal);
     }
 
-    private async Task<GoogleJsonWebSignature.Payload> ValidateGoogleTokenAsync(string idToken)
+    private async Task<GoogleJsonWebSignature.Payload> ValidateGoogleTokenAsync(string idToken, string clientId)
     {
         try
         {
-            var clientId = _configuration["Google:ClientId"];
             var settings = new GoogleJsonWebSignature.ValidationSettings
             {
                 Audience = new[] { clientId }
