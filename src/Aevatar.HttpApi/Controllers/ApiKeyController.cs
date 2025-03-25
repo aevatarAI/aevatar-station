@@ -2,12 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.ApiKeys;
+using Aevatar.Organizations;
+using Aevatar.Permissions;
+using Aevatar.Projects;
 using Aevatar.Service;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OrleansCodeGen.Orleans.EventSourcing.LogStorage;
 using Volo.Abp;
+using Volo.Abp.Identity;
 
 namespace Aevatar.Controllers;
 
@@ -18,23 +22,49 @@ namespace Aevatar.Controllers;
 public class ApiKeyController : AevatarController
 {
     private readonly IProjectApiKeyService _apiKeyService;
+    private readonly IdentityUserManager _identityUserManager;
+    private readonly IOrganizationPermissionChecker _organizationPermission;
+    private readonly IProjectService _projectService;
 
-    public ApiKeyController(IProjectApiKeyService apiKeyService)
+    public ApiKeyController(IProjectApiKeyService apiKeyService, IdentityUserManager identityUserManager, IOrganizationPermissionChecker organizationPermission, IProjectService projectService)
     {
         _apiKeyService = apiKeyService;
+        _identityUserManager = identityUserManager;
+        _organizationPermission = organizationPermission;
+        _projectService = projectService;
     }
 
 
     [HttpPost]
     public async Task CreateApiKey(CreateApiKeyDto createDto)
     {
-        await _apiKeyService.CreateAsync(createDto.ProjectId, createDto.KeyName);
+        // check projectId
+        await _projectService.GetAsync(createDto.ProjectId);
+        
+        await _organizationPermission.AuthenticateAsync(createDto.ProjectId, AevatarPermissions.ApiKeys.Create);
+        await _apiKeyService.CreateAsync(createDto.ProjectId, createDto.KeyName, CurrentUser.Id);
     }
 
     [HttpGet("{guid}")]
     public async Task<List<ApiKeyListResponseDto>> GetApiKeys(Guid guid)
     {
-        return await _apiKeyService.GetApiKeysAsync(guid);
+        await _organizationPermission.AuthenticateAsync(guid, AevatarPermissions.ApiKeys.Default);
+        var result = new List<ApiKeyListResponseDto>();
+        foreach (var item in await _apiKeyService.GetApiKeysAsync(guid))
+        {
+            var creatorInfo = await _identityUserManager.GetByIdAsync((Guid)item.CreatorId!);
+            result.Add(new ApiKeyListResponseDto()
+            {
+                Id = item.Id,
+                ApiKey = item.ApiKey,
+                ApiKeyName = item.ApiKeyName,
+                CreateTime = item.CreationTime,
+                CreatorName = creatorInfo.Name,
+                ProjectId = item.ProjectId,
+            });
+        }
+
+        return result;
     }
 
     [HttpDelete("{guid}")]
@@ -42,7 +72,7 @@ public class ApiKeyController : AevatarController
     {
         await _apiKeyService.DeleteAsync(guid);
     }
-    
+
     [HttpPut("{guid}")]
     public async Task ModifyApiKeyName(Guid guid, [FromBody] ModifyApiKeyNameDto modifyApiKeyNameDto)
     {

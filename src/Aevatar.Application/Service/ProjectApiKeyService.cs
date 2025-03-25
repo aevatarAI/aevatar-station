@@ -1,36 +1,35 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.ApiKey;
 using Aevatar.ApiKeys;
 using Aevatar.APIKeys;
 using Aevatar.Common;
+using Aevatar.Organizations;
+using Aevatar.Permissions;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
-using Volo.Abp.Application.Dtos;
-using Volo.Abp.Application.Services;
+using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
-using Volo.Abp.Identity;
 
 namespace Aevatar.Service;
 
-public class ProjectApiKeyService : ApplicationService, IProjectApiKeyService
+public class ProjectApiKeyService : IProjectApiKeyService, ITransientDependency
 {
     private readonly IApiKeysRepository _apiKeysRepository;
     private readonly ILogger<ProjectApiKeyService> _logger;
-    private readonly IUserAppService _appService;
-    private readonly IdentityUserManager _identityUserManager;
+    private readonly IOrganizationPermissionChecker _organizationPermission;
 
-    public ProjectApiKeyService(IApiKeysRepository apiKeysRepository, ILogger<ProjectApiKeyService> logger,
-        UserAppService appService, IdentityUserManager identityUserManager)
+    public ProjectApiKeyService(IApiKeysRepository apiKeysRepository, ILogger<ProjectApiKeyService> logger, IOrganizationPermissionChecker organizationPermission)
     {
         _apiKeysRepository = apiKeysRepository;
         _logger = logger;
-        _appService = appService;
-        _identityUserManager = identityUserManager;
+        _organizationPermission = organizationPermission;
     }
 
-    public async Task CreateAsync(Guid projectId, string keyName)
+
+    public async Task CreateAsync(Guid projectId, string keyName, Guid? currentUserId)
     {
         _logger.LogDebug($"[ProjectApiKeyService][CreateAsync] projectId:{projectId}, keyName:{keyName}");
 
@@ -40,21 +39,30 @@ public class ProjectApiKeyService : ApplicationService, IProjectApiKeyService
         }
 
         var apikeyStr = MD5Util.CalculateMD5($"{projectId.ToString()}-{keyName}-{Guid.NewGuid()}");
-        var apiKey = new ApiKeyInfo(Guid.NewGuid(), projectId, keyName, apikeyStr);
+        var apiKey = new ApiKeyInfo(Guid.NewGuid(), projectId, keyName, apikeyStr)
+        {
+            CreationTime = DateTime.Now,
+            CreatorId = currentUserId,
+        };
 
-        await _apiKeysRepository.InsertAsync(apiKey);
+       await _apiKeysRepository.InsertAsync(apiKey);
     }
 
     public async Task DeleteAsync(Guid apiKeyId)
     {
-        // todo:validate delete rights
+        var apikeyInfo = await _apiKeysRepository.GetAsync(apiKeyId);
+        if (apikeyInfo == null)
+        {
+            throw new UserFriendlyException("Api key not found");
+        }
+        
+        await _organizationPermission.AuthenticateAsync(apikeyInfo.ProjectId, AevatarPermissions.ApiKeys.Delete);
         _logger.LogDebug($"[ProjectApiKeyService][DeleteAsync] apiKeyId:{apiKeyId}");
         await _apiKeysRepository.HardDeleteAsync(f => f.Id == apiKeyId);
     }
 
     public async Task ModifyApiKeyAsync(Guid apiKeyId, string keyName)
     {
-        // todo:validate modify rights
         _logger.LogDebug($"[ProjectApiKeyService][ModifyApiKeyAsync] apiKeyId:{apiKeyId}, keyName:{keyName}");
 
         var apiKeyInfo = await _apiKeysRepository.GetAsync(apiKeyId);
@@ -63,6 +71,7 @@ public class ProjectApiKeyService : ApplicationService, IProjectApiKeyService
             throw new BusinessException(message: "ApiKey not exist");
         }
 
+        await _organizationPermission.AuthenticateAsync(apiKeyInfo.ProjectId, AevatarPermissions.ApiKeys.Edit);
         if (await _apiKeysRepository.CheckProjectApiKeyNameExist(apiKeyInfo.ProjectId, keyName))
         {
             throw new BusinessException(message: "key name has exist");
@@ -73,34 +82,18 @@ public class ProjectApiKeyService : ApplicationService, IProjectApiKeyService
             throw new BusinessException(message: "ApiKey is the same ");
         }
 
+
         apiKeyInfo.ApiKeyName = keyName;
 
         await _apiKeysRepository.UpdateAsync(apiKeyInfo);
     }
 
-    public async Task<List<ApiKeyListResponseDto>> GetApiKeysAsync(Guid projectId)
+    public async Task<List<ApiKeyInfo>> GetApiKeysAsync(Guid projectId)
     {
-        // one project only have one apikey
         APIKeyPagedRequestDto requestDto = new APIKeyPagedRequestDto()
             { ProjectId = projectId, MaxResultCount = 10, SkipCount = 0 };
 
         var apiKeyList = await _apiKeysRepository.GetProjectApiKeys(requestDto);
-        var result = new List<ApiKeyListResponseDto>();
-        foreach (var item in apiKeyList.Items)
-        {
-            var creatorInfo = await _identityUserManager.GetByIdAsync((Guid)item.CreatorId!);
-
-            result.Add(new ApiKeyListResponseDto()
-            {
-                Id = item.Id,
-                ApiKey = item.ApiKey,
-                ApiKeyName = item.ApiKeyName,
-                CreateTime = item.CreationTime,
-                ProjectId = item.ProjectId,
-                CreatorName = creatorInfo.Name,
-            });
-        }
-
-        return result;
+        return apiKeyList.Items.ToList();
     }
 }

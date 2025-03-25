@@ -1,14 +1,17 @@
 using System;
+using Aevatar.ApiKey;
 using Aevatar.CQRS.Handler;
 using Aevatar.Kubernetes.Manager;
 using Aevatar.Options;
 using Aevatar.WebHook.Deploy;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 using Nest;
 using Volo.Abp.Auditing;
 using Volo.Abp.AutoMapper;
 using Volo.Abp.EventBus;
+using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
 
 namespace Aevatar;
@@ -38,5 +41,13 @@ public class AevatarApplicationTestModule : AbpModule
         context.Services.AddMediatR(typeof(GetStateQueryHandler).Assembly);
         context.Services.AddMediatR(typeof(GetGEventQueryHandler).Assembly);
         context.Services.AddTransient<IHostDeployManager, DefaultHostDeployManager>();
+
+        AddMock(context.Services);
     }
+
+    private void AddMock(IServiceCollection serviceCollection)
+    {
+        
+    }
+    
 }

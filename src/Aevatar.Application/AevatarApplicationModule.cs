@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using Aevatar.Account;
 using Aevatar.Application.Grains;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
@@ -19,6 +20,8 @@ using Volo.Abp.Dapr;
 using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
 using Volo.Abp.PermissionManagement;
+using Volo.Abp.EventBus;
+using Volo.Abp.VirtualFileSystem;
 
 namespace Aevatar;
 
@@ -34,7 +37,8 @@ namespace Aevatar;
     typeof(AevatarCQRSModule),
     typeof(AevatarWebhookDeployModule),
     typeof(AevatarKubernetesModule),
-    typeof(AbpAutoMapperModule)
+    typeof(AbpAutoMapperModule),
+    typeof(AbpEventBusModule)
 )]
 public class AevatarApplicationModule : AbpModule
 {
@@ -43,6 +47,11 @@ public class AevatarApplicationModule : AbpModule
         Configure<AbpAutoMapperOptions>(options =>
         {
             options.AddMaps<AevatarApplicationModule>();
+        });
+        
+        Configure<AbpVirtualFileSystemOptions>(options =>
+        {
+            options.FileSets.AddEmbedded<AevatarApplicationModule>();
         });
         
         var configuration = context.Services.GetConfiguration();
@@ -56,5 +65,7 @@ public class AevatarApplicationModule : AbpModule
         context.Services.AddSingleton<INotificationHandlerFactory, NotificationProcessorFactory>();
         Configure<HostDeployOptions>(configuration.GetSection("HostDeploy"));
         context.Services.Configure<HostOptions>(configuration.GetSection("Host"));
+        
+        Configure<AccountOptions>(configuration.GetSection("Account"));
     }
 }
