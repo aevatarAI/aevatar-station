@@ -20,4 +20,10 @@
     <PackageReference Include="Volo.Abp.TenantManagement.MongoDB"  />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="Aevatar.MongoDB">
+      <HintPath>..\Aevatar.Silo\bin\Debug\net9.0\Aevatar.MongoDB.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>
