@@ -13,15 +13,15 @@ using Volo.Abp.MongoDB;
 
 namespace Aevatar.ApiKeys;
 
-public class ApiKeyMongoRepository : MongoDbRepository<AevatarMongoDbContext, ApiKeyInfo, Guid>, IApiKeysRepository,
+public class ProjectAppIdMongoRepository : MongoDbRepository<AevatarMongoDbContext, ProjectAppIdInfo, Guid>, IProjectAppIdRepository,
     ITransientDependency
 {
-    public ApiKeyMongoRepository(IMongoDbContextProvider<AevatarMongoDbContext> dbContextProvider) : base(
+    public ProjectAppIdMongoRepository(IMongoDbContextProvider<AevatarMongoDbContext> dbContextProvider) : base(
         dbContextProvider)
     {
     }
 
-    public async Task<PagedResultDto<ApiKeyInfo>> GetProjectApiKeys(APIKeyPagedRequestDto requestDto)
+    public async Task<PagedResultDto<ProjectAppIdInfo>> GetProjectAppIds(APIKeyPagedRequestDto requestDto)
     {
         var queryable = await GetMongoQueryableAsync();
         if (requestDto.ProjectId != Guid.Empty)
@@ -29,7 +29,7 @@ public class ApiKeyMongoRepository : MongoDbRepository<AevatarMongoDbContext, Ap
             queryable = queryable.Where(w => w.ProjectId == requestDto.ProjectId);
         }
 
-        var result = new List<ApiKeyInfo>();
+        var result = new List<ProjectAppIdInfo>();
         var queryResponse = await queryable
             .OrderByDescending(o => o.CreationTime)
             .Take(requestDto.MaxResultCount)
@@ -41,17 +41,17 @@ public class ApiKeyMongoRepository : MongoDbRepository<AevatarMongoDbContext, Ap
             result = queryResponse;
         }
         
-        return new PagedResultDto<ApiKeyInfo>(result.Count, result.AsReadOnly());
+        return new PagedResultDto<ProjectAppIdInfo>(result.Count, result.AsReadOnly());
     }
 
-    public async Task<bool> CheckProjectApiKeyNameExist(Guid projectId, string keyName)
+    public async Task<bool> CheckProjectAppNameExist(Guid projectId, string keyName)
     {
         var queryable = await GetMongoQueryableAsync();
-        var result = await queryable.FirstOrDefaultAsync(f => f.ProjectId == projectId && f.ApiKeyName == keyName);
+        var result = await queryable.FirstOrDefaultAsync(f => f.ProjectId == projectId && f.AppName == keyName);
         return result != null;
     }
 
-    public async Task<ApiKeyInfo?> GetAsync(Guid guid)
+    public async Task<ProjectAppIdInfo?> GetAsync(Guid guid)
     {
         var queryable = await GetMongoQueryableAsync();
         return await queryable.FirstOrDefaultAsync(f => f.Id == guid);

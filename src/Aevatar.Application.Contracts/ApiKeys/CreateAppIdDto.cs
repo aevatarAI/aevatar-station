@@ -2,8 +2,9 @@ using System;
 
 namespace Aevatar.ApiKeys;
 
-public class CreateApiKeyDto
+public class CreateAppIdDto
 {
     public Guid ProjectId { get; set; }
-    public string KeyName { get; set; }
+    public string Name { get; set; }
+    
 }

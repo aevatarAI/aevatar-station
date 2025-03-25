@@ -40,7 +40,7 @@ public class AevatarMongoDbContext : AbpMongoDbContext
         //    //...
         //});
         modelBuilder.Entity<IdentityUserExtension>(b => { b.CollectionName = "IdentityUserExtensions"; });
-        modelBuilder.Entity<ApiKeyInfo>(b => b.CollectionName = "ApiKeyInfoCollection");
+        modelBuilder.Entity<ProjectAppIdInfo>(b => b.CollectionName = "ProjectAppInfoCollection");
         modelBuilder.Entity<NotificationInfo>(b => b.CollectionName = "NotificationInfoCollection");
     }
 }

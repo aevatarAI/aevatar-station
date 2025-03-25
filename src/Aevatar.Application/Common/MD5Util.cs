@@ -12,7 +12,7 @@ public class MD5Util
         {
             byte[] hash = md5.ComputeHash(Encoding.UTF8.GetBytes(input));
 
-            return Convert.ToBase64String(hash);
+            return Convert.ToHexString(hash);
         }
     }
 }
