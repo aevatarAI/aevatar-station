@@ -41,8 +41,8 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
             var idToken = context.Request.GetParameter("id_token")?.ToString();
             var source = context.Request.GetParameter("source")?.ToString();
             
-            _logger.LogInformation("AppleGrantHandler.HandleAsync source: {source} idToken: {idToken}", 
-                source, idToken);
+            _logger.LogInformation("AppleGrantHandler.HandleAsync source: {source} idToken: {idToken} code: {code}", 
+                source, idToken, code);
             
             var aud = source == "ios" ? _configuration["Apple:NativeClientId"] : _configuration["Apple:WebClientId"];
             if (string.IsNullOrEmpty(idToken))
@@ -201,7 +201,7 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
     {
         return new ForbidResult(
             new[] { OpenIddictServerAspNetCoreDefaults.AuthenticationScheme },
-            properties: new AuthenticationProperties(new Dictionary<string, string>
+            properties: new AuthenticationProperties(new Dictionary<string, string?>
             {
                 [OpenIddictServerAspNetCoreConstants.Properties.Error] =
                     OpenIddictConstants.Errors.InvalidRequest,

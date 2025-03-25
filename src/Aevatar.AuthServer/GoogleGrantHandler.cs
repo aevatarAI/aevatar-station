@@ -30,12 +30,14 @@ public class GoogleGrantHandler : ITokenExtensionGrant
     public async Task<IActionResult> HandleAsync(ExtensionGrantContext context)
     {
         var idToken = context.Request.GetParameter("id_token").ToString();
-        _logger.LogInformation("GoogleGrantHandler.HandleAsync: idToken: {idToken}", idToken);
+        var source = context.Request.GetParameter("source")?.ToString();
+        
+        _logger.LogInformation("GoogleGrantHandler.HandleAsync source: {source} idToken: {idToken}", source, idToken);
         if (string.IsNullOrEmpty(idToken))
         {
             return new ForbidResult(
                 OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                new AuthenticationProperties(new Dictionary<string, string>
+                new AuthenticationProperties(new Dictionary<string, string?>
                 {
                     [OpenIddictServerAspNetCoreConstants.Properties.Error] = 
                         OpenIddictConstants.Errors.InvalidRequest,
@@ -43,8 +45,37 @@ public class GoogleGrantHandler : ITokenExtensionGrant
                         "Missing id_token parameter"
                 }));
         }
+
+        string clientId;
+        if (source == "ios")
+        {
+            clientId = _configuration["Google:IOSClientId"];
+        }
+        else if (source == "android")
+        {
+            clientId = _configuration["Google:AndroidClientId"];
+        }
+        else
+        {
+            clientId = _configuration["Google:WebClientId"];
+        }
         
-        var clientId = _configuration["Google:ClientId"];
+        if (string.IsNullOrEmpty(clientId))
+        {
+            _logger.LogInformation("GoogleGrantHandler.HandleAsync: clientId not found");
+            return new ForbidResult(
+                OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                new AuthenticationProperties(new Dictionary<string, string?>
+                    {
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] =
+                            OpenIddictConstants.Errors.InvalidRequest,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                            "client Id not found"
+                    }
+                )
+            );
+        }
+        
         _logger.LogInformation("GoogleGrantHandler.HandleAsync: clientId: {clientId}", clientId);
         
         var payload = await ValidateGoogleTokenAsync(idToken);
@@ -54,7 +85,7 @@ public class GoogleGrantHandler : ITokenExtensionGrant
         {
             return new ForbidResult(
                 OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                new AuthenticationProperties(new Dictionary<string, string>
+                new AuthenticationProperties(new Dictionary<string, string?>
                 {
                     [OpenIddictServerAspNetCoreConstants.Properties.Error] = 
                         OpenIddictConstants.Errors.InvalidGrant,
