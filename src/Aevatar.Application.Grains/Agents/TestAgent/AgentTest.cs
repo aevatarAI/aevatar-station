@@ -3,7 +3,6 @@ using System.ComponentModel.DataAnnotations;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AI.Options;
-using Json.Schema.Generation;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
@@ -14,10 +13,9 @@ namespace Aevatar.Application.Grains.Agents.TestAgent;
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 public class AgentTest : GAgentBase<FrontAgentState, FrontTestEvent, EventBase>, IFrontAgentTest
 {
-    
     private readonly ILogger<AgentTest> _logger;
 
-    public AgentTest(ILogger<AgentTest> logger) 
+    public AgentTest(ILogger<AgentTest> logger)
     {
         _logger = logger;
     }
@@ -29,31 +27,19 @@ public class AgentTest : GAgentBase<FrontAgentState, FrontTestEvent, EventBase>,
 
     public async Task PublishEventAsync(FrontTestCreateEvent @event)
     {
-        _logger.LogInformation("FrontTestCreateEvent: {name}", @event.PromptTemplate);
+        _logger.LogInformation("FrontTestCreateEvent: {name}", @event.Name);
         RaiseEvent(new FrontTestCreateSEvent
         {
             Id = Guid.NewGuid(),
-            LLM = new LLMConfig
-            {
-                ProviderEnum = LLMProviderEnum.Azure,
-                ModelIdEnum = ModelIdEnum.OpenAI,
-                ModelName = "Test",
-                Endpoint = "Http://localhost",
-                ApiKey = "qwe"
-            },
-            PromptTemplate = @event.PromptTemplate,
-            IfUpsertKnowledge = true,
-            InputTokenUsage = 10.9,
-            OutTokenUsage = 10,
-            TotalTokenUsage = 10,
-            Time = DateTime.Today,
+            Name = @event.Name,
         });
         await ConfirmEvents();
     }
+
     [EventHandler]
     public async Task HandleFrontTestCreateEvent(FrontTestCreateEvent @event)
     {
-        _logger.LogInformation( "FrontTestCreateEvent: {name}", @event.Name);
+        _logger.LogInformation("FrontTestCreateEvent: {name}", @event.Name);
         RaiseEvent(new FrontTestCreateSEvent
         {
             Id = Guid.NewGuid(),
@@ -84,7 +70,6 @@ public class FrontAgentState : StateBase
 {
     [Id(0)] public Guid Id { get; set; }
     [Id(1)] [Required] public string Name { get; set; }
-   
 }
 
 [GenerateSerializer]
@@ -103,8 +88,6 @@ public class FrontTestCreateEvent : EventBase
 {
     [Id(0)] [Required] public string Name { get; set; }
 }
-
-
 
 [GenerateSerializer]
 public class FrontInitConfig : ConfigurationBase
