@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Aevatar.ApiKeys;
 using Aevatar.Organizations;
 using Aevatar.Permissions;
+using Aevatar.Projects;
 using Aevatar.Service;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
@@ -23,18 +24,23 @@ public class ApiKeyController : AevatarController
     private readonly IProjectApiKeyService _apiKeyService;
     private readonly IdentityUserManager _identityUserManager;
     private readonly IOrganizationPermissionChecker _organizationPermission;
+    private readonly IProjectService _projectService;
 
-    public ApiKeyController(IProjectApiKeyService apiKeyService, IdentityUserManager identityUserManager, IOrganizationPermissionChecker organizationPermission)
+    public ApiKeyController(IProjectApiKeyService apiKeyService, IdentityUserManager identityUserManager, IOrganizationPermissionChecker organizationPermission, IProjectService projectService)
     {
         _apiKeyService = apiKeyService;
         _identityUserManager = identityUserManager;
         _organizationPermission = organizationPermission;
+        _projectService = projectService;
     }
 
 
     [HttpPost]
     public async Task CreateApiKey(CreateApiKeyDto createDto)
     {
+        // check projectId
+        await _projectService.GetAsync(createDto.ProjectId);
+        
         await _organizationPermission.AuthenticateAsync(createDto.ProjectId, AevatarPermissions.ApiKeys.Create);
         await _apiKeyService.CreateAsync(createDto.ProjectId, createDto.KeyName, CurrentUser.Id);
     }
