@@ -1,4 +1,6 @@
-﻿using Aevatar.User;
+﻿using Aevatar.ApiKey;
+using Aevatar.Notification;
+using Aevatar.User;
 using MongoDB.Driver;
 using Volo.Abp.AuditLogging.MongoDB;
 using Volo.Abp.BackgroundJobs.MongoDB;
@@ -32,13 +34,13 @@ public class AevatarMongoDbContext : AbpMongoDbContext
         modelBuilder.ConfigureIdentity();
         modelBuilder.ConfigureOpenIddict();
         modelBuilder.ConfigureFeatureManagement();
+
         //modelBuilder.Entity<YourEntity>(b =>
         //{
         //    //...
         //});
-        modelBuilder.Entity<IdentityUserExtension>(b =>
-        {
-            b.CollectionName = "IdentityUserExtensions"; 
-        });
+        modelBuilder.Entity<IdentityUserExtension>(b => { b.CollectionName = "IdentityUserExtensions"; });
+        modelBuilder.Entity<ApiKeyInfo>(b => b.CollectionName = "ApiKeyInfoCollection");
+        modelBuilder.Entity<NotificationInfo>(b => b.CollectionName = "NotificationInfoCollection");
     }
 }
