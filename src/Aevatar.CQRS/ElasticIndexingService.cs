@@ -425,7 +425,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
     }
 
 
-    public async Task<Tuple<long, string>> GetSortDataDocumentsAsync(string indexName,
+    public async Task<Tuple<long, string>?> GetSortDataDocumentsAsync(string indexName,
         Func<QueryContainerDescriptor<dynamic>, QueryContainer> query, int skip = 0, int limit = 1000)
     {
         try
