@@ -1,251 +1,311 @@
 ﻿using System.Diagnostics;
+using System.Net.Http.Headers;
+using Newtonsoft.Json;
 
+public class Program
+{
+    public async static Task<int> Main(string[] args)
+    {
 // Set required environment variables before creating the builder
-Environment.SetEnvironmentVariable("DOTNET_DASHBOARD_OTLP_ENDPOINT_URL", "http://localhost:14317");
-Environment.SetEnvironmentVariable("DOTNET_DASHBOARD_OTLP_HTTP_ENDPOINT_URL", "http://localhost:14318");
-Environment.SetEnvironmentVariable("ASPIRE_ALLOW_UNSECURED_TRANSPORT", "true");
+        Environment.SetEnvironmentVariable("DOTNET_DASHBOARD_OTLP_ENDPOINT_URL", "http://localhost:14317");
+        Environment.SetEnvironmentVariable("DOTNET_DASHBOARD_OTLP_HTTP_ENDPOINT_URL", "http://localhost:14318");
+        Environment.SetEnvironmentVariable("ASPIRE_ALLOW_UNSECURED_TRANSPORT", "true");
 
-var builder = DistributedApplication.CreateBuilder(args);
+// docker ps , get local port
+        var dockerMongoPort = 62357;
+        var dockerRedisPort = 53966;
+        var dockerEsPort = 63984;
+        var dockerQrPort = 55132;
+        var dockerKafkaPort = 58084;
+
+        var mongodbConnections =
+            $"mongodb://admin:123456@localhost:{dockerMongoPort}/AevatarDb?authSource=admin&authMechanism=SCRAM-SHA-256";
+        var mongoDBClient = $"mongodb://admin:123456@localhost:{dockerMongoPort}?authSource=admin";
+
+        var esUrl = $"[\"http://elastic:123456@localhost:{dockerEsPort}\"]";
+        var qrUrl = $"http://127.0.0.1:{dockerQrPort}";
+        var kfakaUrl = $"127.0.0.1:{dockerKafkaPort}";
+        var redisUrl = $"127.0.0.1:{dockerRedisPort}";
+
+        var builder = DistributedApplication.CreateBuilder(args);
 
 // Add infrastructure resources
-var mongoUserName = builder
-    .AddParameter("MONGOUSERNAME", "admin");
-var mongoPassword = builder
-    .AddParameter("MONGOPASSWORD", "123456");
+        var mongoUserName = builder
+            .AddParameter("MONGOUSERNAME", "admin");
+        var mongoPassword = builder
+            .AddParameter("MONGOPASSWORD", "123456");
 
-var mongodb = builder.AddMongoDB("mongodb", userName:mongoUserName, password:mongoPassword)
-    .WithEnvironment("MONGO_INITDB_DATABASE", "AevatarDb"); // Ensure the default database exists
-mongodb.WithContainerName("mongodb");
-mongodb.WithLifetime(ContainerLifetime.Persistent);
+        var mongodb = builder.AddMongoDB("mongodb", userName: mongoUserName, password: mongoPassword)
+            .WithEnvironment("MONGO_INITDB_DATABASE", "AevatarDb"); // Ensure the default database exists
+        mongodb.WithContainerName("mongodb");
+        mongodb.WithLifetime(ContainerLifetime.Persistent);
 
-var redis = builder.AddRedis("redis");
-redis.WithContainerName("redis");
-redis.WithLifetime(ContainerLifetime.Persistent);
+        var redis = builder.AddRedis("redis");
+        redis.WithContainerName("redis");
+        redis.WithLifetime(ContainerLifetime.Persistent);
 
-var elasticsearchPassword = builder
-    .AddParameter("ESPASSWORD", "123456");
-var elasticsearch = builder.AddElasticsearch("elasticsearch", password: elasticsearchPassword);
-elasticsearch.WithContainerName("elasticsearch");
-elasticsearch.WithLifetime(ContainerLifetime.Persistent);
-var kafka = builder.AddKafka("kafka");
-kafka.WithContainerName("kafka");
-kafka.WithLifetime(ContainerLifetime.Persistent);
+        var elasticsearchPassword = builder
+            .AddParameter("ESPASSWORD", "123456");
+        var elasticsearch = builder.AddElasticsearch("elasticsearch", password: elasticsearchPassword);
+        elasticsearch.WithContainerName("elasticsearch");
+        elasticsearch.WithLifetime(ContainerLifetime.Persistent);
+        var kafka = builder.AddKafka("kafka");
+        kafka.WithContainerName("kafka");
+        kafka.WithLifetime(ContainerLifetime.Persistent);
 
 // Create data directory if it doesn't exist
-Directory.CreateDirectory(Path.Combine(Environment.CurrentDirectory, "data", "qdrant"));
+        Directory.CreateDirectory(Path.Combine(Environment.CurrentDirectory, "data", "qdrant"));
 
 // Note: Qdrant doesn't have an Aspire provider yet, so we'll use a container directly
-var qdrant = builder.AddContainer("qdrant", "qdrant/qdrant:latest")
-    .WithHttpEndpoint(port: 6333, name: "qdrant-http", targetPort: 6333)
-    .WithEndpoint(port: 6334, name: "grpc", targetPort: 6334)
-    // Use proper volume mounting for containers
-    .WithBindMount(Path.Combine(Environment.CurrentDirectory, "data", "qdrant"), "/qdrant/storage");
-qdrant.WithContainerName("qdrant");
-qdrant.WithLifetime(ContainerLifetime.Persistent);
+        var qdrant = builder.AddContainer("qdrant", "qdrant/qdrant:latest")
+            .WithHttpEndpoint(port: 6333, name: "qdrant-http", targetPort: 6333)
+            .WithEndpoint(port: 6334, name: "grpc", targetPort: 6334)
+            // Use proper volume mounting for containers
+            .WithBindMount(Path.Combine(Environment.CurrentDirectory, "data", "qdrant"), "/qdrant/storage");
+        qdrant.WithContainerName("qdrant");
+        qdrant.WithLifetime(ContainerLifetime.Persistent);
 
 // Create a dependency group for all infrastructure resources
 // This ensures all these resources are fully started before any application components
-var infrastructureDependencies = new[] { mongodb, redis, elasticsearch, kafka, qdrant };
+        var infrastructureDependencies = new[] {mongodb, redis, elasticsearch, kafka, qdrant};
 
 // Add Aevatar.Silo (Orleans) project with its dependencies
 // Orleans requires specific configuration for clustering and streams
-var silo = builder.AddProject("silo", "../Aevatar.Silo/Aevatar.Silo.csproj")
-    .WithReference(mongodb)
-    .WithReference(elasticsearch)
-    .WithReference(kafka)
-    // Wait for dependencies
-    .WaitFor(mongodb)
-    .WaitFor(elasticsearch)
-    .WaitFor(kafka)
-    .WaitFor(qdrant)
-    // Configure the Orleans silo properly
-    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
-    // MongoDB connection string
-    .WithEnvironment("MongoDB__ConnectionString", "{mongodb.connectionString}")
-    .WithEnvironment("Elasticsearch__Url", "http://{elasticsearch.bindings.es.host}:{elasticsearch.bindings.es.port}")
-    
-    // Orleans Clustering configuration
-    .WithEnvironment("AevatarOrleans__ClusterId", "AevatarSiloCluster")
-    .WithEnvironment("AevatarOrleans__ServiceId", "AevatarBasicService")
-    .WithEnvironment("AevatarOrleans__AdvertisedIP", "127.0.0.1")
-    .WithEnvironment("AevatarOrleans__GatewayPort", "30000")
-    .WithEnvironment("AevatarOrleans__SiloPort", "11111")
-    .WithEnvironment("AevatarOrleans__MongoDBClient", "{mongodb.connectionString}")
-    .WithEnvironment("AevatarOrleans__DataBase", "AevatarDb")
+        var silo = builder.AddProject("silo", "../Aevatar.Silo/Aevatar.Silo.csproj")
+            .WithReference(mongodb)
+            .WithReference(elasticsearch)
+            .WithReference(kafka)
+            // Wait for dependencies
+            .WaitFor(mongodb)
+            .WaitFor(elasticsearch)
+            .WaitFor(kafka)
+            .WaitFor(qdrant)
+            // Configure the Orleans silo properly
+            .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
+            // MongoDB connection string
+            .WithEnvironment("ConnectionStrings__Default", mongodbConnections)
+            // .WithEnvironment("Elasticsearch__Url", esUrl)
+            //
+            // Orleans Clustering configuration
+            .WithEnvironment("Orleans__ClusterId", "AevatarSiloCluster")
+            .WithEnvironment("Orleans__ServiceId", "AevatarBasicService")
+            .WithEnvironment("Orleans__AdvertisedIP", "127.0.0.1")
+            .WithEnvironment("Orleans__GatewayPort", "30000")
+            .WithEnvironment("Orleans__SiloPort", "11111")
+            .WithEnvironment("Orleans__MongoDBClient", mongoDBClient)
+            .WithEnvironment("Orleans__DataBase", "AevatarDb")
+            .WithEnvironment("Orleans__DashboardPort", "8080")
 
-    // MongoDB provider configuration - Properly configured to work with Orleans
-    .WithEnvironment("AevatarOrleans__Providers__Clustering", "MongoDB")
-    .WithEnvironment("AevatarOrleans__Providers__Storage", "MongoDB")
-    .WithEnvironment("AevatarOrleans__Providers__Default", "MongoDB")
-    .WithEnvironment("AevatarOrleans__Clustering__Provider", "MongoDB")
-    .WithEnvironment("AevatarOrleans__Clustering__ConnectionString", "{mongodb.connectionString}")
-    .WithEnvironment("AevatarOrleans__Clustering__DatabaseName", "OrleansCluster")
-    .WithEnvironment("AevatarOrleans__Storage__Provider", "MongoDB")
-    .WithEnvironment("AevatarOrleans__Storage__Default__Provider", "MongoDB")
-    .WithEnvironment("AevatarOrleans__Storage__ConnectionString", "{mongodb.connectionString}")
-    .WithEnvironment("AevatarOrleans__Storage__DatabaseName", "OrleansStorage")
-    .WithEnvironment("AevatarOrleans__StreamProvider__Kafka__BootstrapServers", "{kafka.bindings.kafka.host}:{kafka.bindings.kafka.port}")
-    .WithEnvironment("Qdrant__Endpoint", "http://{qdrant.bindings.http.host}:{qdrant.bindings.http.port}")
-    .WithEnvironment("AevatarOrleans__Stream__Provider", "Kafka")
-    .WithEnvironment("AevatarOrleans__EventSourcing__Provider", "MongoDB")
-    
-    // Configure Orleans endpoints - both silo and gateway are needed
-    .WithEndpoint(port: 11111, name: "silo")
-    .WithEndpoint(port: 30000, name: "gateway");
+            // MongoDB provider configuration - Properly configured to work with Orleans
+            .WithEnvironment("Qdrant__Endpoint", qrUrl)
+            // .WithEnvironment("OrleansStream__Provider", "Kafka")
+            // .WithEnvironment("OrleansStream__Broker", kfakaUrl)
+            .WithEnvironment("OrleansEventSourcing__Provider", "MongoDB");
+
 
 // Add Aevatar.Developer.Silo (Orleans) project with its dependencies
 // Orleans requires specific configuration for clustering and streams
-var developerSilo = builder.AddProject("developerSilo", "../Aevatar.Silo/Aevatar.Silo.csproj")
-    .WithReference(mongodb)
-    .WithReference(elasticsearch)
-    .WithReference(kafka)
-    // Wait for dependencies
-    .WaitFor(mongodb)
-    .WaitFor(elasticsearch)
-    .WaitFor(kafka)
-    .WaitFor(qdrant)
-    // Configure the Orleans silo properly
-    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
-    // MongoDB connection string
-    .WithEnvironment("MongoDB__ConnectionString", "{mongodb.connectionString}")
-    .WithEnvironment("Elasticsearch__Url", "http://{elasticsearch.bindings.es.host}:{elasticsearch.bindings.es.port}")
-    
-    // Orleans Clustering configuration
-    .WithEnvironment("AevatarOrleans__ClusterId", "AevatarSiloCluster1")
-    .WithEnvironment("AevatarOrleans__ServiceId", "AevatarBasicService")
-    .WithEnvironment("AevatarOrleans__AdvertisedIP", "127.0.0.1")
-    .WithEnvironment("AevatarOrleans__GatewayPort", "40000")
-    .WithEnvironment("AevatarOrleans__SiloPort", "22222")
-    .WithEnvironment("AevatarOrleans__MongoDBClient", "{mongodb.connectionString}")
-    .WithEnvironment("AevatarOrleans__DataBase", "AevatarDb")
-    .WithEnvironment("AevatarOrleans__DashboardPort", "8081")
-    
-    // MongoDB provider configuration - Properly configured to work with Orleans
-    .WithEnvironment("AevatarOrleans__Providers__Clustering", "MongoDB")
-    .WithEnvironment("AevatarOrleans__Providers__Storage", "MongoDB")
-    .WithEnvironment("AevatarOrleans__Providers__Default", "MongoDB")
-    .WithEnvironment("AevatarOrleans__Clustering__Provider", "MongoDB")
-    .WithEnvironment("AevatarOrleans__Clustering__ConnectionString", "{mongodb.connectionString}")
-    .WithEnvironment("AevatarOrleans__Clustering__DatabaseName", "OrleansCluster")
-    .WithEnvironment("AevatarOrleans__Storage__Provider", "MongoDB")
-    .WithEnvironment("AevatarOrleans__Storage__Default__Provider", "MongoDB")
-    .WithEnvironment("AevatarOrleans__Storage__ConnectionString", "{mongodb.connectionString}")
-    .WithEnvironment("AevatarOrleans__Storage__DatabaseName", "OrleansStorage")
-    .WithEnvironment("AevatarOrleans__StreamProvider__Kafka__BootstrapServers", "{kafka.bindings.kafka.host}:{kafka.bindings.kafka.port}")
-    .WithEnvironment("Qdrant__Endpoint", "http://{qdrant.bindings.http.host}:{qdrant.bindings.http.port}")
-    .WithEnvironment("AevatarOrleans__Stream__Provider", "Kafka")
-    .WithEnvironment("AevatarOrleans__EventSourcing__Provider", "MongoDB")
-    
-    // Configure Orleans endpoints - both silo and gateway are needed
-    .WithEndpoint(port: 22222, name: "silo")
-    .WithEndpoint(port: 40000, name: "gateway");
+        var developerSilo = builder.AddProject("developerSilo", "../Aevatar.Silo/Aevatar.Silo.csproj")
+            .WithReference(mongodb)
+            .WithReference(elasticsearch)
+            .WithReference(kafka)
+            // Wait for dependencies
+            .WaitFor(mongodb)
+            .WaitFor(elasticsearch)
+            .WaitFor(kafka)
+            .WaitFor(qdrant)
+            // Configure the Orleans silo properly
+            .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
+            // MongoDB connection string
+            .WithEnvironment("ConnectionStrings__Default", mongodbConnections)
+            .WithEnvironment("Elasticsearch__Url", esUrl)
+
+            // Orleans Clustering configuration
+            .WithEnvironment("Orleans__ClusterId", "AevatarSiloClusterDeveloper")
+            .WithEnvironment("Orleans__ServiceId", "AevatarBasicService")
+            .WithEnvironment("Orleans__AdvertisedIP", "127.0.0.1")
+            .WithEnvironment("Orleans__GatewayPort", "40000")
+            .WithEnvironment("Orleans__SiloPort", "22222")
+            .WithEnvironment("Orleans__MongoDBClient", mongoDBClient)
+            .WithEnvironment("Orleans__DataBase", "AevatarDbDeveloper")
+            .WithEnvironment("Orleans__DashboardPort", "8081")
+
+            // MongoDB provider configuration - Properly configured to work with Orleans
+            .WithEnvironment("Qdrant__Endpoint", qrUrl)
+            // .WithEnvironment("OrleansStream__Provider", "Kafka")
+            // .WithEnvironment("OrleansStream__Broker", kfakaUrl)
+            .WithEnvironment("OrleansEventSourcing__Provider", "MongoDB");
 
 // Add Aevatar.AuthServer project with its dependencies
-var authServer = builder.AddProject("authserver", "../Aevatar.AuthServer/Aevatar.AuthServer.csproj")
-    .WithReference(mongodb)
-    .WithReference(redis)
-    // Wait for all infrastructure components to be ready
-    .WaitFor(mongodb)
-    .WaitFor(redis)
-    // Setting environment variables individually 
-    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
-    .WithEnvironment("MongoDB__ConnectionString", "{mongodb.connectionString}")
-    .WithEnvironment("Redis__ConnectionString", "{redis.connectionString}")
-    .WithHttpEndpoint(port: 7001, name: "authserver-http");
+        var authServer = builder.AddProject("authserver", "../Aevatar.AuthServer/Aevatar.AuthServer.csproj")
+            .WithReference(mongodb)
+            .WithReference(redis)
+            // Wait for all infrastructure components to be ready
+            .WaitFor(mongodb)
+            .WaitFor(redis)
+            // Setting environment variables individually 
+            .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
+            .WithEnvironment("ConnectionStrings__Default", mongodbConnections)
+            .WithEnvironment("Redis__Config", redisUrl)
+            .WithEnvironment("AuthServer__IssuerUri", "http://localhost:7001")
+            .WithHttpEndpoint(port: 7001, name: "authserver-http");
 
 // Add Aevatar.HttpApi.Host project with its dependencies
-var httpApiHost = builder.AddProject("httpapi", "../Aevatar.HttpApi.Host/Aevatar.HttpApi.Host.csproj")
-    .WithReference(mongodb)
-    .WithReference(elasticsearch)
-    .WithReference(authServer)
-    // Wait for dependencies
-    .WaitFor(mongodb)
-    .WaitFor(elasticsearch)
-    .WaitFor(authServer)
-    // Setting environment variables individually
-    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
-    .WithEnvironment("MongoDB__ConnectionString", "{mongodb.connectionString}")
-    .WithEnvironment("Elasticsearch__Url", "http://{elasticsearch.bindings.es.host}:{elasticsearch.bindings.es.port}")
-    .WithEnvironment("AuthServer__Authority", "{authserver.bindings.https.url}")
-    // Configure Swagger as default page with auto-launch
-    .WithEnvironment("SwaggerUI__RoutePrefix", "")
-    .WithEnvironment("SwaggerUI__DefaultModelsExpandDepth", "-1")
-    .WithHttpEndpoint(port: 7002, name: "httpapi-http");
+        var httpApiHost = builder.AddProject("httpapi", "../Aevatar.HttpApi.Host/Aevatar.HttpApi.Host.csproj")
+            .WithReference(mongodb)
+            .WithReference(elasticsearch)
+            .WithReference(authServer)
+            .WithReference(silo)
+            // Wait for dependencies
+            .WaitFor(mongodb)
+            .WaitFor(elasticsearch)
+            .WaitFor(authServer)
+            .WaitFor(silo)
+            // Setting environment variables individually
+            .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
+            .WithEnvironment("ConnectionStrings__Default", mongodbConnections)
+            .WithEnvironment("Orleans__ClusterId", "AevatarSiloCluster")
+            .WithEnvironment("Orleans__MongoDBClient", mongoDBClient)
+            // .WithEnvironment("Elasticsearch__Url", esUrl)
+            .WithEnvironment("AuthServer__Authority", "http://localhost:7001")
+            // Configure Swagger as default page with auto-launch
+            .WithEnvironment("SwaggerUI__RoutePrefix", "")
+            .WithEnvironment("SwaggerUI__DefaultModelsExpandDepth", "-1")
+            .WithHttpEndpoint(port: 7002, name: "httpapi-http");
 
 // Add Aevatar.Developer.Host project with its dependencies
-var developerHost = builder.AddProject("developerhost", "../Aevatar.Developer.Host/Aevatar.Developer.Host.csproj")
-    .WithReference(mongodb)
-    .WithReference(elasticsearch)
-    .WithReference(authServer)
-    // Wait for dependencies
-    .WaitFor(mongodb)
-    .WaitFor(elasticsearch)
-    .WaitFor(authServer)
-    // Setting environment variables individually
-    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
-    .WithEnvironment("MongoDB__ConnectionString", "{mongodb.connectionString}")
-    .WithEnvironment("Elasticsearch__Url", "http://{elasticsearch.bindings.es.host}:{elasticsearch.bindings.es.port}")
-    .WithEnvironment("AuthServer__Authority", "{authserver.bindings.https.url}")
-    // Configure Swagger as default page with auto-launch
-    .WithEnvironment("SwaggerUI__RoutePrefix", "")
-    .WithEnvironment("SwaggerUI__DefaultModelsExpandDepth", "-1");
-    // .WithHttpEndpoint(port: 7003, name: "developerhost-http");
+        var developerHost = builder
+            .AddProject("developerhost", "../Aevatar.Developer.Host/Aevatar.Developer.Host.csproj")
+            .WithReference(mongodb)
+            .WithReference(elasticsearch)
+            .WithReference(authServer)
+            .WithReference(developerSilo)
+            // Wait for dependencies
+            .WaitFor(mongodb)
+            .WaitFor(elasticsearch)
+            .WaitFor(authServer)
+            .WaitFor(developerSilo)
+            // Setting environment variables individually
+            .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
+            .WithEnvironment("ConnectionStrings__Default", mongodbConnections)
+            .WithEnvironment("Orleans__ClusterId", "AevatarSiloClusterDeveloper")
+            .WithEnvironment("Orleans__MongoDBClient", mongoDBClient)
+            .WithEnvironment("Orleans__DataBase", "AevatarDbDeveloper")
+            .WithEnvironment("Elasticsearch__Url", esUrl)
+            .WithEnvironment("AuthServer__Authority", "http://localhost:7001")
+            // Configure Swagger as default page with auto-launch
+            .WithEnvironment("SwaggerUI__RoutePrefix", "")
+            .WithEnvironment("SwaggerUI__DefaultModelsExpandDepth", "-1")
+            .WithHttpEndpoint(port: 7003, name: "developerhost-http");
 
 // Add Aevatar.Worker project with its dependencies
-var worker = builder.AddProject("worker", "../Aevatar.Worker/Aevatar.Worker.csproj")
-    .WithReference(mongodb)
-    .WaitFor(mongodb)
-    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
-    .WithEnvironment("MongoDB__ConnectionString", "{mongodb.connectionString}");
+        var worker = builder.AddProject("worker", "../Aevatar.Worker/Aevatar.Worker.csproj")
+            .WithReference(mongodb)
+            .WithReference(silo)
+            .WaitFor(mongodb)
+            .WaitFor(silo)
+            .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
+            .WithEnvironment("ConnectionStrings__Default", mongodbConnections)
+            .WithEnvironment("Orleans__ClusterId", "AevatarSiloCluster")
+            .WithEnvironment("Orleans__MongoDBClient", mongoDBClient);
 
-try
-{
-    // Build the application
-    var app = builder.Build();
-    
-    // Start infrastructure first
-    Console.WriteLine("Starting infrastructure components...");
-    // The infrastructure will start automatically due to the WaitFor dependencies
-    
-    // Give some time for infrastructure to initialize properly
-    Console.WriteLine("Waiting for infrastructure to initialize completely...");
-    Thread.Sleep(10000); // 10 seconds pause to give MongoDB and other services time to fully start
-    
-    // The rest of the app will auto-start based on the WaitFor dependencies
-    Console.WriteLine("Starting application components...");
-    
-    // Start a timer to open Swagger UIs after services are ready
-    System.Timers.Timer launchTimer = new System.Timers.Timer(30000); // 20 seconds
-    launchTimer.Elapsed += (sender, e) => 
-    {
-        launchTimer.Stop();
-        try 
+        try
         {
-            Console.WriteLine("Opening Swagger UIs in browser...");
-            var psi = new ProcessStartInfo
+            // Build the application
+            var app = builder.Build();
+
+            // Start infrastructure first
+            Console.WriteLine("Starting infrastructure components...");
+            // The infrastructure will start automatically due to the WaitFor dependencies
+
+            // Give some time for infrastructure to initialize properly
+            Console.WriteLine("Waiting for infrastructure to initialize completely...");
+            Thread.Sleep(10000); // 10 seconds pause to give MongoDB and other services time to fully start
+
+            // The rest of the app will auto-start based on the WaitFor dependencies
+            Console.WriteLine("Starting application components...");
+
+            // Start a timer to open Swagger UIs after services are ready
+            System.Timers.Timer launchTimer = new System.Timers.Timer(30000); // 20 seconds
+            launchTimer.Elapsed += (sender, e) =>
             {
-                FileName = "open",
-                Arguments = "http://localhost:7002",
-                UseShellExecute = true
+                launchTimer.Stop();
+                try
+                {
+                    Console.WriteLine("Opening Swagger UIs in browser...");
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = "open",
+                        Arguments = "http://localhost:7002",
+                        UseShellExecute = true
+                    };
+                    Process.Start(psi);
+
+                    psi.Arguments = "http://localhost:7003";
+                    Process.Start(psi);
+                    RegisterClientAsync();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to open browser: {ex.Message}");
+                }
             };
-            Process.Start(psi);
+            launchTimer.AutoReset = false;
+            launchTimer.Start();
             
-            psi.Arguments = "http://localhost:7003";
-            Process.Start(psi);
+            // Run the application
+            app.Run();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to open browser: {ex.Message}");
+            Console.WriteLine($"Error starting application: {ex.Message}");
+            Console.WriteLine(ex.StackTrace);
         }
-    };
-    launchTimer.AutoReset = false;
-    launchTimer.Start();
-    
-    // Run the application
-    app.Run();
-}
-catch (Exception ex)
-{
-    Console.WriteLine($"Error starting application: {ex.Message}");
-    Console.WriteLine(ex.StackTrace);
+
+        return 0;
+    }
+
+    private static async Task RegisterClientAsync()
+    {
+        var requestUrl = "http://127.0.0.1:7001/connect/token";
+        var formData = new Dictionary<string, string>
+        {
+            {"grant_type", "password"},
+            {"client_id", "AevatarAuthServer"},
+            {"username", "admin"},
+            {"password", "1q2W3e*"},
+            {"scope", "Aevatar"}
+        };
+
+        using (var client = new HttpClient())
+        {
+            var content = new FormUrlEncodedContent(formData);
+            try
+            {
+                var response = await client.PostAsync(requestUrl, content);
+                response.EnsureSuccessStatusCode();
+                var responseBody = await response.Content.ReadAsStringAsync();
+                var responseJson = JsonConvert.DeserializeObject<Dictionary<string, Object>>(responseBody);
+                Console.WriteLine($"connect/token response: {responseBody}");
+                if (responseJson.TryGetValue("access_token", out var accessToken))
+                {
+                    var registerClientUrl =
+                        "http://localhost:7002/api/users/registerClient?clientId=Aevatar001&clientSecret=123456&corsUrls=s";
+                    client.DefaultRequestHeaders.Clear();
+                    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
+                    client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
+                    client.DefaultRequestHeaders.Authorization =
+                        new AuthenticationHeaderValue("Bearer", accessToken.ToString());
+                    response = await client.PostAsync(registerClientUrl, new StringContent(String.Empty));
+                    response.EnsureSuccessStatusCode();
+                    responseBody = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"registerClient response: {responseBody}");
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.WriteLine("Request error: " + ex.Message);
+            }
+        }
+    }
 }
