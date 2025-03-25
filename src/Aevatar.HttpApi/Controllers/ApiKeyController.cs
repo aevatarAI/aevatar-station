@@ -64,14 +64,12 @@ public class ApiKeyController : AevatarController
     [HttpDelete("{guid}")]
     public async Task DeleteApiKey(Guid guid)
     {
-        await _organizationPermission.AuthenticateAsync(guid, AevatarPermissions.ApiKeys.Delete);
         await _apiKeyService.DeleteAsync(guid);
     }
 
     [HttpPut("{guid}")]
     public async Task ModifyApiKeyName(Guid guid, [FromBody] ModifyApiKeyNameDto modifyApiKeyNameDto)
     {
-        await _organizationPermission.AuthenticateAsync(guid, AevatarPermissions.ApiKeys.Edit);
         await _apiKeyService.ModifyApiKeyAsync(guid, modifyApiKeyNameDto.ApiKeyName);
     }
 }

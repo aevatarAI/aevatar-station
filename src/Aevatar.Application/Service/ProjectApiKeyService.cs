@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Aevatar.ApiKey;
 using Aevatar.ApiKeys;
 using Aevatar.Common;
+using Aevatar.Organizations;
+using Aevatar.Permissions;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
 using Volo.Abp.DependencyInjection;
@@ -15,18 +17,18 @@ public class ProjectApiKeyService : IProjectApiKeyService, ITransientDependency
 {
     private readonly IApiKeysRepository _apiKeysRepository;
     private readonly ILogger<ProjectApiKeyService> _logger;
+    private readonly IOrganizationPermissionChecker _organizationPermission;
 
-    public ProjectApiKeyService(IApiKeysRepository apiKeysRepository, ILogger<ProjectApiKeyService> logger)
+    public ProjectApiKeyService(IApiKeysRepository apiKeysRepository, ILogger<ProjectApiKeyService> logger, IOrganizationPermissionChecker organizationPermission)
     {
         _apiKeysRepository = apiKeysRepository;
         _logger = logger;
+        _organizationPermission = organizationPermission;
     }
 
 
     public async Task CreateAsync(Guid projectId, string keyName, Guid? currentUserId)
     {
-        // todo:validate create rights
-
         _logger.LogDebug($"[ProjectApiKeyService][CreateAsync] projectId:{projectId}, keyName:{keyName}");
 
         if (await _apiKeysRepository.CheckProjectApiKeyNameExist(projectId, keyName))
@@ -34,10 +36,7 @@ public class ProjectApiKeyService : IProjectApiKeyService, ITransientDependency
             throw new BusinessException(message: "key name has exist");
         }
 
-        var random = new Random();
-        var randNum = random.Next(0, 1000000000);
-        var apikeyStr = MD5Util.CalculateMD5($"{projectId.ToString()}-{keyName}-{randNum}");
-
+        var apikeyStr = MD5Util.CalculateMD5($"{projectId.ToString()}-{keyName}-{Guid.NewGuid()}");
         var apiKey = new ApiKeyInfo(Guid.NewGuid(), projectId, keyName, apikeyStr)
         {
             CreationTime = DateTime.Now,
@@ -49,14 +48,19 @@ public class ProjectApiKeyService : IProjectApiKeyService, ITransientDependency
 
     public async Task DeleteAsync(Guid apiKeyId)
     {
-        // todo:validate delete rights
+        var apikeyInfo = await _apiKeysRepository.GetAsync(apiKeyId);
+        if (apikeyInfo == null)
+        {
+            throw new UserFriendlyException("Api key not found");
+        }
+        
+        await _organizationPermission.AuthenticateAsync(apikeyInfo.ProjectId, AevatarPermissions.ApiKeys.Delete);
         _logger.LogDebug($"[ProjectApiKeyService][DeleteAsync] apiKeyId:{apiKeyId}");
         await _apiKeysRepository.HardDeleteAsync(f => f.Id == apiKeyId);
     }
 
     public async Task ModifyApiKeyAsync(Guid apiKeyId, string keyName)
     {
-        // todo:validate modify rights
         _logger.LogDebug($"[ProjectApiKeyService][ModifyApiKeyAsync] apiKeyId:{apiKeyId}, keyName:{keyName}");
 
         var apiKeyInfo = await _apiKeysRepository.GetAsync(apiKeyId);
@@ -65,6 +69,7 @@ public class ProjectApiKeyService : IProjectApiKeyService, ITransientDependency
             throw new BusinessException(message: "ApiKey not exist");
         }
 
+        await _organizationPermission.AuthenticateAsync(apiKeyInfo.ProjectId, AevatarPermissions.ApiKeys.Edit);
         if (await _apiKeysRepository.CheckProjectApiKeyNameExist(apiKeyInfo.ProjectId, keyName))
         {
             throw new BusinessException(message: "key name has exist");
