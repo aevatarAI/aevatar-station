@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.ApiKey;
 using Aevatar.ApiKeys;
+using Aevatar.APIKeys;
 using Aevatar.Common;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
+using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
@@ -78,11 +80,13 @@ public class ProjectApiKeyService : ApplicationService, IProjectApiKeyService
 
     public async Task<List<ApiKeyListResponseDto>> GetApiKeysAsync(Guid projectId)
     {
-        // todo:validate GetApiKeysAsync rights
+        // one project only have one apikey
+        APIKeyPagedRequestDto requestDto = new APIKeyPagedRequestDto()
+            { ProjectId = projectId, MaxResultCount = 10, SkipCount = 0 };
 
-        var apiKeyList = await _apiKeysRepository.GetProjectApiKeys(projectId, 10, 0);
+        var apiKeyList = await _apiKeysRepository.GetProjectApiKeys(requestDto);
         var result = new List<ApiKeyListResponseDto>();
-        foreach (var item in apiKeyList)
+        foreach (var item in apiKeyList.Items)
         {
             var creatorInfo = await _identityUserManager.GetByIdAsync((Guid)item.CreatorId!);
 
