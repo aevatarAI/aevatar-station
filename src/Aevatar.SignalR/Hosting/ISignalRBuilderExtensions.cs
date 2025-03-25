@@ -15,7 +15,8 @@ public static class ISignalRBuilderExtensions
         builder.Services.AddOptions<AevatarSignalROptions>()
             .Bind(signalRConfig)
             .ValidateDataAnnotations();
-        var prefix = signalRConfig.GetSection("TopicPrefix").Value;
+        var prefix = signalRConfig.GetSection("TopicPrefix").Value ?? builder.Services.GetConfiguration()
+            .GetSection("Aevatar").GetSection("StreamNamespace").Value;
         AevatarStreamConfig.Initialize(prefix);
         return builder;
     }
@@ -27,7 +28,8 @@ public static class ISignalRBuilderExtensions
         builder.Services.AddOptions<AevatarSignalROptions>()
             .Bind(signalRConfig)
             .ValidateDataAnnotations();
-        var prefix = signalRConfig.GetSection("TopicPrefix").Value;
+        var prefix = signalRConfig.GetSection("TopicPrefix").Value ?? builder.Services.GetConfiguration()
+            .GetSection("Aevatar").GetSection("StreamNamespace").Value;
         AevatarStreamConfig.Initialize(prefix);
         return builder;
     }

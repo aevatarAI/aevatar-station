@@ -14,7 +14,8 @@ public static class ISiloBuilderExtensions
         cfg.ConfigureBuilder?.Invoke(builder);
         var signalRConfig = builder.Configuration.GetSection("AevatarSignalR");
         builder.Services.Configure<AevatarSignalROptions>(signalRConfig);
-        var prefix = signalRConfig.GetSection("TopicPrefix").Value;
+        var prefix = signalRConfig.GetSection("TopicPrefix").Value ?? builder.Services.GetConfiguration()
+            .GetSection("Aevatar").GetSection("StreamNamespace").Value;
         AevatarStreamConfig.Initialize(prefix);
         return builder;
     }
