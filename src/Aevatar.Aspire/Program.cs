@@ -8,11 +8,28 @@ Environment.SetEnvironmentVariable("ASPIRE_ALLOW_UNSECURED_TRANSPORT", "true");
 var builder = DistributedApplication.CreateBuilder(args);
 
 // Add infrastructure resources
-var mongodb = builder.AddMongoDB("mongodb")
+var mongoUserName = builder
+    .AddParameter("MONGOUSERNAME", "admin");
+var mongoPassword = builder
+    .AddParameter("MONGOPASSWORD", "123456");
+
+var mongodb = builder.AddMongoDB("mongodb", userName:mongoUserName, password:mongoPassword)
     .WithEnvironment("MONGO_INITDB_DATABASE", "AevatarDb"); // Ensure the default database exists
+mongodb.WithContainerName("mongodb");
+mongodb.WithLifetime(ContainerLifetime.Persistent);
+
 var redis = builder.AddRedis("redis");
-var elasticsearch = builder.AddElasticsearch("elasticsearch");
+redis.WithContainerName("redis");
+redis.WithLifetime(ContainerLifetime.Persistent);
+
+var elasticsearchPassword = builder
+    .AddParameter("ESPASSWORD", "123456");
+var elasticsearch = builder.AddElasticsearch("elasticsearch", password: elasticsearchPassword);
+elasticsearch.WithContainerName("elasticsearch");
+elasticsearch.WithLifetime(ContainerLifetime.Persistent);
 var kafka = builder.AddKafka("kafka");
+kafka.WithContainerName("kafka");
+kafka.WithLifetime(ContainerLifetime.Persistent);
 
 // Create data directory if it doesn't exist
 Directory.CreateDirectory(Path.Combine(Environment.CurrentDirectory, "data", "qdrant"));
@@ -23,10 +40,105 @@ var qdrant = builder.AddContainer("qdrant", "qdrant/qdrant:latest")
     .WithEndpoint(port: 6334, name: "grpc", targetPort: 6334)
     // Use proper volume mounting for containers
     .WithBindMount(Path.Combine(Environment.CurrentDirectory, "data", "qdrant"), "/qdrant/storage");
+qdrant.WithContainerName("qdrant");
+qdrant.WithLifetime(ContainerLifetime.Persistent);
 
 // Create a dependency group for all infrastructure resources
 // This ensures all these resources are fully started before any application components
 var infrastructureDependencies = new[] { mongodb, redis, elasticsearch, kafka, qdrant };
+
+// Add Aevatar.Silo (Orleans) project with its dependencies
+// Orleans requires specific configuration for clustering and streams
+var silo = builder.AddProject("silo", "../Aevatar.Silo/Aevatar.Silo.csproj")
+    .WithReference(mongodb)
+    .WithReference(elasticsearch)
+    .WithReference(kafka)
+    // Wait for dependencies
+    .WaitFor(mongodb)
+    .WaitFor(elasticsearch)
+    .WaitFor(kafka)
+    .WaitFor(qdrant)
+    // Configure the Orleans silo properly
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
+    // MongoDB connection string
+    .WithEnvironment("MongoDB__ConnectionString", "{mongodb.connectionString}")
+    .WithEnvironment("Elasticsearch__Url", "http://{elasticsearch.bindings.es.host}:{elasticsearch.bindings.es.port}")
+    
+    // Orleans Clustering configuration
+    .WithEnvironment("AevatarOrleans__ClusterId", "AevatarSiloCluster")
+    .WithEnvironment("AevatarOrleans__ServiceId", "AevatarBasicService")
+    .WithEnvironment("AevatarOrleans__AdvertisedIP", "127.0.0.1")
+    .WithEnvironment("AevatarOrleans__GatewayPort", "30000")
+    .WithEnvironment("AevatarOrleans__SiloPort", "11111")
+    .WithEnvironment("AevatarOrleans__MongoDBClient", "{mongodb.connectionString}")
+    .WithEnvironment("AevatarOrleans__DataBase", "AevatarDb")
+
+    // MongoDB provider configuration - Properly configured to work with Orleans
+    .WithEnvironment("AevatarOrleans__Providers__Clustering", "MongoDB")
+    .WithEnvironment("AevatarOrleans__Providers__Storage", "MongoDB")
+    .WithEnvironment("AevatarOrleans__Providers__Default", "MongoDB")
+    .WithEnvironment("AevatarOrleans__Clustering__Provider", "MongoDB")
+    .WithEnvironment("AevatarOrleans__Clustering__ConnectionString", "{mongodb.connectionString}")
+    .WithEnvironment("AevatarOrleans__Clustering__DatabaseName", "OrleansCluster")
+    .WithEnvironment("AevatarOrleans__Storage__Provider", "MongoDB")
+    .WithEnvironment("AevatarOrleans__Storage__Default__Provider", "MongoDB")
+    .WithEnvironment("AevatarOrleans__Storage__ConnectionString", "{mongodb.connectionString}")
+    .WithEnvironment("AevatarOrleans__Storage__DatabaseName", "OrleansStorage")
+    .WithEnvironment("AevatarOrleans__StreamProvider__Kafka__BootstrapServers", "{kafka.bindings.kafka.host}:{kafka.bindings.kafka.port}")
+    .WithEnvironment("Qdrant__Endpoint", "http://{qdrant.bindings.http.host}:{qdrant.bindings.http.port}")
+    .WithEnvironment("AevatarOrleans__Stream__Provider", "Kafka")
+    .WithEnvironment("AevatarOrleans__EventSourcing__Provider", "MongoDB")
+    
+    // Configure Orleans endpoints - both silo and gateway are needed
+    .WithEndpoint(port: 11111, name: "silo")
+    .WithEndpoint(port: 30000, name: "gateway");
+
+// Add Aevatar.Developer.Silo (Orleans) project with its dependencies
+// Orleans requires specific configuration for clustering and streams
+var developerSilo = builder.AddProject("developerSilo", "../Aevatar.Silo/Aevatar.Silo.csproj")
+    .WithReference(mongodb)
+    .WithReference(elasticsearch)
+    .WithReference(kafka)
+    // Wait for dependencies
+    .WaitFor(mongodb)
+    .WaitFor(elasticsearch)
+    .WaitFor(kafka)
+    .WaitFor(qdrant)
+    // Configure the Orleans silo properly
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
+    // MongoDB connection string
+    .WithEnvironment("MongoDB__ConnectionString", "{mongodb.connectionString}")
+    .WithEnvironment("Elasticsearch__Url", "http://{elasticsearch.bindings.es.host}:{elasticsearch.bindings.es.port}")
+    
+    // Orleans Clustering configuration
+    .WithEnvironment("AevatarOrleans__ClusterId", "AevatarSiloCluster1")
+    .WithEnvironment("AevatarOrleans__ServiceId", "AevatarBasicService")
+    .WithEnvironment("AevatarOrleans__AdvertisedIP", "127.0.0.1")
+    .WithEnvironment("AevatarOrleans__GatewayPort", "40000")
+    .WithEnvironment("AevatarOrleans__SiloPort", "22222")
+    .WithEnvironment("AevatarOrleans__MongoDBClient", "{mongodb.connectionString}")
+    .WithEnvironment("AevatarOrleans__DataBase", "AevatarDb")
+    .WithEnvironment("AevatarOrleans__DashboardPort", "8081")
+    
+    // MongoDB provider configuration - Properly configured to work with Orleans
+    .WithEnvironment("AevatarOrleans__Providers__Clustering", "MongoDB")
+    .WithEnvironment("AevatarOrleans__Providers__Storage", "MongoDB")
+    .WithEnvironment("AevatarOrleans__Providers__Default", "MongoDB")
+    .WithEnvironment("AevatarOrleans__Clustering__Provider", "MongoDB")
+    .WithEnvironment("AevatarOrleans__Clustering__ConnectionString", "{mongodb.connectionString}")
+    .WithEnvironment("AevatarOrleans__Clustering__DatabaseName", "OrleansCluster")
+    .WithEnvironment("AevatarOrleans__Storage__Provider", "MongoDB")
+    .WithEnvironment("AevatarOrleans__Storage__Default__Provider", "MongoDB")
+    .WithEnvironment("AevatarOrleans__Storage__ConnectionString", "{mongodb.connectionString}")
+    .WithEnvironment("AevatarOrleans__Storage__DatabaseName", "OrleansStorage")
+    .WithEnvironment("AevatarOrleans__StreamProvider__Kafka__BootstrapServers", "{kafka.bindings.kafka.host}:{kafka.bindings.kafka.port}")
+    .WithEnvironment("Qdrant__Endpoint", "http://{qdrant.bindings.http.host}:{qdrant.bindings.http.port}")
+    .WithEnvironment("AevatarOrleans__Stream__Provider", "Kafka")
+    .WithEnvironment("AevatarOrleans__EventSourcing__Provider", "MongoDB")
+    
+    // Configure Orleans endpoints - both silo and gateway are needed
+    .WithEndpoint(port: 22222, name: "silo")
+    .WithEndpoint(port: 40000, name: "gateway");
 
 // Add Aevatar.AuthServer project with its dependencies
 var authServer = builder.AddProject("authserver", "../Aevatar.AuthServer/Aevatar.AuthServer.csproj")
@@ -76,54 +188,8 @@ var developerHost = builder.AddProject("developerhost", "../Aevatar.Developer.Ho
     .WithEnvironment("AuthServer__Authority", "{authserver.bindings.https.url}")
     // Configure Swagger as default page with auto-launch
     .WithEnvironment("SwaggerUI__RoutePrefix", "")
-    .WithEnvironment("SwaggerUI__DefaultModelsExpandDepth", "-1")
-    .WithHttpEndpoint(port: 7003, name: "developerhost-http");
-
-// Add Aevatar.Silo (Orleans) project with its dependencies
-// Orleans requires specific configuration for clustering and streams
-var silo = builder.AddProject("silo", "../Aevatar.Silo/Aevatar.Silo.csproj")
-    .WithReference(mongodb)
-    .WithReference(elasticsearch)
-    .WithReference(kafka)
-    // Wait for dependencies
-    .WaitFor(mongodb)
-    .WaitFor(elasticsearch)
-    .WaitFor(kafka)
-    .WaitFor(qdrant)
-    // Configure the Orleans silo properly
-    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
-    // MongoDB connection string
-    .WithEnvironment("MongoDB__ConnectionString", "{mongodb.connectionString}")
-    .WithEnvironment("Elasticsearch__Url", "http://{elasticsearch.bindings.es.host}:{elasticsearch.bindings.es.port}")
-    
-    // Orleans Clustering configuration
-    .WithEnvironment("AevatarOrleans__ClusterId", "AevatarSiloCluster")
-    .WithEnvironment("AevatarOrleans__ServiceId", "AevatarBasicService")
-    .WithEnvironment("AevatarOrleans__AdvertisedIP", "127.0.0.1")
-    .WithEnvironment("AevatarOrleans__GatewayPort", "30000")
-    .WithEnvironment("AevatarOrleans__SiloPort", "11111")
-    .WithEnvironment("AevatarOrleans__MongoDBClient", "{mongodb.connectionString}")
-    .WithEnvironment("AevatarOrleans__DataBase", "AevatarDb")
-    
-    // MongoDB provider configuration - Properly configured to work with Orleans
-    .WithEnvironment("AevatarOrleans__Providers__Clustering", "MongoDB")
-    .WithEnvironment("AevatarOrleans__Providers__Storage", "MongoDB")
-    .WithEnvironment("AevatarOrleans__Providers__Default", "MongoDB")
-    .WithEnvironment("AevatarOrleans__Clustering__Provider", "MongoDB")
-    .WithEnvironment("AevatarOrleans__Clustering__ConnectionString", "{mongodb.connectionString}")
-    .WithEnvironment("AevatarOrleans__Clustering__DatabaseName", "OrleansCluster")
-    .WithEnvironment("AevatarOrleans__Storage__Provider", "MongoDB")
-    .WithEnvironment("AevatarOrleans__Storage__Default__Provider", "MongoDB")
-    .WithEnvironment("AevatarOrleans__Storage__ConnectionString", "{mongodb.connectionString}")
-    .WithEnvironment("AevatarOrleans__Storage__DatabaseName", "OrleansStorage")
-    .WithEnvironment("AevatarOrleans__StreamProvider__Kafka__BootstrapServers", "{kafka.bindings.kafka.host}:{kafka.bindings.kafka.port}")
-    .WithEnvironment("Qdrant__Endpoint", "http://{qdrant.bindings.http.host}:{qdrant.bindings.http.port}")
-    .WithEnvironment("AevatarOrleans__Stream__Provider", "Kafka")
-    .WithEnvironment("AevatarOrleans__EventSourcing__Provider", "MongoDB")
-    
-    // Configure Orleans endpoints - both silo and gateway are needed
-    .WithEndpoint(port: 11111, name: "silo")
-    .WithEndpoint(port: 30000, name: "gateway");
+    .WithEnvironment("SwaggerUI__DefaultModelsExpandDepth", "-1");
+    // .WithHttpEndpoint(port: 7003, name: "developerhost-http");
 
 // Add Aevatar.Worker project with its dependencies
 var worker = builder.AddProject("worker", "../Aevatar.Worker/Aevatar.Worker.csproj")
