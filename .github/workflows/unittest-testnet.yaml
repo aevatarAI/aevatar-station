@@ -2,6 +2,9 @@ name: Run Aevatar Station Unit Test on Testnet using Python Script
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feature/unit-test-80
 
 run-name: Run Aevatar Station Unit Test on Testnet using Python Script on ${{ github.ref_name }} from ${{ github.sha }}
 
