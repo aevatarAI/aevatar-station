@@ -32,7 +32,7 @@ public class AevatarMongoDbModule : AbpModule
         //Example only, remove if not needed
         context.Services.AddMongoDbContext<AevatarMongoDbContext>(options => { options.AddDefaultRepositories(); });
 
-        context.Services.AddTransient<IApiKeysRepository, ApiKeyMongoRepository>();
+        context.Services.AddTransient<IProjectAppIdRepository, ProjectAppIdMongoRepository>();
         context.Services.AddTransient<INotificationRepository, NotificationMongoRepository>();
         Configure<AbpUnitOfWorkDefaultOptions>(options =>
         {

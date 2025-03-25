@@ -16,19 +16,19 @@ using Volo.Abp.Identity;
 namespace Aevatar.Controllers;
 
 [RemoteService]
-[ControllerName("ApiKey")]
-[Route("api/apikey")]
+[ControllerName("AppId")]
+[Route("api/appId")]
 [Authorize]
-public class ApiKeyController : AevatarController
+public class AppIdController : AevatarController
 {
-    private readonly IProjectApiKeyService _apiKeyService;
+    private readonly IProjectAppIdService _appIdService;
     private readonly IdentityUserManager _identityUserManager;
     private readonly IOrganizationPermissionChecker _organizationPermission;
     private readonly IProjectService _projectService;
 
-    public ApiKeyController(IProjectApiKeyService apiKeyService, IdentityUserManager identityUserManager, IOrganizationPermissionChecker organizationPermission, IProjectService projectService)
+    public AppIdController(IProjectAppIdService appIdService, IdentityUserManager identityUserManager, IOrganizationPermissionChecker organizationPermission, IProjectService projectService)
     {
-        _apiKeyService = apiKeyService;
+        _appIdService = appIdService;
         _identityUserManager = identityUserManager;
         _organizationPermission = organizationPermission;
         _projectService = projectService;
@@ -36,28 +36,29 @@ public class ApiKeyController : AevatarController
 
 
     [HttpPost]
-    public async Task CreateApiKey(CreateApiKeyDto createDto)
+    public async Task CreateApiKey(CreateAppIdDto createDto)
     {
         // check projectId
         await _projectService.GetAsync(createDto.ProjectId);
         
         await _organizationPermission.AuthenticateAsync(createDto.ProjectId, AevatarPermissions.ApiKeys.Create);
-        await _apiKeyService.CreateAsync(createDto.ProjectId, createDto.KeyName, CurrentUser.Id);
+        await _appIdService.CreateAsync(createDto.ProjectId, createDto.Name, CurrentUser.Id);
     }
 
     [HttpGet("{guid}")]
-    public async Task<List<ApiKeyListResponseDto>> GetApiKeys(Guid guid)
+    public async Task<List<ProjectAppIdListResponseDto>> GetApiKeys(Guid guid)
     {
         await _organizationPermission.AuthenticateAsync(guid, AevatarPermissions.ApiKeys.Default);
-        var result = new List<ApiKeyListResponseDto>();
-        foreach (var item in await _apiKeyService.GetApiKeysAsync(guid))
+        var result = new List<ProjectAppIdListResponseDto>();
+        foreach (var item in await _appIdService.GetApiKeysAsync(guid))
         {
             var creatorInfo = await _identityUserManager.GetByIdAsync((Guid)item.CreatorId!);
-            result.Add(new ApiKeyListResponseDto()
+            result.Add(new ProjectAppIdListResponseDto()
             {
                 Id = item.Id,
-                ApiKey = item.ApiKey,
-                ApiKeyName = item.ApiKeyName,
+                AppId = item.AppId,
+                AppSecret = item.AppSecret,
+                AppName = item.AppName,
                 CreateTime = item.CreationTime,
                 CreatorName = creatorInfo.Name,
                 ProjectId = item.ProjectId,
@@ -70,12 +71,12 @@ public class ApiKeyController : AevatarController
     [HttpDelete("{guid}")]
     public async Task DeleteApiKey(Guid guid)
     {
-        await _apiKeyService.DeleteAsync(guid);
+        await _appIdService.DeleteAsync(guid);
     }
 
     [HttpPut("{guid}")]
-    public async Task ModifyApiKeyName(Guid guid, [FromBody] ModifyApiKeyNameDto modifyApiKeyNameDto)
+    public async Task ModifyApiKeyName(Guid guid, [FromBody] ModifyAppNameDto modifyAppNameDto)
     {
-        await _apiKeyService.ModifyApiKeyAsync(guid, modifyApiKeyNameDto.ApiKeyName);
+        await _appIdService.ModifyApiKeyAsync(guid, modifyAppNameDto.AppName);
     }
 }
