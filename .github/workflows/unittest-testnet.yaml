@@ -1,0 +1,63 @@
+name: Run Aevatar Station Unit Test on Testnet using Python Script
+
+on:
+  workflow_dispatch:
+
+run-name: Run Aevatar Station Unit Test on Testnet using Python Script on ${{ github.ref_name }} from ${{ github.sha }}
+
+concurrency:
+  group: workflow-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: 3.12
+  # Setting PYTHONUNBUFFERED to 1 to ensure that Python output is sent straight to the terminal without being buffered
+  PYTHONUNBUFFERED: 1
+
+jobs:
+  run-unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.arch }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.arch }}-pip-
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Run Python Script
+        run: |
+          source venv/bin/activate
+          python hello_world.py
+      
+      - name: Lark Notification on Success
+        if: success()
+        uses: drayeasy/action-lark-notify@main
+        env:
+          LARK_WEBHOOK: ${{ secrets.LARK_WEBHOOK }}
+          LARK_MESSAGE_TITLE: "测试成功"
+
+      - name: Lark Notification on Failure
+        if: failure()
+        uses: drayeasy/action-lark-notify@main
+        env:
+          LARK_WEBHOOK: ${{ secrets.LARK_WEBHOOK }}
+          LARK_MESSAGE_TITLE: "测试失败"
