@@ -12,11 +12,11 @@ using Microsoft.Extensions.Logging;
 [Route("api/subscription")]
 public class SubscriptionController : AevatarController
 {
-    private readonly SubscriptionAppService _subscriptionAppService;
+    private readonly ISubscriptionAppService _subscriptionAppService;
     private readonly ILogger<SubscriptionController> _logger;
 
     public SubscriptionController(
-        SubscriptionAppService subscriptionAppService, 
+        ISubscriptionAppService subscriptionAppService, 
         ILogger<SubscriptionController> logger)
     {
         _subscriptionAppService = subscriptionAppService;
