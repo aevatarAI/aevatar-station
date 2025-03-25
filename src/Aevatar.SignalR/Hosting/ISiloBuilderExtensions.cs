@@ -12,6 +12,10 @@ public static class ISiloBuilderExtensions
         var cfg = new SignalROrleansSiloConfigBuilder();
         configure?.Invoke(cfg);
         cfg.ConfigureBuilder?.Invoke(builder);
+        var signalRConfig = builder.Configuration.GetSection("AevatarSignalR");
+        builder.Services.Configure<AevatarSignalROptions>(signalRConfig);
+        var prefix = signalRConfig.GetSection("TopicPrefix").Value;
+        AevatarStreamConfig.Initialize(prefix);
         return builder;
     }
 
