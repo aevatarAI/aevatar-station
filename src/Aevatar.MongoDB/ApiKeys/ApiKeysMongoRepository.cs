@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.ApiKey;
+using Aevatar.APIKeys;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
+using Volo.Abp.Application.Dtos;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories.MongoDB;
 using Volo.Abp.MongoDB;
@@ -18,15 +20,27 @@ public class ApiKeyMongoRepository : MongoDbRepository<ApiKeysMongoDbContext, Ap
     {
     }
 
-    public async Task<List<ApiKeyInfo>> GetProjectApiKeys(Guid projectId, int limit, int skip)
+    public async Task<PagedResultDto<ApiKeyInfo>> GetProjectApiKeys(APIKeyPagedRequestDto requestDto)
     {
         var queryable = await GetMongoQueryableAsync();
-        var result = await queryable.Where(game => game.ProjectId == projectId)
-            .OrderByDescending(o => o.CreationTime)
-            .Take(limit)
-            .Skip(skip).ToListAsync();
+        if (requestDto.ProjectId != Guid.Empty)
+        {
+            queryable = queryable.Where(w => w.ProjectId == requestDto.ProjectId);
+        }
 
-        return result;
+        var result = new List<ApiKeyInfo>();
+        var queryResponse = await queryable
+            .OrderByDescending(o => o.CreationTime)
+            .Take(requestDto.MaxResultCount)
+            .Skip(requestDto.SkipCount).ToListAsync();
+
+        
+        if (queryResponse != null)
+        {
+            result = queryResponse;
+        }
+        
+        return new PagedResultDto<ApiKeyInfo>(result.Count, result.AsReadOnly());
     }
 
     public async Task<bool> CheckProjectApiKeyNameExist(Guid projectId, string keyName)

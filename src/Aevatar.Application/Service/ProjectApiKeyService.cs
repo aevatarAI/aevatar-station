@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.ApiKey;
 using Aevatar.ApiKeys;
+using Aevatar.APIKeys;
 using Aevatar.Common;
 using Aevatar.Organizations;
 using Aevatar.Permissions;
@@ -88,8 +90,10 @@ public class ProjectApiKeyService : IProjectApiKeyService, ITransientDependency
 
     public async Task<List<ApiKeyInfo>> GetApiKeysAsync(Guid projectId)
     {
-        var apiKeyList = await _apiKeysRepository.GetProjectApiKeys(projectId, 10, 0);
-       
-        return apiKeyList;
+        APIKeyPagedRequestDto requestDto = new APIKeyPagedRequestDto()
+            { ProjectId = projectId, MaxResultCount = 10, SkipCount = 0 };
+
+        var apiKeyList = await _apiKeysRepository.GetProjectApiKeys(requestDto);
+        return apiKeyList.Items.ToList();
     }
 }
