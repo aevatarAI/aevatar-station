@@ -24,10 +24,19 @@ public abstract class AevatarSyncWorker<TRequest, TResponse> : SyncWorker<TReque
     protected sealed override async Task<TResponse> PerformWork(TRequest request,
         GrainCancellationToken grainCancellationToken)
     {
-        _logger.LogInformation($"Performing long run task for request of type {typeof(TRequest).FullName}");
-        var response = await PerformLongRunTask(request);
-        await _asyncStream.OnNextAsync(new EventWrapper<TResponse>(response, Guid.NewGuid(), this.GetGrainId()));
-        return response;
+        _logger.LogInformation($"Performing long run task for request of type {typeof(TRequest).FullName}: {request}");
+        try
+        {
+            var response = await PerformLongRunTask(request);
+            _logger.LogInformation($"Performed long run task for request of type {typeof(TRequest).FullName}, response is {response}");
+            await _asyncStream.OnNextAsync(new EventWrapper<TResponse>(response, Guid.NewGuid(), this.GetGrainId()));
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Error performing long run task: {ex.Message}");
+            throw;
+        }
     }
 
     protected abstract Task<TResponse> PerformLongRunTask(TRequest request);
