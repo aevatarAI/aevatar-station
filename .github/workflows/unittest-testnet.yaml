@@ -64,3 +64,4 @@ jobs:
         env:
           LARK_WEBHOOK: ${{ secrets.LARK_WEBHOOK }}
           LARK_MESSAGE_TITLE: "测试失败"
+          LARK_MESSAGE_TEMPLATE: "red"
