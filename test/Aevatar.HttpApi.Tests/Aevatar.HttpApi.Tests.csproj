@@ -20,6 +20,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="Aevatar.PermissionManagement" />
         <PackageReference Include="Microsoft.Orleans.TestingHost" />
         <PackageReference Include="AutoGen"/>
         <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
