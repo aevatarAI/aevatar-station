@@ -1,25 +1,26 @@
 import sys
 
 try:
-    # 检查是否传递了正确数量的参数
+    # Check if the correct number of arguments is provided
     if len(sys.argv) < 2:
-        print("错误：缺少参数！请提供 'succ' 或 'fail' 作为参数。")
+        print("Error: Missing argument! Please provide 'succ' or 'fail' as a parameter.")
         sys.exit(1)
 
-    # 提取第一个参数
-    command = sys.argv[1].lower()  # 转为小写以避免大小写问题
+    # Get the first argument
+    command = sys.argv[1].lower()  # Convert to lowercase to handle case insensitivity
 
-    # 根据参数值执行相应逻辑
+    # Execute appropriate logic based on the parameter value
     if command == "succ":
-        print("执行成功！")
-        sys.exit(0)  # 成功返回状态码 0
+        print("Execution succeeded!")
+        sys.exit(0)  # Return exit code 0 to indicate success
     elif command == "fail":
-        print("执行失败！")
-        sys.exit(1)  # 失败返回状态码 1
+        print("Execution failed!")
+        sys.exit(1)  # Return exit code 1 to indicate failure
     else:
-        print("错误：无效参数！请使用 'succ' 或 'fail'。")
+        print("Error: Invalid argument! Please use 'succ' or 'fail' as input.")
         sys.exit(1)
 
 except Exception as e:
-    print(f"发生错误: {e}")
-    sys.exit(1)
+    # Handle unexpected errors
+    print(f"An error occurred: {e}")
+    sys.exit(1)  # Return exit code 1 to indicate failure
