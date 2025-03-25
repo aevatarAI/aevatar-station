@@ -1,6 +1,7 @@
 ﻿using Aevatar.ApiKey;
 using Aevatar.ApiKeys;
 using Aevatar.Notification;
+using Amazon.Runtime.Internal.Util;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.AuditLogging.MongoDB;
 using Volo.Abp.BackgroundJobs.MongoDB;
@@ -23,26 +24,18 @@ namespace Aevatar.MongoDB;
     typeof(AbpAuditLoggingMongoDbModule),
     typeof(AbpFeatureManagementMongoDbModule),
     typeof(AbpBackgroundJobsMongoDbModule)
-    )]
+)]
 public class AevatarMongoDbModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
-        
         //Example only, remove if not needed
-        context.Services.AddMongoDbContext<AevatarMongoDbContext>(options =>
-        {
-            options.AddDefaultRepositories();
-        });
+        context.Services.AddMongoDbContext<AevatarMongoDbContext>(options => { options.AddDefaultRepositories(); });
 
         context.Services.AddTransient<IApiKeysRepository, ApiKeyMongoRepository>();
-        context.Services.AddMongoDbContext<ApiKeysMongoDbContext>(options =>
-        {
-            options.AddDefaultRepositories();
-        });
-
+        context.Services.AddMongoDbContext<ApiKeysMongoDbContext>(options => { options.AddDefaultRepositories(); });
         context.Services.AddTransient<INotificationRepository, NotificationMongoRepository>();
-     
+        context.Services.AddMongoDbContext<NotificationDbContext>(options => { options.AddDefaultRepositories(); });
         Configure<AbpUnitOfWorkDefaultOptions>(options =>
         {
             // reference: https://abp.io/docs/latest/framework/architecture/domain-driven-design/unit-of-work?_redirected=B8ABF606AA1BDF5C629883DF1061649A#savechangesasync
