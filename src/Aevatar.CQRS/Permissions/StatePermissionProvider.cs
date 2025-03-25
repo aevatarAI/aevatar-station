@@ -2,8 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Aevatar.Permission;
-using Aevatar.User;
+using Aevatar.Permissions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Volo.Abp.Authorization.Permissions;
@@ -12,7 +11,14 @@ using Volo.Abp.Domain.Repositories;
 
 namespace Aevatar.Permissions;
 
-public class StatePermissionProvider : ISingletonDependency
+public interface IStatePermissionProvider
+{
+    Task<bool> SaveAllStatePermissionAsync();
+
+    Task<bool> CheckPermissionAsync(string stateName);
+}
+
+public class StatePermissionProvider : IStatePermissionProvider, ISingletonDependency
 {
     private readonly ILogger<StatePermissionProvider> _logger;
     private readonly IRepository<StatePermission, Guid> _statePermissionRepository;
@@ -55,8 +61,7 @@ public class StatePermissionProvider : ISingletonDependency
                 {
                     HostId = hostId,
                     Permission = permissionName,
-                    StateName = entry.Value,
-                    Id = Guid.NewGuid()
+                    StateName = entry.Value
                 });
             }
 
@@ -86,7 +91,7 @@ public class StatePermissionProvider : ISingletonDependency
         }
     }
 
-    public async Task<bool> CheckPermissionAsync(string permissionName, string stateName)
+    public async Task<bool> CheckPermissionAsync(string stateName)
     {
         var hostId = _configuration.GetValue<string>("Host:HostId");
         if (string.IsNullOrEmpty(hostId))
@@ -98,12 +103,11 @@ public class StatePermissionProvider : ISingletonDependency
         {
             var permission = await _statePermissionRepository.FirstOrDefaultAsync(x =>
                 x.HostId == hostId &&
-                x.Permission == permissionName &&
                 x.StateName == stateName);
 
             if (permission == null)
             {
-                _logger.LogDebug($" not found: {permissionName} -> {stateName}");
+                _logger.LogDebug($" not found permissionName: -> {stateName}");
                 return true;
             }
 
@@ -111,7 +115,7 @@ public class StatePermissionProvider : ISingletonDependency
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"permission check failed: {permissionName} -> {stateName}");
+            _logger.LogError(ex, $"permission check failed: {stateName}");
             return false;
         }
     }

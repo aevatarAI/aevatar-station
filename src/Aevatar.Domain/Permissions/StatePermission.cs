@@ -1,12 +1,10 @@
 using System;
 using Volo.Abp.Domain.Entities.Auditing;
 
-namespace Aevatar.Permission;
+namespace Aevatar.Permissions;
 
 public class StatePermission : FullAuditedAggregateRoot<Guid>
 {
-    public Guid Id { get; set; }
-
     public string HostId { get; set; }
 
     public string StateName { get; set; }

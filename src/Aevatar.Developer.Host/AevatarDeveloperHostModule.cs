@@ -1,9 +1,9 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using AElf.OpenTelemetry;
 using Aevatar.MongoDB;
+using Aevatar.Permissions;
 using AutoResponseWrapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
@@ -15,15 +15,12 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using Volo.Abp;
 using Volo.Abp.Account.Web;
-using Volo.Abp.AspNetCore.ExceptionHandling;
-using Volo.Abp.AspNetCore.Mvc;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite;
-using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared;
 using Volo.Abp.AspNetCore.Serilog;
-using Volo.Abp.Authorization;
 using Volo.Abp.Autofac;
 using Volo.Abp.Modularity;
 using Volo.Abp.Swashbuckle;
+using Volo.Abp.Threading;
 using Volo.Abp.VirtualFileSystem;
 
 namespace Aevatar.Developer.Host;
@@ -46,17 +43,14 @@ public class AevatarDeveloperHostModule : AbpModule
         context.Services.AddHealthChecks();
         context.Services.AddAutoResponseWrapper();
         var configuration = context.Services.GetConfiguration();
-        ConfigureAuthentication(context,configuration);
+        ConfigureAuthentication(context, configuration);
         ConfigureVirtualFileSystem(context);
         ConfigureCors(context, configuration);
         ConfigureSwaggerServices(context, configuration);
-        context.Services.AddMvc(options =>
-        {
-            options.Filters.Add(new IgnoreAntiforgeryTokenAttribute());
-        })
-        .AddNewtonsoftJson();
+        context.Services.AddMvc(options => { options.Filters.Add(new IgnoreAntiforgeryTokenAttribute()); })
+            .AddNewtonsoftJson();
     }
-    
+
     private void ConfigureAuthentication(ServiceConfigurationContext context, IConfiguration configuration)
     {
         context.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -68,7 +62,7 @@ public class AevatarDeveloperHostModule : AbpModule
                 options.MapInboundClaims = false;
             });
     }
-    
+
     private void ConfigureVirtualFileSystem(ServiceConfigurationContext context)
     {
         var hostingEnvironment = context.Services.GetHostingEnvironment();
@@ -92,7 +86,7 @@ public class AevatarDeveloperHostModule : AbpModule
             });
         }
     }
-    
+
     private void ConfigureCors(ServiceConfigurationContext context, IConfiguration configuration)
     {
         context.Services.AddCors(options =>
@@ -112,6 +106,7 @@ public class AevatarDeveloperHostModule : AbpModule
             });
         });
     }
+
     private static void ConfigureSwaggerServices(ServiceConfigurationContext context, IConfiguration configuration)
     {
         context.Services.AddAbpSwaggerGen(options =>
@@ -142,9 +137,9 @@ public class AevatarDeveloperHostModule : AbpModule
             }
         );
     }
+
     public override void OnPreApplicationInitialization(ApplicationInitializationContext context)
     {
-
     }
 
     public override void OnApplicationInitialization(ApplicationInitializationContext context)
@@ -167,10 +162,7 @@ public class AevatarDeveloperHostModule : AbpModule
 
         app.UseUnitOfWork();
         app.UseDynamicClaims();
-        app.UseEndpoints(endpoints =>
-        {
-            endpoints.MapHealthChecks("/health");
-        });
+        app.UseEndpoints(endpoints => { endpoints.MapHealthChecks("/health"); });
         app.UseSwagger();
         app.UseAbpSwaggerUI(c =>
         {
@@ -183,10 +175,11 @@ public class AevatarDeveloperHostModule : AbpModule
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();
         app.UseConfiguredEndpoints();
+        var statePermissionProvider = context.ServiceProvider.GetRequiredService<IStatePermissionProvider>();
+        AsyncHelper.RunSync(async () => await statePermissionProvider.SaveAllStatePermissionAsync());
     }
-       
+
     public override void OnApplicationShutdown(ApplicationShutdownContext context)
     {
-
     }
 }
