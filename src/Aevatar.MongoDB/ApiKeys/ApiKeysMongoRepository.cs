@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.ApiKey;
 using Aevatar.APIKeys;
+using Aevatar.MongoDB;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using Volo.Abp.Application.Dtos;
@@ -12,10 +13,10 @@ using Volo.Abp.MongoDB;
 
 namespace Aevatar.ApiKeys;
 
-public class ApiKeyMongoRepository : MongoDbRepository<ApiKeysMongoDbContext, ApiKeyInfo, Guid>, IApiKeysRepository,
+public class ApiKeyMongoRepository : MongoDbRepository<AevatarMongoDbContext, ApiKeyInfo, Guid>, IApiKeysRepository,
     ITransientDependency
 {
-    public ApiKeyMongoRepository(IMongoDbContextProvider<ApiKeysMongoDbContext> dbContextProvider) : base(
+    public ApiKeyMongoRepository(IMongoDbContextProvider<AevatarMongoDbContext> dbContextProvider) : base(
         dbContextProvider)
     {
     }
