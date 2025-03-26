@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
 using Volo.Abp.Identity;
-using ILogger = Castle.Core.Logging.ILogger;
 
 namespace Aevatar.Controllers;
 

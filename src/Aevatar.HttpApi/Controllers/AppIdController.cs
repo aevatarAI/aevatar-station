@@ -49,23 +49,7 @@ public class AppIdController : AevatarController
     public async Task<List<ProjectAppIdListResponseDto>> GetApiKeys(Guid guid)
     {
         await _organizationPermission.AuthenticateAsync(guid, AevatarPermissions.ApiKeys.Default);
-        var result = new List<ProjectAppIdListResponseDto>();
-        foreach (var item in await _appIdService.GetApiKeysAsync(guid))
-        {
-            var creatorInfo = await _identityUserManager.GetByIdAsync((Guid)item.CreatorId!);
-            result.Add(new ProjectAppIdListResponseDto()
-            {
-                Id = item.Id,
-                AppId = item.AppId,
-                AppSecret = item.AppSecret,
-                AppName = item.AppName,
-                CreateTime = item.CreationTime,
-                CreatorName = creatorInfo.NormalizedUserName,
-                ProjectId = item.ProjectId,
-            });
-        }
-
-        return result;
+        return await _appIdService.GetApiKeysAsync(guid);
     }
 
     [HttpDelete("{guid}")]
