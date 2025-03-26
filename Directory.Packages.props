@@ -193,7 +193,7 @@
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.2" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client.Core" Version="9.0.2" />
     <PackageVersion Include="Neo4j.Driver" Version="5.27.0" />
-    <PackageVersion Include="MineAiFun.GAgents" Version="0.2.68-alpha" />
+    <PackageVersion Include="MineAiFun.GAgents" Version="0.2.70-alpha" />
     <PackageVersion Include="XWorkerAgent" Version="0.0.28" />
     <PackageVersion Include="TelegramWorkerAgent" Version="0.0.8" />
   </ItemGroup>
