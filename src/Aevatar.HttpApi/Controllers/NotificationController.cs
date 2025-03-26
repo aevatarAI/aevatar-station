@@ -90,4 +90,10 @@ public class NotificationController : AevatarController
     {
         return await _notificationService.GetNotificationList(CurrentUser.Id, pageIndex, pageSize);
     }
+
+    [HttpGet("organization")]
+    public async Task<List<OrganizationVisitDto>> GetOrganizationVisitInfo(int pageIndex, int pageSize)
+    {
+        return await _notificationService.GetOrganizationVisitInfo((Guid)CurrentUser.Id!, pageIndex, pageSize);
+    }
 }
