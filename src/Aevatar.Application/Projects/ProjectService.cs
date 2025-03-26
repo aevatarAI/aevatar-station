@@ -47,17 +47,44 @@ public class ProjectService : OrganizationService, IProjectService
         
         return  ObjectMapper.Map<OrganizationUnit, ProjectDto>(project);
     }
-    
+
+    protected override async Task<Guid> AddOwnerRoleAsync(Guid organizationId)
+    {
+        var role = new IdentityRole(
+            GuidGenerator.Create(),
+            OrganizationRoleHelper.GetRoleName(organizationId, AevatarConsts.OrganizationOwnerRoleName)
+        );
+        await RoleManager.CreateAsync(role);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Members.Default, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Members.Manage, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiKeys.Default, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiKeys.Create, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiKeys.Edit, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiKeys.Delete, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Projects.Default, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Projects.Edit, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Roles.Default, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Roles.Create, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Roles.Edit, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Roles.Delete, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.LLMSModels.Default, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiRequests.Default, true);
+
+        return role.Id;
+    }
+
     protected override async Task<Guid> AddReaderRoleAsync(Guid organizationId)
     {
         var role = new IdentityRole(
             GuidGenerator.Create(),
-            GetOrganizationRoleName(organizationId, ReaderRoleName)
+            OrganizationRoleHelper.GetRoleName(organizationId, AevatarConsts.OrganizationReaderRoleName)
         );
         await RoleManager.CreateAsync(role);
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Organizations.Default, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.OrganizationMembers.Default, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Members.Default, true);
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiKeys.Default, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.LLMSModels.Default, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiRequests.Default, true);
 
         return role.Id;
     }
@@ -75,7 +102,7 @@ public class ProjectService : OrganizationService, IProjectService
     {
         List<OrganizationUnit> organizations;
         if (CurrentUser.IsInRole(AevatarConsts.AdminRoleName) ||
-            await IsOrganizationOwonerAsync(input.OrganizationId, CurrentUser.Id.Value))
+            await IsOrganizationOwnerAsync(input.OrganizationId, CurrentUser.Id.Value))
         {
             organizations = await OrganizationUnitManager.FindChildrenAsync(input.OrganizationId, true);
             organizations = organizations.Where(o =>

@@ -68,7 +68,7 @@ public class ProjectController : AevatarController
     [Route("{projectId}/members")]
     public async Task<ListResultDto<OrganizationMemberDto>> GetMemberListAsync(Guid projectId, GetOrganizationMemberListDto input)
     {
-        await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.OrganizationMembers.Default);
+        await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.Members.Default);
         return await _projectService.GetMemberListAsync(projectId, input);
     }
 
@@ -76,7 +76,7 @@ public class ProjectController : AevatarController
     [Route("{projectId}/members")]
     public async Task SetMemberAsync(Guid projectId, SetOrganizationMemberDto input)
     {
-        await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.OrganizationMembers.Manage);
+        await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.Members.Manage);
         await _projectService.SetMemberAsync(projectId, input);
     }
 
@@ -84,16 +84,8 @@ public class ProjectController : AevatarController
     [Route("{projectId}/member-roles")]
     public async Task SetMemberRoleAsync(Guid projectId, SetOrganizationMemberRoleDto input)
     {
-        await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.OrganizationMembers.Manage);
+        await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.Members.Manage);
         await _projectService.SetMemberRoleAsync(projectId, input);
-    }
-    
-    [HttpGet]
-    [Route("{projectId}/roles")]
-    public async Task<ListResultDto<IdentityRoleDto>> GetRoleListAsync(Guid projectId)
-    {
-        await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.Organizations.Default);
-        return await _projectService.GetRoleListAsync(projectId);
     }
     
     [HttpGet]

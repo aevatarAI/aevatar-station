@@ -76,8 +76,8 @@ public abstract class OrganizationServiceTests<TStartupModule> : AevatarApplicat
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Organizations.Create);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Organizations.Edit);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Organizations.Delete);
-        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.OrganizationMembers.Default);
-        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.OrganizationMembers.Manage);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Members.Default);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Members.Manage);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ApiKeys.Default);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ApiKeys.Create);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ApiKeys.Edit);
@@ -89,7 +89,7 @@ public abstract class OrganizationServiceTests<TStartupModule> : AevatarApplicat
         readerPermissions = readerPermissions.Where(o => o.IsGranted).ToList();
         readerPermissions.Count.ShouldBe(2);
         readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Organizations.Default);
-        readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.OrganizationMembers.Default);
+        readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Members.Default);
 
         var user = await _identityUserManager.GetByIdAsync(_currentUser.Id.Value);
         var isInRole = await _identityUserManager.IsInRoleAsync(user, ownerRole.Name);

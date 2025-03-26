@@ -24,9 +24,6 @@ public class OrganizationService : AevatarAppService, IOrganizationService
     protected readonly IPermissionDefinitionManager PermissionDefinitionManager;
     protected readonly IRepository<IdentityUser, Guid> UserRepository;
 
-    protected const string OwnerRoleName = "Owner";
-    protected const string ReaderRoleName = "Reader";
-
     public OrganizationService(OrganizationUnitManager organizationUnitManager, IdentityUserManager identityUserManager,
         IRepository<OrganizationUnit, Guid> organizationUnitRepository, IdentityRoleManager roleManager,
         IPermissionManager permissionManager, IOrganizationPermissionChecker permissionChecker,
@@ -113,19 +110,28 @@ public class OrganizationService : AevatarAppService, IOrganizationService
     {
         var role = new IdentityRole(
             GuidGenerator.Create(),
-            GetOrganizationRoleName(organizationId, OwnerRoleName)
+            OrganizationRoleHelper.GetRoleName(organizationId, AevatarConsts.OrganizationOwnerRoleName)
         );
         await RoleManager.CreateAsync(role);
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Organizations.Default, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Organizations.Create, true);
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Organizations.Edit, true);
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Organizations.Delete, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.OrganizationMembers.Default, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.OrganizationMembers.Manage, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Members.Default, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Members.Manage, true);
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiKeys.Default, true);
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiKeys.Create, true);
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiKeys.Edit, true);
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiKeys.Delete, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Projects.Default, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Projects.Create, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Projects.Edit, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Projects.Delete, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Roles.Default, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Roles.Create, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Roles.Edit, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Roles.Delete, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.LLMSModels.Default, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiRequests.Default, true);
 
         return role.Id;
     }
@@ -134,11 +140,11 @@ public class OrganizationService : AevatarAppService, IOrganizationService
     {
         var role = new IdentityRole(
             GuidGenerator.Create(),
-            GetOrganizationRoleName(organizationId, ReaderRoleName)
+            OrganizationRoleHelper.GetRoleName(organizationId, AevatarConsts.OrganizationReaderRoleName)
         );
         await RoleManager.CreateAsync(role);
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Organizations.Default, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.OrganizationMembers.Default, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Members.Default, true);
 
         return role.Id;
     }
@@ -269,7 +275,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         var organization = await OrganizationUnitRepository.GetAsync(organizationId);
 
         var result = new List<IdentityRoleDto>();
-        if (organization.TryGetOrganizationRoles(AevatarConsts.OrganizationRoleKey, out var roleIds))
+        if (organization.TryGetOrganizationRoles(out var roleIds))
         {
             foreach (var roleId in roleIds)
             {
@@ -316,7 +322,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
 
     protected virtual async Task DeleteOrganizationRoleAsync(OrganizationUnit organizationUnit)
     {
-        if (organizationUnit.TryGetOrganizationRoles(AevatarConsts.OrganizationRoleKey, out var roles))
+        if (organizationUnit.TryGetOrganizationRoles(out var roles))
         {
             foreach (var roleId in roles)
             {
@@ -331,7 +337,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
 
     protected virtual Guid? FindOrganizationRole(OrganizationUnit organizationUnit, IdentityUser user)
     {
-        if (!organizationUnit.TryGetOrganizationRoles(AevatarConsts.OrganizationRoleKey, out var roles))
+        if (!organizationUnit.TryGetOrganizationRoles(out var roles))
         {
             return null;
         }
@@ -347,7 +353,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         return null;
     }
 
-    protected virtual async Task<bool> IsOrganizationOwonerAsync(Guid organizationId,Guid userId)
+    protected virtual async Task<bool> IsOrganizationOwnerAsync(Guid organizationId,Guid userId)
     {
         var organization = await OrganizationUnitRepository.GetAsync(organizationId);
         var user = await IdentityUserManager.GetByIdAsync(userId);
@@ -358,11 +364,6 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         }
 
         var role = await RoleManager.FindByIdAsync(roleId.Value.ToString());
-        return role.Name == GetOrganizationRoleName(organizationId, OwnerRoleName);
-    }
-
-    protected virtual string GetOrganizationRoleName(Guid organizationId, string roleName)
-    {
-        return $"{organizationId.ToString()}_{roleName}";
+        return role.Name == OrganizationRoleHelper.GetRoleName(organizationId, AevatarConsts.OrganizationOwnerRoleName);
     }
 }
