@@ -8,9 +8,11 @@ using Aevatar.CQRS;
 using Aevatar.CQRS.Dto;
 using Aevatar.Query;
 using Aevatar.CQRS.Provider;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Nest;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using Orleans.Runtime;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -27,138 +29,184 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
     private const int DefaultSkip = 0;
     private const int DefaultLimit = 1000;
     private readonly ICQRSProvider _cqrsProvider;
+    private readonly IMemoryCache _cache;
 
     public ElasticIndexingService(ILogger<ElasticIndexingService> logger, IElasticClient elasticClient,
-        ICQRSProvider cqrsProvider)
+        ICQRSProvider cqrsProvider, IMemoryCache cache)
     {
         _logger = logger;
         _elasticClient = elasticClient;
         _cqrsProvider = cqrsProvider;
+        _cache = cache;
     }
 
     public void CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase
     {
         var indexName = _cqrsProvider.GetIndexName(stateBase.GetType().Name.ToLower());
-        var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
-        if (indexExistsResponse.Exists)
+        if (_cache.TryGetValue(indexName, out bool? _))
         {
             return;
         }
 
+        var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
+        if (!indexExistsResponse.Exists)
+        {
+            var createIndexResponse = CreateIndexAsync(stateBase, indexName);
+
+            if (!createIndexResponse.IsValid)
+            {
+                _logger.LogError(
+                    "Error creating state index. indexName:{indexName},error:{error},DebugInfo:{DebugInfo}",
+                    indexName,
+                    createIndexResponse.ServerError?.Error,
+                    JsonConvert.SerializeObject(createIndexResponse.DebugInformation));
+                return;
+            }
+
+            _logger.LogInformation("Successfully created state index. indexName:{indexName}", indexName);
+        }
+
+        _cache.Set(indexName, true, new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24)
+        });
+    }
+
+    private CreateIndexResponse CreateIndexAsync<T>(T stateBase, string indexName) where T : StateBase
+    {
         var createIndexResponse = _elasticClient.Indices.Create(indexName, c => c
-            .Map<T>(m => m
-                .DynamicTemplates(dt => dt
-                    .DynamicTemplate("numbers_as_integer", t => t
-                        .MatchMappingType("long")
-                        .Mapping(f => { return new NumberProperty(NumberType.Long); })
-                    )
-                    .DynamicTemplate("numbers_as_float", t => t
-                        .MatchMappingType("double")
-                        .Mapping(f => { return new NumberProperty(NumberType.Double); })
-                    )
-                    .DynamicTemplate("objects_as_nested", t => t
-                        .MatchMappingType("object")
-                        .Mapping(f => new ObjectProperty { Dynamic = true })
-                    )
-                ).Properties(props =>
+            .Map<T>(m => m.Dynamic()
+                .Properties(props =>
                 {
-                    var type = stateBase.GetType();
+                    var type = typeof(T);
                     foreach (var property in type.GetProperties())
                     {
                         var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
-                        if (property.PropertyType == typeof(string))
+                        var propType = property.PropertyType;
+
+                        if (propType == typeof(string))
                         {
-                            props.Keyword(k => k
-                                .Name(propertyName)
-                            );
+                            props.Text(t => t.Name(propertyName)).Keyword(k => k.Name(propertyName).IgnoreAbove(256));
                         }
-                        else if (property.PropertyType == typeof(DateTime))
+                        else if (propType == typeof(short) || propType == typeof(int) || propType == typeof(long))
                         {
-                            props.Date(d => d
-                                .Name(propertyName)
-                            );
+                            props.Number(n => n.Name(propertyName).Type(NumberType.Long));
                         }
-                        else if (property.PropertyType == typeof(Guid))
+                        else if (propType == typeof(float))
                         {
-                            props.Keyword(k => k
-                                .Name(propertyName)
-                            );
+                            props.Number(n => n.Name(propertyName).Type(NumberType.Float));
                         }
-                        else if (property.PropertyType == typeof(Type))
+                        else if (propType == typeof(double) || propType == typeof(decimal))
                         {
-                            props.Text(o => o
-                                .Name(propertyName)
-                            );
+                            props.Number(n => n.Name(propertyName).Type(NumberType.Double));
                         }
-                        else if (property.PropertyType == typeof(bool))
+                        else if (propType == typeof(DateTime))
                         {
-                            props.Boolean(b => b
-                                .Name(propertyName)
-                            );
+                            props.Date(d => d.Name(propertyName));
+                        }
+                        else if (propType == typeof(bool))
+                        {
+                            props.Boolean(b => b.Name(propertyName));
+                        }
+                        else if (propType == typeof(Guid))
+                        {
+                            props.Keyword(k => k.Name(propertyName));
                         }
                     }
 
-                    props.Date(d => d
-                        .Name(CTime)
-                    );
+                    props.Date(d => d.Name(CTime));
                     return props;
                 })
+                .DynamicTemplates(dt => dt
+                    .DynamicTemplate("force_strings", t => t
+                        .PathMatch("*")
+                        .Mapping(m => m.Text(tt => tt))
+                    )
+                )
             )
         );
-
-        if (!createIndexResponse.IsValid)
-        {
-            _logger.LogError("Error creating state index. indexName:{indexName},error:{error},DebugInfo:{DebugInfo}",
-                indexName,
-                createIndexResponse.ServerError?.Error,
-                JsonConvert.SerializeObject(createIndexResponse.DebugInformation));
-        }
-        else
-        {
-            _logger.LogInformation("Successfully created state index. indexName:{indexName}", indexName);
-        }
+        return createIndexResponse;
     }
-
-    public async Task SaveOrUpdateStateIndexAsync<T>(string id, T stateBase) where T : StateBase
+    
+    private static bool IsBasicType(Type type)
     {
-        var indexName = _cqrsProvider.GetIndexName(stateBase.GetType().Name.ToLower());
-        var properties = stateBase.GetType().GetProperties();
-        var document = new Dictionary<string, object>();
+        Type underlyingType = Nullable.GetUnderlyingType(type) ?? type;
 
-        foreach (var property in properties)
+        if (underlyingType.IsPrimitive)
+            return true;
+
+        if (underlyingType == typeof(string) ||
+            underlyingType == typeof(DateTime) ||
+            underlyingType == typeof(decimal) ||
+            underlyingType == typeof(Guid))
+            return true;
+        return false;
+    }
+    
+    public async Task SaveOrUpdateStateIndexBatchAsync(IEnumerable<SaveStateCommand> commands)
+    {
+        // Prepare a bulk descriptor for batch indexing
+        var bulkDescriptor = new BulkDescriptor();
+        foreach (var command in commands)
         {
-            var value = property.GetValue(stateBase);
-            var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
-            if (value is IDictionary or GrainId)
+            var stateBase = command.State;
+            var id = command.GuidKey;
+
+            var indexName = _cqrsProvider.GetIndexName(stateBase.GetType().Name.ToLower());
+            var properties = stateBase.GetType().GetProperties();
+            var document = new Dictionary<string, object>();
+
+            foreach (var property in properties)
             {
-                document[propertyName] = JsonConvert.SerializeObject(value);
+                var value = property.GetValue(stateBase);
+                var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
+
+                if (value == null)
+            {
+                continue;
+            }
+
+            if (!IsBasicType(property.PropertyType))
+                {
+                    document[propertyName] = JsonConvert.SerializeObject(value, new JsonSerializerSettings
+                {
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+                    });
             }
             else
-            {
-                if (value != null)
-                {
-                    document.Add(propertyName, value);
+                    {
+                        document.Add(propertyName, value);
+                    }
                 }
-            }
+            
+
+            document.Add(CTime, DateTime.UtcNow);
+
+            // Add a bulk index operation for this document
+            bulkDescriptor.Index<object>(op => op
+                .Index(indexName)
+                .Id(id)
+                .Document(document)
+            );
         }
 
-        document.Add(CTime, DateTime.UtcNow);
+        // Execute the bulk operation
+        var bulkResponse = await _elasticClient.BulkAsync(bulkDescriptor);
 
-        var response = await _elasticClient.IndexAsync(document, i => i
-            .Index(indexName)
-            .Id(id)
-        );
-
-        if (!response.IsValid)
+        // Handle response
+        if (!bulkResponse.IsValid)
         {
             _logger.LogError(
-                "Save State Error, indexing document error,indexName:{indexName} error:{error}, DebugInfo{DebugInfo} ",
-                indexName,
-                response.ServerError, JsonConvert.SerializeObject(response.DebugInformation));
+                "Save State Batch Error, indexing documents error. Errors: {Errors}, DebugInfo: {DebugInfo}",
+                JsonConvert.SerializeObject(bulkResponse.ItemsWithErrors),
+                JsonConvert.SerializeObject(bulkResponse.DebugInformation)
+            );
         }
         else
         {
-            _logger.LogInformation("Save State Successfully. indexName:{indexName}", indexName);
+            _logger.LogInformation("Save State Batch Successfully. Indexed {Count} documents.",
+                bulkResponse.Items.Count);
         }
     }
 
@@ -377,7 +425,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
     }
 
 
-    public async Task<Tuple<long, string>> GetSortDataDocumentsAsync(string indexName,
+    public async Task<Tuple<long, string>?> GetSortDataDocumentsAsync(string indexName,
         Func<QueryContainerDescriptor<dynamic>, QueryContainer> query, int skip = 0, int limit = 1000)
     {
         try

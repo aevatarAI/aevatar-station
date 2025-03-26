@@ -5,39 +5,43 @@ using Aevatar;
 using Aevatar.CQRS;
 using Aevatar.CQRS.Provider;
 using Aevatar.Query;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
 
 
-public class ElasticServiceTests
+public class ElasticServiceTests : AevatarApplicationTestBase
 {
     private readonly Mock<IElasticClient> _mockElasticClient;
     private readonly Mock<ILogger<ElasticIndexingService>> _mockLogger;
     private readonly IIndexingService _elasticService;
     private readonly ICQRSProvider _cqrsProvider;
+    private readonly IMemoryCache _cache;
 
     public ElasticServiceTests()
     {
         _mockElasticClient = new Mock<IElasticClient>();
         _mockLogger = new Mock<ILogger<ElasticIndexingService>>();
-        
+        _cqrsProvider = GetRequiredService<ICQRSProvider>();
+        _cache = GetRequiredService<IMemoryCache>();
         _elasticService = new ElasticIndexingService(
             _mockLogger.Object,
             _mockElasticClient.Object,
-            _cqrsProvider
-            );
+            _cqrsProvider,
+            _cache
+        );
     }
 
     [Fact]
     public async Task QueryWithLuceneAsync_ShouldReturnPagedResult()
     {
         // Arrange
-        var queryDto = new LuceneQueryDto 
+        var queryDto = new LuceneQueryDto
         {
             Index = "test-index",
             QueryString = "level:ERROR",
-            // From = 0,
-            // Size = 10,
+            PageIndex = 0,
+            PageSize = 10,
             SortFields = new List<string> { "timestamp:desc" }
         };
 
@@ -63,15 +67,14 @@ public class ElasticServiceTests
         Assert.Equal(1, result.TotalCount);
         Assert.Single(result.Items);
         Assert.Equal("ERROR", result.Items[0]["level"]);
-        
     }
 
-    
+
     [Fact]
     public async Task ShouldHandleInvalidResponse()
     {
         // Arrange
-        var queryDto = new LuceneQueryDto 
+        var queryDto = new LuceneQueryDto
         {
             Index = "test-index",
             QueryString = "invalid_field:value"
@@ -79,7 +82,7 @@ public class ElasticServiceTests
 
         var mockResponse = new Mock<ISearchResponse<Dictionary<string, object>>>();
         mockResponse.Setup(r => r.IsValid).Returns(false);
-        
+
         _mockElasticClient.Setup(x => x.SearchAsync<Dictionary<string, object>>(
                 It.IsAny<SearchDescriptor<Dictionary<string, object>>>(),
                 default
@@ -87,12 +90,9 @@ public class ElasticServiceTests
             .ReturnsAsync(mockResponse.Object);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<UserFriendlyException>(() => 
+        var ex = await Assert.ThrowsAsync<UserFriendlyException>(() =>
             _elasticService.QueryWithLuceneAsync(queryDto));
-        
-        Assert.Contains("Elasticsearch query failed", ex.Message);
-        
-    }
-    
-}
 
+        Assert.Contains("Elasticsearch query failed", ex.Message);
+    }
+}

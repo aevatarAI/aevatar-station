@@ -15,11 +15,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Google.Apis.Auth" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" />
     <PackageReference Include="Volo.Abp.Account.HttpApi" />
     <PackageReference Include="Volo.Abp.AspNetCore.SignalR" />
     <PackageReference Include="Volo.Abp.Identity.HttpApi" />
     <PackageReference Include="Volo.Abp.PermissionManagement.HttpApi" />
     <PackageReference Include="Aevatar.PermissionManagement" />
+    <PackageReference Include="Volo.Abp.Account.Web.OpenIddict" />
   </ItemGroup>
 
 </Project>
