@@ -207,7 +207,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             LLMConfig = new LLMConfigDto() { SystemLLM = await configuration.GetSystemLLM() },
             StreamingModeEnabled = true, StreamingConfig = new StreamingConfig()
             {
-                BufferingSize = 10
+                BufferingSize = 32
             }
         });
 
