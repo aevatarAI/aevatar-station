@@ -174,8 +174,7 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
         if (!authServerClientId.IsNullOrWhiteSpace())
         {
             var authServerRootUrl = configurationSection["AevatarAuthServer:RootUrl"]?.TrimEnd('/');
-            var redirectUri = configurationSection["AevatarAuthServer:RedirectUri"];
-            
+
             await CreateApplicationAsync(
                 name: authServerClientId!,
                 type: OpenIddictConstants.ClientTypes.Public,
@@ -189,11 +188,10 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
                     OpenIddictConstants.GrantTypes.ClientCredentials,
                     OpenIddictConstants.GrantTypes.RefreshToken,
                     GrantTypeConstants.SIGNATURE,
-                    GrantTypeConstants.LOGIN,
-                    GrantTypeConstants.GOOGLE,
+                    GrantTypeConstants.LOGIN
                 },
                 scopes: commonScopes,
-                redirectUri: redirectUri,
+                redirectUri: authServerRootUrl,
                 clientUri: authServerRootUrl,
                 postLogoutRedirectUri: authServerRootUrl
             );
@@ -349,19 +347,6 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
 
         if (redirectUri != null)
         {
-            if (!clientUri.IsNullOrEmpty())
-            {
-                if (!Uri.TryCreate(clientUri, UriKind.Absolute, out var uri) || !uri.IsWellFormedOriginalString())
-                {
-                    throw new BusinessException(L["InvalidRedirectUri", clientUri]);
-                }
-
-                if (application.RedirectUris.All(x => x != uri))
-                {
-                    application.RedirectUris.Add(uri);
-                }
-            }
-            
             if (!redirectUri.IsNullOrEmpty())
             {
                 if (!Uri.TryCreate(redirectUri, UriKind.Absolute, out var uri) || !uri.IsWellFormedOriginalString())
