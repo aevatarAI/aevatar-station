@@ -60,7 +60,7 @@ public class AppIdController : AevatarController
                 AppSecret = item.AppSecret,
                 AppName = item.AppName,
                 CreateTime = item.CreationTime,
-                CreatorName = creatorInfo.Name,
+                CreatorName = creatorInfo.NormalizedUserName,
                 ProjectId = item.ProjectId,
             });
         }
