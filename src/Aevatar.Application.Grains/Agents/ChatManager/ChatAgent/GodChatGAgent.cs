@@ -39,7 +39,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
                 Instructions = State.PromptTemplate, LLMConfig = new LLMConfigDto() { SystemLLM = llm },
                 StreamingModeEnabled = true, StreamingConfig = new StreamingConfig()
                 {
-                    BufferingSize = 10
+                    BufferingSize = 32
                 }
             });
         }
