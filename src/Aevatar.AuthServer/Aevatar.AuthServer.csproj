@@ -25,6 +25,8 @@
 
     <ItemGroup>
         <PackageReference Include="AElf.Types" />
+        <PackageReference Include="Google.Apis.Auth.AspNetCore3" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
         <PackageReference Include="Microsoft.Orleans.Core" />
         <PackageReference Include="Serilog" />

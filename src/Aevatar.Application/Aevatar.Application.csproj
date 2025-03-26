@@ -19,11 +19,16 @@
 
     <ItemGroup>
         <PackageReference Include="Azure.AI.TextAnalytics" />
+        <PackageReference Include="FluentValidation" />
         <PackageReference Include="OpenAI.API" />
         <PackageReference Include="Volo.Abp.Account.Application" />
         <PackageReference Include="Volo.Abp.Identity.Application" />
         <PackageReference Include="Volo.Abp.PermissionManagement.Application" />
         <PackageReference Include="AElf.OpenTelemetry" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Include="Account\Templates\RegisterCode.tpl" />
     </ItemGroup>
 
 </Project>

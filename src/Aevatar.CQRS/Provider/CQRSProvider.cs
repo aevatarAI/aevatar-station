@@ -178,7 +178,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
             Limit = pageSize,
         });
 
-        if (queryResponse.Item2.IsNullOrWhiteSpace())
+        if (queryResponse == null || queryResponse.Item2.IsNullOrWhiteSpace())
         {
             return new Tuple<long, List<TargetT>>(0, new List<TargetT>());
         }
@@ -225,7 +225,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
             EventJson = JsonConvert.SerializeObject(eventBase),
             EventName = eventBase.GetType().Name
         };
-        
+
         var command = new SaveGEventCommand
         {
             Id = eventId == null ? Guid.NewGuid() : eventId,

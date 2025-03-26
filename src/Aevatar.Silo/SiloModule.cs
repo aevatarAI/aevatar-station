@@ -2,9 +2,7 @@ using AElf.OpenTelemetry;
 using Aevatar.Domain.Grains;
 using Microsoft.Extensions.DependencyInjection;
 using Aevatar.Application.Grains;
-using Aevatar.GAgents.AI.Options;
 using Aevatar.Options;
-using Microsoft.CodeAnalysis.Options;
 using Aevatar.PermissionManagement;
 using Serilog;
 using Volo.Abp.AspNetCore.Serilog;
@@ -39,7 +37,6 @@ public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
             options.IsDynamicPermissionStoreEnabled = true;
         });
         context.Services.Configure<HostOptions>(context.Services.GetConfiguration().GetSection("Host"));
-        context.Services.Configure<SystemLLMConfigOptions>(configuration);
     }
     
     
