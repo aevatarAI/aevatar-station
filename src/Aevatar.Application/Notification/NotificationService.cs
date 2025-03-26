@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Authentication;
 using System.Threading.Tasks;
+using Aevatar.Notification.Parameters;
+using Aevatar.Organizations;
 using Aevatar.SignalR;
 using Aevatar.SignalR.SignalRMessage;
 using Microsoft.Extensions.Logging;
@@ -11,6 +13,7 @@ using Volo.Abp;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Identity;
 using Volo.Abp.ObjectMapping;
+using Volo.Abp.Users;
 
 namespace Aevatar.Notification;
 
@@ -22,16 +25,18 @@ public class NotificationService : INotificationService, ITransientDependency
     private readonly INotificationRepository _notificationRepository;
     private readonly IObjectMapper _objectMapper;
     private readonly IHubService _hubService;
+    private readonly IOrganizationService _organizationService;
 
     public NotificationService(INotificationHandlerFactory notificationHandlerFactory,
         ILogger<NotificationService> logger, INotificationRepository notificationRepository, IObjectMapper objectMapper,
-        IHubService hubService)
+        IHubService hubService, IOrganizationService organizationService)
     {
         _notificationHandlerFactory = notificationHandlerFactory;
         _logger = logger;
         _notificationRepository = notificationRepository;
         _objectMapper = objectMapper;
         _hubService = hubService;
+        _organizationService = organizationService;
     }
 
     public async Task<bool> CreateAsync(NotificationTypeEnum notificationTypeEnum, Guid? creator, Guid target,
@@ -148,5 +153,44 @@ public class NotificationService : INotificationService, ITransientDependency
             .OrderByDescending(o => o.CreationTime).Skip(pageSize * pageIndex).Take(pageSize).ToList();
 
         return _objectMapper.Map<List<NotificationInfo>, List<NotificationDto>>(queryResponse);
+    }
+
+    public async Task<List<OrganizationVisitDto>> GetOrganizationVisitInfo(Guid userId, int pageIndex, int pageSize)
+    {
+        var query = await _notificationRepository.GetQueryableAsync();
+        var queryResponse = query.Where(w =>
+            w.Receiver == userId && w.Status == NotificationStatusEnum.None &&
+            w.Type == NotificationTypeEnum.OrganizationInvitation).Skip(pageSize * pageIndex).Take(pageSize).ToList();
+
+        var result = new List<OrganizationVisitDto>();
+        if (queryResponse.Count == 0)
+        {
+            return result;
+        }
+
+        var notificationWrapper =
+            _notificationHandlerFactory.GetNotification(NotificationTypeEnum.OrganizationInvitation);
+        if (notificationWrapper == null)
+        {
+            return result;
+        }
+
+        foreach (var item in queryResponse)
+        {
+            var organizationInfoObj = notificationWrapper.ConvertInput(JsonConvert.SerializeObject(item.Input));
+            if (organizationInfoObj != null)
+            {
+                var organizationVisitInfo = organizationInfoObj as OrganizationVisitInfo;
+                var  organizationInfo = await _organizationService.GetAsync(organizationVisitInfo!.OrganizationId);
+                result.Add(new OrganizationVisitDto()
+                {
+                    Id = item.Id,
+                    OrganizationId = organizationInfo.Id,
+                    OrganizationName = organizationInfo.DisplayName,
+                });
+            }
+        }
+
+        return result;
     }
 }
