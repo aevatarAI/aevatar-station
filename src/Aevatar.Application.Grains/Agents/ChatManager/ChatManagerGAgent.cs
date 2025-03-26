@@ -200,9 +200,10 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
     {
         var configuration = GetConfiguration();
         IGodChat godChat = GrainFactory.GetGrain<IGodChat>(Guid.NewGuid());
+        var sysMessage = await configuration.GetPrompt();
         await godChat.ConfigAsync(new ChatConfigDto()
         {
-            Instructions = await configuration.GetPrompt(), MaxHistoryCount = 32,
+            Instructions = sysMessage, MaxHistoryCount = 32,
             LLMConfig = new LLMConfigDto() { SystemLLM = await configuration.GetSystemLLM() },
             StreamingModeEnabled = true, StreamingConfig = new StreamingConfig()
             {
@@ -215,6 +216,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             SessionId = godChat.GetPrimaryKey(),
             Title = ""
         });
+
+        await ConfirmEvents();
 
         return godChat.GetPrimaryKey();
     }
