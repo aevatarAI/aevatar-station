@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Aevatar.Organizations;
 using Aevatar.SignalR;
 using Aevatar.SignalR.SignalRMessage;
 using Volo.Abp.ObjectMapping;
@@ -27,6 +28,7 @@ public sealed class Notification_Test : AevatarApplicationTestBase
     private static readonly Guid _notificationId = Guid.Parse("1263293b-fdde-4730-b10a-e95c37379743");
     private readonly NotificationInfo _notificationInfo;
     private readonly CancellationToken _cancellation;
+    private readonly Mock<IOrganizationService> _organizationService;
     private readonly string _input = "{\"OrganizationId\":\"3fa85f64-5717-4562-b3fc-2c963f66afa6\", \"Role\":1}";
 
     private readonly NotificationResponse _notificationResponse = new NotificationResponse()
@@ -37,14 +39,15 @@ public sealed class Notification_Test : AevatarApplicationTestBase
         _notificationHandlerFactory = GetRequiredService<INotificationHandlerFactory>();
         _logger = new Mock<ILogger<NotificationService>>();
         _notificationRepository = new Mock<INotificationRepository>();
+        _organizationService = new Mock<IOrganizationService>();
         _objectMapper = GetRequiredService<IObjectMapper>();
         _hubService = new Mock<IHubService>();
         _cancellation = new CancellationToken();
 
         _notificationService = new NotificationService(_notificationHandlerFactory, _logger.Object,
-            _notificationRepository.Object, _objectMapper, _hubService.Object);
+            _notificationRepository.Object, _objectMapper, _hubService.Object, _organizationService.Object);
 
-        _hubService.Setup(f => f.ResponseAsync(_receiveId, _notificationResponse))
+        _hubService.Setup(f => f.ResponseAsync(new List<Guid>(){_receiveId}, _notificationResponse))
             .Returns(Task.CompletedTask);
 
         _notificationInfo = new NotificationInfo()

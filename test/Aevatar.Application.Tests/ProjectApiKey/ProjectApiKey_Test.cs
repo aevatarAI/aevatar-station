@@ -64,7 +64,7 @@ public sealed class ProjectApiKey_Test : AevatarApplicationTestBase
             .ReturnsAsync(new IdentityUser(_currentUserId, "A", "2222@gmail.com"));
 
         var projectApiKeyService = new ProjectAppIdService(_apiKeysRepository.Object, _logger.Object,
-            _organizationPermissionChecker.Object, _userAppService.Object);
+            _organizationPermissionChecker.Object, _userAppService.Object, _identityUserManager.Object);
         await projectApiKeyService.CreateAsync(_projectId, _firstApiKeyName, _currentUserId);
     }
 
@@ -86,7 +86,7 @@ public sealed class ProjectApiKey_Test : AevatarApplicationTestBase
             .ReturnsAsync(new IdentityUser(_currentUserId, "A", "2222@gmail.com"));
 
         var projectApiKeyService = new ProjectAppIdService(_apiKeysRepository.Object, _logger.Object,
-            _organizationPermissionChecker.Object, _userAppService.Object);
+            _organizationPermissionChecker.Object, _userAppService.Object, _identityUserManager.Object);
 
         await Assert.ThrowsAsync<BusinessException>(async () =>
             await projectApiKeyService.CreateAsync(_projectId, _firstApiKeyName, _currentUserId));
@@ -103,7 +103,7 @@ public sealed class ProjectApiKey_Test : AevatarApplicationTestBase
 
         _apiKeysRepository.Setup(expression: s => s.GetAsync(_firstApikeyId)).ReturnsAsync(apiKeyInfo);
         var projectApiKeyService = new ProjectAppIdService(_apiKeysRepository.Object, _logger.Object,
-            _organizationPermissionChecker.Object, _userAppService.Object);
+            _organizationPermissionChecker.Object, _userAppService.Object, _identityUserManager.Object);
 
         var exception = await Record.ExceptionAsync(async () =>
             await projectApiKeyService.ModifyApiKeyAsync(_firstApikeyId, "bbbb"));
@@ -124,7 +124,7 @@ public sealed class ProjectApiKey_Test : AevatarApplicationTestBase
             .ReturnsAsync(true);
 
         var projectApiKeyService = new ProjectAppIdService(_apiKeysRepository.Object, _logger.Object,
-            _organizationPermissionChecker.Object, _userAppService.Object);
+            _organizationPermissionChecker.Object, _userAppService.Object, _identityUserManager.Object);
 
         var exception = await Record.ExceptionAsync(async () =>
             await projectApiKeyService.ModifyApiKeyAsync(_firstApikeyId, _secondApiKeyName));

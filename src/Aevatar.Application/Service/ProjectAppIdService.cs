@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Volo.Abp;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Identity;
 
 namespace Aevatar.Service;
 
@@ -21,14 +22,16 @@ public class ProjectAppIdService : IProjectAppIdService, ITransientDependency
     private readonly ILogger<ProjectAppIdService> _logger;
     private readonly IOrganizationPermissionChecker _organizationPermission;
     private readonly IUserAppService _userAppService;
+    private readonly IdentityUserManager _identityUserManager;
 
     public ProjectAppIdService(IProjectAppIdRepository projectAppIdRepository, ILogger<ProjectAppIdService> logger,
-        IOrganizationPermissionChecker organizationPermission, IUserAppService userAppService)
+        IOrganizationPermissionChecker organizationPermission, IUserAppService userAppService, IdentityUserManager identityUserManager)
     {
         _projectAppIdRepository = projectAppIdRepository;
         _logger = logger;
         _organizationPermission = organizationPermission;
         _userAppService = userAppService;
+        _identityUserManager = identityUserManager;
     }
 
 
@@ -94,12 +97,29 @@ public class ProjectAppIdService : IProjectAppIdService, ITransientDependency
         await _projectAppIdRepository.UpdateAsync(appIdInfo);
     }
 
-    public async Task<List<ProjectAppIdInfo>> GetApiKeysAsync(Guid projectId)
+    public async Task<List<ProjectAppIdListResponseDto>> GetApiKeysAsync(Guid projectId)
     {
         APIKeyPagedRequestDto requestDto = new APIKeyPagedRequestDto()
             { ProjectId = projectId, MaxResultCount = 10, SkipCount = 0 };
 
         var appIdList = await _projectAppIdRepository.GetProjectAppIds(requestDto);
-        return appIdList.Items.ToList();
+        
+        var result = new List<ProjectAppIdListResponseDto>();
+        foreach (var item in appIdList.Items)
+        {
+            var creatorInfo = await _identityUserManager.GetByIdAsync((Guid)item.CreatorId!);
+            result.Add(new ProjectAppIdListResponseDto()
+            {
+                Id = item.Id,
+                AppId = item.AppId,
+                AppSecret = item.AppSecret,
+                AppName = item.AppName,
+                CreateTime = item.CreationTime,
+                CreatorName = creatorInfo.NormalizedUserName,
+                ProjectId = item.ProjectId,
+            });
+        }
+
+        return result;
     }
 }
