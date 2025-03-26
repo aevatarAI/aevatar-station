@@ -3,7 +3,6 @@ using Aevatar.MongoDB;
 using Aevatar.OpenIddict;
 using Aevatar.Options;
 using Localization.Resources.AbpUi;
-using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.DataProtection;
 using Volo.Abp;
 using Volo.Abp.Account;
@@ -82,6 +81,7 @@ public class AevatarAuthServerModule : AbpModule
             {
                 openIddictServerOptions.GrantTypes.Add(GrantTypeConstants.SIGNATURE);
                 openIddictServerOptions.GrantTypes.Add(GrantTypeConstants.GOOGLE);
+                openIddictServerOptions.GrantTypes.Add(GrantTypeConstants.APPLE);
             });
         });
     }
@@ -102,6 +102,9 @@ public class AevatarAuthServerModule : AbpModule
             options.Grants.Add(GrantTypeConstants.GOOGLE, 
                 new GoogleGrantHandler(context.Services.GetRequiredService<IConfiguration>(), 
                     context.Services.GetRequiredService<ILogger<GoogleGrantHandler>>()));
+            options.Grants.Add(GrantTypeConstants.APPLE, 
+                new AppleGrantHandler(context.Services.GetRequiredService<IConfiguration>(), 
+                    context.Services.GetRequiredService<ILogger<AppleGrantHandler>>()));
         });
 
         Configure<AbpLocalizationOptions>(options =>
