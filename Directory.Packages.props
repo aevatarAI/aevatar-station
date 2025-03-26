@@ -181,6 +181,7 @@
     <PackageVersion Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="11.1.0" />
     <PackageVersion Include="NEST" Version="7.17.5" />
     <PackageVersion Include="GraphQL.Client" Version="6.1.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.0" />
     <PackageVersion Include="GraphQL.Client.Serializer.Newtonsoft" Version="6.1.0" />
     <PackageVersion Include="KubernetesClient" Version="13.0.11" />
     <PackageVersion Include="Mongo2Go" Version="3.1.3" />

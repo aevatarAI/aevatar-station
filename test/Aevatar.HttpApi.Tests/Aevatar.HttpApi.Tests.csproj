@@ -27,7 +27,7 @@
         <PackageReference Include="Azure.AI.TextAnalytics" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" />
-<!--        <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />-->
+        <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
         <PackageReference Include="Volo.Abp.EntityFrameworkCore" />
         <PackageReference Include="Volo.Abp.PermissionManagement.EntityFrameworkCore" />
         <PackageReference Include="xunit" />
@@ -42,6 +42,7 @@
         <PackageReference Include="Moq"  />
         <PackageReference Include="Volo.Abp.Core"  />
         <PackageReference Include="Volo.Abp.TestBase" />
+<!--        <PackageReference Include="Volo.Abp.Testing" />-->
         <PackageReference Include="Volo.Abp.Authorization" />
         <PackageReference Include="Volo.Abp.Identity.Domain"  />
     </ItemGroup>
