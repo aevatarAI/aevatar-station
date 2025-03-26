@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Agent;
+using Aevatar.Agents;
 using Aevatar.Controllers;
 using Aevatar.CQRS.Dto;
 using Aevatar.Permissions;
@@ -128,4 +129,16 @@ public class AgentController : AevatarController
     {
         await _subscriptionAppService.PublishEventAsync(input);
     }
+
+    [HttpGet("/workflow")]
+    public async Task<Task<AgentDto>> GetWorkflowAgents()
+    {
+        throw new NotImplementedException();
+    }
+
+    [HttpPost("/workflow")]
+    public async Task SetWorkFlow([FromBody] WorkflowAgentsDto workflowAgentsDto)
+    {
+        throw new NotImplementedException();
+    } 
 }
