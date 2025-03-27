@@ -98,8 +98,7 @@ public class OrganizationPermissionChecker : IOrganizationPermissionChecker, ITr
         while (true)
         {
             var organization = await _organizationUnitRepository.GetAsync(organizationId);
-            if (organization.TryGetOrganizationRoles(AevatarConsts.OrganizationRoleKey,
-                    out var organizationRoleIds))
+            if (organization.TryGetOrganizationRoles(out var organizationRoleIds))
             {
                 foreach (var organizationRoleId in organizationRoleIds)
                 {
