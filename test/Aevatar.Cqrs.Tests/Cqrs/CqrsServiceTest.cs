@@ -41,21 +41,11 @@ public class CqrsServiceTest : AevatarApplicationTestBase
             cfg.RegisterServicesFromAssembly(typeof(SaveStateBatchCommandHandler).Assembly)
         );
         services.AddMediatR(cfg =>
-            cfg.RegisterServicesFromAssembly(typeof(SaveGEventCommandHandler).Assembly)
-        );
-        services.AddMediatR(cfg =>
-            cfg.RegisterServicesFromAssembly(typeof(SendEventCommandHandler).Assembly)
-        );
-        services.AddMediatR(cfg =>
             cfg.RegisterServicesFromAssembly(typeof(GetStateQueryHandler).Assembly)
-        );
-        services.AddMediatR(cfg =>
-            cfg.RegisterServicesFromAssembly(typeof(GetGEventQueryHandler).Assembly)
         );
         services.AddMediatR(cfg =>
             cfg.RegisterServicesFromAssembly(typeof(GetUserInstanceAgentsHandler).Assembly)
         );
-        services.AddSingleton<IEventDispatcher, CQRSProvider>();
         services.AddSingleton<ICQRSProvider, CQRSProvider>();
         services.AddSingleton<ICqrsService, CqrsService>();
 

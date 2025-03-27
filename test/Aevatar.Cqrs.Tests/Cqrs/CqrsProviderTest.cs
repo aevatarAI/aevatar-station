@@ -1,6 +1,7 @@
 using Aevatar.Agent;
 using Aevatar.Agents.Creator;
 using Aevatar.Application.Grains.Agents.Creator;
+using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Provider;
 using Aevatar.Cqrs.Tests.Cqrs.Dto;
 using Aevatar.GAgent.Dto;
@@ -15,6 +16,7 @@ public class CqrsProviderTest : AevatarApplicationTestBase
 {
     private readonly IClusterClient _clusterClient;
     private readonly ICQRSProvider _cqrsProvider;
+    private readonly IStateProjector _stateProjector;
     private const string AgentType = nameof(CqrsTestCreateAgentGEvent);
     private const string User1Address = "2HxX36oXZS89Jvz7kCeUyuWWDXLTiNRkAzfx3EuXq4KSSkH62W";
     private const string User2Address = "2KxX36oXZS89Jvz7kCeUyuWWDXLTiNRkAzfx3EuXq4KSSkH62S";
@@ -25,6 +27,7 @@ public class CqrsProviderTest : AevatarApplicationTestBase
     {
         _clusterClient = GetRequiredService<IClusterClient>();
         _cqrsProvider = GetRequiredService<ICQRSProvider>();
+        _stateProjector = GetRequiredService<IStateProjector>();
     }
 
     [Fact]
@@ -46,14 +49,15 @@ public class CqrsProviderTest : AevatarApplicationTestBase
                 { "key3", "value3" }
             }
         };
-        await _cqrsProvider.PublishAsync(GrainId.Create("test", grainId.ToString()),cqrsTestAgentState );
+        await _stateProjector.ProjectAsync(
+            new StateWrapper<CqrsTestAgentState>(GrainId.Create("test", grainId.ToString()), cqrsTestAgentState, 0));
 
         //query state index query by eventId
         var indexName = IndexPrefix + nameof(CqrsTestAgentState).ToLower() + IndexSuffix;
         await Task.Delay(1000);
 
         var result = await _cqrsProvider.QueryStateAsync(indexName,
-            q => q.Term(t => t.Field("id").Value(grainId)),
+            q => q.Term(t => t.Field("id").Value(grainId.ToString())),
             0,
             10
         );
@@ -66,10 +70,11 @@ public class CqrsProviderTest : AevatarApplicationTestBase
         //query state index query by groupId
         var grainId2 = Guid.NewGuid();
         cqrsTestAgentState.Id = grainId2;
-        await _cqrsProvider.PublishAsync(GrainId.Create("test", grainId2.ToString()),cqrsTestAgentState);
+        await _stateProjector.ProjectAsync(
+            new StateWrapper<CqrsTestAgentState>(GrainId.Create("test", grainId2.ToString()), cqrsTestAgentState, 0));
         await Task.Delay(1000);
         var result2 = await _cqrsProvider.QueryStateAsync(indexName,
-            q => q.Term(t => t.Field("id").Value(grainId2)),
+            q => q.Term(t => t.Field("id").Value(grainId2.ToString())),
             0,
             10
         );
@@ -80,7 +85,7 @@ public class CqrsProviderTest : AevatarApplicationTestBase
         stateDto2[0].GroupId.ShouldBe(groupId.ToString());
 
         var resultGroup = await _cqrsProvider.QueryStateAsync(indexName,
-            q => q.Term(t => t.Field("groupId").Value(groupId)),
+            q => q.Term(t => t.Field("groupId").Value(groupId.ToString())),
             0,
             10
         );
@@ -93,54 +98,6 @@ public class CqrsProviderTest : AevatarApplicationTestBase
         stateDtoList[1].GroupId.ShouldBe(groupId.ToString());
     }
 
-    [Fact]
-    public async Task SendGeventCommandTest()
-    {
-        var eventId1 = Guid.NewGuid();
-        var agentGrainId = Guid.NewGuid();
-
-        var grainType = GrainType.Create(AgentType);
-        var primaryKey = IdSpan.Create(agentGrainId.ToString());
-
-        var grainId = GrainId.Create(grainType, primaryKey);
-        //save gEvent index
-        var cqrsTestCreateAgentGEvent = new CqrsTestCreateAgentGEvent
-        {
-            Id = eventId1,
-            UserAddress = User1Address,
-            Type = "twitter",
-            Name = AgentType,
-            BusinessAgentId = agentGrainId.ToString(),
-            Properties = "create"
-        };
-        await _cqrsProvider.PublishAsync(eventId1, grainId, cqrsTestCreateAgentGEvent);
-
-        await Task.Delay(1000);
-        //query gEvent index query by eventId
-        var tuple = await _cqrsProvider.QueryGEventAsync(eventId1.ToString(), new List<string>() { }, 1, 10);
-        tuple.Item1.ShouldBe(1);
-        tuple.Item2.Count.ShouldBe(1);
-        tuple.Item2.FirstOrDefault().Id.ShouldBe(eventId1);
-        // tuple.Item2.FirstOrDefault().GrainId.ShouldBe(agentGrainId);
-        tuple.Item2.FirstOrDefault().EventJson.ShouldContain(User1Address);
-
-        //query gEvent index query by grainId
-        var eventId2 = Guid.NewGuid();
-        cqrsTestCreateAgentGEvent.UserAddress = User2Address;
-        await _cqrsProvider.PublishAsync(eventId2, grainId, cqrsTestCreateAgentGEvent);
-        await Task.Delay(1000);
-
-        var tupleResult =
-            await _cqrsProvider.QueryGEventAsync("", new List<string>() { agentGrainId.ToString() }, 1, 10);
-        tupleResult.Item1.ShouldBe(2);
-        tupleResult.Item2.Count.ShouldBe(2);
-        tupleResult.Item2[0].Id.ShouldBe(eventId1);
-        tupleResult.Item2[1].Id.ShouldBe(eventId2);
-        //    tupleResult.Item2[0].GrainId.ShouldBe(agentGrainId);
-        //   tupleResult.Item2[1].GrainId.ShouldBe(agentGrainId);
-        tupleResult.Item2[0].EventJson.ShouldContain(User1Address);
-        tupleResult.Item2[1].EventJson.ShouldContain(User2Address);
-    }
 
     [Fact]
     public async Task QueryUserInstallAgentTest()
@@ -163,7 +120,9 @@ public class CqrsProviderTest : AevatarApplicationTestBase
 
         foreach (var item in creatorList)
         {
-            await _cqrsProvider.PublishAsync( GrainId.Create(nameof(CreatorGAgent).ToLower(), item.Id.ToString().Replace("-", "")),item);
+            await _stateProjector.ProjectAsync(
+                new StateWrapper<CreatorGAgentState>(
+                    GrainId.Create(nameof(CreatorGAgent).ToLower(), item.Id.ToString().Replace("-", "")), item, 0));
         }
 
         var indexName = IndexPrefix + nameof(CreatorGAgentState).ToLower() + IndexSuffix;
