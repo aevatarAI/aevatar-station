@@ -258,33 +258,33 @@ def test_agent_relationships(api_headers, test_agent):
 #     assert_status_code(response)
 #     assert "state" in response.json()["data"]
 #     assert response.json()["data"]["state"]["number"] == number
-#
-#
-# def test_query_operations(api_headers, test_agent):
-#     """test query operations"""
-#     time.sleep(2)
-#     # query state
-#     response = requests.get(
-#         f"{API_HOST}/api/query/state",
-#         params={"stateName": STATE_NAME, "id": test_agent},
-#         headers=api_headers
-#     )
-#     assert_status_code(response)
-#     assert "state" in response.json()["data"]
-#     assert response.json()["data"]["state"]["name"] == AGENT_NAME
-#
-#     # query es
-#     response = requests.get(
-#         f"{API_HOST}/api/query/es",
-#         params={
-#             "index": INDEX_NAME,
-#             "queryString": f"name: {AGENT_NAME}",
-#             "pageSize": 1
-#         },
-#         headers=api_headers
-#     )
-#     assert_status_code(response)
-#     assert response.json()["data"]["totalCount"] > 0
+
+
+def test_query_operations(api_headers, test_agent):
+    """test query operations"""
+    time.sleep(2)
+    # query state
+    response = requests.get(
+        f"{API_HOST}/api/query/state",
+        params={"stateName": STATE_NAME, "id": test_agent},
+        headers=api_headers
+    )
+    assert_status_code(response)
+    assert "state" in response.json()["data"]
+    assert response.json()["data"]["state"]["name"] == AGENT_NAME
+
+    # query es
+    response = requests.get(
+        f"{API_HOST}/api/query/es",
+        params={
+            "index": INDEX_NAME,
+            "queryString": f"name: {AGENT_NAME}",
+            "pageSize": 1
+        },
+        headers=api_headers
+    )
+    assert_status_code(response)
+    assert response.json()["data"]["totalCount"] > 0
 
 
 def test_query_agent_list(api_headers, test_agent):
