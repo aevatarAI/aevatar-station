@@ -242,16 +242,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
 
     protected virtual async Task AddMemberAsync(Guid organizationId, IdentityUser user, Guid? roleId)
     {
-        if (user.ExtraProperties.TryGetValue(AevatarConsts.MemberStatusKey, out var status))
-        {
-            var statusDic = status as Dictionary<string, object>;
-            statusDic[organizationId.ToString()] = MemberStatus.Inviting;
-            user.ExtraProperties[AevatarConsts.MemberStatusKey] = statusDic;
-        }
-        else
-        {
-            user.ExtraProperties[AevatarConsts.MemberStatusKey] = new Dictionary<string, MemberStatus>{{organizationId.ToString(),MemberStatus.Inviting}};
-        }
+        SetMemberStatus(organizationId, user, MemberStatus.Inviting);
 
         await IdentityUserManager.UpdateAsync(user);
         await IdentityUserManager.AddToOrganizationUnitAsync(user.Id, organizationId);
@@ -319,6 +310,8 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         }
 
         user.AddRole(input.RoleId);
+        SetMemberStatus(organizationId, user, MemberStatus.Joined);
+        
         await IdentityUserManager.UpdateAsync(user);
     }
 
@@ -421,13 +414,28 @@ public class OrganizationService : AevatarAppService, IOrganizationService
     {
         if (user.ExtraProperties.TryGetValue(AevatarConsts.MemberStatusKey, out var status))
         {
-            var statusDic = status as Dictionary<string, object>;
-            if (statusDic.TryGetValue(organizationId.ToString(), out var value))
+            var userStatus = status as Dictionary<string, object>;
+            if (userStatus.TryGetValue(organizationId.ToString(), out var value))
             {
                 return (MemberStatus)value;
             }
         }
 
         return MemberStatus.Joined;
+    }
+
+    private void SetMemberStatus(Guid organizationId, IdentityUser user, MemberStatus memberStatus)
+    {
+        if (user.ExtraProperties.TryGetValue(AevatarConsts.MemberStatusKey, out var status))
+        {
+            var userStatus = status as Dictionary<string, object>;
+            userStatus[organizationId.ToString()] = memberStatus;
+            user.ExtraProperties[AevatarConsts.MemberStatusKey] = userStatus;
+        }
+        else
+        {
+            user.ExtraProperties[AevatarConsts.MemberStatusKey] = new Dictionary<string, MemberStatus>
+                { { organizationId.ToString(), memberStatus } };
+        }
     }
 }
