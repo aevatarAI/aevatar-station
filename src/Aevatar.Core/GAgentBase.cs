@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using Orleans.EventSourcing;
 using Orleans.Providers;
 using Orleans.Streams;
+using Orleans.Timers;
 
 namespace Aevatar.Core;
 
@@ -50,6 +51,7 @@ public abstract partial class
 
     private IStateDispatcher? StateDispatcher { get; set; }
     protected readonly AevatarOptions AevatarOptions;
+    private IGrainTimer? _projectionActivationTimer;
 
     protected GAgentBase()
     {
@@ -221,12 +223,41 @@ public abstract partial class
             // This must be called first to initialize Observers field.
             await UpdateObserverListAsync(GetType());
             await InitializeOrResumeEventBaseStreamAsync();
-            await ActivateProjectionGrainAsync();
+            
+            // Register a timer to try to activate the projection grain after a short delay
+            // This helps avoid activation collisions during startup
+            var timerRegistry = ServiceProvider.GetRequiredService<ITimerRegistry>();
+            _projectionActivationTimer = timerRegistry.RegisterGrainTimer(
+                GrainContext,
+                static async (state, ct) => 
+                {
+                    var grain = (GAgentBase<TState, TStateLogEvent, TEvent, TConfiguration>)state;
+                    await grain.DelayedProjectionGrainActivationAsync();
+                },
+                this, // state object to pass to the callback
+                new GrainTimerCreationOptions
+                {
+                    DueTime = TimeSpan.FromSeconds(2), // Initial delay
+                    Period = TimeSpan.FromMilliseconds(-1) // Don't repeat
+                });
         }
         catch (Exception e)
         {
             Logger.LogError($"Error in BaseOnActivateAsync: {e}");
             throw;
+        }
+    }
+
+    private async Task DelayedProjectionGrainActivationAsync()
+    {
+        try
+        {
+            await ActivateProjectionGrainAsync();
+        }
+        catch (Exception e)
+        {
+            Logger.LogError($"Error in delayed projection grain activation: {e}");
+            // Don't throw from timer callback
         }
     }
 
@@ -272,6 +303,11 @@ public abstract partial class
 
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
+        if (_projectionActivationTimer != null)
+        {
+            _projectionActivationTimer.Dispose();
+            _projectionActivationTimer = null;
+        }
         await base.OnDeactivateAsync(reason, cancellationToken);
     }
 

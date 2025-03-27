@@ -13,7 +13,7 @@ public class StateProjectionGrain<TState> : Grain, IProjectionGrain<TState>
     private readonly AevatarOptions AevatarOptions;
     private IStreamProvider StreamProvider => this.GetStreamProvider(AevatarCoreConstants.StreamProvider);
     private ILogger<StateProjectionGrain<TState>> _logger;
-    private bool _activated;
+    private bool _activated = false;
 
     public StateProjectionGrain(ILogger<StateProjectionGrain<TState>> logger,
         IOptionsSnapshot<AevatarOptions> aevatarOptions)
@@ -47,6 +47,9 @@ public class StateProjectionGrain<TState> : Grain, IProjectionGrain<TState>
                 typeof(TState).Name, e);
             throw;
         }
+
+        _activated = true;
+        _logger.LogInformation("State projection stream for {TState} is activated and ready to use.", typeof(TState).Name);
     }
 
     private async Task InitializeOrResumeStateProjectionStreamAsync()
@@ -82,7 +85,6 @@ public class StateProjectionGrain<TState> : Grain, IProjectionGrain<TState>
             throw;
         }
 
-        _activated = true;
         _logger.LogInformation("State projection stream for {TState} is ready", typeof(TState).Name);
     }
 
