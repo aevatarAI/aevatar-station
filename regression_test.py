@@ -190,70 +190,70 @@ def test_agent_relationships(api_headers, test_agent):
     assert_status_code(response)
 
 
-# def test_event_operations(api_headers, test_agent):
-#     """test event operations"""
-#     # create sub agent
-#     response = requests.post(
-#         f"{API_HOST}/api/agent",
-#         json={"agentType": TEST_AGENT, "name": "child Agent"},
-#         headers=api_headers
-#     )
-#     assert_status_code(response)
-#     sub_agent = response.json()["data"]["id"]
-#
-#     # add to group
-#     response = requests.post(
-#         f"{API_HOST}/api/agent/{test_agent}/add-subagent",
-#         json={"subAgents": [sub_agent]},
-#         headers=api_headers
-#     )
-#     assert_status_code(response)
-#     assert sub_agent in response.json()["data"]["subAgents"]
-#
-#     # query available events
-#     response = requests.get(
-#         f"{API_HOST}/api/subscription/events/{test_agent}",
-#         headers=api_headers
-#     )
-#     assert_status_code(response)
-#     assert any(et["eventType"] == EVENT_TYPE for et in response.json()["data"])
-#     event = [et for et in response.json()["data"] if et["eventType"] == EVENT_TYPE][0]
-#     assert any(property["name"] == EVENT_PARAM for property in event["eventProperties"])
-#
-#     number = 10
-#     # publish event
-#     event_data = {
-#         "agentId": test_agent,
-#         "eventType": EVENT_TYPE,
-#         "eventProperties": {EVENT_PARAM: number}
-#     }
-#     response = requests.post(
-#         f"{API_HOST}/api/agent/publishEvent",
-#         json=event_data,
-#         headers=api_headers
-#     )
-#     assert_status_code(response)
-#
-#     time.sleep(2)
-#     # query parent agent state
-#     response = requests.get(
-#         f"{API_HOST}/api/query/state",
-#         params={"stateName": STATE_NAME, "id": test_agent},
-#         headers=api_headers
-#     )
-#     assert_status_code(response)
-#     assert "state" in response.json()["data"]
-#     assert response.json()["data"]["state"]["number"] == number
-#
-#     # query sub agent state
-#     response = requests.get(
-#         f"{API_HOST}/api/query/state",
-#         params={"stateName": STATE_NAME, "id": sub_agent},
-#         headers=api_headers
-#     )
-#     assert_status_code(response)
-#     assert "state" in response.json()["data"]
-#     assert response.json()["data"]["state"]["number"] == number
+def test_event_operations(api_headers, test_agent):
+    """test event operations"""
+    # create sub agent
+    response = requests.post(
+        f"{API_HOST}/api/agent",
+        json={"agentType": TEST_AGENT, "name": "child Agent"},
+        headers=api_headers
+    )
+    assert_status_code(response)
+    sub_agent = response.json()["data"]["id"]
+
+    # add to group
+    response = requests.post(
+        f"{API_HOST}/api/agent/{test_agent}/add-subagent",
+        json={"subAgents": [sub_agent]},
+        headers=api_headers
+    )
+    assert_status_code(response)
+    assert sub_agent in response.json()["data"]["subAgents"]
+
+    # query available events
+    response = requests.get(
+        f"{API_HOST}/api/subscription/events/{test_agent}",
+        headers=api_headers
+    )
+    assert_status_code(response)
+    assert any(et["eventType"] == EVENT_TYPE for et in response.json()["data"])
+    event = [et for et in response.json()["data"] if et["eventType"] == EVENT_TYPE][0]
+    assert any(property["name"] == EVENT_PARAM for property in event["eventProperties"])
+
+    number = 10
+    # publish event
+    event_data = {
+        "agentId": test_agent,
+        "eventType": EVENT_TYPE,
+        "eventProperties": {EVENT_PARAM: number}
+    }
+    response = requests.post(
+        f"{API_HOST}/api/agent/publishEvent",
+        json=event_data,
+        headers=api_headers
+    )
+    assert_status_code(response)
+
+    time.sleep(2)
+    # query parent agent state
+    response = requests.get(
+        f"{API_HOST}/api/query/state",
+        params={"stateName": STATE_NAME, "id": test_agent},
+        headers=api_headers
+    )
+    assert_status_code(response)
+    assert "state" in response.json()["data"]
+    assert response.json()["data"]["state"]["number"] == number
+
+    # query sub agent state
+    response = requests.get(
+        f"{API_HOST}/api/query/state",
+        params={"stateName": STATE_NAME, "id": sub_agent},
+        headers=api_headers
+    )
+    assert_status_code(response)
+    assert "state" in response.json()["data"]
+    assert response.json()["data"]["state"]["number"] == number
 
 
 def test_query_operations(api_headers, test_agent):
