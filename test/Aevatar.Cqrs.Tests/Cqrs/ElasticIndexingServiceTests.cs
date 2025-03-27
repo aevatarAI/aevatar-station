@@ -1,10 +1,10 @@
 using Xunit;
 using Moq;
-using Nest;
 using Aevatar;
 using Aevatar.CQRS;
 using Aevatar.CQRS.Provider;
 using Aevatar.Query;
+using Elastic.Clients.Elasticsearch;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
@@ -12,7 +12,7 @@ using Volo.Abp;
 
 public class ElasticServiceTests : AevatarApplicationTestBase
 {
-    private readonly Mock<IElasticClient> _mockElasticClient;
+    private readonly Mock<ElasticsearchClient> _mockElasticClient;
     private readonly Mock<ILogger<ElasticIndexingService>> _mockLogger;
     private readonly IIndexingService _elasticService;
     private readonly ICQRSProvider _cqrsProvider;
@@ -20,7 +20,7 @@ public class ElasticServiceTests : AevatarApplicationTestBase
 
     public ElasticServiceTests()
     {
-        _mockElasticClient = new Mock<IElasticClient>();
+        _mockElasticClient = new Mock<ElasticsearchClient>();
         _mockLogger = new Mock<ILogger<ElasticIndexingService>>();
         _cqrsProvider = GetRequiredService<ICQRSProvider>();
         _cache = GetRequiredService<IMemoryCache>();
@@ -38,14 +38,14 @@ public class ElasticServiceTests : AevatarApplicationTestBase
         // Arrange
         var queryDto = new LuceneQueryDto
         {
-            Index = "test-index",
+            State = "test-index",
             QueryString = "level:ERROR",
             PageIndex = 0,
             PageSize = 10,
             SortFields = new List<string> { "timestamp:desc" }
         };
 
-        var mockResponse = new Mock<ISearchResponse<Dictionary<string, object>>>();
+        /*var mockResponse = new Mock<ISearchResponse<Dictionary<string, object>>>();
         mockResponse.Setup(r => r.IsValid).Returns(true);
         mockResponse.Setup(r => r.Total).Returns(1L);
         mockResponse.Setup(r => r.Documents)
@@ -58,7 +58,7 @@ public class ElasticServiceTests : AevatarApplicationTestBase
                 It.IsAny<SearchDescriptor<Dictionary<string, object>>>(),
                 default
             ))
-            .ReturnsAsync(mockResponse.Object);
+            .ReturnsAsync(mockResponse.Object);*/
 
         // Act
         var result = await _elasticService.QueryWithLuceneAsync(queryDto);
@@ -76,18 +76,18 @@ public class ElasticServiceTests : AevatarApplicationTestBase
         // Arrange
         var queryDto = new LuceneQueryDto
         {
-            Index = "test-index",
+            State = "test-index",
             QueryString = "invalid_field:value"
         };
 
-        var mockResponse = new Mock<ISearchResponse<Dictionary<string, object>>>();
+        /*var mockResponse = new Mock<ISearchResponse<Dictionary<string, object>>>();
         mockResponse.Setup(r => r.IsValid).Returns(false);
 
         _mockElasticClient.Setup(x => x.SearchAsync<Dictionary<string, object>>(
                 It.IsAny<SearchDescriptor<Dictionary<string, object>>>(),
                 default
             ))
-            .ReturnsAsync(mockResponse.Object);
+            .ReturnsAsync(mockResponse.Object);*/
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<UserFriendlyException>(() =>

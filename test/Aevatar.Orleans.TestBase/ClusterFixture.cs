@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -11,12 +12,13 @@ using Aevatar.CQRS.Provider;
 using Aevatar.Options;
 using Aevatar.Service;
 using AutoMapper;
-using MediatR;
+using Elastic.Clients.Elasticsearch;
+using Elastic.Transport;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using MongoDB.Driver.Core.Configuration;
 using Moq;
-using Nest;
 using Orleans.Hosting;
 using Orleans.TestingHost;
 using Volo.Abp.AutoMapper;
@@ -91,28 +93,11 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                     services.AddMediatR(cfg =>
                         cfg.RegisterServicesFromAssembly(typeof(SaveStateBatchCommandHandler).Assembly)
                     );
-                    services.AddMediatR(cfg =>
-                        cfg.RegisterServicesFromAssembly(typeof(SaveGEventCommandHandler).Assembly)
-                    );
-                    services.AddMediatR(cfg =>
-                        cfg.RegisterServicesFromAssembly(typeof(SendEventCommandHandler).Assembly)
-                    );
-                    services.AddMediatR(cfg =>
-                        cfg.RegisterServicesFromAssembly(typeof(GetGEventQueryHandler).Assembly)
-                    );
-
 
                     services.AddSingleton<IIndexingService, ElasticIndexingService>();
 
                     services.AddSingleton(typeof(IEventDispatcher), typeof(CQRSProvider));
                     services.AddSingleton(typeof(ICQRSProvider), typeof(CQRSProvider));
-                    services.AddSingleton<IElasticClient>(provider =>
-                    {
-                        var settings = new ConnectionSettings(new Uri("http://127.0.0.1:9200"))
-                            .DefaultIndex("cqrs").DefaultFieldNameInferrer(fieldName =>
-                                char.ToLowerInvariant(fieldName[0]) + fieldName[1..]);
-                        return new ElasticClient(settings);
-                    });
                     services.AddSingleton(typeof(ICqrsService), typeof(CqrsService));
                 })
                 .AddMemoryStreams("Aevatar")

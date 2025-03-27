@@ -1,7 +1,6 @@
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.SignalR;
-using Nest;
 
 namespace Aevatar.Application.Grains.Agents.ChatManager;
 
