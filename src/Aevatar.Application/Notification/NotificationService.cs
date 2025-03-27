@@ -80,18 +80,19 @@ public class NotificationService : INotificationService, ITransientDependency
             CreatorId = creator,
         };
 
-        var stopWatch = new Stopwatch();
-        stopWatch.Start();
         notification = await _notificationRepository.InsertAsync(notification);
-        await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
-            new NotificationResponse()
-            {
-                Data = new NotificationResponseMessage()
-                    { Id = notification.Id, Status = NotificationStatusEnum.None }
-            });
-        
-        stopWatch.Stop();
-        _logger.LogInformation($"StopWatch SignalR use time:{stopWatch.ElapsedMilliseconds}");
+        //
+        // var stopWatch = new Stopwatch();
+        // stopWatch.Start();
+        // await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
+        //     new NotificationResponse()
+        //     {
+        //         Data = new NotificationResponseMessage()
+        //             { Id = notification.Id, Status = NotificationStatusEnum.None }
+        //     });
+        //
+        // stopWatch.Stop();
+        // _logger.LogInformation($"StopWatch SignalR use time:{stopWatch.ElapsedMilliseconds}");
         return true;
     }
 
