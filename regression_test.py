@@ -5,8 +5,8 @@ import pytest
 import requests
 
 # 环境配置
-AUTH_HOST = "http://127.0.0.1:8082"
-API_HOST = "http://localhost:8001"
+AUTH_HOST = "https://auth-station-staging.aevatar.ai"
+API_HOST = "https://station-developer-staging.aevatar.ai/test-client"
 
 TEST_AGENT = "testagentwithconfiguration"
 STATE_NAME = "TestAgentState"
@@ -18,8 +18,8 @@ EVENT_PARAM = "Number"
 
 
 # 从环境变量获取凭证
-CLIENT_ID = os.getenv("CLIENT_ID")
-CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+CLIENT_ID = os.getenv("TEST_CLIENT_ID")
+CLIENT_SECRET = os.getenv("TEST_CLIENT_SECRET")
 
 
 @pytest.fixture(scope="session")
