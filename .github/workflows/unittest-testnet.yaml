@@ -53,7 +53,7 @@ jobs:
       - name: Run Python Script
         run: |
           source venv/bin/activate
-          pytest regression_test.py
+          pytest -s -v regression_test.py
 
       - name: Lark Notification on Success
         if: success()
