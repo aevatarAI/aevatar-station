@@ -21,8 +21,4 @@
         <PackageReference Include="MediatR"/>
     </ItemGroup>
 
-    <ItemGroup>
-        <Compile Remove="Dto\BaseStateIndex.cs"/>
-    </ItemGroup>
-
 </Project>
