@@ -11,13 +11,13 @@ TEST_AGENT = "testagentwithconfiguration"
 STATE_NAME = "TestAgentState"
 AGENT_NAME = "TestAgent"
 AGENT_NAME_MODIFIED = "TestAgentNameModified"
-INDEX_NAME = "aevatar-aevatar-testagentstateindex"
 EVENT_TYPE = "Aevatar.Application.Grains.Agents.TestAgent.SetNumberGEvent"
 EVENT_PARAM = "Number"
 
 
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+INDEX_NAME = f"aevatar-{CLIENT_ID}-testagentstateindex"
 
 
 @pytest.fixture(scope="session")
