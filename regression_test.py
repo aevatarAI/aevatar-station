@@ -193,9 +193,16 @@ def test_agent_relationships(api_headers, test_agent):
 def test_event_operations(api_headers, test_agent):
     """test event operations"""
     # create sub agent
+    agent_data = {
+        "agentType": TEST_AGENT,
+        "name": "child Agent",
+        "properties": {
+            "Name": "child Agent"
+        }
+    }
     response = requests.post(
         f"{API_HOST}/api/agent",
-        json={"agentType": TEST_AGENT, "name": "child Agent"},
+        json=agent_data,
         headers=api_headers
     )
     assert_status_code(response)
