@@ -1,62 +1,74 @@
 ﻿using System.Diagnostics;
 using System.Net.Http.Headers;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 
 public class Program
 {
     public async static Task<int> Main(string[] args)
     {
-// Set required environment variables before creating the builder
+        // Set required environment variables before creating the builder
         Environment.SetEnvironmentVariable("DOTNET_DASHBOARD_OTLP_ENDPOINT_URL", "http://localhost:14317");
         Environment.SetEnvironmentVariable("DOTNET_DASHBOARD_OTLP_HTTP_ENDPOINT_URL", "http://localhost:14318");
         Environment.SetEnvironmentVariable("ASPIRE_ALLOW_UNSECURED_TRANSPORT", "true");
 
-// docker ps , get local port
-        var dockerMongoPort = 62357;
-        var dockerRedisPort = 53966;
-        var dockerEsPort = 63984;
-        var dockerQrPort = 55132;
-        var dockerKafkaPort = 58084;
+        var configuration = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json")
+            .Build();
+        // docker ps , get local port
+        var dockerMongoPort = configuration.GetValue<int>("DockerMongoConfig:port");
+        var dockerMongoName = configuration.GetValue<string>("DockerMongoConfig:name");
+        var dockerMongoPassword = configuration.GetValue<string>("DockerMongoConfig:password");
+        
+        var dockerRedisPort = configuration.GetValue<int>("DockerRedisConfig:port");
+        
+        var dockerEsPort = configuration.GetValue<int>("DockerEsConfig:port");
+        var dockerEsName = configuration.GetValue<string>("DockerEsConfig:name");
+        var dockerEsPassword = configuration.GetValue<string>("DockerEsConfig:password");
+
+        var dockerQrPort = configuration.GetValue<int>("DockerQrConfig:port");
+        var dockerKafkaPort = configuration.GetValue<int>("DockerKafkaConfig:port");
 
         var mongodbConnections =
-            $"mongodb://admin:123456@localhost:{dockerMongoPort}/AevatarDb?authSource=admin&authMechanism=SCRAM-SHA-256";
-        var mongoDBClient = $"mongodb://admin:123456@localhost:{dockerMongoPort}?authSource=admin";
+            $"mongodb://{dockerMongoName}:{dockerMongoPassword}@localhost:{dockerMongoPort}/AevatarDb?authSource=admin&authMechanism=SCRAM-SHA-256";
+        var mongoDBClient = $"mongodb://{dockerMongoName}:{dockerMongoPassword}@localhost:{dockerMongoPort}?authSource=admin";
 
-        var esUrl = $"[\"http://elastic:123456@localhost:{dockerEsPort}\"]";
+        var esUrl = $"[\"http://{dockerEsName}:{dockerEsPassword}@localhost:{dockerEsPort}\"]";
         var qrUrl = $"http://127.0.0.1:{dockerQrPort}";
-        var kfakaUrl = $"127.0.0.1:{dockerKafkaPort}";
+        var kafkaUrl = $"127.0.0.1:{dockerKafkaPort}";
         var redisUrl = $"127.0.0.1:{dockerRedisPort}";
 
         var builder = DistributedApplication.CreateBuilder(args);
 
-// Add infrastructure resources
+        // Add infrastructure resources
         var mongoUserName = builder
-            .AddParameter("MONGOUSERNAME", "admin");
+            .AddParameter("MONGOUSERNAME", dockerMongoName);
         var mongoPassword = builder
-            .AddParameter("MONGOPASSWORD", "123456");
+            .AddParameter("MONGOPASSWORD", dockerMongoPassword);
 
-        var mongodb = builder.AddMongoDB("mongodb", userName: mongoUserName, password: mongoPassword)
+        var mongodb = builder.AddMongoDB("mongodb", dockerMongoPort, userName: mongoUserName, password: mongoPassword)
             .WithEnvironment("MONGO_INITDB_DATABASE", "AevatarDb"); // Ensure the default database exists
         mongodb.WithContainerName("mongodb");
         mongodb.WithLifetime(ContainerLifetime.Persistent);
 
-        var redis = builder.AddRedis("redis");
+        var redis = builder.AddRedis("redis", port: dockerRedisPort);
         redis.WithContainerName("redis");
         redis.WithLifetime(ContainerLifetime.Persistent);
 
         var elasticsearchPassword = builder
-            .AddParameter("ESPASSWORD", "123456");
-        var elasticsearch = builder.AddElasticsearch("elasticsearch", password: elasticsearchPassword);
+            .AddParameter("ESPASSWORD", dockerEsPassword);
+        var elasticsearch = builder.AddElasticsearch("elasticsearch", password: elasticsearchPassword, port: dockerEsPort);
         elasticsearch.WithContainerName("elasticsearch");
         elasticsearch.WithLifetime(ContainerLifetime.Persistent);
-        var kafka = builder.AddKafka("kafka");
+        
+        var kafka = builder.AddKafka("kafka", dockerKafkaPort);
         kafka.WithContainerName("kafka");
         kafka.WithLifetime(ContainerLifetime.Persistent);
 
-// Create data directory if it doesn't exist
+        // Create data directory if it doesn't exist
         Directory.CreateDirectory(Path.Combine(Environment.CurrentDirectory, "data", "qdrant"));
 
-// Note: Qdrant doesn't have an Aspire provider yet, so we'll use a container directly
+        // Note: Qdrant doesn't have an Aspire provider yet, so we'll use a container directly
         var qdrant = builder.AddContainer("qdrant", "qdrant/qdrant:latest")
             .WithHttpEndpoint(port: 6333, name: "qdrant-http", targetPort: 6333)
             .WithEndpoint(port: 6334, name: "grpc", targetPort: 6334)
@@ -65,12 +77,12 @@ public class Program
         qdrant.WithContainerName("qdrant");
         qdrant.WithLifetime(ContainerLifetime.Persistent);
 
-// Create a dependency group for all infrastructure resources
-// This ensures all these resources are fully started before any application components
+        // Create a dependency group for all infrastructure resources
+        // This ensures all these resources are fully started before any application components
         var infrastructureDependencies = new[] {mongodb, redis, elasticsearch, kafka, qdrant};
 
-// Add Aevatar.Silo (Orleans) project with its dependencies
-// Orleans requires specific configuration for clustering and streams
+        // Add Aevatar.Silo (Orleans) project with its dependencies
+        // Orleans requires specific configuration for clustering and streams
         var silo = builder.AddProject("silo", "../Aevatar.Silo/Aevatar.Silo.csproj")
             .WithReference(mongodb)
             .WithReference(elasticsearch)
@@ -101,7 +113,6 @@ public class Program
             // .WithEnvironment("OrleansStream__Provider", "Kafka")
             // .WithEnvironment("OrleansStream__Broker", kfakaUrl)
             .WithEnvironment("OrleansEventSourcing__Provider", "MongoDB");
-
 
 // Add Aevatar.Developer.Silo (Orleans) project with its dependencies
 // Orleans requires specific configuration for clustering and streams
@@ -287,20 +298,34 @@ public class Program
                 var responseBody = await response.Content.ReadAsStringAsync();
                 var responseJson = JsonConvert.DeserializeObject<Dictionary<string, Object>>(responseBody);
                 Console.WriteLine($"connect/token response: {responseBody}");
-                if (responseJson.TryGetValue("access_token", out var accessToken))
+                if (!responseJson.TryGetValue("access_token", out var accessToken))
                 {
-                    var registerClientUrl =
-                        "http://localhost:7002/api/users/registerClient?clientId=Aevatar001&clientSecret=123456&corsUrls=s";
-                    client.DefaultRequestHeaders.Clear();
-                    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
-                    client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
-                    client.DefaultRequestHeaders.Authorization =
-                        new AuthenticationHeaderValue("Bearer", accessToken.ToString());
-                    response = await client.PostAsync(registerClientUrl, new StringContent(String.Empty));
-                    response.EnsureSuccessStatusCode();
-                    responseBody = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"registerClient response: {responseBody}");
+                    return;
                 }
+                var registerClientUrl =
+                    "http://localhost:7002/api/users/registerClient?clientId=Aevatar001&clientSecret=123456&corsUrls=s";
+                client.DefaultRequestHeaders.Clear();
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
+                client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
+                client.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue("Bearer", accessToken.ToString());
+                response = await client.PostAsync(registerClientUrl, new StringContent(String.Empty));
+                response.EnsureSuccessStatusCode();
+                responseBody = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"registerClient response: {responseBody}");
+                
+                var clientFormData = new Dictionary<string, string>
+                {
+                    {"grant_type", "client_credentials"},
+                    {"client_id", "Aevatar001"},
+                    {"client_secret", "123456"},
+                    {"scope", "Aevatar"}
+                };
+                var clientContent = new FormUrlEncodedContent(clientFormData);
+                var clientResponse = await client.PostAsync(requestUrl, clientContent);
+                response.EnsureSuccessStatusCode();
+                var clientResponseBody = await clientResponse.Content.ReadAsStringAsync();
+                Console.WriteLine($"clientId connect/token response: {clientResponseBody}");
             }
             catch (HttpRequestException ex)
             {

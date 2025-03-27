@@ -28,5 +28,10 @@
     <ProjectReference Include="..\Aevatar.Developer.Host\Aevatar.Developer.Host.csproj" />
     <ProjectReference Include="..\Aevatar.Worker\Aevatar.Worker.csproj" />
 </ItemGroup>
+    <ItemGroup>
+        <None Update="appsettings.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>   
 
 </Project>
