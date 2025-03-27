@@ -36,15 +36,12 @@ public class TestAgentWithConfiguration : GAgentBase<TestAgentState, TestAgentEv
     
 
     [EventHandler]
-    public async Task HandleAddDataEvent(AddDataGEvent @event)
+    public async Task HandleAddDataEvent(SetNumberGEvent @event)
     {
-        var data = State.Data;
-        data.Add(@event.Number);
-        
-        RaiseEvent(new SetDataSEvent
+        RaiseEvent(new SetNumberSEvent()
         {
             Id = Guid.NewGuid(),
-            Data = data
+            Number = @event.Number
         });
         await ConfirmEvents();
     }
@@ -57,8 +54,8 @@ public class TestAgentWithConfiguration : GAgentBase<TestAgentState, TestAgentEv
                 state.Id = initializationSEvent.Id;
                 state.Name = initializationSEvent.Name;
                 break;
-            case SetDataSEvent setDataSEvent:
-                state.Data = setDataSEvent.Data;
+            case SetNumberSEvent setDataSEvent:
+                state.Number = setDataSEvent.Number;
                 break;
         }
     }
@@ -74,7 +71,7 @@ public class TestAgentState : StateBase
 {
     [Id(0)] public Guid Id { get; set; }
     [Id(1)] [Required] public string Name { get; set; }
-    [Id(2)] public List<int> Data { get; set; } = new();
+    [Id(2)] public int Number { get; set; }
 }
 
 [GenerateSerializer]
@@ -83,9 +80,9 @@ public class TestAgentEvent : StateLogEventBase<TestAgentEvent>
 }
 
 [GenerateSerializer]
-public class SetDataSEvent : TestAgentEvent
+public class SetNumberSEvent : TestAgentEvent
 {
-    [Id(0)] public List<int> Data { get; set; }
+    [Id(0)] public int Number { get; set; }
 }
 
 [GenerateSerializer]
@@ -95,7 +92,7 @@ public class InitializationSEvent : TestAgentEvent
 }
 
 [GenerateSerializer]
-public class AddDataGEvent : EventBase
+public class SetNumberGEvent : EventBase
 {
     [Id(0)] [Required] public int Number { get; set; }
 }

@@ -21,6 +21,7 @@ public class AevatarPermissionDefinitionProvider : PermissionDefinitionProvider
         agentManagementGroup.AddPermission(AevatarPermissions.Agent.View, L("Permission:View"));
         agentManagementGroup.AddPermission(AevatarPermissions.Agent.Update, L("Permission:Update"));
         agentManagementGroup.AddPermission(AevatarPermissions.Agent.Delete, L("Permission:Delete"));
+        agentManagementGroup.AddPermission(AevatarPermissions.Agent.ViewList, L("Permission:ViewList"));
 
         // Relationship Management
         var relationshipGroup = context.AddGroup(AevatarPermissions.Relationship.GroupName, L("Permission:AgentRelationshipManagement"));
