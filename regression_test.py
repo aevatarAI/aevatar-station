@@ -83,7 +83,6 @@ def test_agent(api_headers):
     assert_status_code(response)
     agent_id = response.json()["data"]["id"]
 
-    print("agent_id", agent_id)
     yield agent_id
 
     # delete agent after test

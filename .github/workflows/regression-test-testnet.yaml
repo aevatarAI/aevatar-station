@@ -18,7 +18,7 @@ env:
   PYTHONUNBUFFERED: 1
 
 jobs:
-  run-unit-test:
+  run-regression-test:
     runs-on: ubuntu-latest
     env:
       CLIENT_ID: ${{ secrets.TEST_CLIENT_ID }}
