@@ -238,8 +238,8 @@ public abstract partial class
         {
             // Register a timer to try to activate the projection grain after a short delay
             // This helps avoid activation collisions during startup
-            _projectionActivationTimer ??=
-                this.RegisterGrainTimer(BackgroundWork, TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(-1));
+            // _projectionActivationTimer ??=
+                // this.RegisterGrainTimer(BackgroundWork, TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(-1));
         }
         catch (Exception e)
         {
