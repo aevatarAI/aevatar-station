@@ -253,6 +253,8 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
         }
         
         var json = await response.Content.ReadAsStringAsync();
+        _logger.LogDebug("[AppleGrantHandler][ExchangeCodeForTokenAsync]  json: {json}",json);
+
         var tokenResp = JsonConvert.DeserializeObject<TokenResponse>(json);
         return tokenResp.IdToken;
     }
