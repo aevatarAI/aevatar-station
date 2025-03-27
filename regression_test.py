@@ -1,10 +1,9 @@
-# tests/test_agent_api.py
+# regression_test.py
 import os
 import time
 import pytest
 import requests
 
-# 环境配置
 AUTH_HOST = "https://auth-station-staging.aevatar.ai"
 API_HOST = "https://station-developer-staging.aevatar.ai/test-client"
 
@@ -17,7 +16,6 @@ EVENT_TYPE = "Aevatar.Application.Grains.Agents.TestAgent.SetNumberGEvent"
 EVENT_PARAM = "Number"
 
 
-# 从环境变量获取凭证
 CLIENT_ID = os.getenv("TEST_CLIENT_ID")
 CLIENT_SECRET = os.getenv("TEST_CLIENT_SECRET")
 
