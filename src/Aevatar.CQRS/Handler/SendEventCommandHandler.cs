@@ -21,14 +21,12 @@ public class SendEventCommandHandler : IRequestHandler<SendEventCommand>
         _clusterClient = clusterClient;
     }
 
-    public async Task<Unit> Handle(SendEventCommand request, CancellationToken cancellationToken)
+    public async Task Handle(SendEventCommand request, CancellationToken cancellationToken)
     {
         var publishingAgent = _clusterClient.GetGrain<IPublishingGAgent>(Guid.NewGuid());
         var groupAgent = _clusterClient.GetGrain<IStateGAgent<GroupAgentState>>(Guid.NewGuid());
 
         await publishingAgent.RegisterAsync(groupAgent);
         await publishingAgent.PublishEventAsync(request.Event);
-        return Unit.Value; 
     }
-    
 }

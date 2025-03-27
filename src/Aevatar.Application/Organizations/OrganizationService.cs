@@ -2,11 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Aevatar.Notification;
+using Aevatar.Notification.Parameters;
 using Aevatar.Permissions;
+using Newtonsoft.Json;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.EventBus.Distributed;
 using Volo.Abp.Identity;
 using Volo.Abp.PermissionManagement;
 
@@ -23,11 +27,13 @@ public class OrganizationService : AevatarAppService, IOrganizationService
     protected readonly IOrganizationPermissionChecker PermissionChecker;
     protected readonly IPermissionDefinitionManager PermissionDefinitionManager;
     protected readonly IRepository<IdentityUser, Guid> UserRepository;
+    private readonly IDistributedEventBus _distributedEvent;
 
     public OrganizationService(OrganizationUnitManager organizationUnitManager, IdentityUserManager identityUserManager,
         IRepository<OrganizationUnit, Guid> organizationUnitRepository, IdentityRoleManager roleManager,
         IPermissionManager permissionManager, IOrganizationPermissionChecker permissionChecker,
-        IPermissionDefinitionManager permissionDefinitionManager, IRepository<IdentityUser, Guid> userRepository)
+        IPermissionDefinitionManager permissionDefinitionManager, IRepository<IdentityUser, Guid> userRepository,
+        IDistributedEventBus distributedEvent)
     {
         OrganizationUnitManager = organizationUnitManager;
         IdentityUserManager = identityUserManager;
@@ -37,6 +43,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         PermissionChecker = permissionChecker;
         PermissionDefinitionManager = permissionDefinitionManager;
         UserRepository = userRepository;
+        _distributedEvent = distributedEvent;
     }
 
     public virtual async Task<ListResultDto<OrganizationDto>> GetListAsync(GetOrganizationListDto input)
@@ -53,9 +60,9 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         }
 
         organizations = organizations.Where(o =>
-            o.TryGetExtraPropertyValue<OrganizationType>(AevatarConsts.OrganizationTypeKey,out var type) &&
+            o.TryGetExtraPropertyValue<OrganizationType>(AevatarConsts.OrganizationTypeKey, out var type) &&
             type == OrganizationType.Organization).ToList();
-        
+
         return new ListResultDto<OrganizationDto>
         {
             Items = ObjectMapper.Map<List<OrganizationUnit>, List<OrganizationDto>>(organizations)
@@ -87,14 +94,15 @@ public class OrganizationService : AevatarAppService, IOrganizationService
             GuidGenerator.Create(),
             displayName
         );
-        
+
         var ownerRoleId = await AddOwnerRoleAsync(organizationUnit.Id);
         var readerRoleId = await AddReaderRoleAsync(organizationUnit.Id);
 
         organizationUnit.ExtraProperties[AevatarConsts.OrganizationTypeKey] = OrganizationType.Organization;
-        organizationUnit.ExtraProperties[AevatarConsts.OrganizationRoleKey] = new List<Guid> { ownerRoleId, readerRoleId };
+        organizationUnit.ExtraProperties[AevatarConsts.OrganizationRoleKey] =
+            new List<Guid> { ownerRoleId, readerRoleId };
         await OrganizationUnitManager.CreateAsync(organizationUnit);
-        
+
         if (!CurrentUser.IsInRole(AevatarConsts.AdminRoleName))
         {
             await IdentityUserManager.AddToOrganizationUnitAsync(CurrentUser.Id.Value, organizationUnit.Id);
@@ -102,8 +110,8 @@ public class OrganizationService : AevatarAppService, IOrganizationService
             user.AddRole(ownerRoleId);
             await IdentityUserManager.UpdateAsync(user);
         }
-        
-        return  ObjectMapper.Map<OrganizationUnit, OrganizationDto>(organizationUnit);
+
+        return ObjectMapper.Map<OrganizationUnit, OrganizationDto>(organizationUnit);
     }
 
     protected virtual async Task<Guid> AddOwnerRoleAsync(Guid organizationId)
@@ -135,7 +143,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
 
         return role.Id;
     }
-    
+
     protected virtual async Task<Guid> AddReaderRoleAsync(Guid organizationId)
     {
         var role = new IdentityRole(
@@ -154,7 +162,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         var organization = await OrganizationUnitRepository.GetAsync(id);
         organization.DisplayName = input.DisplayName.Trim();
         await OrganizationUnitManager.UpdateAsync(organization);
-        return  ObjectMapper.Map<OrganizationUnit, OrganizationDto>(organization);
+        return ObjectMapper.Map<OrganizationUnit, OrganizationDto>(organization);
     }
 
     public virtual async Task DeleteAsync(Guid id)
@@ -164,10 +172,10 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         {
             await DeleteOrganizationRoleAsync(child);
         }
-        
+
         var organizationUnit = await OrganizationUnitRepository.GetAsync(id);
         await DeleteOrganizationRoleAsync(organizationUnit);
-        
+
         await OrganizationUnitManager.DeleteAsync(id);
     }
 
@@ -176,7 +184,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
     {
         var organization = await OrganizationUnitRepository.GetAsync(organizationId);
         var members = await IdentityUserManager.GetUsersInOrganizationUnitAsync(organization, true);
-        var result= new List<OrganizationMemberDto>();
+        var result = new List<OrganizationMemberDto>();
         foreach (var member in members)
         {
             var memberDto = ObjectMapper.Map<IdentityUser, OrganizationMemberDto>(member);
@@ -192,7 +200,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
 
             result.Add(memberDto);
         }
-        
+
         return new ListResultDto<OrganizationMemberDto>
         {
             Items = result
@@ -219,13 +227,6 @@ public class OrganizationService : AevatarAppService, IOrganizationService
 
     protected virtual async Task AddMemberAsync(Guid organizationId, IdentityUser user, Guid? roleId)
     {
-        // TODO: invite user
-        if (roleId.HasValue)
-        {
-            user.AddRole(roleId.Value);
-            await IdentityUserManager.UpdateAsync(user);
-        }
-        
         if (user.ExtraProperties.TryGetValue(AevatarConsts.MemberStatusKey, out var status))
         {
             var statusDic = status as Dictionary<string, object>;
@@ -238,10 +239,24 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         }
 
         await IdentityUserManager.UpdateAsync(user);
-
         await IdentityUserManager.AddToOrganizationUnitAsync(user.Id, organizationId);
+        await CurrentUnitOfWork.SaveChangesAsync();
+        
+        await _distributedEvent.PublishAsync(new NotificationCreatForEventBusDto()
+        {
+            Type = NotificationTypeEnum.OrganizationInvitation,
+            Creator = CurrentUser.Id.Value,
+            Target = user.Id,
+            Content = JsonConvert.SerializeObject(new OrganizationVisitInfo
+            {
+                Creator = CurrentUser.Id.Value,
+                OrganizationId = organizationId,
+                RoleId = roleId.Value,
+                Vistor = user.Id
+            })
+        });
     }
-    
+
     protected virtual async Task RemoveMemberAsync(Guid organizationId, IdentityUser user)
     {
         var children = await OrganizationUnitManager.FindChildrenAsync(organizationId, true);
@@ -249,7 +264,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         {
             await RemoveMemberAsync(child, user.Id);
         }
-            
+
         var organization = await OrganizationUnitRepository.GetAsync(organizationId);
         await RemoveMemberAsync(organization, user.Id);
     }
@@ -291,7 +306,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         user.AddRole(input.RoleId);
         await IdentityUserManager.UpdateAsync(user);
     }
-    
+
     public virtual async Task<ListResultDto<IdentityRoleDto>> GetRoleListAsync(Guid organizationId)
     {
         var organization = await OrganizationUnitRepository.GetAsync(organizationId);
@@ -302,7 +317,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
             foreach (var roleId in roleIds)
             {
                 var role = await RoleManager.GetByIdAsync(roleId);
-                result.Add(ObjectMapper.Map<IdentityRole,IdentityRoleDto>(role));
+                result.Add(ObjectMapper.Map<IdentityRole, IdentityRoleDto>(role));
             }
         }
 
@@ -310,14 +325,13 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         {
             Items = result
         };
-
     }
 
     public virtual async Task<ListResultDto<PermissionGrantInfoDto>> GetPermissionListAsync(Guid organizationId)
     {
         var group = await PermissionDefinitionManager.GetGroupsAsync();
         var developerPlatformPermission = group.First(o => o.Name == AevatarPermissions.DeveloperPlatform);
-        
+
         var permissions = new List<PermissionGrantInfoDto>();
         foreach (var permission in developerPlatformPermission.GetPermissionsWithChildren())
         {
@@ -339,7 +353,6 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         {
             Items = permissions
         };
-
     }
 
     protected virtual async Task DeleteOrganizationRoleAsync(OrganizationUnit organizationUnit)

@@ -1,5 +1,4 @@
 using System.Net;
-using Aevatar.Application.Grains.Agents.ChatManager.Options;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
@@ -138,17 +137,14 @@ public static class OrleansHostExtension
                             var partitions = configuration.GetSection("OrleansStream:Partitions").Get<int>();
                             var replicationFactor =
                                 configuration.GetSection("OrleansStream:ReplicationFactor").Get<short>();
-                            var topics = configuration.GetSection("OrleansStream:Topics").Get<string>();
-                            topics = topics.IsNullOrEmpty() ? CommonConstants.StreamNamespace : topics;
-                            foreach (var topic in topics.Split(','))
+                            var topic = configuration.GetSection("Aevatar:StreamNamespace").Get<string>();
+                            topic = topic.IsNullOrEmpty() ? CommonConstants.StreamNamespace : topic;
+                            options.AddTopic(topic, new TopicCreationConfig
                             {
-                                options.AddTopic(topic.Trim(), new TopicCreationConfig
-                                {
-                                    AutoCreate = true,
-                                    Partitions = partitions,
-                                    ReplicationFactor = replicationFactor
-                                });
-                            }
+                                AutoCreate = true,
+                                Partitions = partitions,
+                                ReplicationFactor = replicationFactor
+                            });
                         })
                         .AddJson()
                         .AddLoggingTracker()
@@ -169,12 +165,13 @@ public static class OrleansHostExtension
                 services.Configure<AzureDeepSeekConfig>(context.Configuration.GetSection("AIServices:DeepSeek"));
                 services.Configure<QdrantConfig>(context.Configuration.GetSection("VectorStores:Qdrant"));
                 services.Configure<SystemLLMConfigOptions>(context.Configuration);
-                services.Configure<AzureOpenAIEmbeddingsConfig>(context.Configuration.GetSection("AIServices:AzureOpenAIEmbeddings"));
+                services.Configure<AzureOpenAIEmbeddingsConfig>(
+                    context.Configuration.GetSection("AIServices:AzureOpenAIEmbeddings"));
                 services.Configure<RagConfig>(context.Configuration.GetSection("Rag"));
                 services.AddSingleton(typeof(HubLifetimeManager<>), typeof(OrleansHubLifetimeManager<>));
                 services.AddSingleton<IStateProjector, AevatarStateProjector>();
                 services.AddSingleton<IStateDispatcher, StateDispatcher>();
-                services.AddSingleton<IGAgentFactory,GAgentFactory>();
+                services.AddSingleton<IGAgentFactory, GAgentFactory>();
                 services.AddSemanticKernel()
                     .AddQdrantVectorStore()
                     .AddAzureOpenAITextEmbedding();

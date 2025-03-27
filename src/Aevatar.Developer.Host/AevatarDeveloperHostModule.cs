@@ -4,14 +4,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using AElf.OpenTelemetry;
 using Aevatar.MongoDB;
-using Aevatar.Options;
 using AutoResponseWrapper;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -54,19 +50,11 @@ public class AevatarDeveloperHostModule : AbpModule
         ConfigureVirtualFileSystem(context);
         ConfigureCors(context, configuration);
         ConfigureSwaggerServices(context, configuration);
-        Configure<GoogleLoginOptions>(configuration.GetSection("GoogleLogin"));
         context.Services.AddMvc(options =>
         {
             options.Filters.Add(new IgnoreAntiforgeryTokenAttribute());
         })
         .AddNewtonsoftJson();
-        context.Services.ConfigureApplicationCookie(options =>
-        {
-            options.Cookie.SameSite = SameSiteMode.None; // 允许跨站
-            // options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // 必须HTTPS
-            options.Cookie.Domain = ".aevatar.ai"; // 主域共享Cookie
-            // options.Cookie.Name = "ae_auth"; // 明确命名Cookie
-        });
     }
     
     private void ConfigureAuthentication(ServiceConfigurationContext context, IConfiguration configuration)
@@ -79,21 +67,6 @@ public class AevatarDeveloperHostModule : AbpModule
                 options.Audience = "Aevatar";
                 options.MapInboundClaims = false;
             });
-        
-        context.Services.AddAuthentication(
-                options =>
-                {
-                    options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                    options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
-                })
-            .AddGoogle(options =>
-            {
-                options.ClientId = configuration["Authentication:Google:ClientId"];
-                options.ClientSecret = configuration["Authentication:Google:ClientSecret"];
-                options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                // options.CallbackPath = "/quantumgpt-client/signin-google";
-            })
-            .AddCookie();
     }
     
     private void ConfigureVirtualFileSystem(ServiceConfigurationContext context)
