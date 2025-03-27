@@ -204,9 +204,35 @@ public abstract partial class
 
     public sealed override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        await base.OnActivateAsync(cancellationToken);
-        await BaseOnActivateAsync(cancellationToken);
-        await OnGAgentActivateAsync(cancellationToken);
+        try
+        {
+            await base.OnActivateAsync(cancellationToken);
+        }
+        catch (Exception e)
+        {
+            Logger.LogError("Error in OnActivateAsync.base.OnActivateAsync: {ExceptionMessage}", e.Message);
+            throw;
+        }
+
+        try
+        {
+            await BaseOnActivateAsync(cancellationToken);
+        }
+        catch (Exception e)
+        {
+            Logger.LogError("Error in OnActivateAsync.BaseOnActivateAsync: {ExceptionMessage}", e.Message);
+            throw;
+        }
+
+        try
+        {
+            await OnGAgentActivateAsync(cancellationToken);
+        }
+        catch (Exception e)
+        {
+            Logger.LogError("Error in OnActivateAsync.OnGAgentActivateAsync: {ExceptionMessage}", e.Message);
+            throw;
+        }
 
         try
         {
@@ -217,7 +243,8 @@ public abstract partial class
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Error in RegisterGrainTimer: {ExceptionMessage}", e.Message);
+            Logger.LogError(e, "Error in RegisterGrainTimer for grain {GrainId}: {ExceptionMessage}",
+                this.GetGrainId(), e.Message);
             throw;
         }
     }
