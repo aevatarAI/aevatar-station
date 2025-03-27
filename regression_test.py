@@ -122,15 +122,15 @@ def test_agent_operations(api_headers, test_agent):
     assert response.json()["data"]["name"] == AGENT_NAME_MODIFIED
 
     # test my agent list
-    # time.sleep(2)
-    # response = requests.get(
-    #     f"{API_HOST}/api/agent/agent-list",
-    #     params={"pageIndex": 0, "pageSize": 100},
-    #     headers=api_headers
-    # )
-    # assert_status_code(response)
-    # agent_ids = [agent["id"] for agent in response.json()["data"]]
-    # assert test_agent in agent_ids
+    time.sleep(3)
+    response = requests.get(
+        f"{API_HOST}/api/agent/agent-list",
+        params={"pageIndex": 0, "pageSize": 100},
+        headers=api_headers
+    )
+    assert_status_code(response)
+    agent_ids = [agent["id"] for agent in response.json()["data"]]
+    assert test_agent in agent_ids
 
 
 def test_agent_relationships(api_headers, test_agent):
