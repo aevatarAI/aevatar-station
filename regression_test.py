@@ -277,17 +277,17 @@ def test_query_operations(api_headers, test_agent):
     assert response.json()["data"]["state"]["name"] == AGENT_NAME
 
     # query es
-    # response = requests.get(
-    #     f"{API_HOST}/api/query/es",
-    #     params={
-    #         "index": INDEX_NAME,
-    #         "queryString": f"name: {AGENT_NAME}",
-    #         "pageSize": 1
-    #     },
-    #     headers=api_headers
-    # )
-    # assert_status_code(response)
-    # assert response.json()["data"]["totalCount"] > 0
+    response = requests.get(
+        f"{API_HOST}/api/query/es",
+        params={
+            "index": INDEX_NAME,
+            "queryString": f"name: {AGENT_NAME}",
+            "pageSize": 1
+        },
+        headers=api_headers
+    )
+    assert_status_code(response)
+    assert response.json()["data"]["totalCount"] > 0
 
 
 def test_query_agent_list(api_headers, test_agent):
