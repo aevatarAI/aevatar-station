@@ -99,9 +99,8 @@ def test_login(access_token):
     assert len(access_token) > 100
 
 
-def test_agent_operation(api_headers, test_agent):
+def test_agent_operations(api_headers, test_agent):
     """test agent operation"""
-    print("Begin test agent operation")
     # get agent
     response = requests.get(
         f"{API_HOST}/api/agent/{test_agent}",
@@ -133,12 +132,10 @@ def test_agent_operation(api_headers, test_agent):
     # assert_status_code(response)
     # agent_ids = [agent["id"] for agent in response.json()["data"]]
     # assert test_agent in agent_ids
-    print("End test agent operation")
 
 
 def test_agent_relationships(api_headers, test_agent):
     """test agent relationships"""
-    print("Begin test agent relationships")
     # create sub agent
     agent_data = {
         "agentType": TEST_AGENT,
@@ -192,7 +189,6 @@ def test_agent_relationships(api_headers, test_agent):
     # delete sub agent
     response = requests.delete(f"{API_HOST}/api/agent/{sub_agent}", headers=api_headers)
     assert_status_code(response)
-    print("End test agent relationships")
 
 
 # def test_event_operations(api_headers, test_agent):
@@ -263,7 +259,6 @@ def test_agent_relationships(api_headers, test_agent):
 
 def test_query_operations(api_headers, test_agent):
     """test query operations"""
-    print("Begin test query operation")
     # query state
     time.sleep(2)
     response = requests.get(
@@ -287,18 +282,15 @@ def test_query_operations(api_headers, test_agent):
     # )
     # assert_status_code(response)
     # assert response.json()["data"]["totalCount"] > 0
-    print("End test query operation")
 
 
 def test_query_agent_list(api_headers, test_agent):
     """test query agent list"""
     # query available agent list
-    print("Begin test available agent list query")
     response = requests.get(
         f"{API_HOST}//api/agent/agent-type-info-list",
         headers=api_headers
     )
     assert_status_code(response)
     assert any(at["agentType"] == TEST_AGENT for at in response.json()["data"])
-    print("End test available agent list query")
 
