@@ -51,24 +51,46 @@ public class OrganizationService : AevatarAppService, IOrganizationService
 
     public virtual async Task<ListResultDto<OrganizationDto>> GetListAsync(GetOrganizationListDto input)
     {
-        List<OrganizationUnit> organizations;
+        var result = new List<OrganizationDto>();
         if (CurrentUser.IsInRole(AevatarConsts.AdminRoleName))
         {
-            organizations = await OrganizationUnitRepository.GetListAsync();
+            var organizations = await OrganizationUnitRepository.GetListAsync();
+            foreach (var organization in organizations)
+            {
+                if (!organization.TryGetExtraPropertyValue<OrganizationType>(AevatarConsts.OrganizationTypeKey,
+                        out var type) || type != OrganizationType.Organization)
+                {
+                    continue;
+                }
+                
+                result.Add(ObjectMapper.Map<OrganizationUnit, OrganizationDto>(organization));
+            }
         }
         else
         {
             var user = await IdentityUserManager.GetByIdAsync(CurrentUser.Id.Value);
-            organizations = await IdentityUserManager.GetOrganizationUnitsAsync(user);
+            var organizations = await IdentityUserManager.GetOrganizationUnitsAsync(user);
+            
+            foreach (var organization in organizations)
+            {
+                if (!organization.TryGetExtraPropertyValue<OrganizationType>(AevatarConsts.OrganizationTypeKey,
+                        out var type) || type != OrganizationType.Organization)
+                {
+                    continue;
+                }
+
+                if (FindOrganizationRole(organization, user) == null)
+                {
+                    continue;
+                }
+
+                result.Add(ObjectMapper.Map<OrganizationUnit, OrganizationDto>(organization));
+            }
         }
-
-        organizations = organizations.Where(o =>
-            o.TryGetExtraPropertyValue<OrganizationType>(AevatarConsts.OrganizationTypeKey, out var type) &&
-            type == OrganizationType.Organization).ToList();
-
+        
         return new ListResultDto<OrganizationDto>
         {
-            Items = ObjectMapper.Map<List<OrganizationUnit>, List<OrganizationDto>>(organizations)
+            Items = result
         };
     }
 
