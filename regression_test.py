@@ -143,6 +143,7 @@ def test_agent_relationships(api_headers, test_agent):
         json={"agentType": TEST_AGENT, "name": "child Agent"},
         headers=api_headers
     )
+    print(response)
     assert_status_code(response)
     sub_agent = response.json()["data"]["id"]
 
