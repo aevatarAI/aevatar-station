@@ -16,8 +16,7 @@
         <PackageReference Include="Aevatar.Core"/>
         <PackageReference Include="Aevatar.Core.Abstractions"/>
         <PackageReference Include="Aevatar.EventSourcing.Core"/>
-        <PackageReference Include="NEST"/>
-        <PackageReference Include="NEST.JsonNetSerializer"/>
+        <PackageReference Include="Elastic.Clients.Elasticsearch"/>
         <PackageReference Include="Volo.Abp.AutoMapper"/>
         <PackageReference Include="MediatR"/>
     </ItemGroup>

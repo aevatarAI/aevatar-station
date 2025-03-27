@@ -8,13 +8,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Aevatar.Extensions;
 using Aevatar.Handler;
+using Aevatar.Hubs;
 using Aevatar.SignalR;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Orleans.Hosting;
 using Serilog;
 using Serilog.Events;
-using Serilog.Sinks.OpenTelemetry;
 
 namespace Aevatar;
 
@@ -33,8 +32,9 @@ public class Program
                 .ConfigureDefaults(args)
                 .UseAutofac()
                 .UseSerilog();
-            builder.Services.AddSignalR().AddOrleans();
-            builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, AevatarAuthorizationMiddlewareResultHandler>();
+            builder.Services.AddSignalR(options => { options.EnableDetailedErrors = true; }).AddOrleans();
+            builder.Services
+                .AddSingleton<IAuthorizationMiddlewareResultHandler, AevatarAuthorizationMiddlewareResultHandler>();
             await builder.AddApplicationAsync<AevatarHttpApiHostModule>();
             var app = builder.Build();
             await app.InitializeApplicationAsync();
@@ -62,7 +62,7 @@ public class Program
             Log.CloseAndFlush();
         }
     }
-    
+
     private static void ConfigureLogger(LoggerConfiguration? loggerConfiguration = null)
     {
         var configuration = new ConfigurationBuilder()

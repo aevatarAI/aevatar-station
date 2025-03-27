@@ -5,10 +5,10 @@ using Aevatar.Options;
 using Aevatar.WebHook.Deploy;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
-using Nest;
-using Volo.Abp.Auditing;
 using Volo.Abp.AutoMapper;
+using Volo.Abp.Emailing;
 using Volo.Abp.EventBus;
+using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
 
 namespace Aevatar;
@@ -41,5 +41,15 @@ public class AevatarApplicationTestModule : AbpModule
             cfg.RegisterServicesFromAssembly(typeof(GetGEventQueryHandler).Assembly)
         );
         context.Services.AddTransient<IHostDeployManager, DefaultHostDeployManager>();
+
+        context.Services.AddSingleton<IEmailSender, NullEmailSender>();
+        
+        AddMock(context.Services);
     }
+
+    private void AddMock(IServiceCollection serviceCollection)
+    {
+        
+    }
+    
 }
