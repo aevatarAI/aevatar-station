@@ -44,6 +44,8 @@
     <PackageVersion Include="OpenAI.API" Version="1.0.0" />
     <PackageVersion Include="Orleans.SyncWork" Version="8.1.12" />
     <PackageVersion Include="Serilog.Formatting.Compact" Version="2.0.0" />
+    
+
     <!-- ABP packages -->
     <PackageVersion Include="Volo.Abp.Account.Application" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Account.Application.Contracts" Version="$(AbpVersion)" />
@@ -55,6 +57,7 @@
     <PackageVersion Include="Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite" Version="3.2.0" />
     <PackageVersion Include="Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared" Version="9.0.3" />
     <PackageVersion Include="Volo.Abp.AspNetCore.Serilog" Version="$(AbpVersion)" />
+    <PackageVersion Include="Volo.Abp.AspNetCore.SignalR" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.AuditLogging.Domain" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.AuditLogging.Domain.Shared" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.AuditLogging.MongoDB" Version="$(AbpVersion)" />
