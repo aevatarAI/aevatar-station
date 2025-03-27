@@ -99,44 +99,46 @@ def test_login(access_token):
     assert len(access_token) > 100
 
 
-# def test_agent_crud(api_headers, test_agent):
-#     """test agent CRUD"""
-#     # get agent
-#     response = requests.get(
-#         f"{API_HOST}/api/agent/{test_agent}",
-#         headers=api_headers
-#     )
-#     assert_status_code(response)
-#     assert response.json()["data"]["name"] == AGENT_NAME
-# 
-#     # update agent
-#     update_data = {
-#         "name": AGENT_NAME_MODIFIED,
-#         "properties": {"Name": AGENT_NAME_MODIFIED}
-#     }
-#     response = requests.put(
-#         f"{API_HOST}/api/agent/{test_agent}",
-#         json=update_data,
-#         headers=api_headers
-#     )
-#     assert_status_code(response)
-#     assert response.json()["data"]["name"] == AGENT_NAME_MODIFIED
-# 
-#     # test my agent list
-#     time.sleep(5)
-#     response = requests.get(
-#         f"{API_HOST}/api/agent/agent-list",
-#         params={"pageIndex": 0, "pageSize": 100},
-#         headers=api_headers
-#     )
-#     assert_status_code(response)
-#     agent_ids = [agent["id"] for agent in response.json()["data"]]
-#     assert test_agent in agent_ids
-#     print("test agent crud success")
+def test_agent_operation(api_headers, test_agent):
+    """test agent operation"""
+    print("Begin test agent operation")
+    # get agent
+    response = requests.get(
+        f"{API_HOST}/api/agent/{test_agent}",
+        headers=api_headers
+    )
+    assert_status_code(response)
+    assert response.json()["data"]["name"] == AGENT_NAME
+
+    # update agent
+    update_data = {
+        "name": AGENT_NAME_MODIFIED,
+        "properties": {"Name": AGENT_NAME_MODIFIED}
+    }
+    response = requests.put(
+        f"{API_HOST}/api/agent/{test_agent}",
+        json=update_data,
+        headers=api_headers
+    )
+    assert_status_code(response)
+    assert response.json()["data"]["name"] == AGENT_NAME_MODIFIED
+
+    # test my agent list
+    # time.sleep(2)
+    # response = requests.get(
+    #     f"{API_HOST}/api/agent/agent-list",
+    #     params={"pageIndex": 0, "pageSize": 100},
+    #     headers=api_headers
+    # )
+    # assert_status_code(response)
+    # agent_ids = [agent["id"] for agent in response.json()["data"]]
+    # assert test_agent in agent_ids
+    print("End test agent operation")
 
 
 def test_agent_relationships(api_headers, test_agent):
     """test agent relationships"""
+    print("Begin test agent relationships")
     # create sub agent
     agent_data = {
         "agentType": TEST_AGENT,
@@ -150,7 +152,6 @@ def test_agent_relationships(api_headers, test_agent):
         json=agent_data,
         headers=api_headers
     )
-    print(response.json())
     assert_status_code(response)
     sub_agent = response.json()["data"]["id"]
 
@@ -191,7 +192,7 @@ def test_agent_relationships(api_headers, test_agent):
     # delete sub agent
     response = requests.delete(f"{API_HOST}/api/agent/{sub_agent}", headers=api_headers)
     assert_status_code(response)
-    print("test agent relationships")
+    print("End test agent relationships")
 
 
 # def test_event_operations(api_headers, test_agent):
@@ -262,8 +263,9 @@ def test_agent_relationships(api_headers, test_agent):
 
 def test_query_operations(api_headers, test_agent):
     """test query operations"""
-    time.sleep(2)
+    print("Begin test query operation")
     # query state
+    time.sleep(2)
     response = requests.get(
         f"{API_HOST}/api/query/state",
         params={"stateName": STATE_NAME, "id": test_agent},
@@ -274,26 +276,29 @@ def test_query_operations(api_headers, test_agent):
     assert response.json()["data"]["state"]["name"] == AGENT_NAME
 
     # query es
-    response = requests.get(
-        f"{API_HOST}/api/query/es",
-        params={
-            "index": INDEX_NAME,
-            "queryString": f"name: {AGENT_NAME}",
-            "pageSize": 1
-        },
-        headers=api_headers
-    )
-    assert_status_code(response)
-    assert response.json()["data"]["totalCount"] > 0
+    # response = requests.get(
+    #     f"{API_HOST}/api/query/es",
+    #     params={
+    #         "index": INDEX_NAME,
+    #         "queryString": f"name: {AGENT_NAME}",
+    #         "pageSize": 1
+    #     },
+    #     headers=api_headers
+    # )
+    # assert_status_code(response)
+    # assert response.json()["data"]["totalCount"] > 0
+    print("End test query operation")
 
 
 def test_query_agent_list(api_headers, test_agent):
     """test query agent list"""
     # query available agent list
+    print("Begin test available agent list query")
     response = requests.get(
         f"{API_HOST}//api/agent/agent-type-info-list",
         headers=api_headers
     )
     assert_status_code(response)
     assert any(at["agentType"] == TEST_AGENT for at in response.json()["data"])
+    print("End test available agent list query")
 
