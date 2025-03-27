@@ -35,6 +35,7 @@ def access_token():
         data=auth_data,
         headers={"Content-Type": "application/x-www-form-urlencoded"}
     )
+    print(CLIENT_ID, CLIENT_SECRET)
     assert response.status_code == 200
     print(response.json()["access_token"])
     return response.json()["access_token"]
