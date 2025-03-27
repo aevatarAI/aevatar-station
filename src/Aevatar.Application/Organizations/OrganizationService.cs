@@ -181,6 +181,15 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         {
             var memberDto = ObjectMapper.Map<IdentityUser, OrganizationMemberDto>(member);
             memberDto.RoleId = FindOrganizationRole(organization, member);
+            if (member.ExtraProperties.TryGetValue(AevatarConsts.MemberStatusKey, out var status))
+            {
+                var statusDic = status as Dictionary<string, object>;
+                if (statusDic.TryGetValue(organizationId.ToString(), out var value))
+                {
+                    memberDto.Status = (MemberStatus)value;
+                }
+            }
+
             result.Add(memberDto);
         }
         
@@ -217,6 +226,19 @@ public class OrganizationService : AevatarAppService, IOrganizationService
             await IdentityUserManager.UpdateAsync(user);
         }
         
+        if (user.ExtraProperties.TryGetValue(AevatarConsts.MemberStatusKey, out var status))
+        {
+            var statusDic = status as Dictionary<string, object>;
+            statusDic[organizationId.ToString()] = MemberStatus.Inviting;
+            user.ExtraProperties[AevatarConsts.MemberStatusKey] = statusDic;
+        }
+        else
+        {
+            user.ExtraProperties[AevatarConsts.MemberStatusKey] = new Dictionary<string, MemberStatus>{{organizationId.ToString(),MemberStatus.Inviting}};
+        }
+
+        await IdentityUserManager.UpdateAsync(user);
+
         await IdentityUserManager.AddToOrganizationUnitAsync(user.Id, organizationId);
     }
     
