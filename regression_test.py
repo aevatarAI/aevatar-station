@@ -1,10 +1,6 @@
 # tests/test_agent_api.py
-import os
-import time
-
 import pytest
 import requests
-from uuid import uuid4
 
 # 环境配置
 AUTH_HOST = "http://127.0.0.1:8082"
@@ -295,4 +291,4 @@ def test_agent(api_headers):
 
 def test_demo():
     """demo test"""
-    assert True
+    assert False
