@@ -49,7 +49,7 @@ jobs:
       - name: Run Python Script
         run: |
           source venv/bin/activate
-          python hello_world.py
+          python script/gre-test.py
       
       - name: Lark Notification on Success
         if: success()
