@@ -48,24 +48,46 @@ public class OrganizationService : AevatarAppService, IOrganizationService
 
     public virtual async Task<ListResultDto<OrganizationDto>> GetListAsync(GetOrganizationListDto input)
     {
+        var result = new List<OrganizationDto>();
         List<OrganizationUnit> organizations;
         if (CurrentUser.IsInRole(AevatarConsts.AdminRoleName))
         {
             organizations = await OrganizationUnitRepository.GetListAsync();
+            foreach (var organization in organizations)
+            {
+                if (!organization.TryGetExtraPropertyValue<OrganizationType>(AevatarConsts.OrganizationTypeKey,
+                        out var type) || type != OrganizationType.Organization)
+                {
+                    continue;
+                }
+                
+                result.Add(ObjectMapper.Map<OrganizationUnit, OrganizationDto>(organization));
+            }
         }
         else
         {
             var user = await IdentityUserManager.GetByIdAsync(CurrentUser.Id.Value);
             organizations = await IdentityUserManager.GetOrganizationUnitsAsync(user);
-        }
+            foreach (var organization in organizations)
+            {
+                if (!organization.TryGetExtraPropertyValue<OrganizationType>(AevatarConsts.OrganizationTypeKey,
+                        out var type) || type != OrganizationType.Organization)
+                {
+                    continue;
+                }
 
-        organizations = organizations.Where(o =>
-            o.TryGetExtraPropertyValue<OrganizationType>(AevatarConsts.OrganizationTypeKey, out var type) &&
-            type == OrganizationType.Organization).ToList();
+                if (FindOrganizationRole(organization, user) == null)
+                {
+                    continue;
+                }
+
+                result.Add(ObjectMapper.Map<OrganizationUnit, OrganizationDto>(organization));
+            }
+        }
 
         return new ListResultDto<OrganizationDto>
         {
-            Items = ObjectMapper.Map<List<OrganizationUnit>, List<OrganizationDto>>(organizations)
+            Items = result
         };
     }
 
@@ -189,14 +211,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         {
             var memberDto = ObjectMapper.Map<IdentityUser, OrganizationMemberDto>(member);
             memberDto.RoleId = FindOrganizationRole(organization, member);
-            if (member.ExtraProperties.TryGetValue(AevatarConsts.MemberStatusKey, out var status))
-            {
-                var statusDic = status as Dictionary<string, object>;
-                if (statusDic.TryGetValue(organizationId.ToString(), out var value))
-                {
-                    memberDto.Status = (MemberStatus)value;
-                }
-            }
+            memberDto.Status = GetMemberStatus(organizationId, member);
 
             result.Add(memberDto);
         }
@@ -400,5 +415,19 @@ public class OrganizationService : AevatarAppService, IOrganizationService
 
         var role = await RoleManager.FindByIdAsync(roleId.Value.ToString());
         return role.Name == OrganizationRoleHelper.GetRoleName(organizationId, AevatarConsts.OrganizationOwnerRoleName);
+    }
+
+    private MemberStatus GetMemberStatus(Guid organizationId, IdentityUser user)
+    {
+        if (user.ExtraProperties.TryGetValue(AevatarConsts.MemberStatusKey, out var status))
+        {
+            var statusDic = status as Dictionary<string, object>;
+            if (statusDic.TryGetValue(organizationId.ToString(), out var value))
+            {
+                return (MemberStatus)value;
+            }
+        }
+
+        return MemberStatus.Joined;
     }
 }

@@ -37,14 +37,14 @@ public class ProjectController : AevatarController
     [Route("{id}")]
     public async Task<ProjectDto> GetAsync(Guid id)
     {
-        await _permissionChecker.AuthenticateAsync(id, AevatarPermissions.Organizations.Default);
+        await _permissionChecker.AuthenticateAsync(id, AevatarPermissions.Projects.Default);
         return await _projectService.GetProjectAsync(id);
     }
 
     [HttpPost]
     public async Task<ProjectDto> CreateAsync(CreateProjectDto input)
     {
-        await _permissionChecker.AuthenticateAsync(input.OrganizationId, AevatarPermissions.Organizations.Create);
+        await _permissionChecker.AuthenticateAsync(input.OrganizationId, AevatarPermissions.Projects.Create);
         return await _projectService.CreateAsync(input);
     }
 
@@ -52,7 +52,7 @@ public class ProjectController : AevatarController
     [Route("{id}")]
     public async Task<ProjectDto> UpdateAsync(Guid id, UpdateProjectDto input)
     {
-        await _permissionChecker.AuthenticateAsync(id, AevatarPermissions.Organizations.Edit);
+        await _permissionChecker.AuthenticateAsync(id, AevatarPermissions.Projects.Edit);
         return await _projectService.UpdateAsync(id, input);
     }
 
@@ -60,7 +60,7 @@ public class ProjectController : AevatarController
     [Route("{id}")]
     public async Task DeleteAsync(Guid id)
     {
-        await _permissionChecker.AuthenticateAsync(id, AevatarPermissions.Organizations.Delete);
+        await _permissionChecker.AuthenticateAsync(id, AevatarPermissions.Projects.Delete);
         await _projectService.DeleteAsync(id);
     }
 

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
+using Volo.Abp.Authorization;
 using Volo.Abp.Identity;
 using Volo.Abp.PermissionManagement;
 
@@ -15,7 +16,7 @@ namespace Aevatar.Controllers;
 [RemoteService]
 [ControllerName("ProjectRole")]
 [Route("api/projects/{projectId}/roles")]
-//[Authorize]
+[Authorize]
 public class ProjectRoleController : AevatarController
 {
     private readonly IOrganizationRoleService _organizationRoleService;
@@ -31,13 +32,19 @@ public class ProjectRoleController : AevatarController
     [HttpGet]
     public async Task<ListResultDto<IdentityRoleDto>> GetRoleListAsync(Guid projectId)
     {
-        // await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.Organizations.Default);
+        if (!await _permissionChecker.IsGrantedAsync(projectId, AevatarPermissions.Organizations.Default) &&
+            !await _permissionChecker.IsGrantedAsync(projectId, AevatarPermissions.Roles.Default))
+        {
+            throw new AbpAuthorizationException();
+        }
+
         return await _organizationRoleService.GetListAsync(projectId);
     }
     
     [HttpPost]
     public virtual async Task<IdentityRoleDto> CreateAsync(Guid projectId, IdentityRoleCreateDto input)
     {
+        await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.Roles.Create);
         return await _organizationRoleService.CreateAsync(projectId, input);
     }
 
@@ -45,6 +52,7 @@ public class ProjectRoleController : AevatarController
     [Route("{id}")]
     public virtual async Task<IdentityRoleDto> UpdateAsync(Guid projectId, Guid id, IdentityRoleUpdateDto input)
     {
+        await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.Roles.Edit);
         return await _organizationRoleService.UpdateAsync(projectId, id, input);
     }
 
@@ -52,6 +60,7 @@ public class ProjectRoleController : AevatarController
     [Route("{id}")]
     public virtual async Task DeleteAsync(Guid projectId, Guid id)
     {
+        await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.Roles.Delete);
         await _organizationRoleService.DeleteAsync(projectId, id);
     }
 }

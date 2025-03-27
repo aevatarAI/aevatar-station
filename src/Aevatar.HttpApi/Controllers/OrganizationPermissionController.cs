@@ -15,7 +15,7 @@ namespace Aevatar.Controllers;
 [RemoteService]
 [ControllerName("OrganizationPermission")]
 [Route("api/organization-permissions/{organizationId}")]
-//[Authorize]
+[Authorize]
 public class OrganizationPermissionController : AevatarController
 {
     private readonly IOrganizationPermissionService _organizationPermissionService;
@@ -32,6 +32,7 @@ public class OrganizationPermissionController : AevatarController
     public virtual async Task<GetPermissionListResultDto> GetAsync(Guid organizationId, string providerName,
         string providerKey)
     {
+        await _permissionChecker.AuthenticateAsync(organizationId,AevatarPermissions.Roles.Default);
         return await _organizationPermissionService.GetAsync(organizationId, providerName, providerKey);
     }
 
@@ -39,6 +40,7 @@ public class OrganizationPermissionController : AevatarController
     public virtual async Task UpdateAsync(Guid organizationId, string providerName, string providerKey,
         UpdatePermissionsDto input)
     {
+        await _permissionChecker.AuthenticateAsync(organizationId,AevatarPermissions.Roles.Edit);
         await _organizationPermissionService.UpdateAsync(organizationId, providerName, providerKey, input);
     }
 }

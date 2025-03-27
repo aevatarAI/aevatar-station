@@ -83,7 +83,7 @@ public class ProjectService : OrganizationService, IProjectService
             OrganizationRoleHelper.GetRoleName(organizationId, AevatarConsts.OrganizationReaderRoleName)
         );
         await RoleManager.CreateAsync(role);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Organizations.Default, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Projects.Default, true);
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Members.Default, true);
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiKeys.Default, true);
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.LLMSModels.Default, true);
