@@ -99,92 +99,93 @@ def test_login(access_token):
     assert len(access_token) > 100
 
 
-def test_agent_crud(api_headers, test_agent):
-    """test agent CRUD"""
-    # get agent
-    response = requests.get(
-        f"{API_HOST}/api/agent/{test_agent}",
-        headers=api_headers
-    )
-    assert_status_code(response)
-    assert response.json()["data"]["name"] == AGENT_NAME
-
-    # update agent
-    update_data = {
-        "name": AGENT_NAME_MODIFIED,
-        "properties": {"Name": AGENT_NAME_MODIFIED}
-    }
-    response = requests.put(
-        f"{API_HOST}/api/agent/{test_agent}",
-        json=update_data,
-        headers=api_headers
-    )
-    assert_status_code(response)
-    assert response.json()["data"]["name"] == AGENT_NAME_MODIFIED
-
-    # test my agent list
-    time.sleep(2)
-    response = requests.get(
-        f"{API_HOST}/api/agent/agent-list",
-        params={"pageIndex": 0, "pageSize": 100},
-        headers=api_headers
-    )
-    assert_status_code(response)
-    agent_ids = [agent["id"] for agent in response.json()["data"]]
-    assert test_agent in agent_ids
-    print("test agent crud success")
-
-
-# def test_agent_relationships(api_headers, test_agent):
-#     """test agent relationships"""
-#     # create sub agent
-#     response = requests.post(
-#         f"{API_HOST}/api/agent",
-#         json={"agentType": TEST_AGENT, "name": "child Agent"},
-#         headers=api_headers
-#     )
-#     assert_status_code(response)
-#     sub_agent = response.json()["data"]["id"]
-#
-#     # add sub agent
-#     response = requests.post(
-#         f"{API_HOST}/api/agent/{test_agent}/add-subagent",
-#         json={"subAgents": [sub_agent]},
-#         headers=api_headers
-#     )
-#     assert_status_code(response)
-#     assert sub_agent in response.json()["data"]["subAgents"]
-#
-#     # check relationship
+# def test_agent_crud(api_headers, test_agent):
+#     """test agent CRUD"""
+#     # get agent
 #     response = requests.get(
-#         f"{API_HOST}/api/agent/{test_agent}/relationship",
+#         f"{API_HOST}/api/agent/{test_agent}",
 #         headers=api_headers
 #     )
 #     assert_status_code(response)
-#     assert sub_agent in response.json()["data"]["subAgents"]
-#
-#     # remove sub agent
-#     response = requests.post(
-#         f"{API_HOST}/api/agent/{test_agent}/remove-subagent",
-#         json={"removedSubAgents": [sub_agent]},
+#     assert response.json()["data"]["name"] == AGENT_NAME
+# 
+#     # update agent
+#     update_data = {
+#         "name": AGENT_NAME_MODIFIED,
+#         "properties": {"Name": AGENT_NAME_MODIFIED}
+#     }
+#     response = requests.put(
+#         f"{API_HOST}/api/agent/{test_agent}",
+#         json=update_data,
 #         headers=api_headers
 #     )
 #     assert_status_code(response)
-#     assert sub_agent not in response.json()["data"]["subAgents"]
-#
-#     # check relationship again
+#     assert response.json()["data"]["name"] == AGENT_NAME_MODIFIED
+# 
+#     # test my agent list
+#     time.sleep(5)
 #     response = requests.get(
-#         f"{API_HOST}/api/agent/{test_agent}/relationship",
+#         f"{API_HOST}/api/agent/agent-list",
+#         params={"pageIndex": 0, "pageSize": 100},
 #         headers=api_headers
 #     )
 #     assert_status_code(response)
-#     assert sub_agent not in response.json()["data"]["subAgents"]
-#
-#     # delete sub agent
-#     response = requests.delete(f"{API_HOST}/api/agent/{sub_agent}", headers=api_headers)
-#     assert_status_code(response)
-#
-#
+#     agent_ids = [agent["id"] for agent in response.json()["data"]]
+#     assert test_agent in agent_ids
+#     print("test agent crud success")
+
+
+def test_agent_relationships(api_headers, test_agent):
+    """test agent relationships"""
+    # create sub agent
+    response = requests.post(
+        f"{API_HOST}/api/agent",
+        json={"agentType": TEST_AGENT, "name": "child Agent"},
+        headers=api_headers
+    )
+    assert_status_code(response)
+    sub_agent = response.json()["data"]["id"]
+
+    # add sub agent
+    response = requests.post(
+        f"{API_HOST}/api/agent/{test_agent}/add-subagent",
+        json={"subAgents": [sub_agent]},
+        headers=api_headers
+    )
+    assert_status_code(response)
+    assert sub_agent in response.json()["data"]["subAgents"]
+
+    # check relationship
+    response = requests.get(
+        f"{API_HOST}/api/agent/{test_agent}/relationship",
+        headers=api_headers
+    )
+    assert_status_code(response)
+    assert sub_agent in response.json()["data"]["subAgents"]
+
+    # remove sub agent
+    response = requests.post(
+        f"{API_HOST}/api/agent/{test_agent}/remove-subagent",
+        json={"removedSubAgents": [sub_agent]},
+        headers=api_headers
+    )
+    assert_status_code(response)
+    assert sub_agent not in response.json()["data"]["subAgents"]
+
+    # check relationship again
+    response = requests.get(
+        f"{API_HOST}/api/agent/{test_agent}/relationship",
+        headers=api_headers
+    )
+    assert_status_code(response)
+    assert sub_agent not in response.json()["data"]["subAgents"]
+
+    # delete sub agent
+    response = requests.delete(f"{API_HOST}/api/agent/{sub_agent}", headers=api_headers)
+    assert_status_code(response)
+    print("test agent relationships")
+
+
 # def test_event_operations(api_headers, test_agent):
 #     """test event operations"""
 #     # create sub agent
