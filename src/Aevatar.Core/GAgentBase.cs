@@ -226,26 +226,18 @@ public abstract partial class
             
             // Register a timer to try to activate the projection grain after a short delay
             // This helps avoid activation collisions during startup
-            var timerRegistry = ServiceProvider.GetRequiredService<ITimerRegistry>();
-            _projectionActivationTimer = timerRegistry.RegisterGrainTimer(
-                GrainContext,
-                static async (state, ct) => 
-                {
-                    var grain = (GAgentBase<TState, TStateLogEvent, TEvent, TConfiguration>)state;
-                    await grain.DelayedProjectionGrainActivationAsync();
-                },
-                this, // state object to pass to the callback
-                new GrainTimerCreationOptions
-                {
-                    DueTime = TimeSpan.FromSeconds(2), // Initial delay
-                    Period = TimeSpan.FromMilliseconds(-1) // Don't repeat
-                });
+            _projectionActivationTimer ??= this.RegisterGrainTimer(BackgroundWork, TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(-1));
         }
         catch (Exception e)
         {
-            Logger.LogError($"Error in BaseOnActivateAsync: {e}");
+            Logger.LogError(e, "Error in BaseOnActivateAsync: {ExceptionMessage}", e.Message);
             throw;
         }
+    }
+    
+    private async Task BackgroundWork(CancellationToken token)
+    {
+        await DelayedProjectionGrainActivationAsync();
     }
 
     private async Task DelayedProjectionGrainActivationAsync()
