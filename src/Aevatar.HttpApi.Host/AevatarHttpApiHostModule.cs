@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using AElf.OpenTelemetry;
 using AutoResponseWrapper;
 using Microsoft.AspNetCore.Builder;
@@ -203,9 +202,11 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         app.UseCorrelationId();
         app.UseStaticFiles();
         app.UseRouting();
+        
+        app.UseCors();
         app.UseAuthentication();
         app.UseAuthorization();
-
+        // app.UsePathBase("/developer-client");
         app.UseUnitOfWork();
         app.UseDynamicClaims();
         app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
