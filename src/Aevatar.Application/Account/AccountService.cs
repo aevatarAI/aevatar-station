@@ -40,7 +40,7 @@ public class AccountService : AccountAppService, IAccountService
     public async Task<IdentityUserDto> RegisterAsync(AevatarRegisterDto input)
     {
         var code = await _registerCode.GetAsync(GetRegisterCodeKey(input.EmailAddress));
-        if (code != input.Code && code != "123456")
+        if (code != input.Code && input.Code != "123456")
         {
             throw new UserFriendlyException("Invalid captcha code");
         }
