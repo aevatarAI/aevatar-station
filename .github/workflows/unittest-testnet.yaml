@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - feature/front-agenttest
+      - feature/regression-test
 
 run-name: Run Aevatar Station Unit Test on Testnet using Python Script on ${{ github.ref_name }} from ${{ github.sha }}
 
