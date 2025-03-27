@@ -16,18 +16,17 @@ EVENT_PARAM = "Number"
 
 
 # 从环境变量获取凭证
-# CLIENT_ID = os.getenv("CLIENT_ID")
-# CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+CLIENT_ID = os.getenv("CLIENT_ID")
+CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 
 
 @pytest.fixture(scope="session")
 def access_token():
     """get access token"""
     auth_data = {
-        "grant_type": "password",
-        "client_id": "AevatarAuthServer",
-        "username": "admin",
-        "password": "1q2W3e*",
+        "grant_type": "client_credentials",
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
         "scope": "Aevatar"
     }
 
@@ -96,11 +95,11 @@ def test_agent(api_headers):
     assert response.status_code == 200
 
 
-# def test_login(access_token):
-#     """test login"""
-#     assert len(access_token) > 100
-#
-#
+def test_login(access_token):
+    """test login"""
+    assert len(access_token) > 100
+
+
 # def test_agent_crud(api_headers, test_agent):
 #     """test agent CRUD"""
 #     # get agent
@@ -289,6 +288,6 @@ def test_agent(api_headers):
 #     assert_status_code(response)
 #     assert any(at["agentType"] == TEST_AGENT for at in response.json()["data"])
 
-def test_demo():
-    """demo test"""
-    assert False
+# def test_demo():
+#     """demo test"""
+#     assert False

@@ -1,4 +1,4 @@
-name: Run Aevatar Station Unit Test on Testnet using Python Script
+name: Run Aevatar Station Regression Test on Testnet
 
 on:
   workflow_dispatch:
