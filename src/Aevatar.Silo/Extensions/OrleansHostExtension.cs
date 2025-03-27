@@ -61,6 +61,10 @@ public static class OrleansHostExtension
                             settings.DefaultValueHandling = DefaultValueHandling.Populate;
                             settings.ObjectCreationHandling = ObjectCreationHandling.Replace;
                         })
+                    .Configure<GrainCollectionOptions>(options =>
+                    {
+                        options.ActivationTimeout = TimeSpan.FromMinutes(2);
+                    })
                     .AddMongoDBGrainStorage("Default", (MongoDBGrainStorageOptions op) =>
                     {
                         op.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" : $"Orleans{hostId}";
