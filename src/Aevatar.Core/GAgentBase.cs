@@ -207,6 +207,19 @@ public abstract partial class
         await base.OnActivateAsync(cancellationToken);
         await BaseOnActivateAsync(cancellationToken);
         await OnGAgentActivateAsync(cancellationToken);
+
+        try
+        {
+            // Register a timer to try to activate the projection grain after a short delay
+            // This helps avoid activation collisions during startup
+            _projectionActivationTimer ??=
+                this.RegisterGrainTimer(BackgroundWork, TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(-1));
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "Error in RegisterGrainTimer: {ExceptionMessage}", e.Message);
+            throw;
+        }
     }
 
     protected virtual Task OnGAgentActivateAsync(CancellationToken cancellationToken)
@@ -215,7 +228,6 @@ public abstract partial class
         return Task.CompletedTask;
     }
 
-
     private async Task BaseOnActivateAsync(CancellationToken cancellationToken)
     {
         try
@@ -223,10 +235,6 @@ public abstract partial class
             // This must be called first to initialize Observers field.
             await UpdateObserverListAsync(GetType());
             await InitializeOrResumeEventBaseStreamAsync();
-            
-            // Register a timer to try to activate the projection grain after a short delay
-            // This helps avoid activation collisions during startup
-            _projectionActivationTimer ??= this.RegisterGrainTimer(BackgroundWork, TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(-1));
         }
         catch (Exception e)
         {
