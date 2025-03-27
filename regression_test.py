@@ -16,8 +16,8 @@ EVENT_TYPE = "Aevatar.Application.Grains.Agents.TestAgent.SetNumberGEvent"
 EVENT_PARAM = "Number"
 
 
-CLIENT_ID = os.getenv("TEST_CLIENT_ID")
-CLIENT_SECRET = os.getenv("TEST_CLIENT_SECRET")
+CLIENT_ID = os.getenv("CLIENT_ID")
+CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 
 
 @pytest.fixture(scope="session")

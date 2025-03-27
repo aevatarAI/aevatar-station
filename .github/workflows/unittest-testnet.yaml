@@ -6,7 +6,7 @@ on:
     branches:
       - feature/regression-test
 
-run-name: Run Aevatar Station Unit Test on Testnet using Python Script on ${{ github.ref_name }} from ${{ github.sha }}
+run-name: Run Aevatar Station Regression Test on Testnet on ${{ github.ref_name }} from ${{ github.sha }}
 
 concurrency:
   group: workflow-${{ github.ref }}
@@ -20,6 +20,10 @@ env:
 jobs:
   run-unit-test:
     runs-on: ubuntu-latest
+    env:
+      CLIENT_ID: ${{ secrets.TEST_CLIENT_ID }}
+      CLIENT_SECRET: ${{ secrets.TEST_CLIENT_SECRET }}
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
