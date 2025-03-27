@@ -285,18 +285,15 @@ def test_agent_relationships(api_headers, test_agent):
 #     )
 #     assert_status_code(response)
 #     assert response.json()["data"]["totalCount"] > 0
-#
-#
-# def test_query_agent_list(api_headers, test_agent):
-#     """test query agent list"""
-#     # query available agent list
-#     response = requests.get(
-#         f"{API_HOST}//api/agent/agent-type-info-list",
-#         headers=api_headers
-#     )
-#     assert_status_code(response)
-#     assert any(at["agentType"] == TEST_AGENT for at in response.json()["data"])
 
-# def test_demo():
-#     """demo test"""
-#     assert False
+
+def test_query_agent_list(api_headers, test_agent):
+    """test query agent list"""
+    # query available agent list
+    response = requests.get(
+        f"{API_HOST}//api/agent/agent-type-info-list",
+        headers=api_headers
+    )
+    assert_status_code(response)
+    assert any(at["agentType"] == TEST_AGENT for at in response.json()["data"])
+
