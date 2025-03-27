@@ -13,13 +13,15 @@ public class StateProjectionGrain<TState> : Grain, IProjectionGrain<TState>
     private readonly AevatarOptions AevatarOptions;
     private IStreamProvider StreamProvider => this.GetStreamProvider(AevatarCoreConstants.StreamProvider);
     private ILogger<StateProjectionGrain<TState>> _logger;
-    
-    public StateProjectionGrain(ILogger<StateProjectionGrain<TState>> logger, IOptionsSnapshot<AevatarOptions> aevatarOptions)
+    private bool _activated;
+
+    public StateProjectionGrain(ILogger<StateProjectionGrain<TState>> logger,
+        IOptionsSnapshot<AevatarOptions> aevatarOptions)
     {
         _logger = logger;
         AevatarOptions = aevatarOptions.Value;
     }
-    
+
     public Task ActivateAsync()
     {
         _logger.LogInformation("Someone activated StateProjectionGrain<{TState}>", typeof(TState).Name);
@@ -28,33 +30,62 @@ public class StateProjectionGrain<TState> : Grain, IProjectionGrain<TState>
 
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
+        if (_activated)
+        {
+            _logger.LogInformation("State projection stream for {TState} already activated.", typeof(TState).Name);
+            return;
+        }
+
         await base.OnActivateAsync(cancellationToken);
-        await InitializeOrResumeStateProjectionStreamAsync();
+        try
+        {
+            await InitializeOrResumeStateProjectionStreamAsync();
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("Error initializing or resuming state projection stream for {TState}: {Error}",
+                typeof(TState).Name, e);
+            throw;
+        }
     }
-    
+
     private async Task InitializeOrResumeStateProjectionStreamAsync()
     {
-        _logger.LogInformation("Initializing or resuming state projection stream for {TState}", typeof(TState).Name);
-        var projectionStream = GetStateProjectionStream();
-        var handles = await projectionStream.GetAllSubscriptionHandles();
-        var projectors = ServiceProvider.GetRequiredService<IEnumerable<IStateProjector>>();
-        var asyncObserver = new StateProjectionAsyncObserver(projectors);
-        if (handles.Count > 0)
+        try
         {
-            _logger.LogInformation("Resuming state projection stream for {TState} with handle count of {Count}", typeof(TState).Name, handles.Count);
-            foreach (var handle in handles)
+            _logger.LogInformation("Initializing or resuming state projection stream for {TState}",
+                typeof(TState).Name);
+            var projectionStream = GetStateProjectionStream();
+            var handles = await projectionStream.GetAllSubscriptionHandles();
+            var projectors = ServiceProvider.GetRequiredService<IEnumerable<IStateProjector>>();
+            var asyncObserver = new StateProjectionAsyncObserver(projectors);
+            if (handles.Count > 0)
             {
-                await handle.ResumeAsync(asyncObserver);
+                _logger.LogInformation("Resuming state projection stream for {TState} with handle count of {Count}",
+                    typeof(TState).Name, handles.Count);
+                foreach (var handle in handles)
+                {
+                    await handle.ResumeAsync(asyncObserver);
+                }
+            }
+            else
+            {
+                _logger.LogInformation("Subscribing for the first time to state projection stream for {TState}",
+                    typeof(TState).Name);
+                await projectionStream.SubscribeAsync(asyncObserver);
             }
         }
-        else
+        catch (Exception e)
         {
-            _logger.LogInformation("Subscribing for the first time to state projection stream for {TState}", typeof(TState).Name);
-            await projectionStream.SubscribeAsync(asyncObserver);
+            _logger.LogError("Error initializing or resuming state projection stream for {TState}: {Error}",
+                typeof(TState).Name, e);
+            throw;
         }
+
+        _activated = true;
         _logger.LogInformation("State projection stream for {TState} is ready", typeof(TState).Name);
     }
-    
+
     private IAsyncStream<StateWrapper<TState>> GetStateProjectionStream()
     {
         var streamId = StreamId.Create(AevatarOptions.StreamNamespace, typeof(StateWrapper<TState>).FullName!);
