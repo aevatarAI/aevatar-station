@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using Aevatar.Core.Abstractions;
-using Aevatar.Core.Abstractions.Projections;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -9,7 +8,6 @@ using Newtonsoft.Json;
 using Orleans.EventSourcing;
 using Orleans.Providers;
 using Orleans.Streams;
-using Orleans.Timers;
 
 namespace Aevatar.Core;
 
@@ -51,7 +49,6 @@ public abstract partial class
 
     private IStateDispatcher? StateDispatcher { get; set; }
     protected readonly AevatarOptions AevatarOptions;
-    private IGrainTimer? _projectionActivationTimer;
 
     protected GAgentBase()
     {
@@ -233,20 +230,6 @@ public abstract partial class
             Logger.LogError("Error in OnActivateAsync.OnGAgentActivateAsync: {ExceptionMessage}", e.Message);
             throw;
         }
-
-        try
-        {
-            // Register a timer to try to activate the projection grain after a short delay
-            // This helps avoid activation collisions during startup
-            // _projectionActivationTimer ??=
-                // this.RegisterGrainTimer(BackgroundWork, TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(-1));
-        }
-        catch (Exception e)
-        {
-            Logger.LogError(e, "Error in RegisterGrainTimer for grain {GrainId}: {ExceptionMessage}",
-                this.GetGrainId(), e.Message);
-            throw;
-        }
     }
 
     protected virtual Task OnGAgentActivateAsync(CancellationToken cancellationToken)
@@ -267,24 +250,6 @@ public abstract partial class
         {
             Logger.LogError(e, "Error in BaseOnActivateAsync: {ExceptionMessage}", e.Message);
             throw;
-        }
-    }
-    
-    private async Task BackgroundWork(CancellationToken token)
-    {
-        await DelayedProjectionGrainActivationAsync();
-    }
-
-    private async Task DelayedProjectionGrainActivationAsync()
-    {
-        try
-        {
-            await ActivateProjectionGrainAsync();
-        }
-        catch (Exception e)
-        {
-            Logger.LogError($"Error in delayed projection grain activation: {e}");
-            // Don't throw from timer callback
         }
     }
 
@@ -314,27 +279,8 @@ public abstract partial class
         }
     }
 
-    private async Task ActivateProjectionGrainAsync()
-    {
-        try
-        {
-            var projectionGrain = GrainFactory.GetGrain<IProjectionGrain<TState>>(Guid.Empty);
-            await projectionGrain.ActivateAsync();
-        }
-        catch (Exception e)
-        {
-            Logger.LogError($"Error in ActivateProjectionGrainAsync: {e}");
-            throw;
-        }
-    }
-
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
-        if (_projectionActivationTimer != null)
-        {
-            _projectionActivationTimer.Dispose();
-            _projectionActivationTimer = null;
-        }
         await base.OnDeactivateAsync(reason, cancellationToken);
     }
 
