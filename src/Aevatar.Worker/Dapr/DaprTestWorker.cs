@@ -1,4 +1,3 @@
-using Aevatar.Authors;
 using Aevatar.Dapr;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

@@ -3,7 +3,7 @@
   <Import Project="..\..\common.props" />
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <RootNamespace>Aevatar</RootNamespace>
   </PropertyGroup>
@@ -14,6 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="NJsonSchema" />
     <PackageReference Include="Volo.Abp.Emailing" />
     <PackageReference Include="Volo.Abp.Identity.Domain" />
     <PackageReference Include="Volo.Abp.PermissionManagement.Domain.Identity" />
@@ -22,6 +23,10 @@
     <PackageReference Include="Volo.Abp.OpenIddict.Domain" />
     <PackageReference Include="Volo.Abp.PermissionManagement.Domain.OpenIddict" />
     <PackageReference Include="AElf.OpenTelemetry" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Host\" />
   </ItemGroup>
   
 </Project>

@@ -1,12 +1,12 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
-using Aevatar.Core.Abstractions;
-using Aevatar.CQRS.Dto;
+using Aevatar.CQRS;
+using Aevatar.Query;
 
 namespace Aevatar.Service;
 
 public interface ICqrsService
 {
-    Task<Tuple<long, List<AgentGEventIndex>>> QueryGEventAsync(string eventId, List<string> groupIds, int pageNumber, int pageSize);
+    Task<AgentEventLogsDto> QueryGEventAsync(Guid? guid, string agentType, int pageIndex, int pageSize);
+    Task<AgentStateDto> QueryStateAsync(string stateName, Guid guid);
 }

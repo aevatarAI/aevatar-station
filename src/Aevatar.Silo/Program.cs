@@ -1,9 +1,9 @@
-﻿using Microsoft.Extensions.Configuration;
+
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Aevatar.Silo.Extensions;
 using Serilog;
-using Serilog.Sinks.OpenTelemetry;
 
 namespace Aevatar.Silo;
 
@@ -23,7 +23,9 @@ public class Program
         try
         {
             Log.Information("Starting Silo");
-            await CreateHostBuilder(args).RunConsoleAsync();
+            var builder = CreateHostBuilder(args);
+            var app = builder.Build();
+            await app.RunAsync();
             return 0;
         }
         catch (Exception ex)

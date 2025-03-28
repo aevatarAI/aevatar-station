@@ -1,0 +1,42 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+
+processors:
+  batch:
+    send_batch_size: 1000
+    timeout: 10s
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 1000
+    spike_limit_mib: 200
+
+exporters:
+  otlp:
+    endpoint: "otel-collector:4317"
+    tls:
+      insecure: true
+  logging:
+    verbosity: detailed
+  prometheus:
+    endpoint: "0.0.0.0:9090"
+  elasticsearch:
+    endpoints: ["elasticsearch:9200"]
+    index: "aevatar-traces"
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch, memory_limiter]
+      exporters: [elasticsearch, logging]
+    metrics:
+      receivers: [otlp]
+      processors: [batch, memory_limiter]
+      exporters: [prometheus, logging]
+    logs:
+      receivers: [otlp]
+      processors: [batch, memory_limiter]
+      exporters: [elasticsearch, logging]

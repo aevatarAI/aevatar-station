@@ -1,7 +1,16 @@
-﻿using Aevatar.User;
+﻿using Aevatar.ApiKey;
+using Aevatar.Notification;
+using Aevatar.User;
 using MongoDB.Driver;
+using Volo.Abp.AuditLogging.MongoDB;
+using Volo.Abp.BackgroundJobs.MongoDB;
 using Volo.Abp.Data;
+using Volo.Abp.FeatureManagement.MongoDB;
+using Volo.Abp.Identity.MongoDB;
 using Volo.Abp.MongoDB;
+using Volo.Abp.OpenIddict.MongoDB;
+using Volo.Abp.PermissionManagement.MongoDB;
+using Volo.Abp.SettingManagement.MongoDB;
 
 namespace Aevatar.MongoDB;
 
@@ -17,14 +26,21 @@ public class AevatarMongoDbContext : AbpMongoDbContext
     protected override void CreateModel(IMongoModelBuilder modelBuilder)
     {
         base.CreateModel(modelBuilder);
+        modelBuilder.ConfigureOpenIddict();
+        modelBuilder.ConfigurePermissionManagement();
+        modelBuilder.ConfigureSettingManagement();
+        modelBuilder.ConfigureBackgroundJobs();
+        modelBuilder.ConfigureAuditLogging();
+        modelBuilder.ConfigureIdentity();
+        modelBuilder.ConfigureOpenIddict();
+        modelBuilder.ConfigureFeatureManagement();
 
         //modelBuilder.Entity<YourEntity>(b =>
         //{
         //    //...
         //});
-        modelBuilder.Entity<IdentityUserExtension>(b =>
-        {
-            b.CollectionName = "IdentityUserExtensions"; 
-        });
+        modelBuilder.Entity<IdentityUserExtension>(b => { b.CollectionName = "IdentityUserExtensions"; });
+        modelBuilder.Entity<ProjectAppIdInfo>(b => b.CollectionName = "ProjectAppInfoCollection");
+        modelBuilder.Entity<NotificationInfo>(b => b.CollectionName = "NotificationInfoCollection");
     }
 }

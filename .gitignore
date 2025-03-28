@@ -256,3 +256,5 @@ paket-files/
 .DS_Store
 
 appsettings.secrets.json
+**/wwwroot/libs
+

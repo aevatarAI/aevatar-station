@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Volo.Abp;
 using Volo.Abp.Account;
 using Volo.Abp.Account.Web;
+using Volo.Abp.AspNetCore.Mvc.Libs;
 using Volo.Abp.AspNetCore.Mvc.UI.Bundling;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite.Bundling;
@@ -45,7 +46,8 @@ namespace Aevatar.AuthServer;
     typeof(AbpPermissionManagementEntityFrameworkCoreModule),
     typeof(AbpAuthorizationModule),
     typeof(AbpOpenIddictDomainModule),
-    typeof(AevatarMongoDbModule)
+    typeof(AevatarMongoDbModule),
+    typeof(AevatarApplicationContractsModule)
     )]
 public class AevatarAuthServerModule : AbpModule
 {
@@ -78,7 +80,6 @@ public class AevatarAuthServerModule : AbpModule
         {
             builder.Configure(openIddictServerOptions =>
             {
-                openIddictServerOptions.GrantTypes.Add(GrantTypeConstants.LOGIN);
                 openIddictServerOptions.GrantTypes.Add(GrantTypeConstants.SIGNATURE);
             });
         });
@@ -90,10 +91,12 @@ public class AevatarAuthServerModule : AbpModule
         
         context.Services.Configure<SignatureGrantOptions>(configuration.GetSection("Signature"));
         context.Services.Configure<ChainOptions>(configuration.GetSection("Chains"));
-
+        Configure<AbpMvcLibsOptions>(options =>
+        {
+            options.CheckLibs = false; 
+        });
         context.Services.Configure<AbpOpenIddictExtensionGrantsOptions>(options =>
         {
-            options.Grants.Add(GrantTypeConstants.LOGIN, new LoginGrantHandler());
             options.Grants.Add(GrantTypeConstants.SIGNATURE, new SignatureGrantHandler());
         });
 
@@ -147,7 +150,6 @@ public class AevatarAuthServerModule : AbpModule
         Configure<AppUrlOptions>(options =>
         {
             options.Applications["MVC"].RootUrl = configuration["App:SelfUrl"];
-            options.RedirectAllowedUrls.AddRange(configuration["App:RedirectAllowedUrls"]?.Split(',') ?? Array.Empty<string>());
 
             options.Applications["Angular"].RootUrl = configuration["App:ClientUrl"];
             options.Applications["Angular"].Urls[AccountUrlNames.PasswordReset] = "account/reset-password";
@@ -160,29 +162,12 @@ public class AevatarAuthServerModule : AbpModule
 
         Configure<AbpDistributedCacheOptions>(options =>
         {
-            options.KeyPrefix = ":Auth:";
+            options.KeyPrefix = "Aevatar:";
         });
-
+      
         var dataProtectionBuilder = context.Services.AddDataProtection().SetApplicationName("AevatarAuthServer");
-
-        context.Services.AddCors(options =>
-        {
-            options.AddDefaultPolicy(builder =>
-            {
-                builder
-                    .WithOrigins(
-                        configuration["App:CorsOrigins"]?
-                            .Split(",", StringSplitOptions.RemoveEmptyEntries)
-                            .Select(o => o.RemovePostFix("/"))
-                            .ToArray() ?? Array.Empty<string>()
-                    )
-                    .WithAbpExposedHeaders()
-                    .SetIsOriginAllowedToAllowWildcardSubdomains()
-                    .AllowAnyHeader()
-                    .AllowAnyMethod()
-                    .AllowCredentials();
-            });
-        });
+        
+        context.Services.AddHealthChecks();
     }
 
     public override void OnApplicationInitialization(ApplicationInitializationContext context)
@@ -201,15 +186,16 @@ public class AevatarAuthServerModule : AbpModule
         {
             app.UseErrorPage();
         }
+        
+        app.UseHealthChecks("/health");
 
         app.UseCorrelationId();
         app.UseStaticFiles();
         app.UseRouting();
-        app.UseCors();
         app.UseAuthentication();
         app.UseAbpOpenIddictValidation();
 
-        app.UseMultiTenancy();
+        //app.UseMultiTenancy();
         
         app.UseUnitOfWork();
         app.UseAuthorization();

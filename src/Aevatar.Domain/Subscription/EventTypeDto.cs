@@ -1,15 +1,17 @@
 using System.Collections.Generic;
 
-namespace Aevatar.Domain.Grains.Subscription;
+namespace Aevatar.Subscription;
 
-public class GetEventTypesInputDto
-{
-    public string AgentId { get; set; }
-}
-
-public class EventTypeDto
+public class EventDescriptionDto
 {
     public string EventType { get; set; }
     public string Description { get; set; }
-    public Dictionary<string, string> Payload { get; set; }
+    public List<EventProperty> EventProperties { get; set; }
+}
+
+public class EventProperty
+{
+    public string Name { get; set; } 
+    public string Type { get; set; }
+    public string Description { get; set; }
 }

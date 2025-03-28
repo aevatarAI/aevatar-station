@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <RootNamespace>Aevatar</RootNamespace>
@@ -41,7 +41,6 @@
         <PackageReference Include="Volo.Abp.AspNetCore.Serilog" />
         <PackageReference Include="Volo.Abp.Authorization" />
         <PackageReference Include="Volo.Abp.Autofac" />
-        <PackageReference Include="Volo.Abp.Core" />
         <PackageReference Include="Volo.Abp.Identity.EntityFrameworkCore" />
         <PackageReference Include="Volo.Abp.OpenIddict.AspNetCore" />
         <PackageReference Include="Volo.Abp.OpenIddict.Domain" />

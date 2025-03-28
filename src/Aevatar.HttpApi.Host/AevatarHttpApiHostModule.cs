@@ -1,10 +1,7 @@
 using System;
-using System.IO;
-using System.Linq;
 using AElf.OpenTelemetry;
 using AutoResponseWrapper;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Cors;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -15,23 +12,31 @@ using Microsoft.OpenApi.Models;
 using Aevatar.Application.Grains;
 using Aevatar.Domain.Grains;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using StackExchange.Redis;
 using Volo.Abp;
 using Volo.Abp.Account.Web;
 using Volo.Abp.AspNetCore.Mvc;
+using Volo.Abp.AspNetCore.Mvc.Libs;
 using Volo.Abp.AspNetCore.Mvc.UI.Bundling;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
+using Volo.Abp.Caching;
+using Volo.Abp.Caching.StackExchangeRedis;
 using Volo.Abp.Modularity;
 using Volo.Abp.Swashbuckle;
+using Volo.Abp.Threading;
 using Volo.Abp.VirtualFileSystem;
 
 namespace Aevatar;
 
 [DependsOn(
-    typeof(AevatarHttpApiModule),
+    typeof(AevatarHttpApiAdminModule),
+    typeof(AbpCachingStackExchangeRedisModule),
     typeof(AbpAutofacModule),
     typeof(AevatarApplicationModule),
     typeof(AevatarMongoDbModule),
@@ -45,38 +50,52 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
 {
     public override void PreConfigureServices(ServiceConfigurationContext context)
     {
-        PreConfigure<IdentityBuilder>(builder =>
-        {
-            builder.AddDefaultTokenProviders();
-        });
+        PreConfigure<IdentityBuilder>(builder => { builder.AddDefaultTokenProviders(); });
     }
 
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
+        Configure<AbpMvcLibsOptions>(options => { options.CheckLibs = false; });
         var configuration = context.Services.GetConfiguration();
         var hostingEnvironment = context.Services.GetHostingEnvironment();
 
         ConfigureAuthentication(context, configuration);
         ConfigureBundles();
-       // ConfigureUrls(configuration);
+        // ConfigureUrls(configuration);
         ConfigureConventionalControllers();
         ConfigureVirtualFileSystem(context);
-        ConfigureCors(context, configuration);
         ConfigureAutoResponseWrapper(context);
         ConfigureSwaggerServices(context, configuration);
+        ConfigureDataProtection(context, configuration, hostingEnvironment);
+        ConfigCache(context, configuration);
         //context.Services.AddDaprClient();
+
+        context.Services.AddMvc(options => { options.Filters.Add(new IgnoreAntiforgeryTokenAttribute()); })
+            .AddNewtonsoftJson();
         
-        context.Services.AddMvc(options =>
-        {
-            options.Filters.Add(new IgnoreAntiforgeryTokenAttribute());
-        });
+        context.Services.AddHealthChecks();
+    }
+    private void ConfigureDataProtection(
+        ServiceConfigurationContext context,
+        IConfiguration configuration,
+        IWebHostEnvironment hostingEnvironment)
+    {
+        var dataProtectionBuilder = context.Services.AddDataProtection().SetApplicationName("AevatarAuthServer");
+    }
+
+    private void ConfigCache(ServiceConfigurationContext context,IConfiguration configuration)
+    {
+        var redisOptions = ConfigurationOptions.Parse(configuration["Redis:Configuration"]);
+        context.Services.AddSingleton<IConnectionMultiplexer>(provider => ConnectionMultiplexer.Connect(redisOptions));
+        Configure<AbpDistributedCacheOptions>(options => { options.KeyPrefix = "Aevatar:"; });
+
     }
 
     private static void ConfigureAutoResponseWrapper(ServiceConfigurationContext context)
     {
         context.Services.AddAutoResponseWrapper();
     }
-    
+
     private void ConfigureAuthentication(ServiceConfigurationContext context, IConfiguration configuration)
     {
         context.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -85,12 +104,8 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
                 options.Authority = configuration["AuthServer:Authority"];
                 options.RequireHttpsMetadata = Convert.ToBoolean(configuration["AuthServer:RequireHttpsMetadata"]);
                 options.Audience = "Aevatar";
+                options.MapInboundClaims = false;
             });
-        context.Services.AddAuthorization(options =>
-        {
-            options.AddPolicy("OnlyAdminAccess", policy =>
-                policy.RequireRole("admin"));
-        });
     }
 
     private void ConfigureBundles()
@@ -99,34 +114,32 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         {
             options.StyleBundles.Configure(
                 LeptonXLiteThemeBundles.Styles.Global,
-                bundle =>
-                {
-                    bundle.AddFiles("/global-styles.css");
-                }
+                bundle => { bundle.AddFiles("/global-styles.css"); }
             );
         });
     }
+
     private void ConfigureVirtualFileSystem(ServiceConfigurationContext context)
     {
         var hostingEnvironment = context.Services.GetHostingEnvironment();
 
         if (hostingEnvironment.IsDevelopment())
         {
-            Configure<AbpVirtualFileSystemOptions>(options =>
-            {
-                options.FileSets.ReplaceEmbeddedByPhysical<AevatarDomainSharedModule>(
-                    Path.Combine(hostingEnvironment.ContentRootPath,
-                        $"..{Path.DirectorySeparatorChar}Aevatar.Domain.Shared"));
-                options.FileSets.ReplaceEmbeddedByPhysical<AevatarDomainModule>(
-                    Path.Combine(hostingEnvironment.ContentRootPath,
-                        $"..{Path.DirectorySeparatorChar}Aevatar.Domain"));
-                options.FileSets.ReplaceEmbeddedByPhysical<AevatarApplicationContractsModule>(
-                    Path.Combine(hostingEnvironment.ContentRootPath,
-                        $"..{Path.DirectorySeparatorChar}Aevatar.Application.Contracts"));
-                options.FileSets.ReplaceEmbeddedByPhysical<AevatarApplicationModule>(
-                    Path.Combine(hostingEnvironment.ContentRootPath,
-                        $"..{Path.DirectorySeparatorChar}Aevatar.Application"));
-            });
+            // Configure<AbpVirtualFileSystemOptions>(options =>
+            // {
+            //     options.FileSets.ReplaceEmbeddedByPhysical<AevatarDomainSharedModule>(
+            //         Path.Combine(hostingEnvironment.ContentRootPath,
+            //             $"..{Path.DirectorySeparatorChar}Aevatar.Domain.Shared"));
+            //     options.FileSets.ReplaceEmbeddedByPhysical<AevatarDomainModule>(
+            //         Path.Combine(hostingEnvironment.ContentRootPath,
+            //             $"..{Path.DirectorySeparatorChar}Aevatar.Domain"));
+            //     options.FileSets.ReplaceEmbeddedByPhysical<AevatarApplicationContractsModule>(
+            //         Path.Combine(hostingEnvironment.ContentRootPath,
+            //             $"..{Path.DirectorySeparatorChar}Aevatar.Application.Contracts"));
+            //     options.FileSets.ReplaceEmbeddedByPhysical<AevatarApplicationModule>(
+            //         Path.Combine(hostingEnvironment.ContentRootPath,
+            //             $"..{Path.DirectorySeparatorChar}Aevatar.Application"));
+            // });
         }
     }
 
@@ -169,26 +182,6 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         );
     }
 
-    private void ConfigureCors(ServiceConfigurationContext context, IConfiguration configuration)
-    {
-        context.Services.AddCors(options =>
-        {
-            options.AddDefaultPolicy(builder =>
-            {
-                builder
-                    .WithOrigins(configuration["App:CorsOrigins"]?
-                        .Split(",", StringSplitOptions.RemoveEmptyEntries)
-                        .Select(o => o.RemovePostFix("/"))
-                        .ToArray() ?? Array.Empty<string>())
-                    .WithAbpExposedHeaders()
-                    .SetIsOriginAllowedToAllowWildcardSubdomains()
-                    .AllowAnyHeader()
-                    .AllowAnyMethod()
-                    .AllowCredentials();
-            });
-        });
-    }
-
     public override void OnApplicationInitialization(ApplicationInitializationContext context)
     {
         var app = context.GetApplicationBuilder();
@@ -209,10 +202,11 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         app.UseCorrelationId();
         app.UseStaticFiles();
         app.UseRouting();
+        
         app.UseCors();
         app.UseAuthentication();
         app.UseAuthorization();
-
+        // app.UsePathBase("/developer-client");
         app.UseUnitOfWork();
         app.UseDynamicClaims();
         app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
@@ -225,7 +219,8 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
             c.OAuthClientId(configuration["AuthServer:SwaggerClientId"]);
             c.OAuthScopes("Aevatar");
         });
-        
+        app.UseHealthChecks("/health");
+
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();
         app.UseConfiguredEndpoints();
