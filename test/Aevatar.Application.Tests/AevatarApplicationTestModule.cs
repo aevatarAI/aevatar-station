@@ -10,6 +10,7 @@ using Volo.Abp.Auditing;
 using Volo.Abp.AutoMapper;
 using Volo.Abp.Emailing;
 using Volo.Abp.EventBus;
+using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
 
 namespace Aevatar;
@@ -44,5 +45,13 @@ public class AevatarApplicationTestModule : AbpModule
         context.Services.AddTransient<IHostDeployManager, DefaultHostDeployManager>();
 
         context.Services.AddSingleton<IEmailSender, NullEmailSender>();
+        
+        AddMock(context.Services);
     }
+
+    private void AddMock(IServiceCollection serviceCollection)
+    {
+        
+    }
+    
 }
