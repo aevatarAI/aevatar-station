@@ -12,6 +12,9 @@ using Volo.Abp.Domain.Repositories;
 using Volo.Abp.EventBus.Distributed;
 using Volo.Abp.Identity;
 using Volo.Abp.PermissionManagement;
+using Microsoft.AspNetCore.Identity;
+using IdentityRole = Volo.Abp.Identity.IdentityRole;
+using IdentityUser = Volo.Abp.Identity.IdentityUser;
 
 namespace Aevatar.Projects;
 
@@ -57,7 +60,7 @@ public class ProjectService : OrganizationService, IProjectService
             GuidGenerator.Create(),
             OrganizationRoleHelper.GetRoleName(organizationId, AevatarConsts.OrganizationOwnerRoleName)
         );
-        await RoleManager.CreateAsync(role);
+        (await RoleManager.CreateAsync(role)).CheckErrors();
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Members.Default, true);
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Members.Manage, true);
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiKeys.Default, true);
@@ -82,7 +85,7 @@ public class ProjectService : OrganizationService, IProjectService
             GuidGenerator.Create(),
             OrganizationRoleHelper.GetRoleName(organizationId, AevatarConsts.OrganizationReaderRoleName)
         );
-        await RoleManager.CreateAsync(role);
+        (await RoleManager.CreateAsync(role)).CheckErrors();
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Projects.Default, true);
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Members.Default, true);
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiKeys.Default, true);
@@ -154,7 +157,8 @@ public class ProjectService : OrganizationService, IProjectService
         }
 
         user.AddRole(roleId.Value);
-        await IdentityUserManager.UpdateAsync(user);
+        (await IdentityUserManager.UpdateAsync(user)).CheckErrors();
+        (await IdentityUserManager.UpdateSecurityStampAsync(user)).CheckErrors();
         await IdentityUserManager.AddToOrganizationUnitAsync(user.Id, organizationId);
     }
 }
