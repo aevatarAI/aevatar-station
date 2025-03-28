@@ -81,18 +81,23 @@ public class NotificationService : INotificationService, ITransientDependency
         };
 
         notification = await _notificationRepository.InsertAsync(notification);
-        //
-        // var stopWatch = new Stopwatch();
-        // stopWatch.Start();
-        await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
-            new NotificationResponse()
-            {
-                Data = new NotificationResponseMessage()
-                    { Id = notification.Id, Status = NotificationStatusEnum.None }
-            });
-        
-        // stopWatch.Stop();
-        // _logger.LogInformation($"StopWatch SignalR use time:{stopWatch.ElapsedMilliseconds}");
+
+        _ = Task.Run(async () =>
+        {
+            var stopWatch = new Stopwatch();
+            stopWatch.Start();
+
+            await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
+                new NotificationResponse()
+                {
+                    Data = new NotificationResponseMessage()
+                        { Id = notification.Id, Status = NotificationStatusEnum.None }
+                });
+            
+            stopWatch.Stop();
+            _logger.LogInformation($"StopWatch SignalR CreateAsync use time:{stopWatch.ElapsedMilliseconds}");
+        });
+
         return true;
     }
 
@@ -104,17 +109,25 @@ public class NotificationService : INotificationService, ITransientDependency
             return false;
         }
 
-        // todo: update Transaction
         notification.Status = NotificationStatusEnum.Withdraw;
         await _notificationRepository.UpdateAsync(notification);
 
-        await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
-            new NotificationResponse()
-            {
-                Data = new NotificationResponseMessage()
-                    { Id = notificationId, Status = NotificationStatusEnum.Withdraw }
-            });
-
+        _ = Task.Run(async () =>
+        {
+            var stopWatch = new Stopwatch();
+            stopWatch.Start();
+            
+            await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
+                new NotificationResponse()
+                {
+                    Data = new NotificationResponseMessage()
+                        { Id = notificationId, Status = NotificationStatusEnum.Withdraw }
+                });
+            
+            stopWatch.Stop();
+            _logger.LogInformation($"StopWatch SignalR WithdrawAsync use time:{stopWatch.ElapsedMilliseconds}");
+        });
+        
         return true;
     }
 
@@ -147,9 +160,19 @@ public class NotificationService : INotificationService, ITransientDependency
 
         await _notificationRepository.UpdateAsync(notification);
 
-        await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
-            new NotificationResponse()
-                { Data = new NotificationResponseMessage() { Id = notificationId, Status = status } });
+        _ = Task.Run(async () =>
+        {
+            var stopWatch = new Stopwatch();
+            stopWatch.Start();
+
+            await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
+                new NotificationResponse()
+                    { Data = new NotificationResponseMessage() { Id = notificationId, Status = status } });
+            
+            stopWatch.Stop();
+            _logger.LogInformation($"StopWatch SignalR Response use time:{stopWatch.ElapsedMilliseconds}");
+        });
+        
         return true;
     }
 
@@ -188,7 +211,7 @@ public class NotificationService : INotificationService, ITransientDependency
             if (organizationInfoObj != null)
             {
                 var organizationVisitInfo = organizationInfoObj as OrganizationVisitInfo;
-                var  organizationInfo = await _organizationService.GetAsync(organizationVisitInfo!.OrganizationId);
+                var organizationInfo = await _organizationService.GetAsync(organizationVisitInfo!.OrganizationId);
                 result.Add(new OrganizationVisitDto()
                 {
                     Id = item.Id,

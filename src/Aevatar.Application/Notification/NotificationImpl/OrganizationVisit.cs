@@ -30,16 +30,15 @@ public class OrganizationVisit : NotificationHandlerBase<OrganizationVisitInfo>
 
     public override async Task<string> GetContentForShowAsync(OrganizationVisitInfo input)
     {
-        return "you have been invited to organization";
-        // var stopWatch = new Stopwatch();
-        // stopWatch.Start();
-        // var creator = await _userManager.GetByIdAsync(input.Creator);
-        // var organization = await _organizationService.GetAsync(input.OrganizationId);
-        //
-        // stopWatch.Stop();
-        // _logger.LogInformation($"StopWatch GetContentForShowAsync use time:{stopWatch.ElapsedMilliseconds}");
-        //
-        // return $"{creator!.Name} has invited you to join {organization.DisplayName}";
+        var stopWatch = new Stopwatch();
+        stopWatch.Start();
+        var creator = await _userManager.GetByIdAsync(input.Creator);
+        var organization = await _organizationService.GetAsync(input.OrganizationId);
+        
+        stopWatch.Stop();
+        _logger.LogInformation($"StopWatch GetContentForShowAsync use time:{stopWatch.ElapsedMilliseconds}");
+        
+        return $"{creator!.Name} has invited you to join {organization.DisplayName}";
     }
 
     public override async Task HandleAgreeAsync(OrganizationVisitInfo input)
