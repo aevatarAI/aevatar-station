@@ -4,7 +4,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Aevatar.Application.Grains;
 using Aevatar.GAgents.AI.Options;
 using Aevatar.Options;
-using Microsoft.CodeAnalysis.Options;
+using Aevatar.Silo.Grains.Activation;
+using Aevatar.Silo.IdGeneration;
+using Aevatar.Silo.TypeDiscovery;
 using Aevatar.PermissionManagement;
 using Serilog;
 using Volo.Abp.AspNetCore.Serilog;
@@ -38,9 +40,12 @@ public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
         {
             options.IsDynamicPermissionStoreEnabled = true;
         });
+        
+        context.Services.AddTransient<IStateTypeDiscoverer, StateTypeDiscoverer>();
+        context.Services.AddTransient<IDeterministicIdGenerator, MD5DeterministicIdGenerator>();
+        context.Services.AddTransient<IProjectionGrainActivator, ProjectionGrainActivator>();
+        
         context.Services.Configure<HostOptions>(context.Services.GetConfiguration().GetSection("Host"));
         context.Services.Configure<SystemLLMConfigOptions>(configuration);
     }
-    
-    
 }
