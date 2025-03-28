@@ -18,9 +18,10 @@
         <PackageReference Include="Aevatar.Core.Abstractions"/>
         <PackageReference Include="Aevatar.EventSourcing.Core"/>
         <PackageReference Include="NEST"/>
+        <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection"/>
+        <PackageReference Include="NEST.JsonNetSerializer"/>
         <PackageReference Include="Volo.Abp.AutoMapper"/>
         <PackageReference Include="MediatR"/>
-        <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection"/>
     </ItemGroup>
 
 </Project>

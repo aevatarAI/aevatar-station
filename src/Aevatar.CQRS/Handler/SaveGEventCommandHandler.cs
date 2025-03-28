@@ -8,7 +8,7 @@ namespace Aevatar.CQRS.Handler;
 
 public class SaveGEventCommandHandler : IRequestHandler<SaveGEventCommand>
 {
-    private readonly IIndexingService  _indexingService ;
+    private readonly IIndexingService _indexingService;
 
     public SaveGEventCommandHandler(
         IIndexingService indexingService
@@ -17,11 +17,10 @@ public class SaveGEventCommandHandler : IRequestHandler<SaveGEventCommand>
         _indexingService = indexingService;
     }
 
-    public async Task<Unit> Handle(SaveGEventCommand request, CancellationToken cancellationToken)
+    public async Task Handle(SaveGEventCommand request, CancellationToken cancellationToken)
     {
         _indexingService.CheckExistOrCreateIndex(request.AgentGEventIndex);
         await SaveIndexAsync(request);
-        return Unit.Value;
     }
 
     private async Task SaveIndexAsync(SaveGEventCommand request)

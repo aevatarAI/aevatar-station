@@ -36,6 +36,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="9.0.0" />
     <PackageVersion Include="Microsoft.SemanticKernel" Version="1.32.0" />
     <PackageVersion Include="Microsoft.SemanticKernel.Core" Version="1.32.0" />
+    <PackageVersion Include="MongoDB.Bson" Version="2.29.0" />
     <PackageVersion Include="NJsonSchema" Version="11.1.0" />
     <PackageVersion Include="OpenAI.API" Version="1.0.0" />
     <PackageVersion Include="Orleans.SyncWork" Version="8.1.12" />
@@ -51,6 +52,7 @@
     <PackageVersion Include="Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite" Version="3.2.0" />
     <PackageVersion Include="Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared" Version="9.0.3" />
     <PackageVersion Include="Volo.Abp.AspNetCore.Serilog" Version="$(AbpVersion)" />
+    <PackageVersion Include="Volo.Abp.AspNetCore.SignalR" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.AuditLogging.Domain" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.AuditLogging.Domain.Shared" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.AuditLogging.MongoDB" Version="$(AbpVersion)" />
@@ -179,9 +181,9 @@
     <PackageVersion Include="OpenIddict.Server.AspNetCore" Version="5.5.0" />
     <PackageVersion Include="StackExchange.Redis" Version="2.6.122" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageVersion Include="MediatR" Version="11.1.0" />
-    <PackageVersion Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="11.1.0" />
+    <PackageVersion Include="MediatR" Version="12.4.1" />
     <PackageVersion Include="NEST" Version="7.17.5" />
+    <PackageVersion Include="NEST.JsonNetSerializer" Version="7.17.5" />
     <PackageVersion Include="GraphQL.Client" Version="6.1.0" />
     <PackageVersion Include="GraphQL.Client.Serializer.Newtonsoft" Version="6.1.0" />
     <PackageVersion Include="KubernetesClient" Version="13.0.11" />
