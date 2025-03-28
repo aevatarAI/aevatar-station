@@ -9,6 +9,7 @@ using Aevatar.GAgents.SemanticKernel.Extensions;
 using Aevatar.Extensions;
 using Aevatar.PermissionManagement.Extensions;
 using Aevatar.SignalR;
+using Aevatar.Silo.Startup;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -84,6 +85,9 @@ public static class OrleansHostExtension
                         options.SupportedNamespacePrefixes.Add("Autofac.Core");
                     })
                     .AddActivityPropagation()
+                    // Register our StateProjectionInitializer as a startup task
+                    // This will run during silo startup at ServiceLifecycleStage.ApplicationServices (default)
+                    .AddStartupTask<StateProjectionInitializer>()
                     // .UsePluginGAgents()
                     .UseDashboard(options =>
                     {
