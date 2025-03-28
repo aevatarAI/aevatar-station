@@ -31,7 +31,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Compile Remove="Agents\TestAgent\NaiveTestEvent.cs" />
       <Compile Remove="Agents\TestAgent\GroupGAgent.cs" />
     </ItemGroup>
 </Project>
