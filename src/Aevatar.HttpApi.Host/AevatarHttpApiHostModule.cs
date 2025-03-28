@@ -1,4 +1,5 @@
 using System;
+using System.IdentityModel.Tokens.Jwt;
 using AElf.OpenTelemetry;
 using AutoResponseWrapper;
 using Microsoft.AspNetCore.Builder;
@@ -27,6 +28,7 @@ using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
 using Volo.Abp.Caching;
 using Volo.Abp.Caching.StackExchangeRedis;
+using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
 using Volo.Abp.Swashbuckle;
 using Volo.Abp.Threading;
@@ -105,6 +107,26 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
                 options.RequireHttpsMetadata = Convert.ToBoolean(configuration["AuthServer:RequireHttpsMetadata"]);
                 options.Audience = "Aevatar";
                 options.MapInboundClaims = false;
+                
+                options.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = async context =>
+                    {
+                        var userId = context.Principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+                        if (!userId.IsNullOrWhiteSpace())
+                        {
+                            var userManager = context.HttpContext.RequestServices
+                                .GetRequiredService<IdentityUserManager>();
+                            var user = await userManager.FindByIdAsync(userId);
+
+                            if (user == null || user.SecurityStamp !=
+                                context.Principal.FindFirst(AevatarConsts.SecurityStampClaimType)?.Value)
+                            {
+                                context.Fail("Token is no longer valid.");
+                            }
+                        }
+                    }
+                };
             });
     }
 
@@ -186,11 +208,6 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
     {
         var app = context.GetApplicationBuilder();
         var env = context.GetEnvironment();
-
-        if (env.IsDevelopment())
-        {
-            app.UseDeveloperExceptionPage();
-        }
 
         app.UseAbpRequestLocalization();
 

@@ -131,6 +131,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
             var user = await IdentityUserManager.GetByIdAsync(CurrentUser.Id.Value);
             user.AddRole(ownerRoleId);
             await IdentityUserManager.UpdateAsync(user);
+            await IdentityUserManager.UpdateSecurityStampAsync(user);
         }
 
         return ObjectMapper.Map<OrganizationUnit, OrganizationDto>(organizationUnit);
