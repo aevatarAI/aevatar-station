@@ -131,14 +131,26 @@ public class AgentController : AevatarController
     }
 
     [HttpGet("/workflow")]
-    public async Task<Task<AgentDto>> GetWorkflowAgents()
+    public async Task<List<WorkflowAgentDefinesDto>> GetWorkflowAgents(string workflowGranId)
     {
-        throw new NotImplementedException();
+       return await _agentService.GetWorkflowUnitRelationsAsync(workflowGranId);
     }
 
     [HttpPost("/workflow")]
-    public async Task SetWorkFlow([FromBody] WorkflowAgentsDto workflowAgentsDto)
+    public async Task<CreateWorkflowResponseDto> CreateWorkFlow([FromBody] WorkflowAgentsDto workflowAgentsDto)
     {
-        throw new NotImplementedException();
+        return await _agentService.CreateWorkflowAsync(workflowAgentsDto);
+    } 
+    
+    [HttpPost("/workflow/simulate")]
+    public async Task<string> SimulateWorkFlow([FromBody] WorkflowWithGrainIdRequestDto withGrainIdRequestDto)
+    {
+        return await _agentService.SimulateWorkflowAsync(withGrainIdRequestDto.WorkflowGrainId, withGrainIdRequestDto.WorkUnitRelations);
+    } 
+    
+    [HttpPut("/workflow")]
+    public async Task<string> ModifyWorkFlow([FromBody] WorkflowWithGrainIdRequestDto withGrainIdRequestDto)
+    {
+        return await _agentService.EditWorkWorkflowAsync(withGrainIdRequestDto.WorkflowGrainId, withGrainIdRequestDto.WorkUnitRelations);
     } 
 }

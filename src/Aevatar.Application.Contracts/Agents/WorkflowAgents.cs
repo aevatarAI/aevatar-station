@@ -5,11 +5,11 @@ namespace Aevatar.Agents;
 
 public class WorkflowAgentsDto
 {
-    public List<WorkflowAgentDefinesDto> AgentList { get; set; }
+    public List<WorkflowAgentDefinesDto> WorkUnitRelations { get; set; }
 }
 
 public class WorkflowAgentDefinesDto
 {
-    public GrainId AgentGrainId { get; set; }
-    public GrainId ParentAgentGrainId { get; set; }
+    public string GrainId { get; set; }
+    public string NextGrainId { get; set; }
 }
