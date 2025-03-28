@@ -71,6 +71,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Neo4JStore", "src\A
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Aspire", "src\Aevatar.Aspire\Aevatar.Aspire.csproj", "{A12473D1-EA4F-41D9-814E-F55F811839E8}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{C0E1214B-AE7B-43CC-99F8-DA192454EB1B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.SignalRDemo", "Aevatar.SignalRDemo\Aevatar.SignalRDemo.csproj", "{7A9AF4F5-3DC5-4263-B0DE-93E8F8183383}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -205,6 +209,10 @@ Global
 		{A12473D1-EA4F-41D9-814E-F55F811839E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A12473D1-EA4F-41D9-814E-F55F811839E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A12473D1-EA4F-41D9-814E-F55F811839E8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7A9AF4F5-3DC5-4263-B0DE-93E8F8183383}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7A9AF4F5-3DC5-4263-B0DE-93E8F8183383}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7A9AF4F5-3DC5-4263-B0DE-93E8F8183383}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7A9AF4F5-3DC5-4263-B0DE-93E8F8183383}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -242,6 +250,7 @@ Global
 		{51838FE4-56BD-4B45-BD2A-F4BDF94DB190} = {CA9AC87F-097E-4F15-8393-4BC07735A5B0}
 		{ED3FF01D-A9E4-45F2-85B1-1591D2C9BD61} = {CA9AC87F-097E-4F15-8393-4BC07735A5B0}
 		{A12473D1-EA4F-41D9-814E-F55F811839E8} = {CA9AC87F-097E-4F15-8393-4BC07735A5B0}
+		{7A9AF4F5-3DC5-4263-B0DE-93E8F8183383} = {C0E1214B-AE7B-43CC-99F8-DA192454EB1B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {28315BFD-90E7-4E14-A2EA-F3D23AF4126F}
