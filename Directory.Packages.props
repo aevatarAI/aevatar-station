@@ -178,9 +178,9 @@
     <PackageVersion Include="OpenIddict.Server.AspNetCore" Version="5.5.0" />
     <PackageVersion Include="StackExchange.Redis" Version="2.6.122" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageVersion Include="MediatR" Version="11.1.0" />
-    <PackageVersion Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="11.1.0" />
-    <PackageVersion Include="NEST" Version="7.17.5" />
+    <PackageVersion Include="MediatR" Version="12.4.1" />
+    <PackageVersion Include="Elastic.Clients.Elasticsearch" Version="8.17.3" />
+    <PackageVersion Include="Elastic.Transport" Version="8.17.3" />
     <PackageVersion Include="GraphQL.Client" Version="6.1.0" />
     <PackageVersion Include="GraphQL.Client.Serializer.Newtonsoft" Version="6.1.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="4.11.0" />
