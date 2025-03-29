@@ -333,14 +333,17 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
             {
                 From = from,
                 Size = size,
-                Query = new QueryStringQuery
-                {
-                    Query = queryDto.QueryString,
-                    AllowLeadingWildcard = false
-                },
                 Sort = sortOptions
             };
-
+            if (queryDto.QueryString.IsNullOrEmpty())
+            {
+                searchRequest.Query =
+                    new QueryStringQuery
+                    {
+                        Query = queryDto.QueryString,
+                        AllowLeadingWildcard = false
+                    };
+            }
             var response = await _elasticClient.SearchAsync<Dictionary<string, object>>(searchRequest);
 
             if (!response.IsValidResponse)
