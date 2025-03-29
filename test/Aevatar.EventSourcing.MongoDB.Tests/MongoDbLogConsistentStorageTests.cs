@@ -21,7 +21,7 @@ using Xunit;
 namespace Aevatar.EventSourcing.MongoDB.Tests;
 
 [Collection("MongoDb")]
-public class MongoDbLogConsistentStorageTests
+public class MongoDbLogConsistentStorageTests : IAsyncDisposable
 {
     private readonly Mock<IMongoCollection<BsonDocument>> _mongoCollectionMock;
     private readonly MongoDbLogConsistentStorage _storage;
@@ -59,6 +59,25 @@ public class MongoDbLogConsistentStorageTests
         };
 
         _storage = new MongoDbLogConsistentStorage(_name, _mongoDbOptions, _clusterOptionsMock.Object, _loggerMock.Object);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        // Clean up any test data using real MongoDB connection
+        var client = new MongoClient("mongodb://localhost:27017");
+        var database = client.GetDatabase("TestDb");
+        var collectionsCursor = await database.ListCollectionNamesAsync();
+        var collectionNames = new List<string>();
+        while (await collectionsCursor.MoveNextAsync())
+        {
+            collectionNames.AddRange(collectionsCursor.Current);
+        }
+
+        foreach (var collectionName in collectionNames)
+        {
+            var collection = database.GetCollection<BsonDocument>(collectionName);
+            await collection.DeleteManyAsync(FilterDefinition<BsonDocument>.Empty);
+        }
     }
 
     [Fact]
@@ -150,9 +169,76 @@ public class MongoDbLogConsistentStorageTests
 
         Assert.Contains("Version conflict", exception.Message);
     }
+    
+    [Fact]
+    public async Task ReadAsync_ShouldReturnLogEntries_WhenDataExists()
+    {
+        // Arrange
+        var grainId = GrainId.Create("TestGrain0", "TestKey");
+        var grainTypeName = "TestGrainType";
+        var fromVersion = 0;
+        var maxCount = 10;
+
+        var testData = new List<BsonDocument>
+        {
+            new() { { "Data", "Test1" }, { "Version", 0 }, { "GrainId", grainId.ToString() } },
+            new() { { "Data", "Test2" }, { "Version", 1 }, { "GrainId", grainId.ToString() } }
+        };
+
+        // Mock GetLastVersionAsync to return -1 initially
+        var mockCursorForVersion = new Mock<IAsyncCursor<BsonDocument>>();
+        mockCursorForVersion.Setup(x => x.MoveNextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _mongoCollectionMock.Setup(x => x.FindAsync(
+            It.IsAny<FilterDefinition<BsonDocument>>(),
+            It.IsAny<FindOptions<BsonDocument, BsonDocument>>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(mockCursorForVersion.Object);
+
+        // Mock InsertManyAsync for AppendAsync
+        _mongoCollectionMock.Setup(x => x.InsertManyAsync(
+            It.IsAny<IEnumerable<BsonDocument>>(),
+            It.IsAny<InsertManyOptions>(),
+            It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Mock FindAsync for ReadAsync
+        var mockCursorForRead = new Mock<IAsyncCursor<BsonDocument>>();
+        mockCursorForRead.Setup(x => x.MoveNextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        mockCursorForRead.Setup(x => x.Current)
+            .Returns(testData);
+
+        _mongoCollectionMock.Setup(x => x.FindAsync(
+            It.IsAny<FilterDefinition<BsonDocument>>(),
+            It.IsAny<FindOptions<BsonDocument, BsonDocument>>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(mockCursorForRead.Object);
+
+        // Initialize the storage
+        var observer = new TestSiloLifecycle();
+        _storage.Participate(observer);
+        await observer.OnStart(CancellationToken.None);
+
+        await _storage.AppendAsync(grainTypeName, grainId, testData, -1);
+        // Act
+        var result = await _storage.ReadAsync<TestLogEntry>(grainTypeName, grainId, fromVersion, maxCount);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Count);
+        Assert.Equal("Test1", result[0].Data);
+        Assert.Equal("Test2", result[1].Data);
+
+        // Clean up after test
+        await DisposeAsync();
+    }
 
     private class TestLogEntry
     {
         public required string Data { get; set; }
+        public  ObjectId _id { get; set; }
+        public string GrainId { get; set; }
+        public int Version { get; set; }
     }
 } 
