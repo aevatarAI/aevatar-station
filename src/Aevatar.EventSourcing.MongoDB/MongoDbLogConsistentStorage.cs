@@ -29,9 +29,16 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
         _mongoDbOptions = options;
         _serviceId = clusterOptions.Value.ServiceId;
         _logger = logger;
+        
+        if (BsonSerializer.LookupSerializer<GrainType>() == null)
+        {
+            BsonSerializer.RegisterSerializer(new GrainTypeBsonSerializer());
+        }
 
-        BsonSerializer.RegisterSerializer(new GrainTypeBsonSerializer());
-        BsonSerializer.RegisterSerializer(new IdSpanBsonSerializer());
+        if (BsonSerializer.LookupSerializer<IdSpan>() == null)
+        {
+            BsonSerializer.RegisterSerializer(new IdSpanBsonSerializer());
+        }
     }
 
     public async Task<IReadOnlyList<TLogEntry>> ReadAsync<TLogEntry>(string grainTypeName, GrainId grainId,
