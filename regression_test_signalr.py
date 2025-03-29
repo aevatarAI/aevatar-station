@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 # SignalR Hub URL
 # HUB_URL = "http://localhost:8001/api/agent/aevatarHub"
-HUB_URL = "https://station-developer-staging.aevatar.ai/test-client"
+HUB_URL = "https://station-developer-staging.aevatar.ai/test-client/api/agent/aevatarHub"
 
 
 @pytest.fixture(scope="module")
