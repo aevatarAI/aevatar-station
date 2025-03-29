@@ -23,7 +23,7 @@ public class StateDispatcher : IStateDispatcher
     {
         try
         {
-            var streamId = StreamId.Create(_aevatarOptions.StreamNamespace, typeof(StateWrapper<TState>).FullName!);
+            var streamId = StreamId.Create(_aevatarOptions.StateProjectionStreamNamespace, typeof(StateWrapper<TState>).FullName!);
             var stream = _streamProvider.GetStream<StateWrapper<TState>>(streamId);
             await stream.OnNextAsync(stateWrapper);
         }
