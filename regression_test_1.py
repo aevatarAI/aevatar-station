@@ -1,101 +1,160 @@
-import time
+import pytest
 import json
-from signalrcore.hub_connection_builder import HubConnectionBuilder
-from uuid import uuid4
+import time
 import logging
+from signalrcore.hub_connection_builder import HubConnectionBuilder
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 
 # SignalR Hub URL
-hub_url = "http://localhost:8001/api/agent/aevatarHub"  # Ensure this matches the server configuration
+HUB_URL = "http://localhost:8001/api/agent/aevatarHub"
 
-# Create SignalR Hub connection with automatic reconnect
-hub_connection = HubConnectionBuilder() \
-    .with_url(hub_url) \
-    .with_automatic_reconnect({
-        "type": "raw",
-        "keep_attempting": True,
-        "retries": 3,
-        "intervals": [0, 2000, 10000, 30000]  # Retry intervals in milliseconds
-    }) \
-    .build()
 
-# Event listener for server-side events
-def on_receive_response(message):
-    logging.info(f"[Event Received] {message}")
+@pytest.fixture(scope="module")
+def hub_connection():
+    """
+    Create a SignalR connection and close it after the test ends
+    """
+    connection = HubConnectionBuilder() \
+        .with_url(HUB_URL, options={"verify_ssl": False}) \
+        .with_automatic_reconnect({
+            "type": "raw",
+            "keep_attempting": True,
+            "retries": 3,
+            "intervals": [0, 2000, 10000, 30000],
+        }) \
+        .configure_logging(logging.DEBUG) \
+        .build()
 
-hub_connection.on("ReceiveResponse", on_receive_response)
+    # Variables to track connection state and received messages
+    connection_state = {"is_connected": False}
+    received_messages = []
 
-# Start SignalR connection
-def start_signalr_connection():
-    try:
-        hub_connection.start()
-        logging.info("SignalR connection has started successfully.")
-    except Exception as e:
-        logging.error(f"SignalR connection failed: {e}")
-        exit(1)
+    def on_connection_open():
+        connection_state["is_connected"] = True
+        logging.info("✅ SignalR connection established successfully")
 
-# Check if connection is active
-def is_connection_active():
-    try:
-        # Try to send a ping or check if the hub_connection is not None
-        return hub_connection is not None and hub_connection._transport is not None
-    except Exception:
-        return False
+    def on_connection_close():
+        connection_state["is_connected"] = False
+        logging.info("❌ SignalR connection closed")
 
-# Publish event to the server
-def publish_event(method_name):
-    try:
-        # Prepare event payload
-        event_data = {
-            "Greeting": "Test message"
-        }
-        event_json = json.dumps(event_data)
+    def on_receive_response(message):
+        logging.info(f"📨 Received message: {message}")
+        received_messages.append(message)
 
-        # Grain type and key
-        grain_type = "SignalRSample.GAgents.Aevatar.SignalRDemo"
-        grain_key = "cd6b8f09214673d3cade4e832627b4f6"
-        event_type_name = "SignalRSample.GAgents.NaiveTestEvent"
+    connection.on_open(on_connection_open)
+    connection.on_close(on_connection_close)
+    connection.on("ReceiveResponse", on_receive_response)
 
-        # Send event with retry logic
-        send_event_with_retry(method_name, grain_type, grain_key, event_type_name, event_json)
-        logging.info(f"✅ Success: Event published using {method_name}")
-    except Exception as ex:
-        logging.error(f"❌ Error during {method_name}: {str(ex)}")
+    logging.info("🔌 Connecting to SignalR...")
+    connection.start()
 
-# Retry logic for sending events
-def send_event_with_retry(method_name, grain_type, grain_key, event_type_name, event_json):
-    max_retries = 3
-    retry_count = 0
+    # Wait for the connection to establish (up to 30 seconds)
+    for _ in range(30):
+        if connection_state["is_connected"]:
+            break
+        time.sleep(1)
+    else:
+        pytest.fail("❌ Failed to establish SignalR connection")
 
-    while retry_count < max_retries:
-        try:
-            # Send message to server
-            signal_r_grain_id = hub_connection.send(method_name, [grain_type+"/"+grain_key, event_type_name, event_json])
-            logging.info(f"SignalRGAgentGrainId: {signal_r_grain_id}")
-            return
-        except Exception as ex:
-            retry_count += 1
-            logging.warning(f"Retry {retry_count}/{max_retries} failed: {str(ex)}")
-            if retry_count >= max_retries:
-                raise  # Rethrow the exception after maximum retries
-            time.sleep(1 * retry_count)  # Delay before the next retry
+    yield connection, received_messages
 
-# Main task
-if __name__ == "__main__":
-    try:
-        # Start SignalR connection
-        start_signalr_connection()
+    # Stop the connection
+    connection.stop()
+    logging.info("❌ SignalR connection terminated")
 
-        # Publish test events
-        publish_event("PublishEventAsync")
-        publish_event("SubscribeAsync")
 
-        # Keep connection alive indefinitely
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        logging.info("Exiting...")
-    finally:
-        hub_connection.stop()
+def test_signalr_connection_active(hub_connection):
+    """
+    Test if the SignalR connection is established successfully
+    """
+    connection, _ = hub_connection
+    assert connection is not None, "Hub connection is None"
+    logging.info("✅ Connection test passed!")
+
+
+def test_publish_event(hub_connection):
+    """
+    Test publishing an event to the Hub
+    """
+    connection, _ = hub_connection
+    method_name = "PublishEventAsync"
+    grain_type = "SignalRSample.GAgents.Aevatar.SignalRDemo"
+    grain_key = "cd6b8f09214673d3cade4e832627b4f6"
+    event_type_name = "SignalRSample.GAgents.NaiveTestEvent"
+    event_json = json.dumps({"Greeting": "Hello from Python"})
+
+    result = connection.send(method_name, [f"{grain_type}/{grain_key}", event_type_name, event_json])
+    logging.info(f"✅ Event published successfully: {result}")
+    assert result is not None, "Failed to send event"
+
+
+@pytest.mark.parametrize("test_event", [
+    {"Greeting": "Message A"},
+    {"Greeting": "Message B"}
+])
+def test_dynamic_subscribe_event(hub_connection, test_event):
+    """
+    Dynamically send different events and verify if a response is received
+    """
+    connection, received_messages = hub_connection
+    method_name = "SubscribeAsync"
+    grain_type = "SignalRSample.GAgents.Aevatar.SignalRDemo"
+    grain_key = "cd6b8f09214673d3cade4e832627b4f6"
+    event_type_name = "SignalRSample.GAgents.NaiveTestEvent"
+    event_json = json.dumps(test_event)
+
+    # Clear received messages
+    received_messages.clear()
+
+    # Send the event
+    result = connection.send(method_name, [f"{grain_type}/{grain_key}", event_type_name, event_json])
+    assert result is not None, "Failed to send event"
+    logging.info(f"✅ Event sent successfully: {test_event}")
+
+    # Wait for a response (up to 3 seconds)
+    max_wait_time = 3
+    start_time = time.time()
+    while time.time() - start_time < max_wait_time:
+        if received_messages:
+            break
+        logging.info("⏳ Waiting for server response...")
+        time.sleep(1)
+
+    # Verify if a response is received
+    assert len(received_messages) > 0, "❌ No response received from the server"
+    logging.info(f"✅ Received messages: {received_messages}")
+
+
+def test_dynamic_subscribe_event_failure(hub_connection):
+    """
+    Dynamically send invalid event data and verify failure scenarios
+    """
+    connection, received_messages = hub_connection
+    method_name = "SubscribeAsync"
+    grain_type = "SignalRSample.GAgents.Aevatar.SignalRDemo1"  # Invalid grain_type
+    grain_key = "cd6b8f09214673d3cade4e832627b4f6"
+    event_type_name = "SignalRSample.GAgents.NaiveTestEvent"
+    event_json = json.dumps({"Greeting": "Test Failure Case"})
+
+    # Clear received messages
+    received_messages.clear()
+
+    # Send the event
+    result = connection.send(method_name, [f"{grain_type}/{grain_key}", event_type_name, event_json])
+    assert result is not None, "Failed to send event"
+    logging.info(f"✅ Event sent successfully (failure test): {event_json}")
+
+    # Wait for a response (up to 3 seconds)
+    max_wait_time = 3
+    start_time = time.time()
+    while time.time() - start_time < max_wait_time:
+        if received_messages:  # Check if any messages are received
+            break
+        logging.info("⏳ Waiting for server response (failure test)...")
+        time.sleep(1)
+
+    # Verify no response is received
+    assert len(received_messages) == 0, "❌ Unexpected response received from the server"
+    logging.info("✅ Failure test passed: No response received")
