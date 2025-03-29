@@ -335,7 +335,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                 Size = size,
                 Sort = sortOptions
             };
-            if (queryDto.QueryString.IsNullOrEmpty())
+            if (!queryDto.QueryString.IsNullOrEmpty())
             {
                 searchRequest.Query =
                     new QueryStringQuery
@@ -344,6 +344,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                         AllowLeadingWildcard = false
                     };
             }
+
             var response = await _elasticClient.SearchAsync<Dictionary<string, object>>(searchRequest);
 
             if (!response.IsValidResponse)
