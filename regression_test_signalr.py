@@ -137,7 +137,7 @@ def test_publish_async(hub_connection):
     grain_type = "SignalRSample.GAgents.Aevatar.SignalRDemo"
     grain_key = "cd6b8f09214673d3cade4e832627b4f6"
     event_type_name = "SignalRSample.GAgents.NaiveTestEvent"
-    event_json = json.dumps({"Greeting": "PublishEvent Test"})
+    event_json = json.dumps({"Greeting": "Greeting PublishEvent Test"})
 
     params = [f"{grain_type}/{grain_key}", event_type_name, event_json]
     responses = send_event_and_wait(connection, received_messages, method_name, params)
@@ -146,7 +146,7 @@ def test_publish_async(hub_connection):
 
 
 @pytest.mark.parametrize("test_event", [
-    {"Greeting": "Message A"}
+    {"Greeting": "Greeting SubscribeAsync Test"}
 ])
 def test_subscribe_event(hub_connection, test_event):
     """
