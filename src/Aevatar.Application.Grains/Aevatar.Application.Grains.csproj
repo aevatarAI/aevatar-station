@@ -30,7 +30,7 @@
         <ProjectReference Include="..\Aevatar.Neo4JStore\Aevatar.Neo4JStore.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Compile Remove="Agents\TestAgent\GroupGAgent.cs" />
-    </ItemGroup>
+<!--    <ItemGroup>-->
+<!--      <Compile Remove="Agents\TestAgent\GroupGAgent.cs" />-->
+<!--    </ItemGroup>-->
 </Project>
