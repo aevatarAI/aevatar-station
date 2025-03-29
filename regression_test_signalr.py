@@ -13,11 +13,16 @@ import warnings
 warnings.simplefilter("ignore", category=DeprecationWarning)
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(
+    level=logging.DEBUG,  # Ensure logs are printed
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 # SignalR Hub URL
-# HUB_URL = "http://localhost:8001/api/agent/aevatarHub"
-HUB_URL = "https://station-developer-staging.aevatar.ai/test-client/api/agent/aevatarHub"
+HUB_URL = "http://localhost:8001/api/agent/aevatarHub"
+# Alternate URL for staging
+# HUB_URL = "https://station-developer-staging.aevatar.ai/test-client/api/agent/aevatarHub"
 
 
 @pytest.fixture(scope="module")
@@ -74,6 +79,41 @@ def hub_connection():
     logging.info("❌ SignalR connection terminated")
 
 
+def send_event_and_wait(connection, received_messages, method_name, params, wait_time=10):
+    """
+    Helper method to send an event and wait for a response.
+    """
+    # Clear any previous messages
+    received_messages.clear()
+
+    # Send the event
+    try:
+        logging.info(f"📡 Sending event: {method_name} with params: {params}")
+        result = connection.send(method_name, params)
+
+        # Log the result
+        if hasattr(result, "result"):
+            logging.info(f"✅ Event sent result (JSON): {json.dumps(result.result)}")
+        else:
+            logging.info(f"✅ Event sent result (Raw): {result}")
+
+        assert result is not None, "Failed to send event"
+
+    except Exception as e:
+        logging.error(f"❌ Exception while sending event: {e}")
+        pytest.fail(f"Exception while sending event: {e}")
+
+    # Wait for a response
+    start_time = time.time()
+    while time.time() - start_time < wait_time:
+        if received_messages:
+            break
+        logging.info("⏳ Waiting for server response...")
+        time.sleep(1)
+
+    return received_messages
+
+
 def test_signalr_connection_active(hub_connection):
     """
     Test if the SignalR connection is established successfully
@@ -94,27 +134,12 @@ def test_subscribe_async(hub_connection):
     event_type_name = "SignalRSample.GAgents.NaiveTestEvent"
     event_json = json.dumps({"Greeting": "Subscribe Test"})
 
-    # Clear received messages
-    received_messages.clear()
-
-    # Send the event
-    logging.info(f"📡 Subscribing with params: {grain_type}, {grain_key}, {event_type_name}, {event_json}")
-    result = connection.send(method_name, [f"{grain_type}/{grain_key}", event_type_name, event_json])
-    assert result is not None, "Failed to send SubscribeAsync event"
-    logging.info("✅ SubscribeAsync event sent successfully")
-
-    # Wait for a response (up to 10 seconds)
-    max_wait_time = 10
-    start_time = time.time()
-    while time.time() - start_time < max_wait_time:
-        if received_messages:
-            break
-        logging.info("⏳ Waiting for server response to SubscribeAsync...")
-        time.sleep(1)
+    params = [f"{grain_type}/{grain_key}", event_type_name, event_json]
+    responses = send_event_and_wait(connection, received_messages, method_name, params)
 
     # Verify if a response is received
-    assert len(received_messages) > 0, "❌ No response received from the server"
-    logging.info(f"✅ SubscribeAsync test passed. Received messages: {received_messages}")
+    assert len(responses) > 0, "❌ No response received from the server"
+    logging.info(f"✅ SubscribeAsync test passed. Received messages: {responses}")
 
 
 @pytest.mark.parametrize("test_event", [
@@ -132,27 +157,12 @@ def test_dynamic_publishOrsubscribe_event(hub_connection, test_event):
     event_type_name = "SignalRSample.GAgents.NaiveTestEvent"
     event_json = json.dumps(test_event)
 
-    # Clear received messages
-    received_messages.clear()
-
-    # Send the event
-    logging.info(f"📡 Subscribing with dynamic params: {grain_type}, {grain_key}, {event_type_name}, {event_json}")
-    result = connection.send(method_name, [f"{grain_type}/{grain_key}", event_type_name, event_json])
-    assert result is not None, "Failed to send SubscribeAsync event"
-    logging.info(f"✅ Event sent successfully: {test_event}")
-
-    # Wait for a response (up to 10 seconds)
-    max_wait_time = 10
-    start_time = time.time()
-    while time.time() - start_time < max_wait_time:
-        if received_messages:
-            break
-        logging.info("⏳ Waiting for server response to dynamic SubscribeAsync...")
-        time.sleep(1)
+    params = [f"{grain_type}/{grain_key}", event_type_name, event_json]
+    responses = send_event_and_wait(connection, received_messages, method_name, params)
 
     # Verify if a response is received
-    assert len(received_messages) > 0, "❌ No response received from the server"
-    logging.info(f"✅ Dynamic SubscribeAsync test passed. Received messages: {received_messages}")
+    assert len(responses) > 0, "❌ No response received from the server"
+    logging.info(f"✅ Dynamic SubscribeAsync test passed. Received messages: {responses}")
 
 
 def test_subscribe_async_failure(hub_connection):
@@ -166,24 +176,9 @@ def test_subscribe_async_failure(hub_connection):
     event_type_name = "SignalRSample.GAgents.NaiveTestEvent"
     event_json = json.dumps({"Greeting": "Invalid Subscribe Test"})
 
-    # Clear received messages
-    received_messages.clear()
-
-    # Send the event
-    logging.info(f"📡 Subscribing with invalid params: {grain_type}, {grain_key}, {event_type_name}, {event_json}")
-    result = connection.send(method_name, [f"{grain_type}/{grain_key}", event_type_name, event_json])
-    assert result is not None, "Failed to send SubscribeAsync event (failure test)"
-    logging.info("✅ SubscribeAsync event sent successfully (failure test)")
-
-    # Wait for a response (up to 10 seconds)
-    max_wait_time = 10
-    start_time = time.time()
-    while time.time() - start_time < max_wait_time:
-        if received_messages:
-            break
-        logging.info("⏳ Waiting for server response to invalid SubscribeAsync...")
-        time.sleep(1)
+    params = [f"{grain_type}/{grain_key}", event_type_name, event_json]
+    responses = send_event_and_wait(connection, received_messages, method_name, params)
 
     # Verify no response is received
-    assert len(received_messages) == 0, "❌ Unexpected response received from the server"
+    assert len(responses) == 0, "❌ Unexpected response received from the server"
     logging.info("✅ SubscribeAsync failure test passed: No response received")
