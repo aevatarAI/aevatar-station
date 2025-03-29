@@ -8,7 +8,7 @@ from signalrcore.hub_connection_builder import HubConnectionBuilder
 logging.basicConfig(level=logging.DEBUG)
 
 # SignalR Hub URL
-HUB_URL = "https://station-developer-staging.aevatar.ai/api/agent/aevatarHub"
+HUB_URL = "https://station-developer-staging.aevatar.ai/test-client/api/agent/aevatarHub"
 
 
 @pytest.fixture(scope="module")
