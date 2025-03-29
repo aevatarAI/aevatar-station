@@ -13,7 +13,7 @@ namespace Aevatar.Controllers
     [Route("api/health")]
     public class HealthController : AbpController
     {
-        private readonly string _hubUrl = "http://localhost:8001/api/agent/aevatarHub"; 
+        private string _hubUrl = "http://localhost:8001/api/agent/aevatarHub"; 
         private HubConnection _connection;  
         private readonly object _lock = new object();  
 
@@ -24,11 +24,11 @@ namespace Aevatar.Controllers
         }
 
         [HttpGet("signalR")]
-        public async Task<IActionResult> CheckSignalRHealth()
+        public async Task<string> CheckSignalRHealth([FromQuery] string? url = null)
         {
             try
             {
-                
+                _hubUrl = url ?? _hubUrl;
                 if (_connection?.State != HubConnectionState.Connected)
                 {
                     await _connection.StartAsync();
@@ -39,20 +39,11 @@ namespace Aevatar.Controllers
                 await PublishEventAsync("SubscribeAsync");
 
                 
-                return Ok(new
-                {
-                    status = "Healthy",
-                    message = "SignalR connection and events published successfully."
-                });
+                return "200";
             }
             catch (Exception ex)
             {
-                
-                return StatusCode(500, new
-                {
-                    status = "Unhealthy",
-                    error = ex.Message
-                });
+                return "500:"+ex.Message;
             }
         }
 
