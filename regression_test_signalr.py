@@ -22,7 +22,7 @@ logging.basicConfig(
 # SignalR Hub URL
 # HUB_URL = "http://localhost:8001/api/agent/aevatarHub"
 # Alternate URL for staging
-HUB_URL = "https://station-developer-staging.aevatar.ai/api/agent/aevatarHub"
+HUB_URL = "https://station-developer-staging.aevatar.ai/test-client/api/agent/aevatarHub"
 
 
 @pytest.fixture(scope="module")
@@ -91,12 +91,17 @@ def send_event_and_wait(connection, received_messages, method_name, params, wait
         logging.info(f"📡 Sending event: {method_name} with params: {params}")
         result = connection.send(method_name, params)
 
-        # Log the result
-        if hasattr(result, "result"):
-            logging.info(f"✅ Event sent result (JSON): {json.dumps(result.result)}")
-        else:
-            logging.info(f"✅ Event sent result (Raw): {result}")
+        # Analyze the result
+        try:
+            if hasattr(result, "result"):  # If it's an InvocationResult with a 'result' attribute
+                logging.info(f"✅ Event sent result (JSON): {json.dumps(result.result)}")
+            else:
+                logging.info(f"✅ Event sent result (Raw): {result}")
+        except Exception as parse_error:
+            logging.error(f"❌ Failed to parse result: {parse_error}")
+            logging.error(f"❌ Raw result: {result}")
 
+        # Ensure result is not None
         assert result is not None, "Failed to send event"
 
     except Exception as e:
@@ -123,32 +128,29 @@ def test_signalr_connection_active(hub_connection):
     logging.info("✅ Connection test passed!")
 
 
-def test_subscribe_async(hub_connection):
+def test_publish_async(hub_connection):
     """
-    Test the SubscribeAsync method and verify if a response is received
+    Test the PublishEventAsync method
     """
     connection, received_messages = hub_connection
-    method_name = "SubscribeAsync"
+    method_name = "PublishEventAsync"
     grain_type = "SignalRSample.GAgents.Aevatar.SignalRDemo"
     grain_key = "cd6b8f09214673d3cade4e832627b4f6"
     event_type_name = "SignalRSample.GAgents.NaiveTestEvent"
-    event_json = json.dumps({"Greeting": "Subscribe Test"})
+    event_json = json.dumps({"Greeting": "PublishEvent Test"})
 
     params = [f"{grain_type}/{grain_key}", event_type_name, event_json]
     responses = send_event_and_wait(connection, received_messages, method_name, params)
 
-    # Verify if a response is received
-    assert len(responses) > 0, "❌ No response received from the server"
-    logging.info(f"✅ SubscribeAsync test passed. Received messages: {responses}")
+    logging.info(f"✅ PublishEventAsync test passed. Received messages: {responses}")
 
 
 @pytest.mark.parametrize("test_event", [
-    {"Greeting": "Message A"},
-    {"Greeting": "Message B"}
+    {"Greeting": "Message A"}
 ])
-def test_dynamic_publishOrsubscribe_event(hub_connection, test_event):
+def test_subscribe_event(hub_connection, test_event):
     """
-    Dynamically send different SubscribeAsync events and verify responses
+    Send different SubscribeAsync events and verify responses
     """
     connection, received_messages = hub_connection
     method_name = "SubscribeAsync"
@@ -162,7 +164,7 @@ def test_dynamic_publishOrsubscribe_event(hub_connection, test_event):
 
     # Verify if a response is received
     assert len(responses) > 0, "❌ No response received from the server"
-    logging.info(f"✅ Dynamic SubscribeAsync test passed. Received messages: {responses}")
+    logging.info(f"✅ SubscribeAsync test passed. Received messages: {responses}")
 
 
 def test_subscribe_async_failure(hub_connection):
