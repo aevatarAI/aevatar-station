@@ -4,7 +4,7 @@
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVerion>9.0.1</OrleansVerion>
     <AevatarVerion>1.4.11-alpha.14</AevatarVerion>
-    <AevatarGAgentsVerion>1.4.11-alpha.11</AevatarGAgentsVerion>
+    <AevatarGAgentsVerion>1.4.11-alpha.14</AevatarGAgentsVerion>
   </PropertyGroup>
   <ItemGroup>
     <!-- AElf packages -->
