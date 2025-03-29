@@ -37,13 +37,6 @@
     <PackageReference Include="Microsoft.CodeAnalysis.Common" />
     <PackageReference Include="Aevatar.SignalR" />
     <PackageReference Include="Orleans.Streams.Kafka" />
-    <PackageReference Include="Aevatar" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
-    <PackageReference Include="Newtonsoft.Json" />
-    <PackageReference Include="Microsoft.Orleans.Client" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" />
-    <PackageReference Include="Microsoft.Extensions.Logging" />
 
   </ItemGroup>
 
@@ -55,7 +48,6 @@
     <ProjectReference Include="..\Aevatar.Application\Aevatar.Application.csproj" />
     <ProjectReference Include="..\Aevatar.HttpApi.Admin\Aevatar.HttpApi.Admin.csproj" />
     <ProjectReference Include="..\Aevatar.MongoDB\Aevatar.MongoDB.csproj" />
-    <ProjectReference Include="..\src\Aevatar.Application.Grains\Aevatar.Application.Grains.csproj" />
   </ItemGroup>
 
   <ItemGroup>
