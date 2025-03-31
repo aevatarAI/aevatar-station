@@ -22,10 +22,10 @@ logging.basicConfig(
 
 # SignalR Hub URL
 # HUB_URL = "http://localhost:5001/aevatarHub"
-# HUB_URL = "http://localhost:8001/api/agent/aevatarHub"
+HUB_URL = "http://localhost:8001/api/agent/aevatarHub"
 # HUB_URL = "http://localhost:8308/api/agent/aevatarHub"
 # Alternate URL for staging 
-HUB_URL = "https://station-developer-staging.aevatar.ai/test-client/api/agent/aevatarHub"
+# HUB_URL = "https://station-developer-staging.aevatar.ai/test-client/api/agent/aevatarHub"
 
 
 
@@ -149,24 +149,40 @@ def test_publish_async(hub_connection):
     assert len(responses) > 0, "❌ No response received from the server"
     logging.info(f"✅ PublishEventAsync test passed. responses=: {responses}")
 
-
-def test_subscribe_event(hub_connection):
+def test_subscribe_async(hub_connection):
     """
-    Send different SubscribeAsync events and verify responses
+    Test the SubscribeAsync method
     """
     connection, received_messages = hub_connection
     method_name = "SubscribeAsync"
-    grain_type = "Aevatar.Application.Grains.Agents.ChatManager.ChatGAgentManager"
+    grain_type = "SignalRSample.GAgents.SignalRTestGAgent"
     grain_key = str(uuid4()).replace("-", "")
-    event_type_name = "Aevatar.Application.Grains.Agents.ChatManager.RequestCreateQuantumChatEvent"
-    event_json = json.dumps({"SystemLLM":"OpenAI","Prompt":"你是一个nba专家"})
+    event_type_name = "SignalRSample.GAgents.NaiveTestEvent"
+    event_json = json.dumps({"Greeting": "Greeting PublishEvent Test"})
 
     params = [f"{grain_type}/{grain_key}", event_type_name, event_json]
     responses = send_event_and_wait(connection, received_messages, method_name, params)
 
-    # Verify if a response is received
     assert len(responses) > 0, "❌ No response received from the server"
-    logging.info(f"✅ SubscribeAsync test passed. responses=: {responses}")
+    logging.info(f"✅ PublishEventAsync test passed. responses=: {responses}")
+
+# def test_subscribe_event(hub_connection):
+#     """
+#     Send different SubscribeAsync events and verify responses
+#     """
+#     connection, received_messages = hub_connection
+#     method_name = "SubscribeAsync"
+#     grain_type = "Aevatar.Application.Grains.Agents.ChatManager.ChatGAgentManager"
+#     grain_key = str(uuid4()).replace("-", "")
+#     event_type_name = "Aevatar.Application.Grains.Agents.ChatManager.RequestCreateQuantumChatEvent"
+#     event_json = json.dumps({"SystemLLM":"OpenAI","Prompt":"你是一个nba专家"})
+# 
+#     params = [f"{grain_type}/{grain_key}", event_type_name, event_json]
+#     responses = send_event_and_wait(connection, received_messages, method_name, params)
+# 
+#     # Verify if a response is received
+#     assert len(responses) > 0, "❌ No response received from the server"
+#     logging.info(f"✅ SubscribeAsync test passed. responses=: {responses}")
 
 # 
 # def test_subscribe_async_failure(hub_connection):
