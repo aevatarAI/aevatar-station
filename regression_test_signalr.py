@@ -20,6 +20,7 @@ logging.basicConfig(
 )
 
 # SignalR Hub URL
+# HUB_URL = "http://localhost:5001/aevatarHub"
 # HUB_URL = "http://localhost:8001/api/agent/aevatarHub"
 # Alternate URL for staging
 HUB_URL = "https://station-developer-staging.aevatar.ai/test-client/api/agent/aevatarHub"
@@ -146,7 +147,7 @@ def test_publish_async(hub_connection):
 
 
 @pytest.mark.parametrize("test_event", [
-    {"Greeting": "Greeting SubscribeAsync Test"}
+    {"Greeting": "Greeting SubscribeAsync Test1"}
 ])
 def test_subscribe_event(hub_connection, test_event):
     """
