@@ -28,6 +28,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
     private const string CTime = "cTime";
     private const int DefaultSkip = 0;
     private const int DefaultLimit = 1000;
+    private bool IfCreateTokenUsage = false;
     private readonly ICQRSProvider _cqrsProvider;
     private readonly IMemoryCache _cache;
 
@@ -127,7 +128,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         );
         return createIndexResponse;
     }
-    
+
     private static bool IsBasicType(Type type)
     {
         Type underlyingType = Nullable.GetUnderlyingType(type) ?? type;
@@ -142,7 +143,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
             return true;
         return false;
     }
-    
+
     public async Task SaveOrUpdateStateIndexBatchAsync(IEnumerable<SaveStateCommand> commands)
     {
         // Prepare a bulk descriptor for batch indexing
@@ -162,24 +163,24 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                 var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
 
                 if (value == null)
-            {
-                continue;
-            }
+                {
+                    continue;
+                }
 
-            if (!IsBasicType(property.PropertyType))
+                if (!IsBasicType(property.PropertyType))
                 {
                     document[propertyName] = JsonConvert.SerializeObject(value, new JsonSerializerSettings
-                {
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                ContractResolver = new CamelCasePropertyNamesContractResolver()
-                    });
-            }
-            else
                     {
-                        document.Add(propertyName, value);
-                    }
+                        ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                        ContractResolver = new CamelCasePropertyNamesContractResolver()
+                    });
                 }
-            
+                else
+                {
+                    document.Add(propertyName, value);
+                }
+            }
+
 
             document.Add(CTime, DateTime.UtcNow);
 
@@ -333,6 +334,64 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         }
     }
 
+    public async Task TryCreateTokenUsageIndexAsync(string indexName)
+    {
+        if (IfCreateTokenUsage == true)
+        {
+            return;
+        }
+
+        var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
+        if (indexExistsResponse.Exists)
+        {
+            IfCreateTokenUsage = true;
+            return;
+        }
+
+        var createIndexResponse = await _elasticClient.Indices.CreateAsync(indexName, c => c
+            .Map<TokenUsage>(m => m.AutoMap())
+        );
+        if (!createIndexResponse.IsValid)
+        {
+            _logger.LogError(
+                $"[ElasticIndexingService][TryCreateTokenUsageIndexAsync] Create Index:{indexName} error, error response:{JsonConvert.SerializeObject(createIndexResponse)}");
+        }
+        else
+        {
+            _logger.LogInformation(
+                $"[ElasticIndexingService][TryCreateTokenUsageIndexAsync] Create {indexName} index success");
+
+            IfCreateTokenUsage = true;
+        }
+    }
+
+    public async Task SaveTokenUsage(string indexName, List<TokenUsage> tokenUsages)
+    {
+        var bulkDescriptor = new BulkDescriptor();
+        foreach (var item in tokenUsages)
+        {
+            bulkDescriptor.Index<TokenUsage>(op => op
+                .Index(indexName)
+                .Id(Guid.NewGuid())
+                .Document(item)
+            );
+        }
+        var bulkResponse = await _elasticClient.BulkAsync(bulkDescriptor);
+        if (!bulkResponse.IsValid)
+        {
+            _logger.LogError(
+                "Save TokenUsage error, indexing documents error. Errors: {Errors}, DebugInfo: {DebugInfo}",
+                JsonConvert.SerializeObject(bulkResponse.ItemsWithErrors),
+                JsonConvert.SerializeObject(bulkResponse.DebugInformation)
+            );
+        }
+        else
+        {
+            _logger.LogDebug("Save TokenUsage Batch Successfully. Indexed {Count} documents.",
+                bulkResponse.Items.Count);
+        }
+    }
+    
     public async Task SaveOrUpdateIndexAsync<T>(string id, T baseIndex) where T : BaseIndex
     {
         _logger.LogInformation("SaveOrUpdateIndexAsync, indexName:{indexName}", baseIndex.GetType().Name.ToLower());
@@ -381,7 +440,6 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         Func<SourceFilterDescriptor<TEntity>, ISourceFilter> includeFieldFunc = null,
         Func<SortDescriptor<TEntity>, IPromise<IList<ISort>>> sortFunc = null, int limit = DefaultLimit,
         int skip = DefaultSkip, string? index = null) where TEntity : class
-
     {
         var indexName = index ?? _cqrsProvider.GetIndexName(typeof(TEntity).Name.ToLower());
         try

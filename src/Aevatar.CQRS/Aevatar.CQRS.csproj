@@ -20,6 +20,7 @@
         <PackageReference Include="NEST.JsonNetSerializer"/>
         <PackageReference Include="Volo.Abp.AutoMapper"/>
         <PackageReference Include="MediatR"/>
+        <PackageReference Include="Aevatar.GAgents.AIGAgent" />
     </ItemGroup>
 
 </Project>

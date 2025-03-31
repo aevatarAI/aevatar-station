@@ -31,4 +31,7 @@ public interface IIndexingService
         Func<QueryContainerDescriptor<dynamic>, QueryContainer> query, int skip = 0, int limit = 1000);
 
     Task<PagedResultDto<Dictionary<string, object>>> QueryWithLuceneAsync(LuceneQueryDto queryDto);
+
+    Task TryCreateTokenUsageIndexAsync(string indexName);
+    Task SaveTokenUsage(string indexName, List<TokenUsage> tokenUsages);
 }
