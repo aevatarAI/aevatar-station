@@ -24,9 +24,6 @@ public class AevatarCQRSModule : AbpModule
         context.Services.AddMediatR(cfg =>
             cfg.RegisterServicesFromAssembly(typeof(GetStateQueryHandler).Assembly)
         );
-        context.Services.AddMediatR(cfg =>
-            cfg.RegisterServicesFromAssembly(typeof(GetUserInstanceAgentsHandler).Assembly)
-        );
         context.Services.AddSingleton<IIndexingService, ElasticIndexingService>();
         context.Services.AddSingleton<ICQRSProvider, CQRSProvider>();
         var configuration = context.Services.GetConfiguration();

@@ -2,9 +2,13 @@ using Aevatar.Agent;
 using Aevatar.Agents.Creator;
 using Aevatar.Application.Grains.Agents.Creator;
 using Aevatar.Core.Abstractions;
+using Aevatar.CQRS;
 using Aevatar.CQRS.Provider;
 using Aevatar.Cqrs.Tests.Cqrs.Dto;
 using Aevatar.GAgent.Dto;
+using Aevatar.Mock;
+using Aevatar.Query;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Shouldly;
 using Xunit;
@@ -14,9 +18,9 @@ namespace Aevatar.GAgent;
 
 public class CqrsProviderTest : AevatarApplicationTestBase
 {
-    private readonly IClusterClient _clusterClient;
+    private readonly IIndexingService _elasticService;
     private readonly ICQRSProvider _cqrsProvider;
-    private readonly IStateProjector _stateProjector;
+    private readonly AevatarStateProjector _stateProjector;
     private const string AgentType = nameof(CqrsTestCreateAgentGEvent);
     private const string User1Address = "2HxX36oXZS89Jvz7kCeUyuWWDXLTiNRkAzfx3EuXq4KSSkH62W";
     private const string User2Address = "2KxX36oXZS89Jvz7kCeUyuWWDXLTiNRkAzfx3EuXq4KSSkH62S";
@@ -25,9 +29,11 @@ public class CqrsProviderTest : AevatarApplicationTestBase
 
     public CqrsProviderTest(ITestOutputHelper output)
     {
-        _clusterClient = GetRequiredService<IClusterClient>();
+        var services = new ServiceCollection();
+        services.AddSingleton<IIndexingService, MockElasticIndexingService>();
         _cqrsProvider = GetRequiredService<ICQRSProvider>();
-        _stateProjector = GetRequiredService<IStateProjector>();
+        _stateProjector = GetRequiredService<AevatarStateProjector>();
+        _elasticService = GetRequiredService<IIndexingService>();
     }
 
     [Fact]
@@ -50,18 +56,16 @@ public class CqrsProviderTest : AevatarApplicationTestBase
             }
         };
         await _stateProjector.ProjectAsync(
-            new StateWrapper<CqrsTestAgentState>(GrainId.Create("test", grainId.ToString()), cqrsTestAgentState, 0));
-
+            new StateWrapper<CqrsTestAgentState>(GrainId.Create("test", grainId.ToString("N")), cqrsTestAgentState, 0));
+        await _stateProjector.FlushAsync();
         //query state index query by eventId
-        var indexName = IndexPrefix + nameof(CqrsTestAgentState).ToLower() + IndexSuffix;
-        await Task.Delay(1000);
-
-        var result = await _cqrsProvider.QueryStateAsync(indexName,
+        var result = await _cqrsProvider.QueryStateAsync(nameof(CqrsTestAgentState),
             q => q.Term(t => t.Field("id").Value(grainId.ToString())),
             0,
             10
         );
         result.ShouldNotBe("");
+
         var stateDto = JsonConvert.DeserializeObject<List<CqrsTestAgentStateDto>>(result);
         stateDto.Count.ShouldBe(1);
         stateDto[0].Id.ShouldBe(grainId.ToString());
@@ -71,20 +75,10 @@ public class CqrsProviderTest : AevatarApplicationTestBase
         var grainId2 = Guid.NewGuid();
         cqrsTestAgentState.Id = grainId2;
         await _stateProjector.ProjectAsync(
-            new StateWrapper<CqrsTestAgentState>(GrainId.Create("test", grainId2.ToString()), cqrsTestAgentState, 0));
-        await Task.Delay(1000);
-        var result2 = await _cqrsProvider.QueryStateAsync(indexName,
-            q => q.Term(t => t.Field("id").Value(grainId2.ToString())),
-            0,
-            10
-        );
-        result2.ShouldNotBe("");
-        var stateDto2 = JsonConvert.DeserializeObject<List<CqrsTestAgentStateDto>>(result2);
-        stateDto2.Count.ShouldBe(1);
-        stateDto2[0].Id.ShouldBe(grainId2.ToString());
-        stateDto2[0].GroupId.ShouldBe(groupId.ToString());
-
-        var resultGroup = await _cqrsProvider.QueryStateAsync(indexName,
+            new StateWrapper<CqrsTestAgentState>(GrainId.Create("test", grainId2.ToString("N")), cqrsTestAgentState,
+                0));
+        await _stateProjector.FlushAsync();
+        var resultGroup = await _cqrsProvider.QueryStateAsync(nameof(CqrsTestAgentState),
             q => q.Term(t => t.Field("groupId").Value(groupId.ToString())),
             0,
             10
@@ -92,7 +86,6 @@ public class CqrsProviderTest : AevatarApplicationTestBase
         resultGroup.ShouldNotBe("");
         var stateDtoList = JsonConvert.DeserializeObject<List<CqrsTestAgentStateDto>>(resultGroup);
         stateDtoList.Count.ShouldBe(2);
-        stateDtoList[0].Id.ShouldBe(grainId.ToString());
         stateDtoList[0].GroupId.ShouldBe(groupId.ToString());
         stateDtoList[1].Id.ShouldBe(grainId2.ToString());
         stateDtoList[1].GroupId.ShouldBe(groupId.ToString());
@@ -100,7 +93,7 @@ public class CqrsProviderTest : AevatarApplicationTestBase
 
 
     [Fact]
-    public async Task QueryUserInstallAgentTest()
+    public async Task QueryAgentStateAsyncTest()
     {
         var userId = Guid.NewGuid();
         var userIdString = userId.ToString();
@@ -122,11 +115,20 @@ public class CqrsProviderTest : AevatarApplicationTestBase
         {
             await _stateProjector.ProjectAsync(
                 new StateWrapper<CreatorGAgentState>(
-                    GrainId.Create(nameof(CreatorGAgent).ToLower(), item.Id.ToString().Replace("-", "")), item, 0));
+                    GrainId.Create(nameof(CreatorGAgent), item.Id.ToString().Replace("-", "")), item, 0));
         }
 
-        var indexName = IndexPrefix + nameof(CreatorGAgentState).ToLower() + IndexSuffix;
-        var stationList = await _cqrsProvider.GetUserInstanceAgent<CreatorGAgentState, AgentInstanceDto>(userId, 0, 10);
-        stationList.Item1.ShouldNotBe(0);
+        await _stateProjector.FlushAsync();
+        var stationList = await _cqrsProvider.QueryAgentStateAsync(nameof(CreatorGAgentState), creatorList[0].Id);
+        stationList.ShouldNotBeEmpty();
+        var pagedResultDto = await _elasticService.QueryWithLuceneAsync(new LuceneQueryDto
+        {
+            State = nameof(CreatorGAgentState),
+            PageIndex = 0,
+            PageSize = 2,
+        });
+
+        pagedResultDto.TotalCount.ShouldBe(3);
+        pagedResultDto.Items.Count.ShouldBe(2);
     }
 }

@@ -14,11 +14,9 @@ public interface IIndexingService
     public Task CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase;
     public Task SaveOrUpdateStateIndexBatchAsync(IEnumerable<SaveStateCommand> commands);
 
-    public Task<string> GetStateIndexDocumentsAsync(string indexName,
+    public Task<string> GetStateIndexDocumentsAsync(string stateName,
         Action<QueryDescriptor<dynamic>> query, int skip = 0, int limit = 1000);
 
-    public Task<Tuple<long, string>?> GetSortDataDocumentsAsync(string indexName,
-        Action<QueryDescriptor<dynamic>> query, int skip = 0, int limit = 1000);
 
     Task<PagedResultDto<Dictionary<string, object>>> QueryWithLuceneAsync(LuceneQueryDto queryDto);
 }

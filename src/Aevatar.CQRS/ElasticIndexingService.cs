@@ -3,27 +3,25 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
 using Aevatar.CQRS.Dto;
 using Aevatar.Query;
 using Aevatar.CQRS.Provider;
+using Aevatar.Options;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.Core.Bulk;
 using Elastic.Clients.Elasticsearch.IndexManagement;
 using Elastic.Clients.Elasticsearch.QueryDsl;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using Orleans.Runtime;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
-using Volo.Abp.Application.Services;
 using Volo.Abp.DependencyInjection;
-using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace Aevatar;
 
@@ -36,19 +34,26 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
     private const int DefaultLimit = 1000;
     private readonly ICQRSProvider _cqrsProvider;
     private readonly IMemoryCache _cache;
+    private readonly IOptionsSnapshot<HostOptions> _options;
 
     public ElasticIndexingService(ILogger<ElasticIndexingService> logger, ElasticsearchClient elasticClient,
-        ICQRSProvider cqrsProvider, IMemoryCache cache)
+        ICQRSProvider cqrsProvider, IMemoryCache cache, IOptionsSnapshot<HostOptions> hostOptions)
     {
         _logger = logger;
         _elasticClient = elasticClient;
         _cqrsProvider = cqrsProvider;
         _cache = cache;
+        _options = hostOptions;
+    }
+
+    public string GetIndexName(string index)
+    {
+        return $"{CqrsConstant.IndexPrefix}-{_options.Value.HostId}-{index}{CqrsConstant.IndexSuffix}".ToLower();
     }
 
     public async Task CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase
     {
-        var indexName = _cqrsProvider.GetIndexName(stateBase.GetType().Name.ToLower());
+        var indexName = GetIndexName(stateBase.GetType().Name.ToLower());
         if (_cache.TryGetValue(indexName, out bool? _))
         {
             return;
@@ -157,7 +162,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         foreach (var command in commands)
         {
             var (stateBase, id) = (command.State, command.GuidKey);
-            var indexName = _cqrsProvider.GetIndexName(stateBase.GetType().Name.ToLower());
+            var indexName = GetIndexName(stateBase.GetType().Name.ToLower());
             var document = new Dictionary<string, object>();
             foreach (var property in stateBase.GetType().GetProperties())
             {
@@ -223,9 +228,10 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
     }
 
 
-    public async Task<string> GetStateIndexDocumentsAsync(string indexName,
+    public async Task<string> GetStateIndexDocumentsAsync(string stateName,
         Action<QueryDescriptor<dynamic>> query, int skip = DefaultSkip, int limit = DefaultLimit)
     {
+        var indexName = GetIndexName(stateName.ToLower());
         try
         {
             var response = await _elasticClient.SearchAsync<dynamic>(s => s
@@ -257,38 +263,6 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         catch (Exception e)
         {
             _logger.LogError(e, "state documents query Exception,indexName:{indexName}", indexName);
-            throw;
-        }
-    }
-
-    public async Task<Tuple<long, string>?> GetSortDataDocumentsAsync(string indexName,
-        Action<QueryDescriptor<dynamic>> query, int skip = 0, int limit = 1000)
-    {
-        try
-        {
-            var response = await _elasticClient.SearchAsync<dynamic>(s => s
-                .Index(indexName)
-                .Query(query)
-                .From(skip)
-                .Size(limit));
-
-            if (!response.IsValidResponse)
-            {
-                _logger.LogError(
-                    "index documents query fail, indexName:{indexName} error:{error} ,DebugInfo{DebugInfo}", indexName,
-                    response.ElasticsearchServerError?.Error.Reason,
-                    response.DebugInformation);
-                return null;
-            }
-
-            var total = response.Total;
-            var documents = response.Hits.Select(hit => hit.Source);
-            var documentContent = documents.ToString();
-            return new Tuple<long, string>(total, documentContent);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "index documents query Exception,indexName:{indexName}", indexName);
             throw;
         }
     }
@@ -328,18 +302,24 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
             var from = queryDto.PageIndex * queryDto.PageSize;
             var size = queryDto.PageSize;
 
-            var index = _cqrsProvider.GetIndexName(queryDto.State);
+            var index = GetIndexName(queryDto.State);
+
+
             var searchRequest = new SearchRequest<Dictionary<string, object>>(index)
             {
                 From = from,
                 Size = size,
-                Query = new QueryStringQuery
+
+                Sort = sortOptions
+            };
+            if (!queryDto.QueryString.IsNullOrEmpty())
+            {
+                searchRequest.Query = new QueryStringQuery
                 {
                     Query = queryDto.QueryString,
                     AllowLeadingWildcard = false
-                },
-                Sort = sortOptions
-            };
+                };
+            }
 
             var response = await _elasticClient.SearchAsync<Dictionary<string, object>>(searchRequest);
 

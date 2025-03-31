@@ -187,7 +187,7 @@
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="MediatR" Version="12.4.1" />
     <PackageVersion Include="Elastic.Clients.Elasticsearch" Version="8.17.3" />
-    <PackageVersion Include="Elastic.Transport" Version="8.17.3" />
+    <PackageVersion Include="Elastic.Transport" Version="0.5.9" />
     <PackageVersion Include="GraphQL.Client" Version="6.1.0" />
     <PackageVersion Include="GraphQL.Client.Serializer.Newtonsoft" Version="6.1.0" />
     <PackageVersion Include="KubernetesClient" Version="13.0.11" />

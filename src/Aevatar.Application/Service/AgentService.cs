@@ -66,32 +66,6 @@ public class AgentService : ApplicationService, IAgentService
         _indexingService = indexingService;
     }
 
-
-    private async Task<List<string>> ViewGroupTreeAsync(string agentId)
-    {
-        var result = new List<string> { agentId };
-        await BuildGroupTreeAsync(agentId, result);
-        return result;
-    }
-
-    private async Task BuildGroupTreeAsync(string agentId, List<string> result)
-    {
-        var gAgent = _clusterClient.GetGrain<ICreatorGAgent>(Guid.Parse(agentId));
-        var childrenAgentIds = await gAgent.GetChildrenAsync();
-        if (childrenAgentIds.IsNullOrEmpty())
-        {
-            return;
-        }
-
-        var childrenIds = childrenAgentIds.Select(s => s.Key.ToString()).ToList();
-        result.AddRange(childrenIds);
-
-        foreach (var childrenId in childrenIds)
-        {
-            await BuildGroupTreeAsync(childrenId, result);
-        }
-    }
-
     private async Task<Dictionary<string, AgentTypeData?>> GetAgentTypeDataMap()
     {
         var systemAgents = _agentOptions.CurrentValue.SystemAgentList;
