@@ -146,6 +146,7 @@ def test_publish_async(hub_connection):
     params = [f"{grain_type}/{grain_key}", event_type_name, event_json]
     responses = send_event_and_wait(connection, received_messages, method_name, params)
 
+    assert len(responses) > 0, "❌ No response received from the server"
     logging.info(f"✅ PublishEventAsync test passed. responses=: {responses}")
 
 
