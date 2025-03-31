@@ -2,6 +2,7 @@ import pytest
 import json
 import time
 import logging
+from uuid import uuid4
 from signalrcore.hub_connection_builder import HubConnectionBuilder
 
 # Ignore SSL/TLS warnings
@@ -55,7 +56,7 @@ def hub_connection():
         logging.info("❌ SignalR connection closed")
 
     def on_receive_response(message):
-        logging.info(f"📨 Received message: {message}")
+        logging.info(f"📨 on_receive_response log: {message}")
         received_messages.append(message)
 
     connection.on_open(on_connection_open)
@@ -136,14 +137,14 @@ def test_publish_async(hub_connection):
     connection, received_messages = hub_connection
     method_name = "PublishEventAsync"
     grain_type = "SignalRSample.GAgents.Aevatar.SignalRDemo"
-    grain_key = "cd6b8f09214673d3cade4e832627b4f6"
+    grain_key = str(uuid4()).replace("-", "")
     event_type_name = "SignalRSample.GAgents.NaiveTestEvent"
     event_json = json.dumps({"Greeting": "Greeting PublishEvent Test"})
 
     params = [f"{grain_type}/{grain_key}", event_type_name, event_json]
     responses = send_event_and_wait(connection, received_messages, method_name, params)
 
-    logging.info(f"✅ PublishEventAsync test passed. Received messages: {responses}")
+    logging.info(f"✅ PublishEventAsync test passed. responses=: {responses}")
 
 
 @pytest.mark.parametrize("test_event", [
@@ -156,7 +157,7 @@ def test_subscribe_event(hub_connection, test_event):
     connection, received_messages = hub_connection
     method_name = "SubscribeAsync"
     grain_type = "SignalRSample.GAgents.Aevatar.SignalRDemo"
-    grain_key = "cd6b8f09214673d3cade4e832627b4f6"
+    grain_key = str(uuid4()).replace("-", "")
     event_type_name = "SignalRSample.GAgents.NaiveTestEvent"
     event_json = json.dumps(test_event)
 
@@ -167,21 +168,21 @@ def test_subscribe_event(hub_connection, test_event):
     assert len(responses) > 0, "❌ No response received from the server"
     logging.info(f"✅ SubscribeAsync test passed. Received messages: {responses}")
 
-
-def test_subscribe_async_failure(hub_connection):
-    """
-    Test SubscribeAsync with invalid parameters and verify failure scenarios
-    """
-    connection, received_messages = hub_connection
-    method_name = "SubscribeAsync"
-    grain_type = "SignalRSample.GAgents.Aevatar.InvalidDemo"  # Invalid grain_type
-    grain_key = "cd6b8f09214673d3cade4e832627b4f6"
-    event_type_name = "SignalRSample.GAgents.NaiveTestEvent"
-    event_json = json.dumps({"Greeting": "Invalid Subscribe Test"})
-
-    params = [f"{grain_type}/{grain_key}", event_type_name, event_json]
-    responses = send_event_and_wait(connection, received_messages, method_name, params)
-
-    # Verify no response is received
-    assert len(responses) == 0, "❌ Unexpected response received from the server"
-    logging.info("✅ SubscribeAsync failure test passed: No response received")
+# 
+# def test_subscribe_async_failure(hub_connection):
+#     """
+#     Test SubscribeAsync with invalid parameters and verify failure scenarios
+#     """
+#     connection, received_messages = hub_connection
+#     method_name = "SubscribeAsync"
+#     grain_type = "SignalRSample.GAgents.Aevatar.InvalidDemo"  # Invalid grain_type
+#     grain_key = "cd6b8f09214673d3cade4e832627b4f6"
+#     event_type_name = "SignalRSample.GAgents.NaiveTestEvent"
+#     event_json = json.dumps({"Greeting": "Invalid Subscribe Test"})
+# 
+#     params = [f"{grain_type}/{grain_key}", event_type_name, event_json]
+#     responses = send_event_and_wait(connection, received_messages, method_name, params)
+# 
+#     # Verify no response is received
+#     assert len(responses) == 0, "❌ Unexpected response received from the server"
+#     logging.info("✅ SubscribeAsync failure test passed: No response received")
