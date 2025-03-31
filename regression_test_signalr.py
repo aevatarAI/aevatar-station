@@ -23,8 +23,10 @@ logging.basicConfig(
 # SignalR Hub URL
 # HUB_URL = "http://localhost:5001/aevatarHub"
 # HUB_URL = "http://localhost:8001/api/agent/aevatarHub"
+# HUB_URL = "http://localhost:8308/api/agent/aevatarHub"
 # Alternate URL for staging 
 HUB_URL = "https://station-developer-staging.aevatar.ai/test-client/api/agent/aevatarHub"
+
 
 
 @pytest.fixture(scope="module")
@@ -37,7 +39,7 @@ def hub_connection():
         .with_automatic_reconnect({
             "type": "raw",
             "keep_attempting": True,
-            "retries": 3,
+            "retries": 1,
             "intervals": [0, 2000, 10000, 30000],
         }) \
         .configure_logging(logging.DEBUG) \
@@ -53,7 +55,7 @@ def hub_connection():
 
     def on_connection_close():
         connection_state["is_connected"] = False
-        logging.info("❌ SignalR connection closed")
+        logging.info(" SignalR connection closed")
 
     def on_receive_response(message):
         logging.info(f"📨 on_receive_response log: {message}")
@@ -78,7 +80,7 @@ def hub_connection():
 
     # Stop the connection
     connection.stop()
-    logging.info("❌ SignalR connection terminated")
+    logging.info(" SignalR connection terminated")
 
 
 def send_event_and_wait(connection, received_messages, method_name, params, wait_time=10):
@@ -118,7 +120,7 @@ def send_event_and_wait(connection, received_messages, method_name, params, wait
         logging.info("⏳ Waiting for server response...")
         time.sleep(1)
 
-    return received_messages
+    return f"{result}/{received_messages}"
 
 
 def test_signalr_connection_active(hub_connection):
@@ -136,7 +138,7 @@ def test_publish_async(hub_connection):
     """
     connection, received_messages = hub_connection
     method_name = "PublishEventAsync"
-    grain_type = "SignalRSample.GAgents.Aevatar.SignalRDemo"
+    grain_type = "SignalRSample.GAgents.SignalRTestGAgent"
     grain_key = str(uuid4()).replace("-", "")
     event_type_name = "SignalRSample.GAgents.NaiveTestEvent"
     event_json = json.dumps({"Greeting": "Greeting PublishEvent Test"})
@@ -147,26 +149,23 @@ def test_publish_async(hub_connection):
     logging.info(f"✅ PublishEventAsync test passed. responses=: {responses}")
 
 
-@pytest.mark.parametrize("test_event", [
-    {"Greeting": "Greeting SubscribeAsync Test1"}
-])
-def test_subscribe_event(hub_connection, test_event):
+def test_subscribe_event(hub_connection):
     """
     Send different SubscribeAsync events and verify responses
     """
     connection, received_messages = hub_connection
     method_name = "SubscribeAsync"
-    grain_type = "SignalRSample.GAgents.Aevatar.SignalRDemo"
+    grain_type = "Aevatar.Application.Grains.Agents.ChatManager.ChatGAgentManager"
     grain_key = str(uuid4()).replace("-", "")
-    event_type_name = "SignalRSample.GAgents.NaiveTestEvent"
-    event_json = json.dumps(test_event)
+    event_type_name = "Aevatar.Application.Grains.Agents.ChatManager.RequestCreateQuantumChatEvent"
+    event_json = json.dumps({"SystemLLM":"OpenAI","Prompt":"你是一个nba专家"})
 
     params = [f"{grain_type}/{grain_key}", event_type_name, event_json]
     responses = send_event_and_wait(connection, received_messages, method_name, params)
 
     # Verify if a response is received
     assert len(responses) > 0, "❌ No response received from the server"
-    logging.info(f"✅ SubscribeAsync test passed. Received messages: {responses}")
+    logging.info(f"✅ SubscribeAsync test passed. responses=: {responses}")
 
 # 
 # def test_subscribe_async_failure(hub_connection):

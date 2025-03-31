@@ -13,7 +13,7 @@ public class SignalRTestStateLogEvent : StateLogEventBase<SignalRTestStateLogEve
 
 public interface ISignalRTestGAgent : IStateGAgent<SignalRTestGAgentState>;
 
-[GAgent("Aevatar.SignalRDemo")]
+[GAgent]
 public class SignalRTestGAgent : GAgentBase<SignalRTestGAgentState, SignalRTestStateLogEvent>, ISignalRTestGAgent
 {
     public override Task<string> GetDescriptionAsync()
