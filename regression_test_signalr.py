@@ -120,7 +120,7 @@ def send_event_and_wait(connection, received_messages, method_name, params, wait
         logging.info("⏳ Waiting for server response...")
         time.sleep(1)
 
-    return f"{result}/{received_messages}"
+    return received_messages
 
 
 def test_signalr_connection_active(hub_connection):
