@@ -6,8 +6,9 @@ public class Program
 {
     public async static Task<int> Main(string[] args)
     {
+        var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
         var configuration = new ConfigurationBuilder()
-            .AddJsonFile("appsettings.json")
+            .AddJsonFile($"appsettings.{env}.json")
             .Build();
         Log.Logger = new LoggerConfiguration()
 #if DEBUG
@@ -27,8 +28,10 @@ public class Program
 
         try
         {
-            Log.Information("Starting AevatarAuthServer.AuthServer.");
+            Log.Information("Starting AevatarAuthServer.AuthServer. env {env}", env);
             var builder = WebApplication.CreateBuilder(args);
+            builder.Configuration.AddJsonFile($"appsettings.{env}.json",
+                optional: true);
             // builder.Configuration.AddJsonFile("apollo.appsettings.json");
             builder.Host.AddAppSettingsSecretsJson()
                 .UseAutofac()
