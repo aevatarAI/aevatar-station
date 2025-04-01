@@ -1,6 +1,7 @@
 using System;
 using System.IdentityModel.Tokens.Jwt;
 using AElf.OpenTelemetry;
+using Aevatar.ApiRequests;
 using AutoResponseWrapper;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
@@ -26,6 +27,7 @@ using Volo.Abp.AspNetCore.Mvc.UI.Bundling;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
+using Volo.Abp.BackgroundWorkers;
 using Volo.Abp.Caching;
 using Volo.Abp.Caching.StackExchangeRedis;
 using Volo.Abp.Identity;
@@ -232,9 +234,12 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
             c.OAuthScopes("Aevatar");
         });
         app.UseHealthChecks("/health");
-
+        
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();
         app.UseConfiguredEndpoints();
+        
+        app.UseMiddleware<ApiRequestStatisticsMiddleware>();
+        AsyncHelper.RunSync(() => context.AddBackgroundWorkerAsync<ApiRequestWorker>());
     }
 }
