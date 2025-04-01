@@ -23,7 +23,8 @@ public class ApiRequestService : AevatarAppService, IApiRequestService
         var query = await _apiRequestSnapshotRepository.GetQueryableAsync();
         query = query.Where(o =>
             o.OrganizationId == organizationId && o.Time >= DateTimeHelper.FromUnixTimeMilliseconds(input.StartTime) &&
-            o.Time <= DateTimeHelper.FromUnixTimeMilliseconds(input.EndTime));
+            o.Time <= DateTimeHelper.FromUnixTimeMilliseconds(input.EndTime))
+            .OrderBy(o => o.Time);
         var list = query.ToList();
 
         return new ListResultDto<ApiRequestDto>

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.ApiRequests;
 using Aevatar.Organizations;
@@ -29,8 +30,13 @@ public class ApiRequestController : AevatarController
     }
 
     [HttpGet]
-    public async Task<ListResultDto<ApiRequestDto>> GetListAsync(GetApiRequestDto input)
+    public async Task<ApiRequestDashboardDto> GetAsync(GetApiRequestDto input)
     {
-        return await _apiRequestService.GetListAsync(input);
+        var list = await _apiRequestService.GetListAsync(input);
+        return new ApiRequestDashboardDto
+        {
+            TotalRequests = list.Items.Sum(o => o.Count),
+            Requests = list.Items.ToList()
+        };
     }
 }

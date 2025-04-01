@@ -115,14 +115,15 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
                     OnTokenValidated = async context =>
                     {
                         var userId = context.Principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
-                        if (!userId.IsNullOrWhiteSpace())
+                        var securityStamp = context.Principal.FindFirst(AevatarConsts.SecurityStampClaimType)
+                            ?.Value;
+                        if (!userId.IsNullOrWhiteSpace() && !securityStamp.IsNullOrWhiteSpace())
                         {
                             var userManager = context.HttpContext.RequestServices
                                 .GetRequiredService<IdentityUserManager>();
                             var user = await userManager.FindByIdAsync(userId);
-
-                            if (user == null || user.SecurityStamp !=
-                                context.Principal.FindFirst(AevatarConsts.SecurityStampClaimType)?.Value)
+                            
+                            if (user == null || user.SecurityStamp != securityStamp)
                             {
                                 context.Fail("Token is no longer valid.");
                             }
