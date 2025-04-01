@@ -2,7 +2,6 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
-using Aevatar.GAgents.AI.Options;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 

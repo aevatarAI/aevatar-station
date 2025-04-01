@@ -8,7 +8,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Aevatar.GAgents.ChatAgent"/>
+        <!--
+                <PackageReference Include="Aevatar.GAgents.ChatAgent"/>
+        -->
         <PackageReference Include="Aevatar.PermissionManagement"/>
         <PackageReference Include="AutoGen.Core"/>
         <PackageReference Include="Microsoft.Extensions.Options"/>
@@ -17,9 +19,9 @@
         <PackageReference Include="Volo.Abp.AutoMapper"/>
         <PackageReference Include="Volo.Abp.EventBus.Abstractions"/>
         <PackageReference Include="Aevatar.SignalR"/>
-        <PackageReference Include="Aevatar.GAgents.AIGAgent"/>
-        <PackageReference Include="Aevatar.GAgents.SemanticKernel"/>
-        <PackageReference Include="Aevatar.PermissionManagement" />
+        <!-- <PackageReference Include="Aevatar.GAgents.AIGAgent"/>
+         <PackageReference Include="Aevatar.GAgents.SemanticKernel"/>
+         <PackageReference Include="Aevatar.PermissionManagement" />-->
     </ItemGroup>
 
     <ItemGroup>

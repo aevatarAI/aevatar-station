@@ -2,9 +2,7 @@ using AElf.OpenTelemetry;
 using Aevatar.Domain.Grains;
 using Microsoft.Extensions.DependencyInjection;
 using Aevatar.Application.Grains;
-using Aevatar.GAgents.AI.Options;
 using Aevatar.Options;
-using Microsoft.CodeAnalysis.Options;
 using Aevatar.PermissionManagement;
 using Serilog;
 using Volo.Abp.AspNetCore.Serilog;
@@ -30,17 +28,14 @@ public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
         context.Services.AddHostedService<AevatarHostedService>();
         var configuration = context.Services.GetConfiguration();
         //add dependencies here
-        context.Services.AddSerilog(loggerConfiguration => {},
+        context.Services.AddSerilog(loggerConfiguration => { },
             true, writeToProviders: true);
         context.Services.AddHttpClient();
         context.Services.AddSignalR().AddOrleans();
-        Configure<PermissionManagementOptions>(options =>
-        {
-            options.IsDynamicPermissionStoreEnabled = true;
-        });
+        Configure<PermissionManagementOptions>(options => { options.IsDynamicPermissionStoreEnabled = true; });
         context.Services.Configure<HostOptions>(context.Services.GetConfiguration().GetSection("Host"));
+        /*
         context.Services.Configure<SystemLLMConfigOptions>(configuration);
+    */
     }
-    
-    
 }

@@ -4,8 +4,6 @@ using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
 using Aevatar.Dapr;
 using Aevatar.EventSourcing.MongoDB.Hosting;
-using Aevatar.GAgents.AI.Options;
-using Aevatar.GAgents.SemanticKernel.Extensions;
 using Aevatar.Extensions;
 using Aevatar.PermissionManagement.Extensions;
 using Aevatar.SignalR;
@@ -140,7 +138,7 @@ public static class OrleansHostExtension
                             topics = topics.IsNullOrEmpty() ? CommonConstants.StreamNamespace : topics;
                             foreach (var topic in topics.Split(','))
                             {
-                                options.AddTopic(topic, new TopicCreationConfig
+                                options.AddTopic(topic.Trim(), new TopicCreationConfig
                                 {
                                     AutoCreate = true,
                                     Partitions = partitions,
@@ -163,20 +161,20 @@ public static class OrleansHostExtension
                     .RegisterHub<AevatarSignalRHub>();
             }).ConfigureServices((context, services) =>
             {
-                services.Configure<AzureOpenAIConfig>(context.Configuration.GetSection("AIServices:AzureOpenAI"));
+                /*services.Configure<AzureOpenAIConfig>(context.Configuration.GetSection("AIServices:AzureOpenAI"));
                 services.Configure<AzureDeepSeekConfig>(context.Configuration.GetSection("AIServices:DeepSeek"));
                 services.Configure<QdrantConfig>(context.Configuration.GetSection("VectorStores:Qdrant"));
                 services.Configure<SystemLLMConfigOptions>(context.Configuration);
                 services.Configure<AzureOpenAIEmbeddingsConfig>(
                     context.Configuration.GetSection("AIServices:AzureOpenAIEmbeddings"));
-                services.Configure<RagConfig>(context.Configuration.GetSection("Rag"));
+                services.Configure<RagConfig>(context.Configuration.GetSection("Rag"));*/
                 services.AddSingleton(typeof(HubLifetimeManager<>), typeof(OrleansHubLifetimeManager<>));
                 // services.AddSingleton<IStateProjector, AevatarStateProjector>();
                 services.AddSingleton<IStateDispatcher, StateDispatcher>();
                 services.AddSingleton<IGAgentFactory, GAgentFactory>();
-                services.AddSemanticKernel()
+                /*services.AddSemanticKernel()
                     .AddQdrantVectorStore()
-                    .AddAzureOpenAITextEmbedding();
+                    .AddAzureOpenAITextEmbedding();*/
                 ThreadPool.SetMinThreads(workerThreads: 100, completionPortThreads: 100);
             })
             .UseConsoleLifetime();
