@@ -1,7 +1,8 @@
 using Aevatar.CQRS;
-using Aevatar.Neo4JStore;
+using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.AutoMapper;
 using Volo.Abp.EventBus;
+using Volo.Abp.EventBus.Local;
 using Volo.Abp.Modularity;
 
 namespace Aevatar.Application.Grains;
@@ -10,8 +11,7 @@ namespace Aevatar.Application.Grains;
     typeof(AbpAutoMapperModule),
     typeof(AbpEventBusModule),
     typeof(AevatarApplicationContractsModule),
-    typeof(AevatarCQRSModule),
-    typeof(AevatarNeo4JStoreModule)
+    typeof(AevatarCQRSModule)
 )]
 public class AIApplicationGrainsModule : AbpModule
  
