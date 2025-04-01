@@ -5,7 +5,7 @@ namespace Aevatar.Query;
 
 public class LuceneQueryDto
 {
-    [Required] public string State { get; set; }
+    [Required] public string StateName { get; set; }
 
     public string QueryString { get; set; } = "";
 

@@ -146,7 +146,7 @@ public class MockElasticIndexingService : IIndexingService, ISingletonDependency
 
     public async Task<PagedResultDto<Dictionary<string, object>>> QueryWithLuceneAsync(LuceneQueryDto queryDto)
     {
-        var indexName = queryDto.State;
+        var indexName = queryDto.StateName;
 
         if (!_indexStorage.ContainsKey(indexName))
         {

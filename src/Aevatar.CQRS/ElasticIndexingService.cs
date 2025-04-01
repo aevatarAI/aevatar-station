@@ -270,7 +270,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
     public async Task<PagedResultDto<Dictionary<string, object>>> QueryWithLuceneAsync(LuceneQueryDto queryDto)
     {
         _logger.LogInformation("[Lucene Query] Index: {Index}, Query: {QueryString}",
-            queryDto.State, queryDto.QueryString);
+            queryDto.StateName, queryDto.QueryString);
 
         try
         {
@@ -302,7 +302,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
             var from = queryDto.PageIndex * queryDto.PageSize;
             var size = queryDto.PageSize;
 
-            var index = GetIndexName(queryDto.State);
+            var index = GetIndexName(queryDto.StateName);
 
 
             var searchRequest = new SearchRequest<Dictionary<string, object>>(index)
@@ -338,13 +338,13 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                 .ToList();
 
             _logger.LogInformation("[Lucene Query] Index: {Index}, Found {Count} results",
-                queryDto.State, results.Count);
+                queryDto.StateName, results.Count);
 
             return new PagedResultDto<Dictionary<string, object>>(total, results);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[Lucene Query] Exception occurred. Index: {Index}", queryDto.State);
+            _logger.LogError(ex, "[Lucene Query] Exception occurred. Index: {Index}", queryDto.StateName);
             throw new UserFriendlyException(ex.Message);
         }
     }
