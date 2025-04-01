@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using AElf.OpenTelemetry;
 using Aevatar.MongoDB;
+using Aevatar.Options;
 using Aevatar.Permissions;
 using AutoResponseWrapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
