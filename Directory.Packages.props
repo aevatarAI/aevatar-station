@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVerion>9.0.1</OrleansVerion>
-    <AevatarVerion>1.4.11-alpha.2</AevatarVerion>
+    <AevatarVerion>1.4.11-alpha.14</AevatarVerion>
     <AevatarGAgentVerion>1.4.13-groupchat.1</AevatarGAgentVerion>
   </PropertyGroup>
   <ItemGroup>

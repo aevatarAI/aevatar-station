@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Aevatar.Agent;
 using Aevatar.Agents;
@@ -19,6 +20,7 @@ using Aevatar.GAgents.GroupChat.WorkflowCoordinator.Dto;
 using Aevatar.GAgents.GroupChat.WorkflowCoordinator.GEvent;
 using Aevatar.Options;
 using Aevatar.Schema;
+using Aevatar.Sender;
 using GroupChat.GAgent;
 using GroupChat.GAgent.Feature.Blackboard;
 using Microsoft.Extensions.Logging;
@@ -639,7 +641,7 @@ public class AgentService : ApplicationService, IAgentService
         var result = new CreateWorkflowResponseDto();
         var errorStr =
             await CheckWorkflowAsync(workflowAgentDto.WorkUnitRelations, new List<WorkflowAgentDefinesDto>());
-        if (errorStr.IsNullOrEmpty())
+        if (errorStr.IsNullOrEmpty() == false)
         {
             result.ErrorMessage = errorStr;
             return result;
@@ -657,6 +659,11 @@ public class AgentService : ApplicationService, IAgentService
         }
 
         result.WorkflowGrainId = workflowAgent.GetGrainId().ToString();
+        var workflowList = workflowAgentDto.WorkUnitRelations
+            .Select(s => new WorkflowUnitDto() { GrainId = s.GrainId, NextGrainId = s.NextGrainId }).ToList();
+        var publishGrain = _clusterClient.GetGrain<IPublishingGAgent>(workflowAgent.GetPrimaryKey());
+        await workflowAgent.RegisterAsync(publishGrain);
+        await workflowAgent.ConfigAsync(new WorkflowCoordinatorConfigDto() { WorkflowUnitList = workflowList });
         return result;
     }
 
@@ -678,7 +685,6 @@ public class AgentService : ApplicationService, IAgentService
             return errorMsg;
         }
 
-
         var workflowRelation = await GetWorkflowUnitRelationsAsync(workflowGrainId);
         var notExistWorkUnit = workflowUnitList
             .Where(w => workflowRelation.Exists(e => e.GrainId == w.GrainId) == false).ToList();
@@ -696,7 +702,15 @@ public class AgentService : ApplicationService, IAgentService
 
         var workflowUnitDtoList = workflowUnitList
             .Select(s => new WorkflowUnitDto { GrainId = s.GrainId, NextGrainId = s.NextGrainId }).ToList();
-        await workflow.PublishEventAsync(new ResetWorkflowEvent() { WorkflowUnitList = workflowUnitDtoList });
+
+        var publishGrain = _clusterClient.GetGrain<IPublishingGAgent>(workflow.GetPrimaryKey());
+        if (await publishGrain.GetParentAsync() == default)
+        {
+            publishGrain = _clusterClient.GetGrain<IPublishingGAgent>(workflow.GetPrimaryKey());
+            await workflow.RegisterAsync(publishGrain);
+        }
+        
+        await publishGrain.PublishEventAsync(new ResetWorkflowEvent() { WorkflowUnitList = workflowUnitDtoList });
         return string.Empty;
     }
 
@@ -734,7 +748,8 @@ public class AgentService : ApplicationService, IAgentService
             return "no work unit";
         }
 
-        if (workflowUnits.GroupBy(f => f.GrainId).Count() == workflowUnits.Count)
+        var groupCount = workflowUnits.GroupBy(f => f.GrainId);
+        if (groupCount.Count() != workflowUnits.Count)
         {
             return "cannot input the same work unit";
         }
@@ -776,11 +791,6 @@ public class AgentService : ApplicationService, IAgentService
                     return true;
                 }
 
-                if (nextGrainId == workUnit.NextGrainId)
-                {
-                    return true;
-                }
-
                 if (string.IsNullOrEmpty(nextGrainId))
                 {
                     return false;
@@ -792,8 +802,24 @@ public class AgentService : ApplicationService, IAgentService
                     return true;
                 }
 
+                if (nextWorkUnit.GrainId.Contains("/") == false)
+                {
+                    return true;
+                }
+                else
+                {
+                    if (Regex.IsMatch(nextWorkUnit.GrainId.Split("/")[1], @"^[a-zA-Z0-9]{32}$") == false)
+                    {
+                        return true;
+                    }
+                }
+
                 count += 1;
                 nextGrainId = nextWorkUnit.NextGrainId;
+                if (nextGrainId == nextWorkUnit.GrainId)
+                {
+                    return true;
+                }
             }
         };
 
@@ -805,7 +831,10 @@ public class AgentService : ApplicationService, IAgentService
         var grainId = GrainId.Parse(workUnitGrainId);
         var agent = _clusterClient.GetGrain<IGAgent>(grainId);
 
-        if (ReflectionUtil.CheckInheritClass(agent, typeof(GroupMemberGAgentBase<,,,>)) == false)
+        var agentType = ReflectionUtil.GetTypeByFullName(grainId.Type.ToString()!);
+
+        if (agentType == null ||
+            ReflectionUtil.CheckInheritGenericClass(agentType, typeof(GroupMemberGAgentBase<,,,>)) == false)
         {
             return "Some agents are unable to orchestrate workflows";
         }
