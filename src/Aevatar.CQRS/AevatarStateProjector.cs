@@ -96,10 +96,14 @@ public class AevatarStateProjector : IStateProjector, ISingletonDependency
     {
         foreach (var cmd in processed)
         {
-            _latestCommands.TryGetValue(cmd.Id, out var current);
-            if (current != null && current.Version <= cmd.Version)
+            _latestCommands.TryRemove(cmd.Id, out var current);
+            if (current != null && current.Version > cmd.Version)
             {
-                _latestCommands.TryRemove(cmd.Id, out _);
+                _latestCommands.AddOrUpdate(
+                    current.Id,
+                    current,
+                    (id, existing) => current.Version > existing.Version ? current : existing
+                );
             }
         }
     }
