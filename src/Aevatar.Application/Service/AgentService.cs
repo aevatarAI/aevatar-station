@@ -21,6 +21,7 @@ using Aevatar.GAgents.GroupChat.WorkflowCoordinator.GEvent;
 using Aevatar.Options;
 using Aevatar.Schema;
 using Aevatar.Sender;
+using Aevatar.Workflow;
 using GroupChat.GAgent;
 using GroupChat.GAgent.Feature.Blackboard;
 using Microsoft.Extensions.Logging;
@@ -47,6 +48,7 @@ public class AgentService : ApplicationService, IAgentService
     private readonly IOptionsMonitor<AgentOptions> _agentOptions;
     private readonly GrainTypeResolver _grainTypeResolver;
     private readonly ISchemaProvider _schemaProvider;
+    private readonly IWorkflowRepository _workflowRepository;
 
     public AgentService(
         IClusterClient clusterClient,
@@ -57,7 +59,7 @@ public class AgentService : ApplicationService, IAgentService
         IUserAppService userAppService,
         IOptionsMonitor<AgentOptions> agentOptions,
         GrainTypeResolver grainTypeResolver,
-        ISchemaProvider schemaProvider)
+        ISchemaProvider schemaProvider, IWorkflowRepository workflowRepository)
     {
         _clusterClient = clusterClient;
         _cqrsProvider = cqrsProvider;
@@ -68,6 +70,7 @@ public class AgentService : ApplicationService, IAgentService
         _agentOptions = agentOptions;
         _grainTypeResolver = grainTypeResolver;
         _schemaProvider = schemaProvider;
+        _workflowRepository = workflowRepository;
     }
 
     public async Task<Tuple<long, List<AgentGEventIndex>>> GetAgentEventLogsAsync(string agentId, int pageNumber,
@@ -664,16 +667,39 @@ public class AgentService : ApplicationService, IAgentService
         var publishGrain = _clusterClient.GetGrain<IPublishingGAgent>(workflowAgent.GetPrimaryKey());
         await workflowAgent.RegisterAsync(publishGrain);
         await workflowAgent.ConfigAsync(new WorkflowCoordinatorConfigDto() { WorkflowUnitList = workflowList });
+
+        await _workflowRepository.InsertAsync(new WorkflowInfo()
+        {
+            WorkflowGrainId = workflowAgent.GetGrainId().ToString(), WorkUnitList = workflowAgentDto.WorkUnitRelations
+                .Select(s => new WorkflowUintInfo()
+                {
+                    GrainId = s.GrainId,
+                    NextGrainId = s.NextGrainId,
+                    XPosition = s.XPosition,
+                    YPosition = s.YPosition
+                }).ToList()
+        });
+
         return result;
     }
 
     public async Task<List<WorkflowAgentDefinesDto>> GetWorkflowUnitRelationsAsync(string workflowGrainId)
     {
-        var workflowCoordinator = GetWorkFlowGAgent(workflowGrainId);
-        var workflowState = await workflowCoordinator.GetStateAsync();
+        // var workflowCoordinator = GetWorkFlowGAgent(workflowGrainId);
+        // var workflowState = await workflowCoordinator.GetStateAsync();
+        var workflowInfo = await _workflowRepository.GetByWorkflowGrainId(workflowGrainId);
+        if (workflowInfo == null)
+        {
+            return  new List<WorkflowAgentDefinesDto>();
+        }
 
-        return workflowState.CurrentWorkUnitInfos.Select(workUnit => new WorkflowAgentDefinesDto()
-            { GrainId = workUnit.GrainId, NextGrainId = workUnit.NextGrainId }).ToList();
+        return workflowInfo.WorkUnitList.Select(s => new WorkflowAgentDefinesDto()
+        {
+            GrainId= s.GrainId,
+            NextGrainId = s.NextGrainId,
+            XPosition = s.XPosition,
+            YPosition = s.YPosition,
+        }).ToList();
     }
 
     public async Task<string> EditWorkWorkflowAsync(string workflowGrainId,
@@ -700,6 +726,12 @@ public class AgentService : ApplicationService, IAgentService
             }
         }
 
+        var workUnit = await _workflowRepository.GetByWorkflowGrainId(workflowGrainId);
+        if (workUnit == null)
+        {
+            return "workflow not found";
+        }
+        
         var workflowUnitDtoList = workflowUnitList
             .Select(s => new WorkflowUnitDto { GrainId = s.GrainId, NextGrainId = s.NextGrainId }).ToList();
 
@@ -709,8 +741,18 @@ public class AgentService : ApplicationService, IAgentService
             publishGrain = _clusterClient.GetGrain<IPublishingGAgent>(workflow.GetPrimaryKey());
             await workflow.RegisterAsync(publishGrain);
         }
-        
+
         await publishGrain.PublishEventAsync(new ResetWorkflowEvent() { WorkflowUnitList = workflowUnitDtoList });
+        workUnit.WorkUnitList = workflowUnitList.Select(s => new WorkflowUintInfo()
+        {
+            GrainId= s.GrainId,
+            NextGrainId = s.NextGrainId,
+            XPosition = s.XPosition,
+            YPosition = s.YPosition,
+        }).ToList();
+        
+        await _workflowRepository.UpdateAsync(workUnit);
+        
         return string.Empty;
     }
 
