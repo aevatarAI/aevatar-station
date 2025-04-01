@@ -1,7 +1,9 @@
 using System.Text;
 using Aevatar.Core.Abstractions;
+using Aevatar.Core.Abstractions.Extensions;
 using Aevatar.Core.Abstractions.Plugin;
 using Aevatar.Plugins;
+using Aevatar.Plugins.DbContexts;
 using Aevatar.Plugins.GAgents;
 using Aevatar.Plugins.Repositories;
 using Microsoft.Extensions.Logging;
@@ -22,6 +24,11 @@ public class PluginGAgentManagerTests : AevatarGAgentsTestBase
     private readonly Mock<IPluginCodeStorageRepository> _pluginCodeStorageRepositoryMock;
     private readonly Mock<ILogger<PluginGAgentManager>> _loggerMock;
 
+    private readonly PluginCodeStorageMongoDbContext _pluginCodeStorageMongoDbContext;
+    private readonly TenantPluginCodeMongoDbContext _tenantPluginCodeMongoDbContext;
+    private readonly ITenantPluginCodeRepository _tenantPluginCodeRepository;
+    private readonly IPluginCodeStorageRepository _pluginCodeStorageRepository;
+
     public PluginGAgentManagerTests(ITestOutputHelper outputHelper)
     {
         _outputHelper = outputHelper;
@@ -39,6 +46,25 @@ public class PluginGAgentManagerTests : AevatarGAgentsTestBase
             _loggerMock.Object,
             GetRequiredService<IServiceProvider>()
         );
+        _pluginCodeStorageMongoDbContext = GetRequiredService<PluginCodeStorageMongoDbContext>();
+        _tenantPluginCodeMongoDbContext = GetRequiredService<TenantPluginCodeMongoDbContext>();
+        _pluginCodeStorageRepository = GetRequiredService<IPluginCodeStorageRepository>();
+        _tenantPluginCodeRepository = GetRequiredService<ITenantPluginCodeRepository>();
+    }
+
+    [Fact]
+    public async Task LoadPluginTest()
+    {
+        var ss = PluginLoader.LoadPlugins("plugins");
+        var tenantId = "test".ToGuid();
+        foreach (var code in ss)
+        {
+            await _pluginGAgentManager.AddPluginAsync(new AddPluginDto
+            {
+                Code = code,
+                TenantId = tenantId
+            });
+        }
     }
 
     [Fact(DisplayName = "Can add a new plugin successfully")]

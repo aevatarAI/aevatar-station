@@ -1,21 +1,14 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using Aevatar.EventSourcing.Core.Storage;
+using Aevatar.EventSourcing.Core.Exceptions;
 using Aevatar.EventSourcing.MongoDB.Options;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Clusters;
-using MongoDB.Driver.Core.Configuration;
-using MongoDB.Driver.Core.Events;
 using Moq;
 using Orleans.Configuration;
-using Orleans.Runtime;
 using Orleans.Storage;
+using Shouldly;
 using Xunit;
 
 namespace Aevatar.EventSourcing.MongoDB.Tests;
@@ -232,6 +225,31 @@ public class MongoDbLogConsistentStorageTests : IAsyncDisposable
 
         // Clean up after test
         await DisposeAsync();
+    }
+
+    [Fact]
+    public async Task TestReadAndWriteException()
+    {
+        var readFromLogException = new ReadFromLogStorageFailed()
+        {
+            Exception = new Exception("ReadFromLogFail")
+        };
+        readFromLogException.ToString().ShouldContain("ReadFromLogFail");
+        var readFromSnapshotException = new ReadFromSnapshotStorageFailed()
+        {
+            Exception = new Exception("ReadFromSnapshot")
+        };
+        readFromSnapshotException.ToString().ShouldContain("ReadFromSnapshot");
+        var updateLogException = new UpdateLogStorageFailed()
+        {
+            Exception = new Exception("UpdateLogStorage")
+        };
+        updateLogException.ToString().ShouldContain("UpdateLogStorage");
+        var updateSnapshotException = new UpdateSnapshotStorageFailed()
+        {
+            Exception = new Exception("UpdateSnapshotStorage")
+        };
+        updateSnapshotException.ToString().ShouldContain("UpdateSnapshotStorage");
     }
 
     private class TestLogEntry

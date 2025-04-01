@@ -5,6 +5,7 @@ using Aevatar.Core.Abstractions;
 using Aevatar.EventSourcing.Core;
 using Aevatar.EventSourcing.Core.Hosting;
 using Aevatar.EventSourcing.Core.LogConsistency;
+using Aevatar.EventSourcing.Core.Storage;
 using Castle.Core.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -61,8 +62,9 @@ public sealed class TestKitSilo
         var mockOptionsManager = new Mock<IOptions<TypeManifestOptions>>();
         mockOptionsManager.Setup(m => m.Value).Returns(new TypeManifestOptions());
         var codecProvider = new CodecProvider(ServiceProvider, mockOptionsManager.Object);
+        TestLogConsistentStorage = new InMemoryLogConsistentStorage();
         LogConsistencyProvider =
-            new TestLogConsistencyProvider(ServiceProvider, new InMemoryLogConsistentStorage(), TestGrainStorage);
+            new TestLogConsistencyProvider(ServiceProvider, TestLogConsistentStorage, TestGrainStorage);
         ServiceProvider.AddKeyedService<ILogViewAdaptorFactory>("LogStorage", LogConsistencyProvider);
         ProtocolServices = new DefaultProtocolServices(new Mock<IGrainContext>().Object, NullLoggerFactory.Instance,
             new DeepCopier(codecProvider, new CopyContextPool(codecProvider)), null!);

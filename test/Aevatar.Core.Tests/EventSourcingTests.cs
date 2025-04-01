@@ -65,6 +65,12 @@ public class EventSourcingTests : GAgentTestKitBase
         InMemoryLogConsistentStorage.Storage[GetStreamName(groupGAgent.GetGrainId())].Count.ShouldBe(minimum + 2);
         InMemoryLogConsistentStorage.Storage.ShouldContainKey(GetStreamName(publishingGAgent.GetGrainId()));
         InMemoryLogConsistentStorage.Storage[GetStreamName(publishingGAgent.GetGrainId())].Count.ShouldBe(minimum);
+
+        var resultList = await Silo.TestLogConsistentStorage.ReadAsync<LogEntry>("", logViewGAgent.GetGrainId(), 0, 10);
+        resultList.Count.ShouldBeGreaterThanOrEqualTo(3);
+        
+        resultList = await Silo.TestLogConsistentStorage.ReadAsync<LogEntry>("", logViewGAgent.GetGrainId(), 0, -1);
+        resultList.Count.ShouldBe(0);
     }
 
     private async Task<bool> CheckCount(LogViewAdaptorTestGAgent gAgent, int expectedCount)

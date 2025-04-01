@@ -16,6 +16,7 @@ using Moq;
 using Orleans.Configuration;
 using Orleans.Runtime;
 using Orleans.Storage;
+using Shouldly;
 using Xunit;
 
 namespace Aevatar.EventSourcing.MongoDB.Tests;
@@ -216,6 +217,34 @@ public class MongoDbLogConsistentStorageMongoTests
         // Act & Assert
         await Assert.ThrowsAsync<MongoDbStorageException>(() =>
             observer.OnStop(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task MongoDbStorageOptionsTests()
+    {
+        var settings = MongoClientSettings.FromConnectionString("mongodb://localhost:27017");
+        settings.ClusterConfigurator = builder =>
+        {
+            builder.Subscribe<ClusterClosingEvent>(e =>
+            {
+                throw new MongoException("Test error");
+            });
+        };
+
+        var options = new MongoDbStorageOptions
+        {
+            ClientSettings = settings,
+            Database = "TestDb",
+            InitStage = 0
+        };
+        options.InitStage.ShouldBe(0);
+        options.Credentials.ShouldBeNull();
+
+        var mongoDbOptionValidator = new MongoDbStorageOptionsValidator(options, "test");
+        mongoDbOptionValidator.ValidateConfiguration();
+        
+        mongoDbOptionValidator = new MongoDbStorageOptionsValidator(new MongoDbStorageOptions(), "test");
+        Assert.Throws<OrleansConfigurationException>(() => mongoDbOptionValidator.ValidateConfiguration());
     }
 
     private class TestLogEntry
