@@ -14,8 +14,13 @@ using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
 using Aevatar.CQRS.Provider;
 using Aevatar.Exceptions;
+using Aevatar.GAgents.GroupChat.WorkflowCoordinator;
+using Aevatar.GAgents.GroupChat.WorkflowCoordinator.Dto;
+using Aevatar.GAgents.GroupChat.WorkflowCoordinator.GEvent;
 using Aevatar.Options;
 using Aevatar.Schema;
+using GroupChat.GAgent;
+using GroupChat.GAgent.Feature.Blackboard;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -623,7 +628,8 @@ public class AgentService : ApplicationService, IAgentService
         }
     }
 
-    public async Task<string> SimulateWorkflowAsync(string workflowGrainId, List<WorkflowAgentDefinesDto> workUnitRelations)
+    public async Task<string> SimulateWorkflowAsync(string workflowGrainId,
+        List<WorkflowAgentDefinesDto> workUnitRelations)
     {
         return await CheckWorkflowWithGrainIdAsync(workflowGrainId, workUnitRelations);
     }
@@ -631,16 +637,16 @@ public class AgentService : ApplicationService, IAgentService
     public async Task<CreateWorkflowResponseDto> CreateWorkflowAsync(WorkflowAgentsDto workflowAgentDto)
     {
         var result = new CreateWorkflowResponseDto();
-        var errorStr = await CheckWorkflowAsync(workflowAgentDto.WorkUnitRelations, new List<WorkflowAgentDefinesDto>());
+        var errorStr =
+            await CheckWorkflowAsync(workflowAgentDto.WorkUnitRelations, new List<WorkflowAgentDefinesDto>());
         if (errorStr.IsNullOrEmpty())
         {
             result.ErrorMessage = errorStr;
             return result;
         }
 
-        // todo: replace to workflow
-        var workflowAgent = _clusterClient.GetGrain<ICreatorGAgent>(Guid.NewGuid());
-        var blackboardAgent = _clusterClient.GetGrain<ICreatorGAgent>(Guid.NewGuid());
+        var workflowAgent = _clusterClient.GetGrain<IWorkflowCoordinatorGAgent>(Guid.NewGuid());
+        var blackboardAgent = _clusterClient.GetGrain<IBlackboardGAgent>(Guid.NewGuid());
 
         await workflowAgent.RegisterAsync(blackboardAgent);
         foreach (var item in workflowAgentDto.WorkUnitRelations)
@@ -654,16 +660,17 @@ public class AgentService : ApplicationService, IAgentService
         return result;
     }
 
-    public Task<List<WorkflowAgentDefinesDto>> GetWorkflowUnitRelationsAsync(string workflowGrainId)
+    public async Task<List<WorkflowAgentDefinesDto>> GetWorkflowUnitRelationsAsync(string workflowGrainId)
     {
-        var grainId = GrainId.Parse(workflowGrainId);
-        // todo: get workflowAgent
-        var workUnit = _clusterClient.GetGrain<IGrain>(grainId);
+        var workflowCoordinator = GetWorkFlowGAgent(workflowGrainId);
+        var workflowState = await workflowCoordinator.GetStateAsync();
 
-        return Task.FromResult(new List<WorkflowAgentDefinesDto>());
+        return workflowState.CurrentWorkUnitInfos.Select(workUnit => new WorkflowAgentDefinesDto()
+            { GrainId = workUnit.GrainId, NextGrainId = workUnit.NextGrainId }).ToList();
     }
 
-    public async Task<string> EditWorkWorkflowAsync(string workflowGrainId, List<WorkflowAgentDefinesDto> workflowUnitList)
+    public async Task<string> EditWorkWorkflowAsync(string workflowGrainId,
+        List<WorkflowAgentDefinesDto> workflowUnitList)
     {
         var errorMsg = await CheckWorkflowWithGrainIdAsync(workflowGrainId, workflowUnitList);
         if (errorMsg.IsNullOrEmpty() == false)
@@ -675,17 +682,28 @@ public class AgentService : ApplicationService, IAgentService
         var workflowRelation = await GetWorkflowUnitRelationsAsync(workflowGrainId);
         var notExistWorkUnit = workflowUnitList
             .Where(w => workflowRelation.Exists(e => e.GrainId == w.GrainId) == false).ToList();
-        
-        // todo:add notExist Work unit to workflow;
-        
-        // todo:
+
+        var workflow = GetWorkFlowGAgent(workflowGrainId);
+        if (notExistWorkUnit.Count > 0)
+        {
+            foreach (var item in notExistWorkUnit)
+            {
+                var grainId = GrainId.Parse(item.GrainId);
+                var gAgent = _clusterClient.GetGrain<IGAgent>(grainId);
+                await workflow.SubscribeToAsync(gAgent);
+            }
+        }
+
+        var workflowUnitDtoList = workflowUnitList
+            .Select(s => new WorkflowUnitDto { GrainId = s.GrainId, NextGrainId = s.NextGrainId }).ToList();
+        await workflow.PublishEventAsync(new ResetWorkflowEvent() { WorkflowUnitList = workflowUnitDtoList });
         return string.Empty;
     }
 
     public async Task<string> CheckWorkflowWithGrainIdAsync(string workflowGrainId,
         List<WorkflowAgentDefinesDto> newWorkflowRelations)
     {
-        if (workflowGrainId.IsNullOrEmpty() != false)
+        if (workflowGrainId.IsNullOrEmpty())
         {
             return await CheckWorkflowAsync(newWorkflowRelations, new List<WorkflowAgentDefinesDto>());
         }
@@ -787,8 +805,7 @@ public class AgentService : ApplicationService, IAgentService
         var grainId = GrainId.Parse(workUnitGrainId);
         var agent = _clusterClient.GetGrain<IGAgent>(grainId);
 
-        // todo: replace object to group member
-        if (ReflectionUtil.CheckInheritClass(agent, typeof(object)) == false)
+        if (ReflectionUtil.CheckInheritClass(agent, typeof(GroupMemberGAgentBase<,,,>)) == false)
         {
             return "Some agents are unable to orchestrate workflows";
         }
@@ -800,5 +817,13 @@ public class AgentService : ApplicationService, IAgentService
         }
 
         return string.Empty;
+    }
+
+    private IWorkflowCoordinatorGAgent GetWorkFlowGAgent(string workflowGrainId)
+    {
+        var grainId = GrainId.Parse(workflowGrainId);
+        var workflowCoordinator = _clusterClient.GetGrain<IWorkflowCoordinatorGAgent>(grainId);
+
+        return workflowCoordinator;
     }
 }
