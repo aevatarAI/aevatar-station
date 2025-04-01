@@ -123,6 +123,36 @@ public class ResponseClearAll : ResponseToPublisherEventBase
 }
 
 [GenerateSerializer]
+public class RequestSetFortuneInfoEvent : EventBase
+{
+    [Id(0)] public string Gender { get; set; }
+    [Id(1)] public DateTime BirthDate { get; set; }
+    [Id(2)] public string BirthPlace { get; set; }
+}
+
+[GenerateSerializer]
+public class ResponseSetFortuneInfo : ResponseToPublisherEventBase
+{
+    [Id(0)] public ResponseType ResponseType { get; set; } = ResponseType.SetFortuneInfo;
+    [Id(1)] public bool Success { get; set; }
+}
+
+[GenerateSerializer]
+public class RequestGetFortuneInfoEvent : EventBase
+{
+    
+}
+
+[GenerateSerializer]
+public class ResponseGetFortuneInfo : ResponseToPublisherEventBase
+{
+    [Id(0)] public ResponseType ResponseType { get; set; } = ResponseType.GetFortuneInfo;
+    [Id(1)] public string Gender { get; set; }
+    [Id(2)] public DateTime BirthDate { get; set; }
+    [Id(3)] public string BirthPlace { get; set; }
+}
+
+[GenerateSerializer]
 public enum ResponseType
 {
     CreateSession = 1,
@@ -132,4 +162,6 @@ public enum ResponseType
     SessionDelete = 5,
     SessionRename = 6,
     ClearAll = 7,
+    SetFortuneInfo = 8,
+    GetFortuneInfo = 9,
 }

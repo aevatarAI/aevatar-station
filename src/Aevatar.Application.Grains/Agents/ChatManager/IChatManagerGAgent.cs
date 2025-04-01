@@ -13,4 +13,6 @@ public interface IChatManagerGAgent : IGAgent
     Task DeleteSessionAsync(Guid sessionId);
     Task RenameSessionAsync(Guid sessionId, string title);
     Task ClearAllAsync();
+    Task SetFortuneInfoAsync(string gender, DateTime birthDate, string birthPlace);
+    Task<(string Gender, DateTime BirthDate, string BirthPlace)> GetFortuneInfoAsync();
 }

@@ -220,6 +220,47 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         Logger.LogDebug($"[ChatGAgentManager][RequestClearAllEvent] end:{JsonConvert.SerializeObject(@event)}");
     }
 
+    [EventHandler]
+    public async Task HandleEventAsync(RequestSetFortuneInfoEvent @event)
+    {
+        Logger.LogDebug($"[ChatGAgentManager][RequestSetFortuneInfoEvent] start:{JsonConvert.SerializeObject(@event)}");
+        
+        bool success = false;
+        try
+        {
+            await SetFortuneInfoAsync(@event.Gender, @event.BirthDate, @event.BirthPlace);
+            success = true;
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, $"[ChatGAgentManager][RequestSetFortuneInfoEvent] handle error:{e.ToString()}");
+        }
+
+        await PublishAsync(new ResponseSetFortuneInfo()
+        {
+            Success = success
+        });
+
+        Logger.LogDebug($"[ChatGAgentManager][RequestSetFortuneInfoEvent] end");
+    }
+
+    [EventHandler]
+    public async Task HandleEventAsync(RequestGetFortuneInfoEvent @event)
+    {
+        Logger.LogDebug($"[ChatGAgentManager][RequestGetFortuneInfoEvent] start");
+        
+        var (gender, birthDate, birthPlace) = await GetFortuneInfoAsync();
+        
+        await PublishAsync(new ResponseGetFortuneInfo()
+        {
+            Gender = gender,
+            BirthDate = birthDate,
+            BirthPlace = birthPlace
+        });
+
+        Logger.LogDebug($"[ChatGAgentManager][RequestGetFortuneInfoEvent] end");
+    }
+
     public async Task<Guid> CreateSessionAsync(string systemLLM, string prompt)
     {
         var configuration = GetConfiguration();
@@ -379,6 +420,23 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         await ConfirmEvents();
     }
 
+    public async Task SetFortuneInfoAsync(string gender, DateTime birthDate, string birthPlace)
+    {
+        RaiseEvent(new SetFortuneInfoEventLog()
+        {
+            Gender = gender,
+            BirthDate = birthDate,
+            BirthPlace = birthPlace
+        });
+
+        await ConfirmEvents();
+    }
+
+    public Task<(string Gender, DateTime BirthDate, string BirthPlace)> GetFortuneInfoAsync()
+    {
+        return Task.FromResult((State.Gender, State.BirthDate, State.BirthPlace));
+    }
+
     protected override void AIGAgentTransitionState(ChatManagerGAgentState state,
         StateLogEventBase<ChatManageEventLog> @event)
     {
@@ -400,6 +458,11 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
                 break;
             case ClearAllEventLog:
                 State.SessionInfoList.Clear();
+                break;
+            case SetFortuneInfoEventLog @setFortuneInfoEventLog:
+                State.Gender = @setFortuneInfoEventLog.Gender;
+                State.BirthDate = @setFortuneInfoEventLog.BirthDate;
+                State.BirthPlace = @setFortuneInfoEventLog.BirthPlace;
                 break;
         }
     }
