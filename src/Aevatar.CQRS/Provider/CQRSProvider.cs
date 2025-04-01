@@ -250,4 +250,16 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
     {
         throw new NotImplementedException();
     }
+
+    public async Task<Tuple<long, List<string>>?> QueryTokenUsage(Guid projectId, string systemLLM, DateTime startTime,
+        DateTime endTime, bool statisticsAsHour)
+    {
+        var result = await _mediator.Send(new TokenUsageQueryCommand()
+        {
+            ProjectId = projectId, SystemLLM = systemLLM, StartTime = startTime, EndTime = endTime,
+            StatisticsAsHour = statisticsAsHour
+        });
+
+        return result;
+    }
 }

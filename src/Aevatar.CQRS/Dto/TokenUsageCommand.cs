@@ -22,5 +22,5 @@ public class TokenUsage
     public int LastInputTokenUsage { get; set; } = 0;
     public int LastOutTokenUsage { get; set; } = 0;
     public int LastTotalTokenUsage { get; set; } = 0;
-    public DateTime CreatTime = DateTime.Now;
+    public DateTime CreatTime { get; set; } = DateTime.Now;
 }

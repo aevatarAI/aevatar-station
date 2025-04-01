@@ -16,8 +16,8 @@ using Newtonsoft.Json.Serialization;
 using Orleans.Runtime;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
-using Volo.Abp.Application.Services;
 using Volo.Abp.DependencyInjection;
+using Aevatar.CQRS.Dto;
 
 namespace Aevatar;
 
@@ -349,7 +349,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         }
 
         var createIndexResponse = await _elasticClient.Indices.CreateAsync(indexName, c => c
-            .Map<TokenUsage>(m => m.AutoMap())
+            .Map<CQRS.Dto.TokenUsage>(m => m.AutoMap())
         );
         if (!createIndexResponse.IsValid)
         {
@@ -365,17 +365,18 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         }
     }
 
-    public async Task SaveTokenUsage(string indexName, List<TokenUsage> tokenUsages)
+    public async Task SaveTokenUsageAsync(string indexName, List<CQRS.Dto.TokenUsage> tokenUsages)
     {
         var bulkDescriptor = new BulkDescriptor();
         foreach (var item in tokenUsages)
         {
-            bulkDescriptor.Index<TokenUsage>(op => op
+            bulkDescriptor.Index<CQRS.Dto.TokenUsage>(op => op
                 .Index(indexName)
                 .Id(Guid.NewGuid())
                 .Document(item)
             );
         }
+
         var bulkResponse = await _elasticClient.BulkAsync(bulkDescriptor);
         if (!bulkResponse.IsValid)
         {
@@ -391,7 +392,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                 bulkResponse.Items.Count);
         }
     }
-    
+
     public async Task SaveOrUpdateIndexAsync<T>(string id, T baseIndex) where T : BaseIndex
     {
         _logger.LogInformation("SaveOrUpdateIndexAsync, indexName:{indexName}", baseIndex.GetType().Name.ToLower());
@@ -552,5 +553,40 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
             queryDto.QueryString, resultList);
 
         return new PagedResultDto<Dictionary<string, object>>(response.Total, resultList);
+    }
+
+    public async Task<Tuple<long, List<string>>> QueryTokenUsageAsync(string indexName, Guid projectId,
+        string systemLLM,
+        DateTime startTime,
+        DateTime endTime, bool statisticsAsHour)
+    {
+        var dateHistogramName = "daily_usage";
+        var result = new List<string>();
+        var response = await _elasticClient.SearchAsync<CQRS.Dto.TokenUsage>(s => s.Query(q =>
+                q.DateRange(r => r.Field(f => f.CreatTime).GreaterThanOrEquals(startTime).LessThanOrEquals(endTime)))
+            .Aggregations(a => a.DateHistogram("daily_usage",
+                dh => dh.Field(f => f.CreatTime).CalendarInterval(DateInterval.Day).Aggregations(aa => aa
+                    .Sum("LastInputTokenUsage", sa => sa.Field(f => f.LastInputTokenUsage))
+                    .Sum("LastOutTokenUsage", sa => sa.Field(f => f.LastOutTokenUsage))
+                ))).Size(0)
+        );
+        if (response.IsValid)
+        {
+            var dailyAgg = response.Aggregations.DateHistogram(dateHistogramName);
+            foreach (var bucket in dailyAgg.Buckets)
+            {
+                DateTime date = bucket.Date;
+                double totalInput = bucket.Sum("LastInputTokenUsage").Value ?? 0;
+                double totalOutput = bucket.Sum("LastOutTokenUsage").Value ?? 0;
+
+                result.Add(JsonConvert.SerializeObject(new
+                    { TotalInputTokens = totalInput, TotalOutputTokens = totalInput, Time = date }));
+            }
+
+            return new Tuple<long, List<string>>(result.Count, result);
+        }
+
+        _logger.LogError($"[ElasticIndexingService][QueryTokenUsageAsync] error:{response.DebugInformation}");
+        return new Tuple<long, List<string>>(0, new List<string>());
     }
 }

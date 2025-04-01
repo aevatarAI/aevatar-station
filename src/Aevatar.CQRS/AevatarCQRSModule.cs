@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Aevatar.Core.Abstractions;
+using Aevatar.CQRS.Dto;
 using Aevatar.CQRS.Handler;
 using Aevatar.CQRS.Provider;
 using Aevatar.Options;
@@ -37,6 +38,8 @@ public class AevatarCQRSModule : AbpModule
         context.Services.AddMediatR(cfg =>
             cfg.RegisterServicesFromAssembly(typeof(GetUserInstanceAgentsHandler).Assembly)
         );
+        context.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(TokenUsageCommand).Assembly));
+
         context.Services.AddSingleton<IIndexingService, ElasticIndexingService>();
         context.Services.AddSingleton<IEventDispatcher, CQRSProvider>();
         context.Services.AddSingleton<ICQRSProvider, CQRSProvider>();

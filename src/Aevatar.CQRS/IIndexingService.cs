@@ -33,5 +33,9 @@ public interface IIndexingService
     Task<PagedResultDto<Dictionary<string, object>>> QueryWithLuceneAsync(LuceneQueryDto queryDto);
 
     Task TryCreateTokenUsageIndexAsync(string indexName);
-    Task SaveTokenUsage(string indexName, List<TokenUsage> tokenUsages);
+    Task SaveTokenUsageAsync(string indexName, List<Dto.TokenUsage> tokenUsages);
+
+    Task<Tuple<long, List<string>>> QueryTokenUsageAsync(string indexName, Guid projectId, string systemLLM,
+        DateTime startTime,
+        DateTime endTime, bool statisticsAsHour);
 }

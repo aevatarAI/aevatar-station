@@ -20,4 +20,6 @@ public interface ICQRSProvider : IEventDispatcher
     Task<string> QueryAgentStateAsync(string stateName, Guid primaryKey);
 
     Task<Tuple<long, List<TargetT>>> GetUserInstanceAgent<SourceT,TargetT>(Guid userId, int pageIndex, int pageSize);
+    Task<Tuple<long, List<string>>?> QueryTokenUsage(Guid projectId, string systemLLM, DateTime startTime,
+        DateTime endTime, bool statisticsAsHour);
 }

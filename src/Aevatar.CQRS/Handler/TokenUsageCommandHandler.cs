@@ -22,6 +22,7 @@ public class TokenUsageCommandHandler : IRequestHandler<TokenUsageCommand>
     {
         var indexName = _cqrsProvider.GetIndexName("TokenUsage");
         await _indexingService.TryCreateTokenUsageIndexAsync(indexName);
-        
+
+        await _indexingService.SaveTokenUsageAsync(indexName, request.TokenUsages);
     }
 }
