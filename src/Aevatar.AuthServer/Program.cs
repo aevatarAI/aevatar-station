@@ -29,7 +29,7 @@ public class Program
 
         try
         {
-            Log.Information("Starting AevatarAuthServer.AuthServer. env {env}", env);
+            Log.Information("Starting AuthServer env {env}", env);
             var builder = WebApplication.CreateBuilder(args);
             builder.Configuration.AddJsonFile($"appsettings.{env}.json",
                 optional: true);
