@@ -12,9 +12,18 @@ public class ChatManagerGAgentState : AIGAgentStateBase
     [Id(3)] public string Gender { get; set; }
     [Id(4)] public DateTime BirthDate { get; set; }
     [Id(5)] public string BirthPlace { get; set; }
+    [Id(6)] public UserCredits Credits { get; set; } = new UserCredits();
 
     public SessionInfo? GetSession(Guid sessionId)
     {
         return SessionInfoList.FirstOrDefault(f=>f.SessionId == sessionId);
     }
+}
+
+[GenerateSerializer]
+public class UserCredits
+{
+    [Id(0)] public decimal Value { get; set; }
+    [Id(1)] public decimal Consumed { get; set; } = 10;
+    [Id(2)] public DateTime LastUpdated { get; set; }
 }

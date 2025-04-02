@@ -33,9 +33,17 @@ public class ClearAllEventLog : ChatManageEventLog
 }
 
 [GenerateSerializer]
-public class SetFortuneInfoEventLog : ChatManageEventLog
+public class SetUserProfileEventLog : ChatManageEventLog
 {
     [Id(0)] public string Gender { get; set; }
     [Id(1)] public DateTime BirthDate { get; set; }
     [Id(2)] public string BirthPlace { get; set; }
+}
+
+[GenerateSerializer]
+public class SetUserCreditsLogEvent : ChatManageEventLog
+{
+    [Id(0)] public decimal Value { get; set; }
+    [Id(1)] public decimal Consumed { get; set; } = 10;
+    [Id(2)] public DateTime LastUpdated { get; set; }
 }

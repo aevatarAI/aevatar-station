@@ -7,4 +7,6 @@ public interface IConfigurationGAgent : IGAgent
     Task<string> GetSystemLLM();
     Task<bool> GetStreamingModeEnabled();
     Task<string> GetPrompt();
+    Task<long> GetDefaultCreditsAsync();
+    Task<string> GetUserProfilePromptAsync();
 }

@@ -29,7 +29,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         return string.Empty;
     }
 
-    public async Task<string> GodStreamChatAsync(string llm, bool streamingModeEnabled,string message, String chatId,
+    public async Task<string> GodStreamChatAsync(string llm, bool streamingModeEnabled, string message, String chatId,
         ExecutionPromptSettings? promptSettings = null)
     {
         if (State.SystemLLM != llm || State.StreamingModeEnabled != streamingModeEnabled)
@@ -45,13 +45,65 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         }
 
         AIChatContextDto aiChatContextDto = new AIChatContextDto() { ChatId = chatId };
-        await ChatAsync(message, promptSettings,aiChatContextDto);
+        await ChatAsync(message, promptSettings, aiChatContextDto);
 
         return string.Empty;
+    }
+
+    public async Task SetUserProfileAsync(UserProfileDto? userProfileDto)
+    {
+        if (userProfileDto == null)
+        {
+            return;
+        }
+
+        RaiseEvent(new UpdateUserProfileGodChatEventLog
+        {
+            Gender = userProfileDto.Gender,
+            BirthDate = userProfileDto.BirthDate,
+            BirthPlace = userProfileDto.BirthPlace
+        });
+
+        await ConfirmEvents();
+    }
+
+    public async Task<UserProfileDto?> GetUserProfileAsync()
+    {
+        if (State.UserProfile == null)
+        {
+            return null;
+        }
+
+        return new UserProfileDto
+        {
+            Gender = State.UserProfile.Gender,
+            BirthDate = State.UserProfile.BirthDate,
+            BirthPlace = State.UserProfile.BirthPlace
+        };
     }
 
     public Task<List<ChatMessage>> GetChatMessageAsync()
     {
         return Task.FromResult(State.ChatHistory);
+    }
+
+    protected sealed override void AIGAgentTransitionState(GodChatState state,
+        StateLogEventBase<GodChatEventLog> @event)
+    {
+        base.AIGAgentTransitionState(state, @event);
+        
+        switch (@event)
+        {
+            case UpdateUserProfileGodChatEventLog updateUserProfileGodChatEventLog:
+                if (State.UserProfile == null)
+                {
+                    State.UserProfile = new UserProfile();
+                }
+
+                State.UserProfile.Gender = updateUserProfileGodChatEventLog.Gender;
+                State.UserProfile.BirthDate = updateUserProfileGodChatEventLog.BirthDate;
+                State.UserProfile.BirthPlace = updateUserProfileGodChatEventLog.BirthPlace;
+                break;
+        }
     }
 }

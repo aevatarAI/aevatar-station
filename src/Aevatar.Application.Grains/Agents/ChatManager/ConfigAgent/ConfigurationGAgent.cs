@@ -53,6 +53,26 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
         await ConfirmEvents();
     }
 
+    [EventHandler]
+    public async Task HandleEventAsync(SetDefaultCreditsEvent @event)
+    {
+        RaiseEvent(new SetDefaultCreditsLogEvent
+        {
+            DefaultCredits = @event.DefaultCredits
+        });
+        await ConfirmEvents();
+    }
+
+    [EventHandler]
+    public async Task HandleEventAsync(SetUserProfilePromptEvent @event)
+    {
+        RaiseEvent(new SetUserProfilePromptLogEvent
+        {
+            UserProfilePrompt = @event.UserProfilePrompt
+        });
+        await ConfirmEvents();
+    }
+
     public Task<string> GetSystemLLM()
     {
         return Task.FromResult(State.SystemLLM);
@@ -68,6 +88,16 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
         return Task.FromResult(State.Prompt);
     }
 
+    public Task<long> GetDefaultCreditsAsync()
+    {
+        return Task.FromResult(State.DefaultCredits);
+    }
+
+    public Task<string> GetUserProfilePromptAsync()
+    {
+        return Task.FromResult(State.UserProfilePrompt);
+    }
+
     protected sealed override void GAgentTransitionState(ConfigurationState state,
         StateLogEventBase<ConfigurationLogEvent> @event)
     {
@@ -81,6 +111,12 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
                 break;
             case SetStreamingModeEnabledLogEvent @setStreamingModeEnabledLogEvent:
                 State.StreamingModeEnabled = @setStreamingModeEnabledLogEvent.StreamingModeEnabled;
+                break;
+            case SetDefaultCreditsLogEvent @setDefaultCreditsLogEvent:
+                State.DefaultCredits = setDefaultCreditsLogEvent.DefaultCredits;
+                break;
+            case SetUserProfilePromptLogEvent @setUserProfilePromptLogEvent:
+                State.UserProfilePrompt = setUserProfilePromptLogEvent.UserProfilePrompt;
                 break;
         }
     }

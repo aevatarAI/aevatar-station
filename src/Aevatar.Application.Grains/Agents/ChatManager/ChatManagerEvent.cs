@@ -10,6 +10,7 @@ public class RequestCreateGodChatEvent : EventBase
 {
     [Id(0)] public string SystemLLM { get; set; }
     [Id(1)] public string Prompt { get; set; }
+    [Id(2)] public UserProfileDto UserProfile { get; set; }
 }
 
 [GenerateSerializer]
@@ -17,6 +18,7 @@ public class ResponseCreateGod : ResponseToPublisherEventBase
 {
     [Id(0)] public ResponseType ResponseType { get; set; } = ResponseType.CreateSession;
     [Id(1)] public Guid SessionId { get; set; }
+    [Id(2)] public int Code { get; set; } = (int) ResponseCode.Success;
 }
 
 [GenerateSerializer]
@@ -33,6 +35,7 @@ public class ResponseGodChat : ResponseToPublisherEventBase
     [Id(0)] public ResponseType ResponseType { get; set; } = ResponseType.ChatResponse;
     [Id(1)] public string Response { get; set; }
     [Id(2)] public string NewTitle { get; set; }
+    [Id(3)] public int Code { get; set; } = (int) ResponseCode.Success;
 }
 
 [GenerateSerializer]
@@ -52,9 +55,8 @@ public class ResponseStreamGodChat : ResponseToPublisherEventBase
     [Id(2)] public string NewTitle { get; set; }
     [Id(3)] public string ChatId { get; set; }
     [Id(4)] public bool IsLastChunk { get; set; }
-    
-    [Id(5)]
-    public int SerialNumber { get; set; }
+    [Id(5)] public int SerialNumber { get; set; }
+    [Id(6)] public int Code { get; set; } = (int) ResponseCode.Success;
 }
 
 [GenerateSerializer]
@@ -123,7 +125,7 @@ public class ResponseClearAll : ResponseToPublisherEventBase
 }
 
 [GenerateSerializer]
-public class RequestSetFortuneInfoEvent : EventBase
+public class RequestSetUserProfileEvent : EventBase
 {
     [Id(0)] public string Gender { get; set; }
     [Id(1)] public DateTime BirthDate { get; set; }
@@ -131,25 +133,34 @@ public class RequestSetFortuneInfoEvent : EventBase
 }
 
 [GenerateSerializer]
-public class ResponseSetFortuneInfo : ResponseToPublisherEventBase
+public class ResponseSetUserProfile : ResponseToPublisherEventBase
 {
-    [Id(0)] public ResponseType ResponseType { get; set; } = ResponseType.SetFortuneInfo;
+    [Id(0)] public ResponseType ResponseType { get; set; } = ResponseType.SetUserProfile;
     [Id(1)] public bool Success { get; set; }
 }
 
 [GenerateSerializer]
-public class RequestGetFortuneInfoEvent : EventBase
+public class RequestGetUserProfileEvent : EventBase
 {
     
 }
 
 [GenerateSerializer]
-public class ResponseGetFortuneInfo : ResponseToPublisherEventBase
+public class ResponseGetUserProfile : ResponseToPublisherEventBase
 {
-    [Id(0)] public ResponseType ResponseType { get; set; } = ResponseType.GetFortuneInfo;
+    [Id(0)] public ResponseType ResponseType { get; set; } = ResponseType.GetUserProfile;
     [Id(1)] public string Gender { get; set; }
     [Id(2)] public DateTime BirthDate { get; set; }
     [Id(3)] public string BirthPlace { get; set; }
+    [Id(4)] public decimal Credits { get; set; }
+}
+
+[GenerateSerializer]
+public class UserProfileDto
+{
+    [Id(0)] public string Gender { get; set; }
+    [Id(1)] public DateTime BirthDate { get; set; }
+    [Id(2)] public string BirthPlace { get; set; }
 }
 
 [GenerateSerializer]
@@ -162,6 +173,12 @@ public enum ResponseType
     SessionDelete = 5,
     SessionRename = 6,
     ClearAll = 7,
-    SetFortuneInfo = 8,
-    GetFortuneInfo = 9,
+    SetUserProfile = 8,
+    GetUserProfile = 9,
+}
+
+public enum ResponseCode
+{
+    Success = 20000,
+    UserCreditsLow = 20001
 }
