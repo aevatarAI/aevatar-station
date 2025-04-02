@@ -22,12 +22,12 @@ logging.basicConfig(
 
 # SignalR Hub URL
 # HUB_URL = "http://localhost:5001/aevatarHub"
-HUB_URL = "http://localhost:8001/api/agent/aevatarHub"
-# HUB_URL = "http://localhost:8308/api/agent/aevatarHub"
-# Alternate URL for staging 
-# HUB_URL = "https://station-developer-staging.aevatar.ai/test-client/api/agent/aevatarHub"
+# HUB_URL = "http://192.168.3.11:8001/api/agent/aevatarHub"
+# HUB_URL = "http://localhost:8001/api/agent/aevatarHub"
+# HUB_URL = "http://localhost:8308/api/agent/aevatarHub"  
+HUB_URL = "https://station-developer-staging.aevatar.ai/test-client/api/agent/aevatarHub"
 
-
+TOKEN = "eyJhbGciOiJSUzI1NiIsImtpZCI6IkQyRjhGMkUxOEJFMEMwRTMwRTkxRjgxNUI0MDNDNTlGQjZGNTZFRDIiLCJ4NXQiOiIwdmp5NFl2Z3dPTU9rZmdWdEFQRm43YjFidEkiLCJ0eXAiOiJhdCtqd3QifQ.eyJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwODIvIiwiZXhwIjoxNzQzNjczODg1LCJpYXQiOjE3NDM1MDEwODYsImF1ZCI6IkFldmF0YXIiLCJzY29wZSI6IkFldmF0YXIiLCJqdGkiOiI0NTY1NjE2NS02YTExLTQ4MjYtOGEwMi1hOGY4ODMwNGZhZjEiLCJzdWIiOiI4OGUwZjZkNS1kODg2LWNjNjAtZGMyMS0zYTE3NjA3NDBhMmYiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJhZG1pbiIsImVtYWlsIjoiYWRtaW5AYWJwLmlvIiwicm9sZSI6ImFkbWluIiwiZ2l2ZW5fbmFtZSI6ImFkbWluIiwicGhvbmVfbnVtYmVyX3ZlcmlmaWVkIjoiRmFsc2UiLCJlbWFpbF92ZXJpZmllZCI6IkZhbHNlIiwidW5pcXVlX25hbWUiOiJhZG1pbiIsIm9pX3Byc3QiOiJBZXZhdGFyQXV0aFNlcnZlciIsImNsaWVudF9pZCI6IkFldmF0YXJBdXRoU2VydmVyIiwib2lfdGtuX2lkIjoiYzNiYjBlOGMtZDc3ZC1hY2JlLTY5MTAtM2ExOTAyZjAyNWNkIn0.FJ75JJSp7bg55B8IqLvTF3H788O4wIBYWfi4h06_on-uCGPgYX49GZ-KE1ct3oT8EqRa43ns72mKJcpZRkZVy5RXaNm0zK559l_WkE-T68BugGKDEn3GFWYfIUgRok-B5rsUVxGOfVraF3mgXIA-iTv6dxodhPgDQB2aDa1ffZXXPa9KIwtxQ6Pxc-MVAr6r0U_8ILbXFeesk-AyXGzUrrx72hhg3W7iHNmCVGQnNjlCLmIvDz-F07v-Qb_c3jFXqV8IuDxTpX0IMFOhobl5ccwGmmHihwU8thr-XPi9cCaWLigfVqRTYpNmxfM088TPenIF1WUlxpVyqkk3SuaMkg.eyJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwODIvIiwiZXhwIjoxNzQzNjczODg1LCJpYXQiOjE3NDM1MDEwODYsImF1ZCI6IkFldmF0YXIiLCJzY29wZSI6IkFldmF0YXIiLCJqdGkiOiI0NTY1NjE2NS02YTExLTQ4MjYtOGEwMi1hOGY4ODMwNGZhZjEiLCJzdWIiOiI4OGUwZjZkNS1kODg2LWNjNjAtZGMyMS0zYTE3NjA3NDBhMmYiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJhZG1pbiIsImVtYWlsIjoiYWRtaW5AYWJwLmlvIiwicm9sZSI6ImFkbWluIiwiZ2l2ZW5fbmFtZSI6ImFkbWluIiwicGhvbmVfbnVtYmVyX3ZlcmlmaWVkIjoiRmFsc2UiLCJlbWFpbF92ZXJpZmllZCI6IkZhbHNlIiwidW5pcXVlX25hbWUiOiJhZG1pbiIsIm9pX3Byc3QiOiJBZXZhdGFyQXV0aFNlcnZlciIsImNsaWVudF9pZCI6IkFldmF0YXJBdXRoU2VydmVyIiwib2lfdGtuX2lkIjoiYzNiYjBlOGMtZDc3ZC1hY2JlLTY5MTAtM2ExOTAyZjAyNWNkIn0.FJ75JJSp7bg55B8IqLvTF3H788O4wIBYWfi4h06_on-uCGPgYX49GZ-KE1ct3oT8EqRa43ns72mKJcpZRkZVy5RXaNm0zK559l_WkE-T68BugGKDEn3GFWYfIUgRok-B5rsUVxGOfVraF3mgXIA-iTv6dxodhPgDQB2aDa1ffZXXPa9KIwtxQ6Pxc-MVAr6r0U_8ILbXFeesk-AyXGzUrrx72hhg3W7iHNmCVGQnNjlCLmIvDz-F07v-Qb_c3jFXqV8IuDxTpX0IMFOhobl5ccwGmmHihwU8thr-XPi9cCaWLigfVqRTYpNmxfM088TPenIF1WUlxpVyqkk3SuaMkg"
 
 @pytest.fixture(scope="module")
 def hub_connection():
@@ -37,11 +37,11 @@ def hub_connection():
     connection = HubConnectionBuilder() \
         .with_url(HUB_URL, options={"verify_ssl": False}) \
         .with_automatic_reconnect({
-            "type": "raw",
-            "keep_attempting": True,
-            "retries": 1,
-            "intervals": [0, 2000, 10000, 30000],
-        }) \
+        "type": "raw",
+        "keep_attempting": True,
+        "retries": 1,
+        "intervals": [0, 2000, 10000, 30000],
+    }) \
         .configure_logging(logging.DEBUG) \
         .build()
 
@@ -149,6 +149,7 @@ def test_publish_async(hub_connection):
     assert len(responses) > 0, "❌ No response received from the server"
     logging.info(f"✅ PublishEventAsync test passed. responses=: {responses}")
 
+
 def test_subscribe_async(hub_connection):
     """
     Test the SubscribeAsync method
@@ -165,40 +166,3 @@ def test_subscribe_async(hub_connection):
 
     assert len(responses) > 0, "❌ No response received from the server"
     logging.info(f"✅ PublishEventAsync test passed. responses=: {responses}")
-
-# def test_subscribe_event(hub_connection):
-#     """
-#     Send different SubscribeAsync events and verify responses
-#     """
-#     connection, received_messages = hub_connection
-#     method_name = "SubscribeAsync"
-#     grain_type = "Aevatar.Application.Grains.Agents.ChatManager.ChatGAgentManager"
-#     grain_key = str(uuid4()).replace("-", "")
-#     event_type_name = "Aevatar.Application.Grains.Agents.ChatManager.RequestCreateQuantumChatEvent"
-#     event_json = json.dumps({"SystemLLM":"OpenAI","Prompt":"你是一个nba专家"})
-# 
-#     params = [f"{grain_type}/{grain_key}", event_type_name, event_json]
-#     responses = send_event_and_wait(connection, received_messages, method_name, params)
-# 
-#     # Verify if a response is received
-#     assert len(responses) > 0, "❌ No response received from the server"
-#     logging.info(f"✅ SubscribeAsync test passed. responses=: {responses}")
-
-# 
-# def test_subscribe_async_failure(hub_connection):
-#     """
-#     Test SubscribeAsync with invalid parameters and verify failure scenarios
-#     """
-#     connection, received_messages = hub_connection
-#     method_name = "SubscribeAsync"
-#     grain_type = "SignalRSample.GAgents.Aevatar.InvalidDemo"  # Invalid grain_type
-#     grain_key = "cd6b8f09214673d3cade4e832627b4f6"
-#     event_type_name = "SignalRSample.GAgents.NaiveTestEvent"
-#     event_json = json.dumps({"Greeting": "Invalid Subscribe Test"})
-# 
-#     params = [f"{grain_type}/{grain_key}", event_type_name, event_json]
-#     responses = send_event_and_wait(connection, received_messages, method_name, params)
-# 
-#     # Verify no response is received
-#     assert len(responses) == 0, "❌ Unexpected response received from the server"
-#     logging.info("✅ SubscribeAsync failure test passed: No response received")
