@@ -130,6 +130,36 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
         {
             _connections.Add(connection);
 
+            var httpContext = connection.GetHttpContext();
+            var ipAddress = httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "Unknown IP";
+            var userAgent = httpContext?.Request?.Headers["User-Agent"].ToString() ?? "Unknown Agent";
+            
+            _logger.LogDebug(
+                "Orleans Hub - New client connection:\n" +
+                "Hub: {HubName}\n" +
+                "ServerId: {ServerId}\n" +
+                "ConnectionId: {ConnectionId}\n" +
+                "IP Address: {IpAddress}\n" +
+                "User Agent: {UserAgent}\n" +
+                "User Details:\n" +
+                "  - Identity: {UserIdentity}\n" +
+                "  - IsAuthenticated: {IsAuthenticated}\n" +
+                "  - UserIdentifier: {UserIdentifier}\n" +
+                "Connection Items: {ItemsCount}\n" +
+                "Claims: {Claims}",
+                _hubName,
+                _serverId,
+                connection.ConnectionId,
+                ipAddress,
+                userAgent,
+                connection.User?.Identity?.Name ?? "Anonymous",
+                connection.User?.Identity?.IsAuthenticated ?? false,
+                connection.UserIdentifier ?? "None",
+                connection.Items.Count,
+                connection.User?.Claims != null 
+                    ? string.Join(", ", connection.User.Claims.Select(c => $"{c.Type}: {c.Value}"))
+                    : "No claims");
+            
             var client = _clusterClient.GetClientGrain(_hubName, connection.ConnectionId);
             
             _logger.LogDebug("Handle connection {connectionId} on hub {hubName} (serverId: {serverId})",
@@ -139,6 +169,17 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
 
             if (connection!.User!.Identity!.IsAuthenticated)
             {
+                _logger.LogDebug(
+                    "Orleans Hub - Authenticated user connected:\n" +
+                    "Hub: {HubName}\n" +
+                    "ConnectionId: {ConnectionId}\n" +
+                    "User: {UserIdentity}\n" +
+                    "UserIdentifier: {UserIdentifier}",
+                    _hubName,
+                    connection.ConnectionId,
+                    connection.User.Identity.Name,
+                    connection.UserIdentifier);
+
                 var user = _clusterClient.GetUserGrain(_hubName, connection.UserIdentifier!);
                 await user.Add(connection.ConnectionId);
             }
