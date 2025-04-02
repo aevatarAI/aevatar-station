@@ -85,26 +85,32 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         var ownerPermissions =
             await _permissionManager.GetAllForRoleAsync(ownerRole.Name);
         ownerPermissions = ownerPermissions.Where(o => o.IsGranted).ToList();
-        ownerPermissions.Count.ShouldBe(10);
-        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Organizations.Default);
-        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Organizations.Create);
-        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Organizations.Edit);
-        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Organizations.Delete);
+        ownerPermissions.Count.ShouldBe(14);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Projects.Default);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Projects.Edit);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Members.Default);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Members.Manage);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ApiKeys.Default);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ApiKeys.Create);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ApiKeys.Edit);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ApiKeys.Delete);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Roles.Default);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Roles.Create);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Roles.Edit);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Roles.Delete);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.LLMSModels.Default);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.LLMSModels.Default);
 
         var readerRole = roles.Items.First(o => o.Name.EndsWith("Reader"));
         var readerPermissions =
             await _permissionManager.GetAllForRoleAsync(readerRole.Name);
         readerPermissions = readerPermissions.Where(o => o.IsGranted).ToList();
-        readerPermissions.Count.ShouldBe(3);
-        readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Organizations.Default);
+        readerPermissions.Count.ShouldBe(5);
+        readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Projects.Default);
         readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Members.Default);
         readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ApiKeys.Default);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.LLMSModels.Default);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.LLMSModels.Default);
     }
 
     [Fact]

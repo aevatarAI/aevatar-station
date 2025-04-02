@@ -2,6 +2,7 @@ using System;
 using Aevatar.CQRS.Handler;
 using Aevatar.Kubernetes.Manager;
 using Aevatar.Options;
+using Aevatar.SignalR;
 using Aevatar.WebHook.Deploy;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +13,7 @@ using Volo.Abp.Emailing;
 using Volo.Abp.EventBus;
 using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
+using Moq;
 
 namespace Aevatar;
 
@@ -45,6 +47,8 @@ public class AevatarApplicationTestModule : AbpModule
         context.Services.AddTransient<IHostDeployManager, DefaultHostDeployManager>();
 
         context.Services.AddSingleton<IEmailSender, NullEmailSender>();
+        
+        context.Services.AddTransient<IHubService>(o=>Moq.Mock.Of<IHubService>());
         
         AddMock(context.Services);
     }
