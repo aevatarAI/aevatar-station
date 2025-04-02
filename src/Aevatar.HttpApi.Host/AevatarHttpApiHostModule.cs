@@ -221,6 +221,7 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         app.UseCors();
         app.UseAuthentication();
         app.UseAuthorization();
+        app.UseMiddleware<ApiRequestStatisticsMiddleware>();
         // app.UsePathBase("/developer-client");
         app.UseUnitOfWork();
         app.UseDynamicClaims();
@@ -240,7 +241,7 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         app.UseAbpSerilogEnrichers();
         app.UseConfiguredEndpoints();
         
-        app.UseMiddleware<ApiRequestStatisticsMiddleware>();
+        
         AsyncHelper.RunSync(() => context.AddBackgroundWorkerAsync<ApiRequestWorker>());
     }
 }
