@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Agent;
+using Aevatar.Agents;
 using Aevatar.Controllers;
 using Aevatar.CQRS.Dto;
 using Aevatar.Permissions;
@@ -30,14 +31,6 @@ public class AgentController : AevatarController
         _subscriptionAppService = subscriptionAppService;
     }
 
-    [HttpGet("agent-logs")]
-    [Authorize(Policy = AevatarPermissions.Agent.ViewLogs)] 
-    public async Task<Tuple<long, List<AgentGEventIndex>>> GetAgentLogs(string agentId, int pageIndex, int pageSize)
-    {
-        _logger.LogInformation("Get Agent logs : {agentId} {pageIndex} {pageSize}", agentId, pageIndex, pageSize);
-        var agentDtoList = await _agentService.GetAgentEventLogsAsync(agentId, pageIndex, pageSize);
-        return agentDtoList;
-    }
 
     [HttpGet("agent-type-info-list")]
     [Authorize(Policy = AevatarPermissions.Agent.ViewAllType)]
@@ -47,7 +40,7 @@ public class AgentController : AevatarController
     }
 
     [HttpGet("agent-list")]
-    [Authorize(Policy = AevatarPermissions.Agent.ViewList)]
+    [Authorize]
     public async Task<List<AgentInstanceDto>> GetAllAgentInstance(int pageIndex = 0, int pageSize = 20)
     {
         return await _agentService.GetAllAgentInstances(pageIndex, pageSize);
@@ -129,4 +122,32 @@ public class AgentController : AevatarController
     {
         await _subscriptionAppService.PublishEventAsync(input);
     }
+
+    [HttpGet("/workflow")]
+    [Authorize]
+    public async Task<List<WorkflowAgentDefinesDto>> GetWorkflowAgents(string workflowGranId)
+    {
+       return await _agentService.GetWorkflowUnitRelationsAsync(workflowGranId);
+    }
+
+    [HttpPost("/workflow")]
+    [Authorize]
+    public async Task<CreateWorkflowResponseDto> CreateWorkFlow([FromBody] WorkflowAgentsDto workflowAgentsDto)
+    {
+        return await _agentService.CreateWorkflowAsync(workflowAgentsDto);
+    } 
+    
+    [HttpPost("/workflow/simulate")]
+    [Authorize]
+    public async Task<string> SimulateWorkFlow([FromBody] WorkflowWithGrainIdRequestDto withGrainIdRequestDto)
+    {
+        return await _agentService.SimulateWorkflowAsync(withGrainIdRequestDto.WorkflowGrainId, withGrainIdRequestDto.WorkUnitRelations);
+    } 
+    
+    [HttpPut("/workflow")]
+    [Authorize]
+    public async Task<string> ModifyWorkFlow([FromBody] WorkflowWithGrainIdRequestDto withGrainIdRequestDto)
+    {
+        return await _agentService.EditWorkWorkflowAsync(withGrainIdRequestDto.WorkflowGrainId, withGrainIdRequestDto.WorkUnitRelations);
+    } 
 }

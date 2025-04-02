@@ -2,21 +2,24 @@
 using Localization.Resources.AbpUi;
 using Aevatar.Localization;
 using Aevatar.Options;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.Account;
+using Volo.Abp.AspNetCore.Mvc;
 using Volo.Abp.Identity;
 using Volo.Abp.Localization;
 using Volo.Abp.Modularity;
 using Volo.Abp.PermissionManagement.HttpApi;
+using Volo.Abp.AspNetCore.SignalR;
 
 namespace Aevatar;
 
 [DependsOn(
     typeof(AevatarApplicationContractsModule),
-    typeof(AbpAccountHttpApiModule),
     typeof(AbpIdentityHttpApiModule),
     typeof(AbpPermissionManagementHttpApiModule),
-    typeof(AevatarDeveloperLoggerModule)
+    typeof(AevatarDeveloperLoggerModule),
+    typeof(AbpAspNetCoreSignalRModule)
     )]
 public class AevatarHttpApiModule : AbpModule
 {
@@ -34,6 +37,11 @@ public class AevatarHttpApiModule : AbpModule
                 .AddBaseTypes(
                     typeof(AbpUiResource)
                 );
+        });
+        
+        Configure<MvcOptions>(options =>
+        {
+            options.Conventions.Add(new ApplicationDescription());
         });
     }
 }

@@ -2,16 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Agent;
+using Aevatar.Agents;
 using Aevatar.CQRS.Dto;
 
 namespace Aevatar.Service;
 
 public interface IAgentService
 {
-    Task<Tuple<long, List<AgentGEventIndex>>> GetAgentEventLogsAsync(string agentId, int pageIndex, int pageSize);
-    
     Task<List<AgentTypeDto>> GetAllAgents();
-    
+
     Task<AgentDto> CreateAgentAsync(CreateAgentInputDto dto);
     Task<List<AgentInstanceDto>> GetAllAgentInstances(int pageIndex, int pageSize);
     Task<AgentDto> GetAgentAsync(Guid guid);
@@ -21,4 +20,8 @@ public interface IAgentService
     Task RemoveAllSubAgentAsync(Guid guid);
     Task<AgentRelationshipDto> GetAgentRelationshipAsync(Guid guid);
     Task DeleteAgentAsync(Guid guid);
+    Task<string> SimulateWorkflowAsync(string workflowGrainId, List<WorkflowAgentDefinesDto> workUnitRelations);
+    Task<CreateWorkflowResponseDto> CreateWorkflowAsync(WorkflowAgentsDto workflowAgentDto);
+    Task<string> EditWorkWorkflowAsync(string workflowGrainId, List<WorkflowAgentDefinesDto> workflowUnitList);
+    Task<List<WorkflowAgentDefinesDto>> GetWorkflowUnitRelationsAsync(string workflowGrainId);
 }

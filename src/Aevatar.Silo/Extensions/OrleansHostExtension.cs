@@ -1,6 +1,7 @@
 using System.Net;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
+using Aevatar.CQRS;
 using Aevatar.Dapr;
 using Aevatar.EventSourcing.MongoDB.Hosting;
 using Aevatar.GAgents.AI.Options;
@@ -50,7 +51,7 @@ public static class OrleansHostExtension
                     {
                         options.DatabaseName = configSection.GetValue<string>("DataBase");
                         options.Strategy = MongoDBMembershipStrategy.SingleDocument;
-                        options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" :$"Orleans{hostId}";;
+                        options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" : $"Orleans{hostId}";
                     })
                     .Configure<JsonGrainStateSerializerOptions>(options => options.ConfigureJsonSerializerSettings =
                         settings =>
@@ -61,22 +62,21 @@ public static class OrleansHostExtension
                         })
                     .AddMongoDBGrainStorage("Default", (MongoDBGrainStorageOptions op) =>
                     {
-                        op.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" :$"Orleans{hostId}";
+                        op.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" : $"Orleans{hostId}";
                         op.DatabaseName = configSection.GetValue<string>("DataBase");
                     })
                     .UseMongoDBReminders(options =>
                     {
                         options.DatabaseName = configSection.GetValue<string>("DataBase");
                         options.CreateShardKeyForCosmos = false;
-                        options.CollectionPrefix = hostId.IsNullOrEmpty() ? "Orleans" :$"Orleans{hostId}";;
+                        options.CollectionPrefix = hostId.IsNullOrEmpty() ? "Orleans" : $"Orleans{hostId}";
+                        ;
                     })
-                    
                     .Configure<ClusterOptions>(options =>
                     {
                         options.ClusterId = clusterId;
                         options.ServiceId = serviceId;
                     })
-                    
                     .Configure<ExceptionSerializationOptions>(options =>
                     {
                         options.SupportedNamespacePrefixes.Add("Volo.Abp");
@@ -103,7 +103,7 @@ public static class OrleansHostExtension
                     .AddMongoDBGrainStorage("PubSubStore", options =>
                     {
                         // Config PubSubStore Storage for Persistent Stream 
-                        options.CollectionPrefix = hostId.IsNullOrEmpty() ? "StreamStorage" :$"Stream{hostId}";
+                        options.CollectionPrefix = hostId.IsNullOrEmpty() ? "StreamStorage" : $"Stream{hostId}";
                         options.DatabaseName = configSection.GetValue<string>("DataBase");
                     })
                     .ConfigureLogging(logging => { logging.SetMinimumLevel(LogLevel.Debug).AddConsole(); });
@@ -136,14 +136,17 @@ public static class OrleansHostExtension
                             var partitions = configuration.GetSection("OrleansStream:Partitions").Get<int>();
                             var replicationFactor =
                                 configuration.GetSection("OrleansStream:ReplicationFactor").Get<short>();
-                            var topic = configuration.GetSection("Aevatar:StreamNamespace").Get<string>();
-                            topic = topic.IsNullOrEmpty() ? CommonConstants.StreamNamespace : topic;
-                            options.AddTopic(topic, new TopicCreationConfig
+                            var topics = configuration.GetSection("OrleansStream:Topics").Get<string>();
+                            topics = topics.IsNullOrEmpty() ? CommonConstants.StreamNamespace : topics;
+                            foreach (var topic in topics.Split(','))
                             {
-                                AutoCreate = true,
-                                Partitions = partitions,
-                                ReplicationFactor = replicationFactor
-                            });
+                                options.AddTopic(topic.Trim(), new TopicCreationConfig
+                                {
+                                    AutoCreate = true,
+                                    Partitions = partitions,
+                                    ReplicationFactor = replicationFactor
+                                });
+                            }
                         })
                         .AddJson()
                         .AddLoggingTracker()
@@ -163,10 +166,14 @@ public static class OrleansHostExtension
                 services.Configure<AzureOpenAIConfig>(context.Configuration.GetSection("AIServices:AzureOpenAI"));
                 services.Configure<AzureDeepSeekConfig>(context.Configuration.GetSection("AIServices:DeepSeek"));
                 services.Configure<QdrantConfig>(context.Configuration.GetSection("VectorStores:Qdrant"));
-                services.Configure<AzureOpenAIEmbeddingsConfig>(context.Configuration.GetSection("AIServices:AzureOpenAIEmbeddings"));
+                services.Configure<SystemLLMConfigOptions>(context.Configuration);
+                services.Configure<AzureOpenAIEmbeddingsConfig>(
+                    context.Configuration.GetSection("AIServices:AzureOpenAIEmbeddings"));
                 services.Configure<RagConfig>(context.Configuration.GetSection("Rag"));
                 services.AddSingleton(typeof(HubLifetimeManager<>), typeof(OrleansHubLifetimeManager<>));
-                services.AddSingleton<IGAgentFactory,GAgentFactory>();
+                // services.AddSingleton<IStateProjector, AevatarStateProjector>();
+                services.AddSingleton<IStateDispatcher, StateDispatcher>();
+                services.AddSingleton<IGAgentFactory, GAgentFactory>();
                 services.AddSemanticKernel()
                     .AddQdrantVectorStore()
                     .AddAzureOpenAITextEmbedding();

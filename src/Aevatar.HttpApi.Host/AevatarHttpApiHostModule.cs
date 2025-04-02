@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using AElf.OpenTelemetry;
 using AutoResponseWrapper;
 using Microsoft.AspNetCore.Builder;
@@ -12,6 +11,7 @@ using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite.Bundling;
 using Microsoft.OpenApi.Models;
 using Aevatar.Application.Grains;
 using Aevatar.Domain.Grains;
+using Aevatar.Permissions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
@@ -73,9 +73,10 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
 
         context.Services.AddMvc(options => { options.Filters.Add(new IgnoreAntiforgeryTokenAttribute()); })
             .AddNewtonsoftJson();
-        
+
         context.Services.AddHealthChecks();
     }
+
     private void ConfigureDataProtection(
         ServiceConfigurationContext context,
         IConfiguration configuration,
@@ -84,12 +85,11 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         var dataProtectionBuilder = context.Services.AddDataProtection().SetApplicationName("AevatarAuthServer");
     }
 
-    private void ConfigCache(ServiceConfigurationContext context,IConfiguration configuration)
+    private void ConfigCache(ServiceConfigurationContext context, IConfiguration configuration)
     {
         var redisOptions = ConfigurationOptions.Parse(configuration["Redis:Configuration"]);
         context.Services.AddSingleton<IConnectionMultiplexer>(provider => ConnectionMultiplexer.Connect(redisOptions));
         Configure<AbpDistributedCacheOptions>(options => { options.KeyPrefix = "Aevatar:"; });
-
     }
 
     private static void ConfigureAutoResponseWrapper(ServiceConfigurationContext context)
@@ -126,21 +126,21 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
 
         if (hostingEnvironment.IsDevelopment())
         {
-            Configure<AbpVirtualFileSystemOptions>(options =>
-            {
-                options.FileSets.ReplaceEmbeddedByPhysical<AevatarDomainSharedModule>(
-                    Path.Combine(hostingEnvironment.ContentRootPath,
-                        $"..{Path.DirectorySeparatorChar}Aevatar.Domain.Shared"));
-                options.FileSets.ReplaceEmbeddedByPhysical<AevatarDomainModule>(
-                    Path.Combine(hostingEnvironment.ContentRootPath,
-                        $"..{Path.DirectorySeparatorChar}Aevatar.Domain"));
-                options.FileSets.ReplaceEmbeddedByPhysical<AevatarApplicationContractsModule>(
-                    Path.Combine(hostingEnvironment.ContentRootPath,
-                        $"..{Path.DirectorySeparatorChar}Aevatar.Application.Contracts"));
-                options.FileSets.ReplaceEmbeddedByPhysical<AevatarApplicationModule>(
-                    Path.Combine(hostingEnvironment.ContentRootPath,
-                        $"..{Path.DirectorySeparatorChar}Aevatar.Application"));
-            });
+            // Configure<AbpVirtualFileSystemOptions>(options =>
+            // {
+            //     options.FileSets.ReplaceEmbeddedByPhysical<AevatarDomainSharedModule>(
+            //         Path.Combine(hostingEnvironment.ContentRootPath,
+            //             $"..{Path.DirectorySeparatorChar}Aevatar.Domain.Shared"));
+            //     options.FileSets.ReplaceEmbeddedByPhysical<AevatarDomainModule>(
+            //         Path.Combine(hostingEnvironment.ContentRootPath,
+            //             $"..{Path.DirectorySeparatorChar}Aevatar.Domain"));
+            //     options.FileSets.ReplaceEmbeddedByPhysical<AevatarApplicationContractsModule>(
+            //         Path.Combine(hostingEnvironment.ContentRootPath,
+            //             $"..{Path.DirectorySeparatorChar}Aevatar.Application.Contracts"));
+            //     options.FileSets.ReplaceEmbeddedByPhysical<AevatarApplicationModule>(
+            //         Path.Combine(hostingEnvironment.ContentRootPath,
+            //             $"..{Path.DirectorySeparatorChar}Aevatar.Application"));
+            // });
         }
     }
 
@@ -203,9 +203,11 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         app.UseCorrelationId();
         app.UseStaticFiles();
         app.UseRouting();
+        
+        app.UseCors();
         app.UseAuthentication();
         app.UseAuthorization();
-
+        // app.UsePathBase("/developer-client");
         app.UseUnitOfWork();
         app.UseDynamicClaims();
         app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
@@ -223,5 +225,7 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();
         app.UseConfiguredEndpoints();
+        var statePermissionProvider = context.ServiceProvider.GetRequiredService<IStatePermissionProvider>();
+        AsyncHelper.RunSync(async () => await statePermissionProvider.SaveAllStatePermissionAsync());
     }
 }

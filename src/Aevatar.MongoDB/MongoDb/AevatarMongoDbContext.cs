@@ -1,4 +1,8 @@
-﻿using Aevatar.User;
+﻿using Aevatar.ApiKey;
+using Aevatar.Notification;
+using Aevatar.Permissions;
+using Aevatar.User;
+using Aevatar.Workflow;
 using MongoDB.Driver;
 using Volo.Abp.AuditLogging.MongoDB;
 using Volo.Abp.BackgroundJobs.MongoDB;
@@ -19,6 +23,7 @@ public class AevatarMongoDbContext : AbpMongoDbContext
      * public IMongoCollection<Question> Questions => Collection<Question>();
      */
     public IMongoCollection<IdentityUserExtension> IdentityUserExtensionInfos { get; private set; }
+    public IMongoCollection<StatePermission> StatePermissionInfos { get; private set; }
 
 
     protected override void CreateModel(IMongoModelBuilder modelBuilder)
@@ -32,13 +37,14 @@ public class AevatarMongoDbContext : AbpMongoDbContext
         modelBuilder.ConfigureIdentity();
         modelBuilder.ConfigureOpenIddict();
         modelBuilder.ConfigureFeatureManagement();
+
         //modelBuilder.Entity<YourEntity>(b =>
         //{
         //    //...
         //});
-        modelBuilder.Entity<IdentityUserExtension>(b =>
-        {
-            b.CollectionName = "IdentityUserExtensions"; 
-        });
+        modelBuilder.Entity<IdentityUserExtension>(b => { b.CollectionName = "IdentityUserExtensions"; });
+        modelBuilder.Entity<ProjectAppIdInfo>(b => b.CollectionName = "ProjectAppInfoCollection");
+        modelBuilder.Entity<NotificationInfo>(b => b.CollectionName = "NotificationInfoCollection");
+        modelBuilder.Entity<WorkflowInfo>(b => b.CollectionName = "WorkflowInfoCollection");
     }
 }

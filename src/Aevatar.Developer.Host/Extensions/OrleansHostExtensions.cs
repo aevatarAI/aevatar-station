@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using Aevatar.Dapr;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Orleans;
@@ -6,6 +8,8 @@ using Orleans.Configuration;
 using Orleans.Hosting;
 using Orleans.Providers.MongoDB.Configuration;
 using Orleans.Serialization;
+using Orleans.Streams.Kafka.Config;
+using Serilog;
 
 namespace Aevatar.Developer.Host.Extensions;
 
@@ -15,6 +19,7 @@ public static class OrleansHostExtensions
     {
         return hostBuilder.UseOrleansClient((context, clientBuilder) =>
         {
+            var config = context.Configuration;
             var configSection = context.Configuration.GetSection("Orleans");
             var hostId = context.Configuration.GetValue<string>("Host:HostId");
             if (configSection == null)
@@ -37,8 +42,44 @@ public static class OrleansHostExtensions
                     options.SupportedNamespacePrefixes.Add("Newtonsoft.Json");
                     options.SupportedNamespacePrefixes.Add("MongoDB.Driver");
                 })
-                .AddMemoryStreams("Aevatar")
                 .AddActivityPropagation();
+                
+            var streamProvider = config.GetSection("OrleansStream:Provider").Get<string>();
+            Log.Information("Stream Provider: {streamProvider}", streamProvider);
+            if (string.Equals("kafka", streamProvider, StringComparison.CurrentCultureIgnoreCase))
+            {
+                Log.Information("Using Kafka as stream provider.");
+                clientBuilder
+                    .AddKafka("Aevatar")
+                    .WithOptions(options =>
+                    {
+                        options.BrokerList = config.GetSection("OrleansStream:Brokers").Get<List<string>>();
+                        options.ConsumerGroupId = "Aevatar";
+                        options.ConsumeMode = ConsumeMode.LastCommittedMessage;
+
+                        var partitions = config.GetSection("OrleansStream:Partitions").Get<int>();
+                        var replicationFactor =
+                            config.GetSection("OrleansStream:ReplicationFactor").Get<short>();
+                        var topics = config.GetSection("OrleansStream:Topics").Get<string>();
+                        topics = topics.IsNullOrEmpty() ? CommonConstants.StreamNamespace : topics;
+                        foreach (var topic in topics.Split(','))
+                        {
+                            options.AddTopic(topic.Trim(), new TopicCreationConfig
+                            {
+                                AutoCreate = true,
+                                Partitions = partitions,
+                                ReplicationFactor = replicationFactor
+                            });
+                        }
+                        Log.Information("Kafka Options: {@options}", options);
+                    })
+                    .AddJson()
+                    .Build();
+            }
+            else
+            {
+                clientBuilder.AddMemoryStreams("Aevatar");
+            }
         });
     }
 }

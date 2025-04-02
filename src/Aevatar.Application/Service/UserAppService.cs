@@ -22,7 +22,7 @@ public interface IUserAppService
     Task RegisterClientAuthentication(string clientId, string clientSecret);
     Guid GetCurrentUserId();
     Task  GrantClientPermissionsAsync(string clientId);
-
+    Task DeleteClientAndAuthentication(string clientId);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -79,7 +79,6 @@ public class UserAppService : IdentityUserAppService, IUserAppService
       
     }
   
-
     private async Task SetClientPermissionsAsync(string clientId)
     {
         var permissions= await  _permissionManager.GetAllAsync(RolePermissionValueProvider.ProviderName, AevatarPermissions.DeveloperManager);
@@ -136,5 +135,24 @@ public class UserAppService : IdentityUserAppService, IUserAppService
     public async Task GrantClientPermissionsAsync(string clientId)
     {
         await SetClientPermissionsAsync(clientId);
+    }
+
+    public async Task DeleteClientAndAuthentication(string clientId)
+    {
+       var application = await _applicationManager.FindByClientIdAsync(clientId);
+        if (application == null)
+        {
+            throw new UserFriendlyException("A app with the same ID already exists.");
+        }
+        await _applicationManager.DeleteAsync(application);
+        
+        var permissions= await  _permissionManager.GetAllAsync(RolePermissionValueProvider.ProviderName, AevatarPermissions.DeveloperManager);
+        foreach (var permission in permissions)
+        {
+            if (permission.IsGranted)
+            {
+                await _permissionManager.DeleteAsync(ClientPermissionValueProvider.ProviderName, clientId);
+            }
+        }
     }
 }
