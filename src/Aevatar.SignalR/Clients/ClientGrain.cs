@@ -61,30 +61,38 @@ internal sealed class ClientGrain : IGrainBase, IClientGrain
     {
         var serverDisconnectedStream = _streamProvider.GetServerDisconnectionStream(serverId);
         _serverDisconnectedSubscription = await serverDisconnectedStream.SubscribeAsync(_ => OnDisconnect("server-disconnected"));
-
+        _logger.LogDebug("Connected connection on serverDisconnectedStream.SubscribeAsync end");
+            
         _clientState.State.ServerId = serverId;
         await _clientState.WriteStateAsync();
         
-        _logger.LogDebug("Connected connection on {hubName} for connection {connectionId} to server {serverId}.",
+        _logger.LogDebug("Connected _clientState.WriteStateAsync() end connection on {hubName} for connection {connectionId} to server {serverId}.",
             _hubName, _connectionId, _clientState.State.ServerId);
     }
 
     public async Task OnDisconnect(string? reason = null)
     {
-        _logger.LogDebug("Disconnecting connection on {hubName} for connection {connectionId} from server {serverId} via reason '{reason}'.",
+        _logger.LogDebug("Disconnecting connection start on {hubName} for connection {connectionId} from server {serverId} via reason '{reason}'.",
             _hubName, _connectionId, _clientState.State.ServerId, reason);
 
         if (_serverDisconnectedSubscription is not null)
         {
+            _logger.LogDebug("Disconnecting connection _serverDisconnectedSubscription.UnsubscribeAsync start");
             await _serverDisconnectedSubscription.UnsubscribeAsync();
+            _logger.LogDebug("Disconnecting connection _serverDisconnectedSubscription.UnsubscribeAsync end");
             _serverDisconnectedSubscription = null;
         }
 
         await _streamProvider.GetClientDisconnectionStream(_connectionId).OnNextAsync(_connectionId);
-
+        _logger.LogDebug("Disconnecting connection _streamProvider.GetClientDisconnectionStream end");
+        
         await _clientState.ClearStateAsync();
 
+        _logger.LogDebug("Disconnecting connection _clientState.ClearStateAsync() end");
         this.DeactivateOnIdle();
+        
+        _logger.LogDebug("Disconnecting this.DeactivateOnIdle() connection end on {hubName} for connection {connectionId} from server {serverId} via reason '{reason}'.",
+            _hubName, _connectionId, _clientState.State.ServerId, reason);
     }
 
     // NB: Interface method is marked [ReadOnly] so this method will be re-entrant/interleaved.
