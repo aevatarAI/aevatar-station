@@ -15,7 +15,7 @@
     <PackageVersion Include="AElf.OpenTelemetry" Version="8.2.0" />
     <PackageVersion Include="Aevatar" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.Core" Version="$(AevatarVerion)" />
-    <PackageVersion Include="Aevatar.Core.Abstractions" Version="1.4.12-optimize.5" />
+    <PackageVersion Include="Aevatar.Core.Abstractions" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.EventSourcing.Core" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.Plugins" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.EventSourcing.MongoDB" Version="$(AevatarVerion)" />
