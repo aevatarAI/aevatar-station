@@ -10,8 +10,10 @@ public class Program
 {
     public async static Task<int> Main(string[] args)
     {
+        var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
         var configuration = new ConfigurationBuilder()
             .AddJsonFile("appsettings.json")
+            .AddJsonFile($"appsettings.{env}.json", optional: true)
             .AddJsonFile("appsettings.secrets.json", optional: true)
             .Build();
         Log.Logger = new LoggerConfiguration()
@@ -21,7 +23,7 @@ public class Program
 
         try
         {
-            Log.Information("Starting Silo");
+            Log.Information("Starting Silo Env {env}", env);
             var builder = CreateHostBuilder(args);
             var app = builder.Build();
             await app.RunAsync();
@@ -46,5 +48,12 @@ public class Program
             })
             .UseOrleansConfiguration()
             .UseAutofac()
-            .UseSerilog();
+            .UseSerilog()
+            .ConfigureAppConfiguration((hostingContext, config) =>
+            {
+                var env = hostingContext.HostingEnvironment;
+                config.AddJsonFile($"appsettings.{env.EnvironmentName}.json", 
+                    optional: true, 
+                    reloadOnChange: true);
+            });
 }
