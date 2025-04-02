@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Orleans.EventSourcing;
 using Orleans.Providers;
+using Orleans.Serialization;
 using Orleans.Streams;
 
 namespace Aevatar.Core;
@@ -42,6 +43,7 @@ public abstract partial class
     where TConfiguration : ConfigurationBase
 {
     protected IStreamProvider StreamProvider => this.GetStreamProvider(AevatarCoreConstants.StreamProvider);
+    protected DeepCopier DeepCopier => ServiceProvider.GetRequiredService<DeepCopier>();
 
     public ILogger Logger { get; set; } = NullLogger.Instance;
 
@@ -305,8 +307,29 @@ public abstract partial class
         await HandleStateChangedAsync();
         if (StateDispatcher != null)
         {
-            await StateDispatcher.PublishAsync(this.GetGrainId(),
-                new StateWrapper<TState>(this.GetGrainId(), State, Version));
+            TState state;
+            try
+            {
+                state = DeepCopier.Copy(State);
+            }
+            catch (Exception e)
+            { 
+                Logger.LogError(e, $"Error while deepCopying state of {this.GetGrainId().ToString()}: {e.Message}");
+                // TODO: Remove this workaround when the issue is fixed.
+                var stateProjectors = ServiceProvider.GetRequiredService<IEnumerable<IStateProjector>>();
+                foreach (var stateProjector in stateProjectors)
+                {
+                    await stateProjector.ProjectAsync(new StateWrapper<TState>(this.GetGrainId(), State, Version));
+                }
+
+                return;
+            }
+
+            if (state != null)
+            {
+                await StateDispatcher.PublishAsync(this.GetGrainId(),
+                    new StateWrapper<TState>(this.GetGrainId(), state, Version));
+            }
         }
     }
 
