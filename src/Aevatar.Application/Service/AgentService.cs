@@ -12,6 +12,7 @@ using Aevatar.Application.Grains.Agents.Creator;
 using Aevatar.Application.Grains.Subscription;
 using Aevatar.Common;
 using Aevatar.Core.Abstractions;
+using Aevatar.CQRS;
 using Aevatar.CQRS.Dto;
 using Aevatar.CQRS.Provider;
 using Aevatar.Exceptions;
@@ -19,6 +20,7 @@ using Aevatar.GAgents.GroupChat.WorkflowCoordinator;
 using Aevatar.GAgents.GroupChat.WorkflowCoordinator.Dto;
 using Aevatar.GAgents.GroupChat.WorkflowCoordinator.GEvent;
 using Aevatar.Options;
+using Aevatar.Query;
 using Aevatar.Schema;
 using Aevatar.Sender;
 using Aevatar.Workflow;
@@ -49,6 +51,7 @@ public class AgentService : ApplicationService, IAgentService
     private readonly GrainTypeResolver _grainTypeResolver;
     private readonly ISchemaProvider _schemaProvider;
     private readonly IWorkflowRepository _workflowRepository;
+    private readonly IIndexingService _indexingService;
 
     public AgentService(
         IClusterClient clusterClient,
@@ -59,7 +62,9 @@ public class AgentService : ApplicationService, IAgentService
         IUserAppService userAppService,
         IOptionsMonitor<AgentOptions> agentOptions,
         GrainTypeResolver grainTypeResolver,
-        ISchemaProvider schemaProvider, IWorkflowRepository workflowRepository)
+        ISchemaProvider schemaProvider, 
+        IWorkflowRepository workflowRepository,
+        IIndexingService indexingService)
     {
         _clusterClient = clusterClient;
         _cqrsProvider = cqrsProvider;
@@ -71,45 +76,7 @@ public class AgentService : ApplicationService, IAgentService
         _grainTypeResolver = grainTypeResolver;
         _schemaProvider = schemaProvider;
         _workflowRepository = workflowRepository;
-    }
-
-    public async Task<Tuple<long, List<AgentGEventIndex>>> GetAgentEventLogsAsync(string agentId, int pageNumber,
-        int pageSize)
-    {
-        if (!Guid.TryParse(agentId, out var validGuid))
-        {
-            _logger.LogInformation("GetAgentAsync Invalid id: {id}", agentId);
-            throw new UserFriendlyException("Invalid id");
-        }
-
-        var agentIds = await ViewGroupTreeAsync(agentId);
-
-        return await _cqrsProvider.QueryGEventAsync("", agentIds, pageNumber, pageSize);
-    }
-
-    private async Task<List<string>> ViewGroupTreeAsync(string agentId)
-    {
-        var result = new List<string> { agentId };
-        await BuildGroupTreeAsync(agentId, result);
-        return result;
-    }
-
-    private async Task BuildGroupTreeAsync(string agentId, List<string> result)
-    {
-        var gAgent = _clusterClient.GetGrain<ICreatorGAgent>(Guid.Parse(agentId));
-        var childrenAgentIds = await gAgent.GetChildrenAsync();
-        if (childrenAgentIds.IsNullOrEmpty())
-        {
-            return;
-        }
-
-        var childrenIds = childrenAgentIds.Select(s => s.Key.ToString()).ToList();
-        result.AddRange(childrenIds);
-
-        foreach (var childrenId in childrenIds)
-        {
-            await BuildGroupTreeAsync(childrenId, result);
-        }
+        _indexingService = indexingService;
     }
 
     private async Task<Dictionary<string, AgentTypeData?>> GetAgentTypeDataMap()
@@ -298,20 +265,26 @@ public class AgentService : ApplicationService, IAgentService
         var result = new List<AgentInstanceDto>();
         var currentUserId = _userAppService.GetCurrentUserId();
         var response =
-            await _cqrsProvider.GetUserInstanceAgent<CreatorGAgentState, AgentInstanceSQRSDto>(currentUserId, pageIndex,
-                pageSize);
-        if (response.Item1 == 0)
+            await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
+            {
+                QueryString = "userId.keyword:" + currentUserId,
+                StateName = nameof(CreatorGAgentState),
+                PageSize = pageSize,
+                PageIndex = pageIndex
+            });
+        if (response.TotalCount == 0)
         {
             return result;
         }
 
-        result.AddRange(response.Item2.Select(state => new AgentInstanceDto()
+        result.AddRange(response.Items.Select(state => new AgentInstanceDto()
         {
-            Id = state.Id, Name = state.Name,
-            Properties = state.Properties == null
+            Id = (string)state["id"],
+            Name = (string)state["name"],
+            Properties = state["properties"] == null
                 ? null
-                : JsonConvert.DeserializeObject<Dictionary<string, object>>(state.Properties),
-            AgentType = state.AgentType,
+                : JsonConvert.DeserializeObject<Dictionary<string, object>>((string)state["properties"]),
+            AgentType = (string)state["agentType"],
         }));
 
         return result;

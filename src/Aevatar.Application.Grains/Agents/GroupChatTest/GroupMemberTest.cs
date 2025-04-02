@@ -3,8 +3,6 @@ using GroupChat.GAgent;
 using GroupChat.GAgent.Dto;
 using GroupChat.GAgent.Feature.Common;
 using GroupChat.GAgent.GEvent;
-using Microsoft.Extensions.Logging;
-using Nest;
 
 namespace Aevatar.Application.Grains.Agents.GroupChatTest;
 

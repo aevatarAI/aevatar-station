@@ -9,10 +9,8 @@ namespace Aevatar.Service;
 
 public interface IAgentService
 {
-    Task<Tuple<long, List<AgentGEventIndex>>> GetAgentEventLogsAsync(string agentId, int pageIndex, int pageSize);
-    
     Task<List<AgentTypeDto>> GetAllAgents();
-    
+
     Task<AgentDto> CreateAgentAsync(CreateAgentInputDto dto);
     Task<List<AgentInstanceDto>> GetAllAgentInstances(int pageIndex, int pageSize);
     Task<AgentDto> GetAgentAsync(Guid guid);

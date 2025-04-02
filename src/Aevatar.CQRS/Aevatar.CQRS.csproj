@@ -10,14 +10,15 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj"/>
+        <ProjectReference Include="..\Aevatar.Domain\Aevatar.Domain.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="Aevatar.Core"/>
         <PackageReference Include="Aevatar.Core.Abstractions"/>
         <PackageReference Include="Aevatar.EventSourcing.Core"/>
-        <PackageReference Include="NEST"/>
-        <PackageReference Include="NEST.JsonNetSerializer"/>
+        <PackageReference Include="Elastic.Clients.Elasticsearch"/>
+        <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection"/>
         <PackageReference Include="Volo.Abp.AutoMapper"/>
         <PackageReference Include="MediatR"/>
     </ItemGroup>

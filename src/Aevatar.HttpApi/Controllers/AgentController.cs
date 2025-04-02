@@ -30,14 +30,6 @@ public class AgentController : AevatarController
         _subscriptionAppService = subscriptionAppService;
     }
 
-    [HttpGet("agent-logs")]
-    [Authorize(Policy = AevatarPermissions.Agent.ViewLogs)] 
-    public async Task<Tuple<long, List<AgentGEventIndex>>> GetAgentLogs(string agentId, int pageIndex, int pageSize)
-    {
-        _logger.LogInformation("Get Agent logs : {agentId} {pageIndex} {pageSize}", agentId, pageIndex, pageSize);
-        var agentDtoList = await _agentService.GetAgentEventLogsAsync(agentId, pageIndex, pageSize);
-        return agentDtoList;
-    }
 
     [HttpGet("agent-type-info-list")]
     [Authorize(Policy = AevatarPermissions.Agent.ViewAllType)]
@@ -47,7 +39,7 @@ public class AgentController : AevatarController
     }
 
     [HttpGet("agent-list")]
-    [Authorize(Policy = AevatarPermissions.Agent.ViewList)]
+    [Authorize]
     public async Task<List<AgentInstanceDto>> GetAllAgentInstance(int pageIndex = 0, int pageSize = 20)
     {
         return await _agentService.GetAllAgentInstances(pageIndex, pageSize);
