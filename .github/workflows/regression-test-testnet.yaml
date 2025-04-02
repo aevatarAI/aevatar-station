@@ -54,6 +54,7 @@ jobs:
         run: |
           source venv/bin/activate
           pytest -s -v regression_test.py
+          pytest -s -v regression_test_signalr.py
 
       - name: Lark Notification on Success
         if: success()
