@@ -35,7 +35,7 @@ public interface IIndexingService
     Task TryCreateTokenUsageIndexAsync(string indexName);
     Task SaveTokenUsageAsync(string indexName, List<Dto.TokenUsage> tokenUsages);
 
-    Task<Tuple<long, List<string>>> QueryTokenUsageAsync(string indexName, Guid projectId, string systemLLM,
+    Task<Tuple<long, List<string>>> QueryTokenUsageAsync(string indexName, string systemLLM,
         DateTime startTime,
         DateTime endTime, bool statisticsAsHour);
 }

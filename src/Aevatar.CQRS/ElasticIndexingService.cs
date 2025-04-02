@@ -18,6 +18,7 @@ using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.DependencyInjection;
 using Aevatar.CQRS.Dto;
+using Microsoft.VisualBasic;
 
 namespace Aevatar;
 
@@ -555,7 +556,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         return new PagedResultDto<Dictionary<string, object>>(response.Total, resultList);
     }
 
-    public async Task<Tuple<long, List<string>>> QueryTokenUsageAsync(string indexName, Guid projectId,
+    public async Task<Tuple<long, List<string>>> QueryTokenUsageAsync(string indexName,
         string systemLLM,
         DateTime startTime,
         DateTime endTime, bool statisticsAsHour)

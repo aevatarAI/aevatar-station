@@ -239,6 +239,11 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
     {
         return $"{CqrsConstant.IndexPrefix}-{_options.Value.HostId}-{index}{CqrsConstant.IndexSuffix}".ToLower();
     }
+    
+    public string GetIndexNameWithHostId(string hostId, string name)
+    {
+        return $"{CqrsConstant.IndexPrefix}-{hostId}-{name}{CqrsConstant.IndexSuffix}".ToLower();
+    }
 
     public Task PublishAsync<TState>(GrainId grainId, TState state) where TState : StateBase
     {
@@ -251,12 +256,12 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
         throw new NotImplementedException();
     }
 
-    public async Task<Tuple<long, List<string>>?> QueryTokenUsage(Guid projectId, string systemLLM, DateTime startTime,
+    public async Task<Tuple<long, List<string>>?> QueryTokenUsage(string hostId, string systemLLM, DateTime startTime,
         DateTime endTime, bool statisticsAsHour)
     {
         var result = await _mediator.Send(new TokenUsageQueryCommand()
         {
-            ProjectId = projectId, SystemLLM = systemLLM, StartTime = startTime, EndTime = endTime,
+            HostId = hostId, SystemLLM = systemLLM, StartTime = startTime, EndTime = endTime,
             StatisticsAsHour = statisticsAsHour
         });
 
