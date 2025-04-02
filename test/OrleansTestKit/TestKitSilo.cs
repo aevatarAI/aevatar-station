@@ -63,9 +63,11 @@ public sealed class TestKitSilo
         mockOptionsManager.Setup(m => m.Value).Returns(new TypeManifestOptions());
         var codecProvider = new CodecProvider(ServiceProvider, mockOptionsManager.Object);
         TestLogConsistentStorage = new InMemoryLogConsistentStorage();
-        LogConsistencyProvider =
+        TestLogConsistencyProvider =
             new TestLogConsistencyProvider(ServiceProvider, TestLogConsistentStorage, TestGrainStorage);
-        ServiceProvider.AddKeyedService<ILogViewAdaptorFactory>("LogStorage", LogConsistencyProvider);
+        LogConsistencyProvider = new LogConsistencyProvider(TestLogConsistentStorage, null, ServiceProvider);
+        
+        ServiceProvider.AddKeyedService<ILogViewAdaptorFactory>("LogStorage", TestLogConsistencyProvider);
         ProtocolServices = new DefaultProtocolServices(new Mock<IGrainContext>().Object, NullLoggerFactory.Instance,
             new DeepCopier(codecProvider, new CopyContextPool(codecProvider)), null!);
         ServiceProvider.AddService<ILogConsistencyProtocolServices>(ProtocolServices);
@@ -128,7 +130,8 @@ public sealed class TestKitSilo
     /// <summary>Gets the manager of all test silo timers.</summary>
     public TestTimerRegistry TimerRegistry { get; }
 
-    public TestLogConsistencyProvider LogConsistencyProvider { get; set; }
+    public TestLogConsistencyProvider TestLogConsistencyProvider { get; set; }
+    public LogConsistencyProvider LogConsistencyProvider { get; set; }
     public DefaultProtocolServices ProtocolServices { get; set; }
     public InMemoryLogConsistentStorage TestLogConsistentStorage { get; set; } = new();
 

@@ -28,18 +28,18 @@ public static class IdSpanBsonSerializerConfig
     }
 }
 
-public class IdSpanBsonSerializer : SerializerBase<IdSpan>
-{
-    private readonly StringSerializer _stringSerializer = new();
-
-    public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, IdSpan value)
-    {
-        _stringSerializer.Serialize(context, args, value.ToString());
-    }
-
-    public override IdSpan Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
-    {
-        var value = _stringSerializer.Deserialize(context, args);
-        return IdSpan.Create(value);
-    }
-} 
+// public class IdSpanBsonSerializer : SerializerBase<IdSpan>
+// {
+//     private readonly StringSerializer _stringSerializer = new();
+//
+//     public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, IdSpan value)
+//     {
+//         _stringSerializer.Serialize(context, args, value.ToString());
+//     }
+//
+//     public override IdSpan Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
+//     {
+//         var value = _stringSerializer.Deserialize(context, args);
+//         return IdSpan.Create(value);
+//     }
+// } 

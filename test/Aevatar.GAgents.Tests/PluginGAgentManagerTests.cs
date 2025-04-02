@@ -4,12 +4,14 @@ using Aevatar.Core.Abstractions.Extensions;
 using Aevatar.Core.Abstractions.Plugin;
 using Aevatar.Plugins;
 using Aevatar.Plugins.DbContexts;
+using Aevatar.Plugins.Entities;
 using Aevatar.Plugins.GAgents;
 using Aevatar.Plugins.Repositories;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Shouldly;
+using Volo.Abp.Uow;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,6 +30,8 @@ public class PluginGAgentManagerTests : AevatarGAgentsTestBase
     private readonly TenantPluginCodeMongoDbContext _tenantPluginCodeMongoDbContext;
     private readonly ITenantPluginCodeRepository _tenantPluginCodeRepository;
     private readonly IPluginCodeStorageRepository _pluginCodeStorageRepository;
+    
+    private readonly IUnitOfWorkManager _unitOfWorkManager;
 
     public PluginGAgentManagerTests(ITestOutputHelper outputHelper)
     {
@@ -50,6 +54,66 @@ public class PluginGAgentManagerTests : AevatarGAgentsTestBase
         _tenantPluginCodeMongoDbContext = GetRequiredService<TenantPluginCodeMongoDbContext>();
         _pluginCodeStorageRepository = GetRequiredService<IPluginCodeStorageRepository>();
         _tenantPluginCodeRepository = GetRequiredService<ITenantPluginCodeRepository>();
+        _unitOfWorkManager = GetRequiredService<IUnitOfWorkManager>();
+    }
+
+    [Fact]
+    async Task MongoRepositoryTest()
+    {
+        // need to supply
+        using (var uow = _unitOfWorkManager.Begin())
+        {
+            var primaryKey = Guid.NewGuid();
+            var result = await _pluginCodeStorageRepository.GetPluginCodeByGAgentPrimaryKey(primaryKey);
+            result.ShouldBeNull();
+
+            var primaryKeyList = new List<Guid>() { primaryKey};
+            var resultList = await _pluginCodeStorageRepository.GetPluginCodesByGAgentPrimaryKeys(primaryKeyList);
+            resultList.Count.ShouldBe(0);
+            
+            var result1 = await _tenantPluginCodeRepository.GetGAgentPrimaryKeysByTenantIdAsync(primaryKey);
+            result1.ShouldBeNull();
+        }
+
+        var tenantDoc = new TenantPluginCodeSnapshotDocument()
+        {
+            Etag = "",
+            Doc = new TenantPluginCodeDocEntity()
+            {
+                InternalId = "",
+                Type = "",
+                Snapshot = new TenantPluginCodeSnapshotEntity()
+                {
+                    InternalId = "",
+                    Type = "",
+                    CodeStorageGuids = new CodeStorageGuidList()
+                    {
+                        Type = "",
+                        Values = new List<Guid>()
+                    }
+                }
+            }
+        };
+        tenantDoc.ToString();
+        var pluginDoc = new PluginCodeStorageSnapshotDocument()
+        {
+            Etag = "",
+            Doc = new PluginCodeStorageDoc()
+            {
+                InternalId = "",
+                Type = "",
+                Snapshot = new PluginCodeStorageSnapshot()
+                {
+                    InternalId = "",
+                    Type = "",
+                    Code = new ByteArrayContainer()
+                    {
+                        Type = "",
+                        Value = new byte[1]
+                    }
+                }
+            }
+        };
     }
 
     [Fact]

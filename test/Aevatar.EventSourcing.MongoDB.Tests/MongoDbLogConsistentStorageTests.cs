@@ -1,4 +1,7 @@
+using Aevatar.Core.Abstractions;
 using Aevatar.EventSourcing.Core.Exceptions;
+using Aevatar.EventSourcing.Core.Storage;
+using Aevatar.EventSourcing.MongoDB.Hosting;
 using Aevatar.EventSourcing.MongoDB.Options;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -52,6 +55,11 @@ public class MongoDbLogConsistentStorageTests : IAsyncDisposable
         };
 
         _storage = new MongoDbLogConsistentStorage(_name, _mongoDbOptions, _clusterOptionsMock.Object, _loggerMock.Object);
+    }
+
+    [Fact]
+    public async Task Test()
+    {
     }
 
     public async ValueTask DisposeAsync()
@@ -250,6 +258,29 @@ public class MongoDbLogConsistentStorageTests : IAsyncDisposable
             Exception = new Exception("UpdateSnapshotStorage")
         };
         updateSnapshotException.ToString().ShouldContain("UpdateSnapshotStorage");
+
+        var eventLogWrapper = new EventLogWrapper<int>()
+        {
+            Version = 1,
+            Timestamp = DateTime.Now,
+            Event = 1
+        };
+        eventLogWrapper.Id.ShouldNotBe(Guid.Empty.ToString());
+        
+        var viewStateWrapper = new ViewStateWrapper<int>()
+        {
+            Version = 1,
+            EventLogTimestamp = DateTime.Now,
+            State = 1,
+        };
+        viewStateWrapper.Id.ShouldNotBe(Guid.Empty.ToString());
+
+        var readFromPrimaryFailed = new ReadFromPrimaryFailed()
+        {
+            Exception = new Exception("test exception")
+        };
+        readFromPrimaryFailed.ToString().ShouldContain("test exception");
+        
     }
 
     private class TestLogEntry
