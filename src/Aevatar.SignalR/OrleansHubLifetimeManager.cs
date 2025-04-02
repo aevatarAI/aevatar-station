@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Protocol;
 using Newtonsoft.Json;
 using Orleans.Streams;
+using System.Collections.Concurrent;
 
 namespace Aevatar.SignalR;
 
@@ -23,6 +24,9 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
     private IAsyncStream<ClientMessage> _serverStream = default!;
     private IAsyncStream<AllMessage> _allStream = default!;
     private Timer _timer = default!;
+
+    private static readonly ConcurrentDictionary<string, (int Count, DateTime LastReset)> _ipConnectionCounter = new();
+    private const int MaxConnectionsPerSecond = 5;
 
     public OrleansHubLifetimeManager(
         ILogger<OrleansHubLifetimeManager<THub>> logger,
@@ -122,16 +126,57 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
         return connection == null ? Task.CompletedTask : SendLocal(connection, clientMessage.Message);
     }
 
+    private bool IsIpRateLimited(string ipAddress)
+    {
+        var now = DateTime.UtcNow;
+        var (count, lastReset) = _ipConnectionCounter.GetOrAdd(ipAddress, _ => (0, now));
+        
+        if ((now - lastReset).TotalSeconds >= 1)
+        {
+            _ipConnectionCounter.TryUpdate(ipAddress, (1, now), (count, lastReset));
+            return false;
+        }
+        
+        if (count >= MaxConnectionsPerSecond)
+        {
+            _logger.LogWarning(
+                "IP rate limit exceeded:\n" +
+                "IP: {IpAddress}\n" +
+                "Connections in last second: {Count}\n" +
+                "Max allowed: {MaxAllowed}",
+                ipAddress,
+                count,
+                MaxConnectionsPerSecond);
+            return true;
+        }
+        
+        _ipConnectionCounter.TryUpdate(ipAddress, (count + 1, lastReset), (count, lastReset));
+        return false;
+    }
+
     public override async Task OnConnectedAsync(HubConnectionContext connection)
     {
         await EnsureStreamSetup();
 
         try
         {
-            _connections.Add(connection);
-
             var httpContext = connection.GetHttpContext();
             var ipAddress = httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "Unknown IP";
+            
+            if (IsIpRateLimited(ipAddress))
+            {
+                _logger.LogWarning(
+                    "Connection rejected due to rate limiting:\n" +
+                    "IP: {IpAddress}\n" +
+                    "ConnectionId: {ConnectionId}",
+                    ipAddress,
+                    connection.ConnectionId);
+                    
+                throw new HubException($"Too many connection attempts. Please wait a moment before trying again.");
+            }
+
+            _connections.Add(connection);
+
             var userAgent = httpContext?.Request?.Headers["User-Agent"].ToString() ?? "Unknown Agent";
             
             _logger.LogDebug(
