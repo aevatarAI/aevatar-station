@@ -27,10 +27,11 @@ public class NotificationService : INotificationService, ITransientDependency
     private readonly IObjectMapper _objectMapper;
     private readonly IHubService _hubService;
     private readonly IOrganizationService _organizationService;
+    private readonly IdentityUserManager _identityUserManager;
 
     public NotificationService(INotificationHandlerFactory notificationHandlerFactory,
         ILogger<NotificationService> logger, INotificationRepository notificationRepository, IObjectMapper objectMapper,
-        IHubService hubService, IOrganizationService organizationService)
+        IHubService hubService, IOrganizationService organizationService, IdentityUserManager identityUserManager)
     {
         _notificationHandlerFactory = notificationHandlerFactory;
         _logger = logger;
@@ -38,6 +39,7 @@ public class NotificationService : INotificationService, ITransientDependency
         _objectMapper = objectMapper;
         _hubService = hubService;
         _organizationService = organizationService;
+        _identityUserManager = identityUserManager;
     }
 
     public async Task<bool> CreateAsync(NotificationTypeEnum notificationTypeEnum, Guid? creator, Guid target,
@@ -93,7 +95,7 @@ public class NotificationService : INotificationService, ITransientDependency
                     Data = new NotificationResponseMessage()
                         { Id = notification.Id, Status = NotificationStatusEnum.None }
                 });
-            
+
             stopWatch.Stop();
             _logger.LogInformation($"StopWatch SignalR CreateAsync use time:{stopWatch.ElapsedMilliseconds}");
         });
@@ -116,18 +118,18 @@ public class NotificationService : INotificationService, ITransientDependency
         {
             var stopWatch = new Stopwatch();
             stopWatch.Start();
-            
+
             await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
                 new NotificationResponse()
                 {
                     Data = new NotificationResponseMessage()
                         { Id = notificationId, Status = NotificationStatusEnum.Withdraw }
                 });
-            
+
             stopWatch.Stop();
             _logger.LogInformation($"StopWatch SignalR WithdrawAsync use time:{stopWatch.ElapsedMilliseconds}");
         });
-        
+
         return true;
     }
 
@@ -141,7 +143,8 @@ public class NotificationService : INotificationService, ITransientDependency
             return false;
         }
 
-        if (notification.Status != NotificationStatusEnum.None || status == NotificationStatusEnum.None)
+        if ((notification.Status != NotificationStatusEnum.None &&
+             notification.Status != NotificationStatusEnum.Read) || status == NotificationStatusEnum.None)
         {
             _logger.LogError(
                 $"[NotificationService][Response] notification.Status != NotificationStatusEnum.None notificationId:{notificationId}");
@@ -168,21 +171,31 @@ public class NotificationService : INotificationService, ITransientDependency
             await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
                 new NotificationResponse()
                     { Data = new NotificationResponseMessage() { Id = notificationId, Status = status } });
-            
+
             stopWatch.Stop();
             _logger.LogInformation($"StopWatch SignalR Response use time:{stopWatch.ElapsedMilliseconds}");
         });
-        
+
         return true;
     }
 
     public async Task<List<NotificationDto>> GetNotificationList(Guid? creator, int pageIndex, int pageSize)
     {
         var query = await _notificationRepository.GetQueryableAsync();
-        var queryResponse = query.Where(w => w.Receiver == creator || w.CreatorId == creator)
+        var queryResponse = query.Where(w => w.Receiver == creator)
             .OrderByDescending(o => o.CreationTime).Skip(pageSize * pageIndex).Take(pageSize).ToList();
 
-        return _objectMapper.Map<List<NotificationInfo>, List<NotificationDto>>(queryResponse);
+        var result = _objectMapper.Map<List<NotificationInfo>, List<NotificationDto>>(queryResponse);
+        foreach (var item in result)
+        {
+            var userInfo = await _identityUserManager.GetByIdAsync(item.CreatorId);
+            if (userInfo != null)
+            {
+                item.CreatorName = userInfo.UserName;
+            }
+        }
+
+        return result;
     }
 
     public async Task<List<OrganizationVisitDto>> GetOrganizationVisitInfo(Guid userId, int pageIndex, int pageSize)
