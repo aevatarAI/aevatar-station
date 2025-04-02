@@ -32,7 +32,7 @@ public static class StreamExtensions
     /// </summary>
     /// <param name="serverId">The id of the server that the message destination connection is connected at.</param>
     public static IAsyncStream<ClientMessage> GetServerStream(this IStreamProvider streamProvider, Guid serverId)
-        => streamProvider.GetStream<ClientMessage>(StreamId.Create("SERVER_STREAM_QUANTUM", serverId));
+        => streamProvider.GetStream<ClientMessage>(StreamId.Create("SERVER_STREAM", serverId));
 
     /// <summary>
     /// Gets a stream that you can listen on to receive a message when the connection with the given <paramref name="connectionId"/> has been disconnected.
