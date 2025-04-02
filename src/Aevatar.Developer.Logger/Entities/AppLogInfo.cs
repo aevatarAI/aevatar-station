@@ -1,17 +1,16 @@
+using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 
 namespace Aevetar.Developer.Logger.Entities;
 
 public class AppLogInfo
 {
-    public string Message { get; set; }
+    [JsonPropertyName("@m")] public string Message { get; set; }
+    [JsonPropertyName("@i")] public string LogId { get; set; }
+    [JsonPropertyName("@t")] public DateTime Time { get; set; }
 
-    public string LogId { get; set; }
-    
-    public DateTime Time { get; set; }
-    
-    public string Level { get; set; }
-    public string Exception { get; set; }
+    [JsonPropertyName("@l")] public string Level { get; set; }
+    [JsonPropertyName("@x")] public string Exception { get; set; }
 
     public string SourceContext { get; set; }
 

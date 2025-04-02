@@ -2,169 +2,236 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
 using Aevatar.CQRS.Dto;
 using Aevatar.Query;
 using Aevatar.CQRS.Provider;
+using Aevatar.Options;
+using Elastic.Clients.Elasticsearch;
+using Elastic.Clients.Elasticsearch.Core.Bulk;
+using Elastic.Clients.Elasticsearch.IndexManagement;
+using Elastic.Clients.Elasticsearch.QueryDsl;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using Nest;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using Orleans.Runtime;
+using Newtonsoft.Json.Serialization;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
-using Volo.Abp.Application.Services;
 using Volo.Abp.DependencyInjection;
 
 namespace Aevatar;
 
 public class ElasticIndexingService : IIndexingService, ISingletonDependency
 {
-    private readonly IElasticClient _elasticClient;
+    private readonly ElasticsearchClient _elasticClient;
     private readonly ILogger<ElasticIndexingService> _logger;
     private const string CTime = "cTime";
     private const int DefaultSkip = 0;
     private const int DefaultLimit = 1000;
     private readonly ICQRSProvider _cqrsProvider;
+    private readonly IMemoryCache _cache;
+    private readonly IOptionsSnapshot<HostOptions> _options;
 
-    public ElasticIndexingService(ILogger<ElasticIndexingService> logger, IElasticClient elasticClient,
-        ICQRSProvider cqrsProvider)
+    public ElasticIndexingService(ILogger<ElasticIndexingService> logger, ElasticsearchClient elasticClient,
+        ICQRSProvider cqrsProvider, IMemoryCache cache, IOptionsSnapshot<HostOptions> hostOptions)
     {
         _logger = logger;
         _elasticClient = elasticClient;
         _cqrsProvider = cqrsProvider;
+        _cache = cache;
+        _options = hostOptions;
     }
 
-    public void CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase
+    public string GetIndexName(string index)
     {
-        var indexName = _cqrsProvider.GetIndexName(stateBase.GetType().Name.ToLower());
-        var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
-        if (indexExistsResponse.Exists)
+        return $"{CqrsConstant.IndexPrefix}-{_options.Value.HostId}-{index}{CqrsConstant.IndexSuffix}".ToLower();
+    }
+
+    public async Task CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase
+    {
+        var indexName = GetIndexName(stateBase.GetType().Name.ToLower());
+        if (_cache.TryGetValue(indexName, out bool? _))
         {
             return;
         }
 
-        var createIndexResponse = _elasticClient.Indices.Create(indexName, c => c
-            .Map<T>(m => m
-                .DynamicTemplates(dt => dt
-                    .DynamicTemplate("numbers_as_integer", t => t
-                        .MatchMappingType("long")
-                        .Mapping(f => { return new NumberProperty(NumberType.Long); })
-                    )
-                    .DynamicTemplate("numbers_as_float", t => t
-                        .MatchMappingType("double")
-                        .Mapping(f => { return new NumberProperty(NumberType.Double); })
-                    )
-                    .DynamicTemplate("objects_as_nested", t => t
-                        .MatchMappingType("object")
-                        .Mapping(f => new ObjectProperty { Dynamic = true })
-                    )
-                ).Properties(props =>
+        var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
+        if (!indexExistsResponse.Exists)
+        {
+            var createIndexResponse = await CreateIndexAsync<T>(indexName);
+
+            if (!createIndexResponse.IsValidResponse)
+            {
+                _logger.LogError(
+                    "Error creating state index. indexName:{indexName},error:{error},DebugInfo:{DebugInfo}",
+                    indexName,
+                    createIndexResponse.ElasticsearchServerError?.Error,
+                    createIndexResponse.DebugInformation);
+                return;
+            }
+
+            _logger.LogInformation("Successfully created state index. indexName:{indexName}", indexName);
+        }
+
+        _cache.Set(indexName, true, new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24)
+        });
+    }
+
+    private async Task<CreateIndexResponse> CreateIndexAsync<T>(string indexName) where T : StateBase
+    {
+        var createIndexResponse = await _elasticClient.Indices.CreateAsync(indexName, c => c
+            .Mappings(m => m
+                .Properties<T>(props =>
                 {
-                    var type = stateBase.GetType();
+                    var type = typeof(T);
                     foreach (var property in type.GetProperties())
                     {
                         var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
-                        if (property.PropertyType == typeof(string))
+                        var propType = property.PropertyType;
+
+                        // Map based on property type
+                        if (propType == typeof(string))
                         {
-                            props.Keyword(k => k
-                                .Name(propertyName)
-                            );
+                            props.Text(propertyName);
+                            props.Keyword(propertyName, k => k.IgnoreAbove(256));
                         }
-                        else if (property.PropertyType == typeof(DateTime))
+                        else if (propType == typeof(short) || propType == typeof(int) || propType == typeof(long))
                         {
-                            props.Date(d => d
-                                .Name(propertyName)
-                            );
+                            props.LongNumber(propertyName);
                         }
-                        else if (property.PropertyType == typeof(Guid))
+                        else if (propType == typeof(float))
                         {
-                            props.Keyword(k => k
-                                .Name(propertyName)
-                            );
+                            props.FloatNumber(propertyName);
                         }
-                        else if (property.PropertyType == typeof(Type))
+                        else if (propType == typeof(double) || propType == typeof(decimal))
                         {
-                            props.Text(o => o
-                                .Name(propertyName)
-                            );
+                            props.DoubleNumber(propertyName);
                         }
-                        else if (property.PropertyType == typeof(bool))
+                        else if (propType == typeof(DateTime))
                         {
-                            props.Boolean(b => b
-                                .Name(propertyName)
-                            );
+                            props.Date(propertyName); // Date for datetime fields
+                        }
+                        else if (propType == typeof(bool))
+                        {
+                            props.Boolean(propertyName); // Boolean for boolean fields
+                        }
+                        else if (propType == typeof(Guid))
+                        {
+                            props.Keyword(propertyName, k => k.ToString());
+                        }
+                        else
+                        {
+                            props.Text(propertyName);
                         }
                     }
 
-                    props.Date(d => d
-                        .Name(CTime)
-                    );
-                    return props;
+                    // Add CTime as a Date field
+                    props.Date("CTime");
                 })
             )
         );
 
-        if (!createIndexResponse.IsValid)
-        {
-            _logger.LogError("Error creating state index. indexName:{indexName},error:{error},DebugInfo:{DebugInfo}",
-                indexName,
-                createIndexResponse.ServerError?.Error,
-                JsonConvert.SerializeObject(createIndexResponse.DebugInformation));
-        }
-        else
-        {
-            _logger.LogInformation("Successfully created state index. indexName:{indexName}", indexName);
-        }
+        return createIndexResponse;
     }
 
-    public async Task SaveOrUpdateStateIndexAsync<T>(string id, T stateBase) where T : StateBase
+    private static bool IsBasicType(Type type)
     {
-        var indexName = _cqrsProvider.GetIndexName(stateBase.GetType().Name.ToLower());
-        var properties = stateBase.GetType().GetProperties();
-        var document = new Dictionary<string, object>();
+        Type underlyingType = Nullable.GetUnderlyingType(type) ?? type;
 
-        foreach (var property in properties)
+        if (underlyingType.IsPrimitive)
+            return true;
+
+        if (underlyingType == typeof(string) ||
+            underlyingType == typeof(DateTime) ||
+            underlyingType == typeof(decimal) ||
+            underlyingType == typeof(Guid))
+            return true;
+        return false;
+    }
+
+    public async Task SaveOrUpdateStateIndexBatchAsync(IEnumerable<SaveStateCommand> commands)
+    {
+        var bulkOperations = new BulkOperationsCollection();
+
+        foreach (var command in commands)
         {
-            var value = property.GetValue(stateBase);
-            var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
-            if (value is IDictionary or GrainId)
+            var (stateBase, id) = (command.State, command.GuidKey);
+            var indexName = GetIndexName(stateBase.GetType().Name.ToLower());
+            var document = new Dictionary<string, object>();
+            foreach (var property in stateBase.GetType().GetProperties())
             {
-                document[propertyName] = JsonConvert.SerializeObject(value);
-            }
-            else
-            {
-                if (value != null)
+                var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
+                var value = property.GetValue(stateBase);
+                if (value == null)
+                {
+                    continue;
+                }
+
+                if (!IsBasicType(property.PropertyType))
+                {
+                    document[propertyName] = JsonConvert.SerializeObject(value, new JsonSerializerSettings
+                    {
+                        ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                        ContractResolver = new CamelCasePropertyNamesContractResolver()
+                    });
+                }
+                else
                 {
                     document.Add(propertyName, value);
                 }
             }
+
+            document["ctime"] = DateTime.UtcNow;
+
+            var item = new BulkIndexOperation<object>(document);
+            item.Id = id;
+            item.Index = indexName;
+            bulkOperations.Add(item);
         }
 
-        document.Add(CTime, DateTime.UtcNow);
-
-        var response = await _elasticClient.IndexAsync(document, i => i
-            .Index(indexName)
-            .Id(id)
-        );
-
-        if (!response.IsValid)
+        var bulkRequest = new BulkRequest
         {
+            Operations = bulkOperations,
+            Refresh = Refresh.WaitFor
+        };
+
+        var response = await _elasticClient.BulkAsync(bulkRequest);
+
+        ProcessBulkResponse(response);
+    }
+
+    private void ProcessBulkResponse(BulkResponse response)
+    {
+        if (response.Errors)
+        {
+            var errorDetails = response.Items
+                .Where(item => item.Error != null)
+                .Select(item => new
+                {
+                    DocumentId = item.Id,
+                    ErrorType = item.Error?.Type,
+                    ErrorReason = item.Error?.Reason
+                });
+
             _logger.LogError(
-                "Save State Error, indexing document error,indexName:{indexName} error:{error}, DebugInfo{DebugInfo} ",
-                indexName,
-                response.ServerError, JsonConvert.SerializeObject(response.DebugInformation));
-        }
-        else
-        {
-            _logger.LogInformation("Save State Successfully. indexName:{indexName}", indexName);
+                "Save State Batch Error: {ErrorCount} failures. Details: {Errors}",
+                errorDetails.Count(),
+                JsonConvert.SerializeObject(errorDetails)
+            );
         }
     }
 
-    public async Task<string> GetStateIndexDocumentsAsync(string indexName,
-        Func<QueryContainerDescriptor<dynamic>, QueryContainer> query, int skip = DefaultSkip, int limit = DefaultLimit)
+
+    public async Task<string> GetStateIndexDocumentsAsync(string stateName,
+        Action<QueryDescriptor<dynamic>> query, int skip = DefaultSkip, int limit = DefaultLimit)
     {
+        var indexName = GetIndexName(stateName.ToLower());
         try
         {
             var response = await _elasticClient.SearchAsync<dynamic>(s => s
@@ -173,12 +240,15 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                 .From(skip)
                 .Size(limit));
 
-            if (!response.IsValid)
+            if (!response.IsValidResponse)
             {
+                var errorReason = response.ElasticsearchServerError?.Error?.Reason;
                 _logger.LogError(
-                    "state documents query fail, indexName:{indexName} error:{error} ,DebugInfo{DebugInfo}", indexName,
-                    response.ServerError?.Error.Reason, JsonConvert.SerializeObject(response.DebugInformation));
-                return "";
+                    "State documents query failed. Index: {Index}, Error: {Error}, Debug: {Debug}",
+                    indexName,
+                    errorReason,
+                    response.DebugInformation);
+                return string.Empty;
             }
 
             var documents = response.Hits.Select(hit => hit.Source).ToList();
@@ -187,7 +257,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                 return "";
             }
 
-            var documentContent = JsonConvert.SerializeObject(documents.FirstOrDefault());
+            var documentContent = documents.FirstOrDefault("")!.ToString();
             return documentContent;
         }
         catch (Exception e)
@@ -197,254 +267,124 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         }
     }
 
-    public void CheckExistOrCreateIndex<T>(T baseIndex) where T : BaseIndex
+    public async Task<PagedResultDto<Dictionary<string, object>>> QueryWithLuceneAsync(LuceneQueryDto queryDto)
     {
-        _logger.LogInformation("CheckExistOrCreateIndex, indexName:{indexName}", baseIndex.GetType().Name.ToLower());
+        _logger.LogInformation("[Lucene Query] Index: {Index}, Query: {QueryString}",
+            queryDto.StateName, queryDto.QueryString);
 
-        var indexName = _cqrsProvider.GetIndexName(baseIndex.GetType().Name.ToLower());
-        var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
-        if (indexExistsResponse.Exists)
+        try
         {
-            _logger.LogInformation("Index already exists. indexName:{indexName}", indexName);
-            return;
-        }
-
-        var createIndexResponse = _elasticClient.Indices.Create(indexName, c => c
-            .Map<T>(m => m
-                .Dynamic(false)
-                .Properties(props =>
-                {
-                    var type = baseIndex.GetType();
-                    foreach (var property in type.GetProperties())
-                    {
-                        var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
-                        if (property.PropertyType == typeof(string))
-                        {
-                            props.Keyword(k => k
-                                .Name(propertyName)
-                            );
-                        }
-                        else if (property.PropertyType == typeof(int) || property.PropertyType == typeof(long))
-                        {
-                            props.Number(n => n
-                                .Name(propertyName)
-                                .Type(NumberType.Long)
-                            );
-                        }
-                        else if (property.PropertyType == typeof(float))
-                        {
-                            props.Number(n => n
-                                .Name(propertyName)
-                                .Type(NumberType.Float)
-                            );
-                        }
-                        else if (property.PropertyType == typeof(double) || property.PropertyType == typeof(decimal))
-                        {
-                            props.Number(n => n
-                                .Name(propertyName)
-                                .Type(NumberType.Double)
-                            );
-                        }
-                        else if (property.PropertyType == typeof(DateTime))
-                        {
-                            props.Date(d => d
-                                .Name(propertyName)
-                            );
-                        }
-                        else if (property.PropertyType == typeof(Guid))
-                        {
-                            props.Keyword(k => k
-                                .Name(propertyName)
-                            );
-                        }
-                        else if (property.PropertyType == typeof(bool))
-                        {
-                            props.Boolean(b => b
-                                .Name(propertyName)
-                            );
-                        }
-                    }
-
-                    props.Date(d => d
-                        .Name(CTime)
-                    );
-                    return props;
-                })
-            )
-        );
-        if (!createIndexResponse.IsValid)
-        {
-            _logger.LogError("Error creating index. indexName:{indexName},error:{error},DebugInfo{DebugInfo}",
-                indexName,
-                createIndexResponse.ServerError?.Error,
-                JsonConvert.SerializeObject(createIndexResponse.DebugInformation));
-        }
-        else
-        {
-            _logger.LogInformation("Successfully created index . indexName:{indexName}", indexName);
-        }
-    }
-
-    public async Task SaveOrUpdateIndexAsync<T>(string id, T baseIndex) where T : BaseIndex
-    {
-        _logger.LogInformation("SaveOrUpdateIndexAsync, indexName:{indexName}", baseIndex.GetType().Name.ToLower());
-
-        var indexName = _cqrsProvider.GetIndexName(baseIndex.GetType().Name.ToLower());
-        var properties = baseIndex.GetType().GetProperties();
-        var document = new Dictionary<string, object>();
-
-        foreach (var property in properties)
-        {
-            var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
-            var value = property.GetValue(baseIndex);
-            if (value is IList or IDictionary)
+            var sortOptions = new List<SortOptions>();
+            foreach (var sortField in queryDto.SortFields)
             {
-                document[propertyName] = JsonConvert.SerializeObject(value);
-            }
-            else
-            {
-                if (value != null)
+                var parts = sortField.Split(':', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length != 2)
                 {
-                    document.Add(propertyName, value);
+                    _logger.LogWarning("Invalid sort field: {SortField}", sortField);
+                    continue;
                 }
-            }
-        }
 
-        document.Add(CTime, DateTime.UtcNow);
+                var fieldName = parts[0].Trim();
+                var sortOrder = parts[1].Trim().ToLower();
+                if (sortOrder != "asc" && sortOrder != "desc")
+                {
+                    _logger.LogWarning("Invalid sort order for field: {Field}. Expected 'asc' or 'desc'.", fieldName);
+                    continue;
+                }
 
-        var response = await _elasticClient.IndexAsync(document, i => i
-            .Index(indexName)
-            .Id(id)
-        );
+                var order = sortOrder == "desc" ? SortOrder.Desc : SortOrder.Asc;
 
-        if (!response.IsValid)
-        {
-            _logger.LogError("Index save Error, indexName:{indexName} error:{error},DebugInfo:{DebugInfo} ", indexName,
-                response.ServerError, JsonConvert.SerializeObject(response.DebugInformation));
-        }
-        else
-        {
-            _logger.LogInformation("Index save Successfully, indexName: {indexName} ", indexName);
-        }
-    }
-
-    public async Task<Tuple<long, List<TEntity>>> GetSortListAsync<TEntity>(
-        Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterFunc = null,
-        Func<SourceFilterDescriptor<TEntity>, ISourceFilter> includeFieldFunc = null,
-        Func<SortDescriptor<TEntity>, IPromise<IList<ISort>>> sortFunc = null, int limit = DefaultLimit,
-        int skip = DefaultSkip, string? index = null) where TEntity : class
-
-    {
-        var indexName = index ?? _cqrsProvider.GetIndexName(typeof(TEntity).Name.ToLower());
-        try
-        {
-            Func<SearchDescriptor<TEntity>, ISearchRequest> selector;
-            if (sortFunc != null)
-            {
-                selector = new Func<SearchDescriptor<TEntity>, ISearchRequest>(s => s
-                    .Index(indexName)
-                    .Query(filterFunc ?? (q => q.MatchAll()))
-                    .Sort(sortFunc)
-                    .Source(includeFieldFunc ?? (i => i.IncludeAll()))
-                    .From(skip)
-                    .Size(limit));
-            }
-            else
-            {
-                selector = new Func<SearchDescriptor<TEntity>, ISearchRequest>(s => s
-                    .Index(indexName)
-                    .Query(filterFunc ?? (q => q.MatchAll()))
-                    .Source(includeFieldFunc ?? (i => i.IncludeAll()))
-                    .From(skip)
-                    .Size(limit));
+                var field = new Field(fieldName);
+                var fieldSort = new FieldSort { Order = order };
+                sortOptions.Add(SortOptions.Field(field, fieldSort));
             }
 
-            var result = await _elasticClient.SearchAsync(selector);
-            if (result.IsValid)
+            var from = queryDto.PageIndex * queryDto.PageSize;
+            var size = queryDto.PageSize;
+
+            var index = GetIndexName(queryDto.StateName);
+
+
+            var searchRequest = new SearchRequest<Dictionary<string, object>>(index)
             {
-                return new Tuple<long, List<TEntity>>(result.Total, result.Documents.ToList());
+                From = from,
+                Size = size,
+
+                Sort = sortOptions
+            };
+            if (!queryDto.QueryString.IsNullOrEmpty())
+            {
+                searchRequest.Query = new QueryStringQuery
+                {
+                    Query = queryDto.QueryString,
+                    AllowLeadingWildcard = false
+                };
             }
 
-            _logger.LogError("{indexName} Search fail. error:{error}, DebugInfo{DebugInfo}", indexName,
-                result.ServerError?.Error, JsonConvert.SerializeObject(result.DebugInformation));
-            return null;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "{indexName} Search Exception.", indexName);
-            throw;
-        }
-    }
+            var response = await _elasticClient.SearchAsync<Dictionary<string, object>>(searchRequest);
 
-
-    public async Task<Tuple<long, string>> GetSortDataDocumentsAsync(string indexName,
-        Func<QueryContainerDescriptor<dynamic>, QueryContainer> query, int skip = 0, int limit = 1000)
-    {
-        try
-        {
-            var response = await _elasticClient.SearchAsync<dynamic>(s => s
-                .Index(indexName)
-                .Query(query)
-                .From(skip)
-                .Size(limit));
-
-            if (!response.IsValid)
+            if (!response.IsValidResponse)
             {
-                _logger.LogError(
-                    "index documents query fail, indexName:{indexName} error:{error} ,DebugInfo{DebugInfo}", indexName,
-                    response.ServerError?.Error.Reason, JsonConvert.SerializeObject(response.DebugInformation));
-                return null;
+                var error = response.ElasticsearchServerError?.Error?.Reason ?? "Unknown error";
+                _logger.LogError("Elasticsearch query failed: {Error}, Debug: {Debug}",
+                    error, response.DebugInformation);
+                throw new UserFriendlyException($"ES Query Failed: {error}");
             }
 
             var total = response.Total;
-            var documents = response.Hits.Select(hit => hit.Source);
-            var documentContent = JsonConvert.SerializeObject(documents);
-            return new Tuple<long, string>(total, documentContent);
+            var results = response.Hits
+                .Select(h => ConvertJsonElementToDictionary(h.Source))
+                .Where(s => s != null)
+                .ToList();
+
+            _logger.LogInformation("[Lucene Query] Index: {Index}, Found {Count} results",
+                queryDto.StateName, results.Count);
+
+            return new PagedResultDto<Dictionary<string, object>>(total, results);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            _logger.LogError(e, "index documents query Exception,indexName:{indexName}", indexName);
-            throw;
+            _logger.LogError(ex, "[Lucene Query] Exception occurred. Index: {Index}", queryDto.StateName);
+            throw new UserFriendlyException(ex.Message);
         }
     }
 
-    public async Task<PagedResultDto<Dictionary<string, object>>> QueryWithLuceneAsync(LuceneQueryDto queryDto)
+    private static Dictionary<string, object?> ConvertJsonElementToDictionary(Dictionary<string, object?> source)
     {
-        _logger.LogInformation("[Lucene Query] Index: {Index}, Query: {QueryString}", queryDto.Index,
-            queryDto.QueryString);
-        var sortDescriptor = new SortDescriptor<Dictionary<string, object>>();
-        foreach (var sortField in queryDto.SortFields)
+        if (source == null)
+            return null;
+
+        var result = new Dictionary<string, object?>();
+        foreach (var key in source.Keys)
         {
-            var parts = sortField.Split(':');
-            if (parts.Length == 2)
+            var value = source[key];
+            if (value is JsonElement element)
             {
-                var fieldName = parts[0].Trim();
-                var sortOrder = parts[1].Trim().ToLower() == "desc" ? SortOrder.Descending : SortOrder.Ascending;
-                sortDescriptor = sortDescriptor.Field(f => f.Field(fieldName).Order(sortOrder));
+                result[key] = ConvertJsonElement(element);
+            }
+            else
+            {
+                result[key] = value;
             }
         }
 
-        var from = queryDto.PageIndex * queryDto.PageSize;
-        var size = queryDto.PageSize;
+        return result;
+    }
 
-        var searchDescriptor = new SearchDescriptor<Dictionary<string, object>>()
-            .Index(queryDto.Index)
-            .Query(q => q.QueryString(qs => qs.Query(queryDto.QueryString).AllowLeadingWildcard(false)))
-            .From(from)
-            .Size(size)
-            .Sort(ss => sortDescriptor);
-
-        var response = await _elasticClient.SearchAsync<Dictionary<string, object>>(searchDescriptor);
-        if (!response.IsValid)
+    private static object? ConvertJsonElement(JsonElement element)
+    {
+        return element.ValueKind switch
         {
-            _logger.LogError("Elasticsearch query failed: {info}", response.DebugInformation);
-            throw new UserFriendlyException("Elasticsearch query failed");
-        }
-
-        var resultList = response.Documents.ToList();
-        _logger.LogInformation("[Lucene Query] Index: {Index}, Query: {QueryString}, result: {Result}", queryDto.Index,
-            queryDto.QueryString, resultList);
-
-        return new PagedResultDto<Dictionary<string, object>>(response.Total, resultList);
+            JsonValueKind.String => element.GetString(),
+            JsonValueKind.Number => element.GetDouble(),
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.Array => element.EnumerateArray().Select(ConvertJsonElement).ToList(),
+            JsonValueKind.Object => element.EnumerateObject().ToDictionary(
+                prop => prop.Name,
+                prop => ConvertJsonElement(prop.Value)
+            ),
+            _ => null
+        };
     }
 }
