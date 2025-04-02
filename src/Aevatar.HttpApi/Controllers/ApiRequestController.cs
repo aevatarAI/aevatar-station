@@ -6,6 +6,7 @@ using Aevatar.Organizations;
 using Aevatar.Permissions;
 using Aevatar.Projects;
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -17,6 +18,7 @@ namespace Aevatar.Controllers;
 [RemoteService]
 [ControllerName("ApiRequest")]
 [Route("api/api-requests")]
+[Authorize]
 public class ApiRequestController : AevatarController
 {
     private readonly IApiRequestService _apiRequestService;
@@ -32,6 +34,15 @@ public class ApiRequestController : AevatarController
     [HttpGet]
     public async Task<ApiRequestDashboardDto> GetAsync(GetApiRequestDto input)
     {
+        if (input.ProjectId.HasValue)
+        {
+            await _permissionChecker.AuthenticateAsync(input.ProjectId.Value, AevatarPermissions.ApiRequests.Default);
+        }
+        else
+        {
+            await _permissionChecker.AuthenticateAsync(input.OrganizationId.Value, AevatarPermissions.ApiRequests.Default);
+        }
+
         var list = await _apiRequestService.GetListAsync(input);
         return new ApiRequestDashboardDto
         {
