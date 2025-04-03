@@ -257,25 +257,37 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             return new Tuple<string, string>("", "");
         }
 
-        var title = "";
-        if (sessionInfo.Title.IsNullOrEmpty())
-        {
-            var titleList = await ChatWithHistory(content);
-            title = titleList is { Count: > 0 }
-                ? titleList[0].Content!
-                : string.Join(" ", content.Split(" ").Take(4));
-
-            RaiseEvent(new RenameTitleEventLog()
-            {
-                SessionId = sessionId,
-                Title = title
-            });
-
-            await ConfirmEvents();
-        }
-
+        // var title = "";
+        // if (sessionInfo.Title.IsNullOrEmpty())
+        // {
+        //     var titleList = await ChatWithHistory(content);
+        //     title = titleList is { Count: > 0 }
+        //         ? titleList[0].Content!
+        //         : string.Join(" ", content.Split(" ").Take(4));
+        //
+        // RaiseEvent(new RenameTitleEventLog()
+        // {
+        //     SessionId = sessionId,
+        //     Title = title
+        // });
+        //
+        // await ConfirmEvents();
+        // }
+        //
+        // var configuration = GetConfiguration();
+        // var response = await godChat.GodChatAsync(await configuration.GetSystemLLM(), content, promptSettings);
+        
         var configuration = GetConfiguration();
-        var response = await godChat.GodChatAsync(await configuration.GetSystemLLM(), content, promptSettings);
+        var title = "test title";
+        var response = "test response";
+        RaiseEvent(new RenameTitleEventLog()
+        {
+            SessionId = sessionId,
+            Title = title
+        });
+        await ConfirmEvents();
+        
+        await Task.Delay(5000);
         return new Tuple<string, string>(response, title);
     }
     
