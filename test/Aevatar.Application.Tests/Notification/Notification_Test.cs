@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Newtonsoft.Json;
 using Shouldly;
+using Volo.Abp.Identity;
 using Xunit;
 
 namespace Aevatar.Notification;
@@ -30,6 +31,7 @@ public sealed class Notification_Test : AevatarApplicationTestBase
     private readonly CancellationToken _cancellation;
     private readonly Mock<IOrganizationService> _organizationService;
     private readonly string _input = "{\"OrganizationId\":\"3fa85f64-5717-4562-b3fc-2c963f66afa6\", \"Role\":1}";
+    private readonly Mock<IdentityUserManager> _identityUserManager;
 
     private readonly NotificationResponse _notificationResponse = new NotificationResponse()
         { Data = new NotificationResponseMessage() { Id = _notificationId, Status = _notificationStatusEnum } };
@@ -37,6 +39,7 @@ public sealed class Notification_Test : AevatarApplicationTestBase
     public Notification_Test()
     {
         _notificationHandlerFactory = GetRequiredService<INotificationHandlerFactory>();
+        _identityUserManager = new Mock<IdentityUserManager>();
         _logger = new Mock<ILogger<NotificationService>>();
         _notificationRepository = new Mock<INotificationRepository>();
         _organizationService = new Mock<IOrganizationService>();
@@ -45,9 +48,10 @@ public sealed class Notification_Test : AevatarApplicationTestBase
         _cancellation = new CancellationToken();
 
         _notificationService = new NotificationService(_notificationHandlerFactory, _logger.Object,
-            _notificationRepository.Object, _objectMapper, _hubService.Object, _organizationService.Object);
+            _notificationRepository.Object, _objectMapper, _hubService.Object, _organizationService.Object,
+            _identityUserManager.Object);
 
-        _hubService.Setup(f => f.ResponseAsync(new List<Guid>(){_receiveId}, _notificationResponse))
+        _hubService.Setup(f => f.ResponseAsync(new List<Guid>() { _receiveId }, _notificationResponse))
             .Returns(Task.CompletedTask);
 
         _notificationInfo = new NotificationInfo()
