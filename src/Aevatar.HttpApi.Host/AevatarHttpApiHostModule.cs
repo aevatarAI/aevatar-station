@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using AElf.OpenTelemetry;
 using AutoResponseWrapper;
 using Microsoft.AspNetCore.Builder;
@@ -13,6 +14,7 @@ using Aevatar.Application.Grains;
 using Aevatar.Domain.Grains;
 using Aevatar.Permissions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -69,12 +71,33 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         ConfigureSwaggerServices(context, configuration);
         ConfigureDataProtection(context, configuration, hostingEnvironment);
         ConfigCache(context, configuration);
+        ConfigureCors(context, configuration);
         //context.Services.AddDaprClient();
 
         context.Services.AddMvc(options => { options.Filters.Add(new IgnoreAntiforgeryTokenAttribute()); })
             .AddNewtonsoftJson();
 
         context.Services.AddHealthChecks();
+    }
+
+    private void ConfigureCors(ServiceConfigurationContext context, IConfiguration configuration)
+    {
+        context.Services.AddCors(options =>
+        {
+            options.AddDefaultPolicy(builder =>
+            {
+                builder
+                    .WithOrigins(configuration["App:CorsOrigins"]?
+                        .Split(",", StringSplitOptions.RemoveEmptyEntries)
+                        .Select(o => o.RemovePostFix("/"))
+                        .ToArray() ?? Array.Empty<string>())
+                    .WithAbpExposedHeaders()
+                    .SetIsOriginAllowedToAllowWildcardSubdomains()
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
+            });
+        });
     }
 
     private void ConfigureDataProtection(
