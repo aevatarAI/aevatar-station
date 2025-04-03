@@ -46,7 +46,10 @@ public class Program
                 .ConfigureDefaults(args)
                 .UseAutofac()
                 .UseSerilog();
-            builder.Services.AddSignalR().AddOrleans();
+            builder.Services.AddSignalR(options =>
+            {
+                options.MaximumReceiveMessageSize = 5 * 1024 * 1024;
+            }).AddOrleans();
             builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, AevatarAuthorizationMiddlewareResultHandler>();
             await builder.AddApplicationAsync<AevatarDeveloperHostModule>();
             var app = builder.Build();
