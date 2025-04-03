@@ -13,10 +13,20 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Aevatar.OpenIddict;
 using Aevatar.Permissions;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using OpenIddict.Abstractions;
+using OpenIddict.Server.AspNetCore;
+using Volo.Abp.DependencyInjection;
+using Volo.Abp.Identity;
 using Volo.Abp.OpenIddict;
+using Volo.Abp.OpenIddict.ExtensionGrantTypes;
+using Aevatar.Constants;
+
+namespace Aevatar;
 
 public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
 {
@@ -120,7 +130,7 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
             var tokenHandler = new JwtSecurityTokenHandler();
             
             var jwtToken = tokenHandler.ReadJwtToken(idToken);
-            var kid = jwtToken.Header["kid"]?.ToString();
+            var kid = jwtToken.Header[AppleConstants.Claims.Kid]?.ToString();
             var aud = jwtToken.Audiences.FirstOrDefault();
             
             _logger.LogInformation("AppleGrantHandler.ValidateAppleToken: kid: {kid} required aud: {audience} actual aud: {aud}", 
@@ -129,7 +139,7 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
             var key = await GetApplePublicKeysAsync(kid);
             var validationParameters = new TokenValidationParameters
             {
-                ValidIssuer = "https://appleid.apple.com",
+                ValidIssuer = AppleConstants.ValidIssuer,
                 ValidAudience = audience,
                 IssuerSigningKey = key,
                 ValidateLifetime = true,
@@ -153,7 +163,7 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
     private async Task<SecurityKey> GetApplePublicKeysAsync(string kid)
     {
         using var client = new HttpClient();
-        var keysResponse = await client.GetStringAsync("https://appleid.apple.com/auth/keys");
+        var keysResponse = await client.GetStringAsync(AppleConstants.JwksEndpoint);
         var keys = JObject.Parse(keysResponse)["keys"];
 
         foreach (var key in keys)
@@ -230,7 +240,7 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
     
     private async Task<string> ExchangeCodeForTokenAsync(string code, string clientId)
     {
-        var clientSecret =  GenerateClientSecret(clientId);
+        var clientSecret = GenerateClientSecret(clientId);
         using var client = new HttpClient();
         
         var body = new List<KeyValuePair<string, string>>
@@ -242,7 +252,7 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
             new KeyValuePair<string, string>("client_secret", clientSecret),
         };
         
-        var response = await client.PostAsync("https://appleid.apple.com/auth/token", new FormUrlEncodedContent(body));
+        var response = await client.PostAsync(AppleConstants.TokenEndpoint, new FormUrlEncodedContent(body));
         
         if (!response.IsSuccessStatusCode)
         {

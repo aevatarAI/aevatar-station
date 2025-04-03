@@ -49,8 +49,6 @@
     <PackageVersion Include="OpenAI.API" Version="1.0.0" />
     <PackageVersion Include="Orleans.SyncWork" Version="8.1.12" />
     <PackageVersion Include="Serilog.Formatting.Compact" Version="2.0.0" />
-    
-
     <!-- ABP packages -->
     <PackageVersion Include="Volo.Abp.Account.Application" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Account.Application.Contracts" Version="$(AbpVersion)" />

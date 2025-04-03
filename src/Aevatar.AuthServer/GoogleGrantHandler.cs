@@ -12,6 +12,8 @@ using Volo.Abp.Identity;
 using Volo.Abp.OpenIddict;
 using Volo.Abp.OpenIddict.ExtensionGrantTypes;
 
+namespace Aevatar;
+
 public class GoogleGrantHandler : ITokenExtensionGrant
 {
     private readonly IConfiguration _configuration;
