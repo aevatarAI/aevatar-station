@@ -29,7 +29,7 @@ public static class OrleansHostExtensions
                 {
                     options.DatabaseName = configSection.GetValue<string>("DataBase");
                     options.Strategy = MongoDBMembershipStrategy.SingleDocument;
-                    options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" : $"Orleans{hostId}";
+                    options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" :$"Orleans{hostId}";
                 })
                 .Configure<ClusterOptions>(options =>
                 {
@@ -43,7 +43,7 @@ public static class OrleansHostExtensions
                     options.SupportedNamespacePrefixes.Add("MongoDB.Driver");
                 })
                 .AddActivityPropagation();
-
+                
             var streamProvider = config.GetSection("OrleansStream:Provider").Get<string>();
             Log.Information("Stream Provider: {streamProvider}", streamProvider);
             if (string.Equals("kafka", streamProvider, StringComparison.CurrentCultureIgnoreCase))
@@ -53,32 +53,24 @@ public static class OrleansHostExtensions
                     .AddKafka("Aevatar")
                     .WithOptions(options =>
                     {
-                        Log.Debug("Step 1");
                         options.BrokerList = config.GetSection("OrleansStream:Brokers").Get<List<string>>();
                         options.ConsumerGroupId = "Aevatar";
                         options.ConsumeMode = ConsumeMode.LastCommittedMessage;
-                        Log.Debug("Step 2");
+
                         var partitions = config.GetSection("OrleansStream:Partitions").Get<int>();
-                        Log.Debug($"Step 2 partitions:{partitions}");
                         var replicationFactor =
                             config.GetSection("OrleansStream:ReplicationFactor").Get<short>();
-                        Log.Debug($"Step 3--->{replicationFactor}");
                         var topics = config.GetSection("OrleansStream:Topics").Get<string>();
-                        Log.Debug($"Step 4--->topics:{topics}");
                         topics = topics.IsNullOrEmpty() ? CommonConstants.StreamNamespace : topics;
                         foreach (var topic in topics.Split(','))
                         {
-                            Log.Debug($"Step 5--->start topic:{topic}");
                             options.AddTopic(topic.Trim(), new TopicCreationConfig
                             {
                                 AutoCreate = true,
                                 Partitions = partitions,
                                 ReplicationFactor = replicationFactor
                             });
-                            Log.Debug($"Step 5--->end topic:{topic}");
                         }
-
-                        Log.Debug("Step 6");
                         Log.Information("Kafka Options: {@options}", options);
                     })
                     .AddJson()

@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp;
 using Volo.Abp.AspNetCore.Mvc.Dapr.EventBus;
 using Volo.Abp.Authorization;
@@ -15,26 +16,26 @@ namespace Aevatar;
     typeof(AbpAutofacModule),
     typeof(AbpTestBaseModule),
     typeof(AbpAuthorizationModule),
-    typeof(AbpBackgroundJobsAbstractionsModule),
-    typeof(AbpDaprModule),
-    typeof(AbpAspNetCoreMvcDaprEventBusModule)
-    )]
+    typeof(AbpBackgroundJobsAbstractionsModule)
+)]
 public class AevatarTestBaseModule : AbpModule
 {
+    public override void PreConfigureServices(ServiceConfigurationContext context)
+    {
+        PreConfigure<IdentityBuilder>(builder => { builder.AddDefaultTokenProviders(); });
+    }
+
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
-        Configure<AbpBackgroundJobOptions>(options =>
-        {
-            options.IsJobExecutionEnabled = false;
-        });
+        Configure<AbpBackgroundJobOptions>(options => { options.IsJobExecutionEnabled = false; });
 
         context.Services.AddAlwaysAllowAuthorization();
-        context.Services.AddDaprClient();
+        //context.Services.AddDaprClient();
     }
 
     public override void OnApplicationInitialization(ApplicationInitializationContext context)
     {
-      //  SeedTestData(context);
+        // SeedTestData(context);
     }
 
     private static void SeedTestData(ApplicationInitializationContext context)

@@ -9,8 +9,8 @@ public class IngressHelper
         appId = appId.Replace("_", "-");
         return $"ingress-{appId}-{version}".ToLower();
     }
-    
-    public static V1Ingress CreateAppIngressDefinition(string ingressName, 
+
+    public static V1Ingress CreateAppIngressDefinition(string ingressName,
         string hostName, string rulePath, string serviceName, int port = 80)
     {
         // Define an Ingress resource for the application
@@ -22,7 +22,9 @@ public class IngressHelper
                 NamespaceProperty = KubernetesConstants.AppNameSpace,
                 Annotations = new Dictionary<string, string>
                 {
-                    { "nginx.ingress.kubernetes.io/rewrite-target", "/$2" }
+                    { "nginx.ingress.kubernetes.io/rewrite-target", "/$2" },
+                    { "nginx.ingress.kubernetes.io/proxy-read-timeout", "3600" },
+                    { "nginx.ingress.kubernetes.io/proxy-send-timeout", "3600" }
                 }
             },
             Spec = new V1IngressSpec
@@ -59,13 +61,13 @@ public class IngressHelper
                 },
                 Tls = new List<V1IngressTLS>
                 {
-                   new V1IngressTLS
-                   {
-                       Hosts = new List<string>()
-                       {
-                           hostName
-                       }
-                   }
+                    new V1IngressTLS
+                    {
+                        Hosts = new List<string>()
+                        {
+                            hostName
+                        }
+                    }
                 }
             }
         };

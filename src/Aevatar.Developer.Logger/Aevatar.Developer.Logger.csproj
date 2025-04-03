@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="..\..\common.props" />
+    <Import Project="..\..\common.props"/>
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
@@ -8,9 +8,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="NEST" />
-      <PackageReference Include="Newtonsoft.Json" />
-      <PackageReference Include="Volo.Abp.Core"  />
+        <PackageReference Include="Elastic.Clients.Elasticsearch"/>
+        <PackageReference Include="Newtonsoft.Json"/>
+        <PackageReference Include="Volo.Abp.Core"/>
     </ItemGroup>
 
 </Project>

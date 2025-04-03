@@ -161,9 +161,14 @@ public class WalletLoginProvider: IWalletLoginProvider, ISingletonDependency
         if (!graphQlResult.HasValue || !graphQlResult.Value)
         {
             _logger.LogDebug("graphql is invalid.");
-            return await CheckManagerAddressFromContractAsync(chainId, caHash, manager, _chainOptions);
+            var  contractResult = await CheckManagerAddressFromContractAsync(chainId, caHash, manager, _chainOptions);
+            if (!contractResult.HasValue || !contractResult.Value)
+            {
+                _logger.LogDebug("contract is invalid.");
+                return await ManagerCheckHelper.CheckManagerFromCache(_signatureGrantOptions.CheckManagerUrl, manager, caHash);
+            }
+            return true;
         }
-
         return true;
     }
     
