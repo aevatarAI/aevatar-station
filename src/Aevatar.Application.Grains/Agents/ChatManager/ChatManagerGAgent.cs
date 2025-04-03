@@ -106,7 +106,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         Logger.LogDebug(
             $"[ChatGAgentManager][RequestCreateGodChatEvent] start:{JsonConvert.SerializeObject(@event)}");
 
-        if (!await CheckCreditsAndExecuteAsync(State.UserId, 1, async () =>
+        if (!await CheckCreditsAndExecuteAsync(State.UserId, 0, async () =>
             {
                 await PublishAsync(new ResponseCreateGod()
                 {
