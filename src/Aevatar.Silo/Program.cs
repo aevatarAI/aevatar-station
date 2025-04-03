@@ -24,6 +24,8 @@ public class Program
 
         try
         {
+            var configPath = Path.Combine(AppContext.BaseDirectory, $"appsettings.{env}.json");
+            Log.Information("Checking staging configuration at: {Path} exist: {exist}", configPath, File.Exists(configPath));
             Log.Information("Starting Silo Env {env}", env);
             var builder = CreateHostBuilder(args);
             var app = builder.Build();
@@ -52,8 +54,9 @@ public class Program
             .UseSerilog()
             .ConfigureAppConfiguration((hostingContext, config) =>
             {
-                var env = hostingContext.HostingEnvironment;
-                config.AddJsonFile($"appsettings.{env.EnvironmentName}.json", 
+                // var env = hostingContext.HostingEnvironment;
+                var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+                config.AddJsonFile($"appsettings.{env}.json", 
                     optional: true, 
                     reloadOnChange: true);
             });
