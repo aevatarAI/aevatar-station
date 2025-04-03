@@ -151,7 +151,7 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
         
         if (count >= MaxConnectionsPerSecond)
         {
-            _logger.LogWarning(
+            _logger.LogDebug(
                 "IP rate limit exceeded - IP: {IpAddress}, Connections in last second: {Count}, Max allowed: {MaxAllowed}",
                 ipAddress,
                 count,
@@ -410,7 +410,7 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
 
     public void Participate(ISiloLifecycle lifecycle)
     {
-        _logger.LogInformation(
+        _logger.LogDebug(
             "Participating in silo lifecycle - Instance: {InstanceId}, Hub: {HubName}",
             _instanceId,
             _hubName);
