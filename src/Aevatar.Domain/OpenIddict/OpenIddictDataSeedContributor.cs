@@ -188,7 +188,9 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
                     OpenIddictConstants.GrantTypes.ClientCredentials,
                     OpenIddictConstants.GrantTypes.RefreshToken,
                     GrantTypeConstants.SIGNATURE,
-                    GrantTypeConstants.LOGIN
+                    GrantTypeConstants.LOGIN,
+                    GrantTypeConstants.GOOGLE,
+                    GrantTypeConstants.APPLE
                 },
                 scopes: commonScopes,
                 redirectUri: authServerRootUrl,

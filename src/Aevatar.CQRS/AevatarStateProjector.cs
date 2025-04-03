@@ -61,29 +61,34 @@ public class AevatarStateProjector : IStateProjector, ISingletonDependency
     {
         while (true)
         {
-            try
-            {
-                if (_latestCommands.Count < _batchOptions.BatchSize)
-                {
-                    await Task.Delay(_batchOptions.BatchTimeoutSeconds * 1000);
-                }
+            await FlushAsync();
+        }
+    }
 
-                var currentBatch = _latestCommands.Values
-                    .OrderByDescending(c => c.Version)
-                    .Take(_batchOptions.BatchSize)
-                    .ToList();
-
-                if (currentBatch.Count > 0)
-                {
-                    _logger.LogInformation("latestCommands count :{Count} ", _latestCommands.Count);
-                    await SendBatchAsync(currentBatch);
-                    CleanProcessedCommands(currentBatch);
-                }
-            }
-            catch (Exception ex)
+    public async Task FlushAsync()
+    {
+        try
+        {
+            if (_latestCommands.Count < _batchOptions.BatchSize)
             {
-                _logger.LogError(ex, "Batch processing failed");
+                await Task.Delay(_batchOptions.BatchTimeoutSeconds * 1000);
             }
+
+            var currentBatch = _latestCommands.Values
+                .OrderByDescending(c => c.Version)
+                .Take(_batchOptions.BatchSize)
+                .ToList();
+
+            if (currentBatch.Count > 0)
+            {
+                _logger.LogInformation("latestCommands count :{Count} ", _latestCommands.Count);
+                await SendBatchAsync(currentBatch);
+                CleanProcessedCommands(currentBatch);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Batch processing failed");
         }
     }
 
@@ -91,10 +96,14 @@ public class AevatarStateProjector : IStateProjector, ISingletonDependency
     {
         foreach (var cmd in processed)
         {
-            _latestCommands.TryGetValue(cmd.Id, out var current);
-            if (current != null && current.Version <= cmd.Version)
+            _latestCommands.TryRemove(cmd.Id, out var current);
+            if (current != null && current.Version > cmd.Version)
             {
-                _latestCommands.TryRemove(cmd.Id, out _);
+                _latestCommands.AddOrUpdate(
+                    current.Id,
+                    current,
+                    (id, existing) => current.Version > existing.Version ? current : existing
+                );
             }
         }
     }
