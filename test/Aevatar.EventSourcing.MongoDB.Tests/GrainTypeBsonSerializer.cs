@@ -28,19 +28,3 @@ public static class GrainTypeBsonSerializerConfig
         }
     }
 }
-
-// public class GrainTypeBsonSerializer : SerializerBase<GrainType>
-// {
-//     private readonly StringSerializer _stringSerializer = new();
-//
-//     public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, GrainType value)
-//     {
-//         _stringSerializer.Serialize(context, args, value.ToString());
-//     }
-//
-//     public override GrainType Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
-//     {
-//         var value = _stringSerializer.Deserialize(context, args);
-//         return GrainType.Create(value);
-//     }
-// } 
