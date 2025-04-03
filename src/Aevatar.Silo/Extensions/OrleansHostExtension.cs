@@ -1,5 +1,4 @@
 using System.Net;
-using Aevatar.Application.Grains.Agents.ChatManager.Options;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;

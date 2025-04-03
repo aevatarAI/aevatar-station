@@ -17,20 +17,17 @@ namespace Aevatar;
     typeof(AbpTestBaseModule),
     typeof(AbpAuthorizationModule),
     typeof(AbpBackgroundJobsAbstractionsModule)
-    )]
+)]
 public class AevatarTestBaseModule : AbpModule
 {
     public override void PreConfigureServices(ServiceConfigurationContext context)
     {
         PreConfigure<IdentityBuilder>(builder => { builder.AddDefaultTokenProviders(); });
     }
-    
+
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
-        Configure<AbpBackgroundJobOptions>(options =>
-        {
-            options.IsJobExecutionEnabled = false;
-        });
+        Configure<AbpBackgroundJobOptions>(options => { options.IsJobExecutionEnabled = false; });
 
         context.Services.AddAlwaysAllowAuthorization();
         //context.Services.AddDaprClient();
@@ -38,7 +35,7 @@ public class AevatarTestBaseModule : AbpModule
 
     public override void OnApplicationInitialization(ApplicationInitializationContext context)
     {
-        SeedTestData(context);
+        // SeedTestData(context);
     }
 
     private static void SeedTestData(ApplicationInitializationContext context)
