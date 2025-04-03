@@ -121,12 +121,36 @@ public class AevatarSignalRHub : Hub, IAevatarSignalRHub
 
     public override async Task OnConnectedAsync()
     {
+        _logger.LogInformation(
+            "Client connecting - Connection Details:\n" +
+            "ConnectionId: {ConnectionId}\n" +
+            "User: {UserName}\n" +
+            "IsAuthenticated: {IsAuthenticated}\n" +
+            "Items Count: {ItemsCount}\n" +
+            "Claims: {Claims}",
+            Context.ConnectionId,
+            Context.User?.Identity?.Name ?? "Anonymous",
+            Context.User?.Identity?.IsAuthenticated ?? false,
+            Context.Items.Count,
+            Context.User?.Claims != null 
+                ? string.Join(", ", Context.User.Claims.Select(c => $"{c.Type}: {c.Value}"))
+                : "No claims");
+
         await base.OnConnectedAsync();
         await Groups.AddToGroupAsync(Context.ConnectionId, Guid.Empty.ToString());
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
+        _logger.LogInformation(
+            "Client disconnecting - Connection Details:\n" +
+            "ConnectionId: {ConnectionId}\n" +
+            "User: {UserName}\n" +
+            "Reason: {DisconnectReason}",
+            Context.ConnectionId,
+            Context.User?.Identity?.Name ?? "Anonymous",
+            exception?.Message ?? "Normal disconnection");
+
         await base.OnDisconnectedAsync(exception);
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, Guid.Empty.ToString());
     }
