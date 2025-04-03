@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.SignalR.Protocol;
 using Orleans.Streams;
@@ -60,8 +61,15 @@ internal sealed class ClientGrain : IGrainBase, IClientGrain
     public async Task OnConnect(Guid serverId)
     {
         var serverDisconnectedStream = _streamProvider.GetServerDisconnectionStream(serverId);
+        
+        // Log the number of existing subscriptions (for diagnostic purposes)
+        var existingSubscriptions = await serverDisconnectedStream.GetAllSubscriptionHandles();
+        _logger.LogWarning("🧪 Resuming subscriptions: ServerId = {serverId}, existing subscription count = {count}",
+            _clientState.State.ServerId, existingSubscriptions.Count);
+        
+        
         _serverDisconnectedSubscription = await serverDisconnectedStream.SubscribeAsync(_ => OnDisconnect("server-disconnected"));
-
+        _logger.LogDebug("ClientState size estimate: {size} bytes", JsonSerializer.Serialize(_clientState.State).Length);
         _clientState.State.ServerId = serverId;
         await _clientState.WriteStateAsync();
         
