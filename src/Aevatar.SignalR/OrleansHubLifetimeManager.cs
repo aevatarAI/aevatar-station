@@ -28,6 +28,8 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
     private static readonly ConcurrentDictionary<string, (int Count, DateTime LastReset)> _ipConnectionCounter = new();
     private const int MaxConnectionsPerSecond = 5;
 
+    private readonly string _instanceId = Guid.NewGuid().ToString("N")[..8];
+
     public OrleansHubLifetimeManager(
         ILogger<OrleansHubLifetimeManager<THub>> logger,
         IClusterClient clusterClient
@@ -42,13 +44,15 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
         _logger = logger;
         _clusterClient = clusterClient;
 
-        _logger.LogDebug("Created Orleans HubLifetimeManager {hubName})", _hubName);
+        _logger.LogDebug("Created Orleans HubLifetimeManager - Instance: {InstanceId}, Hub: {HubName}",
+            _instanceId, _hubName);
     }
 
     private async Task HeartbeatCheck()
     {
-        _logger.LogInformation("Heartbeat check for Orleans HubLifetimeManager {hubName} (serverId: {serverId})",
-            _hubName, _serverId);
+        _logger.LogInformation(
+            "Heartbeat check - Instance: {InstanceId}, Hub: {HubName}, ServerId: {ServerId}",
+            _instanceId, _hubName, _serverId);
         _clusterClient.GetServerDirectoryGrain().Heartbeat(_serverId);
     }
 
@@ -56,8 +60,9 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
     {
         if (_streamProvider is not null)
         {
-            _logger.LogDebug("Stream setup already complete for Orleans HubLifetimeManager {hubName} (serverId: {serverId})",
-                _hubName, _serverId);
+            _logger.LogDebug(
+                "Stream setup already complete - Instance: {InstanceId}, Hub: {HubName}, ServerId: {ServerId}",
+                _instanceId, _hubName, _serverId);
             return;
         }
 
@@ -71,8 +76,8 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
                 return;
 
             _logger.LogInformation(
-                "Initializing: Orleans HubLifetimeManager {hubName} (serverId: {serverId})...",
-                _hubName, _serverId);
+                "Initializing Orleans HubLifetimeManager - Instance: {InstanceId}, Hub: {HubName}, ServerId: {ServerId}",
+                _instanceId, _hubName, _serverId);
 
             _streamProvider = _clusterClient.GetOrleansSignalRStreamProvider();
             _serverStream = _streamProvider.GetServerStream(_serverId);
@@ -84,16 +89,18 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
 
             var allMessageObserver = new AllMessageObserver(ProcessAllMessage);
             var allStreamHandle = await _allStream.SubscribeAsync(allMessageObserver);
-            _logger.LogDebug("Subscribed to all stream: StreamId - {streamId}, HandleId - {handleId}, ProviderName - {providerName}",
-                allStreamHandle.StreamId, allStreamHandle.HandleId, allStreamHandle.ProviderName);
+            _logger.LogDebug(
+                "Subscribed to all stream - Instance: {InstanceId}, StreamId: {StreamId}, HandleId: {HandleId}, ProviderName: {ProviderName}",
+                _instanceId, allStreamHandle.StreamId, allStreamHandle.HandleId, allStreamHandle.ProviderName);
             var clientMessageObserver = new ClientMessageObserver(ProcessServerMessage);
             var serverStreamHandle = await _serverStream.SubscribeAsync(clientMessageObserver);
-            _logger.LogDebug("Subscribed to server stream: StreamId - {streamId}, HandleId - {handleId}, ProviderName - {providerName}",
-                serverStreamHandle.StreamId, serverStreamHandle.HandleId, serverStreamHandle.ProviderName);
+            _logger.LogDebug(
+                "Subscribed to server stream - Instance: {InstanceId}, StreamId: {StreamId}, HandleId: {HandleId}, ProviderName: {ProviderName}",
+                _instanceId, serverStreamHandle.StreamId, serverStreamHandle.HandleId, serverStreamHandle.ProviderName);
 
             _logger.LogInformation(
-                "Initialized complete: Orleans HubLifetimeManager {hubName} (serverId: {serverId})",
-                _hubName, _serverId);
+                "Initialization complete - Instance: {InstanceId}, Hub: {HubName}, ServerId: {ServerId}",
+                _instanceId, _hubName, _serverId);
         }
         finally
         {
@@ -121,8 +128,13 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
     private Task ProcessServerMessage(ClientMessage clientMessage)
     {
         var connection = _connections[clientMessage.ConnectionId];
-        _logger.LogDebug("Processing server message for connection {connectionId} on hub {hubName} (serverId: {serverId}) with connection available: {connectionAvailable}",
-            clientMessage.ConnectionId, _hubName, _serverId, connection != null);
+        _logger.LogDebug(
+            "Processing server message - Instance: {InstanceId}, Hub: {HubName}, ServerId: {ServerId}, ConnectionId: {ConnectionId}, Available: {ConnectionAvailable}",
+            _instanceId,
+            _hubName,
+            _serverId,
+            clientMessage.ConnectionId,
+            connection != null);
         return connection == null ? Task.CompletedTask : SendLocal(connection, clientMessage.Message);
     }
 
@@ -140,10 +152,7 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
         if (count >= MaxConnectionsPerSecond)
         {
             _logger.LogWarning(
-                "IP rate limit exceeded:\n" +
-                "IP: {IpAddress}\n" +
-                "Connections in last second: {Count}\n" +
-                "Max allowed: {MaxAllowed}",
+                "IP rate limit exceeded - IP: {IpAddress}, Connections in last second: {Count}, Max allowed: {MaxAllowed}",
                 ipAddress,
                 count,
                 MaxConnectionsPerSecond);
@@ -166,9 +175,8 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
             if (IsIpRateLimited(ipAddress))
             {
                 _logger.LogWarning(
-                    "Connection rejected due to rate limiting:\n" +
-                    "IP: {IpAddress}\n" +
-                    "ConnectionId: {ConnectionId}",
+                    "Connection rejected due to rate limiting - Instance: {InstanceId}, IP: {IpAddress}, ConnectionId: {ConnectionId}",
+                    _instanceId,
                     ipAddress,
                     connection.ConnectionId);
                     
@@ -180,18 +188,8 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
             var userAgent = httpContext?.Request?.Headers["User-Agent"].ToString() ?? "Unknown Agent";
             
             _logger.LogDebug(
-                "Orleans Hub - New client connection:\n" +
-                "Hub: {HubName}\n" +
-                "ServerId: {ServerId}\n" +
-                "ConnectionId: {ConnectionId}\n" +
-                "IP Address: {IpAddress}\n" +
-                "User Agent: {UserAgent}\n" +
-                "User Details:\n" +
-                "  - Identity: {UserIdentity}\n" +
-                "  - IsAuthenticated: {IsAuthenticated}\n" +
-                "  - UserIdentifier: {UserIdentifier}\n" +
-                "Connection Items: {ItemsCount}\n" +
-                "Claims: {Claims}",
+                "Orleans Hub - New client connection - Instance: {InstanceId}, Hub: {HubName}, ServerId: {ServerId}, ConnectionId: {ConnectionId}, IP: {IpAddress}, UserAgent: {UserAgent}, Identity: {UserIdentity}, IsAuthenticated: {IsAuthenticated}, UserIdentifier: {UserIdentifier}, Items: {ItemsCount}, Claims: {Claims}",
+                _instanceId,
                 _hubName,
                 _serverId,
                 connection.ConnectionId,
@@ -207,19 +205,13 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
             
             var client = _clusterClient.GetClientGrain(_hubName, connection.ConnectionId);
             
-            _logger.LogDebug("Handle connection {connectionId} on hub {hubName} (serverId: {serverId})",
-                connection.ConnectionId, _hubName, _serverId);
-            
             await client.OnConnect(_serverId);
 
             if (connection!.User!.Identity!.IsAuthenticated)
             {
                 _logger.LogDebug(
-                    "Orleans Hub - Authenticated user connected:\n" +
-                    "Hub: {HubName}\n" +
-                    "ConnectionId: {ConnectionId}\n" +
-                    "User: {UserIdentity}\n" +
-                    "UserIdentifier: {UserIdentifier}",
+                    "Orleans Hub - Authenticated user connected - Instance: {InstanceId}, Hub: {HubName}, ConnectionId: {ConnectionId}, User: {UserIdentity}, UserIdentifier: {UserIdentifier}",
+                    _instanceId,
                     _hubName,
                     connection.ConnectionId,
                     connection.User.Identity.Name,
@@ -232,8 +224,11 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
         catch (Exception ex)
         {
             _logger.LogError(ex,
-                "An error has occurred 'OnConnectedAsync' while adding connection {connectionId} [hub: {hubName} (serverId: {serverId})]",
-                connection?.ConnectionId, _hubName, _serverId);
+                "An error has occurred 'OnConnectedAsync' while adding connection - Instance: {InstanceId}, ConnectionId: {ConnectionId}, Hub: {HubName}, ServerId: {ServerId}",
+                _instanceId,
+                connection?.ConnectionId,
+                _hubName,
+                _serverId);
             _connections.Remove(connection!);
             throw;
         }
@@ -243,8 +238,12 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
     {
         try
         {
-            _logger.LogDebug("Handle disconnection {connectionId} on hub {hubName} (serverId: {serverId})",
-                connection.ConnectionId, _hubName, _serverId);
+            _logger.LogDebug(
+                "Handle disconnection - Instance: {InstanceId}, Hub: {HubName}, ServerId: {ServerId}, ConnectionId: {ConnectionId}",
+                _instanceId,
+                _hubName,
+                _serverId,
+                connection.ConnectionId);
             var client = _clusterClient.GetClientGrain(_hubName, connection.ConnectionId);
             await client.OnDisconnect("hub-disconnect");
         }
@@ -355,9 +354,11 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
     private Task SendLocal(HubConnectionContext connection, ClientNotification notification)
     {
         _logger.LogInformation(
-            "Sending local message to connection {connectionId} on hub {hubName} (serverId: {serverId})",
-            connection.ConnectionId, _hubName, _serverId);
-        // ReSharper disable once CoVariantArrayConversion
+            "Sending local message - Instance: {InstanceId}, Hub: {HubName}, ServerId: {ServerId}, ConnectionId: {ConnectionId}",
+            _instanceId,
+            _hubName,
+            _serverId,
+            connection.ConnectionId);
         return connection.WriteAsync(new InvocationMessage(SignalROrleansConstants.ResponseMethodName, notification.Arguments))
             .AsTask();
     }
@@ -370,8 +371,11 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
 
     public void Dispose()
     {
-        _logger.LogDebug("Disposing Orleans HubLifetimeManager {hubName} (serverId: {serverId})",
-            _hubName, _serverId);
+        _logger.LogDebug(
+            "Disposing Orleans HubLifetimeManager - Instance: {InstanceId}, Hub: {HubName}, ServerId: {ServerId}",
+            _instanceId,
+            _hubName,
+            _serverId);
 
         _timer?.Dispose();
 
@@ -406,7 +410,10 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
 
     public void Participate(ISiloLifecycle lifecycle)
     {
-        _logger.LogInformation("Participating in the lifecycle of the silo.");
+        _logger.LogInformation(
+            "Participating in silo lifecycle - Instance: {InstanceId}, Hub: {HubName}",
+            _instanceId,
+            _hubName);
         lifecycle.Subscribe(
            observerName: nameof(OrleansHubLifetimeManager<THub>),
            stage: ServiceLifecycleStage.Active,
