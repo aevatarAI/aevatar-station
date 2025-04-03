@@ -30,8 +30,10 @@ namespace Aevatar.Application.Grains.Agents.ChatManager.Common
                 string template = CommonHelper.LoadFileFromCurrentDirectory("./god_prompt_template.txt");
 
                 // Fetch core content from GitHub
-                string coreContent = await GithubUtil.FetchCoreContentAsync();
-                string formalTheoryCoreContent = await GithubUtil.FetchFormalTheoryCoreContentAsync();
+                // string coreContent = await GithubUtil.FetchCoreContentAsync();
+                // string formalTheoryCoreContent = await GithubUtil.FetchFormalTheoryCoreContentAsync();
+                string formalTheoryCosmicOntologyContent = await GithubUtil.FetchFormalTheoryCosmicOntologyContentAsync();
+                string hyperintelligenceContent = await GithubUtil.FetcHyperintelligenceContentAsync();
 
                 // Ensure the template is successfully loaded
                 if (string.IsNullOrWhiteSpace(template))
@@ -42,7 +44,7 @@ namespace Aevatar.Application.Grains.Agents.ChatManager.Common
                 }
 
                 // Ensure the coreContent is successfully loaded
-                if (string.IsNullOrWhiteSpace(coreContent))
+                if (string.IsNullOrWhiteSpace(formalTheoryCosmicOntologyContent))
                 {
                     _logger?.LogWarning(
                         "The core content from GitHub could not be fetched. Loading the default GodPrompt.");
@@ -50,7 +52,7 @@ namespace Aevatar.Application.Grains.Agents.ChatManager.Common
                 }
 
                 // Ensure the formalTheoryCoreContent is successfully loaded
-                if (string.IsNullOrWhiteSpace(formalTheoryCoreContent))
+                if (string.IsNullOrWhiteSpace(formalTheoryCosmicOntologyContent))
                 {
                     _logger?.LogWarning(
                         "The formal theory core content from GitHub could not be fetched. Loading the default GodPrompt.");
@@ -59,9 +61,9 @@ namespace Aevatar.Application.Grains.Agents.ChatManager.Common
 
                 // Replace placeholders in the template
                 string replacedTemplate = template
-                    .Replace("{core}", coreContent ?? string.Empty) // Replace {core}
-                    .Replace("{formal_theory_core}",
-                        formalTheoryCoreContent ?? string.Empty); // Replace {formal_theory_core}
+                    .Replace("{formal_theory_cosmic_ontology}", formalTheoryCosmicOntologyContent ?? string.Empty) // Replace {core}
+                    .Replace("{formal_theory_transcendental_hyperintelligence}",
+                        hyperintelligenceContent ?? string.Empty); // Replace {formal_theory_core}
 
                 return replacedTemplate
                     .Replace("\r", " ") // Converts standalone carriage returns to Unix-style line endings;
