@@ -68,6 +68,12 @@ This will:
 2. Launch all services (AuthServer, HttpApi, Developer.Host, Silo, Worker)
 3. Open Swagger UI for the HttpApi and Developer.Host services
 
+### DBMigrator
+
+If is the first time to start docker infrastructure components, you need
+run `src/Aevatar.DBMigrator` use docker mongodb connections
+
+
 ### Command-line Options
 
 The application supports the following command-line options:
