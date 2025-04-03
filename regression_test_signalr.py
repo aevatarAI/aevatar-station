@@ -15,7 +15,7 @@ warnings.simplefilter("ignore", category=DeprecationWarning)
 
 # Configure logging
 logging.basicConfig(
-    level=logging.DEBUG,  # Ensure logs are printed
+    # level=logging.DEBUG,  # Ensure logs are printed
     format="%(asctime)s - %(levelname)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
@@ -49,21 +49,17 @@ def hub_connection():
 
     def on_connection_open():
         connection_state["is_connected"] = True
-        logging.info("✅ SignalR connection established successfully")
 
     def on_connection_close():
         connection_state["is_connected"] = False
-        logging.info(" SignalR connection closed")
 
     def on_receive_response(message):
-        logging.info(f"📨 on_receive_response log: {message}")
         received_messages.append(message)
 
     connection.on_open(on_connection_open)
     connection.on_close(on_connection_close)
     connection.on("ReceiveResponse", on_receive_response)
 
-    logging.info("🔌 Connecting to SignalR...")
     connection.start()
 
     # Wait for the connection to establish (up to 30 seconds)
@@ -78,7 +74,6 @@ def hub_connection():
 
     # Stop the connection
     connection.stop()
-    logging.info(" SignalR connection terminated")
 
 
 def send_event_and_wait(connection, received_messages, method_name, params, wait_time=10):
@@ -90,24 +85,13 @@ def send_event_and_wait(connection, received_messages, method_name, params, wait
 
     # Send the event
     try:
-        logging.info(f"📡 Sending event: {method_name} with params: {params}")
         result = connection.send(method_name, params)
 
-        # Analyze the result
-        try:
-            if hasattr(result, "result"):  # If it's an InvocationResult with a 'result' attribute
-                logging.info(f"✅ Event sent result (JSON): {json.dumps(result.result)}")
-            else:
-                logging.info(f"✅ Event sent result (Raw): {result}")
-        except Exception as parse_error:
-            logging.error(f"❌ Failed to parse result: {parse_error}")
-            logging.error(f"❌ Raw result: {result}")
 
         # Ensure result is not None
         assert result is not None, "Failed to send event"
 
     except Exception as e:
-        logging.error(f"❌ Exception while sending event: {e}")
         pytest.fail(f"Exception while sending event: {e}")
 
     # Wait for a response
@@ -115,7 +99,6 @@ def send_event_and_wait(connection, received_messages, method_name, params, wait
     while time.time() - start_time < wait_time:
         if received_messages:
             break
-        logging.info("⏳ Waiting for server response...")
         time.sleep(1)
 
     return received_messages
@@ -127,7 +110,6 @@ def test_signalr_connection_active(hub_connection):
     """
     connection, _ = hub_connection
     assert connection is not None, "Hub connection is None"
-    logging.info("✅ Connection test passed!")
 
 
 def test_publish_async(hub_connection):
@@ -145,7 +127,6 @@ def test_publish_async(hub_connection):
     responses = send_event_and_wait(connection, received_messages, method_name, params)
 
     assert len(responses) > 0, "❌ No response received from the server"
-    logging.info(f"✅ PublishEventAsync test passed. responses=: {responses}")
 
 
 def test_subscribe_async(hub_connection):
@@ -163,4 +144,3 @@ def test_subscribe_async(hub_connection):
     responses = send_event_and_wait(connection, received_messages, method_name, params)
 
     assert len(responses) > 0, "❌ No response received from the server"
-    logging.info(f"✅ PublishEventAsync test passed. responses=: {responses}")
