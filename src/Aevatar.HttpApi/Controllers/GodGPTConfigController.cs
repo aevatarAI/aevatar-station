@@ -26,7 +26,7 @@ public class GodGPTConfigController : AevatarController
     }
 
     [HttpGet("system-prompt")]
-    [Authorize(Roles = "systemPromptManager,systemPromptGroup")]
+    // [Authorize(Roles = "systemPromptManager,systemPromptGroup")]
     public async Task<string> GetSystemPrompt()
     {
         var user = HttpContext.User.Identity?.Name ?? "Unknown User";
@@ -43,7 +43,7 @@ public class GodGPTConfigController : AevatarController
     }
 
     [HttpPost("system-prompt")]
-    [Authorize(Roles = "systemPromptManager")]
+    // [Authorize(Roles = "systemPromptManager")]
     public async Task<IActionResult> UpdateSystemPrompt([FromBody] GodGPTConfigurationDto godGptConfigurationDto)
     {
         var user = HttpContext.User.Identity?.Name ?? "Unknown User";
