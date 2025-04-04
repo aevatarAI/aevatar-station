@@ -13,31 +13,31 @@ using Volo.Abp;
 namespace Aevatar.Controllers;
 
 [RemoteService]
-[ControllerName("Quantum")]
-[Route("api/quantum")]
+[ControllerName("GodGPT")]
+[Route("api/gotgpt")]
 [Authorize]
-public class QuantumChatController : AevatarController
+public class GodGPTController : AevatarController
 {
-    private readonly IQuantumService _quantumService;
+    private readonly IGodGPTService _godGptService;
     private readonly string _defaultLLM = "OpenAI";
     private readonly string _defaultPrompt = "you are a robot";
 
-    public QuantumChatController(IQuantumService quantumService)
+    public GodGPTController(IGodGPTService godGptService)
     {
-        _quantumService = quantumService;
+        _godGptService = godGptService;
     }
 
     [HttpPost("create-session")]
     public async Task<Guid> CreateSessionAsync()
     {
-        return await _quantumService.CreateSessionAsync((Guid)CurrentUser.Id!, _defaultLLM, _defaultPrompt);
+        return await _godGptService.CreateSessionAsync((Guid)CurrentUser.Id!, _defaultLLM, _defaultPrompt);
     }
 
     [HttpPost("chat")]
     public async Task<QuantumChatResponseDto> ChatWithSessionAsync(QuantumChatRequestDto request)
     {
         var result =
-            await _quantumService.ChatWithSessionAsync((Guid)CurrentUser.Id!, request.SessionId, _defaultLLM,
+            await _godGptService.ChatWithSessionAsync((Guid)CurrentUser.Id!, request.SessionId, _defaultLLM,
                 request.Content);
 
         return new QuantumChatResponseDto()
@@ -50,24 +50,24 @@ public class QuantumChatController : AevatarController
     [HttpGet("session-list")]
     public async Task<List<SessionInfoDto>> GetSessionListAsync()
     {
-        return await _quantumService.GetSessionListAsync((Guid)CurrentUser.Id!);
+        return await _godGptService.GetSessionListAsync((Guid)CurrentUser.Id!);
     }
 
     [HttpGet("{sessionId}/chat-history")]
     public async Task<List<ChatMessage>> GetSessionMessageListAsync(Guid sessionId)
     {
-        return await _quantumService.GetSessionMessageListAsync((Guid)CurrentUser.Id!, sessionId);
+        return await _godGptService.GetSessionMessageListAsync((Guid)CurrentUser.Id!, sessionId);
     }
 
     [HttpDelete("{sessionId}")]
     public async Task DeleteSessionAsync(Guid sessionId)
     {
-        await _quantumService.DeleteSessionAsync((Guid)CurrentUser.Id!, sessionId);
+        await _godGptService.DeleteSessionAsync((Guid)CurrentUser.Id!, sessionId);
     }
 
     [HttpPut("rename")]
     public async Task RenameSessionAsync(QuantumRenameDto request)
     {
-        await _quantumService.RenameSessionAsync((Guid)CurrentUser.Id!, request.SessionId, request.Title);
+        await _godGptService.RenameSessionAsync((Guid)CurrentUser.Id!, request.SessionId, request.Title);
     }
 }

@@ -68,6 +68,25 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
         return Task.FromResult(State.Prompt);
     }
 
+    public async Task UpdateSystemPromptAsync(string systemPrompt)
+    {
+        const string logContext = "[ConfigurationGAgent][UpdateSystemPrompt]";
+
+        Logger.LogDebug("[{LogContext}] Updating prompt from '{OldPrompt}' to '{NewPrompt}'.", logContext, State.Prompt, systemPrompt);
+
+        // Raise an event to update the prompt
+        RaiseEvent(new SetPromptLogEvent
+        {
+            Prompt = systemPrompt
+        });
+
+        // Confirm updates to persist the new state
+        await ConfirmEvents();
+
+        Logger.LogDebug("[{LogContext}] Prompt successfully updated to '{NewPrompt}'.", logContext, systemPrompt);
+
+    }
+
     protected sealed override void GAgentTransitionState(ConfigurationState state,
         StateLogEventBase<ConfigurationLogEvent> @event)
     {
@@ -102,15 +121,15 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
 
         await ConfirmEvents();
         
-        if (State.Prompt.IsNullOrEmpty())
-        {
-            await UpdatePromptPeriodically(null);
-        }
+        // if (State.Prompt.IsNullOrEmpty())
+        // {
+        //     await UpdatePromptPeriodically(null);
+        // }
         
         // Initialize a periodic task to update the prompt every 5 minutes
-        #pragma warning disable CS0618
-        _timerHandle = RegisterTimer(UpdatePromptPeriodically, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
-        #pragma warning restore CS0618
+        // #pragma warning disable CS0618
+        // _timerHandle = RegisterTimer(UpdatePromptPeriodically, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+        // #pragma warning restore CS0618
     }
     
     private async Task UpdatePromptPeriodically(object? state)
