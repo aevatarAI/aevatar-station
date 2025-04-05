@@ -52,7 +52,9 @@ public class GodGPTConfigController : AevatarController
             .Select(c => c.Value)
             .ToList();
 
-        if (!roleClaims.Contains("systemPromptManager"))
+        var roleNames = string.Join(",", roleClaims);
+
+        if (!roleNames.Contains("systemPromptManager"))
         {
             return "Permission denied: 'systemPromptManager' role is required.";
         }
@@ -90,8 +92,10 @@ public class GodGPTConfigController : AevatarController
             .Where(c => c.Type == ClaimTypes.Role || c.Type == "role")
             .Select(c => c.Value)
             .ToList();
-
-        if (!roleClaims.Contains("systemPromptManager"))
+        
+        var roleNames = string.Join(",", roleClaims);
+        
+        if (!roleNames.Contains("systemPromptManager"))
         {
             // Return a custom "Forbid" response with an error message
             return Forbid(new AuthenticationProperties
