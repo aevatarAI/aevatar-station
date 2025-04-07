@@ -16,7 +16,7 @@ namespace Aevatar.StateProjector;
 
 public class AevatarTokenUsageProjector : IStateProjector, ISingletonDependency
 {
-    private readonly ConcurrentQueue<TokenUsage?> _queue = new ConcurrentQueue<TokenUsage?>();
+    private readonly ConcurrentQueue<CQRS.Dto.TokenUsage?> _queue = new ConcurrentQueue<CQRS.Dto.TokenUsage?>();
     private readonly  AutoResetEvent _dataAvailable = new AutoResetEvent(false);
     private readonly IMediator _mediator;   
     private readonly ILogger<AevatarStateProjector> _logger;
@@ -41,7 +41,7 @@ public class AevatarTokenUsageProjector : IStateProjector, ISingletonDependency
         }
 
         _logger.LogDebug($"[AevatarTokenUsageProjector] ProjectAsync get message:{JsonConvert.SerializeObject(aiGAgentState)}");
-        var saveTokenCommand = new TokenUsage
+        var saveTokenCommand = new CQRS.Dto.TokenUsage
         {
             GrainId = grainId.ToString(),
             SystemLLMConfig = aiGAgentState.SystemLLM.IsNullOrEmpty() ? "" : aiGAgentState.SystemLLM,
@@ -68,8 +68,8 @@ public class AevatarTokenUsageProjector : IStateProjector, ISingletonDependency
 
             while (true)
             {
-                var listGrain = new List<TokenUsage>();
-                while (_queue.TryDequeue(out TokenUsage? message))
+                var listGrain = new List<CQRS.Dto.TokenUsage>();
+                while (_queue.TryDequeue(out CQRS.Dto.TokenUsage? message))
                 {
                     if (message != null)
                     {
