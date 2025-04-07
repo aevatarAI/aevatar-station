@@ -6,6 +6,10 @@ public static class GithubUtil
     private const string FormalTheoryCoreUrl = "https://raw.githubusercontent.com/loning/universe/trae/formal_theory_core.md";
     
     private const string CoreUrl = "https://raw.githubusercontent.com/loning/universe/trae/core.md";
+    
+    private const string FormalTheoryCosmicOntologyUrl = "https://raw.githubusercontent.com/loning/universe/refs/heads/cosmos/formal_theory/formal_theory_cosmic_ontology.md";
+    
+    private const string FormalTheoryTranscendentalHyperintelligenceUrl = "https://raw.githubusercontent.com/loning/universe/refs/heads/cosmos/formal_theory/formal_theory_transcendental_hyperintelligence.md";
 
     
     /// <summary>
@@ -31,6 +35,16 @@ public static class GithubUtil
     public static async Task<string> FetchCoreContentAsync()
     {
         return await FetchContentAsync(CoreUrl);
+    }
+    
+    public static async Task<string> FetchFormalTheoryCosmicOntologyContentAsync()
+    {
+        return await FetchContentAsync(FormalTheoryCosmicOntologyUrl);
+    }
+    
+    public static async Task<string> FetcHyperintelligenceContentAsync()
+    {
+        return await FetchContentAsync(FormalTheoryTranscendentalHyperintelligenceUrl);
     }
 
 }

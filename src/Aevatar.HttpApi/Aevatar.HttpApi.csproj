@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <Import Project="..\..\common.props"/>
+    <Import Project="..\..\common.props" />
 
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
@@ -9,17 +9,17 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj"/>
-        <ProjectReference Include="..\Aevatar.Application\Aevatar.Application.csproj"/>
-        <ProjectReference Include="..\Aevatar.Developer.Logger\Aevatar.Developer.Logger.csproj"/>
+        <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj" />
+        <ProjectReference Include="..\Aevatar.Application\Aevatar.Application.csproj" />
+        <ProjectReference Include="..\Aevatar.Developer.Logger\Aevatar.Developer.Logger.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Volo.Abp.Account.HttpApi"/>
-        <PackageReference Include="Volo.Abp.Identity.HttpApi"/>
-        <PackageReference Include="Volo.Abp.PermissionManagement.HttpApi"/>
-        <PackageReference Include="Aevatar.PermissionManagement"/>
-        <PackageReference Include="Volo.Abp.AspNetCore.SignalR"/>
+        <PackageReference Include="Volo.Abp.Account.HttpApi" />
+        <PackageReference Include="Volo.Abp.Identity.HttpApi" />
+        <PackageReference Include="Volo.Abp.PermissionManagement.HttpApi" />
+        <PackageReference Include="Aevatar.PermissionManagement" />
+        <PackageReference Include="Volo.Abp.AspNetCore.SignalR" />
     </ItemGroup>
 
 </Project>

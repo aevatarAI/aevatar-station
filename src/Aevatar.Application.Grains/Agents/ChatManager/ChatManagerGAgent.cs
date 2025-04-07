@@ -225,6 +225,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         var configuration = GetConfiguration();
         IGodChat godChat = GrainFactory.GetGrain<IGodChat>(Guid.NewGuid());
         var sysMessage = await configuration.GetPrompt();
+        Logger.LogDebug("Retrieved system prompt from configuration: {SysMessage}", sysMessage);
         await godChat.ConfigAsync(new ChatConfigDto()
         {
             Instructions = sysMessage, MaxHistoryCount = 32,
