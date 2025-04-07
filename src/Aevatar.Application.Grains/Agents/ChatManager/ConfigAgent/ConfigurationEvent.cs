@@ -20,3 +20,15 @@ public class SetStreamingModeEnabledEvent : EventBase
 {
     [Id(0)] public bool StreamingModeEnabled { get; set; }
 }
+
+[GenerateSerializer]
+public class SetDefaultCreditsEvent : EventBase
+{
+    [Id(0)] public long DefaultCredits { get; set; }
+}
+
+[GenerateSerializer]
+public class SetUserProfilePromptEvent : EventBase
+{
+    [Id(0)] public string UserProfilePrompt { get; set; }
+}

@@ -8,4 +8,6 @@ public interface IConfigurationGAgent : IGAgent
     Task<bool> GetStreamingModeEnabled();
     Task<string> GetPrompt();
     Task UpdateSystemPromptAsync(String systemPrompt);
+    Task<long> GetDefaultCreditsAsync();
+    Task<string> GetUserProfilePromptAsync();
 }
