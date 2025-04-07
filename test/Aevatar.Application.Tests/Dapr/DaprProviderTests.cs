@@ -18,15 +18,19 @@ public class DaprProviderTests
 
     public DaprProviderTests()
     {
-        // 初始化 Mock 对象
+        // Initialize mock logger
         _mockLogger = new Mock<ILogger<DaprProvider>>();
+
+        // Initialize mock DaprClient
         _mockDaprClient = new Mock<DaprClient>();
+
+        // Initialize mock configuration options
         _mockOptions = new Mock<IOptions<AbpDaprOptions>>();
 
-        // Mock 返回一个有效的配置（例如默认值）
+        // Set up the mock to return default config values
         _mockOptions.Setup(o => o.Value).Returns(new AbpDaprOptions());
 
-        // 初始化 DaprProvider 实例
+        // Create DaprProvider instance using the mock objects
         _daprProvider = new DaprProvider(
             _mockLogger.Object,
             _mockDaprClient.Object,
@@ -42,22 +46,27 @@ public class DaprProviderTests
         string topicName = "test-topic";
         string message = "Hello, World!";
 
-        // 设置 DaprClient 的 PublishEventAsync 不抛出任何异常
+        // Simulate a successful call to DaprClient.PublishEventAsync with no exception thrown
         _mockDaprClient.Setup(c => c.PublishEventAsync(pubsubName, topicName, message, default));
 
         // Act
         await _daprProvider.PublishEventAsync(pubsubName, topicName, message);
 
         // Assert
-        // 验证 DaprClient 的 PublishEventAsync 是否被调用一次
-        _mockDaprClient.Verify(c => c.PublishEventAsync(pubsubName, topicName, message, default), Times.Once);
 
-        // 验证日志是否记录了成功信息
+        // Verify that DaprClient.PublishEventAsync was called once
+        _mockDaprClient.Verify(
+            c => c.PublishEventAsync(pubsubName, topicName, message, default),
+            Times.Once
+        );
+
+        // Verify that a success message was logged
         _mockLogger.Verify(logger =>
                 logger.Log(
                     LogLevel.Information,
                     It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Dapr event published")),
+                    It.Is<It.IsAnyType>((v, t) =>
+                        v.ToString().Contains("Dapr event published")),
                     null,
                     It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -71,7 +80,7 @@ public class DaprProviderTests
         string topicName = "test-topic";
         string message = "Hello, World!";
 
-        // 模拟异常
+        // Simulate an exception thrown by DaprClient.PublishEventAsync
         var exception = new Exception("Test exception");
         _mockDaprClient
             .Setup(c => c.PublishEventAsync(pubsubName, topicName, message, default))
@@ -81,15 +90,20 @@ public class DaprProviderTests
         await _daprProvider.PublishEventAsync(pubsubName, topicName, message);
 
         // Assert
-        // 验证 DaprClient 的 PublishEventAsync 是否被调用一次
-        _mockDaprClient.Verify(c => c.PublishEventAsync(pubsubName, topicName, message, default), Times.Once);
 
-        // 验证日志是否记录了错误信息
+        // Verify that DaprClient.PublishEventAsync was called once
+        _mockDaprClient.Verify(
+            c => c.PublishEventAsync(pubsubName, topicName, message, default),
+            Times.Once
+        );
+
+        // Verify that an error message was logged
         _mockLogger.Verify(logger =>
                 logger.Log(
                     LogLevel.Error,
                     It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Error publishing event")),
+                    It.Is<It.IsAnyType>((v, t) =>
+                        v.ToString().Contains("Error publishing event")),
                     exception,
                     It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);

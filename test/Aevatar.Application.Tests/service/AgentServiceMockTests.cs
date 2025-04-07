@@ -171,24 +171,5 @@ public class AgentServiceTests
         Assert.Equal(5L, Convert.ToInt64(result.Properties["replicas"]));
     }
     
-    // [Fact]
-    // public void CalculateScore_ShouldReturnCorrectValue()
-    // {
-    //     // Arrange: mock依赖（可选）
-    //     var mockLogger = new Mock<ILogger<AgentService>>();
-    //     var service = new AgentService(...);  // 传入你真实依赖或 mock 对象
-    //
-    //     // 使用反射获取 private 方法
-    //     var method = typeof(AgentService).GetMethod("CalculateScore",
-    //         BindingFlags.NonPublic | BindingFlags.Instance);
-    //
-    //     Assert.NotNull(method);
-    //
-    //     // Act
-    //     var result = method.Invoke(service, new object[] { 5, 10 });
-    //
-    //     // Assert
-    //     Assert.Equal(50, result);
-    // }
 }
 
