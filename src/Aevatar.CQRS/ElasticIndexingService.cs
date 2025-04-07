@@ -19,6 +19,7 @@ using Volo.Abp.Application.Dtos;
 using Volo.Abp.DependencyInjection;
 using Aevatar.CQRS.Dto;
 using Microsoft.VisualBasic;
+using DateInterval = Nest.DateInterval;
 
 namespace Aevatar;
 
@@ -561,12 +562,13 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         DateTime startTime,
         DateTime endTime, bool statisticsAsHour)
     {
+        var dateInterval = statisticsAsHour ? DateInterval.Hour : DateInterval.Day;
         var dateHistogramName = "daily_usage";
         var result = new List<string>();
         var response = await _elasticClient.SearchAsync<CQRS.Dto.TokenUsage>(s => s.Query(q =>
                 q.DateRange(r => r.Field(f => f.CreatTime).GreaterThanOrEquals(startTime).LessThanOrEquals(endTime)))
             .Aggregations(a => a.DateHistogram("daily_usage",
-                dh => dh.Field(f => f.CreatTime).CalendarInterval(DateInterval.Day).Aggregations(aa => aa
+                dh => dh.Field(f => f.CreatTime).CalendarInterval(dateInterval).Aggregations(aa => aa
                     .Sum("LastInputTokenUsage", sa => sa.Field(f => f.LastInputTokenUsage))
                     .Sum("LastOutTokenUsage", sa => sa.Field(f => f.LastOutTokenUsage))
                 ))).Size(0)
