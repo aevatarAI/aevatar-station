@@ -20,8 +20,13 @@ public class StationSignalRHub : AbpHub
     public override async Task OnConnectedAsync()
     {
         _logger.LogDebug("connectionId={connectionId} connected.", Context.ConnectionId);
-        await Clients.Client(Context.ConnectionId).SendAsync("Test", "Success");
+        
         await base.OnConnectedAsync();
+
+        _ = Task.Run(async () =>
+        {
+            await Clients.Client(Context.ConnectionId).SendAsync("Test", "Success");
+        });
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
