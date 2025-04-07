@@ -1,5 +1,7 @@
 using System;
+using System.IdentityModel.Tokens.Jwt;
 using AElf.OpenTelemetry;
+using Aevatar.ApiRequests;
 using AutoResponseWrapper;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
@@ -25,8 +27,10 @@ using Volo.Abp.AspNetCore.Mvc.UI.Bundling;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
+using Volo.Abp.BackgroundWorkers;
 using Volo.Abp.Caching;
 using Volo.Abp.Caching.StackExchangeRedis;
+using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
 using Volo.Abp.Swashbuckle;
 using Volo.Abp.Threading;
@@ -105,6 +109,27 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
                 options.RequireHttpsMetadata = Convert.ToBoolean(configuration["AuthServer:RequireHttpsMetadata"]);
                 options.Audience = "Aevatar";
                 options.MapInboundClaims = false;
+                
+                options.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = async context =>
+                    {
+                        var userId = context.Principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+                        var securityStamp = context.Principal.FindFirst(AevatarConsts.SecurityStampClaimType)
+                            ?.Value;
+                        if (!userId.IsNullOrWhiteSpace() && !securityStamp.IsNullOrWhiteSpace())
+                        {
+                            var userManager = context.HttpContext.RequestServices
+                                .GetRequiredService<IdentityUserManager>();
+                            var user = await userManager.FindByIdAsync(userId);
+                            
+                            if (user == null || user.SecurityStamp != securityStamp)
+                            {
+                                context.Fail("Token is no longer valid.");
+                            }
+                        }
+                    }
+                };
             });
     }
 
@@ -187,11 +212,6 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         var app = context.GetApplicationBuilder();
         var env = context.GetEnvironment();
 
-        if (env.IsDevelopment())
-        {
-            app.UseDeveloperExceptionPage();
-        }
-
         app.UseAbpRequestLocalization();
 
         app.UseCorrelationId();
@@ -201,6 +221,7 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         app.UseCors();
         app.UseAuthentication();
         app.UseAuthorization();
+        app.UseMiddleware<ApiRequestStatisticsMiddleware>();
         // app.UsePathBase("/developer-client");
         app.UseUnitOfWork();
         app.UseDynamicClaims();
@@ -215,9 +236,12 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
             c.OAuthScopes("Aevatar");
         });
         app.UseHealthChecks("/health");
-
+        
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();
         app.UseConfiguredEndpoints();
+        
+        
+        AsyncHelper.RunSync(() => context.AddBackgroundWorkerAsync<ApiRequestWorker>());
     }
 }

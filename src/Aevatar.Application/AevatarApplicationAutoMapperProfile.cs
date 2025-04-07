@@ -3,6 +3,7 @@ using Aevatar.Subscription;
 using Aevatar.Agents.Creator;
 using Aevatar.ApiKey;
 using Aevatar.ApiKeys;
+using Aevatar.ApiRequests;
 using Aevatar.CQRS;
 using Aevatar.CQRS.Dto;
 using Aevatar.Domain.Grains.Subscription;
@@ -37,5 +38,8 @@ public class AevatarApplicationAutoMapperProfile : Profile
                     s.ExtraProperties.ContainsKey(AevatarConsts.ProjectDomainNameKey)
                         ? s.ExtraProperties[AevatarConsts.ProjectDomainNameKey].ToString()
                         : null));
+        
+        CreateMap<ApiRequestSnapshot, ApiRequestDto>()
+            .ForMember(d => d.Time, m => m.MapFrom(s => DateTimeHelper.ToUnixTimeMilliseconds(s.Time)));
     }
 }

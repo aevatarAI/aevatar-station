@@ -1,4 +1,5 @@
 ﻿using Aevatar.ApiKey;
+using Aevatar.ApiRequests;
 using Aevatar.Notification;
 using Aevatar.User;
 using MongoDB.Driver;
@@ -21,6 +22,8 @@ public class AevatarMongoDbContext : AbpMongoDbContext
      * public IMongoCollection<Question> Questions => Collection<Question>();
      */
     public IMongoCollection<IdentityUserExtension> IdentityUserExtensionInfos { get; private set; }
+    
+    public IMongoCollection<ApiRequestSnapshot> ApiRequestSnapshots { get; private set; }
 
 
     protected override void CreateModel(IMongoModelBuilder modelBuilder)
@@ -42,5 +45,6 @@ public class AevatarMongoDbContext : AbpMongoDbContext
         modelBuilder.Entity<IdentityUserExtension>(b => { b.CollectionName = "IdentityUserExtensions"; });
         modelBuilder.Entity<ProjectAppIdInfo>(b => b.CollectionName = "ProjectAppInfoCollection");
         modelBuilder.Entity<NotificationInfo>(b => b.CollectionName = "NotificationInfoCollection");
+        modelBuilder.Entity<ApiRequestSnapshot>(b => b.CollectionName = "ApiRequestSnapshots");
     }
 }

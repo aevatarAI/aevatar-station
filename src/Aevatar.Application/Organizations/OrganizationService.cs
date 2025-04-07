@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Aevatar.Notification;
 using Aevatar.Notification.Parameters;
 using Aevatar.Permissions;
+using Microsoft.AspNetCore.Identity;
 using Newtonsoft.Json;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -13,6 +14,8 @@ using Volo.Abp.Domain.Repositories;
 using Volo.Abp.EventBus.Distributed;
 using Volo.Abp.Identity;
 using Volo.Abp.PermissionManagement;
+using IdentityRole = Volo.Abp.Identity.IdentityRole;
+using IdentityUser = Volo.Abp.Identity.IdentityUser;
 
 namespace Aevatar.Organizations;
 
@@ -130,7 +133,8 @@ public class OrganizationService : AevatarAppService, IOrganizationService
             await IdentityUserManager.AddToOrganizationUnitAsync(CurrentUser.Id.Value, organizationUnit.Id);
             var user = await IdentityUserManager.GetByIdAsync(CurrentUser.Id.Value);
             user.AddRole(ownerRoleId);
-            await IdentityUserManager.UpdateAsync(user);
+            (await IdentityUserManager.UpdateAsync(user)).CheckErrors();
+            (await IdentityUserManager.UpdateSecurityStampAsync(user)).CheckErrors();
         }
 
         return ObjectMapper.Map<OrganizationUnit, OrganizationDto>(organizationUnit);
@@ -142,7 +146,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
             GuidGenerator.Create(),
             OrganizationRoleHelper.GetRoleName(organizationId, AevatarConsts.OrganizationOwnerRoleName)
         );
-        await RoleManager.CreateAsync(role);
+        (await RoleManager.CreateAsync(role)).CheckErrors();
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Organizations.Default, true);
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Organizations.Edit, true);
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Organizations.Delete, true);
@@ -172,7 +176,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
             GuidGenerator.Create(),
             OrganizationRoleHelper.GetRoleName(organizationId, AevatarConsts.OrganizationReaderRoleName)
         );
-        await RoleManager.CreateAsync(role);
+        (await RoleManager.CreateAsync(role)).CheckErrors();
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Organizations.Default, true);
         await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Members.Default, true);
 
@@ -244,7 +248,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
     {
         SetMemberStatus(organizationId, user, MemberStatus.Inviting);
 
-        await IdentityUserManager.UpdateAsync(user);
+        (await IdentityUserManager.UpdateAsync(user)).CheckErrors();
         await IdentityUserManager.AddToOrganizationUnitAsync(user.Id, organizationId);
         await CurrentUnitOfWork.SaveChangesAsync();
         
@@ -287,7 +291,8 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         if (role.HasValue)
         {
             user.RemoveRole(role.Value);
-            await IdentityUserManager.UpdateAsync(user);
+            (await IdentityUserManager.UpdateAsync(user)).CheckErrors();
+            (await IdentityUserManager.UpdateSecurityStampAsync(user)).CheckErrors();
         }
 
         await IdentityUserManager.RemoveFromOrganizationUnitAsync(user.Id, organization.Id);
@@ -312,7 +317,8 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         user.AddRole(input.RoleId);
         SetMemberStatus(organizationId, user, MemberStatus.Joined);
         
-        await IdentityUserManager.UpdateAsync(user);
+        (await IdentityUserManager.UpdateAsync(user)).CheckErrors();;
+        (await IdentityUserManager.UpdateSecurityStampAsync(user)).CheckErrors();;
     }
 
     public virtual async Task<ListResultDto<IdentityRoleDto>> GetRoleListAsync(Guid organizationId)
