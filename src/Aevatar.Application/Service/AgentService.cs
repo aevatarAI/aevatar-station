@@ -285,6 +285,8 @@ public class AgentService : ApplicationService, IAgentService
                 ? null
                 : JsonConvert.DeserializeObject<Dictionary<string, object>>((string)state["properties"]),
             AgentType = (string)state["agentType"],
+            BusinessAgentGrainId =
+                state.TryGetValue("formattedBusinessAgentGrainId", out var value) ? (string)value : null
         }));
 
         return result;
