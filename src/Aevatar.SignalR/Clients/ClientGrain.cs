@@ -39,6 +39,8 @@ internal sealed class ClientGrain : IGrainBase, IClientGrain
 
     private async Task EnsureServerDisconnectionSubscription(Guid serverId)
     {
+        // TODO: Handle disconnection.
+        return;
         if (_serverDisconnectedSubscription is null && !_isSubscriptionPending)
         {
             _isSubscriptionPending = true;
