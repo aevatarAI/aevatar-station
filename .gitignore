@@ -260,3 +260,6 @@ appsettings.secrets.json
 
 tools/benchmark-results/*
 tools/coverage/*
+
+# MongoDB测试备份
+backup/

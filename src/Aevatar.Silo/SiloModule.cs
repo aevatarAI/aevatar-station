@@ -73,11 +73,12 @@ public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
             options.MaxRequestProcessingTime = TimeSpan.FromMinutes(10);
         });
         
-        context.Services.Configure<PerformanceTuningOptions>(options =>
-        {
-            options.DefaultConnectionLimit = 200;
-            options.MinDotNetThreadPoolSize = Environment.ProcessorCount * 5;
-        });
+        // 注释掉未找到的PerformanceTuningOptions类型配置
+        // context.Services.Configure<PerformanceTuningOptions>(options =>
+        // {
+        //     options.DefaultConnectionLimit = 200;
+        //     options.MinDotNetThreadPoolSize = Environment.ProcessorCount * 5;
+        // });
         
         context.Services.Configure<GrainCollectionOptions>(options =>
         {
