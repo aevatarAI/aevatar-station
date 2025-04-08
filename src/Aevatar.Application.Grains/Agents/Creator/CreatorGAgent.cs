@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 
 namespace Aevatar.Application.Grains.Agents.Creator;
 
+[GAgent]
 public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>, ICreatorGAgent
 {
     private readonly ILogger<CreatorGAgent> _logger;
