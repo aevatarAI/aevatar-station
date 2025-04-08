@@ -228,13 +228,11 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         var sysMessage = await configuration.GetPrompt();
         var formattedRequirement =
             """
+            
             ### 要求：
-            1. 内容部分将所有 Markdown 元素（（如标题、加粗、列表等）转换为有效的 HTML 标签。
+            1. 内容部分将所有 Markdown 元素（如标题、加粗、列表等）转换为有效的 HTML 标签。
             2. 不需要返回HTML整个页面，只需要内容部分。
-            3. 如果内容里面有公式，需要能够被 react-native-mathjax 解析渲染.
-            4. LaTeX 风格的数学公式转换为以下 HTML 格式：
-               - 行内公式使用 `<span class="katex">...</span>`。
-               - 块级公式使用 `<div class="katex-display">...</div>`。
+            3. 返回的内容不需要转换为有效的 HTML 格式的提示词。
             """;
         sysMessage += formattedRequirement;
         Logger.LogDebug("Retrieved system prompt from configuration: {SysMessage}", sysMessage);
