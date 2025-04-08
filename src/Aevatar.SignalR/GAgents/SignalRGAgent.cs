@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Threading.Channels;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
@@ -72,10 +73,16 @@ public class SignalRGAgent :
                 var connectionIdList = State.ConnectionIds;
                 foreach (var (connectionId, fireAndForget) in connectionIdList)
                 {
-                    Logger.LogInformation("Sending message to connectionId: {ConnectionId}, Message {Message}", connectionId,
+                    Logger.LogInformation("Sending message to connectionId: {ConnectionId}, Message {Message}",
+                        connectionId,
                         message);
+                    Stopwatch sw = new Stopwatch();
+                    sw.Start();
                     await _hubContext.Client(connectionId)
                         .Send(SignalROrleansConstants.ResponseMethodName, message);
+                    sw.Stop();
+                    Logger.LogDebug(
+                        $"[SignalRGAgent][SendWithRetryAsync] connectId:{connectionId}, use time:{sw.ElapsedMilliseconds}");
                     if (fireAndForget)
                     {
                         Logger.LogDebug("Cleaning up connectionId: {ConnectionId}", connectionId);
@@ -107,9 +114,10 @@ public class SignalRGAgent :
     public async Task PublishEventAsync<T>(T @event, string connectionId) where T : EventBase
     {
         await PublishAsync(@event);
-        
-        Logger.LogDebug("Mapping correlationId to connectionId: {@CorrelationId} {ConnectionId}", @event.CorrelationId!.Value, connectionId);
-        
+
+        Logger.LogDebug("Mapping correlationId to connectionId: {@CorrelationId} {ConnectionId}",
+            @event.CorrelationId!.Value, connectionId);
+
         RaiseEvent(new MapCorrelationIdToConnectionIdStateLogEvent
         {
             CorrelationId = @event.CorrelationId!.Value,
@@ -156,7 +164,8 @@ public class SignalRGAgent :
         }
         else
         {
-            Logger.LogInformation("Cannot find corresponding connectionId for correlationId: {@CorrelationId}", @event.CorrelationId);
+            Logger.LogInformation("Cannot find corresponding connectionId for correlationId: {@CorrelationId}",
+                @event.CorrelationId);
         }
 
         await EnqueueMessageAsync(new AevatarSignalRResponse<ResponseToPublisherEventBase>
