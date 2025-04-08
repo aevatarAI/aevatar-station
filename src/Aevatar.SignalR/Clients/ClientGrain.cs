@@ -56,6 +56,8 @@ internal sealed class ClientGrain : IGrainBase, IClientGrain
             var _serverDisconnectedSubscription = (await serverDisconnectedStream.GetAllSubscriptionHandles())[0];
             await _serverDisconnectedSubscription.ResumeAsync((serverId, _) => OnDisconnect("server-disconnected"));
         }
+        
+        _logger.LogDebug("OnActivateAsync executed, ConnectionId = {connectionId}", _connectionId);
     }
 
     public async Task OnConnect(Guid serverId)
@@ -64,12 +66,12 @@ internal sealed class ClientGrain : IGrainBase, IClientGrain
         
         // Log the number of existing subscriptions (for diagnostic purposes)
         var existingSubscriptions = await serverDisconnectedStream.GetAllSubscriptionHandles();
-        _logger.LogDebug("🧪 Resuming subscriptions: ServerId = {serverId}, existing subscription count = {count}",
-            _clientState.State.ServerId, existingSubscriptions.Count);
-        
+        _logger.LogDebug("🧪 Resuming subscriptions: ServerId = {serverId}, ConnectionId = {connectionId}, existing subscription count = {count}",
+            _clientState.State.ServerId, _connectionId, existingSubscriptions.Count);
         
         _serverDisconnectedSubscription = await serverDisconnectedStream.SubscribeAsync(_ => OnDisconnect("server-disconnected"));
-        _logger.LogDebug("ClientState size estimate: {size} bytes", JsonSerializer.Serialize(_clientState.State).Length);
+        _logger.LogDebug("ClientState size estimate: {size} bytes, , ConnectionId = {connectionId}",
+            JsonSerializer.Serialize(_clientState.State).Length, _connectionId);
         _clientState.State.ServerId = serverId;
         await _clientState.WriteStateAsync();
         

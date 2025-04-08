@@ -4,6 +4,7 @@ using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.SignalR.Core;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Aevatar.SignalR.GAgents;
 
@@ -75,7 +76,7 @@ public class SignalRGAgent :
                 {
                     Logger.LogInformation("Sending message to connectionId: {ConnectionId}, Message {Message}",
                         connectionId,
-                        message);
+                        JsonConvert.SerializeObject(message));
                     Stopwatch sw = new Stopwatch();
                     sw.Start();
                     await _hubContext.Client(connectionId)

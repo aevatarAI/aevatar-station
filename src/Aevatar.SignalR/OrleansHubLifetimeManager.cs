@@ -204,6 +204,13 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
                     : "No claims");
             
             var client = _clusterClient.GetClientGrain(_hubName, connection.ConnectionId);
+
+            _logger.LogDebug(
+                "Orleans Hub - Client grain - Instance: {InstanceId}, Hub: {HubName}, ServerId: {ServerId}, ConnectionId: {ConnectionId}",
+                _instanceId,
+                _hubName,
+                _serverId,
+                connection.ConnectionId);
             
             await client.OnConnect(_serverId);
 
