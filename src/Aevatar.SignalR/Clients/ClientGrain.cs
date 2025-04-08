@@ -64,7 +64,7 @@ internal sealed class ClientGrain : IGrainBase, IClientGrain
         
         // Log the number of existing subscriptions (for diagnostic purposes)
         var existingSubscriptions = await serverDisconnectedStream.GetAllSubscriptionHandles();
-        _logger.LogWarning("🧪 Resuming subscriptions: ServerId = {serverId}, existing subscription count = {count}",
+        _logger.LogDebug("🧪 Resuming subscriptions: ServerId = {serverId}, existing subscription count = {count}",
             _clientState.State.ServerId, existingSubscriptions.Count);
         
         
