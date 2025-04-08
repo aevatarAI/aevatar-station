@@ -57,6 +57,10 @@ internal sealed class ClientGrain : IGrainBase, IClientGrain
 
                             _serverDisconnectedSubscription =
                                 await serverDisconnectedStream.SubscribeAsync(_ => OnDisconnect("server-disconnected"));
+                            
+                            _logger.LogDebug(
+                                "Subscribed to server disconnection stream for server {serverId} on connection {connectionId}.",
+                                serverId, _connectionId);
                         }
                     }
                     finally
@@ -67,7 +71,7 @@ internal sealed class ClientGrain : IGrainBase, IClientGrain
                     }
                 },
                 null,
-                TimeSpan.FromMilliseconds(100),
+                TimeSpan.FromMilliseconds(5000),
                 TimeSpan.FromMilliseconds(-1)
             );
         }
