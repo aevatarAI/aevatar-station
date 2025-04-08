@@ -15,6 +15,9 @@ public class AppleAuthService : ApplicationService, IAppleAuthService
     private readonly IOptionsMonitor<AppleAuthOption> _appleAuthOptions;
 
     private const string QuestionMark = "?";
+
+    private const string LoginPlatformBrowser = "browser";
+    private const string LoginPlatformAndroid = "android";
     
     public AppleAuthService(ILogger<AppleAuthService> logger, IOptionsMonitor<AppleAuthOption> appleAuthOptions)
     {
@@ -22,23 +25,23 @@ public class AppleAuthService : ApplicationService, IAppleAuthService
         _appleAuthOptions = appleAuthOptions;
     }
 
-    public async Task<string> CallbackAsync(AppleAuthCallbackDto callbackDto)
+    public async Task<string> CallbackAsync(string platform, AppleAuthCallbackDto callbackDto)
     {
-        _logger.LogDebug("Apple token: {token}", JsonConvert.SerializeObject(callbackDto));
+        _logger.LogDebug("Apple token:{platform}, {token}", platform, JsonConvert.SerializeObject(callbackDto));
 
         var idToken = callbackDto.Id_token;
         var code = callbackDto.Code;
-        
-        return GetRedirectUrl(_appleAuthOptions.CurrentValue.RedirectUrl, idToken, code);
+
+        return GetRedirectUrl(_appleAuthOptions.CurrentValue.RedirectUrl, idToken, code, platform);
     }
     
-    private static string GetRedirectUrl(string redirectUrl, string token, string code)
+    private static string GetRedirectUrl(string redirectUrl, string token, string code, string platform)
     {
         if (redirectUrl.Contains(QuestionMark))
         {
-            return $"{redirectUrl}&id_token={token}&code={code}";
+            return $"{redirectUrl}&id_token={token}&code={code}&platform={platform}";
         }
 
-        return $"{redirectUrl}?id_token={token}&code={code}";
+        return $"{redirectUrl}?id_token={token}&code={code}&platform={platform}";
     }
 }

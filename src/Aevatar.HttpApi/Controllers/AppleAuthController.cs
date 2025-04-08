@@ -18,10 +18,11 @@ public class AppleAuthController : AevatarController
         _appleAuthService = appleAuthService;
     }
 
-    [HttpPost("callback")]
-    public async Task<IActionResult> CallbackAsync([FromForm] AppleAuthCallbackDto appleAuthCallbackDto)
+    [HttpPost("{platform}/callback")]
+    public async Task<IActionResult> CallbackAsync(string platform, [FromForm] AppleAuthCallbackDto appleAuthCallbackDto)
     {
-        var redirectUrl = await _appleAuthService.CallbackAsync(appleAuthCallbackDto);
+        
+        var redirectUrl = await _appleAuthService.CallbackAsync(platform, appleAuthCallbackDto);
         return Redirect(redirectUrl);
     }
 }
