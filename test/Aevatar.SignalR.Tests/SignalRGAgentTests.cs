@@ -1,6 +1,7 @@
 using Aevatar.Core.Abstractions;
 using Aevatar.SignalR.GAgents;
 using Aevatar.SignalR.Tests.GAgents;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Shouldly;
 
@@ -15,7 +16,8 @@ public sealed class SignalRGAgentTests : AevatarSignalRTestBase
     public SignalRGAgentTests()
     {
         _gAgentFactory = GetRequiredService<IGAgentFactory>();
-        _signalRHub = new AevatarSignalRHub(_gAgentFactory, null);
+        var logger = GetRequiredService<ILogger<AevatarSignalRHub>>();
+        _signalRHub = new AevatarSignalRHub(_gAgentFactory, logger);
     }
 
     [Fact]

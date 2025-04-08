@@ -15,11 +15,13 @@ public sealed class SignalRTests : AevatarSignalRTestBase
     private readonly IClusterClient _clusterClient;
     private readonly IGAgentFactory _gAgentFactory;
     private readonly HubLifetimeManager<AevatarSignalRHub> _hubLifetimeManager;
+    private readonly ILogger<AevatarSignalRHub> _logger;
 
     public SignalRTests()
     {
         _clusterClient = GetRequiredService<IClusterClient>();
         _gAgentFactory = GetRequiredService<IGAgentFactory>();
+        _logger = GetRequiredService<ILogger<AevatarSignalRHub>>();
         _hubLifetimeManager = new OrleansHubLifetimeManager<AevatarSignalRHub>(
             new LoggerFactory().CreateLogger<OrleansHubLifetimeManager<AevatarSignalRHub>>(), _clusterClient);
     }
@@ -41,7 +43,7 @@ public sealed class SignalRTests : AevatarSignalRTestBase
         var connection = SignalRTestHelper.CreateHubConnectionContext(client.Connection);
         await _hubLifetimeManager.OnConnectedAsync(connection);
 
-        var hub = new AevatarSignalRHub(_gAgentFactory, null);
+        var hub = new AevatarSignalRHub(_gAgentFactory, _logger);
         await hub.PublishEventAsync(signalRTestGAgent.GetGrainId(), typeof(NaiveTestEvent).FullName!,
             JsonConvert.SerializeObject(new NaiveTestEvent
             {
