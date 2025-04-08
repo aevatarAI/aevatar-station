@@ -65,6 +65,7 @@ public class AevatarApplicationModule : AbpModule
         context.Services.AddSingleton<INotificationHandlerFactory, NotificationProcessorFactory>();
         Configure<HostDeployOptions>(configuration.GetSection("HostDeploy"));
         context.Services.Configure<HostOptions>(configuration.GetSection("Host"));
+        context.Services.Configure<AppleAuthOption>(configuration.GetSection("AppleAuth"));
         
         Configure<AccountOptions>(configuration.GetSection("Account"));
     }
