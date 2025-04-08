@@ -57,14 +57,16 @@ public class OrganizationPermissionChecker : IOrganizationPermissionChecker, ITr
             return true;
         }
 
-        var role = await FindOrganizationRoleAsync(organizationId, currentUserRoles);
-        
-        if (role.IsNullOrEmpty() || !await IsGrantedAsync(permissionName, role))
+        var roles = await FindOrganizationRoleAsync(organizationId, currentUserRoles);
+        foreach (var role in roles)
         {
-            return false;
+            if (await IsGrantedAsync(permissionName, role))
+            {
+                return true;
+            }
         }
 
-        return true;
+        return false;
     }
 
     private async Task<bool> IsGrantedAsync(string name, string role)
@@ -93,8 +95,9 @@ public class OrganizationPermissionChecker : IOrganizationPermissionChecker, ITr
         return true;
     }
 
-    private async Task<string> FindOrganizationRoleAsync(Guid organizationId, List<string> roles)
+    private async Task<List<string>> FindOrganizationRoleAsync(Guid organizationId, List<string> roles)
     {
+        var organizationRoles = new List<string>();
         while (true)
         {
             var organization = await _organizationUnitRepository.GetAsync(organizationId);
@@ -105,7 +108,7 @@ public class OrganizationPermissionChecker : IOrganizationPermissionChecker, ITr
                     var role = await _roleManager.GetByIdAsync(organizationRoleId);
                     if (roles.Contains(role.Name))
                     {
-                        return role.Name;
+                        organizationRoles.Add(role.Name);
                     }
                 }
             }
@@ -116,7 +119,9 @@ public class OrganizationPermissionChecker : IOrganizationPermissionChecker, ITr
                 continue;
             }
 
-            return null;
+            break;
         }
+
+        return organizationRoles;
     }
 }

@@ -24,7 +24,6 @@ public class AevatarMongoDbContext : AbpMongoDbContext
      */
     public IMongoCollection<IdentityUserExtension> IdentityUserExtensionInfos { get; private set; }
     public IMongoCollection<StatePermission> StatePermissionInfos { get; private set; }
-    
     public IMongoCollection<ApiRequestSnapshot> ApiRequestSnapshots { get; private set; }
 
 

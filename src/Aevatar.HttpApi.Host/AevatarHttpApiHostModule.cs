@@ -1,5 +1,6 @@
 using System;
 using System.IdentityModel.Tokens.Jwt;
+using System.Threading.Tasks;
 using AElf.OpenTelemetry;
 using Aevatar.ApiRequests;
 using AutoResponseWrapper;
@@ -113,22 +114,32 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
                 
                 options.Events = new JwtBearerEvents
                 {
-                    OnTokenValidated = async context =>
+                    OnTokenValidated = async tokenValidatedContext  =>
                     {
-                        var userId = context.Principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
-                        var securityStamp = context.Principal.FindFirst(AevatarConsts.SecurityStampClaimType)
+                        var userId = tokenValidatedContext.Principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+                        var securityStamp = tokenValidatedContext.Principal.FindFirst(AevatarConsts.SecurityStampClaimType)
                             ?.Value;
                         if (!userId.IsNullOrWhiteSpace() && !securityStamp.IsNullOrWhiteSpace())
                         {
-                            var userManager = context.HttpContext.RequestServices
+                            var userManager = tokenValidatedContext.HttpContext.RequestServices
                                 .GetRequiredService<IdentityUserManager>();
                             var user = await userManager.FindByIdAsync(userId);
                             
                             if (user == null || user.SecurityStamp != securityStamp)
                             {
-                                context.Fail("Token is no longer valid.");
+                                tokenValidatedContext.Fail("Token is no longer valid.");
                             }
                         }
+                    },
+                    OnMessageReceived = messageReceivedContext =>
+                    {
+                        var accessToken = messageReceivedContext.Request.Query["access_token"];
+                        if (!string.IsNullOrEmpty(accessToken))
+                        {
+                            // Read the token out of the query string
+                            messageReceivedContext.Token = accessToken;
+                        }
+                        return Task.CompletedTask;
                     }
                 };
             });
