@@ -11,13 +11,14 @@ namespace Aevatar.AppleAuth;
 [RemoteService(IsEnabled = false)]
 public class AppleAuthService : ApplicationService, IAppleAuthService
 {
-    private readonly IOptionsMonitor<AppleAuthOption> _appleAuthOptions;
     private readonly ILogger<AppleAuthService> _logger;
+    private readonly IOptionsMonitor<AppleAuthOption> _appleAuthOptions;
 
     private const string QuestionMark = "?";
-
-    public AppleAuthService(IOptionsMonitor<AppleAuthOption> appleAuthOptions)
+    
+    public AppleAuthService(ILogger<AppleAuthService> logger, IOptionsMonitor<AppleAuthOption> appleAuthOptions)
     {
+        _logger = logger;
         _appleAuthOptions = appleAuthOptions;
     }
 
