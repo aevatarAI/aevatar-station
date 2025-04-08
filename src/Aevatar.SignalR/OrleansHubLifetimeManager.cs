@@ -172,16 +172,16 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
             var httpContext = connection.GetHttpContext();
             var ipAddress = httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "Unknown IP";
             
-            if (IsIpRateLimited(ipAddress))
-            {
-                _logger.LogWarning(
-                    "Connection rejected due to rate limiting - Instance: {InstanceId}, IP: {IpAddress}, ConnectionId: {ConnectionId}",
-                    _instanceId,
-                    ipAddress,
-                    connection.ConnectionId);
-                    
-                throw new HubException($"Too many connection attempts. Please wait a moment before trying again.");
-            }
+            // if (IsIpRateLimited(ipAddress))
+            // {
+            //     _logger.LogWarning(
+            //         "Connection rejected due to rate limiting - Instance: {InstanceId}, IP: {IpAddress}, ConnectionId: {ConnectionId}",
+            //         _instanceId,
+            //         ipAddress,
+            //         connection.ConnectionId);
+            //         
+            //     throw new HubException($"Too many connection attempts. Please wait a moment before trying again.");
+            // }
 
             _connections.Add(connection);
 
