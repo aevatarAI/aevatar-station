@@ -227,7 +227,15 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         IGodChat godChat = GrainFactory.GetGrain<IGodChat>(Guid.NewGuid());
         var sysMessage = await configuration.GetPrompt();
         var formattedRequirement =
-            "### 要求：\n1. 将所有 Markdown 元素（如标题、加粗、列表等）转换为有效的 HTML 标签。\n2. 将所有 LaTeX 风格的数学公式（例如：`$E=mc^2$` 的行内公式，或 `$$\\int_0^\\infty e^{-x^2} dx$$` 的块级公式）转换为以下 HTML 格式：\n   - 行内公式使用 `<span class=\"katex\">...</span>`。\n   - 块级公式使用 `<div class=\"katex-display\">...</div>`。\n3. 确保输出的 HTML 优化用于前端渲染，公式部分可以直接交由 KaTeX 或 MathJax 渲染。";
+            """
+            ### 要求：
+            1. 内容部分将所有 Markdown 元素（（如标题、加粗、列表等）转换为有效的 HTML 标签。
+            2. 不需要返回HTML整个页面，只需要内容部分。
+            3. 如果内容里面有公式，需要能够被 react-native-mathjax 解析渲染.
+            4. LaTeX 风格的数学公式转换为以下 HTML 格式：
+               - 行内公式使用 `<span class="katex">...</span>`。
+               - 块级公式使用 `<div class="katex-display">...</div>`。
+            """;
         sysMessage += formattedRequirement;
         Logger.LogDebug("Retrieved system prompt from configuration: {SysMessage}", sysMessage);
         await godChat.ConfigAsync(new ChatConfigDto()
