@@ -1,0 +1,41 @@
+{
+  "name": "aevatar-benchmark-tools",
+  "version": "1.0.0",
+  "description": "Benchmark tools for Aevatar Station",
+  "main": "benchmark.js",
+  "scripts": {
+    "benchmark": "node benchmark.js",
+    "benchmark:users": "node benchmark.js --userCount=10 --batchSize=5",
+    "benchmark:stress": "node benchmark.js --userCount=50 --batchSize=10 --maxConcurrentConnections=100",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "keywords": [
+    "benchmark",
+    "performance",
+    "testing"
+  ],
+  "author": "Aevatar Team",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@microsoft/signalr": "^7.0.0",
+    "node-fetch": "^2.6.9",
+    "ws": "^8.13.0"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0",
+    "sinon": "^20.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/*.test.js"
+    ],
+    "collectCoverage": true,
+    "coverageReporters": [
+      "text",
+      "lcov"
+    ],
+    "coverageDirectory": "coverage"
+  }
+}
