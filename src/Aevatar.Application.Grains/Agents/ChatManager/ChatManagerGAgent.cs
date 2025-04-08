@@ -235,7 +235,9 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             3. 返回的内容不需要转换为有效的 HTML 格式的提示词。
             4. 内容不需要用 ```html ``` 包裹。
             5. 如果内容里面有公式，需要能够被 react-native-mathjax 解析渲染。
-            6. LaTeX 风格的数学公式转换为以下 HTML 格式。
+            6. LaTeX 风格的数学公式转换为以下 HTML 格式:
+              - 行内公式使用 `$...$`。
+              - 块级公式使用 `$$...$$`。
             """;
         sysMessage += formattedRequirement;
         Logger.LogDebug("Retrieved system prompt from configuration: {SysMessage}", sysMessage);
