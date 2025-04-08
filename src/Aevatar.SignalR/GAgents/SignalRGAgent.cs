@@ -94,7 +94,7 @@ public class SignalRGAgent :
                 if (i >= maxRetries - 1)
                     Logger.LogError(ex, $"Message failed after {maxRetries} retries.");
                 else
-                    await Task.Delay(1000 * (i + 1));
+                    await Task.Delay(10 * (i + 1));
             }
         }
     }
