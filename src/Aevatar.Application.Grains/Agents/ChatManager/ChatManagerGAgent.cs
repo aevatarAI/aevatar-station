@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Orleans.Providers;
+using Orleans.Concurrency;
 
 namespace Aevatar.Application.Grains.Agents.ChatManager;
 
@@ -21,9 +22,11 @@ namespace Aevatar.Application.Grains.Agents.ChatManager;
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 [GAgent(nameof(ChatGAgentManager))]
+[Reentrant]
 public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManageEventLog>,
     IChatManagerGAgent
 {
+    [Orleans.Concurrency.ReadOnly]
     public override Task<string> GetDescriptionAsync()
     {
         return Task.FromResult("Chat GAgent Manager");
@@ -43,7 +46,33 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             if (State.StreamingModeEnabled)
             {
                 Logger.LogDebug("State.StreamingModeEnabled is on");
-                await StreamChatWithSessionAsync(@event.SessionId, @event.SystemLLM, @event.Content,chatId);
+                // 使用Task.Run来避免长时间运行操作阻塞Grain
+                _ = Task.Run(async () => 
+                {
+                    try 
+                    {
+                        await StreamChatWithSessionAsync(@event.SessionId, @event.SystemLLM, @event.Content, chatId);
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.LogError(e, $"[ChatGAgentManager][RequestStreamGodChatEvent] stream chat error:{e}");
+                        await PublishAsync(new ResponseStreamGodChat()
+                        {
+                            ChatId = chatId,
+                            Response = $"Error processing stream request: {e.Message}",
+                            IsLastChunk = true
+                        });
+                    }
+                });
+                
+                // 立即返回初始响应，表示流式处理已开始
+                await PublishAsync(new ResponseStreamGodChat()
+                {
+                    ChatId = chatId,
+                    Response = "",
+                    IsLastChunk = false
+                });
+                return;
             }
             else
             {
@@ -56,11 +85,13 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         catch (Exception e)
         {
             Logger.LogError(e, $"[ChatGAgentManager][RequestStreamGodChatEvent] handle error:{e.ToString()}");
+            content = $"Error: {e.Message}";
+            isLastChunk = true;
         }
 
         await PublishAsync(new ResponseStreamGodChat()
         {
-            ChatId =chatId,
+            ChatId = chatId,
             Response = content,
             NewTitle = title,
             IsLastChunk = isLastChunk
@@ -84,7 +115,6 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         });
         
         Logger.LogDebug($"[ChatGAgentManager][AIStreamingResponseGEvent] end:{JsonConvert.SerializeObject(@event)}");
-
     }
     
     
@@ -129,6 +159,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         catch (Exception e)
         {
             Logger.LogError(e, $"[ChatGAgentManager][RequestGodChatEvent] handle error:{e.ToString()}");
+            content = $"Error: {e.Message}";
         }
 
         await PublishAsync(new ResponseGodChat()

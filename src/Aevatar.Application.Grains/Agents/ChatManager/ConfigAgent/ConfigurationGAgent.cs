@@ -4,6 +4,7 @@ using Aevatar.Core.Abstractions;
 using Json.Schema.Generation;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
+using Orleans.Concurrency;
 
 namespace Aevatar.Application.Grains.Agents.ChatManager.ConfigAgent;
 
@@ -11,10 +12,12 @@ namespace Aevatar.Application.Grains.Agents.ChatManager.ConfigAgent;
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 [GAgent(nameof(ConfigurationGAgent))]
+[Reentrant]
 public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationLogEvent>, IConfigurationGAgent
 {
     private IDisposable _timerHandle;
 
+    [Orleans.Concurrency.ReadOnly]
     public override Task<string> GetDescriptionAsync()
     {
         return Task.FromResult("Configuration GAgent");
@@ -53,16 +56,19 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
         await ConfirmEvents();
     }
 
+    [Orleans.Concurrency.ReadOnly]
     public Task<string> GetSystemLLM()
     {
         return Task.FromResult(State.SystemLLM);
     }
 
+    [Orleans.Concurrency.ReadOnly]
     public Task<bool> GetStreamingModeEnabled()
     {
         return Task.FromResult(State.StreamingModeEnabled);
     }
 
+    [Orleans.Concurrency.ReadOnly]
     public Task<string> GetPrompt()
     {
         return Task.FromResult(State.Prompt);
@@ -84,7 +90,6 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
         await ConfirmEvents();
 
         Logger.LogDebug("[{LogContext}] Prompt successfully updated to '{NewPrompt}'.", logContext, systemPrompt);
-
     }
 
     protected sealed override void GAgentTransitionState(ConfigurationState state,
