@@ -293,6 +293,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         var title = "";
         if (sessionInfo == null)
         {
+            Logger.LogError("StreamChatWithSessionAsync sessionInfo is null sessionId={A}",sessionId);
             return ;
         }
         if (sessionInfo.Title.IsNullOrEmpty())
