@@ -34,7 +34,7 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
     private readonly ILogger<AppleGrantHandler> _logger;
 
     public string Name => GrantTypeConstants.APPLE;
-    private const string PlatFormWeb = "web";
+    private const string PlatFormMobile = "mobile";
 
     public AppleGrantHandler(
         IConfiguration configuration,
@@ -53,8 +53,8 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
             var source = context.Request.GetParameter("source")?.ToString();
             var platform = context.Request.GetParameter("platform")?.ToString() ?? string.Empty;
             
-            _logger.LogInformation("AppleGrantHandler.HandleAsync source: {source} idToken: {idToken} code: {code}", 
-                source, idToken, code);
+            _logger.LogInformation("AppleGrantHandler.HandleAsync source: {source} idToken: {idToken} code: {code} platform: {platform}", 
+                source, idToken, code, platform);
             
             var aud = source == "ios" ? _configuration["Apple:NativeClientId"] : _configuration["Apple:WebClientId"];
             if (string.IsNullOrEmpty(idToken))
@@ -246,9 +246,9 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
         using var client = new HttpClient();
 
         var redirectUrl = string.Empty;
-        if (platform == PlatFormWeb)
+        if (platform == PlatFormMobile)
         {
-            redirectUrl = _configuration["Apple:WebRedirectUri"];
+            redirectUrl = _configuration["Apple:MobileRedirectUri"];
         }
         else
         {
