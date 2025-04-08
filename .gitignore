@@ -258,3 +258,5 @@ paket-files/
 appsettings.secrets.json
 **/wwwroot/libs
 
+tools/benchmark-results/*
+tools/coverage/*
