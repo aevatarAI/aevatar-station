@@ -4,5 +4,5 @@ namespace Aevatar.AppleAuth;
 
 public interface IAppleAuthService
 {
-    Task<string> CallbackAsync(AppleAuthCallbackDto callbackDto);
+    Task<string> CallbackAsync(string platform, AppleAuthCallbackDto callbackDto);
 }
