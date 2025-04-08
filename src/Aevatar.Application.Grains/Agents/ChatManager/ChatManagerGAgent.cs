@@ -42,6 +42,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         {
             if (State.StreamingModeEnabled)
             {
+                Logger.LogDebug("State.StreamingModeEnabled is on");
                 await StreamChatWithSessionAsync(@event.SessionId, @event.SystemLLM, @event.Content,chatId);
             }
             else
