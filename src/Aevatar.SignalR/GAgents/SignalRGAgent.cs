@@ -81,8 +81,10 @@ public class SignalRGAgent :
                     await _hubContext.Client(connectionId)
                         .Send(SignalROrleansConstants.ResponseMethodName, message);
                     sw.Stop();
-                    Logger.LogDebug(
-                        $"[SignalRGAgent][SendWithRetryAsync] connectId:{connectionId}, use time:{sw.ElapsedMilliseconds}");
+                    
+                    Logger.LogInformation(
+                        $"[SignalRGAgent][SendWithRetryAsync]: connectId{connectionId}, time use:{sw.ElapsedMilliseconds}, Message {message}");
+
                     if (fireAndForget)
                     {
                         Logger.LogDebug("Cleaning up connectionId: {ConnectionId}", connectionId);
@@ -114,10 +116,9 @@ public class SignalRGAgent :
     public async Task PublishEventAsync<T>(T @event, string connectionId) where T : EventBase
     {
         await PublishAsync(@event);
-
-        Logger.LogDebug("Mapping correlationId to connectionId: {@CorrelationId} {ConnectionId}",
-            @event.CorrelationId!.Value, connectionId);
-
+        
+        Logger.LogDebug("Mapping correlationId to connectionId: {@CorrelationId} {ConnectionId}", @event.CorrelationId!.Value, connectionId);
+        
         RaiseEvent(new MapCorrelationIdToConnectionIdStateLogEvent
         {
             CorrelationId = @event.CorrelationId!.Value,
@@ -164,8 +165,7 @@ public class SignalRGAgent :
         }
         else
         {
-            Logger.LogInformation("Cannot find corresponding connectionId for correlationId: {@CorrelationId}",
-                @event.CorrelationId);
+            Logger.LogInformation("Cannot find corresponding connectionId for correlationId: {@CorrelationId}", @event.CorrelationId);
         }
 
         await EnqueueMessageAsync(new AevatarSignalRResponse<ResponseToPublisherEventBase>
@@ -175,41 +175,12 @@ public class SignalRGAgent :
         });
     }
 
-    [EventHandler]
-    public async Task HandleExceptionEventAsync(EventHandlerExceptionEvent @event)
-    {
-        Logger.LogInformation($"HandleExceptionEventAsync: {@event}");
-
-        if (State.ConnectionIdMap.TryGetValue(@event.CorrelationId!.Value, out var connectionId))
-        {
-            var response = new AevatarSignalRResponse<ResponseToPublisherEventBase>
-            {
-                IsSuccess = false,
-                ErrorType = ErrorType.EventHandler,
-                ErrorMessage = $"GrainId: {@event.GrainId}, ExceptionMessage: {@event.ExceptionMessage}",
-                ConnectionId = connectionId
-            };
-            await EnqueueMessageAsync(response);
-        }
-    }
-
-    [EventHandler]
-    public async Task GAgentBaseExceptionEventAsync(GAgentBaseExceptionEvent @event)
-    {
-        Logger.LogInformation($"GAgentBaseExceptionEventAsync: {@event}");
-
-        if (State.ConnectionIdMap.TryGetValue(@event.CorrelationId!.Value, out var connectionId))
-        {
-            var response = new AevatarSignalRResponse<ResponseToPublisherEventBase>
-            {
-                IsSuccess = false,
-                ErrorType = ErrorType.Framework,
-                ErrorMessage = $"GrainId: {@event.GrainId}, ExceptionMessage: {@event.ExceptionMessage}",
-                ConnectionId = connectionId
-            };
-            await EnqueueMessageAsync(response);
-        }
-    }
+    // [AllEventHandler]
+    // public async Task ResponseErrorToSignalRAsync(EventWrapperBase eventWrapperBase)
+    // {
+    //     Logger.LogInformation($"ResponseErrorToSignalRAsync: {eventWrapperBase}");
+    //
+    // }
 
     protected override void GAgentTransitionState(SignalRGAgentState state,
         StateLogEventBase<SignalRStateLogEvent> @event)
