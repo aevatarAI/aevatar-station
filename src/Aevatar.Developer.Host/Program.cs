@@ -48,7 +48,7 @@ public class Program
                 .UseSerilog();
             builder.Services.AddSignalR(options =>
             {
-                options.MaximumReceiveMessageSize = 5 * 1024 * 1024;
+                options.MaximumReceiveMessageSize = 1 * 1024 * 1024;
             }).AddOrleans();
             builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, AevatarAuthorizationMiddlewareResultHandler>();
             await builder.AddApplicationAsync<AevatarDeveloperHostModule>();

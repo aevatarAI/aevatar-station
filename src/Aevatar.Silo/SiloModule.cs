@@ -35,7 +35,7 @@ public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
         context.Services.AddHttpClient();
         context.Services.AddSignalR(options =>
         {
-            options.MaximumReceiveMessageSize = 5 * 1024 * 1024;
+            options.MaximumReceiveMessageSize = 1 * 1024 * 1024;
         }).AddOrleans();
         Configure<PermissionManagementOptions>(options =>
         {
