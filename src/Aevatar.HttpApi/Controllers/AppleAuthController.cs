@@ -8,7 +8,7 @@ namespace Aevatar.Controllers;
 
 [RemoteService]
 [ControllerName("AppleAuth")]
-[Microsoft.AspNetCore.Components.Route("api/apple")]
+[Route("api/apple")]
 public class AppleAuthController : AevatarController
 {
     private readonly IAppleAuthService _appleAuthService;
