@@ -62,19 +62,29 @@ internal sealed class ClientGrain : IGrainBase, IClientGrain
 
     public async Task OnConnect(Guid serverId)
     {
+        _logger.LogDebug("Connecting connection on {hubName} for connection {connectionId} to server {serverId}.",
+            _hubName, _connectionId, serverId);
+
         var serverDisconnectedStream = _streamProvider.GetServerDisconnectionStream(serverId);
-        
+
+        _logger.LogDebug(
+            "Subscribing to server disconnection stream for server {serverId} on connection {connectionId}.",
+            serverId, _connectionId);
+
         // Log the number of existing subscriptions (for diagnostic purposes)
-        var existingSubscriptions = await serverDisconnectedStream.GetAllSubscriptionHandles();
-        _logger.LogDebug("🧪 Resuming subscriptions: ServerId = {serverId}, ConnectionId = {connectionId}, existing subscription count = {count}",
-            _clientState.State.ServerId, _connectionId, existingSubscriptions.Count);
-        
-        _serverDisconnectedSubscription = await serverDisconnectedStream.SubscribeAsync(_ => OnDisconnect("server-disconnected"));
+        // var existingSubscriptions = await serverDisconnectedStream.GetAllSubscriptionHandles();
+        // _logger.LogDebug("🧪 Resuming subscriptions: ServerId = {serverId}, ConnectionId = {connectionId}, existing subscription count = {count}",
+        //     _clientState.State.ServerId, _connectionId, existingSubscriptions.Count);
+
+        _serverDisconnectedSubscription =
+            await serverDisconnectedStream.SubscribeAsync(_ => OnDisconnect("server-disconnected"));
+
         _logger.LogDebug("ClientState size estimate: {size} bytes, , ConnectionId = {connectionId}",
             JsonSerializer.Serialize(_clientState.State).Length, _connectionId);
+
         _clientState.State.ServerId = serverId;
         await _clientState.WriteStateAsync();
-        
+
         _logger.LogDebug("Connected connection on {hubName} for connection {connectionId} to server {serverId}.",
             _hubName, _connectionId, _clientState.State.ServerId);
     }
