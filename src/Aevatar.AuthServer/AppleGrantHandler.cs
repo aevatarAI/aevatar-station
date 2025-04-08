@@ -34,6 +34,7 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
     private readonly ILogger<AppleGrantHandler> _logger;
 
     public string Name => GrantTypeConstants.APPLE;
+    private const string PlatFormWeb = "web";
 
     public AppleGrantHandler(
         IConfiguration configuration,
@@ -50,6 +51,7 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
             var code = context.Request.GetParameter("code")?.ToString();
             var idToken = context.Request.GetParameter("id_token")?.ToString();
             var source = context.Request.GetParameter("source")?.ToString();
+            var platform = context.Request.GetParameter("platform")?.ToString() ?? string.Empty;
             
             _logger.LogInformation("AppleGrantHandler.HandleAsync source: {source} idToken: {idToken} code: {code}", 
                 source, idToken, code);
@@ -63,7 +65,7 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
                     return ErrorResult("Missing both id_token and code");
                 }
                 
-                idToken = await ExchangeCodeForTokenAsync(code, aud);
+                idToken = await ExchangeCodeForTokenAsync(code, aud, platform);
                 _logger.LogInformation("AppleGrantHandler.HandleAsync ExchangeCodeForTokenAsync code: {idToken} aud: {aud} token: {token}", code, aud, idToken);
 
                 if (idToken.IsNullOrEmpty())
@@ -238,16 +240,26 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
         return resources;
     }
     
-    private async Task<string> ExchangeCodeForTokenAsync(string code, string clientId)
+    private async Task<string> ExchangeCodeForTokenAsync(string code, string clientId, string platform)
     {
         var clientSecret = GenerateClientSecret(clientId);
         using var client = new HttpClient();
+
+        var redirectUrl = string.Empty;
+        if (platform == PlatFormWeb)
+        {
+            redirectUrl = _configuration["Apple:WebRedirectUri"];
+        }
+        else
+        {
+            redirectUrl = _configuration["Apple:RedirectUri"];
+        }
         
         var body = new List<KeyValuePair<string, string>>
         {
             new KeyValuePair<string, string>("grant_type", "authorization_code"),
             new KeyValuePair<string, string>("code", code),
-            new KeyValuePair<string, string>("redirect_uri", _configuration["Apple:RedirectUri"]),
+            new KeyValuePair<string, string>("redirect_uri", redirectUrl),
             new KeyValuePair<string, string>("client_id", clientId),
             new KeyValuePair<string, string>("client_secret", clientSecret),
         };
