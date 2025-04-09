@@ -1,4 +1,3 @@
-using System.Reflection;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.SignalR;
@@ -32,12 +31,6 @@ public class SignalRTestGAgent : GAgentBase<SignalRTestGAgentState, SignalRTestS
             Data = "test"
         });
     }
-
-    // [EventHandler]
-    // public async Task HandleWithExceptionAsync(NaiveTestEvent eventData)
-    // {
-    //     throw new Exception("Hey, something wrong here123.");
-    // }
 }
 
 [GenerateSerializer]
