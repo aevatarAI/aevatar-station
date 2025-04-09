@@ -340,17 +340,18 @@ public class AgentService : ApplicationService, IAgentService
             {
                 var config = SetupConfigurationData(configuration, updatedParam);
                 await businessAgent.ConfigAsync(config);
-                await creatorAgent.UpdateAgentAsync(new UpdateAgentInput
-                {
-                    Name = dto.Name,
-                    Properties = JsonConvert.SerializeObject(dto.Properties)
-                });
             }
             else
             {
                 _logger.LogError("no properties to be updated, id: {id}", guid);
             }
         }
+        
+        await creatorAgent.UpdateAgentAsync(new UpdateAgentInput
+        {
+            Name = dto.Name,
+            Properties = JsonConvert.SerializeObject(dto.Properties)
+        });
 
         var resp = new AgentDto
         {
