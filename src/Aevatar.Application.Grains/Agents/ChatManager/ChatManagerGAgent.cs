@@ -298,6 +298,11 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
     {
         Stopwatch sw = new Stopwatch();
         sw.Start();
+        if (content.Equals("testslow"))
+        {
+            Logger.LogDebug("StreamChatWithSessionAsync testslow 30 s");
+            await Task.Delay(30000);
+        }
         var sessionInfo = State.GetSession(sessionId);
         if (sessionInfo == null)
         {
