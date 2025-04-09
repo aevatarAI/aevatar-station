@@ -112,7 +112,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         });
 
         Logger.LogDebug(
-            $"[ChatGAgentManager][RequestCreateGodChatEvent] end :{JsonConvert.SerializeObject(@event)}");
+            "[ChatGAgentManager][RequestCreateGodChatEvent] sessionId:{A} end {B} ", sessionId,
+            JsonConvert.SerializeObject(@event));
     }
 
     [EventHandler]
