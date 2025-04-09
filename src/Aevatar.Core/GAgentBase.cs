@@ -36,14 +36,17 @@ public abstract class
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 public abstract partial class
-    GAgentBase<TState, TStateLogEvent, TEvent, TConfiguration> 
-    : JournaledGrain<TState, StateLogEventBase<TStateLogEvent>>, IStateGAgent<TState>
+    GAgentBase<TState, TStateLogEvent, TEvent, TConfiguration>
+    : JournaledGrain<TState, StateLogEventBase<TStateLogEvent>>, IStateGAgent<TState>, IExtGAgent
     where TState : StateBase, new()
     where TStateLogEvent : StateLogEventBase<TStateLogEvent>
     where TEvent : EventBase
     where TConfiguration : ConfigurationBase
 {
-    protected IStreamProvider StreamProvider => this.GetStreamProvider(AevatarCoreConstants.StreamProvider);
+    private Lazy<IStreamProvider> LazyStreamProvider => new(()
+        => this.GetStreamProvider(AevatarCoreConstants.StreamProvider));
+
+    protected IStreamProvider StreamProvider => LazyStreamProvider.Value;
     protected DeepCopier DeepCopier => ServiceProvider.GetRequiredService<DeepCopier>();
 
     public ILogger Logger { get; set; } = NullLogger.Instance;
@@ -51,14 +54,8 @@ public abstract partial class
     private readonly List<EventWrapperBaseAsyncObserver> _observers = [];
 
     private IStateDispatcher? StateDispatcher { get; set; }
-    protected readonly AevatarOptions AevatarOptions;
+    protected AevatarOptions? AevatarOptions;
     private IGrainTimer? _projectionActivationTimer;
-
-    protected GAgentBase()
-    {
-        StateDispatcher = ServiceProvider.GetService<IStateDispatcher>();
-        AevatarOptions = ServiceProvider.GetRequiredService<IOptions<AevatarOptions>>().Value;
-    }
 
     public async Task ActivateAsync()
     {
@@ -76,6 +73,30 @@ public abstract partial class
         await AddChildAsync(gAgent.GetGrainId());
         await gAgent.SubscribeToAsync(this);
         await OnRegisterAgentAsync(gAgent.GetGrainId());
+    }
+
+    public async Task RegisterManyAsync(List<IGAgent> gAgents)
+    {
+        if (gAgents.IsNullOrEmpty())
+        {
+            return;
+        }
+
+        gAgents.RemoveAll(g => g.GetGrainId() == this.GetGrainId());
+        if (gAgents.IsNullOrEmpty())
+        {
+            return;
+        }
+
+        var grainIds = gAgents.Select(g => g.GetGrainId()).ToList();
+        var tasks = new List<Task>();
+        foreach (var gAgent in gAgents)
+        {
+            tasks.Add(gAgent.SubscribeToAsync(this));
+        }
+        tasks.Add(AddChildManyAsync(grainIds));
+        tasks.Add(OnRegisterAgentManyAsync(grainIds));
+        await Task.WhenAll(tasks);
     }
 
     public async Task SubscribeToAsync(IGAgent gAgent)
@@ -139,6 +160,7 @@ public abstract partial class
     }
 
     [EventHandler]
+    // ReSharper disable once UnusedMember.Global
     public async Task<SubscribedEventListEvent> HandleRequestAllSubscriptionsEventAsync(
         RequestAllSubscriptionsEvent request)
     {
@@ -147,7 +169,10 @@ public abstract partial class
 
     private async Task<SubscribedEventListEvent> GetGroupSubscribedEventListEvent()
     {
-        var gAgentList = State.Children.Select(grainId => GrainFactory.GetGrain<IGAgent>(grainId)).ToList();
+        var gAgentList = State.Children
+            .Distinct()
+            .Select(grainId => GrainFactory.GetGrain<IGAgent>(grainId))
+            .ToList();
 
         if (gAgentList.IsNullOrEmpty())
         {
@@ -160,33 +185,52 @@ public abstract partial class
 
         if (gAgentList.Any(grain => grain == null))
         {
-            // Only happened on test environment.
-            throw new InvalidOperationException("One or more grains in gAgentList are null.");
+            throw new InvalidOperationException($"Null grains detected in GAgent List. Count: {gAgentList.Count}");
         }
 
-        var dict = new ConcurrentDictionary<Type, List<Type>>();
-        foreach (var gAgent in gAgentList.AsParallel())
+        var subscriptionMap = new Dictionary<Type, List<Type>>();
+
+        foreach (var gAgent in gAgentList)
         {
-            var eventList = await gAgent.GetAllSubscribedEventsAsync();
-            dict[gAgent.GetType()] = eventList ?? [];
+            var events = await gAgent.GetAllSubscribedEventsAsync() ?? [];
+            subscriptionMap[gAgent.GetType()] = events;
         }
 
         return new SubscribedEventListEvent
         {
-            Value = dict.ToDictionary(),
+            Value = subscriptionMap,
             GAgentType = GetType()
         };
     }
 
-    [AllEventHandler]
+    [AllEventHandler(allowSelfHandling: true)]
     protected virtual async Task ForwardEventAsync(EventWrapperBase eventWrapper)
     {
-        Logger.LogInformation(
-            $"{this.GetGrainId().ToString()} is forwarding event downwards: {JsonConvert.SerializeObject((EventWrapper<TEvent>)eventWrapper)}");
-        await SendEventDownwardsAsync((EventWrapper<TEvent>)eventWrapper);
+        if (eventWrapper is not EventWrapper<TEvent> typedWrapper)
+        {
+            Logger.LogWarning("Invalid event type received: {EventType}", eventWrapper.GetType());
+            return;
+        }
+
+        using (Logger.BeginScope(new Dictionary<string, object>
+               {
+                   ["GrainId"] = typedWrapper.GrainId,
+                   ["CorrelationId"] = typedWrapper.CorrelationId!,
+                   ["PublisherGrainId"] = typedWrapper.PublisherGrainId!,
+                   ["EventType"] = typeof(TEvent).Name
+               }))
+        {
+            Logger.LogDebug("Forwarding event to children: {Event}", JsonConvert.SerializeObject(typedWrapper));
+            await SendEventDownwardsAsync(typedWrapper);
+        }
     }
 
     protected virtual Task OnRegisterAgentAsync(GrainId agentGuid)
+    {
+        return Task.CompletedTask;
+    }
+
+    protected virtual Task OnRegisterAgentManyAsync(List<GrainId> agentGuids)
     {
         return Task.CompletedTask;
     }
@@ -205,6 +249,8 @@ public abstract partial class
 
     public sealed override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
+        StateDispatcher = ServiceProvider.GetService<IStateDispatcher>();
+        AevatarOptions = ServiceProvider.GetRequiredService<IOptions<AevatarOptions>>().Value;
         try
         {
             await base.OnActivateAsync(cancellationToken);
@@ -293,7 +339,7 @@ public abstract partial class
     {
         try
         {
-            var streamOfThisGAgent = GetEventBaseStream(this.GetGrainId().ToString());
+            var streamOfThisGAgent = GetEventBaseStream(this.GetGrainId());
             var handles = await streamOfThisGAgent.GetAllSubscriptionHandles();
             var asyncObserver = new GAgentAsyncObserver(_observers);
             if (handles.Count > 0)
@@ -341,6 +387,7 @@ public abstract partial class
 
     protected virtual Task HandleStateChangedAsync()
     {
+        // Derived classes can override this method.
         return Task.CompletedTask;
     }
 
@@ -388,30 +435,37 @@ public abstract partial class
 
     protected sealed override async void RaiseEvent<T>(T @event)
     {
-        Logger.LogDebug("base raiseEvent info:{info}", JsonConvert.SerializeObject(@event));
+        Logger.LogDebug("Base event raised: {Event}", JsonConvert.SerializeObject(@event));
         base.RaiseEvent(@event);
-        InternalRaiseEventAsync(@event).ContinueWith(task =>
+
+        AsyncTaskRunner.RunSafely(async () =>
         {
-            if (task.Exception != null)
+            try
             {
-                Logger.LogError(task.Exception, "InternalRaiseEventAsync operation failed");
+                await InternalRaiseEventAsync(@event);
             }
-        }, TaskContinuationOptions.OnlyOnFaulted);
+            catch (TimeoutException ex)
+            {
+                Logger.LogError(ex, "Event processing timeout occurred");
+            }
+        }, Logger);
     }
 
-    private async Task InternalRaiseEventAsync<T>(T raisedStateLogEvent)
+    private async Task InternalRaiseEventAsync<T>(T raisedStateLogEvent) where T : StateLogEventBase<TStateLogEvent>
     {
         await HandleRaiseEventAsync();
     }
 
-    protected virtual async Task HandleRaiseEventAsync()
+    protected virtual Task HandleRaiseEventAsync()
     {
-
+        // Derived classes can override this method.
+        return Task.CompletedTask;
     }
 
-    private IAsyncStream<EventWrapperBase> GetEventBaseStream(string grainIdString)
+    private IAsyncStream<EventWrapperBase> GetEventBaseStream(GrainId grainId)
     {
-        var streamId = StreamId.Create(AevatarOptions.StreamNamespace, grainIdString);
+        var grainIdString = grainId.ToString();
+        var streamId = StreamId.Create(AevatarOptions!.StreamNamespace, grainIdString);
         return StreamProvider.GetStream<EventWrapperBase>(streamId);
     }
 }

@@ -1,4 +1,5 @@
 using Aevatar.Core.Abstractions;
+using Aevatar.Core.Tests.TestArtifacts;
 using Aevatar.Core.Tests.TestGAgents;
 using Aevatar.Core.Tests.TestInitializeDtos;
 using Microsoft.Extensions.DependencyInjection;
@@ -170,6 +171,41 @@ public sealed class GAgentFactoryTests : AevatarGAgentsTestBase
                 var gAgent = await _gAgentFactory.GetGAgentAsync(grainId);
                 await CheckSubscribedEventsAsync(gAgent);
             }
+        }
+    }
+    
+    [Fact(DisplayName = "The implementation of GetAvailableEventTypes works.")]
+    public async Task GetAvailableEventTypesTest()
+    {
+        var availableEventTypes = _gAgentManager.GetAvailableEventTypes();
+        availableEventTypes.Count.ShouldBeGreaterThan(20);
+        foreach (var eventType in availableEventTypes.Select(eventType => eventType.Name))
+        {
+            _outputHelper.WriteLine(eventType);
+        }
+    }
+
+    [Fact(DisplayName = "Can create ArtifactGAgent.")]
+    public async Task GetArtifactGAgentTest()
+    {
+        {
+            var artifactGAgent = await _gAgentFactory
+                .GetGAgentAsync<IArtifactGAgent<MyArtifact, MyArtifactGAgentState, MyArtifactStateLogEvent>>();
+            var events = await artifactGAgent.GetAllSubscribedEventsAsync();
+            events.ShouldNotBeEmpty();
+
+            var desc = await artifactGAgent.GetDescriptionAsync();
+            desc.ShouldBe("MyArtifact Description, this is for testing.");
+
+            var artifact = await artifactGAgent.GetArtifactAsync();
+            artifact.ShouldNotBeNull();
+        }
+
+        {
+            var artifactGAgent = await _gAgentFactory
+                .GetArtifactGAgentAsync<MyArtifact, MyArtifactGAgentState, MyArtifactStateLogEvent>();
+            var events = await artifactGAgent.GetAllSubscribedEventsAsync();
+            events.ShouldNotBeEmpty();
         }
     }
 
