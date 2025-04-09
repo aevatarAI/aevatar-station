@@ -246,7 +246,7 @@ public class AgentService : ApplicationService, IAgentService
         var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
         agentData.BusinessAgentGrainId = businessAgent.GetGrainId();
         await creatorAgent.CreateAgentAsync(agentData);
-
+        
         var resp = new AgentDto
         {
             Id = guid,
@@ -254,8 +254,15 @@ public class AgentService : ApplicationService, IAgentService
             Name = dto.Name,
             GrainId = businessAgent.GetGrainId(),
             Properties = dto.Properties,
-            AgentGuid = businessAgent.GetPrimaryKey()
+            AgentGuid = businessAgent.GetPrimaryKey(),
+            BusinessAgentGrainId = businessAgent.GetGrainId().ToString()
         };
+        
+        var configuration = await GetAgentConfigurationAsync(businessAgent);
+        if (configuration != null)
+        {
+            resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration.DtoType).ToJson();
+        }
 
         return resp;
     }
@@ -332,10 +339,10 @@ public class AgentService : ApplicationService, IAgentService
 
         var businessAgent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
 
+        var configuration = await GetAgentConfigurationAsync(businessAgent);
         if (!dto.Properties.IsNullOrEmpty())
         {
             var updatedParam = JsonConvert.SerializeObject(dto.Properties);
-            var configuration = await GetAgentConfigurationAsync(businessAgent);
             if (configuration != null && !updatedParam.IsNullOrEmpty())
             {
                 var config = SetupConfigurationData(configuration, updatedParam);
@@ -359,8 +366,13 @@ public class AgentService : ApplicationService, IAgentService
             AgentType = agentState.AgentType,
             Name = dto.Name,
             GrainId = agentState.BusinessAgentGrainId,
-            Properties = dto.Properties
+            Properties = dto.Properties,
+            BusinessAgentGrainId = agentState.BusinessAgentGrainId.ToString()
         };
+        if (configuration != null)
+        {
+            resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration.DtoType).ToJson();
+        }
 
         return resp;
     }
