@@ -226,17 +226,17 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         var configuration = GetConfiguration();
         IGodChat godChat = GrainFactory.GetGrain<IGodChat>(Guid.NewGuid());
         var sysMessage = await configuration.GetPrompt();
-        var formattedRequirement =
-            """
-            
-            ### 要求：
-            1. 内容部分将所有 Markdown 元素（如标题、加粗、列表等）转换为有效的 HTML 标签。
-            2. 不需要返回HTML整个页面，只需要内容部分。
-            3. 返回的内容不需要转换为有效的 HTML 格式的提示词。
-            4. 内容不需要用 ```html ``` 包裹。
-            5. 如果内容里面有公式，需要能够被 react-native-mathjax 解析渲染。
-            """;
-        sysMessage += formattedRequirement;
+        // var formattedRequirement =
+        //     """
+        //     
+        //     ### 要求：
+        //     1. 内容部分将所有 Markdown 元素（如标题、加粗、列表等）转换为有效的 HTML 标签。
+        //     2. 不需要返回HTML整个页面，只需要内容部分。
+        //     3. 返回的内容不需要转换为有效的 HTML 格式的提示词。
+        //     4. 内容不需要用 ```html ``` 包裹。
+        //     5. 如果内容里面有公式，需要能够被 react-native-mathjax 解析渲染。
+        //     """;
+        // sysMessage += formattedRequirement;
         Logger.LogDebug("Retrieved system prompt from configuration: {SysMessage}", sysMessage);
         await godChat.ConfigAsync(new ChatConfigDto()
         {
