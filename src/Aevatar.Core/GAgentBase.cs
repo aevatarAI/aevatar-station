@@ -46,7 +46,6 @@ public abstract partial class
         => this.GetStreamProvider(AevatarCoreConstants.StreamProvider));
 
     protected IStreamProvider StreamProvider => LazyStreamProvider.Value;
-    protected DeepCopier DeepCopier => ServiceProvider.GetRequiredService<DeepCopier>();
 
     public ILogger Logger { get; set; } = NullLogger.Instance;
 
@@ -354,29 +353,8 @@ public abstract partial class
         await HandleStateChangedAsync();
         if (StateDispatcher != null)
         {
-            TState state;
-            try
-            {
-                state = DeepCopier.Copy(State);
-            }
-            catch (Exception e)
-            { 
-                Logger.LogError(e, $"Error while deepCopying state of {this.GetGrainId().ToString()}: {e.Message}");
-                // TODO: Remove this workaround when the issue is fixed.
-                var stateProjectors = ServiceProvider.GetRequiredService<IEnumerable<IStateProjector>>();
-                foreach (var stateProjector in stateProjectors)
-                {
-                    await stateProjector.ProjectAsync(new StateWrapper<TState>(this.GetGrainId(), State, Version));
-                }
-
-                return;
-            }
-
-            if (state != null)
-            {
-                await StateDispatcher.PublishAsync(this.GetGrainId(),
-                    new StateWrapper<TState>(this.GetGrainId(), state, Version));
-            }
+            await StateDispatcher.PublishAsync(this.GetGrainId(),
+                new StateWrapper<TState>(this.GetGrainId(), State, Version));
         }
     }
 
