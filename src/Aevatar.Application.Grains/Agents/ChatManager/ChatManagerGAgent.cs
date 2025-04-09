@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Aevatar.Application.Grains.Agents.ChatManager.Chat;
 using Aevatar.Application.Grains.Agents.ChatManager.Common;
 using Aevatar.Application.Grains.Agents.ChatManager.ConfigAgent;
@@ -226,17 +227,17 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         var configuration = GetConfiguration();
         IGodChat godChat = GrainFactory.GetGrain<IGodChat>(Guid.NewGuid());
         var sysMessage = await configuration.GetPrompt();
-        // var formattedRequirement =
-        //     """
-        //     
-        //     ### 要求：
-        //     1. 内容部分将所有 Markdown 元素（如标题、加粗、列表等）转换为有效的 HTML 标签。
-        //     2. 不需要返回HTML整个页面，只需要内容部分。
-        //     3. 返回的内容不需要转换为有效的 HTML 格式的提示词。
-        //     4. 内容不需要用 ```html ``` 包裹。
-        //     5. 如果内容里面有公式，需要能够被 react-native-mathjax 解析渲染。
-        //     """;
-        // sysMessage += formattedRequirement;
+        var formattedRequirement =
+            """
+            
+            ### 要求：
+            1. 内容部分将所有 Markdown 元素（如标题、加粗、列表等）转换为有效的 HTML 标签。
+            2. 不需要返回HTML整个页面，只需要内容部分。
+            3. 返回的内容不需要转换为有效的 HTML 格式的提示词。
+            4. 内容不需要用 ```html ``` 包裹。
+            5. 如果内容里面有公式，需要能够被 react-native-mathjax 解析渲染。
+            """;
+        sysMessage += formattedRequirement;
         Logger.LogDebug("Retrieved system prompt from configuration: {SysMessage}", sysMessage);
         await godChat.ConfigAsync(new ChatConfigDto()
         {
@@ -295,20 +296,29 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
     private async Task StreamChatWithSessionAsync(Guid sessionId, string sysmLLM, string content,string chatId,
         ExecutionPromptSettings promptSettings = null)
     {
+        Stopwatch sw = new Stopwatch();
+        sw.Start();
         var sessionInfo = State.GetSession(sessionId);
-        IGodChat godChat = GrainFactory.GetGrain<IGodChat>(sessionId);
-
-        await RegisterAsync(godChat);
-        
-
-        var title = "";
         if (sessionInfo == null)
         {
-            Logger.LogError("StreamChatWithSessionAsync sessionInfo is null sessionId={A}",sessionId);
+            Logger.LogError("StreamChatWithSessionAsync sessionInfoIsNull sessionId={A}",sessionId);
             return ;
         }
+        IGodChat godChat = GrainFactory.GetGrain<IGodChat>(sessionId);
+        sw.Stop();
+        Logger.LogDebug($"StreamChatWithSessionAsync - step1,time use:{sw.ElapsedMilliseconds}");
+        sw.Reset();
+        sw.Start();
+        await RegisterAsync(godChat);
+        sw.Stop();
+        Logger.LogDebug($"StreamChatWithSessionAsync - step2,time use:{sw.ElapsedMilliseconds}");
+
+        var title = "";
+        
         if (sessionInfo.Title.IsNullOrEmpty())
         {
+            sw.Reset();
+            sw.Start();
             var titleList = await ChatWithHistory(content);
             title = titleList is { Count: > 0 }
                 ? titleList[0].Content!
@@ -321,10 +331,16 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             });
         
             await ConfirmEvents();
+            sw.Stop();
+            Logger.LogDebug($"StreamChatWithSessionAsync - step3,time use:{sw.ElapsedMilliseconds}");
         }
 
+        sw.Reset();
+        sw.Start();
         var configuration = GetConfiguration();
-        await godChat.GodStreamChatAsync(await configuration.GetSystemLLM(), await configuration.GetStreamingModeEnabled(),content, chatId,promptSettings);
+        godChat.GodStreamChatAsync(await configuration.GetSystemLLM(), await configuration.GetStreamingModeEnabled(),content, chatId,promptSettings);
+        sw.Stop();
+        Logger.LogDebug($"StreamChatWithSessionAsync - step4,time use:{sw.ElapsedMilliseconds}");
     }
 
     public Task<List<SessionInfoDto>> GetSessionListAsync()
