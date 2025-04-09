@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Aevatar.Application.Grains.Agents.ChatManager.Chat;
 using Aevatar.Application.Grains.Agents.ChatManager.Common;
 using Aevatar.Application.Grains.Agents.ChatManager.ConfigAgent;
@@ -295,11 +296,17 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
     private async Task StreamChatWithSessionAsync(Guid sessionId, string sysmLLM, string content,string chatId,
         ExecutionPromptSettings promptSettings = null)
     {
+        Stopwatch sw = new Stopwatch();
+        sw.Start();
         var sessionInfo = State.GetSession(sessionId);
         IGodChat godChat = GrainFactory.GetGrain<IGodChat>(sessionId);
-
+        sw.Stop();
+        Logger.LogDebug($"StreamChatWithSessionAsync - step1,time use:{sw.ElapsedMilliseconds}");
+        sw.Reset();
+        sw.Start();
         await RegisterAsync(godChat);
-        
+        sw.Stop();
+        Logger.LogDebug($"StreamChatWithSessionAsync - step2,time use:{sw.ElapsedMilliseconds}");
 
         var title = "";
         if (sessionInfo == null)
@@ -309,6 +316,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         }
         if (sessionInfo.Title.IsNullOrEmpty())
         {
+            sw.Reset();
+            sw.Start();
             var titleList = await ChatWithHistory(content);
             title = titleList is { Count: > 0 }
                 ? titleList[0].Content!
@@ -321,10 +330,16 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             });
         
             await ConfirmEvents();
+            sw.Stop();
+            Logger.LogDebug($"StreamChatWithSessionAsync - step3,time use:{sw.ElapsedMilliseconds}");
         }
 
+        sw.Reset();
+        sw.Start();
         var configuration = GetConfiguration();
         godChat.GodStreamChatAsync(await configuration.GetSystemLLM(), await configuration.GetStreamingModeEnabled(),content, chatId,promptSettings);
+        sw.Stop();
+        Logger.LogDebug($"StreamChatWithSessionAsync - step4,time use:{sw.ElapsedMilliseconds}");
     }
 
     public Task<List<SessionInfoDto>> GetSessionListAsync()
