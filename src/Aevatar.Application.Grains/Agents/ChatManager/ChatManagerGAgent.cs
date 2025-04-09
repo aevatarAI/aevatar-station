@@ -299,11 +299,6 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
     {
         Stopwatch sw = new Stopwatch();
         sw.Start();
-        if (content.Equals("testslow"))
-        {
-            Logger.LogDebug("StreamChatWithSessionAsync testslow 30 s");
-            await Task.Delay(20000);
-        }
         var sessionInfo = State.GetSession(sessionId);
         IGodChat godChat = GrainFactory.GetGrain<IGodChat>(sessionId);
         sw.Stop();
