@@ -34,6 +34,7 @@ public class TestAgentWithConfiguration : GAgentBase<TestAgentState, TestAgentEv
         await ConfirmEvents();
     }
     
+    
 
     [EventHandler]
     public async Task HandleAddDataEvent(SetNumberGEvent @event)
