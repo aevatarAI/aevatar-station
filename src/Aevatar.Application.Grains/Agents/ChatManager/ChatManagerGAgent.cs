@@ -301,14 +301,9 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         if (content.Equals("testslow"))
         {
             Logger.LogDebug("StreamChatWithSessionAsync testslow 30 s");
-            await Task.Delay(30000);
+            await Task.Delay(20000);
         }
         var sessionInfo = State.GetSession(sessionId);
-        if (sessionInfo == null)
-        {
-            Logger.LogError("StreamChatWithSessionAsync sessionInfoIsNull sessionId={A}",sessionId);
-            return ;
-        }
         IGodChat godChat = GrainFactory.GetGrain<IGodChat>(sessionId);
         sw.Stop();
         Logger.LogDebug($"StreamChatWithSessionAsync - step1,time use:{sw.ElapsedMilliseconds}");
@@ -319,7 +314,11 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         Logger.LogDebug($"StreamChatWithSessionAsync - step2,time use:{sw.ElapsedMilliseconds}");
 
         var title = "";
-        
+        if (sessionInfo == null)
+        {
+            Logger.LogError("StreamChatWithSessionAsync sessionInfoIsNull sessionId={A}",sessionId);
+            return ;
+        }
         if (sessionInfo.Title.IsNullOrEmpty())
         {
             sw.Reset();
