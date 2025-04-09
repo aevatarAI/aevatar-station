@@ -22,5 +22,5 @@ public interface ICQRSProvider : IEventDispatcher
 
     Task<Tuple<long, List<TargetT>>> GetUserInstanceAgent<SourceT,TargetT>(Guid userId, int pageIndex, int pageSize);
     Task<Tuple<long, List<string>>?> QueryTokenUsage(string hostId, string systemLLM, DateTime startTime,
-        DateTime endTime, bool statisticsAsHour);
+        DateTime endTime, bool statisticsAsHour,int count);
 }
