@@ -2,9 +2,10 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AbpVersion>9.0.3</AbpVersion>
-    <OrleansVerion>9.0.1</OrleansVerion>
-    <AevatarVerion>1.4.12-optimize.5</AevatarVerion>
-    <AevatarGAgentVerion>1.4.15-alpha-no-vector.3</AevatarGAgentVerion>
+    <OrleansVersion>9.0.1</OrleansVersion>
+    <AevatarVersion>1.4.12-optimize.5</AevatarVersion>
+    <AevatarSignalRVersion>1.5.6-init.0</AevatarSignalRVersion>
+    <AevatarGAgentVersion>1.4.15-alpha-no-vector.3</AevatarGAgentVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- AElf packages -->
@@ -13,20 +14,20 @@
     <PackageVersion Include="AElf.Sdk.CSharp" Version="1.5.0" />
     <PackageVersion Include="AElf.Types" Version="1.5.0" />
     <PackageVersion Include="AElf.OpenTelemetry" Version="8.2.0" />
-    <PackageVersion Include="Aevatar" Version="$(AevatarVerion)" />
-    <PackageVersion Include="Aevatar.Core" Version="$(AevatarVerion)" />
-    <PackageVersion Include="Aevatar.Core.Abstractions" Version="$(AevatarVerion)" />
-    <PackageVersion Include="Aevatar.EventSourcing.Core" Version="$(AevatarVerion)" />
-    <PackageVersion Include="Aevatar.Plugins" Version="$(AevatarVerion)" />
-    <PackageVersion Include="Aevatar.EventSourcing.MongoDB" Version="$(AevatarVerion)" />
-    <PackageVersion Include="Aevatar.PermissionManagement" Version="$(AevatarVerion)" />
-    <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="$(AevatarGAgentVerion)" />
-    <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="$(AevatarGAgentVerion)" />
-    <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="$(AevatarGAgentVerion)" />
-    <PackageVersion Include="Aevatar.SignalR" Version="1.5.5-parent.16" />
-    <PackageVersion Include="Aevatar.GAgents.SocialGAgent" Version="$(AevatarGAgentVerion)" />
-    <PackageVersion Include="Aevatar.GAgents.Twitter" Version="$(AevatarGAgentVerion)" />
-    <PackageVersion Include="Aevatar.GAgents.ChatAgent" Version="$(AevatarGAgentVerion)" />
+    <PackageVersion Include="Aevatar" Version="$(AevatarVersion)" />
+    <PackageVersion Include="Aevatar.Core" Version="$(AevatarVersion)" />
+    <PackageVersion Include="Aevatar.Core.Abstractions" Version="$(AevatarVersion)" />
+    <PackageVersion Include="Aevatar.EventSourcing.Core" Version="$(AevatarVersion)" />
+    <PackageVersion Include="Aevatar.Plugins" Version="$(AevatarVersion)" />
+    <PackageVersion Include="Aevatar.EventSourcing.MongoDB" Version="$(AevatarVersion)" />
+    <PackageVersion Include="Aevatar.PermissionManagement" Version="$(AevatarVersion)" />
+    <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="$(AevatarGAgentVersion)" />
+    <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="$(AevatarGAgentVersion)" />
+    <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="$(AevatarGAgentVersion)" />
+    <PackageVersion Include="Aevatar.SignalR" Version="$(AevatarSignalRVersion)" />
+    <PackageVersion Include="Aevatar.GAgents.SocialGAgent" Version="$(AevatarGAgentVersion)" />
+    <PackageVersion Include="Aevatar.GAgents.Twitter" Version="$(AevatarGAgentVersion)" />
+    <PackageVersion Include="Aevatar.GAgents.ChatAgent" Version="$(AevatarGAgentVersion)" />
     <!-- AI and Analysis packages -->
     <PackageVersion Include="AutoGen" Version="0.2.1" />
     <PackageVersion Include="AutoGen.Core" Version="0.2.1" />
@@ -121,19 +122,19 @@
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
-    <PackageVersion Include="Microsoft.Orleans.Client" Version="$(OrleansVerion)" />
-    <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="$(OrleansVerion)" />
-    <PackageVersion Include="Microsoft.Orleans.EventSourcing" Version="$(OrleansVerion)" />
-    <PackageVersion Include="Microsoft.Orleans.Hosting" Version="$(OrleansVerion)" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(OrleansVerion)" />
+    <PackageVersion Include="Microsoft.Orleans.Client" Version="$(OrleansVersion)" />
+    <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="$(OrleansVersion)" />
+    <PackageVersion Include="Microsoft.Orleans.EventSourcing" Version="$(OrleansVersion)" />
+    <PackageVersion Include="Microsoft.Orleans.Hosting" Version="$(OrleansVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(OrleansVersion)" />
     <PackageVersion Include="Orleans.Streams.Kafka" Version="8.0.2" />
-    <PackageVersion Include="Microsoft.Orleans.Reminders" Version="$(OrleansVerion)" />
-    <PackageVersion Include="Microsoft.Orleans.Runtime" Version="$(OrleansVerion)" />
-    <PackageVersion Include="Microsoft.Orleans.Sdk" Version="$(OrleansVerion)" />
-    <PackageVersion Include="Microsoft.Orleans.Server" Version="$(OrleansVerion)" />
-    <PackageVersion Include="Microsoft.Orleans.Streaming" Version="$(OrleansVerion)" />
-    <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="$(OrleansVerion)" />
-    <PackageVersion Include="Microsoft.Orleans.Core" Version="$(OrleansVerion)" />
+    <PackageVersion Include="Microsoft.Orleans.Reminders" Version="$(OrleansVersion)" />
+    <PackageVersion Include="Microsoft.Orleans.Runtime" Version="$(OrleansVersion)" />
+    <PackageVersion Include="Microsoft.Orleans.Sdk" Version="$(OrleansVersion)" />
+    <PackageVersion Include="Microsoft.Orleans.Server" Version="$(OrleansVersion)" />
+    <PackageVersion Include="Microsoft.Orleans.Streaming" Version="$(OrleansVersion)" />
+    <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="$(OrleansVersion)" />
+    <PackageVersion Include="Microsoft.Orleans.Core" Version="$(OrleansVersion)" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.6" />
     <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="9.0.0" />
