@@ -392,7 +392,8 @@ public class AgentService : ApplicationService, IAgentService
             Name = agentState.Name,
             GrainId = agentState.BusinessAgentGrainId,
             Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentState.Properties),
-            AgentGuid = agentState.BusinessAgentGrainId.GetGuidKey()
+            AgentGuid = agentState.BusinessAgentGrainId.GetGuidKey(),
+            BusinessAgentGrainId = agentState.BusinessAgentGrainId.ToString()
         };
 
         var businessAgent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
@@ -634,8 +635,7 @@ public class AgentService : ApplicationService, IAgentService
             await CheckWorkflowAsync(workflowAgentDto.WorkUnitRelations, new List<WorkflowAgentDefinesDto>());
         if (errorStr.IsNullOrEmpty() == false)
         {
-            result.ErrorMessage = errorStr;
-            return result;
+            throw new UserFriendlyException(errorStr);
         }
 
         var workflowAgent = _clusterClient.GetGrain<IWorkflowCoordinatorGAgent>(Guid.NewGuid());
@@ -690,13 +690,13 @@ public class AgentService : ApplicationService, IAgentService
         }).ToList();
     }
 
-    public async Task<string> EditWorkWorkflowAsync(string workflowGrainId,
+    public async Task EditWorkWorkflowAsync(string workflowGrainId,
         List<WorkflowAgentDefinesDto> workflowUnitList)
     {
         var errorMsg = await CheckWorkflowWithGrainIdAsync(workflowGrainId, workflowUnitList);
         if (errorMsg.IsNullOrEmpty() == false)
         {
-            return errorMsg;
+            throw new UserFriendlyException(errorMsg);
         }
 
         var workflowRelation = await GetWorkflowUnitRelationsAsync(workflowGrainId);
@@ -717,7 +717,7 @@ public class AgentService : ApplicationService, IAgentService
         var workUnit = await _workflowRepository.GetByWorkflowGrainId(workflowGrainId);
         if (workUnit == null)
         {
-            return "workflow not found";
+            throw new UserFriendlyException("workflow not found");
         }
         
         var workflowUnitDtoList = workflowUnitList
@@ -740,8 +740,6 @@ public class AgentService : ApplicationService, IAgentService
         }).ToList();
         
         await _workflowRepository.UpdateAsync(workUnit);
-        
-        return string.Empty;
     }
 
     public async Task<string> CheckWorkflowWithGrainIdAsync(string workflowGrainId,

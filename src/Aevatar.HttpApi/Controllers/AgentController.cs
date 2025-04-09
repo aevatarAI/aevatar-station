@@ -145,8 +145,8 @@ public class AgentController : AevatarController
     
     [HttpPut("workflow")]
     [Authorize]
-    public async Task<string> ModifyWorkFlow([FromBody] WorkflowWithGrainIdRequestDto withGrainIdRequestDto)
+    public async Task ModifyWorkFlow([FromBody] WorkflowWithGrainIdRequestDto withGrainIdRequestDto)
     {
-        return await _agentService.EditWorkWorkflowAsync(withGrainIdRequestDto.WorkflowGrainId, withGrainIdRequestDto.WorkUnitRelations);
+        await _agentService.EditWorkWorkflowAsync(withGrainIdRequestDto.WorkflowGrainId, withGrainIdRequestDto.WorkUnitRelations);
     } 
 }
