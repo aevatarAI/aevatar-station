@@ -23,7 +23,7 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
 
     public async Task<IActionResult> HandleAsync(ExtensionGrantContext context)
     {
-        /*var publicKeyVal = context.Request.GetParameter("pubkey").ToString();
+        var publicKeyVal = context.Request.GetParameter("pubkey").ToString();
         var signatureVal = context.Request.GetParameter("signature").ToString();
         var chainId = context.Request.GetParameter("chain_id").ToString();
         var caHash = context.Request.GetParameter("ca_hash").ToString();
@@ -62,10 +62,9 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
             _logger.LogError("[SignatureGrantHandler] Signature validation failed: {e}",
                 e.Message);
             throw;
-        }*/
+        }
 
         var userManager = context.HttpContext.RequestServices.GetRequiredService<IdentityUserManager>();
-        string walletAddress = "abc";
         var user = await userManager.FindByNameAsync(walletAddress);
         if (user == null)
         {
