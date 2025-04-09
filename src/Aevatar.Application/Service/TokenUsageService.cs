@@ -1,29 +1,37 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.CQRS.Provider;
+using Aevatar.Options;
 using Aevatar.TokenUsage;
+using Microsoft.CodeAnalysis.Options;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Volo.Abp.DependencyInjection;
 
 namespace Aevatar.Service;
 
-public class TokenUsageService:ITokenUsageService,ISingletonDependency
+public class TokenUsageService : ITokenUsageService, ISingletonDependency
 {
     private readonly ICQRSProvider _cqrsProvider;
+    private readonly IOptions<HostOptions> _hostOptions;
     private readonly Logger<TokenUsageService> _logger;
 
-    public TokenUsageService(ICQRSProvider cqrsProvider, Logger<TokenUsageService> logger)
+    public TokenUsageService(ICQRSProvider cqrsProvider, Logger<TokenUsageService> logger,
+        IOptions<HostOptions> hostOptions)
     {
         _cqrsProvider = cqrsProvider;
         _logger = logger;
+        _hostOptions = hostOptions;
     }
 
     public async Task<List<TokenUsageResponseDto>> GetTokenUsageAsync(TokenUsageRequestDto requestDto)
     {
         var result = new List<TokenUsageResponseDto>();
-        
-        var response = await _cqrsProvider.QueryTokenUsage(requestDto.ProjectId, requestDto.SystemLLM, requestDto.StartTime,
+
+        var response = await _cqrsProvider.QueryTokenUsage(GetHostId(requestDto.ProjectId), requestDto.SystemLLM,
+            requestDto.StartTime,
             requestDto.EndTime, requestDto.StatisticsAsHour);
         if (response == null)
         {
@@ -35,12 +43,17 @@ public class TokenUsageService:ITokenUsageService,ISingletonDependency
         {
             return result;
         }
-        
+
         foreach (var item in response.Item2)
         {
-            result.Add( JsonConvert.DeserializeObject<TokenUsageResponseDto>(item)!);
+            result.Add(JsonConvert.DeserializeObject<TokenUsageResponseDto>(item)!);
         }
 
         return result;
+    }
+
+    private string GetHostId(Guid projectId)
+    {
+        return _hostOptions.Value.HostId;
     }
 }
