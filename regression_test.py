@@ -241,7 +241,7 @@ def test_event_operations(api_headers, test_agent):
     )
     assert_status_code(response)
 
-    time.sleep(2)
+    time.sleep(5)
     # query parent agent state
     response = requests.get(
         f"{API_HOST}/api/query/state",
@@ -266,7 +266,7 @@ def test_event_operations(api_headers, test_agent):
 def test_query_operations(api_headers, test_agent):
     """test query operations"""
     # query state
-    time.sleep(3)
+    time.sleep(5)
     response = requests.get(
         f"{API_HOST}/api/query/state",
         params={"stateName": STATE_NAME, "id": test_agent},
