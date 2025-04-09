@@ -37,5 +37,5 @@ public interface IIndexingService
 
     Task<Tuple<long, List<string>>> QueryTokenUsageAsync(string indexName, string systemLLM,
         DateTime startTime,
-        DateTime endTime, bool statisticsAsHour);
+        DateTime endTime, bool statisticsAsHour, int count);
 }

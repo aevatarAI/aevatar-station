@@ -560,30 +560,30 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
     public async Task<Tuple<long, List<string>>> QueryTokenUsageAsync(string indexName,
         string systemLLM,
         DateTime startTime,
-        DateTime endTime, bool statisticsAsHour)
+        DateTime endTime, bool statisticsAsHour, int count)
     {
         var dateInterval = statisticsAsHour ? DateInterval.Hour : DateInterval.Day;
         var dateHistogramName = "daily_usage";
         var result = new List<string>();
         var response = await _elasticClient.SearchAsync<CQRS.Dto.TokenUsage>(s => s.Query(q =>
                 q.DateRange(r => r.Field(f => f.CreatTime).GreaterThanOrEquals(startTime).LessThanOrEquals(endTime)))
-            .Aggregations(a => a.DateHistogram("daily_usage",
+            .Aggregations(a => a.DateHistogram(dateHistogramName,
                 dh => dh.Field(f => f.CreatTime).CalendarInterval(dateInterval).Aggregations(aa => aa
                     .Sum("LastInputTokenUsage", sa => sa.Field(f => f.LastInputTokenUsage))
                     .Sum("LastOutTokenUsage", sa => sa.Field(f => f.LastOutTokenUsage))
-                ))).Size(0)
+                ))).Index(indexName).Size(count)
         );
         if (response.IsValid)
         {
             var dailyAgg = response.Aggregations.DateHistogram(dateHistogramName);
-            foreach (var bucket in dailyAgg.Buckets)
+            foreach (var bucket in dailyAgg.Buckets.Take(count))
             {
                 DateTime date = bucket.Date;
                 double totalInput = bucket.Sum("LastInputTokenUsage").Value ?? 0;
                 double totalOutput = bucket.Sum("LastOutTokenUsage").Value ?? 0;
 
                 result.Add(JsonConvert.SerializeObject(new
-                    { TotalInputTokens = totalInput, TotalOutputTokens = totalInput, Time = date }));
+                    { TotalInputTokens = (int)totalInput, TotalOutputTokens = (int)totalOutput, Time = date }));
             }
 
             return new Tuple<long, List<string>>(result.Count, result);

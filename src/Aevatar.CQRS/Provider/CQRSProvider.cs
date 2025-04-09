@@ -239,7 +239,7 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
     {
         return $"{CqrsConstant.IndexPrefix}-{_options.Value.HostId}-{index}{CqrsConstant.IndexSuffix}".ToLower();
     }
-    
+
     public string GetIndexNameWithHostId(string hostId, string name)
     {
         return $"{CqrsConstant.IndexPrefix}-{hostId}-{name}{CqrsConstant.IndexSuffix}".ToLower();
@@ -257,12 +257,12 @@ public class CQRSProvider : ICQRSProvider, ISingletonDependency
     }
 
     public async Task<Tuple<long, List<string>>?> QueryTokenUsage(string hostId, string systemLLM, DateTime startTime,
-        DateTime endTime, bool statisticsAsHour)
+        DateTime endTime, bool statisticsAsHour, int count)
     {
         var result = await _mediator.Send(new TokenUsageQueryCommand()
         {
             HostId = hostId, SystemLLM = systemLLM, StartTime = startTime, EndTime = endTime,
-            StatisticsAsHour = statisticsAsHour
+            StatisticsAsHour = statisticsAsHour, Count = count
         });
 
         return result;

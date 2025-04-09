@@ -14,4 +14,6 @@ public class TokenUsageRequestDto
     public DateTime EndTime { get; set; }
 
     [Required] public bool StatisticsAsHour { get; set; } = false;
+
+    public int Count { get; set; } = 10;
 }

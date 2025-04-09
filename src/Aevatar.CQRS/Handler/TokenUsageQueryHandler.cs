@@ -25,6 +25,6 @@ public class TokenUsageQueryHandler: IRequestHandler<TokenUsageQueryCommand, Tup
         await _indexingService.TryCreateTokenUsageIndexAsync(indexName);
 
         return await _indexingService.QueryTokenUsageAsync(indexName, request.SystemLLM, request.StartTime,
-            request.EndTime, request.StatisticsAsHour);
+            request.EndTime, request.StatisticsAsHour, request.Count);
     }
 }

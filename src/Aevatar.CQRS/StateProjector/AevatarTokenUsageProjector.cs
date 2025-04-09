@@ -17,14 +17,20 @@ namespace Aevatar.StateProjector;
 public class AevatarTokenUsageProjector : IStateProjector, ISingletonDependency
 {
     private readonly ConcurrentQueue<CQRS.Dto.TokenUsage?> _queue = new ConcurrentQueue<CQRS.Dto.TokenUsage?>();
-    private readonly  AutoResetEvent _dataAvailable = new AutoResetEvent(false);
-    private readonly IMediator _mediator;   
-    private readonly ILogger<AevatarStateProjector> _logger;
+    private readonly AutoResetEvent _dataAvailable = new AutoResetEvent(false);
 
-    public AevatarTokenUsageProjector(IMediator mediator, ILogger<AevatarStateProjector> logger)
+    private readonly ConcurrentDictionary<GrainId, Tuple<int, DateTime>> _versionToTime =
+        new ConcurrentDictionary<GrainId, Tuple<int, DateTime>>();
+
+    private readonly IMediator _mediator;
+    private DateTime _lastUpdateTime = DateTime.Now;
+    private readonly ILogger<AevatarTokenUsageProjector> _logger;
+
+    public AevatarTokenUsageProjector(IMediator mediator, ILogger<AevatarTokenUsageProjector> logger)
     {
         _mediator = mediator;
         _logger = logger;
+        Task.Run(async () => { await ProcessCommand(); });
     }
 
     public Task ProjectAsync<T>(T state) where T : StateWrapperBase
@@ -40,7 +46,16 @@ public class AevatarTokenUsageProjector : IStateProjector, ISingletonDependency
             return Task.CompletedTask;
         }
 
-        _logger.LogDebug($"[AevatarTokenUsageProjector] ProjectAsync get message:{JsonConvert.SerializeObject(aiGAgentState)}");
+        if (_versionToTime.TryGetValue(grainId, out var versionData) && versionData.Item1 >= version)
+        {
+            return Task.CompletedTask;
+        }
+
+        var newVersionData = new Tuple<int, DateTime>(version, DateTime.Now);
+        _versionToTime.AddOrUpdate(grainId, newVersionData, (id, existing) => newVersionData);
+
+        _logger.LogDebug(
+            $"[AevatarTokenUsageProjector] ProjectAsync get message:{JsonConvert.SerializeObject(aiGAgentState)}");
         var saveTokenCommand = new CQRS.Dto.TokenUsage
         {
             GrainId = grainId.ToString(),
@@ -53,10 +68,10 @@ public class AevatarTokenUsageProjector : IStateProjector, ISingletonDependency
             InputTokenUsage = aiGAgentState.InputTokenUsage,
             OutTokenUsage = aiGAgentState.OutTokenUsage
         };
-        
+
         _queue.Enqueue(saveTokenCommand);
         _dataAvailable.Set();
-        
+
         return Task.CompletedTask;
     }
 
@@ -81,12 +96,34 @@ public class AevatarTokenUsageProjector : IStateProjector, ISingletonDependency
                 {
                     break;
                 }
-                
+
                 _logger.LogDebug($"[AevatarTokenUsageProjector][ProcessCommand] save token count:{listGrain.Count}");
-                await _mediator.Send(new TokenUsageCommand() { TokenUsages = listGrain});
+                await _mediator.Send(new TokenUsageCommand() { TokenUsages = listGrain });
+
+                TryRemoveExpireGrain();
             }
         }
-        
+
         // ReSharper disable once FunctionNeverReturns
+    }
+
+    private void TryRemoveExpireGrain()
+    {
+        int expireTime = 30;
+        var dtNow = DateTime.Now;
+        if ((dtNow - _lastUpdateTime).TotalSeconds <= expireTime)
+        {
+            return;
+        }
+
+        foreach (var item in _versionToTime)
+        {
+            if ((dtNow - item.Value.Item2).TotalSeconds >= expireTime)
+            {
+                _versionToTime.TryRemove(item);
+            }
+        }
+
+        _lastUpdateTime = dtNow;
     }
 }
