@@ -299,6 +299,11 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         Stopwatch sw = new Stopwatch();
         sw.Start();
         var sessionInfo = State.GetSession(sessionId);
+        if (sessionInfo == null)
+        {
+            Logger.LogError("StreamChatWithSessionAsync sessionInfoIsNull sessionId={A}",sessionId);
+            return ;
+        }
         IGodChat godChat = GrainFactory.GetGrain<IGodChat>(sessionId);
         sw.Stop();
         Logger.LogDebug($"StreamChatWithSessionAsync - step1,time use:{sw.ElapsedMilliseconds}");
@@ -309,11 +314,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         Logger.LogDebug($"StreamChatWithSessionAsync - step2,time use:{sw.ElapsedMilliseconds}");
 
         var title = "";
-        if (sessionInfo == null)
-        {
-            Logger.LogError("StreamChatWithSessionAsync sessionInfo is null sessionId={A}",sessionId);
-            return ;
-        }
+        
         if (sessionInfo.Title.IsNullOrEmpty())
         {
             sw.Reset();
