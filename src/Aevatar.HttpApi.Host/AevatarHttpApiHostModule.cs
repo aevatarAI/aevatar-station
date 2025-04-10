@@ -224,8 +224,6 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         var app = context.GetApplicationBuilder();
         var env = context.GetEnvironment();
 
-        app.UseAbpRequestLocalization();
-
         app.UseCorrelationId();
         app.UseStaticFiles();
         app.UseRouting();
