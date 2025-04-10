@@ -228,16 +228,11 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         var app = context.GetApplicationBuilder();
         var env = context.GetEnvironment();
         
-        CultureInfo.CurrentCulture = new CultureInfo(AevatarConsts.CultureEnglish);
-        CultureInfo.CurrentUICulture = new CultureInfo(AevatarConsts.CultureEnglish);
-
         // if (env.IsDevelopment())
         // {
         //     app.UseDeveloperExceptionPage();
         // }
-
-        app.UseAbpRequestLocalization();
-
+        
         // if (!env.IsDevelopment())
         // {
         //     app.UseErrorPage();

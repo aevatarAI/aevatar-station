@@ -10,5 +10,4 @@ public static class AevatarConsts
     public const string OrganizationTypeKey = "OrganizationType";
     public const string OrganizationRoleKey = "OrganizationRole";
     public const string ProjectDomainNameKey = "ProjectDomainName";
-    public const string CultureEnglish = "en";
 }
