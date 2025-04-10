@@ -237,7 +237,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             3. 返回的内容不需要转换为有效的 HTML 格式的提示词。
             4. 内容不需要用 ```html ``` 包裹。
             5. 如果内容里面有公式，需要能够被 react-native-mathjax 解析渲染。
-            6. LaTeX 数学公式转换为以下aelf字符串包裹返回:
+            6. LaTeX 数学公式用以下的aelf字符串包裹返回:
               - 行内公式使用 `aelfline...aelfline`。
               - 块级公式使用 `aelfblock...aelfblock`。
             """;
