@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using Aevatar.Core.Abstractions;
-using Aevatar.Core.Abstractions.Projections;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -8,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Orleans.EventSourcing;
 using Orleans.Providers;
+using Orleans.Serialization;
 using Orleans.Streams;
 
 namespace Aevatar.Core;
@@ -52,7 +52,7 @@ public abstract partial class
     private readonly List<EventWrapperBaseAsyncObserver> _observers = [];
 
     private IStateDispatcher? StateDispatcher { get; set; }
-    protected AevatarOptions? AevatarOptions { get; private set; }
+    protected AevatarOptions? AevatarOptions;
 
     public async Task ActivateAsync()
     {
@@ -94,7 +94,6 @@ public abstract partial class
         tasks.Add(AddChildManyAsync(grainIds));
         tasks.Add(OnRegisterAgentManyAsync(grainIds));
         await Task.WhenAll(tasks);
-
     }
 
     public async Task SubscribeToAsync(IGAgent gAgent)
@@ -249,9 +248,35 @@ public abstract partial class
     {
         StateDispatcher = ServiceProvider.GetService<IStateDispatcher>();
         AevatarOptions = ServiceProvider.GetRequiredService<IOptions<AevatarOptions>>().Value;
-        await base.OnActivateAsync(cancellationToken);
-        await BaseOnActivateAsync(cancellationToken);
-        await OnGAgentActivateAsync(cancellationToken);
+        try
+        {
+            await base.OnActivateAsync(cancellationToken);
+        }
+        catch (Exception e)
+        {
+            Logger.LogError("Error in OnActivateAsync.base.OnActivateAsync: {ExceptionMessage}", e.Message);
+            throw;
+        }
+
+        try
+        {
+            await BaseOnActivateAsync(cancellationToken);
+        }
+        catch (Exception e)
+        {
+            Logger.LogError("Error in OnActivateAsync.BaseOnActivateAsync: {ExceptionMessage}", e.Message);
+            throw;
+        }
+
+        try
+        {
+            await OnGAgentActivateAsync(cancellationToken);
+        }
+        catch (Exception e)
+        {
+            Logger.LogError("Error in OnActivateAsync.OnGAgentActivateAsync: {ExceptionMessage}", e.Message);
+            throw;
+        }
     }
 
     protected virtual Task OnGAgentActivateAsync(CancellationToken cancellationToken)
@@ -262,40 +287,42 @@ public abstract partial class
 
     private async Task BaseOnActivateAsync(CancellationToken cancellationToken)
     {
-        // This must be called first to initialize Observers field.
-        await UpdateObserverListAsync(GetType());
-
-        var initTasks = new[]
+        try
         {
-            InitializeOrResumeEventBaseStreamAsync(),
-            ActivateProjectionGrainAsync()
-        };
-        await Task.WhenAll(initTasks);
+            // This must be called first to initialize Observers field.
+            await UpdateObserverListAsync(GetType());
+            await InitializeOrResumeEventBaseStreamAsync();
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "Error in BaseOnActivateAsync: {ExceptionMessage}", e.Message);
+            throw;
+        }
     }
 
     private async Task InitializeOrResumeEventBaseStreamAsync()
     {
-        var streamOfThisGAgent = GetEventBaseStream(this.GetGrainId());
-        var asyncObserver = new GAgentAsyncObserver(_observers);
-        await ResumeOrSubscribeAsync(streamOfThisGAgent, asyncObserver);
-    }
-
-    private async Task ActivateProjectionGrainAsync()
-    {
-        var projectionGrain = GrainFactory.GetGrain<IProjectionGrain>(typeof(TState).FullName);
-        await projectionGrain.ActivateAsync();
-    }
-
-    private async Task ResumeOrSubscribeAsync<T>(IAsyncStream<T> stream, IAsyncObserver<T> observer)
-    {
-        var handles = await stream.GetAllSubscriptionHandles();
-        if (handles.Count > 0)
+        try
         {
-            await Task.WhenAll(handles.Select(async h => await h.ResumeAsync(observer)));
+            var streamOfThisGAgent = GetEventBaseStream(this.GetGrainId());
+            var handles = await streamOfThisGAgent.GetAllSubscriptionHandles();
+            var asyncObserver = new GAgentAsyncObserver(_observers);
+            if (handles.Count > 0)
+            {
+                foreach (var handle in handles)
+                {
+                    await handle.ResumeAsync(asyncObserver);
+                }
+            }
+            else
+            {
+                await streamOfThisGAgent.SubscribeAsync(asyncObserver);
+            }
         }
-        else
+        catch (Exception e)
         {
-            await stream.SubscribeAsync(observer);
+            Logger.LogError($"Error in InitializeOrResumeEventBaseStreamAsync: {e}");
+            throw;
         }
     }
 

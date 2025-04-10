@@ -57,7 +57,7 @@ public class PluginGAgentManagerTests : AevatarGAgentsTestBase
         _unitOfWorkManager = GetRequiredService<IUnitOfWorkManager>();
     }
 
-    [Fact]
+    [Fact(Skip = "Need mongodb.")]
     async Task MongoRepositoryTest()
     {
         // need to supply
