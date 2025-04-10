@@ -54,8 +54,7 @@ public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependenc
     {
         var emailContent = await _templateRenderer.RenderAsync(
             AevatarAccountEmailTemplates.RegisterCode,
-            new { code = code },
-            "en"
+            new { code = code }
         );
 
         await CheckSendEmailAsync(email);
@@ -74,8 +73,7 @@ public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependenc
 
         var emailContent = await _templateRenderer.RenderAsync(
             AccountEmailTemplates.PasswordResetLink,
-            new { link = link },
-            "en"
+            new { link = link }
         );
         
         await CheckSendEmailAsync(user.Email);
