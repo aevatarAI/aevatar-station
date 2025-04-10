@@ -74,21 +74,21 @@ public class AevatarDeveloperHostModule : AbpModule
 
         if (hostingEnvironment.IsDevelopment())
         {
-            Configure<AbpVirtualFileSystemOptions>(options =>
-            {
-                options.FileSets.ReplaceEmbeddedByPhysical<AevatarDomainSharedModule>(
-                    Path.Combine(hostingEnvironment.ContentRootPath,
-                        $"..{Path.DirectorySeparatorChar}Aevatar.Domain.Shared"));
-                options.FileSets.ReplaceEmbeddedByPhysical<AevatarDomainModule>(
-                    Path.Combine(hostingEnvironment.ContentRootPath,
-                        $"..{Path.DirectorySeparatorChar}Aevatar.Domain"));
-                options.FileSets.ReplaceEmbeddedByPhysical<AevatarApplicationContractsModule>(
-                    Path.Combine(hostingEnvironment.ContentRootPath,
-                        $"..{Path.DirectorySeparatorChar}Aevatar.Application.Contracts"));
-                options.FileSets.ReplaceEmbeddedByPhysical<AevatarApplicationModule>(
-                    Path.Combine(hostingEnvironment.ContentRootPath,
-                        $"..{Path.DirectorySeparatorChar}Aevatar.Application"));
-            });
+            // Configure<AbpVirtualFileSystemOptions>(options =>
+            // {
+            //     options.FileSets.ReplaceEmbeddedByPhysical<AevatarDomainSharedModule>(
+            //         Path.Combine(hostingEnvironment.ContentRootPath,
+            //             $"..{Path.DirectorySeparatorChar}Aevatar.Domain.Shared"));
+            //     options.FileSets.ReplaceEmbeddedByPhysical<AevatarDomainModule>(
+            //         Path.Combine(hostingEnvironment.ContentRootPath,
+            //             $"..{Path.DirectorySeparatorChar}Aevatar.Domain"));
+            //     options.FileSets.ReplaceEmbeddedByPhysical<AevatarApplicationContractsModule>(
+            //         Path.Combine(hostingEnvironment.ContentRootPath,
+            //             $"..{Path.DirectorySeparatorChar}Aevatar.Application.Contracts"));
+            //     options.FileSets.ReplaceEmbeddedByPhysical<AevatarApplicationModule>(
+            //         Path.Combine(hostingEnvironment.ContentRootPath,
+            //             $"..{Path.DirectorySeparatorChar}Aevatar.Application"));
+            // });
         }
     }
 
