@@ -15,5 +15,4 @@ public class TokenUsageRequestDto
 
     [Required] public bool StatisticsAsHour { get; set; } = false;
 
-    public int Count { get; set; } = 10;
 }

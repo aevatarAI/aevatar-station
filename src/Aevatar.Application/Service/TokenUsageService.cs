@@ -32,7 +32,7 @@ public class TokenUsageService : ITokenUsageService, ITransientDependency
 
         var response = await _cqrsProvider.QueryTokenUsage(GetHostId(requestDto.ProjectId), requestDto.SystemLLM,
             requestDto.StartTime,
-            requestDto.EndTime, requestDto.StatisticsAsHour, requestDto.Count);
+            requestDto.EndTime, requestDto.StatisticsAsHour);
         if (response == null)
         {
             _logger.LogError("[TokenUsageService] GetTokenUsageAsync null");

@@ -1,22 +1,26 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Aevatar;
-using Aevatar.Core.Abstractions;
 using Aevatar.Application.Grains;
 using Aevatar.CQRS;
 using Aevatar.CQRS.Handler;
 using Aevatar.CQRS.Provider;
+using Aevatar.Mock;
 using Aevatar.Options;
 using Aevatar.Service;
 using AutoMapper;
-using MediatR;
+using Elastic.Clients.Elasticsearch;
+using Elastic.Clients.Elasticsearch.Ingest;
+using Elastic.Transport;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using MongoDB.Driver.Core.Configuration;
 using Moq;
-using Nest;
 using Orleans.Hosting;
 using Orleans.TestingHost;
 using Volo.Abp.AutoMapper;
@@ -59,7 +63,7 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                     services.AddAutoMapper(typeof(AIApplicationGrainsModule).Assembly);
                     var mock = new Mock<ILocalEventBus>();
                     services.AddSingleton(typeof(ILocalEventBus), mock.Object);
-
+                    services.AddMemoryCache();
                     // Configure logging
                     var loggerProvider = new MockLoggerProvider("Aevatar");
                     services.AddSingleton<ILoggerProvider>(loggerProvider);
@@ -88,31 +92,25 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                     //services.AddMediatR(typeof(TestSiloConfigurations).Assembly);
 
                     services.AddTransient<IMapperAccessor>(provider => provider.GetRequiredService<MapperAccessor>());
+
+
+                    services.AddSingleton<IIndexingService, MockElasticIndexingService>();
+
+                    services.AddSingleton<ElasticsearchClient>(sp =>
+                    {
+                        var response =
+                            TestableResponseFactory.CreateSuccessfulResponse<SearchResponse<Document>>(new(), 200);
+                        var mock = new Mock<ElasticsearchClient>();
+                        mock
+                            .Setup(m => m.SearchAsync<Document>(It.IsAny<SearchRequest>(),
+                                It.IsAny<CancellationToken>()))
+                            .ReturnsAsync(response);
+                        return mock.Object;
+                    });
                     services.AddMediatR(cfg =>
                         cfg.RegisterServicesFromAssembly(typeof(SaveStateBatchCommandHandler).Assembly)
                     );
-                    services.AddMediatR(cfg =>
-                        cfg.RegisterServicesFromAssembly(typeof(SaveGEventCommandHandler).Assembly)
-                    );
-                    services.AddMediatR(cfg =>
-                        cfg.RegisterServicesFromAssembly(typeof(SendEventCommandHandler).Assembly)
-                    );
-                    services.AddMediatR(cfg =>
-                        cfg.RegisterServicesFromAssembly(typeof(GetGEventQueryHandler).Assembly)
-                    );
-
-
-                    services.AddSingleton<IIndexingService, ElasticIndexingService>();
-
-                    services.AddSingleton(typeof(IEventDispatcher), typeof(CQRSProvider));
                     services.AddSingleton(typeof(ICQRSProvider), typeof(CQRSProvider));
-                    services.AddSingleton<IElasticClient>(provider =>
-                    {
-                        var settings = new ConnectionSettings(new Uri("http://127.0.0.1:9200"))
-                            .DefaultIndex("cqrs").DefaultFieldNameInferrer(fieldName =>
-                                char.ToLowerInvariant(fieldName[0]) + fieldName[1..]);
-                        return new ElasticClient(settings);
-                    });
                     services.AddSingleton(typeof(ICqrsService), typeof(CqrsService));
                 })
                 .AddMemoryStreams("Aevatar")

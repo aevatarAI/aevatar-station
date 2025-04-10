@@ -1,26 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
-using Nest;
+using Elastic.Clients.Elasticsearch.QueryDsl;
 
 namespace Aevatar.CQRS.Provider;
 
-public interface ICQRSProvider : IEventDispatcher
+public interface ICQRSProvider
 {
-    string GetIndexName(string name);
+    Task<string> QueryStateAsync(string indexName, Action<QueryDescriptor<dynamic>> query,
+        int skip, int limit);
 
-    string GetIndexNameWithHostId(string hostId, string name);
-    Task<string> QueryStateAsync(string indexName,Func<QueryContainerDescriptor<dynamic>, QueryContainer> query,int skip, int limit);
-    
-    Task<Tuple<long, List<AgentGEventIndex>>> QueryGEventAsync(string eventId, List<string> grainIds, int pageNumber, int pageSize);
-    
-    Task<Tuple<long, List<AgentGEventIndex>>> QueryAgentGEventAsync(Guid? primaryKey, string agentType, int pageNumber, int pageSize);
-  
     Task<string> QueryAgentStateAsync(string stateName, Guid primaryKey);
 
-    Task<Tuple<long, List<TargetT>>> GetUserInstanceAgent<SourceT,TargetT>(Guid userId, int pageIndex, int pageSize);
     Task<Tuple<long, List<string>>?> QueryTokenUsage(string hostId, string systemLLM, DateTime startTime,
-        DateTime endTime, bool statisticsAsHour,int count);
+        DateTime endTime, bool statisticsAsHour);
 }

@@ -5,10 +5,10 @@ using Aevatar.CQRS.Dto;
 using Aevatar.CQRS.Handler;
 using Aevatar.CQRS.Provider;
 using Aevatar.Options;
-using Elasticsearch.Net;
+using Elastic.Clients.Elasticsearch;
+using Elastic.Transport;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Nest;
 using Volo.Abp.AutoMapper;
 using Volo.Abp.Modularity;
 
@@ -24,24 +24,11 @@ public class AevatarCQRSModule : AbpModule
             cfg.RegisterServicesFromAssembly(typeof(SaveStateBatchCommandHandler).Assembly)
         );
         context.Services.AddMediatR(cfg =>
-            cfg.RegisterServicesFromAssembly(typeof(SaveGEventCommandHandler).Assembly)
-        );
-        context.Services.AddMediatR(cfg =>
-            cfg.RegisterServicesFromAssembly(typeof(SendEventCommandHandler).Assembly)
-        );
-        context.Services.AddMediatR(cfg =>
             cfg.RegisterServicesFromAssembly(typeof(GetStateQueryHandler).Assembly)
         );
-        context.Services.AddMediatR(cfg =>
-            cfg.RegisterServicesFromAssembly(typeof(GetGEventQueryHandler).Assembly)
-        );
-        context.Services.AddMediatR(cfg =>
-            cfg.RegisterServicesFromAssembly(typeof(GetUserInstanceAgentsHandler).Assembly)
-        );
+        
         context.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(TokenUsageCommand).Assembly));
-
         context.Services.AddSingleton<IIndexingService, ElasticIndexingService>();
-        context.Services.AddSingleton<IEventDispatcher, CQRSProvider>();
         context.Services.AddSingleton<ICQRSProvider, CQRSProvider>();
         var configuration = context.Services.GetConfiguration();
         ConfigureElasticsearch(context, configuration);
@@ -52,7 +39,7 @@ public class AevatarCQRSModule : AbpModule
         ServiceConfigurationContext context,
         IConfiguration configuration)
     {
-        context.Services.AddSingleton<IElasticClient>(sp =>
+        context.Services.AddSingleton<ElasticsearchClient>(sp =>
         {
             var uris = configuration.GetSection("ElasticUris:Uris").Get<string[]>();
             if (uris == null || uris.Length == 0)
@@ -60,12 +47,12 @@ public class AevatarCQRSModule : AbpModule
                 throw new ArgumentNullException("ElasticUris:Uris", "Elasticsearch URIs cannot be null or empty.");
             }
 
-            var settings =
-                new ConnectionSettings(new StaticConnectionPool(uris.Select(uri => new Uri(uri)).ToArray()))
-                    .DefaultFieldNameInferrer(fieldName =>
-                        char.ToLowerInvariant(fieldName[0]) + fieldName[1..]);
+            var nodes = uris.Select(uri => new Uri(uri)).ToArray();
+            var connectionPool = new StaticNodePool(nodes);
 
-            return new ElasticClient(settings);
+            var settings = new ElasticsearchClientSettings(connectionPool)
+                .EnableHttpCompression();
+            return new ElasticsearchClient(settings);
         });
     }
 }
