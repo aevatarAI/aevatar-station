@@ -226,7 +226,13 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
     public async Task<Guid> CreateSessionAsync(string systemLLM, string prompt)
     {
         var configuration = GetConfiguration();
+        Stopwatch sw = new Stopwatch();
+        sw.Start();
         IGodChat godChat = GrainFactory.GetGrain<IGodChat>(Guid.NewGuid());
+        await RegisterAsync(godChat);
+        sw.Stop();
+        Logger.LogDebug($"CreateSessionAsync - step,time use:{sw.ElapsedMilliseconds}");
+        
         var sysMessage = await configuration.GetPrompt();
         var formattedRequirement =
             """
@@ -313,11 +319,6 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         IGodChat godChat = GrainFactory.GetGrain<IGodChat>(sessionId);
         sw.Stop();
         Logger.LogDebug($"StreamChatWithSessionAsync - step1,time use:{sw.ElapsedMilliseconds}");
-        sw.Reset();
-        sw.Start();
-        await RegisterAsync(godChat);
-        sw.Stop();
-        Logger.LogDebug($"StreamChatWithSessionAsync - step2,time use:{sw.ElapsedMilliseconds}");
 
         var title = "";
         if (sessionInfo == null)
