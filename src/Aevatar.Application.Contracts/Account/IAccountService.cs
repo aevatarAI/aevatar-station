@@ -7,5 +7,7 @@ namespace Aevatar.Account;
 public interface IAccountService: IAccountAppService
 {
     Task SendRegisterCodeAsync(SendRegisterCodeDto input);
-    Task<IdentityUserDto> RegisterAsync(AevatarRegisterDto input);
+    Task<IdentityUserDto> RegisterAsync(RegisterDto input);
+    Task<bool> CheckEmailRegisteredAsync(CheckEmailRegisteredDto input);
+    Task<IdentityUserDto> GodgptRegisterAsync(GodGptRegisterDto input);
 }
