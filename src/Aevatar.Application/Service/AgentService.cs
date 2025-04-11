@@ -10,12 +10,10 @@ using Aevatar.Application.Grains.Agents.Creator;
 using Aevatar.Application.Grains.Subscription;
 using Aevatar.Common;
 using Aevatar.Core.Abstractions;
-using Aevatar.CQRS;
 using Aevatar.CQRS.Dto;
 using Aevatar.CQRS.Provider;
 using Aevatar.Exceptions;
 using Aevatar.Options;
-using Aevatar.Query;
 using Aevatar.Schema;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -40,7 +38,6 @@ public class AgentService : ApplicationService, IAgentService
     private readonly IOptionsMonitor<AgentOptions> _agentOptions;
     private readonly GrainTypeResolver _grainTypeResolver;
     private readonly ISchemaProvider _schemaProvider;
-    private readonly IIndexingService _indexingService;
 
     public AgentService(
         IClusterClient clusterClient,
@@ -51,8 +48,7 @@ public class AgentService : ApplicationService, IAgentService
         IUserAppService userAppService,
         IOptionsMonitor<AgentOptions> agentOptions,
         GrainTypeResolver grainTypeResolver,
-        ISchemaProvider schemaProvider,
-        IIndexingService indexingService)
+        ISchemaProvider schemaProvider)
     {
         _clusterClient = clusterClient;
         _cqrsProvider = cqrsProvider;
@@ -63,7 +59,45 @@ public class AgentService : ApplicationService, IAgentService
         _agentOptions = agentOptions;
         _grainTypeResolver = grainTypeResolver;
         _schemaProvider = schemaProvider;
-        _indexingService = indexingService;
+    }
+
+    public async Task<Tuple<long, List<AgentGEventIndex>>> GetAgentEventLogsAsync(string agentId, int pageNumber,
+        int pageSize)
+    {
+        if (!Guid.TryParse(agentId, out var validGuid))
+        {
+            _logger.LogInformation("GetAgentAsync Invalid id: {id}", agentId);
+            throw new UserFriendlyException("Invalid id");
+        }
+
+        var agentIds = await ViewGroupTreeAsync(agentId);
+
+        return await _cqrsProvider.QueryGEventAsync("", agentIds, pageNumber, pageSize);
+    }
+
+    private async Task<List<string>> ViewGroupTreeAsync(string agentId)
+    {
+        var result = new List<string> { agentId };
+        await BuildGroupTreeAsync(agentId, result);
+        return result;
+    }
+
+    private async Task BuildGroupTreeAsync(string agentId, List<string> result)
+    {
+        var gAgent = _clusterClient.GetGrain<ICreatorGAgent>(Guid.Parse(agentId));
+        var childrenAgentIds = await gAgent.GetChildrenAsync();
+        if (childrenAgentIds.IsNullOrEmpty())
+        {
+            return;
+        }
+
+        var childrenIds = childrenAgentIds.Select(s => s.Key.ToString()).ToList();
+        result.AddRange(childrenIds);
+
+        foreach (var childrenId in childrenIds)
+        {
+            await BuildGroupTreeAsync(childrenId, result);
+        }
     }
 
     private async Task<Dictionary<string, AgentTypeData?>> GetAgentTypeDataMap()
@@ -84,9 +118,7 @@ public class AgentService : ApplicationService, IAgentService
                 {
                     FullName = agentType.FullName,
                 };
-                var grainId = GrainId.Create(grainType,
-                    GuidUtil.GuidToGrainKey(
-                        GuidUtil.StringToGuid("AgentDefaultId"))); // make sure only one agent instance for each type
+                var grainId = GrainId.Create(grainType, GuidUtil.GuidToGrainKey(GuidUtil.StringToGuid("AgentDefaultId"))); // make sure only one agent instance for each type
                 var agent = await _gAgentFactory.GetGAgentAsync(grainId);
                 var initializeDtoType = await agent.GetConfigurationTypeAsync();
                 if (initializeDtoType == null || initializeDtoType.IsAbstract)
@@ -209,7 +241,7 @@ public class AgentService : ApplicationService, IAgentService
         {
             throw new BusinessException("[AgentService][SetupInitializedConfig] config convert error");
         }
-
+        
         return config;
     }
 
@@ -226,8 +258,7 @@ public class AgentService : ApplicationService, IAgentService
             Name = dto.Name
         };
 
-        var initializationParam =
-            dto.Properties.IsNullOrEmpty() ? string.Empty : JsonConvert.SerializeObject(dto.Properties);
+        var initializationParam = dto.Properties.IsNullOrEmpty() ? string.Empty : JsonConvert.SerializeObject(dto.Properties);
         var businessAgent = await InitializeBusinessAgent(guid, dto.AgentType, initializationParam);
 
         var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
@@ -252,26 +283,20 @@ public class AgentService : ApplicationService, IAgentService
         var result = new List<AgentInstanceDto>();
         var currentUserId = _userAppService.GetCurrentUserId();
         var response =
-            await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
-            {
-                QueryString = "userId.keyword:" + currentUserId,
-                StateName = nameof(CreatorGAgentState),
-                PageSize = pageSize,
-                PageIndex = pageIndex
-            });
-        if (response.TotalCount == 0)
+            await _cqrsProvider.GetUserInstanceAgent<CreatorGAgentState, AgentInstanceSQRSDto>(currentUserId, pageIndex,
+                pageSize);
+        if (response.Item1 == 0)
         {
             return result;
         }
 
-        result.AddRange(response.Items.Select(state => new AgentInstanceDto()
+        result.AddRange(response.Item2.Select(state => new AgentInstanceDto()
         {
-            Id = (string)state["id"],
-            Name = (string)state["name"],
-            Properties = state["properties"] == null
+            Id = state.Id, Name = state.Name,
+            Properties = state.Properties == null
                 ? null
-                : JsonConvert.DeserializeObject<Dictionary<string, object>>((string)state["properties"]),
-            AgentType = (string)state["agentType"],
+                : JsonConvert.DeserializeObject<Dictionary<string, object>>(state.Properties),
+            AgentType = state.AgentType,
         }));
 
         return result;
@@ -303,8 +328,9 @@ public class AgentService : ApplicationService, IAgentService
         {
             var config = SetupConfigurationData(initializationData, agentProperties);
             await businessAgent.ConfigAsync(config);
+            
         }
-
+        
         return businessAgent;
     }
 
@@ -327,9 +353,10 @@ public class AgentService : ApplicationService, IAgentService
                 await businessAgent.ConfigAsync(config);
                 await creatorAgent.UpdateAgentAsync(new UpdateAgentInput
                 {
-                    Name = dto.Name,
+                    Name = dto.Name, 
                     Properties = JsonConvert.SerializeObject(dto.Properties)
                 });
+            
             }
             else
             {
@@ -366,9 +393,9 @@ public class AgentService : ApplicationService, IAgentService
             Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentState.Properties),
             AgentGuid = agentState.BusinessAgentGrainId.GetGuidKey()
         };
-
+        
         var businessAgent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
-
+        
         var configuration = await GetAgentConfigurationAsync(businessAgent);
         if (configuration != null)
         {

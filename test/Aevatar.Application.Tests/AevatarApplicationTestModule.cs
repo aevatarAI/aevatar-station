@@ -1,22 +1,17 @@
 using System;
-using System.Threading;
 using Aevatar.CQRS.Handler;
 using Aevatar.Kubernetes.Manager;
-using Aevatar.Mock;
+using Aevatar.Options;
 using Aevatar.WebHook.Deploy;
-using Elastic.Clients.Elasticsearch;
-using Elastic.Clients.Elasticsearch.Ingest;
-using Elastic.Transport;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
-using MongoDB.Driver.Core.Configuration;
-using Moq;
+using Nest;
+using Volo.Abp.Auditing;
 using Volo.Abp.AutoMapper;
 using Volo.Abp.Emailing;
 using Volo.Abp.EventBus;
 using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
-using ChatConfigOptions = Aevatar.Options.ChatConfigOptions;
 
 namespace Aevatar;
 
@@ -34,27 +29,29 @@ public class AevatarApplicationTestModule : AbpModule
         Configure<AbpAutoMapperOptions>(options => { options.AddMaps<AevatarApplicationModule>(); });
         var configuration = context.Services.GetConfiguration();
         Configure<ChatConfigOptions>(configuration.GetSection("Chat"));
-        context.Services.AddSingleton<ElasticsearchClient>(sp =>
+        context.Services.AddSingleton<IElasticClient>(provider =>
         {
-            var response = TestableResponseFactory.CreateSuccessfulResponse<SearchResponse<Document>>(new(), 200);
-            var mock = new Mock<ElasticsearchClient>();
-            mock
-                .Setup(m => m.SearchAsync<Document>(It.IsAny<SearchRequest>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(response);
-            return mock.Object;
+            var settings = new ConnectionSettings(new Uri("http://127.0.0.1:9200"))
+                .DefaultIndex("cqrs").DefaultFieldNameInferrer(fieldName =>
+                    char.ToLowerInvariant(fieldName[0]) + fieldName[1..]);
+            return new ElasticClient(settings);
         });
-
-        context.Services.AddTransient<IHostDeployManager, DefaultHostDeployManager>();
-
+        context.Services.AddMediatR(cfg =>
+            cfg.RegisterServicesFromAssembly(typeof(GetStateQueryHandler).Assembly)
+        );
+        context.Services.AddMediatR(cfg =>
+            cfg.RegisterServicesFromAssembly(typeof(GetGEventQueryHandler).Assembly)
+        );
         context.Services.AddTransient<IHostDeployManager, DefaultHostDeployManager>();
 
         context.Services.AddSingleton<IEmailSender, NullEmailSender>();
-
-
+        
         AddMock(context.Services);
     }
 
     private void AddMock(IServiceCollection serviceCollection)
     {
+        
     }
+    
 }

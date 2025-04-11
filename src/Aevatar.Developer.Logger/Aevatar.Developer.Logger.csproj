@@ -8,9 +8,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Elastic.Clients.Elasticsearch" />
-        <PackageReference Include="Newtonsoft.Json" />
-        <PackageReference Include="Volo.Abp.Core" />
+      <PackageReference Include="NEST" />
+      <PackageReference Include="Newtonsoft.Json" />
+      <PackageReference Include="Volo.Abp.Core"  />
     </ItemGroup>
 
 </Project>
