@@ -195,6 +195,6 @@
     <PackageVersion Include="MineAiFun.GAgents" Version="1.1.13" />
     <PackageVersion Include="Neo4j.Driver" Version="5.27.0" />
     <PackageVersion Include="XWorkerAgent" Version="0.0.79" />
-    <PackageVersion Include="TelegramWorkerAgent" Version="0.0.84" />
+    <PackageVersion Include="TelegramWorkerAgent" Version="0.0.85" />
   </ItemGroup>
 </Project>
