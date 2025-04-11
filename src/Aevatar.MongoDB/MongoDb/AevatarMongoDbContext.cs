@@ -1,5 +1,6 @@
 ﻿using Aevatar.ApiKey;
 using Aevatar.Notification;
+using Aevatar.Permissions;
 using Aevatar.User;
 using MongoDB.Driver;
 using Volo.Abp.AuditLogging.MongoDB;
@@ -21,6 +22,7 @@ public class AevatarMongoDbContext : AbpMongoDbContext
      * public IMongoCollection<Question> Questions => Collection<Question>();
      */
     public IMongoCollection<IdentityUserExtension> IdentityUserExtensionInfos { get; private set; }
+    public IMongoCollection<StatePermission> StatePermissionInfos { get; private set; }
 
 
     protected override void CreateModel(IMongoModelBuilder modelBuilder)

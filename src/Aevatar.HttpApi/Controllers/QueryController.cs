@@ -19,29 +19,21 @@ public class QueryController : AevatarController
     private readonly ICqrsService _cqrsService;
     private readonly IIndexingService _indexingService;
 
-    public QueryController(ICqrsService cqrsService, 
+    public QueryController(ICqrsService cqrsService,
         IIndexingService indexingService)
     {
         _cqrsService = cqrsService;
         _indexingService = indexingService;
     }
 
-    [HttpGet("logs")]
-    [Authorize(Policy = AevatarPermissions.CqrsManagement.Logs)] 
-    public async Task<AgentEventLogsDto> GetEventLogs([FromQuery] Guid? id, string agentType, int pageIndex = 0, int pageSize = 20)
-    {
-        var resp = await _cqrsService.QueryGEventAsync(id, agentType, pageIndex, pageSize);
-        return resp;
-    }
-
     [HttpGet("state")]
-    [Authorize(Policy = AevatarPermissions.CqrsManagement.States)] 
+    [Authorize(Policy = AevatarPermissions.CqrsManagement.States)]
     public async Task<AgentStateDto> GetStates([FromQuery] string stateName, Guid id)
     {
         var resp = await _cqrsService.QueryStateAsync(stateName, id);
         return resp;
     }
-    
+
     [HttpGet("es")]
     public async Task<PagedResultDto<Dictionary<string, object>>> QueryEs(
         [FromQuery] LuceneQueryDto request)
@@ -52,9 +44,8 @@ public class QueryController : AevatarController
         {
             throw new UserFriendlyException(result.Errors[0].ErrorMessage);
         }
-            
+
         var resp = await _indexingService.QueryWithLuceneAsync(request);
         return resp;
     }
-    
 }
