@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.ApiKey;
 using Microsoft.Extensions.Options;
@@ -55,6 +56,8 @@ public class ApiRequestProvider : IApiRequestProvider, ISingletonDependency
     public async Task FlushAsync()
     {
         var segmentTime = GetSegmentTime(DateTime.UtcNow);
+        var insertEntities = new Dictionary<string, ApiRequestSnapshot>();
+        var updateEntities = new Dictionary<string, ApiRequestSnapshot>();
         foreach (var item in _apiRequests)
         {
             if (item.Value.SegmentTime >= segmentTime)
@@ -74,18 +77,39 @@ public class ApiRequestProvider : IApiRequestProvider, ISingletonDependency
             }
 
             var time = item.Value.SegmentTime.Date.AddHours(item.Value.SegmentTime.Hour);
-            await UpdateSnapshotAsync(app.ProjectId, time, item.Value.Count);
+            await UpdateSnapshotAsync(app.ProjectId, time, item.Value.Count, insertEntities, updateEntities);
             
             var organization = await _organizationUnitRepository.GetAsync(app.ProjectId);
-            await UpdateSnapshotAsync(organization.ParentId.Value, time, item.Value.Count);
+            await UpdateSnapshotAsync(organization.ParentId.Value, time, item.Value.Count, insertEntities, updateEntities);
+        }
+
+        if (insertEntities.Values.Count > 0)
+        {
+            await _apiRequestSnapshotRepository.InsertManyAsync(insertEntities.Values);
+        }
+        
+        if (updateEntities.Values.Count > 0)
+        {
+            await _apiRequestSnapshotRepository.UpdateManyAsync(updateEntities.Values);
         }
     }
 
-    private async Task UpdateSnapshotAsync(Guid organizationId, DateTime time, long count)
+    private async Task UpdateSnapshotAsync(Guid organizationId, DateTime time, long count,
+        Dictionary<string, ApiRequestSnapshot> insertEntities, Dictionary<string, ApiRequestSnapshot> updateEntities)
     {
-        var snapshot =
-            await _apiRequestSnapshotRepository.FindAsync(o =>
-                o.OrganizationId == organizationId && o.Time == time);
+        var entityKey = $"{organizationId}-{time}";
+        if (!insertEntities.TryGetValue(entityKey, out var snapshot) &&
+            !updateEntities.TryGetValue(entityKey, out snapshot))
+        {
+            snapshot =
+                await _apiRequestSnapshotRepository.FindAsync(o =>
+                    o.OrganizationId == organizationId && o.Time == time);
+            if (snapshot != null)
+            {
+                updateEntities[entityKey] = snapshot;
+            }
+        }
+
         if (snapshot == null)
         {
             snapshot = new ApiRequestSnapshot(Guid.NewGuid())
@@ -94,12 +118,11 @@ public class ApiRequestProvider : IApiRequestProvider, ISingletonDependency
                 Time = time,
                 OrganizationId = organizationId
             };
-            await _apiRequestSnapshotRepository.InsertAsync(snapshot);
+            insertEntities[entityKey] = snapshot;
         }
         else
         {
             snapshot.Count += count;
-            await _apiRequestSnapshotRepository.UpdateAsync(snapshot);
         }
     }
 

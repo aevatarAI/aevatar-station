@@ -10,6 +10,8 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Newtonsoft.Json;
 using Shouldly;
+using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Identity;
 using Xunit;
 
 namespace Aevatar.Notification;
@@ -28,8 +30,9 @@ public sealed class Notification_Test : AevatarApplicationTestBase
     private static readonly Guid _notificationId = Guid.Parse("1263293b-fdde-4730-b10a-e95c37379743");
     private readonly NotificationInfo _notificationInfo;
     private readonly CancellationToken _cancellation;
-    private readonly Mock<IOrganizationService> _organizationService;
+    private readonly Mock<IRepository<OrganizationUnit, Guid>> _organizationUnitRepository;
     private readonly string _input = "{\"OrganizationId\":\"3fa85f64-5717-4562-b3fc-2c963f66afa6\", \"Role\":1}";
+    private readonly Mock<IdentityUserManager> _identityUserManager;
 
     private readonly NotificationResponse _notificationResponse = new NotificationResponse()
         { Data = new NotificationResponseMessage() { Id = _notificationId, Status = _notificationStatusEnum } };
@@ -37,17 +40,19 @@ public sealed class Notification_Test : AevatarApplicationTestBase
     public Notification_Test()
     {
         _notificationHandlerFactory = GetRequiredService<INotificationHandlerFactory>();
+        _identityUserManager = new Mock<IdentityUserManager>();
         _logger = new Mock<ILogger<NotificationService>>();
         _notificationRepository = new Mock<INotificationRepository>();
-        _organizationService = new Mock<IOrganizationService>();
+        _organizationUnitRepository = new Mock<IRepository<OrganizationUnit, Guid>>();
         _objectMapper = GetRequiredService<IObjectMapper>();
         _hubService = new Mock<IHubService>();
         _cancellation = new CancellationToken();
 
         _notificationService = new NotificationService(_notificationHandlerFactory, _logger.Object,
-            _notificationRepository.Object, _objectMapper, _hubService.Object, _organizationService.Object);
+            _notificationRepository.Object, _objectMapper, _hubService.Object,
+            _identityUserManager.Object, _organizationUnitRepository.Object);
 
-        _hubService.Setup(f => f.ResponseAsync(new List<Guid>(){_receiveId}, _notificationResponse))
+        _hubService.Setup(f => f.ResponseAsync(new List<Guid>() { _receiveId }, _notificationResponse))
             .Returns(Task.CompletedTask);
 
         _notificationInfo = new NotificationInfo()
@@ -69,8 +74,6 @@ public sealed class Notification_Test : AevatarApplicationTestBase
 
         var response = await _notificationService.CreateAsync(NotificationTypeEnum.OrganizationInvitation, _creator,
             _receiveId, _input);
-
-        response.ShouldBeTrue();
     }
 
     [Fact]

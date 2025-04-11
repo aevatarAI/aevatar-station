@@ -23,7 +23,7 @@
     <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="$(AevatarGAgentVerion)" />
     <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="$(AevatarGAgentVerion)" />
     <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="$(AevatarGAgentVerion)" />
-    <PackageVersion Include="Aevatar.SignalR" Version="1.5.5-parent.1" />
+    <PackageVersion Include="Aevatar.SignalR" Version="1.5.5-parent.11" />
     <PackageVersion Include="Aevatar.GAgents.SocialGAgent" Version="$(AevatarGAgentVerion)" />
     <PackageVersion Include="Aevatar.GAgents.Twitter" Version="$(AevatarGAgentVerion)" />
     <PackageVersion Include="Aevatar.GAgents.ChatAgent" Version="$(AevatarGAgentVerion)" />
@@ -185,6 +185,8 @@
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="MediatR" Version="12.4.1" />
     <PackageVersion Include="Elastic.Clients.Elasticsearch" Version="8.17.3" />
+    <PackageVersion Include="Elasticsearch.Net" Version="7.17.5"/>
+    <PackageVersion Include="Aevatar.SignalR" Version="1.5.5-parent.11" />
     <PackageVersion Include="Elasticsearch.Net" Version="7.17.5"/>
     <PackageVersion Include="Elastic.Transport" Version="0.5.9" />
     <PackageVersion Include="GraphQL.Client" Version="6.1.0" />

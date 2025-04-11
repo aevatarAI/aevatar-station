@@ -80,6 +80,12 @@ public abstract class ApiRequestServiceTests<TStartupModule> : AevatarApplicatio
         await _apiRequestProvider.IncreaseRequestAsync(appId2, new DateTime(now.Year,now.Month,now.Day,now.Hour-1,3,3,DateTimeKind.Utc));
 
         await _apiRequestProvider.FlushAsync();
+        
+        await _apiRequestProvider.IncreaseRequestAsync(appId1, new DateTime(now.Year,now.Month,now.Day,now.Hour-3,11,1,DateTimeKind.Utc));
+        await _apiRequestProvider.IncreaseRequestAsync(appId1, new DateTime(now.Year,now.Month,now.Day,now.Hour-1,12,2,DateTimeKind.Utc));
+        await _apiRequestProvider.IncreaseRequestAsync(appId2, new DateTime(now.Year,now.Month,now.Day,now.Hour-1,13,3,DateTimeKind.Utc));
+
+        await _apiRequestProvider.FlushAsync();
 
         var apiRequests = await _apiRequestService.GetListAsync(new GetApiRequestDto
         {
@@ -89,9 +95,9 @@ public abstract class ApiRequestServiceTests<TStartupModule> : AevatarApplicatio
         });
         
         apiRequests.Items.Count.ShouldBe(2);
-        apiRequests.Items[0].Count.ShouldBe(1);
+        apiRequests.Items[0].Count.ShouldBe(2);
         apiRequests.Items[0].Time.ShouldBe(DateTimeHelper.ToUnixTimeMilliseconds(new DateTime(now.Year,now.Month,now.Day,now.Hour-3,0,0,DateTimeKind.Utc)));
-        apiRequests.Items[1].Count.ShouldBe(2);
+        apiRequests.Items[1].Count.ShouldBe(4);
         apiRequests.Items[1].Time.ShouldBe(DateTimeHelper.ToUnixTimeMilliseconds(new DateTime(now.Year,now.Month,now.Day,now.Hour-1,0,0,DateTimeKind.Utc)));
         
         apiRequests = await _apiRequestService.GetListAsync(new GetApiRequestDto
@@ -102,9 +108,9 @@ public abstract class ApiRequestServiceTests<TStartupModule> : AevatarApplicatio
         });
         
         apiRequests.Items.Count.ShouldBe(2);
-        apiRequests.Items[0].Count.ShouldBe(1);
+        apiRequests.Items[0].Count.ShouldBe(2);
         apiRequests.Items[0].Time.ShouldBe(DateTimeHelper.ToUnixTimeMilliseconds(new DateTime(now.Year,now.Month,now.Day,now.Hour-3,0,0,DateTimeKind.Utc)));
-        apiRequests.Items[1].Count.ShouldBe(1);
+        apiRequests.Items[1].Count.ShouldBe(2);
         apiRequests.Items[1].Time.ShouldBe(DateTimeHelper.ToUnixTimeMilliseconds(new DateTime(now.Year,now.Month,now.Day,now.Hour-1,0,0,DateTimeKind.Utc)));
         
         apiRequests = await _apiRequestService.GetListAsync(new GetApiRequestDto
@@ -115,7 +121,7 @@ public abstract class ApiRequestServiceTests<TStartupModule> : AevatarApplicatio
         });
         
         apiRequests.Items.Count.ShouldBe(1);
-        apiRequests.Items[0].Count.ShouldBe(1);
+        apiRequests.Items[0].Count.ShouldBe(2);
         apiRequests.Items[0].Time.ShouldBe(DateTimeHelper.ToUnixTimeMilliseconds(new DateTime(now.Year,now.Month,now.Day,now.Hour-1,0,0,DateTimeKind.Utc)));
     }
 }

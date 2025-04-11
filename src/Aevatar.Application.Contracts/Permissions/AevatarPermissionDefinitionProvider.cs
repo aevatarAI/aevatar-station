@@ -79,9 +79,7 @@ public class AevatarPermissionDefinitionProvider : PermissionDefinitionProvider
         
         var organizationsPermission = developerPlatformGroup.AddPermission(AevatarPermissions.Organizations.Default, L("Permission:Organizations"));
         organizationsPermission.Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.Organization;
-        //organizationsPermission.AddChild(AevatarPermissions.Organizations.Edit, L("Permission:Organizations.Create"));
         organizationsPermission.AddChild(AevatarPermissions.Organizations.Edit, L("Permission:Organizations.Edit")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.Organization;
-        //organizationsPermission.AddChild(AevatarPermissions.Organizations.Delete, L("Permission:Organizations.Delete"));
         
         var projectsPermission = developerPlatformGroup.AddPermission(AevatarPermissions.Projects.Default, L("Permission:Projects"));
         projectsPermission.Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
