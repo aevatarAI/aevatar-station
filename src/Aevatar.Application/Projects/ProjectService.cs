@@ -54,45 +54,37 @@ public class ProjectService : OrganizationService, IProjectService
         return ObjectMapper.Map<OrganizationUnit, ProjectDto>(project);
     }
 
-    protected override async Task<Guid> AddOwnerRoleAsync(Guid organizationId)
+    protected override List<string> GetOwnerPermissions()
     {
-        var role = new IdentityRole(
-            GuidGenerator.Create(),
-            OrganizationRoleHelper.GetRoleName(organizationId, AevatarConsts.OrganizationOwnerRoleName)
-        );
-        (await RoleManager.CreateAsync(role)).CheckErrors();
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Members.Default, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Members.Manage, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiKeys.Default, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiKeys.Create, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiKeys.Edit, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiKeys.Delete, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Projects.Default, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Projects.Edit, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Roles.Default, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Roles.Create, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Roles.Edit, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Roles.Delete, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.LLMSModels.Default, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiRequests.Default, true);
-
-        return role.Id;
+        return
+        [
+            AevatarPermissions.Members.Default,
+            AevatarPermissions.Members.Manage,
+            AevatarPermissions.ApiKeys.Default,
+            AevatarPermissions.ApiKeys.Create,
+            AevatarPermissions.ApiKeys.Edit,
+            AevatarPermissions.ApiKeys.Delete,
+            AevatarPermissions.Projects.Default,
+            AevatarPermissions.Projects.Edit,
+            AevatarPermissions.Roles.Default,
+            AevatarPermissions.Roles.Create,
+            AevatarPermissions.Roles.Edit,
+            AevatarPermissions.Roles.Delete,
+            AevatarPermissions.LLMSModels.Default,
+            AevatarPermissions.ApiRequests.Default
+        ];
     }
-
-    protected override async Task<Guid> AddReaderRoleAsync(Guid organizationId)
+    
+    protected override List<string> GetReaderPermissions()
     {
-        var role = new IdentityRole(
-            GuidGenerator.Create(),
-            OrganizationRoleHelper.GetRoleName(organizationId, AevatarConsts.OrganizationReaderRoleName)
-        );
-        (await RoleManager.CreateAsync(role)).CheckErrors();
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Projects.Default, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Members.Default, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiKeys.Default, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.LLMSModels.Default, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiRequests.Default, true);
-
-        return role.Id;
+        return
+        [
+            AevatarPermissions.Projects.Default,
+            AevatarPermissions.Members.Default,
+            AevatarPermissions.ApiKeys.Default,
+            AevatarPermissions.LLMSModels.Default,
+            AevatarPermissions.ApiRequests.Default
+        ];
     }
 
     public async Task<ProjectDto> UpdateAsync(Guid id, UpdateProjectDto input)

@@ -147,27 +147,39 @@ public class OrganizationService : AevatarAppService, IOrganizationService
             OrganizationRoleHelper.GetRoleName(organizationId, AevatarConsts.OrganizationOwnerRoleName)
         );
         (await RoleManager.CreateAsync(role)).CheckErrors();
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Organizations.Default, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Organizations.Edit, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Organizations.Delete, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Members.Default, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Members.Manage, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiKeys.Default, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiKeys.Create, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiKeys.Edit, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiKeys.Delete, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Projects.Default, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Projects.Create, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Projects.Edit, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Projects.Delete, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Roles.Default, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Roles.Create, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Roles.Edit, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Roles.Delete, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.LLMSModels.Default, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiRequests.Default, true);
+
+        foreach (var permission in GetOwnerPermissions())
+        {
+            await PermissionManager.SetForRoleAsync(role.Name, permission, true);
+        }
 
         return role.Id;
+    }
+
+    protected virtual List<string> GetOwnerPermissions()
+    {
+        return
+        [
+            AevatarPermissions.Organizations.Default,
+            AevatarPermissions.Organizations.Edit,
+            AevatarPermissions.Organizations.Delete,
+            AevatarPermissions.Members.Default,
+            AevatarPermissions.Members.Manage,
+            AevatarPermissions.ApiKeys.Default,
+            AevatarPermissions.ApiKeys.Create,
+            AevatarPermissions.ApiKeys.Edit,
+            AevatarPermissions.ApiKeys.Delete,
+            AevatarPermissions.Projects.Default,
+            AevatarPermissions.Projects.Create,
+            AevatarPermissions.Projects.Edit,
+            AevatarPermissions.Projects.Delete,
+            AevatarPermissions.Roles.Default,
+            AevatarPermissions.Roles.Create,
+            AevatarPermissions.Roles.Edit,
+            AevatarPermissions.Roles.Delete,
+            AevatarPermissions.LLMSModels.Default,
+            AevatarPermissions.ApiRequests.Default
+        ];
     }
 
     protected virtual async Task<Guid> AddReaderRoleAsync(Guid organizationId)
@@ -177,10 +189,22 @@ public class OrganizationService : AevatarAppService, IOrganizationService
             OrganizationRoleHelper.GetRoleName(organizationId, AevatarConsts.OrganizationReaderRoleName)
         );
         (await RoleManager.CreateAsync(role)).CheckErrors();
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Organizations.Default, true);
-        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Members.Default, true);
+        
+        foreach (var permission in GetReaderPermissions())
+        {
+            await PermissionManager.SetForRoleAsync(role.Name, permission, true);
+        }
 
         return role.Id;
+    }
+    
+    protected virtual List<string> GetReaderPermissions()
+    {
+        return
+        [
+            AevatarPermissions.Organizations.Default,
+            AevatarPermissions.Members.Default
+        ];
     }
 
     public virtual async Task<OrganizationDto> UpdateAsync(Guid id, UpdateOrganizationDto input)
