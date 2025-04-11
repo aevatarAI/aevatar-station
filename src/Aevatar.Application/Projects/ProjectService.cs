@@ -25,9 +25,9 @@ public class ProjectService : OrganizationService, IProjectService
         IRepository<OrganizationUnit, Guid> organizationUnitRepository, IdentityRoleManager roleManager,
         IPermissionManager permissionManager, IOrganizationPermissionChecker permissionChecker,
         IPermissionDefinitionManager permissionDefinitionManager, IRepository<IdentityUser, Guid> userRepository,
-        IDistributedEventBus distributedEvent) :
+        INotificationService notificationService) :
         base(organizationUnitManager, identityUserManager, organizationUnitRepository, roleManager, permissionManager,
-            permissionChecker, permissionDefinitionManager, userRepository, distributedEvent)
+            permissionChecker, permissionDefinitionManager, userRepository, notificationService)
     {
     }
 
@@ -152,5 +152,17 @@ public class ProjectService : OrganizationService, IProjectService
         (await IdentityUserManager.UpdateAsync(user)).CheckErrors();
         (await IdentityUserManager.UpdateSecurityStampAsync(user)).CheckErrors();
         await IdentityUserManager.AddToOrganizationUnitAsync(user.Id, organizationId);
+    }
+    
+    protected override async Task RemoveMemberAsync(Guid organizationId, IdentityUser user)
+    {
+        var children = await OrganizationUnitManager.FindChildrenAsync(organizationId, true);
+        foreach (var child in children)
+        {
+            await RemoveMemberAsync(child, user.Id);
+        }
+
+        var organization = await OrganizationUnitRepository.GetAsync(organizationId);
+        await RemoveMemberAsync(organization, user.Id);
     }
 }

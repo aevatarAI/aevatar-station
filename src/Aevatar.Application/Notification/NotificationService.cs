@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Volo.Abp;
 using Volo.Abp.DependencyInjection;
+using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
 using Volo.Abp.ObjectMapping;
 using Volo.Abp.Users;
@@ -26,20 +27,21 @@ public class NotificationService : INotificationService, ITransientDependency
     private readonly INotificationRepository _notificationRepository;
     private readonly IObjectMapper _objectMapper;
     private readonly IHubService _hubService;
-    private readonly IOrganizationService _organizationService;
     private readonly IdentityUserManager _identityUserManager;
+    private readonly IRepository<OrganizationUnit, Guid> _organizationUnitRepository;
 
     public NotificationService(INotificationHandlerFactory notificationHandlerFactory,
         ILogger<NotificationService> logger, INotificationRepository notificationRepository, IObjectMapper objectMapper,
-        IHubService hubService, IOrganizationService organizationService, IdentityUserManager identityUserManager)
+        IHubService hubService, IdentityUserManager identityUserManager,
+        IRepository<OrganizationUnit, Guid> organizationUnitRepository)
     {
         _notificationHandlerFactory = notificationHandlerFactory;
         _logger = logger;
         _notificationRepository = notificationRepository;
         _objectMapper = objectMapper;
         _hubService = hubService;
-        _organizationService = organizationService;
         _identityUserManager = identityUserManager;
+        _organizationUnitRepository = organizationUnitRepository;
     }
 
     public async Task<Guid> CreateAsync(NotificationTypeEnum notificationTypeEnum, Guid? creator, Guid target,
@@ -224,7 +226,7 @@ public class NotificationService : INotificationService, ITransientDependency
             if (organizationInfoObj != null)
             {
                 var organizationVisitInfo = organizationInfoObj as OrganizationVisitInfo;
-                var organizationInfo = await _organizationService.GetAsync(organizationVisitInfo!.OrganizationId);
+                var organizationInfo = await _organizationUnitRepository.GetAsync(organizationVisitInfo!.OrganizationId);
                 result.Add(new OrganizationVisitDto()
                 {
                     Id = item.Id,

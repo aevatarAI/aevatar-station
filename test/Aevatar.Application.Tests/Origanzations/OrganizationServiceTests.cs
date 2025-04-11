@@ -243,4 +243,69 @@ public abstract class OrganizationServiceTests<TStartupModule> : AevatarApplicat
         readerUser = await _identityUserManager.GetByIdAsync(readerUser.Id);
         readerUser.IsInOrganizationUnit(organization.Id).ShouldBeFalse();
     }
+    
+    [Fact]
+    public async Task Organization_DeletePendingMember_Test()
+    {
+        var owner = new IdentityUser(_currentUser.Id.Value, "owner", "owner@email.io");
+        await _identityUserManager.CreateAsync(owner);
+
+        var createInput = new CreateOrganizationDto
+        {
+            DisplayName = "Test"
+        };
+        var organization = await _organizationService.CreateAsync(createInput);
+        
+        var roles = await _organizationService.GetRoleListAsync(organization.Id);
+        var ownerRole = roles.Items.First(o => o.Name.EndsWith("Owner"));
+        var readerRole = roles.Items.First(o => o.Name.EndsWith("Reader"));
+        
+        organization = await _organizationService.GetAsync(organization.Id);
+        organization.MemberCount.ShouldBe(1);
+
+        var members =
+            await _organizationService.GetMemberListAsync(organization.Id, new GetOrganizationMemberListDto());
+        members.Items.Count.ShouldBe(1);
+        members.Items[0].UserName.ShouldBe(owner.UserName);
+        members.Items[0].Email.ShouldBe(owner.Email);
+        members.Items[0].RoleId.ShouldBe(ownerRole.Id);
+
+        var readerUser = new IdentityUser(Guid.NewGuid(), "reader", "reader@email.io");
+        await _identityUserManager.CreateAsync(readerUser);
+
+        await _organizationService.SetMemberAsync(organization.Id, new SetOrganizationMemberDto
+        {
+            Email = readerUser.Email,
+            Join = true,
+            RoleId = readerRole.Id
+        });
+        
+        organization = await _organizationService.GetAsync(organization.Id);
+        organization.MemberCount.ShouldBe(2);
+        
+        members =
+            await _organizationService.GetMemberListAsync(organization.Id, new GetOrganizationMemberListDto());
+        members.Items.Count.ShouldBe(2);
+        var readerMember = members.Items.First(o => o.Id == readerUser.Id);
+        readerMember.UserName.ShouldBe(readerUser.UserName);
+        readerMember.Email.ShouldBe(readerUser.Email);
+        readerMember.RoleId.ShouldBe(null);
+        readerMember.Status.ShouldBe(MemberStatus.Inviting);
+        
+        await _organizationService.SetMemberAsync(organization.Id, new SetOrganizationMemberDto
+        {
+            Email = readerUser.Email,
+            Join = false
+        });
+        
+        organization = await _organizationService.GetAsync(organization.Id);
+        organization.MemberCount.ShouldBe(1);
+
+        members =
+            await _organizationService.GetMemberListAsync(organization.Id, new GetOrganizationMemberListDto());
+        members.Items.Count.ShouldBe(1);
+
+        readerUser = await _identityUserManager.GetByIdAsync(readerUser.Id);
+        readerUser.IsInOrganizationUnit(organization.Id).ShouldBeFalse();
+    }
 }

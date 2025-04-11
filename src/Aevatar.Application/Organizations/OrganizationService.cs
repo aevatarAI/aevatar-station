@@ -30,13 +30,13 @@ public class OrganizationService : AevatarAppService, IOrganizationService
     protected readonly IOrganizationPermissionChecker PermissionChecker;
     protected readonly IPermissionDefinitionManager PermissionDefinitionManager;
     protected readonly IRepository<IdentityUser, Guid> UserRepository;
-    private readonly IDistributedEventBus _distributedEvent;
+    protected readonly INotificationService NotificationService;
 
     public OrganizationService(OrganizationUnitManager organizationUnitManager, IdentityUserManager identityUserManager,
         IRepository<OrganizationUnit, Guid> organizationUnitRepository, IdentityRoleManager roleManager,
         IPermissionManager permissionManager, IOrganizationPermissionChecker permissionChecker,
         IPermissionDefinitionManager permissionDefinitionManager, IRepository<IdentityUser, Guid> userRepository,
-        IDistributedEventBus distributedEvent)
+        INotificationService notificationService)
     {
         OrganizationUnitManager = organizationUnitManager;
         IdentityUserManager = identityUserManager;
@@ -46,7 +46,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         PermissionChecker = permissionChecker;
         PermissionDefinitionManager = permissionDefinitionManager;
         UserRepository = userRepository;
-        _distributedEvent = distributedEvent;
+        NotificationService = notificationService;
     }
 
     public virtual async Task<ListResultDto<OrganizationDto>> GetListAsync(GetOrganizationListDto input)
@@ -270,29 +270,35 @@ public class OrganizationService : AevatarAppService, IOrganizationService
 
     protected virtual async Task AddMemberAsync(Guid organizationId, IdentityUser user, Guid? roleId)
     {
-        SetMemberStatus(organizationId, user, MemberStatus.Inviting);
-
-        (await IdentityUserManager.UpdateAsync(user)).CheckErrors();
-        await IdentityUserManager.AddToOrganizationUnitAsync(user.Id, organizationId);
-        await CurrentUnitOfWork.SaveChangesAsync();
-        
-        await _distributedEvent.PublishAsync(new NotificationCreatForEventBusDto()
-        {
-            Type = NotificationTypeEnum.OrganizationInvitation,
-            Creator = CurrentUser.Id.Value,
-            Target = user.Id,
-            Content = JsonConvert.SerializeObject(new OrganizationVisitInfo
+        var notificationId = await NotificationService.CreateAsync(NotificationTypeEnum.OrganizationInvitation,
+            CurrentUser.Id.Value, user.Id, JsonConvert.SerializeObject(new OrganizationVisitInfo
             {
                 Creator = CurrentUser.Id.Value,
                 OrganizationId = organizationId,
                 RoleId = roleId.Value,
                 Vistor = user.Id
-            })
+            }));
+        
+        SetMemberStatus(organizationId, user, MemberStatus.Inviting);
+        SetMemberInvitationInfo(organizationId,user, new MemberInvitationInfo
+        {
+            Inviter = CurrentUser.Id.Value,
+            InvitationId = notificationId
         });
+
+        (await IdentityUserManager.UpdateAsync(user)).CheckErrors();
+        await IdentityUserManager.AddToOrganizationUnitAsync(user.Id, organizationId);
     }
 
     protected virtual async Task RemoveMemberAsync(Guid organizationId, IdentityUser user)
     {
+        var userStatus = GetMemberStatus(organizationId, user);
+        if (userStatus == MemberStatus.Inviting)
+        {
+            var invitationInfo = GetMemberInvitationInfo(organizationId, user);
+            await NotificationService.WithdrawAsync(invitationInfo.Inviter, invitationInfo.InvitationId);
+        }
+
         var children = await OrganizationUnitManager.FindChildrenAsync(organizationId, true);
         foreach (var child in children)
         {
@@ -303,7 +309,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         await RemoveMemberAsync(organization, user.Id);
     }
 
-    private async Task RemoveMemberAsync(OrganizationUnit organization, Guid userId)
+    protected virtual async Task RemoveMemberAsync(OrganizationUnit organization, Guid userId)
     {
         var user = await IdentityUserManager.GetByIdAsync(userId);
         if (!user.IsInOrganizationUnit(organization.Id))
@@ -466,6 +472,35 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         {
             user.ExtraProperties[AevatarConsts.MemberStatusKey] = new Dictionary<string, MemberStatus>
                 { { organizationId.ToString(), memberStatus } };
+        }
+    }
+    
+    private MemberInvitationInfo GetMemberInvitationInfo(Guid organizationId, IdentityUser user)
+    {
+        if (user.ExtraProperties.TryGetValue(AevatarConsts.MemberInvitationInfoKey, out var info))
+        {
+            var invitationInfo = info as Dictionary<string, object>;
+            if (invitationInfo.TryGetValue(organizationId.ToString(), out var value))
+            {
+                return JsonConvert.DeserializeObject<MemberInvitationInfo>(value as string);
+            }
+        }
+
+        return null;
+    }
+
+    private void SetMemberInvitationInfo(Guid organizationId, IdentityUser user, MemberInvitationInfo memberInvitation)
+    {
+        if (user.ExtraProperties.TryGetValue(AevatarConsts.MemberInvitationInfoKey, out var info))
+        {
+            var invitationInfo = info as Dictionary<string, string>;
+            invitationInfo[organizationId.ToString()] = JsonConvert.SerializeObject(memberInvitation);
+            user.ExtraProperties[AevatarConsts.MemberInvitationInfoKey] = invitationInfo;
+        }
+        else
+        {
+            user.ExtraProperties[AevatarConsts.MemberInvitationInfoKey] = new Dictionary<string, string>
+                { { organizationId.ToString(), JsonConvert.SerializeObject(memberInvitation) } };
         }
     }
 }
