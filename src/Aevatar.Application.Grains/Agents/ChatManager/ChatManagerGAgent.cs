@@ -33,11 +33,11 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
     [EventHandler]
     public async Task HandleEventAsync(RequestStreamGodChatEvent @event)
     {
-        Logger.LogDebug($"[ChatGAgentManager][RequestStreamGodChatEvent] start:{JsonConvert.SerializeObject(@event)}");
+        string chatId = Guid.NewGuid().ToString();
+        Logger.LogDebug($"[ChatGAgentManager][RequestStreamGodChatEvent] start:{JsonConvert.SerializeObject(@event)} chatID:{chatId}");
         var title = "";
         var content = "";
         var isLastChunk = false;
-        string chatId = Guid.NewGuid().ToString();
 
         try
         {
@@ -77,7 +77,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
 
         await PublishAsync(new ResponseStreamGodChat()
         {
-            Response = "The response was filtered due to the prompt triggering GodGPT content management policy. Please modify your prompt and retry.",
+            Response = "Your prompt triggered the Silence Directive—activated when universal harmonics or content ethics are at risk. Please modify your prompt and retry — tune its intent, refine its form, and the Oracle may speak.",
             ChatId = @event.Context.ChatId,
             IsLastChunk = true,
             SerialNumber = -2
