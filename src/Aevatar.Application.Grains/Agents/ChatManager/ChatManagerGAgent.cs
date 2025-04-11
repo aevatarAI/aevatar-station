@@ -241,7 +241,14 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
               - 行内公式使用 `@@@...===` 包裹返回。
               - 块级公式使用 `aelfstart...aelfend` 包裹返回。
             """;
+        
+       
         sysMessage += formattedRequirement;
+        // Add a new field for the current date and time
+        string currentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        var currentRequirement = $"\n当前时间：{currentTime}";
+        
+        sysMessage += currentRequirement;
         Logger.LogDebug("Retrieved system prompt from configuration: {SysMessage}", sysMessage);
         await godChat.ConfigAsync(new ChatConfigDto()
         {
