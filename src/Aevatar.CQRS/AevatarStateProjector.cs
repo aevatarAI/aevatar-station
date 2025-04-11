@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS.Dto;
@@ -12,12 +13,16 @@ using Microsoft.Extensions.Options;
 using Orleans.Runtime;
 using Volo.Abp.DependencyInjection;
 
-public class AevatarStateProjector : IStateProjector, ISingletonDependency
+public class AevatarStateProjector : IStateProjector, ISingletonDependency, IDisposable
 {
     private readonly ConcurrentDictionary<string, SaveStateCommand> _latestCommands = new();
     private readonly IMediator _mediator;
     private readonly ILogger<AevatarStateProjector> _logger;
     private readonly ProjectorBatchOptions _batchOptions;
+    private readonly CancellationTokenSource _shutdownCts = new();
+    private int _isProcessing;
+    private bool _disposed;
+    private DateTime _lastFlushTime = DateTime.UtcNow;
 
     public AevatarStateProjector(
         IMediator mediator,
@@ -27,78 +32,148 @@ public class AevatarStateProjector : IStateProjector, ISingletonDependency
         _mediator = mediator;
         _logger = logger;
         _batchOptions = options.Value;
-        _ = ProcessCommandsAsync();
     }
 
     public Task ProjectAsync<T>(T state) where T : StateWrapperBase
     {
-        if (IsValidStateWrapper(state))
+        if (_disposed)
+        {
+            _logger.LogWarning("ProjectAsync called after disposal");
+            return Task.CompletedTask;
+        }
+
+        if (!IsValidStateWrapper(state))
+        {
+            return Task.CompletedTask;
+        }
+
+        try
         {
             dynamic wrapper = state;
             GrainId grainId = wrapper.GrainId;
             StateBase wrapperState = wrapper.State;
             int version = wrapper.Version;
+            
             _logger.LogDebug("AevatarStateProjector GrainId {GrainId} Version {Version}", grainId.ToString(), version);
+            
             var command = new SaveStateCommand
             {
                 Id = grainId.ToString(),
                 GuidKey = grainId.GetGuidKey().ToString(),
                 State = wrapperState,
-                Version = version
+                Version = version,
+                Timestamp = DateTime.UtcNow
             };
 
+            // 更新命令集合
             _latestCommands.AddOrUpdate(
                 command.Id,
-                command,
-                (id, existing) => command.Version > existing.Version ? command : existing
+                _ => command,
+                (_, existing) => command.Version > existing.Version ? command : existing
             );
+
+            // 检查是否需要执行刷新操作
+            var shouldFlush = _latestCommands.Count >= _batchOptions.BatchSize || 
+                              (DateTime.UtcNow - _lastFlushTime).TotalSeconds >= _batchOptions.BatchTimeoutSeconds;
+            
+            if (shouldFlush && Interlocked.CompareExchange(ref _isProcessing, 1, 0) == 0)
+            {
+                // 非阻塞方式执行刷新
+                return FlushInternalAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in ProjectAsync");
         }
 
         return Task.CompletedTask;
     }
 
-    private async Task ProcessCommandsAsync()
+    /// <summary>
+    /// 执行内部刷新操作，并重置状态
+    /// </summary>
+    private async Task FlushInternalAsync()
     {
-        while (true)
+        try
         {
-            try
-            {
-                if (_latestCommands.Count < _batchOptions.BatchSize)
-                {
-                    await Task.Delay(_batchOptions.BatchTimeoutSeconds * 1000);
-                }
-
-                var currentBatch = _latestCommands.Values
-                    .OrderByDescending(c => c.Version)
-                    .Take(_batchOptions.BatchSize)
-                    .ToList();
-
-                if (currentBatch.Count > 0)
-                {
-                    _logger.LogInformation("latestCommands count :{Count} ", _latestCommands.Count);
-                    await SendBatchAsync(currentBatch);
-                    CleanProcessedCommands(currentBatch);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Batch processing failed");
-            }
+            await FlushAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during flush operation");
+        }
+        finally
+        {
+            // 无论成功失败都要重置处理状态
+            Interlocked.Exchange(ref _isProcessing, 0);
+            _lastFlushTime = DateTime.UtcNow;
         }
     }
 
-    private void CleanProcessedCommands(List<SaveStateCommand> processed)
+    public async Task FlushAsync(CancellationToken cancellationToken = default)
     {
-        foreach (var cmd in processed)
+        if (_latestCommands.IsEmpty)
         {
-            _latestCommands.TryGetValue(cmd.Id, out var current);
-            if (current != null && current.Version <= cmd.Version)
+            return;
+        }
+
+        try
+        {
+            // 计算批处理大小
+            int effectiveBatchSize = CalculateEffectiveBatchSize();
+            
+            // 获取批处理数据
+            var currentBatch = _latestCommands.Values
+                .OrderByDescending(c => c.Version)
+                .ThenByDescending(c => c.Timestamp)
+                .Take(effectiveBatchSize)
+                .ToList();
+
+            if (currentBatch.Count > 0)
             {
-                _latestCommands.TryRemove(cmd.Id, out _);
+                _logger.LogInformation("Processing batch: {BatchSize} commands (total pending: {TotalCount})", 
+                    currentBatch.Count, _latestCommands.Count);
+                    
+                await SendBatchAsync(currentBatch, cancellationToken);
+                
+                // 处理完成后移除已处理的命令
+                foreach (var cmd in currentBatch)
+                {
+                    _latestCommands.TryRemove(cmd.Id, out _);
+                }
             }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Batch processing failed");
+            throw;
         }
     }
 
+    private int CalculateEffectiveBatchSize()
+    {
+        // 默认使用配置的批大小
+        int size = _batchOptions.BatchSize;
+        
+        // 如果队列较大，增加批大小以加快处理
+        if (_latestCommands.Count > _batchOptions.BatchSize * 5)
+        {
+            size = Math.Min(_batchOptions.BatchSize * 2, _batchOptions.MaxBatchSize);
+        }
+        
+        // 检查内存压力
+        if (GC.GetTotalMemory(false) > _batchOptions.HighMemoryThreshold)
+        {
+            size = Math.Max(_batchOptions.MinBatchSize, size / 2);
+        }
+        
+        return size;
+    }
 
     private bool IsValidStateWrapper<T>(T state) where T : StateWrapperBase
     {
@@ -107,58 +182,61 @@ public class AevatarStateProjector : IStateProjector, ISingletonDependency
                typeof(StateBase).IsAssignableFrom(state.GetType().GetGenericArguments()[0]);
     }
 
-    private async Task SendBatchAsync(List<SaveStateCommand> batch)
+    private async Task SendBatchAsync(List<SaveStateCommand> batch, CancellationToken cancellationToken)
     {
-        const int maxRetries = 3;
         int retryCount = 0;
-        List<SaveStateCommand> remainingCommands = new(batch);
 
-        while (retryCount < maxRetries && remainingCommands.Count > 0)
+        while (retryCount < _batchOptions.MaxRetryCount && !cancellationToken.IsCancellationRequested)
         {
             try
             {
-                var batchCommand = new SaveStateBatchCommand { Commands = remainingCommands };
-                await _mediator.Send(batchCommand);
-                _logger.LogInformation("Successfully sent {Count} commands", remainingCommands.Count);
-                return;
+                var batchCommand = new SaveStateBatchCommand
+                {
+                    Commands = batch
+                };
+                
+                await _mediator.Send(batchCommand, cancellationToken);
+                return; // 成功发送后直接返回
             }
             catch (Exception ex)
             {
                 retryCount++;
-                _logger.LogWarning(ex, "Batch send failed (Attempt {RetryCount}/{MaxRetries})", retryCount, maxRetries);
-
-                remainingCommands = GetValidCommands(remainingCommands);
-
-                if (remainingCommands.Count == 0)
+                
+                if (retryCount >= _batchOptions.MaxRetryCount)
                 {
-                    _logger.LogInformation("All commands expired or succeeded");
-                    return;
+                    _logger.LogError(ex, "Failed to process batch after {RetryCount} attempts", retryCount);
+                    throw; // 达到最大重试次数，向上抛出异常
                 }
-
-                await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, retryCount)));
+                
+                _logger.LogWarning(ex, "Error processing batch, will retry ({RetryCount}/{MaxRetries})", 
+                    retryCount, _batchOptions.MaxRetryCount);
+                
+                // 指数退避策略
+                int delayMs = (int)(_batchOptions.RetryBaseDelaySeconds * 1000 * Math.Pow(2, retryCount - 1));
+                await Task.Delay(delayMs, cancellationToken);
             }
         }
-
-        _logger.LogError("Failed to send {Count} commands after {Retries} retries", remainingCommands.Count,
-            maxRetries);
     }
 
-    private List<SaveStateCommand> GetValidCommands(List<SaveStateCommand> commands)
+    public void Dispose()
     {
-        var validCommands = new List<SaveStateCommand>();
-        foreach (var cmd in commands)
+        if (_disposed) return;
+        _disposed = true;
+        
+        // 尝试执行最后一次刷新
+        if (_latestCommands.Count > 0 && Interlocked.CompareExchange(ref _isProcessing, 1, 0) == 0)
         {
-            if (_latestCommands.TryGetValue(cmd.Id, out var latest) && latest.Version == cmd.Version)
+            try
             {
-                validCommands.Add(cmd);
+                FlushAsync().Wait(TimeSpan.FromSeconds(5));
             }
-            else
+            catch (Exception ex)
             {
-                _logger.LogDebug("Command {Id} v{Version} expired, latest is v{LatestVersion}",
-                    cmd.Id, cmd.Version, latest?.Version ?? -1);
+                _logger.LogError(ex, "Error during final flush on dispose");
             }
         }
-
-        return validCommands;
+        
+        _shutdownCts.Cancel();
+        _shutdownCts.Dispose();
     }
 }
