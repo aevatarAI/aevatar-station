@@ -70,6 +70,23 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         Logger.LogDebug($"[ChatGAgentManager][RequestStreamGodChatEvent] end:{JsonConvert.SerializeObject(@event)}");
     }
     
+    [EventHandler]
+    public async Task HandleEventAsync(AIStreamingErrorResponseGEvent @event)
+    {
+        Logger.LogDebug($"[ChatGAgentManager][AIStreamingErrorResponseGEvent] start:{JsonConvert.SerializeObject(@event)}");
+
+        await PublishAsync(new ResponseStreamGodChat()
+        {
+            Response = "The response was filtered due to the prompt triggering GodGPT content management policy. Please modify your prompt and retry.",
+            ChatId = @event.Context.ChatId,
+            IsLastChunk = true,
+            SerialNumber = -2
+        });
+        
+        Logger.LogDebug($"[ChatGAgentManager][AIStreamingErrorResponseGEvent] end:{JsonConvert.SerializeObject(@event)}");
+
+    }
+    
     
     [EventHandler]
     public async Task HandleEventAsync(AIStreamingResponseGEvent @event)
