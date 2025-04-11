@@ -42,7 +42,7 @@ public class NotificationService : INotificationService, ITransientDependency
         _identityUserManager = identityUserManager;
     }
 
-    public async Task<bool> CreateAsync(NotificationTypeEnum notificationTypeEnum, Guid? creator, Guid target,
+    public async Task<Guid> CreateAsync(NotificationTypeEnum notificationTypeEnum, Guid? creator, Guid target,
         string input)
     {
         _logger.LogDebug(
@@ -100,7 +100,7 @@ public class NotificationService : INotificationService, ITransientDependency
             _logger.LogInformation($"StopWatch SignalR CreateAsync use time:{stopWatch.ElapsedMilliseconds}");
         });
 
-        return true;
+        return notification.Id;
     }
 
     public async Task<bool> WithdrawAsync(Guid? creator, Guid notificationId)
