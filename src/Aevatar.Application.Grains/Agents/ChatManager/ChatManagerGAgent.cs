@@ -268,8 +268,9 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
        
         sysMessage += formattedRequirement;
         // Add a new field for the current date and time
-        string currentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-        var currentRequirement = $"\n当前时间：{currentTime}";
+        string currentTime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");  
+        var currentRequirement = $"\n当前 UTC 时间：{currentTime}, " +
+                                 $"\n 回答有关时间的问题时,以UTC时间为基准 ";
         
         sysMessage += currentRequirement;
         Logger.LogDebug("Retrieved system prompt from configuration: {SysMessage}", sysMessage);
