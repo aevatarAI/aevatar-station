@@ -14,6 +14,7 @@ namespace Aevatar.Application.Grains.Agents.ChatManager.ConfigAgent;
 public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationLogEvent>, IConfigurationGAgent
 {
     private IDisposable _timerHandle;
+    private const string OpenAILatest = "OpenAILatest";
 
     public override Task<string> GetDescriptionAsync()
     {
@@ -106,13 +107,19 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
 
     protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)
     {
-        if (State.SystemLLM.IsNullOrEmpty())
+        Logger.LogDebug("ConfigurationGAgent OnGAgentActivateAsync");
+
+        // if (State.SystemLLM.IsNullOrEmpty())
+        // {
+        //     RaiseEvent(new SetSystemLLMLogEvent()
+        //     {
+        //         SystemLLM = OpenAILatest
+        //     });
+        // }
+        RaiseEvent(new SetSystemLLMLogEvent()
         {
-            RaiseEvent(new SetSystemLLMLogEvent()
-            {
-                SystemLLM = "OpenAI"
-            });
-        }
+            SystemLLM = OpenAILatest
+        });
 
         RaiseEvent(new SetStreamingModeEnabledLogEvent()
         {
