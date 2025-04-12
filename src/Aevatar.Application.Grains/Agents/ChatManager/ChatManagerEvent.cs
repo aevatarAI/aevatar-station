@@ -10,6 +10,7 @@ public class RequestCreateGodChatEvent : EventBase
 {
     [Id(0)] public string SystemLLM { get; set; }
     [Id(1)] public string Prompt { get; set; }
+    [Id(2)] public UserProfileDto UserProfile { get; set; }
 }
 
 [GenerateSerializer]
@@ -123,6 +124,44 @@ public class ResponseClearAll : ResponseToPublisherEventBase
 }
 
 [GenerateSerializer]
+public class RequestSetUserProfileEvent : EventBase
+{
+    [Id(0)] public string Gender { get; set; }
+    [Id(1)] public DateTime BirthDate { get; set; }
+    [Id(2)] public string BirthPlace { get; set; }
+}
+
+[GenerateSerializer]
+public class ResponseSetUserProfile : ResponseToPublisherEventBase
+{
+    [Id(0)] public ResponseType ResponseType { get; set; } = ResponseType.SetUserProfile;
+    [Id(1)] public bool Success { get; set; }
+}
+
+[GenerateSerializer]
+public class RequestGetUserProfileEvent : EventBase
+{
+    
+}
+
+[GenerateSerializer]
+public class ResponseGetUserProfile : ResponseToPublisherEventBase
+{
+    [Id(0)] public ResponseType ResponseType { get; set; } = ResponseType.GetUserProfile;
+    [Id(1)] public string Gender { get; set; }
+    [Id(2)] public DateTime BirthDate { get; set; }
+    [Id(3)] public string BirthPlace { get; set; }
+}
+
+[GenerateSerializer]
+public class UserProfileDto
+{
+    [Id(0)] public string Gender { get; set; }
+    [Id(1)] public DateTime BirthDate { get; set; }
+    [Id(2)] public string BirthPlace { get; set; }
+}
+
+[GenerateSerializer]
 public enum ResponseType
 {
     CreateSession = 1,
@@ -132,4 +171,6 @@ public enum ResponseType
     SessionDelete = 5,
     SessionRename = 6,
     ClearAll = 7,
+    SetUserProfile = 8,
+    GetUserProfile = 9
 }

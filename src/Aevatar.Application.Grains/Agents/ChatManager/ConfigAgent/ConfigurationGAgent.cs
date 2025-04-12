@@ -53,6 +53,16 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
 
         await ConfirmEvents();
     }
+    
+    [EventHandler]
+    public async Task HandleEventAsync(SetUserProfilePromptEvent @event)
+    {
+        RaiseEvent(new SetUserProfilePromptLogEvent
+        {
+            UserProfilePrompt = @event.UserProfilePrompt
+        });
+        await ConfirmEvents();
+    }
 
     public Task<string> GetSystemLLM()
     {
@@ -67,6 +77,11 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
     public Task<string> GetPrompt()
     {
         return Task.FromResult(State.Prompt);
+    }
+    
+    public Task<string> GetUserProfilePromptAsync()
+    {
+        return Task.FromResult(State.UserProfilePrompt);
     }
 
     public async Task UpdateSystemPromptAsync(string systemPrompt)
@@ -101,6 +116,9 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
                 break;
             case SetStreamingModeEnabledLogEvent @setStreamingModeEnabledLogEvent:
                 State.StreamingModeEnabled = @setStreamingModeEnabledLogEvent.StreamingModeEnabled;
+                break;
+            case SetUserProfilePromptLogEvent @setUserProfilePromptLogEvent:
+                State.UserProfilePrompt = @setUserProfilePromptLogEvent.UserProfilePrompt;
                 break;
         }
     }

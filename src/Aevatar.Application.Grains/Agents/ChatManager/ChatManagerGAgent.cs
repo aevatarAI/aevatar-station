@@ -25,6 +25,7 @@ namespace Aevatar.Application.Grains.Agents.ChatManager;
 public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManageEventLog>,
     IChatManagerGAgent
 {
+    private const string FormattedDate = "yyyy-MM-dd";
     public override Task<string> GetDescriptionAsync()
     {
         return Task.FromResult("Chat GAgent Manager");
@@ -116,7 +117,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         var sessionId = Guid.Empty;
         try
         {
-            sessionId = await CreateSessionAsync(@event.SystemLLM, @event.Prompt);
+            sessionId = await CreateSessionAsync(@event.SystemLLM, @event.Prompt, @event.UserProfile);
         }
         catch (Exception e)
         {
@@ -239,8 +240,49 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
 
         Logger.LogDebug($"[ChatGAgentManager][RequestClearAllEvent] end:{JsonConvert.SerializeObject(@event)}");
     }
+    
+    [EventHandler]
+    public async Task HandleEventAsync(RequestSetUserProfileEvent @event)
+    {
+        Logger.LogDebug($"[ChatGAgentManager][RequestSetFortuneInfoEvent] start:{JsonConvert.SerializeObject(@event)}");
 
-    public async Task<Guid> CreateSessionAsync(string systemLLM, string prompt)
+        bool success = false;
+        try
+        {
+            await SetUserProfileAsync(@event.Gender, @event.BirthDate, @event.BirthPlace);
+            success = true;
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, $"[ChatGAgentManager][RequestSetFortuneInfoEvent] handle error:{e.ToString()}");
+        }
+
+        await PublishAsync(new ResponseSetUserProfile()
+        {
+            Success = success
+        });
+
+        Logger.LogDebug($"[ChatGAgentManager][RequestSetFortuneInfoEvent] end");
+    }
+
+    [EventHandler]
+    public async Task HandleEventAsync(RequestGetUserProfileEvent @event)
+    {
+        Logger.LogDebug($"[ChatGAgentManager][RequestGetUserProfileEvent] start");
+
+        //var userProfileDto = await GetLastSessionUserProfileAsync();
+
+        await PublishAsync(new ResponseGetUserProfile()
+        {
+            Gender = State.Gender,
+            BirthDate = State.BirthDate,
+            BirthPlace = State.BirthPlace
+        });
+
+        Logger.LogDebug($"[ChatGAgentManager][RequestGetUserProfileEvent] end");
+    }
+
+    public async Task<Guid> CreateSessionAsync(string systemLLM, string prompt, UserProfileDto? userProfile = null)
     {
         var configuration = GetConfiguration();
         Stopwatch sw = new Stopwatch();
@@ -251,6 +293,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         Logger.LogDebug($"CreateSessionAsync - step,time use:{sw.ElapsedMilliseconds}");
         
         var sysMessage = await configuration.GetPrompt();
+        sysMessage = await AppendUserInfoToSystemPromptAsync(configuration, sysMessage, userProfile);
         var formattedRequirement =
             """
             
@@ -283,16 +326,51 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
                 BufferingSize = 32
             }
         });
-
+        var sessionId = godChat.GetPrimaryKey();
+        if (userProfile != null)
+        {
+            Logger.LogDebug("CreateSessionAsync set user profile. session={0}", sessionId);
+            await SetUserProfileAsync(userProfile.Gender, userProfile.BirthDate, userProfile.BirthPlace);
+            Logger.LogDebug("CreateSessionAsync set GodChat user profile. session={0}", sessionId);
+            await godChat.SetUserProfileAsync(userProfile);
+        }
+        
         RaiseEvent(new CreateSessionInfoEventLog()
         {
-            SessionId = godChat.GetPrimaryKey(),
+            SessionId = sessionId,
             Title = ""
         });
 
         await ConfirmEvents();
 
         return godChat.GetPrimaryKey();
+    }
+
+    private async Task<string> AppendUserInfoToSystemPromptAsync(IConfigurationGAgent configurationGAgent,
+        string sysMessage, UserProfileDto? userProfile)
+    {
+        if (userProfile == null)
+        {
+            return sysMessage;
+        }
+
+        var userProfilePrompt = await configurationGAgent.GetUserProfilePromptAsync();
+        if (userProfilePrompt.IsNullOrWhiteSpace())
+        {
+            return sysMessage;
+        }
+        
+        var variables = new Dictionary<string, string>
+        {
+            { "Gender", userProfile.Gender },
+            { "BirthDate", userProfile.BirthDate.ToString(FormattedDate) },
+            { "BirthPlace", userProfile.BirthPlace }
+        };
+
+        userProfilePrompt = variables.Aggregate(userProfilePrompt,
+            (current, pair) => current.Replace("{" + pair.Key + "}", pair.Value));
+
+        return $"{sysMessage} \n {userProfilePrompt}";
     }
 
     public async Task<Tuple<string, string>> ChatWithSessionAsync(Guid sessionId, string sysmLLM, string content,
@@ -438,6 +516,31 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         await ConfirmEvents();
     }
 
+    public async Task SetUserProfileAsync(string gender, DateTime birthDate, string birthPlace)
+    {
+        RaiseEvent(new SetUserProfileEventLog()
+        {
+            Gender = gender,
+            BirthDate = birthDate,
+            BirthPlace = birthPlace
+        });
+
+        await ConfirmEvents();
+    }
+
+    public async Task<UserProfileDto> GetLastSessionUserProfileAsync()
+    {
+        var sessionInfo = State.SessionInfoList.LastOrDefault(new SessionInfo());
+        if (sessionInfo.SessionId == Guid.Empty)
+        {
+            return new UserProfileDto();
+        }
+        
+        var godChat = GrainFactory.GetGrain<IGodChat>(sessionInfo.SessionId);
+        var userProfileDto = await godChat.GetUserProfileAsync();
+        return userProfileDto ?? new UserProfileDto();
+    }
+
     protected override void AIGAgentTransitionState(ChatManagerGAgentState state,
         StateLogEventBase<ChatManageEventLog> @event)
     {
@@ -459,6 +562,11 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
                 break;
             case ClearAllEventLog:
                 State.SessionInfoList.Clear();
+                break;
+            case SetUserProfileEventLog @setFortuneInfoEventLog:
+                State.Gender = @setFortuneInfoEventLog.Gender;
+                State.BirthDate = @setFortuneInfoEventLog.BirthDate;
+                State.BirthPlace = @setFortuneInfoEventLog.BirthPlace;
                 break;
         }
     }

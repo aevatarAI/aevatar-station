@@ -8,4 +8,9 @@ public class ConfigurationState : StateBase
     [Id(0)] public string SystemLLM { get; set; }
     [Id(1)] public string Prompt { get; set; }
     [Id(2)] public bool StreamingModeEnabled { get; set; }
+    [Id(3)] public string UserProfilePrompt { get; set; } = @"
+                I'm {Gender} 
+                My Birth date is {BirthDate} and my birth place is {BirthPlace}
+                Please tell me {What’s My Fortune Today? - Quantum Algorithms Unveil Today’s Potential} 
+            ";
 }

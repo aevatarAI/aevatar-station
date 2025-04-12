@@ -31,3 +31,9 @@ public class SetStreamingModeEnabledLogEvent : ConfigurationLogEvent
 {
     [Id(0)] public bool StreamingModeEnabled { get; set; }
 }
+
+[GenerateSerializer]
+public class SetUserProfilePromptLogEvent : ConfigurationLogEvent
+{
+    [Id(0)] public string UserProfilePrompt { get; set; }
+}
