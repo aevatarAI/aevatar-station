@@ -11,10 +11,11 @@
 
 ### Prerequisites
 
-- .NET 8.0 SDK
+- .NET 9.0 SDK
 - MongoDB
 - Elasticsearch
 - Redis
+- Kafka
 
 ## Configuration
 
@@ -88,6 +89,111 @@
     cd ../Aevatar.HttpApi.Host
     dotnet run
     ```
+
+## Documentation
+
+### Data Flow Diagram (through SignalR)
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API as api/agent/aevatarHub
+    participant Hub as AevatarSignalRHub
+    participant SignalRCluster as Orleans SignalR Cluster
+    participant SRGAgent as SignalRGAgent (Proxy)
+    participant TargetGAgent as Target GAgent
+    participant OrleansSilo as Orleans Silo
+
+    Client->>API: Connect to SignalR endpoint
+    API->>Hub: Route Connection
+    Hub->>SignalRCluster: Register client connection
+    SignalRCluster->>Hub: Connection ID assigned
+    Hub->>Client: Connection Established
+
+    Client->>Hub: PublishEventAsync(grainId, eventTypeName, eventJson)
+    Hub->>SignalRCluster: Get or create SignalRGAgent
+    SignalRCluster->>SRGAgent: Activate proxy grain
+    Hub->>SRGAgent: Forward client event
+    
+    SRGAgent->>TargetGAgent: Route Event to target GAgent via Orleans
+    Note over TargetGAgent: Process Event using EventHandler
+    TargetGAgent->>OrleansSilo: Update state (if needed)
+    
+    TargetGAgent->>SRGAgent: PublishAsync(ResponseToPublisherEventBase)
+    SRGAgent->>SignalRCluster: Find client connection
+    SignalRCluster->>Hub: Route response to connection
+    Hub->>Client: ReceiveResponse(message)
+```
+
+A data flow diagram depicting communication between frontend and backend to process data. All communications within the backend are done through Kafka on runtime.
+
+### GAgent Store Dependency
+
+```mermaid
+graph TD
+    GAgent[GAgent]
+    EventStore[Event Store]
+    StateStore[State Store]
+    StreamProvider[Stream Provider]
+    PubSub[Pub/Sub Messaging]
+    
+    GAgent -->|Stores events via LogConsistencyProvider| EventStore
+    GAgent -->|Persists state via StorageProvider| StateStore
+    GAgent -->|Publishes/subscribes to events| StreamProvider
+    GAgent -->|Communicates between agents| PubSub
+    
+    subgraph Storage Components
+        EventStore -->|LogStorage| MongoDB[MongoDB/Memory]
+        StateStore -->|PubSubStore| MongoDB
+        StreamProvider -->|Aevatar provider| Kafka[Kafka/Memory Streams]
+    end
+    
+    subgraph Agent State Management
+        State[Agent State]
+        Events[Event Log]
+        
+        Events -->|Replay & Apply| State
+        GAgent -->|RaiseEvent| Events
+        GAgent -->|Read| State
+    end
+    
+    subgraph Agent Communication
+        Publisher[Publisher Agent]
+        Subscriber[Subscriber Agent]
+        
+        Publisher -->|PublishAsync| StreamProvider
+        StreamProvider -->|SubscribeAsync| Subscriber
+    end
+```
+
+The diagram shows how GAgents in the Aevatar Framework use different storage components:
+
+1. **Event Store (LogStorage)**:
+   - Implemented via the `LogConsistencyProvider` attribute
+   - Stores event logs for event sourcing
+   - Can be configured to use MongoDB or in-memory storage
+   - Responsible for maintaining the event history of each agent
+
+2. **State Store (PubSubStore)**:
+   - Implemented via the `StorageProvider` attribute
+   - Persists the agent's state
+   - Can be configured to use MongoDB or in-memory storage
+   - Maintains the current state derived from events
+
+3. **Stream Provider**:
+   - Used for pub/sub messaging between agents
+   - Can be configured to use Kafka or in-memory streams
+   - Enables event broadcasting and subscription
+
+The GAgent combines these components to provide:
+- Event sourcing (storing all state changes as events)
+- State management (applying events to update state)
+- Communication between agents (via pub/sub)
+- Hierarchical agent relationships (agent registration and subscription)
+
+Each GAgent transitions state by applying events through the `GAgentTransitionState` method, which updates the agent's state based on the events stored in the event log.
+
+
 ## Contributing
 
 If you encounter a bug or have a feature request, please use the [Issue Tracker](https://github.com/AISmartProject/aevatar-station/issues/new). The project is also open to contributions, so feel free to fork the project and open pull requests.
