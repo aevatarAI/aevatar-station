@@ -114,8 +114,8 @@ public class ProjectAppIdService : IProjectAppIdService, ITransientDependency
                 AppId = item.AppId,
                 AppSecret = item.AppSecret,
                 AppName = item.AppName,
-                CreateTime = item.CreationTime,
-                CreatorName = creatorInfo.NormalizedUserName,
+                CreateTime = DateTimeHelper.ToUnixTimeMilliseconds(item.CreationTime),
+                CreatorName = creatorInfo.Name,
                 ProjectId = item.ProjectId,
             });
         }
