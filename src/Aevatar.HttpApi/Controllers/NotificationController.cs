@@ -95,4 +95,16 @@ public class NotificationController : AevatarController
     {
         return await _notificationService.GetOrganizationVisitInfo((Guid)CurrentUser.Id!, pageIndex, pageSize);
     }
+    
+    [HttpGet("unread-count")]
+    public async Task GetUnreadCountAsync()
+    {
+        await _notificationService.GetUnreadCountAsync(CurrentUser.Id.Value);
+    }
+    
+    [HttpPost("read")]
+    public async Task ReadAsync(ReadNotificationDto input)
+    {
+        await _notificationService.ReadAsync(CurrentUser.Id.Value, input);
+    }
 }
