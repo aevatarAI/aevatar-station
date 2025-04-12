@@ -57,11 +57,13 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
     [EventHandler]
     public async Task HandleEventAsync(SetUserProfilePromptEvent @event)
     {
+        Logger.LogDebug("[SetUserProfilePromptEvent] Set user profile prompt. {0}", @event.UserProfilePrompt);
         RaiseEvent(new SetUserProfilePromptLogEvent
         {
             UserProfilePrompt = @event.UserProfilePrompt
         });
         await ConfirmEvents();
+        Logger.LogDebug("[SetUserProfilePromptEvent] Set user profile prompt end. {0}", State.UserProfilePrompt);
     }
 
     public Task<string> GetSystemLLM()
