@@ -97,9 +97,9 @@ public class NotificationController : AevatarController
     }
     
     [HttpGet("unread-count")]
-    public async Task GetUnreadCountAsync()
+    public async Task<int> GetUnreadCountAsync()
     {
-        await _notificationService.GetUnreadCountAsync(CurrentUser.Id.Value);
+        return await _notificationService.GetUnreadCountAsync(CurrentUser.Id.Value);
     }
     
     [HttpPost("read")]
