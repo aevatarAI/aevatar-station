@@ -300,18 +300,19 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             ### 输出内容的格式要求：
             Markdown转换规则：
                 将所有Markdown语法元素（包括标题、加粗、斜体、列表、代码块、链接等）转换为标准HTML标签
-                示例：### 标题 → <h3>标题</h3>
+                示例：段落文本 → <p>段落文本</p>
                 示例：- 列表项 → <ul><li>列表项</li></ul>
                 注意：仅返回内容部分的HTML，不要包含``<head>``<body>等文档结构标签
 
             数学公式处理：
-                行内LaTeX公式：
-                    使用@@@和===包裹：@@@\LaTeX公式===
+                行内LaTeX公式使用@@@符号和===符号包裹,
+                    示例：@@@ LaTeX公式 ===
                     示例：@@@E=mc^2===
-                块级LaTeX公式：
-                    使用特殊标记包裹：aelfstart\LaTeX公式aelfend
-                    示例：aelfstart\int_a^b f(x)dxaelfend
-
+                    注意：不是@@@E=mc^2@@@
+                块级LaTeX公式不用 '$$'、'['、'\[' 包裹，使用 aelfstart LaTeX公式 aelfend 包裹,
+                    示例：aelfstart \LaTeX公式 aelfend
+                    示例：aelfstart \int_a^b f(x)dx aelfend
+                    示例：aelfstart M = R \cdot (I + A) aelfend
             异常处理：
                 保持原始内容的语义结构和逻辑顺序
                 确保 HTML 和公式的格式化严格符合上述要求
