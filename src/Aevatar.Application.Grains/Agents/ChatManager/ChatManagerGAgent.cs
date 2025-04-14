@@ -310,8 +310,9 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             ### 输出数据的格式要求：
             Markdown转换规则：
             将所有Markdown语法元素（包括标题、加粗、斜体、列表、代码块、链接等）转换为标准HTML标签
-                示例：**加粗** → <strong>加粗</strong>
-                注意：仅返回内容部分的HTML，不要包含<html>``<head>``<body>等文档结构标签
+                示例：### 标题 → <h3>标题</h3>
+                示例：- 列表项 → <ul><li>列表项</li></ul>
+            注意：仅返回内容部分的HTML，不要包含``<head>``<body>等文档结构标签
             数学公式处理：
             行内LaTeX公式：
             使用@@@和===包裹：@@@\LaTeX公式===
