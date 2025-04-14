@@ -115,7 +115,7 @@ public class ProjectAppIdService : IProjectAppIdService, ITransientDependency
                 AppSecret = item.AppSecret,
                 AppName = item.AppName,
                 CreateTime = DateTimeHelper.ToUnixTimeMilliseconds(item.CreationTime),
-                CreatorName = creatorInfo.Email,
+                CreatorName = creatorInfo.UserName,
                 ProjectId = item.ProjectId,
             });
         }
