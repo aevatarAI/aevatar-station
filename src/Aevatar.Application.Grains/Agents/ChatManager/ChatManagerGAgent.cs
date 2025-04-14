@@ -293,7 +293,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         Logger.LogDebug($"CreateSessionAsync - step,time use:{sw.ElapsedMilliseconds}");
         
         var sysMessage = await configuration.GetPrompt();
-        sysMessage = await AppendUserInfoToSystemPromptAsync(configuration, sysMessage, userProfile);
+        //put user data into the user prompt
+        //sysMessage = await AppendUserInfoToSystemPromptAsync(configuration, sysMessage, userProfile);
         var formattedRequirement =
             """
             
