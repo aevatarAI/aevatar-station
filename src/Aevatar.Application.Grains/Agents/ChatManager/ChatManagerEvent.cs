@@ -152,6 +152,7 @@ public class ResponseGetUserProfile : ResponseToPublisherEventBase
     [Id(1)] public string Gender { get; set; }
     [Id(2)] public DateTime BirthDate { get; set; }
     [Id(3)] public string BirthPlace { get; set; }
+    [Id(4)] public string FullName { get; set; }
 }
 
 [GenerateSerializer]

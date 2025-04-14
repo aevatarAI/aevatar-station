@@ -276,7 +276,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         {
             Gender = State.Gender,
             BirthDate = State.BirthDate,
-            BirthPlace = State.BirthPlace
+            BirthPlace = State.BirthPlace,
+            FullName = State.FullName
         });
 
         Logger.LogDebug($"[ChatGAgentManager][RequestGetUserProfileEvent] end");
