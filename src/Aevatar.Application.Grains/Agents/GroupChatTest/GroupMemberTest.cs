@@ -3,6 +3,7 @@ using GroupChat.GAgent;
 using GroupChat.GAgent.Dto;
 using GroupChat.GAgent.Feature.Common;
 using GroupChat.GAgent.GEvent;
+using Microsoft.Extensions.Logging;
 
 namespace Aevatar.Application.Grains.Agents.GroupChatTest;
 
@@ -22,6 +23,7 @@ public class GroupMemberTest : GroupMemberGAgentBase<GroupMemberState, GroupMemb
 
     protected override Task<ChatResponse> ChatAsync(Guid blackboardId, List<ChatMessage>? coordinatorMessages)
     {
+        Logger.LogDebug($"[GroupMemberGAgentBase] grainId:{this.GetGrainId().ToString()} say");
         return Task.FromResult(new ChatResponse() { Content = "ddatata" });
     }
 }
