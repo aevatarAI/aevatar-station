@@ -249,7 +249,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         bool success = false;
         try
         {
-            await SetUserProfileAsync(@event.Gender, @event.BirthDate, @event.BirthPlace);
+            await SetUserProfileAsync(@event.Gender, @event.BirthDate, @event.BirthPlace, @event.FullName);
             success = true;
         }
         catch (Exception e)
@@ -316,7 +316,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
                                  $"\n 回答有关时间的问题时,以UTC时间为基准 ";
         
         sysMessage += currentRequirement;
-        Logger.LogDebug("Retrieved system prompt from configuration: {SysMessage}", sysMessage);
+        Logger.LogDebug("[ChatGAgentManager][RequestCreateGodChatEvent] System prompt: {SysMessage}", sysMessage);
         await godChat.ConfigAsync(new ChatConfigDto()
         {
             Instructions = sysMessage, MaxHistoryCount = 32,
@@ -330,7 +330,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         if (userProfile != null)
         {
             Logger.LogDebug("CreateSessionAsync set user profile. session={0}", sessionId);
-            await SetUserProfileAsync(userProfile.Gender, userProfile.BirthDate, userProfile.BirthPlace);
+            await SetUserProfileAsync(userProfile.Gender, userProfile.BirthDate, userProfile.BirthPlace, userProfile.FullName);
             Logger.LogDebug("CreateSessionAsync set GodChat user profile. session={0}", sessionId);
             await godChat.SetUserProfileAsync(userProfile);
         }
@@ -364,7 +364,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         {
             { "Gender", userProfile.Gender },
             { "BirthDate", userProfile.BirthDate.ToString(FormattedDate) },
-            { "BirthPlace", userProfile.BirthPlace }
+            { "BirthPlace", userProfile.BirthPlace },
+            { "FullName", userProfile.FullName }
         };
 
         userProfilePrompt = variables.Aggregate(userProfilePrompt,
@@ -516,13 +517,14 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         await ConfirmEvents();
     }
 
-    public async Task SetUserProfileAsync(string gender, DateTime birthDate, string birthPlace)
+    public async Task SetUserProfileAsync(string gender, DateTime birthDate, string birthPlace, string fullName)
     {
         RaiseEvent(new SetUserProfileEventLog()
         {
             Gender = gender,
             BirthDate = birthDate,
-            BirthPlace = birthPlace
+            BirthPlace = birthPlace,
+            FullName = fullName
         });
 
         await ConfirmEvents();
@@ -567,6 +569,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
                 State.Gender = @setFortuneInfoEventLog.Gender;
                 State.BirthDate = @setFortuneInfoEventLog.BirthDate;
                 State.BirthPlace = @setFortuneInfoEventLog.BirthPlace;
+                State.FullName = @setFortuneInfoEventLog.FullName;
                 break;
         }
     }
