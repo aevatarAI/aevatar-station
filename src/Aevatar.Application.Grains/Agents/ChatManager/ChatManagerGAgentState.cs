@@ -12,6 +12,7 @@ public class ChatManagerGAgentState : AIGAgentStateBase
     [Id(3)] public string Gender { get; set; }
     [Id(4)] public DateTime BirthDate { get; set; }
     [Id(5)] public string BirthPlace { get; set; }
+    [Id(6)] public string FullName { get; set; }
 
     public SessionInfo? GetSession(Guid sessionId)
     {

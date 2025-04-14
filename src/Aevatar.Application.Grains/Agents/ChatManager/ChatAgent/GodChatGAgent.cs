@@ -61,7 +61,8 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         {
             Gender = userProfileDto.Gender,
             BirthDate = userProfileDto.BirthDate,
-            BirthPlace = userProfileDto.BirthPlace
+            BirthPlace = userProfileDto.BirthPlace,
+            FullName = userProfileDto.FullName
         });
 
         await ConfirmEvents();
@@ -78,7 +79,8 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         {
             Gender = State.UserProfile.Gender,
             BirthDate = State.UserProfile.BirthDate,
-            BirthPlace = State.UserProfile.BirthPlace
+            BirthPlace = State.UserProfile.BirthPlace,
+            FullName = State.UserProfile.FullName
         };
     }
 
@@ -102,6 +104,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
                 State.UserProfile.Gender = updateUserProfileGodChatEventLog.Gender;
                 State.UserProfile.BirthDate = updateUserProfileGodChatEventLog.BirthDate;
                 State.UserProfile.BirthPlace = updateUserProfileGodChatEventLog.BirthPlace;
+                State.UserProfile.FullName = updateUserProfileGodChatEventLog.FullName;
                 break;
         }
     }
