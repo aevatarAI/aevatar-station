@@ -297,15 +297,17 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         //sysMessage = await AppendUserInfoToSystemPromptAsync(configuration, sysMessage, userProfile);
         var formattedRequirement =
             """
+            ### 按 Markdown 
             ### 如果有数学公式，按如下格式处理：
             1. 行内LaTeX公式使用@@@符号和===符号包裹,
                 示例：@@@ LaTeX公式 ===
                 示例：@@@E=mc^2===
                 注意：不是@@@E=mc^2@@@
-            2. 块级LaTeX公式不用 '$$'、'['、'\[' 包裹，使用 aelfstart LaTeX公式 aelfend 包裹,
-                示例：aelfstart \LaTeX公式 aelfend
-                示例：aelfstart \int_a^b f(x)dx aelfend
-                示例：aelfstart M = R \cdot (I + A) aelfend        
+            2. 块级LaTeX公式用 aelfstart\LaTeX公式aelfend 包裹,
+                示例：aelfstart\LaTeX公式aelfend
+                示例：aelfstart\int_a^b f(x)dxaelfend
+                示例：aelfstartM = R \cdot (I + A)aelfend
+                注意：不用 '$$'、'['、'\[' 包裹    
             """;
         
        
