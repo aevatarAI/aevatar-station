@@ -115,6 +115,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         Logger.LogDebug(
             $"[ChatGAgentManager][RequestCreateGodChatEvent] start:{JsonConvert.SerializeObject(@event)}");
         var sessionId = Guid.Empty;
+        var stopwatch = Stopwatch.StartNew();
         try
         {
             sessionId = await CreateSessionAsync(@event.SystemLLM, @event.Prompt, @event.UserProfile);
@@ -128,10 +129,9 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         {
             SessionId = sessionId
         });
-
         Logger.LogDebug(
-            "[ChatGAgentManager][RequestCreateGodChatEvent] sessionId:{A} end {B} ", sessionId,
-            JsonConvert.SerializeObject(@event));
+            "[ChatGAgentManager][RequestCreateGodChatEvent] sessionId:{A} end {B}, Duration {C}ms ", sessionId,
+            JsonConvert.SerializeObject(@event), stopwatch.ElapsedMilliseconds);
     }
 
     [EventHandler]
