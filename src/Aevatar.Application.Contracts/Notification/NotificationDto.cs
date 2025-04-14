@@ -11,5 +11,6 @@ public class NotificationDto
     public Guid CreatorId { get; set; }
     public string CreatorName { get; set; }
     public NotificationStatusEnum Status { get; set; }
-    public DateTime CreationTime { get; set; }
+    public long CreationTime { get; set; }
+    public bool IsRead { get; set; }
 }

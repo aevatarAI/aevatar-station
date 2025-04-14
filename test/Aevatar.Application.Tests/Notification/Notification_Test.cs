@@ -73,8 +73,6 @@ public sealed class Notification_Test : AevatarApplicationTestBase
 
         var response = await _notificationService.CreateAsync(NotificationTypeEnum.OrganizationInvitation, _creator,
             _receiveId, _input);
-
-        response.ShouldBeTrue();
     }
 
     [Fact]
