@@ -640,6 +640,7 @@ public class AgentService : ApplicationService, IAgentService
         
         var agentDto = await CreateAgentAsync(new CreateAgentInputDto
         {
+            Name = "Workflow",
             AgentType = _grainTypeResolver.GetGrainType(typeof(WorkflowCoordinatorGAgent)).ToString()
         });
         
