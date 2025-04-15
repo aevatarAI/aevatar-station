@@ -65,7 +65,10 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             ChatId =chatId,
             Response = content,
             NewTitle = title,
-            IsLastChunk = isLastChunk
+            IsLastChunk = isLastChunk,
+            SerialNumber = -1,
+            SessionId = @event.SessionId
+            
         });
 
         Logger.LogDebug($"[ChatGAgentManager][RequestStreamGodChatEvent] end:{JsonConvert.SerializeObject(@event)}");
@@ -99,7 +102,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             Response = @event.ResponseContent,
             ChatId = @event.Context.ChatId,
             IsLastChunk = @event.IsLastChunk,
-            SerialNumber = @event.SerialNumber
+            SerialNumber = @event.SerialNumber,
+            SessionId = @event.PublisherGrainId.GetGuidKey()
         });
         
         Logger.LogDebug($"[ChatGAgentManager][AIStreamingResponseGEvent] end:{JsonConvert.SerializeObject(@event)}");
