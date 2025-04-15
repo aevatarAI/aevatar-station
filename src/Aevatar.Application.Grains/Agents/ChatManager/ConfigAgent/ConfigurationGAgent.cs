@@ -136,7 +136,7 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
         // }
         RaiseEvent(new SetSystemLLMLogEvent()
         {
-            SystemLLM = "OpenAI"
+            SystemLLM = "DeepSeek"
         });
 
         RaiseEvent(new SetStreamingModeEnabledLogEvent()
