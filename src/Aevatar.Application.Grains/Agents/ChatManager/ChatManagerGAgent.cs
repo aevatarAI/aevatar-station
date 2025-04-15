@@ -65,7 +65,10 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             ChatId =chatId,
             Response = content,
             NewTitle = title,
-            IsLastChunk = isLastChunk
+            IsLastChunk = isLastChunk,
+            SerialNumber = -1,
+            SessionId = @event.SessionId
+            
         });
 
         Logger.LogDebug($"[ChatGAgentManager][RequestStreamGodChatEvent] end:{JsonConvert.SerializeObject(@event)}");
@@ -99,7 +102,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             Response = @event.ResponseContent,
             ChatId = @event.Context.ChatId,
             IsLastChunk = @event.IsLastChunk,
-            SerialNumber = @event.SerialNumber
+            SerialNumber = @event.SerialNumber,
+            SessionId = @event.Context.RequestId
         });
         
         Logger.LogDebug($"[ChatGAgentManager][AIStreamingResponseGEvent] end:{JsonConvert.SerializeObject(@event)}");
@@ -407,7 +411,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         return new Tuple<string, string>(response, title);
     }
     
-    private async Task StreamChatWithSessionAsync(Guid sessionId, string sysmLLM, string content,string chatId,
+    private async Task StreamChatWithSessionAsync(Guid sessionId,string sysmLLM, string content,string chatId,
         ExecutionPromptSettings promptSettings = null)
     {
         Stopwatch sw = new Stopwatch();
@@ -446,7 +450,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         sw.Reset();
         sw.Start();
         var configuration = GetConfiguration();
-        godChat.GodStreamChatAsync(await configuration.GetSystemLLM(), await configuration.GetStreamingModeEnabled(),content, chatId,promptSettings);
+        godChat.GodStreamChatAsync(sessionId,await configuration.GetSystemLLM(), await configuration.GetStreamingModeEnabled(),content, chatId,promptSettings);
         sw.Stop();
         Logger.LogDebug($"StreamChatWithSessionAsync - step4,time use:{sw.ElapsedMilliseconds}");
     }

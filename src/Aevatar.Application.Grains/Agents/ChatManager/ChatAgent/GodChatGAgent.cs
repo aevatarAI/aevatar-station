@@ -29,7 +29,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         return string.Empty;
     }
 
-    public async Task<string> GodStreamChatAsync(string llm, bool streamingModeEnabled,string message, String chatId,
+    public async Task<string> GodStreamChatAsync(Guid sessionId,string llm, bool streamingModeEnabled,string message, String chatId,
         ExecutionPromptSettings? promptSettings = null)
     {
         if (State.SystemLLM != llm || State.StreamingModeEnabled != streamingModeEnabled)
@@ -44,7 +44,12 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
             });
         }
 
-        AIChatContextDto aiChatContextDto = new AIChatContextDto() { ChatId = chatId };
+        AIChatContextDto aiChatContextDto = new AIChatContextDto()
+        {
+            ChatId = chatId,
+            RequestId = sessionId
+            
+        };
         await ChatAsync(message, promptSettings,aiChatContextDto);
 
         return string.Empty;

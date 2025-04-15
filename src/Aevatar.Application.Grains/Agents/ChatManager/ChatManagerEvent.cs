@@ -54,8 +54,10 @@ public class ResponseStreamGodChat : ResponseToPublisherEventBase
     [Id(3)] public string ChatId { get; set; }
     [Id(4)] public bool IsLastChunk { get; set; }
     
-    [Id(5)]
-    public int SerialNumber { get; set; }
+    [Id(5)] public int SerialNumber { get; set; }
+    
+    [Id(6)] public Guid SessionId { get; set; }
+
 }
 
 [GenerateSerializer]
