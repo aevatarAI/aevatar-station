@@ -20,18 +20,26 @@ exporters:
     endpoint: "jaeger:4317"
     tls:
       insecure: true
+  logging:
+    verbosity: detailed
   prometheus:
     endpoint: "0.0.0.0:9090"
-  debug:
-    verbosity: detailed
+  elasticsearch:
+    endpoints: ["elasticsearch:9200"]
+    index: "aevatar-traces"
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch, memory_limiter, spanmetrics]
-      exporters: [otlp, debug]
+      exporters: [otlp, elasticsearch, logging]
     metrics:
       receivers: [otlp]
       processors: [batch, memory_limiter]
-      exporters: [prometheus, debug] 
+      exporters: [prometheus, logging]
+
+    logs:
+      receivers: [otlp]
+      processors: [batch, memory_limiter]
+      exporters: [elasticsearch, logging]
