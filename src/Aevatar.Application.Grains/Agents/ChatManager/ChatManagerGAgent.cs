@@ -564,6 +564,10 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
                 break;
             case ClearAllEventLog:
                 State.SessionInfoList.Clear();
+                State.Gender = string.Empty;
+                State.BirthDate = default;
+                State.BirthPlace = string.Empty;
+                State.FullName = string.Empty;
                 break;
             case SetUserProfileEventLog @setFortuneInfoEventLog:
                 State.Gender = @setFortuneInfoEventLog.Gender;
