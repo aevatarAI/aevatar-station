@@ -637,8 +637,16 @@ public class AgentService : ApplicationService, IAgentService
         {
             throw new UserFriendlyException(errorStr);
         }
+        
+        var agentDto = await CreateAgentAsync(new CreateAgentInputDto
+        {
+            AgentType = _grainTypeResolver.GetGrainType(typeof(WorkflowCoordinatorGAgent)).ToString()
+        });
+        
+        var creatorGAgent = _clusterClient.GetGrain<ICreatorGAgent>(agentDto.Id); 
+        var workflowAgent = await _gAgentFactory.GetGAgentAsync(agentDto.GrainId);
+        await creatorGAgent.RegisterAsync(workflowAgent);
 
-        var workflowAgent = _clusterClient.GetGrain<IWorkflowCoordinatorGAgent>(Guid.NewGuid());
         var blackboardAgent = _clusterClient.GetGrain<IBlackboardGAgent>(Guid.NewGuid());
 
         await workflowAgent.RegisterAsync(blackboardAgent);
@@ -650,6 +658,8 @@ public class AgentService : ApplicationService, IAgentService
         }
 
         result.WorkflowGrainId = workflowAgent.GetGrainId().ToString();
+        result.WorkflowAgentId = agentDto.Id;
+        
         var workflowList = workflowAgentDto.WorkUnitRelations
             .Select(s => new WorkflowUnitDto() { GrainId = s.GrainId, NextGrainId = s.NextGrainId }).ToList();
         var publishGrain = _clusterClient.GetGrain<IPublishingGAgent>(workflowAgent.GetPrimaryKey());
