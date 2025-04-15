@@ -4,6 +4,7 @@ using Aevatar.Agent;
 using Aevatar.Agents.Creator;
 using Aevatar.Agents.Creator.GEvents;
 using Aevatar.Agents.Creator.Models;
+using Aevatar.Application.Grains.Agents.TestAgent;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.Logging;
@@ -16,23 +17,23 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
 {
     private readonly ILogger<CreatorGAgent> _logger;
 
-    public CreatorGAgent(ILogger<CreatorGAgent> logger) 
+    public CreatorGAgent(ILogger<CreatorGAgent> logger)
     {
         _logger = logger;
     }
-    
+
     public override Task<string> GetDescriptionAsync()
     {
         return Task.FromResult(
             "Represents an agent responsible for creating and grouping other agents");
     }
-    
+
     public async Task<CreatorGAgentState> GetAgentAsync()
     {
         _logger.LogInformation("GetAgentAsync {state}", JsonConvert.SerializeObject(State));
         return State;
     }
-    
+
     public async Task CreateAgentAsync(AgentData agentData)
     {
         _logger.LogInformation("CreateAgentAsync");
@@ -48,7 +49,7 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
         });
         await ConfirmEvents();
     }
-    
+
     public async Task UpdateAgentAsync(UpdateAgentInput dto)
     {
         _logger.LogInformation("UpdateAgentAsync");
@@ -69,9 +70,9 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
         });
         await ConfirmEvents();
     }
-    
+
     public async Task UpdateAvailableEventsAsync(List<Type>? eventTypeList)
-    {   
+    {
         _logger.LogInformation("UpdateAvailableEventsAsync {list}", JsonConvert.SerializeObject(eventTypeList));
         if (eventTypeList == null)
         {
@@ -88,15 +89,16 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
                 Description = t.GetCustomAttribute<DescriptionAttribute>()?.Description ?? "No description",
             });
         }
-        
+
         RaiseEvent(new UpdateAvailableEventsGEvent()
         {
             EventInfoList = eventDescriptionList
         });
         await ConfirmEvents();
-        _logger.LogInformation("UpdateAvailableEventsAsync Finish {list}", JsonConvert.SerializeObject(eventDescriptionList));
+        _logger.LogInformation("UpdateAvailableEventsAsync Finish {list}",
+            JsonConvert.SerializeObject(eventDescriptionList));
     }
-    
+
     public async Task PublishEventAsync<T>(T @event) where T : EventBase
     {
         if (@event == null)
@@ -104,11 +106,16 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
             throw new ArgumentNullException(nameof(@event));
         }
 
-        Logger.LogInformation( "publish event: {event}", @event);
-        await PublishAsync(@event);
+        Logger.LogInformation("publish event: {event}", @event);
+        var streamId = StreamId.Create(AevatarOptions!.StreamNamespace, State.BusinessAgentGrainId.ToString());
+        var stream = StreamProvider.GetStream<EventWrapperBase>(streamId);
+        var eventWrapper = new EventWrapper<T>(@event, Guid.NewGuid(), this.GetGrainId());
+        await stream.OnNextAsync(eventWrapper);
+        // await PublishAsync(@event);
     }
-    
-    protected override void GAgentTransitionState(CreatorGAgentState state, StateLogEventBase<CreatorAgentGEvent> @event)
+
+    protected override void GAgentTransitionState(CreatorGAgentState state,
+        StateLogEventBase<CreatorAgentGEvent> @event)
     {
         switch (@event)
         {
