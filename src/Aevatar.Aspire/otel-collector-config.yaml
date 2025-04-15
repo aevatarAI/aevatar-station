@@ -40,7 +40,6 @@ service:
       receivers: [otlp]
       processors: [batch, memory_limiter]
       exporters: [prometheus, logging]
-
     logs:
       receivers: [otlp]
       processors: [batch, memory_limiter]
