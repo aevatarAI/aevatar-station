@@ -97,7 +97,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
     
     
     [EventHandler]
-    public async Task HandleEventAsync(AIStreamingResponseGEvent @event)
+    public async Task HandleEventAsync(AIOldStreamingResponseGEvent @event)
     {
         Logger.LogDebug($"[ChatGAgentManager][AIStreamingResponseGEvent] start:{JsonConvert.SerializeObject(@event)}");
 
