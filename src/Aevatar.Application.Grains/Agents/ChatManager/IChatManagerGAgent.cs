@@ -1,3 +1,4 @@
+using Aevatar.Application.Grains.Agents.ChatManager.Chat;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
@@ -17,4 +18,6 @@ public interface IChatManagerGAgent : IGAgent
     Task ClearAllAsync();
     Task SetUserProfileAsync(string gender, DateTime birthDate, string birthPlace, string fullName);
     Task<UserProfileDto> GetLastSessionUserProfileAsync();
+
+    Task RenameChatTitleAsync(RenameChatTitleEvent @event);
 }

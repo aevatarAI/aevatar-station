@@ -112,8 +112,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
 
     }
     
-    [EventHandler]
-    public async Task HandleEventAsync(RenameChatTitleEvent @event)
+    public async Task RenameChatTitleAsync(RenameChatTitleEvent @event)
     {
         Logger.LogDebug($"[ChatGAgentManager][RenameChatTitleEvent] start:{JsonConvert.SerializeObject(@event)}");
 
@@ -365,7 +364,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         });
 
         await ConfirmEvents();
-
+        await godChat.InitAsync(this.GetPrimaryKey());
         return godChat.GetPrimaryKey();
     }
 

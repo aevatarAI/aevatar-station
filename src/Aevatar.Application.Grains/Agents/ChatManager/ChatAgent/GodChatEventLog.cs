@@ -21,3 +21,9 @@ public class RenameChatTitleEventLog : GodChatEventLog
 {
     [Id(0)] public string Title { get; set; }
 }
+
+[GenerateSerializer]
+public class SetChatManagerGuidEventLog : GodChatEventLog
+{
+    [Id(0)] public Guid ChatManagerGuid { get; set; }
+}

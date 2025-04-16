@@ -86,7 +86,8 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         
             await ConfirmEvents();
             sw.Stop();
-            await PublishAsync(new RenameChatTitleEvent()
+            IChatManagerGAgent chatManagerGAgent = GrainFactory.GetGrain<IChatManagerGAgent>((Guid)State.ChatManagerGuid);
+            await chatManagerGAgent.RenameChatTitleAsync(new RenameChatTitleEvent()
             {
                 SessionId = sessionId,
                 Title = title
@@ -118,6 +119,16 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         }
 
         return string.Empty;
+    }
+
+    public async Task InitAsync(Guid ChatManagerGuid)
+    {
+        RaiseEvent(new SetChatManagerGuidEventLog
+        {
+           ChatManagerGuid = ChatManagerGuid
+        });
+
+        await ConfirmEvents();
     }
 
     public async Task<string> GodStreamChatAsync(Guid sessionId,string llm, bool streamingModeEnabled,string message, String chatId,
@@ -233,7 +244,8 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
 
             await ConfirmEvents();
             
-            await PublishAsync(new RenameChatTitleEvent()
+            IChatManagerGAgent chatManagerGAgent = GrainFactory.GetGrain<IChatManagerGAgent>((Guid)State.ChatManagerGuid);
+            await chatManagerGAgent.RenameChatTitleAsync(new RenameChatTitleEvent()
             {
                 SessionId = sessionId,
                 Title = title
