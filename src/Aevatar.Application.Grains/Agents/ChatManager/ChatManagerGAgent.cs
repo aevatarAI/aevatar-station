@@ -318,27 +318,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         var sysMessage = await configuration.GetPrompt();
         //put user data into the user prompt
         //sysMessage = await AppendUserInfoToSystemPromptAsync(configuration, sysMessage, userProfile);
-        var formattedRequirement =
-            """
-            ### 如果有数学公式，按如下格式处理：
-            1. 行内LaTeX公式使用@@@$和$@@@符号包裹,
-                示例：@@@$LaTeX公式$@@@
-                示例：@@@$E=mc^2$@@@
-                注意：不是@@@E=mc^2@@@
-            2. 块级LaTeX公式用 ===$$\LaTeX公式$$=== 包裹,
-                示例：===$$\int_a^b f(x)dx$$===
-                示例：===$$M = R \cdot (I + A)$$=== 
-            """;
-        
        
-        sysMessage += formattedRequirement;
-        // Add a new field for the current date and time
-        string currentTime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");  
-        var currentRequirement = $"\n当前 UTC 时间：{currentTime}, " +
-                                 $"\n 回答有关时间的问题时,以UTC时间为基准 ";
-        
-        sysMessage += currentRequirement;
-        Logger.LogDebug("[ChatGAgentManager][RequestCreateGodChatEvent] System prompt: {SysMessage}", sysMessage);
         await godChat.ConfigAsync(new ChatConfigDto()
         {
             Instructions = sysMessage, MaxHistoryCount = 32,
@@ -603,7 +583,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
     protected override async Task OnAIGAgentActivateAsync(CancellationToken cancellationToken)
     {
         var configuration = GetConfiguration();
-
+        
         var llm = await configuration.GetSystemLLM();
         var streamingModeEnabled = await configuration.GetStreamingModeEnabled();
         if (State.SystemLLM != llm || State.StreamingModeEnabled != streamingModeEnabled)

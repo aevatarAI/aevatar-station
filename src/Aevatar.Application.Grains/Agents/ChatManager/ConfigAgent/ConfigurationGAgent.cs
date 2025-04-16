@@ -42,7 +42,7 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
 
         await ConfirmEvents();
     }
-    
+
     [EventHandler]
     public async Task HandleEventAsync(SetStreamingModeEnabledEvent @event)
     {
@@ -53,7 +53,7 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
 
         await ConfirmEvents();
     }
-    
+
     [EventHandler]
     public async Task HandleEventAsync(SetUserProfilePromptEvent @event)
     {
@@ -76,9 +76,34 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
 
     public Task<string> GetPrompt()
     {
-        return Task.FromResult(State.Prompt);
+        // Task.FromResult(State.Prompt);
+        var sysMessage = State.Prompt;
+
+        var formattedRequirement =
+            """
+            ### 如果有数学公式，按如下格式处理：
+            1. 行内LaTeX公式使用@@@$和$@@@符号包裹,
+                示例：@@@$LaTeX公式$@@@
+                示例：@@@$E=mc^2$@@@
+                注意：不是@@@E=mc^2@@@
+            2. 块级LaTeX公式用 ===$$\LaTeX公式$$=== 包裹,
+                示例：===$$\int_a^b f(x)dx$$===
+                示例：===$$M = R \cdot (I + A)$$=== 
+            """;
+
+
+        sysMessage += formattedRequirement;
+        // Add a new field for the current date and time
+        string currentTime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+        var currentRequirement = $"\n当前 UTC 时间：{currentTime}, " +
+                                 $"\n 回答有关时间的问题时,以UTC时间为基准 ";
+
+        sysMessage += currentRequirement;
+        Logger.LogDebug("[ConfigurationGAgent][GetPrompt] System prompt: {SysMessage}", sysMessage);
+
+        return Task.FromResult(sysMessage);
     }
-    
+
     public Task<string> GetUserProfilePromptAsync()
     {
         return Task.FromResult(State.UserProfilePrompt);
@@ -88,7 +113,8 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
     {
         const string logContext = "[ConfigurationGAgent][UpdateSystemPrompt]";
 
-        Logger.LogDebug("[{LogContext}] Updating prompt from '{OldPrompt}' to '{NewPrompt}'.", logContext, State.Prompt, systemPrompt);
+        Logger.LogDebug("[{LogContext}] Updating prompt from '{OldPrompt}' to '{NewPrompt}'.", logContext, State.Prompt,
+            systemPrompt);
 
         // Raise an event to update the prompt
         RaiseEvent(new SetPromptLogEvent
@@ -100,7 +126,6 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
         await ConfirmEvents();
 
         Logger.LogDebug("[{LogContext}] Prompt successfully updated to '{NewPrompt}'.", logContext, systemPrompt);
-
     }
 
     protected sealed override void GAgentTransitionState(ConfigurationState state,
@@ -145,18 +170,18 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
         });
 
         await ConfirmEvents();
-        
+
         // if (State.Prompt.IsNullOrEmpty())
         // {
         //     await UpdatePromptPeriodically(null);
         // }
-        
+
         // Initialize a periodic task to update the prompt every 5 minutes
         // #pragma warning disable CS0618
         // _timerHandle = RegisterTimer(UpdatePromptPeriodically, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
         // #pragma warning restore CS0618
     }
-    
+
     private async Task UpdatePromptPeriodically(object? state)
     {
         const string logContext = "[ConfigurationGAgent][UpdatePromptPeriodically]";
@@ -176,7 +201,8 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
             // Check if the new prompt is different from the currently stored prompt
             if (newPrompt != State.Prompt)
             {
-                Logger.LogDebug("[{LogContext}] Updating prompt from '{OldPrompt}' to '{NewPrompt}'.", logContext, State.Prompt, newPrompt);
+                Logger.LogDebug("[{LogContext}] Updating prompt from '{OldPrompt}' to '{NewPrompt}'.", logContext,
+                    State.Prompt, newPrompt);
 
                 // Raise an event to update the prompt
                 RaiseEvent(new SetPromptLogEvent
@@ -191,7 +217,8 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
             }
             else
             {
-                Logger.LogDebug("[{LogContext}] New prompt is identical to the current state, no update needed.", logContext);
+                Logger.LogDebug("[{LogContext}] New prompt is identical to the current state, no update needed.",
+                    logContext);
             }
         }
         catch (Exception ex)
@@ -200,11 +227,11 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
             Logger.LogError(ex, "[{LogContext}] Failed to update the prompt due to an exception.", logContext);
         }
     }
-    
+
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
         // Dispose of the timer to clean up resources on grain deactivation
         _timerHandle?.Dispose();
-        await base.OnDeactivateAsync(reason,cancellationToken);
+        await base.OnDeactivateAsync(reason, cancellationToken);
     }
 }

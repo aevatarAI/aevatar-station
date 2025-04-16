@@ -238,10 +238,12 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         var title = "";
         if (State.Title.IsNullOrEmpty())
         {
-            var titleList = await ChatWithHistory(content);
-            title = titleList is { Count: > 0 }
-                ? titleList[0].Content!
-                : string.Join(" ", content.Split(" ").Take(4));
+            // var titleList = await ChatWithHistory(content);
+            // title = titleList is { Count: > 0 }
+            //     ? titleList[0].Content!
+            //     : string.Join(" ", content.Split(" ").Take(4));
+
+            title = string.Join(" ", content.Split(" ").Take(4));
 
             RaiseEvent(new RenameChatTitleEventLog()
             {
@@ -261,5 +263,25 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         var configuration = GetConfiguration();
         var response = await GodChatAsync(await configuration.GetSystemLLM(), content, promptSettings);
         return new Tuple<string, string>(response, title);
+    }
+    
+    protected override async Task OnAIGAgentActivateAsync(CancellationToken cancellationToken)
+    {
+        var configuration = GetConfiguration();
+
+        var sysMessage = await configuration.GetPrompt();
+        var llm = await configuration.GetSystemLLM();
+        var streamingModeEnabled = await configuration.GetStreamingModeEnabled();
+        if (State.SystemLLM != llm || State.StreamingModeEnabled != streamingModeEnabled)
+        {
+            await InitializeAsync(new InitializeDto()
+            {
+                Instructions = sysMessage,
+                LLMConfig = new LLMConfigDto() { SystemLLM = await configuration.GetSystemLLM(), },
+                StreamingModeEnabled = await configuration.GetStreamingModeEnabled()
+            });
+        }
+        
+        await base.OnAIGAgentActivateAsync(cancellationToken);
     }
 }
