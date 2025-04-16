@@ -79,17 +79,26 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         {
             sw.Reset();
             sw.Start();
-            var titleList = await ChatWithHistory(content);
-            title = titleList is { Count: > 0 }
-                ? titleList[0].Content!
-                : string.Join(" ", content.Split(" ").Take(4));
-        
+            // var titleList = await ChatWithHistory(content);
+            // title = titleList is { Count: > 0 }
+            //     ? titleList[0].Content!
+            //     : string.Join(" ", content.Split(" ").Take(4));
+            //
+            
+            // var titleList = await ChatWithHistory(content);
+            // title = titleList is { Count: > 0 }
+            //     ? titleList[0].Content!
+            //     : string.Join(" ", content.Split(" ").Take(4));
+
+            title = string.Join(" ", content.Split(" ").Take(4));
+
             RaiseEvent(new RenameChatTitleEventLog()
             {
                 Title = title
             });
-        
+
             await ConfirmEvents();
+            
             sw.Stop();
             IChatManagerGAgent chatManagerGAgent = GrainFactory.GetGrain<IChatManagerGAgent>((Guid)State.ChatManagerGuid);
             await chatManagerGAgent.RenameChatTitleAsync(new RenameChatTitleEvent()
