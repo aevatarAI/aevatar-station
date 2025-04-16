@@ -12,6 +12,7 @@ public interface IChatManagerGAgent : IGAgent
     Task<Tuple<string,string>> ChatWithSessionAsync(Guid sessionId, string sysmLLM, string content, ExecutionPromptSettings promptSettings = null);
     [ReadOnly]
     Task<List<SessionInfoDto>> GetSessionListAsync();
+    [ReadOnly]
     Task<List<ChatMessage>> GetSessionMessageListAsync(Guid sessionId);
     Task DeleteSessionAsync(Guid sessionId);
     Task RenameSessionAsync(Guid sessionId, string title);
