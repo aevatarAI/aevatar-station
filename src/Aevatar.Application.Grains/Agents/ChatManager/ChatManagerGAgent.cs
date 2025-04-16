@@ -601,14 +601,14 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         var configuration = GetConfiguration();
         
         var llm = await configuration.GetSystemLLM();
-        var streamingModeEnabled = await configuration.GetStreamingModeEnabled();
+        var streamingModeEnabled = false;
         if (State.SystemLLM != llm || State.StreamingModeEnabled != streamingModeEnabled)
         {
             await InitializeAsync(new InitializeDto()
             {
                 Instructions = "Please summarize the following content briefly, with no more than 8 words.",
                 LLMConfig = new LLMConfigDto() { SystemLLM = await configuration.GetSystemLLM(), },
-                StreamingModeEnabled = await configuration.GetStreamingModeEnabled(),
+                StreamingModeEnabled = streamingModeEnabled,
                 StreamingConfig = new StreamingConfig()
                 {
                     BufferingSize = 32,
