@@ -16,7 +16,7 @@ using Xunit;
 
 namespace Aevatar.EventSourcing.MongoDB.Tests;
 
-[Collection("MongoDb")]
+[Collection(nameof(MongoDbTestCollection))]
 public class MongoDbLogConsistentStorageTests : IAsyncDisposable
 {
     private readonly Mock<IMongoCollection<BsonDocument>> _mongoCollectionMock;
