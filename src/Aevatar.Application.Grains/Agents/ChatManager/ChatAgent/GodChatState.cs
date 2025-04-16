@@ -8,7 +8,7 @@ public class GodChatState:ChatGAgentState
     [Id(0)] public UserProfile? UserProfile { get; set; }
     [Id(1)] public string? Title { get; set; }
     
-    [Id(2)] public Guid ChatManagerGuid { get; set; }
+    [Id(2)] public Guid? ChatManagerGuid { get; set; }
 }
 
 [GenerateSerializer]
