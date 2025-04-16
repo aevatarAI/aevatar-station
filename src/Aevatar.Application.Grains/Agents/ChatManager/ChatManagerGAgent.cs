@@ -312,7 +312,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         Stopwatch sw = new Stopwatch();
         sw.Start();
         IGodChat godChat = GrainFactory.GetGrain<IGodChat>(Guid.NewGuid());
-        await RegisterAsync(godChat);
+        // await RegisterAsync(godChat);
         sw.Stop();
         Logger.LogDebug($"CreateSessionAsync - step,time use:{sw.ElapsedMilliseconds}");
         
