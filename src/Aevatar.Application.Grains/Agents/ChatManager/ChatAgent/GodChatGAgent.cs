@@ -227,7 +227,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
 
     public Task<List<ChatMessage>> GetChatMessageAsync()
     {
-        Logger.LogDebug($"[ChatGAgentManager][GetSessionMessageListAsync] - session:ID{0},message={1}",
+        Logger.LogDebug("[ChatGAgentManager][GetSessionMessageListAsync] - session:ID{0},message={1}",
             this.GetPrimaryKey(), JsonConvert.SerializeObject(State.ChatHistory));
         return Task.FromResult(State.ChatHistory);
     }
@@ -251,6 +251,9 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
                 break;
             case RenameChatTitleEventLog renameChatTitleEventLog:
                 State.Title = renameChatTitleEventLog.Title;
+                break;
+            case SetChatManagerGuidEventLog setChatManagerGuidEventLog:
+                State.ChatManagerGuid = setChatManagerGuidEventLog.ChatManagerGuid;
                 break;
         }
     }

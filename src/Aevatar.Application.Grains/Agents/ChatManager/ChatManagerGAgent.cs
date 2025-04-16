@@ -479,9 +479,9 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
 
     public async Task<List<ChatMessage>> GetSessionMessageListAsync(Guid sessionId)
     {
-        Logger.LogDebug($"[ChatGAgentManager][GetSessionMessageListAsync] - session:ID{sessionId}");
+        Logger.LogDebug("[ChatGAgentManager][GetSessionMessageListAsync] - session:ID{0}", sessionId);
         var sessionInfo = State.GetSession(sessionId);
-        Logger.LogDebug($"[ChatGAgentManager][GetSessionMessageListAsync] - session:ID{JsonConvert.SerializeObject(sessionInfo)}");
+        Logger.LogDebug("[ChatGAgentManager][GetSessionMessageListAsync] - session:ID{0}", JsonConvert.SerializeObject(sessionInfo));
 
         if (sessionInfo == null)
         {
