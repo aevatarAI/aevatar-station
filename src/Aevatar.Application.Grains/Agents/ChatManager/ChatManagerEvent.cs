@@ -18,6 +18,7 @@ public class ResponseCreateGod : ResponseToPublisherEventBase
 {
     [Id(0)] public ResponseType ResponseType { get; set; } = ResponseType.CreateSession;
     [Id(1)] public Guid SessionId { get; set; }
+    [Id(2)] public String SessionVersion { get; set; }
 }
 
 [GenerateSerializer]

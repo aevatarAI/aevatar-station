@@ -28,6 +28,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
     IChatManagerGAgent
 {
     private const string FormattedDate = "yyyy-MM-dd";
+    const string SessionVersion = "1.0.0";
+
     public override Task<string> GetDescriptionAsync()
     {
         return Task.FromResult("Chat GAgent Manager");
@@ -149,7 +151,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
 
         await PublishAsync(new ResponseCreateGod()
         {
-            SessionId = sessionId
+            SessionId = sessionId,
+            SessionVersion = SessionVersion
         });
         Logger.LogDebug(
             "[ChatGAgentManager][RequestCreateGodChatEvent] sessionId:{A} end {B}, Duration {C}ms ", sessionId,
