@@ -19,6 +19,7 @@
         <PackageReference Include="Aevatar.GAgents.AIGAgent"/>
         <PackageReference Include="Aevatar.GAgents.SemanticKernel"/>
         <PackageReference Include="Aevatar.PermissionManagement" />
+        <PackageReference Include="Orleans.SyncWork" />
     </ItemGroup>
 
     <ItemGroup>
