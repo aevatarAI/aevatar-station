@@ -18,16 +18,13 @@
         <PackageReference Include="Aevatar.SignalR"/>
         <PackageReference Include="Aevatar.GAgents.AIGAgent"/>
         <PackageReference Include="Aevatar.GAgents.SemanticKernel"/>
-        <PackageReference Include="Aevatar.PermissionManagement" />
+        <PackageReference Include="Aevatar.PermissionManagement"/>
 
 
         <PackageReference Include="Aevatar.GAgents.AI.Abstractions"/>
-         <PackageReference Include="MineAiFun.GAgents"/>
+        <PackageReference Include="MineAiFun.GAgents"/>
         <PackageReference Include="Aevatar.GAgents.Twitter"/>
-        <PackageReference Include="XWorkerAgent"/>
-        <PackageReference Include="TelegramWorkerAgent"/>
         <PackageReference Include="Aevatar.GAgents.SocialGAgent"/>
-
     </ItemGroup>
 
     <ItemGroup>
