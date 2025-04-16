@@ -227,6 +227,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
 
     public Task<List<ChatMessage>> GetChatMessageAsync()
     {
+        Logger.LogDebug($"[ChatGAgentManager][GetSessionMessageListAsync] - session:ID{State.ChatHistory}");
         return Task.FromResult(State.ChatHistory);
     }
 
