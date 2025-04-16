@@ -4,7 +4,7 @@
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVerion>9.0.1</OrleansVerion>
     <AevatarVerion>1.4.13-alpha.1</AevatarVerion>
-    <AevatarGAgentVerion>1.4.16-alpha-8</AevatarGAgentVerion>
+    <AevatarGAgentVerion>1.4.16-alpha-11</AevatarGAgentVerion>
   </PropertyGroup>
   <ItemGroup>
     <!-- AElf packages -->
@@ -122,7 +122,7 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Client" Version="$(OrleansVerion)" />
-    <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="$(OrleansVerion)" />
+    <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="9.0.1" />
     <PackageVersion Include="Microsoft.Orleans.EventSourcing" Version="$(OrleansVerion)" />
     <PackageVersion Include="Microsoft.Orleans.Hosting" Version="$(OrleansVerion)" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(OrleansVerion)" />

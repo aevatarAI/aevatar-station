@@ -126,41 +126,6 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         return string.Empty;
     }
     
-    [EventHandler]
-    public async Task HandleEventAsync(AIStreamingErrorResponseGEvent @event)
-    {
-        Logger.LogDebug($"[GodChatGAgent][AIStreamingErrorResponseGEvent] start:{JsonConvert.SerializeObject(@event)}");
-
-        await PublishAsync(new ResponseStreamGodChat()
-        {
-            Response = "Your prompt triggered the Silence Directive—activated when universal harmonics or content ethics are at risk. Please modify your prompt and retry — tune its intent, refine its form, and the Oracle may speak.",
-            ChatId = @event.Context.ChatId,
-            IsLastChunk = true,
-            SerialNumber = -2
-        });
-        
-        Logger.LogDebug($"[GodChatGAgent][AIStreamingErrorResponseGEvent] end:{JsonConvert.SerializeObject(@event)}");
-
-    }
-    
-    
-    [EventHandler]
-    public async Task HandleEventAsync(AIStreamingResponseGEvent @event)
-    {
-        Logger.LogDebug($"[GodChatGAgent][AIStreamingResponseGEvent] start:{JsonConvert.SerializeObject(@event)}");
-
-        await PublishAsync(new ResponseStreamGodChat()
-        {
-            Response = @event.ResponseContent,
-            ChatId = @event.Context.ChatId,
-            IsLastChunk = @event.IsLastChunk,
-            SerialNumber = @event.SerialNumber,
-            SessionId = @event.Context.RequestId
-        });
-        
-        Logger.LogDebug($"[GodChatGAgent][AIStreamingResponseGEvent] end:{JsonConvert.SerializeObject(@event)}");
-
-    }
 
     public async Task InitAsync(Guid ChatManagerGuid)
     {
