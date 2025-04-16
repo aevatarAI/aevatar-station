@@ -18,7 +18,7 @@ namespace Aevatar.Application.Grains.Agents.ChatManager.Chat;
 [Description("god chat agent")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
-[GAgent(nameof(ChatGAgentManager))]
+[GAgent]
 [Reentrant]
 public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, EventBase, ChatConfigDto>, IGodChat
 {
