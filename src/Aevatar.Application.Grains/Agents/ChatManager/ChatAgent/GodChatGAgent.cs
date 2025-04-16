@@ -227,8 +227,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
 
     public Task<List<ChatMessage>> GetChatMessageAsync()
     {
-        Logger.LogDebug("[ChatGAgentManager][GetSessionMessageListAsync] - session:ID{0},message={1}",
-            this.GetPrimaryKey(), JsonConvert.SerializeObject(State.ChatHistory));
+        Logger.LogDebug($"[ChatGAgentManager][GetSessionMessageListAsync] - session:ID{this.GetPrimaryKey()},message={JsonConvert.SerializeObject(State.ChatHistory)}");
         return Task.FromResult(State.ChatHistory);
     }
 
@@ -296,6 +295,12 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         var configuration = GetConfiguration();
         var response = await GodChatAsync(await configuration.GetSystemLLM(), content, promptSettings);
         return new Tuple<string, string>(response, title);
+    }
+
+    protected override async Task OnAIGAgentActivateAsync(CancellationToken cancellationToken)
+    {
+        Logger.LogDebug($"[ChatGAgentManager][GetSessionMessageListAsync] - OnAIGAgentActivateAsync session:ID{this.GetPrimaryKey()},message={JsonConvert.SerializeObject(State.ChatHistory)}");
+        await base.OnAIGAgentActivateAsync(cancellationToken);
     }
     
 }
