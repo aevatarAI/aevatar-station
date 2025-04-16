@@ -17,8 +17,8 @@ using Orleans.Providers;
 namespace Aevatar.Application.Grains.Agents.ChatManager.Chat;
 
 [Description("god chat agent")]
-[StorageProvider(ProviderName = "PubSubStore")]
-[LogConsistencyProvider(ProviderName = "LogStorage")]
+// [StorageProvider(ProviderName = "PubSubStore")]
+// [LogConsistencyProvider(ProviderName = "LogStorage")]
 [GAgent]
 [Reentrant]
 public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, EventBase, ChatConfigDto>, IGodChat
@@ -300,6 +300,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
     protected override async Task OnAIGAgentActivateAsync(CancellationToken cancellationToken)
     {
         Logger.LogDebug($"[ChatGAgentManager][GetSessionMessageListAsync] - OnAIGAgentActivateAsync session:ID{this.GetPrimaryKey().ToString()},message={JsonConvert.SerializeObject(State)}");
+        ReadStateAsync();
         await base.OnAIGAgentActivateAsync(cancellationToken);
     }
     
