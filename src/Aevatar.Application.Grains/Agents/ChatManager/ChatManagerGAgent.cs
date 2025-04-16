@@ -46,18 +46,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
 
         try
         {
-            if (State.StreamingModeEnabled)
-            {
-                Logger.LogDebug("State.StreamingModeEnabled is on");
-                await StreamChatWithSessionAsync(@event.SessionId, @event.SystemLLM, @event.Content,chatId);
-            }
-            else
-            {
-                var response = await ChatWithSessionAsync(@event.SessionId, @event.SystemLLM, @event.Content);
-                content = response.Item1;
-                title = response.Item2;
-                isLastChunk = true;
-            }
+            Logger.LogDebug("State.StreamingModeEnabled is on");
+            await StreamChatWithSessionAsync(@event.SessionId, @event.SystemLLM, @event.Content,chatId);
         }
         catch (Exception e)
         {
