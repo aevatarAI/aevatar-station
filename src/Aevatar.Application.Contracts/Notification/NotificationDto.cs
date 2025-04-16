@@ -10,5 +10,6 @@ public class NotificationDto
     public Guid Receiver { get; set; }
     public Guid CreatorId { get; set; }
     public NotificationStatusEnum Status { get; set; }
-    public DateTime CreationTime { get; set; }
+    public long CreationTime { get; set; }
+    public bool IsRead { get; set; }
 }

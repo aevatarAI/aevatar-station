@@ -10,5 +10,5 @@ public class ProjectAppIdListResponseDto
     public string AppId { get; set; }
     public string AppSecret { get; set; }
     public string CreatorName { get; set; }
-    public DateTime CreateTime { get; set; }
+    public long CreateTime { get; set; }
 }
