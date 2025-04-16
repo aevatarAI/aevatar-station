@@ -112,6 +112,23 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
 
     }
     
+    [EventHandler]
+    public async Task HandleEventAsync(RenameChatTitleEvent @event)
+    {
+        Logger.LogDebug($"[ChatGAgentManager][RenameChatTitleEvent] start:{JsonConvert.SerializeObject(@event)}");
+
+        RaiseEvent(new RenameTitleEventLog()
+        {
+            SessionId = @event.SessionId,
+            Title = @event.Title
+        });
+
+        await ConfirmEvents();
+        
+        Logger.LogDebug($"[ChatGAgentManager][RenameChatTitleEvent] end:{JsonConvert.SerializeObject(@event)}");
+
+    }
+    
     
     
 

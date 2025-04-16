@@ -15,3 +15,9 @@ public class UpdateUserProfileGodChatEventLog : GodChatEventLog
     [Id(2)] public string BirthPlace { get; set; }
     [Id(3)] public string FullName { get; set; }
 }
+
+[GenerateSerializer]
+public class RenameChatTitleEventLog : GodChatEventLog
+{
+    [Id(0)] public string Title { get; set; }
+}

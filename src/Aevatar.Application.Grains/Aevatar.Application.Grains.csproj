@@ -8,12 +8,14 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Aevatar.Core.Abstractions" />
         <PackageReference Include="Aevatar.GAgents.ChatAgent" />
         <PackageReference Include="Aevatar.PermissionManagement" />
         <PackageReference Include="AutoGen.Core" />
         <PackageReference Include="Microsoft.Extensions.Options" />
         <PackageReference Include="Microsoft.Orleans.Sdk" />
         <PackageReference Include="AElf.OpenTelemetry" />
+        <PackageReference Include="Newtonsoft.Json" />
         <PackageReference Include="Serilog" />
         <PackageReference Include="Volo.Abp.AutoMapper" /> 
         <PackageReference Include="Volo.Abp.EventBus.Abstractions" />

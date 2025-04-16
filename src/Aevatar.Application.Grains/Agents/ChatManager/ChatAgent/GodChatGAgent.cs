@@ -1,3 +1,6 @@
+using System.Diagnostics;
+using Aevatar.Application.Grains.Agents.ChatManager.Common;
+using Aevatar.Application.Grains.Agents.ChatManager.ConfigAgent;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
@@ -5,12 +8,98 @@ using Aevatar.GAgents.AIGAgent.Dtos;
 using Aevatar.GAgents.ChatAgent.Dtos;
 using Aevatar.GAgents.ChatAgent.GAgent;
 using Json.Schema.Generation;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Aevatar.Application.Grains.Agents.ChatManager.Chat;
 
 [Description("god chat agent")]
 public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, EventBase, ChatConfigDto>, IGodChat
 {
+    
+    [EventHandler]
+    public async Task HandleEventAsync(RequestStreamGodChatEvent @event)
+    {
+        string chatId = Guid.NewGuid().ToString();
+        Logger.LogDebug($"[GodChatGAgent][RequestStreamGodChatEvent] start:{JsonConvert.SerializeObject(@event)} chatID:{chatId}");
+        var title = "";
+        var content = "";
+        var isLastChunk = false;
+
+        try
+        {
+            if (State.StreamingModeEnabled)
+            {
+                Logger.LogDebug("State.StreamingModeEnabled is on");
+                await StreamChatWithSessionAsync(@event.SessionId, @event.SystemLLM, @event.Content,chatId);
+            }
+            else
+            {
+                var response = await ChatWithSessionAsync(@event.SessionId, @event.SystemLLM, @event.Content);
+                content = response.Item1;
+                title = response.Item2;
+                isLastChunk = true;
+            }
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, $"[GodChatGAgent][RequestStreamGodChatEvent] handle error:{e.ToString()}");
+        }
+
+        await PublishAsync(new ResponseStreamGodChat()
+        {
+            ChatId =chatId,
+            Response = content,
+            NewTitle = title,
+            IsLastChunk = isLastChunk,
+            SerialNumber = -1,
+            SessionId = @event.SessionId
+            
+        });
+
+        Logger.LogDebug($"[GodChatGAgent][RequestStreamGodChatEvent] end:{JsonConvert.SerializeObject(@event)}");
+    }
+    
+    private async Task StreamChatWithSessionAsync(Guid sessionId,string sysmLLM, string content,string chatId,
+        ExecutionPromptSettings promptSettings = null)
+    {
+        Stopwatch sw = new Stopwatch();
+        Logger.LogDebug($"StreamChatWithSessionAsync - step1,time use:{sw.ElapsedMilliseconds}");
+
+        var title = "";
+        
+        if (State.Title.IsNullOrEmpty())
+        {
+            sw.Reset();
+            sw.Start();
+            var titleList = await ChatWithHistory(content);
+            title = titleList is { Count: > 0 }
+                ? titleList[0].Content!
+                : string.Join(" ", content.Split(" ").Take(4));
+        
+            RaiseEvent(new RenameChatTitleEventLog()
+            {
+                Title = title
+            });
+        
+            await ConfirmEvents();
+            sw.Stop();
+            await PublishAsync(new RenameChatTitleEvent()
+            {
+                SessionId = sessionId,
+                Title = title
+            });
+            Logger.LogDebug($"StreamChatWithSessionAsync - step3,time use:{sw.ElapsedMilliseconds}");
+        }
+
+        sw.Reset();
+        sw.Start();
+        var configuration = GetConfiguration();
+        GodStreamChatAsync(sessionId,await configuration.GetSystemLLM(), await configuration.GetStreamingModeEnabled(),content, chatId,promptSettings);
+        sw.Stop();
+        Logger.LogDebug($"StreamChatWithSessionAsync - step4,time use:{sw.ElapsedMilliseconds}");
+    }
+    
     public async Task<string> GodChatAsync(string llm, string message,
         ExecutionPromptSettings? promptSettings = null)
     {
@@ -111,6 +200,46 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
                 State.UserProfile.BirthPlace = updateUserProfileGodChatEventLog.BirthPlace;
                 State.UserProfile.FullName = updateUserProfileGodChatEventLog.FullName;
                 break;
+            case RenameChatTitleEventLog renameChatTitleEventLog:
+                State.Title = renameChatTitleEventLog.Title;
+                break;
         }
+    }
+    
+    private IConfigurationGAgent GetConfiguration()
+    {
+        return GrainFactory.GetGrain<IConfigurationGAgent>(CommonHelper.GetSessionManagerConfigurationId());
+    }
+    
+    public async Task<Tuple<string, string>> ChatWithSessionAsync(Guid sessionId, string sysmLLM, string content,
+        ExecutionPromptSettings promptSettings = null)
+    {
+        
+
+        var title = "";
+        if (State.Title.IsNullOrEmpty())
+        {
+            var titleList = await ChatWithHistory(content);
+            title = titleList is { Count: > 0 }
+                ? titleList[0].Content!
+                : string.Join(" ", content.Split(" ").Take(4));
+
+            RaiseEvent(new RenameChatTitleEventLog()
+            {
+                Title = title
+            });
+
+            await ConfirmEvents();
+            
+            await PublishAsync(new RenameChatTitleEvent()
+            {
+                SessionId = sessionId,
+                Title = title
+            });
+        }
+
+        var configuration = GetConfiguration();
+        var response = await GodChatAsync(await configuration.GetSystemLLM(), content, promptSettings);
+        return new Tuple<string, string>(response, title);
     }
 }

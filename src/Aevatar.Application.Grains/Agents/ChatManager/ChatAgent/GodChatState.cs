@@ -6,6 +6,7 @@ namespace Aevatar.Application.Grains.Agents.ChatManager.Chat;
 public class GodChatState:ChatGAgentState
 {
     [Id(0)] public UserProfile? UserProfile { get; set; }
+    [Id(1)] public string? Title { get; set; }
 }
 
 [GenerateSerializer]
