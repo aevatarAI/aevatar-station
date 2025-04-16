@@ -596,7 +596,11 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             {
                 Instructions = "Please summarize the following content briefly, with no more than 8 words.",
                 LLMConfig = new LLMConfigDto() { SystemLLM = await configuration.GetSystemLLM(), },
-                StreamingModeEnabled = await configuration.GetStreamingModeEnabled()
+                StreamingModeEnabled = await configuration.GetStreamingModeEnabled(),
+                StreamingConfig = new StreamingConfig()
+                {
+                    BufferingSize = 32,
+                }
             });
         }
         

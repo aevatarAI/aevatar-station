@@ -293,25 +293,4 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         return new Tuple<string, string>(response, title);
     }
     
-    protected override async Task OnAIGAgentActivateAsync(CancellationToken cancellationToken)
-    {
-        var configuration = GetConfiguration();
-
-        var sysMessage = await configuration.GetPrompt();
-        var llm = await configuration.GetSystemLLM();
-        var streamingModeEnabled = await configuration.GetStreamingModeEnabled();
-        var initializeDto = new InitializeDto()
-        {
-            Instructions = sysMessage,
-            LLMConfig = new LLMConfigDto() { SystemLLM = await configuration.GetSystemLLM(), },
-            StreamingModeEnabled = await configuration.GetStreamingModeEnabled()
-        };
-        Logger.LogDebug($"[GodChatGAgent][InitializeAsync] Detail : {JsonConvert.SerializeObject(initializeDto)}");
-        if (State.SystemLLM != llm || State.StreamingModeEnabled != streamingModeEnabled)
-        {
-            await InitializeAsync(initializeDto);
-        }
-        
-        await base.OnAIGAgentActivateAsync(cancellationToken);
-    }
 }
