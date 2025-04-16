@@ -23,6 +23,7 @@ namespace Aevatar.Application.Grains.Agents.ChatManager;
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 [GAgent(nameof(ChatGAgentManager))]
+[Reentrant]
 public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManageEventLog>,
     IChatManagerGAgent
 {
@@ -398,7 +399,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         var title = "";
         if (sessionInfo.Title.IsNullOrEmpty())
         {
-            var titleList = await ChatWithHistory(content);
+            var titleList = await ChatWithHistory(content,context: new AIChatContextDto());
             title = titleList is { Count: > 0 }
                 ? titleList[0].Content!
                 : string.Join(" ", content.Split(" ").Take(4));
@@ -437,7 +438,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         {
             sw.Reset();
             sw.Start();
-            var titleList = await ChatWithHistory(content);
+            var titleList = await ChatWithHistory(content,context: new AIChatContextDto());
             title = titleList is { Count: > 0 }
                 ? titleList[0].Content!
                 : string.Join(" ", content.Split(" ").Take(4));
