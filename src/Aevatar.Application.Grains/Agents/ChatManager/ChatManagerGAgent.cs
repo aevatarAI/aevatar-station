@@ -573,6 +573,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
                 State.SessionInfoList.RemoveAll(f => f.SessionId == @deleteSessionEventLog.SessionId);
                 break;
             case RenameTitleEventLog @renameTitleEventLog:
+                Logger.LogDebug($"[ChatGAgentManager][RenameChatTitleEvent] end:{JsonConvert.SerializeObject(@renameTitleEventLog)}");
                 var sessionInfo = State.SessionInfoList.First(f => f.SessionId == @renameTitleEventLog.SessionId);
                 sessionInfo.Title = @renameTitleEventLog.Title;
                 break;
