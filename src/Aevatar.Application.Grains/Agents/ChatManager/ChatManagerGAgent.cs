@@ -23,7 +23,6 @@ namespace Aevatar.Application.Grains.Agents.ChatManager;
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 [GAgent(nameof(ChatGAgentManager))]
-[Reentrant]
 public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManageEventLog>,
     IChatManagerGAgent
 {
