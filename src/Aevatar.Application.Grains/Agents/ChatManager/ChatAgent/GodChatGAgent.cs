@@ -300,7 +300,6 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
     protected override async Task OnAIGAgentActivateAsync(CancellationToken cancellationToken)
     {
         Logger.LogDebug($"[ChatGAgentManager][GetSessionMessageListAsync] - OnAIGAgentActivateAsync session:ID{this.GetPrimaryKey().ToString()},message={JsonConvert.SerializeObject(State)}");
-        ReadStateAsync();
         await base.OnAIGAgentActivateAsync(cancellationToken);
     }
     
