@@ -30,9 +30,9 @@ public class GodGPTController : AevatarController
     }
     
     [HttpGet("query-version")]
-    public async Task<string> QueryVersion()
+    public Task<string> QueryVersion()
     {
-        return Version;
+        return Task.FromResult(Version);
     }
 
     [HttpPost("create-session")]
