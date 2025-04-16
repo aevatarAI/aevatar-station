@@ -46,18 +46,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
 
         try
         {
-            if (State.StreamingModeEnabled)
-            {
-                Logger.LogDebug("State.StreamingModeEnabled is on");
-                await StreamChatWithSessionAsync(@event.SessionId, @event.SystemLLM, @event.Content,chatId);
-            }
-            else
-            {
-                var response = await ChatWithSessionAsync(@event.SessionId, @event.SystemLLM, @event.Content);
-                content = response.Item1;
-                title = response.Item2;
-                isLastChunk = true;
-            }
+            Logger.LogDebug("State.StreamingModeEnabled is on");
+            await StreamChatWithSessionAsync(@event.SessionId, @event.SystemLLM, @event.Content,chatId);
         }
         catch (Exception e)
         {
@@ -601,14 +591,14 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         var configuration = GetConfiguration();
         
         var llm = await configuration.GetSystemLLM();
-        var streamingModeEnabled = await configuration.GetStreamingModeEnabled();
+        var streamingModeEnabled = false;
         if (State.SystemLLM != llm || State.StreamingModeEnabled != streamingModeEnabled)
         {
             await InitializeAsync(new InitializeDto()
             {
                 Instructions = "Please summarize the following content briefly, with no more than 8 words.",
                 LLMConfig = new LLMConfigDto() { SystemLLM = await configuration.GetSystemLLM(), },
-                StreamingModeEnabled = await configuration.GetStreamingModeEnabled(),
+                StreamingModeEnabled = streamingModeEnabled,
                 StreamingConfig = new StreamingConfig()
                 {
                     BufferingSize = 32,
