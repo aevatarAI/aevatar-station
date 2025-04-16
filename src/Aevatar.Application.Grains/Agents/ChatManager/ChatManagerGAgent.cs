@@ -143,6 +143,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         try
         {
             sessionId = await CreateSessionAsync(@event.SystemLLM, @event.Prompt, @event.UserProfile);
+            IGodChat godChat = GrainFactory.GetGrain<IGodChat>(sessionId);
+            await RegisterAsync(godChat);
         }
         catch (Exception e)
         {
