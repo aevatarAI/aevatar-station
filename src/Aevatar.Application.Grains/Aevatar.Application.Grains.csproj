@@ -13,6 +13,7 @@
         <PackageReference Include="Aevatar.PermissionManagement" />
         <PackageReference Include="AutoGen.Core" />
         <PackageReference Include="Microsoft.Extensions.Options" />
+        <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
         <PackageReference Include="Microsoft.Orleans.Sdk" />
         <PackageReference Include="AElf.OpenTelemetry" />
         <PackageReference Include="Newtonsoft.Json" />

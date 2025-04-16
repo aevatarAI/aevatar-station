@@ -20,7 +20,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
 {
     
     [EventHandler]
-    public async Task HandleEventAsync(RequestStreamGodChatEvent @event)
+    public async Task HandleEventAsync(RequestStreamChatEvent @event)
     {
         string chatId = Guid.NewGuid().ToString();
         Logger.LogDebug($"[GodChatGAgent][RequestStreamGodChatEvent] start:{JsonConvert.SerializeObject(@event)} chatID:{chatId}");
