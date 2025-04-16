@@ -140,17 +140,36 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
     public async Task<string> GodStreamChatAsync(Guid sessionId,string llm, bool streamingModeEnabled,string message, String chatId,
         ExecutionPromptSettings? promptSettings = null)
     {
+        var configuration = GetConfiguration();
+
+        var sysMessage = await configuration.GetPrompt();
+
         if (State.SystemLLM != llm || State.StreamingModeEnabled != streamingModeEnabled)
         {
-            await InitializeAsync(new InitializeDto()
+            var initializeDto = new InitializeDto()
             {
-                Instructions = State.PromptTemplate, LLMConfig = new LLMConfigDto() { SystemLLM = llm },
+                Instructions = sysMessage, LLMConfig = new LLMConfigDto() { SystemLLM = llm },
                 StreamingModeEnabled = true, StreamingConfig = new StreamingConfig()
                 {
                     BufferingSize = 32
                 }
-            });
+            };
+            Logger.LogDebug($"[GodChatGAgent][InitializeAsync] Detail : {JsonConvert.SerializeObject(initializeDto)}");
+
+            await InitializeAsync(initializeDto);
         }
+        
+        // if (State.SystemLLM != llm || State.StreamingModeEnabled != streamingModeEnabled)
+        // {
+        //     await InitializeAsync(new InitializeDto()
+        //     {
+        //         Instructions = State.PromptTemplate, LLMConfig = new LLMConfigDto() { SystemLLM = llm },
+        //         StreamingModeEnabled = true, StreamingConfig = new StreamingConfig()
+        //         {
+        //             BufferingSize = 32
+        //         }
+        //     });
+        // }
 
         AIChatContextDto aiChatContextDto = new AIChatContextDto()
         {
@@ -272,14 +291,16 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         var sysMessage = await configuration.GetPrompt();
         var llm = await configuration.GetSystemLLM();
         var streamingModeEnabled = await configuration.GetStreamingModeEnabled();
+        var initializeDto = new InitializeDto()
+        {
+            Instructions = sysMessage,
+            LLMConfig = new LLMConfigDto() { SystemLLM = await configuration.GetSystemLLM(), },
+            StreamingModeEnabled = await configuration.GetStreamingModeEnabled()
+        };
+        Logger.LogDebug($"[GodChatGAgent][InitializeAsync] Detail : {JsonConvert.SerializeObject(initializeDto)}");
         if (State.SystemLLM != llm || State.StreamingModeEnabled != streamingModeEnabled)
         {
-            await InitializeAsync(new InitializeDto()
-            {
-                Instructions = sysMessage,
-                LLMConfig = new LLMConfigDto() { SystemLLM = await configuration.GetSystemLLM(), },
-                StreamingModeEnabled = await configuration.GetStreamingModeEnabled()
-            });
+            await InitializeAsync(initializeDto);
         }
         
         await base.OnAIGAgentActivateAsync(cancellationToken);

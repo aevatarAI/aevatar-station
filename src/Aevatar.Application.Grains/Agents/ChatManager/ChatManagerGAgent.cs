@@ -318,8 +318,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         var sysMessage = await configuration.GetPrompt();
         //put user data into the user prompt
         //sysMessage = await AppendUserInfoToSystemPromptAsync(configuration, sysMessage, userProfile);
-       
-        await godChat.ConfigAsync(new ChatConfigDto()
+
+        var chatConfigDto = new ChatConfigDto()
         {
             Instructions = sysMessage, MaxHistoryCount = 32,
             LLMConfig = new LLMConfigDto() { SystemLLM = await configuration.GetSystemLLM() },
@@ -327,7 +327,11 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             {
                 BufferingSize = 32
             }
-        });
+        };
+        Logger.LogDebug($"[GodChatGAgent][InitializeAsync] Detail : {JsonConvert.SerializeObject(chatConfigDto)}");
+
+        await godChat.ConfigAsync(chatConfigDto);
+        
         var sessionId = godChat.GetPrimaryKey();
         if (userProfile != null)
         {
