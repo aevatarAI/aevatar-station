@@ -574,7 +574,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
                 break;
             case RenameTitleEventLog @renameTitleEventLog:
                 var sessionInfo = State.SessionInfoList.First(f => f.SessionId == @renameTitleEventLog.SessionId);
-                sessionInfo.Title = renameTitleEventLog.Title;
+                sessionInfo.Title = @renameTitleEventLog.Title;
                 break;
             case ClearAllEventLog:
                 State.SessionInfoList.Clear();
