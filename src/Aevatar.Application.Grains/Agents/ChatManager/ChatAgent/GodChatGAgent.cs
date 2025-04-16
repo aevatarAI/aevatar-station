@@ -227,7 +227,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
 
     public Task<List<ChatMessage>> GetChatMessageAsync()
     {
-        Logger.LogDebug($"[ChatGAgentManager][GetSessionMessageListAsync] - session:ID{State.ChatHistory}");
+        Logger.LogDebug($"[ChatGAgentManager][GetSessionMessageListAsync] - session:ID{this.GetPrimaryKey().ToString()},message={JsonConvert.SerializeObject(State.ChatHistory)}");
         return Task.FromResult(State.ChatHistory);
     }
 
@@ -250,6 +250,9 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
                 break;
             case RenameChatTitleEventLog renameChatTitleEventLog:
                 State.Title = renameChatTitleEventLog.Title;
+                break;
+            case SetChatManagerGuidEventLog setChatManagerGuidEventLog:
+                State.ChatManagerGuid = setChatManagerGuidEventLog.ChatManagerGuid;
                 break;
         }
     }
@@ -292,6 +295,12 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         var configuration = GetConfiguration();
         var response = await GodChatAsync(await configuration.GetSystemLLM(), content, promptSettings);
         return new Tuple<string, string>(response, title);
+    }
+
+    protected override async Task OnAIGAgentActivateAsync(CancellationToken cancellationToken)
+    {
+        Logger.LogDebug($"[ChatGAgentManager][GetSessionMessageListAsync] - OnAIGAgentActivateAsync session:ID{this.GetPrimaryKey().ToString()},message={JsonConvert.SerializeObject(State.ChatHistory)}");
+        await base.OnAIGAgentActivateAsync(cancellationToken);
     }
     
 }

@@ -478,7 +478,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
 
     public async Task<List<ChatMessage>> GetSessionMessageListAsync(Guid sessionId)
     {
-        Logger.LogDebug($"[ChatGAgentManager][GetSessionMessageListAsync] - session:ID{sessionId}");
+        Logger.LogDebug($"[ChatGAgentManager][GetSessionMessageListAsync] - session:ID{sessionId.ToString()}");
         var sessionInfo = State.GetSession(sessionId);
         Logger.LogDebug($"[ChatGAgentManager][GetSessionMessageListAsync] - session:ID{JsonConvert.SerializeObject(sessionInfo)}");
 
@@ -572,9 +572,12 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
                 State.SessionInfoList.RemoveAll(f => f.SessionId == @deleteSessionEventLog.SessionId);
                 break;
             case RenameTitleEventLog @renameTitleEventLog:
-                Logger.LogDebug($"[ChatGAgentManager][RenameChatTitleEvent] end:{JsonConvert.SerializeObject(@renameTitleEventLog)}");
-                var sessionInfo = State.SessionInfoList.First(f => f.SessionId == @renameTitleEventLog.SessionId);
+                Logger.LogDebug($"[ChatGAgentManager][RenameChatTitleEvent] event:{JsonConvert.SerializeObject(@renameTitleEventLog)}");
+                var sessionInfoList = State.SessionInfoList;
+                var sessionInfo = sessionInfoList.First(f => f.SessionId == @renameTitleEventLog.SessionId);
+                Logger.LogDebug($"[ChatGAgentManager][RenameChatTitleEvent] event exist:{JsonConvert.SerializeObject(@renameTitleEventLog)}");
                 sessionInfo.Title = @renameTitleEventLog.Title;
+                State.SessionInfoList = sessionInfoList;
                 break;
             case ClearAllEventLog:
                 State.SessionInfoList.Clear();
