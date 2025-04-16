@@ -10,10 +10,12 @@ using Aevatar.GAgents.ChatAgent.GAgent;
 using Json.Schema.Generation;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Orleans.Concurrency;
 
 namespace Aevatar.Application.Grains.Agents.ChatManager.Chat;
 
 [Description("god chat agent")]
+[Reentrant]
 public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, EventBase, ChatConfigDto>, IGodChat
 {
     
