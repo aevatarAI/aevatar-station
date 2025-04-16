@@ -14,6 +14,7 @@ using Json.Schema.Generation;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using Orleans.Concurrency;
 using Orleans.Providers;
 
 namespace Aevatar.Application.Grains.Agents.ChatManager;
@@ -22,6 +23,7 @@ namespace Aevatar.Application.Grains.Agents.ChatManager;
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 [GAgent(nameof(ChatGAgentManager))]
+[Reentrant]
 public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManageEventLog>,
     IChatManagerGAgent
 {
