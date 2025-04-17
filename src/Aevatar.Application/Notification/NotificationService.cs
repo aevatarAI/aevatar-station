@@ -91,6 +91,7 @@ public class NotificationService : INotificationService, ITransientDependency
             var stopWatch = new Stopwatch();
             stopWatch.Start();
 
+            _logger.LogInformation($"Push new message to {(Guid)notification.CreatorId!} and {notification.Receiver}");
             await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
                 new NotificationResponse()
                 {
@@ -98,6 +99,7 @@ public class NotificationService : INotificationService, ITransientDependency
                         { Id = notification.Id, Status = NotificationStatusEnum.None }
                 });
             
+            _logger.LogInformation($"Push unread message to {target}");
             var unreadCount = await GetUnreadCountAsync(target);
             await _hubService.ResponseAsync([target],
                 new UnreadNotificationResponse()

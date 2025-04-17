@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Volo.Abp.AspNetCore.SignalR;
 
@@ -16,10 +17,13 @@ public class StationSignalRHub : AbpHub
         _logger = logger;
     }
 
-    public override Task OnConnectedAsync()
+    public override async Task OnConnectedAsync()
     {
         _logger.LogDebug("connectionId={connectionId} connected.", Context.ConnectionId);
-        return base.OnConnectedAsync();
+        
+        await base.OnConnectedAsync();
+        
+        await Clients.Client(Context.ConnectionId).SendAsync("Test", "Success");
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
