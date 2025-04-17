@@ -192,7 +192,7 @@
     <PackageVersion Include="Mongo2Go" Version="3.1.3" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.2" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client.Core" Version="9.0.2" />
-    <PackageVersion Include="MineAiFun.GAgents" Version="0.4.2-refactor" />
+    <PackageVersion Include="MineAiFun.GAgents" Version="0.4.3-refactor" />
     <PackageVersion Include="Neo4j.Driver" Version="5.27.0" />
   </ItemGroup>
 </Project>
