@@ -56,7 +56,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         if (CurrentUser.IsInRole(AevatarConsts.AdminRoleName))
         {
             organizations = await OrganizationUnitRepository.GetListAsync();
-            foreach (var organization in organizations)
+            foreach (var organization in organizations.OrderBy(o=>o.CreationTime))
             {
                 if (!organization.TryGetExtraPropertyValue<OrganizationType>(AevatarConsts.OrganizationTypeKey,
                         out var type) || type != OrganizationType.Organization)
@@ -71,7 +71,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         {
             var user = await IdentityUserManager.GetByIdAsync(CurrentUser.Id.Value);
             organizations = await IdentityUserManager.GetOrganizationUnitsAsync(user);
-            foreach (var organization in organizations)
+            foreach (var organization in organizations.OrderBy(o=>o.CreationTime))
             {
                 if (!organization.TryGetExtraPropertyValue<OrganizationType>(AevatarConsts.OrganizationTypeKey,
                         out var type) || type != OrganizationType.Organization)
@@ -126,7 +126,15 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         organizationUnit.ExtraProperties[AevatarConsts.OrganizationTypeKey] = OrganizationType.Organization;
         organizationUnit.ExtraProperties[AevatarConsts.OrganizationRoleKey] =
             new List<Guid> { ownerRoleId, readerRoleId };
-        await OrganizationUnitManager.CreateAsync(organizationUnit);
+        try
+        {
+            await OrganizationUnitManager.CreateAsync(organizationUnit);
+        }
+        catch (BusinessException ex)
+            when (ex.Code == IdentityErrorCodes.DuplicateOrganizationUnitDisplayName)
+        {
+            throw new UserFriendlyException("The same organization name already exists");
+        }
 
         if (!CurrentUser.IsInRole(AevatarConsts.AdminRoleName))
         {
@@ -264,6 +272,11 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         }
         else
         {
+            if (user.Id == CurrentUser.Id.Value)
+            {
+                throw new UserFriendlyException("Can't remove yourself.");
+            }
+
             await RemoveMemberAsync(organizationId, user);
         }
     }
@@ -335,6 +348,11 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         if (!user.IsInOrganizationUnit(organizationId))
         {
             throw new UserFriendlyException("User is not in current organization.");
+        }
+        
+        if (user.Id == CurrentUser.Id)
+        {
+            throw new UserFriendlyException("Unable to set your own role.");
         }
 
         var organization = await OrganizationUnitRepository.GetAsync(organizationId);

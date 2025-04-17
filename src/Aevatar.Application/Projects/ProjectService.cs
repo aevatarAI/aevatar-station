@@ -49,7 +49,15 @@ public class ProjectService : OrganizationService, IProjectService
         project.ExtraProperties[AevatarConsts.OrganizationRoleKey] = new List<Guid> { ownerRoleId, readerRoleId };
         project.ExtraProperties[AevatarConsts.ProjectDomainNameKey] = input.DomainName;
 
-        await OrganizationUnitManager.CreateAsync(project);
+        try
+        {
+            await OrganizationUnitManager.CreateAsync(project);
+        }
+        catch (BusinessException ex)
+            when (ex.Code == IdentityErrorCodes.DuplicateOrganizationUnitDisplayName)
+        {
+            throw new UserFriendlyException("The same project name already exists");
+        }
 
         return ObjectMapper.Map<OrganizationUnit, ProjectDto>(project);
     }
@@ -118,7 +126,7 @@ public class ProjectService : OrganizationService, IProjectService
         }
 
         var result = new List<ProjectDto>();
-        foreach (var organization in organizations)
+        foreach (var organization in organizations.OrderBy(o=>o.CreationTime))
         {
             var projectDto = ObjectMapper.Map<OrganizationUnit, ProjectDto>(organization);
             projectDto.MemberCount = await UserRepository.CountAsync(u =>
