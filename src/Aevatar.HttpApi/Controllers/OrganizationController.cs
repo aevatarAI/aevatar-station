@@ -85,6 +85,12 @@ public class OrganizationController : AevatarController
     public async Task SetMemberRoleAsync(Guid organizationId, SetOrganizationMemberRoleDto input)
     {
         await _permissionChecker.AuthenticateAsync(organizationId, AevatarPermissions.Members.Manage);
+                
+        if (input.UserId == CurrentUser.Id)
+        {
+            throw new UserFriendlyException("Unable to set your own role.");
+        }
+        
         await _organizationService.SetMemberRoleAsync(organizationId, input);
     }
     
