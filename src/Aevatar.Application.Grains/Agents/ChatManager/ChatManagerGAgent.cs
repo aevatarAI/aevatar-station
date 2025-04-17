@@ -311,6 +311,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         Logger.LogDebug($"CreateSessionAsync - step,time use:{sw.ElapsedMilliseconds}");
         Logger.LogDebug($"[ChatGAgentManager][RequestCreateGodChatEvent] grainId={godChat.GetGrainId()}");
         
+        sw.Reset();
         var sysMessage = await configuration.GetPrompt();
         //put user data into the user prompt
         //sysMessage = await AppendUserInfoToSystemPromptAsync(configuration, sysMessage, userProfile);
@@ -327,7 +328,9 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         Logger.LogDebug($"[GodChatGAgent][InitializeAsync] Detail : {JsonConvert.SerializeObject(chatConfigDto)}");
 
         await godChat.ConfigAsync(chatConfigDto);
-        
+        sw.Stop();
+        Logger.LogDebug($"CreateSessionAsync - step2,time use:{sw.ElapsedMilliseconds}");
+
         var sessionId = godChat.GetPrimaryKey();
         if (userProfile != null)
         {
@@ -337,6 +340,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             await godChat.SetUserProfileAsync(userProfile);
         }
         
+        sw.Reset();
         RaiseEvent(new CreateSessionInfoEventLog()
         {
             SessionId = sessionId,
@@ -345,6 +349,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
 
         await ConfirmEvents();
         await godChat.InitAsync(this.GetPrimaryKey());
+        sw.Stop();
+        Logger.LogDebug($"CreateSessionAsync - step2,time use:{sw.ElapsedMilliseconds}");
         return godChat.GetPrimaryKey();
     }
 
