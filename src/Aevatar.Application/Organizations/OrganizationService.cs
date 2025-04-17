@@ -523,7 +523,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
     {
         if (user.ExtraProperties.TryGetValue(AevatarConsts.MemberInvitationInfoKey, out var info))
         {
-            var invitationInfo = info as Dictionary<string, string>;
+            var invitationInfo = info as Dictionary<string, object>;
             invitationInfo[organizationId.ToString()] = JsonConvert.SerializeObject(memberInvitation);
             user.ExtraProperties[AevatarConsts.MemberInvitationInfoKey] = invitationInfo;
         }
