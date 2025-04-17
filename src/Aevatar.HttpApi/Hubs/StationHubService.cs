@@ -27,10 +27,16 @@ public class StationHubService : IHubService, ISingletonDependency
         {
             _logger.LogInformation(
                 $"[StationHubService][ResponseAsync] userId:{userIds} , message:{JsonConvert.SerializeObject(message)} start");
-            var userProxy = _hubContext.Clients.Users(userIds.Select(s => s.ToString()));
-            await userProxy.SendAsync(message.MessageType, message.Data);
-            // await _hubContext.Clients.Users(userId.ToString())
-            //     .SendAsync(message.MessageType, message.Data);
+
+            foreach (var userId in userIds)
+            {
+                _logger.LogInformation(
+                    $"[StationHubService][ResponseAsync] userId:{userId} , message:{JsonConvert.SerializeObject(message)}");
+                var userProxy = _hubContext.Clients.User(userId.ToString());
+                await userProxy.SendAsync(message.MessageType, message.Data);
+                // await _hubContext.Clients.Users(userId.ToString())
+                //     .SendAsync(message.MessageType, message.Data);
+            }
 
             _logger.LogInformation(
                 $"[StationHubService][ResponseAsync] userId:{userIds} , message:{JsonConvert.SerializeObject(message)} end");
