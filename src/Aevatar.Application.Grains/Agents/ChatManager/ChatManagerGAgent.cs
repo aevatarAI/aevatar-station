@@ -309,7 +309,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         // await RegisterAsync(godChat);
         sw.Stop();
         Logger.LogDebug($"CreateSessionAsync - step,time use:{sw.ElapsedMilliseconds}");
-        Logger.LogDebug($"[ChatGAgentManager][RequestCreateGodChatEvent] grainId={godChat.GetGrainId()}");
+        Logger.LogDebug($"[ChatGAgentManager][RequestCreateGodChatEvent] grainId={godChat.GetGrainId().ToString()}");
         
         sw.Reset();
         var sysMessage = await configuration.GetPrompt();
