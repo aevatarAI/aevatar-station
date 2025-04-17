@@ -49,4 +49,9 @@ public class OrganizationVisit : NotificationHandlerBase<OrganizationVisitInfo>
             RoleId = input.RoleId
         });
     }
+
+    public override async Task HandleRefuseAsync(OrganizationVisitInfo input)
+    {
+        await _organizationService.RefuseInvitationAsync(input.OrganizationId, input.Vistor);
+    }
 }

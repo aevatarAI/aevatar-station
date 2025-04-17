@@ -3,5 +3,6 @@ namespace Aevatar.Organizations;
 public enum MemberStatus
 {
     Joined,
-    Inviting
+    Inviting,
+    Refused
 }

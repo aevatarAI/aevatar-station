@@ -85,6 +85,12 @@ public class ProjectController : AevatarController
     public async Task SetMemberRoleAsync(Guid projectId, SetOrganizationMemberRoleDto input)
     {
         await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.Members.Manage);
+        
+        if (input.UserId == CurrentUser.Id)
+        {
+            throw new UserFriendlyException("Unable to set your own role.");
+        }
+        
         await _projectService.SetMemberRoleAsync(projectId, input);
     }
     

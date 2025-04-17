@@ -349,11 +349,6 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         {
             throw new UserFriendlyException("User is not in current organization.");
         }
-        
-        if (user.Id == CurrentUser.Id)
-        {
-            throw new UserFriendlyException("Unable to set your own role.");
-        }
 
         var organization = await OrganizationUnitRepository.GetAsync(organizationId);
         var existRole = FindOrganizationRole(organization, user);
@@ -367,6 +362,23 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         
         (await IdentityUserManager.UpdateAsync(user)).CheckErrors();;
         (await IdentityUserManager.UpdateSecurityStampAsync(user)).CheckErrors();;
+    }
+
+    public virtual async Task RefuseInvitationAsync(Guid organizationId, Guid userId)
+    {
+        var user = await IdentityUserManager.GetByIdAsync(userId);
+
+        if (!user.IsInOrganizationUnit(organizationId))
+        {
+            throw new UserFriendlyException("User is not in current organization.");
+        }
+        
+        var userStatus = GetMemberStatus(organizationId, user);
+        if (userStatus == MemberStatus.Inviting)
+        {
+            SetMemberStatus(organizationId,user,MemberStatus.Refused);
+            (await IdentityUserManager.UpdateAsync(user)).CheckErrors();;
+        }
     }
 
     public virtual async Task<ListResultDto<IdentityRoleDto>> GetRoleListAsync(Guid organizationId)
