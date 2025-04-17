@@ -17,7 +17,7 @@ using Orleans.Providers;
 namespace Aevatar.Application.Grains.Agents.ChatManager.Chat;
 
 [Description("god chat agent")]
-// [GAgent]
+[GAgent]
 [Reentrant]
 public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, EventBase, ChatConfigDto>, IGodChat
 {
