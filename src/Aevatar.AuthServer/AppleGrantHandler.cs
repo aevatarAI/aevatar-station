@@ -1,6 +1,13 @@
 using System.Collections.Immutable;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.IdentityModel.Tokens;
+using OpenIddict.Abstractions;
+using OpenIddict.Server.AspNetCore;
+using Volo.Abp.DependencyInjection;
+using Volo.Abp.Identity;
+using Volo.Abp.OpenIddict.ExtensionGrantTypes;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -27,6 +34,7 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
     private readonly ILogger<AppleGrantHandler> _logger;
 
     public string Name => GrantTypeConstants.APPLE;
+    private const string PlatFormMobile = "mobile";
 
     public AppleGrantHandler(
         IConfiguration configuration,
@@ -43,9 +51,10 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
             var code = context.Request.GetParameter("code")?.ToString();
             var idToken = context.Request.GetParameter("id_token")?.ToString();
             var source = context.Request.GetParameter("source")?.ToString();
+            var platform = context.Request.GetParameter("platform")?.ToString() ?? string.Empty;
             
-            _logger.LogInformation("AppleGrantHandler.HandleAsync source: {source} idToken: {idToken} code: {code}", 
-                source, idToken, code);
+            _logger.LogInformation("AppleGrantHandler.HandleAsync source: {source} idToken: {idToken} code: {code} platform: {platform}", 
+                source, idToken, code, platform);
             
             var aud = source == "ios" ? _configuration["Apple:NativeClientId"] : _configuration["Apple:WebClientId"];
             if (string.IsNullOrEmpty(idToken))
@@ -56,7 +65,7 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
                     return ErrorResult("Missing both id_token and code");
                 }
                 
-                idToken = await ExchangeCodeForTokenAsync(code, aud);
+                idToken = await ExchangeCodeForTokenAsync(code, aud, platform);
                 _logger.LogInformation("AppleGrantHandler.HandleAsync ExchangeCodeForTokenAsync code: {idToken} aud: {aud} token: {token}", code, aud, idToken);
 
                 if (idToken.IsNullOrEmpty())
@@ -231,16 +240,26 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
         return resources;
     }
     
-    private async Task<string> ExchangeCodeForTokenAsync(string code, string clientId)
+    private async Task<string> ExchangeCodeForTokenAsync(string code, string clientId, string platform)
     {
         var clientSecret = GenerateClientSecret(clientId);
         using var client = new HttpClient();
+
+        var redirectUrl = string.Empty;
+        if (platform == PlatFormMobile)
+        {
+            redirectUrl = _configuration["Apple:MobileRedirectUri"];
+        }
+        else
+        {
+            redirectUrl = _configuration["Apple:RedirectUri"];
+        }
         
         var body = new List<KeyValuePair<string, string>>
         {
             new KeyValuePair<string, string>("grant_type", "authorization_code"),
             new KeyValuePair<string, string>("code", code),
-            new KeyValuePair<string, string>("redirect_uri", _configuration["Apple:RedirectUri"]),
+            new KeyValuePair<string, string>("redirect_uri", redirectUrl),
             new KeyValuePair<string, string>("client_id", clientId),
             new KeyValuePair<string, string>("client_secret", clientSecret),
         };
@@ -256,6 +275,8 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
         }
         
         var json = await response.Content.ReadAsStringAsync();
+        _logger.LogInformation("[AppleGrantHandler][ExchangeCodeForTokenAsync]  json: {json}",json);
+
         var tokenResp = JsonConvert.DeserializeObject<TokenResponse>(json);
         return tokenResp.IdToken;
     }

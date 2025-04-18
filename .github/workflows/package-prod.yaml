@@ -1,11 +1,11 @@
-name: Package Staging
+name: Package Production
 
 on:
   push:
-    branches:
-      - "release/*"
+    tags:
+      - "v*.*.*"
 
-run-name: Deploy Aevatar Station on ${{ github.ref }} to Staging from ${{ github.sha }}
+run-name: Deploy Aevatar Station on ${{ github.ref }} to Production from ${{ github.sha }}
 
 env:
   DOTNET_INSTALL_DIR: "./.dotnet"
@@ -30,10 +30,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: '9.0.x'
+
       - name: Cache NuGet Packages
         id: nuget-packages
         uses: actions/cache@v4
@@ -47,7 +49,10 @@ jobs:
         if: ${{ steps.nuget-packages.outputs.cache-hit == 'true' }}
         continue-on-error: true
         run: ls -lh ~/.nuget/packages
-      - run: dotnet publish src/${{ matrix.servicename }}/${{ matrix.servicename }}.csproj -o out/${{ matrix.servicename }}
+
+      - name: Publish .NET service
+        run: dotnet publish src/${{ matrix.servicename }}/${{ matrix.servicename }}.csproj -o out/${{ matrix.servicename }}
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -75,25 +80,30 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Set short git commit SHA
         id: vars
         run: |
           calculatedSha=$(git rev-parse --short ${{ github.sha }})
           echo "short_sha=$calculatedSha" >> "$GITHUB_OUTPUT"
+
       - name: Download a single artifact
         uses: actions/download-artifact@v4
         with:
           name: ${{ matrix.servicename }}
           path: out/${{ matrix.servicename }}
+
       - name: Create image tag
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ secrets.REPOSITORY_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/${{ matrix.servicename }}
           tags: |
-            type=sha
+            type=ref,event=tag
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -104,23 +114,5 @@ jobs:
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-        
-  dispatch:
-    runs-on: aismart-runner
-    needs: build-and-push-image
-    steps:
-      - name: Deploy
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.TOK }}
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: 'AElfDevops',
-              repo: 'devops',
-              workflow_id: 'aevatar-station-deploy.yaml',
-              ref: 'main',
-              inputs: {
-                env: 'staging',
-                commit_sha: 'sha-${{ needs.build-and-push-image.outputs.short_sha }}',
-              }
-            })
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

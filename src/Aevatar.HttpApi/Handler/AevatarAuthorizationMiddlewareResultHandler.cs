@@ -35,7 +35,7 @@ public class AevatarAuthorizationMiddlewareResultHandler : IAuthorizationMiddlew
             var claims = "";
             foreach (var claim in user.Claims)
             {
-                claims += claim.Type + ":  "+ claim.Value + "   ";
+                claims += claim.Type + ":  "+ claim.Value + "    ";
             }
             _logger.LogInformation("claims:{claims}",claims);
             var userId = user.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;

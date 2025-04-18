@@ -20,13 +20,13 @@ public static class EndpointsExtensions
             switch (webhook.HttpMethod.ToUpperInvariant())
             {
                 case "POST":
-                    endpoints.MapPost(webhook.GetFullPath(webhookId), async context =>
+                    endpoints.MapPost(webhook.RelativePath, async context =>
                     {
                         await ExecuteWebhookHandler(webhook, context);
                     });
                     break;
                 case "GET":
-                    endpoints.MapGet(webhook.GetFullPath(webhookId), async context =>
+                    endpoints.MapGet(webhook.RelativePath, async context =>
                     {
                         await ExecuteWebhookHandler(webhook, context);
                     });

@@ -2,6 +2,7 @@
 using Aevatar.Notification;
 using Aevatar.Permissions;
 using Aevatar.User;
+using Aevatar.Workflow;
 using MongoDB.Driver;
 using Volo.Abp.AuditLogging.MongoDB;
 using Volo.Abp.BackgroundJobs.MongoDB;
@@ -44,5 +45,6 @@ public class AevatarMongoDbContext : AbpMongoDbContext
         modelBuilder.Entity<IdentityUserExtension>(b => { b.CollectionName = "IdentityUserExtensions"; });
         modelBuilder.Entity<ProjectAppIdInfo>(b => b.CollectionName = "ProjectAppInfoCollection");
         modelBuilder.Entity<NotificationInfo>(b => b.CollectionName = "NotificationInfoCollection");
+        modelBuilder.Entity<WorkflowInfo>(b => b.CollectionName = "WorkflowInfoCollection");
     }
 }

@@ -3,6 +3,6 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Aevatar.WebHook.SDK" Version="1.1.1" />
+    <PackageVersion Include="Aevatar.WebHook.SDK" Version="1.1.2" />
   </ItemGroup>
 </Project>

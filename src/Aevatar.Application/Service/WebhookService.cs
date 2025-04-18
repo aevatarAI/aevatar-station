@@ -12,22 +12,23 @@ using Volo.Abp.Auditing;
 
 namespace Aevatar.Service;
 
-
 public interface IWebhookService
 {
     Task CreateWebhookAsync(string webhookId, string version, byte[]? codeBytes);
     Task<string> GetWebhookCodeAsync(string webhookId, string version);
     Task DestroyWebhookAsync(string inputWebhookId, string inputVersion);
+    Task UpdateCodeAsync(string webhookId, string version, byte[]? codeBytes);
 }
 
 [RemoteService(IsEnabled = false)]
 [DisableAuditing]
-public class WebhookService: ApplicationService, IWebhookService
+public class WebhookService : ApplicationService, IWebhookService
 {
     private readonly IClusterClient _clusterClient;
     private readonly IHostDeployManager _hostDeployManager;
     private readonly WebhookDeployOptions _webhookDeployOptions;
-    public WebhookService(IClusterClient clusterClient,IHostDeployManager hostDeployManager,
+
+    public WebhookService(IClusterClient clusterClient, IHostDeployManager hostDeployManager,
         IOptions<WebhookDeployOptions> webhookDeployOptions)
     {
         _clusterClient = clusterClient;
@@ -37,12 +38,11 @@ public class WebhookService: ApplicationService, IWebhookService
 
     public async Task CreateWebhookAsync(string webhookId, string version, byte[]? codeBytes)
     {
-        if (codeBytes !=null)
+        if (codeBytes != null)
         {
             await _clusterClient.GetGrain<ICodeGAgent>(GuidUtil.StringToGuid(webhookId)).UploadCodeAsync(
-                webhookId,version,codeBytes);
-            await _hostDeployManager.CreateNewWebHookAsync(webhookId, version,_webhookDeployOptions.WebhookImageName);
-
+                webhookId, version, codeBytes);
+            await _hostDeployManager.CreateNewWebHookAsync(webhookId, version, _webhookDeployOptions.WebhookImageName);
         }
     }
 
@@ -56,6 +56,14 @@ public class WebhookService: ApplicationService, IWebhookService
     {
         await _hostDeployManager.DestroyWebHookAsync(inputWebhookId, inputVersion);
     }
+
+    public async Task UpdateCodeAsync(string webhookId, string version, byte[]? codeBytes)
+    {
+        if (codeBytes != null)
+        {
+            await _clusterClient.GetGrain<ICodeGAgent>(GuidUtil.StringToGuid(webhookId)).UploadCodeAsync(
+                webhookId, version, codeBytes);
+            await _hostDeployManager.RestartHostAsync(webhookId, version);
+        }
+    }
 }
-
-
