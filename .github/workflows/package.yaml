@@ -11,7 +11,7 @@ on:
         options:
           - Aevatar.Silo
           - Aevatar.Developer.Host
-          - Aevetar.Webhook.Host
+          - Aevatar.WebHook.Host
 
 env:
   DOTNET_INSTALL_DIR: "./.dotnet"
