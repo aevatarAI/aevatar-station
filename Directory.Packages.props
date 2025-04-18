@@ -13,20 +13,20 @@
     <PackageVersion Include="AElf.Sdk.CSharp" Version="1.5.0" />
     <PackageVersion Include="AElf.Types" Version="1.5.0" />
     <PackageVersion Include="AElf.OpenTelemetry" Version="8.2.0" />
-    <PackageVersion Include="Aevatar" Version="$(AevatarVersion)" />
-    <PackageVersion Include="Aevatar.Core" Version="$(AevatarVersion)" />
-    <PackageVersion Include="Aevatar.Core.Abstractions" Version="$(AevatarVersion)" />
-    <PackageVersion Include="Aevatar.EventSourcing.Core" Version="$(AevatarVersion)" />
-    <PackageVersion Include="Aevatar.Plugins" Version="$(AevatarVersion)" />
-    <PackageVersion Include="Aevatar.EventSourcing.MongoDB" Version="$(AevatarVersion)" />
-    <PackageVersion Include="Aevatar.PermissionManagement" Version="$(AevatarVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="$(AevatarGAgentVersion)" />
+    <PackageVersion Include="Aevatar" Version="$(AevatarVerion)" />
+    <PackageVersion Include="Aevatar.Core" Version="$(AevatarVerion)" />
+    <PackageVersion Include="Aevatar.Core.Abstractions" Version="$(AevatarVerion)" />
+    <PackageVersion Include="Aevatar.EventSourcing.Core" Version="$(AevatarVerion)" />
+    <PackageVersion Include="Aevatar.Plugins" Version="$(AevatarVerion)" />
+    <PackageVersion Include="Aevatar.EventSourcing.MongoDB" Version="$(AevatarVerion)" />
+    <PackageVersion Include="Aevatar.PermissionManagement" Version="$(AevatarVerion)" />
+    <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="$(AevatarGAgentVerion)" />
+    <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="$(AevatarGAgentVerion)" />
+    <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="$(AevatarGAgentVerion)" />
     <PackageVersion Include="Aevatar.SignalR" Version="1.5.5-parent.16" />
-    <PackageVersion Include="Aevatar.GAgents.SocialGAgent" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.Twitter" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.ChatAgent" Version="$(AevatarGAgentVersion)" />
+    <PackageVersion Include="Aevatar.GAgents.SocialGAgent" Version="$(AevatarGAgentVerion)" />
+    <PackageVersion Include="Aevatar.GAgents.Twitter" Version="$(AevatarGAgentVerion)" />
+    <PackageVersion Include="Aevatar.GAgents.ChatAgent" Version="$(AevatarGAgentVerion)" />
     <!-- AI and Analysis packages -->
     <PackageVersion Include="AutoGen" Version="0.2.1" />
     <PackageVersion Include="AutoGen.Core" Version="0.2.1" />
