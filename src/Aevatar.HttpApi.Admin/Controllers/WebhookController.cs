@@ -62,7 +62,7 @@ public class WebhookController : AevatarController
             codeBytes = input.Code.GetAllBytes();
         }
 
-        await _webhookService.UpdateCodeAsync(clientId, "1",
+        await _webhookService.UpdateCodeAsync(clientId.ToLower(), "1",
             codeBytes);
     }
 
