@@ -28,6 +28,13 @@ public class AccountController : AevatarController
     }
     
     [HttpPost]
+    [Route("godgpt-register")]
+    public virtual Task<IdentityUserDto> GodgptRegisterAsync(GodGptRegisterDto input)
+    {
+        return _accountService.GodgptRegisterAsync(input);
+    }
+    
+    [HttpPost]
     [Route("send-register-code")]
     public virtual Task SendRegisterCodeAsync(SendRegisterCodeDto input)
     {
@@ -53,5 +60,12 @@ public class AccountController : AevatarController
     public virtual Task ResetPasswordAsync(ResetPasswordDto input)
     {
         return _accountService.ResetPasswordAsync(input);
+    }
+    
+    [HttpPost]
+    [Route("check-email-registered")]
+    public virtual Task<bool> CheckEmailRegisteredAsync(CheckEmailRegisteredDto input)
+    {
+        return _accountService.CheckEmailRegisteredAsync(input);
     }
 }

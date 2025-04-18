@@ -59,6 +59,28 @@ public class AccountService : AccountAppService, IAccountService
         return ObjectMapper.Map<IdentityUser, IdentityUserDto>(user);
     }
 
+    public async Task<IdentityUserDto> GodgptRegisterAsync(GodGptRegisterDto input)
+    {
+        var code = await _registerCode.GetAsync(GetRegisterCodeKey(input.EmailAddress));
+        if (code != input.Code)
+        {
+            throw new UserFriendlyException("Invalid captcha code");
+        }
+
+        await IdentityOptions.SetAsync();
+        var userName = input.UserName.IsNullOrWhiteSpace() ? GuidGenerator.Create().ToString() : input.UserName;
+        var user = new IdentityUser(GuidGenerator.Create(), userName, input.EmailAddress);
+    
+        input.MapExtraPropertiesTo(user);
+
+        (await UserManager.CreateAsync(user, input.Password)).CheckErrors();
+
+        await UserManager.SetEmailAsync(user, input.EmailAddress);
+        await UserManager.AddDefaultRolesAsync(user);
+
+        return ObjectMapper.Map<IdentityUser, IdentityUserDto>(user);
+    }
+
     public async Task SendRegisterCodeAsync(SendRegisterCodeDto input)
     {
         var user = await UserManager.FindByEmailAsync(input.Email);
@@ -77,6 +99,12 @@ public class AccountService : AccountAppService, IAccountService
         var user = await GetUserByEmailAsync(input.Email);
         var resetToken = await UserManager.GeneratePasswordResetTokenAsync(user);
         await _aevatarAccountEmailer.SendPasswordResetLinkAsync(user, resetToken);
+    }
+
+    public async Task<bool> CheckEmailRegisteredAsync(CheckEmailRegisteredDto input)
+    {
+        var existingUser = await UserManager.FindByEmailAsync(input.EmailAddress);
+        return existingUser != null;
     }
     
     private string GenerateVerificationCode()

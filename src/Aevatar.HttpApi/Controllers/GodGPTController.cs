@@ -21,10 +21,18 @@ public class GodGPTController : AevatarController
     private readonly IGodGPTService _godGptService;
     private readonly string _defaultLLM = "OpenAI";
     private readonly string _defaultPrompt = "you are a robot";
+    const string Version = "1.0.0";
+
 
     public GodGPTController(IGodGPTService godGptService)
     {
         _godGptService = godGptService;
+    }
+    
+    [HttpGet("query-version")]
+    public Task<string> QueryVersion()
+    {
+        return Task.FromResult(Version);
     }
 
     [HttpPost("create-session")]

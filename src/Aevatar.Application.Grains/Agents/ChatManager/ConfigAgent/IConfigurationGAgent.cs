@@ -12,6 +12,8 @@ public interface IConfigurationGAgent : IGAgent
     Task<bool> GetStreamingModeEnabled();
     [ReadOnly]
     Task<string> GetPrompt();
-    
+        
     Task UpdateSystemPromptAsync(String systemPrompt);
+    [ReadOnly]
+    Task<string> GetUserProfilePromptAsync();
 }

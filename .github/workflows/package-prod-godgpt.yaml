@@ -1,0 +1,51 @@
+name: Package Prod GodGPT
+
+on:
+  workflow_dispatch:
+    inputs:
+      servicename:
+        description: 'Select service to build and deploy'
+        required: true
+        default: 'Aevatar.HttpApi.Host'
+        type: choice
+        options:
+          - Aevatar.Silo
+          - Aevatar.Developer.Host
+
+env:
+  DOTNET_INSTALL_DIR: "./.dotnet"
+
+concurrency:
+  group: workflow-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: aismart-runner
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.0.x'
+      - name: Cache NuGet Packages
+        id: nuget-packages
+        uses: actions/cache@v4
+        env:
+          cache-name: nuget-package-cache
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ github.event.inputs.servicename }}
+
+      - name: List NuGet Packages
+        if: ${{ steps.nuget-packages.outputs.cache-hit == 'true' }}
+        continue-on-error: true
+        run: ls -lh ~/.nuget/packages
+      - run: dotnet publish src/${{ github.event.inputs.servicename}}/${{ github.event.inputs.servicename }}.csproj -o out/${{ github.event.inputs.servicename }}
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.servicename }}
+          path: out/${{ github.event.inputs.servicename }}
+          retention-days: 1
