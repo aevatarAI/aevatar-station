@@ -15,7 +15,7 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
         {
             var syncWorker = GrainFactory.GetGrain<IAevatarSyncWorker<TRequest, TResponse>>(Guid.NewGuid());
             await syncWorker.SetLongRunTaskAsync(GetEventBaseStream(GrainId));
-            await syncWorker.StartWorkAndPollUntilResult(request);
+            await syncWorker.Start(request);
         }
         catch (Exception ex)
         {
