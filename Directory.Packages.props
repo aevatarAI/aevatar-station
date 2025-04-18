@@ -47,7 +47,7 @@
     <PackageVersion Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="11.1.0" />
     <PackageVersion Include="NJsonSchema" Version="11.1.0" />
     <PackageVersion Include="OpenAI.API" Version="1.0.0" />
-    <PackageVersion Include="Orleans.SyncWork" Version="8.1.12" />
+    <PackageVersion Include="Orleans.SyncWork" Version="9.4.4" />
     <PackageVersion Include="Serilog.Formatting.Compact" Version="2.0.0" />
     <!-- ABP packages -->
     <PackageVersion Include="Volo.Abp.Account.Application" Version="$(AbpVersion)" />

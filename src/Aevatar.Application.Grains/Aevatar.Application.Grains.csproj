@@ -26,6 +26,7 @@
         <PackageReference Include="XWorkerAgent"/>
         <PackageReference Include="TelegramWorkerAgent"/>
         <PackageReference Include="Aevatar.GAgents.SocialGAgent"/>
+        <PackageReference Include="Orleans.SyncWork"/>
     </ItemGroup>
 
     <ItemGroup>
