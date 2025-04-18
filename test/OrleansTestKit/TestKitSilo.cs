@@ -25,7 +25,7 @@ namespace Orleans.TestKit;
 /// <summary>
 /// The central abstraction for the OrleansTestKit -- stands up multiple services and provides a centralized abstraction for interacting with test grains
 /// </summary>
-public sealed class TestKitSilo
+public sealed class TestKitSilo : IDisposable
 {
     private readonly List<IGrainBase> _activatedGrains = new();
 
@@ -71,10 +71,6 @@ public sealed class TestKitSilo
         ServiceProvider.AddService<IGrainRuntime>(GrainRuntime);
         _grainCreator = new TestGrainCreator(GrainRuntime, ReminderRegistry, TestGrainStorage, ServiceProvider);
 
-        
-        // var manager = new AgentDescriptionManager();
-        // ServiceProvider.AddService(manager);
-        // ServiceProvider.AddService(new AutoGenExecutor(NullLogger<AutoGenExecutor>.Instance, GrainFactory, manager, new TestChatAgentProvider()));
         ServiceProvider.AddService<IGrainStorage>(TestGrainStorage);
         var provider = new ServiceCollection()
             .AddSingleton<GrainTypeResolver>()
@@ -296,5 +292,29 @@ public sealed class TestKitSilo
     public bool IsGrainTypeCreated(Type grainType)
     {
         return _createdGrains.ContainsKey(grainType);
+    }
+
+    /// <summary>
+    /// Disposes resources used by the TestKitSilo
+    /// </summary>
+    public void Dispose()
+    {
+        // 释放所有已激活的Grain
+        foreach (var grain in _activatedGrains)
+        {
+            if (grain is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+        }
+        
+        // 清空创建的Grain列表
+        _activatedGrains.Clear();
+        _createdGrains.Clear();
+        
+        // 注意：这些管理器没有实现IDisposable接口，所以我们不需要尝试释放它们
+        // 如果将来它们实现了IDisposable，可以在这里添加相应的代码
+        
+        GC.SuppressFinalize(this);
     }
 }

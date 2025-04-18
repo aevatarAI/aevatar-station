@@ -19,8 +19,20 @@
         <PackageReference Include="Aevatar.GAgents.AIGAgent"/>
         <PackageReference Include="Aevatar.GAgents.SemanticKernel"/>
         <PackageReference Include="Aevatar.PermissionManagement" />
+<<<<<<< HEAD
         <PackageReference Include="Aevatar.GAgents.GroupChat"/>
         <PackageReference Include="Aevatar.GAgents.AI.Abstractions"/>
+=======
+
+
+        <PackageReference Include="Aevatar.GAgents.AI.Abstractions"/>
+         <PackageReference Include="MineAiFun.GAgents"/>
+        <PackageReference Include="Aevatar.GAgents.Twitter"/>
+        <PackageReference Include="XWorkerAgent"/>
+        <PackageReference Include="TelegramWorkerAgent"/>
+        <PackageReference Include="Aevatar.GAgents.SocialGAgent"/>
+
+>>>>>>> origin/feature/update-webhook
     </ItemGroup>
 
     <ItemGroup>

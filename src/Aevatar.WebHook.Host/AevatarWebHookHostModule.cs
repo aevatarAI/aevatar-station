@@ -45,13 +45,12 @@ public class AevatarListenerHostModule : AbpModule
         var app = context.GetApplicationBuilder();
         var handlers = context.ServiceProvider.GetServices<IWebhookHandler>();
         app.UseRouting();
-        app.UseHealthChecks("/health");
         var configuration = context.GetConfiguration();
         var webhookId = configuration["Webhook:WebhookId"];
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapWebhookHandlers(handlers,webhookId);
-            endpoints.MapHealthChecks($"/{webhookId}/health");
+            endpoints.MapHealthChecks("/health");
         });
     }
        

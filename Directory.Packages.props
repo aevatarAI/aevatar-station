@@ -23,7 +23,7 @@
     <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="$(AevatarGAgentVerion)" />
     <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="$(AevatarGAgentVerion)" />
     <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="$(AevatarGAgentVerion)" />
-    <PackageVersion Include="Aevatar.SignalR" Version="1.5.5-parent.1" />
+    <PackageVersion Include="Aevatar.SignalR" Version="1.5.5-parent.11" />
     <PackageVersion Include="Aevatar.GAgents.SocialGAgent" Version="$(AevatarGAgentVerion)" />
     <PackageVersion Include="Aevatar.GAgents.Twitter" Version="$(AevatarGAgentVerion)" />
     <PackageVersion Include="Aevatar.GAgents.ChatAgent" Version="$(AevatarGAgentVerion)" />
@@ -199,7 +199,7 @@
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client.Core" Version="9.0.2" />
     <PackageVersion Include="MineAiFun.GAgents" Version="1.1.13" />
     <PackageVersion Include="Neo4j.Driver" Version="5.27.0" />
-    <PackageVersion Include="XWorkerAgent" Version="0.0.28" />
-    <PackageVersion Include="TelegramWorkerAgent" Version="0.0.8" />
+    <PackageVersion Include="XWorkerAgent" Version="0.0.79" />
+    <PackageVersion Include="TelegramWorkerAgent" Version="0.0.84" />
   </ItemGroup>
 </Project>
