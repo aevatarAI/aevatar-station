@@ -27,3 +27,9 @@ public class SetChatManagerGuidEventLog : GodChatEventLog
 {
     [Id(0)] public Guid ChatManagerGuid { get; set; }
 }
+
+[GenerateSerializer]
+public class SetAIAgentIdLogEvent : GodChatEventLog
+{
+    [Id(0)] public List<Guid> AIAgentIds { get; set; }
+}

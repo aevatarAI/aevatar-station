@@ -9,6 +9,7 @@ public class GodChatState:ChatGAgentState
     [Id(1)] public string? Title { get; set; }
     
     [Id(2)] public Guid ChatManagerGuid { get; set; }
+    [Id(3)] public List<Guid> AIAgentIds { get; set; } = new List<Guid>();
 }
 
 [GenerateSerializer]
