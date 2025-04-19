@@ -468,6 +468,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             {
                 SessionId = item.SessionId,
                 Title = item.Title,
+                CreateAt = item.CreateAt
             });
         }
 
@@ -563,7 +564,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
                 State.SessionInfoList.Add(new SessionInfo()
                 {
                     SessionId = @createSessionInfo.SessionId,
-                    Title = @createSessionInfo.Title
+                    Title = @createSessionInfo.Title,
+                    CreateAt = DateTime.UtcNow
                 });
                 break;
             case DeleteSessionEventLog @deleteSessionEventLog:
