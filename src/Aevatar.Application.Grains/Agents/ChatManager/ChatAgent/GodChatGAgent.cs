@@ -337,16 +337,14 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
 
             await ConfirmEvents();
         }
-        else
+        
+        await PublishAsync(new ResponseStreamGodChat()
         {
-            await PublishAsync(new ResponseStreamGodChat()
-            {
-                Response = chatContent.ResponseContent,
-                ChatId = contextDto.ChatId,
-                IsLastChunk = chatContent.IsLastChunk,
-                SerialNumber = chatContent.SerialNumber
-            });
-        }
+            Response = chatContent.ResponseContent,
+            ChatId = contextDto.ChatId,
+            IsLastChunk = chatContent.IsLastChunk,
+            SerialNumber = chatContent.SerialNumber
+        });
     }
 
     public Task<List<ChatMessage>> GetChatMessageAsync()
