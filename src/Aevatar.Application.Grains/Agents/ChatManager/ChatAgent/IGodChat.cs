@@ -19,6 +19,8 @@ public interface IGodChat : IGAgent
     [ReadOnly]
     Task<List<ChatMessage>> GetChatMessageAsync();
 
+    Task StreamChatWithSessionAsync(Guid sessionId, string sysmLLM, string content, string chatId,
+        ExecutionPromptSettings promptSettings = null);
     Task SetUserProfileAsync(UserProfileDto? userProfileDto);
     Task<UserProfileDto?> GetUserProfileAsync();
 

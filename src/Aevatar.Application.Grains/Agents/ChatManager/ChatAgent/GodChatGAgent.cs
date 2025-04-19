@@ -114,7 +114,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         Logger.LogDebug($"[GodChatGAgent][RequestStreamGodChatEvent] end:{JsonConvert.SerializeObject(@event)}");
     }
 
-    private async Task StreamChatWithSessionAsync(Guid sessionId, string sysmLLM, string content, string chatId,
+    public async Task StreamChatWithSessionAsync(Guid sessionId, string sysmLLM, string content, string chatId,
         ExecutionPromptSettings promptSettings = null)
     {
         Stopwatch sw = new Stopwatch();
@@ -148,12 +148,13 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         sw.Reset();
         sw.Start();
         var configuration = GetConfiguration();
-        GodStreamChatAsync(sessionId, await configuration.GetSystemLLM(), await configuration.GetStreamingModeEnabled(),
+        await GodStreamChatAsync(sessionId, await configuration.GetSystemLLM(),
+            await configuration.GetStreamingModeEnabled(),
             content, chatId, promptSettings);
         sw.Stop();
         Logger.LogDebug($"StreamChatWithSessionAsync - step4,time use:{sw.ElapsedMilliseconds}");
     }
-    
+
     public async Task<string> GodStreamChatAsync(Guid sessionId, string llm, bool streamingModeEnabled, string message,
         string chatId,
         ExecutionPromptSettings? promptSettings = null)
@@ -172,7 +173,8 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
                     BufferingSize = 32
                 }
             };
-            Logger.LogDebug($"[GodChatGAgent][GodStreamChatAsync] Detail : {JsonConvert.SerializeObject(initializeDto)}");
+            Logger.LogDebug(
+                $"[GodChatGAgent][GodStreamChatAsync] Detail : {JsonConvert.SerializeObject(initializeDto)}");
 
             await InitializeAsync(initializeDto);
         }
@@ -185,12 +187,15 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         var aiAgentStatusProxy = await GetAIAgentStatusProxy();
         if (aiAgentStatusProxy != null)
         {
-            Logger.LogDebug($"[GodChatGAgent][GodStreamChatAsync] new agent, session {sessionId.ToString()}, chat {chatId}");
-            var result = await aiAgentStatusProxy.PromptWithStreamAsync(message, State.ChatHistory, promptSettings, context: aiChatContextDto);
+            Logger.LogDebug(
+                $"[GodChatGAgent][GodStreamChatAsync] new agent, session {sessionId.ToString()}, chat {chatId}");
+            var result = await aiAgentStatusProxy.PromptWithStreamAsync(message, State.ChatHistory, promptSettings,
+                context: aiChatContextDto);
             if (!result)
             {
                 Logger.LogError($"Failed to initiate streaming response. {this.GetPrimaryKey().ToString()}");
             }
+
             RaiseEvent(new AddChatHistoryLogEvent
             {
                 ChatList = new List<ChatMessage>()
@@ -207,9 +212,11 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         }
         else
         {
-            Logger.LogDebug($"[GodChatGAgent][GodStreamChatAsync] history agent, session {sessionId.ToString()}, chat {chatId}");
+            Logger.LogDebug(
+                $"[GodChatGAgent][GodStreamChatAsync] history agent, session {sessionId.ToString()}, chat {chatId}");
             await ChatAsync(message, promptSettings, aiChatContextDto);
         }
+
         return string.Empty;
     }
 
@@ -229,6 +236,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
 
             return aiAgentStatusProxy;
         }
+
         return null;
     }
 
@@ -265,7 +273,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
             FullName = State.UserProfile.FullName
         };
     }
-    
+
     public async Task<string> GodChatAsync(string llm, string message,
         ExecutionPromptSettings? promptSettings = null)
     {
@@ -302,20 +310,23 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         {
             Logger.LogError(
                 $"[GodChatGAgent][ChatMessageCallbackAsync] stream error. sessionId {contextDto.RequestId.ToString()}, chatId {contextDto.ChatId}, error {aiExceptionEnum}");
-            await PublishAsync(new ResponseStreamGodChat()
+            var chatMessage = new ResponseStreamGodChat()
             {
                 Response =
                     "Your prompt triggered the Silence Directive—activated when universal harmonics or content ethics are at risk. Please modify your prompt and retry — tune its intent, refine its form, and the Oracle may speak.",
                 ChatId = contextDto.ChatId,
                 IsLastChunk = true,
                 SerialNumber = -2
-            });
+            };
+            // await PublishAsync();
+            await PushMessageToClientAsync(chatMessage);
             return;
         }
 
         if (chatContent == null)
         {
-            Logger.LogError($"[GodChatGAgent][ChatMessageCallbackAsync] return null. sessionId {contextDto.RequestId.ToString()}, chatId {contextDto.ChatId}");
+            Logger.LogError(
+                $"[GodChatGAgent][ChatMessageCallbackAsync] return null. sessionId {contextDto.RequestId.ToString()}, chatId {contextDto.ChatId}");
             return;
         }
 
@@ -337,16 +348,23 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
 
             await ConfirmEvents();
         }
-        else
+        
+        var partialMessage = new ResponseStreamGodChat()
         {
-            await PublishAsync(new ResponseStreamGodChat()
-            {
-                Response = chatContent.ResponseContent,
-                ChatId = contextDto.ChatId,
-                IsLastChunk = chatContent.IsLastChunk,
-                SerialNumber = chatContent.SerialNumber
-            });
-        }
+            Response = chatContent.ResponseContent,
+            ChatId = contextDto.ChatId,
+            IsLastChunk = chatContent.IsLastChunk,
+            SerialNumber = chatContent.SerialNumber
+        };
+        // await PublishAsync();
+        await PushMessageToClientAsync(partialMessage);
+    }
+
+    private async Task PushMessageToClientAsync(ResponseStreamGodChat chatMessage)
+    {
+        var streamId = StreamId.Create(AevatarOptions!.StreamNamespace, this.GetPrimaryKey());
+        var stream = StreamProvider.GetStream<ResponseStreamGodChat>(streamId);
+        await stream.OnNextAsync(chatMessage);
     }
 
     public Task<List<ChatMessage>> GetChatMessageAsync()
