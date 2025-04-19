@@ -344,7 +344,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         RaiseEvent(new CreateSessionInfoEventLog()
         {
             SessionId = sessionId,
-            Title = ""
+            Title = "",
+            CreateAt = DateTime.UtcNow
         });
 
         await ConfirmEvents();
@@ -565,7 +566,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
                 {
                     SessionId = @createSessionInfo.SessionId,
                     Title = @createSessionInfo.Title,
-                    CreateAt = DateTime.UtcNow
+                    CreateAt = @createSessionInfo.CreateAt
                 });
                 break;
             case DeleteSessionEventLog @deleteSessionEventLog:
