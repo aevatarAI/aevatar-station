@@ -100,7 +100,17 @@ public class ProjectService : OrganizationService, IProjectService
         var organization = await OrganizationUnitRepository.GetAsync(id);
         organization.DisplayName = input.DisplayName.Trim();
         organization.ExtraProperties[AevatarConsts.ProjectDomainNameKey] = input.DomainName.Trim();
-        await OrganizationUnitManager.UpdateAsync(organization);
+        
+        try
+        {
+            await OrganizationUnitManager.UpdateAsync(organization);
+        }
+        catch (BusinessException ex)
+            when (ex.Code == IdentityErrorCodes.DuplicateOrganizationUnitDisplayName)
+        {
+            throw new UserFriendlyException("The same project name already exists");
+        }
+        
         return ObjectMapper.Map<OrganizationUnit, ProjectDto>(organization);
     }
 
