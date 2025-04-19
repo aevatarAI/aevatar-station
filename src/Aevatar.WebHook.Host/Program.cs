@@ -16,7 +16,7 @@ public class Program
         var configuration = new ConfigurationBuilder()
             .AddJsonFile("appsettings.json")
             .Build();
-        
+
         var webhookId = configuration["Webhook:WebhookId"];
         var version = configuration["Webhook:Version"];
         Log.Logger = new LoggerConfiguration()
@@ -27,10 +27,7 @@ public class Program
 #endif
             .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
             .Enrich.FromLogContext()
-            .Enrich.WithProperty("WebhookId", webhookId)
-            .Enrich.WithProperty("Version", version)
             .ReadFrom.Configuration(configuration)
-            .WriteTo.Async(c => c.Console())
             .CreateLogger();
 
         try
@@ -49,7 +46,7 @@ public class Program
             Log.CloseAndFlush();
         }
     }
-    
+
     private static IHostBuilder CreateHostBuilder(string[] args)
     {
         return OrleansHostExtensions.UseOrleansClient(Host.CreateDefaultBuilder(args))
