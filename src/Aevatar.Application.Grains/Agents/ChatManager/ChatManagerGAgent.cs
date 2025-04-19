@@ -465,11 +465,16 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         var result = new List<SessionInfoDto>();
         foreach (var item in State.SessionInfoList)
         {
+            var createAt = item.CreateAt;
+            if (createAt == default)
+            {
+                createAt = new DateTime(2025, 4, 18);
+            }
             result.Add(new SessionInfoDto()
             {
                 SessionId = item.SessionId,
                 Title = item.Title,
-                CreateAt = item.CreateAt
+                CreateAt = createAt
             });
         }
 
