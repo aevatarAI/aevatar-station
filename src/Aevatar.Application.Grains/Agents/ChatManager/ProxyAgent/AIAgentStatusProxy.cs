@@ -10,6 +10,7 @@ using Aevatar.GAgents.AIGAgent.Agent;
 using Aevatar.GAgents.AIGAgent.Dtos;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Nito.Disposables;
 using Orleans.Concurrency;
 
 namespace Aevatar.Application.Grains.Agents.ChatManager.ProxyAgent;
@@ -93,6 +94,8 @@ public class AIAgentStatusProxy :
         var timeElapsed = now - unavailableSince;
         if (timeElapsed > State.RecoveryDelay)
         {
+            Logger.LogDebug(
+                $"[AIAgentStatusProxy][IsAvailableAsync] recovery, LLM {State.SystemLLM}, Parent {State.ParentId.ToString()}");
             RaiseEvent(new SetAvailableLogEvent
             {
                 IsAvailable = true
@@ -100,7 +103,8 @@ public class AIAgentStatusProxy :
             await ConfirmEvents();
             return true;
         }
-
+        Logger.LogDebug(
+            $"[AIAgentStatusProxy][IsAvailableAsync] Unavailable, LLM {State.SystemLLM}, Parent {State.ParentId.ToString()}");
         return false;
     }
 
