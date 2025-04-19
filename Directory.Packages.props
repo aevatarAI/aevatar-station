@@ -62,6 +62,7 @@
     <PackageVersion Include="Volo.Abp.Authorization" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.AutoMapper" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Autofac" Version="$(AbpVersion)" />
+    <PackageVersion Include="Volo.Abp.Auditing" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.BackgroundJobs.Abstractions" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.BackgroundJobs.Domain" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.BackgroundJobs.Domain.Shared" Version="$(AbpVersion)" />

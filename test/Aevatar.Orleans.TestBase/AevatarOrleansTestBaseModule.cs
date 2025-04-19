@@ -1,3 +1,5 @@
+using Aevatar.Core;
+using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
 using Aevatar.CQRS.Provider;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,6 +33,8 @@ public class AevatarOrleansTestBaseModule : AbpModule
         context.Services.AddSingleton<ClusterFixture>();
         context.Services.AddSingleton<IClusterClient>(sp => context.Services.GetRequiredService<ClusterFixture>().Cluster.Client);
         context.Services.AddSingleton<IGrainFactory>(sp => context.Services.GetRequiredService<ClusterFixture>().Cluster.GrainFactory);
+        context.Services.AddSingleton<IGAgentFactory>(sp => new GAgentFactory(context.Services.GetRequiredService<ClusterFixture>().Cluster.Client));
+        context.Services.AddSingleton<IGAgentManager>(sp => new GAgentManager(context.Services.GetRequiredService<ClusterFixture>().Cluster.Client));
         context.Services.AddSingleton<ICQRSProvider, CQRSProvider>();
         Configure<AbpAutoMapperOptions>(options => { options.AddMaps<AevatarApplicationModule>(); });
 

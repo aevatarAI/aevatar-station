@@ -191,6 +191,19 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
             {
                 Logger.LogError($"Failed to initiate streaming response. {this.GetPrimaryKey().ToString()}");
             }
+            RaiseEvent(new AddChatHistoryLogEvent
+            {
+                ChatList = new List<ChatMessage>()
+                {
+                    new ChatMessage
+                    {
+                        ChatRole = ChatRole.User,
+                        Content = message
+                    }
+                }
+            });
+
+            await ConfirmEvents();
         }
         else
         {
