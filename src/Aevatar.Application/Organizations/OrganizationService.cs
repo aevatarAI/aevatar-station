@@ -219,7 +219,17 @@ public class OrganizationService : AevatarAppService, IOrganizationService
     {
         var organization = await OrganizationUnitRepository.GetAsync(id);
         organization.DisplayName = input.DisplayName.Trim();
-        await OrganizationUnitManager.UpdateAsync(organization);
+        
+        try
+        {
+            await OrganizationUnitManager.UpdateAsync(organization);
+        }
+        catch (BusinessException ex)
+            when (ex.Code == IdentityErrorCodes.DuplicateOrganizationUnitDisplayName)
+        {
+            throw new UserFriendlyException("The same organization name already exists");
+        }
+        
         return ObjectMapper.Map<OrganizationUnit, OrganizationDto>(organization);
     }
 
