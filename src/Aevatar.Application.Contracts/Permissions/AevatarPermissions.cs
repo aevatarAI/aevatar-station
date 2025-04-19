@@ -7,6 +7,9 @@ namespace Aevatar.Permissions
         public const string AdminGroup = "AdminManagement";
         public const string AdminPolicy = AdminGroup+".AdminPolicy";
         public const string DeveloperPlatform = "DeveloperPlatform";
+        
+        public const string OrganizationScopeKey = "Scope";
+        
         // Permissions for Agent Management
         public static class Agent
         {
@@ -70,10 +73,18 @@ namespace Aevatar.Permissions
             public const string Delete = Default + ".Delete";
         }
         
-        public static class OrganizationMembers
+        public static class Members
         {
-            public const string Default = DeveloperPlatform + ".OrganizationMembers";
+            public const string Default = DeveloperPlatform + ".Members";
             public const string Manage = Default + ".Manage";
+        }
+        
+        public static class Projects
+        {
+            public const string Default = DeveloperPlatform + ".Projects";
+            public const string Create = Default + ".Create";
+            public const string Edit = Default + ".Edit";
+            public const string Delete = Default + ".Delete";
         }
         
         public static class ApiKeys
@@ -82,6 +93,26 @@ namespace Aevatar.Permissions
             public const string Create = Default + ".Create";
             public const string Edit = Default + ".Edit";
             public const string Delete = Default + ".Delete";
+        }
+        
+        public static class Roles
+        {
+            public const string Default = DeveloperPlatform + ".Roles";
+            public const string Create = Default + ".Create";
+            public const string Edit = Default + ".Edit";
+            public const string Delete = Default + ".Delete";
+        }
+        
+        public const string Dashboard = DeveloperPlatform + ".Dashboards";
+        
+        public static class LLMSModels
+        {
+            public const string Default = Dashboard + ".LLMSModels";
+        }
+        
+        public static class ApiRequests
+        {
+            public const string Default = Dashboard + ".ApiRequests";
         }
     }
 }
