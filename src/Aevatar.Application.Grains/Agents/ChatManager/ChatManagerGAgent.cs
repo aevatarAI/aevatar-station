@@ -464,27 +464,6 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
     {
         var result = new List<SessionInfoDto>();
         
-        //TODO TestCode
-        result.Add(new SessionInfoDto
-        {
-            SessionId = Guid.NewGuid(),
-            Title = "Test Title3",
-            CreateAt = new DateTime(2025, 3, 5)
-        });
-        result.Add(new SessionInfoDto
-        {
-            SessionId = Guid.NewGuid(),
-            Title = "Test Title4",
-            CreateAt = new DateTime(2025, 4, 10)
-        });
-        result.Add(new SessionInfoDto
-        {
-            SessionId = Guid.NewGuid(),
-            Title = "Test Title5",
-            CreateAt = new DateTime(2025, 4, 18)
-        });
-        
-        
         foreach (var item in State.SessionInfoList)
         {
             var createAt = item.CreateAt;
