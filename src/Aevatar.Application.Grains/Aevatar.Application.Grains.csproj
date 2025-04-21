@@ -18,16 +18,15 @@
         <PackageReference Include="Aevatar.SignalR"/>
         <PackageReference Include="Aevatar.GAgents.AIGAgent"/>
         <PackageReference Include="Aevatar.GAgents.SemanticKernel"/>
-        <PackageReference Include="Aevatar.PermissionManagement" />
-
-
+        <PackageReference Include="Aevatar.PermissionManagement"/>
+        <PackageReference Include="Aevatar.GAgents.GroupChat"/>
         <PackageReference Include="Aevatar.GAgents.AI.Abstractions"/>
-         <PackageReference Include="MineAiFun.GAgents"/>
+        <PackageReference Include="MineAiFun.GAgents"/>
         <PackageReference Include="Aevatar.GAgents.Twitter"/>
         <PackageReference Include="XWorkerAgent"/>
         <PackageReference Include="TelegramWorkerAgent"/>
         <PackageReference Include="Aevatar.GAgents.SocialGAgent"/>
-
+        <PackageReference Include="Orleans.SyncWork"/>
     </ItemGroup>
 
     <ItemGroup>
@@ -37,7 +36,6 @@
         <ProjectReference Include="..\Aevatar.Domain\Aevatar.Domain.csproj"/>
         <ProjectReference Include="..\Aevatar.Neo4JStore\Aevatar.Neo4JStore.csproj"/>
     </ItemGroup>
-
     <ItemGroup>
         <Compile Remove="Agents\TestAgent\TestAgent.cs"/>
     </ItemGroup>

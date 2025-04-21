@@ -1,9 +1,11 @@
 using System.Collections.Immutable;
+using System.Security.Claims;
 using Aevatar.OpenIddict;
 using Aevatar.Permissions;
 using Google.Apis.Auth;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
 using Volo.Abp.Identity;
@@ -15,7 +17,7 @@ namespace Aevatar;
 public class GoogleGrantHandler : ITokenExtensionGrant
 {
     private readonly IConfiguration _configuration;
-    private readonly ILogger<GoogleGrantHandler> _logger;
+    private ILogger<GoogleGrantHandler> _logger;
 
     public string Name => GrantTypeConstants.GOOGLE;
     

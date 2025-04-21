@@ -82,9 +82,10 @@ public class UserAppService : IdentityUserAppService, IUserAppService
     private async Task SetClientPermissionsAsync(string clientId)
     {
         var permissions= await  _permissionManager.GetAllAsync(RolePermissionValueProvider.ProviderName, AevatarPermissions.DeveloperManager);
-
+        _logger.LogInformation("permissions count {Count} clientId {clientId}",permissions.Count,clientId);
         foreach (var permission in permissions)
         {
+            _logger.LogInformation("add permission {Permission} ,isGrant {IsGranted}",permission.Name,permission.IsGranted);
             if (permission.IsGranted)
             {
                 await _permissionManager.SetForClientAsync(clientId,permission.Name,true);
