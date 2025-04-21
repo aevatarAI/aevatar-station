@@ -25,7 +25,7 @@ namespace Aevatar.Application.Grains.Agents.ChatManager.Chat;
 public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, EventBase, ChatConfigDto>, IGodChat
 {
     private List<IAIAgentStatusProxy> AIAgentStatusProxies = new();
-    private static readonly List<string> UsableLLMs = new List<string>() { "OpenAI", "OpenAILast" };
+    private static readonly List<string> UsableLLMs = new List<string>() { "OpenAILast", "OpenAI" };
     private static readonly TimeSpan RequestRecoveryDelay = TimeSpan.FromSeconds(60);
 
     protected override async Task ChatPerformConfigAsync(ChatConfigDto configuration)
