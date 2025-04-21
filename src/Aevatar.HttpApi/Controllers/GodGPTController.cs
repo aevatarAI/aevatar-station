@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Aevatar.Application.Grains.Agents.ChatManager;
@@ -65,6 +66,7 @@ public class GodGPTController : AevatarController
     [HttpPost("chat")]
     public async Task<QuantumChatResponseDto> ChatWithSessionAsync(QuantumChatRequestDto request)
     {
+        var stopwatch = Stopwatch.StartNew();
         _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}");
         var streamProvider = _clusterClient.GetStreamProvider("Aevatar");
         var streamId = StreamId.Create(_aevatarOptions.Value.StreamNamespace, request.SessionId);
@@ -91,7 +93,7 @@ public class GodGPTController : AevatarController
             if (firstFlag == false)
             {
                 firstFlag = true;
-                _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] SubscribeAsync get first message:{request.SessionId}");
+                _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] SubscribeAsync get first message:{request.SessionId}, duration: {stopwatch.ElapsedMilliseconds}ms");
             }
             await Response.WriteAsync(JsonConvert.SerializeObject(chatResponse));
             await Response.Body.FlushAsync();
