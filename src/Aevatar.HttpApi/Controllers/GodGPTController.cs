@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Orleans;
@@ -36,15 +37,17 @@ public class GodGPTController : AevatarController
     private readonly string _defaultLLM = "OpenAI";
     private readonly string _defaultPrompt = "you are a robot";
     private readonly IOptions<AevatarOptions> _aevatarOptions;
+    private readonly ILogger<GodGPTController> _logger;
     const string Version = "1.0.0";
 
 
     public GodGPTController(IGodGPTService godGptService, IClusterClient clusterClient,
-        IOptions<AevatarOptions> aevatarOptions)
+        IOptions<AevatarOptions> aevatarOptions, ILogger<GodGPTController> logger)
     {
         _godGptService = godGptService;
         _clusterClient = clusterClient;
         _aevatarOptions = aevatarOptions;
+        _logger = logger;
     }
 
     [HttpGet("query-version")]
@@ -62,28 +65,35 @@ public class GodGPTController : AevatarController
     [HttpPost("chat")]
     public async Task<QuantumChatResponseDto> ChatWithSessionAsync(QuantumChatRequestDto request)
     {
+        _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}");
         var streamProvider = _clusterClient.GetStreamProvider("Aevatar");
         var streamId = StreamId.Create(_aevatarOptions.Value.StreamNamespace, request.SessionId);
         Response.ContentType = "text/event-stream";
         var responseStream = streamProvider.GetStream<ResponseStreamGodChat>(streamId);
         var godChat = _clusterClient.GetGrain<IGodChat>(request.SessionId);
 
-        var chatId = Guid.NewGuid().ToString(); 
+        var chatId = Guid.NewGuid().ToString();
         await godChat.StreamChatWithSessionAsync(request.SessionId, string.Empty, request.Content,
             chatId, null, true);
-
+        _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] http request llm:{request.SessionId}");
         var exitSignal = new TaskCompletionSource();
         StreamSubscriptionHandle<ResponseStreamGodChat>? subscription = null;
+        var firstFlag = false;
         subscription = await responseStream.SubscribeAsync(async (chatResponse, token) =>
         {
             if (chatResponse.ChatId != chatId)
             {
                 return;
             }
-            
+
+            if (firstFlag == false)
+            {
+                firstFlag = true;
+                _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] SubscribeAsync get first message:{request.SessionId}");
+            }
             await Response.WriteAsync(JsonConvert.SerializeObject(chatResponse));
             await Response.Body.FlushAsync();
-            
+
             if (chatResponse.IsLastChunk)
             {
                 exitSignal.TrySetResult();
@@ -114,6 +124,7 @@ public class GodGPTController : AevatarController
             }
         }
 
+        _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] complete done sessionId:{request.SessionId}");
         return new QuantumChatResponseDto()
         {
             Content = "",
