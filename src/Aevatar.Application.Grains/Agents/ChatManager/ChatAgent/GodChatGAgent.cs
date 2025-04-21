@@ -25,7 +25,7 @@ namespace Aevatar.Application.Grains.Agents.ChatManager.Chat;
 public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, EventBase, ChatConfigDto>, IGodChat
 {
     private List<IAIAgentStatusProxy> AIAgentStatusProxies = new();
-    private static readonly List<string> UsableLLMs = new List<string>() { "OpenAI", "DeepSeek" };
+    private static readonly List<string> UsableLLMs = new List<string>() { "OpenAILast", "OpenAI" };
     private static readonly TimeSpan RequestRecoveryDelay = TimeSpan.FromSeconds(60);
 
     protected override async Task ChatPerformConfigAsync(ChatConfigDto configuration)
@@ -118,7 +118,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         ExecutionPromptSettings promptSettings = null, bool isHttpRequest = false)
     {
         Stopwatch sw = new Stopwatch();
-        Logger.LogDebug($"StreamChatWithSessionAsync - step1,time use:{sw.ElapsedMilliseconds}");
+        Logger.LogDebug($"StreamChatWithSessionAsync {sessionId.ToString()} - step1,time use:{sw.ElapsedMilliseconds}");
 
         var title = "";
 
@@ -142,7 +142,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
                 SessionId = sessionId,
                 Title = title
             });
-            Logger.LogDebug($"StreamChatWithSessionAsync - step3,time use:{sw.ElapsedMilliseconds}");
+            Logger.LogDebug($"StreamChatWithSessionAsync {sessionId.ToString()} - step3,time use:{sw.ElapsedMilliseconds}");
         }
 
         sw.Reset();
@@ -152,7 +152,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
             await configuration.GetStreamingModeEnabled(),
             content, chatId, promptSettings, isHttpRequest);
         sw.Stop();
-        Logger.LogDebug($"StreamChatWithSessionAsync - step4,time use:{sw.ElapsedMilliseconds}");
+        Logger.LogDebug($"StreamChatWithSessionAsync {sessionId.ToString()} - step4,time use:{sw.ElapsedMilliseconds}");
     }
 
     public async Task<string> GodStreamChatAsync(Guid sessionId, string llm, bool streamingModeEnabled, string message,
@@ -194,7 +194,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         if (aiAgentStatusProxy != null)
         {
             Logger.LogDebug(
-                $"[GodChatGAgent][GodStreamChatAsync] new agent, session {sessionId.ToString()}, chat {chatId}");
+                $"[GodChatGAgent][GodStreamChatAsync] agent {aiAgentStatusProxy.GetPrimaryKey().ToString()}, session {sessionId.ToString()}, chat {chatId}");
             var result = await aiAgentStatusProxy.PromptWithStreamAsync(message, State.ChatHistory, promptSettings,
                 context: aiChatContextDto);
             if (!result)
@@ -342,7 +342,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         }
 
         Logger.LogDebug(
-            $"[AIAgentStatusProxy][AIChatHandleStreamAsync] sessionId {contextDto.RequestId.ToString()}, chatId {contextDto.ChatId}, messageId {contextDto.MessageId}, {JsonConvert.SerializeObject(chatContent)}");
+            $"[AIAgentStatusProxy][ChatMessageCallbackAsync] sessionId {contextDto.RequestId.ToString()}, chatId {contextDto.ChatId}, messageId {contextDto.MessageId}, {JsonConvert.SerializeObject(chatContent)}");
         if (chatContent.IsAggregationMsg)
         {
             RaiseEvent(new AddChatHistoryLogEvent
@@ -359,13 +359,14 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
 
             await ConfirmEvents();
         }
-
+        
         var partialMessage = new ResponseStreamGodChat()
         {
             Response = chatContent.ResponseContent,
             ChatId = contextDto.ChatId,
             IsLastChunk = chatContent.IsLastChunk,
-            SerialNumber = chatContent.SerialNumber
+            SerialNumber = chatContent.SerialNumber,
+            SessionId = contextDto.RequestId
         };
         if (contextDto.MessageId.IsNullOrWhiteSpace())
         {
