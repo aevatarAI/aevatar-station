@@ -21,6 +21,9 @@ public class StationSignalRHub : AbpHub
     {
         _logger.LogDebug("connectionId={connectionId} connected.", Context.ConnectionId);
         
+        _logger.LogInformation($"UserIdentifier before: {Context.UserIdentifier}");
+        _logger.LogInformation($"CurrentUser Id before: {CurrentUser.Id?.ToString() ?? "NULL"}");
+        
         await base.OnConnectedAsync();
         
         _logger.LogInformation($"UserIdentifier: {Context.UserIdentifier}");
