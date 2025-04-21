@@ -86,23 +86,23 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
     }
     
     
-    // [EventHandler]
-    // public async Task HandleEventAsync(AIOldStreamingResponseGEvent @event)
-    // {
-    //     Logger.LogDebug($"[ChatGAgentManager][AIStreamingResponseGEvent] start:{JsonConvert.SerializeObject(@event)}");
-    //
-    //     await PublishAsync(new ResponseStreamGodChat()
-    //     {
-    //         Response = @event.ResponseContent,
-    //         ChatId = @event.Context.ChatId,
-    //         IsLastChunk = @event.IsLastChunk,
-    //         SerialNumber = @event.SerialNumber,
-    //         SessionId = @event.Context.RequestId
-    //     });
-    //     
-    //     Logger.LogDebug($"[ChatGAgentManager][AIStreamingResponseGEvent] end:{JsonConvert.SerializeObject(@event)}");
-    //
-    // }
+    [EventHandler]
+    public async Task HandleEventAsync(AIOldStreamingResponseGEvent @event)
+    {
+        Logger.LogDebug($"[ChatGAgentManager][AIStreamingResponseGEvent] start:{JsonConvert.SerializeObject(@event)}");
+    
+        await PublishAsync(new ResponseStreamGodChat()
+        {
+            Response = @event.ResponseContent,
+            ChatId = @event.Context.ChatId,
+            IsLastChunk = @event.IsLastChunk,
+            SerialNumber = @event.SerialNumber,
+            SessionId = @event.Context.RequestId
+        });
+        
+        Logger.LogDebug($"[ChatGAgentManager][AIStreamingResponseGEvent] end:{JsonConvert.SerializeObject(@event)}");
+    
+    }
     
     public async Task RenameChatTitleAsync(RenameChatTitleEvent @event)
     {

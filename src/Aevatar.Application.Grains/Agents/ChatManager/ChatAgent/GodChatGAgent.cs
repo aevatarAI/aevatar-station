@@ -324,7 +324,12 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
                 IsLastChunk = true,
                 SerialNumber = -2
             };
-            // await PublishAsync();
+            if (contextDto.MessageId.IsNullOrWhiteSpace())
+            {
+                await PublishAsync(chatMessage);
+                return;
+            }
+
             await PushMessageToClientAsync(chatMessage);
             return;
         }
@@ -355,28 +360,20 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
             await ConfirmEvents();
         }
 
+        var partialMessage = new ResponseStreamGodChat()
+        {
+            Response = chatContent.ResponseContent,
+            ChatId = contextDto.ChatId,
+            IsLastChunk = chatContent.IsLastChunk,
+            SerialNumber = chatContent.SerialNumber
+        };
         if (contextDto.MessageId.IsNullOrWhiteSpace())
         {
-            await PublishAsync(new ResponseStreamGodChat()
-            {
-                Response = chatContent.ResponseContent,
-                ChatId = contextDto.ChatId,
-                IsLastChunk = chatContent.IsLastChunk,
-                SerialNumber = chatContent.SerialNumber
-            });
+            await PublishAsync(partialMessage);
+            return;
         }
-        else
-        {
-            var partialMessage = new ResponseStreamGodChat()
-            {
-                Response = chatContent.ResponseContent,
-                ChatId = contextDto.ChatId,
-                IsLastChunk = chatContent.IsLastChunk,
-                SerialNumber = chatContent.SerialNumber
-            };
-            // await PublishAsync();
-            await PushMessageToClientAsync(partialMessage);
-        }
+
+        await PushMessageToClientAsync(partialMessage);
     }
 
     private async Task PushMessageToClientAsync(ResponseStreamGodChat chatMessage)
