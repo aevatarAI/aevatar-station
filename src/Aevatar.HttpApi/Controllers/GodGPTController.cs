@@ -68,6 +68,8 @@ public class GodGPTController : AevatarController
         _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}");
         var streamProvider = _clusterClient.GetStreamProvider("Aevatar");
         var streamId = StreamId.Create(_aevatarOptions.Value.StreamNamespace, request.SessionId);
+        _logger.LogDebug(
+            $"[GodGPTController][ChatWithSessionAsync] sessionId {request.SessionId}, namespace {_aevatarOptions.Value.StreamNamespace}, streamId {streamId.ToString()}");
         Response.ContentType = "text/event-stream";
         var responseStream = streamProvider.GetStream<ResponseStreamGodChat>(streamId);
         var godChat = _clusterClient.GetGrain<IGodChat>(request.SessionId);

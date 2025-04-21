@@ -1,4 +1,5 @@
-﻿using Aevatar.Developer.Logger;
+﻿using Aevatar.Core.Abstractions;
+using Aevatar.Developer.Logger;
 using Localization.Resources.AbpUi;
 using Aevatar.Localization;
 using Aevatar.Options;
@@ -26,6 +27,9 @@ public class AevatarHttpApiModule : AbpModule
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
         ConfigureLocalization();
+
+        var configuration = context.Services.GetConfiguration();
+        Configure<AevatarOptions>(configuration.GetSection("Aevatar"));
     }
 
     private void ConfigureLocalization()

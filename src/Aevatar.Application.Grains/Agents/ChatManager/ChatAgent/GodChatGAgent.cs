@@ -342,7 +342,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         }
 
         Logger.LogDebug(
-            $"[AIAgentStatusProxy][ChatMessageCallbackAsync] sessionId {contextDto.RequestId.ToString()}, chatId {contextDto.ChatId}, messageId {contextDto.MessageId}, {JsonConvert.SerializeObject(chatContent)}");
+            $"[GodChatGAgent][ChatMessageCallbackAsync] sessionId {contextDto.RequestId.ToString()}, chatId {contextDto.ChatId}, messageId {contextDto.MessageId}, {JsonConvert.SerializeObject(chatContent)}");
         if (chatContent.IsAggregationMsg)
         {
             RaiseEvent(new AddChatHistoryLogEvent
@@ -380,6 +380,8 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
     private async Task PushMessageToClientAsync(ResponseStreamGodChat chatMessage)
     {
         var streamId = StreamId.Create(AevatarOptions!.StreamNamespace, this.GetPrimaryKey());
+        Logger.LogDebug(
+            $"[GodChatGAgent][PushMessageToClientAsync] sessionId {this.GetPrimaryKey().ToString()}, namespace {AevatarOptions!.StreamNamespace}, streamId {streamId.ToString()}");
         var stream = StreamProvider.GetStream<ResponseStreamGodChat>(streamId);
         await stream.OnNextAsync(chatMessage);
     }
