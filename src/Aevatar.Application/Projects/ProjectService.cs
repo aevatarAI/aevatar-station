@@ -90,6 +90,7 @@ public class ProjectService : OrganizationService, IProjectService
             AevatarPermissions.Projects.Default,
             AevatarPermissions.Members.Default,
             AevatarPermissions.ApiKeys.Default,
+            AevatarPermissions.Dashboard,
             AevatarPermissions.LLMSModels.Default,
             AevatarPermissions.ApiRequests.Default
         ];
@@ -118,7 +119,7 @@ public class ProjectService : OrganizationService, IProjectService
     {
         List<OrganizationUnit> organizations;
         if (CurrentUser.IsInRole(AevatarConsts.AdminRoleName) ||
-            await IsOrganizationOwnerAsync(input.OrganizationId, CurrentUser.Id.Value))
+            await PermissionChecker.IsGrantedAsync(input.OrganizationId, AevatarPermissions.Projects.Default))
         {
             organizations = await OrganizationUnitManager.FindChildrenAsync(input.OrganizationId, true);
             organizations = organizations.Where(o =>

@@ -98,7 +98,7 @@ public class AevatarPermissionDefinitionProvider : PermissionDefinitionProvider
         apiKeysPermission.AddChild(AevatarPermissions.ApiKeys.Delete, L("Permission:ApiKeys.Delete")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
         
         var rolesPermission = developerPlatformGroup.AddPermission(AevatarPermissions.Roles.Default, L("Permission:Roles"));
-        apiKeysPermission.Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
+        rolesPermission.Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
         rolesPermission.AddChild(AevatarPermissions.Roles.Create, L("Permission:Roles.Create")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
         rolesPermission.AddChild(AevatarPermissions.Roles.Edit, L("Permission:Roles.Edit")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
         rolesPermission.AddChild(AevatarPermissions.Roles.Delete, L("Permission:Roles.Delete")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
