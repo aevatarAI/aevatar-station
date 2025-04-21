@@ -23,6 +23,9 @@ public class StationSignalRHub : AbpHub
         
         await base.OnConnectedAsync();
         
+        _logger.LogInformation($"UserIdentifier: {Context.UserIdentifier}");
+        _logger.LogInformation($"CurrentUser Id: {CurrentUser.Id?.ToString() ?? "NULL"}");
+        
         await Clients.Client(Context.ConnectionId).SendAsync("Test", "Success");
         await Clients.User(CurrentUser.Id.ToString()).SendAsync("Test", CurrentUser.Id.ToString());
     }
