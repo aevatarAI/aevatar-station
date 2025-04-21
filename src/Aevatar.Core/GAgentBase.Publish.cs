@@ -35,19 +35,21 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
         var eventId = Guid.NewGuid();
         try
         {
+            // Create event wrapper with context propagation
+            var eventWrapper = new EventWrapper<T>(@event, eventId, this.GetGrainId());
             if (State.Parent == null)
             {
                 Logger.LogInformation(
                     "Event is the first time appeared to silo: {@Event}", @event);
                 // This event is the first time appeared to silo.
-                await SendEventToSelfAsync(new EventWrapper<T>(@event, eventId, GrainId));
+                await SendEventToSelfAsync(eventWrapper);
             }
             else
             {
                 Logger.LogInformation(
                     "{GrainId} is publishing event upwards: {EventJson}",
                     GrainId.ToString(), JsonConvert.SerializeObject(@event));
-                await PublishEventUpwardsAsync(@event, eventId);
+                await SendEventUpwardsAsync(eventWrapper);
             }
         }
         catch (Exception ex)
