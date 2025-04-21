@@ -70,7 +70,7 @@ public class GodGPTController : AevatarController
 
         var chatId = Guid.NewGuid().ToString(); 
         await godChat.StreamChatWithSessionAsync(request.SessionId, string.Empty, request.Content,
-            chatId);
+            chatId, null, true);
 
         var exitSignal = new TaskCompletionSource();
         StreamSubscriptionHandle<ResponseStreamGodChat>? subscription = null;

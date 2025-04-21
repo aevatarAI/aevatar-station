@@ -115,7 +115,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
     }
 
     public async Task StreamChatWithSessionAsync(Guid sessionId, string sysmLLM, string content, string chatId,
-        ExecutionPromptSettings promptSettings = null)
+        ExecutionPromptSettings promptSettings = null, bool isHttpRequest = false)
     {
         Stopwatch sw = new Stopwatch();
         Logger.LogDebug($"StreamChatWithSessionAsync - step1,time use:{sw.ElapsedMilliseconds}");
@@ -150,14 +150,14 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         var configuration = GetConfiguration();
         await GodStreamChatAsync(sessionId, await configuration.GetSystemLLM(),
             await configuration.GetStreamingModeEnabled(),
-            content, chatId, promptSettings);
+            content, chatId, promptSettings, isHttpRequest);
         sw.Stop();
         Logger.LogDebug($"StreamChatWithSessionAsync - step4,time use:{sw.ElapsedMilliseconds}");
     }
 
     public async Task<string> GodStreamChatAsync(Guid sessionId, string llm, bool streamingModeEnabled, string message,
         string chatId,
-        ExecutionPromptSettings? promptSettings = null)
+        ExecutionPromptSettings? promptSettings = null, bool isHttpRequest = false)
     {
         var configuration = GetConfiguration();
 
@@ -184,6 +184,12 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
             ChatId = chatId,
             RequestId = sessionId
         };
+        if (isHttpRequest)
+        {
+            aiChatContextDto.MessageId = JsonConvert.SerializeObject(new Dictionary<string, object>()
+                { { "IsHttpRequest", true } });
+        }
+
         var aiAgentStatusProxy = await GetAIAgentStatusProxy();
         if (aiAgentStatusProxy != null)
         {
@@ -331,7 +337,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         }
 
         Logger.LogDebug(
-            $"[AIAgentStatusProxy][AIChatHandleStreamAsync] sessionId {contextDto.RequestId.ToString()}, chatId {contextDto.ChatId}, {JsonConvert.SerializeObject(chatContent)}");
+            $"[AIAgentStatusProxy][AIChatHandleStreamAsync] sessionId {contextDto.RequestId.ToString()}, chatId {contextDto.ChatId}, messageId {contextDto.MessageId}, {JsonConvert.SerializeObject(chatContent)}");
         if (chatContent.IsAggregationMsg)
         {
             RaiseEvent(new AddChatHistoryLogEvent
@@ -348,16 +354,29 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
 
             await ConfirmEvents();
         }
-        
-        var partialMessage = new ResponseStreamGodChat()
+
+        if (contextDto.MessageId.IsNullOrWhiteSpace())
         {
-            Response = chatContent.ResponseContent,
-            ChatId = contextDto.ChatId,
-            IsLastChunk = chatContent.IsLastChunk,
-            SerialNumber = chatContent.SerialNumber
-        };
-        // await PublishAsync();
-        await PushMessageToClientAsync(partialMessage);
+            await PublishAsync(new ResponseStreamGodChat()
+            {
+                Response = chatContent.ResponseContent,
+                ChatId = contextDto.ChatId,
+                IsLastChunk = chatContent.IsLastChunk,
+                SerialNumber = chatContent.SerialNumber
+            });
+        }
+        else
+        {
+            var partialMessage = new ResponseStreamGodChat()
+            {
+                Response = chatContent.ResponseContent,
+                ChatId = contextDto.ChatId,
+                IsLastChunk = chatContent.IsLastChunk,
+                SerialNumber = chatContent.SerialNumber
+            };
+            // await PublishAsync();
+            await PushMessageToClientAsync(partialMessage);
+        }
     }
 
     private async Task PushMessageToClientAsync(ResponseStreamGodChat chatMessage)
