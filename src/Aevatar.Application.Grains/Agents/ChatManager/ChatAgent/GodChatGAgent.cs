@@ -58,7 +58,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
             });
 
             Logger.LogDebug(
-                $"[GodChatGAgent][ChatPerformConfigAsync] MultiAIChatgAgentId: {this.GetPrimaryKey().ToString()}, AIAgentStatusProxyId: {aiAgentStatusProxy.GetPrimaryKey().ToString()}");
+                $"[GodChatGAgent][ChatPerformConfigAsync] primaryKey: {this.GetPrimaryKey().ToString()}, LLM: {usableLlM}, AIAgentStatusProxyId: {aiAgentStatusProxy.GetPrimaryKey().ToString()}");
 
             AIAgentStatusProxies.Add(aiAgentStatusProxy);
             aiAgentIds.Add(aiAgentStatusProxy.GetPrimaryKey());
