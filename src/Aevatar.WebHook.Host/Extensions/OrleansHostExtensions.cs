@@ -11,7 +11,7 @@ namespace Aevatar.Webhook.Extensions;
 
 public static class OrleansHostExtensions
 {
-    public static IHostBuilder UseOrleansClient(this IHostBuilder hostBuilder)
+    public static IHostBuilder UseOrleansClientConfigration(this IHostBuilder hostBuilder)
     {
         return hostBuilder.UseOrleansClient((context, clientBuilder) =>
         {
@@ -24,7 +24,7 @@ public static class OrleansHostExtensions
                 {
                     options.DatabaseName = configSection.GetValue<string>("DataBase");
                     options.Strategy = MongoDBMembershipStrategy.SingleDocument;
-                    options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" :$"Orleans{hostId}";
+                    options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" : $"Orleans{hostId}";
                 })
                 .Configure<ClusterOptions>(options =>
                 {
