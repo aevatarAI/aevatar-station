@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using Aevatar.Application.Grains.Agents.Code;
 using Aevatar.Common;
@@ -11,14 +13,6 @@ using Volo.Abp.Application.Services;
 using Volo.Abp.Auditing;
 
 namespace Aevatar.Service;
-
-public interface IWebhookService
-{
-    Task CreateWebhookAsync(string webhookId, string version, byte[]? codeBytes);
-    Task<string> GetWebhookCodeAsync(string webhookId, string version);
-    Task DestroyWebhookAsync(string inputWebhookId, string inputVersion);
-    Task UpdateCodeAsync(string webhookId, string version, byte[]? codeBytes);
-}
 
 [RemoteService(IsEnabled = false)]
 [DisableAuditing]
@@ -36,34 +30,42 @@ public class WebhookService : ApplicationService, IWebhookService
         _webhookDeployOptions = webhookDeployOptions.Value;
     }
 
-    public async Task CreateWebhookAsync(string webhookId, string version, byte[]? codeBytes)
+    public async Task CreateWebhookAsync(string webhookId, string version, Dictionary<string, byte[]> codeFiles)
     {
-        if (codeBytes != null)
+        if (codeFiles != null && codeFiles.Count > 0)
         {
             await _clusterClient.GetGrain<ICodeGAgent>(GuidUtil.StringToGuid(webhookId)).UploadCodeAsync(
-                webhookId, version, codeBytes);
+                webhookId, version, codeFiles);
             await _hostDeployManager.CreateNewWebHookAsync(webhookId, version, _webhookDeployOptions.WebhookImageName);
         }
     }
 
-    public async Task<string> GetWebhookCodeAsync(string webhookId, string version)
+    public async Task<Dictionary<string, string>> GetWebhookCodeAsync(string webhookId, string version)
     {
         var webhookCode = await _clusterClient.GetGrain<ICodeGAgent>(GuidUtil.StringToGuid(webhookId)).GetStateAsync();
-        return Convert.ToBase64String(webhookCode.Code);
+        var result = new Dictionary<string, string>();
+        foreach (var file in webhookCode.CodeFiles)
+        {
+            result[file.Key] = Convert.ToBase64String(file.Value);
+        }
+        return result;
     }
 
     public async Task DestroyWebhookAsync(string inputWebhookId, string inputVersion)
     {
+        // Clear all CodeFiles in ICodeGAgent by uploading an empty dictionary
+        await _clusterClient.GetGrain<ICodeGAgent>(GuidUtil.StringToGuid(inputWebhookId)).UploadCodeAsync(
+            inputWebhookId, inputVersion, new Dictionary<string, byte[]>());
+        
         await _hostDeployManager.DestroyWebHookAsync(inputWebhookId, inputVersion);
     }
 
-    public async Task UpdateCodeAsync(string webhookId, string version, byte[]? codeBytes)
+    public async Task UpdateCodeAsync(string webhookId, string version, Dictionary<string, byte[]> codeFiles)
     {
-        if (codeBytes != null)
+        if (codeFiles != null && codeFiles.Count > 0)
         {
             await _clusterClient.GetGrain<ICodeGAgent>(GuidUtil.StringToGuid(webhookId)).UploadCodeAsync(
-                webhookId, version, codeBytes);
-            await _hostDeployManager.RestartHostAsync(webhookId, version);
+                webhookId, version, codeFiles);
         }
     }
 }
