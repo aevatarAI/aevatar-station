@@ -24,7 +24,7 @@ public class StationSignalRHub : AbpHub
         await base.OnConnectedAsync();
         
         await Clients.Client(Context.ConnectionId).SendAsync("Test", "Success");
-        await Clients.User("afaa8912-4a80-0b8d-fbd6-3a1955635d55").SendAsync("Test", "Success-2");
+        await Clients.User(CurrentUser.Id.ToString()).SendAsync("Test", CurrentUser.Id.ToString());
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
