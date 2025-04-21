@@ -43,7 +43,6 @@ public class RequestStreamGodChatEvent : EventBase
     [Id(0)] public Guid SessionId { get; set; }
     [Id(1)] public string SystemLLM { get; set; }
     [Id(2)] public string Content { get; set; }
-    
 }
 
 [GenerateSerializer]
@@ -54,11 +53,32 @@ public class ResponseStreamGodChat : ResponseToPublisherEventBase
     [Id(2)] public string NewTitle { get; set; }
     [Id(3)] public string ChatId { get; set; }
     [Id(4)] public bool IsLastChunk { get; set; }
-    
+
     [Id(5)] public int SerialNumber { get; set; }
-    
+
     [Id(6)] public Guid SessionId { get; set; }
 
+    public ResponseStreamGodChatForHttp ConvertToHttpResponse()
+    {
+        return new ResponseStreamGodChatForHttp()
+        {
+            Response = Response,
+            ChatId = ChatId,
+            IsLastChunk = IsLastChunk,
+            SerialNumber = SerialNumber,
+            SessionId = SessionId,
+        };
+    }
+}
+
+public class ResponseStreamGodChatForHttp
+{
+    public ResponseType ResponseType { get; set; } = ResponseType.ChatResponse;
+    public string Response { get; set; }
+    public string ChatId { get; set; }
+    public bool IsLastChunk { get; set; }
+    public int SerialNumber { get; set; }
+    public Guid SessionId { get; set; }
 }
 
 [GenerateSerializer]
@@ -145,7 +165,6 @@ public class ResponseSetUserProfile : ResponseToPublisherEventBase
 [GenerateSerializer]
 public class RequestGetUserProfileEvent : EventBase
 {
-    
 }
 
 [GenerateSerializer]

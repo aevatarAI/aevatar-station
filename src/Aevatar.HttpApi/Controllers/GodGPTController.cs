@@ -95,7 +95,9 @@ public class GodGPTController : AevatarController
                 firstFlag = true;
                 _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] SubscribeAsync get first message:{request.SessionId}, duration: {stopwatch.ElapsedMilliseconds}ms");
             }
-            await Response.WriteAsync(JsonConvert.SerializeObject(chatResponse));
+
+            var responseData = $"data: {JsonConvert.SerializeObject(chatResponse.ConvertToHttpResponse())}\n\n";
+            await Response.WriteAsync(responseData);
             await Response.Body.FlushAsync();
 
             if (chatResponse.IsLastChunk)
