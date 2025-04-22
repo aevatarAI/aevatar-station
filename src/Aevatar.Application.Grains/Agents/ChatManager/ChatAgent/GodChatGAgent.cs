@@ -315,7 +315,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         if (aiExceptionEnum != AIExceptionEnum.None)
         {
             Logger.LogError(
-                $"[GodChatGAgent][ChatMessageCallbackAsync] stream error. sessionId {contextDto.RequestId.ToString()}, chatId {contextDto.ChatId}, error {aiExceptionEnum}");
+                $"[GodChatGAgent][ChatMessageCallbackAsync] stream error. sessionId {contextDto?.RequestId.ToString()}, chatId {contextDto?.ChatId}, error {aiExceptionEnum}");
             var chatMessage = new ResponseStreamGodChat()
             {
                 Response =

@@ -59,6 +59,8 @@ public class AIAgentStatusProxy :
         string? errorMessage,
         AIStreamChatContent? content)
     {
+        Logger.LogDebug(
+            $"[AIAgentStatusProxy][AIChatHandleStreamAsync] sessionId {context?.RequestId.ToString()}, chatId {context?.ChatId}, errorEnum {errorEnum}, errorMessage {errorMessage}: {JsonConvert.SerializeObject(content)}");
         if (errorEnum == AIExceptionEnum.RequestLimitError)
         {
             RaiseEvent(new SetAvailableLogEvent
@@ -69,8 +71,6 @@ public class AIAgentStatusProxy :
             await ConfirmEvents();
         }
         
-        Logger.LogDebug(
-            $"[AIAgentStatusProxy][AIChatHandleStreamAsync] sessionId {context.RequestId.ToString()}, chatId {context.ChatId}: {JsonConvert.SerializeObject(content)}");
         var godChat = GrainFactory.GetGrain<IGodChat>(State.ParentId);
         await godChat.ChatMessageCallbackAsync(context, errorEnum, errorMessage, content);
     }
