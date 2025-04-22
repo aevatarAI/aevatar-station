@@ -85,6 +85,7 @@ public class GodGPTController : AevatarController
         var exitSignal = new TaskCompletionSource();
         StreamSubscriptionHandle<ResponseStreamGodChat>? subscription = null;
         var firstFlag = false;
+        var ifLastChunk = false;
         subscription = await responseStream.SubscribeAsync(async (chatResponse, token) =>
         {
             if (chatResponse.ChatId != chatId)
@@ -105,6 +106,7 @@ public class GodGPTController : AevatarController
 
             if (chatResponse.IsLastChunk)
             {
+                ifLastChunk = true;
                 exitSignal.TrySetResult();
                 if (subscription != null)
                 {
@@ -138,6 +140,11 @@ public class GodGPTController : AevatarController
             {
                 await subscription.UnsubscribeAsync();
             }
+        }
+
+        if (ifLastChunk == false)
+        {
+            _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] No LastChunk:{request.SessionId},chatId:{chatId}");
         }
 
         _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] complete done sessionId:{request.SessionId}");
