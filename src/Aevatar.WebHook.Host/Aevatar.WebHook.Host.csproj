@@ -8,6 +8,7 @@
 
     <ItemGroup>
         <PackageReference Include="TelegramWorkerAgent"/>
+        <PackageReference Include="AevatarTemplate.TelegramBot"/>
         <PackageReference Include="Microsoft.Orleans.Client"/>
         <PackageReference Include="Orleans.Providers.MongoDB"/>
         <ProjectReference Include="..\Aevatar.WebHook.SDK\Aevatar.WebHook.SDK.csproj"/>
