@@ -21,7 +21,7 @@ internal static class EventWrapperHelper
     public static (EventBase eventType, string? eventId) ExtractProperties(EventWrapperBase wrapper)
     {
         var eventType = GetProperty<EventBase>(wrapper, nameof(EventWrapper<EventBase>.Event))!;
-        var eventId = GetProperty<object>(wrapper, "EventId")?.ToString();
+        var eventId = GetProperty<object>(wrapper, nameof(EventWrapper<EventBase>.EventId))?.ToString();
         
         return (eventType, eventId);
     }
