@@ -107,6 +107,7 @@ public class GodGPTController : AevatarController
             if (chatResponse.IsLastChunk)
             {
                 await Response.WriteAsync("event: completed\n");
+                Response.Body.Close();
                 ifLastChunk = true;
                 exitSignal.TrySetResult();
                 if (subscription != null)
