@@ -142,7 +142,8 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
                 SessionId = sessionId,
                 Title = title
             });
-            Logger.LogDebug($"StreamChatWithSessionAsync {sessionId.ToString()} - step3,time use:{sw.ElapsedMilliseconds}");
+            Logger.LogDebug(
+                $"StreamChatWithSessionAsync {sessionId.ToString()} - step3,time use:{sw.ElapsedMilliseconds}");
         }
 
         sw.Reset();
@@ -337,7 +338,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         if (chatContent == null)
         {
             Logger.LogError(
-                $"[GodChatGAgent][ChatMessageCallbackAsync] return null. sessionId {contextDto.RequestId.ToString()}, chatId {contextDto.ChatId}");
+                $"[GodChatGAgent][ChatMessageCallbackAsync] return null. sessionId {contextDto.RequestId.ToString()},chatId {contextDto.ChatId},aiExceptionEnum:{aiExceptionEnum}, errorMessage:{errorMessage}");
             return;
         }
 
@@ -359,7 +360,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
 
             await ConfirmEvents();
         }
-        
+
         var partialMessage = new ResponseStreamGodChat()
         {
             Response = chatContent.ResponseContent,
