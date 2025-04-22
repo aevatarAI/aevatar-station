@@ -4,6 +4,7 @@ using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Webhook.Extensions;
 using Aevatar.Webhook.SDK.Handler;
+using AevatarTemplate.TelegramBot;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -17,7 +18,8 @@ namespace Aevatar.Webhook;
 
 [DependsOn(typeof(AbpAutofacModule),
     typeof(AbpAutoMapperModule),
-    typeof(AbpAspNetCoreSerilogModule)
+    typeof(AbpAspNetCoreSerilogModule),
+    typeof(AevatarWebHookTemplateModule)
 )]
 public class AevatarListenerHostModule : AbpModule
 {
