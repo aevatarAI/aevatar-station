@@ -94,7 +94,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
     }
 
     public async Task StreamChatWithSessionAsync(Guid sessionId, string sysmLLM, string content, string chatId,
-        ExecutionPromptSettings promptSettings = null, bool isHttpRequest = false)
+        ExecutionPromptSettings promptSettings = null, bool isHttpRequest = false, string? region = null)
     {
         var sw = new Stopwatch();
         Logger.LogDebug($"StreamChatWithSessionAsync {sessionId.ToString()} - step1,time use:{sw.ElapsedMilliseconds}");
@@ -130,7 +130,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         var configuration = GetConfiguration();
         await GodStreamChatAsync(sessionId, await configuration.GetSystemLLM(),
             await configuration.GetStreamingModeEnabled(),
-            content, chatId, promptSettings, isHttpRequest);
+            content, chatId, promptSettings, isHttpRequest, region);
         sw.Stop();
         Logger.LogDebug($"StreamChatWithSessionAsync {sessionId.ToString()} - step4,time use:{sw.ElapsedMilliseconds}");
     }
@@ -231,7 +231,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
             return await GetProxyByRegionAsync(DefaultRegion);
         }
         
-        if (!State.RegionProxies.TryGetValue(region, out var proxyIds) || proxyIds.IsNullOrEmpty())
+        if (State.RegionProxies == null || !State.RegionProxies.TryGetValue(region, out var proxyIds) || proxyIds.IsNullOrEmpty())
         {
             Logger.LogDebug($"[GodChatGAgent][GetProxyByRegionAsync] session {this.GetPrimaryKey().ToString()}, No proxies found for region {region}, initializing.");
             proxyIds = await InitializeRegionProxiesAsync(region);
@@ -377,7 +377,8 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
                 (string)dictionary.GetValueOrDefault("LLM", systemLlm),
                 (bool)dictionary.GetValueOrDefault("StreamingModeEnabled", true),
                 (string)dictionary.GetValueOrDefault("Message", string.Empty),
-                contextDto.ChatId, null, (bool)dictionary.GetValueOrDefault("IsHttpRequest", true));
+                contextDto.ChatId, null, (bool)dictionary.GetValueOrDefault("IsHttpRequest", true),
+                (string)dictionary.GetValueOrDefault("Region", null));
             return;
         }
         else if (aiExceptionEnum != AIExceptionEnum.None)
@@ -495,6 +496,10 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
             case UpdateRegionProxiesLogEvent updateRegionProxiesLogEvent:
                 foreach (var regionProxy in updateRegionProxiesLogEvent.RegionProxies)
                 {
+                    if (State.RegionProxies == null)
+                    {
+                        State.RegionProxies = new Dictionary<string, List<Guid>>();
+                    }
                     State.RegionProxies[regionProxy.Key] = regionProxy.Value;
                 }
                 break;
