@@ -19,24 +19,5 @@ public class EventWrapper<T> : EventWrapperBase where T : EventBase
         GrainId = grainId;
         CorrelationId = @event.CorrelationId;
         PublisherGrainId = @event.PublisherGrainId;
-        
-        // Initialize ContextMetadata
-        ContextMetadata = new Dictionary<string, string>();
-        
-        // Simple context injection - in real implementation, this would be
-        // enhanced with DistributedContextPropagator usage in GAgentAsyncObserver
-        var activity = Activity.Current;
-        if (activity != null)
-        {
-            ContextMetadata[TraceIdKey] = activity.TraceId.ToString();
-            ContextMetadata[SpanIdKey] = activity.SpanId.ToString();
-            ContextMetadata[TraceFlagsKey] = activity.ActivityTraceFlags.ToString();
-            
-            // Add baggage items
-            foreach (var baggage in activity.Baggage)
-            {
-                ContextMetadata[$"{BaggagePrefixKey}{baggage.Key}"] = baggage.Value;
-            }
-        }
     }
 }
