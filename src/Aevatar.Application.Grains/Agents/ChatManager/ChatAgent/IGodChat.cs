@@ -14,7 +14,7 @@ public interface IGodChat : IGAgent
     Task InitAsync(Guid ChatManagerGuid);
 
     Task<string> GodStreamChatAsync(Guid sessionId, string llm, bool streamingModeEnabled, string message,
-        String chatId, ExecutionPromptSettings? promptSettings = null, bool isHttpRequest = false);
+        string chatId, ExecutionPromptSettings? promptSettings = null, bool isHttpRequest = false, string? region = null);
 
     [ReadOnly]
     Task<List<ChatMessage>> GetChatMessageAsync();
