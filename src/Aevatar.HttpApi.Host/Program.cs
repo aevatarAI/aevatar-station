@@ -39,7 +39,10 @@ public class Program
             await app.InitializeApplicationAsync();
             app.MapHub<AevatarSignalRHub>("api/agent/aevatarHub");
             app.MapHub<StationSignalRHub>("api/notifications").RequireAuthorization();
-
+            app.Map("/api/gotgpt/chat", config =>
+            {
+                config.UseMiddleware<ChatMiddleware>();
+            });
             await app.RunAsync();
             return 0;
         }

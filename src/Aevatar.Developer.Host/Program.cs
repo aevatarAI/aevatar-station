@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Aevatar.Developer.Host.Extensions;
+using Aevatar.Handler;
 using Aevatar.SignalR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
@@ -49,6 +50,10 @@ public class Program
             var app = builder.Build();
             await app.InitializeApplicationAsync();
             app.MapHub<AevatarSignalRHub>("api/agent/aevatarHub");
+            app.Map("/api/gotgpt/chat", config =>
+            {
+                config.UseMiddleware<ChatMiddleware>();
+            });
             await app.RunAsync();
             return 0;
         }

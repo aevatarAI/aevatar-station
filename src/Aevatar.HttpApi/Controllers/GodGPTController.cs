@@ -29,7 +29,7 @@ namespace Aevatar.Controllers;
 
 [RemoteService]
 [ControllerName("GodGPT")]
-[Route("api/gotgpt")]
+[Route("api/godgpt")]
 [Authorize]
 public class GodGPTController : AevatarController
 {
@@ -63,7 +63,7 @@ public class GodGPTController : AevatarController
         return await _godGptService.CreateSessionAsync((Guid)CurrentUser.Id!, _defaultLLM, _defaultPrompt);
     }
 
-    [HttpPost("chat")]
+    [HttpPost("chat_old")]
     public async Task<QuantumChatResponseDto> ChatWithSessionAsync(QuantumChatRequestDto request)
     {
         var stopwatch = Stopwatch.StartNew();
