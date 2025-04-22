@@ -187,7 +187,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         if (isHttpRequest)
         {
             aiChatContextDto.MessageId = JsonConvert.SerializeObject(new Dictionary<string, object>()
-                { { "IsHttpRequest", true } });
+                { { "IsHttpRequest", true },{"LLM", llm}, {"StreamingModeEnabled", streamingModeEnabled}, {"Message", message} });
         }
 
         var aiAgentStatusProxy = await GetAIAgentStatusProxy();
@@ -312,7 +312,20 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
     public async Task ChatMessageCallbackAsync(AIChatContextDto contextDto,
         AIExceptionEnum aiExceptionEnum, string? errorMessage, AIStreamChatContent? chatContent)
     {
-        if (aiExceptionEnum != AIExceptionEnum.None)
+        if (aiExceptionEnum == AIExceptionEnum.RequestLimitError && !contextDto.MessageId.IsNullOrWhiteSpace())
+        {
+            Logger.LogError(
+                $"[GodChatGAgent][ChatMessageCallbackAsync] RequestLimitError retry. contextDto {JsonConvert.SerializeObject(contextDto)}");
+            var configuration = GetConfiguration();
+            var systemLlm = await configuration.GetSystemLLM();
+            var dictionary = JsonConvert.DeserializeObject<Dictionary<string, object>>(contextDto.MessageId);
+            GodStreamChatAsync(contextDto.RequestId,
+                (string)dictionary.GetValueOrDefault("LLM", systemLlm),
+                (bool)dictionary.GetValueOrDefault("StreamingModeEnabled", true),
+                (string)dictionary.GetValueOrDefault("Message", string.Empty),
+                contextDto.ChatId, null, (bool)dictionary.GetValueOrDefault("IsHttpRequest", true));
+            return;
+        } else if (aiExceptionEnum != AIExceptionEnum.None)
         {
             Logger.LogError(
                 $"[GodChatGAgent][ChatMessageCallbackAsync] stream error. sessionId {contextDto?.RequestId.ToString()}, chatId {contextDto?.ChatId}, error {aiExceptionEnum}");
