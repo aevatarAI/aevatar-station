@@ -29,7 +29,7 @@ namespace Aevatar.Controllers;
 
 [RemoteService]
 [ControllerName("GodGPT")]
-[Route("api/godgpt")]
+[Route("api/gotgpt")]
 [Authorize]
 public class GodGPTController : AevatarController
 {
