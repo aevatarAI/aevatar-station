@@ -188,7 +188,10 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         if (isHttpRequest)
         {
             aiChatContextDto.MessageId = JsonConvert.SerializeObject(new Dictionary<string, object>()
-                { { "IsHttpRequest", true },{"LLM", llm}, {"StreamingModeEnabled", streamingModeEnabled}, {"Message", message} });
+            {
+                { "IsHttpRequest", true }, { "LLM", llm }, { "StreamingModeEnabled", streamingModeEnabled },
+                { "Message", message }
+            });
         }
 
         var aiAgentStatusProxy = await GetAIAgentStatusProxy();
@@ -196,7 +199,9 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         {
             Logger.LogDebug(
                 $"[GodChatGAgent][GodStreamChatAsync] agent {aiAgentStatusProxy.GetPrimaryKey().ToString()}, session {sessionId.ToString()}, chat {chatId}");
-            var result = await aiAgentStatusProxy.PromptWithStreamAsync(message, State.ChatHistory, promptSettings,
+            var settings = promptSettings ?? new ExecutionPromptSettings();
+            settings.Temperature = "0.9";
+            var result = await aiAgentStatusProxy.PromptWithStreamAsync(message, State.ChatHistory, settings,
                 context: aiChatContextDto);
             if (!result)
             {
@@ -326,7 +331,8 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
                 (string)dictionary.GetValueOrDefault("Message", string.Empty),
                 contextDto.ChatId, null, (bool)dictionary.GetValueOrDefault("IsHttpRequest", true));
             return;
-        } else if (aiExceptionEnum != AIExceptionEnum.None)
+        }
+        else if (aiExceptionEnum != AIExceptionEnum.None)
         {
             Logger.LogError(
                 $"[GodChatGAgent][ChatMessageCallbackAsync] stream error. sessionId {contextDto?.RequestId.ToString()}, chatId {contextDto?.ChatId}, error {aiExceptionEnum}");
