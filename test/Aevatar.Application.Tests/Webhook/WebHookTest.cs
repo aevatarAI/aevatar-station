@@ -2,11 +2,13 @@ using System;
 using System.Threading.Tasks;
 using Aevatar.Service;
 using Shouldly;
+using Volo.Abp.Modularity;
 using Xunit;
 
 namespace Aevatar.Webhook;
 
-public class WebHookTests : AevatarApplicationTestBase
+public abstract class WebHookTests<TStartupModule> : AevatarApplicationTestBase<TStartupModule>
+    where TStartupModule : IAbpModule
 {
     private readonly IWebhookService _webhookService;
     public WebHookTests()

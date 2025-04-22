@@ -69,7 +69,6 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
     {
         await CreateScopesAsync();
         await CreateApplicationsAsync();
-        await SeedAdminUserAsync();
     }
 
     private async Task CreateScopesAsync()
@@ -79,62 +78,6 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
             await _scopeManager.CreateAsync(new OpenIddictScopeDescriptor {
                 Name = "Aevatar", DisplayName = "Aevatar API", Resources = { "Aevatar" }
             });
-        }
-    }
-    
-    private async Task SeedAdminUserAsync()
-    {
-        var adminUser = await _identityUserManager.FindByNameAsync("admin");
-        if (adminUser != null)
-        {
-            var adminPassword = _usersOptions.AdminPassword;
-            var token = await _identityUserManager.GeneratePasswordResetTokenAsync(adminUser);
-            var result = await _identityUserManager.ResetPasswordAsync(adminUser, token, adminPassword);
-            if (!result.Succeeded)
-            {
-                throw new Exception("Failed to set admin password: " + result.Errors.Select(e => e.Description).Aggregate((errors, error) => errors + ", " + error));
-            }
-            await SeedPermissionsFromConfigurationAsync();
-        }
-    }
-    
-    private async Task SeedPermissionsFromConfigurationAsync()
-    {
-        var permissionMappings = _configuration.GetSection("PermissionMappings").Get<Dictionary<string, List<string>>>();
-        if (permissionMappings == null) return;
-        int count = 0;
-        foreach (var mapping in permissionMappings)
-        {
-            var roleName = mapping.Key;
-            var permissions = mapping.Value;
-           
-            var role = await _roleManager.RoleExistsAsync(roleName);
-            if (!role)
-            {
-                var identityRole = new IdentityRole(Guid.NewGuid(), roleName);
-                identityRole.IsPublic = true;
-                identityRole.IsStatic = true;
-                if (count == 0 )
-                {
-                    identityRole.IsDefault = true;
-                }
-                count++;
-                var result = await _roleManager.CreateAsync(identityRole);
-                if (!result.Succeeded)
-                {
-                    throw new Exception($"Failed to create role '{roleName}': " +
-                                        $"{string.Join(", ", result.Errors.Select(e => e.Description))}");
-                }
-            }
-            foreach (var permission in permissions)
-            {
-                await _permissionManager.SetAsync(
-                    permission,
-                    RolePermissionValueProvider.ProviderName ,
-                    roleName,
-                    true 
-                );
-            }
         }
     }
 
