@@ -29,7 +29,7 @@ namespace Aevatar.Controllers;
 
 [RemoteService]
 [ControllerName("GodGPT")]
-[Route("api/gotgpt")]
+[Route("api/godgpt")]
 [Authorize]
 public class GodGPTController : AevatarController
 {
@@ -95,7 +95,8 @@ public class GodGPTController : AevatarController
             if (firstFlag == false)
             {
                 firstFlag = true;
-                _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] SubscribeAsync get first message:{request.SessionId}, duration: {stopwatch.ElapsedMilliseconds}ms");
+                _logger.LogDebug(
+                    $"[GodGPTController][ChatWithSessionAsync] SubscribeAsync get first message:{request.SessionId}, duration: {stopwatch.ElapsedMilliseconds}ms");
             }
 
             var responseData = $"data: {JsonConvert.SerializeObject(chatResponse.ConvertToHttpResponse())}\n\n";
@@ -143,24 +144,75 @@ public class GodGPTController : AevatarController
     [HttpGet("session-list")]
     public async Task<List<SessionInfoDto>> GetSessionListAsync()
     {
-        return await _godGptService.GetSessionListAsync((Guid)CurrentUser.Id!);
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var sessionList = await _godGptService.GetSessionListAsync(currentUserId);
+        _logger.LogDebug("[GodGPTController][GetSessionListAsync] userId: {0}, duration: {1}ms",
+            currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
+        return sessionList;
     }
 
-    [HttpGet("{sessionId}/chat-history")]
+    [HttpGet("chat/{sessionId}")]
     public async Task<List<ChatMessage>> GetSessionMessageListAsync(Guid sessionId)
     {
-        return await _godGptService.GetSessionMessageListAsync((Guid)CurrentUser.Id!, sessionId);
+        var stopwatch = Stopwatch.StartNew();
+        var chatMessages = await _godGptService.GetSessionMessageListAsync((Guid)CurrentUser.Id!, sessionId);
+        _logger.LogDebug("[GodGPTController][GetSessionMessageListAsync] sessionId: {0}, duration: {1}ms",
+            sessionId, stopwatch.ElapsedMilliseconds);
+        return chatMessages;
     }
 
-    [HttpDelete("{sessionId}")]
-    public async Task DeleteSessionAsync(Guid sessionId)
+    [HttpPut("chat/rename")]
+    public async Task<Guid> RenameSessionAsync(QuantumRenameDto request)
     {
-        await _godGptService.DeleteSessionAsync((Guid)CurrentUser.Id!, sessionId);
+        var stopwatch = Stopwatch.StartNew();
+        var sessionId =
+            await _godGptService.RenameSessionAsync((Guid)CurrentUser.Id!, request.SessionId, request.Title);
+        _logger.LogDebug("[GodGPTController][RenameSessionAsync] sessionId: {0}, duration: {1}ms",
+            sessionId, stopwatch.ElapsedMilliseconds);
+        return sessionId;
     }
 
-    [HttpPut("rename")]
-    public async Task RenameSessionAsync(QuantumRenameDto request)
+    [HttpDelete("chat/{sessionId}")]
+    public async Task<Guid> DeleteSessionAsync(Guid sessionId)
     {
-        await _godGptService.RenameSessionAsync((Guid)CurrentUser.Id!, request.SessionId, request.Title);
+        var stopwatch = Stopwatch.StartNew();
+        var deleteSessionId = await _godGptService.DeleteSessionAsync((Guid)CurrentUser.Id!, sessionId);
+        _logger.LogDebug("[GodGPTController][DeleteSessionAsync] sessionId: {0}, duration: {1}ms",
+            deleteSessionId, stopwatch.ElapsedMilliseconds);
+        return deleteSessionId;
+    }
+
+    [HttpGet("account")]
+    public async Task<UserProfileDto> GetUserProfileAsync()
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var userProfileDto = await _godGptService.GetUserProfileAsync(currentUserId);
+        _logger.LogDebug("[GodGPTController][GetUserProfileAsync] sessionId: {0}, duration: {1}ms",
+            currentUserId, stopwatch.ElapsedMilliseconds);
+        return userProfileDto;
+    }
+
+    [HttpPut("account")]
+    public async Task<Guid> SetUserProfileAsync(UserProfileDto userProfile)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var updateUserId = await _godGptService.SetUserProfileAsync(currentUserId, userProfile);
+        _logger.LogDebug("[GodGPTController][SetUserProfileAsync] sessionId: {0}, duration: {1}ms",
+            updateUserId, stopwatch.ElapsedMilliseconds);
+        return updateUserId;
+    }
+
+    [HttpDelete("account")]
+    public async Task<Guid> DeleteAccountAsync()
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var deleteUserId = await _godGptService.DeleteAccountAsync(currentUserId);
+        _logger.LogDebug("[GodGPTController][SetUserProfileAsync] sessionId: {0}, duration: {1}ms",
+            deleteUserId, stopwatch.ElapsedMilliseconds);
+        return deleteUserId;
     }
 }

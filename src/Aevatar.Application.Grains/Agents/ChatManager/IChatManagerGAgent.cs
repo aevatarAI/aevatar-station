@@ -14,11 +14,12 @@ public interface IChatManagerGAgent : IGAgent
     Task<List<SessionInfoDto>> GetSessionListAsync();
     [ReadOnly]
     Task<List<ChatMessage>> GetSessionMessageListAsync(Guid sessionId);
-    Task DeleteSessionAsync(Guid sessionId);
-    Task RenameSessionAsync(Guid sessionId, string title);
-    Task ClearAllAsync();
-    Task SetUserProfileAsync(string gender, DateTime birthDate, string birthPlace, string fullName);
+    Task<Guid> DeleteSessionAsync(Guid sessionId);
+    Task<Guid> RenameSessionAsync(Guid sessionId, string title);
+    Task<UserProfileDto> GetUserProfileAsync();
+    Task<Guid> SetUserProfileAsync(string gender, DateTime birthDate, string birthPlace, string fullName);
     Task<UserProfileDto> GetLastSessionUserProfileAsync();
+    Task<Guid> ClearAllAsync();
 
     Task RenameChatTitleAsync(RenameChatTitleEvent @event);
 }
