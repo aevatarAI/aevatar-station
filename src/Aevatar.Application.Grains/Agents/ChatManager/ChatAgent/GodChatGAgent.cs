@@ -26,7 +26,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
 {
     private List<IAIAgentStatusProxy> AIAgentStatusProxies = new();
     private static readonly List<string> UsableLLMs = new List<string>() { "OpenAILast", "OpenAI" };
-    private static readonly TimeSpan RequestRecoveryDelay = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan RequestRecoveryDelay = TimeSpan.FromSeconds(600);
 
     protected override async Task ChatPerformConfigAsync(ChatConfigDto configuration)
     {
