@@ -344,7 +344,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         RaiseEvent(new CreateSessionInfoEventLog()
         {
             SessionId = sessionId,
-            Title = ""
+            Title = "",
+            CreateAt = DateTime.UtcNow
         });
 
         await ConfirmEvents();
@@ -462,12 +463,19 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
     public Task<List<SessionInfoDto>> GetSessionListAsync()
     {
         var result = new List<SessionInfoDto>();
+        
         foreach (var item in State.SessionInfoList)
         {
+            var createAt = item.CreateAt;
+            if (createAt == default)
+            {
+                createAt = new DateTime(2025, 4, 18);
+            }
             result.Add(new SessionInfoDto()
             {
                 SessionId = item.SessionId,
                 Title = item.Title,
+                CreateAt = createAt
             });
         }
 
@@ -563,7 +571,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
                 State.SessionInfoList.Add(new SessionInfo()
                 {
                     SessionId = @createSessionInfo.SessionId,
-                    Title = @createSessionInfo.Title
+                    Title = @createSessionInfo.Title,
+                    CreateAt = @createSessionInfo.CreateAt
                 });
                 break;
             case DeleteSessionEventLog @deleteSessionEventLog:
