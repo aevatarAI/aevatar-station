@@ -4,5 +4,5 @@ namespace Aevatar.Webhook.Dto;
 
 public class ApiHostResponse
 {
-    public Dictionary<string, string>? CodeBytes { get; set; }
+    public Dictionary<string, string>? Data { get; set; }
 }

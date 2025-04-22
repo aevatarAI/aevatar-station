@@ -38,10 +38,7 @@ public class Startup
         services.AddApplicationAsync<T>(options =>
         {
             var codeFiles = AsyncHelper.RunSync(async () => await GetPluginCodeAsync());
-            foreach (var codeFile in codeFiles)
-            {
-                options.PlugInSources.AddCode(codeFile.Value);
-            }
+            options.PlugInSources.AddCode(codeFiles);
         });
     }
 
@@ -79,13 +76,13 @@ public class Startup
 
             var responseBody = await response.Content.ReadAsStringAsync();
             var apiResponse = JsonConvert.DeserializeObject<ApiHostResponse>(responseBody);
-            if (apiResponse?.CodeBytes == null)
+            if (apiResponse?.Data == null)
             {
                 throw new Exception("Invalid API response format");
             }
 
             var result = new Dictionary<string, byte[]>();
-            foreach (var file in apiResponse.CodeBytes)
+            foreach (var file in apiResponse.Data)
             {
                 result[file.Key] = Convert.FromBase64String(file.Value);
             }
