@@ -95,7 +95,8 @@ public class GodGPTController : AevatarController
             if (firstFlag == false)
             {
                 firstFlag = true;
-                _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] SubscribeAsync get first message:{request.SessionId}, duration: {stopwatch.ElapsedMilliseconds}ms");
+                _logger.LogDebug(
+                    $"[GodGPTController][ChatWithSessionAsync] SubscribeAsync get first message:{request.SessionId}, duration: {stopwatch.ElapsedMilliseconds}ms");
             }
 
             var responseData = $"data: {JsonConvert.SerializeObject(chatResponse.ConvertToHttpResponse())}\n\n";
@@ -112,10 +113,13 @@ public class GodGPTController : AevatarController
             }
         }, ex =>
         {
+            _logger.LogError(
+                $"[GodGPTController][ChatWithSessionAsync] on stream error async:{ex.Message} - session:{request.SessionId.ToString()}, chatId:{chatId}");
             exitSignal.TrySetException(ex);
             return Task.CompletedTask;
         }, () =>
         {
+            _logger.LogError($"[GodGPTController][ChatWithSessionAsync] oncomplete");
             exitSignal.TrySetResult();
             return Task.CompletedTask;
         });
@@ -123,6 +127,10 @@ public class GodGPTController : AevatarController
         try
         {
             await exitSignal.Task.WaitAsync(HttpContext.RequestAborted);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"[GodGPTController][ChatWithSessionAsync] catch error:{ex.ToString()}");
         }
         finally
         {
