@@ -171,6 +171,7 @@
     <PackageVersion Include="xunit.extensibility.core" Version="2.7.0" />
     <PackageVersion Include="xunit.extensibility.execution" Version="2.7.0" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.5.7" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <!-- Aspire packages -->
     <PackageVersion Include="Aspire.Hosting" Version="9.1.0" />
     <PackageVersion Include="Aspire.Hosting.MongoDB" Version="9.1.0" />
