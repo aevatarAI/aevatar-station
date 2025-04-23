@@ -27,7 +27,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
     private static readonly Dictionary<string, List<string>> RegionToLLMsMap = new Dictionary<string, List<string>>()
     {
         { "CN", new List<string> { "DeepSeek"} },
-        { "DEFAULT", new List<string>() {  "OpenAI", "OpenAILast" }}
+        { "DEFAULT", new List<string>() {  "OpenAILast", "OpenAI" }}
     };
     private static readonly TimeSpan RequestRecoveryDelay = TimeSpan.FromSeconds(600);
     private const string DefaultRegion = "DEFAULT";
