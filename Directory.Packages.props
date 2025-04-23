@@ -194,5 +194,6 @@
     <PackageVersion Include="MineAiFun.GAgents" Version="1.0.0-beta.14" />
     <PackageVersion Include="XWorkerAgent" Version="0.0.28" />
     <PackageVersion Include="TelegramWorkerAgent" Version="0.0.8" />
+    <PackageVersion Include="FluentValidation" Version="12.0.0-preview1" />
   </ItemGroup>
 </Project>

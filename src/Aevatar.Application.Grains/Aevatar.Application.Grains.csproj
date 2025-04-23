@@ -19,6 +19,7 @@
         <PackageReference Include="Aevatar.GAgents.SemanticKernel"  />
         <PackageReference Include="Aevatar.GAgents.AI.Abstractions"/>
         <PackageReference Include="MineAiFun.GAgents"/>
+        <PackageReference Include="FluentValidation" />
     </ItemGroup>
 
     <ItemGroup>
