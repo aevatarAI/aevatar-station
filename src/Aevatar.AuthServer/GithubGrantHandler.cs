@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Security.Claims;
 using Aevatar.OpenIddict;
 using Aevatar.Permissions;
 using Google.Apis.Auth;
@@ -38,78 +39,93 @@ public class GithubGrantHandler : ITokenExtensionGrant
         
         if (string.IsNullOrEmpty(code))
         {
-            return new ForbidResult(
-                OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                new AuthenticationProperties(new Dictionary<string, string?>
-                {
-                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = 
-                        OpenIddictConstants.Errors.InvalidRequest,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = 
-                        "Missing code parameter"
-                }));
+            return ErrorResult("Missing code parameter");
         }
 
-        Octokit.User githubUser;
-        try
+        var githubUser = await GetUserInfoAsync(code);
+        if (githubUser == null)
         {
-            githubUser = await GetUserInfoAsync(code);
+            return ErrorResult("Invalid code");
         }
-        catch (BusinessException e)
-        {
-            return new ForbidResult(
-                OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                new AuthenticationProperties(new Dictionary<string, string?>
-                {
-                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = 
-                        OpenIddictConstants.Errors.InvalidRequest,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = 
-                        e.Message
-                }));
-        }
-
-        var userManager = context.HttpContext.RequestServices.GetRequiredService<IdentityUserManager>();
-        var signInManager = context.HttpContext.RequestServices.GetRequiredService<SignInManager<IdentityUser>>();
         
-        var user = await userManager.FindByLoginAsync(GrantTypeConstants.Github, githubUser.Id.ToString());
+        var user = await GetOrCreateUserAsync(context, githubUser);
         if (user == null)
         {
-            var name = Guid.NewGuid().ToString("N");
-            user = new IdentityUser(Guid.NewGuid(), name,
-                email: githubUser.Email.IsNullOrWhiteSpace() ? $"{name}@github.com" : githubUser.Email);
-            var createResult = await userManager.CreateAsync(user);
-            if (!createResult.Succeeded)
-            {
-                _logger.LogError("User creation failed: {errors}", 
-                    string.Join(", ", createResult.Errors.Select(e => e.Description)));
-            
-                return new ForbidResult(
-                    OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                    new AuthenticationProperties(new Dictionary<string, string?>
-                    {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = 
-                            OpenIddictConstants.Errors.InvalidRequest,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = 
-                            "User creation failed"
-                    }));
-            }
-
-            await userManager.SetRolesAsync(user, [AevatarPermissions.BasicUser]);
-            
-            await userManager.AddLoginAsync(user, new UserLoginInfo(
-                GrantTypeConstants.Github, 
-                githubUser.Id.ToString(), 
-                GrantTypeConstants.Github));
+            return ErrorResult("Failed to create or retrieve user");
         }
         
-        var claimsPrincipal = await signInManager.CreateUserPrincipalAsync(user);
-        claimsPrincipal.SetScopes(context.Request.GetScopes());
-        claimsPrincipal.SetResources(await GetResourcesAsync(context, claimsPrincipal.GetScopes()));
-        claimsPrincipal.SetAudiences("Aevatar");
-        await context.HttpContext.RequestServices.GetRequiredService<AbpOpenIddictClaimsPrincipalManager>()
-            .HandleAsync(context.Request, claimsPrincipal);
+        var claimsPrincipal = await CreateUserClaimsPrincipalAsync(context, user);
 
         return new SignInResult(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme, claimsPrincipal);
     }
+    
+    private async Task<IdentityUser> GetOrCreateUserAsync(ExtensionGrantContext context, Octokit.User githubUser)
+    {
+        var userManager = context.HttpContext.RequestServices.GetRequiredService<IdentityUserManager>();
+        
+        var user = await userManager.FindByLoginAsync(GrantTypeConstants.Github, githubUser.Id.ToString());
+        if (user != null)
+        {
+            return user;
+        }
+
+        return await CreateUserFromGithubAsync(githubUser, userManager);
+    }
+
+    private async Task<IdentityUser> CreateUserFromGithubAsync(Octokit.User githubUser, IdentityUserManager userManager)
+    {
+        var name = Guid.NewGuid().ToString("N");
+        var email = !string.IsNullOrWhiteSpace(githubUser.Email) ? githubUser.Email : $"{name}@github.com";
+        
+        var user = new IdentityUser(Guid.NewGuid(), name, email);
+        var createResult = await userManager.CreateAsync(user);
+        
+        if (!createResult.Succeeded)
+        {
+            _logger.LogError("User creation failed: {Errors}", 
+                string.Join(", ", createResult.Errors.Select(e => e.Description)));
+            return null;
+        }
+
+        await userManager.SetRolesAsync(user, [AevatarPermissions.BasicUser]);
+        
+        await userManager.AddLoginAsync(user, new UserLoginInfo(
+            GrantTypeConstants.Github, 
+            githubUser.Id.ToString(), 
+            GrantTypeConstants.Github));
+
+        return user;
+    }
+    
+    private async Task<ClaimsPrincipal> CreateUserClaimsPrincipalAsync(ExtensionGrantContext context, IdentityUser user)
+    {
+        var signInManager = context.HttpContext.RequestServices.GetRequiredService<SignInManager<IdentityUser>>();
+        var claimsPrincipal = await signInManager.CreateUserPrincipalAsync(user);
+        
+        claimsPrincipal.SetScopes(context.Request.GetScopes());
+        claimsPrincipal.SetResources(await GetResourcesAsync(context, claimsPrincipal.GetScopes()));
+        claimsPrincipal.SetAudiences("Aevatar");
+        
+        await context.HttpContext.RequestServices
+            .GetRequiredService<AbpOpenIddictClaimsPrincipalManager>()
+            .HandleAsync(context.Request, claimsPrincipal);
+
+        return claimsPrincipal;
+    }
+    
+    private ForbidResult ErrorResult(string errorDescription)
+    {
+        return new ForbidResult(
+            OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+            new AuthenticationProperties(new Dictionary<string, string?>
+            {
+                [OpenIddictServerAspNetCoreConstants.Properties.Error] = 
+                    OpenIddictConstants.Errors.InvalidRequest,
+                [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = 
+                    errorDescription
+            }));
+    }
+
 
     private async Task<Octokit.User> GetUserInfoAsync(string code)
     {
@@ -128,7 +144,7 @@ public class GithubGrantHandler : ITokenExtensionGrant
 
         if (token.AccessToken.IsNullOrWhiteSpace())
         {
-            throw new BusinessException(message: "Invalid code");
+            return null;
         }
 
         client.Credentials = new Credentials(token.AccessToken);
