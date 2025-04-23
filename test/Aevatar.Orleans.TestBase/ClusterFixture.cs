@@ -9,8 +9,12 @@ using Aevatar.Application.Grains;
 using Aevatar.CQRS;
 using Aevatar.CQRS.Handler;
 using Aevatar.CQRS.Provider;
+using Aevatar.Extensions;
+using Aevatar.GAgents.AI.Options;
+using Aevatar.GAgents.SemanticKernel.Extensions;
 using Aevatar.Mock;
 using Aevatar.Options;
+using Aevatar.PermissionManagement.Extensions;
 using Aevatar.Service;
 using AutoMapper;
 using Elastic.Clients.Elasticsearch;
@@ -54,7 +58,7 @@ public class ClusterFixture : IDisposable, ISingletonDependency
         public void Configure(ISiloBuilder hostBuilder)
         {
             var configuration = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.json")
+                .AddJsonFile("/opt/evn/appsettings.json")
                 // .AddJsonFile("appsettings.secrets.json")
                 .Build();
 
@@ -63,6 +67,7 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                     services.AddAutoMapper(typeof(AIApplicationGrainsModule).Assembly);
                     var mock = new Mock<ILocalEventBus>();
                     services.AddSingleton(typeof(ILocalEventBus), mock.Object);
+                    
                     services.AddMemoryCache();
                     // Configure logging
                     var loggerProvider = new MockLoggerProvider("Aevatar");
@@ -89,11 +94,10 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                     {
                         Mapper = sp.GetRequiredService<IMapper>()
                     });
+                    
                     //services.AddMediatR(typeof(TestSiloConfigurations).Assembly);
 
                     services.AddTransient<IMapperAccessor>(provider => provider.GetRequiredService<MapperAccessor>());
-
-
                     services.AddSingleton<IIndexingService, MockElasticIndexingService>();
 
                     services.AddSingleton<ElasticsearchClient>(sp =>
@@ -112,10 +116,20 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                     );
                     services.AddSingleton(typeof(ICQRSProvider), typeof(CQRSProvider));
                     services.AddSingleton(typeof(ICqrsService), typeof(CqrsService));
+                    
+                    services.Configure<QdrantConfig>(configuration.GetSection("VectorStores:Qdrant"));
+                    services.Configure<AzureOpenAIEmbeddingsConfig>(configuration.GetSection("AIServices:AzureOpenAIEmbeddings"));
+                    services.Configure<RagConfig>(configuration.GetSection("Rag"));
+                    services.Configure<SystemLLMConfigOptions>(configuration);
+                    
+                    services.AddSemanticKernel()
+                        .AddQdrantVectorStore()
+                        .AddAzureOpenAITextEmbedding();
                 })
                 .AddMemoryStreams("Aevatar")
                 .AddMemoryGrainStorage("PubSubStore")
                 .AddMemoryGrainStorageAsDefault()
+                .UseAevatar()
                 .AddLogStorageBasedLogConsistencyProvider("LogStorage")
                 .Configure<NameContestOptions>(configuration.GetSection("NameContest"));
         }

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using AElf.OpenTelemetry;
+using Aevatar.Handler;
 using Aevatar.MongoDB;
 using Aevatar.Options;
 using Aevatar.Permissions;
@@ -49,11 +50,8 @@ public class AevatarDeveloperHostModule : AbpModule
         ConfigureCors(context, configuration);
         ConfigureSwaggerServices(context, configuration);
         Configure<GoogleLoginOptions>(configuration.GetSection("GoogleLogin"));
-        context.Services.AddMvc(options =>
-        {
-            options.Filters.Add(new IgnoreAntiforgeryTokenAttribute());
-        })
-        .AddNewtonsoftJson();
+        context.Services.AddMvc(options => { options.Filters.Add(new IgnoreAntiforgeryTokenAttribute()); })
+            .AddNewtonsoftJson();
     }
 
     private void ConfigureAuthentication(ServiceConfigurationContext context, IConfiguration configuration)
@@ -167,7 +165,12 @@ public class AevatarDeveloperHostModule : AbpModule
 
         app.UseUnitOfWork();
         app.UseDynamicClaims();
-        app.UseEndpoints(endpoints => { endpoints.MapHealthChecks("/health"); });
+        app.Map("/api/gotgpt/chat", config => { config.UseMiddleware<ChatMiddleware>(); });
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapHealthChecks("/health");
+            endpoints.MapControllers();
+        });
         app.UseSwagger();
         app.UseAbpSwaggerUI(c =>
         {
