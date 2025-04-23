@@ -11,8 +11,7 @@ public class AevatarMongoDbFixture : IDisposable
     {
         MongoDbRunner = MongoRunner.Run(new MongoRunnerOptions
         {
-            UseSingleNodeReplicaSet = true,
-            MongoPort = 27017
+            UseSingleNodeReplicaSet = true
         });
     }
 
