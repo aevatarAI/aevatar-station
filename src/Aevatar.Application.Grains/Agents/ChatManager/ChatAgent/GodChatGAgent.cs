@@ -152,7 +152,9 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         {
             Logger.LogDebug(
                 $"[GodChatGAgent][GodStreamChatAsync] agent {aiAgentStatusProxy.GetPrimaryKey().ToString()}, session {sessionId.ToString()}, chat {chatId}");
-            var result = await aiAgentStatusProxy.PromptWithStreamAsync(message, State.ChatHistory, promptSettings,
+            var settings = promptSettings ?? new ExecutionPromptSettings();
+            settings.Temperature = "0.9";
+            var result = await aiAgentStatusProxy.PromptWithStreamAsync(message, State.ChatHistory, settings,
                 context: aiChatContextDto);
             if (!result)
             {

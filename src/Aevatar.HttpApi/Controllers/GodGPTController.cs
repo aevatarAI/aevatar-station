@@ -63,7 +63,7 @@ public class GodGPTController : AevatarController
         return await _godGptService.CreateSessionAsync((Guid)CurrentUser.Id!, _defaultLLM, _defaultPrompt);
     }
 
-    [HttpPost("chat")]
+    [HttpPost("chat_old")]
     public async Task<QuantumChatResponseDto> ChatWithSessionAsync(QuantumChatRequestDto request)
     {
         var stopwatch = Stopwatch.StartNew();
@@ -85,6 +85,7 @@ public class GodGPTController : AevatarController
         var exitSignal = new TaskCompletionSource();
         StreamSubscriptionHandle<ResponseStreamGodChat>? subscription = null;
         var firstFlag = false;
+        var ifLastChunk = false;
         subscription = await responseStream.SubscribeAsync(async (chatResponse, token) =>
         {
             if (chatResponse.ChatId != chatId)
@@ -105,6 +106,9 @@ public class GodGPTController : AevatarController
 
             if (chatResponse.IsLastChunk)
             {
+                await Response.WriteAsync("event: completed\n");
+                Response.Body.Close();
+                ifLastChunk = true;
                 exitSignal.TrySetResult();
                 if (subscription != null)
                 {
@@ -113,10 +117,13 @@ public class GodGPTController : AevatarController
             }
         }, ex =>
         {
+            _logger.LogError(
+                $"[GodGPTController][ChatWithSessionAsync] on stream error async:{ex.Message} - session:{request.SessionId.ToString()}, chatId:{chatId}");
             exitSignal.TrySetException(ex);
             return Task.CompletedTask;
         }, () =>
         {
+            _logger.LogError($"[GodGPTController][ChatWithSessionAsync] oncomplete");
             exitSignal.TrySetResult();
             return Task.CompletedTask;
         });
@@ -125,12 +132,21 @@ public class GodGPTController : AevatarController
         {
             await exitSignal.Task.WaitAsync(HttpContext.RequestAborted);
         }
+        catch (Exception ex)
+        {
+            _logger.LogError($"[GodGPTController][ChatWithSessionAsync] catch error:{ex.ToString()}");
+        }
         finally
         {
             if (subscription != null)
             {
                 await subscription.UnsubscribeAsync();
             }
+        }
+
+        if (ifLastChunk == false)
+        {
+            _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] No LastChunk:{request.SessionId},chatId:{chatId}");
         }
 
         _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] complete done sessionId:{request.SessionId}");

@@ -11,6 +11,7 @@ using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite.Bundling;
 using Microsoft.OpenApi.Models;
 using Aevatar.Application.Grains;
 using Aevatar.Domain.Grains;
+using Aevatar.Handler;
 using Aevatar.Permissions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
@@ -210,6 +211,10 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         // app.UsePathBase("/developer-client");
         app.UseUnitOfWork();
         app.UseDynamicClaims();
+        app.Map("/api/gotgpt/chat", config =>
+        {
+            config.UseMiddleware<ChatMiddleware>();
+        });
         app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
         app.UseSwagger();
         app.UseAbpSwaggerUI(c =>
