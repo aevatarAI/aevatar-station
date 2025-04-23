@@ -25,7 +25,6 @@
 
     <ItemGroup>
         <PackageReference Include="AElf.Types" />
-        <PackageReference Include="AspNet.Security.OAuth.GitHub" />
         <PackageReference Include="Google.Apis.Auth" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
         <PackageReference Include="Microsoft.Orleans.Core" />
