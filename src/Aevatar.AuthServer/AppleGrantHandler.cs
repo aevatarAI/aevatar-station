@@ -25,6 +25,9 @@ using Volo.Abp.Identity;
 using Volo.Abp.OpenIddict;
 using Volo.Abp.OpenIddict.ExtensionGrantTypes;
 using Aevatar.Constants;
+using Microsoft.AspNetCore.Identity;
+using IdentityUser = Volo.Abp.Identity.IdentityUser;
+using SignInResult = Microsoft.AspNetCore.Mvc.SignInResult;
 
 namespace Aevatar;
 
@@ -86,20 +89,30 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
             _logger.LogInformation("AppleGrantHandler.HandleAsync: email: {email}", email);
             var userManager = context.HttpContext.RequestServices.GetRequiredService<IdentityUserManager>();
 
-            var name = email + "@" + GrantTypeConstants.APPLE;
-            var user = await userManager.FindByNameAsync(name);
+            var user = await userManager.FindByLoginAsync(GrantTypeConstants.APPLE, appleUser.SubjectId);
             if (user == null)
             {
-                user = new IdentityUser(Guid.NewGuid(), name, email: Guid.NewGuid().ToString("N") + "@ABP.IO");
-                await userManager.CreateAsync(user);
-                await userManager.SetRolesAsync(user, 
-                    [AevatarPermissions.BasicUser]);
+                // Compatible with historical data login
+                var name = email + "@" + GrantTypeConstants.APPLE;
+                user = await userManager.FindByNameAsync(name);
+                if (user == null)
+                {
+                    name = Guid.NewGuid().ToString("N");
+                    user = new IdentityUser(Guid.NewGuid(), name, email: email.IsNullOrWhiteSpace() ? $"{name}@apple.com":email);
+                    await userManager.CreateAsync(user);
+                    await userManager.SetRolesAsync(user,
+                        [AevatarPermissions.BasicUser]);
+                }
+                
+                await userManager.AddLoginAsync(user, new UserLoginInfo(
+                    GrantTypeConstants.APPLE, 
+                    appleUser.SubjectId, 
+                    GrantTypeConstants.APPLE));
             }
 
-            var identityUser = await userManager.FindByNameAsync(name);
             var identityRoleManager = context.HttpContext.RequestServices.GetRequiredService<IdentityRoleManager>();
             var roleNames = new List<string>();
-            foreach (var userRole in identityUser.Roles)
+            foreach (var userRole in user.Roles)
             {
                 var role = await identityRoleManager.GetByIdAsync(userRole.RoleId);
                 roleNames.Add(role.Name);

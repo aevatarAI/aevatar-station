@@ -4,6 +4,7 @@ using Aevatar.OpenIddict;
 using Aevatar.Permissions;
 using Google.Apis.Auth;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using OpenIddict.Abstractions;
@@ -11,6 +12,8 @@ using OpenIddict.Server.AspNetCore;
 using Volo.Abp.Identity;
 using Volo.Abp.OpenIddict;
 using Volo.Abp.OpenIddict.ExtensionGrantTypes;
+using IdentityUser = Volo.Abp.Identity.IdentityUser;
+using SignInResult = Microsoft.AspNetCore.Mvc.SignInResult;
 
 namespace Aevatar;
 
@@ -100,19 +103,31 @@ public class GoogleGrantHandler : ITokenExtensionGrant
         _logger.LogInformation("GoogleGrantHandler.HandleAsync: email: {email}", email);
         var userManager = context.HttpContext.RequestServices.GetRequiredService<IdentityUserManager>();
 
-        var name = email + "@" + GrantTypeConstants.GOOGLE;
-        var user = await userManager.FindByNameAsync(name);
+        var user = await userManager.FindByLoginAsync(GrantTypeConstants.GOOGLE, payload.Subject);
         if (user == null)
         {
-            user = new IdentityUser(Guid.NewGuid(), name, email: Guid.NewGuid().ToString("N") + "@ABP.IO");
-            await userManager.CreateAsync(user);
-            await userManager.SetRolesAsync(user,
-                [AevatarPermissions.BasicUser]);
+            // Compatible with historical data login
+            var name = email + "@" + GrantTypeConstants.GOOGLE;
+            user = await userManager.FindByNameAsync(name);
+            if (user == null)
+            {
+                name = Guid.NewGuid().ToString("N");
+                user = new IdentityUser(Guid.NewGuid(), name,
+                    email: email.IsNullOrWhiteSpace() ? $"{name}@google.com" : email);
+                await userManager.CreateAsync(user);
+                await userManager.SetRolesAsync(user,
+                    [AevatarPermissions.BasicUser]);
+            }
+            
+            await userManager.AddLoginAsync(user, new UserLoginInfo(
+                GrantTypeConstants.GOOGLE, 
+                payload.Subject, 
+                GrantTypeConstants.GOOGLE));
         }
-        var identityUser = await userManager.FindByNameAsync(name);
+        
         var identityRoleManager = context.HttpContext.RequestServices.GetRequiredService<IdentityRoleManager>();
         var roleNames = new List<string>();
-        foreach (var userRole in identityUser.Roles)
+        foreach (var userRole in user.Roles)
         {
             var role = await identityRoleManager.GetByIdAsync(userRole.RoleId);
             roleNames.Add(role.Name);
