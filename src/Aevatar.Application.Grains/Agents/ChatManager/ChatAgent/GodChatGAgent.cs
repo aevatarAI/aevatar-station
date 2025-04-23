@@ -199,14 +199,18 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         {
             Logger.LogDebug(
                 $"[GodChatGAgent][GodStreamChatAsync] agent {aiAgentStatusProxy.GetPrimaryKey().ToString()}, session {sessionId.ToString()}, chat {chatId}");
-            var settings = promptSettings ?? new ExecutionPromptSettings();
-            settings.Temperature = "0.9";
-            var result = await aiAgentStatusProxy.PromptWithStreamAsync(message, State.ChatHistory, settings,
-                context: aiChatContextDto);
-            if (!result)
-            {
-                Logger.LogError($"Failed to initiate streaming response. {this.GetPrimaryKey().ToString()}");
-            }
+            
+            //TODO Stress testing
+            // var settings = promptSettings ?? new ExecutionPromptSettings();
+            // settings.Temperature = "0.9";
+            // var result = await aiAgentStatusProxy.PromptWithStreamAsync(message, State.ChatHistory, settings,
+            //     context: aiChatContextDto);
+            // if (!result)
+            // {
+            //     Logger.LogError($"Failed to initiate streaming response. {this.GetPrimaryKey().ToString()}");
+            // }
+            MockCallBackAsync(sessionId, llm, message, chatId, promptSettings, isHttpRequest);
+            
 
             RaiseEvent(new AddChatHistoryLogEvent
             {
@@ -226,10 +230,45 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         {
             Logger.LogDebug(
                 $"[GodChatGAgent][GodStreamChatAsync] history agent, session {sessionId.ToString()}, chat {chatId}");
-            await ChatAsync(message, promptSettings, aiChatContextDto);
+            //TODO Stress testing
+            //await ChatAsync(message, promptSettings, aiChatContextDto);
         }
 
         return string.Empty;
+    }
+    
+    private async Task MockCallBackAsync(Guid sessionId, string sysmLLM, string content, string chatId,
+        ExecutionPromptSettings promptSettings = null, bool isHttpRequest = false)
+    {
+        try
+        {
+            Logger.LogDebug(
+                $"[GodChatGAgent][MockCallBackAsync] Mock callback, session {sessionId.ToString()}, chat {chatId}");
+            await Task.Delay(TimeSpan.FromMilliseconds(800));
+
+            await ChatMessageCallbackAsync(new AIChatContextDto
+            {
+                RequestId = sessionId,
+                MessageId = JsonConvert.SerializeObject(new Dictionary<string, object>()
+                {
+                    { "IsHttpRequest", true }, { "LLM", sysmLLM }, { "StreamingModeEnabled", true },
+                    { "Message", content }
+                }),
+                ChatId = chatId
+            }, AIExceptionEnum.None, null, new AIStreamChatContent
+            {
+                ResponseContent = "Mock data for stress testing environment.",
+                SerialNumber = 1,
+                IsLastChunk = true,
+                IsAggregationMsg = true,
+                AggregationMsg = "Mock data for stress testing environment."
+            });
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e,
+                $"[GodChatGAgent][MockCallBackAsync] Mock callback error, session {sessionId.ToString()}, chat {chatId}, {e.Message}");
+        }
     }
 
     private async Task<IAIAgentStatusProxy?> GetAIAgentStatusProxy()
@@ -295,7 +334,10 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
                 { Instructions = State.PromptTemplate, LLMConfig = new LLMConfigDto() { SystemLLM = llm } });
         }
 
-        var response = await ChatAsync(message, promptSettings);
+        //TODO Stress testing
+        //var response = await ChatAsync(message, promptSettings);
+        var response = new List<ChatMessage>();
+        
         if (response is { Count: > 0 })
         {
             return response[0].Content!;
