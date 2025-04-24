@@ -33,7 +33,7 @@ public class ChatMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        if (context.Request.PathBase == "/api/gotgpt/chat")
+        if (context.Request.PathBase == "/api/godgpt/chat")
         {
             var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
             var request = JsonConvert.DeserializeObject<QuantumChatRequestDto>(body);
@@ -53,7 +53,7 @@ public class ChatMiddleware
 
                 var chatId = Guid.NewGuid().ToString();
                 await godChat.StreamChatWithSessionAsync(request.SessionId, string.Empty, request.Content,
-                    chatId, null, true);
+                    chatId, null, true, request.Region);
                 _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] http request llm:{request.SessionId}");
                 var exitSignal = new TaskCompletionSource();
                 StreamSubscriptionHandle<ResponseStreamGodChat>? subscription = null;
