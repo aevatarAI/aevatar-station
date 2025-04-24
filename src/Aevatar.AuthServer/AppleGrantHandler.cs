@@ -53,16 +53,16 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
             var idToken = context.Request.GetParameter("id_token")?.ToString();
             var source = context.Request.GetParameter("source")?.ToString();
             var platform = context.Request.GetParameter("platform")?.ToString() ?? string.Empty;
-            var clientId = context.Request.GetParameter("client_id")?.ToString();
+            var appId = context.Request.GetParameter("apple_app_id")?.ToString();
             
             _logger.LogInformation("AppleGrantHandler.HandleAsync source: {source} idToken: {idToken} code: {code} platform: {platform} clientId: {clientId}", 
-                source, idToken, code, platform, clientId);
+                source, idToken, code, platform, appId);
 
             var appleOptions = context.HttpContext.RequestServices.GetRequiredService<IOptionsMonitor<AppleOptions>>();
-            if (!appleOptions.CurrentValue.APPs.TryGetValue(clientId, out var appOptions))
+            if (!appleOptions.CurrentValue.APPs.TryGetValue(appId, out var appOptions))
             {
-                _logger.LogInformation("Invalid Client Id ");
-                return ErrorResult("Invalid client_id");
+                _logger.LogInformation("Invalid apple_app_id ");
+                return ErrorResult("Invalid apple_app_id");
             }
             
             var aud = source == "ios" ? appOptions.NativeClientId : appOptions.WebClientId;
