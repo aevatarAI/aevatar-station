@@ -95,7 +95,7 @@ public class ChatMiddleware
                         await context.Response.WriteAsync(responseData);
                         await context.Response.Body.FlushAsync();
                         takedCount += currentTakeCount;
-                        index += 1;
+                        index += currentTakeCount;
                     }
 
                     if (chatResponse.IsLastChunk)
