@@ -25,12 +25,14 @@ using Volo.Abp.Identity;
 using Volo.Abp.OpenIddict;
 using Volo.Abp.OpenIddict.ExtensionGrantTypes;
 using Aevatar.Constants;
+using Aevatar.Options;
+using Microsoft.Extensions.Options;
+using Namotion.Reflection;
 
 namespace Aevatar;
 
 public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
 {
-    private readonly IConfiguration _configuration;
     private readonly ILogger<AppleGrantHandler> _logger;
 
     public string Name => GrantTypeConstants.APPLE;
@@ -40,7 +42,6 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
         IConfiguration configuration,
         ILogger<AppleGrantHandler> logger)
     {
-        _configuration = configuration;
         _logger = logger;
     }
 
@@ -52,11 +53,19 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
             var idToken = context.Request.GetParameter("id_token")?.ToString();
             var source = context.Request.GetParameter("source")?.ToString();
             var platform = context.Request.GetParameter("platform")?.ToString() ?? string.Empty;
+            var clientId = context.Request.GetParameter("client_id")?.ToString();
             
-            _logger.LogInformation("AppleGrantHandler.HandleAsync source: {source} idToken: {idToken} code: {code} platform: {platform}", 
-                source, idToken, code, platform);
+            _logger.LogInformation("AppleGrantHandler.HandleAsync source: {source} idToken: {idToken} code: {code} platform: {platform} clientId: {clientId}", 
+                source, idToken, code, platform, clientId);
+
+            var appleOptions = context.HttpContext.RequestServices.GetRequiredService<IOptionsMonitor<AppleOptions>>();
+            if (!appleOptions.CurrentValue.APPs.TryGetValue(clientId, out var appOptions))
+            {
+                _logger.LogInformation("Missing both id_token and code");
+                return ErrorResult("Missing both id_token and code");
+            }
             
-            var aud = source == "ios" ? _configuration["Apple:NativeClientId"] : _configuration["Apple:WebClientId"];
+            var aud = source == "ios" ? appOptions.NativeClientId : appOptions.WebClientId;
             if (string.IsNullOrEmpty(idToken))
             {
                 if (string.IsNullOrEmpty(code))
@@ -65,7 +74,7 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
                     return ErrorResult("Missing both id_token and code");
                 }
                 
-                idToken = await ExchangeCodeForTokenAsync(code, aud, platform);
+                idToken = await ExchangeCodeForTokenAsync(code, aud, platform, appOptions);
                 _logger.LogInformation("AppleGrantHandler.HandleAsync ExchangeCodeForTokenAsync code: {idToken} aud: {aud} token: {token}", code, aud, idToken);
 
                 if (idToken.IsNullOrEmpty())
@@ -240,19 +249,20 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
         return resources;
     }
     
-    private async Task<string> ExchangeCodeForTokenAsync(string code, string clientId, string platform)
+    private async Task<string> ExchangeCodeForTokenAsync(string code, string clientId, string platform,
+        AppleAppOptions appOptions)
     {
-        var clientSecret = GenerateClientSecret(clientId);
+        var clientSecret = GenerateClientSecret(clientId, appOptions);
         using var client = new HttpClient();
 
         var redirectUrl = string.Empty;
         if (platform == PlatFormMobile)
         {
-            redirectUrl = _configuration["Apple:MobileRedirectUri"];
+            redirectUrl = appOptions.MobileRedirectUri;
         }
         else
         {
-            redirectUrl = _configuration["Apple:RedirectUri"];
+            redirectUrl = appOptions.RedirectUri;
         }
         
         var body = new List<KeyValuePair<string, string>>
@@ -281,9 +291,9 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
         return tokenResp.IdToken;
     }
     
-    private string GenerateClientSecret(string clientId)
+    private string GenerateClientSecret(string clientId, AppleAppOptions appOptions)
     {
-        var key =  Regex.Replace(_configuration["Apple:Pk"], @"\t|\n|\r", "");
+        var key =  Regex.Replace(appOptions.Pk, @"\t|\n|\r", "");
         using var algorithm = ECDsa.Create();
         algorithm.ImportPkcs8PrivateKey(Convert.FromBase64String(key), out _);
 
@@ -291,12 +301,12 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
         var header = new
         {
             alg = "ES256", 
-            kid = _configuration["Apple:KeyId"]   
+            kid = appOptions.KeyId  
         };
         
         var payload = new
         {
-            iss = _configuration["Apple:TeamId"], 
+            iss = appOptions.TeamId, 
             iat = new DateTimeOffset(now).ToUnixTimeSeconds(), 
             exp = new DateTimeOffset(now.AddMinutes(30)).ToUnixTimeSeconds(),
             aud = "https://appleid.apple.com", 
