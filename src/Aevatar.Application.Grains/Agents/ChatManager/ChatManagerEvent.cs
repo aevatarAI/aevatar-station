@@ -78,6 +78,7 @@ public class ResponseStreamGodChatForHttp
     public string ChatId { get; set; }
     public bool IsLastChunk { get; set; }
     public int SerialNumber { get; set; }
+    public int SerialChunk { get; set; }
     public Guid SessionId { get; set; }
 }
 

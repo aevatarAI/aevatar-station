@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Application.Grains.Agents.ChatManager;
 using Aevatar.Application.Grains.Agents.ChatManager.Chat;
@@ -23,7 +24,8 @@ public class ChatMiddleware
     private readonly ILogger<ChatMiddleware> _logger;
     private readonly IOptions<AevatarOptions> _aevatarOptions;
 
-    public ChatMiddleware(RequestDelegate next, ILogger<ChatMiddleware> logger, IClusterClient clusterClient, IOptions<AevatarOptions> aevatarOptions)
+    public ChatMiddleware(RequestDelegate next, ILogger<ChatMiddleware> logger, IClusterClient clusterClient,
+        IOptions<AevatarOptions> aevatarOptions)
     {
         _next = next;
         _logger = logger;
@@ -74,9 +76,27 @@ public class ChatMiddleware
                             $"[GodGPTController][ChatWithSessionAsync] SubscribeAsync get first message:{request.SessionId}, duration: {stopwatch.ElapsedMilliseconds}ms");
                     }
 
-                    var responseData = $"data: {JsonConvert.SerializeObject(chatResponse.ConvertToHttpResponse())}\n\n";
-                    await context.Response.WriteAsync(responseData);
-                    await context.Response.Body.FlushAsync();
+                    var takedCount = 0;
+                    var index = 0;
+                    const int perTakeCount = 2;
+                    var totalLen = chatResponse.Response.Length;
+                    var clientResponseData = chatResponse.ConvertToHttpResponse();
+                    while (takedCount < totalLen)
+                    {
+                        var currentTakeCount = chatResponse.Response.Length - takedCount > perTakeCount
+                            ? perTakeCount
+                            : chatResponse.Response.Length - takedCount;
+
+                        var takeResponse = chatResponse.Response.Substring(index, currentTakeCount);
+                        clientResponseData.SerialChunk = index;
+                        clientResponseData.Response = takeResponse;
+
+                        var responseData = $"data: {JsonConvert.SerializeObject(clientResponseData)}\n\n";
+                        await context.Response.WriteAsync(responseData);
+                        await context.Response.Body.FlushAsync();
+                        takedCount += currentTakeCount;
+                        index += 1;
+                    }
 
                     if (chatResponse.IsLastChunk)
                     {
