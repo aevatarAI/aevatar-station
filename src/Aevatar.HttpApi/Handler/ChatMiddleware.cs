@@ -37,6 +37,13 @@ public class ChatMiddleware
     {
         if (context.Request.PathBase == "/api/godgpt/chat")
         {
+            if (!context.User.Identity?.IsAuthenticated ?? true)
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                await context.Response.WriteAsync("Unauthorized: User is not authenticated.");
+                return;
+            }
+            
             var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
             var request = JsonConvert.DeserializeObject<QuantumChatRequestDto>(body);
             try
