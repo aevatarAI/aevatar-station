@@ -11,6 +11,7 @@ namespace Aevatar.Application.Grains.Agents.TestAgent;
 [Description("AgentTest")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
+[GAgent]
 public class AgentTest : GAgentBase<FrontAgentState, FrontTestEvent, EventBase>, IFrontAgentTest
 {
     private readonly ILogger<AgentTest> _logger;
