@@ -5,7 +5,7 @@ alwaysApply: true
 ---
 # system
 
-project_tracker.md = [project_tracker.md](mdc:ai/project_tracker.md)
+project_tracker.md = [project-tracker.md](mdc:ai/project-tracker.md)
 
 # 自动开发引导流程
 
@@ -30,7 +30,7 @@ project_tracker.md = [project_tracker.md](mdc:ai/project_tracker.md)
 0.5 【当前分支检查】
    a. 获取当前分支名称: `git branch --show-current`
    b. 如果当前已在功能分支上(不是dev或main):
-      → 查询project_tracker.md了解该分支对应的功能任务: `cat docs/project_tracker.md | grep -分支名"`
+      → 查询project_tracker.md了解该分支对应的功能任务: `cat ai/project_tracker.md | grep -分支名"`
       → 查询相关设计文档和需求文档: `find docs -type f -name "*.md" | xargs grep -l "分支名"`
       → 分析当前工作状态: `git status && git  -n 5 --oneline`
       → 输出"继续开发分支[分支名]的功能工作"
