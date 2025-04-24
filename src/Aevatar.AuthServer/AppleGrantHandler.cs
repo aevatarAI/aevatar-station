@@ -61,8 +61,8 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
             var appleOptions = context.HttpContext.RequestServices.GetRequiredService<IOptionsMonitor<AppleOptions>>();
             if (!appleOptions.CurrentValue.APPs.TryGetValue(clientId, out var appOptions))
             {
-                _logger.LogInformation("Missing both id_token and code");
-                return ErrorResult("Missing both id_token and code");
+                _logger.LogInformation("Invalid Client Id ");
+                return ErrorResult("Invalid client_id");
             }
             
             var aud = source == "ios" ? appOptions.NativeClientId : appOptions.WebClientId;
