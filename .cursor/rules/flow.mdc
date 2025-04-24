@@ -5,7 +5,7 @@ alwaysApply: true
 ---
 # system
 
-project_tracker.md = [project-tracker.md](mdc:ai/project-tracker.md)
+project_tracker.md = [project_tracker.md](mdc:ai/project_tracker.md)
 
 # 自动开发引导流程
 
