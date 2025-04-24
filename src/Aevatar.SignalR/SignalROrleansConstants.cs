@@ -14,5 +14,5 @@ public static class SignalROrleansConstants
     internal const int ServerHeartbeatPulseInMinutes = 30;
 
     public const string ResponseMethodName = "ReceiveResponse";
-    public const string AllResponseMethodName = "ReceiveAll";
+    public const string DefaultTopicPrefix = "AevatarSignalR";
 }
