@@ -255,7 +255,7 @@ public class AgentService : ApplicationService, IAgentService
             await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
             {
                 QueryString = "userId.keyword:" + currentUserId,
-                StateName = nameof(CreatorGAgentState),
+                State = nameof(CreatorGAgentState),
                 PageSize = pageSize,
                 PageIndex = pageIndex
             });

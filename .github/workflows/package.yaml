@@ -115,8 +115,8 @@ jobs:
           -H "Content-Type: application/x-www-form-urlencoded" \
           -H "Accept: application/json" \
           --data-urlencode "grant_type=client_credentials" \
-          --data-urlencode "client_id=${{ secrets.AUTOMATEX_CLIENT_ID }}" \
-          --data-urlencode "client_secret=${{ secrets.AUTOMATEX_CLIENT_SECRET }}" \
+          --data-urlencode "client_id=${{ secrets.AIMINIRE_CLIENT_ID }}" \
+          --data-urlencode "client_secret=${{ secrets.AIMINIRE_CLIENT_SECRET }}" \
           --data-urlencode "scope=Aevatar")
           echo "Response: $response"
           token=$(echo $response | jq -r '.access_token')

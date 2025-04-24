@@ -123,7 +123,7 @@ public class CqrsProviderTest : AevatarApplicationTestBase
         stationList.ShouldNotBeEmpty();
         var pagedResultDto = await _elasticService.QueryWithLuceneAsync(new LuceneQueryDto
         {
-            StateName = nameof(CreatorGAgentState),
+            State = nameof(CreatorGAgentState),
             PageIndex = 0,
             PageSize = 2,
         });
