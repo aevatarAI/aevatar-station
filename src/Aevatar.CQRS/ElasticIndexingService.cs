@@ -99,7 +99,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                         if (propType == typeof(string))
                         {
                             props.Text(propertyName);
-                            props.Keyword(propertyName, k => k.IgnoreAbove(256));
+                           // props.Keyword(propertyName, k => k.IgnoreAbove(256));
                         }
                         else if (propType == typeof(short) || propType == typeof(int) || propType == typeof(long))
                         {
@@ -183,7 +183,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                 }
                 else
                 {
-                    document.Add(propertyName, value);
+                    document[propertyName] = value;
                 }
             }
 
