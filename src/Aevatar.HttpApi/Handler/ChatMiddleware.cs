@@ -87,15 +87,24 @@ public class ChatMiddleware
                             ? perTakeCount
                             : chatResponse.Response.Length - takedCount;
 
-                        var takeResponse = chatResponse.Response.Substring(index, currentTakeCount);
+                        var takeResponse = chatResponse.Response.Substring(takedCount, currentTakeCount);
+                        takedCount += currentTakeCount;
                         clientResponseData.SerialChunk = index;
                         clientResponseData.Response = takeResponse;
+
+                        if (takedCount >= totalLen && chatResponse.IsLastChunk)
+                        {
+                            clientResponseData.IsLastChunk = true;
+                        }
+                        else
+                        {
+                            clientResponseData.IsLastChunk = false;
+                        }
 
                         var responseData = $"data: {JsonConvert.SerializeObject(clientResponseData)}\n\n";
                         await context.Response.WriteAsync(responseData);
                         await context.Response.Body.FlushAsync();
-                        takedCount += currentTakeCount;
-                        index += currentTakeCount;
+                        index += 1;
                     }
 
                     if (chatResponse.IsLastChunk)
