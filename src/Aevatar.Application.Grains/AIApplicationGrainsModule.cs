@@ -1,6 +1,7 @@
 using Aevatar.CQRS;
 using Aevatar.GAgents.Twitter;
 using Aevatar.Neo4JStore;
+using MineAiFun.Silo;
 using Org.BouncyCastle.Asn1.X509.Qualified;
 using Volo.Abp.AutoMapper;
 using Volo.Abp.EventBus;
@@ -14,7 +15,8 @@ namespace Aevatar.Application.Grains;
     typeof(AevatarApplicationContractsModule),
     typeof(AevatarCQRSModule),
     typeof(AevatarNeo4JStoreModule),
-    typeof(AevatarGAgentsTwitterModule)
+    typeof(AevatarGAgentsTwitterModule),
+    typeof(MineAiFunGAgentsModule)
 )]
 public class AIApplicationGrainsModule : AbpModule
  
