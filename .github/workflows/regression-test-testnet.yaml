@@ -141,10 +141,14 @@ jobs:
               workflow_id: 'ephemeral-env-main.yaml',
               ref: 'main',
               inputs: {
-                project_name: ${{ github.event.inputs.project_name }},
-                environment_ttl: ${{ github.event.inputs.environment_ttl }},
-                client_id: ${{ github.event.client_id }},
-                client_secret: ${{ github.event.client_secret }},
+                # project_name: ${{ github.event.inputs.project_name }},
+                # environment_ttl: ${{ github.event.inputs.environment_ttl }},
+                # client_id: ${{ github.event.inputs.client_id }},
+                # client_secret: ${{ github.event.inputs.client_secret }},
+                project_name: "regressiontest",
+                environment_ttl: "1",
+                client_id: "regressiontest",
+                client_secret: "regressiontest",
                 host_silo_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
                 host_client_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}"
               }
