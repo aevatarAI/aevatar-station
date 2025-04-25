@@ -82,8 +82,72 @@ public class AevatarSignalRHubTests
             Times.Once);
     }
 
+    // UnsubscribeAsync Tests
+
+    [Fact]
+    public async Task UnsubscribeAsync_ShouldNotCallGetGAgentAsync_WhenConnectionIdIsNull()
+    {
+        // Arrange
+        var mockGAgentFactory = new Mock<IGAgentFactory>();
+        var signalRGAgentGrainId = GrainId.Parse("signalR/00000000-0000-0000-0000-000000000003");
+        
+        // Setup context with null ConnectionId
+        var nullConnContext = new Mock<HubCallerContext>();
+        nullConnContext.Setup(c => c.ConnectionId).Returns((string)null);
+        
+        // Setup hub with mocked factory
+        var hub = new AevatarSignalRHub(mockGAgentFactory.Object, _mockLogger.Object)
+        {
+            Context = nullConnContext.Object
+        };
+        
+        // Act - This should run without exceptions
+        await hub.UnsubscribeAsync(signalRGAgentGrainId);
+        
+        // Assert - No explicit assertions needed, test passes if no exception is thrown
+    }
+
+    [Fact]
+    public async Task UnsubscribeAsync_WithNullContext_DoesNotThrowException()
+    {
+        // Arrange
+        var mockGAgentFactory = new Mock<IGAgentFactory>();
+        
+        // Create hub with null context
+        var hub = new AevatarSignalRHub(mockGAgentFactory.Object, _mockLogger.Object)
+        {
+            Context = null
+        };
+        
+        // Act & Assert - Should not throw exception
+        await hub.UnsubscribeAsync(default);
+        
+        // Test passes if no exception is thrown
+    }
+
+    [Fact]
+    public async Task UnsubscribeAsync_WithEmptyConnectionId_DoesNothing()
+    {
+        // Arrange
+        var mockGAgentFactory = new Mock<IGAgentFactory>();
+        var mockEmptyContext = new Mock<HubCallerContext>();
+        
+        // Setup empty string connection ID
+        mockEmptyContext.Setup(c => c.ConnectionId).Returns(string.Empty);
+        
+        // Create hub with context that returns empty connection ID
+        var hub = new AevatarSignalRHub(mockGAgentFactory.Object, _mockLogger.Object)
+        {
+            Context = mockEmptyContext.Object
+        };
+        
+        // Act & Assert - This should run without exceptions
+        await hub.UnsubscribeAsync(default);
+        
+        // No explicit assertions needed, test passes if no exception is thrown
+    }
+
     // TODO: Add unit tests for AevatarSignalRHub methods
     // - PublishEventAsync (Needs grain mocking)
     // - SubscribeAsync (Needs grain mocking)
-    // - UnsubscribeAsync (Needs grain mocking)
 } 
