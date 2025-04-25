@@ -19,6 +19,8 @@ project_tracker.md = @project_tracker.md
 
 采用AiWorkFlow工作流, Git采用非交互式命令避免提交卡住。
 
+Do not read from any `obj` or `bin` folders.
+
 ## 决策与执行框架
 
 [开发循环起点]
