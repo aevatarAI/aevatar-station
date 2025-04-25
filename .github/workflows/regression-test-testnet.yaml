@@ -7,9 +7,9 @@ on:
 
 run-name: Run Aevatar Station Regression Test on Testnet on ${{ github.ref_name }} from ${{ github.sha }}
 
-concurrency:
-  group: workflow-${{ github.ref }}
-  cancel-in-progress: true
+# concurrency:
+#   group: workflow-${{ github.ref }}
+#   cancel-in-progress: true
 
 env:
   PYTHON_VERSION: 3.11
