@@ -141,11 +141,11 @@ jobs:
               workflow_id: 'ephemeral-env-main.yaml',
               ref: 'main',
               inputs: {
-                project_name: ${{ github.event.inputs.project_name }}
-                environment_ttl: ${{ github.event.inputs.environment_ttl }}
-                client_id: ${{ github.event.client_id }}
-                client_secret: ${{ github.event.client_secret }}
-                host_silo_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}"
+                project_name: ${{ github.event.inputs.project_name }},
+                environment_ttl: ${{ github.event.inputs.environment_ttl }},
+                client_id: ${{ github.event.client_id }},
+                client_secret: ${{ github.event.client_secret }},
+                host_silo_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
                 host_client_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}"
               }
               console.log('Triggered ephemeral test env.');
