@@ -35,7 +35,7 @@ public class ChatMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        if (context.Request.PathBase == "/api/godgpt/chat")
+        if (context.Request.PathBase == "/api/gotgpt/chat")
         {
             if (!context.User.Identity?.IsAuthenticated ?? true)
             {

@@ -211,7 +211,7 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         // app.UsePathBase("/developer-client");
         app.UseUnitOfWork();
         app.UseDynamicClaims();
-        app.Map("/api/godgpt/chat", config =>
+        app.Map("/api/gotgpt/chat", config =>
         {
             config.UseMiddleware<ChatMiddleware>();
         });

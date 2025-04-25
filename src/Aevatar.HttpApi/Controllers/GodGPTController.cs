@@ -29,7 +29,7 @@ namespace Aevatar.Controllers;
 
 [RemoteService]
 [ControllerName("GodGPT")]
-[Route("api/godgpt")]
+[Route("api")]
 [Authorize]
 public class GodGPTController : AevatarController
 {
@@ -51,19 +51,19 @@ public class GodGPTController : AevatarController
         _logger = logger;
     }
 
-    [HttpGet("query-version")]
+    [HttpGet("godgpt/query-version")]
     public Task<string> QueryVersion()
     {
         return Task.FromResult(Version);
     }
 
-    [HttpPost("create-session")]
+    [HttpPost("gotgpt/create-session")]
     public async Task<Guid> CreateSessionAsync()
     {
         return await _godGptService.CreateSessionAsync((Guid)CurrentUser.Id!, _defaultLLM, _defaultPrompt);
     }
 
-    [HttpPost("chat_old")]
+    [HttpPost("gotgpt/chat_old")]
     public async Task<QuantumChatResponseDto> ChatWithSessionAsync(QuantumChatRequestDto request)
     {
         var stopwatch = Stopwatch.StartNew();
@@ -157,7 +157,7 @@ public class GodGPTController : AevatarController
         };
     }
 
-    [HttpGet("session-list")]
+    [HttpGet("godgpt/session-list")]
     public async Task<List<SessionInfoDto>> GetSessionListAsync()
     {
         var stopwatch = Stopwatch.StartNew();
@@ -168,7 +168,7 @@ public class GodGPTController : AevatarController
         return sessionList;
     }
 
-    [HttpGet("chat/{sessionId}")]
+    [HttpGet("godgpt/chat/{sessionId}")]
     public async Task<List<ChatMessage>> GetSessionMessageListAsync(Guid sessionId)
     {
         var stopwatch = Stopwatch.StartNew();
@@ -178,7 +178,7 @@ public class GodGPTController : AevatarController
         return chatMessages;
     }
 
-    [HttpPut("chat/rename")]
+    [HttpPut("godgpt/chat/rename")]
     public async Task<Guid> RenameSessionAsync(QuantumRenameDto request)
     {
         var stopwatch = Stopwatch.StartNew();
@@ -189,7 +189,7 @@ public class GodGPTController : AevatarController
         return sessionId;
     }
 
-    [HttpDelete("chat/{sessionId}")]
+    [HttpDelete("godgpt/chat/{sessionId}")]
     public async Task<Guid> DeleteSessionAsync(Guid sessionId)
     {
         var stopwatch = Stopwatch.StartNew();
@@ -199,7 +199,7 @@ public class GodGPTController : AevatarController
         return deleteSessionId;
     }
 
-    [HttpGet("account")]
+    [HttpGet("godgpt/account")]
     public async Task<UserProfileDto> GetUserProfileAsync()
     {
         var stopwatch = Stopwatch.StartNew();
@@ -210,7 +210,7 @@ public class GodGPTController : AevatarController
         return userProfileDto;
     }
 
-    [HttpPut("account")]
+    [HttpPut("godgpt/account")]
     public async Task<Guid> SetUserProfileAsync(UserProfileDto userProfile)
     {
         var stopwatch = Stopwatch.StartNew();
@@ -221,7 +221,7 @@ public class GodGPTController : AevatarController
         return updateUserId;
     }
 
-    [HttpDelete("account")]
+    [HttpDelete("godgpt/account")]
     public async Task<Guid> DeleteAccountAsync()
     {
         var stopwatch = Stopwatch.StartNew();
