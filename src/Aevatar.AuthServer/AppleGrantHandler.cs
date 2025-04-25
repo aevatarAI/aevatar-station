@@ -55,6 +55,11 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
             var platform = context.Request.GetParameter("platform")?.ToString() ?? string.Empty;
             var appId = context.Request.GetParameter("apple_app_id")?.ToString();
             
+            if (appId.IsNullOrWhiteSpace())
+            {
+                appId = "com.gpt.god";
+            }
+            
             _logger.LogInformation("AppleGrantHandler.HandleAsync source: {source} idToken: {idToken} code: {code} platform: {platform} clientId: {clientId}", 
                 source, idToken, code, platform, appId);
 
