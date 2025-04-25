@@ -3,21 +3,27 @@ description: implement unit test
 globs: 
 alwaysApply: false
 ---
+# Unit Test Implementation Guide
 
-# Unit Test Writing Best Practices
+When implementing unit tests:
 
-When working on unit tests, do the following:
-1. Output "!!!Implementing Unit Test Cases!!!".
-2. Make sure to cover the following test cases:
-    1. Positive Test Cases
-    2. Negative Test Cases
-    3. Boundary Test Cases
-    4. Exception Test Cases
-3. Use Arrange, Act and Assert format. 
-4. Implement using SOLID principles.
-5. Only edit test files.
+1. Cover these essential test scenarios:
+   - Positive: Verify expected behavior with valid inputs
+   - Negative: Confirm appropriate handling of invalid inputs
+   - Boundary: Test edge cases and limit values
+   - Exception: Validate error handling and exceptions
 
-You MUST iterate implementing and fixing unit tests until all the following criteria are met:
-1. At least 80% code coverage.
-2. All unit test cases passes.
-3. Execute `dotnet test` and it yields no compile error.
+2. Follow the AAA pattern:
+   - Arrange: Set up test prerequisites
+   - Act: Execute the code being tested
+   - Assert: Verify expected outcomes
+
+3. Quality requirements:
+   - Achieve minimum 80% code coverage
+   - Ensure all tests pass successfully
+   - Verify builds with `dotnet test` without errors
+
+4. Development constraints:
+   - Modify test files only
+   - Write isolated, independent tests
+   - Use descriptive test names that explain the scenario and expected outcome
