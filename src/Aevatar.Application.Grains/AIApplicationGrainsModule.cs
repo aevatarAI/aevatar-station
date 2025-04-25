@@ -15,8 +15,8 @@ namespace Aevatar.Application.Grains;
     typeof(AevatarApplicationContractsModule),
     typeof(AevatarCQRSModule),
     typeof(AevatarNeo4JStoreModule),
-    typeof(AevatarGAgentsTwitterModule),
-    typeof(MineAiFunGAgentsModule)
+    typeof(AevatarGAgentsTwitterModule)
+    // typeof(MineAiFunGAgentsModule)
 )]
 public class AIApplicationGrainsModule : AbpModule
  
