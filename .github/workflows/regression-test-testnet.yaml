@@ -2,6 +2,23 @@ name: Run Aevatar Station Regression Test on Testnet
 
 on:
   workflow_dispatch:
+    inputs:
+      project_name:
+        description: 'Project name to use as prefix for the namespace'
+        required: true
+        default: 'aevatar'
+      environment_ttl:
+        description: 'Time to live for the environment in minutes (0 for manual cleanup)'
+        required: true
+        default: '240'
+      client_id:
+        required: true
+        type: string
+        description: 'Client ID for the new app'
+      client_secret:
+        required: true
+        type: string
+        description: 'Client secret for the new app'
   push:
     branches:
       - feature/regression-test
@@ -18,7 +35,97 @@ env:
   PYTHONUNBUFFERED: 1
 
 jobs:
+  setup-ephermeral-test-env:
+    runs-on: ubuntu-latest
+    outputs:
+      auth_server_url: ${{ steps.setup_env.outputs.workflow.outputs.auth_server_url }}
+      api_server_url: ${{ steps.setup_env.outputs.workflow.outputs.api_server_url }} 
+      app_url: ${{ steps.setup_env.outputs.workflow.outputs.app_url }}
+    steps:
+      - name: Setup Ephermeral Env
+        id: setup_env
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.TOK }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'AElfDevops',
+              repo: 'ephemeral-test-env',
+              workflow_id: 'ephemeral-env-main.yaml',
+              ref: 'main',
+              inputs: {
+                project_name: ${{ github.event.inputs.project_name }}
+                environment_ttl: ${{ github.event.inputs.environment_ttl }}
+                client_id: ${{ github.event.client_id }}
+                client_secret: ${{ github.event.client_secret }}
+                # host_silo_image_tag:
+                # host_client_image_tag:
+              }
+              console.log('Triggered ephemeral test env.');
+            });
+            
+      - name: Wait for workflow run to complete
+        id: setup_wait
+        env:
+          github-token: ${{ secrets.TOK }}
+        run: |
+          owner="AElfDevops"
+          repo="ephemeral-test-env"
+          workflow_id=${{ steps.setup_env.outputs.workflow_id }}
+
+          echo "Waiting for workflow $workflow_id to start..."
+          run_id=""
+
+          # Wait until the workflow run appears
+          for i in {1..30}; do
+            run_id=$(gh api repos/$owner/$repo/actions/workflows/$workflow_id/runs \
+              --jq '.workflow_runs[0].id')
+            if [ -n "$run_id" ]; then
+              echo "Run ID: $run_id"
+              break
+            fi
+            echo "Workflow not yet started, retrying in 10s..."
+            sleep 10
+          done
+
+          # Poll the run status
+          echo "Waiting for workflow run to complete..."
+          for i in {1..60}; do
+            status=$(gh api repos/$owner/$repo/actions/runs/$run_id --jq '.status')
+            conclusion=$(gh api repos/$owner/$repo/actions/runs/$run_id --jq '.conclusion')
+
+            echo "Status: $status | Conclusion: $conclusion"
+            if [ "$status" == "completed" ]; then
+              if [ "$conclusion" != "success" ]; then
+                echo "Workflow failed or was cancelled"
+                exit 1
+              fi
+              break
+            fi
+            sleep 10
+          done
+
+          echo "Workflow completed successfully"
+
+      - name: Download artifact from Devops repo
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: ephemeral-env-main.yaml
+          repo: AElfDevops/ephemeral-test-env
+          name: setup-aevatar-app-env-output  
+          github_token: ${{ secrets.TOK }}
+          path: ./downloaded
+
+      - name: Extract env data from JSON
+        id: extract
+        run: |
+          content=$(cat ./downloaded/setup-aevatar-app-env-output.json)
+          echo "auth_server_url=$(echo $content | jq -r '.auth_server_url')" >> $GITHUB_OUTPUT
+          echo "api_server_url=$(echo $content | jq -r '.api_server_url')" >> $GITHUB_OUTPUT
+          echo "app_url=$(echo $content | jq -r '.app_url')" >> $GITHUB_OUTPUT
+
   run-regression-test:
+    needs: setup-ephermeral-test-env 
     runs-on: ubuntu-latest
     env:
       CLIENT_ID: ${{ secrets.TEST_CLIENT_ID }}
