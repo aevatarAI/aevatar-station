@@ -156,6 +156,14 @@ jobs:
           echo "Waiting for workflow $workflow_id to start..."
           run_id=""
 
+          # Wait for 30 seconds before attempting to get the workflow run
+          echo "Sleeping for 30 seconds before checking workflow run..."
+          sleep 30
+
+          # Get the workflow run ID based on the latest triggered run
+          run_id=$(gh api repos/$owner/$repo/actions/workflows/$workflow_id/runs \
+            --jq '.workflow_runs | sort_by(.created_at) | reverse | .[0].id')
+
           # Wait until the workflow run appears
           for i in {1..30}; do
             run_id=$(gh api repos/$owner/$repo/actions/workflows/$workflow_id/runs \
