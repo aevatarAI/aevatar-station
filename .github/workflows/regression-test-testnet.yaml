@@ -118,7 +118,7 @@ jobs:
       - name: Generate UUID for project and client
         id: generate-uuid
         run: |
-          UUID=$(python3 -c 'import uuid; print(uuid.uuid4())')
+          UUID=$(python3 -c 'import uuid; print(str(uuid.uuid4())[:8])')
           echo "project_name=env-${UUID}" >> "$GITHUB_OUTPUT"
           echo "client_id=${UUID}" >> "$GITHUB_OUTPUT"
           echo "client_secret=${UUID}" >> "$GITHUB_OUTPUT"
@@ -204,6 +204,13 @@ jobs:
           echo "api_server_url=$(echo $content | jq -r '.api_server_url')" >> $GITHUB_OUTPUT
           echo "app_url=$(echo $content | jq -r '.app_url')" >> $GITHUB_OUTPUT
 
+      - name: Set job summary
+        run: |
+          echo "## Aevatar App Created Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "- **Client ID**: \`${{ steps.generate-uuid.outputs.client_id }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Auth Server URL**: \`${{ steps.extract.outputs.auth_server_url }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **API Server URL**: \`${{ steps.extract.outputs.api_server_url }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **APP URL**: \`https://station-developer-testing.aevatar.ai/${{ steps.generate-uuid.outputs.project_name }}-client\`" >> $GITHUB_STEP_SUMMARY
 
   run-regression-test:
     needs: setup-ephermeral-test-env 
