@@ -79,38 +79,7 @@ public class ChatMiddleware
                     var responseData = $"data: {JsonConvert.SerializeObject(chatResponse.ConvertToHttpResponse())}\n\n";
                     await context.Response.WriteAsync(responseData);
                     await context.Response.Body.FlushAsync();
-
-                    // var takedCount = 0;
-                    // var index = 0;
-                    // const int perTakeCount = 2;
-                    // var totalLen = chatResponse.Response.Length;
-                    // var clientResponseData = chatResponse.ConvertToHttpResponse();
-                    // while (takedCount < totalLen)
-                    // {
-                    //     var currentTakeCount = chatResponse.Response.Length - takedCount > perTakeCount
-                    //         ? perTakeCount
-                    //         : chatResponse.Response.Length - takedCount;
-                    //
-                    //     var takeResponse = chatResponse.Response.Substring(takedCount, currentTakeCount);
-                    //     takedCount += currentTakeCount;
-                    //     clientResponseData.SerialChunk = index;
-                    //     clientResponseData.Response = takeResponse;
-                    //
-                    //     if (takedCount >= totalLen && chatResponse.IsLastChunk)
-                    //     {
-                    //         clientResponseData.IsLastChunk = true;
-                    //     }
-                    //     else
-                    //     {
-                    //         clientResponseData.IsLastChunk = false;
-                    //     }
-                    //
-                    //     var responseData = $"data: {JsonConvert.SerializeObject(clientResponseData)}\n\n";
-                    //     await context.Response.WriteAsync(responseData);
-                    //     await context.Response.Body.FlushAsync();
-                    //     index += 1;
-                    // }
-
+                    
                     if (chatResponse.IsLastChunk)
                     {
                         await context.Response.WriteAsync("event: completed\n");
