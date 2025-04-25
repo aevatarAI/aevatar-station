@@ -27,6 +27,9 @@ on:
 
 run-name: Run Aevatar Station Regression Test on Testnet on ${{ github.ref_name }} from ${{ github.sha }}
 
+env:
+  DOTNET_INSTALL_DIR: "./.dotnet"
+
 concurrency:
   group: workflow-${{ github.ref }}
   cancel-in-progress: true
@@ -53,7 +56,6 @@ jobs:
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: '9.0.x'
-          installation-path: $HOME/.dotnet
       - name: Cache NuGet Packages
         id: nuget-packages
         uses: actions/cache@v4
@@ -62,7 +64,6 @@ jobs:
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-${{ env.cache-name }}-${{ matrix.servicename }}
-
       - name: List NuGet Packages
         if: ${{ steps.nuget-packages.outputs.cache-hit == 'true' }}
         continue-on-error: true
