@@ -6,6 +6,7 @@ using Aevatar.GAgents.AI.Options;
 using Aevatar.Options;
 using Microsoft.CodeAnalysis.Options;
 using Aevatar.PermissionManagement;
+using Aevatar.Plugins;
 using Serilog;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
@@ -20,6 +21,7 @@ namespace Aevatar.Silo;
     typeof(AbpAutofacModule),
     typeof(OpenTelemetryModule),
     typeof(AevatarModule),
+    typeof(AevatarPluginsModule),
     typeof(AevatarPermissionManagementModule)
 )]
 public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
