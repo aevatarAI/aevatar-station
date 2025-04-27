@@ -12,4 +12,5 @@ public class NotificationInfo : FullAuditedAggregateRoot<Guid>
     public string Content { get; set; }
     public Guid Receiver { get; set; }
     public NotificationStatusEnum Status { get; set; }
+    public bool IsRead { get; set; }
 }

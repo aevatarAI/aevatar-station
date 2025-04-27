@@ -10,7 +10,7 @@ using Xunit.Abstractions;
 
 namespace Aevatar.GAgent;
 
-public class SubscriptionGAgentTests : AevatarApplicationTestBase
+public class SubscriptionGAgentTests : AevatarApplicationGrainsTestBase
 {
     private readonly IClusterClient _clusterClient;
     private readonly ITestOutputHelper _output;
