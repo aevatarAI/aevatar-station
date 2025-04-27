@@ -16,6 +16,7 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Orleans.Concurrency;
 using Orleans.Providers;
+using Volo.Abp;
 
 namespace Aevatar.Application.Grains.Agents.ChatManager;
 
@@ -497,7 +498,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
 
         if (sessionInfo == null)
         {
-            return new List<ChatMessage>();
+            throw new UserFriendlyException($"Unable to load conversation {sessionId}");
         }
 
         var godChat = GrainFactory.GetGrain<IGodChat>(sessionInfo.SessionId);
