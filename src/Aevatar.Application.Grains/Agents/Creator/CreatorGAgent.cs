@@ -107,11 +107,21 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
         }
 
         Logger.LogInformation("publish event: {event}", @event);
+        await PublishAsync(@event);
+    }
+
+    public async Task PublishEventPointAsync<T>(T @event) where T : EventBase
+    {
+        if (@event == null)
+        {
+            throw new ArgumentNullException(nameof(@event));
+        }
+
+        Logger.LogInformation("publish point event: {event}", @event);
         var streamId = StreamId.Create(AevatarOptions!.StreamNamespace, State.BusinessAgentGrainId.ToString());
         var stream = StreamProvider.GetStream<EventWrapperBase>(streamId);
         var eventWrapper = new EventWrapper<T>(@event, Guid.NewGuid(), this.GetGrainId());
         await stream.OnNextAsync(eventWrapper);
-        // await PublishAsync(@event);
     }
 
     protected override void GAgentTransitionState(CreatorGAgentState state,
@@ -154,4 +164,6 @@ public interface ICreatorGAgent : IStateGAgent<CreatorGAgentState>
     Task DeleteAgentAsync();
     Task PublishEventAsync<T>(T @event) where T : EventBase;
     Task UpdateAvailableEventsAsync(List<Type>? eventTypeList);
+
+    Task PublishEventPointAsync<T>(T @event) where T : EventBase;
 }
