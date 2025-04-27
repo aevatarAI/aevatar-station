@@ -37,19 +37,36 @@ public class ChatMiddleware
     {
         if (context.Request.PathBase == "/api/gotgpt/chat")
         {
-            if (!context.User.Identity?.IsAuthenticated ?? true)
+            if (context.User?.Identity == null || !context.User.Identity.IsAuthenticated)
             {
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 await context.Response.WriteAsync("Unauthorized: User is not authenticated.");
                 return;
             }
             
+            var userIdStr = context.User.FindFirst("sub")?.Value ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (userIdStr.IsNullOrWhiteSpace() || !Guid.TryParse(userIdStr, out var userId))
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                await context.Response.WriteAsync("Unauthorized: Unable to retrieve UserId.");
+                return;
+            }
+
             var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
             var request = JsonConvert.DeserializeObject<QuantumChatRequestDto>(body);
             try
             {
                 var stopwatch = Stopwatch.StartNew();
-                _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}");
+                _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}, userId {userId}");
+                
+                var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
+                if (!await manager.IsUserSessionAsync(request.SessionId))
+                {
+                    _logger.LogError("[GodGPTController][ChatWithSessionAsync] sessionInfoIsNull sessionId={A}", request.SessionId);
+                    await context.Response.WriteAsync("Unauthorized: Unable to retrieve UserId.");
+                    return;
+                }
+
                 var streamProvider = _clusterClient.GetStreamProvider("Aevatar");
                 var streamId = StreamId.Create(_aevatarOptions.Value.StreamNamespace, request.SessionId);
                 _logger.LogDebug(

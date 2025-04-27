@@ -483,6 +483,12 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         return Task.FromResult(result);
     }
 
+    public async Task<bool> IsUserSessionAsync(Guid sessionId)
+    {
+        var sessionInfo = State.GetSession(sessionId);
+        return sessionInfo != null;
+    }
+
     public async Task<List<ChatMessage>> GetSessionMessageListAsync(Guid sessionId)
     {
         Logger.LogDebug($"[ChatGAgentManager][GetSessionMessageListAsync] - session:ID {sessionId.ToString()}");
