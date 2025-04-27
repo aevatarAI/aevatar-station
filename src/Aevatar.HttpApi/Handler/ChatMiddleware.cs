@@ -42,6 +42,7 @@ public class ChatMiddleware
                 _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] Unauthorized: User is not authenticated");
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 await context.Response.WriteAsync("Unauthorized: User is not authenticated.");
+                await context.Response.Body.FlushAsync();
                 return;
             }
             
@@ -51,6 +52,7 @@ public class ChatMiddleware
                 _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] Unauthorized: Unable to retrieve UserId.");
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 await context.Response.WriteAsync("Unauthorized: Unable to retrieve UserId.");
+                await context.Response.Body.FlushAsync();
                 return;
             }
 
@@ -65,7 +67,9 @@ public class ChatMiddleware
                 if (!await manager.IsUserSessionAsync(request.SessionId))
                 {
                     _logger.LogError("[GodGPTController][ChatWithSessionAsync] sessionInfoIsNull sessionId={A}", request.SessionId);
-                    await context.Response.WriteAsync("Unauthorized: Unable to retrieve UserId.");
+                    context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                    await context.Response.WriteAsync($"Unable to load conversation {request.SessionId}");
+                    await context.Response.Body.FlushAsync();
                     return;
                 }
 
