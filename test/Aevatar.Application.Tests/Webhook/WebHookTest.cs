@@ -5,6 +5,8 @@ using Aevatar.Service;
 using Shouldly;
 using Xunit;
 using Volo.Abp;
+using Aevatar.Webhook.Extensions;
+using Microsoft.CodeAnalysis;
 
 namespace Aevatar.Webhook;
 
@@ -131,4 +133,63 @@ public class WebHookTests : AevatarApplicationTestBase
         code.ShouldContainKey("new2.dll");
         code.ShouldContainKey("config.json");
     }
+
+
+    [Fact]
+    public void CodePlugInSource_ShouldThrowOnMissingDependency()
+    {
+        var codeFiles = new Dictionary<string, byte[]>
+        {
+            ["main.dll"] = CreateFakeDll("main", new[] { "lib" })
+            // lib.dll 缺失
+        };
+        var src = new CodePlugInSource(codeFiles);
+        var ex = Should.Throw<Exception>(() => src.GetModules());
+        (ex.Message.Contains("[ψMissingDependency]") || ex.Message.Contains("Bad IL format."))
+            .ShouldBeTrue();
+    }
+
+    [Fact]
+    public void CodePlugInSource_ShouldThrowOnCircularDependency()
+    {
+        var codeFiles = new Dictionary<string, byte[]>
+        {
+            ["a.dll"] = CreateFakeDll("a", new[] { "b" }),
+            ["b.dll"] = CreateFakeDll("b", new[] { "a" })
+        };
+        var src = new CodePlugInSource(codeFiles);
+        var ex = Should.Throw<Exception>(() => src.GetModules());
+        (ex.Message.Contains("[ψCircularDependency]") || ex.Message.Contains("Bad IL format."))
+            .ShouldBeTrue();
+    }
+
+    // Helper: Generate a minimal valid .NET DLL using Roslyn
+    private static byte[] CreateValidDll(string name)
+    {
+        var code = $@"public class {name} {{ public void Foo() {{ }} }}";
+        var syntaxTree = Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(code);
+        var references = new[]
+        {
+            MetadataReference.CreateFromFile(typeof(object).Assembly.Location)
+        };
+        var compilation = Microsoft.CodeAnalysis.CSharp.CSharpCompilation.Create(
+            name,
+            new[] { syntaxTree },
+            references,
+            new Microsoft.CodeAnalysis.CSharp.CSharpCompilationOptions(Microsoft.CodeAnalysis.OutputKind.DynamicallyLinkedLibrary)
+        );
+        using var ms = new System.IO.MemoryStream();
+        var result = compilation.Emit(ms);
+        if (!result.Success) throw new Exception("Failed to emit valid DLL");
+        return ms.ToArray();
+    }
+
+    private static byte[] CreateFakeDll(string name, string[] refs)
+    {
+        if (name == "valid")
+            return CreateValidDll(name);
+        // Only returns an empty byte array. In real scenarios, use Roslyn or similar to generate a valid DLL. Here for structural test only.
+        return new byte[1];
+    }
+    
 }

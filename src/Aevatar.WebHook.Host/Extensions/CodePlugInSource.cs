@@ -26,19 +26,66 @@ public class CodePlugInSource : IPlugInSource
 
         var source = new List<Type>();
         var context = new CustomAssemblyLoadContext();
-        
-        // Load all dlls first
         var assemblies = new Dictionary<string, Assembly>();
+
+        // 1. 解析依赖关系，构建依赖图
+        var dependencyGraph = new Dictionary<string, List<string>>();
+        var nameToBytes = new Dictionary<string, byte[]>();
+        var nameToFile = new Dictionary<string, string>();
         foreach (var file in _codeFiles)
         {
             if (file.Key.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
             {
-                var assembly = context.LoadFromStream(new MemoryStream(file.Value));
-                assemblies[file.Key] = assembly;
+                using var ms = new MemoryStream(file.Value);
+                var asm = Assembly.Load(ms.ToArray());
+                var asmName = asm.GetName().Name;
+                nameToBytes[asmName] = file.Value;
+                nameToFile[asmName] = file.Key;
+                var refs = new List<string>();
+                foreach (var refAsm in asm.GetReferencedAssemblies())
+                {
+                    if (nameToBytes.ContainsKey(refAsm.Name) || _codeFiles.ContainsKey(refAsm.Name + ".dll"))
+                    {
+                        refs.Add(refAsm.Name);
+                    }
+                }
+                dependencyGraph[asmName] = refs;
             }
         }
 
-        // Then find all modules from loaded assemblies
+        // 2. 拓扑排序
+        var sorted = new List<string>();
+        var visited = new Dictionary<string, int>(); // 0=未访问,1=访问中,2=已完成
+        void Visit(string node)
+        {
+            if (!visited.ContainsKey(node)) visited[node] = 0;
+            if (visited[node] == 1)
+                throw new Exception($"[ψ依赖环] 检测到循环依赖: {node}");
+            if (visited[node] == 2) return;
+            visited[node] = 1;
+            foreach (var dep in dependencyGraph[node])
+            {
+                if (!dependencyGraph.ContainsKey(dep))
+                    throw new Exception($"[ψ缺失] DLL依赖未找到: {dep} (被{node}依赖)");
+                Visit(dep);
+            }
+            visited[node] = 2;
+            sorted.Add(node);
+        }
+        foreach (var node in dependencyGraph.Keys)
+        {
+            Visit(node);
+        }
+
+        // 3. 按拓扑顺序加载DLL
+        foreach (var asmName in sorted)
+        {
+            var fileKey = nameToFile[asmName];
+            var assembly = context.LoadFromStream(new MemoryStream(_codeFiles[fileKey]));
+            assemblies[fileKey] = assembly;
+        }
+
+        // 4. 查找AbpModule类型
         foreach (var assembly in assemblies.Values)
         {
             var types = assembly.GetTypes();
