@@ -114,8 +114,8 @@ public static class OrleansHostExtension
                     siloBuilder.AddMongoDbStorageBasedLogConsistencyProvider("LogStorage", options =>
                     {
                         options.ClientSettings =
-                            MongoClientSettings.FromConnectionString(configSection.GetValue<string>("MongoDBClient"));
-                        options.Database = configSection.GetValue<string>("DataBase");
+                            MongoClientSettings.FromConnectionString(configSection.GetValue<string>("LogMongoDBClient"));
+                        options.Database = configSection.GetValue<string>("LogDataBase");
                     });
                 }
                 else
