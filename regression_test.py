@@ -12,7 +12,7 @@ EVENT_TYPE = "Aevatar.Application.Grains.Agents.TestAgent.SetNumberGEvent"
 EVENT_PARAM = "Number"
 
 AUTH_HOST = os.getenv("AUTH_HOST")
-API_HOST =  os.getenv("API_HOST")}
+API_HOST =  os.getenv("API_HOST")
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 INDEX_NAME = f"aevatar-{CLIENT_ID}-testagentstateindex"
