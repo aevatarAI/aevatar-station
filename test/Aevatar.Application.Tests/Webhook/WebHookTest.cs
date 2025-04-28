@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Service;
 using Shouldly;
+using Volo.Abp.Modularity;
 using Xunit;
 using Volo.Abp;
 using Aevatar.Webhook.Extensions;
@@ -10,7 +11,8 @@ using Microsoft.CodeAnalysis;
 
 namespace Aevatar.Webhook;
 
-public class WebHookTests : AevatarApplicationTestBase
+public abstract class WebHookTests<TStartupModule> : AevatarApplicationTestBase<TStartupModule>
+    where TStartupModule : IAbpModule
 {
     private readonly IWebhookService _webhookService;
 
