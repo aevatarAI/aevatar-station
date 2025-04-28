@@ -111,9 +111,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-and-push-image
     outputs:
-      auth_server_url: ${{ steps.setup_env.outputs.workflow.outputs.auth_server_url }}
-      api_server_url: ${{ steps.setup_env.outputs.workflow.outputs.api_server_url }} 
-      app_url: ${{ steps.setup_env.outputs.workflow.outputs.app_url }}
+      auth_server_url: ${{ steps.setup_env.outputs.auth_server_url }}
+      api_server_url: ${{ steps.setup_env.outputs.api_server_url }} 
+      app_url: ${{ steps.setup_env.outputs.app_url }}
+      client_id: ${{ steps.generate-uuid.outputs.client_id }}
+      client_secret: ${{ steps.generate-uuid.outputs.client_secret }}
     steps:
       - name: Generate UUID for project and client
         id: generate-uuid
