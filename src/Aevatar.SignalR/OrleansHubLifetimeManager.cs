@@ -24,9 +24,6 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
     private IAsyncStream<AllMessage> _allStream = default!;
     private Timer _timer = default!;
 
-    private static readonly ConcurrentDictionary<string, (int Count, DateTime LastReset)> _ipConnectionCounter = new();
-    private const int MaxConnectionsPerSecond = 5;
-
     private readonly string _instanceId = Guid.NewGuid().ToString("N")[..8];
 
     public OrleansHubLifetimeManager(
@@ -110,17 +107,18 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
     {
         var allTasks = new List<Task>();
         var payload = allMessage.Message!;
-        
+
         // 获取当前连接的快照，避免在迭代时修改集合
         var connections = _connections.Values.ToList();
-        
+
         foreach (var connection in connections)
         {
             if (connection.ConnectionAborted.IsCancellationRequested)
                 continue;
 
             if (allMessage.ExcludedIds == null || !allMessage.ExcludedIds.Contains(connection.ConnectionId))
-                allTasks.Add(SendLocal(connection, new ClientNotification(payload.Target, payload.Arguments!.ToStrings())));
+                allTasks.Add(SendLocal(connection,
+                    new ClientNotification(payload.Target, payload.Arguments!.ToStrings())));
         }
 
         return Task.WhenAll(allTasks);
@@ -128,7 +126,6 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
 
     private Task ProcessServerMessage(ClientMessage clientMessage)
     {
-        // 线程安全地获取连接
         if (_connections.TryGetValue(clientMessage.ConnectionId, out var connection))
         {
             _logger.LogDebug(
@@ -140,32 +137,8 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
                 connection != null);
             return SendLocal(connection, clientMessage.Message);
         }
-        return Task.CompletedTask;
-    }
 
-    private bool IsIpRateLimited(string ipAddress)
-    {
-        var now = DateTime.UtcNow;
-        var (count, lastReset) = _ipConnectionCounter.GetOrAdd(ipAddress, _ => (0, now));
-        
-        if ((now - lastReset).TotalSeconds >= 1)
-        {
-            _ipConnectionCounter.TryUpdate(ipAddress, (1, now), (count, lastReset));
-            return false;
-        }
-        
-        if (count >= MaxConnectionsPerSecond)
-        {
-            _logger.LogDebug(
-                "IP rate limit exceeded - IP: {IpAddress}, Connections in last second: {Count}, Max allowed: {MaxAllowed}",
-                ipAddress,
-                count,
-                MaxConnectionsPerSecond);
-            return true;
-        }
-        
-        _ipConnectionCounter.TryUpdate(ipAddress, (count + 1, lastReset), (count, lastReset));
-        return false;
+        return Task.CompletedTask;
     }
 
     public override async Task OnConnectedAsync(HubConnectionContext connection)
@@ -176,12 +149,11 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
         {
             var httpContext = connection.GetHttpContext();
             var ipAddress = httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "Unknown IP";
-  
-            // 使用线程安全的方式添加连接
+
             _connections.TryAdd(connection.ConnectionId, connection);
 
             var userAgent = httpContext?.Request?.Headers["User-Agent"].ToString() ?? "Unknown Agent";
-            
+
             _logger.LogDebug(
                 "Orleans Hub - New client connection - Instance: {InstanceId}, Hub: {HubName}, ServerId: {ServerId}, ConnectionId: {ConnectionId}, IP: {IpAddress}, UserAgent: {UserAgent}, Identity: {UserIdentity}, IsAuthenticated: {IsAuthenticated}, UserIdentifier: {UserIdentifier}, Items: {ItemsCount}, Claims: {Claims}",
                 _instanceId,
@@ -194,10 +166,10 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
                 connection.User?.Identity?.IsAuthenticated ?? false,
                 connection.UserIdentifier ?? "None",
                 connection.Items.Count,
-                connection.User?.Claims != null 
+                connection.User?.Claims != null
                     ? string.Join(", ", connection.User.Claims.Select(c => $"{c.Type}: {c.Value}"))
                     : "No claims");
-            
+
             var client = _clusterClient.GetClientGrain(_hubName, connection.ConnectionId);
 
             _logger.LogDebug(
@@ -206,7 +178,7 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
                 _hubName,
                 _serverId,
                 connection.ConnectionId);
-            
+
             await client.OnConnect(_serverId);
 
             if (connection!.User!.Identity!.IsAuthenticated)
@@ -362,7 +334,8 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
             _hubName,
             _serverId,
             connection.ConnectionId);
-        return connection.WriteAsync(new InvocationMessage(SignalROrleansConstants.ResponseMethodName, notification.Arguments))
+        return connection
+            .WriteAsync(new InvocationMessage(SignalROrleansConstants.ResponseMethodName, notification.Arguments))
             .AsTask();
     }
 
@@ -407,8 +380,7 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
 
         var serverDirectoryGrain = _clusterClient.GetServerDirectoryGrain();
         toUnsubscribe.Add(serverDirectoryGrain.Unregister(_serverId));
-        
-        // 等待所有取消订阅任务完成
+
         try
         {
             Task.WhenAll(toUnsubscribe.ToArray()).GetAwaiter().GetResult();
@@ -417,8 +389,7 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
         {
             _logger.LogError(ex, "Error unsubscribing from streams during disposal");
         }
-        
-        // 释放锁资源
+
         _streamSetupLock.Dispose();
     }
 
@@ -429,8 +400,8 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
             _instanceId,
             _hubName);
         lifecycle.Subscribe(
-           observerName: nameof(OrleansHubLifetimeManager<THub>),
-           stage: ServiceLifecycleStage.Active,
-           onStart: async cts => await Task.Run(EnsureStreamSetup, cts));
+            observerName: nameof(OrleansHubLifetimeManager<THub>),
+            stage: ServiceLifecycleStage.Active,
+            onStart: async cts => await Task.Run(EnsureStreamSetup, cts));
     }
 }

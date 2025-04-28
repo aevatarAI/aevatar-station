@@ -39,44 +39,43 @@ internal sealed class ClientGrain : IGrainBase, IClientGrain
 
     private async Task EnsureServerDisconnectionSubscription(Guid serverId)
     {
-        // TODO: Handle disconnection.
-        return;
-        if (_serverDisconnectedSubscription is null && !_isSubscriptionPending)
-        {
-            _isSubscriptionPending = true;
-            _subscriptionTimer?.Dispose();
-            _subscriptionTimer = this.RegisterGrainTimer<object>(
-                async _ =>
-                {
-                    try
-                    {
-                        if (_serverDisconnectedSubscription is null)
-                        {
-                            var serverDisconnectedStream = _streamProvider.GetServerDisconnectionStream(serverId);
-                            _logger.LogDebug(
-                                "Subscribing to server disconnection stream for server {serverId} on connection {connectionId}.",
-                                serverId, _connectionId);
-
-                            _serverDisconnectedSubscription =
-                                await serverDisconnectedStream.SubscribeAsync(_ => OnDisconnect("server-disconnected"));
-                            
-                            _logger.LogDebug(
-                                "Subscribed to server disconnection stream for server {serverId} on connection {connectionId}.",
-                                serverId, _connectionId);
-                        }
-                    }
-                    finally
-                    {
-                        _isSubscriptionPending = false;
-                        _subscriptionTimer?.Dispose();
-                        _subscriptionTimer = null;
-                    }
-                },
-                null,
-                TimeSpan.FromMilliseconds(5000),
-                TimeSpan.FromMilliseconds(-1)
-            );
-        }
+        // TODO: Need to be sure ClientDisconnectStream's subscriptions can be called when disconnected.
+        // if (_serverDisconnectedSubscription is null && !_isSubscriptionPending)
+        // {
+        //     _isSubscriptionPending = true;
+        //     _subscriptionTimer?.Dispose();
+        //     _subscriptionTimer = this.RegisterGrainTimer<object>(
+        //         async _ =>
+        //         {
+        //             try
+        //             {
+        //                 if (_serverDisconnectedSubscription is null)
+        //                 {
+        //                     var serverDisconnectedStream = _streamProvider.GetServerDisconnectionStream(serverId);
+        //                     _logger.LogDebug(
+        //                         "Subscribing to server disconnection stream for server {serverId} on connection {connectionId}.",
+        //                         serverId, _connectionId);
+        //
+        //                     _serverDisconnectedSubscription =
+        //                         await serverDisconnectedStream.SubscribeAsync(_ => OnDisconnect("server-disconnected"));
+        //                     
+        //                     _logger.LogDebug(
+        //                         "Subscribed to server disconnection stream for server {serverId} on connection {connectionId}.",
+        //                         serverId, _connectionId);
+        //                 }
+        //             }
+        //             finally
+        //             {
+        //                 _isSubscriptionPending = false;
+        //                 _subscriptionTimer?.Dispose();
+        //                 _subscriptionTimer = null;
+        //             }
+        //         },
+        //         null,
+        //         TimeSpan.FromMilliseconds(5000),
+        //         TimeSpan.FromMilliseconds(-1)
+        //     );
+        // }
     }
 
     public async Task OnActivateAsync(CancellationToken cancellationToken)
