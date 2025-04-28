@@ -25,7 +25,7 @@ logging.basicConfig(
 # HUB_URL = "http://192.168.3.11:8001/api/agent/aevatarHub"
 # HUB_URL = "http://localhost:8001/api/agent/aevatarHub"
 # HUB_URL = "http://localhost:8308/api/agent/aevatarHub"  
-HUB_URL = "https://station-developer-staging.aevatar.ai/test-client/api/agent/aevatarHub"
+HUB_URL = f"{os.getenv("API_HOST")}/api/agent/aevatarHub"
 
 @pytest.fixture(scope="module")
 def hub_connection():

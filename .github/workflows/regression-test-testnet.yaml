@@ -226,8 +226,10 @@ jobs:
     needs: setup-ephermeral-test-env 
     runs-on: ubuntu-latest
     env:
-      CLIENT_ID: ${{ secrets.TEST_CLIENT_ID }}
-      CLIENT_SECRET: ${{ secrets.TEST_CLIENT_SECRET }}
+      AUTH_HOST: ${{ needs.setup-ephermeral-test-env.outputs.auth_server_url }}
+      API_HOST: ${{ needs.setup-ephermeral-test-env.outputs.app_url }}
+      CLIENT_ID: ${{ needs.setup-ephermeral-test-env.outputs.client_id }}
+      CLIENT_SECRET: ${{ needs.setup-ephermeral-test-env.outputs.client_secret }}
     
     steps:
       - name: Checkout code
@@ -266,12 +268,12 @@ jobs:
         uses: drayeasy/action-lark-notify@main
         env:
           LARK_WEBHOOK: ${{ secrets.LARK_WEBHOOK }}
-          LARK_MESSAGE_TITLE: "测试成功"
+          LARK_MESSAGE_TITLE: "Regression Testing Successful"
 
       - name: Lark Notification on Failure
         if: failure()
         uses: drayeasy/action-lark-notify@main
         env:
           LARK_WEBHOOK: ${{ secrets.LARK_WEBHOOK }}
-          LARK_MESSAGE_TITLE: "测试失败"
+          LARK_MESSAGE_TITLE: "Regression Test Failed"
           LARK_MESSAGE_TEMPLATE: "red"

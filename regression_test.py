@@ -4,9 +4,6 @@ import time
 import pytest
 import requests
 
-AUTH_HOST = "https://auth-station-staging.aevatar.ai"
-API_HOST = "https://station-developer-staging.aevatar.ai/test-client"
-
 TEST_AGENT = "testagentwithconfiguration"
 STATE_NAME = "TestAgentState"
 AGENT_NAME = "TestAgent"
@@ -14,7 +11,8 @@ AGENT_NAME_MODIFIED = "TestAgentNameModified"
 EVENT_TYPE = "Aevatar.Application.Grains.Agents.TestAgent.SetNumberGEvent"
 EVENT_PARAM = "Number"
 
-
+AUTH_HOST = os.getenv("AUTH_HOST")
+API_HOST =  os.getenv("API_HOST")}
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 INDEX_NAME = f"aevatar-{CLIENT_ID}-testagentstateindex"
