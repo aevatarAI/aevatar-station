@@ -9,7 +9,6 @@ using System.Collections.Concurrent;
 
 namespace Aevatar.SignalR;
 
-// TODO: Is this thing called in a threadsafe manner by signalR? 
 public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, ILifecycleParticipant<ISiloLifecycle>,
     IDisposable where THub : Hub
 {
@@ -18,7 +17,7 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
     private readonly string _hubName;
     private readonly IClusterClient _clusterClient;
     private readonly SemaphoreSlim _streamSetupLock = new(1);
-    private readonly HubConnectionStore _connections = new();
+    private readonly ConcurrentDictionary<string, HubConnectionContext> _connections = new();
 
     private IStreamProvider? _streamProvider;
     private IAsyncStream<ClientMessage> _serverStream = default!;
@@ -40,7 +39,6 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
             ? hubType.Name[1..]
             : hubType.Name;
 
-        _serverId = "Test".ToGuid();
         _logger = logger;
         _clusterClient = clusterClient;
 
@@ -68,10 +66,10 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
 
         _serverId = _serverId == Guid.Empty ? Guid.NewGuid() : _serverId;
 
-        await _streamSetupLock.WaitAsync();
-
         try
         {
+            await _streamSetupLock.WaitAsync();
+
             if (_streamProvider is not null)
                 return;
 
@@ -110,10 +108,13 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
 
     private Task ProcessAllMessage(AllMessage allMessage)
     {
-        var allTasks = new List<Task>(_connections.Count);
+        var allTasks = new List<Task>();
         var payload = allMessage.Message!;
-
-        foreach (var connection in _connections)
+        
+        // 获取当前连接的快照，避免在迭代时修改集合
+        var connections = _connections.Values.ToList();
+        
+        foreach (var connection in connections)
         {
             if (connection.ConnectionAborted.IsCancellationRequested)
                 continue;
@@ -127,15 +128,19 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
 
     private Task ProcessServerMessage(ClientMessage clientMessage)
     {
-        var connection = _connections[clientMessage.ConnectionId];
-        _logger.LogDebug(
-            "Processing server message - Instance: {InstanceId}, Hub: {HubName}, ServerId: {ServerId}, ConnectionId: {ConnectionId}, Available: {ConnectionAvailable}",
-            _instanceId,
-            _hubName,
-            _serverId,
-            clientMessage.ConnectionId,
-            connection != null);
-        return connection == null ? Task.CompletedTask : SendLocal(connection, clientMessage.Message);
+        // 线程安全地获取连接
+        if (_connections.TryGetValue(clientMessage.ConnectionId, out var connection))
+        {
+            _logger.LogDebug(
+                "Processing server message - Instance: {InstanceId}, Hub: {HubName}, ServerId: {ServerId}, ConnectionId: {ConnectionId}, Available: {ConnectionAvailable}",
+                _instanceId,
+                _hubName,
+                _serverId,
+                clientMessage.ConnectionId,
+                connection != null);
+            return SendLocal(connection, clientMessage.Message);
+        }
+        return Task.CompletedTask;
     }
 
     private bool IsIpRateLimited(string ipAddress)
@@ -171,19 +176,9 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
         {
             var httpContext = connection.GetHttpContext();
             var ipAddress = httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "Unknown IP";
-            
-            // if (IsIpRateLimited(ipAddress))
-            // {
-            //     _logger.LogWarning(
-            //         "Connection rejected due to rate limiting - Instance: {InstanceId}, IP: {IpAddress}, ConnectionId: {ConnectionId}",
-            //         _instanceId,
-            //         ipAddress,
-            //         connection.ConnectionId);
-            //         
-            //     throw new HubException($"Too many connection attempts. Please wait a moment before trying again.");
-            // }
-
-            _connections.Add(connection);
+  
+            // 使用线程安全的方式添加连接
+            _connections.TryAdd(connection.ConnectionId, connection);
 
             var userAgent = httpContext?.Request?.Headers["User-Agent"].ToString() ?? "Unknown Agent";
             
@@ -236,7 +231,7 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
                 connection?.ConnectionId,
                 _hubName,
                 _serverId);
-            _connections.Remove(connection!);
+            _connections.TryRemove(connection!.ConnectionId, out _);
             throw;
         }
     }
@@ -256,7 +251,8 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
         }
         finally
         {
-            _connections.Remove(connection);
+            // 使用线程安全的方式移除连接
+            _connections.TryRemove(connection.ConnectionId, out _);
         }
     }
 
@@ -283,8 +279,8 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
 
         var message = new InvocationMessage(methodName, args);
 
-        var connection = _connections[connectionId];
-        if (connection != null)
+        // 线程安全地获取连接
+        if (_connections.TryGetValue(connectionId, out var connection))
         {
             return SendLocal(connection, new ClientNotification(methodName, args!.ToStrings()));
         }
@@ -340,7 +336,7 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
     public override Task SendUsersAsync(IReadOnlyList<string> userIds, string methodName, object?[] args,
         CancellationToken cancellationToken = default)
     {
-        var tasks = userIds.Select(u => SendGroupAsync(u, methodName, args, cancellationToken));
+        var tasks = userIds.Select(u => SendUserAsync(u, methodName, args, cancellationToken));
         return Task.WhenAll(tasks);
     }
 
@@ -411,8 +407,19 @@ public sealed class OrleansHubLifetimeManager<THub> : HubLifetimeManager<THub>, 
 
         var serverDirectoryGrain = _clusterClient.GetServerDirectoryGrain();
         toUnsubscribe.Add(serverDirectoryGrain.Unregister(_serverId));
-
-        Task.WhenAll(toUnsubscribe.ToArray()).GetAwaiter().GetResult();
+        
+        // 等待所有取消订阅任务完成
+        try
+        {
+            Task.WhenAll(toUnsubscribe.ToArray()).GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error unsubscribing from streams during disposal");
+        }
+        
+        // 释放锁资源
+        _streamSetupLock.Dispose();
     }
 
     public void Participate(ISiloLifecycle lifecycle)

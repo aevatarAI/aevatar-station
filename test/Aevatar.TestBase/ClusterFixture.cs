@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Extensions;
 using Aevatar.SignalR;
@@ -103,6 +104,9 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                     services.AddSingleton(typeof(HubLifetimeManager<>), typeof(OrleansHubLifetimeManager<>));
                     services.AddTransient<AevatarSignalRHub>();
                     services.AddTransient<IAevatarSignalRHub, AevatarSignalRHub>();
+                    
+                    // Register IGAgentFactory for AevatarSignalRHub
+                    services.AddSingleton<IGAgentFactory>(sp => new GAgentFactory(sp.GetRequiredService<IClusterClient>()));
                 })
                 .RegisterHub<AevatarSignalRHub>()
                 .UseAevatar()
