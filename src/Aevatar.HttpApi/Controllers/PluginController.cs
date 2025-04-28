@@ -18,6 +18,7 @@ namespace Aevatar.Controllers;
 [ControllerName("Plugin")]
 [Route("api/plugins")]
 [Authorize]
+[RequestFormLimits(MultipartBodyLengthLimit = 15 * 1024 * 1024)] // 15MB
 public class PluginController : AevatarController
 {
     private readonly IPluginService _pluginService;
@@ -39,14 +40,14 @@ public class PluginController : AevatarController
     [HttpPost]
     public async Task<PluginDto> CreateAsync([FromForm] CreatePluginDto input)
     {
-        return await _pluginService.CreateAsync(input.ProjectId, input.Code.Name, input.Code.GetAllBytes());
+        return await _pluginService.CreateAsync(input.ProjectId, input.Code.FileName, input.Code.GetAllBytes());
     }
 
     [HttpPut]
     [Route("{id}")]
     public async Task<PluginDto> UpdateAsync(Guid id, [FromForm] UpdatePluginDto input)
     {
-        return await _pluginService.UpdateAsync(id, input.Code.Name, input.Code.GetAllBytes());
+        return await _pluginService.UpdateAsync(id, input.Code.FileName, input.Code.GetAllBytes());
     }
 
     [HttpDelete]
