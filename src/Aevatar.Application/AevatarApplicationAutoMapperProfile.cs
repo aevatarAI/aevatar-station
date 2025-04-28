@@ -9,6 +9,7 @@ using Aevatar.CQRS.Dto;
 using Aevatar.Domain.Grains.Subscription;
 using Aevatar.Notification;
 using Aevatar.Organizations;
+using Aevatar.Plugins;
 using Aevatar.Projects;
 using AutoMapper;
 using Volo.Abp.Identity;
@@ -40,5 +41,8 @@ public class AevatarApplicationAutoMapperProfile : Profile
         
         CreateMap<ApiRequestSnapshot, ApiRequestDto>()
             .ForMember(d => d.Time, m => m.MapFrom(s => DateTimeHelper.ToUnixTimeMilliseconds(s.Time)));
+
+        CreateMap<Plugin, PluginDto>()
+            .ForMember(d => d.CreationTime, m => m.MapFrom(s => DateTimeHelper.ToUnixTimeMilliseconds(s.CreationTime)));
     }
 }
