@@ -85,18 +85,25 @@ public class NotificationService : INotificationService, ITransientDependency
         };
 
         notification = await _notificationRepository.InsertAsync(notification);
-        await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
-            new NotificationResponse()
-            {
-                Data = new NotificationResponseMessage()
-                    { Id = notification.Id, Status = NotificationStatusEnum.None }
-            });
 
-        var unreadCount = await GetUnreadCountAsync(target);
-        await _hubService.ResponseAsync([target],
-            new UnreadNotificationResponse()
-                { Data = new UnreadNotification(unreadCount: unreadCount) });
-        
+        _ = Task.Run(async () =>
+        {
+            _logger.LogDebug($"Push new message to {(Guid)notification.CreatorId!} and {notification.Receiver}");
+            await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
+                new NotificationResponse()
+                {
+                    Data = new NotificationResponseMessage()
+                        { Id = notification.Id, Status = NotificationStatusEnum.None }
+                });
+            
+            _logger.LogDebug($"Push unread message to {target}");
+            var unreadCount = await GetUnreadCountAsync(target);
+            await _hubService.ResponseAsync([target],
+                new UnreadNotificationResponse()
+                    { Data = new UnreadNotification(unreadCount: unreadCount) });
+
+        });
+
         return notification.Id;
     }
 
@@ -112,12 +119,15 @@ public class NotificationService : INotificationService, ITransientDependency
         notification.Status = NotificationStatusEnum.Withdraw;
         await _notificationRepository.UpdateAsync(notification);
 
-        await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
-            new NotificationResponse()
-            {
-                Data = new NotificationResponseMessage()
-                    { Id = notificationId, Status = NotificationStatusEnum.Withdraw }
-            });
+        _ = Task.Run(async () =>
+        {
+            await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
+                new NotificationResponse()
+                {
+                    Data = new NotificationResponseMessage()
+                        { Id = notificationId, Status = NotificationStatusEnum.Withdraw }
+                });
+        });
 
         return true;
     }
@@ -151,9 +161,13 @@ public class NotificationService : INotificationService, ITransientDependency
 
         await _notificationRepository.UpdateAsync(notification);
 
-        await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
-            new NotificationResponse()
-                { Data = new NotificationResponseMessage() { Id = notificationId, Status = status } });
+        _ = Task.Run(async () =>
+        {
+            await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
+                new NotificationResponse()
+                    { Data = new NotificationResponseMessage() { Id = notificationId, Status = status } });
+        });
+
         return true;
     }
 
