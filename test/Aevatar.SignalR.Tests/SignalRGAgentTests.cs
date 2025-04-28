@@ -48,6 +48,6 @@ public sealed class SignalRGAgentTests : AevatarSignalRTestBase
 
         var children = await groupGAgent.GetChildrenAsync();
         children.Count.ShouldBe(2);
-        children.Last().Type.ShouldBe(GrainType.Create("Aevatar.SignalR.GAgents/SignalRGAgent"));
+        children.Last().Type.ShouldBe(GrainType.Create("Aevatar.SignalR.GAgents.SignalRGAgent"));
     }
 }

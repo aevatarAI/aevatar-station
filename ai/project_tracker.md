@@ -11,7 +11,7 @@ This document tracks the development status of features and tasks for the AEVata
 
 | ID | Status | Feature/Task | Branch | Development Machine | Priority | Unit Test Coverage | Regression Test Coverage | Overall Test Coverage | Notes/Description |
 |----|--------|-------------|--------|---------------------|----------|-------------------|--------------------------|----------------------|------------------|
-| 1 | 🔜 | Comprehensive Unit Testing | feature/unit-testing | N/A | High | 0% | 0% | 0% | Develop and implement unit tests for all components, ensuring code quality and test-driven development practices |
+| 1 | 🚧 | Comprehensive Unit Testing | feature/unit-test-coverage | b6:3e:3e:3e:c1:99 | High | 0% | 0% | 0% | Develop and implement unit tests for all components, ensuring code quality and test-driven development practices |
 
 
 ## Development Notes

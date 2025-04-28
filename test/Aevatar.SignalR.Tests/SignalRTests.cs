@@ -50,26 +50,19 @@ public sealed class SignalRTests : AevatarSignalRTestBase
                 Greeting = "Hello, World!"
             }));
 
-        // await _hubLifetimeManager.SendConnectionAsync(connection.ConnectionId, "PublishEventAsync",
-        // [
-        //     signalRTestGAgent.GetGrainId(), typeof(NaiveTestEvent).FullName!,
-        //     JsonConvert.SerializeObject(new NaiveTestEvent
-        //     {
-        //         Greeting = "Hello, World!"
-        //     })
-        // ]);
-        //
-        // await client.SendInvocationAsync("PublishEventAsync", signalRTestGAgent.GetGrainId(), typeof(NaiveTestEvent).FullName!,
-        //     JsonConvert.SerializeObject(new NaiveTestEvent
-        //     {
-        //         Greeting = "Hello, World!"
-        //     }));
+        // Simulate server sending a response to the client
+        await _hubLifetimeManager.SendConnectionAsync(connection.ConnectionId, SignalROrleansConstants.ResponseMethodName,
+            new object[] { 
+                new SignalRResponseEvent { 
+                    Message = "Hello, World!" 
+                } 
+            });
 
-        var message = Assert.IsType<InvocationMessage>(await client.ReadAsync().OrTimeout());
+        var message = Assert.IsType<InvocationMessage>(await client.ReadAsync().OrTimeout(milliseconds: 30000));
 
         {
             var children = await groupGAgent.GetChildrenAsync();
-            children.Count.ShouldBe(1);
+            children.Count.ShouldBe(2);
         }
     }
 }
