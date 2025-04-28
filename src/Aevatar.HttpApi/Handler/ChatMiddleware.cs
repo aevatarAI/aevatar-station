@@ -37,12 +37,42 @@ public class ChatMiddleware
     {
         if (context.Request.PathBase == "/api/gotgpt/chat")
         {
+            if (context.User?.Identity == null || !context.User.Identity.IsAuthenticated)
+            {
+                _logger.LogDebug("[GodGPTController][ChatWithSessionAsync] Unauthorized: User is not authenticated");
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                await context.Response.WriteAsync("Unauthorized: User is not authenticated.");
+                await context.Response.Body.FlushAsync();
+                return;
+            }
+            
+            var userIdStr = context.User.FindFirst("sub")?.Value ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (userIdStr.IsNullOrWhiteSpace() || !Guid.TryParse(userIdStr, out var userId))
+            {
+                _logger.LogDebug("[GodGPTController][ChatWithSessionAsync] Unauthorized: Unable to retrieve UserId.");
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                await context.Response.WriteAsync("Unauthorized: Unable to retrieve UserId.");
+                await context.Response.Body.FlushAsync();
+                return;
+            }
+
             var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
             var request = JsonConvert.DeserializeObject<QuantumChatRequestDto>(body);
             try
             {
                 var stopwatch = Stopwatch.StartNew();
-                _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}");
+                _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}, userId {userId}");
+                
+                var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
+                if (!await manager.IsUserSessionAsync(request.SessionId))
+                {
+                    _logger.LogError("[GodGPTController][ChatWithSessionAsync] sessionInfoIsNull sessionId={A}", request.SessionId);
+                    context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                    await context.Response.WriteAsync($"Unable to load conversation {request.SessionId}");
+                    await context.Response.Body.FlushAsync();
+                    return;
+                }
+
                 var streamProvider = _clusterClient.GetStreamProvider("Aevatar");
                 var streamId = StreamId.Create(_aevatarOptions.Value.StreamNamespace, request.SessionId);
                 _logger.LogDebug(
@@ -55,7 +85,7 @@ public class ChatMiddleware
 
                 var chatId = Guid.NewGuid().ToString();
                 await godChat.StreamChatWithSessionAsync(request.SessionId, string.Empty, request.Content,
-                    chatId, null, true);
+                    chatId, null, true, request.Region);
                 _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] http request llm:{request.SessionId}");
                 var exitSignal = new TaskCompletionSource();
                 StreamSubscriptionHandle<ResponseStreamGodChat>? subscription = null;

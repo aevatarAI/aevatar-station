@@ -8,6 +8,9 @@ using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
 using Aevatar.Quantum;
 using Orleans;
+using Volo.Abp;
+using Volo.Abp.Application.Services;
+using Volo.Abp.Auditing;
 using Volo.Abp.DependencyInjection;
 
 namespace Aevatar.Service;
@@ -19,15 +22,20 @@ public interface IGodGPTService
         ExecutionPromptSettings promptSettings = null);
     Task<List<SessionInfoDto>> GetSessionListAsync(Guid userId);
     Task<List<ChatMessage>> GetSessionMessageListAsync(Guid userId, Guid sessionId);
-    Task DeleteSessionAsync(Guid userId, Guid sessionId);
-    Task RenameSessionAsync(Guid userId, Guid sessionId, string title);
+    Task<Guid> DeleteSessionAsync(Guid userId, Guid sessionId);
+    Task<Guid> RenameSessionAsync(Guid userId, Guid sessionId, string title);
     
     Task<string> GetSystemPromptAsync();
     Task UpdateSystemPromptAsync(GodGPTConfigurationDto godGptConfigurationDto);
 
+    Task<UserProfileDto> GetUserProfileAsync(Guid currentUserId);
+    Task<Guid> SetUserProfileAsync(Guid currentUserId, UserProfileDto userProfileDto);
+    Task<Guid> DeleteAccountAsync(Guid currentUserId);
 }
 
-public class GodGPTService : IGodGPTService, ITransientDependency
+[RemoteService(IsEnabled = false)]
+[DisableAuditing]
+public class GodGPTService : ApplicationService, IGodGPTService
 {
     private readonly IClusterClient _clusterClient;
 
@@ -62,16 +70,16 @@ public class GodGPTService : IGodGPTService, ITransientDependency
         return await manager.GetSessionMessageListAsync(sessionId);
     }
 
-    public async Task DeleteSessionAsync(Guid userId, Guid sessionId)
+    public async Task<Guid> DeleteSessionAsync(Guid userId, Guid sessionId)
     {
         var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
-        await manager.DeleteSessionAsync(sessionId);
+        return await manager.DeleteSessionAsync(sessionId);
     }
 
-    public async Task RenameSessionAsync(Guid userId, Guid sessionId, string title)
+    public async Task<Guid> RenameSessionAsync(Guid userId, Guid sessionId, string title)
     {
         var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
-        await manager.RenameSessionAsync(sessionId, title);
+        return await manager.RenameSessionAsync(sessionId, title);
     }
 
     public Task<string> GetSystemPromptAsync()
@@ -84,5 +92,24 @@ public class GodGPTService : IGodGPTService, ITransientDependency
     {
         var configurationAgent = _clusterClient.GetGrain<IConfigurationGAgent>(CommonHelper.GetSessionManagerConfigurationId());
         return  configurationAgent.UpdateSystemPromptAsync(godGptConfigurationDto.SystemPrompt);
+    }
+
+    public async Task<UserProfileDto> GetUserProfileAsync(Guid currentUserId)
+    {
+        var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
+        return await manager.GetUserProfileAsync();
+    }
+
+    public async Task<Guid> SetUserProfileAsync(Guid currentUserId, UserProfileDto userProfileDto)
+    {
+        var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
+        return await manager.SetUserProfileAsync(userProfileDto.Gender, userProfileDto.BirthDate, userProfileDto.BirthPlace, userProfileDto.FullName);
+    }
+
+    public async Task<Guid> DeleteAccountAsync(Guid currentUserId)
+    {
+        var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
+        return await manager.ClearAllAsync();
+
     }
 }

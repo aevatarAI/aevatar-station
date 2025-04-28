@@ -16,6 +16,7 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Orleans.Concurrency;
 using Orleans.Providers;
+using Volo.Abp;
 
 namespace Aevatar.Application.Grains.Agents.ChatManager;
 
@@ -288,13 +289,14 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         Logger.LogDebug($"[ChatGAgentManager][RequestGetUserProfileEvent] start");
 
         //var userProfileDto = await GetLastSessionUserProfileAsync();
+        var userProfileDto = await GetUserProfileAsync();
 
         await PublishAsync(new ResponseGetUserProfile()
         {
-            Gender = State.Gender,
-            BirthDate = State.BirthDate,
-            BirthPlace = State.BirthPlace,
-            FullName = State.FullName
+            Gender = userProfileDto.Gender,
+            BirthDate = userProfileDto.BirthDate,
+            BirthPlace = userProfileDto.BirthPlace,
+            FullName = userProfileDto.FullName
         });
 
         Logger.LogDebug($"[ChatGAgentManager][RequestGetUserProfileEvent] end");
@@ -482,6 +484,12 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         return Task.FromResult(result);
     }
 
+    public async Task<bool> IsUserSessionAsync(Guid sessionId)
+    {
+        var sessionInfo = State.GetSession(sessionId);
+        return sessionInfo != null;
+    }
+
     public async Task<List<ChatMessage>> GetSessionMessageListAsync(Guid sessionId)
     {
         Logger.LogDebug($"[ChatGAgentManager][GetSessionMessageListAsync] - session:ID {sessionId.ToString()}");
@@ -490,18 +498,18 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
 
         if (sessionInfo == null)
         {
-            return new List<ChatMessage>();
+            throw new UserFriendlyException($"Unable to load conversation {sessionId}");
         }
 
         var godChat = GrainFactory.GetGrain<IGodChat>(sessionInfo.SessionId);
         return await godChat.GetChatMessageAsync();
     }
 
-    public async Task DeleteSessionAsync(Guid sessionId)
+    public async Task<Guid> DeleteSessionAsync(Guid sessionId)
     {
         if (State.GetSession(sessionId) == null)
         {
-            return;
+            return sessionId;
         }
 
         RaiseEvent(new DeleteSessionEventLog()
@@ -510,14 +518,15 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         });
 
         await ConfirmEvents();
+        return sessionId;
     }
 
-    public async Task RenameSessionAsync(Guid sessionId, string title)
+    public async Task<Guid> RenameSessionAsync(Guid sessionId, string title)
     {
         var sessionInfo = State.GetSession(sessionId);
         if (sessionInfo == null || sessionInfo.Title == title)
         {
-            return;
+            return sessionId;
         }
 
         RaiseEvent(new RenameTitleEventLog()
@@ -527,16 +536,18 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         });
 
         await ConfirmEvents();
+        return sessionId;
     }
 
-    public async Task ClearAllAsync()
+    public async Task<Guid> ClearAllAsync()
     {
         // Record the event to clear all sessions
         RaiseEvent(new ClearAllEventLog());
         await ConfirmEvents();
+        return this.GetPrimaryKey();
     }
 
-    public async Task SetUserProfileAsync(string gender, DateTime birthDate, string birthPlace, string fullName)
+    public async Task<Guid> SetUserProfileAsync(string gender, DateTime birthDate, string birthPlace, string fullName)
     {
         RaiseEvent(new SetUserProfileEventLog()
         {
@@ -547,6 +558,18 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         });
 
         await ConfirmEvents();
+        return this.GetPrimaryKey();
+    }
+
+    public async Task<UserProfileDto> GetUserProfileAsync()
+    {
+        return new UserProfileDto
+        {
+            Gender = State.Gender,
+            BirthDate = State.BirthDate,
+            BirthPlace = State.BirthPlace,
+            FullName = State.FullName
+        };
     }
 
     public async Task<UserProfileDto> GetLastSessionUserProfileAsync()
