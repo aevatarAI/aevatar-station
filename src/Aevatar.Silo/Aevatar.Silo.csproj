@@ -31,7 +31,6 @@
         <PackageReference Include="Aevatar" />
         <PackageReference Include="Aevatar.SignalR" />
         <PackageReference Include="Aevatar.PermissionManagement" />
-        <PackageReference Include="Scrutor" />
     </ItemGroup>
 
     <ItemGroup>
