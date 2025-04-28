@@ -212,6 +212,10 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
         if (email?.EndsWith("@privaterelay.appleid.com") == true)
         {
             email = $"{sub}@apple.privaterelay.com";
+        } 
+        if (email.IsNullOrWhiteSpace())
+        {
+            email = $"{sub}@apple.privaterelay.com";
         }
 
         return new AppleUserInfo
