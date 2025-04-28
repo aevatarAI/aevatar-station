@@ -16,7 +16,7 @@
 | 任务 | 描述 | 验收标准 | 负责人 | 状态 | 备注 |
 |---|---|---|---|---|---|
 | 分支与环境准备 | 创建feature分支，合并dev，配置本地观测平台 | 分支创建成功，dev合并无冲突，观测平台本地可用 | 研发 | 已完成 | 本地环境已成功启动，所有docker服务（elasticsearch、grafana、jaeger、kafka、mongodb、otel-collector、prometheus、qdrant、redis）健康运行。 |
-| ElasticIndexingService插桩 | 关键方法插入Activity与metrics，traceId/SpanId贯穿，异常与日志关联 | 埋点代码合入，traceId/SpanId贯穿，异常与日志关联，编译与单测通过 | 研发 | 待开始 | 已定位ElasticIndexingService核心方法，分析插桩点（如SaveOrUpdateStateIndexBatchAsync、CheckExistOrCreateStateIndex等），准备插入Activity、metrics、traceId/SpanId、异常日志增强。 |
+| ElasticIndexingService插桩 | 关键方法插入Activity与metrics，traceId/SpanId贯穿，异常与日志关联 | 埋点代码合入，traceId/SpanId贯穿，异常与日志关联，编译与单测通过 | 研发 | 进行中 | 已集成非侵入式metrics/trace装饰器，依赖注入自动包装ElasticIndexingService，metrics与trace采集与业务解耦。 |
 | LogElasticSearchService插桩 | 关键方法插入Activity与metrics，采集命中数/耗时/异常，日志与traceId关联 | 埋点代码合入，指标采集，日志与traceId关联，编译与单测通过 | 研发 | 待开始 |   |
 | 单元测试 | 插桩相关单元测试100%覆盖 | 单元测试100%覆盖，trace/metrics采集验证 | QA | 待开始 |   |
 | 集成测试 | 验证trace/metrics在Prometheus/Jaeger/ES可见 | 集成测试通过，观测平台可见trace/metrics | QA | 待开始 |   |
