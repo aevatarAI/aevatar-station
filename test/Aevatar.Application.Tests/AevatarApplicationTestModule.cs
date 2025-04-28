@@ -1,10 +1,14 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Aevatar.CQRS.Handler;
 using Aevatar.Kubernetes.Manager;
 using Aevatar.Options;
 using Aevatar.SignalR;
 using Aevatar.Mock;
+using Aevatar.SignalR;
+using Aevatar.SignalR.SignalRMessage;
 using Aevatar.WebHook.Deploy;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.Ingest;
@@ -62,5 +66,13 @@ public class AevatarApplicationTestModule : AbpModule
 
     private void AddMock(IServiceCollection serviceCollection)
     {
+        serviceCollection.AddSingleton<IHubService>(provider =>
+        {
+            var mockHubService = new Mock<IHubService>();
+
+            mockHubService.Setup(f => f.ResponseAsync(It.IsAny<List<Guid>>(), It.IsAny<NotificationResponse>()))
+                .Returns(Task.CompletedTask);
+            return mockHubService.Object;
+        });
     }
 }

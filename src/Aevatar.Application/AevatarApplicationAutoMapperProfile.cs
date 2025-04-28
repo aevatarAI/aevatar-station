@@ -22,7 +22,8 @@ public class AevatarApplicationAutoMapperProfile : Profile
         CreateMap<EventSubscriptionState, SubscriptionDto>().ReverseMap();
 
         CreateMap<CreateSubscriptionDto, SubscribeEventInputDto>().ReverseMap();
-        CreateMap<NotificationInfo, NotificationDto>();
+        CreateMap<NotificationInfo, NotificationDto>()
+            .ForMember(d => d.CreationTime, m => m.MapFrom(s => DateTimeHelper.ToUnixTimeMilliseconds(s.CreationTime)));
         CreateMap<EventSubscriptionState, SubscriptionDto>()
             .ForMember(t => t.SubscriptionId, m => m.MapFrom(f => f.Id))
             .ForMember(t => t.CreatedAt, m => m.MapFrom(f => f.CreateTime));

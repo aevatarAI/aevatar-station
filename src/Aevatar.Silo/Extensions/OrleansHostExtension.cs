@@ -9,6 +9,7 @@ using Aevatar.GAgents.SemanticKernel.Extensions;
 using Aevatar.Extensions;
 using Aevatar.PermissionManagement.Extensions;
 using Aevatar.SignalR;
+using Aevatar.Silo.Startup;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -84,6 +85,9 @@ public static class OrleansHostExtension
                         options.SupportedNamespacePrefixes.Add("Autofac.Core");
                     })
                     .AddActivityPropagation()
+                    // Register our StateProjectionInitializer as a startup task
+                    // This will run during silo startup at ServiceLifecycleStage.ApplicationServices (default)
+                    .AddStartupTask<StateProjectionInitializer>()
                     // .UsePluginGAgents()
                     .UseDashboard(options =>
                     {
@@ -163,8 +167,8 @@ public static class OrleansHostExtension
                     .RegisterHub<AevatarSignalRHub>();
             }).ConfigureServices((context, services) =>
             {
-                services.Configure<AzureOpenAIConfig>(context.Configuration.GetSection("AIServices:AzureOpenAI"));
-                services.Configure<AzureDeepSeekConfig>(context.Configuration.GetSection("AIServices:DeepSeek"));
+                // services.Configure<AzureOpenAIConfig>(context.Configuration.GetSection("AIServices:AzureOpenAI"));
+                // services.Configure<AzureDeepSeekConfig>(context.Configuration.GetSection("AIServices:DeepSeek"));
                 services.Configure<QdrantConfig>(context.Configuration.GetSection("VectorStores:Qdrant"));
                 services.Configure<SystemLLMConfigOptions>(context.Configuration);
                 services.Configure<AzureOpenAIEmbeddingsConfig>(
