@@ -7,13 +7,13 @@ headers = {
     "Content-Type": "application/json"
 }
 
-# 循环发送递增请求
-for i in range(1, 3000):  # 示例发送100次
+# Loop to send incremental requests
+for i in range(1, 3000):  # Example: send 100 times
     payload = {
         "agentId": "d870f136-d6b9-440c-a30e-a8902a2b265d",
         "EventType": "MineAiFun.GAgents.GAgents.Common.GEvents.CreateUserGAgentGEvent",
         "eventProperties": {
-            "PkAddress": f"pk{i:04d}",  # 生成4位补零序号，如pk0001
+            "PkAddress": f"pk{i:04d}",  # Generate 4-digit zero-padded sequence, e.g., pk0001
             "Name": f"pk{i:03d}",
             "ThirdAddress": "third",
             "Color": "Red",
@@ -26,9 +26,9 @@ for i in range(1, 3000):  # 示例发送100次
 
     try:
         response = requests.post(url, json=payload, headers=headers)
-        response.raise_for_status()  # 自动处理错误状态码
-        print(f"成功发送: PK{i} 状态码: {response.content}")
+        response.raise_for_status()  # Automatically handle error status codes
+        print(f"Successfully sent: PK{i} Status code: {response.content}")
     except requests.exceptions.RequestException as e:
-        print(f"请求失败: {e}")
+        print(f"Request failed: {e}")
 
-    time.sleep(0.1)  # 添加间隔防止服务器过载
+    time.sleep(0.1)  # Add interval to prevent server overload
