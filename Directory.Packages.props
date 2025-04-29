@@ -199,5 +199,6 @@
     <PackageVersion Include="XWorkerAgent" Version="0.0.125" />
     <PackageVersion Include="TelegramWorkerAgent" Version="0.0.125" />
     <PackageVersion Include="AevatarTemplate.TelegramBot" Version="0.0.125" />
+    <PackageVersion Include="WTelegramClient" Version="4.3.1" />
   </ItemGroup>
 </Project>
