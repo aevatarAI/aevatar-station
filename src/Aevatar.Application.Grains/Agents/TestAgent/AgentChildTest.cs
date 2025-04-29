@@ -48,7 +48,7 @@ public class AgentChildTest : GAgentBase<ChildAgentState, FrontChildTestEvent, E
             Name = @event.Name
         });
         await ConfirmEvents();
-       
+
         await SendRandomMessageAsync();
     }
 
@@ -70,10 +70,13 @@ public class AgentChildTest : GAgentBase<ChildAgentState, FrontChildTestEvent, E
         _logger.LogInformation("Sending random message with number {randomNumber}", randomNumber);
 
         if(randomNumber == 1)
-        await PublishEventAsync(new FrontParentTestCreateEvent
         {
-            Name = $"Random Message {randomNumber}"
-        });
+            var parentAgent = GrainFactory.GetGrain<IFrontAgentParentTest>(Guid.NewGuid());
+            await parentAgent.PublishEventAsync(new FrontParentTestCreateEvent
+            {
+                Name = $"Random Message {randomNumber}"
+            });
+        }
     }
 }
 
@@ -108,13 +111,13 @@ public class FrontChildTestCreateEvent : EventBase
 }
 
 [GenerateSerializer]
-public class FrontInitConfig : ConfigurationBase
+public class FrontChildInitConfig : ConfigurationBase
 {
     [Id(0)] [Required] public string Name { get; set; }
 
     [Id(1)] [Required] public List<int> StudentIds { get; set; }
 
-    [Id(2)] [Required] public JobType JobType { get; set; }
+    [Id(2)] [Required] public ChildJobType JobType { get; set; }
 
     [Required]
     [RegularExpression(@"^https?://.*")]
@@ -125,7 +128,7 @@ public class FrontInitConfig : ConfigurationBase
     [Id(4)] public string Memo { get; set; }
 }
 
-public enum JobType
+public enum ChildJobType
 {
     Teacher,
     Professor,
