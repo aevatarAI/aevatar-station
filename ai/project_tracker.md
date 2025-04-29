@@ -20,6 +20,7 @@
 |----|--------------|--------|----------|--------|-------------------|----------|------------|------------------|-------|
 | F001 | Sample Feature | 🔜 | High | - | - | - | - | - | Initial setup required |
 | F002 | Another Feature | 🔜 | Medium | - | - | - | - | - | Depends on F001 |
+| F003 | ElasticSearch 性能观测与Tracing增强 | 🚧 | High | feature/add-metrics-for-es | 86:76:d2:43:c1:a2 | - | - | - | 详见features/ElasticSearch-Observability-FeatureTracker.md |
 
 ## Technical Debt & Refactoring
 
