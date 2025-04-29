@@ -226,14 +226,20 @@ def test_event_operations(api_headers, test_agent):
     assert any(property["name"] == EVENT_PARAM for property in event["eventProperties"])
 
     number = 10
-    time.sleep(5)
     # publish event
+    event_data = {
+        "agentId": test_agent,
+        "eventType": EVENT_TYPE,
+        "eventProperties": {EVENT_PARAM: number}
+    }
     response = requests.post(
-        f"{API_HOST}/api/agent",
-        json=agent_data,
+        f"{API_HOST}/api/agent/publishEvent",
+        json=event_data,
         headers=api_headers
     )
     assert_status_code(response)
+
+    time.sleep(5)
     # query parent agent state
     response = requests.get(
         f"{API_HOST}/api/query/state",
