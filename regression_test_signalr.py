@@ -1,3 +1,4 @@
+import os
 import pytest
 import json
 import time
@@ -25,7 +26,8 @@ logging.basicConfig(
 # HUB_URL = "http://192.168.3.11:8001/api/agent/aevatarHub"
 # HUB_URL = "http://localhost:8001/api/agent/aevatarHub"
 # HUB_URL = "http://localhost:8308/api/agent/aevatarHub"  
-HUB_URL = f"{os.getenv("API_HOST")}/api/agent/aevatarHub"
+API_HOST = os.getenv("API_HOST")
+HUB_URL = f"{API_HOST}/api/agent/aevatarHub"
 
 @pytest.fixture(scope="module")
 def hub_connection():
