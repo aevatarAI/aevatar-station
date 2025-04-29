@@ -275,12 +275,10 @@ def test_query_operations(api_headers, test_agent):
     assert response.json()["data"]["state"]["name"] == AGENT_NAME
 
     # query es
-    index_name = INDEX_NAME.lower()
     response = requests.get(
         f"{API_HOST}/api/query/es",
         params={
-            "state": STATE_NAME,
-            "index": index_name,
+            "stateName": STATE_NAME,
             "queryString": f"name: {AGENT_NAME}",
             "pageSize": 1
         },
