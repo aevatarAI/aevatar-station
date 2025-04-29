@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using Shouldly;
-using Xunit;
 
 namespace Aevatar.SignalR.Tests;
 

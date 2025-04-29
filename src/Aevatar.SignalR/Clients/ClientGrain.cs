@@ -24,6 +24,8 @@ internal sealed class ClientGrain : IGrainBase, IClientGrain
     private StreamSubscriptionHandle<Guid>? _serverDisconnectedSubscription = default;
 
     private int _failAttempts = 0;
+    private IDisposable? _subscriptionTimer;
+    private bool _isSubscriptionPending;
 
     public ClientGrain(
         ILogger<ClientGrain> logger,
@@ -35,6 +37,47 @@ internal sealed class ClientGrain : IGrainBase, IClientGrain
         GrainContext = grainContext;
     }
 
+    private async Task EnsureServerDisconnectionSubscription(Guid serverId)
+    {
+        // TODO: Need to be sure ClientDisconnectStream's subscriptions can be called when disconnected.
+        // if (_serverDisconnectedSubscription is null && !_isSubscriptionPending)
+        // {
+        //     _isSubscriptionPending = true;
+        //     _subscriptionTimer?.Dispose();
+        //     _subscriptionTimer = this.RegisterGrainTimer<object>(
+        //         async _ =>
+        //         {
+        //             try
+        //             {
+        //                 if (_serverDisconnectedSubscription is null)
+        //                 {
+        //                     var serverDisconnectedStream = _streamProvider.GetServerDisconnectionStream(serverId);
+        //                     _logger.LogDebug(
+        //                         "Subscribing to server disconnection stream for server {serverId} on connection {connectionId}.",
+        //                         serverId, _connectionId);
+        //
+        //                     _serverDisconnectedSubscription =
+        //                         await serverDisconnectedStream.SubscribeAsync(_ => OnDisconnect("server-disconnected"));
+        //                     
+        //                     _logger.LogDebug(
+        //                         "Subscribed to server disconnection stream for server {serverId} on connection {connectionId}.",
+        //                         serverId, _connectionId);
+        //                 }
+        //             }
+        //             finally
+        //             {
+        //                 _isSubscriptionPending = false;
+        //                 _subscriptionTimer?.Dispose();
+        //                 _subscriptionTimer = null;
+        //             }
+        //         },
+        //         null,
+        //         TimeSpan.FromMilliseconds(5000),
+        //         TimeSpan.FromMilliseconds(-1)
+        //     );
+        // }
+    }
+
     public async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         var key = ClientKey.FromGrainPrimaryKey(this.GetPrimaryKeyString());
@@ -43,28 +86,26 @@ internal sealed class ClientGrain : IGrainBase, IClientGrain
 
         _streamProvider = this.GetOrleansSignalRStreamProvider();
 
-        // Resume subscriptions if we have already been "connected".
-        // We know we have already been connected if the "ServerId" parameter is set.
         if (ServerId != default)
         {
             _logger.LogDebug("Resuming connection on {hubName} for connection {connectionId} to server {serverId}.",
                 _hubName, _connectionId, ServerId);
-            
-            // We will listen to this stream to know if the server is disconnected (silo goes down) so that we can enact client disconnected procedure.
-            var serverDisconnectedStream = _streamProvider.GetServerDisconnectionStream(_clientState.State.ServerId);
-            var _serverDisconnectedSubscription = (await serverDisconnectedStream.GetAllSubscriptionHandles())[0];
-            await _serverDisconnectedSubscription.ResumeAsync((serverId, _) => OnDisconnect("server-disconnected"));
+            await EnsureServerDisconnectionSubscription(ServerId);
         }
+        
+        _logger.LogDebug("OnActivateAsync executed, ConnectionId = {connectionId}", _connectionId);
     }
 
     public async Task OnConnect(Guid serverId)
     {
-        var serverDisconnectedStream = _streamProvider.GetServerDisconnectionStream(serverId);
-        _serverDisconnectedSubscription = await serverDisconnectedStream.SubscribeAsync(_ => OnDisconnect("server-disconnected"));
+        _logger.LogDebug("Connecting connection on {hubName} for connection {connectionId} to server {serverId}.",
+            _hubName, _connectionId, serverId);
 
         _clientState.State.ServerId = serverId;
         await _clientState.WriteStateAsync();
-        
+
+        await EnsureServerDisconnectionSubscription(serverId);
+
         _logger.LogDebug("Connected connection on {hubName} for connection {connectionId} to server {serverId}.",
             _hubName, _connectionId, _clientState.State.ServerId);
     }
@@ -73,6 +114,10 @@ internal sealed class ClientGrain : IGrainBase, IClientGrain
     {
         _logger.LogDebug("Disconnecting connection on {hubName} for connection {connectionId} from server {serverId} via reason '{reason}'.",
             _hubName, _connectionId, _clientState.State.ServerId, reason);
+
+        _subscriptionTimer?.Dispose();
+        _subscriptionTimer = null;
+        _isSubscriptionPending = false;
 
         if (_serverDisconnectedSubscription is not null)
         {
@@ -85,6 +130,11 @@ internal sealed class ClientGrain : IGrainBase, IClientGrain
         await _clientState.ClearStateAsync();
 
         this.DeactivateOnIdle();
+    }
+
+    public async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken token)
+    {
+        _subscriptionTimer?.Dispose();
     }
 
     // NB: Interface method is marked [ReadOnly] so this method will be re-entrant/interleaved.

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Threading.Channels;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
@@ -5,6 +6,7 @@ using Aevatar.SignalR.Core;
 using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
 using Orleans.Timers;
+using Newtonsoft.Json;
 
 namespace Aevatar.SignalR.GAgents;
 
@@ -102,10 +104,18 @@ public class SignalRGAgent :
                 var connectionIdList = new Dictionary<string, bool>(State.ConnectionIds);
                 foreach (var (connectionId, fireAndForget) in connectionIdList)
                 {
-                    Logger.LogInformation("Sending message to connectionId: {ConnectionId}, Message {Message}", connectionId,
-                        message);
+                    Logger.LogInformation("Sending message to connectionId: {ConnectionId}, Message {Message}",
+                        connectionId,
+                        JsonConvert.SerializeObject(message));
+                    Stopwatch sw = new Stopwatch();
+                    sw.Start();
                     await _hubContext.Client(connectionId)
                         .Send(SignalROrleansConstants.ResponseMethodName, message);
+                    sw.Stop();
+                    
+                    Logger.LogInformation(
+                        $"[SignalRGAgent][SendWithRetryAsync]: connectId{connectionId}, time use:{sw.ElapsedMilliseconds}, Message {message}");
+
                     if (fireAndForget)
                     {
                         Logger.LogDebug("Cleaning up connectionId: {ConnectionId}", connectionId);
@@ -124,7 +134,7 @@ public class SignalRGAgent :
                 if (i >= maxRetries - 1)
                     Logger.LogError(ex, $"Message failed after {maxRetries} retries.");
                 else
-                    await Task.Delay(1000 * (i + 1));
+                    await Task.Delay(10 * (i + 1));
             }
         }
     }
