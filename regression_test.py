@@ -239,7 +239,13 @@ def test_event_operations(api_headers, test_agent):
     )
     assert_status_code(response)
 
-    time.sleep(5)
+    time.sleep(2)
+    response = requests.post(
+        f"{API_HOST}/api/agent",
+        json=agent_data,
+        headers=api_headers
+    )
+    assert_status_code(response)
     # query parent agent state
     response = requests.get(
         f"{API_HOST}/api/query/state",
@@ -263,15 +269,27 @@ def test_event_operations(api_headers, test_agent):
 
 def test_query_operations(api_headers, test_agent):
     """test query operations"""
+    time.sleep(2)
+    agent_data = {
+        "agentType": TEST_AGENT,
+        "name": "other Agent",
+        "properties": {
+            "Name": "other Agent"
+        }
+    }
+    response = requests.post(
+            f"{API_HOST}/api/agent",
+        json=agent_data,
+        headers=api_headers
+    )
+    assert_status_code(response)
     # query state
-    time.sleep(5)
     response = requests.get(
         f"{API_HOST}/api/query/state",
         params={"stateName": STATE_NAME, "id": test_agent},
         headers=api_headers
     )
     assert_status_code(response)
-    print(response.json())
     assert "state" in response.json()["data"]
     assert response.json()["data"]["state"]["name"] == AGENT_NAME
 
