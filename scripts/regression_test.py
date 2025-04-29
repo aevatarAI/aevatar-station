@@ -4,12 +4,12 @@ import time
 import pytest
 import requests
 
-TEST_AGENT = "testagentwithconfiguration"
-STATE_NAME = "TestAgentState"
+TEST_AGENT = "agenttest"
+STATE_NAME = "FrontAgentState"
 AGENT_NAME = "TestAgent"
 AGENT_NAME_MODIFIED = "TestAgentNameModified"
-EVENT_TYPE = "Aevatar.Application.Grains.Agents.TestAgent.SetNumberGEvent"
-EVENT_PARAM = "Number"
+EVENT_TYPE = "Aevatar.Application.Grains.Agents.TestAgent.FrontTestCreateEvent"
+EVENT_PARAM = "Name"
 
 AUTH_HOST = os.getenv("AUTH_HOST")
 API_HOST =  os.getenv("API_HOST")
@@ -66,10 +66,7 @@ def test_agent(api_headers):
     """Create a test agent and return its ID, with automatic cleanup after testing completes"""
     agent_data = {
         "agentType": TEST_AGENT,
-        "name": AGENT_NAME,
-        "properties": {
-            "Name": AGENT_NAME
-        }
+        "name": AGENT_NAME
     }
 
     # create agent
@@ -108,8 +105,7 @@ def test_agent_operations(api_headers, test_agent):
 
     # update agent
     update_data = {
-        "name": AGENT_NAME_MODIFIED,
-        "properties": {"Name": AGENT_NAME_MODIFIED}
+        "name": AGENT_NAME_MODIFIED
     }
     response = requests.put(
         f"{API_HOST}/api/agent/{test_agent}",
@@ -136,10 +132,7 @@ def test_agent_relationships(api_headers, test_agent):
     # create sub agent
     agent_data = {
         "agentType": TEST_AGENT,
-        "name": "child Agent",
-        "properties": {
-            "Name": "child Agent"
-        }
+        "name": "child Agent"
     }
     response = requests.post(
         f"{API_HOST}/api/agent",
@@ -193,10 +186,7 @@ def test_event_operations(api_headers, test_agent):
     # create sub agent
     agent_data = {
         "agentType": TEST_AGENT,
-        "name": "child Agent",
-        "properties": {
-            "Name": "child Agent"
-        }
+        "name": "child Agent"
     }
     response = requests.post(
         f"{API_HOST}/api/agent",
@@ -225,12 +215,12 @@ def test_event_operations(api_headers, test_agent):
     event = [et for et in response.json()["data"] if et["eventType"] == EVENT_TYPE][0]
     assert any(property["name"] == EVENT_PARAM for property in event["eventProperties"])
 
-    number = 10
+    name = "test name"
     # publish event
     event_data = {
         "agentId": test_agent,
         "eventType": EVENT_TYPE,
-        "eventProperties": {EVENT_PARAM: number}
+        "eventProperties": {EVENT_PARAM: name}
     }
     response = requests.post(
         f"{API_HOST}/api/agent/publishEvent",
@@ -248,7 +238,7 @@ def test_event_operations(api_headers, test_agent):
     )
     assert_status_code(response)
     assert "state" in response.json()["data"]
-    assert response.json()["data"]["state"]["number"] == number
+    assert response.json()["data"]["state"]["name"] == name
 
     # query sub agent state
     response = requests.get(
@@ -258,7 +248,7 @@ def test_event_operations(api_headers, test_agent):
     )
     assert_status_code(response)
     assert "state" in response.json()["data"]
-    assert response.json()["data"]["state"]["number"] == number
+    assert response.json()["data"]["state"]["name"] == name
 
 
 def test_query_operations(api_headers, test_agent):

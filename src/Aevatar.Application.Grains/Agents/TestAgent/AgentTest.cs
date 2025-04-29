@@ -5,6 +5,7 @@ using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AI.Options;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
+using Aevatar.SignalR;
 
 namespace Aevatar.Application.Grains.Agents.TestAgent;
 
@@ -46,6 +47,12 @@ public class AgentTest : GAgentBase<FrontAgentState, FrontTestEvent, EventBase>,
             Name = @event.Name
         });
         await ConfirmEvents();
+
+        await PublishAsync(new SignalRResponseEvent<string>
+        {
+            Message = @event.Name,
+            Data = "test"
+        });
     }
 
     protected override void GAgentTransitionState(FrontAgentState state, StateLogEventBase<FrontTestEvent> @event)
@@ -112,4 +119,11 @@ public enum JobType
     Teacher,
     Professor,
     Dean
+}
+
+[GenerateSerializer]
+public class SignalRResponseEvent<T> : ResponseToPublisherEventBase
+{
+    [Id(0)] public string Message { get; set; }
+    [Id(1)] public T Data { get; set; }
 }

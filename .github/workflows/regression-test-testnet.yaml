@@ -137,7 +137,7 @@ jobs:
               ref: 'main',
               inputs: {
                 project_name: "${{ steps.generate-uuid.outputs.project_name }}",
-                environment_ttl: "15",
+                environment_ttl: "60",
                 client_id: "${{ steps.generate-uuid.outputs.client_id }}",
                 client_secret: "${{ steps.generate-uuid.outputs.client_secret }}",
                 host_silo_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
@@ -260,8 +260,8 @@ jobs:
       - name: Run Python Script
         run: |
           source venv/bin/activate
-          pytest -s -v regression_test.py
-          pytest -s -v regression_test_signalr.py
+          pytest -s -v scripts/regression_test.py
+          pytest -s -v scripts/regression_test_signalr.py
 
       - name: Lark Notification on Success
         if: success()
