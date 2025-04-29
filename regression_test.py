@@ -271,6 +271,7 @@ def test_query_operations(api_headers, test_agent):
         headers=api_headers
     )
     assert_status_code(response)
+    print(response.json())
     assert "state" in response.json()["data"]
     assert response.json()["data"]["state"]["name"] == AGENT_NAME
 
