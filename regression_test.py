@@ -239,7 +239,7 @@ def test_event_operations(api_headers, test_agent):
     )
     assert_status_code(response)
 
-    time.sleep(2)
+    time.sleep(5)
     response = requests.post(
         f"{API_HOST}/api/agent",
         json=agent_data,
@@ -269,7 +269,7 @@ def test_event_operations(api_headers, test_agent):
 
 def test_query_operations(api_headers, test_agent):
     """test query operations"""
-    time.sleep(2)
+    time.sleep(5)
     agent_data = {
         "agentType": TEST_AGENT,
         "name": "other Agent",
