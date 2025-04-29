@@ -226,20 +226,8 @@ def test_event_operations(api_headers, test_agent):
     assert any(property["name"] == EVENT_PARAM for property in event["eventProperties"])
 
     number = 10
-    # publish event
-    event_data = {
-        "agentId": test_agent,
-        "eventType": EVENT_TYPE,
-        "eventProperties": {EVENT_PARAM: number}
-    }
-    response = requests.post(
-        f"{API_HOST}/api/agent/publishEvent",
-        json=event_data,
-        headers=api_headers
-    )
-    assert_status_code(response)
-
     time.sleep(5)
+    # publish event
     response = requests.post(
         f"{API_HOST}/api/agent",
         json=agent_data,
@@ -270,19 +258,6 @@ def test_event_operations(api_headers, test_agent):
 def test_query_operations(api_headers, test_agent):
     """test query operations"""
     time.sleep(5)
-    agent_data = {
-        "agentType": TEST_AGENT,
-        "name": "other Agent",
-        "properties": {
-            "Name": "other Agent"
-        }
-    }
-    response = requests.post(
-            f"{API_HOST}/api/agent",
-        json=agent_data,
-        headers=api_headers
-    )
-    assert_status_code(response)
     # query state
     response = requests.get(
         f"{API_HOST}/api/query/state",
