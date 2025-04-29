@@ -137,15 +137,16 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
     {
         var agent = _clusterClient.GetGrain<ICreatorGAgent>(dto.AgentId);
         var agentState = await agent.GetAgentAsync();
-        _logger.LogInformation("PublishEventAsync id: {id} state: {state}", dto.AgentId, JsonConvert.SerializeObject(agentState));
-        
+        _logger.LogInformation("PublishEventAsync id: {id} state: {state}", dto.AgentId,
+            JsonConvert.SerializeObject(agentState));
+
         /*var currentUserId = _userAppService.GetCurrentUserId();
         if (agentState.UserId != currentUserId)
         {
             _logger.LogInformation("User {userId} is not allowed to publish event {eventType}.", currentUserId, dto.EventType);
             throw new UserFriendlyException("User is not allowed to publish event");
         }*/
-        
+
         var eventList = agentState.EventInfoList;
         var eventDescription = eventList.Find(i => i.EventType.FullName == dto.EventType);
 
@@ -162,20 +163,27 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
                 throw new UserFriendlyException("event could not be found");
             }
         }
-        
+
         var propertiesString = JsonConvert.SerializeObject(dto.EventProperties);
         var eventInstance = JsonConvert.DeserializeObject(propertiesString, eventDescription.EventType) as EventBase;
-        
+
         if (eventInstance == null)
         {
-            _logger.LogError("Event {type} could not be instantiated with param {param}", dto.EventType, propertiesString);
+            _logger.LogError("Event {type} could not be instantiated with param {param}", dto.EventType,
+                propertiesString);
             throw new UserFriendlyException("event could not be instantiated");
         }
-        
-        await agent.PublishEventAsync(eventInstance);
-        
+
+        if (dto.IsGroup)
+        {
+            await agent.PublishEventAsync(eventInstance);
+        }
+        else
+        {
+            await agent.PublishEventPointAsync(eventInstance);
+        }
     }
-    
+
     private async Task RefreshEventListAsync(ICreatorGAgent creatorAgent)
     {
         var agentState = await creatorAgent.GetAgentAsync();
