@@ -46,8 +46,8 @@ public class MetricsElasticIndexingService : IIndexingService
     {
         _inner = inner;
         _logger = logger;
-        _activitySource = new ActivitySource("Aevatar.CQRS.ElasticIndexingService");
-        var meter = new Meter("Aevatar.CQRS.ElasticIndexingService");
+        _activitySource = new ActivitySource("Aevatar.CQRS");
+        var meter = new Meter("Aevatar.CQRS");
         
         _bulkDurationHistogram = meter.CreateHistogram<double>("es.bulk.duration", "ms", "ElasticSearch bulk operation duration");
         _bulkSuccessCounter = meter.CreateCounter<long>("es.bulk.success", "count", "ElasticSearch bulk operations succeeded");
