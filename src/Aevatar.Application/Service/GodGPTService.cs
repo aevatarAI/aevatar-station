@@ -4,9 +4,11 @@ using System.Threading.Tasks;
 using Aevatar.Application.Grains.Agents.ChatManager;
 using Aevatar.Application.Grains.Agents.ChatManager.Common;
 using Aevatar.Application.Grains.Agents.ChatManager.ConfigAgent;
+using Aevatar.Application.Grains.Agents.ChatManager.Dtos;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
 using Aevatar.Quantum;
+using Microsoft.Extensions.Logging;
 using Orleans;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
@@ -31,6 +33,8 @@ public interface IGodGPTService
     Task<UserProfileDto> GetUserProfileAsync(Guid currentUserId);
     Task<Guid> SetUserProfileAsync(Guid currentUserId, UserProfileDto userProfileDto);
     Task<Guid> DeleteAccountAsync(Guid currentUserId);
+    Task<CreateShareIdResponse> GenerateShareContentAsync(Guid currentUserId, CreateShareIdRequest request);
+    Task<List<ChatMessage>> GetShareMessageListAsync(string shareString);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -38,10 +42,12 @@ public interface IGodGPTService
 public class GodGPTService : ApplicationService, IGodGPTService
 {
     private readonly IClusterClient _clusterClient;
+    private readonly ILogger<GodGPTService> _logger;
 
-    public GodGPTService(IClusterClient clusterClient)
+    public GodGPTService(IClusterClient clusterClient, ILogger<GodGPTService> logger)
     {
         _clusterClient = clusterClient;
+        _logger = logger;
     }
 
     public async Task<Guid> CreateSessionAsync(Guid userId, string systemLLM, string prompt)
@@ -111,5 +117,82 @@ public class GodGPTService : ApplicationService, IGodGPTService
         var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
         return await manager.ClearAllAsync();
 
+    }
+
+    public async Task<CreateShareIdResponse> GenerateShareContentAsync(Guid currentUserId, CreateShareIdRequest request)
+    {
+        var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
+        var shareId = await manager.GenerateChatShareContentAsync(request.SessionId);
+        return new CreateShareIdResponse
+        {
+            ShareId = GuidCompressor.CompressGuids(currentUserId, request.SessionId, shareId)
+        };
+    }
+
+    public async Task<List<ChatMessage>> GetShareMessageListAsync(string shareString)
+    {
+        if (shareString.IsNullOrWhiteSpace())
+        {
+            throw new UserFriendlyException("Invalid Share string");
+        }
+
+        Guid userId;
+        Guid sessionId;
+        Guid shareId;
+        try
+        {
+            (userId, sessionId, shareId) = GuidCompressor.DecompressGuids(shareString);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Invalid Share string. {0}", shareString);
+            throw new UserFriendlyException("Invalid Share string");
+        }
+        
+        var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
+        var shareLinkDto = await manager.GetChatShareContentAsync(sessionId, shareId);
+        return shareLinkDto.Messages;
+    }
+}
+
+public static class GuidCompressor
+{
+    public static string CompressGuids(Guid guid1, Guid guid2, Guid guid3)
+    {
+        var combinedBytes = CombineBytes(guid1.ToByteArray(), guid2.ToByteArray());
+        combinedBytes = CombineBytes(combinedBytes, guid3.ToByteArray());
+
+        var base64 = Convert.ToBase64String(combinedBytes)
+            .Replace('+', '-')
+            .Replace('/', '_')
+            .Replace("=", "");
+        return base64;
+    }
+    
+    public static (Guid, Guid, Guid) DecompressGuids(string compressedString)
+    {
+        var restoredBase64 = compressedString
+            .Replace('-', '+')
+            .Replace('_', '/')
+            .PadRight(compressedString.Length + (4 - compressedString.Length % 4) % 4, '=');
+
+        var bytes = Convert.FromBase64String(restoredBase64);
+
+        var guid1Bytes = new byte[16];
+        var guid2Bytes = new byte[16];
+        var guid3Bytes = new byte[16];
+        Array.Copy(bytes, 0, guid1Bytes, 0, 16);
+        Array.Copy(bytes, 16, guid2Bytes, 0, 16);
+        Array.Copy(bytes, 32, guid3Bytes, 0, 16);
+
+        return (new Guid(guid1Bytes), new Guid(guid2Bytes), new Guid(guid3Bytes));
+    }
+    
+    private static byte[] CombineBytes(byte[] bytes1, byte[] bytes2)
+    {
+        var combined = new byte[bytes1.Length + bytes2.Length];
+        Buffer.BlockCopy(bytes1, 0, combined, 0, bytes1.Length);
+        Buffer.BlockCopy(bytes2, 0, combined, bytes1.Length, bytes2.Length);
+        return combined;
     }
 }

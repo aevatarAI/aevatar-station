@@ -41,3 +41,10 @@ public class SetUserProfileEventLog : ChatManageEventLog
     [Id(2)] public string BirthPlace { get; set; }
     [Id(3)] public string FullName { get; set; }
 }
+
+[GenerateSerializer]
+public class GenerateChatShareContentLogEvent : ChatManageEventLog
+{
+    [Id(0)] public Guid SessionId { get; set; }
+    [Id(1)] public Guid ShareId { get; set; }
+}
