@@ -250,26 +250,12 @@ def test_event_operations(api_headers, test_agent):
     assert "state" in response.json()["data"]
     assert response.json()["data"]["state"]["name"] == name
 
-
-def test_query_operations(api_headers, test_agent):
-    """test query operations"""
-    time.sleep(5)
-    # query state
-    response = requests.get(
-        f"{API_HOST}/api/query/state",
-        params={"stateName": STATE_NAME, "id": test_agent},
-        headers=api_headers
-    )
-    assert_status_code(response)
-    assert "state" in response.json()["data"]
-    assert response.json()["data"]["state"]["name"] == AGENT_NAME
-
     # query es
     response = requests.get(
         f"{API_HOST}/api/query/es",
         params={
             "stateName": STATE_NAME,
-            "queryString": f"name: {AGENT_NAME}",
+            "queryString": f"name: {name}",
             "pageSize": 1
         },
         headers=api_headers

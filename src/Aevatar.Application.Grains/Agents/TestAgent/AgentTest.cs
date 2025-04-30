@@ -9,6 +9,7 @@ using Aevatar.SignalR;
 
 namespace Aevatar.Application.Grains.Agents.TestAgent;
 
+[GAgent]
 [Description("AgentTest")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
