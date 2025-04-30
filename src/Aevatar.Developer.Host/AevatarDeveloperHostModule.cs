@@ -109,7 +109,7 @@ public class AevatarDeveloperHostModule : AbpModule
                     .AllowAnyHeader()
                     .AllowAnyMethod()
                     .AllowCredentials()
-                    .WithExposedHeaders("X-Server-Time", "_AbpErrorFormat", "Abp-Tenant-Resolve-Error");
+                    .WithExposedHeaders("X-Server-Time");
             });
         });
     }
