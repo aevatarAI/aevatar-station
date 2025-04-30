@@ -9,7 +9,6 @@ using Aevatar.SignalR;
 
 namespace Aevatar.Application.Grains.Agents.TestAgent;
 
-[GAgent]
 [Description("AgentTest")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
@@ -48,12 +47,6 @@ public class AgentTest : GAgentBase<FrontAgentState, FrontTestEvent, EventBase>,
             Name = @event.Name
         });
         await ConfirmEvents();
-
-        await PublishAsync(new SignalRResponseEvent<string>
-        {
-            Message = @event.Name,
-            Data = "test"
-        });
     }
 
     protected override void GAgentTransitionState(FrontAgentState state, StateLogEventBase<FrontTestEvent> @event)
@@ -120,6 +113,41 @@ public enum JobType
     Teacher,
     Professor,
     Dean
+}
+
+[GenerateSerializer]
+public class SignalRTestGAgentState : StateBase;
+
+[GenerateSerializer]
+public class SignalRTestStateLogEvent : StateLogEventBase<SignalRTestStateLogEvent>;
+
+public interface ISignalRTestGAgent : IStateGAgent<SignalRTestGAgentState>;
+
+[GAgent]
+public class SignalRTestGAgent : GAgentBase<SignalRTestGAgentState, SignalRTestStateLogEvent>, ISignalRTestGAgent
+{
+    public override Task<string> GetDescriptionAsync()
+    {
+        return Task.FromResult("This is a GAgent for testing SignalRGAgent");
+    }
+
+    [EventHandler]
+    public async Task HandleEventAsync(NaiveTestEvent eventData)
+    {
+        //throw new Exception("Hey, something wrong here.");
+
+        await PublishAsync(new SignalRResponseEvent<string>
+        {
+            Message = eventData.Greeting,
+            Data = "test"
+        });
+    }
+}
+
+[GenerateSerializer]
+public class NaiveTestEvent : EventBase
+{
+    [Id(0)] public string Greeting { get; set; }
 }
 
 [GenerateSerializer]

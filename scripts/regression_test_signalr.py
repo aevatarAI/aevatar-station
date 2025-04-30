@@ -120,10 +120,10 @@ def test_publish_async(hub_connection):
     """
     connection, received_messages = hub_connection
     method_name = "PublishEventAsync"
-    grain_type = "Aevatar.Application.Grains.Agents.TestAgent.AgentTest"
+    grain_type = "Aevatar.Application.Grains.Agents.TestAgent.SignalRTestGAgent"
     grain_key = str(uuid4()).replace("-", "")
-    event_type_name = "Aevatar.Application.Grains.Agents.TestAgent.FrontTestCreateEvent"
-    event_json = json.dumps({"Name": "SignalR Test Name"})
+    event_type_name = "Aevatar.Application.Grains.Agents.TestAgent.NaiveTestEvent"
+    event_json = json.dumps({"Greeting": "Greeting PublishEvent Test"})
 
     params = [f"{grain_type}/{grain_key}", event_type_name, event_json]
     responses = send_event_and_wait(connection, received_messages, method_name, params)
@@ -137,10 +137,10 @@ def test_subscribe_async(hub_connection):
     """
     connection, received_messages = hub_connection
     method_name = "SubscribeAsync"
-    grain_type = "Aevatar.Application.Grains.Agents.TestAgent.AgentTest"
+    grain_type = "Aevatar.Application.Grains.Agents.TestAgent.SignalRTestGAgent"
     grain_key = str(uuid4()).replace("-", "")
-    event_type_name = "Aevatar.Application.Grains.Agents.TestAgent.FrontTestCreateEvent"
-    event_json = json.dumps({"Name": "SignalR Test Name"})
+    event_type_name = "Aevatar.Application.Grains.Agents.TestAgent.NaiveTestEvent"
+    event_json = json.dumps({"Greeting": "Greeting PublishEvent Test"})
 
     params = [f"{grain_type}/{grain_key}", event_type_name, event_json]
     responses = send_event_and_wait(connection, received_messages, method_name, params)
