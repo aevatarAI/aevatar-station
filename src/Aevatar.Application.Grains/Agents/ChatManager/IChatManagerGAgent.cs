@@ -1,4 +1,5 @@
 using Aevatar.Application.Grains.Agents.ChatManager.Chat;
+using Aevatar.Application.Grains.Agents.ChatManager.Share;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
@@ -22,6 +23,8 @@ public interface IChatManagerGAgent : IGAgent
     Task<Guid> SetUserProfileAsync(string gender, DateTime birthDate, string birthPlace, string fullName);
     Task<UserProfileDto> GetLastSessionUserProfileAsync();
     Task<Guid> ClearAllAsync();
-
     Task RenameChatTitleAsync(RenameChatTitleEvent @event);
+    Task<Guid> GenerateChatShareContentAsync(Guid sessionId);
+    [ReadOnly]
+    Task<ShareLinkDto> GetChatShareContentAsync(Guid sessionId, Guid shareId);
 }

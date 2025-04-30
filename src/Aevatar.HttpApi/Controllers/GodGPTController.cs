@@ -5,6 +5,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Aevatar.Application.Grains.Agents.ChatManager;
 using Aevatar.Application.Grains.Agents.ChatManager.Chat;
+using Aevatar.Application.Grains.Agents.ChatManager.Dtos;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AI.Common;
@@ -230,5 +231,27 @@ public class GodGPTController : AevatarController
         _logger.LogDebug("[GodGPTController][SetUserProfileAsync] sessionId: {0}, duration: {1}ms",
             deleteUserId, stopwatch.ElapsedMilliseconds);
         return deleteUserId;
+    }
+
+    [HttpPost("godgpt/share")]
+    public async Task<CreateShareIdResponse> CreateShareStringAsync(CreateShareIdRequest request)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var response = await _godGptService.GenerateShareContentAsync(currentUserId, request);
+        _logger.LogDebug("[GodGPTController][CreateShareStringAsync] userId: {0} sessionId: {1}, ShareId={2}, duration: {3}ms",
+            currentUserId, request.SessionId, response.ShareId, stopwatch.ElapsedMilliseconds);
+        return response;
+    }
+
+    [AllowAnonymous]
+    [HttpGet("godgpt/share/{shareString}")]
+    public async Task<List<ChatMessage>> GetShareMessageListAsync(string shareString)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var response = await _godGptService.GetShareMessageListAsync(shareString);
+        _logger.LogDebug("[GodGPTController][GetShareMessageListAsync] shareString: {0} duration: {1}ms",
+            shareString, stopwatch.ElapsedMilliseconds);
+        return response;
     }
 }

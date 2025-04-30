@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Aevatar.Application.Grains.Agents.ChatManager.Chat;
 using Aevatar.Application.Grains.Agents.ChatManager.Common;
 using Aevatar.Application.Grains.Agents.ChatManager.ConfigAgent;
+using Aevatar.Application.Grains.Agents.ChatManager.Share;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
@@ -120,9 +121,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         Logger.LogDebug($"[ChatGAgentManager][RenameChatTitleEvent] end:{JsonConvert.SerializeObject(@event)}");
 
     }
-    
-    
-    
+
 
     [EventHandler]
     public async Task HandleEventAsync(RequestCreateGodChatEvent @event)
@@ -511,6 +510,8 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         {
             return sessionId;
         }
+        
+        //Do not clear the content of ShareGrain. When querying, first determine whether the Session exists
 
         RaiseEvent(new DeleteSessionEventLog()
         {
@@ -541,6 +542,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
 
     public async Task<Guid> ClearAllAsync()
     {
+        //Do not clear the content of ShareGrain. When querying, first determine whether the Session exists
         // Record the event to clear all sessions
         RaiseEvent(new ClearAllEventLog());
         await ConfirmEvents();
@@ -571,6 +573,62 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
             FullName = State.FullName
         };
     }
+    
+    public async Task<Guid> GenerateChatShareContentAsync(Guid sessionId)
+    {
+        Logger.LogDebug($"[ChatGAgentManager][GenerateChatShareContentAsync] - session: {sessionId.ToString()}");
+
+        if (State.CurrentShareCount >= State.MaxShareCount)
+        {
+            Logger.LogDebug($"[ChatGAgentManager][GenerateChatShareContentAsync] - session: {sessionId.ToString()}, Exceed the maximum sharing limit. {State.CurrentShareCount}");
+            throw new UserFriendlyException($"Max {State.MaxShareCount} shares reached. Delete some to continue!");
+        }
+
+        var chatMessages = await GetSessionMessageListAsync(sessionId);
+        if (chatMessages.IsNullOrEmpty())
+        {
+            Logger.LogDebug($"[ChatGAgentManager][GenerateChatShareContentAsync] - session: {sessionId.ToString()}, chatMessages is null");
+            throw new UserFriendlyException("Invalid session to generate a share link.");
+        }
+        
+        var shareId = Guid.NewGuid();
+        var shareLinkGrain = GrainFactory.GetGrain<IShareLinkGrain>(shareId);
+        await shareLinkGrain.SaveShareContentAsync(new ShareLinkDto
+        {
+            UserId = this.GetPrimaryKey(),
+            SessionId = sessionId,
+            Messages = chatMessages
+        });
+        Logger.LogDebug($"[ChatGAgentManager][GenerateChatShareContentAsync] - session: {sessionId.ToString()}, save success");
+        RaiseEvent(new GenerateChatShareContentLogEvent
+        {
+            SessionId = sessionId,
+            ShareId = shareId
+        });
+
+        await ConfirmEvents();
+        return shareId;
+    }
+
+    public async Task<ShareLinkDto> GetChatShareContentAsync(Guid sessionId, Guid shareId)
+    {
+        var sessionInfo = State.GetSession(sessionId);
+        Logger.LogDebug($"[ChatGAgentManager][GetChatShareContentAsync] - session {sessionInfo?.SessionId.ToString()}");
+        if (sessionInfo == null)
+        {
+            Logger.LogDebug($"[ChatGAgentManager][GetChatShareContentAsync] - session {sessionId.ToString()}, session not found.");
+            throw new UserFriendlyException("Sorry, this conversation has been deleted by the owner.");
+        }
+
+        if (sessionInfo.ShareIds.IsNullOrEmpty() || !sessionInfo.ShareIds.Contains(shareId))
+        {
+            Logger.LogDebug($"[ChatGAgentManager][GetChatShareContentAsync] - session {sessionId.ToString()}, shareId not found.");
+            throw new UserFriendlyException("Sorry, this conversation has been deleted by the owner.");
+        }
+        
+        var shareLinkGrain = GrainFactory.GetGrain<IShareLinkGrain>(shareId);
+        return await shareLinkGrain.GetShareContentAsync();
+    }
 
     public async Task<UserProfileDto> GetLastSessionUserProfileAsync()
     {
@@ -599,6 +657,11 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
                 });
                 break;
             case DeleteSessionEventLog @deleteSessionEventLog:
+                var deleteSession = State.GetSession(@deleteSessionEventLog.SessionId);
+                if (deleteSession != null && !deleteSession.ShareIds.IsNullOrEmpty())
+                {
+                    State.CurrentShareCount -= deleteSession.ShareIds.Count;
+                }
                 State.SessionInfoList.RemoveAll(f => f.SessionId == @deleteSessionEventLog.SessionId);
                 break;
             case RenameTitleEventLog @renameTitleEventLog:
@@ -615,12 +678,30 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
                 State.BirthDate = default;
                 State.BirthPlace = string.Empty;
                 State.FullName = string.Empty;
+                State.CurrentShareCount = 0;
                 break;
             case SetUserProfileEventLog @setFortuneInfoEventLog:
                 State.Gender = @setFortuneInfoEventLog.Gender;
                 State.BirthDate = @setFortuneInfoEventLog.BirthDate;
                 State.BirthPlace = @setFortuneInfoEventLog.BirthPlace;
                 State.FullName = @setFortuneInfoEventLog.FullName;
+                break;
+            case GenerateChatShareContentLogEvent generateChatShareContentLogEvent:
+                var session = State.GetSession(generateChatShareContentLogEvent.SessionId);
+                if (session == null)
+                {
+                    Logger.LogDebug($"[ChatGAgentManager][GenerateChatShareContentLogEvent] session not fuound: {generateChatShareContentLogEvent.SessionId.ToString()}");
+                    break;
+                }
+                State.CurrentShareCount += 1;
+                if (session.ShareIds == null)
+                {
+                    session.ShareIds = new List<Guid>();
+                }
+                session.ShareIds.Add(generateChatShareContentLogEvent.ShareId);
+                break;
+            case SetMaxShareCountLogEvent setMaxShareCountLogEvent:
+                State.MaxShareCount = setMaxShareCountLogEvent.MaxShareCount;
                 break;
         }
     }
@@ -643,6 +724,15 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
                     BufferingSize = 32,
                 }
             });
+        }
+
+        if (State.MaxShareCount == 0)
+        {
+            RaiseEvent(new SetMaxShareCountLogEvent
+            {
+                MaxShareCount = 10000
+            });
+            await ConfirmEvents();
         }
         
         await base.OnAIGAgentActivateAsync(cancellationToken);

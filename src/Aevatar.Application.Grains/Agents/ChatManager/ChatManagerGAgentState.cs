@@ -13,6 +13,8 @@ public class ChatManagerGAgentState : AIGAgentStateBase
     [Id(4)] public DateTime BirthDate { get; set; }
     [Id(5)] public string BirthPlace { get; set; }
     [Id(6)] public string FullName { get; set; }
+    [Id(7)] public int MaxShareCount { get; set; }
+    [Id(8)] public int CurrentShareCount { get; set; } = 0;
 
     public SessionInfo? GetSession(Guid sessionId)
     {
