@@ -30,7 +30,7 @@ namespace Aevatar.Controllers;
 [RemoteService]
 [ControllerName("GodGPT")]
 [Route("api/gotgpt")]
-[Authorize]
+// [Authorize]
 public class GodGPTController : AevatarController
 {
     private readonly IGodGPTService _godGptService;
@@ -60,7 +60,8 @@ public class GodGPTController : AevatarController
     [HttpPost("create-session")]
     public async Task<Guid> CreateSessionAsync()
     {
-        return await _godGptService.CreateSessionAsync((Guid)CurrentUser.Id!, _defaultLLM, _defaultPrompt);
+        var mockUserId = Guid.NewGuid();
+        return await _godGptService.CreateSessionAsync(mockUserId, _defaultLLM, _defaultPrompt);
     }
 
     [HttpPost("chat_old")]
