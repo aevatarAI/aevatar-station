@@ -32,6 +32,26 @@ public class WebhookController : AevatarController
         _logger = logger;
     }
 
+    private Dictionary<string, byte[]> ExtractCodeFiles(IFormFileCollection codeFiles)
+    {
+        var result = new Dictionary<string, byte[]>();
+        if (codeFiles != null && codeFiles.Count > 0)
+        {
+            foreach (var file in codeFiles)
+            {
+                if (file.Length > 0)
+                {
+                    using (var stream = new MemoryStream())
+                    {
+                        file.CopyTo(stream);
+                        result[file.FileName] = stream.ToArray();
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
     [HttpPut]
     [Authorize(Policy = AevatarPermissions.AdminPolicy)]
     [Route("code/{webhookId}/{version}")]
@@ -42,22 +62,7 @@ public class WebhookController : AevatarController
         [Required] string version,
         [Required] [FromForm] CreateWebhookDto input)
     {
-        var codeFiles = new Dictionary<string, byte[]>();
-        if (input.Code != null && input.Code.Count > 0)
-        {
-            foreach (var file in input.Code)
-            {
-                if (file.Length > 0)
-                {
-                    using (var stream = new MemoryStream())
-                    {
-                        await file.CopyToAsync(stream);
-                        codeFiles[file.FileName] = stream.ToArray();
-                    }
-                }
-            }
-        }
-
+        var codeFiles = ExtractCodeFiles(input.Code);
         await _webhookService.CreateWebhookAsync(webhookId, version, codeFiles);
     }
 
@@ -72,25 +77,10 @@ public class WebhookController : AevatarController
             throw new UserFriendlyException("unSupport client");
         }
 
-        if (input.Code != null && input.Code.Count > 0)
+        var codeFiles = ExtractCodeFiles(input.Code);
+        if (codeFiles.Count > 0)
         {
-            var codeFiles = new Dictionary<string, byte[]>();
-            foreach (var file in input.Code)
-            {
-                if (file.Length > 0)
-                {
-                    using (var stream = new MemoryStream())
-                    {
-                        await file.CopyToAsync(stream);
-                        codeFiles[file.FileName] = stream.ToArray();
-                    }
-                }
-            }
-
-            if (codeFiles.Count > 0)
-            {
-                await _webhookService.UpdateCodeAsync(clientId, "1", codeFiles);
-            }
+            await _webhookService.UpdateCodeAsync(clientId, "1", codeFiles);
         }
     }
 

@@ -16,7 +16,7 @@ public static class OrleansHostExtensions
         return hostBuilder.UseOrleansClient((context, clientBuilder) =>
         {
             var configSection = context.Configuration.GetSection("Orleans");
-            var hostId = "";//context.Configuration.GetValue<string>("Webhook:WebhookId");
+            var hostId = context.Configuration.GetValue<string>("Webhook:WebhookId");
             if (configSection == null)
                 throw new ArgumentNullException(nameof(configSection), "The Orleans config node is missing");
             clientBuilder.UseMongoDBClient(configSection.GetValue<string>("MongoDBClient"))
