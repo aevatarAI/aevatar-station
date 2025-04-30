@@ -27,17 +27,6 @@ public class AgentParentTest : GAgentBase<ParentAgentState, FrontParentTestEvent
         return Task.FromResult("this is used for front parent test");
     }
 
-    public async Task PublishEventAsync(FrontParentTestCreateEvent @event)
-    {
-        _logger.LogInformation("FrontParentTestCreateEvent: {name}", @event.Name);
-        RaiseEvent(new FrontParentTestCreateSEvent
-        {
-            Id = Guid.NewGuid(),
-            Name = @event.Name,
-        });
-        await ConfirmEvents();
-    }
-
     [EventHandler]
     public async Task HandleFrontParentTestCreateEvent(FrontParentTestCreateEvent @event)
     {
@@ -48,15 +37,10 @@ public class AgentParentTest : GAgentBase<ParentAgentState, FrontParentTestEvent
             Name = @event.Name
         });
         await ConfirmEvents();
-
-        var childAgent = GrainFactory.GetGrain<IFrontAgentChildTest>(Guid.NewGuid());
-        await childAgent.PublishEventAsync(new FrontChildTestCreateEvent
-        {
-            Name = "test"
-        });
     }
 
-    protected override void GAgentTransitionState(ParentAgentState state, StateLogEventBase<FrontParentTestEvent> @event)
+    protected override void GAgentTransitionState(ParentAgentState state,
+        StateLogEventBase<FrontParentTestEvent> @event)
     {
         switch (@event)
         {
@@ -71,7 +55,6 @@ public class AgentParentTest : GAgentBase<ParentAgentState, FrontParentTestEvent
 
 public interface IFrontAgentParentTest : IGAgent
 {
-    Task PublishEventAsync(FrontParentTestCreateEvent frontParentTestCreateEvent);
 }
 
 [GenerateSerializer]
@@ -97,29 +80,4 @@ public class FrontParentTestCreateSEvent : FrontParentTestEvent
 public class FrontParentTestCreateEvent : EventBase
 {
     [Id(0)] [Required] public string Name { get; set; }
-}
-
-[GenerateSerializer]
-public class FrontParentInitConfig : ConfigurationBase
-{
-    [Id(0)] [Required] public string Name { get; set; }
-
-    [Id(1)] [Required] public List<int> StudentIds { get; set; }
-
-    [Id(2)] [Required] public ParentJobType JobType { get; set; }
-
-    [Required]
-    [RegularExpression(@"^https?://.*")]
-    [Description("the url of school")]
-    [Id(3)]
-    public string Url { get; set; }
-
-    [Id(4)] public string Memo { get; set; }
-}
-
-public enum ParentJobType
-{
-    Teacher,
-    Professor,
-    Dean
 }

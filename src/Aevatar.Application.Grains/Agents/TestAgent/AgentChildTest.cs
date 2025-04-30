@@ -27,16 +27,6 @@ public class AgentChildTest : GAgentBase<ChildAgentState, FrontChildTestEvent, E
         return Task.FromResult("this is used for front child test");
     }
 
-    public async Task PublishEventAsync(FrontChildTestCreateEvent @event)
-    {
-        _logger.LogInformation("FrontChildTestCreateEvent: {name}", @event.Name);
-        RaiseEvent(new FrontChildTestCreateSEvent
-        {
-            Id = Guid.NewGuid(),
-            Name = @event.Name,
-        });
-        await ConfirmEvents();
-    }
 
     [EventHandler]
     public async Task HandleFrontChildTestCreateEvent(FrontChildTestCreateEvent @event)
@@ -69,10 +59,9 @@ public class AgentChildTest : GAgentBase<ChildAgentState, FrontChildTestEvent, E
         var randomNumber = _random.Next(1, 10);
         _logger.LogInformation("Sending random message with number {randomNumber}", randomNumber);
 
-        if(randomNumber == 1)
+        if (randomNumber == 1)
         {
-            var parentAgent = GrainFactory.GetGrain<IFrontAgentParentTest>(Guid.NewGuid());
-            await parentAgent.PublishEventAsync(new FrontParentTestCreateEvent
+            await PublishAsync(new FrontParentTestCreateEvent
             {
                 Name = $"Random Message {randomNumber}"
             });
@@ -82,7 +71,6 @@ public class AgentChildTest : GAgentBase<ChildAgentState, FrontChildTestEvent, E
 
 public interface IFrontAgentChildTest : IGAgent
 {
-    Task PublishEventAsync(FrontChildTestCreateEvent frontChildTestCreateEvent);
 }
 
 [GenerateSerializer]
@@ -108,29 +96,4 @@ public class FrontChildTestCreateSEvent : FrontChildTestEvent
 public class FrontChildTestCreateEvent : EventBase
 {
     [Id(0)] [Required] public string Name { get; set; }
-}
-
-[GenerateSerializer]
-public class FrontChildInitConfig : ConfigurationBase
-{
-    [Id(0)] [Required] public string Name { get; set; }
-
-    [Id(1)] [Required] public List<int> StudentIds { get; set; }
-
-    [Id(2)] [Required] public ChildJobType JobType { get; set; }
-
-    [Required]
-    [RegularExpression(@"^https?://.*")]
-    [Description("the url of school")]
-    [Id(3)]
-    public string Url { get; set; }
-
-    [Id(4)] public string Memo { get; set; }
-}
-
-public enum ChildJobType
-{
-    Teacher,
-    Professor,
-    Dean
 }
