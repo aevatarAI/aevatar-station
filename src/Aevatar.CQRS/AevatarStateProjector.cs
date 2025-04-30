@@ -23,6 +23,7 @@ public class AevatarStateProjector : IStateProjector, ISingletonDependency, IDis
     private int _isProcessing;
     private bool _disposed;
     private DateTime _lastFlushTime = DateTime.UtcNow;
+    private System.Threading.Timer _flushTimer;
 
     public AevatarStateProjector(
         IMediator mediator,
@@ -32,6 +33,10 @@ public class AevatarStateProjector : IStateProjector, ISingletonDependency, IDis
         _mediator = mediator;
         _logger = logger;
         _batchOptions = options.Value;
+        // Initialize timer
+        int timerPeriodMs = Math.Max(_batchOptions.FlushMinPeriodInMs, (int)(_batchOptions.BatchTimeoutSeconds * _batchOptions.FlushMinPeriodInMs / 2));
+        _flushTimer = new System.Threading.Timer(FlushTimerCallback, null, timerPeriodMs, timerPeriodMs);
+
     }
 
     public Task ProjectAsync<T>(T state) where T : StateWrapperBase
@@ -238,5 +243,23 @@ public class AevatarStateProjector : IStateProjector, ISingletonDependency, IDis
         
         _shutdownCts.Cancel();
         _shutdownCts.Dispose();
+        _flushTimer?.Dispose();
+    }
+
+    private void FlushTimerCallback(object? state)
+    {
+        if (_disposed) return;
+        if (_latestCommands.IsEmpty) return;
+        if (Interlocked.CompareExchange(ref _isProcessing, 1, 0) != 0) return;
+        try
+        {
+            // Non-blocking flush execution
+            _ = FlushInternalAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[Timer] Exception in FlushTimerCallback");
+            Interlocked.Exchange(ref _isProcessing, 0);
+        }
     }
 }
