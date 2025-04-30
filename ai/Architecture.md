@@ -15,7 +15,7 @@ Aevatar Station is a full-stack platform for developing, managing, and deploying
 ┌──────────────────────────────────────────────────────────────┐
 │ [API Gateway/HttpApi.Host/Developer.Host]                   │
 │ [WebHook.Host (Plugin/Dynamic Extension)]                   │
-│ [Worker] (定时调度)                                         │
+│ [Worker] (Scheduled Task)                                    │
 └──────────────────────────────────────────────────────────────┘
      │             │                │
      ▼             ▼                ▼
