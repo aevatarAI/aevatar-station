@@ -19,7 +19,7 @@ env:
 
 jobs:
   publish:
-    runs-on: aismart-runner
+    runs-on: ephemeral-env-runner
     strategy:
       matrix:
         servicename:
@@ -59,7 +59,7 @@ jobs:
 
   build-and-push-image:
     needs: publish
-    runs-on: aismart-runner
+    runs-on: ephemeral-env-runner
     strategy:
       matrix:
         servicename:
@@ -108,7 +108,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
   setup-ephermeral-test-env:
-    runs-on: ubuntu-latest
+    runs-on: ephemeral-env-runner
     needs: build-and-push-image
     outputs:
       auth_server_url: ${{ steps.extract.outputs.auth_server_url }}
@@ -224,7 +224,7 @@ jobs:
 
   run-regression-test:
     needs: setup-ephermeral-test-env 
-    runs-on: ubuntu-latest
+    runs-on: ephemeral-env-runner
     env:
       AUTH_HOST: ${{ needs.setup-ephermeral-test-env.outputs.auth_server_url }}
       API_HOST: ${{ needs.setup-ephermeral-test-env.outputs.app_url }}
