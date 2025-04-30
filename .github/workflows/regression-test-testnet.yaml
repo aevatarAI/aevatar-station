@@ -124,6 +124,10 @@ jobs:
           echo "project_name=env-${UUID}" >> "$GITHUB_OUTPUT"
           echo "client_id=${UUID}" >> "$GITHUB_OUTPUT"
           echo "client_secret=${UUID}" >> "$GITHUB_OUTPUT"
+      
+      - name: Set up GitHub CLI
+        uses: cli/cli@v2
+    
       - name: Setup Ephermeral Env
         id: setup_env
         uses: actions/github-script@v6
