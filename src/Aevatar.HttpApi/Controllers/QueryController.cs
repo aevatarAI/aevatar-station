@@ -48,8 +48,11 @@ public class QueryController : AevatarController
         var resp = await _indexingService.QueryWithLuceneAsync(request);
         var serverTime = DateTime.UtcNow.ToString("o"); 
 
-        Response.Headers.Add("X-Server-Time", serverTime);
-        Response.Headers.Add("Access-Control-Expose-Headers", "X-Server-Time"); 
+        /*Response.Headers.Add("X-Server-Time", serverTime);
+        Response.Headers.Add("Access-Control-Expose-Headers", "X-Server-Time");*/
+        Response.Headers["X-Server-Time"] = serverTime;
+        Response.Headers["Access-Control-Expose-Headers"] = "X-Server-Time";
+
         return resp;
     }
 }
