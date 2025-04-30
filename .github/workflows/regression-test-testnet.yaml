@@ -126,7 +126,9 @@ jobs:
           echo "client_secret=${UUID}" >> "$GITHUB_OUTPUT"
       
       - name: Set up GitHub CLI
-        uses: cli/cli@v2
+        uses: actions4gh/setup-gh@v1
+        with:
+          gh-version: 'latest'
     
       - name: Setup Ephermeral Env
         id: setup_env
