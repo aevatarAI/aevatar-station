@@ -14,8 +14,8 @@ headers = {
 data = {
     'grant_type': 'client_credentials',
     'scope': 'Aevatar',
-    'client_id': 'AIMining',
-    'client_secret': 'AIMining123'
+    'client_id': '***',
+    'client_secret': '***'
 }
 
 # Send authentication request[1,3](@ref)
