@@ -95,6 +95,6 @@ init_response = requests.post(
 
 # Process initialization response
 if init_response.status_code == 200:
-    print(f"🎉 Agent initialization completed: {aimining_agent_id}")
+    print(f"🎉 Agent initialization completed id: {aimining_agent_id} token {access_token}")
 else:
     print(f"Initialization failed: {init_response.text}")
