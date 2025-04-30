@@ -108,7 +108,8 @@ public class AevatarDeveloperHostModule : AbpModule
                     .SetIsOriginAllowedToAllowWildcardSubdomains()
                     .AllowAnyHeader()
                     .AllowAnyMethod()
-                    .AllowCredentials();
+                    .AllowCredentials()
+                    .WithExposedHeaders("X-Server-Time", "_AbpErrorFormat", "Abp-Tenant-Resolve-Error");
             });
         });
     }
