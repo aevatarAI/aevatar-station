@@ -24,7 +24,6 @@ public class AevatarStateProjector : IStateProjector, ISingletonDependency, IDis
     private bool _disposed;
     private DateTime _lastFlushTime = DateTime.UtcNow;
     private System.Threading.Timer _flushTimer;
-    private const int MinTimerPeriodMs = 1000;
 
     public AevatarStateProjector(
         IMediator mediator,
@@ -34,8 +33,8 @@ public class AevatarStateProjector : IStateProjector, ISingletonDependency, IDis
         _mediator = mediator;
         _logger = logger;
         _batchOptions = options.Value;
-        // Initialize timer, period is BatchTimeoutSeconds/2, minimum 1 second
-        int timerPeriodMs = Math.Max(MinTimerPeriodMs, (int)(_batchOptions.BatchTimeoutSeconds * MinTimerPeriodMs / 2));
+        // Initialize timer
+        int timerPeriodMs = Math.Max(_batchOptions.FlushMinPeriodInMs, (int)(_batchOptions.BatchTimeoutSeconds * _batchOptions.FlushMinPeriodInMs / 2));
         _flushTimer = new System.Threading.Timer(FlushTimerCallback, null, timerPeriodMs, timerPeriodMs);
     }
 

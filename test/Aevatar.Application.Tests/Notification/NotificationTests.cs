@@ -41,7 +41,7 @@ public abstract class NotificationTests<TStartupModule> : AevatarApplicationTest
     public virtual async Task CreatNotification_Test()
     {
         var response =await CreatNotificationAsync();
-        response.ShouldBeTrue();
+        response.ShouldNotBe(Guid.Empty);
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public abstract class NotificationTests<TStartupModule> : AevatarApplicationTest
         response.ShouldBeTrue();
     }
     
-    private async Task<bool> CreatNotificationAsync()
+    private async Task<Guid> CreatNotificationAsync()
     {
         var owner = new IdentityUser(_currentUser.Id!.Value, "owner", "owner@email.io");
         await _userManager.CreateAsync(owner);

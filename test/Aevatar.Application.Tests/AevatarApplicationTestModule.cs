@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Aevatar.CQRS.Handler;
 using Aevatar.Kubernetes.Manager;
+using Aevatar.Options;
+using Aevatar.SignalR;
 using Aevatar.Mock;
 using Aevatar.SignalR;
 using Aevatar.SignalR.SignalRMessage;
@@ -21,6 +23,7 @@ using Volo.Abp.EventBus;
 using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
 using ChatConfigOptions = Aevatar.Options.ChatConfigOptions;
+using Moq;
 
 namespace Aevatar;
 
@@ -53,6 +56,9 @@ public class AevatarApplicationTestModule : AbpModule
         context.Services.AddTransient<IHostDeployManager, DefaultHostDeployManager>();
 
         context.Services.AddSingleton<IEmailSender, NullEmailSender>();
+        
+        context.Services.AddTransient<IHubService>(o=>Moq.Mock.Of<IHubService>());
+        
 
 
         AddMock(context.Services);

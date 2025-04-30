@@ -104,7 +104,7 @@ public class NotificationWrapper
             return;
         }
 
-        var task = (Task)method.Invoke(_handlerInstance, parameter);
+        var task = (Task)method.Invoke(_handlerInstance, parameter)!;
         await task;
     }
 

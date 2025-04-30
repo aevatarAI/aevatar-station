@@ -20,12 +20,15 @@
 |----|--------------|--------|----------|--------|-------------------|----------|------------|------------------|-------|
 | F001 | Sample Feature | 🔜 | High | - | - | - | - | - | Initial setup required |
 | F002 | Another Feature | 🔜 | Medium | - | - | - | - | - | Depends on F001 |
+| F003 | Webhook supports multi-dll loading | ✅ | High | feature/update-webhook | 42:82:57:47:65:d3 | 100% | ✓ | ✓ | Completed on 2025-04-28 |
+| F004 | Test coverage improvement | ✅ | High | feature/test-cov | 42:82:57:47:65:d3 | 100% | ✓ | ✓ | Completed on 2025-04-28 |
 
 ## Technical Debt & Refactoring
 
 | ID | Task Description | Status | Priority | Branch | Assigned To (MAC) | Unit Tests | Regression Tests | Notes |
 |----|------------------|--------|----------|--------|-------------------|------------|------------------|-------|
 | T001 | Refactor Component X | 🔜 | Medium | - | - | - | - | Improve performance |
+| T002 | Aevatar.WebHook.Host architecture doc refactor & optimization | ✅ | High | dev | 42:82:57:47:65:d3 | ✓ | ✓ | Completed on 2025-04-27 |
 
 ## Bug Fixes
 

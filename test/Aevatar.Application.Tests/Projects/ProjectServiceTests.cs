@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Aevatar.Organizations;
 using Aevatar.Permissions;
 using Shouldly;
+using Volo.Abp;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
@@ -85,26 +86,32 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         var ownerPermissions =
             await _permissionManager.GetAllForRoleAsync(ownerRole.Name);
         ownerPermissions = ownerPermissions.Where(o => o.IsGranted).ToList();
-        ownerPermissions.Count.ShouldBe(10);
-        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Organizations.Default);
-        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Organizations.Create);
-        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Organizations.Edit);
-        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Organizations.Delete);
-        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.OrganizationMembers.Default);
-        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.OrganizationMembers.Manage);
+        ownerPermissions.Count.ShouldBe(14);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Projects.Default);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Projects.Edit);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Members.Default);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Members.Manage);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ApiKeys.Default);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ApiKeys.Create);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ApiKeys.Edit);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ApiKeys.Delete);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Roles.Default);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Roles.Create);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Roles.Edit);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Roles.Delete);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.LLMSModels.Default);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.LLMSModels.Default);
 
         var readerRole = roles.Items.First(o => o.Name.EndsWith("Reader"));
         var readerPermissions =
             await _permissionManager.GetAllForRoleAsync(readerRole.Name);
         readerPermissions = readerPermissions.Where(o => o.IsGranted).ToList();
-        readerPermissions.Count.ShouldBe(3);
-        readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Organizations.Default);
-        readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.OrganizationMembers.Default);
+        readerPermissions.Count.ShouldBe(5);
+        readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Projects.Default);
+        readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Members.Default);
         readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ApiKeys.Default);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.LLMSModels.Default);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.LLMSModels.Default);
     }
 
     [Fact]
@@ -310,6 +317,9 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
     {
         var owner = new IdentityUser(_currentUser.Id.Value, "owner", "owner@email.io");
         await _identityUserManager.CreateAsync(owner);
+        
+        var reader = new IdentityUser(Guid.NewGuid(), "reader", "reader@email.io");
+        await _identityUserManager.CreateAsync(reader);
 
         var createOrganizationInput = new CreateOrganizationDto
         {
@@ -338,22 +348,37 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         
         project = await _projectService.GetProjectAsync(project.Id);
         project.MemberCount.ShouldBe(1);
-
+        
+        await _projectService.SetMemberAsync(project.Id, new SetOrganizationMemberDto
+        {
+            Email = reader.Email,
+            Join = true,
+            RoleId = readerRole.Id
+        });
+        
+        project = await _projectService.GetProjectAsync(project.Id);
+        project.MemberCount.ShouldBe(2);
+        
+        await Should.ThrowAsync<UserFriendlyException>(async () => await _organizationService.SetMemberAsync(organization.Id, new SetOrganizationMemberDto
+        {
+            Email = owner.Email,
+            Join = false
+        }));
         
         await _organizationService.SetMemberAsync(organization.Id, new SetOrganizationMemberDto
         {
-            Email = owner.Email,
+            Email = reader.Email,
             Join = false
         });
 
         organization = await _organizationService.GetAsync(organization.Id);
-        organization.MemberCount.ShouldBe(0);
+        organization.MemberCount.ShouldBe(1);
         
         project = await _projectService.GetProjectAsync(project.Id);
-        project.MemberCount.ShouldBe(0);
+        project.MemberCount.ShouldBe(1);
 
 
-        owner = await _identityUserManager.GetByIdAsync(owner.Id);
+        owner = await _identityUserManager.GetByIdAsync(reader.Id);
         owner.IsInOrganizationUnit(organization.Id).ShouldBeFalse();
         owner.IsInOrganizationUnit(project.Id).ShouldBeFalse();
     }
