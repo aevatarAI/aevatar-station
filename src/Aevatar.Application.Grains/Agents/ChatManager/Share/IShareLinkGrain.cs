@@ -13,7 +13,7 @@ public class ShareLinkGrain : Grain<ShareState>, IShareLinkGrain
 {
     private readonly ILogger<ShareLinkGrain> _logger;
     
-    protected ShareLinkGrain(ILogger<ShareLinkGrain> logger)
+    public ShareLinkGrain(ILogger<ShareLinkGrain> logger)
     {
         _logger = logger;
     }

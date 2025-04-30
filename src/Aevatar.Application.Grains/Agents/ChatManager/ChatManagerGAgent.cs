@@ -694,7 +694,14 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
                     break;
                 }
                 State.CurrentShareCount += 1;
-                session.ShareIds.Add(generateChatShareContentLogEvent.SessionId);
+                if (session.ShareIds == null)
+                {
+                    session.ShareIds = new List<Guid>();
+                }
+                session.ShareIds.Add(generateChatShareContentLogEvent.ShareId);
+                break;
+            case SetMaxShareCountLogEvent setMaxShareCountLogEvent:
+                State.MaxShareCount = setMaxShareCountLogEvent.MaxShareCount;
                 break;
         }
     }
@@ -717,6 +724,15 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
                     BufferingSize = 32,
                 }
             });
+        }
+
+        if (State.MaxShareCount == 0)
+        {
+            RaiseEvent(new SetMaxShareCountLogEvent
+            {
+                MaxShareCount = 10000
+            });
+            await ConfirmEvents();
         }
         
         await base.OnAIGAgentActivateAsync(cancellationToken);
