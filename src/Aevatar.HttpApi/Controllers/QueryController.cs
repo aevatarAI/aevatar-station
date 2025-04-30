@@ -50,8 +50,8 @@ public class QueryController : AevatarController
 
         /*Response.Headers.Add("X-Server-Time", serverTime);
         Response.Headers.Add("Access-Control-Expose-Headers", "X-Server-Time");*/
-        Response.Headers["Access-Control-Expose-Headers"] = "AIMining-Server-Time";
-        Response.Headers["AIMining-Server-Time"] = serverTime;
+        Response.Headers["Access-Control-Expose-Headers"] = "X-Server-Time";
+        Response.Headers["X-Server-Time"] = serverTime;
 
         return resp;
     }
