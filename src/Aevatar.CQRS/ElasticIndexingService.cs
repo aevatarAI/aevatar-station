@@ -27,7 +27,7 @@ namespace Aevatar;
 
 public class ElasticIndexingService : IIndexingService, ISingletonDependency
 {
-    private readonly ElasticsearchClient _elasticClient;
+    private readonly ElasticsearchClient _client;
     private readonly ILogger<ElasticIndexingService> _logger;
     private const string CTime = "cTime";
     private const int DefaultSkip = 0;
@@ -36,11 +36,11 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
     private readonly IMemoryCache _cache;
     private readonly IOptionsSnapshot<HostOptions> _options;
 
-    public ElasticIndexingService(ILogger<ElasticIndexingService> logger, ElasticsearchClient elasticClient,
+    public ElasticIndexingService(ILogger<ElasticIndexingService> logger, ElasticsearchClient client,
         ICQRSProvider cqrsProvider, IMemoryCache cache, IOptionsSnapshot<HostOptions> hostOptions)
     {
         _logger = logger;
-        _elasticClient = elasticClient;
+        _client = client;
         _cqrsProvider = cqrsProvider;
         _cache = cache;
         _options = hostOptions;
@@ -59,7 +59,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
             return;
         }
 
-        var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
+        var indexExistsResponse = _client.Indices.Exists(indexName);
         if (!indexExistsResponse.Exists)
         {
             var createIndexResponse = await CreateIndexAsync<T>(indexName);
@@ -85,7 +85,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
 
     private async Task<CreateIndexResponse> CreateIndexAsync<T>(string indexName) where T : StateBase
     {
-        var createIndexResponse = await _elasticClient.Indices.CreateAsync(indexName, c => c
+        var createIndexResponse = await _client.Indices.CreateAsync(indexName, c => c
             .Mappings(m => m
                 .Properties<T>(props =>
                 {
@@ -188,11 +188,40 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
             }
 
             document["ctime"] = DateTime.UtcNow;
+            document["version"] = command.Version;     
 
-            var item = new BulkIndexOperation<object>(document);
-            item.Id = id;
-            item.Index = indexName;
-            bulkOperations.Add(item);
+            // For version 1, use BulkIndexOperation to ensure document creation
+            // For version > 1, use BulkUpdateOperation with script to check version before updating
+            if (command.Version <= 1)
+            {
+                // Use BulkIndexOperation for new documents
+                var item = new BulkIndexOperation<Dictionary<string, object>>(document)
+                {
+                    Id = id,
+                    Index = indexName
+                };
+                bulkOperations.Add(item);
+            }
+            else
+            {
+                // Use BulkUpdateOperation with script-based version checking for updates
+                var item = new BulkUpdateOperation<Dictionary<string, object>, object>(id)
+                {
+                    Index = indexName,
+                    Script = new Script
+                    {
+                        Source = "if (ctx._source.version == null || params.version > ctx._source.version) { ctx._source = params.doc; } else { ctx.op = 'noop'; }",
+                        Params = new Dictionary<string, object>
+                        {
+                            ["version"] = document["version"],
+                            ["doc"] = document
+                        }
+                    },
+                    ScriptedUpsert = true,
+                    Upsert = document
+                };
+                bulkOperations.Add(item);
+            }
         }
 
         var bulkRequest = new BulkRequest
@@ -201,7 +230,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
             Refresh = Refresh.WaitFor
         };
 
-        var response = await _elasticClient.BulkAsync(bulkRequest);
+        var response = await _client.BulkAsync(bulkRequest);
 
         ProcessBulkResponse(response);
     }
@@ -234,7 +263,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         var indexName = GetIndexName(stateName.ToLower());
         try
         {
-            var response = await _elasticClient.SearchAsync<dynamic>(s => s
+            var response = await _client.SearchAsync<dynamic>(s => s
                 .Index(indexName)
                 .Query(query)
                 .From(skip)
@@ -321,7 +350,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                 };
             }
 
-            var response = await _elasticClient.SearchAsync<Dictionary<string, object>>(searchRequest);
+            var response = await _client.SearchAsync<Dictionary<string, object>>(searchRequest);
 
             if (!response.IsValidResponse)
             {
