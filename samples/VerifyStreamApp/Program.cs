@@ -11,6 +11,7 @@ using Orleans.Hosting;
 using Orleans.Providers.MongoDB.Configuration;
 using Orleans.Streams.Kafka.Config;
 using MessagingGAgent.Grains;
+using Aevatar.Application.Grains.Agents.TestAgent;
 
 IHostBuilder builder = Host.CreateDefaultBuilder(args)
     .UseOrleansClient(client =>
@@ -71,7 +72,7 @@ await Task.Delay(2000);
 // Create a new grain instance for the publisher agent
 // test broadcast
 var pubAgentId = Guid.NewGuid();
-var pubAgent = client.GetGrain<IDemoGAgent>(pubAgentId);
+var pubAgent = client.GetGrain<ITestDbScheduleGAgent>(pubAgentId);
 
 var demoEvent = new DemoEvent
 {
@@ -80,7 +81,7 @@ var demoEvent = new DemoEvent
     PublisherGrainId = pubAgent.GetGrainId(),
 };
 
-await pubAgent.BroadCastEventAsync("DemoScheduleGAgent", demoEvent);
+await pubAgent.BroadCastEventAsync("TestDbScheduleGAgent", demoEvent);
 
 await Task.Delay(500);
 
