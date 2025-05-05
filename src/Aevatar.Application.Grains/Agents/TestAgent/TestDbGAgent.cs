@@ -4,6 +4,8 @@ using Orleans.Providers;
 
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
+using Aevatar.Core.Placement;
+
 using Orleans.Streams;
 using Orleans.Concurrency;
 
@@ -41,6 +43,7 @@ public interface ITestDbGAgent : IBroadCastGAgent
     Task PublishAsync<T>(GrainId grainId,T @event) where T : EventBase;
 }
 
+[SiloNamePatternPlacement("User")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 public class TestDbGAgent : BroadCastGAgentBase<TestDbGState, TestDbStateLogEvent>, ITestDbGAgent
@@ -93,6 +96,7 @@ public interface ITestDbScheduleGAgent : IBroadCastGAgent
 
 }
 
+[SiloNamePatternPlacement("Scheduler")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 public class TestDbScheduleGAgent : BroadCastGAgentBase<BroadCastGState, TestDbStateLogEvent>, ITestDbScheduleGAgent
