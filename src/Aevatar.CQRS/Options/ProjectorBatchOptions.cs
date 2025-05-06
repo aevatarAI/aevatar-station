@@ -41,4 +41,9 @@ public class ProjectorBatchOptions
     /// 最大重试延迟（秒）
     /// </summary>
     public int MaxRetryDelaySeconds { get; set; } = 30;
+
+    /// <summary>
+    /// Minimum flush period (ms)
+    /// </summary>
+    public int FlushMinPeriodInMs { get; set; } = 1000;
 }

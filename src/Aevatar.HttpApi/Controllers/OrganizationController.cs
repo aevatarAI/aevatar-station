@@ -68,7 +68,7 @@ public class OrganizationController : AevatarController
     [Route("{organizationId}/members")]
     public async Task<ListResultDto<OrganizationMemberDto>> GetMemberListAsync(Guid organizationId, GetOrganizationMemberListDto input)
     {
-        await _permissionChecker.AuthenticateAsync(organizationId, AevatarPermissions.OrganizationMembers.Default);
+        await _permissionChecker.AuthenticateAsync(organizationId, AevatarPermissions.Members.Default);
         return await _organizationService.GetMemberListAsync(organizationId, input);
     }
 
@@ -76,7 +76,7 @@ public class OrganizationController : AevatarController
     [Route("{organizationId}/members")]
     public async Task SetMemberAsync(Guid organizationId, SetOrganizationMemberDto input)
     {
-        await _permissionChecker.AuthenticateAsync(organizationId, AevatarPermissions.OrganizationMembers.Manage);
+        await _permissionChecker.AuthenticateAsync(organizationId, AevatarPermissions.Members.Manage);
         await _organizationService.SetMemberAsync(organizationId, input);
     }
 
@@ -84,16 +84,14 @@ public class OrganizationController : AevatarController
     [Route("{organizationId}/member-roles")]
     public async Task SetMemberRoleAsync(Guid organizationId, SetOrganizationMemberRoleDto input)
     {
-        await _permissionChecker.AuthenticateAsync(organizationId, AevatarPermissions.OrganizationMembers.Manage);
+        await _permissionChecker.AuthenticateAsync(organizationId, AevatarPermissions.Members.Manage);
+                
+        if (input.UserId == CurrentUser.Id)
+        {
+            throw new UserFriendlyException("Unable to set your own role.");
+        }
+        
         await _organizationService.SetMemberRoleAsync(organizationId, input);
-    }
-    
-    [HttpGet]
-    [Route("{organizationId}/roles")]
-    public async Task<ListResultDto<IdentityRoleDto>> GetRoleListAsync(Guid organizationId)
-    {
-        await _permissionChecker.AuthenticateAsync(organizationId, AevatarPermissions.Organizations.Default);
-        return await _organizationService.GetRoleListAsync(organizationId);
     }
     
     [HttpGet]

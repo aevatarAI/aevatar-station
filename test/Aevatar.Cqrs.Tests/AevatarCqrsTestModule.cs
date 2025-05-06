@@ -13,11 +13,9 @@ using ChatConfigOptions = Aevatar.Options.ChatConfigOptions;
 namespace Aevatar.Cqrs.Tests;
 
 [DependsOn(
-    typeof(AevatarApplicationModule),
     typeof(AbpEventBusModule),
     typeof(AevatarOrleansTestBaseModule),
-    typeof(AevatarDomainTestModule),
-    typeof(AevatarApplicationTestModule)
+    typeof(AevatarCQRSModule)
 )]
 public class AevatarCqrsTestModule : AbpModule
 {
@@ -27,7 +25,8 @@ public class AevatarCqrsTestModule : AbpModule
         Configure<AbpAutoMapperOptions>(options => { options.AddMaps<AevatarCqrsTestModule>(); });
         var configuration = context.Services.GetConfiguration();
         Configure<ChatConfigOptions>(configuration.GetSection("Chat"));
-        Configure<ProjectorBatchOptions>(options => { options.BatchSize = 1; });
+        //Configure<ProjectorBatchOptions>(options => { options.BatchSize = 1; });
+        context.Services.AddMemoryCache();
         context.Services.AddSingleton<IIndexingService, MockElasticIndexingService>();
         context.Services.AddMediatR(cfg =>
             cfg.RegisterServicesFromAssembly(typeof(GetStateQueryHandler).Assembly)
