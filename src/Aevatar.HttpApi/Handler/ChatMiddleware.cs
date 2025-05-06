@@ -43,8 +43,12 @@ public class ChatMiddleware
                 _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}");
                 var streamProvider = _clusterClient.GetStreamProvider("Aevatar");
                 var streamId = StreamId.Create(_aevatarOptions.Value.StreamNamespace, request.SessionId);
+                stopwatch.Stop();
+                _logger.LogDebug("[GodGPTController][ChatWithSessionAsync] - step 1 create Stream, time use:{use}", stopwatch.ElapsedMilliseconds);
                 _logger.LogDebug(
                     $"[GodGPTController][ChatWithSessionAsync] sessionId {request.SessionId}, namespace {_aevatarOptions.Value.StreamNamespace}, streamId {streamId.ToString()}");
+                
+                stopwatch.Restart();
                 context.Response.ContentType = "text/event-stream";
                 context.Response.Headers.Connection = "keep-alive";
                 context.Response.Headers.CacheControl = "no-cache";
@@ -54,11 +58,15 @@ public class ChatMiddleware
                 var chatId = Guid.NewGuid().ToString();
                 await godChat.StreamChatWithSessionAsync(request.SessionId, string.Empty, request.Content,
                     chatId, null, true);
+                stopwatch.Stop();
+                _logger.LogDebug("[GodGPTController][ChatWithSessionAsync] - step 2 StreamChatWithSessionAsync, time use:{use}", stopwatch.ElapsedMilliseconds);
                 _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] http request llm:{request.SessionId}");
                 var exitSignal = new TaskCompletionSource();
                 StreamSubscriptionHandle<ResponseStreamGodChat>? subscription = null;
                 var firstFlag = false;
                 var ifLastChunk = false;
+                
+                stopwatch.Restart();
                 subscription = await responseStream.SubscribeAsync(async (chatResponse, token) =>
                 {
                     if (chatResponse.ChatId != chatId)
@@ -101,7 +109,10 @@ public class ChatMiddleware
                     exitSignal.TrySetResult();
                     return Task.CompletedTask;
                 });
-
+                stopwatch.Stop();
+                _logger.LogDebug("[GodGPTController][ChatWithSessionAsync] - step 3 SubscribeAsync, time use:{use}", stopwatch.ElapsedMilliseconds);
+                
+                
                 try
                 {
                     await exitSignal.Task.WaitAsync(context.RequestAborted);

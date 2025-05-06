@@ -133,8 +133,11 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
             });
 
             await ConfirmEvents();
-
             sw.Stop();
+            Logger.LogDebug(
+                $"StreamChatWithSessionAsync {sessionId.ToString()} - step2,time use:{sw.ElapsedMilliseconds}");
+            
+            sw.Restart();
             IChatManagerGAgent chatManagerGAgent =
                 GrainFactory.GetGrain<IChatManagerGAgent>((Guid)State.ChatManagerGuid);
             await chatManagerGAgent.RenameChatTitleAsync(new RenameChatTitleEvent()
@@ -142,12 +145,12 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
                 SessionId = sessionId,
                 Title = title
             });
+            sw.Stop();
             Logger.LogDebug(
                 $"StreamChatWithSessionAsync {sessionId.ToString()} - step3,time use:{sw.ElapsedMilliseconds}");
         }
-
-        sw.Reset();
-        sw.Start();
+        
+        sw.Restart();
         var configuration = GetConfiguration();
         await GodStreamChatAsync(sessionId, await configuration.GetSystemLLM(),
             await configuration.GetStreamingModeEnabled(),
