@@ -9,7 +9,7 @@ using Aevatar.Core.Placement;
 using Orleans.Streams;
 using Orleans.Concurrency;
 
-namespace Aevatar.Application.Grains.Agents.TestAgent;
+namespace E2E.Grains;
 
 [GenerateSerializer]
 public class TestDbEvent : EventBase
