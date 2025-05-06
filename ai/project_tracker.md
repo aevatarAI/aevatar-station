@@ -22,6 +22,7 @@
 | F002 | Another Feature | 🔜 | Medium | - | - | - | - | - | Depends on F001 |
 | F003 | Webhook supports multi-dll loading | ✅ | High | feature/update-webhook | 42:82:57:47:65:d3 | 100% | ✓ | ✓ | Completed on 2025-04-28 |
 | F004 | Test coverage improvement | ✅ | High | feature/test-cov | 42:82:57:47:65:d3 | 100% | ✓ | ✓ | Completed on 2025-04-28 |
+| F005 | Improve OrleansHostExtension unit tests | ✅ | High | dev | 3e:58:e5:c6:ab:31 | 100% | ✓ | ✓ | Fixed StateProjectionInitializer registration tests |
 
 ## Technical Debt & Refactoring
 

@@ -6,7 +6,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- MongoDB Driver -->
+    <PackageReference Include="MongoDB.Driver" />
 
+    <!-- Orleans MongoDB Provider -->
+    <PackageReference Include="Orleans.Providers.MongoDB"/>
+
+    <!-- Newtonsoft.Json (if required by your serializer) -->
+    <PackageReference Include="Newtonsoft.Json"  />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Orleans.Client" />
     <PackageReference Include="Microsoft.Orleans.Sdk" />
@@ -25,5 +34,4 @@
     <!-- <ProjectReference Include="..\..\src\Aevatar.MongoDB\Aevatar.MongoDB.csproj" /> -->
     <!-- <ProjectReference Include="../../../non-fork/Orleans.Streams.Kafka/Orleans.Streams.Kafka/Orleans.Streams.Kafka.csproj" /> -->
 </ItemGroup>
-
 </Project>

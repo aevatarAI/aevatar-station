@@ -25,5 +25,4 @@
     <!-- <ProjectReference Include="..\..\src\Aevatar.MongoDB\Aevatar.MongoDB.csproj" /> -->
     <!-- <ProjectReference Include="../../../non-fork/Orleans.Streams.Kafka/Orleans.Streams.Kafka/Orleans.Streams.Kafka.csproj" /> -->
 </ItemGroup>
-
 </Project>

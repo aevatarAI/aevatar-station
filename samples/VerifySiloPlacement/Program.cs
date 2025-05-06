@@ -11,13 +11,14 @@ using Orleans.Hosting;
 using Orleans.Providers.MongoDB.Configuration;
 using Orleans.Streams.Kafka.Config;
 using Aevatar.Application.Grains.Agents.TestAgent;
+using System.Diagnostics;
 
 IHostBuilder builder = Host.CreateDefaultBuilder(args)
     .UseOrleansClient(client =>
     {
         //client.UseLocalhostClustering();
         var hostId = "Aevatar";
-        client.UseMongoDBClient("mongodb://localhost:27017/?maxPoolSize=555")
+        client.UseMongoDBClient("mongodb://localhost:27017/?maxPoolSize=15000")
             .UseMongoDBClustering(options =>
             {
                 options.DatabaseName = "AevatarDb";
@@ -29,8 +30,7 @@ IHostBuilder builder = Host.CreateDefaultBuilder(args)
                 options.ClusterId = "AevatarSiloCluster";
                 options.ServiceId = "AevatarBasicService";
             })
-            .AddActivityPropagation();
-        client.UseLocalhostClustering(gatewayPort: 20001)
+            .AddActivityPropagation()
             // .AddMemoryStreams(AevatarCoreConstants.StreamProvider);
             .AddKafka("Aevatar")
             .WithOptions(options =>
@@ -41,7 +41,7 @@ IHostBuilder builder = Host.CreateDefaultBuilder(args)
 
                 var partitions = 1;
                 var replicationFactor = (short)1;  // ReplicationFactor should be short
-                var topics = "Aevatar";
+                var topics = "Aevatar,AevatarStateProjection,AevatarBroadCast";
                 foreach (var topic in topics.Split(','))
                 {
                     options.AddTopic(topic.Trim(), new TopicCreationConfig
@@ -57,49 +57,20 @@ IHostBuilder builder = Host.CreateDefaultBuilder(args)
     })
     .ConfigureLogging(logging => logging.AddConsole())
     .UseConsoleLifetime();
+
 using IHost host = builder.Build();
 await host.StartAsync();
 
 var client = host.Services.GetRequiredService<IClusterClient>();
 
+//create a new schedule agent
+var scheduleAgent = client.GetGrain<ITestDbScheduleGAgent>(Guid.NewGuid());
+var scheResult = await scheduleAgent.GetDescriptionAsync();
+Console.WriteLine(scheResult);
 
-var subAgentId = Guid.NewGuid();
-var subAgent = client.GetGrain<ITestDbGAgent>(subAgentId);
-await subAgent.ActivateAsync();
-await Task.Delay(2000);
-
-// Create a new grain instance for the publisher agent
-// test broadcast
-var pubAgentId = Guid.NewGuid();
-var pubAgent = client.GetGrain<ITestDbScheduleGAgent>(pubAgentId);
-
-var demoEvent = new TestDbEvent
-{
-    Number = 100,
-    CorrelationId = Guid.NewGuid(),
-    PublisherGrainId = pubAgent.GetGrainId(),
-};
-
-await pubAgent.BroadCastEventAsync("TestDbScheduleGAgent", demoEvent);
-
-await Task.Delay(500);
-
-Console.WriteLine("Count is {0}", await subAgent.GetCount());
-
-// test p2p
-var p2pAgentId1 = Guid.NewGuid();
-var p2pAgent1 = client.GetGrain<ITestDbGAgent>(p2pAgentId1);
-await p2pAgent1.ActivateAsync();
-
-var p2pAgentId2 = Guid.NewGuid();
-var p2pAgent2 = client.GetGrain<ITestDbGAgent>(p2pAgentId2);
-await p2pAgent2.ActivateAsync();
-
-await p2pAgent1.PublishAsync(p2pAgent2.GetGrainId(), demoEvent);
-
-await Task.Delay(500);
-Console.WriteLine("Count is {0}", await p2pAgent2.GetCount());
-
-Console.WriteLine("Press any key to exit...");
+//create a new user agent
+var userAgent = client.GetGrain<ITestDbGAgent>(Guid.NewGuid());
+var userResult = await userAgent.GetDescriptionAsync();
+Console.WriteLine(userResult);
 
 await host.StopAsync();

@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-
+  
   <ItemGroup>
     <PackageReference Include="Microsoft.Orleans.Client" />
     <PackageReference Include="Microsoft.Orleans.Sdk" />
@@ -19,11 +19,7 @@
 </ItemGroup>
 
 <ItemGroup>
-    <!-- <ProjectReference Include="..\..\..\aevatar-framework\src\Aevatar.Core\Aevatar.Core.csproj" /> -->
     <!-- <ProjectReference Include="..\..\..\aevatar-framework\samples\MessagingGAgent.Grains\MessagingGAgent.Grains.csproj" /> -->
     <ProjectReference Include="..\..\src\Aevatar.Application.Grains\Aevatar.Application.Grains.csproj" />
-    <!-- <ProjectReference Include="..\..\src\Aevatar.MongoDB\Aevatar.MongoDB.csproj" /> -->
-    <!-- <ProjectReference Include="../../../non-fork/Orleans.Streams.Kafka/Orleans.Streams.Kafka/Orleans.Streams.Kafka.csproj" /> -->
 </ItemGroup>
-
 </Project>
