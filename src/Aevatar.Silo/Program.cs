@@ -41,8 +41,10 @@ public class Program
 
     internal static IHostBuilder CreateHostBuilder(string[] args) =>
         Host.CreateDefaultBuilder(args)
-            .ConfigureServices((hostcontext, services) =>
+            .ConfigureServices((hostContext, services) =>
             {
+                // Configure OpenTelemetry
+                services.AddAevatarOpenTelemetry(hostContext.Configuration);
                 services.AddApplication<SiloModule>();
             })
             .UseOrleansConfiguration()
