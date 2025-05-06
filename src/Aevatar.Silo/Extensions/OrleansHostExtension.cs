@@ -61,7 +61,7 @@ public static class OrleansHostExtension
                     : GetEnvironmentVariable("AevatarOrleans__SILO_NAME_PATTERN");
                 
                 // Register StateProjectionInitializer when SiloNamePattern is "Projector"
-                if (string.Compare(siloNamePattern, "Projector", StringComparison.OrdinalIgnoreCase) == 0)
+                if (string.IsNullOrEmpty(siloNamePattern) || string.Compare(siloNamePattern, "Projector", StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     // Register our StateProjectionInitializer as a startup task
                     // This will run during silo startup at ServiceLifecycleStage.ApplicationServices (default)
