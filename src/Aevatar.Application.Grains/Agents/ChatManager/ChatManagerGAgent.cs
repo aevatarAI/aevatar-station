@@ -301,21 +301,31 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
     }
 
     public async Task<Guid> CreateSessionAsync(string systemLLM, string prompt, UserProfileDto? userProfile = null)
-    {
-        var configuration = GetConfiguration();
+    {   
+        // 1.Get Configuration
         Stopwatch sw = new Stopwatch();
-        sw.Start();
+        var configuration = GetConfiguration();
+        sw.Stop();
+        Logger.LogDebug("CreateSessionAsync - step 1 get configuration, time use:{use}", sw.ElapsedMilliseconds);
+        
+        // 2.Create GodChat Grain
+        sw.Reset();
         IGodChat godChat = GrainFactory.GetGrain<IGodChat>(Guid.NewGuid());
         // await RegisterAsync(godChat);
         sw.Stop();
-        Logger.LogDebug($"CreateSessionAsync - step,time use:{sw.ElapsedMilliseconds}");
+        Logger.LogDebug("CreateSessionAsync - step 2 create GodChat Grain, time use:{use}", sw.ElapsedMilliseconds);
         Logger.LogDebug($"[ChatGAgentManager][RequestCreateGodChatEvent] grainId={godChat.GetGrainId().ToString()}");
         
+        // 3.Get prompt
         sw.Reset();
         var sysMessage = await configuration.GetPrompt();
+        sw.Stop();
+        Logger.LogDebug("CreateSessionAsync - step 3 get prompt, time use:{use}", sw.ElapsedMilliseconds);
         //put user data into the user prompt
         //sysMessage = await AppendUserInfoToSystemPromptAsync(configuration, sysMessage, userProfile);
-
+    
+        // 4.build ChatConfigDto
+        sw.Reset();
         var chatConfigDto = new ChatConfigDto()
         {
             Instructions = sysMessage, MaxHistoryCount = 32,
@@ -325,33 +335,47 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
                 BufferingSize = 32
             }
         };
+        sw.Stop();
+        Logger.LogDebug("CreateSessionAsync - step 4 build ChatConfigDto, time use:{use}", sw.ElapsedMilliseconds);
         Logger.LogDebug($"[GodChatGAgent][InitializeAsync] Detail : {JsonConvert.SerializeObject(chatConfigDto)}");
-
+        
+        // 5.config GodChat Grain
+        sw.Reset();
         await godChat.ConfigAsync(chatConfigDto);
         sw.Stop();
-        Logger.LogDebug($"CreateSessionAsync - step2,time use:{sw.ElapsedMilliseconds}");
+        Logger.LogDebug("CreateSessionAsync - step 5 config GodChat Grain, time use:{use}", sw.ElapsedMilliseconds);
 
         var sessionId = godChat.GetPrimaryKey();
+        
+        // 6.set user profile
         if (userProfile != null)
         {
+            sw.Reset();
             Logger.LogDebug("CreateSessionAsync set user profile. session={0}", sessionId);
             await SetUserProfileAsync(userProfile.Gender, userProfile.BirthDate, userProfile.BirthPlace, userProfile.FullName);
             Logger.LogDebug("CreateSessionAsync set GodChat user profile. session={0}", sessionId);
             await godChat.SetUserProfileAsync(userProfile);
+            sw.Stop();
+            Logger.LogDebug("CreateSessionAsync - step 6 set user profile, time use:{use}", sw.ElapsedMilliseconds);
         }
         
         sw.Reset();
+        // 7.event log
         RaiseEvent(new CreateSessionInfoEventLog()
         {
             SessionId = sessionId,
             Title = "",
             CreateAt = DateTime.UtcNow
         });
-
         await ConfirmEvents();
+        sw.Stop();
+        Logger.LogDebug("CreateSessionAsync - step 7 event log, time use:{use}", sw.ElapsedMilliseconds);
+        
+        // 8.init GodChat Grain
+        sw.Reset();
         await godChat.InitAsync(this.GetPrimaryKey());
         sw.Stop();
-        Logger.LogDebug($"CreateSessionAsync - step2,time use:{sw.ElapsedMilliseconds}");
+        Logger.LogDebug("CreateSessionAsync - step 8 init GodChat Grain, time use:{use}", sw.ElapsedMilliseconds);
         return godChat.GetPrimaryKey();
     }
 
@@ -608,19 +632,19 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         
         var llm = await configuration.GetSystemLLM();
         var streamingModeEnabled = false;
-        if (State.SystemLLM != llm || State.StreamingModeEnabled != streamingModeEnabled)
-        {
-            await InitializeAsync(new InitializeDto()
-            {
-                Instructions = "Please summarize the following content briefly, with no more than 8 words.",
-                LLMConfig = new LLMConfigDto() { SystemLLM = await configuration.GetSystemLLM(), },
-                StreamingModeEnabled = streamingModeEnabled,
-                StreamingConfig = new StreamingConfig()
-                {
-                    BufferingSize = 32,
-                }
-            });
-        }
+        // if (State.SystemLLM != llm || State.StreamingModeEnabled != streamingModeEnabled)
+        // {
+        //     await InitializeAsync(new InitializeDto()
+        //     {
+        //         Instructions = "Please summarize the following content briefly, with no more than 8 words.",
+        //         LLMConfig = new LLMConfigDto() { SystemLLM = await configuration.GetSystemLLM(), },
+        //         StreamingModeEnabled = streamingModeEnabled,
+        //         StreamingConfig = new StreamingConfig()
+        //         {
+        //             BufferingSize = 32,
+        //         }
+        //     });
+        // }
         
         await base.OnAIGAgentActivateAsync(cancellationToken);
     }
