@@ -20,6 +20,6 @@
 
 <ItemGroup>
     <!-- <ProjectReference Include="..\..\..\aevatar-framework\samples\MessagingGAgent.Grains\MessagingGAgent.Grains.csproj" /> -->
-    <ProjectReference Include="..\..\src\Aevatar.Application.Grains\Aevatar.Application.Grains.csproj" />
+    <ProjectReference Include="..\E2E.Grains\E2E.Grains.csproj" />
 </ItemGroup>
 </Project>
