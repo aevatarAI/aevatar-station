@@ -10,7 +10,6 @@ using Orleans.Configuration;
 using Orleans.Hosting;
 using Orleans.Providers.MongoDB.Configuration;
 using Orleans.Streams.Kafka.Config;
-using MessagingGAgent.Grains;
 using Aevatar.Application.Grains.Agents.TestAgent;
 
 IHostBuilder builder = Host.CreateDefaultBuilder(args)
@@ -65,7 +64,7 @@ var client = host.Services.GetRequiredService<IClusterClient>();
 
 
 var subAgentId = Guid.NewGuid();
-var subAgent = client.GetGrain<IDemoGAgent>(subAgentId);
+var subAgent = client.GetGrain<ITestDbGAgent>(subAgentId);
 await subAgent.ActivateAsync();
 await Task.Delay(2000);
 
@@ -74,7 +73,7 @@ await Task.Delay(2000);
 var pubAgentId = Guid.NewGuid();
 var pubAgent = client.GetGrain<ITestDbScheduleGAgent>(pubAgentId);
 
-var demoEvent = new DemoEvent
+var demoEvent = new TestDbEvent
 {
     Number = 100,
     CorrelationId = Guid.NewGuid(),
@@ -89,11 +88,11 @@ Console.WriteLine("Count is {0}", await subAgent.GetCount());
 
 // test p2p
 var p2pAgentId1 = Guid.NewGuid();
-var p2pAgent1 = client.GetGrain<IDemoGAgent>(p2pAgentId1);
+var p2pAgent1 = client.GetGrain<ITestDbGAgent>(p2pAgentId1);
 await p2pAgent1.ActivateAsync();
 
 var p2pAgentId2 = Guid.NewGuid();
-var p2pAgent2 = client.GetGrain<IDemoGAgent>(p2pAgentId2);
+var p2pAgent2 = client.GetGrain<ITestDbGAgent>(p2pAgentId2);
 await p2pAgent2.ActivateAsync();
 
 await p2pAgent1.PublishAsync(p2pAgent2.GetGrainId(), demoEvent);
