@@ -40,6 +40,7 @@ public class ChatMiddleware
             try
             {
                 var stopwatch = Stopwatch.StartNew();
+                var totalWatch = Stopwatch.StartNew();
                 _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}");
                 var streamProvider = _clusterClient.GetStreamProvider("Aevatar");
                 var streamId = StreamId.Create(_aevatarOptions.Value.StreamNamespace, request.SessionId);
@@ -134,9 +135,10 @@ public class ChatMiddleware
                     _logger.LogDebug(
                         $"[GodGPTController][ChatWithSessionAsync] No LastChunk:{request.SessionId},chatId:{chatId}");
                 }
-
+                
+                totalWatch.Stop();
                 _logger.LogDebug(
-                    $"[GodGPTController][ChatWithSessionAsync] complete done sessionId:{request.SessionId}");
+                    $"[GodGPTController][ChatWithSessionAsync] complete done sessionId:{request.SessionId}, use: {totalWatch.ElapsedMilliseconds}");
             }
             catch (Exception ex)
             {
