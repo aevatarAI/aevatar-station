@@ -12,15 +12,18 @@ namespace Aevatar.Silo.Startup
     {
         private readonly IStateTypeDiscoverer _typeDiscoverer;
         private readonly IProjectionGrainActivator _grainActivator;
+        private readonly List<IStateProjector> _stateProjectors;
         private readonly ILogger<StateProjectionInitializer> _logger;
 
         public StateProjectionInitializer(
             IStateTypeDiscoverer typeDiscoverer,
             IProjectionGrainActivator grainActivator,
+            IEnumerable<IStateProjector> stateProjectors,
             ILogger<StateProjectionInitializer> logger)
         {
             _typeDiscoverer = typeDiscoverer;
             _grainActivator = grainActivator;
+            _stateProjectors = stateProjectors.ToList();
             _logger = logger;
         }
 
@@ -47,7 +50,8 @@ namespace Aevatar.Silo.Startup
                     }
                 }
                 
-                _logger.LogInformation("Completed initializing StateProjectionGrains");
+                _logger.LogInformation("Completed initializing StateProjectionGrains with {Count} StateProjectors",
+                    _stateProjectors.Count);
             }
             catch (Exception ex)
             {
