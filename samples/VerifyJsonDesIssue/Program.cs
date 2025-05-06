@@ -1,11 +1,10 @@
 ﻿using Aevatar.Core.Abstractions;
-using Aevatar.Application.Grains.Agents.Code;
 using Orleans.Providers.MongoDB.StorageProviders.Serializers;
 using System.Text.Json;
 using Newtonsoft.Json;
 
 using Orleans;
-using Aevatar.Application.Grains.Agents.TestAgent;
+using E2E.Grains;
 using System.Diagnostics;
 
 using VerifyJsonDesIssue;
