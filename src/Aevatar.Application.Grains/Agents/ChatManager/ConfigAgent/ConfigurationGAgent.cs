@@ -99,7 +99,7 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
                                  $"\n 回答有关时间的问题时,以UTC时间为基准 ";
 
         sysMessage += currentRequirement;
-        Logger.LogDebug("[ConfigurationGAgent][GetPrompt] System prompt: {SysMessage}", sysMessage);
+        Logger.LogDebug("[ConfigurationGAgent][GetPrompt] System prompt");
 
         return Task.FromResult(sysMessage);
     }
