@@ -188,40 +188,26 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
             }
 
             document["ctime"] = DateTime.UtcNow;
-            document["version"] = command.Version;     
+            document["version"] = command.Version;
 
-            // For version 1, use BulkIndexOperation to ensure document creation
-            // For version > 1, use BulkUpdateOperation with script to check version before updating
-            if (command.Version <= 1)
+            // Use BulkUpdateOperation with script-based version checking for updates
+            var item = new BulkUpdateOperation<Dictionary<string, object>, object>(id)
             {
-                // Use BulkIndexOperation for new documents
-                var item = new BulkIndexOperation<Dictionary<string, object>>(document)
+                Index = indexName,
+                Script = new Script
                 {
-                    Id = id,
-                    Index = indexName
-                };
-                bulkOperations.Add(item);
-            }
-            else
-            {
-                // Use BulkUpdateOperation with script-based version checking for updates
-                var item = new BulkUpdateOperation<Dictionary<string, object>, object>(id)
-                {
-                    Index = indexName,
-                    Script = new Script
+                    Source = "if (ctx.op == 'create' || ctx._source.version == null || params.version > ctx._source.version) { ctx._source = params.doc; } else { ctx.op = 'noop'; }",
+                    Params = new Dictionary<string, object>
                     {
-                        Source = "if (ctx._source.version == null || params.version > ctx._source.version) { ctx._source = params.doc; } else { ctx.op = 'noop'; }",
-                        Params = new Dictionary<string, object>
-                        {
-                            ["version"] = document["version"],
-                            ["doc"] = document
-                        }
-                    },
-                    ScriptedUpsert = true,
-                    Upsert = document
-                };
-                bulkOperations.Add(item);
-            }
+                        ["version"] = document["version"],
+                        ["doc"] = document
+                    }
+                },
+                ScriptedUpsert = true,
+                Upsert = document
+            };
+
+            bulkOperations.Add(item);
         }
 
         var bulkRequest = new BulkRequest
