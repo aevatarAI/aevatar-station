@@ -1,12 +1,27 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
-    <RootNamespace>Aevatar.Application.Grains</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <RootNamespace>Aevatar.Application.Grains</RootNamespace>
+    <AssemblyName>GodGPT.GAgents</AssemblyName>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <RestoreSources>https://www.myget.org/F/aelf-project-dev/api/v3/index.json;https://api.nuget.org/v3/index.json
+    </RestoreSources>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="Aevatar.Core" />
+    <PackageReference Include="Aevatar.Core.Abstractions" />
+    <PackageReference Include="Volo.Abp.AutoMapper" />
+    <PackageReference Include="Aevatar.GAgents.AIGAgent" />
+    <PackageReference Include="Aevatar.GAgents.AI.Abstractions" />
+    <PackageReference Include="Aevatar.GAgents.SemanticKernel" />
+    <PackageReference Include="Aevatar.EventSourcing.Core" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" />
@@ -14,13 +29,8 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Options" />
     <PackageReference Include="Volo.Abp.Core" />
-    <PackageReference Include="Aevatar.Core" />
-    <PackageReference Include="Aevatar.Core.Abstractions" />
-    <PackageReference Include="Aevatar.EventSourcing.Core" />
-    <PackageReference Include="Aevatar.GAgents.AIGAgent" />
+    <PackageReference Include="Volo.Abp.EventBus.Abstractions" />
     <PackageReference Include="Aevatar.GAgents.ChatAgent" />
-    <PackageReference Include="Aevatar.GAgents.AI.Abstractions" />
-    <PackageReference Include="Aevatar.GAgents.SemanticKernel" />
     <PackageReference Include="Microsoft.Orleans.Sdk" />
     <PackageReference Include="Microsoft.Orleans.Reminders" />
     <PackageReference Include="Microsoft.Orleans.Streaming" />

@@ -7,6 +7,9 @@
     <AevatarGAgentVerion>1.4.16-alpha-25</AevatarGAgentVerion>
   </PropertyGroup>
   <ItemGroup>
+
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
+    
     <!-- AElf packages -->
     <PackageVersion Include="AElf.Client" Version="1.1.0" />
     <PackageVersion Include="AElf.ExceptionHandler.ABP" Version="8.2.8" />
