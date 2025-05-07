@@ -30,6 +30,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
 
     protected override async Task ChatPerformConfigAsync(ChatConfigDto configuration)
     {
+        Logger.LogDebug($"[GodChatGAgent][ChatPerformConfigAsync] start");
         if (UsableLLMs.IsNullOrEmpty())
         {
             Logger.LogDebug($"[GodChatGAgent][ChatPerformConfigAsync] LLMConfigs is null or empty.");
@@ -69,6 +70,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
             AIAgentIds = aiAgentIds
         });
         await ConfirmEvents();
+        Logger.LogDebug($"[GodChatGAgent][ChatPerformConfigAsync] end");
     }
 
     [EventHandler]
