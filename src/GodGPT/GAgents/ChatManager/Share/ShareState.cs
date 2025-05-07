@@ -9,4 +9,4 @@ public class ShareState
     [Id(1)] public Guid SessionId { get; set; }
     [Id(2)] public List<ChatMessage> Messages { get; set; }
     [Id(3)] public DateTime CreateTime { get; set; }
-}
+} 

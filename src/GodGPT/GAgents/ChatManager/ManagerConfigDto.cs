@@ -6,4 +6,4 @@ namespace Aevatar.Application.Grains.Agents.ChatManager;
 public class ManagerConfigDto : ConfigurationBase
 {
     [Id(1)] public string SystemLLM { get; set; }
-}
+} 

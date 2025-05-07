@@ -31,5 +31,6 @@
         <ProjectReference Include="..\Aevatar.CQRS\Aevatar.CQRS.csproj" />
         <ProjectReference Include="..\Aevatar.Domain.Grains\Aevatar.Domain.Grains.csproj" />
         <ProjectReference Include="..\Aevatar.Domain\Aevatar.Domain.csproj" />
+        <ProjectReference Include="..\GodGPT\GodGPT.csproj"/>
     </ItemGroup>
 </Project>

@@ -1,4 +1,8 @@
+using System;
+using System.ComponentModel;
 using System.Diagnostics;
+using Aevatar.AI.Exceptions;
+using Aevatar.AI.Feature.StreamSyncWoker;
 using Aevatar.Application.Grains.Agents.ChatManager.Chat;
 using Aevatar.Application.Grains.Agents.ChatManager.Common;
 using Aevatar.Application.Grains.Agents.ChatManager.ConfigAgent;
@@ -10,7 +14,6 @@ using Aevatar.GAgents.AIGAgent.Agent;
 using Aevatar.GAgents.AIGAgent.Dtos;
 using Aevatar.GAgents.AIGAgent.GEvents;
 using Aevatar.GAgents.ChatAgent.Dtos;
-using Aevatar.Sender;
 using Json.Schema.Generation;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -21,7 +24,7 @@ using Volo.Abp;
 
 namespace Aevatar.Application.Grains.Agents.ChatManager;
 
-[Description("manage chat agent")]
+[Json.Schema.Generation.Description("manage chat agent")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 [GAgent(nameof(ChatGAgentManager))]

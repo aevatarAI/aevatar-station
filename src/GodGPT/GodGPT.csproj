@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <RootNamespace>Aevatar.Application.Grains</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="JsonSchema.Net.Generation" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+    <PackageReference Include="Volo.Abp.Core" />
+    <PackageReference Include="Aevatar.Core" />
+    <PackageReference Include="Aevatar.Core.Abstractions" />
+    <PackageReference Include="Aevatar.EventSourcing.Core" />
+    <PackageReference Include="Aevatar.GAgents.AIGAgent" />
+    <PackageReference Include="Aevatar.GAgents.ChatAgent" />
+    <PackageReference Include="Aevatar.GAgents.AI.Abstractions" />
+    <PackageReference Include="Aevatar.GAgents.SemanticKernel" />
+    <PackageReference Include="Microsoft.Orleans.Sdk" />
+    <PackageReference Include="Microsoft.Orleans.Reminders" />
+    <PackageReference Include="Microsoft.Orleans.Streaming" />
+    <PackageReference Include="Microsoft.Orleans.Runtime" />
+    <PackageReference Include="Microsoft.Orleans.EventSourcing" />
+  </ItemGroup>
+
+</Project>

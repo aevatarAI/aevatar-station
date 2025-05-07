@@ -197,5 +197,15 @@
     <PackageVersion Include="Neo4j.Driver" Version="5.27.0" />
     <PackageVersion Include="XWorkerAgent" Version="0.0.28" />
     <PackageVersion Include="TelegramWorkerAgent" Version="0.0.8" />
+    <PackageVersion Include="Microsoft.Orleans.Core" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Orleans.EventSourcing" Version="8.0.0" />
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageVersion Include="JsonSchema.Net.Generation" Version="3.3.2" />
+    <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
+    <PackageVersion Include="xunit" Version="2.7.0" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.5.7" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.0" />
+    <PackageVersion Include="Microsoft.Orleans.Serialization.TestKit" Version="9.0.1" />
   </ItemGroup>
 </Project>
