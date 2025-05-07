@@ -35,6 +35,7 @@ public abstract class AccountServiceTests<TStartupModule> : AevatarApplicationTe
         await _accountService.SendRegisterCodeAsync(new SendRegisterCodeDto
         {
             Email = email,
+            UserName = "test",
             AppName = "Aevatar"
         });
 
@@ -64,6 +65,7 @@ public abstract class AccountServiceTests<TStartupModule> : AevatarApplicationTe
         await Should.ThrowAsync<UserFriendlyException>(async ()=> await _accountService.SendRegisterCodeAsync(new SendRegisterCodeDto
         {
             Email = email,
+            UserName = "test",
             AppName = "Aevatar"
         }));
     }

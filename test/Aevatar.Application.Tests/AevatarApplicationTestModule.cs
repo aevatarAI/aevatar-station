@@ -1,8 +1,14 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Aevatar.CQRS.Handler;
 using Aevatar.Kubernetes.Manager;
+using Aevatar.Options;
+using Aevatar.SignalR;
 using Aevatar.Mock;
+using Aevatar.SignalR;
+using Aevatar.SignalR.SignalRMessage;
 using Aevatar.WebHook.Deploy;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.Ingest;
@@ -17,6 +23,7 @@ using Volo.Abp.EventBus;
 using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
 using ChatConfigOptions = Aevatar.Options.ChatConfigOptions;
+using Moq;
 
 namespace Aevatar;
 
@@ -49,6 +56,9 @@ public class AevatarApplicationTestModule : AbpModule
         context.Services.AddTransient<IHostDeployManager, DefaultHostDeployManager>();
 
         context.Services.AddSingleton<IEmailSender, NullEmailSender>();
+        
+        context.Services.AddTransient<IHubService>(o=>Moq.Mock.Of<IHubService>());
+        
 
 
         AddMock(context.Services);
@@ -56,5 +66,13 @@ public class AevatarApplicationTestModule : AbpModule
 
     private void AddMock(IServiceCollection serviceCollection)
     {
+        serviceCollection.AddSingleton<IHubService>(provider =>
+        {
+            var mockHubService = new Mock<IHubService>();
+
+            mockHubService.Setup(f => f.ResponseAsync(It.IsAny<List<Guid>>(), It.IsAny<NotificationResponse>()))
+                .Returns(Task.CompletedTask);
+            return mockHubService.Object;
+        });
     }
 }

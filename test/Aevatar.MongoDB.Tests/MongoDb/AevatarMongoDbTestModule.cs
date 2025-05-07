@@ -1,4 +1,6 @@
 ﻿using System;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.Data;
 using Volo.Abp.Modularity;
 using Volo.Abp.Uow;
@@ -13,9 +15,25 @@ public class AevatarMongoDbTestModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
+        var configuration = context.Services.GetConfiguration();
+        var useMongoDbFixture = configuration["TestingEnvironment"] != "MongoDB";
+        
         Configure<AbpDbConnectionOptions>(options =>
         {
-            options.ConnectionStrings.Default = AevatarMongoDbFixture.GetRandomConnectionString();
+            if (useMongoDbFixture)
+            {
+                // 使用临时的Mongo2Go实例做单元测试
+                options.ConnectionStrings.Default = AevatarMongoDbFixture.GetRandomConnectionString();
+            }
+            else
+            {
+                // 使用配置文件中的连接字符串（来自Docker容器）
+                var connectionString = configuration.GetConnectionString("Default");
+                if (!string.IsNullOrEmpty(connectionString))
+                {
+                    options.ConnectionStrings.Default = connectionString;
+                }
+            }
         });
         
         Configure<AbpUnitOfWorkDefaultOptions>(options =>

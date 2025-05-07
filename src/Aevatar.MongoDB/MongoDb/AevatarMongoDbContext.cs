@@ -1,4 +1,5 @@
 ﻿using Aevatar.ApiKey;
+using Aevatar.ApiRequests;
 using Aevatar.Notification;
 using Aevatar.Permissions;
 using Aevatar.User;
@@ -24,6 +25,7 @@ public class AevatarMongoDbContext : AbpMongoDbContext
      */
     public IMongoCollection<IdentityUserExtension> IdentityUserExtensionInfos { get; private set; }
     public IMongoCollection<StatePermission> StatePermissionInfos { get; private set; }
+    public IMongoCollection<ApiRequestSnapshot> ApiRequestSnapshots { get; private set; }
 
 
     protected override void CreateModel(IMongoModelBuilder modelBuilder)
@@ -46,5 +48,6 @@ public class AevatarMongoDbContext : AbpMongoDbContext
         modelBuilder.Entity<ProjectAppIdInfo>(b => b.CollectionName = "ProjectAppInfoCollection");
         modelBuilder.Entity<NotificationInfo>(b => b.CollectionName = "NotificationInfoCollection");
         modelBuilder.Entity<WorkflowInfo>(b => b.CollectionName = "WorkflowInfoCollection");
+        modelBuilder.Entity<ApiRequestSnapshot>(b => b.CollectionName = "ApiRequestSnapshots");
     }
 }
