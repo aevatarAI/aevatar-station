@@ -31,7 +31,7 @@ public class ProjectAppIdMongoRepository : MongoDbRepository<AevatarMongoDbConte
 
         var result = new List<ProjectAppIdInfo>();
         var queryResponse = await queryable
-            .OrderBy(o => o.CreationTime)
+            .OrderByDescending(o => o.CreationTime)
             .Take(requestDto.MaxResultCount)
             .Skip(requestDto.SkipCount).ToListAsync();
 

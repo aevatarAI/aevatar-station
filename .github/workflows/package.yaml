@@ -11,7 +11,6 @@ on:
         options:
           - Aevatar.Silo
           - Aevatar.Developer.Host
-          - Aevatar.WebHook.Host
 
 env:
   DOTNET_INSTALL_DIR: "./.dotnet"
@@ -90,6 +89,8 @@ jobs:
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Determine hostType
         id: determine_host_type
@@ -100,8 +101,6 @@ jobs:
             hostType="0"
           elif [ "${{ github.event.inputs.servicename }}" = "Aevatar.Developer.Host" ]; then
             hostType="1"
-          elif [ "${{ github.event.inputs.servicename }}" = "Aevatar.WebHook.Host" ]; then
-            hostType="2"
           fi
           echo "hostType=$hostType" >> $GITHUB_ENV
           

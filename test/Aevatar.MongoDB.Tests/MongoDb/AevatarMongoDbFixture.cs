@@ -1,18 +1,18 @@
 using System;
-using EphemeralMongo;
+using Microsoft.Extensions.Logging.Abstractions;
+using Mongo2Go;
 
 namespace Aevatar.MongoDB;
 
 public class AevatarMongoDbFixture : IDisposable
 {
-    private static readonly IMongoRunner MongoDbRunner;
+    private static readonly MongoDbRunner MongoDbRunner;
+    public static readonly string ConnectionString;
 
     static AevatarMongoDbFixture()
     {
-        MongoDbRunner = MongoRunner.Run(new MongoRunnerOptions
-        {
-            UseSingleNodeReplicaSet = true
-        });
+        MongoDbRunner = MongoDbRunner.Start(singleNodeReplSet: true, singleNodeReplSetWaitTimeout: 20, logger: NullLogger.Instance);
+        ConnectionString = MongoDbRunner.ConnectionString;
     }
 
     public static string GetRandomConnectionString()

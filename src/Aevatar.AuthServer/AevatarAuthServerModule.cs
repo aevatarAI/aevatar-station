@@ -4,7 +4,6 @@ using Aevatar.OpenIddict;
 using Aevatar.Options;
 using Localization.Resources.AbpUi;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Account;
 using Volo.Abp.Account.Web;
@@ -176,11 +175,6 @@ public class AevatarAuthServerModule : AbpModule
         var dataProtectionBuilder = context.Services.AddDataProtection().SetApplicationName("AevatarAuthServer");
         
         context.Services.AddHealthChecks();
-        
-        Configure<MvcOptions>(options =>
-        {
-            options.Conventions.Add(new ApplicationDescription());
-        });
     }
 
     public override void OnApplicationInitialization(ApplicationInitializationContext context)

@@ -22,37 +22,9 @@ public abstract class AevatarTestBase<TStartupModule> : AbpIntegratedTest<TStart
     protected override void BeforeAddApplication(IServiceCollection services)
     {
         var builder = new ConfigurationBuilder();
-        
-        // 基础配置文件
-        builder.AddJsonFile("appsettings.json", optional: false);
-        
-        // 根据环境变量加载不同的配置
-        string env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Testing";
-        builder.AddJsonFile($"appsettings.{env}.json", optional: true);
-        
-        // MongoDB特定配置，只在需要时加载
-        if (ShouldUseMongoDB())
-        {
-            builder.AddJsonFile("appsettings.MongoDB.json", optional: true);
-        }
-        
-        // 秘钥配置
-        builder.AddJsonFile("appsettings.secrets.json", optional: true);
-        
-        // 环境变量
-        builder.AddEnvironmentVariables();
-        
+        builder.AddJsonFile("appsettings.json", false);
+        builder.AddJsonFile("appsettings.secrets.json", true);
         services.ReplaceConfiguration(builder.Build());
-    }
-
-    /// <summary>
-    /// 决定是否应该使用MongoDB配置
-    /// 子类可以覆盖此方法来指定是否需要MongoDB
-    /// </summary>
-    protected virtual bool ShouldUseMongoDB()
-    {
-        // 检查环境变量是否指定使用MongoDB
-        return Environment.GetEnvironmentVariable("USE_MONGODB") == "true";
     }
 
     protected virtual Task WithUnitOfWorkAsync(Func<Task> func)

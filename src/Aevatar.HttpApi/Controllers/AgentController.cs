@@ -32,8 +32,7 @@ public class AgentController : AevatarController
 
 
     [HttpGet("agent-type-info-list")]
-    // [Authorize(Policy = AevatarPermissions.Agent.ViewAllType)]
-    [Authorize]
+    [Authorize(Policy = AevatarPermissions.Agent.ViewAllType)]
     public async Task<List<AgentTypeDto>> GetAllAgent()
     {
         return await _agentService.GetAllAgents();
@@ -47,8 +46,7 @@ public class AgentController : AevatarController
     }
 
     [HttpPost]
-    // [Authorize(Policy = AevatarPermissions.Agent.Create)]
-    [Authorize]
+    [Authorize(Policy = AevatarPermissions.Agent.Create)]
     public async Task<AgentDto> CreateAgent([FromBody] CreateAgentInputDto createAgentInputDto)
     {
         _logger.LogInformation("Create Agent: {agent}", JsonConvert.SerializeObject(createAgentInputDto));
@@ -57,8 +55,7 @@ public class AgentController : AevatarController
     }
 
     [HttpGet("{guid}")]
-    // [Authorize(Policy = AevatarPermissions.Agent.View)]
-    [Authorize]
+    [Authorize(Policy = AevatarPermissions.Agent.View)]
     public async Task<AgentDto> GetAgent(Guid guid)
     {
         _logger.LogInformation("Get Agent: {guid}", guid);
@@ -67,8 +64,7 @@ public class AgentController : AevatarController
     }
 
     [HttpGet("{guid}/relationship")]
-    // [Authorize(Policy = AevatarPermissions.Relationship.ViewRelationship)]
-    [Authorize]
+    [Authorize(Policy = AevatarPermissions.Relationship.ViewRelationship)]
     public async Task<AgentRelationshipDto> GetAgentRelationship(Guid guid)
     {
         _logger.LogInformation("Get Agent Relationship");
@@ -77,8 +73,7 @@ public class AgentController : AevatarController
     }
 
     [HttpPost("{guid}/add-subagent")]
-    // [Authorize(Policy = AevatarPermissions.Relationship.AddSubAgent)]
-    [Authorize]
+    [Authorize(Policy = AevatarPermissions.Relationship.AddSubAgent)]
     public async Task<SubAgentDto> AddSubAgent(Guid guid, [FromBody] AddSubAgentDto addSubAgentDto)
     {
         _logger.LogInformation("Add sub Agent: {agent}", JsonConvert.SerializeObject(addSubAgentDto));
@@ -87,8 +82,7 @@ public class AgentController : AevatarController
     }
 
     [HttpPost("{guid}/remove-subagent")]
-    // [Authorize(Policy = AevatarPermissions.Relationship.RemoveSubAgent)]
-    [Authorize]
+    [Authorize(Policy = AevatarPermissions.Relationship.RemoveSubAgent)]
     public async Task<SubAgentDto> RemoveSubAgent(Guid guid, [FromBody] RemoveSubAgentDto removeSubAgentDto)
     {
         _logger.LogInformation("remove sub Agent: {agent}", JsonConvert.SerializeObject(removeSubAgentDto));
@@ -97,8 +91,7 @@ public class AgentController : AevatarController
     }
 
     [HttpPost("{guid}/remove-all-subagent")]
-    // [Authorize(Policy = AevatarPermissions.Relationship.RemoveAllSubAgents)]
-    [Authorize]
+    [Authorize(Policy = AevatarPermissions.Relationship.RemoveAllSubAgents)]
     public async Task RemoveAllSubAgent(Guid guid)
     {
         _logger.LogInformation("remove sub Agent: {guid}", guid);
@@ -106,8 +99,7 @@ public class AgentController : AevatarController
     }
 
     [HttpPut("{guid}")]
-    // [Authorize(Policy = AevatarPermissions.Agent.Update)]
-    [Authorize]
+    [Authorize(Policy = AevatarPermissions.Agent.Update)]
     public async Task<AgentDto> UpdateAgent(Guid guid, [FromBody] UpdateAgentInputDto updateAgentInputDto)
     {
         _logger.LogInformation("Update Agent--1: {agent}", JsonConvert.SerializeObject(updateAgentInputDto));
@@ -116,8 +108,7 @@ public class AgentController : AevatarController
     }
 
     [HttpDelete("{guid}")]
-    // [Authorize(Policy = AevatarPermissions.Agent.Delete)]
-    [Authorize]
+    [Authorize(Policy = AevatarPermissions.Agent.Delete)]
     public async Task DeleteAgent(Guid guid)
     {
         _logger.LogInformation("Delete Agent: {guid}", guid);
@@ -125,8 +116,7 @@ public class AgentController : AevatarController
     }
 
     [HttpPost("publishEvent")]
-    // [Authorize(Policy = AevatarPermissions.EventManagement.Publish)]
-    [Authorize]
+    [Authorize(Policy = AevatarPermissions.EventManagement.Publish)]
     public async Task PublishAsync([FromBody] PublishEventDto input)
     {
         await _subscriptionAppService.PublishEventAsync(input);

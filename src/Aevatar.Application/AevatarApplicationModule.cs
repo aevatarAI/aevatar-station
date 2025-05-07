@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using Aevatar.Account;
-using Aevatar.ApiRequests;
 using Aevatar.Application.Grains;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
@@ -68,6 +67,5 @@ public class AevatarApplicationModule : AbpModule
         context.Services.Configure<HostOptions>(configuration.GetSection("Host"));
         
         Configure<AccountOptions>(configuration.GetSection("Account"));
-        Configure<ApiRequestOptions>(configuration.GetSection("ApiRequest"));
     }
 }

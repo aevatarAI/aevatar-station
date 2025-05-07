@@ -6,7 +6,6 @@
 *.user
 *.userosscache
 *.sln.docstates
-*.vscode
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -71,8 +70,7 @@ artifacts/
 *.pidb
 *.svclog
 *.scc
-*.bk
-src/Aevatar.Aspire/data
+
 # Chutzpah Test files
 _Chutzpah*
 

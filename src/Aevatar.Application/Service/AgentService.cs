@@ -415,7 +415,7 @@ public class AgentService : ApplicationService, IAgentService
 
         EnsureUserAuthorized(agentState.UserId);
 
-        var agent = await _gAgentFactory.GetGAgentAsync<IExtGAgent>(agentState.BusinessAgentGrainId);
+        var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
 
         // check if all sub agent can be added 
         var newSubAgentGrainIds = new List<GrainId>();
@@ -445,7 +445,6 @@ public class AgentService : ApplicationService, IAgentService
 
         // register sub agent and add their events to parent agent
         var subAgentGuids = subAgentGrainIds.Select(x => x.GetGuidKey()).ToList();
-        var businessAgents = new List<IGAgent>();
         foreach (var grainId in newSubAgentGrainIds)
         {
             if (subAgentGrainIds.Contains(grainId))
@@ -454,27 +453,22 @@ public class AgentService : ApplicationService, IAgentService
             }
 
             var businessAgent = await _gAgentFactory.GetGAgentAsync(grainId);
-            businessAgents.Add(businessAgent);
+            await agent.RegisterAsync(businessAgent);
             subAgentGuids.Add(grainId.GetGuidKey());
-        }
-        
-        await agent.RegisterManyAsync(businessAgents);
-        
-        foreach (var businessAgent in businessAgents)
-        {
+
             var eventsHandledByAgent = await businessAgent.GetAllSubscribedEventsAsync();
             if (eventsHandledByAgent != null)
             {
                 _logger.LogInformation("all events for agent {agentId}, events: {events}",
-                    businessAgent.GetGrainId().GetGuidKey(), JsonConvert.SerializeObject(eventsHandledByAgent));
+                    grainId.GetGuidKey(), JsonConvert.SerializeObject(eventsHandledByAgent));
                 var eventsToAdd = eventsHandledByAgent.Except(allEventsHandled).ToList();
                 _logger.LogInformation("Adding events for agent {agentId}, events: {events}",
-                    businessAgent.GetGrainId().GetGuidKey(), JsonConvert.SerializeObject(eventsToAdd));
+                    grainId.GetGuidKey(), JsonConvert.SerializeObject(eventsToAdd));
                 allEventsHandled.AddRange(eventsToAdd);
             }
             else
             {
-                _logger.LogInformation("No events handled by agent {agentId}", businessAgent.GetGrainId().GetGuidKey());
+                _logger.LogInformation("No events handled by agent {agentId}", grainId.GetGuidKey());
             }
         }
 

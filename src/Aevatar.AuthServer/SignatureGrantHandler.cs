@@ -14,11 +14,11 @@ using Volo.Abp.OpenIddict.ExtensionGrantTypes;
 
 namespace Aevatar;
 
-public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
+public class SignatureGrantHandler: ITokenExtensionGrant, ITransientDependency
 {
     private ILogger<SignatureGrantHandler> _logger;
     private IWalletLoginProvider _walletLoginProvider;
-
+    
     public string Name { get; } = GrantTypeConstants.SIGNATURE;
 
     public async Task<IActionResult> HandleAsync(ExtensionGrantContext context)
@@ -28,11 +28,11 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
         var chainId = context.Request.GetParameter("chain_id").ToString();
         var caHash = context.Request.GetParameter("ca_hash").ToString();
         var plainText = context.Request.GetParameter("plain_text").ToString();
-
+        
         _walletLoginProvider = context.HttpContext.RequestServices.GetRequiredService<IWalletLoginProvider>();
         _logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<SignatureGrantHandler>>();
-
-
+       
+       
         var errors = _walletLoginProvider.CheckParams(publicKeyVal, signatureVal, chainId, plainText);
         if (errors.Count > 0)
         {
@@ -41,8 +41,7 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
                 properties: new AuthenticationProperties(new Dictionary<string, string>
                 {
                     [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidRequest,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
-                        _walletLoginProvider.GetErrorMessage(errors)
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = _walletLoginProvider.GetErrorMessage(errors)
                 }!));
         }
 
@@ -50,7 +49,7 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
         try
         {
             walletAddress = await _walletLoginProvider.VerifySignatureAndParseWalletAddressAsync(publicKeyVal,
-                signatureVal, plainText, caHash, chainId);
+                signatureVal, plainText, caHash,  chainId);
         }
         catch (UserFriendlyException verifyException)
         {
@@ -63,22 +62,16 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
                 e.Message);
             throw;
         }
-
         var userManager = context.HttpContext.RequestServices.GetRequiredService<IdentityUserManager>();
+
         var user = await userManager.FindByNameAsync(walletAddress);
         if (user == null)
         {
             user = new IdentityUser(Guid.NewGuid(), walletAddress, email: Guid.NewGuid().ToString("N") + "@ABP.IO");
             await userManager.CreateAsync(user);
             await userManager.SetRolesAsync(user,
-                [AevatarPermissions.BasicUser]);
+            [AevatarPermissions.BasicUser]);
         }
-        else if (user.Roles.IsNullOrEmpty())
-        {
-            await userManager.SetRolesAsync(user,
-                [AevatarPermissions.BasicUser]);
-        }
-
         var identityUser = await userManager.FindByNameAsync(walletAddress);
         var identityRoleManager = context.HttpContext.RequestServices.GetRequiredService<IdentityRoleManager>();
         var roleNames = new List<string>();
@@ -88,12 +81,12 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
             roleNames.Add(role.Name);
         }
 
-
+        
         var userClaimsPrincipalFactory = context.HttpContext.RequestServices
             .GetRequiredService<Microsoft.AspNetCore.Identity.IUserClaimsPrincipalFactory<IdentityUser>>();
         var claimsPrincipal = await userClaimsPrincipalFactory.CreateAsync(user);
         claimsPrincipal.SetClaim(OpenIddictConstants.Claims.Subject, user.Id.ToString());
-        claimsPrincipal.SetClaim(OpenIddictConstants.Claims.Role, string.Join(",", roleNames));
+        claimsPrincipal.SetClaim(OpenIddictConstants.Claims.Role, string.Join(",",roleNames));
         claimsPrincipal.SetScopes(context.Request.GetScopes());
         claimsPrincipal.SetResources(await GetResourcesAsync(context, claimsPrincipal.GetScopes()));
         claimsPrincipal.SetAudiences("Aevatar");
@@ -102,7 +95,7 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
 
         return new SignInResult(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme, claimsPrincipal);
     }
-
+    
     private ForbidResult GetForbidResult(string errorType, string errorDescription)
     {
         return new ForbidResult(
@@ -113,7 +106,7 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
                 [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = errorDescription
             }));
     }
-
+    
     private async Task<IEnumerable<string>> GetResourcesAsync(ExtensionGrantContext context,
         ImmutableArray<string> scopes)
     {
@@ -131,4 +124,5 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
 
         return resources;
     }
+    
 }
