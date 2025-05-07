@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Orleans.Runtime;
 
 [Route("api/agent")]
 public class AgentController : AevatarController
@@ -18,15 +19,18 @@ public class AgentController : AevatarController
     private readonly ILogger<AgentController> _logger;
     private readonly IAgentService _agentService;
     private readonly SubscriptionAppService _subscriptionAppService;
+    private readonly IUserAppService _userAppService;
 
     public AgentController(
-        ILogger<AgentController> logger,
+    ILogger<AgentController> logger,
         SubscriptionAppService subscriptionAppService,
-        IAgentService agentService)
+        IAgentService agentService,
+    IUserAppService userAppService)
     {
         _logger = logger;
         _agentService = agentService;
         _subscriptionAppService = subscriptionAppService;
+        _userAppService = userAppService;
     }
 
 
@@ -118,6 +122,9 @@ public class AgentController : AevatarController
     [Authorize]
     public async Task PublishAsync([FromBody] PublishEventDto input)
     {
+        var currentUserId = _userAppService.GetCurrentUserId();
+        RequestContext.Set("currentUserId",currentUserId.ToString());
+        _logger.LogInformation("PublishAsync event: {uid}", currentUserId);
         await _subscriptionAppService.PublishEventAsync(input);
     }
 }
