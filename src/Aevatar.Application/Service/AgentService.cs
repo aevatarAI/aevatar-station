@@ -261,7 +261,7 @@ public class AgentService : ApplicationService, IAgentService
         var configuration = await GetAgentConfigurationAsync(businessAgent);
         if (configuration != null)
         {
-            resp.PropertyJsonSchema = JsonConvert.SerializeObject(_schemaProvider.GetTypeSchema(configuration.DtoType));
+            resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration.DtoType).ToJson();
         }
 
         return resp;
