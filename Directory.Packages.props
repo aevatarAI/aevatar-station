@@ -8,7 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
 
-    <PackageVersion Include="GodGPT.GAgents" Version="1.0.1-alpha" />
+    <PackageVersion Include="GodGPT.GAgents" Version="1.0.2-alpha" />
     
     <!-- AElf packages -->
     <PackageVersion Include="AElf.Client" Version="1.1.0" />
