@@ -62,7 +62,7 @@ public class AgentService : ApplicationService, IAgentService
         IUserAppService userAppService,
         IOptionsMonitor<AgentOptions> agentOptions,
         GrainTypeResolver grainTypeResolver,
-        ISchemaProvider schemaProvider, 
+        ISchemaProvider schemaProvider,
         IWorkflowRepository workflowRepository,
         IIndexingService indexingService)
     {
@@ -246,7 +246,7 @@ public class AgentService : ApplicationService, IAgentService
         var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
         agentData.BusinessAgentGrainId = businessAgent.GetGrainId();
         await creatorAgent.CreateAgentAsync(agentData);
-        
+
         var resp = new AgentDto
         {
             Id = guid,
@@ -257,11 +257,11 @@ public class AgentService : ApplicationService, IAgentService
             AgentGuid = businessAgent.GetPrimaryKey(),
             BusinessAgentGrainId = businessAgent.GetGrainId().ToString()
         };
-        
+
         var configuration = await GetAgentConfigurationAsync(businessAgent);
         if (configuration != null)
         {
-            resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration.DtoType).ToJson();
+            resp.PropertyJsonSchema = JsonConvert.SerializeObject(_schemaProvider.GetTypeSchema(configuration.DtoType));
         }
 
         return resp;
@@ -353,7 +353,7 @@ public class AgentService : ApplicationService, IAgentService
                 _logger.LogError("no properties to be updated, id: {id}", guid);
             }
         }
-        
+
         await creatorAgent.UpdateAgentAsync(new UpdateAgentInput
         {
             Name = dto.Name,
@@ -637,18 +637,18 @@ public class AgentService : ApplicationService, IAgentService
         {
             throw new UserFriendlyException(errorStr);
         }
-        
+
         var agentDto = await CreateAgentAsync(new CreateAgentInputDto
         {
             Name = "Workflow",
             AgentType = _grainTypeResolver.GetGrainType(typeof(WorkflowCoordinatorGAgent)).ToString()
         });
-        
-        var creatorGAgent = _clusterClient.GetGrain<ICreatorGAgent>(agentDto.Id); 
+
+        var creatorGAgent = _clusterClient.GetGrain<ICreatorGAgent>(agentDto.Id);
         var workflowAgent = await _gAgentFactory.GetGAgentAsync(agentDto.GrainId);
         await creatorGAgent.RegisterAsync(workflowAgent);
 
-        var blackboardAgent = _clusterClient.GetGrain<IBlackboardGAgent>(Guid.NewGuid());
+        var blackboardAgent = _clusterClient.GetGrain<IBlackboardGAgent>(agentDto.AgentGuid);
 
         await workflowAgent.RegisterAsync(blackboardAgent);
         foreach (var item in workflowAgentDto.WorkUnitRelations)
@@ -660,7 +660,7 @@ public class AgentService : ApplicationService, IAgentService
 
         result.WorkflowGrainId = workflowAgent.GetGrainId().ToString();
         result.WorkflowAgentId = agentDto.Id;
-        
+
         var workflowList = workflowAgentDto.WorkUnitRelations
             .Select(s => new WorkflowUnitDto() { GrainId = s.GrainId, NextGrainId = s.NextGrainId }).ToList();
         var publishGrain = _clusterClient.GetGrain<IPublishingGAgent>(workflowAgent.GetPrimaryKey());
@@ -689,12 +689,12 @@ public class AgentService : ApplicationService, IAgentService
         var workflowInfo = await _workflowRepository.GetByWorkflowGrainId(workflowGrainId);
         if (workflowInfo == null)
         {
-            return  new List<WorkflowAgentDefinesDto>();
+            return new List<WorkflowAgentDefinesDto>();
         }
 
         return workflowInfo.WorkUnitList.Select(s => new WorkflowAgentDefinesDto()
         {
-            GrainId= s.GrainId,
+            GrainId = s.GrainId,
             NextGrainId = s.NextGrainId,
             XPosition = s.XPosition,
             YPosition = s.YPosition,
@@ -730,7 +730,7 @@ public class AgentService : ApplicationService, IAgentService
         {
             throw new UserFriendlyException("workflow not found");
         }
-        
+
         var workflowUnitDtoList = workflowUnitList
             .Select(s => new WorkflowUnitDto { GrainId = s.GrainId, NextGrainId = s.NextGrainId }).ToList();
 
@@ -744,12 +744,12 @@ public class AgentService : ApplicationService, IAgentService
         await publishGrain.PublishEventAsync(new ResetWorkflowEvent() { WorkflowUnitList = workflowUnitDtoList });
         workUnit.WorkUnitList = workflowUnitList.Select(s => new WorkflowUintInfo()
         {
-            GrainId= s.GrainId,
+            GrainId = s.GrainId,
             NextGrainId = s.NextGrainId,
             XPosition = s.XPosition,
             YPosition = s.YPosition,
         }).ToList();
-        
+
         await _workflowRepository.UpdateAsync(workUnit);
     }
 
