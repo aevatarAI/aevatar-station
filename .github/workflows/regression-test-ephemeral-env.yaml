@@ -1,11 +1,10 @@
-name: Run Aevatar Station Regression Test on Testnet
+name: Run Aevatar Station Regression Test on Ephemeral Test Environment
 
 on:
-  push:
-    branches:
-      - feature/regression-test
+  pull_request:
+    types: [labeled]
 
-run-name: Run Aevatar Station Regression Test on Testnet on ${{ github.ref_name }} from ${{ github.sha }}
+run-name: Run Aevatar Station Regression Test on Ephemeral Test Environment on ${{ github.ref_name }} from ${{ github.sha }}
 
 # concurrency:
 #   group: workflow-${{ github.ref }}
@@ -19,6 +18,7 @@ env:
 
 jobs:
   publish:
+    if: github.event.label.name == 'require-regression-test'
     runs-on: ephemeral-env-runner
     strategy:
       matrix:
@@ -58,6 +58,7 @@ jobs:
           retention-days: 1
 
   build-and-push-image:
+    if: github.event.label.name == 'require-regression-test'
     needs: publish
     runs-on: ephemeral-env-runner
     strategy:
@@ -108,6 +109,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
   setup-ephermeral-test-env:
+    if: github.event.label.name == 'require-regression-test'
     runs-on: ephemeral-env-runner
     needs: build-and-push-image
     outputs:
@@ -145,7 +147,7 @@ jobs:
               ref: 'main',
               inputs: {
                 project_name: "${{ steps.generate-uuid.outputs.project_name }}",
-                environment_ttl: "60",
+                environment_ttl: "5",
                 client_id: "${{ steps.generate-uuid.outputs.client_id }}",
                 client_secret: "${{ steps.generate-uuid.outputs.client_secret }}",
                 host_silo_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
@@ -231,6 +233,7 @@ jobs:
           echo "- **APP URL**: \`${{ steps.extract.outputs.app_url }}\`" >> $GITHUB_STEP_SUMMARY
 
   run-regression-test:
+    if: github.event.label.name == 'require-regression-test'
     needs: setup-ephermeral-test-env 
     runs-on: ephemeral-env-runner
     env:
