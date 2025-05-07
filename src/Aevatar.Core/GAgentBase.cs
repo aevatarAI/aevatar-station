@@ -389,7 +389,7 @@ public abstract partial class
         return Task.CompletedTask;
     }
 
-    private IAsyncStream<EventWrapperBase> GetEventBaseStream(GrainId grainId)
+    protected virtual IAsyncStream<EventWrapperBase> GetEventBaseStream(GrainId grainId)
     {
         var grainIdString = grainId.ToString();
         var streamId = StreamId.Create(AevatarOptions!.StreamNamespace, grainIdString);
