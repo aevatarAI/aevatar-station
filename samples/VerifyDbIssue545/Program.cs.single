@@ -1,5 +1,4 @@
 ﻿using Aevatar.Core.Abstractions;
-using Aevatar.Application.Grains.Agents.Code;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,7 +13,7 @@ using Orleans.Configuration;
 using Orleans.Hosting;
 using Orleans.Providers.MongoDB.Configuration;
 using Orleans.Streams.Kafka.Config;
-using Aevatar.Application.Grains.Agents.TestAgent;
+using E2E.Grains;
 
 IHostBuilder builder = Host.CreateDefaultBuilder(args)
     .UseOrleansClient(client =>
