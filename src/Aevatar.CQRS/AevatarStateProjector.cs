@@ -36,7 +36,6 @@ public class AevatarStateProjector : IStateProjector, ISingletonDependency, IDis
         // Initialize timer
         int timerPeriodMs = Math.Max(_batchOptions.FlushMinPeriodInMs, (int)(_batchOptions.BatchTimeoutSeconds * _batchOptions.FlushMinPeriodInMs / 2));
         _flushTimer = new System.Threading.Timer(FlushTimerCallback, null, timerPeriodMs, timerPeriodMs);
-
     }
 
     public Task ProjectAsync<T>(T state) where T : StateWrapperBase
