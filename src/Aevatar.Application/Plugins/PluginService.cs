@@ -32,6 +32,14 @@ public class PluginService : AevatarAppService, IPluginService
                 o.ProjectId == input.ProjectId)
             .OrderBy(o => o.CreationTime);
         var list = query.ToList();
+
+        var status = await _pluginGAgentManager.GetPluginLoadStatusAsync();
+        var pluginStatus = new Dictionary<Guid, PluginLoadStatus>();
+        foreach (var item in status)
+        {
+            var key = Guid.Parse(item.Key.Split("_").Last());
+            pluginStatus[key] = item.Value;
+        }
         
         var pluginDtos = new List<PluginDto>();
         foreach (var plugin in list)
@@ -39,7 +47,13 @@ public class PluginService : AevatarAppService, IPluginService
             var dto = ObjectMapper.Map<Plugin, PluginDto>(plugin);
             var creator =await _identityUserManager.GetByIdAsync(plugin.CreatorId.Value);
             dto.CreatorName = creator.UserName;
-            
+
+            if (pluginStatus.TryGetValue(plugin.Id, out var value))
+            {
+                dto.LoadStatus = value.Status;
+                dto.Reason = value.Reason;
+            }
+
             pluginDtos.Add(dto);
         }
 
