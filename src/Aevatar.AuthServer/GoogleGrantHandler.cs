@@ -109,6 +109,12 @@ public class GoogleGrantHandler : ITokenExtensionGrant
             // Compatible with historical data login
             var name = email + "@" + GrantTypeConstants.GOOGLE;
             user = await userManager.FindByNameAsync(name);
+
+            if (user == null && !string.IsNullOrWhiteSpace(email))
+            {
+                user = await userManager.FindByEmailAsync(email);
+            }
+
             if (user == null)
             {
                 name = Guid.NewGuid().ToString("N");
