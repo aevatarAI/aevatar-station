@@ -43,6 +43,11 @@ public class AevatarApplicationAutoMapperProfile : Profile
             .ForMember(d => d.Time, m => m.MapFrom(s => DateTimeHelper.ToUnixTimeMilliseconds(s.Time)));
 
         CreateMap<Plugin, PluginDto>()
-            .ForMember(d => d.CreationTime, m => m.MapFrom(s => DateTimeHelper.ToUnixTimeMilliseconds(s.CreationTime)));
+            .ForMember(d => d.CreationTime, m => m.MapFrom(s => DateTimeHelper.ToUnixTimeMilliseconds(s.CreationTime)))
+            .ForMember(d => d.LastModificationTime,
+                m => m.MapFrom(s =>
+                    s.LastModificationTime.HasValue
+                        ? DateTimeHelper.ToUnixTimeMilliseconds(s.LastModificationTime.Value)
+                        : 0));
     }
 }

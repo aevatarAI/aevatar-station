@@ -45,8 +45,18 @@ public class PluginService : AevatarAppService, IPluginService
         foreach (var plugin in list)
         {
             var dto = ObjectMapper.Map<Plugin, PluginDto>(plugin);
-            var creator =await _identityUserManager.GetByIdAsync(plugin.CreatorId.Value);
-            dto.CreatorName = creator.UserName;
+
+            if (plugin.CreatorId.HasValue)
+            {
+                var creator = await _identityUserManager.GetByIdAsync(plugin.CreatorId.Value);
+                dto.CreatorName = creator.UserName;
+            }
+
+            if (plugin.LastModifierId.HasValue)
+            {
+                var lastModifier = await _identityUserManager.GetByIdAsync(plugin.LastModifierId.Value);
+                dto.LastModifierName = lastModifier.UserName;
+            }
 
             if (pluginStatus.TryGetValue(plugin.Id, out var value))
             {
