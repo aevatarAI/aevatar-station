@@ -59,7 +59,7 @@ public class GithubGrantHandler : ITokenExtensionGrant
         return new SignInResult(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme, claimsPrincipal);
     }
     
-    private async Task<IdentityUser> GetOrCreateUserAsync(ExtensionGrantContext context, Octokit.User githubUser)
+    private async Task<IdentityUser> GetOrCreateUserAsync(ExtensionGrantContext context, GithubUser githubUser)
     {
         var userManager = context.HttpContext.RequestServices.GetRequiredService<IdentityUserManager>();
         
@@ -69,10 +69,25 @@ public class GithubGrantHandler : ITokenExtensionGrant
             return user;
         }
 
-        return await CreateUserFromGithubAsync(githubUser, userManager);
+        if (!string.IsNullOrWhiteSpace(githubUser.Email))
+        {
+            user = await userManager.FindByEmailAsync(githubUser.Email);
+        }
+
+        if (user == null)
+        {
+            user = await CreateUserFromGithubAsync(githubUser, userManager);
+        }
+
+        await userManager.AddLoginAsync(user, new UserLoginInfo(
+            GrantTypeConstants.Github, 
+            githubUser.Id.ToString(), 
+            GrantTypeConstants.Github));
+
+        return user;
     }
 
-    private async Task<IdentityUser> CreateUserFromGithubAsync(Octokit.User githubUser, IdentityUserManager userManager)
+    private async Task<IdentityUser> CreateUserFromGithubAsync(GithubUser githubUser, IdentityUserManager userManager)
     {
         var name = Guid.NewGuid().ToString("N");
         var email = !string.IsNullOrWhiteSpace(githubUser.Email) ? githubUser.Email : $"{name}@github.com";
@@ -89,11 +104,6 @@ public class GithubGrantHandler : ITokenExtensionGrant
 
         await userManager.SetRolesAsync(user, [AevatarPermissions.BasicUser]);
         
-        await userManager.AddLoginAsync(user, new UserLoginInfo(
-            GrantTypeConstants.Github, 
-            githubUser.Id.ToString(), 
-            GrantTypeConstants.Github));
-
         return user;
     }
     
@@ -127,7 +137,7 @@ public class GithubGrantHandler : ITokenExtensionGrant
     }
 
 
-    private async Task<Octokit.User> GetUserInfoAsync(string code)
+    private async Task<GithubUser> GetUserInfoAsync(string code)
     {
         var clientId = _configuration["Github:ClientId"];
         var secret = _configuration["Github:ClientSecret"];
@@ -150,7 +160,21 @@ public class GithubGrantHandler : ITokenExtensionGrant
         client.Credentials = new Credentials(token.AccessToken);
 
         var user = await client.User.Current();
-        return user;
+        var email = user.Email;
+        if (email.IsNullOrWhiteSpace())
+        {
+            var emails = await client.User.Email.GetAll();
+            if (emails.Count > 0)
+            {
+                email = emails.FirstOrDefault(o=>o.Primary)?.Email;
+            }
+        }
+
+        return new GithubUser
+        {
+            Id = user.Id,
+            Email = email
+        };
     }
 
 
@@ -171,4 +195,10 @@ public class GithubGrantHandler : ITokenExtensionGrant
 
         return resources;
     }
+}
+
+public class GithubUser
+{
+    public long Id { get; set; }
+    public string Email { get; set; }
 }
