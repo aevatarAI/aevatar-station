@@ -89,7 +89,7 @@ services:
     container_name: otel-collector
     networks:
       - aevatar-network
-    command: ["--config=/etc/otel-collector-config.yaml"]
+    command: [ "--config=/etc/otel-collector-config.yaml" ]
     volumes:
       - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
     ports:

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Aevatar.Kubernetes.Adapter;
 using Aevatar.Kubernetes.ResourceDefinition;
 using Aevatar.Options;
@@ -147,11 +148,12 @@ public async Task UpdateDockerImageAsync(string appId, string version, string ne
 
 private static string GetWebhookConfigContent(string appId, string version, string templateFilePath)
 {
-    string configContent = File.ReadAllText(templateFilePath)
+    string rawContent = File.ReadAllText(templateFilePath);
+    string unescapedContent = Regex.Unescape(rawContent);
+    return unescapedContent
         .Replace(KubernetesConstants.PlaceHolderAppId, appId.ToLower())
         .Replace(KubernetesConstants.PlaceHolderVersion, version.ToLower())
         .Replace(KubernetesConstants.PlaceHolderNameSpace, KubernetesConstants.AppNameSpace.ToLower());
-    return configContent;
 }
 
 private static string GetHostSiloConfigContent(string appId, string version, string templateFilePath)
