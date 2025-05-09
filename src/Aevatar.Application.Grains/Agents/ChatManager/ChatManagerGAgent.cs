@@ -291,10 +291,10 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
 
         await PublishAsync(new ResponseGetUserProfile()
         {
-            Gender = State.Gender,
-            BirthDate = State.BirthDate,
-            BirthPlace = State.BirthPlace,
-            FullName = State.FullName
+            Gender = TentativeState.Gender,
+            BirthDate = TentativeState.BirthDate,
+            BirthPlace = TentativeState.BirthPlace,
+            FullName = TentativeState.FullName
         });
 
         Logger.LogDebug($"[ChatGAgentManager][RequestGetUserProfileEvent] end");
@@ -410,7 +410,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
     public async Task<Tuple<string, string>> ChatWithSessionAsync(Guid sessionId, string sysmLLM, string content,
         ExecutionPromptSettings promptSettings = null)
     {
-        var sessionInfo = State.GetSession(sessionId);
+        var sessionInfo = TentativeState.GetSession(sessionId);
         IGodChat godChat = GrainFactory.GetGrain<IGodChat>(sessionId);
         
         if (sessionInfo == null)
@@ -445,7 +445,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
     {
         Stopwatch sw = new Stopwatch();
         sw.Start();
-        var sessionInfo = State.GetSession(sessionId);
+        var sessionInfo = TentativeState.GetSession(sessionId);
         IGodChat godChat = GrainFactory.GetGrain<IGodChat>(sessionId);
         sw.Stop();
         Logger.LogDebug($"StreamChatWithSessionAsync - step1,time use:{sw.ElapsedMilliseconds}");
@@ -488,7 +488,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
     {
         var result = new List<SessionInfoDto>();
         
-        foreach (var item in State.SessionInfoList)
+        foreach (var item in TentativeState.SessionInfoList)
         {
             var createAt = item.CreateAt;
             if (createAt == default)
@@ -509,7 +509,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
     public async Task<List<ChatMessage>> GetSessionMessageListAsync(Guid sessionId)
     {
         Logger.LogDebug($"[ChatGAgentManager][GetSessionMessageListAsync] - session:ID {sessionId.ToString()}");
-        var sessionInfo = State.GetSession(sessionId);
+        var sessionInfo = TentativeState.GetSession(sessionId);
         Logger.LogDebug($"[ChatGAgentManager][GetSessionMessageListAsync] - session:ID {JsonConvert.SerializeObject(sessionInfo)}");
 
         if (sessionInfo == null)
@@ -523,7 +523,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
 
     public async Task DeleteSessionAsync(Guid sessionId)
     {
-        if (State.GetSession(sessionId) == null)
+        if (TentativeState.GetSession(sessionId) == null)
         {
             return;
         }
@@ -538,7 +538,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
 
     public async Task RenameSessionAsync(Guid sessionId, string title)
     {
-        var sessionInfo = State.GetSession(sessionId);
+        var sessionInfo = TentativeState.GetSession(sessionId);
         if (sessionInfo == null || sessionInfo.Title == title)
         {
             return;
@@ -575,7 +575,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
 
     public async Task<UserProfileDto> GetLastSessionUserProfileAsync()
     {
-        var sessionInfo = State.SessionInfoList.LastOrDefault(new SessionInfo());
+        var sessionInfo = TentativeState.SessionInfoList.LastOrDefault(new SessionInfo());
         if (sessionInfo.SessionId == Guid.Empty)
         {
             return new UserProfileDto();
@@ -592,7 +592,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         switch (@event)
         {
             case CreateSessionInfoEventLog @createSessionInfo:
-                State.SessionInfoList.Add(new SessionInfo()
+                state.SessionInfoList.Add(new SessionInfo()
                 {
                     SessionId = @createSessionInfo.SessionId,
                     Title = @createSessionInfo.Title,
@@ -600,28 +600,28 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
                 });
                 break;
             case DeleteSessionEventLog @deleteSessionEventLog:
-                State.SessionInfoList.RemoveAll(f => f.SessionId == @deleteSessionEventLog.SessionId);
+                state.SessionInfoList.RemoveAll(f => f.SessionId == @deleteSessionEventLog.SessionId);
                 break;
             case RenameTitleEventLog @renameTitleEventLog:
-                Logger.LogDebug($"[ChatGAgentManager][RenameChatTitleEvent] event:{JsonConvert.SerializeObject(@renameTitleEventLog)}");
-                var sessionInfoList = State.SessionInfoList;
+                Logger.LogDebug($"[ChatGAgentManager][RenameChatTitleEvent] event:{{JsonConvert.SerializeObject(@renameTitleEventLog)}}");
+                var sessionInfoList = state.SessionInfoList;
                 var sessionInfo = sessionInfoList.First(f => f.SessionId == @renameTitleEventLog.SessionId);
-                Logger.LogDebug($"[ChatGAgentManager][RenameChatTitleEvent] event exist:{JsonConvert.SerializeObject(@renameTitleEventLog)}");
+                Logger.LogDebug($"[ChatGAgentManager][RenameChatTitleEvent] event exist:{{JsonConvert.SerializeObject(@renameTitleEventLog)}}");
                 sessionInfo.Title = @renameTitleEventLog.Title;
-                State.SessionInfoList = sessionInfoList;
+                state.SessionInfoList = sessionInfoList;
                 break;
             case ClearAllEventLog:
-                State.SessionInfoList.Clear();
-                State.Gender = string.Empty;
-                State.BirthDate = default;
-                State.BirthPlace = string.Empty;
-                State.FullName = string.Empty;
+                state.SessionInfoList.Clear();
+                state.Gender = string.Empty;
+                state.BirthDate = default;
+                state.BirthPlace = string.Empty;
+                state.FullName = string.Empty;
                 break;
             case SetUserProfileEventLog @setFortuneInfoEventLog:
-                State.Gender = @setFortuneInfoEventLog.Gender;
-                State.BirthDate = @setFortuneInfoEventLog.BirthDate;
-                State.BirthPlace = @setFortuneInfoEventLog.BirthPlace;
-                State.FullName = @setFortuneInfoEventLog.FullName;
+                state.Gender = @setFortuneInfoEventLog.Gender;
+                state.BirthDate = @setFortuneInfoEventLog.BirthDate;
+                state.BirthPlace = @setFortuneInfoEventLog.BirthPlace;
+                state.FullName = @setFortuneInfoEventLog.FullName;
                 break;
         }
     }

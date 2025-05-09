@@ -66,18 +66,18 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
 
     public Task<string> GetSystemLLM()
     {
-        return Task.FromResult(State.SystemLLM);
+        return Task.FromResult(TentativeState.SystemLLM);
     }
 
     public Task<bool> GetStreamingModeEnabled()
     {
-        return Task.FromResult(State.StreamingModeEnabled);
+        return Task.FromResult(TentativeState.StreamingModeEnabled);
     }
 
     public Task<string> GetPrompt()
     {
         // Task.FromResult(State.Prompt);
-        var sysMessage = State.Prompt;
+        var sysMessage = TentativeState.Prompt;
 
         var formattedRequirement =
             """
@@ -106,7 +106,7 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
 
     public Task<string> GetUserProfilePromptAsync()
     {
-        return Task.FromResult(State.UserProfilePrompt);
+        return Task.FromResult(TentativeState.UserProfilePrompt);
     }
 
     public async Task UpdateSystemPromptAsync(string systemPrompt)
@@ -134,16 +134,16 @@ public class ConfigurationGAgent : GAgentBase<ConfigurationState, ConfigurationL
         switch (@event)
         {
             case SetSystemLLMLogEvent @systemLlmLogEvent:
-                State.SystemLLM = @systemLlmLogEvent.SystemLLM;
+                state.SystemLLM = @systemLlmLogEvent.SystemLLM;
                 break;
             case SetPromptLogEvent @setPromptLogEvent:
-                State.Prompt = @setPromptLogEvent.Prompt;
+                state.Prompt = @setPromptLogEvent.Prompt;
                 break;
             case SetStreamingModeEnabledLogEvent @setStreamingModeEnabledLogEvent:
-                State.StreamingModeEnabled = @setStreamingModeEnabledLogEvent.StreamingModeEnabled;
+                state.StreamingModeEnabled = @setStreamingModeEnabledLogEvent.StreamingModeEnabled;
                 break;
             case SetUserProfilePromptLogEvent @setUserProfilePromptLogEvent:
-                State.UserProfilePrompt = @setUserProfilePromptLogEvent.UserProfilePrompt;
+                state.UserProfilePrompt = @setUserProfilePromptLogEvent.UserProfilePrompt;
                 break;
         }
     }
