@@ -1,5 +1,4 @@
 ﻿using Aevatar.Core.Abstractions;
-using Aevatar.Application.Grains.Agents.Code;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,7 +9,7 @@ using Orleans.Configuration;
 using Orleans.Hosting;
 using Orleans.Providers.MongoDB.Configuration;
 using Orleans.Streams.Kafka.Config;
-using MessagingGAgent.Grains;
+using E2E.Grains;
 
 IHostBuilder builder = Host.CreateDefaultBuilder(args)
     .UseOrleansClient(client =>
@@ -64,23 +63,23 @@ var client = host.Services.GetRequiredService<IClusterClient>();
 
 
 var subAgentId = Guid.NewGuid();
-var subAgent = client.GetGrain<IDemoGAgent>(subAgentId);
+var subAgent = client.GetGrain<ITestDbGAgent>(subAgentId);
 await subAgent.ActivateAsync();
 await Task.Delay(2000);
 
 // Create a new grain instance for the publisher agent
 // test broadcast
 var pubAgentId = Guid.NewGuid();
-var pubAgent = client.GetGrain<IDemoGAgent>(pubAgentId);
+var pubAgent = client.GetGrain<ITestDbScheduleGAgent>(pubAgentId);
 
-var demoEvent = new DemoEvent
+var demoEvent = new TestDbEvent
 {
     Number = 100,
     CorrelationId = Guid.NewGuid(),
     PublisherGrainId = pubAgent.GetGrainId(),
 };
 
-await pubAgent.BroadCastEventAsync("DemoScheduleGAgent", demoEvent);
+await pubAgent.BroadCastEventAsync("TestDbScheduleGAgent", demoEvent);
 
 await Task.Delay(500);
 
@@ -88,11 +87,11 @@ Console.WriteLine("Count is {0}", await subAgent.GetCount());
 
 // test p2p
 var p2pAgentId1 = Guid.NewGuid();
-var p2pAgent1 = client.GetGrain<IDemoGAgent>(p2pAgentId1);
+var p2pAgent1 = client.GetGrain<ITestDbGAgent>(p2pAgentId1);
 await p2pAgent1.ActivateAsync();
 
 var p2pAgentId2 = Guid.NewGuid();
-var p2pAgent2 = client.GetGrain<IDemoGAgent>(p2pAgentId2);
+var p2pAgent2 = client.GetGrain<ITestDbGAgent>(p2pAgentId2);
 await p2pAgent2.ActivateAsync();
 
 await p2pAgent1.PublishAsync(p2pAgent2.GetGrainId(), demoEvent);

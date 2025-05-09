@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -36,11 +37,11 @@ public class Startup
     {
         services.AddApplicationAsync<T>(options =>
         {
-            var code = AsyncHelper.RunSync(async () => await GetPluginCodeAsync());
-            options.PlugInSources.AddCode(code);
+            var codeFiles = AsyncHelper.RunSync(async () => await GetPluginCodeAsync());
+            options.PlugInSources.AddCode(codeFiles);
         });
     }
-    
+
     // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
     // ReSharper disable once UnusedMember.Global
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -49,8 +50,8 @@ public class Startup
         CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
         app.InitializeApplication();
     }
-    
-    private async Task<byte[]> GetPluginCodeAsync()
+
+    private async Task<Dictionary<string, byte[]>> GetPluginCodeAsync()
     {
         var webhookId = _configuration["Webhook:WebhookId"];
         var version = _configuration["Webhook:Version"];
@@ -74,8 +75,19 @@ public class Startup
             response.EnsureSuccessStatusCode();
 
             var responseBody = await response.Content.ReadAsStringAsync();
-            var decodedBytes = Convert.FromBase64String(JsonConvert.DeserializeObject<ApiHostResponse>(responseBody)!.Data);
-            return decodedBytes;
+            var apiResponse = JsonConvert.DeserializeObject<ApiHostResponse>(responseBody);
+            if (apiResponse?.Data == null)
+            {
+                throw new Exception("Invalid API response format");
+            }
+
+            var result = new Dictionary<string, byte[]>();
+            foreach (var file in apiResponse.Data)
+            {
+                result[file.Key] = Convert.FromBase64String(file.Value);
+            }
+
+            return result;
         }
     }
 }
