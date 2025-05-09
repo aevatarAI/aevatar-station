@@ -787,11 +787,11 @@ public class AgentService : ApplicationService, IAgentService
             return "no work unit";
         }
 
-        var groupCount = workflowUnits.GroupBy(f => f.GrainId);
-        if (groupCount.Count() != workflowUnits.Count)
-        {
-            return "cannot input the same work unit";
-        }
+        // var groupCount = workflowUnits.GroupBy(f => f.GrainId);
+        // if (groupCount.Count() != workflowUnits.Count)
+        // {
+        //     return "cannot input the same work unit";
+        // }
 
         if (ExistLoopAgents(workflowUnits) == true)
         {
