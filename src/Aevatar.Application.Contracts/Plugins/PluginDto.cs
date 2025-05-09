@@ -12,6 +12,6 @@ public class PluginDto : EntityDto<Guid>
     public string CreatorName { get; set; }
     public long LastModificationTime { get; set; }
     public string LastModifierName { get; set; }
-    public LoadStatus? LoadStatus { get; set; }
+    public LoadStatus LoadStatus { get; set; }
     public string? Reason { get; set; }
 }

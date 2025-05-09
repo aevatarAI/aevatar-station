@@ -58,9 +58,10 @@ public class PluginService : AevatarAppService, IPluginService
                 dto.LastModifierName = lastModifier.UserName;
             }
 
+            dto.LoadStatus = LoadStatus.Unload;
             if (pluginStatus.TryGetValue(plugin.Id, out var value))
             {
-                dto.LoadStatus = value.Status;
+                dto.LoadStatus = (LoadStatus)value.Status;
                 dto.Reason = value.Reason;
             }
 
