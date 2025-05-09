@@ -27,6 +27,7 @@ public static class OpenTelemetryExtensions
                     .AddSource("Orleans.Runtime")
                     .AddSource("Orleans.Messaging")
                     .AddSource("Microsoft.Orleans")
+                    .AddSource("Aevatar.CQRS")
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation();
             })
@@ -35,6 +36,7 @@ public static class OpenTelemetryExtensions
                 .AddAspNetCoreInstrumentation()
                 .AddMeter("Microsoft.Orleans")
                 .AddMeter("Aevatar.Messaging")
+                .AddMeter("Aevatar.CQRS")
                 .AddMeter("Aevatar.Storage")
                 .AddMeter(serviceName)
                 .AddOtlpExporter(options =>
