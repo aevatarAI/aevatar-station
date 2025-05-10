@@ -318,7 +318,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         
         // 3.Get prompt
         sw.Restart();
-        var sysMessage = "test prompt";
+        var sysMessage = await SystemPromptCache.GetPromptAsync(configuration);
         sw.Stop();
         Logger.LogDebug("CreateSessionAsync - step 3 get prompt, time use:{use}", sw.ElapsedMilliseconds);
         //put user data into the user prompt
@@ -657,25 +657,14 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
     public static class SystemPromptCache
     {
         private static string _cachedPrompt;
-        private static long _cachedVersion;
         private static DateTime _lastFetchTime;
         private static readonly object _lock = new();
 
         public static async Task<string> GetPromptAsync(IConfigurationGAgent configGrain)
         {
-            if (_cachedPrompt == null || DateTime.UtcNow - _lastFetchTime > TimeSpan.FromSeconds(5))
+            if (_cachedPrompt.IsNullOrEmpty())
             {
-                lock (_lock)
-                {
-                    if (_cachedPrompt != null && DateTime.UtcNow - _lastFetchTime <= TimeSpan.FromSeconds(5))
-                        return _cachedPrompt;
-                }
-                var prompt = await configGrain.GetPrompt();
-                lock (_lock)
-                {
-                    _cachedPrompt = prompt;
-                    _lastFetchTime = DateTime.UtcNow;
-                }
+                _cachedPrompt = await configGrain.GetPrompt();
             }
             return _cachedPrompt;
         }
