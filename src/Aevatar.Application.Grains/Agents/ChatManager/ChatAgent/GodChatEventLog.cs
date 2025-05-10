@@ -29,7 +29,14 @@ public class SetChatManagerGuidEventLog : GodChatEventLog
 }
 
 [GenerateSerializer]
+[Obsolete("This class is deprecated and no longer in use.")]
 public class SetAIAgentIdLogEvent : GodChatEventLog
 {
     [Id(0)] public List<Guid> AIAgentIds { get; set; }
+}
+
+[GenerateSerializer]
+public class UpdateRegionProxiesLogEvent : GodChatEventLog
+{
+    [Id(0)] public Dictionary<string, List<Guid>> RegionProxies;
 }
