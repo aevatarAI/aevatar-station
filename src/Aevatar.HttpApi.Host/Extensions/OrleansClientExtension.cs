@@ -45,7 +45,7 @@ public static class OrleansClientExtension
                     options.SupportedNamespacePrefixes.Add("MongoDB.Driver");
                 })
                 .AddActivityPropagation()
-                .UseAevatar(true);
+                .UseAevatar();
                 
             var streamProvider = config.GetSection("OrleansStream:Provider").Get<string>();
             Log.Information("Stream Provider: {streamProvider}", streamProvider);
