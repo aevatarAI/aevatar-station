@@ -5,6 +5,7 @@ namespace Aevatar.Application.Grains.Agents.ChatManager.Common;
 
 public class CommonHelper
 {
+    public static string SystemLLM = "OpenAI";
     public static Guid StringToGuid(string input)
     {
         using (MD5 md5 = MD5.Create())

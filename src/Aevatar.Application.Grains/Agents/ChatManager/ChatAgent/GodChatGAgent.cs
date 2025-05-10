@@ -154,7 +154,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         
         sw.Restart();
         var configuration = GetConfiguration();
-        await GodStreamChatAsync(sessionId, await configuration.GetSystemLLM(),
+        await GodStreamChatAsync(sessionId, CommonHelper.SystemLLM,
             await configuration.GetStreamingModeEnabled(),
             content, chatId, promptSettings, isHttpRequest);
         sw.Stop();
@@ -370,7 +370,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
             Logger.LogError(
                 $"[GodChatGAgent][ChatMessageCallbackAsync] RequestLimitError retry. contextDto {JsonConvert.SerializeObject(contextDto)}");
             var configuration = GetConfiguration();
-            var systemLlm = await configuration.GetSystemLLM();
+            var systemLlm = CommonHelper.SystemLLM;
             var dictionary = JsonConvert.DeserializeObject<Dictionary<string, object>>(contextDto.MessageId);
             GodStreamChatAsync(contextDto.RequestId,
                 (string)dictionary.GetValueOrDefault("LLM", systemLlm),
@@ -541,7 +541,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         }
 
         var configuration = GetConfiguration();
-        var response = await GodChatAsync(await configuration.GetSystemLLM(), content, promptSettings);
+        var response = await GodChatAsync(CommonHelper.SystemLLM, content, promptSettings);
         return new Tuple<string, string>(response, title);
     }
 }

@@ -329,7 +329,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         var chatConfigDto = new ChatConfigDto()
         {
             Instructions = sysMessage, MaxHistoryCount = 32,
-            LLMConfig = new LLMConfigDto() { SystemLLM = "OpenAI" },
+            LLMConfig = new LLMConfigDto() { SystemLLM = CommonHelper.SystemLLM },
             StreamingModeEnabled = true, StreamingConfig = new StreamingConfig()
             {
                 BufferingSize = 32
@@ -436,7 +436,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         }
 
         var configuration = GetConfiguration();
-        var response = await godChat.GodChatAsync(await configuration.GetSystemLLM(), content, promptSettings);
+        var response = await godChat.GodChatAsync(CommonHelper.SystemLLM, content, promptSettings);
         return new Tuple<string, string>(response, title);
     }
     
@@ -479,7 +479,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         sw.Reset();
         sw.Start();
         var configuration = GetConfiguration();
-        godChat.GodStreamChatAsync(sessionId,await configuration.GetSystemLLM(), await configuration.GetStreamingModeEnabled(),content, chatId,promptSettings);
+        godChat.GodStreamChatAsync(sessionId,CommonHelper.SystemLLM, await configuration.GetStreamingModeEnabled(),content, chatId,promptSettings);
         sw.Stop();
         Logger.LogDebug($"StreamChatWithSessionAsync - step4,time use:{sw.ElapsedMilliseconds}");
     }
@@ -652,5 +652,32 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
     private IConfigurationGAgent GetConfiguration()
     {
         return GrainFactory.GetGrain<IConfigurationGAgent>(CommonHelper.GetSessionManagerConfigurationId());
+    }
+    
+    public static class SystemPromptCache
+    {
+        private static string _cachedPrompt;
+        private static long _cachedVersion;
+        private static DateTime _lastFetchTime;
+        private static readonly object _lock = new();
+
+        public static async Task<string> GetPromptAsync(IConfigurationGAgent configGrain)
+        {
+            if (_cachedPrompt == null || DateTime.UtcNow - _lastFetchTime > TimeSpan.FromSeconds(5))
+            {
+                lock (_lock)
+                {
+                    if (_cachedPrompt != null && DateTime.UtcNow - _lastFetchTime <= TimeSpan.FromSeconds(5))
+                        return _cachedPrompt;
+                }
+                var prompt = await configGrain.GetPrompt();
+                lock (_lock)
+                {
+                    _cachedPrompt = prompt;
+                    _lastFetchTime = DateTime.UtcNow;
+                }
+            }
+            return _cachedPrompt;
+        }
     }
 }
