@@ -31,7 +31,7 @@ public static class OrleansClientExtension
                 {
                     options.DatabaseName = configSection.GetValue<string>("DataBase");
                     options.Strategy = MongoDBMembershipStrategy.SingleDocument;
-                    options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" :$"Orleans{hostId}";
+                    options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" : $"Orleans{hostId}";
                 })
                 .Configure<ClusterOptions>(options =>
                 {
@@ -44,7 +44,8 @@ public static class OrleansClientExtension
                     options.SupportedNamespacePrefixes.Add("Newtonsoft.Json");
                     options.SupportedNamespacePrefixes.Add("MongoDB.Driver");
                 })
-                .AddActivityPropagation();
+                .AddActivityPropagation()
+                .UseAevatar(true);
                 
             var streamProvider = config.GetSection("OrleansStream:Provider").Get<string>();
             Log.Information("Stream Provider: {streamProvider}", streamProvider);
