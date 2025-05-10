@@ -318,7 +318,7 @@ public class ChatGAgentManager : AIGAgentBase<ChatManagerGAgentState, ChatManage
         
         // 3.Get prompt
         sw.Restart();
-        var sysMessage = await configuration.GetPrompt();
+        var sysMessage = "test prompt";
         sw.Stop();
         Logger.LogDebug("CreateSessionAsync - step 3 get prompt, time use:{use}", sw.ElapsedMilliseconds);
         //put user data into the user prompt
