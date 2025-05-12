@@ -17,6 +17,7 @@ using Aevatar.Exceptions;
 using Aevatar.Options;
 using Aevatar.Query;
 using Aevatar.Schema;
+using AutoGen.Core;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -25,6 +26,7 @@ using Orleans.Metadata;
 using Orleans.Runtime;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
+using Exception = System.Exception;
 
 namespace Aevatar.Service;
 
@@ -69,7 +71,16 @@ public class AgentService : ApplicationService, IAgentService
     private async Task<Dictionary<string, AgentTypeData?>> GetAgentTypeDataMap()
     {
         var systemAgents = _agentOptions.CurrentValue.SystemAgentList;
-        var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
+        List<Type> availableGAgents;
+        try
+        {
+            availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e,"GetAvailableGAgentTypes Error");
+            throw;
+        }
         var validAgent = availableGAgents.Where(a => !a.Namespace.StartsWith("OrleansCodeGen")).ToList();
         var businessAgentTypes = validAgent.Where(a => !systemAgents.Contains(a.Name)).ToList();
 
@@ -77,47 +88,67 @@ public class AgentService : ApplicationService, IAgentService
 
         foreach (var agentType in businessAgentTypes)
         {
-            var grainType = _grainTypeResolver.GetGrainType(agentType).ToString();
-            if (grainType != null)
+            try
             {
-                var agentTypeData = new AgentTypeData
+                var grainType = _grainTypeResolver.GetGrainType(agentType).ToString();
+                if (grainType != null)
                 {
-                    FullName = agentType.FullName,
-                };
-                var grainId = GrainId.Create(grainType,
-                    GuidUtil.GuidToGrainKey(
-                        GuidUtil.StringToGuid("AgentDefaultId"))); // make sure only one agent instance for each type
-                var agent = await _gAgentFactory.GetGAgentAsync(grainId);
-                var initializeDtoType = await agent.GetConfigurationTypeAsync();
-                if (initializeDtoType == null || initializeDtoType.IsAbstract)
-                {
-                    dict[grainType] = agentTypeData;
-                    continue;
-                }
-
-                PropertyInfo[] properties =
-                    initializeDtoType.GetProperties(BindingFlags.Public | BindingFlags.Instance |
-                                                    BindingFlags.DeclaredOnly);
-
-                var initializationData = new Configuration
-                {
-                    DtoType = initializeDtoType
-                };
-
-                var propertyDtos = new List<PropertyData>();
-                foreach (PropertyInfo property in properties)
-                {
-                    var propertyDto = new PropertyData()
+                    var agentTypeData = new AgentTypeData
                     {
-                        Name = property.Name,
-                        Type = property.PropertyType
+                        FullName = agentType.FullName,
                     };
-                    propertyDtos.Add(propertyDto);
-                }
+                    var grainId = GrainId.Create(grainType,
+                        GuidUtil.GuidToGrainKey(
+                            GuidUtil.StringToGuid(
+                                "AgentDefaultId"))); // make sure only one agent instance for each type
 
-                initializationData.Properties = propertyDtos;
-                agentTypeData.InitializationData = initializationData;
-                dict[grainType] = agentTypeData;
+                    Aevatar.Core.Abstractions.IGAgent agent = null;
+                    try
+                    {
+                        agent = await _gAgentFactory.GetGAgentAsync(grainId);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex,$"Get Agent Error: {grainType}" );
+                        throw;
+                    }
+
+                    var initializeDtoType = await agent.GetConfigurationTypeAsync();
+                    if (initializeDtoType == null || initializeDtoType.IsAbstract)
+                    {
+                        dict[grainType] = agentTypeData;
+                        continue;
+                    }
+
+                    PropertyInfo[] properties =
+                        initializeDtoType.GetProperties(BindingFlags.Public | BindingFlags.Instance |
+                                                        BindingFlags.DeclaredOnly);
+
+                    var initializationData = new Configuration
+                    {
+                        DtoType = initializeDtoType
+                    };
+
+                    var propertyDtos = new List<PropertyData>();
+                    foreach (PropertyInfo property in properties)
+                    {
+                        var propertyDto = new PropertyData()
+                        {
+                            Name = property.Name,
+                            Type = property.PropertyType
+                        };
+                        propertyDtos.Add(propertyDto);
+                    }
+
+                    initializationData.Properties = propertyDtos;
+                    agentTypeData.InitializationData = initializationData;
+                    dict[grainType] = agentTypeData;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex,$"Handle Agent Type Error: {agentType.FullName}" );
+                throw;
             }
         }
 
