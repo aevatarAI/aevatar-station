@@ -96,6 +96,14 @@ project_tracker.md = @project_tracker.md
 □ git status 使用: `git -c color.status=false status`
 □ 强制拒绝所有交互: `export GIT_ASKPASS=echo`
 
+【⚠️ 代码规范】
+□ 变量名、函数名、类名必须使用英文命名
+□ 所有注释必须使用英文书写
+□ 错误message和日志必须使用英文记录
+□ 所有git commit message必须使用英文书写
+□ 文档应使用英文或提供英文版本
+□ 特殊情况下必须使用中文的内容应在代码中明确标注原因
+
 【MAC地址读取与使用】
 - 使用缩写MAC地址格式以便于在表格中显示
 - 如MAC地址获取失败，使用主机名替代: `hostname`

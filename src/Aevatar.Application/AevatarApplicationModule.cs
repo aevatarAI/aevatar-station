@@ -5,6 +5,7 @@ using Aevatar.Application.Grains;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
+using Aevatar.GodGPT.Options;
 using Aevatar.Kubernetes;
 using Aevatar.Kubernetes.Manager;
 using Aevatar.Notification;
@@ -66,7 +67,7 @@ public class AevatarApplicationModule : AbpModule
         Configure<HostDeployOptions>(configuration.GetSection("HostDeploy"));
         context.Services.Configure<HostOptions>(configuration.GetSection("Host"));
         context.Services.Configure<AppleAuthOption>(configuration.GetSection("AppleAuth"));
-        
         Configure<AccountOptions>(configuration.GetSection("Account"));
+        Configure<AwsS3Option>(configuration.GetSection("AwsS3"));
     }
 }

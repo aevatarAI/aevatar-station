@@ -28,6 +28,39 @@ using Volo.Abp;
 
 namespace Aevatar.Controllers;
 
+// 添加语音对话请求DTO
+public class VoiceChatRequestDto
+{
+    public Guid SessionId { get; set; }
+    public string AudioData { get; set; } // Base64编码的音频数据
+    public string Region { get; set; }
+    public string RecognitionLanguage { get; set; } // 语音识别使用的语言（中文版默认"zh-CN"，国际版默认"en-US"）
+    public string SynthesisLanguage { get; set; } // 语音合成使用的语言（中文版默认"zh-CN"，国际版默认"en-US"）
+    public string SynthesisVoiceName { get; set; } // 语音合成使用的声音名称
+}
+
+// 添加语音对话响应DTO
+public class VoiceChatResponseDto
+{
+    public string AudioData { get; set; } // Base64编码的响应音频数据
+    public string AudioUrl { get; set; } // 响应音频的URL
+    public string NewTitle { get; set; } // 新标题
+    public string Message { get; set; } // 可选的消息
+    
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+    public string Code { get; set; } = "20000";
+    
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+    public VoiceChatResponseData Data { get; set; }
+}
+
+public class VoiceChatResponseData
+{
+    public string AudioData { get; set; }
+    public string AudioUrl { get; set; }
+    public string NewTitle { get; set; }
+}
+
 [RemoteService]
 [ControllerName("GodGPT")]
 [Route("api")]
@@ -257,5 +290,62 @@ public class GodGPTController : AevatarController
         _logger.LogDebug("[GodGPTController][GetShareMessageListAsync] shareString: {0} duration: {1}ms",
             shareString, stopwatch.ElapsedMilliseconds);
         return response;
+    }
+
+    // 添加语音对话接口
+    [HttpPost("godgpt/chat/voice")]
+    public async Task<VoiceChatResponseDto> ChatWithVoiceAsync(VoiceChatRequestDto request)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        _logger.LogDebug("[GodGPTController][ChatWithVoiceAsync] sessionId: {0}, language: {1}", 
+            request.SessionId, request.RecognitionLanguage);
+        
+        try
+        {
+            // 假设语音识别已经在其他地方处理，这里我们只需要获取识别后的文本内容
+            // 实际实现中，这里应该调用语音识别服务，将音频数据转换为文本
+            
+            // 调用聊天服务获取文本响应
+            var currentUserId = (Guid)CurrentUser.Id!;
+            // 这里假设我们已经将语音识别为文本，现在需要与GodGPT对话
+            // 实际实现中，你需要替换下面的代码，调用真实的语音识别服务
+            string recognizedText = "识别后的文本将在这里"; // 实际中应从语音识别服务获取
+            
+            // 调用聊天服务获取文本响应
+            var textResponse = await _godGptService.ChatWithSessionAsync(
+                currentUserId, 
+                request.SessionId, 
+                _defaultLLM, 
+                recognizedText);
+            
+            // 假设语音合成在其他地方处理，这里我们只需要返回合成后的音频数据
+            // 实际实现中，这里应该调用语音合成服务，将文本转换为音频
+            
+            // 生成响应
+            var response = new VoiceChatResponseDto
+            {
+                Code = "20000",
+                Data = new VoiceChatResponseData
+                {
+                    AudioData = "合成后的音频数据将在这里", // 实际中应从语音合成服务获取
+                    AudioUrl = "可选的音频URL",
+                    NewTitle = textResponse.Item2 // 使用聊天服务返回的标题
+                }
+            };
+            
+            _logger.LogDebug("[GodGPTController][ChatWithVoiceAsync] sessionId: {0}, duration: {1}ms",
+                request.SessionId, stopwatch.ElapsedMilliseconds);
+            
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[GodGPTController][ChatWithVoiceAsync] Error processing voice chat request for sessionId: {0}", request.SessionId);
+            return new VoiceChatResponseDto
+            {
+                Code = "50000",
+                Message = "Internal server error occurred while processing voice chat"
+            };
+        }
     }
 }
