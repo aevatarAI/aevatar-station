@@ -580,10 +580,10 @@ public class AgentService : ApplicationService, IAgentService
         foreach (var grainId in children)
         {
             var grainType = grainId.Type;
-            if (grainType == creatorGAgentType || grainType == subscriptionGAgentType)
-            {
-                continue;
-            }
+            // if (grainType == creatorGAgentType || grainType == subscriptionGAgentType)
+            // {
+            //     continue;
+            // }
 
             subAgentGrainIds.Add(grainId);
         }
