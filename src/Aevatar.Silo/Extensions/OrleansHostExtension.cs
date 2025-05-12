@@ -158,9 +158,9 @@ public static class OrleansHostExtension
                 }
 
                 siloBuilder.UseAevatar()
-                    .UseAevatarPermissionManagement()
-                    .UseSignalR()
-                    .RegisterHub<AevatarSignalRHub>();
+                    .UseAevatarPermissionManagement();
+                // .UseSignalR()
+                // .RegisterHub<AevatarSignalRHub>();
             }).ConfigureServices((context, services) =>
             {
                 services.Configure<QdrantConfig>(context.Configuration.GetSection("VectorStores:Qdrant"));
@@ -168,7 +168,7 @@ public static class OrleansHostExtension
                 services.Configure<AzureOpenAIEmbeddingsConfig>(
                     context.Configuration.GetSection("AIServices:AzureOpenAIEmbeddings"));
                 services.Configure<RagConfig>(context.Configuration.GetSection("Rag"));
-                services.AddSingleton(typeof(HubLifetimeManager<>), typeof(OrleansHubLifetimeManager<>));
+                // services.AddSingleton(typeof(HubLifetimeManager<>), typeof(OrleansHubLifetimeManager<>));
                 // services.AddSingleton<IStateProjector, AevatarStateProjector>();
                 services.AddSingleton<IStateDispatcher, StateDispatcher>();
                 services.AddSingleton<IGAgentFactory, GAgentFactory>();

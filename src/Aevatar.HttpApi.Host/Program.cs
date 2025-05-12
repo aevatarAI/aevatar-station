@@ -36,7 +36,7 @@ public class Program
             await builder.AddApplicationAsync<AevatarHttpApiHostModule>();
             var app = builder.Build();
             await app.InitializeApplicationAsync();
-            app.MapHub<AevatarSignalRHub>("api/agent/aevatarHub");
+            // app.MapHub<AevatarSignalRHub>("api/agent/aevatarHub");
             app.MapHub<StationSignalRHub>("api/notifications").RequireAuthorization();
             await app.RunAsync();
             return 0;

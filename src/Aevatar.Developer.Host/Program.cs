@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Aevatar.Developer.Host.Extensions;
-using Aevatar.SignalR;
+// using Aevatar.SignalR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -44,11 +44,11 @@ public class Program
                 .ConfigureDefaults(args)
                 .UseAutofac()
                 .UseSerilog();
-            builder.Services.AddSignalR().AddOrleans();
+            // builder.Services.AddSignalR().AddOrleans();
             await builder.AddApplicationAsync<AevatarDeveloperHostModule>();
             var app = builder.Build();
             await app.InitializeApplicationAsync();
-            app.MapHub<AevatarSignalRHub>("api/agent/aevatarHub");
+            // app.MapHub<AevatarSignalRHub>("api/agent/aevatarHub");
             await app.RunAsync();
             return 0;
         }
