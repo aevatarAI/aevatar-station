@@ -174,7 +174,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
                 }
             });
 
-            await ConfirmEvents();
+            // await ConfirmEvents();
         }
         else
         {
@@ -463,7 +463,7 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
                 }
             });
 
-            await ConfirmEvents();
+            // await ConfirmEvents();
         }
 
         var partialMessage = new ResponseStreamGodChat()
