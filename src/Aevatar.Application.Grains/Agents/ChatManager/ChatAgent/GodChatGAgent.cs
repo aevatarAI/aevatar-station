@@ -128,9 +128,8 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
 
         sw.Reset();
         sw.Start();
-        var configuration = GetConfiguration();
         await GodStreamChatAsync(sessionId, CommonHelper.SystemLLM,
-            await configuration.GetStreamingModeEnabled(),
+            true,
             content, chatId, promptSettings, isHttpRequest, region);
         sw.Stop();
         Logger.LogDebug($"StreamChatWithSessionAsync {sessionId.ToString()} - step4,time use:{sw.ElapsedMilliseconds}");
@@ -140,8 +139,9 @@ public class GodChatGAgent : ChatGAgentBase<GodChatState, GodChatEventLog, Event
         string chatId, ExecutionPromptSettings? promptSettings = null, bool isHttpRequest = false,
         string? region = null)
     {
-        var configuration = GetConfiguration();
         Logger.LogDebug($"[GodChatGAgent][GodStreamChatAsync] start");
+        var configuration = GetConfiguration();
+        Logger.LogDebug($"[GodChatGAgent][GodStreamChatAsync] GetConfiguration");
         var sysMessage = await configuration.GetPrompt();
 
         await LLMInitializedAsync(llm, streamingModeEnabled, sysMessage);
