@@ -86,7 +86,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         var ownerPermissions =
             await _permissionManager.GetAllForRoleAsync(ownerRole.Name);
         ownerPermissions = ownerPermissions.Where(o => o.IsGranted).ToList();
-        ownerPermissions.Count.ShouldBe(14);
+        ownerPermissions.Count.ShouldBe(15);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Projects.Default);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Projects.Edit);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Members.Default);
@@ -99,6 +99,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Roles.Create);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Roles.Edit);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Roles.Delete);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Dashboard);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.LLMSModels.Default);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.LLMSModels.Default);
 
@@ -106,12 +107,13 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         var readerPermissions =
             await _permissionManager.GetAllForRoleAsync(readerRole.Name);
         readerPermissions = readerPermissions.Where(o => o.IsGranted).ToList();
-        readerPermissions.Count.ShouldBe(5);
+        readerPermissions.Count.ShouldBe(6);
         readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Projects.Default);
         readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Members.Default);
         readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ApiKeys.Default);
-        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.LLMSModels.Default);
-        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.LLMSModels.Default);
+        readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Dashboard);
+        readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.LLMSModels.Default);
+        readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.LLMSModels.Default);
     }
 
     [Fact]
