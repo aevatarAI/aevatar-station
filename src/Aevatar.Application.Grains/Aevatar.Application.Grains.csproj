@@ -23,7 +23,6 @@
 
         <PackageReference Include="Aevatar.GAgents.AI.Abstractions"/>
         <PackageReference Include="MineAiFun.GAgents"/>
-        <PackageReference Include="Aevatar.GAgents.Twitter"/>
         <PackageReference Include="Aevatar.GAgents.SocialGAgent"/>
         <PackageReference Include="Orleans.SyncWork"/>
         <PackageReference Include="Aevatar.GAgents.Twitter"/>
