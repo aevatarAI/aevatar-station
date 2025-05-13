@@ -1,7 +1,6 @@
 using System.Net;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
-using Aevatar.Core.Placement;
 using Aevatar.CQRS;
 using Aevatar.Dapr;
 using Aevatar.EventSourcing.MongoDB.Hosting;
@@ -207,7 +206,7 @@ public static class OrleansHostExtension
                 // Register the SiloNamePatternPlacement director
                 services
                     .AddPlacementDirector<Aevatar.Core.Placement.SiloNamePatternPlacement,
-                        SiloNamePatternPlacementDirector>();
+                        Aevatar.Core.Placement.SiloNamePatternPlacementDirector>();
 
                 services.Configure<SystemLLMConfigOptions>(context.Configuration);
                 services.Configure<AzureOpenAIEmbeddingsConfig>(
