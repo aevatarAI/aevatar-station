@@ -4,6 +4,7 @@ using Aevatar.Application.Grains.Agents.Creator;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
 using Aevatar.CQRS.Provider;
+using Aevatar.Cqrs.Tests;
 using Aevatar.Cqrs.Tests.Cqrs.Dto;
 using Aevatar.GAgent.Dto;
 using Aevatar.Mock;
@@ -16,7 +17,7 @@ using Xunit.Abstractions;
 
 namespace Aevatar.GAgent;
 
-public class CqrsProviderTest : AevatarApplicationTestBase
+public class CqrsProviderTest : AevatarTestBase<AevatarCqrsTestModule>
 {
     private readonly IIndexingService _elasticService;
     private readonly ICQRSProvider _cqrsProvider;

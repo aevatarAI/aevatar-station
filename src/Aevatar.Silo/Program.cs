@@ -1,8 +1,8 @@
-
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Aevatar.Silo.Extensions;
+using Aevatar.Silo.Observability;
 using Serilog;
 
 namespace Aevatar.Silo;
@@ -41,11 +41,17 @@ public class Program
 
     internal static IHostBuilder CreateHostBuilder(string[] args) =>
         Host.CreateDefaultBuilder(args)
-            .ConfigureServices((hostcontext, services) =>
+            .ConfigureServices((hostContext, services) =>
             {
+                // Configure OpenTelemetry
+                services.AddAevatarOpenTelemetry(hostContext.Configuration);
                 services.AddApplication<SiloModule>();
             })
             .UseOrleansConfiguration()
             .UseAutofac()
-            .UseSerilog();
+            .UseSerilog()
+            .ConfigureServices((context, services) =>
+            {
+                services.UseGrainStorageWithMetrics();
+            });
 }

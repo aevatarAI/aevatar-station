@@ -88,18 +88,20 @@ public class NotificationService : INotificationService, ITransientDependency
 
         _ = Task.Run(async () =>
         {
-            var stopWatch = new Stopwatch();
-            stopWatch.Start();
-
+            _logger.LogDebug($"Push new message to {(Guid)notification.CreatorId!} and {notification.Receiver}");
             await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
                 new NotificationResponse()
                 {
                     Data = new NotificationResponseMessage()
                         { Id = notification.Id, Status = NotificationStatusEnum.None }
                 });
+            
+            _logger.LogDebug($"Push unread message to {target}");
+            var unreadCount = await GetUnreadCountAsync(target);
+            await _hubService.ResponseAsync([target],
+                new UnreadNotificationResponse()
+                    { Data = new UnreadNotification(unreadCount: unreadCount) });
 
-            stopWatch.Stop();
-            _logger.LogInformation($"StopWatch SignalR CreateAsync use time:{stopWatch.ElapsedMilliseconds}");
         });
 
         return notification.Id;
@@ -113,23 +115,18 @@ public class NotificationService : INotificationService, ITransientDependency
             return false;
         }
 
+        // todo: update Transaction
         notification.Status = NotificationStatusEnum.Withdraw;
         await _notificationRepository.UpdateAsync(notification);
 
         _ = Task.Run(async () =>
         {
-            var stopWatch = new Stopwatch();
-            stopWatch.Start();
-
             await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
                 new NotificationResponse()
                 {
                     Data = new NotificationResponseMessage()
                         { Id = notificationId, Status = NotificationStatusEnum.Withdraw }
                 });
-
-            stopWatch.Stop();
-            _logger.LogInformation($"StopWatch SignalR WithdrawAsync use time:{stopWatch.ElapsedMilliseconds}");
         });
 
         return true;
@@ -145,8 +142,7 @@ public class NotificationService : INotificationService, ITransientDependency
             return false;
         }
 
-        if ((notification.Status != NotificationStatusEnum.None &&
-             notification.Status != NotificationStatusEnum.Read) || status == NotificationStatusEnum.None)
+        if (notification.Status != NotificationStatusEnum.None || status == NotificationStatusEnum.None)
         {
             _logger.LogError(
                 $"[NotificationService][Response] notification.Status != NotificationStatusEnum.None notificationId:{notificationId}");
@@ -167,15 +163,9 @@ public class NotificationService : INotificationService, ITransientDependency
 
         _ = Task.Run(async () =>
         {
-            var stopWatch = new Stopwatch();
-            stopWatch.Start();
-
             await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
                 new NotificationResponse()
                     { Data = new NotificationResponseMessage() { Id = notificationId, Status = status } });
-
-            stopWatch.Stop();
-            _logger.LogInformation($"StopWatch SignalR Response use time:{stopWatch.ElapsedMilliseconds}");
         });
 
         return true;
@@ -237,5 +227,42 @@ public class NotificationService : INotificationService, ITransientDependency
         }
 
         return result;
+    }
+
+    public async Task<int> GetUnreadCountAsync(Guid userId)
+    {
+        var query = await _notificationRepository.GetQueryableAsync();
+        var count = query.Count(w => w.Receiver == userId && w.IsRead == false);
+        return count;
+    }
+
+    public async Task ReadAsync(Guid userId, ReadNotificationDto input)
+    {
+        var unreadCount = 0;
+        if (input.NotificationId.HasValue)
+        {
+            var notification =
+                await _notificationRepository.FirstAsync(
+                    o => o.Id == input.NotificationId.Value && o.Receiver == userId);
+            notification.IsRead = true;
+            await _notificationRepository.UpdateAsync(notification);
+
+            unreadCount = await GetUnreadCountAsync(userId);
+        }
+        else
+        {
+            var notifications =
+                await _notificationRepository.GetListAsync(o => o.Receiver == userId && o.IsRead == false);
+            foreach (var notification in notifications)
+            {
+                notification.IsRead = true;
+            }
+
+            await _notificationRepository.UpdateManyAsync(notifications);
+        }
+
+        await _hubService.ResponseAsync([userId],
+            new UnreadNotificationResponse()
+                { Data = new UnreadNotification(unreadCount: unreadCount) });
     }
 }

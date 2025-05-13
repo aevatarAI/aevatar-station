@@ -3,8 +3,8 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVerion>9.0.1</OrleansVerion>
-    <AevatarVerion>1.5.0-plugins.5</AevatarVerion>
-    <AevatarGAgentVerion>1.3.13</AevatarGAgentVerion>
+    <AevatarVerion>1.5.0-plugins.7</AevatarVerion>
+    <AevatarGAgentVerion>1.4.16-alpha-9+twitter1</AevatarGAgentVerion>
   </PropertyGroup>
   <ItemGroup>
     <!-- AElf packages -->
@@ -141,6 +141,8 @@
     <!-- MongoDB packages -->
     <PackageVersion Include="EphemeralMongo.Core" Version="1.1.3" />
     <PackageVersion Include="EphemeralMongo6.runtime.osx-x64" Version="1.1.3" />
+    <PackageVersion Include="EphemeralMongo6.runtime.linux-x64" Version="1.1.3" />
+    <PackageVersion Include="EphemeralMongo6.runtime.win-x64" Version="1.1.3" />
     <PackageVersion Include="MongoDB.Driver.Core.Extensions.DiagnosticSources" Version="1.0.0" />
     <PackageVersion Include="MongoDB.Driver" Version="2.29.0" />
     <PackageVersion Include="Orleans.Providers.MongoDB" Version="8.1.0" />
@@ -169,6 +171,7 @@
     <PackageVersion Include="xunit.extensibility.core" Version="2.7.0" />
     <PackageVersion Include="xunit.extensibility.execution" Version="2.7.0" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.5.7" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <!-- Aspire packages -->
     <PackageVersion Include="Aspire.Hosting" Version="9.1.0" />
     <PackageVersion Include="Aspire.Hosting.MongoDB" Version="9.1.0" />
@@ -194,7 +197,7 @@
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client.Core" Version="9.0.2" />
     <PackageVersion Include="MineAiFun.GAgents" Version="1.1.13" />
     <PackageVersion Include="Neo4j.Driver" Version="5.27.0" />
-    <PackageVersion Include="XWorkerAgent" Version="0.0.28" />
-    <PackageVersion Include="TelegramWorkerAgent" Version="0.0.8" />
+    <PackageVersion Include="XWorkerAgent" Version="0.0.79" />
+    <PackageVersion Include="TelegramWorkerAgent" Version="0.0.98" />
   </ItemGroup>
 </Project>
