@@ -284,17 +284,48 @@ public class AgentService : ApplicationService, IAgentService
             return result;
         }
 
-        result.AddRange(response.Items.Select(state => new AgentInstanceDto()
+        var getJsonSchema = async (string creatorId) =>
         {
-            Id = (string)state["id"],
-            Name = (string)state["name"],
-            Properties = state["properties"] == null
-                ? null
-                : JsonConvert.DeserializeObject<Dictionary<string, object>>((string)state["properties"]),
-            AgentType = (string)state["agentType"],
-            BusinessAgentGrainId =
-                state.TryGetValue("formattedBusinessAgentGrainId", out var value) ? (string)value : null
-        }));
+            if (creatorId.IsNullOrEmpty())
+            {
+                return string.Empty;
+            }
+
+            var creatorGAgent = await _gAgentFactory.GetGAgentAsync<ICreatorGAgent>(Guid.Parse(creatorId));
+            var creatorState = await creatorGAgent.GetStateAsync();
+            if (creatorState.BusinessAgentGrainId == default)
+            {
+                return string.Empty;
+            }
+            
+            var businessAgent = await _gAgentFactory.GetGAgentAsync(creatorState.BusinessAgentGrainId);
+            var initializationData = await GetAgentConfigurationAsync(businessAgent);
+            if (initializationData == null)
+            {
+                return string.Empty;
+            }
+
+            var jsonSchema = _schemaProvider.GetTypeSchema(initializationData.DtoType);
+            return jsonSchema.ToJson();
+        };
+
+        foreach (var state in response.Items)
+        {
+            var temp = new AgentInstanceDto()
+            {
+                Id = (string)state["id"],
+                Name = (string)state["name"],
+                Properties = state["properties"] == null
+                    ? null
+                    : JsonConvert.DeserializeObject<Dictionary<string, object>>((string)state["properties"]),
+                AgentType = (string)state["agentType"],
+                BusinessAgentGrainId =
+                    state.TryGetValue("formattedBusinessAgentGrainId", out var value) ? (string)value : null,
+                PropertyJsonSchema = await getJsonSchema((string)state["id"])
+            };
+
+            result.Add(temp);
+        }
 
         return result;
     }
