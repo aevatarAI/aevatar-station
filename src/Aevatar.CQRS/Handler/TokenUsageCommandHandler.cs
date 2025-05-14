@@ -17,9 +17,9 @@ public class TokenUsageCommandHandler : IRequestHandler<TokenUsageCommand>
 
     public async Task Handle(TokenUsageCommand request, CancellationToken cancellationToken)
     {
-        var indexName = _indexingService.GetIndexName("TokenUsage");
-        await _indexingService.TryCreateTokenUsageIndexAsync(indexName);
-
-        await _indexingService.SaveTokenUsageAsync(indexName, request.TokenUsages);
+        // var indexName = _indexingService.GetIndexName("TokenUsage");
+        // await _indexingService.TryCreateTokenUsageIndexAsync(indexName);
+        //
+        // await _indexingService.SaveTokenUsageAsync(indexName, request.TokenUsages);
     }
 }

@@ -19,10 +19,11 @@ public class TokenUsageQueryHandler: IRequestHandler<TokenUsageQueryCommand, Tup
 
     public async Task<Tuple<long, List<string>>?> Handle(TokenUsageQueryCommand request, CancellationToken cancellationToken)
     {
-        var indexName = _indexingService.GetIndexNameWithHostId(request.HostId, "TokenUsage");
-        await _indexingService.TryCreateTokenUsageIndexAsync(indexName);
-
-        return await _indexingService.QueryTokenUsageAsync(indexName, request.SystemLLM, request.StartTime,
-            request.EndTime, request.StatisticsAsHour);
+        return default;
+        // var indexName = _indexingService.GetIndexNameWithHostId(request.HostId, "TokenUsage");
+        // await _indexingService.TryCreateTokenUsageIndexAsync(indexName);
+        //
+        // return await _indexingService.QueryTokenUsageAsync(indexName, request.SystemLLM, request.StartTime,
+        //     request.EndTime, request.StatisticsAsHour);
     }
 }

@@ -78,6 +78,7 @@ public class ProjectService : OrganizationService, IProjectService
             AevatarPermissions.Roles.Create,
             AevatarPermissions.Roles.Edit,
             AevatarPermissions.Roles.Delete,
+            AevatarPermissions.Dashboard,
             AevatarPermissions.LLMSModels.Default,
             AevatarPermissions.ApiRequests.Default
         ];

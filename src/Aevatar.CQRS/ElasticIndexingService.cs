@@ -13,7 +13,6 @@ using Aevatar.Options;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.Core.Bulk;
 using Elastic.Clients.Elasticsearch.IndexManagement;
-using Elastic.Clients.Elasticsearch.Aggregations;
 using Elastic.Clients.Elasticsearch.QueryDsl;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -28,21 +27,20 @@ namespace Aevatar;
 
 public class ElasticIndexingService : IIndexingService, ISingletonDependency
 {
-    private readonly ElasticsearchClient _elasticClient;
+    private readonly ElasticsearchClient _client;
     private readonly ILogger<ElasticIndexingService> _logger;
     private const string CTime = "cTime";
     private const int DefaultSkip = 0;
     private const int DefaultLimit = 1000;
-    private bool IfCreateTokenUsage = false;
     private readonly ICQRSProvider _cqrsProvider;
     private readonly IMemoryCache _cache;
     private readonly IOptionsSnapshot<HostOptions> _options;
 
-    public ElasticIndexingService(ILogger<ElasticIndexingService> logger, ElasticsearchClient elasticClient,
+    public ElasticIndexingService(ILogger<ElasticIndexingService> logger, ElasticsearchClient client,
         ICQRSProvider cqrsProvider, IMemoryCache cache, IOptionsSnapshot<HostOptions> hostOptions)
     {
         _logger = logger;
-        _elasticClient = elasticClient;
+        _client = client;
         _cqrsProvider = cqrsProvider;
         _cache = cache;
         _options = hostOptions;
@@ -53,11 +51,6 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         return $"{CqrsConstant.IndexPrefix}-{_options.Value.HostId}-{index}{CqrsConstant.IndexSuffix}".ToLower();
     }
 
-    public string GetIndexNameWithHostId(string hostId, string index)
-    {
-        return $"{CqrsConstant.IndexPrefix}-{hostId}-{index}{CqrsConstant.IndexSuffix}".ToLower();
-    }
-
     public async Task CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase
     {
         var indexName = GetIndexName(stateBase.GetType().Name.ToLower());
@@ -66,7 +59,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
             return;
         }
 
-        var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
+        var indexExistsResponse = _client.Indices.Exists(indexName);
         if (!indexExistsResponse.Exists)
         {
             var createIndexResponse = await CreateIndexAsync<T>(indexName);
@@ -92,7 +85,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
 
     private async Task<CreateIndexResponse> CreateIndexAsync<T>(string indexName) where T : StateBase
     {
-        var createIndexResponse = await _elasticClient.Indices.CreateAsync(indexName, c => c
+        var createIndexResponse = await _client.Indices.CreateAsync(indexName, c => c
             .Mappings(m => m
                 .Properties<T>(props =>
                 {
@@ -106,7 +99,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                         if (propType == typeof(string))
                         {
                             props.Text(propertyName);
-                            props.Keyword(propertyName, k => k.IgnoreAbove(256));
+                           // props.Keyword(propertyName, k => k.IgnoreAbove(256));
                         }
                         else if (propType == typeof(short) || propType == typeof(int) || propType == typeof(long))
                         {
@@ -190,15 +183,30 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                 }
                 else
                 {
-                    document.Add(propertyName, value);
+                    document[propertyName] = value;
                 }
             }
 
             document["ctime"] = DateTime.UtcNow;
+            document["version"] = command.Version;
 
-            var item = new BulkIndexOperation<object>(document);
-            item.Id = id;
-            item.Index = indexName;
+            // Use BulkUpdateOperation with script-based version checking for updates
+            var item = new BulkUpdateOperation<Dictionary<string, object>, object>(id)
+            {
+                Index = indexName,
+                Script = new Script
+                {
+                    Source = "if (ctx.op == 'create' || ctx._source.version == null || params.version > ctx._source.version) { ctx._source = params.doc; } else { ctx.op = 'noop'; }",
+                    Params = new Dictionary<string, object>
+                    {
+                        ["version"] = document["version"],
+                        ["doc"] = document
+                    }
+                },
+                ScriptedUpsert = true,
+                Upsert = document
+            };
+
             bulkOperations.Add(item);
         }
 
@@ -208,7 +216,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
             Refresh = Refresh.WaitFor
         };
 
-        var response = await _elasticClient.BulkAsync(bulkRequest);
+        var response = await _client.BulkAsync(bulkRequest);
 
         ProcessBulkResponse(response);
     }
@@ -241,7 +249,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         var indexName = GetIndexName(stateName.ToLower());
         try
         {
-            var response = await _elasticClient.SearchAsync<dynamic>(s => s
+            var response = await _client.SearchAsync<dynamic>(s => s
                 .Index(indexName)
                 .Query(query)
                 .From(skip)
@@ -271,66 +279,6 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         {
             _logger.LogError(e, "state documents query Exception,indexName:{indexName}", indexName);
             throw;
-        }
-    }
-
-    public async Task TryCreateTokenUsageIndexAsync(string indexName)
-    {
-        if (IfCreateTokenUsage == true)
-        {
-            return;
-        }
-
-        var indexExistsResponse = _elasticClient.Indices.Exists(indexName);
-        if (indexExistsResponse.Exists)
-        {
-            IfCreateTokenUsage = true;
-            return;
-        }
-
-        var createIndexResponse = await _elasticClient.Indices.CreateAsync(indexName);
-        if (!createIndexResponse.IsValidResponse)
-        {
-            _logger.LogError(
-                $"[ElasticIndexingService][TryCreateTokenUsageIndexAsync] Create Index:{indexName} error, error response:{JsonConvert.SerializeObject(createIndexResponse)}");
-        }
-        else
-        {
-            _logger.LogInformation(
-                $"[ElasticIndexingService][TryCreateTokenUsageIndexAsync] Create {indexName} index success");
-
-            IfCreateTokenUsage = true;
-        }
-    }
-
-    public async Task SaveTokenUsageAsync(string indexName, List<CQRS.Dto.TokenUsage> tokenUsages)
-    {
-        var bulkRequest = new BulkRequest
-        {
-            Operations = new List<IBulkOperation>()
-        };
-
-        foreach (var item in tokenUsages)
-        {
-            var bulkDescriptor = new BulkIndexOperation<CQRS.Dto.TokenUsage>(item);
-            bulkDescriptor.Index = indexName;
-            bulkDescriptor.Id = Guid.NewGuid();
-            bulkRequest.Operations.Add(bulkDescriptor);
-        }
-
-        var bulkResponse = await _elasticClient.BulkAsync(bulkRequest);
-        if (!bulkResponse.IsValidResponse)
-        {
-            _logger.LogError(
-                "Save TokenUsage error, indexing documents error. Errors: {Errors}, DebugInfo: {DebugInfo}",
-                JsonConvert.SerializeObject(bulkResponse.ItemsWithErrors),
-                JsonConvert.SerializeObject(bulkResponse.DebugInformation)
-            );
-        }
-        else
-        {
-            _logger.LogDebug("Save TokenUsage Batch Successfully. Indexed {Count} documents.",
-                bulkResponse.Items.Count);
         }
     }
 
@@ -388,7 +336,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                 };
             }
 
-            var response = await _elasticClient.SearchAsync<Dictionary<string, object>>(searchRequest);
+            var response = await _client.SearchAsync<Dictionary<string, object>>(searchRequest);
 
             if (!response.IsValidResponse)
             {
@@ -414,81 +362,6 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
             _logger.LogError(ex, "[Lucene Query] Exception occurred. Index: {Index}", queryDto.StateName);
             throw new UserFriendlyException(ex.Message);
         }
-    }
-
-    public async Task<Tuple<long, List<string>>> QueryTokenUsageAsync(string indexName,
-        string systemLLM,
-        DateTime startTime,
-        DateTime endTime, bool statisticsAsHour)
-    {
-        var dateInterval = statisticsAsHour ? CalendarInterval.Hour : CalendarInterval.Day;
-        var dateHistogramName = "daily_usage";
-        var result = new List<string>();
-
-        var requestQuery = new QueryDescriptor<CQRS.Dto.TokenUsage>();
-
-        var queryCondition = new List< Elastic.Clients.Elasticsearch.QueryDsl.Query>();
-        var dateTimeQuery = new DateRangeQuery(new Field("creatTime"))
-        {
-            Gte = DateMath.Anchored(startTime),
-            Lte = DateMath.Anchored(endTime)
-        };
-        
-        var rangQuery = Elastic.Clients.Elasticsearch.QueryDsl.Query.Range(dateTimeQuery);
-        queryCondition.Add(rangQuery);
-        if (!string.IsNullOrEmpty(systemLLM))
-        {
-            var queryString = new QueryStringQuery
-            {
-                Query = systemLLM,
-                DefaultField = new Field("systemLLMConfig")
-            };
-
-            var queryStringQuery = Elastic.Clients.Elasticsearch.QueryDsl.Query.QueryString(queryString);
-            queryCondition.Add(queryStringQuery);
-        }
-
-        requestQuery = requestQuery.Bool(b => b.Must(queryCondition));
-
-        var response = await _elasticClient.SearchAsync<CQRS.Dto.TokenUsage>(s =>
-            s.Index(indexName)
-                .Size(0)
-                .Query(
-                    requestQuery
-                )
-                .Aggregations(a =>
-                    a.Add(dateHistogramName,
-                        agg =>
-                            agg.DateHistogram(dh => dh.Field(f => f.CreatTime).CalendarInterval(dateInterval))
-                                .Aggregations(sub => sub.Add("LastInputTokenUsage",
-                                        sum => sum.Sum(sdd => sdd.Field(f => f.LastInputTokenUsage)))
-                                    .Add("LastOutTokenUsage",
-                                        sum => sum.Sum(sdd => sdd.Field(f => f.LastOutTokenUsage)))
-                                ))
-                ));
-
-        if (response.IsValidResponse)
-        {
-            var dateHistogram = response.Aggregations!.GetDateHistogram(dateHistogramName);
-            foreach (var bucket in dateHistogram!.Buckets)
-            {
-                if (bucket.KeyAsString != null)
-                {
-                    DateTime date = DateTime.Parse(bucket.KeyAsString);
-
-                    var totalInput = bucket.Aggregations.GetSum("LastInputTokenUsage")!.Value ?? 0;
-                    var totalOutput = bucket.Aggregations.GetSum("LastOutTokenUsage")!.Value ?? 0;
-
-                    result.Add(JsonConvert.SerializeObject(new
-                        { TotalInputTokens = (int)totalInput, TotalOutputTokens = (int)totalOutput, Time = date }));
-                }
-            }
-
-            return new Tuple<long, List<string>>(result.Count, result);
-        }
-
-        _logger.LogError($"[ElasticIndexingService][QueryTokenUsageAsync] error:{response.DebugInformation}");
-        return new Tuple<long, List<string>>(0, new List<string>());
     }
 
     private static Dictionary<string, object?> ConvertJsonElementToDictionary(Dictionary<string, object?> source)

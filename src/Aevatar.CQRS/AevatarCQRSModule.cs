@@ -30,6 +30,7 @@ public class AevatarCQRSModule : AbpModule
         context.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(TokenUsageCommand).Assembly));
         context.Services.AddSingleton<IIndexingService, ElasticIndexingService>();
         context.Services.AddSingleton<ICQRSProvider, CQRSProvider>();
+        context.Services.UseElasticIndexingWithMetrics();
         var configuration = context.Services.GetConfiguration();
         ConfigureElasticsearch(context, configuration);
         Configure<ProjectorBatchOptions>(configuration.GetSection("ProjectorBatch"));

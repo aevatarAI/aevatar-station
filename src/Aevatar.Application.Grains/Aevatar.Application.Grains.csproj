@@ -20,6 +20,11 @@
         <PackageReference Include="Aevatar.GAgents.SemanticKernel"/>
         <PackageReference Include="Aevatar.PermissionManagement" />
         <PackageReference Include="Orleans.SyncWork" />
+
+
+        <PackageReference Include="Aevatar.GAgents.AI.Abstractions"/>
+        <PackageReference Include="Aevatar.GAgents.Twitter"/>
+
     </ItemGroup>
 
     <ItemGroup>
