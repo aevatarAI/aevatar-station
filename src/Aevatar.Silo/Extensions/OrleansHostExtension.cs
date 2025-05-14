@@ -204,10 +204,6 @@ public static class OrleansHostExtension
                 services.Configure<QdrantConfig>(context.Configuration.GetSection("VectorStores:Qdrant"));
 
                 // Register the SiloNamePatternPlacement director
-                services
-                    .AddPlacementDirector<Aevatar.Core.Placement.SiloNamePatternPlacement,
-                        Aevatar.Core.Placement.SiloNamePatternPlacementDirector>();
-
                 services.Configure<SystemLLMConfigOptions>(context.Configuration);
                 services.Configure<AzureOpenAIEmbeddingsConfig>(
                     context.Configuration.GetSection("AIServices:AzureOpenAIEmbeddings"));
