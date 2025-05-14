@@ -52,6 +52,7 @@ public class GodGPTController : AevatarController
         _logger = logger;
     }
 
+    [AllowAnonymous]
     [HttpGet("godgpt/query-version")]
     public Task<string> QueryVersion()
     {
