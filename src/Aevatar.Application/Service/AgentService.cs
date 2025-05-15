@@ -297,7 +297,7 @@ public class AgentService : ApplicationService, IAgentService
             {
                 return string.Empty;
             }
-            
+
             var businessAgent = await _gAgentFactory.GetGAgentAsync(creatorState.BusinessAgentGrainId);
             var initializationData = await GetAgentConfigurationAsync(businessAgent);
             if (initializationData == null)
@@ -311,6 +311,12 @@ public class AgentService : ApplicationService, IAgentService
 
         foreach (var state in response.Items)
         {
+            var agentType = (string)state["agentType"];
+            if (_agentOptions.CurrentValue.SystemAgentList.Exists(s => agentType.Contains(s)))
+            {
+                continue;
+            }
+
             var temp = new AgentInstanceDto()
             {
                 Id = (string)state["id"],
