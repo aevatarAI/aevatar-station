@@ -35,6 +35,7 @@ public interface IGodGPTService
     Task<Guid> DeleteAccountAsync(Guid currentUserId);
     Task<CreateShareIdResponse> GenerateShareContentAsync(Guid currentUserId, CreateShareIdRequest request);
     Task<List<ChatMessage>> GetShareMessageListAsync(string shareString);
+    Task UpdateShowToastAsync(Guid currentUserId);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -152,6 +153,12 @@ public class GodGPTService : ApplicationService, IGodGPTService
         var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
         var shareLinkDto = await manager.GetChatShareContentAsync(sessionId, shareId);
         return shareLinkDto.Messages;
+    }
+
+    public async Task UpdateShowToastAsync(Guid currentUserId)
+    {
+        var userQuotaGrain = _clusterClient.GetGrain<IUserQuotaGrain>(CommonHelper.GetUserQuotaGAgentId(currentUserId));
+        await userQuotaGrain.SetShownCreditsToastAsync(true);
     }
 }
 

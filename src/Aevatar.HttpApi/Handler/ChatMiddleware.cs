@@ -14,6 +14,7 @@ using Newtonsoft.Json;
 using Orleans;
 using Orleans.Runtime;
 using Orleans.Streams;
+using Volo.Abp;
 
 namespace Aevatar.Handler;
 
@@ -61,12 +62,14 @@ public class ChatMiddleware
             try
             {
                 var stopwatch = Stopwatch.StartNew();
-                _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}, userId {userId}");
-                
+                _logger.LogDebug(
+                    $"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}, userId {userId}");
+
                 var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
                 if (!await manager.IsUserSessionAsync(request.SessionId))
                 {
-                    _logger.LogError("[GodGPTController][ChatWithSessionAsync] sessionInfoIsNull sessionId={A}", request.SessionId);
+                    _logger.LogError("[GodGPTController][ChatWithSessionAsync] sessionInfoIsNull sessionId={A}",
+                        request.SessionId);
                     context.Response.StatusCode = StatusCodes.Status400BadRequest;
                     await context.Response.WriteAsync($"Unable to load conversation {request.SessionId}");
                     await context.Response.Body.FlushAsync();
@@ -105,11 +108,11 @@ public class ChatMiddleware
                         _logger.LogDebug(
                             $"[GodGPTController][ChatWithSessionAsync] SubscribeAsync get first message:{request.SessionId}, duration: {stopwatch.ElapsedMilliseconds}ms");
                     }
-                    
+
                     var responseData = $"data: {JsonConvert.SerializeObject(chatResponse.ConvertToHttpResponse())}\n\n";
                     await context.Response.WriteAsync(responseData);
                     await context.Response.Body.FlushAsync();
-                    
+
                     if (chatResponse.IsLastChunk)
                     {
                         await context.Response.WriteAsync("event: completed\n");
@@ -158,6 +161,24 @@ public class ChatMiddleware
 
                 _logger.LogDebug(
                     $"[GodGPTController][ChatWithSessionAsync] complete done sessionId:{request.SessionId}");
+            }
+            catch (UserFriendlyException e)
+            {
+                var statusCode = StatusCodes.Status500InternalServerError;
+                if (int.TryParse(e.Code, out var code))
+                {
+                    if (code == ExecuteActionStatus.InsufficientCredits.toString())
+                    {
+                        statusCode = StatusCodes.Status402PaymentRequired;
+                    } else if (code == ExecuteActionStatus.RateLimitExceeded.toString())
+                    {
+                        statusCode = StatusCodes.Status429TooManyRequests;
+                    }
+                }
+                context.Response.StatusCode = statusCode;
+                await context.Response.WriteAsync(e.Message);
+                await context.Response.Body.FlushAsync();
+                _logger.LogDebug("[GodGPTController][ChatWithSessionAsync] {0}", e.Message);
             }
             catch (Exception ex)
             {

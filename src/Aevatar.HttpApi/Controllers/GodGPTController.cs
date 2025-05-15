@@ -238,6 +238,17 @@ public class GodGPTController : AevatarController
         return deleteUserId;
     }
 
+    [HttpPost("godgpt/account/show-toast")]
+    public async Task<Guid> UpdateShowToastAsync()
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        await _godGptService.UpdateShowToastAsync(currentUserId);
+        _logger.LogDebug("[GodGPTController][UpdateShowToastAsync] userId: {0}, duration: {1}ms",
+            currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
+        return currentUserId;
+    }
+
     [HttpPost("godgpt/share")]
     public async Task<CreateShareIdResponse> CreateShareStringAsync(CreateShareIdRequest request)
     {
