@@ -15,6 +15,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="Stripe.net" />
         <PackageReference Include="Volo.Abp.Account.HttpApi" />
         <PackageReference Include="Volo.Abp.Identity.HttpApi" />
         <PackageReference Include="Volo.Abp.PermissionManagement.HttpApi" />
