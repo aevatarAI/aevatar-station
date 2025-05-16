@@ -19,7 +19,6 @@ using MongoDB.Driver;
 using Newtonsoft.Json;
 using Orleans.Configuration;
 using Orleans.Providers.MongoDB.Configuration;
-using Orleans.Runtime.Placement;
 using Orleans.Serialization;
 using Orleans.Streams.Kafka.Config;
 
@@ -202,6 +201,9 @@ public static class OrleansHostExtension
                 // services.Configure<AzureOpenAIConfig>(context.Configuration.GetSection("AIServices:AzureOpenAI"));
                 // services.Configure<AzureDeepSeekConfig>(context.Configuration.GetSection("AIServices:DeepSeek"));
                 services.Configure<QdrantConfig>(context.Configuration.GetSection("VectorStores:Qdrant"));
+                services
+                    .AddPlacementDirector<Aevatar.Core.Placement.SiloNamePatternPlacement,
+                        Aevatar.Core.Placement.SiloNamePatternPlacementDirector>();
 
                 // Register the SiloNamePatternPlacement director
                 services.Configure<SystemLLMConfigOptions>(context.Configuration);
