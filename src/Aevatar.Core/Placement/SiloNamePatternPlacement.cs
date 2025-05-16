@@ -167,8 +167,9 @@ namespace Aevatar.Core.Placement
 
             // Randomly select one of the matching silos
             var idx = Random.Shared.Next(matchingSilos.Count);
-            _logger.LogDebug("[SiloNamePatternPlacement] GrainId={GrainId}, Pattern={Pattern}, compatibleSiloCount={CompatibleSiloCount}, matchingSiloCount={MatchingCount}, idx ={Idx}",
-                target.GrainIdentity, siloNamePattern, compatibleSilos.Length, matchingSilos.Count,idx);
+            var hashIdx = Math.Abs(target.GrainIdentity.GetHashCode()) % matchingSilos.Count;
+            _logger.LogDebug("[SiloNamePatternPlacement] GrainId={GrainId}, Pattern={Pattern}, compatibleSiloCount={CompatibleSiloCount}, matchingSiloCount={MatchingCount}, idx ={Idx},hashIdx = {hashIdx}",
+                target.GrainIdentity, siloNamePattern, compatibleSilos.Length, matchingSilos.Count,idx,hashIdx);
             return Task.FromResult(matchingSilos[idx]);
         }
     }
