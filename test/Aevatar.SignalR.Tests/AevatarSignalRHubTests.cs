@@ -29,6 +29,15 @@ public class AevatarSignalRHubTests
         _mockClients = new Mock<IHubCallerClients>();
         _mockClientProxy = new Mock<IClientProxy>();
         _mockSingleClientProxy = new Mock<ISingleClientProxy>();
+        
+        // Setup logger to handle any log method without throwing exceptions
+        _mockLogger.Setup(x => x.Log(
+            It.IsAny<LogLevel>(),
+            It.IsAny<EventId>(),
+            It.IsAny<It.IsAnyType>(),
+            It.IsAny<Exception>(),
+            It.IsAny<Func<It.IsAnyType, Exception, string>>()))
+        .Callback(() => { });
     }
 
     [Fact]
@@ -46,6 +55,10 @@ public class AevatarSignalRHubTests
         var connectionId = "test-connection-id";
         var groupName = Guid.Empty.ToString();
         _mockContext.Setup(c => c.ConnectionId).Returns(connectionId);
+        
+        // Setup context properties used in logging
+        _mockContext.Setup(c => c.User).Returns((System.Security.Claims.ClaimsPrincipal)null);
+        _mockContext.Setup(c => c.Items).Returns(new Dictionary<object, object>());
 
         // Act
         await hub.OnConnectedAsync();
