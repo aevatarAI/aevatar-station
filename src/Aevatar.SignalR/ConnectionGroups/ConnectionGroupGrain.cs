@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.SignalR.Protocol;
 using Orleans.Runtime;
 using Orleans.Streams;
-using System.Collections.Immutable;
 
 namespace Aevatar.SignalR.ConnectionGroups;
 
@@ -78,24 +77,15 @@ internal sealed class ConnectionGroupGrain : IConnectionGroupGrain, IGrainBase
     public Task<int> Count()
       => Task.FromResult(_state.State.ConnectionIds.Count);
 
-    // 在[ReadOnly]方法中使用不可变集合保证线程安全
+    // NB: Interface method is marked [ReadOnly] so this method will be re-entrant/interleaved.
     public Task Send([Immutable] InvocationMessage message)
-    {
-        // 创建一个不可变副本，确保在使用过程中不会被修改
-        var connectionIds = _state.State.ConnectionIds.ToImmutableHashSet();
-        return SendAll(message, connectionIds);
-    }
+      => SendAll(message, _state.State.ConnectionIds);
 
-    // 在[ReadOnly]方法中使用不可变集合保证线程安全
+    // NB: Interface method is marked [ReadOnly] so this method will be re-entrant/interleaved.
     public Task SendExcept(string methodName, object?[] args, IEnumerable<string> excludedConnectionIds)
     {
         var message = new InvocationMessage(methodName, args);
-        
-        // 创建一个不可变副本，并排除指定的连接ID
-        var connectionIds = _state.State.ConnectionIds.ToImmutableHashSet()
-            .Except(excludedConnectionIds);
-            
-        return SendAll(message, connectionIds);
+        return SendAll(message, _state.State.ConnectionIds.Except(excludedConnectionIds));
     }
 
     private Task SendAll([Immutable] InvocationMessage message, IEnumerable<string> connectionIds)
