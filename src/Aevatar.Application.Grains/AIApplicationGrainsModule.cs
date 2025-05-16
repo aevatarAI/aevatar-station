@@ -11,7 +11,8 @@ namespace Aevatar.Application.Grains;
     typeof(AbpAutoMapperModule),
     typeof(AbpEventBusModule),
     typeof(AevatarApplicationContractsModule),
-    typeof(AevatarCQRSModule)
+    typeof(AevatarCQRSModule),
+    typeof(GodGPTGAgentModule)
 )]
 public class AIApplicationGrainsModule : AbpModule
  
