@@ -117,59 +117,86 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
     /// <returns>The agent instance for fluent chaining</returns>
     protected async Task AddSubscriptionAsync<T>(string agentType, Func<T, Task> eventHandler) where T : EventBase
     {
-        var stream = GenStream<T>(agentType);
-
-        var logger = ServiceProvider.GetService<ILoggerFactory>()?.CreateLogger<EventWrapperBaseAsyncObserver>();
-        if (logger == null)
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var stepTimings = new List<(string Step, long Ms)>();
+        long lastMs = 0;
+        try
         {
-            Logger.LogWarning("[{0}.{1}]EventWrapperBaseAsyncObserver Logger is null", this.GetType().Name, nameof(AddSubscriptionAsync));
-        }
+            // Step 1: Generate stream
+            var stream = GenStream<T>(agentType);
+            stepTimings.Add(("GenStream", stopwatch.ElapsedMilliseconds - lastMs));
+            lastMs = stopwatch.ElapsedMilliseconds;
 
-        // Create an observer that will handle the events
-        var observer = EventWrapperBaseAsyncObserver.Create(
-            async item =>
+            // Step 2: Get logger
+            var logger = ServiceProvider.GetService<ILoggerFactory>()?.CreateLogger<EventWrapperBaseAsyncObserver>();
+            stepTimings.Add(("GetLogger", stopwatch.ElapsedMilliseconds - lastMs));
+            lastMs = stopwatch.ElapsedMilliseconds;
+            if (logger == null)
             {
-                var eventWrapper = item as EventWrapper<T>;
-                if (eventWrapper == null)
+                Logger.LogWarning("[{0}.{1}]EventWrapperBaseAsyncObserver Logger is null", this.GetType().Name, nameof(AddSubscriptionAsync));
+            }
+
+            // Step 3: Create observer
+            var observer = EventWrapperBaseAsyncObserver.Create(
+                async item =>
                 {
-                    Logger.LogWarning("[{0}.{1}]EventWrapperBaseAsyncObserver eventWrapper is null", this.GetType().Name, nameof(AddSubscriptionAsync));
-                    return;
+                    var eventWrapper = item as EventWrapper<T>;
+                    if (eventWrapper == null)
+                    {
+                        Logger.LogWarning("[{0}.{1}]EventWrapperBaseAsyncObserver eventWrapper is null", this.GetType().Name, nameof(AddSubscriptionAsync));
+                        return;
+                    }
+                    await eventHandler.Invoke(eventWrapper.Event);
+                }, ServiceProvider, eventHandler.Method.Name, typeof(T).Name);
+            stepTimings.Add(("CreateObserver", stopwatch.ElapsedMilliseconds - lastMs));
+            lastMs = stopwatch.ElapsedMilliseconds;
+
+            // Step 4: Check/Resume handle if exists
+            var key = GetStreamIdString<T>(agentType);
+            StreamSubscriptionHandle<EventWrapperBase> handle = null;
+            if (State.Subscription.TryGetValue(key, out Guid handleId))
+            {
+                Logger.LogWarning("[{0}.{1}]Subscription {2} already exists", this.GetType().Name, nameof(AddSubscriptionAsync), key);
+                var handles = await stream.GetAllSubscriptionHandles();
+                var resumeHandles = handles.Where(h => h.HandleId == handleId).ToList();
+                if (resumeHandles.IsNullOrEmpty())
+                {
+                    Logger.LogWarning("[{0}.{1}]Unable to locate handle {2} to be resumed, continue to subscribe", this.GetType().Name, nameof(AddSubscriptionAsync), handleId);
                 }
-
-                await eventHandler.Invoke(eventWrapper.Event);
-            }, ServiceProvider, eventHandler.Method.Name, typeof(T).Name);
-
-        var key = GetStreamIdString<T>(agentType);
-
-        StreamSubscriptionHandle<EventWrapperBase> handle;
-        
-        if (State.Subscription.TryGetValue(key, out Guid handleId))
-        {
-            Logger.LogWarning("[{0}.{1}]Subscription {2} already exists", this.GetType().Name, nameof(AddSubscriptionAsync), key);
-            var handles = await stream.GetAllSubscriptionHandles();
-            var resumeHandles = handles.Where(h => h.HandleId == handleId).ToList();
-            if (resumeHandles.IsNullOrEmpty())
-            {
-                Logger.LogWarning("[{0}.{1}]Unable to locate handle {2} to be resumed, continue to subscribe", this.GetType().Name, nameof(AddSubscriptionAsync), handleId);
+                else if (resumeHandles.Count > 1)
+                {
+                    Logger.LogError("[{0}.{1}]Multiple handles found for {2} to be resumed", this.GetType().Name, nameof(AddSubscriptionAsync), handleId);
+                    throw new InvalidOperationException($"Multiple handles found for {handleId} to be resumed");
+                }
+                else
+                {
+                    handle = await resumeHandles.First().ResumeAsync(observer);
+                }
+                stepTimings.Add(("Check/ResumeHandle", stopwatch.ElapsedMilliseconds - lastMs));
+                lastMs = stopwatch.ElapsedMilliseconds;
             }
-            else if (resumeHandles.Count > 1)
+
+            // Step 5: Subscribe stream
+            if (handle == null)
             {
-                Logger.LogError("[{0}.{1}]Multiple handles found for {2} to be resumed", this.GetType().Name, nameof(AddSubscriptionAsync), handleId);
-                throw new InvalidOperationException($"Multiple handles found for {handleId} to be resumed");
+                handle = await stream.SubscribeAsync(observer);
+                stepTimings.Add(("SubscribeAsync", stopwatch.ElapsedMilliseconds - lastMs));
+                lastMs = stopwatch.ElapsedMilliseconds;
             }
-            else
-            {
-                handle = await resumeHandles.First().ResumeAsync(observer);
-            }
+
+            // Step 6: Update pending collections
+            Logger.LogInformation("[{0}.{1}]Subscription {2} created", this.GetType().Name, nameof(AddSubscriptionAsync), key);
+            _pendingSubscriptions[key] = handle.HandleId;
+            _pendingHandles[key] = handle;
+            stepTimings.Add(("UpdatePendingCollections", stopwatch.ElapsedMilliseconds - lastMs));
         }
-
-        handle = await stream.SubscribeAsync(observer);
-        
-        Logger.LogInformation("[{0}.{1}]Subscription {2} created", this.GetType().Name, nameof(AddSubscriptionAsync), key);
-        
-        // Add to pending collections
-        _pendingSubscriptions[key] = handle.HandleId;
-        _pendingHandles[key] = handle;
+        finally
+        {
+            stopwatch.Stop();
+            var total = stopwatch.ElapsedMilliseconds;
+            var steps = string.Join(", ", stepTimings.Select(s => $"{s.Step}: {s.Ms}ms"));
+            Logger.LogDebug("[AddSubscriptionAsync] {0}.{1}]Step timings: {2}, Total: {3}ms", this.GetType().Name, nameof(AddSubscriptionAsync), steps, total);
+        }
     }
 
     /// <summary>
