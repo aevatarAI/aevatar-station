@@ -4,8 +4,6 @@ using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.SignalR.Core;
 using Microsoft.Extensions.Logging;
-using Orleans.Runtime;
-using Orleans.Timers;
 using Newtonsoft.Json;
 
 namespace Aevatar.SignalR.GAgents;
@@ -15,7 +13,6 @@ public class SignalRGAgentState : StateBase
 {
     [Id(1)] public Dictionary<string, bool> ConnectionIds { get; set; } = new();
     [Id(2)] public Dictionary<Guid, string> ConnectionIdMap { get; set; } = new();
-    [Id(3)] public Queue<ResponseToPublisherEventBase> MessageQueue { get; set; } = new();
 }
 
 [GenerateSerializer]
@@ -33,10 +30,8 @@ public class SignalRGAgent :
     ISignalRGAgent
 {
     private readonly HubContext<AevatarSignalRHub> _hubContext;
-    private IDisposable? _processQueueTimer;
-    private readonly TimeSpan _processQueueInterval = TimeSpan.FromSeconds(1);
-    private const int MaxMessagesPerBatch = 20;
-    private bool _isProcessingQueue;
+
+    private Channel<ResponseToPublisherEventBase> _signalRMessageChannel;
 
     public SignalRGAgent(IGrainFactory grainFactory)
     {
@@ -48,50 +43,25 @@ public class SignalRGAgent :
         return Task.FromResult("SignalR Publisher.");
     }
 
-    protected override Task OnGAgentActivateAsync(CancellationToken cancellationToken)
+    protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)
     {
-        _processQueueTimer = RegisterTimer(
-            ProcessQueueTimerCallback,
-            null,
-            TimeSpan.Zero,
-            _processQueueInterval);
-            
-        return Task.CompletedTask;
+        _signalRMessageChannel = Channel.CreateUnbounded<ResponseToPublisherEventBase>();
+        StartProcessingQueue();
     }
 
-    private async Task ProcessQueueTimerCallback(object state)
+    private void StartProcessingQueue()
     {
-        await ProcessQueueAsync();
-    }
-
-    private async Task ProcessQueueAsync()
-    {
-        if (_isProcessingQueue) return;
-        
-        try
+        var reader = _signalRMessageChannel.Reader;
+        Task.Run(async () =>
         {
-            _isProcessingQueue = true;
-            
-            var messagesToProcess = new List<ResponseToPublisherEventBase>();
-            int count = 0;
-            
-            while (State.MessageQueue.Count > 0 && count < MaxMessagesPerBatch)
+            while (await reader.WaitToReadAsync())
             {
-                messagesToProcess.Add(State.MessageQueue.Dequeue());
-                count++;
+                while (reader.TryRead(out var msg))
+                {
+                    await SendWithRetryAsync(msg);
+                }
             }
-            
-            await ConfirmEvents();
-            
-            foreach (var message in messagesToProcess)
-            {
-                await SendWithRetryAsync(message);
-            }
-        }
-        finally
-        {
-            _isProcessingQueue = false;
-        }
+        });
     }
 
     private async Task SendWithRetryAsync(object message)
@@ -101,7 +71,7 @@ public class SignalRGAgent :
         {
             try
             {
-                var connectionIdList = new Dictionary<string, bool>(State.ConnectionIds);
+                var connectionIdList = State.ConnectionIds;
                 foreach (var (connectionId, fireAndForget) in connectionIdList)
                 {
                     Logger.LogInformation("Sending message to connectionId: {ConnectionId}, Message {Message}",
@@ -139,13 +109,9 @@ public class SignalRGAgent :
         }
     }
 
-    private Task EnqueueMessageAsync(ResponseToPublisherEventBase message)
+    private async Task EnqueueMessageAsync(ResponseToPublisherEventBase message)
     {
-        RaiseEvent(new EnqueueMessageStateLogEvent
-        {
-            Message = message
-        });
-        return ConfirmEvents();
+        await _signalRMessageChannel.Writer.WriteAsync(message);
     }
 
     public async Task PublishEventAsync<T>(T @event, string connectionId) where T : EventBase
@@ -262,16 +228,7 @@ public class SignalRGAgent :
                 State.ConnectionIdMap[mapCorrelationIdToConnectionIdStateLogEvent.CorrelationId] =
                     mapCorrelationIdToConnectionIdStateLogEvent.ConnectionId;
                 break;
-            case EnqueueMessageStateLogEvent enqueueMessageStateLogEvent:
-                State.MessageQueue.Enqueue(enqueueMessageStateLogEvent.Message);
-                break;
         }
-    }
-
-    public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
-    {
-        _processQueueTimer?.Dispose();
-        return Task.CompletedTask;
     }
 
     [GenerateSerializer]
@@ -292,11 +249,5 @@ public class SignalRGAgent :
     {
         [Id(0)] public Guid CorrelationId { get; set; }
         [Id(1)] public string ConnectionId { get; set; }
-    }
-    
-    [GenerateSerializer]
-    public class EnqueueMessageStateLogEvent : SignalRStateLogEvent
-    {
-        [Id(0)] public ResponseToPublisherEventBase Message { get; set; }
     }
 }
