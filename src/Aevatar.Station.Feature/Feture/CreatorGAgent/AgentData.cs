@@ -1,9 +1,4 @@
-using System;
-using System.Collections.Generic;
-using Orleans;
-using Orleans.Runtime;
-
-namespace Aevatar.Agents.Creator.Models;
+namespace Aevatar.Station.Feature.CreatorGAgent;
 
 [GenerateSerializer]
 public class AgentData

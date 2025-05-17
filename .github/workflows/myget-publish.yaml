@@ -21,7 +21,8 @@ jobs:
       matrix:
         servicename: [
           Aevatar.CQRS,
-          Aevatar.WebHook.SDK
+          Aevatar.WebHook.SDK,
+          Aevatar.Station.Feature
         ]
     steps:
       - name: Checkout code
