@@ -31,7 +31,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Aevatar.Station.Feature\Aevatar.Station.Feature\Aevatar.Station.Feature.csproj" />
+    <ProjectReference Include="..\Aevatar.Station.Feature\Aevatar.Station.Feature.csproj" />
   </ItemGroup>
 
 </Project>
