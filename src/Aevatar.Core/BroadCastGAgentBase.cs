@@ -118,25 +118,18 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
     protected async Task AddSubscriptionAsync<T>(string agentType, Func<T, Task> eventHandler) where T : EventBase
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        var stepTimings = new List<(string Step, long Ms)>();
-        long lastMs = 0;
+        long getHandlesCost = 0;
+        long resumeCost = 0;
+        long subscribeCost = 0;
+        StreamSubscriptionHandle<EventWrapperBase> handle = null;
         try
         {
-            // Step 1: Generate stream
             var stream = GenStream<T>(agentType);
-            stepTimings.Add(("GenStream", stopwatch.ElapsedMilliseconds - lastMs));
-            lastMs = stopwatch.ElapsedMilliseconds;
-
-            // Step 2: Get logger
             var logger = ServiceProvider.GetService<ILoggerFactory>()?.CreateLogger<EventWrapperBaseAsyncObserver>();
-            stepTimings.Add(("GetLogger", stopwatch.ElapsedMilliseconds - lastMs));
-            lastMs = stopwatch.ElapsedMilliseconds;
             if (logger == null)
             {
                 Logger.LogWarning("[{0}.{1}]EventWrapperBaseAsyncObserver Logger is null", this.GetType().Name, nameof(AddSubscriptionAsync));
             }
-
-            // Step 3: Create observer
             var observer = EventWrapperBaseAsyncObserver.Create(
                 async item =>
                 {
@@ -148,16 +141,14 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
                     }
                     await eventHandler.Invoke(eventWrapper.Event);
                 }, ServiceProvider, eventHandler.Method.Name, typeof(T).Name);
-            stepTimings.Add(("CreateObserver", stopwatch.ElapsedMilliseconds - lastMs));
-            lastMs = stopwatch.ElapsedMilliseconds;
 
-            // Step 4: Check/Resume handle if exists
             var key = GetStreamIdString<T>(agentType);
-            StreamSubscriptionHandle<EventWrapperBase> handle = null;
             if (State.Subscription.TryGetValue(key, out Guid handleId))
             {
                 Logger.LogWarning("[{0}.{1}]Subscription {2} already exists", this.GetType().Name, nameof(AddSubscriptionAsync), key);
+                var getHandlesStart = stopwatch.ElapsedMilliseconds;
                 var handles = await stream.GetAllSubscriptionHandles();
+                getHandlesCost = stopwatch.ElapsedMilliseconds - getHandlesStart;
                 var resumeHandles = handles.Where(h => h.HandleId == handleId).ToList();
                 if (resumeHandles.IsNullOrEmpty())
                 {
@@ -170,32 +161,25 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
                 }
                 else
                 {
+                    var resumeStart = stopwatch.ElapsedMilliseconds;
                     handle = await resumeHandles.First().ResumeAsync(observer);
+                    resumeCost = stopwatch.ElapsedMilliseconds - resumeStart;
+                    _pendingHandles[key] = handle; // Only update _pendingHandles for resume
+                    return;
                 }
-                stepTimings.Add(("Check/ResumeHandle", stopwatch.ElapsedMilliseconds - lastMs));
-                lastMs = stopwatch.ElapsedMilliseconds;
             }
 
-            // Step 5: Subscribe stream
-            if (handle == null)
-            {
-                handle = await stream.SubscribeAsync(observer);
-                stepTimings.Add(("SubscribeAsync", stopwatch.ElapsedMilliseconds - lastMs));
-                lastMs = stopwatch.ElapsedMilliseconds;
-            }
-
-            // Step 6: Update pending collections
-            Logger.LogInformation("[{0}.{1}]Subscription {2} created", this.GetType().Name, nameof(AddSubscriptionAsync), key);
+            var subscribeStart = stopwatch.ElapsedMilliseconds;
+            handle = await stream.SubscribeAsync(observer);
+            subscribeCost = stopwatch.ElapsedMilliseconds - subscribeStart;
             _pendingSubscriptions[key] = handle.HandleId;
             _pendingHandles[key] = handle;
-            stepTimings.Add(("UpdatePendingCollections", stopwatch.ElapsedMilliseconds - lastMs));
+            Logger.LogInformation("[{0}.{1}]Subscription {2} created", this.GetType().Name, nameof(AddSubscriptionAsync), key);
         }
         finally
         {
             stopwatch.Stop();
-            var total = stopwatch.ElapsedMilliseconds;
-            var steps = string.Join(", ", stepTimings.Select(s => $"{s.Step}: {s.Ms}ms"));
-            Logger.LogDebug("[AddSubscriptionAsync] {0}.{1}]Step timings: {2}, Total: {3}ms", this.GetType().Name, nameof(AddSubscriptionAsync), steps, total);
+            Logger.LogDebug("[{0}.{1} AddSubscriptionAsync]Timing: GetAllSubscriptionHandles: {2}ms, ResumeAsync: {3}ms, SubscribeAsync: {4}ms", this.GetType().Name, nameof(AddSubscriptionAsync), getHandlesCost, resumeCost, subscribeCost);
         }
     }
 
