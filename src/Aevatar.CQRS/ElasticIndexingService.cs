@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -35,6 +37,23 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
     private readonly ICQRSProvider _cqrsProvider;
     private readonly IMemoryCache _cache;
     private readonly IOptionsSnapshot<HostOptions> _options;
+
+    private static readonly HashSet<Type> SupportedCollectionTypes = new()
+    {
+        typeof(List<>),
+        typeof(IList<>),
+        typeof(IEnumerable<>),
+        typeof(ICollection<>),
+        typeof(HashSet<>),
+        typeof(Array),
+        typeof(ReadOnlyCollection<>),
+        typeof(Queue<>),
+        typeof(Stack<>),
+        typeof(ConcurrentBag<>),
+        typeof(IReadOnlyCollection<>),
+        typeof(IReadOnlyList<>),
+        typeof(ISet<>),
+    };
 
     public ElasticIndexingService(ILogger<ElasticIndexingService> logger, ElasticsearchClient client,
         ICQRSProvider cqrsProvider, IMemoryCache cache, IOptionsSnapshot<HostOptions> hostOptions)
@@ -143,6 +162,16 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
     private static bool IsBasicType(Type type)
     {
         Type underlyingType = Nullable.GetUnderlyingType(type) ?? type;
+
+        if (underlyingType.IsGenericType)
+        {
+            var genericDef = underlyingType.GetGenericTypeDefinition();
+            if (SupportedCollectionTypes.Contains(genericDef))
+            {
+                var itemType = underlyingType.GetGenericArguments()[0];
+                return IsBasicType(itemType);
+            }
+        }
 
         if (underlyingType.IsPrimitive)
             return true;
