@@ -163,10 +163,10 @@ public class ChatMiddleware
                 _logger.LogDebug(
                     $"[GodGPTController][ChatWithSessionAsync] complete done sessionId:{request.SessionId}");
             }
-            catch (UserFriendlyException e)
+            catch (InvalidOperationException e)
             {
                 var statusCode = StatusCodes.Status500InternalServerError;
-                if (int.TryParse(e.Code, out var code))
+                if (e.Data.Contains("Code") && int.TryParse((string)e.Data["Code"], out var code))
                 {
                     if (code == ExecuteActionStatus.InsufficientCredits)
                     {
