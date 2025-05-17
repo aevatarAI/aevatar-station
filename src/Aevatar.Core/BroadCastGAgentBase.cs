@@ -192,7 +192,7 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
         if (!_pendingSubscriptions.Any())
         {
             Logger.LogWarning("[{0}.{1}]No pending subscriptions to save", this.GetType().Name, nameof(SaveBatchSubscriptionsAsync));
-            return new Dictionary<string, StreamSubscriptionHandle<EventWrapperBase>>();
+            return new Dictionary<string, StreamSubscriptionHandle<EventWrapperBase>>(_pendingHandles);
         }
 
         var subscribeBatchEvent = new SubscribeBatchStateLogEvent
