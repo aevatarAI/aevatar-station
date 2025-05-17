@@ -5,8 +5,13 @@ using Aevatar.Application.Grains.Agents.ChatManager;
 using Aevatar.Application.Grains.Agents.ChatManager.Common;
 using Aevatar.Application.Grains.Agents.ChatManager.ConfigAgent;
 using Aevatar.Application.Grains.Agents.ChatManager.Dtos;
+using Aevatar.Application.Grains.ChatManager.Dtos;
+using Aevatar.Application.Grains.ChatManager.UserBilling;
+using Aevatar.Application.Grains.ChatManager.UserQuota;
+using Aevatar.Application.Grains.Common.Constants;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
+using Aevatar.GodGPT.Dtos;
 using Aevatar.Quantum;
 using Microsoft.Extensions.Logging;
 using Orleans;
@@ -20,13 +25,15 @@ namespace Aevatar.Service;
 public interface IGodGPTService
 {
     Task<Guid> CreateSessionAsync(Guid userId, string systemLLM, string prompt);
+
     Task<Tuple<string, string>> ChatWithSessionAsync(Guid userId, Guid sessionId, string sysmLLM, string content,
         ExecutionPromptSettings promptSettings = null);
+
     Task<List<SessionInfoDto>> GetSessionListAsync(Guid userId);
     Task<List<ChatMessage>> GetSessionMessageListAsync(Guid userId, Guid sessionId);
     Task<Guid> DeleteSessionAsync(Guid userId, Guid sessionId);
     Task<Guid> RenameSessionAsync(Guid userId, Guid sessionId, string title);
-    
+
     Task<string> GetSystemPromptAsync();
     Task UpdateSystemPromptAsync(GodGPTConfigurationDto godGptConfigurationDto);
 
@@ -36,6 +43,8 @@ public interface IGodGPTService
     Task<CreateShareIdResponse> GenerateShareContentAsync(Guid currentUserId, CreateShareIdRequest request);
     Task<List<ChatMessage>> GetShareMessageListAsync(string shareString);
     Task UpdateShowToastAsync(Guid currentUserId);
+    Task<List<StripeProductDto>> GetStripeProductsAsync(Guid currentUserId);
+    Task<string> CreateCheckoutSessionAsync(Guid currentUserId, CreateCheckoutSessionInput createCheckoutSessionInput);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -91,14 +100,16 @@ public class GodGPTService : ApplicationService, IGodGPTService
 
     public Task<string> GetSystemPromptAsync()
     {
-        var configurationAgent = _clusterClient.GetGrain<IConfigurationGAgent>(CommonHelper.GetSessionManagerConfigurationId());
-        return  configurationAgent.GetPrompt();
+        var configurationAgent =
+            _clusterClient.GetGrain<IConfigurationGAgent>(CommonHelper.GetSessionManagerConfigurationId());
+        return configurationAgent.GetPrompt();
     }
 
     public Task UpdateSystemPromptAsync(GodGPTConfigurationDto godGptConfigurationDto)
     {
-        var configurationAgent = _clusterClient.GetGrain<IConfigurationGAgent>(CommonHelper.GetSessionManagerConfigurationId());
-        return  configurationAgent.UpdateSystemPromptAsync(godGptConfigurationDto.SystemPrompt);
+        var configurationAgent =
+            _clusterClient.GetGrain<IConfigurationGAgent>(CommonHelper.GetSessionManagerConfigurationId());
+        return configurationAgent.UpdateSystemPromptAsync(godGptConfigurationDto.SystemPrompt);
     }
 
     public async Task<UserProfileDto> GetUserProfileAsync(Guid currentUserId)
@@ -110,14 +121,14 @@ public class GodGPTService : ApplicationService, IGodGPTService
     public async Task<Guid> SetUserProfileAsync(Guid currentUserId, UserProfileDto userProfileDto)
     {
         var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
-        return await manager.SetUserProfileAsync(userProfileDto.Gender, userProfileDto.BirthDate, userProfileDto.BirthPlace, userProfileDto.FullName);
+        return await manager.SetUserProfileAsync(userProfileDto.Gender, userProfileDto.BirthDate,
+            userProfileDto.BirthPlace, userProfileDto.FullName);
     }
 
     public async Task<Guid> DeleteAccountAsync(Guid currentUserId)
     {
         var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
         return await manager.ClearAllAsync();
-
     }
 
     public async Task<CreateShareIdResponse> GenerateShareContentAsync(Guid currentUserId, CreateShareIdRequest request)
@@ -149,7 +160,7 @@ public class GodGPTService : ApplicationService, IGodGPTService
             _logger.LogError(e, "Invalid Share string. {0}", shareString);
             throw new UserFriendlyException("Invalid Share string");
         }
-        
+
         var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
         var shareLinkDto = await manager.GetChatShareContentAsync(sessionId, shareId);
         return shareLinkDto.Messages;
@@ -159,6 +170,29 @@ public class GodGPTService : ApplicationService, IGodGPTService
     {
         var userQuotaGrain = _clusterClient.GetGrain<IUserQuotaGrain>(CommonHelper.GetUserQuotaGAgentId(currentUserId));
         await userQuotaGrain.SetShownCreditsToastAsync(true);
+    }
+
+    public async Task<List<StripeProductDto>> GetStripeProductsAsync(Guid currentUserId)
+    {
+        var userBillingGrain =
+            _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(currentUserId));
+        return await userBillingGrain.GetStripeProductsAsync();
+    }
+
+    public async Task<string> CreateCheckoutSessionAsync(Guid currentUserId,
+        CreateCheckoutSessionInput createCheckoutSessionInput)
+    {
+        var userBillingGrain =
+            _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(currentUserId));
+        var result = await userBillingGrain.CreateCheckoutSessionAsync(new CreateCheckoutSessionDto
+        {
+            UserId = currentUserId.ToString(),
+            PriceId = createCheckoutSessionInput.PriceId,
+            Mode = createCheckoutSessionInput.Mode ?? PaymentMode.SUBSCRIPTION,
+            Quantity = createCheckoutSessionInput.Quantity <= 0 ? 1 : createCheckoutSessionInput.Quantity,
+            UiMode = createCheckoutSessionInput.UiMode ?? StripeUiMode.HOSTED
+        });
+        return result;
     }
 }
 
@@ -175,7 +209,7 @@ public static class GuidCompressor
             .Replace("=", "");
         return base64;
     }
-    
+
     public static (Guid, Guid, Guid) DecompressGuids(string compressedString)
     {
         var restoredBase64 = compressedString
@@ -194,7 +228,7 @@ public static class GuidCompressor
 
         return (new Guid(guid1Bytes), new Guid(guid2Bytes), new Guid(guid3Bytes));
     }
-    
+
     private static byte[] CombineBytes(byte[] bytes1, byte[] bytes2)
     {
         var combined = new byte[bytes1.Length + bytes2.Length];

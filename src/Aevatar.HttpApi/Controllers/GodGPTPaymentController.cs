@@ -1,97 +1,90 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
-using System.Security.Claims;
 using System.Threading.Tasks;
+using Aevatar.Application.Grains.ChatManager.Dtos;
+using Aevatar.Application.Grains.Common.Constants;
 using Aevatar.Application.Grains.Payment;
-using Aevatar.Options;
-using Aevatar.Payment;
+using Aevatar.GodGPT.Dtos;
+using Aevatar.Service;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
+using OpenIddict.Abstractions;
 using Orleans;
 using Stripe;
-using Stripe.Checkout;
 using Volo.Abp;
+using Volo.Abp.Security.Claims;
+using PaymentStatus = Aevatar.Payment.PaymentStatus;
 
 namespace Aevatar.Controllers;
 
 [RemoteService]
 [ControllerName("Payment")]
 [Route("api/godgpt/payment")]
-// [Authorize]
-public class PaymentController  : AevatarController
+[Authorize]
+public class GodGPTPaymentController : AevatarController
 {
-    private readonly IOptionsMonitor<StripeOptions> _options;
-    private readonly IStripeClient _client;
+    private readonly ILogger<GodGPTPaymentController> _logger;
     private readonly IClusterClient _clusterClient;
+    private readonly IGodGPTService _godGptService;
 
-    public PaymentController(
-        IOptionsMonitor<StripeOptions> options, 
-        IClusterClient clusterClient)
+    public GodGPTPaymentController(IClusterClient clusterClient, ILogger<GodGPTPaymentController> logger,
+        IGodGPTService godGptService)
     {
-        _options  = options;
-        _client = new StripeClient(options.CurrentValue.SecretKey);
         _clusterClient = clusterClient;
+        _logger = logger;
+        _godGptService = godGptService;
     }
-    
-    [HttpPost("create-checkout-session")]
-    public async Task<IActionResult> Create([FromForm] CreateCheckouSessionDto createCheckoutSessionDto)
+
+    [HttpGet("keys")]
+    public async Task<StripePaymentKeysDto> GetStripePaymentKeysAsync()
     {
-        var orderId = Guid.NewGuid().ToString();
-        var options = new SessionCreateOptions
+        return new StripePaymentKeysDto
         {
-            ClientReferenceId = orderId, 
-            SuccessUrl = $"{_options.CurrentValue.Domain}/success.html?session_id={{CHECKOUT_SESSION_ID}}",
-            CancelUrl = $"{_options.CurrentValue.Domain}/canceled.html",
-            Mode = createCheckoutSessionDto.Mode,
-            LineItems = new List<SessionLineItemOptions>
-            {
-                new SessionLineItemOptions
-                {
-                    Price = createCheckoutSessionDto.PriceId,
-                    Quantity = createCheckoutSessionDto.Quantity
-                },
-            },
-            Metadata = new Dictionary<string, string>
-            {
-                { "userId", CurrentUser.Id.ToString() ?? string.Empty },
-                { "priceId", createCheckoutSessionDto.PriceId },
-                { "quantity", createCheckoutSessionDto.Quantity.ToString() }
-            },
-            SubscriptionData = createCheckoutSessionDto.Mode == "subscription" ?
-                new SessionSubscriptionDataOptions
-                {
-                    Metadata = new Dictionary<string, string>
-                    {
-                        { "userId", CurrentUser.Id.ToString() ?? string.Empty }
-                    }
-                } : null
+            PublishableKey = string.Empty
         };
-        var service = new SessionService(_client);
+    }
+
+    [HttpGet("products")]
+    public async Task<List<StripeProductDto>> GetStripeProductsAsync()
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var productDtos = await _godGptService.GetStripeProductsAsync(currentUserId);
+        _logger.LogDebug("[GodGPTPaymentController][GetStripeProductsAsync] userId: {0}, duration: {1}ms",
+            currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
+        return productDtos;
+    }
+
+    [HttpPost("create-checkout-session")]
+    public async Task<IActionResult> CreateCheckoutSessionAsync(CreateCheckoutSessionInput createCheckoutSessionInput)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
         try
         {
-            var session = await service.CreateAsync(options);
-            var id = session.Id;
-            
-            // var orderId = string.Join("_", CurrentUser.Id, session.Id);
-
-            // 激活Grain并初始化状态
-            var paymentGrain = _clusterClient.GetGrain<IPaymentGrain>(orderId);
-            await paymentGrain.InitializeAsync(
-                createCheckoutSessionDto.PriceId,
-                1, CurrentUser.Id!);
-            
-            return Redirect(session.Url);
+            var result = await _godGptService.CreateCheckoutSessionAsync(currentUserId, createCheckoutSessionInput);
+            _logger.LogDebug("[GodGPTPaymentController][CreateCheckoutSessionAsync] userId: {0}, duration: {1}ms",
+                currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
+            if (createCheckoutSessionInput.UiMode == StripeUiMode.EMBEDDED)
+            {
+                return Ok(result);
+            }
+            else
+            {
+                return Redirect(result);
+            }
         }
         catch (StripeException e)
         {
-            Console.WriteLine(e.StripeError.Message);
+            _logger.LogError(e, "[GodGPTPaymentController][GetStripeProductsAsync] create-checkout-session error.");
             return BadRequest();
         }
     }
-    
+
     [HttpPost("webhook")]
     public async Task<IActionResult> Webhook()
     {
@@ -102,7 +95,7 @@ public class PaymentController  : AevatarController
             stripeEvent = EventUtility.ConstructEvent(
                 json,
                 Request.Headers["Stripe-Signature"],
-                _options.CurrentValue.WebhookSecret
+                ""// _stripeOptions.CurrentValue.WebhookSecret
             );
             Console.WriteLine($"Webhook notification with type: {stripeEvent.Type} found for {stripeEvent.Id}");
         }
@@ -116,13 +109,13 @@ public class PaymentController  : AevatarController
         {
             var session = stripeEvent.Data.Object as Stripe.Checkout.Session;
             Console.WriteLine($"Session ID: {session.Id}");
-            
+    
             var orderId = session.ClientReferenceId;
             var paymentGrain = _clusterClient.GetGrain<IPaymentGrain>(orderId);
-                
+    
             // 标记订单为成功
             await paymentGrain.UpdateStatusAsync(PaymentStatus.Succeeded);
-                
+    
             // 触发后续业务逻辑（例如开通服务）
             // await OnPaymentSucceededAsync(orderId);
             // Take some action based on session.
@@ -130,7 +123,7 @@ public class PaymentController  : AevatarController
     
         return Ok();
     }
-    
+
     // [HttpPost("create-subscription")]
     // public ActionResult<SubscriptionCreateResponse> CreateSubscription([FromBody] CreateSubscriptionRequest req)
     // {

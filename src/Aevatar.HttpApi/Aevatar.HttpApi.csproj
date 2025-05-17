@@ -12,10 +12,10 @@
         <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj" />
         <ProjectReference Include="..\Aevatar.Application\Aevatar.Application.csproj" />
         <ProjectReference Include="..\Aevatar.Developer.Logger\Aevatar.Developer.Logger.csproj" />
+        <ProjectReference Include="..\Aevatar.GodGPT\Aevatar.GodGPT.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Stripe.net" />
         <PackageReference Include="Volo.Abp.Account.HttpApi" />
         <PackageReference Include="Volo.Abp.Identity.HttpApi" />
         <PackageReference Include="Volo.Abp.PermissionManagement.HttpApi" />

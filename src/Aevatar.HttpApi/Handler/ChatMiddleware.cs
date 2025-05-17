@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Application.Grains.Agents.ChatManager;
 using Aevatar.Application.Grains.Agents.ChatManager.Chat;
+using Aevatar.Application.Grains.ChatManager.UserQuota;
 using Aevatar.Core.Abstractions;
 using Aevatar.Quantum;
 using Microsoft.AspNetCore.Http;
@@ -167,10 +168,10 @@ public class ChatMiddleware
                 var statusCode = StatusCodes.Status500InternalServerError;
                 if (int.TryParse(e.Code, out var code))
                 {
-                    if (code == ExecuteActionStatus.InsufficientCredits.toString())
+                    if (code == ExecuteActionStatus.InsufficientCredits)
                     {
                         statusCode = StatusCodes.Status402PaymentRequired;
-                    } else if (code == ExecuteActionStatus.RateLimitExceeded.toString())
+                    } else if (code == ExecuteActionStatus.RateLimitExceeded)
                     {
                         statusCode = StatusCodes.Status429TooManyRequests;
                     }
