@@ -25,10 +25,10 @@
         <PackageReference Include="Serilog.Sinks.Console" />
         <PackageReference Include="Serilog.Sinks.OpenTelemetry" />
         <PackageReference Include="Orleans.Streams.Kafka" />
-        <PackageReference Include="Aevatar.SignalR" />
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\..\signalR\src\Aevatar.SignalR\Aevatar.SignalR.csproj" />
         <ProjectReference Include="..\..\..\framework\src\Aevatar\Aevatar.csproj" />
         <ProjectReference Include="..\..\..\framework\src\Aevatar.PermissionManagement\Aevatar.PermissionManagement.csproj" />
         <ProjectReference Include="..\..\..\framework\src\Aevatar.Plugins\Aevatar.Plugins.csproj" />

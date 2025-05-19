@@ -99,6 +99,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Plugins", "..\frame
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar", "..\framework\src\Aevatar\Aevatar.csproj", "{587AC700-E187-416F-9EAB-85F056C73210}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "signalR", "signalR", "{B2D830C5-EA0A-4AC6-B568-D0861C2712FC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.SignalR", "..\signalR\src\Aevatar.SignalR\Aevatar.SignalR.csproj", "{619B9C2A-697C-4691-88E5-EDC024133581}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -637,6 +641,18 @@ Global
 		{587AC700-E187-416F-9EAB-85F056C73210}.Release|x64.Build.0 = Release|Any CPU
 		{587AC700-E187-416F-9EAB-85F056C73210}.Release|x86.ActiveCfg = Release|Any CPU
 		{587AC700-E187-416F-9EAB-85F056C73210}.Release|x86.Build.0 = Release|Any CPU
+		{619B9C2A-697C-4691-88E5-EDC024133581}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{619B9C2A-697C-4691-88E5-EDC024133581}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{619B9C2A-697C-4691-88E5-EDC024133581}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{619B9C2A-697C-4691-88E5-EDC024133581}.Debug|x64.Build.0 = Debug|Any CPU
+		{619B9C2A-697C-4691-88E5-EDC024133581}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{619B9C2A-697C-4691-88E5-EDC024133581}.Debug|x86.Build.0 = Debug|Any CPU
+		{619B9C2A-697C-4691-88E5-EDC024133581}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{619B9C2A-697C-4691-88E5-EDC024133581}.Release|Any CPU.Build.0 = Release|Any CPU
+		{619B9C2A-697C-4691-88E5-EDC024133581}.Release|x64.ActiveCfg = Release|Any CPU
+		{619B9C2A-697C-4691-88E5-EDC024133581}.Release|x64.Build.0 = Release|Any CPU
+		{619B9C2A-697C-4691-88E5-EDC024133581}.Release|x86.ActiveCfg = Release|Any CPU
+		{619B9C2A-697C-4691-88E5-EDC024133581}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -686,6 +702,7 @@ Global
 		{8F06A204-3ECA-4E62-BDBA-418262681DFE} = {3A239035-91D1-4879-8722-6BB5E153E997}
 		{B04A402D-72C3-4674-8F2D-876F634454C4} = {3A239035-91D1-4879-8722-6BB5E153E997}
 		{587AC700-E187-416F-9EAB-85F056C73210} = {3A239035-91D1-4879-8722-6BB5E153E997}
+		{619B9C2A-697C-4691-88E5-EDC024133581} = {B2D830C5-EA0A-4AC6-B568-D0861C2712FC}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {28315BFD-90E7-4E14-A2EA-F3D23AF4126F}

@@ -35,7 +35,6 @@
     <PackageReference Include="MongoDB.Driver" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
     <PackageReference Include="Microsoft.CodeAnalysis.Common" />
-    <PackageReference Include="Aevatar.SignalR" />
     <PackageReference Include="Orleans.Streams.Kafka" />
 
   </ItemGroup>
@@ -45,6 +44,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\signalR\src\Aevatar.SignalR\Aevatar.SignalR.csproj" />
     <ProjectReference Include="..\Aevatar.Application\Aevatar.Application.csproj" />
     <ProjectReference Include="..\Aevatar.HttpApi.Admin\Aevatar.HttpApi.Admin.csproj" />
     <ProjectReference Include="..\Aevatar.MongoDB\Aevatar.MongoDB.csproj" />

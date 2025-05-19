@@ -11,7 +11,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Aevatar" />
         <PackageReference Include="coverlet.collector" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" />
         <PackageReference Include="Moq" />
@@ -27,6 +26,10 @@
         <PackageReference Include="Volo.Abp.AutoMapper" />
         <PackageReference Include="Volo.Abp.TestBase" />
         <PackageReference Include="Volo.Abp.Authorization" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\framework\src\Aevatar\Aevatar.csproj" />
     </ItemGroup>
 
     <ItemGroup>

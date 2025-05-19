@@ -9,8 +9,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Aevatar" />
-        <PackageReference Include="Aevatar.Core.Abstractions" />
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
         <PackageReference Include="Newtonsoft.Json" />
         <PackageReference Include="Microsoft.Orleans.Client" />
@@ -19,6 +17,8 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\..\framework\src\Aevatar\Aevatar.csproj" />
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
         <ProjectReference Include="..\..\src\Aevatar.SignalR\Aevatar.SignalR.csproj" />
         <ProjectReference Include="..\SignalRSample.GAgents\SignalRSample.GAgents.csproj" />
     </ItemGroup>

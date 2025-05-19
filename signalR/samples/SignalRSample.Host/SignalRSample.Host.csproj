@@ -9,15 +9,15 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\src\Aevatar.SignalR\Aevatar.SignalR.csproj" />
-      <ProjectReference Include="..\SignalRSample.GAgents\SignalRSample.GAgents.csproj" />
+        <ProjectReference Include="..\..\..\framework\src\Aevatar\Aevatar.csproj" />
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.Core\Aevatar.Core.csproj" />
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.PermissionManagement\Aevatar.PermissionManagement.csproj" />
+        <ProjectReference Include="..\..\src\Aevatar.SignalR\Aevatar.SignalR.csproj" />
+        <ProjectReference Include="..\SignalRSample.GAgents\SignalRSample.GAgents.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Aevatar" />
-        <PackageReference Include="Aevatar.Core" />
-        <PackageReference Include="Aevatar.Core.Abstractions" />
-        <PackageReference Include="Aevatar.PermissionManagement" />
         <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Microsoft.Orleans.Streaming" />
@@ -27,16 +27,16 @@
     </ItemGroup>
 
     <ItemGroup>
-      <None Remove="appsettings.json" />
-      <Content Include="appsettings.json">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </Content>
+        <None Remove="appsettings.json" />
+        <Content Include="appsettings.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
     </ItemGroup>
-    
+
     <ItemGroup>
-      <Content Include="..\..\.dockerignore">
-        <Link>.dockerignore</Link>
-      </Content>
+        <Content Include="..\..\.dockerignore">
+            <Link>.dockerignore</Link>
+        </Content>
     </ItemGroup>
 
     <PropertyGroup>

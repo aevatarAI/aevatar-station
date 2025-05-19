@@ -15,7 +15,6 @@
     <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="$(AevatarGAgentVersion)" />
     <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="$(AevatarGAgentVersion)" />
     <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.SignalR" Version="1.5.5-parent.11" />
     <PackageVersion Include="Aevatar.GAgents.SocialGAgent" Version="$(AevatarGAgentVersion)" />
     <PackageVersion Include="Aevatar.GAgents.Twitter" Version="$(AevatarGAgentVersion)" />
     <PackageVersion Include="Aevatar.GAgents.ChatAgent" Version="$(AevatarGAgentVersion)" />
