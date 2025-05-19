@@ -24,6 +24,9 @@ namespace Aevatar.Core.Tests.Placement
             var mockSiloStatusOracle = new Mock<ISiloStatusOracle>();
             services.AddSingleton(mockSiloStatusOracle.Object);
             
+            var mockLogger = new Mock<ILogger<SiloNamePatternPlacementDirector>>();
+            services.AddSingleton(mockLogger.Object);
+            
             // Register IClusterManifestProvider for GrainPropertiesResolver
             var mockClusterManifestProvider = new Mock<IClusterManifestProvider>();
             services.AddSingleton(mockClusterManifestProvider.Object);
