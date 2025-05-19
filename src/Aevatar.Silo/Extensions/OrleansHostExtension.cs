@@ -19,6 +19,7 @@ using MongoDB.Driver;
 using Newtonsoft.Json;
 using Orleans.Configuration;
 using Orleans.Providers.MongoDB.Configuration;
+using Orleans.Providers.MongoDB.StorageProviders.Serializers;
 using Orleans.Serialization;
 using Orleans.Streams.Kafka.Config;
 
@@ -204,7 +205,7 @@ public static class OrleansHostExtension
                 services
                     .AddPlacementDirector<Aevatar.Core.Placement.SiloNamePatternPlacement,
                         Aevatar.Core.Placement.SiloNamePatternPlacementDirector>();
-
+                services.AddSingleton<IGrainStateSerializer, BinaryGrainStateSerializer>();
                 // Register the SiloNamePatternPlacement director
                 services.Configure<SystemLLMConfigOptions>(context.Configuration);
                 services.Configure<AzureOpenAIEmbeddingsConfig>(
