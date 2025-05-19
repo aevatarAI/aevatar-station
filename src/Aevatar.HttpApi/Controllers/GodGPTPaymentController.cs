@@ -5,6 +5,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Aevatar.Application.Grains.ChatManager.Dtos;
 using Aevatar.Application.Grains.Common.Constants;
+using Aevatar.Application.Grains.Common.Options;
 using Aevatar.Application.Grains.Payment;
 using Aevatar.GodGPT.Dtos;
 using Aevatar.Service;
@@ -12,6 +13,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OpenIddict.Abstractions;
 using Orleans;
 using Stripe;
@@ -28,15 +30,17 @@ namespace Aevatar.Controllers;
 public class GodGPTPaymentController : AevatarController
 {
     private readonly ILogger<GodGPTPaymentController> _logger;
+    private readonly IOptionsMonitor<StripeOptions> _stripeOptions;
     private readonly IClusterClient _clusterClient;
     private readonly IGodGPTService _godGptService;
 
     public GodGPTPaymentController(IClusterClient clusterClient, ILogger<GodGPTPaymentController> logger,
-        IGodGPTService godGptService)
+        IGodGPTService godGptService, IOptionsMonitor<StripeOptions> stripeOptions)
     {
         _clusterClient = clusterClient;
         _logger = logger;
         _godGptService = godGptService;
+        _stripeOptions = stripeOptions;
     }
 
     [HttpGet("keys")]
@@ -85,6 +89,7 @@ public class GodGPTPaymentController : AevatarController
         }
     }
 
+    [AllowAnonymous]
     [HttpPost("webhook")]
     public async Task<IActionResult> Webhook()
     {
@@ -96,17 +101,21 @@ public class GodGPTPaymentController : AevatarController
             stripeEvent = EventUtility.ConstructEvent(
                 json,
                 Request.Headers["Stripe-Signature"],
-                ""// _stripeOptions.CurrentValue.WebhookSecret
+                _stripeOptions.CurrentValue.WebhookSecret
             );
-            _logger.LogDebug($"Webhook notification with type: {stripeEvent.Type} found for {stripeEvent.Id}");
         }
         catch (Exception e)
         {
-            _logger.LogDebug($"Something failed {e}");
-            return BadRequest();
+            _logger.LogError(e, "[GodGPTPaymentController][Webhook] Error validating webhook: {Message}", e.Message);
+            return BadRequest("Error validating webhook");
         }
     
-        if (stripeEvent.Type == "checkout.session.completed")
+        if (stripeEvent.Type == "checkout.session.completed" 
+            || stripeEvent.Type == "invoice.payment_succeeded" 
+            || stripeEvent.Type == "invoice.payment_failed"
+            || stripeEvent.Type == "payment_intent.succeeded"
+            || stripeEvent.Type == "customer.subscription.created" 
+            || stripeEvent.Type == "charge.refunded")
         {
             var session = stripeEvent.Data.Object as Stripe.Checkout.Session;
             _logger.LogDebug($"Session ID: {session.Id}");
