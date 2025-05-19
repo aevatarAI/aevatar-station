@@ -121,63 +121,71 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
         long getHandlesCost = 0;
         long resumeCost = 0;
         long subscribeCost = 0;
-        StreamSubscriptionHandle<EventWrapperBase> handle = null;
-     
-            var stream = GenStream<T>(agentType);
-            var logger = ServiceProvider.GetService<ILoggerFactory>()?.CreateLogger<EventWrapperBaseAsyncObserver>();
-            if (logger == null)
-            {
-                Logger.LogWarning("[{0}.{1}]EventWrapperBaseAsyncObserver Logger is null", this.GetType().Name, nameof(AddSubscriptionAsync));
-            }
-            var observer = EventWrapperBaseAsyncObserver.Create(
-                async item =>
-                {
-                    var eventWrapper = item as EventWrapper<T>;
-                    if (eventWrapper == null)
-                    {
-                        Logger.LogWarning("[{0}.{1}]EventWrapperBaseAsyncObserver eventWrapper is null", this.GetType().Name, nameof(AddSubscriptionAsync));
-                        return;
-                    }
-                    await eventHandler.Invoke(eventWrapper.Event);
-                }, ServiceProvider, eventHandler.Method.Name, typeof(T).Name);
+        var stream = GenStream<T>(agentType);
 
-            var key = GetStreamIdString<T>(agentType);
-            if (State.Subscription.TryGetValue(key, out Guid handleId))
+        var logger = ServiceProvider.GetService<ILoggerFactory>()?.CreateLogger<EventWrapperBaseAsyncObserver>();
+        if (logger == null)
+        {
+            Logger.LogWarning("[{0}.{1}]EventWrapperBaseAsyncObserver Logger is null", this.GetType().Name, nameof(AddSubscriptionAsync));
+        }
+
+        // Create an observer that will handle the events
+        var observer = EventWrapperBaseAsyncObserver.Create(
+            async item =>
             {
-                Logger.LogWarning("[{0}.{1}]Subscription {2} already exists", this.GetType().Name, nameof(AddSubscriptionAsync), key);
-                var getHandlesStart = stopwatch.ElapsedMilliseconds;
-                var handles = await stream.GetAllSubscriptionHandles();
-                getHandlesCost = stopwatch.ElapsedMilliseconds - getHandlesStart;
-                var resumeHandles = handles.Where(h => h.HandleId == handleId).ToList();
-                if (resumeHandles.IsNullOrEmpty())
+                var eventWrapper = item as EventWrapper<T>;
+                if (eventWrapper == null)
                 {
-                    Logger.LogWarning("[{0}.{1}]Unable to locate handle {2} to be resumed, continue to subscribe", this.GetType().Name, nameof(AddSubscriptionAsync), handleId);
-                }
-                else if (resumeHandles.Count > 1)
-                {
-                    Logger.LogError("[{0}.{1}]Multiple handles found for {2} to be resumed", this.GetType().Name, nameof(AddSubscriptionAsync), handleId);
-                    throw new InvalidOperationException($"Multiple handles found for {handleId} to be resumed");
-                }
-                else
-                {
-                    var resumeStart = stopwatch.ElapsedMilliseconds;
-                    handle = await resumeHandles.First().ResumeAsync(observer);
-                    resumeCost = stopwatch.ElapsedMilliseconds - resumeStart;
-                    _pendingHandles[key] = handle; // Only update _pendingHandles for resume
-                    stopwatch.Stop();
-                    Logger.LogDebug("[{0}.{1} AddSubscriptionAsync]Timing: GetAllSubscriptionHandles: {2}ms, ResumeAsync: {3}ms", this.GetType().Name, nameof(AddSubscriptionAsync), getHandlesCost, resumeCost);
+                    Logger.LogWarning("[{0}.{1}]EventWrapperBaseAsyncObserver eventWrapper is null", this.GetType().Name, nameof(AddSubscriptionAsync));
                     return;
                 }
-            }
 
-            var subscribeStart = stopwatch.ElapsedMilliseconds;
-            handle = await stream.SubscribeAsync(observer);
-            subscribeCost = stopwatch.ElapsedMilliseconds - subscribeStart;
-            _pendingSubscriptions[key] = handle.HandleId;
-            _pendingHandles[key] = handle;
-            Logger.LogInformation("[{0}.{1}]Subscription {2} created", this.GetType().Name, nameof(AddSubscriptionAsync), key);
-            stopwatch.Stop();
-            Logger.LogDebug("[{0}.{1} AddSubscriptionAsync]Timing: GetAllSubscriptionHandles: {2}ms, ResumeAsync: {3}ms, SubscribeAsync: {4}ms", this.GetType().Name, nameof(AddSubscriptionAsync), getHandlesCost, resumeCost, subscribeCost);
+                await eventHandler.Invoke(eventWrapper.Event);
+            }, ServiceProvider, eventHandler.Method.Name, typeof(T).Name);
+
+        var key = GetStreamIdString<T>(agentType);
+
+        StreamSubscriptionHandle<EventWrapperBase> handle;
+        
+        if (State.Subscription.TryGetValue(key, out Guid handleId))
+        {
+            Logger.LogWarning("[{0}.{1}]Subscription {2} already exists", this.GetType().Name, nameof(AddSubscriptionAsync), key);
+            var getHandlesStart = stopwatch.ElapsedMilliseconds;
+            var handles = await stream.GetAllSubscriptionHandles();
+            getHandlesCost = stopwatch.ElapsedMilliseconds - getHandlesStart;
+            var resumeHandles = handles.Where(h => h.HandleId == handleId).ToList();
+            if (resumeHandles.IsNullOrEmpty())
+            {
+                Logger.LogWarning("[{0}.{1}]Unable to locate handle {2} to be resumed, continue to subscribe", this.GetType().Name, nameof(AddSubscriptionAsync), handleId);
+            }
+            else if (resumeHandles.Count > 1)
+            {
+                Logger.LogError("[{0}.{1}]Multiple handles found for {2} to be resumed", this.GetType().Name, nameof(AddSubscriptionAsync), handleId);
+                throw new InvalidOperationException($"Multiple handles found for {handleId} to be resumed");
+            }
+            else
+            {
+                var resumeStart = stopwatch.ElapsedMilliseconds;
+                handle = await resumeHandles.First().ResumeAsync(observer);
+                resumeCost = stopwatch.ElapsedMilliseconds - resumeStart;
+                _pendingHandles[key] = handle; // Only update _pendingHandles for resume
+                stopwatch.Stop();
+                Logger.LogDebug("[{0}.{1} AddSubscriptionAsync]Timing: GetAllSubscriptionHandles: {2}ms, ResumeAsync: {3}ms", this.GetType().Name, nameof(AddSubscriptionAsync), getHandlesCost, resumeCost);
+                return;
+            }
+        }
+
+        var subscribeStart = stopwatch.ElapsedMilliseconds;
+        handle = await stream.SubscribeAsync(observer);
+        subscribeCost = stopwatch.ElapsedMilliseconds - subscribeStart;
+        Logger.LogInformation("[{0}.{1}]Subscription {2} created", this.GetType().Name, nameof(AddSubscriptionAsync), key);
+        
+        // Add to pending collections
+        _pendingSubscriptions[key] = handle.HandleId;
+        _pendingHandles[key] = handle;
+        Logger.LogInformation("[{0}.{1}]Subscription {2} created", this.GetType().Name, nameof(AddSubscriptionAsync), key);
+        stopwatch.Stop();
+        Logger.LogDebug("[{0}.{1} AddSubscriptionAsync]Timing: GetAllSubscriptionHandles: {2}ms, ResumeAsync: {3}ms, SubscribeAsync: {4}ms", this.GetType().Name, nameof(AddSubscriptionAsync), getHandlesCost, resumeCost, subscribeCost);
     }
 
     /// <summary>
