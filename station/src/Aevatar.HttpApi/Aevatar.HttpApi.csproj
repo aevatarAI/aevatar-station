@@ -9,6 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.PermissionManagement\Aevatar.PermissionManagement.csproj" />
         <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj"/>
         <ProjectReference Include="..\Aevatar.Application\Aevatar.Application.csproj"/>
         <ProjectReference Include="..\Aevatar.Developer.Logger\Aevatar.Developer.Logger.csproj"/>
@@ -18,7 +19,6 @@
       <PackageReference Include="Volo.Abp.Account.HttpApi"/>
       <PackageReference Include="Volo.Abp.Identity.HttpApi"/>
       <PackageReference Include="Volo.Abp.PermissionManagement.HttpApi"/>
-      <PackageReference Include="Aevatar.PermissionManagement"/>
       <PackageReference Include="Volo.Abp.AspNetCore.SignalR"/>
   </ItemGroup>
 

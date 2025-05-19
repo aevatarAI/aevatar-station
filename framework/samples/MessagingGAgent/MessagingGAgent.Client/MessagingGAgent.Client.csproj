@@ -14,7 +14,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\src\Aevatar.Core\Aevatar.Core.csproj" />
+        <ProjectReference Include="..\..\..\src\Aevatar.Core\Aevatar.Core.csproj" />
         <ProjectReference Include="..\MessagingGAgent.Grains\MessagingGAgent.Grains.csproj" />
     </ItemGroup>
 

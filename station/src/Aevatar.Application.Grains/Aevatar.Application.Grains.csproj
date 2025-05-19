@@ -18,15 +18,12 @@
         <PackageReference Include="Aevatar.SignalR"/>
         <PackageReference Include="Aevatar.GAgents.AIGAgent"/>
         <PackageReference Include="Aevatar.GAgents.SemanticKernel"/>
-        <PackageReference Include="Aevatar.PermissionManagement" />
-
-
         <PackageReference Include="Aevatar.GAgents.AI.Abstractions"/>
         <PackageReference Include="Aevatar.GAgents.Twitter"/>
-
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.PermissionManagement\Aevatar.PermissionManagement.csproj" />
         <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj"/>
         <ProjectReference Include="..\Aevatar.CQRS\Aevatar.CQRS.csproj"/>
         <ProjectReference Include="..\Aevatar.Domain.Grains\Aevatar.Domain.Grains.csproj"/>

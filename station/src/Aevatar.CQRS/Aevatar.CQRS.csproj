@@ -9,14 +9,14 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.Core\Aevatar.Core.csproj" />
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.EventSourcing.Core\Aevatar.EventSourcing.Core.csproj" />
         <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj" />
         <ProjectReference Include="..\Aevatar.Domain\Aevatar.Domain.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Aevatar.Core" />
-        <PackageReference Include="Aevatar.Core.Abstractions" />
-        <PackageReference Include="Aevatar.EventSourcing.Core" />
         <PackageReference Include="Elastic.Clients.Elasticsearch" />
         <PackageReference Include="Volo.Abp.AutoMapper" />
         <PackageReference Include="MediatR" />

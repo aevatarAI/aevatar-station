@@ -20,11 +20,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{7851
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MessagingGAgent", "MessagingGAgent", "{BCBA315D-A500-436E-85C0-BAE7D8058FD4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessagingGAgent.Client", "samples\MessagingGAgent.Client\MessagingGAgent.Client.csproj", "{05951375-1D85-42AD-857B-4474A51816A1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessagingGAgent.Client", "samples\MessagingGAgent\MessagingGAgent.Client\MessagingGAgent.Client.csproj", "{05951375-1D85-42AD-857B-4474A51816A1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessagingGAgent.Silo", "samples\MessagingGAgent.Silo\MessagingGAgent.Silo.csproj", "{2753C61C-57D5-4612-BC4C-59D64D10337A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessagingGAgent.Silo", "samples\MessagingGAgent\MessagingGAgent.Silo\MessagingGAgent.Silo.csproj", "{2753C61C-57D5-4612-BC4C-59D64D10337A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessagingGAgent.Grains", "samples\MessagingGAgent.Grains\MessagingGAgent.Grains.csproj", "{050C69A8-C69D-4202-810D-70BB51F19C1F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessagingGAgent.Grains", "samples\MessagingGAgent\MessagingGAgent.Grains\MessagingGAgent.Grains.csproj", "{050C69A8-C69D-4202-810D-70BB51F19C1F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.TestBase", "test\Aevatar.TestBase\Aevatar.TestBase.csproj", "{55EF840B-F16D-4D15-9770-B3006ADB6EFB}"
 EndProject
