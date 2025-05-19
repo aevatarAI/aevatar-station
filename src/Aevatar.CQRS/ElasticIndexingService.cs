@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.Json;
@@ -37,7 +38,18 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
     private readonly ICQRSProvider _cqrsProvider;
     private readonly IMemoryCache _cache;
     private readonly IOptionsSnapshot<HostOptions> _options;
-
+    
+    private static readonly HashSet<Type> SupportedDictionaryTypes = new()
+    {
+        typeof(Dictionary<,>),
+        typeof(IDictionary<,>),
+        typeof(IReadOnlyDictionary<,>),
+        typeof(SortedDictionary<,>),
+        typeof(ConcurrentDictionary<,>),
+        typeof(ImmutableDictionary<,>),
+        typeof(ReadOnlyDictionary<,>)
+    };
+    
     private static readonly HashSet<Type> SupportedCollectionTypes = new()
     {
         typeof(List<>),
@@ -54,6 +66,14 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         typeof(IReadOnlyList<>),
         typeof(ISet<>),
     };
+
+    static ElasticIndexingService()
+    {
+        foreach (var dictionaryType in SupportedDictionaryTypes)
+        {
+            SupportedCollectionTypes.Add(dictionaryType);
+        }
+    }
 
     public ElasticIndexingService(ILogger<ElasticIndexingService> logger, ElasticsearchClient client,
         ICQRSProvider cqrsProvider, IMemoryCache cache, IOptionsSnapshot<HostOptions> hostOptions)
@@ -168,8 +188,13 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
             var genericDef = underlyingType.GetGenericTypeDefinition();
             if (SupportedCollectionTypes.Contains(genericDef))
             {
-                var itemType = underlyingType.GetGenericArguments()[0];
-                return IsBasicType(itemType);
+                var genericArgs = underlyingType.GetGenericArguments();
+                if (genericArgs.Length == 2 && SupportedDictionaryTypes.Contains(genericDef))
+                {
+                    return IsBasicType(genericArgs[0]) && IsBasicType(genericArgs[1]);
+                }
+                
+                return IsBasicType(genericArgs[0]);
             }
         }
 
