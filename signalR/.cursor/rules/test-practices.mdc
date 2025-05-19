@@ -1,0 +1,33 @@
+---
+description: implement unit test
+globs: 
+alwaysApply: false
+---
+# Unit Test Implementation Guide
+
+When implementing unit tests:
+
+1. Output: !!!"Unit Test Implemeting"!!!
+
+2. Cover these essential test scenarios:
+   - Positive: Verify expected behavior with valid inputs
+   - Negative: Confirm appropriate handling of invalid inputs
+   - Boundary: Test edge cases and limit values
+   - Exception: Validate error handling and exceptions
+
+3. Follow the AAA pattern:
+   - Arrange: Set up test prerequisites
+   - Act: Execute the code being tested
+   - Assert: Verify expected outcomes
+
+4. Quality requirements:
+   - Achieve minimum 80% code coverage
+   - Ensure all tests pass successfully
+   - Verify builds with `dotnet test` without errors
+
+5. Development constraints:
+   - Modify test files only
+   - Write isolated, independent tests
+   - Use descriptive test names that explain the scenario and expected outcome
+   - Do not create additional unit test files
+   - Creating additional files for helper classes is allowed
