@@ -117,6 +117,10 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
     /// <returns>The agent instance for fluent chaining</returns>
     protected async Task AddSubscriptionAsync<T>(string agentType, Func<T, Task> eventHandler) where T : EventBase
     {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        long getHandlesCost = 0;
+        long resumeCost = 0;
+        long subscribeCost = 0;
         var stream = GenStream<T>(agentType);
 
         var logger = ServiceProvider.GetService<ILoggerFactory>()?.CreateLogger<EventWrapperBaseAsyncObserver>();
@@ -146,7 +150,9 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
         if (State.Subscription.TryGetValue(key, out Guid handleId))
         {
             Logger.LogWarning("[{0}.{1}]Subscription {2} already exists", this.GetType().Name, nameof(AddSubscriptionAsync), key);
+            var getHandlesStart = stopwatch.ElapsedMilliseconds;
             var handles = await stream.GetAllSubscriptionHandles();
+            getHandlesCost = stopwatch.ElapsedMilliseconds - getHandlesStart;
             var resumeHandles = handles.Where(h => h.HandleId == handleId).ToList();
             if (resumeHandles.IsNullOrEmpty())
             {
@@ -159,17 +165,26 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
             }
             else
             {
+                var resumeStart = stopwatch.ElapsedMilliseconds;
                 handle = await resumeHandles.First().ResumeAsync(observer);
+                resumeCost = stopwatch.ElapsedMilliseconds - resumeStart;
+                _pendingHandles[key] = handle; // Only update _pendingHandles for resume
+                stopwatch.Stop();
+                Logger.LogDebug("[{0}.{1} AddSubscriptionAsync]Timing: GetAllSubscriptionHandles: {2}ms, ResumeAsync: {3}ms", this.GetType().Name, nameof(AddSubscriptionAsync), getHandlesCost, resumeCost);
+                return;
             }
         }
 
+        var subscribeStart = stopwatch.ElapsedMilliseconds;
         handle = await stream.SubscribeAsync(observer);
-        
+        subscribeCost = stopwatch.ElapsedMilliseconds - subscribeStart;
         Logger.LogInformation("[{0}.{1}]Subscription {2} created", this.GetType().Name, nameof(AddSubscriptionAsync), key);
         
         // Add to pending collections
         _pendingSubscriptions[key] = handle.HandleId;
         _pendingHandles[key] = handle;
+        stopwatch.Stop();
+        Logger.LogDebug("[{0}.{1} AddSubscriptionAsync]Timing: GetAllSubscriptionHandles: {2}ms, ResumeAsync: {3}ms, SubscribeAsync: {4}ms", this.GetType().Name, nameof(AddSubscriptionAsync), getHandlesCost, resumeCost, subscribeCost);
     }
 
     /// <summary>
@@ -181,7 +196,7 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
         if (!_pendingSubscriptions.Any())
         {
             Logger.LogWarning("[{0}.{1}]No pending subscriptions to save", this.GetType().Name, nameof(SaveBatchSubscriptionsAsync));
-            return new Dictionary<string, StreamSubscriptionHandle<EventWrapperBase>>();
+            return new Dictionary<string, StreamSubscriptionHandle<EventWrapperBase>>(_pendingHandles);
         }
 
         var subscribeBatchEvent = new SubscribeBatchStateLogEvent
