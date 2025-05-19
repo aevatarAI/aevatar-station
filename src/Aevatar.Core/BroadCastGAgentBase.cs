@@ -183,7 +183,6 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
         // Add to pending collections
         _pendingSubscriptions[key] = handle.HandleId;
         _pendingHandles[key] = handle;
-        Logger.LogInformation("[{0}.{1}]Subscription {2} created", this.GetType().Name, nameof(AddSubscriptionAsync), key);
         stopwatch.Stop();
         Logger.LogDebug("[{0}.{1} AddSubscriptionAsync]Timing: GetAllSubscriptionHandles: {2}ms, ResumeAsync: {3}ms, SubscribeAsync: {4}ms", this.GetType().Name, nameof(AddSubscriptionAsync), getHandlesCost, resumeCost, subscribeCost);
     }
