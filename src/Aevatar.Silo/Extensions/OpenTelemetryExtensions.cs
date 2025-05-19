@@ -13,6 +13,7 @@ public static class OpenTelemetryExtensions
     {
         var serviceName = configuration["OpenTelemetry:ServiceName"] ?? "Aevatar.Silo";
         var serviceVersion = configuration["OpenTelemetry:ServiceVersion"] ?? "1.0";
+        var endpoint = configuration["OpenTelemetry:CollectorEndpoint"] ?? "http://localhost:4315";
 
         return services.AddOpenTelemetry()
             .ConfigureResource(resource => resource.AddService(
@@ -26,6 +27,7 @@ public static class OpenTelemetryExtensions
                     .AddSource("Orleans.Runtime")
                     .AddSource("Orleans.Messaging")
                     .AddSource("Microsoft.Orleans")
+                    .AddSource("Aevatar.CQRS")
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation();
             })
@@ -34,7 +36,13 @@ public static class OpenTelemetryExtensions
                 .AddAspNetCoreInstrumentation()
                 .AddMeter("Microsoft.Orleans")
                 .AddMeter("Aevatar.Messaging")
+                .AddMeter("Aevatar.CQRS")
+                .AddMeter("Aevatar.Storage")
                 .AddMeter(serviceName)
+                .AddOtlpExporter(options =>
+                {
+                    options.Endpoint = new Uri(endpoint);
+                })
             )
             .Services;
     }
