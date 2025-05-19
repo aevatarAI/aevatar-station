@@ -122,8 +122,7 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
         long resumeCost = 0;
         long subscribeCost = 0;
         StreamSubscriptionHandle<EventWrapperBase> handle = null;
-        try
-        {
+     
             var stream = GenStream<T>(agentType);
             var logger = ServiceProvider.GetService<ILoggerFactory>()?.CreateLogger<EventWrapperBaseAsyncObserver>();
             if (logger == null)
@@ -165,6 +164,8 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
                     handle = await resumeHandles.First().ResumeAsync(observer);
                     resumeCost = stopwatch.ElapsedMilliseconds - resumeStart;
                     _pendingHandles[key] = handle; // Only update _pendingHandles for resume
+                    stopwatch.Stop();
+                    Logger.LogDebug("[{0}.{1} AddSubscriptionAsync]Timing: GetAllSubscriptionHandles: {2}ms, ResumeAsync: {3}ms", this.GetType().Name, nameof(AddSubscriptionAsync), getHandlesCost, resumeCost);
                     return;
                 }
             }
@@ -175,12 +176,8 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
             _pendingSubscriptions[key] = handle.HandleId;
             _pendingHandles[key] = handle;
             Logger.LogInformation("[{0}.{1}]Subscription {2} created", this.GetType().Name, nameof(AddSubscriptionAsync), key);
-        }
-        finally
-        {
             stopwatch.Stop();
             Logger.LogDebug("[{0}.{1} AddSubscriptionAsync]Timing: GetAllSubscriptionHandles: {2}ms, ResumeAsync: {3}ms, SubscribeAsync: {4}ms", this.GetType().Name, nameof(AddSubscriptionAsync), getHandlesCost, resumeCost, subscribeCost);
-        }
     }
 
     /// <summary>
