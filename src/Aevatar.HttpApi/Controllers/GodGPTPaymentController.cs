@@ -75,7 +75,7 @@ public class GodGPTPaymentController : AevatarController
             }
             else
             {
-                return Redirect(result);
+                return Ok(result);
             }
         }
         catch (StripeException e)
