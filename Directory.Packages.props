@@ -199,5 +199,6 @@
     <PackageVersion Include="Neo4j.Driver" Version="5.27.0" />
     <PackageVersion Include="XWorkerAgent" Version="0.0.79" />
     <PackageVersion Include="TelegramWorkerAgent" Version="0.0.98" />
+    
   </ItemGroup>
 </Project>
