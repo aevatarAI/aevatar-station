@@ -89,6 +89,7 @@ public class GodGPTPaymentController : AevatarController
     public async Task<IActionResult> Webhook()
     {
         var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
+        _logger.LogDebug("[GodGPTPaymentController][webhook] josn: {0}", json);
         Event stripeEvent;
         try
         {
@@ -97,18 +98,18 @@ public class GodGPTPaymentController : AevatarController
                 Request.Headers["Stripe-Signature"],
                 ""// _stripeOptions.CurrentValue.WebhookSecret
             );
-            Console.WriteLine($"Webhook notification with type: {stripeEvent.Type} found for {stripeEvent.Id}");
+            _logger.LogDebug($"Webhook notification with type: {stripeEvent.Type} found for {stripeEvent.Id}");
         }
         catch (Exception e)
         {
-            Console.WriteLine($"Something failed {e}");
+            _logger.LogDebug($"Something failed {e}");
             return BadRequest();
         }
     
         if (stripeEvent.Type == "checkout.session.completed")
         {
             var session = stripeEvent.Data.Object as Stripe.Checkout.Session;
-            Console.WriteLine($"Session ID: {session.Id}");
+            _logger.LogDebug($"Session ID: {session.Id}");
     
             var orderId = session.ClientReferenceId;
             var paymentGrain = _clusterClient.GetGrain<IPaymentGrain>(orderId);
