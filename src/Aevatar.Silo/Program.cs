@@ -1,8 +1,8 @@
-
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Aevatar.Silo.Extensions;
+using Aevatar.Silo.Observability;
 using Serilog;
 
 namespace Aevatar.Silo;
@@ -49,5 +49,9 @@ public class Program
             })
             .UseOrleansConfiguration()
             .UseAutofac()
-            .UseSerilog();
+            .UseSerilog()
+            .ConfigureServices((context, services) =>
+            {
+                services.UseGrainStorageWithMetrics();
+            });
 }
