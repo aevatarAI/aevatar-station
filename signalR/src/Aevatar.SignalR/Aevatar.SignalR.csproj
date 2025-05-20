@@ -2,6 +2,7 @@
 
     <PropertyGroup>
         <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+        <Version>$(AevatarSignalRSourceCodeVersion)</Version>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <InternalsVisibleTo>Aevatar.SignalR.Tests</InternalsVisibleTo>
