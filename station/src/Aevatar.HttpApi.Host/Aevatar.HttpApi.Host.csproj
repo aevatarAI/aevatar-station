@@ -5,7 +5,7 @@
     <DisableStaticWebAssets>true</DisableStaticWebAssets>
   </PropertyGroup>
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
     <Nullable>enable</Nullable>
     <RootNamespace>Aevatar</RootNamespace>
     <PreserveCompilationReferences>true</PreserveCompilationReferences>

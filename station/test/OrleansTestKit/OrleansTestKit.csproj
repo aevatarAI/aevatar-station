@@ -16,7 +16,7 @@
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <Version>8.2.2</Version>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
   </PropertyGroup>
 
   <PropertyGroup>
