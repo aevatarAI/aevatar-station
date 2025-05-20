@@ -7,15 +7,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 
-public interface IBroadCastGAgent : IGAgent
+public interface IBroadcastGAgent : IGAgent
 {
-    Task BroadCastEventAsync<T>(string streamIdString, T @event) where T : EventBase;
+    Task BroadcastEventAsync<T>(string streamIdString, T @event) where T : EventBase;
 }
 
-public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEvent>
-    : GAgentBase<TBroadCastState, TBroadCastStateLogEvent>, IBroadCastGAgent
-        where TBroadCastState : BroadCastGState, new()
-        where TBroadCastStateLogEvent : StateLogEventBase<TBroadCastStateLogEvent>
+public abstract class BroadcastGAgentBase<TBroadcastState, TBroadcastStateLogEvent>
+    : GAgentBase<TBroadcastState, TBroadcastStateLogEvent>, IBroadcastGAgent
+        where TBroadcastState : BroadcastGState, new()
+        where TBroadcastStateLogEvent : StateLogEventBase<TBroadcastStateLogEvent>
 {
     // For batch subscription operations
     private readonly Dictionary<string, Guid> _pendingSubscriptions = new();
@@ -23,26 +23,26 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
     private readonly List<Task> _pendingOperations = new();
 
     [GenerateSerializer]
-    public class SubscribeStateLogEvent : StateLogEventBase<TBroadCastStateLogEvent>
+    public class SubscribeStateLogEvent : StateLogEventBase<TBroadcastStateLogEvent>
     {
         [Id(0)]public required string Key { get; set; } = string.Empty;
         [Id(1)]public required Guid Value { get; set; } = Guid.Empty;
     }
 
     [GenerateSerializer]
-    public class UnSubscribeStateLogEvent : StateLogEventBase<TBroadCastStateLogEvent>
+    public class UnSubscribeStateLogEvent : StateLogEventBase<TBroadcastStateLogEvent>
     {
         [Id(0)]public required string Key { get; set; } = string.Empty;
     }
 
     [GenerateSerializer]
-    public class SubscribeBatchStateLogEvent : StateLogEventBase<TBroadCastStateLogEvent>
+    public class SubscribeBatchStateLogEvent : StateLogEventBase<TBroadcastStateLogEvent>
     {
         [Id(0)]public required Dictionary<string, Guid> Subscriptions { get; set; } = new Dictionary<string, Guid>();
     }
 
     [GenerateSerializer]
-    public class UnSubscribeBatchStateLogEvent : StateLogEventBase<TBroadCastStateLogEvent>
+    public class UnSubscribeBatchStateLogEvent : StateLogEventBase<TBroadcastStateLogEvent>
     {
         [Id(0)]public required HashSet<string> Keys { get; set; } = new HashSet<string>();
     }
@@ -64,7 +64,7 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
     /// <param name="streamIdString"></param>
     /// <param name="event"></param>
     /// <returns></returns>
-    public async Task BroadCastEventAsync<T>(string streamIdString, T @event) where T : EventBase
+    public async Task BroadcastEventAsync<T>(string streamIdString, T @event) where T : EventBase
     {
         var stream = GenStream<T>(streamIdString);
         var eventWrapper = new EventWrapper<T>(@event, Guid.NewGuid(), this.GetGrainId());
@@ -88,7 +88,7 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
     /// <summary>
     /// Subscribe to a broadcast event and returns the subscription handle
     /// </summary>
-    protected async Task<StreamSubscriptionHandle<EventWrapperBase>> SubscribeBroadCastEventAsync<T>(string agentType, Func<T, Task> eventHandler) where T : EventBase
+    protected async Task<StreamSubscriptionHandle<EventWrapperBase>> SubscribeBroadcastEventAsync<T>(string agentType, Func<T, Task> eventHandler) where T : EventBase
     {
         // Clear any previous pending operations for a single subscription
         StartBatchSubscriptionAsync();
@@ -139,7 +139,17 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
                     Logger.LogWarning("[{0}.{1}]EventWrapperBaseAsyncObserver eventWrapper is null", this.GetType().Name, nameof(AddSubscriptionAsync));
                     return;
                 }
+                var eventId = eventWrapper.Event.EventId;
+                if (State is BroadcastGState broadCastState)
+                {
+                    if (!broadCastState.ProcessedEventIds.Add(eventId))
+                    {
+                        Logger.LogDebug($"Event already handled: {eventId}");
+                        return;
+                    }
 
+                    Logger.LogDebug($"Handled event: {eventId}, Type={typeof(T).Name}");
+                }
                 await eventHandler.Invoke(eventWrapper.Event);
             }, ServiceProvider, eventHandler.Method.Name, typeof(T).Name);
 
@@ -147,7 +157,7 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
 
         StreamSubscriptionHandle<EventWrapperBase> handle;
         
-        if (State.Subscription.TryGetValue(key, out Guid handleId))
+        if (State.Subscription.TryGetValue(key, out var handleId))
         {
             Logger.LogWarning("[{0}.{1}]Subscription {2} already exists", this.GetType().Name, nameof(AddSubscriptionAsync), key);
             var getHandlesStart = stopwatch.ElapsedMilliseconds;
@@ -219,7 +229,7 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
     /// <typeparam name="T">The type of event listened to</typeparam>
     /// <param name="subscriptions">Dictionary containing grain types and their corresponding handles to unsubscribe</param>
     /// <returns></returns>
-    protected async Task UnSubscribeBroadCastEventsAsync<T>(Dictionary<string, StreamSubscriptionHandle<EventWrapperBase>> subscriptions) where T : EventBase
+    protected async Task UnSubscribeBroadcastEventsAsync<T>(Dictionary<string, StreamSubscriptionHandle<EventWrapperBase>> subscriptions) where T : EventBase
     {
         if (subscriptions == null || !subscriptions.Any())
         {
@@ -245,7 +255,7 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
             
             if (!grTypeToStreamAndHandles.TryGetValue(grType, out var streamAndHandles))
             {
-                Logger.LogError("[{0}.{1}]Failed to get stream and handles for grain type {2}", this.GetType().Name, nameof(UnSubscribeBroadCastEventsAsync), grType);
+                Logger.LogError("[{0}.{1}]Failed to get stream and handles for grain type {2}", this.GetType().Name, nameof(UnSubscribeBroadcastEventsAsync), grType);
                 continue;
             }
             
@@ -256,13 +266,13 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
             
             if (unsub.IsNullOrEmpty())
             {
-                Logger.LogWarning("[{0}.{1}]Unable to locate handle {2} to be unsubscribed", this.GetType().Name, nameof(UnSubscribeBroadCastEventsAsync), handle.HandleId);
+                Logger.LogWarning("[{0}.{1}]Unable to locate handle {2} to be unsubscribed", this.GetType().Name, nameof(UnSubscribeBroadcastEventsAsync), handle.HandleId);
                 continue;
             }
 
             if (unsub.Count > 1)
             {
-                Logger.LogWarning("[{0}.{1}]Multiple handles found for {2} to be unsubscribed", this.GetType().Name, nameof(UnSubscribeBroadCastEventsAsync), handle.HandleId);
+                Logger.LogWarning("[{0}.{1}]Multiple handles found for {2} to be unsubscribed", this.GetType().Name, nameof(UnSubscribeBroadcastEventsAsync), handle.HandleId);
             }
 
             foreach (var unsubscription in unsub)
@@ -274,11 +284,11 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
             if (State.Subscription.ContainsKey(key))
             {
                 keysToUnsubscribe.Add(key);
-                Logger.LogInformation("[{0}.{1}]Unsubscribed from {2}", this.GetType().Name, nameof(UnSubscribeBroadCastEventsAsync), key);
+                Logger.LogInformation("[{0}.{1}]Unsubscribed from {2}", this.GetType().Name, nameof(UnSubscribeBroadcastEventsAsync), key);
             }
             else
             {
-                Logger.LogWarning("[{0}.{1}]Unable to locate key {2} in state to be unsubscribed", this.GetType().Name, nameof(UnSubscribeBroadCastEventsAsync), key);
+                Logger.LogWarning("[{0}.{1}]Unable to locate key {2} in state to be unsubscribed", this.GetType().Name, nameof(UnSubscribeBroadcastEventsAsync), key);
             }
         }
 
@@ -301,7 +311,7 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
     /// <param name="grType">The name of agent which published the event</param>
     /// <param name="handle"></param>
     /// <returns></returns>
-    protected async Task UnSubscribeBroadCastAsync<T>(string grType, StreamSubscriptionHandle<EventWrapperBase> handle) where T : EventBase
+    protected async Task UnSubscribeBroadcastAsync<T>(string grType, StreamSubscriptionHandle<EventWrapperBase> handle) where T : EventBase
     {
         var stream = GenStream<T>(grType);
 
@@ -309,13 +319,13 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
         var unsub = handles.Where(x => x.HandleId == handle.HandleId).ToList();
         if (unsub.IsNullOrEmpty())
         {
-            Logger.LogWarning("[{0}.{1}]Unable to locate handle {2} to be unsubscribed", this.GetType().Name, nameof(UnSubscribeBroadCastAsync), handle.HandleId);
+            Logger.LogWarning("[{0}.{1}]Unable to locate handle {2} to be unsubscribed", this.GetType().Name, nameof(UnSubscribeBroadcastAsync), handle.HandleId);
             return;
         }
 
         if (unsub.Count > 1)
         {
-            Logger.LogWarning("[{0}.{1}]Multiple handles found for {2} to be unsubscribed", this.GetType().Name, nameof(UnSubscribeBroadCastAsync), handle.HandleId);
+            Logger.LogWarning("[{0}.{1}]Multiple handles found for {2} to be unsubscribed", this.GetType().Name, nameof(UnSubscribeBroadcastAsync), handle.HandleId);
         }
 
         foreach (var subscription in unsub)
@@ -332,15 +342,15 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
             };
             RaiseEvent(unsubscribeEvent);
             await ConfirmEvents();
-            Logger.LogInformation("[{0}.{1}]Unsubscribed from {2}", this.GetType().Name, nameof(UnSubscribeBroadCastAsync), key);
+            Logger.LogInformation("[{0}.{1}]Unsubscribed from {2}", this.GetType().Name, nameof(UnSubscribeBroadcastAsync), key);
         }
         else
         {
-            Logger.LogWarning("[{0}.{1}]Unable to locate handle {2} to be unsubscribed", this.GetType().Name, nameof(UnSubscribeBroadCastAsync), key);
+            Logger.LogWarning("[{0}.{1}]Unable to locate handle {2} to be unsubscribed", this.GetType().Name, nameof(UnSubscribeBroadcastAsync), key);
         }
     }
 
-    protected async Task UnSubscribeBroadCastAsync<T>(string grType) where T : EventBase
+    protected async Task UnSubscribeBroadcastAsync<T>(string grType) where T : EventBase
     {
         var key = GetStreamIdString<T>(grType);
 
@@ -352,12 +362,12 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
 
             if (unsub.IsNullOrEmpty())
             {
-                Logger.LogWarning("[{0}.{1}]Unable to locate handle {2} to be unsubscribed", this.GetType().Name, nameof(UnSubscribeBroadCastAsync), handleId);
+                Logger.LogWarning("[{0}.{1}]Unable to locate handle {2} to be unsubscribed", this.GetType().Name, nameof(UnSubscribeBroadcastAsync), handleId);
             }
 
             if (unsub.Count > 1)
             {
-                Logger.LogWarning("[{0}.{1}]Multiple handles found for {2} to be unsubscribed", this.GetType().Name, nameof(UnSubscribeBroadCastAsync), handleId);
+                Logger.LogWarning("[{0}.{1}]Multiple handles found for {2} to be unsubscribed", this.GetType().Name, nameof(UnSubscribeBroadcastAsync), handleId);
             }
 
             foreach (var subscription in unsub)
@@ -370,15 +380,15 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
             };
             RaiseEvent(unsubscribeEvent);
             await ConfirmEvents();
-            Logger.LogInformation("[{0}.{1}]Unsubscribed from {2}", this.GetType().Name, nameof(UnSubscribeBroadCastAsync), key);
+            Logger.LogInformation("[{0}.{1}]Unsubscribed from {2}", this.GetType().Name, nameof(UnSubscribeBroadcastAsync), key);
         }
         else
         {
-            Logger.LogWarning("[{0}.{1}]Unable to locate handle {2} to be unsubscribed", this.GetType().Name, nameof(UnSubscribeBroadCastAsync), key);
+            Logger.LogWarning("[{0}.{1}]Unable to locate handle {2} to be unsubscribed", this.GetType().Name, nameof(UnSubscribeBroadcastAsync), key);
         }
     }
 
-    protected override void GAgentTransitionState(TBroadCastState state, StateLogEventBase<TBroadCastStateLogEvent> @event)
+    protected override void GAgentTransitionState(TBroadcastState state, StateLogEventBase<TBroadcastStateLogEvent> @event)
     {
         switch (@event)
         {
@@ -408,7 +418,7 @@ public abstract class BroadCastGAgentBase<TBroadCastState, TBroadCastStateLogEve
     private IAsyncStream<EventWrapperBase> GenStream<T>(string grType)
     {
         var streamIdString = GetStreamIdString<T>(grType);
-        var streamId = StreamId.Create(AevatarOptions!.BroadCastStreamNamespace, streamIdString);
+        var streamId = StreamId.Create(AevatarOptions!.BroadcastStreamNamespace, streamIdString);
         return StreamProvider.GetStream<EventWrapperBase>(streamId);
     }
 

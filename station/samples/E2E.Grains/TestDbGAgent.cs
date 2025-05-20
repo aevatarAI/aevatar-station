@@ -25,7 +25,7 @@ public class TestDbStateLogEvent : StateLogEventBase<TestDbStateLogEvent>
 }
 
 [GenerateSerializer]
-public class TestDbGState : BroadCastGState
+public class TestDbGState : BroadcastGState
 {
     public int Count { get; set; } = 0;
 
@@ -34,7 +34,7 @@ public class TestDbGState : BroadCastGState
         Count = Count + @event.AddMe;
     }
 }
-public interface ITestDbGAgent : IBroadCastGAgent
+public interface ITestDbGAgent : IBroadcastGAgent
 {
     Task<int> GetCount();
 
@@ -46,7 +46,7 @@ public interface ITestDbGAgent : IBroadCastGAgent
 [SiloNamePatternPlacement("User")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
-public class TestDbGAgent : BroadCastGAgentBase<TestDbGState, TestDbStateLogEvent>, ITestDbGAgent
+public class TestDbGAgent : BroadcastGAgentBase<TestDbGState, TestDbStateLogEvent>, ITestDbGAgent
 {
     public async Task PublishAsync<T>(GrainId grainId,T @event) where T : EventBase
     {
@@ -61,7 +61,7 @@ public class TestDbGAgent : BroadCastGAgentBase<TestDbGState, TestDbStateLogEven
     {
         await base.OnGAgentActivateAsync(cancellationToken);
 
-        await SubscribeBroadCastEventAsync<TestDbEvent>("TestDbScheduleGAgent", OnAddNumberEvent);
+        await SubscribeBroadcastEventAsync<TestDbEvent>("TestDbScheduleGAgent", OnAddNumberEvent);
     }
     public override Task<string> GetDescriptionAsync()
     {
@@ -86,12 +86,12 @@ public class TestDbGAgent : BroadCastGAgentBase<TestDbGState, TestDbStateLogEven
     public async Task UnSubWithOutHandle<T>() where T : EventBase
     {
         // Logger.LogInformation($"UnSub called");
-        await UnSubscribeBroadCastAsync<T>("TestDbScheduleGAgent");
+        await UnSubscribeBroadcastAsync<T>("TestDbScheduleGAgent");
     }
 
 }
 
-public interface ITestDbScheduleGAgent : IBroadCastGAgent 
+public interface ITestDbScheduleGAgent : IBroadcastGAgent 
 {
 
 }
@@ -99,7 +99,7 @@ public interface ITestDbScheduleGAgent : IBroadCastGAgent
 [SiloNamePatternPlacement("Scheduler")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
-public class TestDbScheduleGAgent : BroadCastGAgentBase<BroadCastGState, TestDbStateLogEvent>, ITestDbScheduleGAgent
+public class TestDbScheduleGAgent : BroadcastGAgentBase<BroadcastGState, TestDbStateLogEvent>, ITestDbScheduleGAgent
 {
     public override Task<string> GetDescriptionAsync()
     {

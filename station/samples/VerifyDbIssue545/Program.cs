@@ -41,7 +41,7 @@ IHostBuilder builder = Host.CreateDefaultBuilder(args)
 
                 var partitions = 1;
                 var replicationFactor = (short)1;  // ReplicationFactor should be short
-                var topics = "Aevatar,AevatarStateProjection,AevatarBroadCast";
+                var topics = "Aevatar,AevatarStateProjection,AevatarBroadcast";
                 foreach (var topic in topics.Split(','))
                 {
                     options.AddTopic(topic.Trim(), new TopicCreationConfig
@@ -106,7 +106,7 @@ var TestDbEvent = new TestDbEvent
     PublisherGrainId = pubAgent.GetGrainId(),
 };
 
-await pubAgent.BroadCastEventAsync("TestDbScheduleGAgent", TestDbEvent);
+await pubAgent.BroadcastEventAsync("TestDbScheduleGAgent", TestDbEvent);
 
 // Wait for the event to be processed
 await Task.Delay(1000);
@@ -131,7 +131,7 @@ if (subscriberCount > 0)
     Console.WriteLine("subAgent-{0} Count {1}", subscriberCount, await subAgents[subscriberCount - 1].GetCount());
 }
 
-// await pubAgent.BroadCastEventAsync("TestDbScheduleGAgent", TestDbEvent);
+// await pubAgent.BroadcastEventAsync("TestDbScheduleGAgent", TestDbEvent);
 
 // Wait for the event to be processed
 // await Task.Delay(1000);
