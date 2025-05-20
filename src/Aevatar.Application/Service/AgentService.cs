@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Aevatar.Agent;
+using Aevatar.Agents;
 using Aevatar.Agents.Creator;
 using Aevatar.Agents.Creator.Models;
 using Aevatar.Application.Grains.Agents.Creator;
@@ -14,9 +16,16 @@ using Aevatar.CQRS;
 using Aevatar.CQRS.Dto;
 using Aevatar.CQRS.Provider;
 using Aevatar.Exceptions;
+using Aevatar.GAgents.GroupChat.WorkflowCoordinator;
+using Aevatar.GAgents.GroupChat.WorkflowCoordinator.Dto;
+using Aevatar.GAgents.GroupChat.WorkflowCoordinator.GEvent;
 using Aevatar.Options;
 using Aevatar.Query;
 using Aevatar.Schema;
+using Aevatar.Sender;
+using Aevatar.Workflow;
+using GroupChat.GAgent;
+using GroupChat.GAgent.Feature.Blackboard;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -25,6 +34,7 @@ using Orleans.Metadata;
 using Orleans.Runtime;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
+using ZstdSharp.Unsafe;
 
 namespace Aevatar.Service;
 
@@ -40,6 +50,7 @@ public class AgentService : ApplicationService, IAgentService
     private readonly IOptionsMonitor<AgentOptions> _agentOptions;
     private readonly GrainTypeResolver _grainTypeResolver;
     private readonly ISchemaProvider _schemaProvider;
+    private readonly IWorkflowRepository _workflowRepository;
     private readonly IIndexingService _indexingService;
 
     public AgentService(
@@ -52,6 +63,7 @@ public class AgentService : ApplicationService, IAgentService
         IOptionsMonitor<AgentOptions> agentOptions,
         GrainTypeResolver grainTypeResolver,
         ISchemaProvider schemaProvider,
+        IWorkflowRepository workflowRepository,
         IIndexingService indexingService)
     {
         _clusterClient = clusterClient;
@@ -63,6 +75,7 @@ public class AgentService : ApplicationService, IAgentService
         _agentOptions = agentOptions;
         _grainTypeResolver = grainTypeResolver;
         _schemaProvider = schemaProvider;
+        _workflowRepository = workflowRepository;
         _indexingService = indexingService;
     }
 
@@ -241,8 +254,15 @@ public class AgentService : ApplicationService, IAgentService
             Name = dto.Name,
             GrainId = businessAgent.GetGrainId(),
             Properties = dto.Properties,
-            AgentGuid = businessAgent.GetPrimaryKey()
+            AgentGuid = businessAgent.GetPrimaryKey(),
+            BusinessAgentGrainId = businessAgent.GetGrainId().ToString()
         };
+
+        var configuration = await GetAgentConfigurationAsync(businessAgent);
+        if (configuration != null)
+        {
+            resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration.DtoType).ToJson();
+        }
 
         return resp;
     }
@@ -264,15 +284,54 @@ public class AgentService : ApplicationService, IAgentService
             return result;
         }
 
-        result.AddRange(response.Items.Select(state => new AgentInstanceDto()
+        var getJsonSchema = async (string creatorId) =>
         {
-            Id = (string)state["id"],
-            Name = (string)state["name"],
-            Properties = state["properties"] == null
-                ? null
-                : JsonConvert.DeserializeObject<Dictionary<string, object>>((string)state["properties"]),
-            AgentType = (string)state["agentType"],
-        }));
+            if (creatorId.IsNullOrEmpty())
+            {
+                return string.Empty;
+            }
+
+            var creatorGAgent = await _gAgentFactory.GetGAgentAsync<ICreatorGAgent>(Guid.Parse(creatorId));
+            var creatorState = await creatorGAgent.GetStateAsync();
+            if (creatorState.BusinessAgentGrainId == default)
+            {
+                return string.Empty;
+            }
+
+            var businessAgent = await _gAgentFactory.GetGAgentAsync(creatorState.BusinessAgentGrainId);
+            var initializationData = await GetAgentConfigurationAsync(businessAgent);
+            if (initializationData == null)
+            {
+                return string.Empty;
+            }
+
+            var jsonSchema = _schemaProvider.GetTypeSchema(initializationData.DtoType);
+            return jsonSchema.ToJson();
+        };
+
+        foreach (var state in response.Items)
+        {
+            var agentType = (string)state["agentType"];
+            if (_agentOptions.CurrentValue.SystemAgentList.Exists(s => agentType.Contains(s)))
+            {
+                continue;
+            }
+
+            var temp = new AgentInstanceDto()
+            {
+                Id = (string)state["id"],
+                Name = (string)state["name"],
+                Properties = state["properties"] == null
+                    ? null
+                    : JsonConvert.DeserializeObject<Dictionary<string, object>>((string)state["properties"]),
+                AgentType = (string)state["agentType"],
+                BusinessAgentGrainId =
+                    state.TryGetValue("formattedBusinessAgentGrainId", out var value) ? (string)value : null,
+                PropertyJsonSchema = await getJsonSchema((string)state["id"])
+            };
+
+            result.Add(temp);
+        }
 
         return result;
     }
@@ -317,19 +376,14 @@ public class AgentService : ApplicationService, IAgentService
 
         var businessAgent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
 
+        var configuration = await GetAgentConfigurationAsync(businessAgent);
         if (!dto.Properties.IsNullOrEmpty())
         {
             var updatedParam = JsonConvert.SerializeObject(dto.Properties);
-            var configuration = await GetAgentConfigurationAsync(businessAgent);
             if (configuration != null && !updatedParam.IsNullOrEmpty())
             {
                 var config = SetupConfigurationData(configuration, updatedParam);
                 await businessAgent.ConfigAsync(config);
-                await creatorAgent.UpdateAgentAsync(new UpdateAgentInput
-                {
-                    Name = dto.Name,
-                    Properties = JsonConvert.SerializeObject(dto.Properties)
-                });
             }
             else
             {
@@ -337,14 +391,25 @@ public class AgentService : ApplicationService, IAgentService
             }
         }
 
+        await creatorAgent.UpdateAgentAsync(new UpdateAgentInput
+        {
+            Name = dto.Name,
+            Properties = JsonConvert.SerializeObject(dto.Properties)
+        });
+
         var resp = new AgentDto
         {
             Id = guid,
             AgentType = agentState.AgentType,
             Name = dto.Name,
             GrainId = agentState.BusinessAgentGrainId,
-            Properties = dto.Properties
+            Properties = dto.Properties,
+            BusinessAgentGrainId = agentState.BusinessAgentGrainId.ToString()
         };
+        if (configuration != null)
+        {
+            resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration.DtoType).ToJson();
+        }
 
         return resp;
     }
@@ -364,7 +429,8 @@ public class AgentService : ApplicationService, IAgentService
             Name = agentState.Name,
             GrainId = agentState.BusinessAgentGrainId,
             Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentState.Properties),
-            AgentGuid = agentState.BusinessAgentGrainId.GetGuidKey()
+            AgentGuid = agentState.BusinessAgentGrainId.GetGuidKey(),
+            BusinessAgentGrainId = agentState.BusinessAgentGrainId.ToString()
         };
 
         var businessAgent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
@@ -386,7 +452,7 @@ public class AgentService : ApplicationService, IAgentService
 
         EnsureUserAuthorized(agentState.UserId);
 
-        var agent = await _gAgentFactory.GetGAgentAsync<IExtGAgent>(agentState.BusinessAgentGrainId);
+        var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
 
         // check if all sub agent can be added 
         var newSubAgentGrainIds = new List<GrainId>();
@@ -416,7 +482,6 @@ public class AgentService : ApplicationService, IAgentService
 
         // register sub agent and add their events to parent agent
         var subAgentGuids = subAgentGrainIds.Select(x => x.GetGuidKey()).ToList();
-        var businessAgents = new List<IGAgent>();
         foreach (var grainId in newSubAgentGrainIds)
         {
             if (subAgentGrainIds.Contains(grainId))
@@ -425,27 +490,22 @@ public class AgentService : ApplicationService, IAgentService
             }
 
             var businessAgent = await _gAgentFactory.GetGAgentAsync(grainId);
-            businessAgents.Add(businessAgent);
+            await agent.RegisterAsync(businessAgent);
             subAgentGuids.Add(grainId.GetGuidKey());
-        }
-        
-        await agent.RegisterManyAsync(businessAgents);
-        
-        foreach (var businessAgent in businessAgents)
-        {
+
             var eventsHandledByAgent = await businessAgent.GetAllSubscribedEventsAsync();
             if (eventsHandledByAgent != null)
             {
                 _logger.LogInformation("all events for agent {agentId}, events: {events}",
-                    businessAgent.GetGrainId().GetGuidKey(), JsonConvert.SerializeObject(eventsHandledByAgent));
+                    grainId.GetGuidKey(), JsonConvert.SerializeObject(eventsHandledByAgent));
                 var eventsToAdd = eventsHandledByAgent.Except(allEventsHandled).ToList();
                 _logger.LogInformation("Adding events for agent {agentId}, events: {events}",
-                    businessAgent.GetGrainId().GetGuidKey(), JsonConvert.SerializeObject(eventsToAdd));
+                    grainId.GetGuidKey(), JsonConvert.SerializeObject(eventsToAdd));
                 allEventsHandled.AddRange(eventsToAdd);
             }
             else
             {
-                _logger.LogInformation("No events handled by agent {agentId}", businessAgent.GetGrainId().GetGuidKey());
+                _logger.LogInformation("No events handled by agent {agentId}", grainId.GetGuidKey());
             }
         }
 
@@ -597,5 +657,278 @@ public class AgentService : ApplicationService, IAgentService
             _logger.LogInformation("Agent {agentId} has parent, please remove from it first.", guid);
             throw new UserFriendlyException("Agent has parent, please remove from it first.");
         }
+    }
+
+    public async Task<string> SimulateWorkflowAsync(string workflowGrainId,
+        List<WorkflowAgentDefinesDto> workUnitRelations)
+    {
+        return await CheckWorkflowWithGrainIdAsync(workflowGrainId, workUnitRelations);
+    }
+
+    public async Task<CreateWorkflowResponseDto> CreateWorkflowAsync(WorkflowAgentsDto workflowAgentDto)
+    {
+        var result = new CreateWorkflowResponseDto();
+        var errorStr =
+            await CheckWorkflowAsync(workflowAgentDto.WorkUnitRelations, new List<WorkflowAgentDefinesDto>());
+        if (errorStr.IsNullOrEmpty() == false)
+        {
+            throw new UserFriendlyException(errorStr);
+        }
+
+        var agentDto = await CreateAgentAsync(new CreateAgentInputDto
+        {
+            Name = "Workflow",
+            AgentType = _grainTypeResolver.GetGrainType(typeof(WorkflowCoordinatorGAgent)).ToString()
+        });
+
+        var creatorGAgent = _clusterClient.GetGrain<ICreatorGAgent>(agentDto.Id);
+        var workflowAgent = await _gAgentFactory.GetGAgentAsync(agentDto.GrainId);
+        await creatorGAgent.RegisterAsync(workflowAgent);
+
+        var blackboardAgent = _clusterClient.GetGrain<IBlackboardGAgent>(agentDto.AgentGuid);
+
+        await workflowAgent.RegisterAsync(blackboardAgent);
+        foreach (var item in workflowAgentDto.WorkUnitRelations)
+        {
+            var grainId = GrainId.Parse(item.GrainId);
+            var gAgent = _clusterClient.GetGrain<IGAgent>(grainId);
+            await workflowAgent.RegisterAsync(gAgent);
+        }
+
+        result.WorkflowGrainId = workflowAgent.GetGrainId().ToString();
+        result.WorkflowAgentId = agentDto.Id;
+
+        var workflowList = workflowAgentDto.WorkUnitRelations
+            .Select(s => new WorkflowUnitDto() { GrainId = s.GrainId, NextGrainId = s.NextGrainId }).ToList();
+        var publishGrain = _clusterClient.GetGrain<IPublishingGAgent>(workflowAgent.GetPrimaryKey());
+        await workflowAgent.RegisterAsync(publishGrain);
+        await workflowAgent.ConfigAsync(new WorkflowCoordinatorConfigDto() { WorkflowUnitList = workflowList });
+
+        await _workflowRepository.InsertAsync(new WorkflowInfo()
+        {
+            WorkflowGrainId = workflowAgent.GetGrainId().ToString(), WorkUnitList = workflowAgentDto.WorkUnitRelations
+                .Select(s => new WorkflowUintInfo()
+                {
+                    GrainId = s.GrainId,
+                    NextGrainId = s.NextGrainId,
+                    XPosition = s.XPosition,
+                    YPosition = s.YPosition
+                }).ToList()
+        });
+
+        return result;
+    }
+
+    public async Task<List<WorkflowAgentDefinesDto>> GetWorkflowUnitRelationsAsync(string workflowGrainId)
+    {
+        // var workflowCoordinator = GetWorkFlowGAgent(workflowGrainId);
+        // var workflowState = await workflowCoordinator.GetStateAsync();
+        var workflowInfo = await _workflowRepository.GetByWorkflowGrainId(workflowGrainId);
+        if (workflowInfo == null)
+        {
+            return new List<WorkflowAgentDefinesDto>();
+        }
+
+        return workflowInfo.WorkUnitList.Select(s => new WorkflowAgentDefinesDto()
+        {
+            GrainId = s.GrainId,
+            NextGrainId = s.NextGrainId,
+            XPosition = s.XPosition,
+            YPosition = s.YPosition,
+        }).ToList();
+    }
+
+    public async Task EditWorkWorkflowAsync(string workflowGrainId,
+        List<WorkflowAgentDefinesDto> workflowUnitList)
+    {
+        var errorMsg = await CheckWorkflowWithGrainIdAsync(workflowGrainId, workflowUnitList);
+        if (errorMsg.IsNullOrEmpty() == false)
+        {
+            throw new UserFriendlyException(errorMsg);
+        }
+
+        var workflowRelation = await GetWorkflowUnitRelationsAsync(workflowGrainId);
+        var notExistWorkUnit = workflowUnitList
+            .Where(w => workflowRelation.Exists(e => e.GrainId == w.GrainId) == false).ToList();
+
+        var workflow = GetWorkFlowGAgent(workflowGrainId);
+        if (notExistWorkUnit.Count > 0)
+        {
+            foreach (var item in notExistWorkUnit)
+            {
+                var grainId = GrainId.Parse(item.GrainId);
+                var gAgent = _clusterClient.GetGrain<IGAgent>(grainId);
+                await workflow.SubscribeToAsync(gAgent);
+            }
+        }
+
+        var workUnit = await _workflowRepository.GetByWorkflowGrainId(workflowGrainId);
+        if (workUnit == null)
+        {
+            throw new UserFriendlyException("workflow not found");
+        }
+
+        var workflowUnitDtoList = workflowUnitList
+            .Select(s => new WorkflowUnitDto { GrainId = s.GrainId, NextGrainId = s.NextGrainId }).ToList();
+
+        var publishGrain = _clusterClient.GetGrain<IPublishingGAgent>(workflow.GetPrimaryKey());
+        if (await publishGrain.GetParentAsync() == default)
+        {
+            publishGrain = _clusterClient.GetGrain<IPublishingGAgent>(workflow.GetPrimaryKey());
+            await workflow.RegisterAsync(publishGrain);
+        }
+
+        await publishGrain.PublishEventAsync(new ResetWorkflowEvent() { WorkflowUnitList = workflowUnitDtoList });
+        workUnit.WorkUnitList = workflowUnitList.Select(s => new WorkflowUintInfo()
+        {
+            GrainId = s.GrainId,
+            NextGrainId = s.NextGrainId,
+            XPosition = s.XPosition,
+            YPosition = s.YPosition,
+        }).ToList();
+
+        await _workflowRepository.UpdateAsync(workUnit);
+    }
+
+    public async Task<string> CheckWorkflowWithGrainIdAsync(string workflowGrainId,
+        List<WorkflowAgentDefinesDto> newWorkflowRelations)
+    {
+        if (workflowGrainId.IsNullOrEmpty())
+        {
+            return await CheckWorkflowAsync(newWorkflowRelations, new List<WorkflowAgentDefinesDto>());
+        }
+
+        var workflowRelation = await GetWorkflowUnitRelationsAsync(workflowGrainId);
+        var notExistWorkUnit =
+            newWorkflowRelations.Where(w => workflowRelation.Exists(e => e.GrainId == w.GrainId) == false).ToList();
+        if (notExistWorkUnit.Count > 0)
+        {
+            foreach (var item in notExistWorkUnit)
+            {
+                var errorMsg = await CheckAgentCanJoinWorkflow(item.GrainId);
+                if (errorMsg.IsNullOrEmpty() == false)
+                {
+                    return errorMsg;
+                }
+            }
+        }
+
+        return await CheckWorkflowAsync(newWorkflowRelations, workflowRelation);
+    }
+
+    private async Task<string> CheckWorkflowAsync(List<WorkflowAgentDefinesDto> workflowUnits,
+        List<WorkflowAgentDefinesDto> existWorkflowRelation)
+    {
+        if (workflowUnits.Count == 0)
+        {
+            return "no work unit";
+        }
+
+        // var groupCount = workflowUnits.GroupBy(f => f.GrainId);
+        // if (groupCount.Count() != workflowUnits.Count)
+        // {
+        //     return "cannot input the same work unit";
+        // }
+
+        if (ExistLoopAgents(workflowUnits) == true)
+        {
+            _logger.LogError($"[AgentService] exist cyclic agent:{JsonConvert.SerializeObject(workflowUnits)}");
+            return "A workflow with cyclic workflows or non-existent nodes.";
+        }
+
+        foreach (var workUnit in workflowUnits)
+        {
+            if (existWorkflowRelation.Exists(e => e.GrainId == workUnit.GrainId) == true)
+            {
+                continue;
+            }
+
+            var errorMsg = await CheckAgentCanJoinWorkflow(workUnit.GrainId);
+            if (errorMsg.IsNullOrEmpty() == false)
+            {
+                return errorMsg;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private bool ExistLoopAgents(List<WorkflowAgentDefinesDto> workflowAgents)
+    {
+        var agentCount = workflowAgents.Count;
+        var checkCycle = (WorkflowAgentDefinesDto workUnit) =>
+        {
+            var count = 0;
+            var nextGrainId = workUnit.NextGrainId;
+            while (true)
+            {
+                if (count >= agentCount)
+                {
+                    return true;
+                }
+
+                if (string.IsNullOrEmpty(nextGrainId))
+                {
+                    return false;
+                }
+
+                var nextWorkUnit = workflowAgents.FirstOrDefault(f => f.GrainId == nextGrainId);
+                if (nextWorkUnit == null)
+                {
+                    return true;
+                }
+
+                if (nextWorkUnit.GrainId.Contains("/") == false)
+                {
+                    return true;
+                }
+                else
+                {
+                    if (Regex.IsMatch(nextWorkUnit.GrainId.Split("/")[1], @"^[a-zA-Z0-9]{32}$") == false)
+                    {
+                        return true;
+                    }
+                }
+
+                count += 1;
+                nextGrainId = nextWorkUnit.NextGrainId;
+                if (nextGrainId == nextWorkUnit.GrainId)
+                {
+                    return true;
+                }
+            }
+        };
+
+        return workflowAgents.Any(workUnit => checkCycle(workUnit) == true);
+    }
+
+    private async Task<string> CheckAgentCanJoinWorkflow(string workUnitGrainId)
+    {
+        var grainId = GrainId.Parse(workUnitGrainId);
+        var agent = _clusterClient.GetGrain<IGAgent>(grainId);
+
+        var agentType = ReflectionUtil.GetTypeByFullName(grainId.Type.ToString()!);
+
+        if (agentType == null ||
+            ReflectionUtil.CheckInheritGenericClass(agentType, typeof(GroupMemberGAgentBase<,,,>)) == false)
+        {
+            return "Some agents are unable to orchestrate workflows";
+        }
+
+        var parent = await agent.GetParentAsync();
+        if (parent != default)
+        {
+            return $"agent:{grainId.ToString()} cannot participate in the pipeline";
+        }
+
+        return string.Empty;
+    }
+
+    private IWorkflowCoordinatorGAgent GetWorkFlowGAgent(string workflowGrainId)
+    {
+        var grainId = GrainId.Parse(workflowGrainId);
+        var workflowCoordinator = _clusterClient.GetGrain<IWorkflowCoordinatorGAgent>(grainId);
+
+        return workflowCoordinator;
     }
 }

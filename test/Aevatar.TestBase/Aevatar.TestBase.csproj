@@ -39,8 +39,6 @@
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="Volo.Abp.Dapr" />
     <PackageReference Include="Volo.Abp.AspNetCore.Mvc.Dapr.EventBus" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Common" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
   </ItemGroup>
 
 </Project>

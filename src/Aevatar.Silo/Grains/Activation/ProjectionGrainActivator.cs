@@ -1,4 +1,3 @@
-using Aevatar.Core.Abstractions;
 using Aevatar.Core.Abstractions.Projections;
 using Aevatar.Silo.IdGeneration;
 using Microsoft.Extensions.Logging;
@@ -35,20 +34,16 @@ namespace Aevatar.Silo.Grains.Activation
                 // Get the generic StateProjectionGrain type with this StateBase type
                 var grainType = typeof(IProjectionGrain<>).MakeGenericType(stateType);
                 
-
-                // Get the grain and activate it
-                for (int i = 0; i < AevatarCoreConstants.DefaultNumOfProjectorPerAgentType; i++)
-                {
-                    // Create a deterministic GUID based on the state type name
-                    var grainId = _idGenerator.CreateDeterministicGuid(stateType.FullName + i.ToString());
-                    RequestContext.Set("id", i);
-                    var grain = _grainFactory.GetGrain(grainType, grainId).Cast(grainType);
-                    var method = grainType.GetMethod("ActivateAsync");
-                    await (Task)method?.Invoke(grain, null)!;
+                // Create a deterministic GUID based on the state type name
+                var grainId = _idGenerator.CreateDeterministicGuid(stateType.FullName);
                 
-                    _logger.LogInformation("Successfully activated StateProjectionGrain for {StateType} with ID {GrainId}", 
-                        stateType.Name, grainId);
-                }
+                // Get the grain and activate it
+                var grain = _grainFactory.GetGrain(grainType, grainId).Cast(grainType);
+                var method = grainType.GetMethod("ActivateAsync");
+                await (Task)method?.Invoke(grain, null)!;
+                
+                _logger.LogInformation("Successfully activated StateProjectionGrain for {StateType} with ID {GrainId}", 
+                    stateType.Name, grainId);
             }
             catch (Exception ex)
             {

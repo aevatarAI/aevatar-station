@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Aevatar.Notification.NotificationImpl;
-using Aevatar.Notification.Parameters;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Volo.Abp.DependencyInjection;
@@ -27,35 +25,32 @@ public class NotificationProcessorFactory : INotificationHandlerFactory
         _serviceProvider = serviceProvider;
         _logger = logger;
 
-        // var handlerTypes = Assembly.GetExecutingAssembly().GetTypes()
-        //     .Where(t =>
-        //         t.IsClass &&
-        //         !t.IsAbstract &&
-        //         t.GetInterfaces().Any(item =>
-        //             item.IsGenericType && item.GetGenericTypeDefinition() == typeof(INotificationHandler<>))
-        //     );
-        //
-        //
-        // foreach (var item in handlerTypes)
-        // {
-        //     var instance =
-        //         ActivatorUtilities.GetServiceOrCreateInstance(_serviceProvider, item) as INotificationHandlerType;
-        //     if (instance == null)
-        //     {
-        //         _logger.LogError(
-        //             $"[NotificationProcessor] Constructor ActivatorUtilities.GetServiceOrCreateInstance error:{item.FullName}");
-        //         continue;
-        //     }
-        //
-        //     _typeDic.TryAdd(instance.Type, item);
-        //     
-        //     var inheritInterface  = item.GetInterfaces().First(w => w.IsGenericType && w.GetGenericTypeDefinition() == typeof(INotificationHandler<>));
-        //     var genericType = inheritInterface.GetGenericArguments()[0];
-        //     _typeToGeneratorDic.TryAdd(item, genericType);
-        // }
-        
-        _typeDic.TryAdd(NotificationTypeEnum.OrganizationInvitation, typeof(OrganizationVisit));
-        _typeToGeneratorDic.TryAdd(typeof(OrganizationVisit), typeof(OrganizationVisitInfo));
+        var handlerTypes = Assembly.GetExecutingAssembly().GetTypes()
+            .Where(t =>
+                t.IsClass &&
+                !t.IsAbstract &&
+                t.GetInterfaces().Any(item =>
+                    item.IsGenericType && item.GetGenericTypeDefinition() == typeof(INotificationHandler<>))
+            );
+
+
+        foreach (var item in handlerTypes)
+        {
+            var instance =
+                ActivatorUtilities.GetServiceOrCreateInstance(_serviceProvider, item) as INotificationHandlerType;
+            if (instance == null)
+            {
+                _logger.LogError(
+                    $"[NotificationProcessor] Constructor ActivatorUtilities.GetServiceOrCreateInstance error:{item.FullName}");
+                continue;
+            }
+
+            _typeDic.TryAdd(instance.Type, item);
+            
+            var inheritInterface  = item.GetInterfaces().First(w => w.IsGenericType && w.GetGenericTypeDefinition() == typeof(INotificationHandler<>));
+            var genericType = inheritInterface.GetGenericArguments()[0];
+            _typeToGeneratorDic.TryAdd(item, genericType);
+        }
     }
 
     public NotificationWrapper? GetNotification(NotificationTypeEnum type)

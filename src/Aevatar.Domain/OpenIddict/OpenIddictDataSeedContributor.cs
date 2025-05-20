@@ -97,7 +97,7 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
             await SeedPermissionsFromConfigurationAsync();
         }
     }
-
+    
     private async Task SeedPermissionsFromConfigurationAsync()
     {
         var permissionMappings = _configuration.GetSection("PermissionMappings").Get<Dictionary<string, List<string>>>();
@@ -107,7 +107,7 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
         {
             var roleName = mapping.Key;
             var permissions = mapping.Value;
-
+           
             var role = await _roleManager.RoleExistsAsync(roleName);
             if (!role)
             {

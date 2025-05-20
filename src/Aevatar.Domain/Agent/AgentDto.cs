@@ -13,4 +13,5 @@ public class AgentDto
     public GrainId GrainId { get; set; }
     public Guid AgentGuid { get; set; }
     public string PropertyJsonSchema { get; set; }
+    public string BusinessAgentGrainId { get; set; }
 }

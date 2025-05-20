@@ -17,7 +17,6 @@ public interface IOrganizationService
     Task<ListResultDto<OrganizationMemberDto>> GetMemberListAsync(Guid organizationId, GetOrganizationMemberListDto input);
     Task SetMemberAsync(Guid organizationId, SetOrganizationMemberDto input);
     Task SetMemberRoleAsync(Guid organizationId, SetOrganizationMemberRoleDto input);
-    Task RefuseInvitationAsync(Guid organizationId, Guid userId);
 
     Task<ListResultDto<IdentityRoleDto>> GetRoleListAsync(Guid organizationId);
     Task<ListResultDto<PermissionGrantInfoDto>> GetPermissionListAsync(Guid organizationId);

@@ -12,9 +12,6 @@ using Volo.Abp.Domain.Repositories;
 using Volo.Abp.EventBus.Distributed;
 using Volo.Abp.Identity;
 using Volo.Abp.PermissionManagement;
-using Microsoft.AspNetCore.Identity;
-using IdentityRole = Volo.Abp.Identity.IdentityRole;
-using IdentityUser = Volo.Abp.Identity.IdentityUser;
 
 namespace Aevatar.Projects;
 
@@ -25,9 +22,9 @@ public class ProjectService : OrganizationService, IProjectService
         IRepository<OrganizationUnit, Guid> organizationUnitRepository, IdentityRoleManager roleManager,
         IPermissionManager permissionManager, IOrganizationPermissionChecker permissionChecker,
         IPermissionDefinitionManager permissionDefinitionManager, IRepository<IdentityUser, Guid> userRepository,
-        INotificationService notificationService) :
+        IDistributedEventBus distributedEvent) :
         base(organizationUnitManager, identityUserManager, organizationUnitRepository, roleManager, permissionManager,
-            permissionChecker, permissionDefinitionManager, userRepository, notificationService)
+            permissionChecker, permissionDefinitionManager, userRepository, distributedEvent)
     {
     }
 
@@ -49,50 +46,23 @@ public class ProjectService : OrganizationService, IProjectService
         project.ExtraProperties[AevatarConsts.OrganizationRoleKey] = new List<Guid> { ownerRoleId, readerRoleId };
         project.ExtraProperties[AevatarConsts.ProjectDomainNameKey] = input.DomainName;
 
-        try
-        {
-            await OrganizationUnitManager.CreateAsync(project);
-        }
-        catch (BusinessException ex)
-            when (ex.Code == IdentityErrorCodes.DuplicateOrganizationUnitDisplayName)
-        {
-            throw new UserFriendlyException("The same project name already exists");
-        }
+        await OrganizationUnitManager.CreateAsync(project);
 
         return ObjectMapper.Map<OrganizationUnit, ProjectDto>(project);
     }
 
-    protected override List<string> GetOwnerPermissions()
+    protected override async Task<Guid> AddReaderRoleAsync(Guid organizationId)
     {
-        return
-        [
-            AevatarPermissions.Members.Default,
-            AevatarPermissions.Members.Manage,
-            AevatarPermissions.ApiKeys.Default,
-            AevatarPermissions.ApiKeys.Create,
-            AevatarPermissions.ApiKeys.Edit,
-            AevatarPermissions.ApiKeys.Delete,
-            AevatarPermissions.Projects.Default,
-            AevatarPermissions.Projects.Edit,
-            AevatarPermissions.Roles.Default,
-            AevatarPermissions.Roles.Create,
-            AevatarPermissions.Roles.Edit,
-            AevatarPermissions.Roles.Delete,
-            AevatarPermissions.LLMSModels.Default,
-            AevatarPermissions.ApiRequests.Default
-        ];
-    }
-    
-    protected override List<string> GetReaderPermissions()
-    {
-        return
-        [
-            AevatarPermissions.Projects.Default,
-            AevatarPermissions.Members.Default,
-            AevatarPermissions.ApiKeys.Default,
-            AevatarPermissions.LLMSModels.Default,
-            AevatarPermissions.ApiRequests.Default
-        ];
+        var role = new IdentityRole(
+            GuidGenerator.Create(),
+            GetOrganizationRoleName(organizationId, ReaderRoleName)
+        );
+        await RoleManager.CreateAsync(role);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.Organizations.Default, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.OrganizationMembers.Default, true);
+        await PermissionManager.SetForRoleAsync(role.Name, AevatarPermissions.ApiKeys.Default, true);
+
+        return role.Id;
     }
 
     public async Task<ProjectDto> UpdateAsync(Guid id, UpdateProjectDto input)
@@ -108,7 +78,7 @@ public class ProjectService : OrganizationService, IProjectService
     {
         List<OrganizationUnit> organizations;
         if (CurrentUser.IsInRole(AevatarConsts.AdminRoleName) ||
-            await IsOrganizationOwnerAsync(input.OrganizationId, CurrentUser.Id.Value))
+            await IsOrganizationOwonerAsync(input.OrganizationId, CurrentUser.Id.Value))
         {
             organizations = await OrganizationUnitManager.FindChildrenAsync(input.OrganizationId, true);
             organizations = organizations.Where(o =>
@@ -126,7 +96,7 @@ public class ProjectService : OrganizationService, IProjectService
         }
 
         var result = new List<ProjectDto>();
-        foreach (var organization in organizations.OrderBy(o=>o.CreationTime))
+        foreach (var organization in organizations)
         {
             var projectDto = ObjectMapper.Map<OrganizationUnit, ProjectDto>(organization);
             projectDto.MemberCount = await UserRepository.CountAsync(u =>
@@ -157,20 +127,7 @@ public class ProjectService : OrganizationService, IProjectService
         }
 
         user.AddRole(roleId.Value);
-        (await IdentityUserManager.UpdateAsync(user)).CheckErrors();
-        (await IdentityUserManager.UpdateSecurityStampAsync(user)).CheckErrors();
+        await IdentityUserManager.UpdateAsync(user);
         await IdentityUserManager.AddToOrganizationUnitAsync(user.Id, organizationId);
-    }
-    
-    protected override async Task RemoveMemberAsync(Guid organizationId, IdentityUser user)
-    {
-        var children = await OrganizationUnitManager.FindChildrenAsync(organizationId, true);
-        foreach (var child in children)
-        {
-            await RemoveMemberAsync(child, user.Id);
-        }
-
-        var organization = await OrganizationUnitRepository.GetAsync(organizationId);
-        await RemoveMemberAsync(organization, user.Id);
     }
 }

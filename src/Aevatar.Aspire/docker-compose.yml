@@ -1,15 +1,10 @@
 version: '3.8'
 
-networks:
-  aevatar-network:
-    driver: bridge
-
 services:
   mongodb:
     image: mongo:latest
+    network_mode: bridge
     container_name: mongodb
-    networks:
-      - aevatar-network
     ports:
       - "27017:27017"
     volumes:
@@ -19,9 +14,8 @@ services:
 
   redis:
     image: redis:latest
+    network_mode: bridge
     container_name: redis
-    networks:
-      - aevatar-network
     ports:
       - "6379:6379"
     volumes:
@@ -29,9 +23,8 @@ services:
 
   kafka:
     image: bitnami/kafka:latest
+    network_mode: bridge
     container_name: kafka
-    networks:
-      - aevatar-network
     ports:
       - "9092:9092"
     environment:
@@ -48,9 +41,8 @@ services:
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.12.1
+    network_mode: bridge
     container_name: elasticsearch
-    networks:
-      - aevatar-network
     ports:
       - "9200:9200"
     environment:
@@ -62,74 +54,24 @@ services:
 
   qdrant:
     image: qdrant/qdrant:latest
+    network_mode: bridge
     container_name: qdrant
-    networks:
-      - aevatar-network
     ports:
       - "6333:6333"
       - "6334:6334"
     volumes:
       - qdrant-data:/qdrant/storage
 
-  jaeger:
-    image: jaegertracing/all-in-one:latest
-    container_name: jaeger
-    networks:
-      - aevatar-network
-    ports:
-      - "16686:16686"  # UI
-      - "14250:14250"  # Collector
-      - "4317:4317"    # OTLP gRPC
-      - "4318:4318"    # OTLP HTTP
-    environment:
-      - COLLECTOR_OTLP_ENABLED=true
-
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.88.0
+    image: otel/opentelemetry-collector-contrib:latest
+    network_mode: bridge
     container_name: otel-collector
-    networks:
-      - aevatar-network
-    command: [ "--config=/etc/otel-collector-config.yaml" ]
+    command: ["--config=/etc/otel-collector-config.yaml"]
     volumes:
       - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
     ports:
       - "4315:4315"  # OTLP gRPC
       - "9090:9090"  # Prometheus exporter
-    depends_on:
-      - jaeger
-
-  # Add a proper Prometheus server
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
-    networks:
-      - aevatar-network
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--web.enable-lifecycle'
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus-data:/prometheus
-    ports:
-      - "9091:9090"  # Using 9091 on host to avoid conflict with otel-collector
-    depends_on:
-      - otel-collector
-
-  # Add Grafana for better visualization
-  grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
-    networks:
-      - aevatar-network
-    volumes:
-      - grafana-data:/var/lib/grafana
-    ports:
-      - "3000:3000"
-    depends_on:
-      - prometheus
 
 volumes:
   mongodb-data:
@@ -137,5 +79,3 @@ volumes:
   kafka-data:
   elasticsearch-data:
   qdrant-data:
-  prometheus-data:
-  grafana-data:

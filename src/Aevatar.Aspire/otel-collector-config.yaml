@@ -2,7 +2,6 @@ receivers:
   otlp:
     protocols:
       grpc:
-        endpoint: 0.0.0.0:4315
       http:
 
 processors:
@@ -13,13 +12,10 @@ processors:
     check_interval: 1s
     limit_mib: 1000
     spike_limit_mib: 200
-  spanmetrics:
-    metrics_exporter: prometheus
-    aggregation_temporality: CUMULATIVE
 
 exporters:
   otlp:
-    endpoint: "jaeger:4317"
+    endpoint: "otel-collector:4317"
     tls:
       insecure: true
   logging:
@@ -34,8 +30,8 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [batch, memory_limiter, spanmetrics]
-      exporters: [otlp, elasticsearch, logging]
+      processors: [batch, memory_limiter]
+      exporters: [elasticsearch, logging]
     metrics:
       receivers: [otlp]
       processors: [batch, memory_limiter]

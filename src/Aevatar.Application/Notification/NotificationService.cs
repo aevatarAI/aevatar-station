@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Security.Authentication;
 using System.Threading.Tasks;
@@ -12,7 +11,6 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Volo.Abp;
 using Volo.Abp.DependencyInjection;
-using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
 using Volo.Abp.ObjectMapping;
 using Volo.Abp.Users;
@@ -27,24 +25,21 @@ public class NotificationService : INotificationService, ITransientDependency
     private readonly INotificationRepository _notificationRepository;
     private readonly IObjectMapper _objectMapper;
     private readonly IHubService _hubService;
-    private readonly IdentityUserManager _identityUserManager;
-    private readonly IRepository<OrganizationUnit, Guid> _organizationUnitRepository;
+    private readonly IOrganizationService _organizationService;
 
     public NotificationService(INotificationHandlerFactory notificationHandlerFactory,
         ILogger<NotificationService> logger, INotificationRepository notificationRepository, IObjectMapper objectMapper,
-        IHubService hubService, IdentityUserManager identityUserManager,
-        IRepository<OrganizationUnit, Guid> organizationUnitRepository)
+        IHubService hubService, IOrganizationService organizationService)
     {
         _notificationHandlerFactory = notificationHandlerFactory;
         _logger = logger;
         _notificationRepository = notificationRepository;
         _objectMapper = objectMapper;
         _hubService = hubService;
-        _identityUserManager = identityUserManager;
-        _organizationUnitRepository = organizationUnitRepository;
+        _organizationService = organizationService;
     }
 
-    public async Task<Guid> CreateAsync(NotificationTypeEnum notificationTypeEnum, Guid? creator, Guid target,
+    public async Task<bool> CreateAsync(NotificationTypeEnum notificationTypeEnum, Guid? creator, Guid target,
         string input)
     {
         _logger.LogDebug(
@@ -85,26 +80,13 @@ public class NotificationService : INotificationService, ITransientDependency
         };
 
         notification = await _notificationRepository.InsertAsync(notification);
-
-        _ = Task.Run(async () =>
-        {
-            _logger.LogDebug($"Push new message to {(Guid)notification.CreatorId!} and {notification.Receiver}");
-            await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
-                new NotificationResponse()
-                {
-                    Data = new NotificationResponseMessage()
-                        { Id = notification.Id, Status = NotificationStatusEnum.None }
-                });
-            
-            _logger.LogDebug($"Push unread message to {target}");
-            var unreadCount = await GetUnreadCountAsync(target);
-            await _hubService.ResponseAsync([target],
-                new UnreadNotificationResponse()
-                    { Data = new UnreadNotification(unreadCount: unreadCount) });
-
-        });
-
-        return notification.Id;
+        await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
+            new NotificationResponse()
+            {
+                Data = new NotificationResponseMessage()
+                    { Id = notification.Id, Status = NotificationStatusEnum.None }
+            });
+        return true;
     }
 
     public async Task<bool> WithdrawAsync(Guid? creator, Guid notificationId)
@@ -119,15 +101,12 @@ public class NotificationService : INotificationService, ITransientDependency
         notification.Status = NotificationStatusEnum.Withdraw;
         await _notificationRepository.UpdateAsync(notification);
 
-        _ = Task.Run(async () =>
-        {
-            await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
-                new NotificationResponse()
-                {
-                    Data = new NotificationResponseMessage()
-                        { Id = notificationId, Status = NotificationStatusEnum.Withdraw }
-                });
-        });
+        await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
+            new NotificationResponse()
+            {
+                Data = new NotificationResponseMessage()
+                    { Id = notificationId, Status = NotificationStatusEnum.Withdraw }
+            });
 
         return true;
     }
@@ -161,33 +140,19 @@ public class NotificationService : INotificationService, ITransientDependency
 
         await _notificationRepository.UpdateAsync(notification);
 
-        _ = Task.Run(async () =>
-        {
-            await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
-                new NotificationResponse()
-                    { Data = new NotificationResponseMessage() { Id = notificationId, Status = status } });
-        });
-
+        await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
+            new NotificationResponse()
+                { Data = new NotificationResponseMessage() { Id = notificationId, Status = status } });
         return true;
     }
 
     public async Task<List<NotificationDto>> GetNotificationList(Guid? creator, int pageIndex, int pageSize)
     {
         var query = await _notificationRepository.GetQueryableAsync();
-        var queryResponse = query.Where(w => w.Receiver == creator)
+        var queryResponse = query.Where(w => w.Receiver == creator || w.CreatorId == creator)
             .OrderByDescending(o => o.CreationTime).Skip(pageSize * pageIndex).Take(pageSize).ToList();
 
-        var result = _objectMapper.Map<List<NotificationInfo>, List<NotificationDto>>(queryResponse);
-        foreach (var item in result)
-        {
-            var userInfo = await _identityUserManager.GetByIdAsync(item.CreatorId);
-            if (userInfo != null)
-            {
-                item.CreatorName = userInfo.UserName;
-            }
-        }
-
-        return result;
+        return _objectMapper.Map<List<NotificationInfo>, List<NotificationDto>>(queryResponse);
     }
 
     public async Task<List<OrganizationVisitDto>> GetOrganizationVisitInfo(Guid userId, int pageIndex, int pageSize)
@@ -216,7 +181,7 @@ public class NotificationService : INotificationService, ITransientDependency
             if (organizationInfoObj != null)
             {
                 var organizationVisitInfo = organizationInfoObj as OrganizationVisitInfo;
-                var organizationInfo = await _organizationUnitRepository.GetAsync(organizationVisitInfo!.OrganizationId);
+                var  organizationInfo = await _organizationService.GetAsync(organizationVisitInfo!.OrganizationId);
                 result.Add(new OrganizationVisitDto()
                 {
                     Id = item.Id,
@@ -227,42 +192,5 @@ public class NotificationService : INotificationService, ITransientDependency
         }
 
         return result;
-    }
-
-    public async Task<int> GetUnreadCountAsync(Guid userId)
-    {
-        var query = await _notificationRepository.GetQueryableAsync();
-        var count = query.Count(w => w.Receiver == userId && w.IsRead == false);
-        return count;
-    }
-
-    public async Task ReadAsync(Guid userId, ReadNotificationDto input)
-    {
-        var unreadCount = 0;
-        if (input.NotificationId.HasValue)
-        {
-            var notification =
-                await _notificationRepository.FirstAsync(
-                    o => o.Id == input.NotificationId.Value && o.Receiver == userId);
-            notification.IsRead = true;
-            await _notificationRepository.UpdateAsync(notification);
-
-            unreadCount = await GetUnreadCountAsync(userId);
-        }
-        else
-        {
-            var notifications =
-                await _notificationRepository.GetListAsync(o => o.Receiver == userId && o.IsRead == false);
-            foreach (var notification in notifications)
-            {
-                notification.IsRead = true;
-            }
-
-            await _notificationRepository.UpdateManyAsync(notifications);
-        }
-
-        await _hubService.ResponseAsync([userId],
-            new UnreadNotificationResponse()
-                { Data = new UnreadNotification(unreadCount: unreadCount) });
     }
 }
