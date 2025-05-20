@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Aevatar.ApiRequests;
 using Aevatar.Core.Abstractions.Plugin;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Identity;
+using System.Linq;
 
 namespace Aevatar.Plugins;
-using System.Linq;
 
 [RemoteService(IsEnabled = false)]
 public class PluginService : AevatarAppService, IPluginService
@@ -61,7 +60,7 @@ public class PluginService : AevatarAppService, IPluginService
             dto.LoadStatus = LoadStatus.Unload;
             if (pluginStatus.TryGetValue(plugin.Id, out var value))
             {
-                dto.LoadStatus = (LoadStatus)value.Status;
+                dto.LoadStatus = value.Status;
                 dto.Reason = value.Reason;
             }
 
