@@ -21,6 +21,7 @@
         <PackageReference Include="Aevatar.PermissionManagement" />
         <PackageReference Include="Aevatar.GAgents.GroupChat"/>
         <PackageReference Include="Aevatar.GAgents.AI.Abstractions"/>
+
     </ItemGroup>
 
     <ItemGroup>

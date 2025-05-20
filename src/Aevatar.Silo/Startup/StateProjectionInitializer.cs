@@ -59,7 +59,7 @@ namespace Aevatar.Silo.Startup
                         _logger.LogError(ex, "Error activating StateProjectionGrain for {StateType}", stateType.Name);
                     }
                 }
-                
+
                 _logger.LogInformation("Completed initializing StateProjectionGrains");
             }
             catch (Exception ex)

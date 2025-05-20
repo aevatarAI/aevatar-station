@@ -244,7 +244,8 @@ public class DeploymentHelper
                         FieldPath = "status.podIP"
                     }
                 }
-            }
+            },
+            new V1EnvVar("SILO_NAME_PATTERN", "Projector")
         };
     }
 
