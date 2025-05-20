@@ -14,7 +14,9 @@ using Aevatar.GAgents.AI.Options;
 using Aevatar.GodGPT.Dtos;
 using Aevatar.Quantum;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 using Orleans;
+using Stripe;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Auditing;
@@ -45,6 +47,9 @@ public interface IGodGPTService
     Task UpdateShowToastAsync(Guid currentUserId);
     Task<List<StripeProductDto>> GetStripeProductsAsync(Guid currentUserId);
     Task<string> CreateCheckoutSessionAsync(Guid currentUserId, CreateCheckoutSessionInput createCheckoutSessionInput);
+    Task<string> ParseEventAndGetUserIdAsync(string json);
+    Task<bool> HandleStripeWebhookEventAsync(Guid internalUserId, string json, StringValues stripeSignature);
+    Task<List<PaymentSummary>> GetPaymentHistoryAsync(Guid currentUserId, GetPaymentHistoryInput input);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -193,6 +198,100 @@ public class GodGPTService : ApplicationService, IGodGPTService
             UiMode = createCheckoutSessionInput.UiMode ?? StripeUiMode.HOSTED
         });
         return result;
+    }
+
+    public async Task<string> ParseEventAndGetUserIdAsync(string json)
+    {
+        var stripeEvent = EventUtility.ParseEvent(json);
+        _logger.LogInformation("[GodGPTPaymentController][webhook] Type: {0}", stripeEvent.Type);
+        if (stripeEvent.Type == "checkout.session.completed")
+        {
+            var session = stripeEvent.Data.Object as Stripe.Checkout.Session;
+            var b = session.Metadata;
+            if (TryGetUserIdFromMetadata(session.Metadata, out  var userId))
+            {
+                _logger.LogDebug("[GodGPTService][ParseEventAndGetUserIdAsync] Type={0}, UserId={1}",stripeEvent.Type, userId);
+                return userId;
+            }
+            _logger.LogWarning("[GodGPTService][ParseEventAndGetUserIdAsync] Type={0}, not found uerid",stripeEvent.Type);
+        }
+        // else if (stripeEvent.Type == "invoice.payment_succeeded")
+        // {
+        //     var invoice = stripeEvent.Data.Object as Stripe.Invoice;
+        //     if (TryGetUserIdFromMetadata(invoice?.Parent?.SubscriptionDetails?.Metadata, out  var userId))
+        //     {
+        //         return userId;
+        //     }
+        // } 
+        else if (stripeEvent.Type == "invoice.paid")
+        {
+            var invoice = stripeEvent.Data.Object as Stripe.Invoice;
+            if (TryGetUserIdFromMetadata(invoice?.Parent?.SubscriptionDetails?.Metadata, out  var userId))
+            {
+                _logger.LogDebug("[GodGPTService][ParseEventAndGetUserIdAsync] Type={0}, UserId={1}",stripeEvent.Type, userId);
+                return userId;
+            }
+            _logger.LogWarning("[GodGPTService][ParseEventAndGetUserIdAsync] Type={0}, not found uerid",stripeEvent.Type);
+        }
+        // else if (stripeEvent.Type == "invoice.payment_failed")
+        // {
+        //     var invoice = stripeEvent.Data.Object as Stripe.Invoice;
+        //     if (TryGetUserIdFromMetadata(invoice.Metadata, out  var userId))
+        //     {
+        //         return userId;
+        //     }
+        // }
+        // else if (stripeEvent.Type == "payment_intent.succeeded")
+        // {
+        //     var paymentIntent = stripeEvent.Data.Object as Stripe.PaymentIntent;
+        //     if (TryGetUserIdFromMetadata(paymentIntent.Metadata, out  var userId))
+        //     {
+        //         return userId;
+        //     }
+        // }
+        // else if (stripeEvent.Type == "customer.subscription.created")
+        // {
+        //     var subscription = stripeEvent.Data.Object as Stripe.Subscription;
+        //     if (TryGetUserIdFromMetadata(subscription.Metadata, out  var userId))
+        //     {
+        //         return userId;
+        //     }
+        // }
+        // else if (stripeEvent.Type == "charge.refunded")
+        // {
+        //     var charge = stripeEvent.Data.Object as Stripe.Charge;
+        //     if (TryGetUserIdFromMetadata(charge.Metadata, out  var userId))
+        //     {
+        //         return userId;
+        //     }
+        // }
+
+        return string.Empty;
+    }
+
+    public async Task<bool> HandleStripeWebhookEventAsync(Guid internalUserId, string json, StringValues stripeSignature)
+    {
+        var userBillingGrain =
+            _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(internalUserId));
+        return await userBillingGrain.HandleStripeWebhookEventAsync(json, stripeSignature);
+    }
+
+    public async Task<List<PaymentSummary>> GetPaymentHistoryAsync(Guid currentUserId, GetPaymentHistoryInput input)
+    {
+        var userBillingGrain =
+            _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(currentUserId));
+        return await userBillingGrain.GetPaymentHistoryAsync(input.Page, input.PageSize);
+    }
+
+    private bool TryGetUserIdFromMetadata(IDictionary<string, string> metadata, out string userId)
+    {
+        userId = null;
+        if (metadata != null && metadata.TryGetValue("internal_user_id", out var id) && !string.IsNullOrEmpty(id))
+        {
+            userId = id;
+            return true;
+        }
+        return false;
     }
 }
 
