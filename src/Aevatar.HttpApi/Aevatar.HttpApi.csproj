@@ -14,12 +14,12 @@
         <ProjectReference Include="..\Aevatar.Developer.Logger\Aevatar.Developer.Logger.csproj"/>
     </ItemGroup>
 
-  <ItemGroup>
-      <PackageReference Include="Volo.Abp.Account.HttpApi"/>
-      <PackageReference Include="Volo.Abp.Identity.HttpApi"/>
-      <PackageReference Include="Volo.Abp.PermissionManagement.HttpApi"/>
-      <PackageReference Include="Aevatar.PermissionManagement"/>
-      <PackageReference Include="Volo.Abp.AspNetCore.SignalR"/>
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Volo.Abp.Account.HttpApi"/>
+        <PackageReference Include="Volo.Abp.Identity.HttpApi"/>
+        <PackageReference Include="Volo.Abp.PermissionManagement.HttpApi"/>
+        <PackageReference Include="Aevatar.PermissionManagement"/>
+        <PackageReference Include="Volo.Abp.AspNetCore.SignalR"/>
+    </ItemGroup>
 
 </Project>

@@ -12,7 +12,6 @@
         <ProjectReference Include="..\Aevatar.Application.Tests\Aevatar.Application.Tests.csproj" />
         <ProjectReference Include="..\Aevatar.Domain.Tests\Aevatar.Domain.Tests.csproj" />
         <ProjectReference Include="..\Aevatar.Orleans.TestBase\Aevatar.Orleans.TestBase.csproj" />
-        <ProjectReference Include="..\..\src\Aevatar.CQRS\Aevatar.CQRS.csproj" />
     </ItemGroup>
 
     <ItemGroup>
