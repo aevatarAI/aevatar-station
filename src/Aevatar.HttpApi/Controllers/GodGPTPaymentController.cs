@@ -90,6 +90,17 @@ public class GodGPTPaymentController : AevatarController
         }
     }
 
+    [HttpPost("create-subscription")]
+    public async Task<SubscriptionResponseDto> CreateSubscriptionAsync(CreateSubscriptionInput input)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var responseDto = await _godGptService.CreateSubscriptionAsync(currentUserId, input);
+        _logger.LogDebug("[GodGPTPaymentController][CreateSubscriptionAsync] userId: {0}, duration: {1}ms",
+            currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
+        return responseDto;
+    }
+
     [HttpGet("list")]
     public async Task<List<PaymentSummary>> GetPaymentHistoryAsync(GetPaymentHistoryInput input)
     {
@@ -99,6 +110,17 @@ public class GodGPTPaymentController : AevatarController
         _logger.LogDebug("[GodGPTPaymentController][GetPaymentHistoryAsync] userId: {0}, duration: {1}ms",
             currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
         return paymentHistories;
+    }
+
+    [HttpPost("customer")]
+    public async Task<GetCustomerResponseDto> GetStripeCustomerAsync()
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        GetCustomerResponseDto customerResponseDto = await _godGptService.GetStripeCustomerAsync(currentUserId);
+        _logger.LogDebug("[GodGPTPaymentController][GetPaymentHistoryAsync] userId: {0}, duration: {1}ms",
+            currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
+        return customerResponseDto;
     }
 
     [AllowAnonymous]

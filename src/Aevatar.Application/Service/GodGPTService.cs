@@ -50,6 +50,8 @@ public interface IGodGPTService
     Task<string> ParseEventAndGetUserIdAsync(string json);
     Task<bool> HandleStripeWebhookEventAsync(Guid internalUserId, string json, StringValues stripeSignature);
     Task<List<PaymentSummary>> GetPaymentHistoryAsync(Guid currentUserId, GetPaymentHistoryInput input);
+    Task<GetCustomerResponseDto> GetStripeCustomerAsync(Guid currentUserId);
+    Task<SubscriptionResponseDto> CreateSubscriptionAsync(Guid currentUserId, CreateSubscriptionInput input);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -281,6 +283,29 @@ public class GodGPTService : ApplicationService, IGodGPTService
         var userBillingGrain =
             _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(currentUserId));
         return await userBillingGrain.GetPaymentHistoryAsync(input.Page, input.PageSize);
+    }
+
+    public async Task<GetCustomerResponseDto> GetStripeCustomerAsync(Guid currentUserId)
+    {
+        var userBillingGrain =
+            _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(currentUserId));
+        return await userBillingGrain.GetStripeCustomerAsync(currentUserId.ToString());
+    }
+
+    public async Task<SubscriptionResponseDto> CreateSubscriptionAsync(Guid currentUserId, CreateSubscriptionInput input)
+    {
+        var userBillingGrain =
+            _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(currentUserId));
+        return await userBillingGrain.CreateSubscriptionAsync(new CreateSubscriptionDto
+        {
+            UserId = currentUserId,
+            PriceId = input.PriceId,
+            Quantity = input.Quantity,
+            PaymentMethodId = input.PaymentMethodId,
+            Description = input.Description,
+            Metadata = input.Metadata,
+            TrialPeriodDays = input.TrialPeriodDays
+        });
     }
 
     private bool TryGetUserIdFromMetadata(IDictionary<string, string> metadata, out string userId)
