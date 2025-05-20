@@ -3,6 +3,7 @@ using Aevatar.ApiRequests;
 using Aevatar.Notification;
 using Aevatar.Permissions;
 using Aevatar.User;
+using Aevatar.Workflow;
 using MongoDB.Driver;
 using Volo.Abp.AuditLogging.MongoDB;
 using Volo.Abp.BackgroundJobs.MongoDB;
@@ -47,5 +48,6 @@ public class AevatarMongoDbContext : AbpMongoDbContext
         modelBuilder.Entity<ProjectAppIdInfo>(b => b.CollectionName = "ProjectAppInfoCollection");
         modelBuilder.Entity<NotificationInfo>(b => b.CollectionName = "NotificationInfoCollection");
         modelBuilder.Entity<ApiRequestSnapshot>(b => b.CollectionName = "ApiRequestSnapshots");
+        modelBuilder.Entity<WorkflowInfo>(b => b.CollectionName = "WorkflowInfoCollection");
     }
 }

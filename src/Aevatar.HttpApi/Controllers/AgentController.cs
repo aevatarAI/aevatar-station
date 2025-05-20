@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Agent;
+using Aevatar.Agents;
 using Aevatar.Controllers;
 using Aevatar.CQRS.Dto;
 using Aevatar.Permissions;
@@ -130,4 +131,32 @@ public class AgentController : AevatarController
     {
         await _subscriptionAppService.PublishEventAsync(input);
     }
+    
+    [HttpGet("workflow")]
+    [Authorize]
+    public async Task<List<WorkflowAgentDefinesDto>> GetWorkflowAgents(string workflowGranId)
+    {
+        return await _agentService.GetWorkflowUnitRelationsAsync(workflowGranId);
+    }
+
+    [HttpPost("workflow")]
+    [Authorize]
+    public async Task<CreateWorkflowResponseDto> CreateWorkFlow([FromBody] WorkflowAgentsDto workflowAgentsDto)
+    {
+        return await _agentService.CreateWorkflowAsync(workflowAgentsDto);
+    } 
+
+    [HttpPost("workflow/simulate")]
+    [Authorize]
+    public async Task<string> SimulateWorkFlow([FromBody] WorkflowWithGrainIdRequestDto withGrainIdRequestDto)
+    {
+        return await _agentService.SimulateWorkflowAsync(withGrainIdRequestDto.WorkflowGrainId, withGrainIdRequestDto.WorkUnitRelations);
+    } 
+
+    [HttpPut("workflow")]
+    [Authorize]
+    public async Task ModifyWorkFlow([FromBody] WorkflowWithGrainIdRequestDto withGrainIdRequestDto)
+    {
+        await _agentService.EditWorkWorkflowAsync(withGrainIdRequestDto.WorkflowGrainId, withGrainIdRequestDto.WorkUnitRelations);
+    } 
 }

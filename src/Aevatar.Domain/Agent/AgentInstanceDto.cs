@@ -20,4 +20,7 @@ public class AgentInstanceDto
     public string Name { get; set; }
     public string AgentType { get; set; }
     public Dictionary<string, object>? Properties { get; set; }
+    public string BusinessAgentGrainId { get; set; }
+
+    public string PropertyJsonSchema { get; set; }
 }

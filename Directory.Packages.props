@@ -4,7 +4,7 @@
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVerion>9.0.1</OrleansVerion>
     <AevatarVerion>1.5.0-alpha.6</AevatarVerion>
-    <AevatarGAgentVerion>1.4.16-alpha-9+twitter1</AevatarGAgentVerion>
+    <AevatarGAgentVerion>1.5.0-alpha-5</AevatarGAgentVerion>
   </PropertyGroup>
   <ItemGroup>
     <!-- AElf packages -->
@@ -27,6 +27,7 @@
     <PackageVersion Include="Aevatar.GAgents.SocialGAgent" Version="$(AevatarGAgentVerion)" />
     <PackageVersion Include="Aevatar.GAgents.Twitter" Version="$(AevatarGAgentVerion)" />
     <PackageVersion Include="Aevatar.GAgents.ChatAgent" Version="$(AevatarGAgentVerion)" />
+    <PackageVersion Include="Aevatar.GAgents.GroupChat" Version="$(AevatarGAgentVerion)" />
     <!-- AI and Analysis packages -->
     <PackageVersion Include="AutoGen" Version="0.2.1" />
     <PackageVersion Include="AutoGen.Core" Version="0.2.1" />
