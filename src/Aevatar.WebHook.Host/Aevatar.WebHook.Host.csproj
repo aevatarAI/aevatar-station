@@ -11,5 +11,5 @@
         <PackageReference Include="Orleans.Providers.MongoDB" />
         <ProjectReference Include="..\Aevatar.WebHook.SDK\Aevatar.WebHook.SDK.csproj" />
     </ItemGroup>
-    
+
 </Project>

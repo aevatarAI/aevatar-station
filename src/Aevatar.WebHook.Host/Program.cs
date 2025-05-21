@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Aevatar.Webhook.Extensions;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Events;
@@ -16,7 +18,7 @@ public class Program
         var configuration = new ConfigurationBuilder()
             .AddJsonFile("appsettings.json")
             .Build();
-        
+
         var webhookId = configuration["Webhook:WebhookId"];
         var version = configuration["Webhook:Version"];
         Log.Logger = new LoggerConfiguration()
@@ -27,16 +29,22 @@ public class Program
 #endif
             .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
             .Enrich.FromLogContext()
-            .Enrich.WithProperty("WebhookId", webhookId)
-            .Enrich.WithProperty("Version", version)
             .ReadFrom.Configuration(configuration)
-            .WriteTo.Async(c => c.Console())
             .CreateLogger();
 
         try
         {
             Log.Information("Starting Aevatar.Developer.Host.");
-            await CreateHostBuilder(args).Build().RunAsync();
+            var builder = WebApplication.CreateBuilder(args);
+            builder.Host
+                .UseOrleansClientConfigration()
+                .ConfigureDefaults(args)
+                .UseAutofac()
+                .UseSerilog();
+            await builder.AddApplicationAsync<AevatarListenerHostModule>();
+            var app = builder.Build();
+            await app.InitializeApplicationAsync();
+            await app.RunAsync();
             return 0;
         }
         catch (Exception ex)
@@ -48,13 +56,5 @@ public class Program
         {
             Log.CloseAndFlush();
         }
-    }
-    
-    private static IHostBuilder CreateHostBuilder(string[] args)
-    {
-        return OrleansHostExtensions.UseOrleansClient(Host.CreateDefaultBuilder(args))
-            .UseAutofac()
-            .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); })
-            .UseSerilog();
     }
 }
