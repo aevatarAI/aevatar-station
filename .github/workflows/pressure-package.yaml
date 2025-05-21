@@ -82,7 +82,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: station
           push: true
           build-args: |
             servicename=${{ github.event.inputs.servicename }}
