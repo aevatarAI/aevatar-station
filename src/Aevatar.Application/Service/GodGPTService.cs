@@ -9,11 +9,13 @@ using Aevatar.Application.Grains.ChatManager.Dtos;
 using Aevatar.Application.Grains.ChatManager.UserBilling;
 using Aevatar.Application.Grains.ChatManager.UserQuota;
 using Aevatar.Application.Grains.Common.Constants;
+using Aevatar.Application.Grains.Common.Options;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
 using Aevatar.GodGPT.Dtos;
 using Aevatar.Quantum;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Orleans;
 using Stripe;
@@ -60,11 +62,17 @@ public class GodGPTService : ApplicationService, IGodGPTService
 {
     private readonly IClusterClient _clusterClient;
     private readonly ILogger<GodGPTService> _logger;
+    private readonly IOptionsMonitor<StripeOptions> _stripeOptions;
 
-    public GodGPTService(IClusterClient clusterClient, ILogger<GodGPTService> logger)
+    private readonly StripeClient _stripeClient;
+
+    public GodGPTService(IClusterClient clusterClient, ILogger<GodGPTService> logger, IOptionsMonitor<StripeOptions> stripeOptions)
     {
         _clusterClient = clusterClient;
         _logger = logger;
+        _stripeOptions = stripeOptions;
+
+        _stripeClient = new StripeClient(_stripeOptions.CurrentValue.SecretKey);
     }
 
     public async Task<Guid> CreateSessionAsync(Guid userId, string systemLLM, string prompt)
@@ -225,7 +233,7 @@ public class GodGPTService : ApplicationService, IGodGPTService
         //         return userId;
         //     }
         // } 
-        else if (stripeEvent.Type == "invoice.paid")
+        else if (stripeEvent.Type is "invoice.paid" or "invoice.payment_failed")
         {
             var invoice = stripeEvent.Data.Object as Stripe.Invoice;
             if (TryGetUserIdFromMetadata(invoice?.Parent?.SubscriptionDetails?.Metadata, out  var userId))
@@ -251,22 +259,24 @@ public class GodGPTService : ApplicationService, IGodGPTService
         //         return userId;
         //     }
         // }
-        // else if (stripeEvent.Type == "customer.subscription.created")
-        // {
-        //     var subscription = stripeEvent.Data.Object as Stripe.Subscription;
-        //     if (TryGetUserIdFromMetadata(subscription.Metadata, out  var userId))
-        //     {
-        //         return userId;
-        //     }
-        // }
-        // else if (stripeEvent.Type == "charge.refunded")
-        // {
-        //     var charge = stripeEvent.Data.Object as Stripe.Charge;
-        //     if (TryGetUserIdFromMetadata(charge.Metadata, out  var userId))
-        //     {
-        //         return userId;
-        //     }
-        // }
+        else if (stripeEvent.Type is "customer.subscription.deleted" or "customer.subscription.updated")
+        {
+            var subscription = stripeEvent.Data.Object as Stripe.Subscription;
+            if (TryGetUserIdFromMetadata(subscription.Metadata, out  var userId))
+            {
+                return userId;
+            }
+        }
+        else if (stripeEvent.Type == "charge.refunded")
+        {
+            var charge = stripeEvent.Data.Object as Stripe.Charge;
+            var paymentIntentService = new PaymentIntentService(_stripeClient);
+            var paymentIntent = paymentIntentService.Get(charge.PaymentIntentId);
+            if (TryGetUserIdFromMetadata(paymentIntent.Metadata, out  var userId))
+            {
+                return userId;
+            }
+        }
 
         return string.Empty;
     }
