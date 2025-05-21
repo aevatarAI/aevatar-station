@@ -44,14 +44,13 @@ public class KubernetesHostManager: IHostDeployManager, ISingletonDependency
     private async Task<string> CreatePodAsync(string appId, string version, string imageName, string config,
         List<string> Command, string hostName)
     {
-        var sharedConfigContent = GetHostClientConfigContent(appId, version, KubernetesConstants.AppSettingSharedFileName,null);
-        var httpApiHostSharedConfigContent = GetHostClientConfigContent(appId, version, KubernetesConstants.AppSettingHttpApiHostSharedFileName ,null);
         // Ensure ConfigMaps (AppSettings and SideCar Configs) are created
         var configFiles = new Dictionary<string, string>
         {
             { KubernetesConstants.AppSettingFileName, config },
-            { KubernetesConstants.AppSettingSharedFileName, sharedConfigContent },
-            { KubernetesConstants.AppSettingHttpApiHostSharedFileName, httpApiHostSharedConfigContent }
+            { KubernetesConstants.AppSettingSharedFileName, GetHostClientConfigContent(appId, version, KubernetesConstants.AppSettingSharedFileName,null) },
+            { KubernetesConstants.AppSettingHttpApiHostSharedFileName, GetHostClientConfigContent(appId, version, KubernetesConstants.AppSettingHttpApiHostSharedFileName ,null) },
+            { KubernetesConstants.AppSettingSiloSharedFileName, GetHostClientConfigContent(appId, version, KubernetesConstants.AppSettingSiloSharedFileName, null) }
         };
         await EnsureConfigMapAsync(
             appId, 
@@ -359,6 +358,7 @@ private async Task EnsureIngressAsync(
         {
             { KubernetesConstants.AppSettingFileName, appSettingsContent },
             { KubernetesConstants.AppSettingSharedFileName, GetHostSiloConfigContent(appId, version, KubernetesConstants.AppSettingSharedFileName) },
+            { KubernetesConstants.AppSettingHttpApiHostSharedFileName, GetHostSiloConfigContent(appId, version, KubernetesConstants.AppSettingHttpApiHostSharedFileName) },
             { KubernetesConstants.AppSettingSiloSharedFileName, GetHostSiloConfigContent(appId, version, KubernetesConstants.AppSettingSiloSharedFileName) }
         };
         await EnsureConfigMapAsync(
