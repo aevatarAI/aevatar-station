@@ -6,12 +6,12 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY Directory.Packages.props ./
-COPY ["src/Aevatar.SignalR/Aevatar.SignalR.csproj", "src/Aevatar.SignalR/"]
-COPY ["samples/SignalRSample.Host/SignalRSample.Host.csproj", "samples/SignalRSample.Host/"]
-COPY ["samples/SignalRSample.GAgents/SignalRSample.GAgents.csproj", "samples/SignalRSample.GAgents/"]
-RUN dotnet restore "samples/SignalRSample.Host/SignalRSample.Host.csproj"
+COPY ["signalR/src/Aevatar.SignalR/Aevatar.SignalR.csproj", "signalR/src/Aevatar.SignalR/"]
+COPY ["signalR/samples/SignalRSample.Host/SignalRSample.Host.csproj", "signalR/samples/SignalRSample.Host/"]
+COPY ["signalR/samples/SignalRSample.GAgents/SignalRSample.GAgents.csproj", "signalR/samples/SignalRSample.GAgents/"]
+RUN dotnet restore "signalR/samples/SignalRSample.Host/SignalRSample.Host.csproj"
 COPY . .
-WORKDIR "/src/samples/SignalRSample.Host"
+WORKDIR "/signalR/src/samples/SignalRSample.Host"
 RUN dotnet build "SignalRSample.Host.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish

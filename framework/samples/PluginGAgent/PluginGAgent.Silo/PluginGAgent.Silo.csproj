@@ -22,6 +22,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\..\..\station\samples\E2E.Grains\E2E.Grains.csproj" />
         <ProjectReference Include="..\..\..\src\Aevatar.Core\Aevatar.Core.csproj" />
         <ProjectReference Include="..\..\..\src\Aevatar.EventSourcing.MongoDB\Aevatar.EventSourcing.MongoDB.csproj" />
         <ProjectReference Include="..\..\..\src\Aevatar.PermissionManagement\Aevatar.PermissionManagement.csproj" />

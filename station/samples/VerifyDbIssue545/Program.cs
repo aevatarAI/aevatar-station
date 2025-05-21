@@ -29,8 +29,9 @@ IHostBuilder builder = Host.CreateDefaultBuilder(args)
                 options.ClusterId = "AevatarSiloCluster";
                 options.ServiceId = "AevatarBasicService";
             })
-            .AddActivityPropagation();
-        client.UseLocalhostClustering(gatewayPort: 20001)
+            .AddActivityPropagation()
+
+        // client.UseLocalhostClustering(gatewayPort: 20001)
             // .AddMemoryStreams(AevatarCoreConstants.StreamProvider);
             .AddKafka("Aevatar")
             .WithOptions(options =>
@@ -57,11 +58,12 @@ IHostBuilder builder = Host.CreateDefaultBuilder(args)
     })
     .ConfigureLogging(logging => logging.AddConsole())
     .UseConsoleLifetime();
+
 using IHost host = builder.Build();
 await host.StartAsync();
 
 var client = host.Services.GetRequiredService<IClusterClient>();
-const int subscriberCount = 0;
+const int subscriberCount = 1;
 
 var sw = new Stopwatch();
 sw.Start();
@@ -70,13 +72,11 @@ var subAgents = new List<ITestDbGAgent>();
 for (var i = 0; i < subscriberCount; ++i)
 {
     var sws = new Stopwatch();
-    var subAgentId = Guid.NewGuid();
-    //0693d7631939428ab6910fe4a0e77bed working
-    //6a963e2daf8a443a9b793a89d3a48670 not working
-    //  var subAgentId = Guid.Parse("abd8518a9c134fae9694d182fa327944");
+    // var subAgentId = Guid.NewGuid();
+    //6bb4d647cd034339ac655b34f0ef4d9f working
+    var subAgentId = Guid.Parse("6bb4d647cd034339ac655b34f0ef4d9f");
     Console.WriteLine("subAgent Guid: {0}", subAgentId.ToString("N"));
     var subAgent = client.GetGrain<ITestDbGAgent>(subAgentId);
-    // Console.WriteLine("subAgent count: {0}", await subAgent.GetCount());
     
     sws.Start();
     await subAgent.ActivateAsync();
@@ -88,8 +88,7 @@ sw.Stop();
 Console.WriteLine("Time taken to create {0} sub-agents: {1} ms", subscriberCount, sw.ElapsedMilliseconds);
 // Create a new grain instance for the publisher agent
 // var pubAgentId = Guid.NewGuid();
-//subagent bc8aeb04bb0043008b49e5caf4d86fe7
-var pubAgentId = Guid.Parse("48733802aa084964bccb978f720c0486");
+var pubAgentId = Guid.Parse("8de50e3952884d928bcff15b68123eab");
 
 var pubAgent = client.GetGrain<ITestDbScheduleGAgent>(pubAgentId);
 
@@ -109,14 +108,14 @@ var TestDbEvent = new TestDbEvent
 await pubAgent.BroadCastEventAsync("TestDbScheduleGAgent", TestDbEvent);
 
 // Wait for the event to be processed
-await Task.Delay(1000);
+await Task.Delay(5000);
 
 var count = 0;
 for (var i = 0; i < subscriberCount; ++i)
 {
     if (await subAgents[i].GetCount() != 100)
     {
-        Console.WriteLine("subAgent-{0} Count {1}", i, await subAgents[i].GetCount());
+        Console.WriteLine("subAgent-{0} Count {1}", i+1, await subAgents[i].GetCount());
         count++;
     }
 }
@@ -150,7 +149,10 @@ if (subscriberCount > 0)
 //     Console.WriteLine("Total missing is {0}", count);
 // }
 
-// Console.WriteLine("pubAgent: {0} subAgent-{1} Count {2}, subAgent-{3} Count {4}",pubAgentId.ToString("N"),  subscriberCount-2,await subAgents[subscriberCount-2].GetCount(), subscriberCount-1,await subAgents[subscriberCount-1].GetCount());
+// if (subscriberCount > 0)
+// {
+//     Console.WriteLine("subAgent-{0} Count {1}", subscriberCount, await subAgents[subscriberCount - 1].GetCount());
+// }
 
 Console.WriteLine("Press any key to exit...");
 
