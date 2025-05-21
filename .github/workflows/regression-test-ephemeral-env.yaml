@@ -1,8 +1,9 @@
 name: Run Aevatar Station Regression Test on Ephemeral Test Environment
 
 on:
-  pull_request_review:
-    types: [submitted]
+  push:
+    branches:
+      - 'feature/common-configuration-file'
 
 run-name: Run Aevatar Station Regression Test on Ephemeral Test Environment on ${{ github.ref_name }} from ${{ github.sha }}
 
@@ -18,7 +19,6 @@ env:
 
 jobs:
   approval-count:
-    if: github.event.review.state == 'approved'
     runs-on: ephemeral-env-runner
     outputs:
       approved_enough: ${{ steps.check.outputs.approved_enough }}
@@ -47,7 +47,7 @@ jobs:
               APPROVED_COUNT=$((APPROVED_COUNT+1))
             fi
           done
-          echo "Approve count (with write/admin): $APPROVED_COUNT"
+          echo "Approve count: $APPROVED_COUNT"
           if [ "$APPROVED_COUNT" -eq 1 ]; then
             echo "approved_enough=true" >> $GITHUB_OUTPUT
           else
@@ -55,7 +55,6 @@ jobs:
           fi
 
   publish:
-    if: needs.approval-count.outputs.approved_enough == 'true'
     needs: approval-count
     runs-on: ephemeral-env-runner
     strategy:
@@ -96,7 +95,6 @@ jobs:
           retention-days: 1
 
   build-and-push-image:
-    if: needs.approval-count.outputs.approved_enough == 'true'
     needs: publish
     runs-on: ephemeral-env-runner
     strategy:
@@ -147,7 +145,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
   setup-ephermeral-test-env:
-    if: needs.approval-count.outputs.approved_enough == 'true'
     runs-on: ephemeral-env-runner
     needs: build-and-push-image
     outputs:
@@ -271,7 +268,6 @@ jobs:
           echo "- **APP URL**: \`${{ steps.extract.outputs.app_url }}\`" >> $GITHUB_STEP_SUMMARY
 
   run-regression-test:
-    if: needs.approval-count.outputs.approved_enough == 'true'
     needs: setup-ephermeral-test-env 
     runs-on: ephemeral-env-runner
     env:
