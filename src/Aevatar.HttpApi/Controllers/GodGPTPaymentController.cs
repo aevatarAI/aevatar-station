@@ -123,6 +123,12 @@ public class GodGPTPaymentController : AevatarController
         return customerResponseDto;
     }
 
+    [HttpPost("refunded")]
+    public async Task<bool> RefundedAsync()
+    {
+        return true;
+    }
+
     [AllowAnonymous]
     [HttpPost("webhook")]
     public async Task<IActionResult> Webhook()
