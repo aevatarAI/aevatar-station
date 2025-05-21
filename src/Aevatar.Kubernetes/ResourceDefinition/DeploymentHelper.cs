@@ -361,6 +361,21 @@ public class DeploymentHelper
                         {
                             Key = KubernetesConstants.AppSettingFileName,
                             Path = KubernetesConstants.AppSettingFileName
+                        },
+                        new V1KeyToPath
+                        {
+                            Key = KubernetesConstants.AppSettingSharedFileName,
+                            Path = KubernetesConstants.AppSettingSharedFileName
+                        },
+                        new V1KeyToPath
+                        {
+                            Key = KubernetesConstants.AppSettingHttpApiHostSharedFileName,
+                            Path = KubernetesConstants.AppSettingHttpApiHostSharedFileName
+                        },
+                        new V1KeyToPath
+                        {
+                            Key = KubernetesConstants.AppSettingSiloSharedFileName,
+                            Path = KubernetesConstants.AppSettingSiloSharedFileName
                         }
                     }
                 }
