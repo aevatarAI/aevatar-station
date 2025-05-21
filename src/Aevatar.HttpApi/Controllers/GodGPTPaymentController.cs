@@ -123,6 +123,17 @@ public class GodGPTPaymentController : AevatarController
         return customerResponseDto;
     }
 
+    [HttpPost("cancel-subscription")]
+    public async Task<CancelSubscriptionResponseDto> CancelSubscriptionAsync(CancelSubscriptionInput input)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var cancelSubscription = await _godGptService.CancelSubscriptionAsync(currentUserId, input);
+        _logger.LogDebug("[GodGPTPaymentController][GetPaymentHistoryAsync] userId: {0}, duration: {1}ms",
+            currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
+        return cancelSubscription;
+    }
+
     [HttpPost("refunded")]
     public async Task<bool> RefundedAsync()
     {

@@ -54,6 +54,7 @@ public interface IGodGPTService
     Task<List<PaymentSummary>> GetPaymentHistoryAsync(Guid currentUserId, GetPaymentHistoryInput input);
     Task<GetCustomerResponseDto> GetStripeCustomerAsync(Guid currentUserId);
     Task<SubscriptionResponseDto> CreateSubscriptionAsync(Guid currentUserId, CreateSubscriptionInput input);
+    Task<CancelSubscriptionResponseDto> CancelSubscriptionAsync(Guid currentUserId, CancelSubscriptionInput input);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -315,6 +316,19 @@ public class GodGPTService : ApplicationService, IGodGPTService
             Description = input.Description,
             Metadata = input.Metadata,
             TrialPeriodDays = input.TrialPeriodDays
+        });
+    }
+
+    public async Task<CancelSubscriptionResponseDto> CancelSubscriptionAsync(Guid currentUserId, CancelSubscriptionInput input)
+    {
+        var userBillingGrain =
+            _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(currentUserId));
+        return await userBillingGrain.CancelSubscriptionAsync(new CancelSubscriptionDto
+        {
+            UserId = currentUserId,
+            SubscriptionId = input.SubscriptionId,
+            CancellationReason = string.Empty,
+            CancelAtPeriodEnd = true
         });
     }
 
