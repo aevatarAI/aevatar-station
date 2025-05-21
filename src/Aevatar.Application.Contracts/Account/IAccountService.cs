@@ -8,4 +8,5 @@ public interface IAccountService: IAccountAppService
 {
     Task SendRegisterCodeAsync(SendRegisterCodeDto input);
     Task<IdentityUserDto> RegisterAsync(AevatarRegisterDto input);
+    Task<bool> VerifyRegisterCodeAsync(VerifyRegisterCodeDto input);
 }
