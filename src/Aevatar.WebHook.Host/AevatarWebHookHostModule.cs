@@ -17,7 +17,8 @@ namespace Aevatar.Webhook;
 
 [DependsOn(typeof(AbpAutofacModule),
     typeof(AbpAutoMapperModule),
-    typeof(AbpAspNetCoreSerilogModule)
+    typeof(AbpAspNetCoreSerilogModule),
+    typeof(GodGPTWebHookTemplateModule)
 )]
 public class AevatarListenerHostModule : AbpModule
 {

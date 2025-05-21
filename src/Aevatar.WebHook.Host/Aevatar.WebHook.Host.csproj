@@ -7,6 +7,9 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="GodGPT.Webhook"/>
+        <PackageReference Include="GodGPT.GAgents"/>
+        <PackageReference Include="Stripe.net"/>
         <PackageReference Include="Microsoft.Orleans.Client" />
         <PackageReference Include="Orleans.Providers.MongoDB" />
         <ProjectReference Include="..\Aevatar.WebHook.SDK\Aevatar.WebHook.SDK.csproj" />
