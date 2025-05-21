@@ -18,8 +18,11 @@ public class KubernetesConstants
      public const string AppSettingFileMountPath = "/app/appsettings.json";
      public const string AppLogFileMountPath = "/app/Logs";
      public const string AppSettingSharedFileName = "appsettings.Shared.json";
+     public const string AppSettingSharedFileMountPath = "/app/appsettings.Shared.json";
      public const string AppSettingHttpApiHostSharedFileName = "appsettings.HttpApi.Host.Shared.json";
+     public const string AppSettingHttpApiHostSharedFileMountPath = "/app/appsettings.HttpApi.Host.Shared.json";
      public const string AppSettingSiloSharedFileName = "appsettings.Silo.Shared.json";
+     public const string AppSettingSiloSharedFileMountPath = "/app/appsettings.Silo.Shared.json";
      
      //FileBeat
      public const string FileBeatImage = "docker.elastic.co/beats/filebeat:7.16.2";

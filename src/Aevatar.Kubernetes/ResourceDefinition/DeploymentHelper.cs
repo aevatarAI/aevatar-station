@@ -300,6 +300,27 @@ public class DeploymentHelper
             },
             new V1VolumeMount
             {
+                Name = "config-volume",
+                MountPath = KubernetesConstants
+                    .AppSettingSharedFileMountPath,
+                SubPath = KubernetesConstants.AppSettingSharedFileName
+            },
+            new V1VolumeMount
+            {
+                Name = "config-volume",
+                MountPath = KubernetesConstants
+                    .AppSettingHttpApiHostSharedFileMountPath,
+                SubPath = KubernetesConstants.AppSettingHttpApiHostSharedFileName
+            },
+            new V1VolumeMount
+            {
+                Name = "config-volume",
+                MountPath = KubernetesConstants
+                    .AppSettingSiloSharedFileMountPath,
+                SubPath = KubernetesConstants.AppSettingSiloSharedFileName
+            },
+            new V1VolumeMount
+            {
                 Name = "log-volume",
                 MountPath = KubernetesConstants.AppLogFileMountPath
             }
