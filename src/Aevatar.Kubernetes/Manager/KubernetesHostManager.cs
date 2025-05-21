@@ -44,19 +44,28 @@ public class KubernetesHostManager: IHostDeployManager, ISingletonDependency
     private async Task<string> CreatePodAsync(string appId, string version, string imageName, string config,
         List<string> Command, string hostName)
     {
+        var sharedConfigContent = GetHostClientConfigContent(appId, version, KubernetesConstants.AppSettingSharedFileName,null);
+        var httpApiHostSharedConfigContent = GetHostClientConfigContent(appId, version, KubernetesConstants.AppSettingHttpApiHostSharedFileName ,null);
         // Ensure ConfigMaps (AppSettings and SideCar Configs) are created
+        var configFiles = new Dictionary<string, string>
+        {
+            { KubernetesConstants.AppSettingFileName, config },
+            { KubernetesConstants.AppSettingSharedFileName, sharedConfigContent },
+            { KubernetesConstants.AppSettingHttpApiHostSharedFileName, httpApiHostSharedConfigContent }
+        };
         await EnsureConfigMapAsync(
             appId, 
             version, 
             ConfigMapHelper.GetAppSettingConfigMapName, 
-            config, 
+            configFiles,
             ConfigMapHelper.CreateAppSettingConfigMapDefinition);
+        _logger.LogInformation($"[KubernetesAppManager] ConfigMap injected for appId={appId}, version={version}, keys=[{string.Join(",", configFiles.Keys)}]");
 
         await EnsureConfigMapAsync(
             appId, 
             version, 
             ConfigMapHelper.GetAppFileBeatConfigMapName, 
-            GetWebhookConfigContent(appId, version, KubernetesConstants.WebhookFileBeatConfigTemplateFilePath), 
+            new Dictionary<string, string> { { KubernetesConstants.FileBeatConfigFileName, GetWebhookConfigContent(appId, version, KubernetesConstants.WebhookFileBeatConfigTemplateFilePath) } },
             ConfigMapHelper.CreateFileBeatConfigMapDefinition);
 
         // Ensure Deployment is created
@@ -90,8 +99,8 @@ public class KubernetesHostManager: IHostDeployManager, ISingletonDependency
     string appId, 
     string version, 
     Func<string, string, string> getConfigMapNameFunc, 
-    string configContent, 
-    Func<string, string, V1ConfigMap> createConfigMapDefinitionFunc)
+    Dictionary<string, string> configContent, 
+    Func<string, Dictionary<string, string>, V1ConfigMap> createConfigMapDefinitionFunc)
 {
     string configMapName = getConfigMapNameFunc(appId, version);
     var configMaps = await _kubernetesClientAdapter.ListConfigMapAsync(KubernetesConstants.AppNameSpace);
@@ -329,13 +338,12 @@ private async Task EnsureIngressAsync(
 
     public async Task<string> CreateHostAsync(string appId, string version, string corsUrls)
     {
-        await CreateHostSiloAsync(GetHostName(appId,KubernetesConstants.HostSilo) , version, _HostDeployOptions.HostSiloImageName,
+        await CreateHostSiloAsync(GetHostName(appId,KubernetesConstants.HostSilo), version, _HostDeployOptions.HostSiloImageName,
             GetHostSiloConfigContent(appId,version,KubernetesConstants.HostSiloSettingTemplateFilePath));
-
         // await EnsurePhaAsync(appId, version);
-       await CreatePodAsync(GetHostName(appId,KubernetesConstants.HostClient), version, _HostDeployOptions.HostClientImageName,
-           GetHostClientConfigContent(appId, version, KubernetesConstants.HostClientSettingTemplateFilePath,corsUrls),
-           KubernetesConstants.HostClientCommand,_kubernetesOptions.DeveloperHostName);
+        await CreatePodAsync(GetHostName(appId,KubernetesConstants.HostClient), version, _HostDeployOptions.HostClientImageName,
+            GetHostClientConfigContent(appId, version, KubernetesConstants.HostClientSettingTemplateFilePath,corsUrls),
+            KubernetesConstants.HostClientCommand,_kubernetesOptions.DeveloperHostName);
         return "";
     }
 
@@ -346,18 +354,25 @@ private async Task EnsureIngressAsync(
 
     private async Task CreateHostSiloAsync(string appId, string version, string imageName, string hostSiloConfigContent)
     {
+        var appSettingsContent = hostSiloConfigContent;
+        var configFiles = new Dictionary<string, string>
+        {
+            { KubernetesConstants.AppSettingFileName, appSettingsContent },
+            { KubernetesConstants.AppSettingSharedFileName, GetHostSiloConfigContent(appId, version, KubernetesConstants.AppSettingSharedFileName) },
+            { KubernetesConstants.AppSettingSiloSharedFileName, GetHostSiloConfigContent(appId, version, KubernetesConstants.AppSettingSiloSharedFileName) }
+        };
         await EnsureConfigMapAsync(
-            appId, 
-            version, 
+            appId,
+            version,
             ConfigMapHelper.GetAppSettingConfigMapName,
-            hostSiloConfigContent,
+            configFiles,
             ConfigMapHelper.CreateAppSettingConfigMapDefinition);
 
         await EnsureConfigMapAsync(
             appId, 
             version, 
             ConfigMapHelper.GetAppFileBeatConfigMapName, 
-            GetHostSiloConfigContent(appId,version,KubernetesConstants.HostFileBeatConfigTemplateFilePath),
+            new Dictionary<string, string> { { KubernetesConstants.FileBeatConfigFileName, GetHostSiloConfigContent(appId,version,KubernetesConstants.HostFileBeatConfigTemplateFilePath) } },
             ConfigMapHelper.CreateFileBeatConfigMapDefinition);
 
         // Ensure Deployment is created
