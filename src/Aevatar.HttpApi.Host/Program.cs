@@ -31,7 +31,12 @@ public class Program
                 .ConfigureDefaults(args)
                 .UseAutofac()
                 .UseSerilog();
-            builder.Services.AddSignalR(options => { options.EnableDetailedErrors = true; }).AddOrleans();
+           // builder.Services.AddSignalR(options => { options.EnableDetailedErrors = true; }).AddOrleans();
+            builder.Services.AddSignalR(options =>
+            {
+                options.MaximumReceiveMessageSize = 1 * 1024 * 1024;
+                options.EnableDetailedErrors = true;
+            }).AddOrleans();
             builder.Services
                 .AddSingleton<IAuthorizationMiddlewareResultHandler, AevatarAuthorizationMiddlewareResultHandler>();
             await builder.AddApplicationAsync<AevatarHttpApiHostModule>();
