@@ -7,7 +7,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="TelegramWorkerAgent"/>
         <PackageReference Include="Microsoft.Orleans.Client"/>
         <PackageReference Include="Orleans.Providers.MongoDB"/>
         <ProjectReference Include="..\Aevatar.WebHook.SDK\Aevatar.WebHook.SDK.csproj"/>
