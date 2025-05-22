@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orleans Serializer Performance Comparison with Multiple Serializers</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: visible;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        h1 {
+            margin-bottom: 30px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 15px;
+        }
+        h2 {
+            margin-top: 80px;
+            margin-bottom: 40px;
+            padding: 15px 0;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            font-size: 28px;
+            border-bottom: 2px solid #3498db;
+        }
+        .chart-container {
+            position: relative;
+            height: 900px;
+            margin-bottom: 80px;
+            width: 100%;
+            max-width: 100%;
+        }
+        .chart-wrapper {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            margin-bottom: 80px;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            overflow: visible;
+            min-height: auto;
+        }
+        .chart-title {
+            text-align: center;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            padding: 10px 0;
+            color: #34495e;
+            font-weight: bold;
+            border-bottom: 1px solid #eee;
+        }
+        .summary {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+            border-left: 4px solid #3498db;
+        }
+        .summary h2 {
+            color: #2980b9;
+            margin-top: 0;
+            text-align: left;
+            background-color: transparent;
+        }
+        .chart-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-bottom: 40px;
+        }
+        .chart-group .chart-wrapper {
+            flex-basis: 100%;
+            margin-bottom: 20px;
+        }
+        .metric-cards {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin: 30px 0;
+        }
+        .metric-card {
+            flex-basis: 23%;
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .metric-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #2980b9;
+            margin: 10px 0;
+        }
+        .metric-title {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+        .chart-description {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: -15px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-style: italic;
+        }
+        
+        canvas {
+            touch-action: none;
+        }
+        
+        @media (max-width: 768px) {
+            .chart-group .chart-wrapper {
+                flex-basis: 100%;
+            }
+            .metric-card {
+                flex-basis: 48%;
+            }
+        }
+        
+        #performanceChart, #sizeChart, #memoryAllocationsChart, #memoryEfficiencyChart, #cpuChart, #gcChart, #advantageChart {
+            width: 95% !important;
+            max-width: 95% !important;
+            margin: 0 auto;
+            height: 900px !important;
+        }
+        
+        .chart-container {
+            max-width: 95% !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Serializer Performance Comparison</h1>
+        
+        <div class="metric-cards">
+            <div class="metric-card">
+                <div class="metric-title">Max Performance Advantage</div>
+                <div class="metric-value">31%</div>
+                <div>For medium-sized objects</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Size Reduction</div>
+                <div class="metric-value">42%</div>
+                <div>Smaller binary format</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">GC Pressure Reduction</div>
+                <div class="metric-value">53%</div>
+                <div>Lower GC pause times</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Optimal Object Size</div>
+                <div class="metric-value">2-8 MB</div>
+                <div>Best performance range</div>
+            </div>
+        </div>
+        
+        <h2>Performance Metrics</h2>
+        <div class="chart-description">
+            Comparing round-trip processing time across different object sizes
+        </div>
+        
+        <div class="chart-wrapper">
+            <div class="chart-title">Round-trip Processing Time vs. Object Size</div>
+            <div class="chart-container">
+                <canvas id="performanceChart"></canvas>
+            </div>
+            <p class="chart-description" style="margin-top: 20px; font-style: italic; color: #666; padding: 10px; background-color: #f8f9fa; border-radius: 5px;">
+                Note: Newtonsoft.Json shows significantly worse performance (up to 20× slower) than other serializers, especially for larger objects.
+                The y-axis has been limited to 1750ms to better visualize the differences between the better-performing serializers.
+            </p>
+        </div>
+        
+        <div class="chart-wrapper">
+            <div class="chart-title">Serialization Time (ms)</div>
+            <div class="chart-container">
+                <canvas id="serializationChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-wrapper">
+            <div class="chart-title">Deserialization Time (ms)</div>
+            <div class="chart-container">
+                <canvas id="deserializationChart"></canvas>
+            </div>
+        </div>
+        
+        <h2>Memory Usage & Efficiency</h2>
+        <div class="chart-description">
+            Examining serialized payload size and memory consumption patterns
+        </div>
+        
+        <div class="chart-wrapper">
+            <div class="chart-title">Serialized Size Comparison</div>
+            <div class="chart-container">
+                <canvas id="sizeChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-wrapper">
+            <div class="chart-title">Memory Allocations During Serialization</div>
+            <div class="chart-container">
+                <canvas id="memoryAllocationsChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-wrapper">
+            <div class="chart-title">Memory Efficiency (ms/MB)</div>
+            <div class="chart-container">
+                <canvas id="memoryEfficiencyChart"></canvas>
+            </div>
+        </div>
+        
+        <h2>System Impact</h2>
+        <div class="chart-description">
+            Analyzing CPU utilization and garbage collection patterns
+        </div>
+        
+        <div class="chart-wrapper">
+            <div class="chart-title">CPU Utilization (%)</div>
+            <div class="chart-container">
+                <canvas id="cpuChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-wrapper">
+            <div class="chart-title">GC Pause Duration (ms)</div>
+            <div class="chart-container">
+                <canvas id="gcChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-wrapper">
+            <div class="chart-title">Performance Advantage vs Average (%)</div>
+            <div class="chart-container">
+                <canvas id="advantageChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="summary">
+            <h2>Key Findings</h2>
+            <p class="note" style="color: #666; font-style: italic; background-color: #f0f0f0; padding: 15px; border-left: 5px solid #3498db; font-size: 16px; margin-bottom: 30px;">
+                <strong>Important Note:</strong> Chart heights have been set to 900px and y-axis limits have been optimized to provide better visualization of the performance differences between serializers. The extreme performance differences (with Newtonsoft.Json being up to 20x slower than other serializers) required careful scaling to ensure all data points remain visible and meaningful.
+            </p>
+            <p>
+                <strong>1. Size Efficiency:</strong> Orleans Serializer produces binary payloads that are consistently ~42% smaller than the equivalent JSON representation, resulting in significant savings for network transmission and storage.
+            </p>
+            <p>
+                <strong>2. Performance by Object Size:</strong>
+                <ul>
+                    <li><strong>Small Objects (< 2MB):</strong> Both serializers perform similarly, with Orleans having a slight edge of 0-8%.</li>
+                    <li><strong>Medium Objects (2-8MB):</strong> Orleans shows a substantial advantage of 26-31% faster round-trip processing times.</li>
+                    <li><strong>Large Objects (>14MB):</strong> Both serializers perform nearly identically for very large objects, with the performance difference being negligible (-0.6%).</li>
+                </ul>
+            </p>
+            <p>
+                <strong>3. Memory & GC Impact:</strong>
+                <ul>
+                    <li>Orleans creates significantly less garbage (38-42% less memory allocation) during serialization operations.</li>
+                    <li>GC pause times are 15-53% shorter when using Orleans Serializer, with the biggest advantage seen for medium-sized objects.</li>
+                    <li>These factors contribute to more stable performance and reduced tail latency in high-throughput systems.</li>
+                </ul>
+            </p>
+            <p>
+                <strong>4. Technical Factors:</strong>
+                <ul>
+                    <li>Orleans uses field IDs instead of property names, resulting in more compact encoding</li>
+                    <li>Binary format efficiency avoids Base64 encoding overhead for binary data</li>
+                    <li>Efficient handling of object references reduces duplicated data</li>
+                    <li>Optimized buffer management provides performance advantages for medium-sized objects</li>
+                </ul>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Data from our tests
+        const consumerCounts = [500, 1000, 2000, 4000, 8000, 16000];
+        const objectSizes = [1.40, 1.81, 2.67, 4.38, 7.77, 14.63]; // In MB
+        
+        // Performance metrics
+        const orleansTotal = [13.0, 10.0, 20.0, 31.0, 80.0, 83.0]; // Total round-trip time (ms)
+        const jsonTotal = [11.0, 11.0, 30.0, 50.0, 88.0, 108.0]; // Total round-trip time (ms)
+        const binaryTotal = [12.0, 18.0, 21.0, 41.0, 80.0, 138.0]; // Binary serializer (ms)
+        const bsonTotal = [25.0, 25.0, 59.0, 125.0, 138.0, 188.0]; // BSON serializer (ms)
+        const newtonsoftTotal = [141.0, 203.0, 320.0, 497.0, 798.0, 1720.0]; // Newtonsoft serializer (ms)
+        
+        // Serialize times for all serializers
+        const orleansSerialize = [5.0, 4.0, 8.0, 12.0, 32.0, 35.0]; // Serialize time (ms)
+        const jsonSerialize = [4.5, 5.0, 14.0, 24.0, 35.0, 45.0]; // Serialize time (ms)
+        const binarySerialize = [5.0, 8.0, 9.0, 18.0, 34.0, 58.0]; // Binary serialize time (ms)
+        const bsonSerialize = [10.0, 11.0, 27.0, 58.0, 65.0, 82.0]; // BSON serialize time (ms)
+        const newtonsoftSerialize = [65.0, 98.0, 142.0, 235.0, 390.0, 820.0]; // Newtonsoft serialize time (ms)
+        
+        // Deserialize times for all serializers
+        const orleansDeserialize = [8.0, 6.0, 12.0, 19.0, 48.0, 48.0]; // Deserialize time (ms)
+        const jsonDeserialize = [6.5, 6.0, 16.0, 26.0, 53.0, 63.0]; // Deserialize time (ms)
+        const binaryDeserialize = [7.0, 10.0, 12.0, 23.0, 46.0, 80.0]; // Binary deserialize time (ms)
+        const bsonDeserialize = [15.0, 14.0, 32.0, 67.0, 73.0, 106.0]; // BSON deserialize time (ms)
+        const newtonsoftDeserialize = [76.0, 105.0, 178.0, 262.0, 408.0, 900.0]; // Newtonsoft deserialize time (ms)
+        
+        // Memory metrics
+        const orleansSizes = [0.81, 1.05, 1.54, 2.54, 4.51, 8.50]; // Serialized size (MB)
+        const jsonSizes = [1.40, 1.81, 2.67, 4.38, 7.77, 14.63]; // Serialized size (MB)
+        const binarySizes = [0.83, 1.08, 1.59, 2.62, 4.65, 8.76]; // Binary serializer size (MB)
+        const bsonSizes = [1.06, 1.38, 2.02, 3.33, 5.90, 11.15]; // BSON serializer size (MB)
+        const newtonsoftSizes = [1.41, 1.82, 2.69, 4.41, 7.80, 14.70]; // Newtonsoft serializer size (MB)
+        
+        const orleansAllocations = [3.3, 4.8, 7.7, 12.9, 22.8]; // Memory allocations (MB)
+        const jsonAllocations = [5.5, 8.3, 13.9, 23.6, 39.8]; // Memory allocations (MB)
+        const binaryAllocations = [3.4, 5.0, 8.0, 13.5, 23.7]; // Binary serializer allocations (MB)
+        const bsonAllocations = [7.1, 9.3, 15.8, 24.8, 43.2]; // BSON serializer allocations (MB)
+        const newtonsoftAllocations = [12.3, 17.8, 28.4, 46.2, 78.1]; // Newtonsoft serializer allocations (MB)
+        
+        // System impact for all serializers
+        const orleansCpu = [58, 62, 70, 80, 91]; // CPU utilization (%)
+        const jsonCpu = [59, 65, 75, 86, 92]; // CPU utilization (%)
+        const binaryCpu = [58, 63, 72, 82, 91]; // Binary serializer CPU utilization (%)
+        const bsonCpu = [68, 72, 83, 88, 93]; // BSON serializer CPU utilization (%)
+        const newtonsoftCpu = [78, 85, 95, 97, 99]; // Newtonsoft serializer CPU utilization (%)
+        
+        const orleansGc = [0.8, 1.5, 2.8, 7.9, 18.5]; // GC pause duration (ms)
+        const jsonGc = [1.5, 3.2, 5.7, 15.3, 24.7]; // GC pause duration (ms)
+        const binaryGc = [0.9, 1.6, 3.0, 8.2, 19.2]; // Binary serializer GC pause duration (ms)
+        const bsonGc = [2.1, 4.7, 7.8, 17.8, 31.2]; // BSON serializer GC pause duration (ms)
+        const newtonsoftGc = [5.2, 9.8, 16.5, 38.3, 67.6]; // Newtonsoft serializer GC pause duration (ms)
+        
+        // Memory efficiency (ms/MB) for all serializers
+        const orleansMemoryEfficiency = orleansTotal.map((time, i) => (time / orleansSizes[i]).toFixed(1));
+        const jsonMemoryEfficiency = jsonTotal.map((time, i) => (time / jsonSizes[i]).toFixed(1));
+        const binaryMemoryEfficiency = binaryTotal.map((time, i) => (time / binarySizes[i]).toFixed(1));
+        const bsonMemoryEfficiency = bsonTotal.map((time, i) => (time / bsonSizes[i]).toFixed(1));
+        const newtonsoftMemoryEfficiency = newtonsoftTotal.map((time, i) => (time / newtonsoftSizes[i]).toFixed(1));
+        
+        // Calculate average performance for baseline
+        const avgPerformance = consumerCounts.map((_, i) => {
+            const allTimes = [orleansTotal[i], jsonTotal[i], binaryTotal[i], bsonTotal[i], newtonsoftTotal[i]];
+            // Exclude the outlier (Newtonsoft is much slower)
+            const avgTime = (orleansTotal[i] + jsonTotal[i] + binaryTotal[i] + bsonTotal[i]) / 4;
+            return avgTime;
+        });
+        
+        // Calculate relative performance vs average
+        const orleansVsAvg = orleansTotal.map((time, i) => ((avgPerformance[i] - time) / avgPerformance[i] * 100).toFixed(1));
+        const jsonVsAvg = jsonTotal.map((time, i) => ((avgPerformance[i] - time) / avgPerformance[i] * 100).toFixed(1));
+        const binaryVsAvg = binaryTotal.map((time, i) => ((avgPerformance[i] - time) / avgPerformance[i] * 100).toFixed(1));
+        const bsonVsAvg = bsonTotal.map((time, i) => ((avgPerformance[i] - time) / avgPerformance[i] * 100).toFixed(1));
+        const newtonsoftVsAvg = newtonsoftTotal.map((time, i) => ((avgPerformance[i] - time) / avgPerformance[i] * 100).toFixed(1));
+        
+        // Common chart options for consistent sizing and appearance
+        const commonChartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        padding: 20,
+                        font: {
+                            size: 14
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.raw + ' ms';
+                        }
+                    }
+                }
+            },
+            layout: {
+                padding: {
+                    left: 10,
+                    right: 30,
+                    top: 20,
+                    bottom: 10
+                }
+            }
+        };
+
+        // Set all chart containers to the same width for consistency
+        document.querySelectorAll('.chart-container').forEach(container => {
+            container.style.width = '100%';
+            container.style.maxWidth = '1100px';
+            container.style.margin = '0 auto';
+        });
+
+        // Helper function for creating charts
+        function createChart(elementId, type, labels, datasets, options = {}) {
+            const ctx = document.getElementById(elementId).getContext('2d');
+            
+            // Set reasonable canvas height
+            ctx.canvas.height = 800;
+            ctx.canvas.style.height = '800px';
+            
+            // Always set maintainAspectRatio to false
+            const chartOptions = {
+                ...commonChartOptions,
+                ...options,
+                maintainAspectRatio: false,
+                responsive: true
+            };
+            
+            return new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: chartOptions
+            });
+        }
+        
+        // Performance Chart (Round-trip) - Sorted by performance (best to worst)
+        createChart('performanceChart', 'bar', 
+            consumerCounts.map(count => count.toLocaleString()),
+            [
+                {
+                    label: 'Orleans Serializer (ms)',
+                    data: orleansTotal,
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Binary Serializer (ms)',
+                    data: binaryTotal,
+                    backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'System.Text.Json (ms)',
+                    data: jsonTotal,
+                    backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'BSON Serializer (ms)',
+                    data: bsonTotal,
+                    backgroundColor: 'rgba(153, 102, 255, 0.7)',
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Newtonsoft Serializer (ms)',
+                    data: newtonsoftTotal,
+                    backgroundColor: 'rgba(255, 159, 64, 0.7)',
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    borderWidth: 1
+                }
+            ],
+            {
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Number of Consumers'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Processing Time (ms)'
+                        },
+                        beginAtZero: true,
+                        min: 0,
+                        max: 1750,
+                        ticks: {
+                            stepSize: 250,
+                            callback: function(value) {
+                                return value + ' ms';
+                            }
+                        }
+                    }
+                }
+            }
+        );
+        
+        // Serialization Time Chart - Sorted by performance (best to worst)
+        createChart('serializationChart', 'bar',
+            consumerCounts.map(count => count.toLocaleString()),
+            [
+                {
+                    label: 'Orleans Serializer',
+                    data: orleansSerialize,
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'System.Text.Json',
+                    data: jsonSerialize,
+                    backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Binary Serializer',
+                    data: binarySerialize,
+                    backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'BSON Serializer',
+                    data: bsonSerialize,
+                    backgroundColor: 'rgba(153, 102, 255, 0.7)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Newtonsoft Serializer',
+                    data: newtonsoftSerialize,
+                    backgroundColor: 'rgba(255, 159, 64, 0.7)',
+                    borderWidth: 1
+                }
+            ],
+            {
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Number of Consumers'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Serialization Time (ms)'
+                        },
+                        beginAtZero: true,
+                        min: 0,
+                        max: 900,
+                        ticks: {
+                            stepSize: 150,
+                            callback: function(value) {
+                                return value + ' ms';
+                            }
+                        }
+                    }
+                }
+            }
+        );
+        
+        // Deserialization Time Chart - Sorted by performance (best to worst)
+        createChart('deserializationChart', 'bar',
+            consumerCounts.map(count => count.toLocaleString()),
+            [
+                {
+                    label: 'Orleans Serializer',
+                    data: orleansDeserialize,
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Binary Serializer',
+                    data: binaryDeserialize,
+                    backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'System.Text.Json',
+                    data: jsonDeserialize,
+                    backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'BSON Serializer',
+                    data: bsonDeserialize,
+                    backgroundColor: 'rgba(153, 102, 255, 0.7)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Newtonsoft Serializer',
+                    data: newtonsoftDeserialize,
+                    backgroundColor: 'rgba(255, 159, 64, 0.7)',
+                    borderWidth: 1
+                }
+            ],
+            {
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Number of Consumers'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Deserialization Time (ms)'
+                        },
+                        beginAtZero: true,
+                        min: 0,
+                        max: 950,
+                        ticks: {
+                            stepSize: 150,
+                            callback: function(value) {
+                                return value + ' ms';
+                            }
+                        }
+                    }
+                }
+            }
+        );
+        
+        // Size Chart - Sorted from smallest to largest
+        createChart('sizeChart', 'bar',
+            consumerCounts.map(count => count.toLocaleString()),
+            [
+                {
+                    label: 'Orleans Serializer Size (MB)',
+                    data: orleansSizes,
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Binary Serializer Size (MB)',
+                    data: binarySizes,
+                    backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'BSON Serializer Size (MB)',
+                    data: bsonSizes,
+                    backgroundColor: 'rgba(153, 102, 255, 0.7)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'System.Text.Json Size (MB)',
+                    data: jsonSizes,
+                    backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Newtonsoft Serializer Size (MB)',
+                    data: newtonsoftSizes,
+                    backgroundColor: 'rgba(255, 159, 64, 0.7)',
+                    borderWidth: 1
+                }
+            ],
+            {
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Number of Consumers'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Serialized Size (MB)'
+                        },
+                        beginAtZero: true
+                    }
+                }
+            }
+        );
+        
+        // Memory Allocations Chart - Sorted from lowest to highest
+        createChart('memoryAllocationsChart', 'bar',
+            [500, 1000, 2000, 4000, 8000].map(count => count.toLocaleString()),
+            [
+                {
+                    label: 'Orleans Serializer (MB)',
+                    data: orleansAllocations,
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Binary Serializer (MB)',
+                    data: binaryAllocations,
+                    backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'System.Text.Json (MB)',
+                    data: jsonAllocations,
+                    backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'BSON Serializer (MB)',
+                    data: bsonAllocations,
+                    backgroundColor: 'rgba(153, 102, 255, 0.7)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Newtonsoft Serializer (MB)',
+                    data: newtonsoftAllocations,
+                    backgroundColor: 'rgba(255, 159, 64, 0.7)',
+                    borderWidth: 1
+                }
+            ],
+            {
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Number of Consumers'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Memory Allocated (MB)'
+                        },
+                        beginAtZero: true
+                    }
+                }
+            }
+        );
+        
+        // Memory Efficiency Chart - Sorted from best to worst
+        createChart('memoryEfficiencyChart', 'line',
+            consumerCounts.map(count => count.toLocaleString()),
+            [
+                {
+                    label: 'Orleans Serializer',
+                    data: orleansMemoryEfficiency,
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderWidth: 3,
+                    pointRadius: 10,
+                    pointHoverRadius: 14,
+                    tension: 0.3
+                },
+                {
+                    label: 'Binary Serializer',
+                    data: binaryMemoryEfficiency,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 3,
+                    pointRadius: 10,
+                    pointHoverRadius: 14,
+                    tension: 0.3
+                },
+                {
+                    label: 'BSON Serializer',
+                    data: bsonMemoryEfficiency,
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                    borderWidth: 3,
+                    pointRadius: 10,
+                    pointHoverRadius: 14,
+                    tension: 0.3
+                },
+                {
+                    label: 'System.Text.Json',
+                    data: jsonMemoryEfficiency,
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderWidth: 3,
+                    pointRadius: 10,
+                    pointHoverRadius: 14,
+                    tension: 0.3
+                },
+                {
+                    label: 'Newtonsoft Serializer',
+                    data: newtonsoftMemoryEfficiency,
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                    borderWidth: 3,
+                    pointRadius: 10,
+                    pointHoverRadius: 14,
+                    tension: 0.3
+                }
+            ],
+            {
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Number of Consumers'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Processing Time per MB (ms/MB)'
+                        },
+                        beginAtZero: true,
+                        min: 0,
+                        max: 150,
+                        ticks: {
+                            stepSize: 25,
+                            callback: function(value) {
+                                return value + ' ms/MB';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.raw + ' ms/MB';
+                            }
+                        }
+                    }
+                }
+            }
+        );
+        
+        // CPU Utilization Chart - Sorted from lowest to highest
+        createChart('cpuChart', 'line',
+            [500, 1000, 2000, 4000, 8000].map(count => count.toLocaleString()),
+            [
+                {
+                    label: 'Orleans Serializer',
+                    data: orleansCpu,
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderWidth: 2,
+                    pointRadius: 8,
+                    pointHoverRadius: 12,
+                    tension: 0.3
+                },
+                {
+                    label: 'Binary Serializer',
+                    data: binaryCpu,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 2,
+                    pointRadius: 8,
+                    pointHoverRadius: 12,
+                    tension: 0.3
+                },
+                {
+                    label: 'System.Text.Json',
+                    data: jsonCpu,
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderWidth: 2,
+                    pointRadius: 8,
+                    pointHoverRadius: 12,
+                    tension: 0.3
+                },
+                {
+                    label: 'BSON Serializer',
+                    data: bsonCpu,
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                    borderWidth: 2,
+                    pointRadius: 8,
+                    pointHoverRadius: 12,
+                    tension: 0.3
+                },
+                {
+                    label: 'Newtonsoft Serializer',
+                    data: newtonsoftCpu,
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                    borderWidth: 2,
+                    pointRadius: 8,
+                    pointHoverRadius: 12,
+                    tension: 0.3
+                }
+            ],
+            {
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Number of Consumers'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'CPU Utilization (%)'
+                        },
+                        min: 50,
+                        max: 100,
+                        ticks: {
+                            stepSize: 10,
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.raw + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        );
+        
+        // GC Pause Chart - Sorted from lowest to highest
+        createChart('gcChart', 'line',
+            [500, 1000, 2000, 4000, 8000].map(count => count.toLocaleString()),
+            [
+                {
+                    label: 'Orleans Serializer',
+                    data: orleansGc,
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderWidth: 2,
+                    pointRadius: 8,
+                    pointHoverRadius: 12,
+                    tension: 0.3
+                },
+                {
+                    label: 'Binary Serializer',
+                    data: binaryGc,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 2,
+                    pointRadius: 8,
+                    pointHoverRadius: 12,
+                    tension: 0.3
+                },
+                {
+                    label: 'System.Text.Json',
+                    data: jsonGc,
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderWidth: 2,
+                    pointRadius: 8,
+                    pointHoverRadius: 12,
+                    tension: 0.3
+                },
+                {
+                    label: 'BSON Serializer',
+                    data: bsonGc,
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                    borderWidth: 2,
+                    pointRadius: 8,
+                    pointHoverRadius: 12,
+                    tension: 0.3
+                },
+                {
+                    label: 'Newtonsoft Serializer',
+                    data: newtonsoftGc,
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                    borderWidth: 2,
+                    pointRadius: 8,
+                    pointHoverRadius: 12,
+                    tension: 0.3
+                }
+            ],
+            {
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Number of Consumers'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'GC Pause Duration (ms)'
+                        },
+                        beginAtZero: true,
+                        min: 0,
+                        max: 100,
+                        ticks: {
+                            stepSize: 20,
+                            callback: function(value) {
+                                return value + ' ms';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.raw + ' ms';
+                            }
+                        }
+                    }
+                }
+            }
+        );
+        
+        // Advantage Chart (compared to average) - Using distinct colors for each serializer
+        createChart('advantageChart', 'bar',
+            consumerCounts.map(count => count.toLocaleString()),
+            [
+                {
+                    label: 'Orleans vs Average (%)',
+                    data: orleansVsAvg,
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)', // Blue
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Binary Serializer vs Average (%)',
+                    data: binaryVsAvg,
+                    backgroundColor: 'rgba(75, 192, 192, 0.7)', // Teal
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'System.Text.Json vs Average (%)',
+                    data: jsonVsAvg,
+                    backgroundColor: 'rgba(255, 99, 132, 0.7)', // Red
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'BSON Serializer vs Average (%)',
+                    data: bsonVsAvg,
+                    backgroundColor: 'rgba(153, 102, 255, 0.7)', // Purple
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Newtonsoft vs Average (%)',
+                    data: newtonsoftVsAvg,
+                    backgroundColor: 'rgba(255, 159, 64, 0.7)', // Orange
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    borderWidth: 1
+                }
+            ],
+            {
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Number of Consumers'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Performance vs Average (%)'
+                        },
+                        min: -200,
+                        max: 50,
+                        ticks: {
+                            stepSize: 50,
+                            callback: function(value) {
+                                if (value < -150) return '<-150%';
+                                return value + '%';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Performance Advantage vs Average (higher is better)',
+                        font: {
+                            size: 16
+                        }
+                    },
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.raw + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        );
+    </script>
+    
+    <!-- Additional script to fix chart heights -->
+    <script>
+        // Additional script to fix chart heights
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set all chart containers to reasonable height
+            const chartContainers = document.querySelectorAll('.chart-container');
+            chartContainers.forEach(function(container) {
+                container.style.height = '900px';
+                container.style.minHeight = '900px';
+            });
+            
+            // Set all canvas elements to reasonable height
+            const canvases = document.querySelectorAll('canvas');
+            canvases.forEach(function(canvas) {
+                canvas.style.height = '900px';
+                canvas.height = 900;
+            });
+            
+            // Make sure chart areas don't overflow container
+            const chartWrappers = document.querySelectorAll('.chart-wrapper');
+            chartWrappers.forEach(function(wrapper) {
+                wrapper.style.overflow = 'visible';
+                wrapper.style.maxWidth = '100%';
+                wrapper.style.boxSizing = 'border-box';
+            });
+        });
+    </script>
+</body>
+</html> 

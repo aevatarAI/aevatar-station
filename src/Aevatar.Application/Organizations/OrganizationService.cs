@@ -185,6 +185,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
             AevatarPermissions.Roles.Create,
             AevatarPermissions.Roles.Edit,
             AevatarPermissions.Roles.Delete,
+            AevatarPermissions.Dashboard,
             AevatarPermissions.LLMSModels.Default,
             AevatarPermissions.ApiRequests.Default
         ];

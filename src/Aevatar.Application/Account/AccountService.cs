@@ -78,6 +78,12 @@ public class AccountService : AccountAppService, IAccountService
         await _aevatarAccountEmailer.SendRegisterCodeAsync(input.Email, code);
     }
 
+    public async Task<bool> VerifyRegisterCodeAsync(VerifyRegisterCodeDto input)
+    {
+        var code = await _registerCode.GetAsync(GetRegisterCodeKey(input.Email));
+        return code == input.Code;
+    }
+
     public override async Task SendPasswordResetCodeAsync(SendPasswordResetCodeDto input)
     {
         var user = await GetUserByEmailAsync(input.Email);

@@ -4,6 +4,7 @@ using Aevatar.Organizations;
 using Aevatar.Permissions;
 using Aevatar.Projects;
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -15,6 +16,7 @@ namespace Aevatar.Controllers;
 [RemoteService]
 [ControllerName("Project")]
 [Route("api/projects")]
+[Authorize]
 public class ProjectController : AevatarController
 {
     private readonly IProjectService _projectService;

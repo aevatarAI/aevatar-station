@@ -35,11 +35,25 @@ public abstract class AccountServiceTests<TStartupModule> : AevatarApplicationTe
         await _accountService.SendRegisterCodeAsync(new SendRegisterCodeDto
         {
             Email = email,
-            UserName = "test",
-            AppName = "Aevatar"
+            AppName = "Aevatar",
+            UserName = "Tester"
         });
 
         var code = await _registerCode.GetAsync($"RegisterCode_{email.ToLower()}");
+
+        var verifyResult = await _accountService.VerifyRegisterCodeAsync(new VerifyRegisterCodeDto
+        {
+            Email = email,
+            Code = "Wrong"
+        });
+        verifyResult.ShouldBeFalse();
+
+        verifyResult = await _accountService.VerifyRegisterCodeAsync(new VerifyRegisterCodeDto
+        {
+            Email = email,
+            Code = code
+        });
+        verifyResult.ShouldBeTrue();
 
         var registerInput = new AevatarRegisterDto
         {
@@ -65,8 +79,8 @@ public abstract class AccountServiceTests<TStartupModule> : AevatarApplicationTe
         await Should.ThrowAsync<UserFriendlyException>(async ()=> await _accountService.SendRegisterCodeAsync(new SendRegisterCodeDto
         {
             Email = email,
-            UserName = "test",
-            AppName = "Aevatar"
+            AppName = "Aevatar",
+            UserName = "Tester"
         }));
     }
 
