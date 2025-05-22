@@ -7,12 +7,14 @@ using Aevatar.Agents.Creator.Models;
 using Aevatar.Application.Grains.Agents.TestAgent;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
+using Aevatar.Core.Placement;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace Aevatar.Application.Grains.Agents.Creator;
 
 [GAgent]
+[SiloNamePatternPlacement("User")]
 public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>, ICreatorGAgent
 {
     private readonly ILogger<CreatorGAgent> _logger;

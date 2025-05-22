@@ -6,11 +6,13 @@ using Aevatar.Code;
 using Aevatar.Code.GEvents;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
+using Aevatar.Core.Placement;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
 namespace Aevatar.Application.Grains.Agents.Code;
 
+[SiloNamePatternPlacement("User")]
 [Description("Handle Agent Combination")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]

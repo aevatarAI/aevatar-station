@@ -2,12 +2,14 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
+using Aevatar.Core.Placement;
 using Aevatar.GAgents.AI.Options;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
 namespace Aevatar.Application.Grains.Agents.TestAgent;
 
+[SiloNamePatternPlacement("User")]
 [Description("AgentChildTest")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
