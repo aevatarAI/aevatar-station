@@ -63,7 +63,7 @@ public class UserController : AevatarController
 
     [Authorize]
     [HttpPost("updateDockerImage")]
-    public async Task UpdateDockerImageAsync(HostTypeEnum hostType, string imageName)
+    public async Task UpdateDockerImageAsync(HostTypeEnum hostType, string imageName, string version = "1")
     {
         var clientId = CurrentUser.GetAllClaims().First(o => o.Type == "client_id").Value;
         if (!clientId.IsNullOrEmpty() && clientId.Contains("Aevatar"))
@@ -78,15 +78,16 @@ public class UserController : AevatarController
             appId = appId + "-" + hostType;
         }
 
-        await _developerService.UpdateDockerImageAsync(appId, "1",
+        await _developerService.UpdateDockerImageAsync(appId, version,
             imageName);
     }
 
     [Authorize(Policy = "OnlyAdminAccess")]
     [HttpPost("updateDockerImageByAdmin")]
-    public async Task UpdateDockerImageByAdminAsync(string hostId, HostTypeEnum hostType, string imageName)
+    public async Task UpdateDockerImageByAdminAsync(string hostId, HostTypeEnum hostType, string imageName,
+        string version = "1")
     {
-        await _developerService.UpdateDockerImageAsync(hostId + "-" + hostType, "1",
+        await _developerService.UpdateDockerImageAsync(hostId + "-" + hostType, version,
             imageName);
     }
 }
