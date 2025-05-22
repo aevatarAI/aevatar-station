@@ -85,7 +85,7 @@ jobs:
         with:
           context: ${{ matrix.project_root }}
           push: true
-          file: ${{ matrix.dockerfile }}
+          file: ${{ matrix.project_root }}/${{ matrix.dockerfile }}
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
