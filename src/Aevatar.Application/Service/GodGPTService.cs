@@ -315,7 +315,8 @@ public class GodGPTService : ApplicationService, IGodGPTService
             PaymentMethodId = input.PaymentMethodId,
             Description = input.Description,
             Metadata = input.Metadata,
-            TrialPeriodDays = input.TrialPeriodDays
+            TrialPeriodDays = input.TrialPeriodDays,
+            Platform = input.Platform
         });
     }
 

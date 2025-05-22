@@ -8,4 +8,6 @@ public class CreateSubscriptionInput
     public string Description { get; set; } = string.Empty;
     public Dictionary<string, string>? Metadata { get; set; } = new Dictionary<string, string>();
     public int? TrialPeriodDays { get; set; }
+
+    public string? Platform { get; set; } = "android";//android/ios
 }
