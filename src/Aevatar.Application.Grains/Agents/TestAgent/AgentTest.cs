@@ -106,8 +106,7 @@ public class FrontInitConfig : ConfigurationBase
     public string Url { get; set; }
 
     [Id(4)] public string Memo { get; set; }
-
-    [Id(5)] public School School { get; set; }
+    
 }
 
 [GenerateSerializer]
