@@ -47,7 +47,7 @@ jobs:
               APPROVED_COUNT=$((APPROVED_COUNT+1))
             fi
           done
-          echo "Approve count (with write/admin): $APPROVED_COUNT"
+          echo "Approve count: $APPROVED_COUNT"
           if [ "$APPROVED_COUNT" -eq 1 ]; then
             echo "approved_enough=true" >> $GITHUB_OUTPUT
           else
