@@ -156,8 +156,8 @@ public async Task UpdateDockerImageAsync(string appId, string version, string ne
 
 private static string GetWebhookConfigContent(string appId, string version, string templateFilePath)
 {
-    string rawContent = File.ReadAllText(templateFilePath);
-    string unescapedContent = Regex.Unescape(rawContent);
+    var rawContent = File.ReadAllText(templateFilePath);
+    var unescapedContent = Regex.Unescape(rawContent);
     return unescapedContent
         .Replace(KubernetesConstants.PlaceHolderAppId, appId.ToLower())
         .Replace(KubernetesConstants.PlaceHolderVersion, version.ToLower())
@@ -166,24 +166,25 @@ private static string GetWebhookConfigContent(string appId, string version, stri
 
 private static string GetHostSiloConfigContent(string appId, string version, string templateFilePath)
 {
-    string configContent = File.ReadAllText(templateFilePath)
-        .Replace(KubernetesConstants.HostPlaceHolderAppId, appId.ToLower())
+    var configContent = File.ReadAllText(templateFilePath);
+    var unescapedContent = Regex.Unescape(configContent);
+    return unescapedContent.Replace(KubernetesConstants.HostPlaceHolderAppId, appId.ToLower())
         .Replace(KubernetesConstants.HostPlaceHolderVersion, version.ToLower())
         .Replace(KubernetesConstants.HostPlaceHolderNameSpace, KubernetesConstants.AppNameSpace.ToLower());
-    return configContent;
 }
 
 private static string GetHostClientConfigContent(string appId, string version, string templateFilePath,[CanBeNull] string corsUrls)
 {
-    string configContent = File.ReadAllText(templateFilePath)
-        .Replace(KubernetesConstants.HostPlaceHolderAppId, appId.ToLower())
+    var configContent = File.ReadAllText(templateFilePath);
+    var unescapedContent = Regex.Unescape(configContent);   
+    unescapedContent = unescapedContent.Replace(KubernetesConstants.HostPlaceHolderAppId, appId.ToLower())
         .Replace(KubernetesConstants.HostPlaceHolderVersion, version.ToLower())
         .Replace(KubernetesConstants.HostPlaceHolderNameSpace, KubernetesConstants.AppNameSpace.ToLower());
     if (corsUrls != null)
     {
-        configContent = configContent.Replace(KubernetesConstants.HostClientCors, corsUrls);
+        unescapedContent = unescapedContent.Replace(KubernetesConstants.HostClientCors, corsUrls);
     }
-    return configContent;
+    return unescapedContent;
 }
 
 private async Task EnsureDeploymentAsync(
