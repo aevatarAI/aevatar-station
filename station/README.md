@@ -203,6 +203,20 @@ Each GAgent transitions state by applying events through the `GAgentTransitionSt
 | ORLEANS_SERVICE_ID | Orleans service identifier | aevatar-service |
 | SILO_NAME_PATTERN | Pattern to match silo names for SiloNamePatternPlacement | compute- |
 
+## Update aevatar-framework & aevatar-signalR
+1. Add `aevatar-framework`, `aevatar-signalR` and this repo itself as remote repos.
+```bash
+git remote add framework git@github.com:aevatarAI/aevatar-framework.git
+git remote add signalR git@github.com:aevatarAI/aevatar-signalR.git
+git remote add station git@github.com:aevatarAI/aevatar-station.git
+```
+2. Update dev branch
+```bash
+git subtree pull --prefix=framework framework dev --squash
+git subtree pull --prefix=signalR signalR dev --squash
+git subtree pull --prefix=station station dev --squash
+```
+
 ## Contributing
 
 If you encounter a bug or have a feature request, please use the [Issue Tracker](https://github.com/AISmartProject/aevatar-station/issues/new). The project is also open to contributions, so feel free to fork the project and open pull requests.
