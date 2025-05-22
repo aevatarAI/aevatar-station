@@ -12,7 +12,7 @@ namespace Aevatar.Application.Grains.Agents.TestAgent;
 [Description("AgentTest")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
-public class AgentTest : GAgentBase<FrontAgentState, FrontTestEvent, EventBase>, IFrontAgentTest
+public class AgentTest : GAgentBase<FrontAgentState, FrontTestEvent, EventBase, FrontInitConfig>, IFrontAgentTest
 {
     private readonly ILogger<AgentTest> _logger;
 
@@ -106,6 +106,18 @@ public class FrontInitConfig : ConfigurationBase
     public string Url { get; set; }
 
     [Id(4)] public string Memo { get; set; }
+
+    [Id(5)] public School School { get; set; }
+}
+
+[GenerateSerializer]
+public class School
+{
+    [Id(0)] public string Name { get; set; }
+
+    [Id(1)] public bool Status { get; set; }
+    
+    [Id(2)] public Dictionary<string, string> Data { get; set; }
 }
 
 public enum JobType
