@@ -4,9 +4,8 @@ on:
   push:
     branches:
       - "release/*"
-      - "feature/*"
 
-run-name: Deploy Aevatar Services to Staging from ${{ github.sha }}
+run-name: Deploy Aevatar Station on ${{ github.ref }} to Staging from ${{ github.sha }}
 
 env:
   DOTNET_INSTALL_DIR: "./.dotnet"
@@ -16,37 +15,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  publish-build-and-push-image:
+  publish:
     runs-on: aismart-runner
-    outputs:
-      short_sha: ${{ steps.vars.outputs.short_sha }}
     strategy:
       matrix:
-        include:
-          - name: SignalRSample.Client
-            path: samples/SignalRSample.Client
-            dockerfile: samples/SignalRSample.Client/Dockerfile
-            project_root: signalR
-          - name: SignalRSample.Host
-            path: samples/SignalRSample.Host
-            dockerfile: samples/SignalRSample.Host/Dockerfile
-            project_root: signalR
-          - name: Aevatar.HttpApi.Host
-            path: src/Aevatar.HttpApi.Host
-            dockerfile: src/Aevatar.HttpApi.Host/Dockerfile
-            project_root: station
-          - name: Aevatar.Silo
-            path: src/Aevatar.Silo
-            dockerfile: src/Aevatar.Silo/Dockerfile
-            project_root: station
-          - name: Aevatar.AuthServer
-            path: src/Aevatar.AuthServer
-            dockerfile: src/Aevatar.AuthServer/Dockerfile
-            project_root: station
-          - name: Aevatar.WebHook.Host
-            path: src/Aevatar.WebHook.Host
-            dockerfile: src/Aevatar.WebHook.Host/Dockerfile
-            project_root: station
+        servicename:
+          [
+            Aevatar.HttpApi.Host,
+            Aevatar.Silo,
+            Aevatar.AuthServer,
+            Aevatar.WebHook.Host,
+          ]
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -61,21 +40,54 @@ jobs:
           cache-name: nuget-package-cache
         with:
           path: ~/.nuget/packages
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ matrix.name }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ matrix.servicename }}
+
       - name: List NuGet Packages
         if: ${{ steps.nuget-packages.outputs.cache-hit == 'true' }}
         continue-on-error: true
         run: ls -lh ~/.nuget/packages
+      - run: dotnet publish station/src/${{ matrix.servicename }}/${{ matrix.servicename }}.csproj -o out/${{ matrix.servicename }}
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.servicename }}
+          path: out/${{ matrix.servicename }}
+          retention-days: 1
+
+  build-and-push-image:
+    needs: publish
+    runs-on: aismart-runner
+    strategy:
+      matrix:
+        servicename:
+          [
+            Aevatar.HttpApi.Host,
+            Aevatar.Silo,
+            Aevatar.AuthServer,
+            Aevatar.WebHook.Host,
+          ]
+    permissions:
+      contents: read
+    outputs:
+      short_sha: ${{ steps.vars.outputs.short_sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Set short git commit SHA
         id: vars
         run: |
           calculatedSha=$(git rev-parse --short ${{ github.sha }})
           echo "short_sha=$calculatedSha" >> "$GITHUB_OUTPUT"
+      - name: Download a single artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.servicename }}
+          path: out/${{ matrix.servicename }}
       - name: Create image tag
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.REPOSITORY_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/${{ matrix.name }}
+          images: ${{ secrets.REPOSITORY_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/${{ matrix.servicename }}
           tags: |
             type=sha
       - name: Set up Docker Buildx
@@ -83,25 +95,18 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: ${{ matrix.project_root }}
+          context: .
           push: true
-          file: ${{ matrix.project_root }}/${{ matrix.dockerfile }}
+          build-args: |
+            servicename=${{ matrix.servicename }}
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          #cache-from: type=gha
-          #cache-to: type=gha,mode=max
-      - name: Publish
-        run: cd ${{ matrix.project_root }} && dotnet publish ${{ matrix.path }}/${{ matrix.name }}.csproj -o ../../out/${{ matrix.name }}
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.name }}
-          path: out/${{ matrix.name }}
-          retention-days: 1
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
   dispatch:
     runs-on: aismart-runner
-    needs: publish-build-and-push-image
+    needs: build-and-push-image
     steps:
       - name: Deploy
         uses: actions/github-script@v6
@@ -115,6 +120,6 @@ jobs:
               ref: 'main',
               inputs: {
                 env: 'staging',
-                commit_sha: 'sha-${{ needs.publish-build-and-push-image.outputs.short_sha }}',
+                commit_sha: 'sha-${{ needs.build-and-push-image.outputs.short_sha }}',
               }
-            }) 
+            })
