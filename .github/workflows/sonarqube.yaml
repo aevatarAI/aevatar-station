@@ -42,13 +42,14 @@ jobs:
       - name: Begin SonarQube analysis
         run: |
           ./.sonar/scanner/dotnet-sonarscanner begin /k:"aevatar-station" /d:sonar.host.url="${{ secrets.SONAR_HOST_URL }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
-          cd station
-          dotnet build aevatar-station.sln
-          cd ..
-          cd signalR
-          dotnet build aevatar-signalR.sln
-          cd ..
-          cd framework
-          dotnet build aevatar-framework.sln
-          cd ..
+#          cd station
+#          dotnet build aevatar-station.sln
+#          cd ..
+#          cd signalR
+#          dotnet build aevatar-signalR.sln
+#          cd ..
+#          cd framework
+#          dotnet build aevatar-framework.sln
+#          cd ..
+           dotnet build AevatarStation.sln
           ./.sonar/scanner/dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
