@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\..\common.props" />
+
+  <PropertyGroup>
+    <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Aevatar</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Volo.Abp.FeatureManagement.MongoDB" />
+    <PackageReference Include="Volo.Abp.SettingManagement.MongoDB" />
+    <ProjectReference Include="..\Aevatar.Domain\Aevatar.Domain.csproj" />
+    <PackageReference Include="Volo.Abp.PermissionManagement.MongoDB" />
+    <PackageReference Include="Volo.Abp.Identity.MongoDB" />
+    <PackageReference Include="Volo.Abp.BackgroundJobs.MongoDB" />
+    <PackageReference Include="Volo.Abp.AuditLogging.MongoDB" />
+    <PackageReference Include="Volo.Abp.OpenIddict.MongoDB" />
+    <PackageReference Include="Volo.Abp.TenantManagement.MongoDB"  />
+  </ItemGroup>
+
+</Project>

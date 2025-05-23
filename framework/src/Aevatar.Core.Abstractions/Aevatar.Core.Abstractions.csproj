@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+        <Version>$(AevatarSourceCodeVersion)</Version>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <PackageType>Dependency</PackageType>
+        <PackageId>Aevatar.Core.Abstractions</PackageId>
+        <Title>aevatar Framework</Title>
+        <Authors>AElf</Authors>
+        <Description>The abstraction package to the Aevatar.Core framework.</Description>
+        <PackageTags>agent</PackageTags>
+        <RepositoryUrl>https://github.com/aevatarAI/aevatar-framework</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageProjectUrl>https://github.com/aevatarAI/aevatar-framework</PackageProjectUrl>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Orleans.Sdk" />
+        <PackageReference Include="Microsoft.Orleans.Streaming" />
+        <PackageReference Include="Microsoft.Extensions.Logging" />
+        <PackageReference Include="Orleans.SyncWork" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="InitializationEventBase.cs" />
+      <Compile Remove="GEventBase.cs" />
+    </ItemGroup>
+
+</Project>
