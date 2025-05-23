@@ -3,6 +3,7 @@ on:
     types: [opened, synchronize, reopened]
 
 name: PR Static Code Analysis
+
 jobs:
   static-code-analysis:
     runs-on: ubuntu-latest
@@ -15,7 +16,7 @@ jobs:
         with:
           dotnet-version: '9.0'
       - name: Create temporary global.json
-        run: echo '{"sdk":{"version":"9.0.x"}}' > ./global.json
+        run: echo '{"sdk":{"version":"9.0.*"}}' > ./global.json
       - name: Install protobuf
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       - name: Set up JDK 17
@@ -42,14 +43,5 @@ jobs:
       - name: Begin SonarQube analysis
         run: |
           ./.sonar/scanner/dotnet-sonarscanner begin /k:"aevatar-station" /d:sonar.host.url="${{ secrets.SONAR_HOST_URL }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
-#          cd station
-#          dotnet build aevatar-station.sln
-#          cd ..
-#          cd signalR
-#          dotnet build aevatar-signalR.sln
-#          cd ..
-#          cd framework
-#          dotnet build aevatar-framework.sln
-#          cd ..
-           dotnet build AevatarStation.sln
+          dotnet build AevatarStation.sln
           ./.sonar/scanner/dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
