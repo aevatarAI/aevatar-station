@@ -8,9 +8,9 @@
   </PropertyGroup>
   <ItemGroup>
 
-    <PackageVersion Include="GodGPT.GAgents" Version="1.0.6-alpha-payment-22" />
+    <PackageVersion Include="GodGPT.GAgents" Version="1.0.6-alpha-payment-23" />
     <PackageVersion Include="Stripe.net" Version="48.1.0"/>
-    <PackageVersion Include="GodGPT.Webhook" Version="1.0.6-alpha-payment-22" />
+    <PackageVersion Include="GodGPT.Webhook" Version="1.0.6-alpha-payment-23" />
     
     <!-- AElf packages -->
     <PackageVersion Include="AElf.Client" Version="1.1.0" />
