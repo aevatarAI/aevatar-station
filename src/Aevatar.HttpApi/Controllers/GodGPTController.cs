@@ -9,6 +9,7 @@ using Aevatar.Application.Grains.Agents.ChatManager.Dtos;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AI.Common;
+using Aevatar.GodGPT.Dtos;
 using Aevatar.Quantum;
 using Aevatar.Service;
 using Asp.Versioning;
@@ -211,13 +212,13 @@ public class GodGPTController : AevatarController
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
         var userProfileDto = await _godGptService.GetUserProfileAsync(currentUserId);
-        _logger.LogDebug("[GodGPTController][GetUserProfileAsync] sessionId: {0}, duration: {1}ms",
+        _logger.LogDebug("[GodGPTController][GetUserProfileAsync] userId: {0}, duration: {1}ms",
             currentUserId, stopwatch.ElapsedMilliseconds);
         return userProfileDto;
     }
 
     [HttpPut("godgpt/account")]
-    public async Task<Guid> SetUserProfileAsync(UserProfileDto userProfile)
+    public async Task<Guid> SetUserProfileAsync(SetUserProfileInput userProfile)
     {
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;

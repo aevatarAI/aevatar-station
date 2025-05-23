@@ -42,7 +42,7 @@ public interface IGodGPTService
     Task UpdateSystemPromptAsync(GodGPTConfigurationDto godGptConfigurationDto);
 
     Task<UserProfileDto> GetUserProfileAsync(Guid currentUserId);
-    Task<Guid> SetUserProfileAsync(Guid currentUserId, UserProfileDto userProfileDto);
+    Task<Guid> SetUserProfileAsync(Guid currentUserId, SetUserProfileInput userProfileDto);
     Task<Guid> DeleteAccountAsync(Guid currentUserId);
     Task<CreateShareIdResponse> GenerateShareContentAsync(Guid currentUserId, CreateShareIdRequest request);
     Task<List<ChatMessage>> GetShareMessageListAsync(string shareString);
@@ -134,7 +134,7 @@ public class GodGPTService : ApplicationService, IGodGPTService
         return await manager.GetUserProfileAsync();
     }
 
-    public async Task<Guid> SetUserProfileAsync(Guid currentUserId, UserProfileDto userProfileDto)
+    public async Task<Guid> SetUserProfileAsync(Guid currentUserId, SetUserProfileInput userProfileDto)
     {
         var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
         return await manager.SetUserProfileAsync(userProfileDto.Gender, userProfileDto.BirthDate,
