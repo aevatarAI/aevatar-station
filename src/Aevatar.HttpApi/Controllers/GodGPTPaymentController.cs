@@ -93,7 +93,7 @@ public class GodGPTPaymentController : AevatarController
     [HttpPost("create-subscription")]
     public async Task<SubscriptionResponseDto> CreateSubscriptionAsync(CreateSubscriptionInput input)
     {
-        _logger.LogWarning("CreateSubscriptionAsync Platform={A}",input.Platform);
+        _logger.LogWarning("CreateSubscriptionAsync Platform={A}",input.From);
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
         var responseDto = await _godGptService.CreateSubscriptionAsync(currentUserId, input);

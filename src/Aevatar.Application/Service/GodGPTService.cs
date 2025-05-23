@@ -316,7 +316,7 @@ public class GodGPTService : ApplicationService, IGodGPTService
             Description = input.Description,
             Metadata = input.Metadata,
             TrialPeriodDays = input.TrialPeriodDays,
-            Platform = input.Platform
+            Platform = input.From
         });
     }
 
