@@ -241,8 +241,15 @@ public class AgentService : ApplicationService, IAgentService
             Name = dto.Name,
             GrainId = businessAgent.GetGrainId(),
             Properties = dto.Properties,
-            AgentGuid = businessAgent.GetPrimaryKey()
+            AgentGuid = businessAgent.GetPrimaryKey(),
+            BusinessAgentGrainId = businessAgent.GetGrainId().ToString()
         };
+        
+        var configuration = await GetAgentConfigurationAsync(businessAgent);
+        if (configuration != null)
+        {
+            resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration.DtoType).ToJson();
+        }
 
         return resp;
     }
@@ -343,7 +350,8 @@ public class AgentService : ApplicationService, IAgentService
             AgentType = agentState.AgentType,
             Name = dto.Name,
             GrainId = agentState.BusinessAgentGrainId,
-            Properties = dto.Properties
+            Properties = dto.Properties,
+            BusinessAgentGrainId = agentState.BusinessAgentGrainId.ToString()
         };
 
         return resp;
@@ -364,7 +372,8 @@ public class AgentService : ApplicationService, IAgentService
             Name = agentState.Name,
             GrainId = agentState.BusinessAgentGrainId,
             Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentState.Properties),
-            AgentGuid = agentState.BusinessAgentGrainId.GetGuidKey()
+            AgentGuid = agentState.BusinessAgentGrainId.GetGuidKey(),
+            BusinessAgentGrainId = agentState.BusinessAgentGrainId.ToString()
         };
 
         var businessAgent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
