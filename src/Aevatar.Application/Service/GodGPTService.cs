@@ -206,7 +206,8 @@ public class GodGPTService : ApplicationService, IGodGPTService
             PriceId = createCheckoutSessionInput.PriceId,
             Mode = createCheckoutSessionInput.Mode ?? PaymentMode.SUBSCRIPTION,
             Quantity = createCheckoutSessionInput.Quantity <= 0 ? 1 : createCheckoutSessionInput.Quantity,
-            UiMode = createCheckoutSessionInput.UiMode ?? StripeUiMode.HOSTED
+            UiMode = createCheckoutSessionInput.UiMode ?? StripeUiMode.HOSTED,
+            CancelUrl = createCheckoutSessionInput.CancelUrl
         });
         return result;
     }
