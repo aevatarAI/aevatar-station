@@ -177,7 +177,6 @@ public class ChatMiddleware
                     }
                 }
                 context.Response.StatusCode = statusCode;
-                context.Response.ContentType = "application/json-patch+json";
                 await context.Response.WriteAsync(e.Message);
                 await context.Response.Body.FlushAsync();
                 _logger.LogDebug("[GodGPTController][ChatWithSessionAsync] {0}", e.Message);
