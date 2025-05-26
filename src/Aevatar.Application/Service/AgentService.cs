@@ -20,7 +20,6 @@ using Aevatar.Schema;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using NJsonSchema.Validation;
 using Orleans;
 using Orleans.Metadata;
 using Orleans.Runtime;
@@ -198,11 +197,7 @@ public class AgentService : ApplicationService, IAgentService
 
         var config = (ConfigurationBase)actualDto!;
         var schema = _schemaProvider.GetTypeSchema(config.GetType());
-        var validateResponse = schema.Validate(propertiesString, new JsonSchemaValidatorSettings
-        {
-            PropertyStringComparer = StringComparer.InvariantCultureIgnoreCase
-        });
-        
+        var validateResponse = schema.Validate(propertiesString);
         if (validateResponse.Count > 0)
         {
             var validateDic = _schemaProvider.ConvertValidateError(validateResponse);
