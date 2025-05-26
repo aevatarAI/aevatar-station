@@ -3,8 +3,8 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVerion>9.0.1</OrleansVerion>
-    <AevatarVerion>1.5.0-alpha.6</AevatarVerion>
-    <AevatarGAgentVerion>1.4.16-alpha-26</AevatarGAgentVerion>
+    <AevatarVerion>1.5.1-alpha.0</AevatarVerion>
+    <AevatarGAgentVerion>1.4.17-alpha-1</AevatarGAgentVerion>
   </PropertyGroup>
   <ItemGroup>
     <!-- AElf packages -->
