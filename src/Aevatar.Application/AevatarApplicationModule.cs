@@ -48,16 +48,13 @@ public class AevatarApplicationModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
-        Configure<AbpAutoMapperOptions>(options =>
-        {
-            options.AddMaps<AevatarApplicationModule>();
-        });
-        
+        Configure<AbpAutoMapperOptions>(options => { options.AddMaps<AevatarApplicationModule>(); });
+
         Configure<AbpVirtualFileSystemOptions>(options =>
         {
             options.FileSets.AddEmbedded<AevatarApplicationModule>();
         });
-        
+
         var configuration = context.Services.GetConfiguration();
         Configure<NameContestOptions>(configuration.GetSection("NameContest"));
         context.Services.AddSingleton<ISchemaProvider, SchemaProvider>();
@@ -67,7 +64,7 @@ public class AevatarApplicationModule : AbpModule
         context.Services.AddSingleton<INotificationHandlerFactory, NotificationProcessorFactory>();
         Configure<HostDeployOptions>(configuration.GetSection("HostDeploy"));
         context.Services.Configure<HostOptions>(configuration.GetSection("Host"));
-        
+
         Configure<AccountOptions>(configuration.GetSection("Account"));
         Configure<ApiRequestOptions>(configuration.GetSection("ApiRequest"));
     }

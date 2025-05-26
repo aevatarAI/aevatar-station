@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics.Metrics;
-using System.Threading.Tasks;
 using Aevatar;
 using Aevatar.CQRS;
 using Aevatar.CQRS.Dto;
@@ -75,7 +72,8 @@ public class MetricsElasticIndexingServiceTest
         var mockLogger = new Mock<ILogger<MetricsElasticIndexingService>>();
         var metricsService = new MetricsElasticIndexingService(mockInner.Object, mockLogger.Object);
         var commands = new List<SaveStateCommand>();
-        await Assert.ThrowsAsync<InvalidOperationException>(() => metricsService.SaveOrUpdateStateIndexBatchAsync(commands));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            metricsService.SaveOrUpdateStateIndexBatchAsync(commands));
         mockLogger.Verify(l => l.Log(
             LogLevel.Error,
             It.IsAny<EventId>(),
@@ -128,7 +126,8 @@ public class MetricsElasticIndexingServiceTest
             .ThrowsAsync(new InvalidOperationException("test error"));
         var mockLogger = new Mock<ILogger<MetricsElasticIndexingService>>();
         var metricsService = new MetricsElasticIndexingService(mockInner.Object, mockLogger.Object);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => metricsService.CheckExistOrCreateStateIndex(new MockStateBase()));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            metricsService.CheckExistOrCreateStateIndex(new MockStateBase()));
         mockLogger.Verify(l => l.Log(
             LogLevel.Error,
             It.IsAny<EventId>(),
@@ -142,10 +141,10 @@ public class MetricsElasticIndexingServiceTest
     {
         var mockInner = new Mock<IIndexingService>();
         mockInner.Setup(x => x.GetStateIndexDocumentsAsync(
-            It.IsAny<string>(), 
-            It.IsAny<Action<QueryDescriptor<dynamic>>>(), 
-            It.IsAny<int>(), 
-            It.IsAny<int>()))
+                It.IsAny<string>(),
+                It.IsAny<Action<QueryDescriptor<dynamic>>>(),
+                It.IsAny<int>(),
+                It.IsAny<int>()))
             .ReturnsAsync("result");
         var mockLogger = new Mock<ILogger<MetricsElasticIndexingService>>();
         var metricsService = new MetricsElasticIndexingService(mockInner.Object, mockLogger.Object);
@@ -172,7 +171,9 @@ public class MetricsElasticIndexingServiceTest
         listener.Start();
         var result = await metricsService.GetStateIndexDocumentsAsync("test", q => { });
         listener.Dispose();
-        mockInner.Verify(x => x.GetStateIndexDocumentsAsync("test", It.IsAny<Action<QueryDescriptor<dynamic>>>(), 0, 1000), Times.Once);
+        mockInner.Verify(
+            x => x.GetStateIndexDocumentsAsync("test", It.IsAny<Action<QueryDescriptor<dynamic>>>(), 0, 1000),
+            Times.Once);
         Assert.Equal("result", result);
         Assert.True(observedDuration.HasValue && observedDuration.Value >= 0);
         Assert.True(observedSuccess > 0);
@@ -183,14 +184,15 @@ public class MetricsElasticIndexingServiceTest
     {
         var mockInner = new Mock<IIndexingService>();
         mockInner.Setup(x => x.GetStateIndexDocumentsAsync(
-            It.IsAny<string>(), 
-            It.IsAny<Action<QueryDescriptor<dynamic>>>(), 
-            It.IsAny<int>(), 
-            It.IsAny<int>()))
+                It.IsAny<string>(),
+                It.IsAny<Action<QueryDescriptor<dynamic>>>(),
+                It.IsAny<int>(),
+                It.IsAny<int>()))
             .ThrowsAsync(new InvalidOperationException("test error"));
         var mockLogger = new Mock<ILogger<MetricsElasticIndexingService>>();
         var metricsService = new MetricsElasticIndexingService(mockInner.Object, mockLogger.Object);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => metricsService.GetStateIndexDocumentsAsync("test", q => { }));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            metricsService.GetStateIndexDocumentsAsync("test", q => { }));
         mockLogger.Verify(l => l.Log(
             LogLevel.Error,
             It.IsAny<EventId>(),
@@ -244,7 +246,8 @@ public class MetricsElasticIndexingServiceTest
             .ThrowsAsync(new InvalidOperationException("test error"));
         var mockLogger = new Mock<ILogger<MetricsElasticIndexingService>>();
         var metricsService = new MetricsElasticIndexingService(mockInner.Object, mockLogger.Object);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => metricsService.QueryWithLuceneAsync(new LuceneQueryDto()));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            metricsService.QueryWithLuceneAsync(new LuceneQueryDto()));
         mockLogger.Verify(l => l.Log(
             LogLevel.Error,
             It.IsAny<EventId>(),
@@ -252,4 +255,4 @@ public class MetricsElasticIndexingServiceTest
             It.IsAny<Exception>(),
             It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.AtLeastOnce);
     }
-} 
+}

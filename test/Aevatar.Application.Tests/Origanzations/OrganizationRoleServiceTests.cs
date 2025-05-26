@@ -24,7 +24,7 @@ public abstract class OrganizationRoleServiceTests<TStartupModule> : AevatarAppl
     private readonly IdentityRoleManager _roleManager;
     private readonly IPermissionManager _permissionManager;
     private readonly IOrganizationRoleService _organizationRoleService;
-    
+
     protected OrganizationRoleServiceTests()
     {
         _organizationUnitManager = GetRequiredService<OrganizationUnitManager>();
@@ -36,7 +36,7 @@ public abstract class OrganizationRoleServiceTests<TStartupModule> : AevatarAppl
         _permissionManager = GetRequiredService<IPermissionManager>();
         _organizationRoleService = GetRequiredService<IOrganizationRoleService>();
     }
-    
+
     [Fact]
     public async Task Role_Test()
     {
@@ -60,12 +60,12 @@ public abstract class OrganizationRoleServiceTests<TStartupModule> : AevatarAppl
             Name = "Dev"
         };
         var role = await _organizationRoleService.CreateAsync(organization.Id, createRoleInput);
-        
+
         roles = await _organizationRoleService.GetListAsync(organization.Id);
         roles.Items.Count.ShouldBe(3);
         roles.Items.First(o =>
             o.Id == role.Id).Name.ShouldBe(OrganizationRoleHelper.GetRoleName(organization.Id, createRoleInput.Name));
-        
+
         var updateRoleInput = new IdentityRoleUpdateDto
         {
             Name = "Dev-2"
@@ -97,7 +97,7 @@ public abstract class OrganizationRoleServiceTests<TStartupModule> : AevatarAppl
             DisplayName = "Test"
         };
         var organization = await _organizationService.CreateAsync(createInput);
-        
+
         var roles = await _organizationRoleService.GetListAsync(organization.Id);
         var ownerRole = roles.Items.First(o => o.Name.EndsWith(AevatarConsts.OrganizationOwnerRoleName));
 
@@ -106,11 +106,11 @@ public abstract class OrganizationRoleServiceTests<TStartupModule> : AevatarAppl
             {
                 Name = "NewName"
             }));
-        
+
         await Should.ThrowAsync<UserFriendlyException>(async () =>
             await _organizationRoleService.DeleteAsync(organization.Id, ownerRole.Id));
     }
-    
+
     [Fact]
     public async Task Role_WrongOrganization_Test()
     {
@@ -126,7 +126,7 @@ public abstract class OrganizationRoleServiceTests<TStartupModule> : AevatarAppl
         };
         var organization = await _organizationService.CreateAsync(createInput);
         var wrongOrganizationId = Guid.NewGuid();
-        
+
         var roles = await _organizationRoleService.GetListAsync(organization.Id);
         var readerRole = roles.Items.First(o => o.Name.EndsWith(AevatarConsts.OrganizationReaderRoleName));
 
@@ -135,7 +135,7 @@ public abstract class OrganizationRoleServiceTests<TStartupModule> : AevatarAppl
             {
                 Name = "NewName"
             }));
-        
+
         await Should.ThrowAsync<UserFriendlyException>(async () =>
             await _organizationRoleService.DeleteAsync(wrongOrganizationId, readerRole.Id));
     }

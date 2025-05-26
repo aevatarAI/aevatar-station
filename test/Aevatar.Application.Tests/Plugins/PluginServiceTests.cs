@@ -1,10 +1,7 @@
 using System;
-using System.Linq;
 using System.Threading.Tasks;
-using Aevatar.Plugins;
 using Shouldly;
 using Volo.Abp.Domain.Entities;
-using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
 using Volo.Abp.Users;
@@ -100,4 +97,4 @@ public abstract class PluginServiceTests<TStartupModule> : AevatarApplicationTes
         await Should.ThrowAsync<EntityNotFoundException>(async () =>
             await _pluginRepository.GetAsync(plugin.Id));
     }
-} 
+}

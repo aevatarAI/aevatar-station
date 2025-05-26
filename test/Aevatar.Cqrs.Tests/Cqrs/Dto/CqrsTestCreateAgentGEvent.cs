@@ -1,8 +1,9 @@
 using Aevatar.Core.Abstractions;
 
 namespace Aevatar.GAgent.Dto;
+
 [GenerateSerializer]
-public class CqrsTestCreateAgentGEvent: StateLogEventBase
+public class CqrsTestCreateAgentGEvent : StateLogEventBase
 {
     [Id(0)] public Guid Id { get; set; }
     [Id(1)] public string UserAddress { get; set; }

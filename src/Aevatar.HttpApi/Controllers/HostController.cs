@@ -22,21 +22,19 @@ public class HostController
     private readonly KubernetesOptions _kubernetesOptions;
 
     public HostController(
-        ILogService logService, 
+        ILogService logService,
         IOptionsSnapshot<KubernetesOptions> kubernetesOptions
-      )
+    )
     {
         _logService = logService;
         _kubernetesOptions = kubernetesOptions.Value;
     }
-    
+
     [HttpGet("log")]
-    public async Task<List<HostLogIndex>> GetLatestRealTimeLogs(string appId,HostTypeEnum hostType,int offset)
+    public async Task<List<HostLogIndex>> GetLatestRealTimeLogs(string appId, HostTypeEnum hostType, int offset)
     {
-        var indexName = _logService.GetHostLogIndexAliasName(_kubernetesOptions.AppNameSpace, appId + "-"+hostType.ToString().ToLower(), "1");
+        var indexName = _logService.GetHostLogIndexAliasName(_kubernetesOptions.AppNameSpace,
+            appId + "-" + hostType.ToString().ToLower(), "1");
         return await _logService.GetHostLatestLogAsync(indexName, offset);
     }
-   
-    
-    
 }

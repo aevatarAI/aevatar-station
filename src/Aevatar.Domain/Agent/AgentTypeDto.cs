@@ -28,7 +28,7 @@ public class Configuration
 public class AgentTypeData
 {
     public string? FullName { get; set; }
-    public Configuration? InitializationData { get; set; } 
+    public Configuration? InitializationData { get; set; }
 }
 
 public class PropertyData

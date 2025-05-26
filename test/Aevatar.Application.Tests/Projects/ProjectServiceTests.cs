@@ -47,7 +47,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
                 _currentUser.Id.Value,
                 "test",
                 "test@email.io"));
-        
+
         var createOrganizationInput = new CreateOrganizationDto
         {
             DisplayName = "Test Organization"
@@ -124,7 +124,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
                 _currentUser.Id.Value,
                 "test",
                 "test@email.io"));
-        
+
         var createOrganizationInput = new CreateOrganizationDto
         {
             DisplayName = "Test Organization"
@@ -145,7 +145,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
             DomainName = "App New"
         };
         await _projectService.UpdateAsync(project.Id, updateInput);
-        
+
         project = await _projectService.GetProjectAsync(project.Id);
         project.DisplayName.ShouldBe(updateInput.DisplayName);
         project.DomainName.ShouldBe(updateInput.DomainName);
@@ -159,7 +159,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
                 _currentUser.Id.Value,
                 "test",
                 "test@email.io"));
-        
+
         var createOrganizationInput = new CreateOrganizationDto
         {
             DisplayName = "Test Organization"
@@ -173,7 +173,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
             DomainName = "App"
         };
         var project = await _projectService.CreateAsync(createProjectInput);
-        
+
         var roles = await _projectService.GetRoleListAsync(project.Id);
 
         await _projectService.DeleteAsync(project.Id);
@@ -206,11 +206,11 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
             DomainName = "App"
         };
         var project = await _projectService.CreateAsync(createProjectInput);
-        
+
         var roles = await _projectService.GetRoleListAsync(project.Id);
         var ownerRole = roles.Items.First(o => o.Name.EndsWith("Owner"));
         var readerRole = roles.Items.First(o => o.Name.EndsWith("Reader"));
-        
+
         project = await _projectService.GetProjectAsync(project.Id);
         project.MemberCount.ShouldBe(0);
 
@@ -227,10 +227,10 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
             Join = true,
             RoleId = readerRole.Id
         });
-        
+
         project = await _projectService.GetProjectAsync(project.Id);
         project.MemberCount.ShouldBe(1);
-        
+
         members =
             await _projectService.GetMemberListAsync(project.Id, new GetOrganizationMemberListDto());
         members.Items.Count.ShouldBe(1);
@@ -243,18 +243,18 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
             UserId = readerUser.Id,
             RoleId = ownerRole.Id
         });
-        
+
         members =
             await _projectService.GetMemberListAsync(project.Id, new GetOrganizationMemberListDto());
         members.Items.Count.ShouldBe(1);
         members.Items[0].RoleId.ShouldBe(ownerRole.Id);
-        
+
         await _projectService.SetMemberAsync(project.Id, new SetOrganizationMemberDto
         {
             Email = readerUser.Email,
             Join = false
         });
-        
+
         project = await _projectService.GetProjectAsync(project.Id);
         project.MemberCount.ShouldBe(0);
 
@@ -265,7 +265,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         readerUser = await _identityUserManager.GetByIdAsync(readerUser.Id);
         readerUser.IsInOrganizationUnit(project.Id).ShouldBeFalse();
     }
-    
+
     [Fact]
     public async Task Organization_Delete_WithProject_Test()
     {
@@ -274,7 +274,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
                 _currentUser.Id.Value,
                 "test",
                 "test@email.io"));
-        
+
         var createOrganizationInput = new CreateOrganizationDto
         {
             DisplayName = "Test Organization"
@@ -288,7 +288,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
             DomainName = "App"
         };
         var project = await _projectService.CreateAsync(createProjectInput);
-        
+
         var organizationRoles = await _organizationService.GetRoleListAsync(organization.Id);
         var projectRoles = await _projectService.GetRoleListAsync(project.Id);
 
@@ -301,10 +301,10 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         {
             await Should.ThrowAsync<EntityNotFoundException>(async () => await _roleManager.GetByIdAsync(role.Id));
         }
-        
+
         var user = await _identityUserManager.GetByIdAsync(_currentUser.Id.Value);
         user.IsInOrganizationUnit(organization.Id).ShouldBeFalse();
-        
+
         await Should.ThrowAsync<EntityNotFoundException>(async () =>
             await _projectService.GetProjectAsync(project.Id));
 
@@ -313,13 +313,13 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
             await Should.ThrowAsync<EntityNotFoundException>(async () => await _roleManager.GetByIdAsync(role.Id));
         }
     }
-    
+
     [Fact]
     public async Task Organization_DeleteMember_WithProject_Test()
     {
         var owner = new IdentityUser(_currentUser.Id.Value, "owner", "owner@email.io");
         await _identityUserManager.CreateAsync(owner);
-        
+
         var reader = new IdentityUser(Guid.NewGuid(), "reader", "reader@email.io");
         await _identityUserManager.CreateAsync(reader);
 
@@ -336,7 +336,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
             DomainName = "App"
         };
         var project = await _projectService.CreateAsync(createProjectInput);
-        
+
         var roles = await _projectService.GetRoleListAsync(project.Id);
         var ownerRole = roles.Items.First(o => o.Name.EndsWith("Owner"));
         var readerRole = roles.Items.First(o => o.Name.EndsWith("Reader"));
@@ -347,26 +347,27 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
             Join = true,
             RoleId = ownerRole.Id
         });
-        
+
         project = await _projectService.GetProjectAsync(project.Id);
         project.MemberCount.ShouldBe(1);
-        
+
         await _projectService.SetMemberAsync(project.Id, new SetOrganizationMemberDto
         {
             Email = reader.Email,
             Join = true,
             RoleId = readerRole.Id
         });
-        
+
         project = await _projectService.GetProjectAsync(project.Id);
         project.MemberCount.ShouldBe(2);
-        
-        await Should.ThrowAsync<UserFriendlyException>(async () => await _organizationService.SetMemberAsync(organization.Id, new SetOrganizationMemberDto
-        {
-            Email = owner.Email,
-            Join = false
-        }));
-        
+
+        await Should.ThrowAsync<UserFriendlyException>(async () => await _organizationService.SetMemberAsync(
+            organization.Id, new SetOrganizationMemberDto
+            {
+                Email = owner.Email,
+                Join = false
+            }));
+
         await _organizationService.SetMemberAsync(organization.Id, new SetOrganizationMemberDto
         {
             Email = reader.Email,
@@ -375,10 +376,9 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
 
         organization = await _organizationService.GetAsync(organization.Id);
         organization.MemberCount.ShouldBe(1);
-        
+
         project = await _projectService.GetProjectAsync(project.Id);
         project.MemberCount.ShouldBe(1);
-
 
         owner = await _identityUserManager.GetByIdAsync(reader.Id);
         owner.IsInOrganizationUnit(organization.Id).ShouldBeFalse();

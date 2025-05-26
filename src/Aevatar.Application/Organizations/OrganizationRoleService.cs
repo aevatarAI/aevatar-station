@@ -52,7 +52,7 @@ public class OrganizationRoleService : AevatarAppService, IOrganizationRoleServi
             OrganizationRoleHelper.GetRoleName(organizationId, input.Name)
         );
         (await RoleManager.CreateAsync(role)).CheckErrors();
-        
+
         var organization = await OrganizationUnitRepository.GetAsync(organizationId);
         organization.TryGetOrganizationRoles(out var roles);
         roles.Add(role.Id);
@@ -75,30 +75,30 @@ public class OrganizationRoleService : AevatarAppService, IOrganizationRoleServi
 
         var newName = OrganizationRoleHelper.GetRoleName(organizationId, input.Name);
 
-        (await RoleManager.SetRoleNameAsync(role,newName)).CheckErrors();
-        
+        (await RoleManager.SetRoleNameAsync(role, newName)).CheckErrors();
+
         (await RoleManager.UpdateAsync(role)).CheckErrors();
-        
+
         return ObjectMapper.Map<IdentityRole, IdentityRoleDto>(role);
     }
 
     public async Task DeleteAsync(Guid organizationId, Guid id)
     {
         var role = await RoleManager.GetByIdAsync(id);
-        
+
         if (OrganizationRoleHelper.IsOwner(role.Name))
         {
             throw new UserFriendlyException("The owner role cannot be deleted.");
         }
-        
+
         OrganizationRoleHelper.CheckRoleInOrganization(organizationId, role.Name);
-        
+
         var organization = await OrganizationUnitRepository.GetAsync(organizationId);
         organization.TryGetOrganizationRoles(out var roles);
         roles.Remove(role.Id);
         organization.ExtraProperties[AevatarConsts.OrganizationRoleKey] = roles;
         await OrganizationUnitManager.UpdateAsync(organization);
-        
+
         await RoleManager.DeleteAsync(role);
     }
 }

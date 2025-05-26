@@ -16,5 +16,5 @@ public class AgentEventDto
     public string AgentGrainType { get; set; }
     public string EventName { get; set; }
     public DateTime Ctime { get; set; }
-    public string EventJson{ get; set; }
+    public string EventJson { get; set; }
 }

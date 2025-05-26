@@ -211,7 +211,8 @@ public sealed class TestKitSilo : IDisposable
         var grainType = _grainTypeResolver.GetGrainType(typeof(T));
         var grainId = GrainId.Create(grainType, identity);
 
-        if (ServiceProvider.GetService<IGrainContext>() is not TestGrainActivationContext context || context.GrainId != grainId || context.GrainType != typeof(T))
+        if (ServiceProvider.GetService<IGrainContext>() is not TestGrainActivationContext context ||
+            context.GrainId != grainId || context.GrainType != typeof(T))
         {
             // we have not registered a context yet OR we have registered a context but it is for a different grain and we need to re-create
             context = new TestGrainActivationContext
@@ -307,14 +308,14 @@ public sealed class TestKitSilo : IDisposable
                 disposable.Dispose();
             }
         }
-        
+
         // 清空创建的Grain列表
         _activatedGrains.Clear();
         _createdGrains.Clear();
-        
+
         // 注意：这些管理器没有实现IDisposable接口，所以我们不需要尝试释放它们
         // 如果将来它们实现了IDisposable，可以在这里添加相应的代码
-        
+
         GC.SuppressFinalize(this);
     }
 }

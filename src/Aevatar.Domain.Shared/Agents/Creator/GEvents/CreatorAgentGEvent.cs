@@ -2,7 +2,4 @@ using Aevatar.Core.Abstractions;
 
 namespace Aevatar.Agents.Creator.GEvents;
 
-public class CreatorAgentGEvent : StateLogEventBase<CreatorAgentGEvent>
-{
-    
-}
+public class CreatorAgentGEvent : StateLogEventBase<CreatorAgentGEvent>;

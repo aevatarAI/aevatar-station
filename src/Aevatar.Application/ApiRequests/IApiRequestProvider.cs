@@ -78,16 +78,17 @@ public class ApiRequestProvider : IApiRequestProvider, ISingletonDependency
 
             var time = item.Value.SegmentTime.Date.AddHours(item.Value.SegmentTime.Hour);
             await UpdateSnapshotAsync(app.ProjectId, time, item.Value.Count, insertEntities, updateEntities);
-            
+
             var organization = await _organizationUnitRepository.GetAsync(app.ProjectId);
-            await UpdateSnapshotAsync(organization.ParentId.Value, time, item.Value.Count, insertEntities, updateEntities);
+            await UpdateSnapshotAsync(organization.ParentId.Value, time, item.Value.Count, insertEntities,
+                updateEntities);
         }
 
         if (insertEntities.Values.Count > 0)
         {
             await _apiRequestSnapshotRepository.InsertManyAsync(insertEntities.Values);
         }
-        
+
         if (updateEntities.Values.Count > 0)
         {
             await _apiRequestSnapshotRepository.UpdateManyAsync(updateEntities.Values);
@@ -130,7 +131,7 @@ public class ApiRequestProvider : IApiRequestProvider, ISingletonDependency
     {
         return $"{appId}-{dateTime}";
     }
-    
+
     private DateTime GetSegmentTime(DateTime dateTime)
     {
         var minute = (dateTime.Minute / _apiRequestOptions.FlushPeriod) * _apiRequestOptions.FlushPeriod;

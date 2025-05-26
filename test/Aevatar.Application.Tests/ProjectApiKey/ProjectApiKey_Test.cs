@@ -27,7 +27,7 @@ public abstract class ProjectApiKeyTests<TStartupModule> : AevatarApplicationTes
     public ProjectApiKeyTests()
     {
         _projectAppIdService = GetRequiredService<IProjectAppIdService>();
-        _identityUserManager =GetRequiredService<IdentityUserManager>();
+        _identityUserManager = GetRequiredService<IdentityUserManager>();
         _currentUser = GetRequiredService<ICurrentUser>();
         _principalAccessor = GetRequiredService<ICurrentPrincipalAccessor>();
     }
@@ -36,7 +36,7 @@ public abstract class ProjectApiKeyTests<TStartupModule> : AevatarApplicationTes
     public async Task CreateApiKeyTest()
     {
         await _identityUserManager.CreateAsync(new IdentityUser(_currentUser.Id!.Value, "A", "2222@gmail.com"));
-        
+
         await _projectAppIdService.CreateAsync(_projectId, _firstApiKeyName, _currentUser.Id!.Value);
     }
 
@@ -45,7 +45,7 @@ public abstract class ProjectApiKeyTests<TStartupModule> : AevatarApplicationTes
     public async Task CreateApiKeyExistTest()
     {
         await _projectAppIdService.CreateAsync(_projectId, _firstApiKeyName, _currentUser.Id!.Value);
-        
+
         await Assert.ThrowsAsync<BusinessException>(async () =>
             await _projectAppIdService.CreateAsync(_projectId, _firstApiKeyName, _currentUser.Id!.Value));
     }
@@ -53,13 +53,13 @@ public abstract class ProjectApiKeyTests<TStartupModule> : AevatarApplicationTes
     [Fact]
     public async Task UpdateApiKeyNameTest()
     {
-        using(_principalAccessor.Change(new []
-              {
-                  new Claim(AbpClaimTypes.UserId, _currentUser.Id!.Value.ToString()),
-                  new Claim(AbpClaimTypes.UserName, _currentUser.UserName!),
-                    new Claim(AbpClaimTypes.Email, _currentUser.Email!),
-                    new Claim(AbpClaimTypes.Role, AevatarConsts.AdminRoleName)
-              }))
+        using (_principalAccessor.Change(new[]
+               {
+                   new Claim(AbpClaimTypes.UserId, _currentUser.Id!.Value.ToString()),
+                   new Claim(AbpClaimTypes.UserName, _currentUser.UserName!),
+                   new Claim(AbpClaimTypes.Email, _currentUser.Email!),
+                   new Claim(AbpClaimTypes.Role, AevatarConsts.AdminRoleName)
+               }))
         {
             await _identityUserManager.CreateAsync(new IdentityUser(_currentUser.Id!.Value, "A", "2222@gmail.com"));
             await _projectAppIdService.CreateAsync(_projectId, _firstApiKeyName, _currentUser.Id!.Value);
@@ -73,13 +73,13 @@ public abstract class ProjectApiKeyTests<TStartupModule> : AevatarApplicationTes
     [Fact]
     public async Task UpdateApiKeyNameExistTest()
     {
-        using(_principalAccessor.Change(new []
-              {
-                  new Claim(AbpClaimTypes.UserId, _currentUser.Id!.Value.ToString()),
-                  new Claim(AbpClaimTypes.UserName, _currentUser.UserName!),
-                  new Claim(AbpClaimTypes.Email, _currentUser.Email!),
-                  new Claim(AbpClaimTypes.Role, AevatarConsts.AdminRoleName)
-              }))
+        using (_principalAccessor.Change(new[]
+               {
+                   new Claim(AbpClaimTypes.UserId, _currentUser.Id!.Value.ToString()),
+                   new Claim(AbpClaimTypes.UserName, _currentUser.UserName!),
+                   new Claim(AbpClaimTypes.Email, _currentUser.Email!),
+                   new Claim(AbpClaimTypes.Role, AevatarConsts.AdminRoleName)
+               }))
         {
             await _identityUserManager.CreateAsync(new IdentityUser(_currentUser.Id!.Value, "A", "2222@gmail.com"));
             await _projectAppIdService.CreateAsync(_projectId, _firstApiKeyName, _currentUser.Id!.Value);

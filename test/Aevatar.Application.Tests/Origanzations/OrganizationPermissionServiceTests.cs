@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Organizations;
@@ -47,23 +46,24 @@ public abstract class OrganizationPermissionServiceTests<TStartupModule> : Aevat
         var permissions = await _organizationPermissionService.GetAsync(organization.Id, "R",
             OrganizationRoleHelper.GetRoleName(organization.Id, AevatarConsts.OrganizationReaderRoleName));
         permissions.Groups.Count.ShouldBe(1);
-        permissions.Groups[0].Permissions.First(o=>o.Name == AevatarPermissions.Members.Manage).IsGranted.ShouldBeFalse();
+        permissions.Groups[0].Permissions.First(o => o.Name == AevatarPermissions.Members.Manage).IsGranted
+            .ShouldBeFalse();
 
         await _organizationPermissionService.UpdateAsync(organization.Id, "R",
             OrganizationRoleHelper.GetRoleName(organization.Id, AevatarConsts.OrganizationReaderRoleName),
             new UpdatePermissionsDto
             {
-                Permissions = new[]
-                {
+                Permissions =
+                [
                     new UpdatePermissionDto
                     {
                         Name = AevatarPermissions.Members.Manage,
                         IsGranted = true
                     }
-                }
+                ]
             });
     }
-    
+
     [Fact]
     public async Task Permission_ModifyOwner_Test()
     {
@@ -78,15 +78,20 @@ public abstract class OrganizationPermissionServiceTests<TStartupModule> : Aevat
             DisplayName = "Test"
         };
         var organization = await _organizationService.CreateAsync(createInput);
-        
+
         await Should.ThrowAsync<UserFriendlyException>(async () =>
-            await _organizationPermissionService.UpdateAsync(organization.Id, "R", OrganizationRoleHelper.GetRoleName(organization.Id,AevatarConsts.OrganizationOwnerRoleName), new UpdatePermissionsDto
-            {
-                Permissions = new []{new UpdatePermissionDto
+            await _organizationPermissionService.UpdateAsync(organization.Id, "R",
+                OrganizationRoleHelper.GetRoleName(organization.Id, AevatarConsts.OrganizationOwnerRoleName),
+                new UpdatePermissionsDto
                 {
-                    Name = AevatarPermissions.Organizations.Default,
-                    IsGranted = false
-                }}
-            }));
+                    Permissions =
+                    [
+                        new UpdatePermissionDto
+                        {
+                            Name = AevatarPermissions.Organizations.Default,
+                            IsGranted = false
+                        }
+                    ]
+                }));
     }
 }

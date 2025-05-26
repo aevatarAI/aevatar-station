@@ -26,13 +26,15 @@ public class DaprProvider : IDaprProvider, ISingletonDependency
         try
         {
             await _daprClient.PublishEventAsync(pubsubName, topicName, message);
-            _logger.LogInformation("Dapr event published. pubsubName: {pubsub}, topicName: {topicName}, message: {message}",
+            _logger.LogInformation(
+                "Dapr event published. pubsubName: {pubsub}, topicName: {topicName}, message: {message}",
                 pubsubName, topicName, message);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error publishing event. pubsubName: {pubsub}, topicName: {topicName},, message: {message}",
-                pubsubName, topicName,message);
+            _logger.LogError(ex,
+                "Error publishing event. pubsubName: {pubsub}, topicName: {topicName},, message: {message}",
+                pubsubName, topicName, message);
             ;
         }
     }

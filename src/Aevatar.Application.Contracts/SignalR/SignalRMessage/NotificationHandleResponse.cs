@@ -4,12 +4,11 @@ using Orleans;
 
 namespace Aevatar.SignalR.SignalRMessage;
 
-public class NotificationResponse:ISignalRMessage<NotificationResponseMessage>
+public class NotificationResponse : ISignalRMessage<NotificationResponseMessage>
 {
     public string MessageType => "NotificationAction";
     public NotificationResponseMessage Data { get; set; }
 }
-
 
 [GenerateSerializer]
 public class NotificationResponseMessage

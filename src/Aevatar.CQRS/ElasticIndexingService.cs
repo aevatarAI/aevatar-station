@@ -99,7 +99,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                         if (propType == typeof(string))
                         {
                             props.Text(propertyName);
-                           // props.Keyword(propertyName, k => k.IgnoreAbove(256));
+                            // props.Keyword(propertyName, k => k.IgnoreAbove(256));
                         }
                         else if (propType == typeof(short) || propType == typeof(int) || propType == typeof(long))
                         {
@@ -196,7 +196,8 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                 Index = indexName,
                 Script = new Script
                 {
-                    Source = "if (ctx.op == 'create' || ctx._source.version == null || params.version > ctx._source.version) { ctx._source = params.doc; } else { ctx.op = 'noop'; }",
+                    Source =
+                        "if (ctx.op == 'create' || ctx._source.version == null || params.version > ctx._source.version) { ctx._source = params.doc; } else { ctx.op = 'noop'; }",
                     Params = new Dictionary<string, object>
                     {
                         ["version"] = document["version"],

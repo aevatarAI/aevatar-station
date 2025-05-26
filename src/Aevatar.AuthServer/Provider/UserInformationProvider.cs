@@ -5,15 +5,15 @@ using Volo.Abp.ObjectMapping;
 
 namespace Aevatar.Provider;
 
-public class UserInformationProvider: IUserInformationProvider, ISingletonDependency
+public class UserInformationProvider : IUserInformationProvider, ISingletonDependency
 {
     private readonly ILogger<UserInformationProvider> _logger;
     private readonly IRepository<IdentityUserExtension, Guid> _userExtensionRepository;
     private readonly IObjectMapper _objectMapper;
-    
+
 
     public UserInformationProvider(IRepository<IdentityUserExtension, Guid> userExtensionRepository,
-        IObjectMapper objectMapper,ILogger<UserInformationProvider> logger)
+        IObjectMapper objectMapper, ILogger<UserInformationProvider> logger)
     {
         _userExtensionRepository = userExtensionRepository;
         _objectMapper = objectMapper;
@@ -46,7 +46,8 @@ public class UserInformationProvider: IUserInformationProvider, ISingletonDepend
         {
             return new UserExtensionDto();
         }
-        return _objectMapper.Map<IdentityUserExtension,UserExtensionDto>(userExtension);
+
+        return _objectMapper.Map<IdentityUserExtension, UserExtensionDto>(userExtension);
     }
 
     public async Task<UserExtensionDto> GetUserExtensionInfoByWalletAddressAsync(string address)

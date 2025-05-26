@@ -1,6 +1,3 @@
 namespace Aevatar.Organizations;
 
-public class GetOrganizationMemberListDto
-{
-    
-}
+public class GetOrganizationMemberListDto;

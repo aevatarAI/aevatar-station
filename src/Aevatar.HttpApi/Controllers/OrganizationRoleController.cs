@@ -40,7 +40,7 @@ public class OrganizationRoleController : AevatarController
 
         return await _organizationRoleService.GetListAsync(organizationId);
     }
-    
+
     [HttpPost]
     public virtual async Task<IdentityRoleDto> CreateAsync(Guid organizationId, IdentityRoleCreateDto input)
     {
@@ -63,5 +63,4 @@ public class OrganizationRoleController : AevatarController
         await _permissionChecker.AuthenticateAsync(organizationId, AevatarPermissions.Roles.Delete);
         await _organizationRoleService.DeleteAsync(organizationId, id);
     }
-    
 }

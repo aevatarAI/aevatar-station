@@ -5,7 +5,6 @@ using Aevatar.Service;
 using Shouldly;
 using Volo.Abp.Modularity;
 using Xunit;
-using Volo.Abp;
 using Aevatar.Webhook.Extensions;
 using Microsoft.CodeAnalysis;
 
@@ -178,7 +177,8 @@ public abstract class WebHookTests<TStartupModule> : AevatarApplicationTestBase<
             name,
             new[] { syntaxTree },
             references,
-            new Microsoft.CodeAnalysis.CSharp.CSharpCompilationOptions(Microsoft.CodeAnalysis.OutputKind.DynamicallyLinkedLibrary)
+            new Microsoft.CodeAnalysis.CSharp.CSharpCompilationOptions(Microsoft.CodeAnalysis.OutputKind
+                .DynamicallyLinkedLibrary)
         );
         using var ms = new System.IO.MemoryStream();
         var result = compilation.Emit(ms);
@@ -193,5 +193,4 @@ public abstract class WebHookTests<TStartupModule> : AevatarApplicationTestBase<
         // Only returns an empty byte array. In real scenarios, use Roslyn or similar to generate a valid DLL. Here for structural test only.
         return new byte[1];
     }
-    
 }

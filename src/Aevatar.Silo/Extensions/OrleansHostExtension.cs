@@ -30,7 +30,7 @@ public static class OrleansHostExtension
 {
     // Delegate for environment variable access, allows for mocking in tests
     public static Func<string, string> GetEnvironmentVariable { get; set; } = Environment.GetEnvironmentVariable;
-    
+
     public static IHostBuilder UseOrleansConfiguration(this IHostBuilder hostBuilder)
     {
         return hostBuilder.UseOrleans((context, siloBuilder) =>
@@ -53,21 +53,22 @@ public static class OrleansHostExtension
                     : int.Parse(GetEnvironmentVariable("AevatarOrleans__SiloPort"));
                 var gatewayPort = isRunningInKubernetes
                     ? configSection.GetValue<int>("GatewayPort")
-                    :int.Parse(GetEnvironmentVariable("AevatarOrleans__GatewayPort"));
-                
+                    : int.Parse(GetEnvironmentVariable("AevatarOrleans__GatewayPort"));
+
                 // Read the silo name pattern from environment variable or configuration
                 var siloNamePattern = isRunningInKubernetes
                     ? GetEnvironmentVariable("SILO_NAME_PATTERN")
                     : GetEnvironmentVariable("AevatarOrleans__SILO_NAME_PATTERN");
-                
+
                 // Register StateProjectionInitializer when SiloNamePattern is "Projector"
-                if (string.IsNullOrEmpty(siloNamePattern) || string.Compare(siloNamePattern, "Projector", StringComparison.OrdinalIgnoreCase) == 0)
+                if (string.IsNullOrEmpty(siloNamePattern) ||
+                    string.Compare(siloNamePattern, "Projector", StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     // Register our StateProjectionInitializer as a startup task
                     // This will run during silo startup at ServiceLifecycleStage.ApplicationServices (default)
                     siloBuilder.AddStartupTask<StateProjectionInitializer>();
                 }
-                    
+
                 siloBuilder
                     .ConfigureEndpoints(advertisedIP: IPAddress.Parse(advertisedIP),
                         siloPort: siloPort,
@@ -111,15 +112,16 @@ public static class OrleansHostExtension
                         options.SupportedNamespacePrefixes.Add("Autofac.Core");
                     })
                     .AddActivityPropagation()
-                    // .UsePluginGAgents()
                     .UseDashboard(options =>
                     {
                         options.Username = configSection.GetValue<string>("DashboardUserName");
                         options.Password = configSection.GetValue<string>("DashboardPassword");
-                        options.Host = isRunningInKubernetes ? "*" 
-                        : GetEnvironmentVariable("AevatarOrleans__DashboardIp");
-                        options.Port = isRunningInKubernetes ? configSection.GetValue<int>("DashboardPort") 
-                        : int.Parse(GetEnvironmentVariable("AevatarOrleans__DashboardPort"));
+                        options.Host = isRunningInKubernetes
+                            ? "*"
+                            : GetEnvironmentVariable("AevatarOrleans__DashboardIp");
+                        options.Port = isRunningInKubernetes
+                            ? configSection.GetValue<int>("DashboardPort")
+                            : int.Parse(GetEnvironmentVariable("AevatarOrleans__DashboardPort"));
                         options.HostSelf = true;
                         options.CounterUpdateIntervalMs =
                             configSection.GetValue<int>("DashboardCounterUpdateIntervalMs");
@@ -138,7 +140,7 @@ public static class OrleansHostExtension
                     .ConfigureLogging(logging => { logging.SetMinimumLevel(LogLevel.Debug).AddConsole(); })
                     .Configure<SiloOptions>(options =>
                     {
-                        options.SiloName = $"{siloNamePattern}-{Guid.NewGuid().ToString("N").Substring(0, 6)}";                        
+                        options.SiloName = $"{siloNamePattern}-{Guid.NewGuid().ToString("N").Substring(0, 6)}";
                     });
 
                 var eventSourcingProvider = configuration.GetSection("OrleansEventSourcing:Provider").Get<string>();
@@ -196,19 +198,16 @@ public static class OrleansHostExtension
                     .RegisterHub<AevatarSignalRHub>();
             }).ConfigureServices((context, services) =>
             {
-                // services.Configure<AzureOpenAIConfig>(context.Configuration.GetSection("AIServices:AzureOpenAI"));
-                // services.Configure<AzureDeepSeekConfig>(context.Configuration.GetSection("AIServices:DeepSeek"));
                 services.Configure<QdrantConfig>(context.Configuration.GetSection("VectorStores:Qdrant"));
-                
+
                 // Register the SiloNamePatternPlacement director
                 services.AddPlacementDirector<SiloNamePatternPlacement, SiloNamePatternPlacementDirector>();
-                
+
                 services.Configure<SystemLLMConfigOptions>(context.Configuration);
                 services.Configure<AzureOpenAIEmbeddingsConfig>(
                     context.Configuration.GetSection("AIServices:AzureOpenAIEmbeddings"));
                 services.Configure<RagConfig>(context.Configuration.GetSection("Rag"));
                 services.AddSingleton(typeof(HubLifetimeManager<>), typeof(OrleansHubLifetimeManager<>));
-                // services.AddSingleton<IStateProjector, AevatarStateProjector>();
                 services.AddSingleton<IStateDispatcher, StateDispatcher>();
                 services.AddSingleton<IGAgentFactory, GAgentFactory>();
                 services.AddSemanticKernel()

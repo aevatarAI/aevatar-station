@@ -20,8 +20,9 @@ public class HelloTimers : Grain<HelloTimersState>, IGrainWithIntegerKey
         _timer1 = RegisterTimer(_ => OnTimer1(), null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
         _timer2 = RegisterTimer(_ => OnTimer2(), null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
 
-        _grainTimer0 = this.RegisterGrainTimer<object?>((_, c) => OnGrainTimer0(c), null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
-   
+        _grainTimer0 =
+            this.RegisterGrainTimer<object?>((_, c) => OnGrainTimer0(c), null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+
         return base.OnActivateAsync(cancellationToken);
     }
 

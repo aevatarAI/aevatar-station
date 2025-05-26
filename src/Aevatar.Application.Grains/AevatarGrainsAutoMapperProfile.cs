@@ -6,7 +6,5 @@ public class AevatarGrainsAutoMapperProfile : Profile
 {
     public AevatarGrainsAutoMapperProfile()
     {
-        // User AutoMap
-        
     }
 }

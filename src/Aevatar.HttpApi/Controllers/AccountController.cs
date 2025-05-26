@@ -19,14 +19,14 @@ public class AccountController : AevatarController
     {
         _accountService = accountService;
     }
-    
+
     [HttpPost]
     [Route("register")]
     public virtual Task<IdentityUserDto> RegisterAsync(AevatarRegisterDto input)
     {
         return _accountService.RegisterAsync(input);
     }
-    
+
     [HttpPost]
     [Route("send-register-code")]
     public virtual Task SendRegisterCodeAsync(SendRegisterCodeDto input)

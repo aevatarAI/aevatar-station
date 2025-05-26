@@ -26,7 +26,8 @@ public class AppIdController : AevatarController
     private readonly IOrganizationPermissionChecker _organizationPermission;
     private readonly IProjectService _projectService;
 
-    public AppIdController(IProjectAppIdService appIdService, IdentityUserManager identityUserManager, IOrganizationPermissionChecker organizationPermission, IProjectService projectService)
+    public AppIdController(IProjectAppIdService appIdService, IdentityUserManager identityUserManager,
+        IOrganizationPermissionChecker organizationPermission, IProjectService projectService)
     {
         _appIdService = appIdService;
         _identityUserManager = identityUserManager;
@@ -40,7 +41,7 @@ public class AppIdController : AevatarController
     {
         // check projectId
         await _projectService.GetAsync(createDto.ProjectId);
-        
+
         await _organizationPermission.AuthenticateAsync(createDto.ProjectId, AevatarPermissions.ApiKeys.Create);
         await _appIdService.CreateAsync(createDto.ProjectId, createDto.Name, CurrentUser.Id);
     }

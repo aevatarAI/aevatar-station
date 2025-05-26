@@ -46,7 +46,7 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
                 }!));
         }
 
-        string walletAddress = string.Empty;
+        var walletAddress = string.Empty;
         try
         {
             walletAddress = await _walletLoginProvider.VerifySignatureAndParseWalletAddressAsync(publicKeyVal,

@@ -40,7 +40,7 @@ public abstract class NotificationTests<TStartupModule> : AevatarApplicationTest
     [Fact]
     public virtual async Task CreatNotification_Test()
     {
-        var response =await CreatNotificationAsync();
+        var response = await CreatNotificationAsync();
         response.ShouldNotBe(Guid.Empty);
     }
 
@@ -56,7 +56,7 @@ public abstract class NotificationTests<TStartupModule> : AevatarApplicationTest
             Status = NotificationStatusEnum.None,
             CreationTime = DateTime.Now,
             CreatorId = _creator,
-        },true, _cancellation);
+        }, true, _cancellation);
         var response = await _notificationService.WithdrawAsync(_creator, notificationInfo.Id);
         response.ShouldBeTrue();
     }
@@ -66,12 +66,13 @@ public abstract class NotificationTests<TStartupModule> : AevatarApplicationTest
     {
         await CreatNotificationAsync();
         var notification = await _notificationRepository.FirstAsync(cancellationToken: _cancellation);
-        
-        var response = await _notificationService.Response(notification.Id, notification.Receiver, NotificationStatusEnum.Agree);
+
+        var response =
+            await _notificationService.Response(notification.Id, notification.Receiver, NotificationStatusEnum.Agree);
 
         response.ShouldBeTrue();
     }
-    
+
     private async Task<Guid> CreatNotificationAsync()
     {
         var owner = new IdentityUser(_currentUser.Id!.Value, "owner", "owner@email.io");

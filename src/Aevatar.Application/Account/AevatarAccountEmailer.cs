@@ -31,12 +31,12 @@ public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependenc
     private readonly IEmailSender _emailSender;
     private readonly IStringLocalizer<AccountResource> _stringLocalizer;
     private readonly AccountOptions _accountOptions;
-    private readonly IDistributedCache<string,string> _lastEmailCache;
+    private readonly IDistributedCache<string, string> _lastEmailCache;
     private readonly DistributedCacheEntryOptions _defaultCacheOptions;
 
     public AevatarAccountEmailer(IEmailSender emailSender, ITemplateRenderer templateRenderer,
         IStringLocalizer<AccountResource> stringLocalizer, IOptionsSnapshot<AccountOptions> accountOptions,
-        IDistributedCache<string,string> lastEmailCache)
+        IDistributedCache<string, string> lastEmailCache)
     {
         _emailSender = emailSender;
         _templateRenderer = templateRenderer;
@@ -58,7 +58,7 @@ public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependenc
         );
 
         await CheckSendEmailAsync(email);
-        
+
         await _emailSender.SendAsync(
             email,
             "Registration",
@@ -75,9 +75,9 @@ public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependenc
             AccountEmailTemplates.PasswordResetLink,
             new { link = link }
         );
-        
+
         await CheckSendEmailAsync(user.Email);
-        
+
         await _emailSender.SendAsync(
             user.Email,
             "PasswordReset",
@@ -93,7 +93,7 @@ public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependenc
         {
             throw new UserFriendlyException("Email sent too frequently. Please try again later.");
         }
-        
+
         await _lastEmailCache.SetAsync(key, email, _defaultCacheOptions);
     }
 }

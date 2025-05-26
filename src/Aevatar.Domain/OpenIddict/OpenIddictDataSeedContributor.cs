@@ -47,7 +47,7 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
         IPermissionDataSeeder permissionDataSeeder,
         IdentityUserManager identityUserManager,
         IOptionsSnapshot<UsersOptions> userOptions,
-        IStringLocalizer<OpenIddictResponse> l ,
+        IStringLocalizer<OpenIddictResponse> l,
         IPermissionManager permissionManager,
         IdentityRoleManager roleManager)
     {
@@ -76,12 +76,15 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
     {
         if (await _openIddictScopeRepository.FindByNameAsync("Aevatar") == null)
         {
-            await _scopeManager.CreateAsync(new OpenIddictScopeDescriptor {
-                Name = "Aevatar", DisplayName = "Aevatar API", Resources = { "Aevatar" }
+            await _scopeManager.CreateAsync(new OpenIddictScopeDescriptor
+            {
+                Name = "Aevatar",
+                DisplayName = "Aevatar API",
+                Resources = { "Aevatar" }
             });
         }
     }
-    
+
     private async Task SeedAdminUserAsync()
     {
         var adminUser = await _identityUserManager.FindByNameAsync("admin");
@@ -92,15 +95,18 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
             var result = await _identityUserManager.ResetPasswordAsync(adminUser, token, adminPassword);
             if (!result.Succeeded)
             {
-                throw new Exception("Failed to set admin password: " + result.Errors.Select(e => e.Description).Aggregate((errors, error) => errors + ", " + error));
+                throw new Exception("Failed to set admin password: " + result.Errors.Select(e => e.Description)
+                    .Aggregate((errors, error) => errors + ", " + error));
             }
+
             await SeedPermissionsFromConfigurationAsync();
         }
     }
 
     private async Task SeedPermissionsFromConfigurationAsync()
     {
-        var permissionMappings = _configuration.GetSection("PermissionMappings").Get<Dictionary<string, List<string>>>();
+        var permissionMappings =
+            _configuration.GetSection("PermissionMappings").Get<Dictionary<string, List<string>>>();
         if (permissionMappings == null) return;
         int count = 0;
         foreach (var mapping in permissionMappings)
@@ -114,10 +120,11 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
                 var identityRole = new IdentityRole(Guid.NewGuid(), roleName);
                 identityRole.IsPublic = true;
                 identityRole.IsStatic = true;
-                if (count == 0 )
+                if (count == 0)
                 {
                     identityRole.IsDefault = true;
                 }
+
                 count++;
                 var result = await _roleManager.CreateAsync(identityRole);
                 if (!result.Succeeded)
@@ -126,13 +133,14 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
                                         $"{string.Join(", ", result.Errors.Select(e => e.Description))}");
                 }
             }
+
             foreach (var permission in permissions)
             {
                 await _permissionManager.SetAsync(
                     permission,
-                    RolePermissionValueProvider.ProviderName ,
+                    RolePermissionValueProvider.ProviderName,
                     roleName,
-                    true 
+                    true
                 );
             }
         }
@@ -140,7 +148,8 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
 
     private async Task CreateApplicationsAsync()
     {
-        var commonScopes = new List<string> {
+        var commonScopes = new List<string>
+        {
             OpenIddictConstants.Permissions.Scopes.Address,
             OpenIddictConstants.Permissions.Scopes.Email,
             OpenIddictConstants.Permissions.Scopes.Phone,
@@ -169,7 +178,7 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
                 clientUri: swaggerRootUrl
             );
         }
-        
+
         var authServerClientId = configurationSection["AevatarAuthServer:ClientId"];
         if (!authServerClientId.IsNullOrWhiteSpace())
         {
@@ -227,7 +236,8 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
 
         var client = await _openIddictApplicationRepository.FindByClientIdAsync(name);
 
-        var application = new AbpApplicationDescriptor {
+        var application = new AbpApplicationDescriptor
+        {
             ClientId = name,
             ClientType = type,
             ClientSecret = secret,
@@ -256,7 +266,8 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
             application.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Logout);
         }
 
-        var buildInGrantTypes = new[] {
+        var buildInGrantTypes = new[]
+        {
             OpenIddictConstants.GrantTypes.Implicit, OpenIddictConstants.GrantTypes.Password,
             OpenIddictConstants.GrantTypes.AuthorizationCode, OpenIddictConstants.GrantTypes.ClientCredentials,
             OpenIddictConstants.GrantTypes.DeviceCode, OpenIddictConstants.GrantTypes.RefreshToken
@@ -329,7 +340,8 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
             }
         }
 
-        var buildInScopes = new[] {
+        var buildInScopes = new[]
+        {
             OpenIddictConstants.Permissions.Scopes.Address, OpenIddictConstants.Permissions.Scopes.Email,
             OpenIddictConstants.Permissions.Scopes.Phone, OpenIddictConstants.Permissions.Scopes.Profile,
             OpenIddictConstants.Permissions.Scopes.Roles
@@ -398,8 +410,10 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
 
         if (!HasSameRedirectUris(client, application))
         {
-            client.RedirectUris = JsonSerializer.Serialize(application.RedirectUris.Select(q => q.ToString().TrimEnd('/')));
-            client.PostLogoutRedirectUris = JsonSerializer.Serialize(application.PostLogoutRedirectUris.Select(q => q.ToString().TrimEnd('/')));
+            client.RedirectUris =
+                JsonSerializer.Serialize(application.RedirectUris.Select(q => q.ToString().TrimEnd('/')));
+            client.PostLogoutRedirectUris =
+                JsonSerializer.Serialize(application.PostLogoutRedirectUris.Select(q => q.ToString().TrimEnd('/')));
 
             await _applicationManager.UpdateAsync(client.ToModel());
         }
@@ -413,11 +427,13 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
 
     private bool HasSameRedirectUris(OpenIddictApplication existingClient, AbpApplicationDescriptor application)
     {
-        return existingClient.RedirectUris == JsonSerializer.Serialize(application.RedirectUris.Select(q => q.ToString().TrimEnd('/')));
+        return existingClient.RedirectUris ==
+               JsonSerializer.Serialize(application.RedirectUris.Select(q => q.ToString().TrimEnd('/')));
     }
 
     private bool HasSameScopes(OpenIddictApplication existingClient, AbpApplicationDescriptor application)
     {
-        return existingClient.Permissions == JsonSerializer.Serialize(application.Permissions.Select(q => q.ToString().TrimEnd('/')));
+        return existingClient.Permissions ==
+               JsonSerializer.Serialize(application.Permissions.Select(q => q.ToString().TrimEnd('/')));
     }
 }

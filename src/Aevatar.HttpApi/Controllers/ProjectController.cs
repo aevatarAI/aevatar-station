@@ -68,7 +68,8 @@ public class ProjectController : AevatarController
 
     [HttpGet]
     [Route("{projectId}/members")]
-    public async Task<ListResultDto<OrganizationMemberDto>> GetMemberListAsync(Guid projectId, GetOrganizationMemberListDto input)
+    public async Task<ListResultDto<OrganizationMemberDto>> GetMemberListAsync(Guid projectId,
+        GetOrganizationMemberListDto input)
     {
         await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.Members.Default);
         return await _projectService.GetMemberListAsync(projectId, input);
@@ -87,15 +88,15 @@ public class ProjectController : AevatarController
     public async Task SetMemberRoleAsync(Guid projectId, SetOrganizationMemberRoleDto input)
     {
         await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.Members.Manage);
-        
+
         if (input.UserId == CurrentUser.Id)
         {
             throw new UserFriendlyException("Unable to set your own role.");
         }
-        
+
         await _projectService.SetMemberRoleAsync(projectId, input);
     }
-    
+
     [HttpGet]
     [Route("{projectId}/permissions")]
     public async Task<ListResultDto<PermissionGrantInfoDto>> GetPermissionsListAsync(Guid projectId)

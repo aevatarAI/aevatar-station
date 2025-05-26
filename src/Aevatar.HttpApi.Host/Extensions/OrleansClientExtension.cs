@@ -46,7 +46,7 @@ public static class OrleansClientExtension
                 })
                 .AddActivityPropagation()
                 .UseAevatar();
-                
+
             var streamProvider = config.GetSection("OrleansStream:Provider").Get<string>();
             Log.Information("Stream Provider: {streamProvider}", streamProvider);
             if (string.Equals("kafka", streamProvider, StringComparison.CurrentCultureIgnoreCase))
@@ -74,6 +74,7 @@ public static class OrleansClientExtension
                                 ReplicationFactor = replicationFactor
                             });
                         }
+
                         Log.Information("Kafka Options: {@options}", options);
                     })
                     .AddJson()

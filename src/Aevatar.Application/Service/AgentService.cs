@@ -11,7 +11,6 @@ using Aevatar.Application.Grains.Subscription;
 using Aevatar.Common;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
-using Aevatar.CQRS.Dto;
 using Aevatar.CQRS.Provider;
 using Aevatar.Exceptions;
 using Aevatar.Options;
@@ -428,9 +427,9 @@ public class AgentService : ApplicationService, IAgentService
             businessAgents.Add(businessAgent);
             subAgentGuids.Add(grainId.GetGuidKey());
         }
-        
+
         await agent.RegisterManyAsync(businessAgents);
-        
+
         foreach (var businessAgent in businessAgents)
         {
             var eventsHandledByAgent = await businessAgent.GetAllSubscribedEventsAsync();
@@ -522,7 +521,6 @@ public class AgentService : ApplicationService, IAgentService
         var agentState = await creatorAgent.GetAgentAsync();
         var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
 
-
         var parentGrainId = await agent.GetParentAsync();
         var subAgentGrainIds = await GetSubAgentGrainIds(agent);
         var subAgentGuids = subAgentGrainIds.Select(x => x.GetGuidKey()).ToList();
@@ -543,7 +541,10 @@ public class AgentService : ApplicationService, IAgentService
         var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
         var subAgentGrainIds = await GetSubAgentGrainIds(agent);
         await RemoveSubAgentAsync(guid,
-            new RemoveSubAgentDto { RemovedSubAgents = subAgentGrainIds.Select(x => x.GetGuidKey()).ToList() });
+            new RemoveSubAgentDto
+            {
+                RemovedSubAgents = subAgentGrainIds.Select(x => x.GetGuidKey()).ToList()
+            });
     }
 
     private async Task<List<GrainId>> GetSubAgentGrainIds(IGAgent agent)

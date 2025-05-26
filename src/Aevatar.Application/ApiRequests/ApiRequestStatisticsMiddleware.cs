@@ -18,11 +18,11 @@ public class ApiRequestStatisticsMiddleware
     public async Task InvokeAsync(HttpContext context)
     {
         var clientId = context.User.FindFirst("client_id")?.Value;
-        if(!clientId.IsNullOrWhiteSpace())
+        if (!clientId.IsNullOrWhiteSpace())
         {
             await _apiRequestProvider.IncreaseRequestAsync(clientId, DateTime.UtcNow);
         }
-        
+
         await _next(context);
     }
 }

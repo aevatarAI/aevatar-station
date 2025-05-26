@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Application.Grains.Subscription;
 using Aevatar.Domain.Grains.Subscription;
@@ -14,6 +13,7 @@ public class SubscriptionGAgentTests : AevatarApplicationGrainsTestBase
 {
     private readonly IClusterClient _clusterClient;
     private readonly ITestOutputHelper _output;
+
     public SubscriptionGAgentTests(ITestOutputHelper output)
     {
         _clusterClient = GetRequiredService<IClusterClient>();
@@ -23,21 +23,18 @@ public class SubscriptionGAgentTests : AevatarApplicationGrainsTestBase
     [Fact]
     public async Task AddSubscriptionTest()
     {
-      var eventSubscription =  await _clusterClient.GetGrain<ISubscriptionGAgent>(Guid.NewGuid()).SubscribeAsync(
+        var eventSubscription = await _clusterClient.GetGrain<ISubscriptionGAgent>(Guid.NewGuid()).SubscribeAsync(
             new SubscribeEventInputDto
             {
                 AgentId = Guid.NewGuid(),
-                EventTypes = new List<string>()
-                {
-                    "Created", "Updated"
-                },
+                EventTypes = ["Created", "Updated"],
                 CallbackUrl = "http://127.0.0.1"
             });
-      eventSubscription.AgentId.ShouldNotBe(Guid.Empty);
-      eventSubscription.CallbackUrl.ShouldNotBeNullOrEmpty();
-      eventSubscription.Status.ShouldBe("Active");
+        eventSubscription.AgentId.ShouldNotBe(Guid.Empty);
+        eventSubscription.CallbackUrl.ShouldNotBeNullOrEmpty();
+        eventSubscription.Status.ShouldBe("Active");
     }
-    
+
     [Fact]
     public async Task CancelSubscriptionTest()
     {
@@ -49,17 +46,11 @@ public class SubscriptionGAgentTests : AevatarApplicationGrainsTestBase
             new SubscribeEventInputDto
             {
                 AgentId = Guid.NewGuid(),
-                EventTypes = new List<string>()
-                {
-                    "Created", "Updated"
-                },
+                EventTypes = ["Created", "Updated"],
                 CallbackUrl = "http://127.0.0.1"
             });
         await _clusterClient.GetGrain<ISubscriptionGAgent>(subscriptionId).UnsubscribeAsync();
         subscription = await _clusterClient.GetGrain<ISubscriptionGAgent>(subscriptionId).GetStateAsync();
         subscription.Status.ShouldBe("Cancelled");
     }
-    
-   
-
 }

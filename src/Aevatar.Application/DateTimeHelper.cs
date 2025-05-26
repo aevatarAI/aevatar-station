@@ -7,7 +7,7 @@ public class DateTimeHelper
     public static long ToUnixTimeMilliseconds(DateTime value)
     {
         var span = value - DateTime.UnixEpoch;
-        return (long) span.TotalMilliseconds;
+        return (long)span.TotalMilliseconds;
     }
 
     public static DateTime FromUnixTimeMilliseconds(long value)

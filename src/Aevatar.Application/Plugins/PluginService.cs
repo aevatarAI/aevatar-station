@@ -39,7 +39,7 @@ public class PluginService : AevatarAppService, IPluginService
             var key = Guid.Parse(item.Key.Split("_").Last());
             pluginStatus[key] = item.Value;
         }
-        
+
         var pluginDtos = new List<PluginDto>();
         foreach (var plugin in list)
         {
@@ -78,7 +78,7 @@ public class PluginService : AevatarAppService, IPluginService
         var id = await _pluginGAgentManager.AddPluginAsync(new AddPluginDto
         {
             Code = code,
-            TenantId =projectId
+            TenantId = projectId
         });
 
         var plugin = new Plugin(id)
@@ -87,34 +87,34 @@ public class PluginService : AevatarAppService, IPluginService
             Name = name
         };
         await _pluginRepository.InsertAsync(plugin);
-        
+
         return ObjectMapper.Map<Plugin, PluginDto>(plugin);
     }
 
     public async Task<PluginDto> UpdateAsync(Guid id, string name, byte[] code)
     {
         var plugin = await _pluginRepository.GetAsync(id);
-        
+
         await _pluginGAgentManager.UpdatePluginAsync(new Aevatar.Core.Abstractions.Plugin.UpdatePluginDto
         {
             Code = code,
-            TenantId =plugin.ProjectId,
+            TenantId = plugin.ProjectId,
             PluginCodeId = plugin.Id
         });
 
         plugin.Name = name;
         await _pluginRepository.UpdateAsync(plugin);
-        
+
         return ObjectMapper.Map<Plugin, PluginDto>(plugin);
     }
 
     public async Task DeleteAsync(Guid id)
     {
         var plugin = await _pluginRepository.GetAsync(id);
-        
+
         await _pluginGAgentManager.RemovePluginAsync(new RemovePluginDto
         {
-            TenantId =plugin.ProjectId,
+            TenantId = plugin.ProjectId,
             PluginCodeId = plugin.Id
         });
 

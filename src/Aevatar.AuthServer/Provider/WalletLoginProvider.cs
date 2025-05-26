@@ -18,14 +18,15 @@ using Volo.Abp.DependencyInjection;
 
 namespace Aevatar.Provider;
 
-public class WalletLoginProvider: IWalletLoginProvider, ISingletonDependency
+public class WalletLoginProvider : IWalletLoginProvider, ISingletonDependency
 {
     private readonly ILogger<WalletLoginProvider> _logger;
     private readonly SignatureGrantOptions _signatureGrantOptions;
     private readonly ChainOptions _chainOptions;
-    
+
     private const string GetHolderInfoMethodName = "GetHolderInfo";
     private const string Nonce = "Nonce:";
+
     public WalletLoginProvider(ILogger<WalletLoginProvider> logger,
         IOptionsMonitor<SignatureGrantOptions> signatureOptions, IOptionsMonitor<ChainOptions> chainOptions)
     {
@@ -34,7 +35,7 @@ public class WalletLoginProvider: IWalletLoginProvider, ISingletonDependency
         _chainOptions = chainOptions.CurrentValue;
     }
 
-    public List<string> CheckParams(string publicKeyVal, string signatureVal, string chainId, 
+    public List<string> CheckParams(string publicKeyVal, string signatureVal, string chainId,
         string plainText)
     {
         var errors = new List<string>();
@@ -62,11 +63,11 @@ public class WalletLoginProvider: IWalletLoginProvider, ISingletonDependency
     }
 
     public async Task<string> VerifySignatureAndParseWalletAddressAsync(string publicKeyVal, string signatureVal,
-        string plainText, string caHash,  string chainId)
+        string plainText, string caHash, string chainId)
     {
         var rawText = Encoding.UTF8.GetString(ByteArrayHelper.HexStringToByteArray(plainText));
         _logger.LogInformation("rawText:{rawText}", rawText);
-        var timestampVal = rawText.TrimEnd().Substring(rawText.LastIndexOf(Nonce) + Nonce.Length);        
+        var timestampVal = rawText.TrimEnd().Substring(rawText.LastIndexOf(Nonce) + Nonce.Length);
         var timestamp = long.Parse(timestampVal);
         _logger.LogInformation("timestamp:{timestamp}", timestamp);
         //Validate timestamp validity period
@@ -107,10 +108,11 @@ public class WalletLoginProvider: IWalletLoginProvider, ISingletonDependency
             var caAddress = addressInfos[0].Address;
             return caAddress;
         }
+
         return signAddress;
     }
 
-    private string VerifySignature( string plainText, string signatureVal,string publicKeyVal)
+    private string VerifySignature(string plainText, string signatureVal, string publicKeyVal)
     {
         var signature = ByteArrayHelper.HexStringToByteArray(signatureVal);
         var hash = Encoding.UTF8.GetBytes(plainText).ComputeHash();
@@ -119,7 +121,7 @@ public class WalletLoginProvider: IWalletLoginProvider, ISingletonDependency
         {
             throw new UserFriendlyException("Signature validation failed new.");
         }
-        
+
         //Since it is not possible to determine whether the CA wallet manager address is in managerPublicKey or in managerPublicKeyOld
         //therefore, the accurate manager address is obtained from publicKeyVal.
         var signAddress = Address.FromPublicKey(publicKey).ToBase58();
@@ -152,8 +154,8 @@ public class WalletLoginProvider: IWalletLoginProvider, ISingletonDependency
         return false;
     }
 
-   
-    
+
+
     private async Task<bool?> CheckManagerAddressAsync(string chainId, string caHash, string manager)
     {
         string graphQlUrl = _signatureGrantOptions.PortkeyV2GraphQLUrl;
@@ -161,17 +163,20 @@ public class WalletLoginProvider: IWalletLoginProvider, ISingletonDependency
         if (!graphQlResult.HasValue || !graphQlResult.Value)
         {
             _logger.LogDebug("graphql is invalid.");
-            var  contractResult = await CheckManagerAddressFromContractAsync(chainId, caHash, manager, _chainOptions);
+            var contractResult = await CheckManagerAddressFromContractAsync(chainId, caHash, manager, _chainOptions);
             if (!contractResult.HasValue || !contractResult.Value)
             {
                 _logger.LogDebug("contract is invalid.");
-                return await ManagerCheckHelper.CheckManagerFromCache(_signatureGrantOptions.CheckManagerUrl, manager, caHash);
+                return await ManagerCheckHelper.CheckManagerFromCache(_signatureGrantOptions.CheckManagerUrl, manager,
+                    caHash);
             }
+
             return true;
         }
+
         return true;
     }
-    
+
     private async Task<bool?> CheckManagerAddressFromContractAsync(string chainId, string caHash, string manager,
         ChainOptions chainOptions)
     {
@@ -182,12 +187,12 @@ public class WalletLoginProvider: IWalletLoginProvider, ISingletonDependency
         };
 
         var output =
-            await CallTransactionAsync<GetHolderInfoOutput>(chainId, GetHolderInfoMethodName, param, 
+            await CallTransactionAsync<GetHolderInfoOutput>(chainId, GetHolderInfoMethodName, param,
                 chainOptions);
 
         return output?.ManagerInfos?.Any(t => t.Address.ToBase58() == manager);
     }
-    
+
     private async Task<bool?> CheckManagerAddressFromGraphQlAsync(string url, string caHash,
         string managerAddress)
     {
@@ -197,7 +202,7 @@ public class WalletLoginProvider: IWalletLoginProvider, ISingletonDependency
         var caHolderManagerInfos = loginChainHolderInfo?.ManagerInfos;
         return caHolderManagerInfos?.Any(t => t.Address == managerAddress);
     }
-    
+
     private async Task<T> CallTransactionAsync<T>(string chainId, string methodName, IMessage param,
         ChainOptions chainOptions) where T : class, IMessage<T>, new()
     {
@@ -232,7 +237,7 @@ public class WalletLoginProvider: IWalletLoginProvider, ISingletonDependency
             return null;
         }
     }
-    
+
     private async Task<HolderInfoIndexerDto> GetHolderInfosAsync(string url, string caHash)
     {
         using var graphQlClient = new GraphQLHttpClient(url, new NewtonsoftJsonSerializer());
@@ -245,14 +250,16 @@ public class WalletLoginProvider: IWalletLoginProvider, ISingletonDependency
                 }",
             Variables = new
             {
-                caHash, skipCount = 0, maxResultCount = 10
+                caHash,
+                skipCount = 0,
+                maxResultCount = 10
             }
         };
 
         var graphQlResponse = await graphQlClient.SendQueryAsync<HolderInfoIndexerDto>(request);
         return graphQlResponse.Data;
     }
-    
+
     private async Task<List<UserChainAddressDto>> GetAddressInfosAsync(string caHash)
     {
         var addressInfos = new List<UserChainAddressDto>();
@@ -286,7 +293,7 @@ public class WalletLoginProvider: IWalletLoginProvider, ISingletonDependency
 
         return addressInfos;
     }
-    
+
     private async Task<UserChainAddressDto> GetAddressInfoFromContractAsync(string chainId, string caHash)
     {
         var param = new GetHolderInfoInput
@@ -295,7 +302,7 @@ public class WalletLoginProvider: IWalletLoginProvider, ISingletonDependency
             LoginGuardianIdentifierHash = Hash.Empty
         };
 
-        var output = await CallTransactionAsync<GetHolderInfoOutput>(chainId, GetHolderInfoMethodName, param, 
+        var output = await CallTransactionAsync<GetHolderInfoOutput>(chainId, GetHolderInfoMethodName, param,
             _chainOptions);
 
         return new UserChainAddressDto()

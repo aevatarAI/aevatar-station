@@ -5,7 +5,8 @@ using Volo.Abp.EventBus.Local;
 
 namespace Aevatar.Notification;
 
-public class NotificationCreateEventBusHandler:IDistributedEventHandler<NotificationCreatForEventBusDto>, ITransientDependency
+public class NotificationCreateEventBusHandler : IDistributedEventHandler<NotificationCreatForEventBusDto>,
+    ITransientDependency
 {
     private readonly INotificationService _notificationService;
 

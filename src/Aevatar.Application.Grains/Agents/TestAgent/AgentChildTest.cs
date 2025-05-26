@@ -2,7 +2,6 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
-using Aevatar.GAgents.AI.Options;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
@@ -69,9 +68,7 @@ public class AgentChildTest : GAgentBase<ChildAgentState, FrontChildTestEvent, E
     }
 }
 
-public interface IFrontAgentChildTest : IGAgent
-{
-}
+public interface IFrontAgentChildTest : IGAgent;
 
 [GenerateSerializer]
 public class ChildAgentState : StateBase
@@ -82,9 +79,7 @@ public class ChildAgentState : StateBase
 }
 
 [GenerateSerializer]
-public class FrontChildTestEvent : StateLogEventBase<FrontChildTestEvent>
-{
-}
+public class FrontChildTestEvent : StateLogEventBase<FrontChildTestEvent>;
 
 [GenerateSerializer]
 public class FrontChildTestCreateSEvent : FrontChildTestEvent

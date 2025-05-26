@@ -1,11 +1,10 @@
-using Aevatar.Agents;
 using JetBrains.Annotations;
 using Orleans;
 using Orleans.EventSourcing;
 using Orleans.EventSourcing.Common;
 using Orleans.Storage;
 
-public class TestLogViewAdaptor<TLogView, TLogEntry> : 
+public class TestLogViewAdaptor<TLogView, TLogEntry> :
     PrimaryBasedLogViewAdaptor<TLogView, TLogEntry, SubmissionEntry<TLogEntry>>
     where TLogView : class, new()
     where TLogEntry : class
@@ -17,6 +16,7 @@ public class TestLogViewAdaptor<TLogView, TLogEntry> :
 
     public static readonly ICollection<ViewStateWrapper<TLogView>> SnapshotCollection =
         new List<ViewStateWrapper<TLogView>>();
+
     public static readonly ICollection<EventLogWrapper<TLogEntry>> EventLogCollection =
         new List<EventLogWrapper<TLogEntry>>();
 
@@ -61,6 +61,7 @@ public class TestLogViewAdaptor<TLogView, TLogEntry> :
                     _confirmedVersion = snapshot.Version;
                     _confirmedView = snapshot.State;
                 }
+
                 var eventLogs = await GetAllEventsAsync();
                 if (!eventLogs.Any())
                 {
@@ -82,9 +83,9 @@ public class TestLogViewAdaptor<TLogView, TLogEntry> :
                     _confirmedView = snapshot.State;
                     break;
                 }
-                
+
                 // TODO: Can only retrieve log segment from _confirmedVersion to _globalVersion
- 
+
                 foreach (var eventLog in eventLogs)
                 {
                     _host.UpdateView(_confirmedView, eventLog.Event);
@@ -103,9 +104,10 @@ public class TestLogViewAdaptor<TLogView, TLogEntry> :
                 {
                     e = ((ProtocolTransportException)e).InnerException!;
                 }
+
                 LastPrimaryIssue.Record(new ReadFromPrimaryFailed { Exception = e }, Host, Services);
             }
-            
+
             await LastPrimaryIssue.DelayBeforeRetry();
         }
     }
@@ -174,7 +176,7 @@ public class TestLogViewAdaptor<TLogView, TLogEntry> :
 
         return Task.FromResult(timestamp);
     }
-    
+
     [ItemCanBeNull]
     private Task<ViewStateWrapper<TLogView>> GetSnapshotAsync()
     {

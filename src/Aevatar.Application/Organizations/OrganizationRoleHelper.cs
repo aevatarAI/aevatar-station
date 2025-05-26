@@ -9,12 +9,12 @@ public class OrganizationRoleHelper
     {
         return $"{organizationId.ToString()}_{roleName}";
     }
-    
+
     public static string GetRoleOrganizationIdName(string roleName)
     {
         return roleName.Split("_")[0];
     }
-    
+
     public static void CheckRoleInOrganization(Guid organizationId, string roleName)
     {
         var roleOrganizationId = GetRoleOrganizationIdName(roleName);

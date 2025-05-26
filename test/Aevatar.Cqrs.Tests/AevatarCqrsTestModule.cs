@@ -1,10 +1,8 @@
 ﻿using Aevatar.CQRS;
 using Aevatar.CQRS.Handler;
 using Aevatar.Mock;
-using Aevatar.Options;
 using Aevatar.Service;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Volo.Abp.AutoMapper;
 using Volo.Abp.EventBus;
 using Volo.Abp.Modularity;

@@ -11,7 +11,7 @@ public class ReflectionUtil
         {
             return null;
         }
-        
+
         if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(List<>))
         {
             var elementType = targetType.GetGenericArguments()[0];
@@ -24,7 +24,7 @@ public class ReflectionUtil
 
             return list;
         }
-        
+
         return Convert.ChangeType(value, targetType);
     }
 }

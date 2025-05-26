@@ -32,15 +32,12 @@ public class Program
             // builder.Configuration.AddJsonFile("apollo.appsettings.json");
             builder.Host.AddAppSettingsSecretsJson()
                 .UseAutofac()
-                // .UseApollo()
                 .UseSerilog()
-                // .UseOrleansClient()
                 ;
             await builder.AddApplicationAsync<AevatarAuthServerModule>();
             var app = builder.Build();
             await app.InitializeApplicationAsync();
             await app.RunAsync();
-            //CreateHostBuilder(args).Build().Run();
             return 0;
         }
         catch (Exception ex)
@@ -58,6 +55,7 @@ public class Program
             Log.CloseAndFlush();
         }
     }
+
     private static IHostBuilder CreateHostBuilder(string[] args)
     {
         return Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder(args)

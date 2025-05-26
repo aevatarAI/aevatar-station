@@ -11,7 +11,6 @@ using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.Domain.Repositories;
-using Volo.Abp.EventBus.Distributed;
 using Volo.Abp.Identity;
 using Volo.Abp.PermissionManagement;
 using IdentityRole = Volo.Abp.Identity.IdentityRole;
@@ -56,14 +55,14 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         if (CurrentUser.IsInRole(AevatarConsts.AdminRoleName))
         {
             organizations = await OrganizationUnitRepository.GetListAsync();
-            foreach (var organization in organizations.OrderBy(o=>o.CreationTime))
+            foreach (var organization in organizations.OrderBy(o => o.CreationTime))
             {
                 if (!organization.TryGetExtraPropertyValue<OrganizationType>(AevatarConsts.OrganizationTypeKey,
                         out var type) || type != OrganizationType.Organization)
                 {
                     continue;
                 }
-                
+
                 result.Add(ObjectMapper.Map<OrganizationUnit, OrganizationDto>(organization));
             }
         }
@@ -71,7 +70,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         {
             var user = await IdentityUserManager.GetByIdAsync(CurrentUser.Id.Value);
             organizations = await IdentityUserManager.GetOrganizationUnitsAsync(user);
-            foreach (var organization in organizations.OrderBy(o=>o.CreationTime))
+            foreach (var organization in organizations.OrderBy(o => o.CreationTime))
             {
                 if (!organization.TryGetExtraPropertyValue<OrganizationType>(AevatarConsts.OrganizationTypeKey,
                         out var type) || type != OrganizationType.Organization)
@@ -198,7 +197,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
             OrganizationRoleHelper.GetRoleName(organizationId, AevatarConsts.OrganizationReaderRoleName)
         );
         (await RoleManager.CreateAsync(role)).CheckErrors();
-        
+
         foreach (var permission in GetReaderPermissions())
         {
             await PermissionManager.SetForRoleAsync(role.Name, permission, true);
@@ -206,7 +205,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
 
         return role.Id;
     }
-    
+
     protected virtual List<string> GetReaderPermissions()
     {
         return
@@ -292,9 +291,9 @@ public class OrganizationService : AevatarAppService, IOrganizationService
                 RoleId = roleId.Value,
                 Vistor = user.Id
             }));
-        
+
         SetMemberStatus(organizationId, user, MemberStatus.Inviting);
-        SetMemberInvitationInfo(organizationId,user, new MemberInvitationInfo
+        SetMemberInvitationInfo(organizationId, user, new MemberInvitationInfo
         {
             Inviter = CurrentUser.Id.Value,
             InvitationId = notificationId
@@ -360,9 +359,11 @@ public class OrganizationService : AevatarAppService, IOrganizationService
 
         user.AddRole(input.RoleId);
         SetMemberStatus(organizationId, user, MemberStatus.Joined);
-        
-        (await IdentityUserManager.UpdateAsync(user)).CheckErrors();;
-        (await IdentityUserManager.UpdateSecurityStampAsync(user)).CheckErrors();;
+
+        (await IdentityUserManager.UpdateAsync(user)).CheckErrors();
+        ;
+        (await IdentityUserManager.UpdateSecurityStampAsync(user)).CheckErrors();
+        ;
     }
 
     public virtual async Task RefuseInvitationAsync(Guid organizationId, Guid userId)
@@ -373,12 +374,12 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         {
             throw new UserFriendlyException("User is not in current organization.");
         }
-        
+
         var userStatus = GetMemberStatus(organizationId, user);
         if (userStatus == MemberStatus.Inviting)
         {
-            SetMemberStatus(organizationId,user,MemberStatus.Refused);
-            (await IdentityUserManager.UpdateAsync(user)).CheckErrors();;
+            SetMemberStatus(organizationId, user, MemberStatus.Refused);
+            (await IdentityUserManager.UpdateAsync(user)).CheckErrors();
         }
     }
 
@@ -463,7 +464,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         return null;
     }
 
-    protected virtual async Task<bool> IsOrganizationOwnerAsync(Guid organizationId,Guid userId)
+    protected virtual async Task<bool> IsOrganizationOwnerAsync(Guid organizationId, Guid userId)
     {
         var organization = await OrganizationUnitRepository.GetAsync(organizationId);
         var user = await IdentityUserManager.GetByIdAsync(userId);
@@ -505,7 +506,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
                 { { organizationId.ToString(), memberStatus } };
         }
     }
-    
+
     private MemberInvitationInfo GetMemberInvitationInfo(Guid organizationId, IdentityUser user)
     {
         if (user.ExtraProperties.TryGetValue(AevatarConsts.MemberInvitationInfoKey, out var info))

@@ -38,7 +38,7 @@ public class AevatarApplicationAutoMapperProfile : Profile
                     s.ExtraProperties.ContainsKey(AevatarConsts.ProjectDomainNameKey)
                         ? s.ExtraProperties[AevatarConsts.ProjectDomainNameKey].ToString()
                         : null));
-        
+
         CreateMap<ApiRequestSnapshot, ApiRequestDto>()
             .ForMember(d => d.Time, m => m.MapFrom(s => DateTimeHelper.ToUnixTimeMilliseconds(s.Time)));
 
