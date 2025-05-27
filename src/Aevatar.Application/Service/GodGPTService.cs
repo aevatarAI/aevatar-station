@@ -28,7 +28,7 @@ namespace Aevatar.Service;
 
 public interface IGodGPTService
 {
-    Task<Guid> CreateSessionAsync(Guid userId, string systemLLM, string prompt);
+    Task<Guid> CreateSessionAsync(Guid userId, string systemLLM, string prompt, string? guider = null);
 
     Task<Tuple<string, string>> ChatWithSessionAsync(Guid userId, Guid sessionId, string sysmLLM, string content,
         ExecutionPromptSettings promptSettings = null);
@@ -76,10 +76,10 @@ public class GodGPTService : ApplicationService, IGodGPTService
         _stripeClient = new StripeClient(_stripeOptions.CurrentValue.SecretKey);
     }
 
-    public async Task<Guid> CreateSessionAsync(Guid userId, string systemLLM, string prompt)
+    public async Task<Guid> CreateSessionAsync(Guid userId, string systemLLM, string prompt, string? guider = null)
     {
         var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
-        return await manager.CreateSessionAsync(systemLLM, prompt);
+        return await manager.CreateSessionAsync(systemLLM, prompt, null, guider);
     }
 
     public async Task<Tuple<string, string>> ChatWithSessionAsync(Guid userId, Guid sessionId, string sysmLLM,
