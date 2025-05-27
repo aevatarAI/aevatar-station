@@ -18,9 +18,9 @@ public class GoogleGrantHandler : ITokenExtensionGrant
     private readonly ILogger<GoogleGrantHandler> _logger;
 
     public string Name => GrantTypeConstants.GOOGLE;
-    
+
     public GoogleGrantHandler(
-        IConfiguration configuration, 
+        IConfiguration configuration,
         ILogger<GoogleGrantHandler> logger)
     {
         _configuration = configuration;
@@ -31,7 +31,7 @@ public class GoogleGrantHandler : ITokenExtensionGrant
     {
         var idToken = context.Request.GetParameter("id_token").ToString();
         var source = context.Request.GetParameter("source")?.ToString();
-        
+
         _logger.LogInformation("GoogleGrantHandler.HandleAsync source: {source} idToken: {idToken}", source, idToken);
         if (string.IsNullOrEmpty(idToken))
         {
@@ -39,9 +39,9 @@ public class GoogleGrantHandler : ITokenExtensionGrant
                 OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                 new AuthenticationProperties(new Dictionary<string, string?>
                 {
-                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = 
+                    [OpenIddictServerAspNetCoreConstants.Properties.Error] =
                         OpenIddictConstants.Errors.InvalidRequest,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = 
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
                         "Missing id_token parameter"
                 }));
         }
@@ -59,41 +59,41 @@ public class GoogleGrantHandler : ITokenExtensionGrant
         {
             clientId = _configuration["Google:ClientId"];
         }
-        
+
         if (string.IsNullOrEmpty(clientId))
         {
             _logger.LogInformation("GoogleGrantHandler.HandleAsync: clientId not found");
             return new ForbidResult(
                 OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                new AuthenticationProperties(new Dictionary<string, string?>
+                new AuthenticationProperties(
+                    new Dictionary<string, string?>
                     {
                         [OpenIddictServerAspNetCoreConstants.Properties.Error] =
                             OpenIddictConstants.Errors.InvalidRequest,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
-                            "client Id not found"
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "client Id not found"
                     }
                 )
             );
         }
-        
+
         _logger.LogInformation("GoogleGrantHandler.HandleAsync: clientId: {clientId}", clientId);
-        
+
         var payload = await ValidateGoogleTokenAsync(idToken, clientId);
         _logger.LogInformation("GoogleGrantHandler.HandleAsync: payload: {payload}", payload);
-        
+
         if (payload == null)
         {
             return new ForbidResult(
                 OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                 new AuthenticationProperties(new Dictionary<string, string?>
                 {
-                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = 
+                    [OpenIddictServerAspNetCoreConstants.Properties.Error] =
                         OpenIddictConstants.Errors.InvalidGrant,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = 
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
                         "Invalid Google token"
                 }));
         }
-        
+
         var email = payload.Email;
         _logger.LogInformation("GoogleGrantHandler.HandleAsync: email: {email}", email);
         var userManager = context.HttpContext.RequestServices.GetRequiredService<IdentityUserManager>();
@@ -107,6 +107,7 @@ public class GoogleGrantHandler : ITokenExtensionGrant
             await userManager.SetRolesAsync(user,
                 [AevatarPermissions.BasicUser]);
         }
+
         var identityUser = await userManager.FindByNameAsync(name);
         var identityRoleManager = context.HttpContext.RequestServices.GetRequiredService<IdentityRoleManager>();
         var roleNames = new List<string>();
@@ -115,13 +116,13 @@ public class GoogleGrantHandler : ITokenExtensionGrant
             var role = await identityRoleManager.GetByIdAsync(userRole.RoleId);
             roleNames.Add(role.Name);
         }
-        
-        
+
+
         var userClaimsPrincipalFactory = context.HttpContext.RequestServices
             .GetRequiredService<Microsoft.AspNetCore.Identity.IUserClaimsPrincipalFactory<IdentityUser>>();
         var claimsPrincipal = await userClaimsPrincipalFactory.CreateAsync(user);
         claimsPrincipal.SetClaim(OpenIddictConstants.Claims.Subject, user.Id.ToString());
-        claimsPrincipal.SetClaim(OpenIddictConstants.Claims.Role, string.Join(",",roleNames));
+        claimsPrincipal.SetClaim(OpenIddictConstants.Claims.Role, string.Join(",", roleNames));
         claimsPrincipal.SetScopes(context.Request.GetScopes());
         claimsPrincipal.SetResources(await GetResourcesAsync(context, claimsPrincipal.GetScopes()));
         claimsPrincipal.SetAudiences("Aevatar");
@@ -147,8 +148,8 @@ public class GoogleGrantHandler : ITokenExtensionGrant
             return null;
         }
     }
-    
-    
+
+
     private async Task<IEnumerable<string>> GetResourcesAsync(ExtensionGrantContext context,
         ImmutableArray<string> scopes)
     {

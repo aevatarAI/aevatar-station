@@ -43,10 +43,10 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
             var code = context.Request.GetParameter("code")?.ToString();
             var idToken = context.Request.GetParameter("id_token")?.ToString();
             var source = context.Request.GetParameter("source")?.ToString();
-            
-            _logger.LogInformation("AppleGrantHandler.HandleAsync source: {source} idToken: {idToken} code: {code}", 
+
+            _logger.LogInformation("AppleGrantHandler.HandleAsync source: {source} idToken: {idToken} code: {code}",
                 source, idToken, code);
-            
+
             var aud = source == "ios" ? _configuration["Apple:NativeClientId"] : _configuration["Apple:WebClientId"];
             if (string.IsNullOrEmpty(idToken))
             {
@@ -55,16 +55,18 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
                     _logger.LogInformation("Missing both id_token and code");
                     return ErrorResult("Missing both id_token and code");
                 }
-                
+
                 idToken = await ExchangeCodeForTokenAsync(code, aud);
-                _logger.LogInformation("AppleGrantHandler.HandleAsync ExchangeCodeForTokenAsync code: {idToken} aud: {aud} token: {token}", code, aud, idToken);
+                _logger.LogInformation(
+                    "AppleGrantHandler.HandleAsync ExchangeCodeForTokenAsync code: {idToken} aud: {aud} token: {token}",
+                    code, aud, idToken);
 
                 if (idToken.IsNullOrEmpty())
                 {
                     return ErrorResult("Code invalid or expired");
                 }
             }
-            
+
             var (isValid, principal) = await ValidateAppleToken(idToken, aud);
             if (!isValid)
             {
@@ -83,7 +85,7 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
             {
                 user = new IdentityUser(Guid.NewGuid(), name, email: Guid.NewGuid().ToString("N") + "@ABP.IO");
                 await userManager.CreateAsync(user);
-                await userManager.SetRolesAsync(user, 
+                await userManager.SetRolesAsync(user,
                     [AevatarPermissions.BasicUser]);
             }
 
@@ -121,12 +123,13 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
         try
         {
             var tokenHandler = new JwtSecurityTokenHandler();
-            
+
             var jwtToken = tokenHandler.ReadJwtToken(idToken);
             var kid = jwtToken.Header[AppleConstants.Claims.Kid]?.ToString();
             var aud = jwtToken.Audiences.FirstOrDefault();
-            
-            _logger.LogInformation("AppleGrantHandler.ValidateAppleToken: kid: {kid} required aud: {audience} actual aud: {aud}", 
+
+            _logger.LogInformation(
+                "AppleGrantHandler.ValidateAppleToken: kid: {kid} required aud: {audience} actual aud: {aud}",
                 kid, audience, aud);
 
             var key = await GetApplePublicKeysAsync(kid);
@@ -148,11 +151,11 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "APPLE token validation failed");
-            _logger.LogError( "AppleGrantHandler.ValidateAppleToken failed, msg: {msg}", ex.Message);
+            _logger.LogError("AppleGrantHandler.ValidateAppleToken failed, msg: {msg}", ex.Message);
             return (false, null);
         }
     }
-    
+
     private async Task<SecurityKey> GetApplePublicKeysAsync(string kid)
     {
         using var client = new HttpClient();
@@ -165,13 +168,13 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
             {
                 var modulus = Base64UrlEncoder.DecodeBytes(key["n"].ToString());
                 var exponent = Base64UrlEncoder.DecodeBytes(key["e"].ToString());
-                
+
                 var rsaParameters = new RSAParameters
                 {
                     Modulus = modulus,
                     Exponent = exponent
                 };
-                
+
                 return new RsaSecurityKey(rsaParameters);
             }
         }
@@ -185,7 +188,7 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
         var firstName = principal.FindFirstValue(ClaimTypes.GivenName);
         var lastName = principal.FindFirstValue(ClaimTypes.Surname);
         var sub = principal.FindFirstValue(ClaimTypes.NameIdentifier);
-        
+
         if (email?.EndsWith("@privaterelay.appleid.com") == true)
         {
             email = $"{sub}@apple.privaterelay.com";
@@ -230,12 +233,12 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
 
         return resources;
     }
-    
+
     private async Task<string> ExchangeCodeForTokenAsync(string code, string clientId)
     {
         var clientSecret = GenerateClientSecret(clientId);
         using var client = new HttpClient();
-        
+
         var body = new List<KeyValuePair<string, string>>
         {
             new KeyValuePair<string, string>("grant_type", "authorization_code"),
@@ -244,9 +247,9 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
             new KeyValuePair<string, string>("client_id", clientId),
             new KeyValuePair<string, string>("client_secret", clientSecret),
         };
-        
+
         var response = await client.PostAsync(AppleConstants.TokenEndpoint, new FormUrlEncodedContent(body));
-        
+
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogError("Token exchange failed. StatusCode: {StatusCode}, Response: {ResponseBody}",
@@ -254,44 +257,44 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
                 await response.Content.ReadAsStringAsync());
             return "";
         }
-        
+
         var json = await response.Content.ReadAsStringAsync();
         var tokenResp = JsonConvert.DeserializeObject<TokenResponse>(json);
         return tokenResp.IdToken;
     }
-    
+
     private string GenerateClientSecret(string clientId)
     {
-        var key =  Regex.Replace(_configuration["Apple:Pk"], @"\t|\n|\r", "");
+        var key = Regex.Replace(_configuration["Apple:Pk"], @"\t|\n|\r", "");
         using var algorithm = ECDsa.Create();
         algorithm.ImportPkcs8PrivateKey(Convert.FromBase64String(key), out _);
 
         var now = DateTime.UtcNow;
         var header = new
         {
-            alg = "ES256", 
-            kid = _configuration["Apple:KeyId"]   
+            alg = "ES256",
+            kid = _configuration["Apple:KeyId"]
         };
-        
+
         var payload = new
         {
-            iss = _configuration["Apple:TeamId"], 
-            iat = new DateTimeOffset(now).ToUnixTimeSeconds(), 
+            iss = _configuration["Apple:TeamId"],
+            iat = new DateTimeOffset(now).ToUnixTimeSeconds(),
             exp = new DateTimeOffset(now.AddMinutes(30)).ToUnixTimeSeconds(),
-            aud = "https://appleid.apple.com", 
-            sub = clientId 
+            aud = "https://appleid.apple.com",
+            sub = clientId
         };
-        
+
         var encodedHeader = Base64UrlEncode(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(header)));
         var encodedPayload = Base64UrlEncode(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(payload)));
-        
+
         var stringToSign = $"{encodedHeader}.{encodedPayload}";
         var signature = algorithm.SignData(Encoding.UTF8.GetBytes(stringToSign), HashAlgorithmName.SHA256);
         var encodedSignature = Base64UrlEncode(signature);
-       
+
         return $"{encodedHeader}.{encodedPayload}.{encodedSignature}";
     }
-    
+
     private static string Base64UrlEncode(byte[] input)
     {
         return Convert.ToBase64String(input)
@@ -299,20 +302,16 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
             .Replace("/", "_")
             .TrimEnd('=');
     }
-    
+
     public class TokenResponse
     {
-        [JsonProperty("access_token")]
-        public string? AccessToken { get; set; }
+        [JsonProperty("access_token")] public string? AccessToken { get; set; }
 
-        [JsonProperty("id_token")]
-        public string? IdToken { get; set; }
+        [JsonProperty("id_token")] public string? IdToken { get; set; }
 
-        [JsonProperty("expires_in")]
-        public int ExpiresIn { get; set; }
+        [JsonProperty("expires_in")] public int ExpiresIn { get; set; }
 
-        [JsonProperty("token_type")]
-        public string? TokenType { get; set; }
+        [JsonProperty("token_type")] public string? TokenType { get; set; }
     }
 
     private class AppleUserInfo

@@ -3,7 +3,7 @@ using Volo.Abp.OpenIddict.Controllers;
 
 namespace Aevatar;
 
-public class ApplicationDescription: IApplicationModelConvention
+public class ApplicationDescription : IApplicationModelConvention
 {
     public ApplicationDescription()
     {
@@ -11,6 +11,6 @@ public class ApplicationDescription: IApplicationModelConvention
 
     public void Apply(ApplicationModel application)
     {
-        application.Controllers.RemoveAll(x=>x.ControllerType == typeof(TokenController));
+        application.Controllers.RemoveAll(x => x.ControllerType == typeof(TokenController));
     }
 }

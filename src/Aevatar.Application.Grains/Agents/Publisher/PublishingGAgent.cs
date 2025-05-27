@@ -8,16 +8,14 @@ using Orleans.Providers;
 namespace Aevatar.Application.Grains.Agents.Publisher;
 
 [GenerateSerializer]
-public class PublishingAgentState : StateBase
-{
-}
+public class PublishingAgentState : StateBase;
 
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 [GAgent("publish")]
 public class PublishingGAgent : GAgentBase<PublishingAgentState, PublishingGEvent>, IPublishingGAgent
 {
-    public PublishingGAgent() 
+    public PublishingGAgent()
     {
     }
 

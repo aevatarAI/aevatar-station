@@ -33,20 +33,17 @@ public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
         Configure<AbpAutoMapperOptions>(options => { options.AddMaps<SiloModule>(); });
         context.Services.AddHostedService<AevatarHostedService>();
         var configuration = context.Services.GetConfiguration();
-        //add dependencies here
-        context.Services.AddSerilog(loggerConfiguration => {},
+        // Add dependencies here
+        context.Services.AddSerilog(_ => { },
             true, writeToProviders: true);
         context.Services.AddHttpClient();
         context.Services.AddSignalR().AddOrleans();
-        Configure<PermissionManagementOptions>(options =>
-        {
-            options.IsDynamicPermissionStoreEnabled = true;
-        });
-        
+        Configure<PermissionManagementOptions>(options => { options.IsDynamicPermissionStoreEnabled = true; });
+
         context.Services.AddTransient<IStateTypeDiscoverer, StateTypeDiscoverer>();
         context.Services.AddTransient<IDeterministicIdGenerator, MD5DeterministicIdGenerator>();
         context.Services.AddTransient<IProjectionGrainActivator, ProjectionGrainActivator>();
-        
+
         context.Services.Configure<HostOptions>(context.Services.GetConfiguration().GetSection("Host"));
         context.Services.Configure<SystemLLMConfigOptions>(configuration);
     }

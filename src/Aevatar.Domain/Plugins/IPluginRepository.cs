@@ -3,7 +3,4 @@ using Volo.Abp.Domain.Repositories;
 
 namespace Aevatar.Plugins;
 
-public interface IPluginRepository : IRepository<Plugin, Guid>
-{
-    
-}
+public interface IPluginRepository : IRepository<Plugin, Guid>;

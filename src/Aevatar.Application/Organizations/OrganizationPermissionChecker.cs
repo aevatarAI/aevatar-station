@@ -20,7 +20,7 @@ public class OrganizationPermissionChecker : IOrganizationPermissionChecker, ITr
     private readonly IPermissionDefinitionManager _permissionDefinitionManager;
     private readonly ICurrentPrincipalAccessor _principalAccessor;
     private readonly ISimpleStateCheckerManager<PermissionDefinition> _stateCheckerManager;
-    
+
     public const string ProviderName = "R";
 
     public OrganizationPermissionChecker(IdentityRoleManager roleManager, IPermissionStore permissionStore,
@@ -51,7 +51,7 @@ public class OrganizationPermissionChecker : IOrganizationPermissionChecker, ITr
         {
             return false;
         }
-        
+
         if (currentUserRoles.Contains(AevatarConsts.AdminRoleName))
         {
             return true;
@@ -76,7 +76,7 @@ public class OrganizationPermissionChecker : IOrganizationPermissionChecker, ITr
         {
             return false;
         }
-    
+
         if (!permission.IsEnabled)
         {
             return false;
@@ -86,7 +86,7 @@ public class OrganizationPermissionChecker : IOrganizationPermissionChecker, ITr
         {
             return false;
         }
-        
+
         if (!await _permissionStore.IsGrantedAsync(name, ProviderName, role))
         {
             return false;

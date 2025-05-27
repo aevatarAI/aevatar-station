@@ -6,6 +6,6 @@ namespace Aevatar.Subscription;
 public class PublishEventDto
 {
     public Guid AgentId { get; set; }
-    public string EventType { get; set; } 
+    public string EventType { get; set; }
     public Dictionary<string, object> EventProperties { get; set; }
 }

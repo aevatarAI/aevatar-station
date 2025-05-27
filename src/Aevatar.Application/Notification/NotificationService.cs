@@ -90,17 +90,22 @@ public class NotificationService : INotificationService, ITransientDependency
         {
             _logger.LogDebug($"Push new message to {(Guid)notification.CreatorId!} and {notification.Receiver}");
             await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
-                new NotificationResponse()
+                new NotificationResponse
                 {
-                    Data = new NotificationResponseMessage()
-                        { Id = notification.Id, Status = NotificationStatusEnum.None }
+                    Data = new NotificationResponseMessage
+                    {
+                        Id = notification.Id,
+                        Status = NotificationStatusEnum.None
+                    }
                 });
-            
+
             _logger.LogDebug($"Push unread message to {target}");
             var unreadCount = await GetUnreadCountAsync(target);
             await _hubService.ResponseAsync([target],
-                new UnreadNotificationResponse()
-                    { Data = new UnreadNotification(unreadCount: unreadCount) });
+                new UnreadNotificationResponse
+                {
+                    Data = new UnreadNotification(unreadCount: unreadCount)
+                });
 
         });
 
@@ -122,10 +127,13 @@ public class NotificationService : INotificationService, ITransientDependency
         _ = Task.Run(async () =>
         {
             await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
-                new NotificationResponse()
+                new NotificationResponse
                 {
-                    Data = new NotificationResponseMessage()
-                        { Id = notificationId, Status = NotificationStatusEnum.Withdraw }
+                    Data = new NotificationResponseMessage
+                    {
+                        Id = notificationId,
+                        Status = NotificationStatusEnum.Withdraw
+                    }
                 });
         });
 
@@ -164,8 +172,14 @@ public class NotificationService : INotificationService, ITransientDependency
         _ = Task.Run(async () =>
         {
             await _hubService.ResponseAsync([(Guid)notification.CreatorId!, notification.Receiver],
-                new NotificationResponse()
-                    { Data = new NotificationResponseMessage() { Id = notificationId, Status = status } });
+                new NotificationResponse
+                {
+                    Data = new NotificationResponseMessage
+                    {
+                        Id = notificationId,
+                        Status = status
+                    }
+                });
         });
 
         return true;
@@ -216,8 +230,9 @@ public class NotificationService : INotificationService, ITransientDependency
             if (organizationInfoObj != null)
             {
                 var organizationVisitInfo = organizationInfoObj as OrganizationVisitInfo;
-                var organizationInfo = await _organizationUnitRepository.GetAsync(organizationVisitInfo!.OrganizationId);
-                result.Add(new OrganizationVisitDto()
+                var organizationInfo =
+                    await _organizationUnitRepository.GetAsync(organizationVisitInfo!.OrganizationId);
+                result.Add(new OrganizationVisitDto
                 {
                     Id = item.Id,
                     OrganizationId = organizationInfo.Id,
@@ -242,8 +257,8 @@ public class NotificationService : INotificationService, ITransientDependency
         if (input.NotificationId.HasValue)
         {
             var notification =
-                await _notificationRepository.FirstAsync(
-                    o => o.Id == input.NotificationId.Value && o.Receiver == userId);
+                await _notificationRepository.FirstAsync(o =>
+                    o.Id == input.NotificationId.Value && o.Receiver == userId);
             notification.IsRead = true;
             await _notificationRepository.UpdateAsync(notification);
 
@@ -262,7 +277,9 @@ public class NotificationService : INotificationService, ITransientDependency
         }
 
         await _hubService.ResponseAsync([userId],
-            new UnreadNotificationResponse()
-                { Data = new UnreadNotification(unreadCount: unreadCount) });
+            new UnreadNotificationResponse
+            {
+                Data = new UnreadNotification(unreadCount: unreadCount)
+            });
     }
 }

@@ -1,4 +1,3 @@
-using System.Linq;
 using Aevatar.Localization;
 using Aevatar.Organizations;
 using Aevatar.PermissionManagement;
@@ -76,37 +75,59 @@ public class AevatarPermissionDefinitionProvider : PermissionDefinitionProvider
         }
 
         var developerPlatformGroup = context.AddGroup(AevatarPermissions.DeveloperPlatform);
-        
-        var organizationsPermission = developerPlatformGroup.AddPermission(AevatarPermissions.Organizations.Default, L("Permission:Organizations"));
+
+        var organizationsPermission =
+            developerPlatformGroup.AddPermission(AevatarPermissions.Organizations.Default,
+                L("Permission:Organizations"));
         organizationsPermission.Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.Organization;
-        organizationsPermission.AddChild(AevatarPermissions.Organizations.Edit, L("Permission:Organizations.Edit")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.Organization;
-        
-        var projectsPermission = developerPlatformGroup.AddPermission(AevatarPermissions.Projects.Default, L("Permission:Projects"));
+        organizationsPermission.AddChild(AevatarPermissions.Organizations.Edit, L("Permission:Organizations.Edit"))
+            .Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.Organization;
+
+        var projectsPermission =
+            developerPlatformGroup.AddPermission(AevatarPermissions.Projects.Default, L("Permission:Projects"));
         projectsPermission.Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
-        projectsPermission.AddChild(AevatarPermissions.Projects.Create, L("Permission:Projects.Create")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.Organization;
-        projectsPermission.AddChild(AevatarPermissions.Projects.Edit, L("Permission:Projects.Edit")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
-        projectsPermission.AddChild(AevatarPermissions.Projects.Delete, L("Permission:Projects.Delete")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.Organization;
-        
-        var organizationMembersPermission = developerPlatformGroup.AddPermission(AevatarPermissions.Members.Default, L("Permission:Members"));
-        organizationMembersPermission.Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
-        organizationMembersPermission.AddChild(AevatarPermissions.Members.Manage, L("Permission:Members.Manage")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
-        
-        var apiKeysPermission = developerPlatformGroup.AddPermission(AevatarPermissions.ApiKeys.Default, L("Permission:ApiKeys"));
+        projectsPermission.AddChild(AevatarPermissions.Projects.Create, L("Permission:Projects.Create"))
+            .Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.Organization;
+        projectsPermission.AddChild(AevatarPermissions.Projects.Edit, L("Permission:Projects.Edit"))
+            .Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
+        projectsPermission.AddChild(AevatarPermissions.Projects.Delete, L("Permission:Projects.Delete"))
+            .Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.Organization;
+
+        var organizationMembersPermission =
+            developerPlatformGroup.AddPermission(AevatarPermissions.Members.Default, L("Permission:Members"));
+        organizationMembersPermission.Properties[AevatarPermissions.OrganizationScopeKey] =
+            PermissionScope.OrganizationAndProject;
+        organizationMembersPermission.AddChild(AevatarPermissions.Members.Manage, L("Permission:Members.Manage"))
+            .Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
+
+        var apiKeysPermission =
+            developerPlatformGroup.AddPermission(AevatarPermissions.ApiKeys.Default, L("Permission:ApiKeys"));
         apiKeysPermission.Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
-        apiKeysPermission.AddChild(AevatarPermissions.ApiKeys.Create, L("Permission:ApiKeys.Create")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
-        apiKeysPermission.AddChild(AevatarPermissions.ApiKeys.Edit, L("Permission:ApiKeys.Edit")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
-        apiKeysPermission.AddChild(AevatarPermissions.ApiKeys.Delete, L("Permission:ApiKeys.Delete")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
-        
-        var rolesPermission = developerPlatformGroup.AddPermission(AevatarPermissions.Roles.Default, L("Permission:Roles"));
+        apiKeysPermission.AddChild(AevatarPermissions.ApiKeys.Create, L("Permission:ApiKeys.Create"))
+            .Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
+        apiKeysPermission.AddChild(AevatarPermissions.ApiKeys.Edit, L("Permission:ApiKeys.Edit"))
+            .Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
+        apiKeysPermission.AddChild(AevatarPermissions.ApiKeys.Delete, L("Permission:ApiKeys.Delete"))
+            .Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
+
+        var rolesPermission =
+            developerPlatformGroup.AddPermission(AevatarPermissions.Roles.Default, L("Permission:Roles"));
         apiKeysPermission.Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
-        rolesPermission.AddChild(AevatarPermissions.Roles.Create, L("Permission:Roles.Create")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
-        rolesPermission.AddChild(AevatarPermissions.Roles.Edit, L("Permission:Roles.Edit")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
-        rolesPermission.AddChild(AevatarPermissions.Roles.Delete, L("Permission:Roles.Delete")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
-        
-        var dashboardsPermission = developerPlatformGroup.AddPermission(AevatarPermissions.Dashboard, L("Permission:Dashboards"));
-        dashboardsPermission.Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
-        dashboardsPermission.AddChild(AevatarPermissions.LLMSModels.Default, L("Permission:LLMSModels")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
-        dashboardsPermission.AddChild(AevatarPermissions.ApiRequests.Default, L("Permission:ApiRequests")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
+        rolesPermission.AddChild(AevatarPermissions.Roles.Create, L("Permission:Roles.Create"))
+            .Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
+        rolesPermission.AddChild(AevatarPermissions.Roles.Edit, L("Permission:Roles.Edit"))
+            .Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
+        rolesPermission.AddChild(AevatarPermissions.Roles.Delete, L("Permission:Roles.Delete"))
+            .Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
+
+        var dashboardsPermission =
+            developerPlatformGroup.AddPermission(AevatarPermissions.Dashboard, L("Permission:Dashboards"));
+        dashboardsPermission.Properties[AevatarPermissions.OrganizationScopeKey] =
+            PermissionScope.OrganizationAndProject;
+        dashboardsPermission.AddChild(AevatarPermissions.LLMSModels.Default, L("Permission:LLMSModels"))
+            .Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
+        dashboardsPermission.AddChild(AevatarPermissions.ApiRequests.Default, L("Permission:ApiRequests"))
+            .Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
     }
 
     private static LocalizableString L(string name)

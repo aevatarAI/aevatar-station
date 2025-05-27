@@ -16,7 +16,8 @@ public class ManagerCheckHelper
             var response = await httpClient.GetAsync(url);
             response.EnsureSuccessStatusCode();
             var content = await response.Content.ReadAsStringAsync();
-            return !content.IsNullOrEmpty() && caHash.Equals(JsonConvert.DeserializeObject<ManagerCacheDto>(content)?.CaHash);
+            return !content.IsNullOrEmpty() &&
+                   caHash.Equals(JsonConvert.DeserializeObject<ManagerCacheDto>(content)?.CaHash);
         }
         catch (Exception e)
         {

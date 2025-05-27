@@ -18,7 +18,7 @@ public class AccountService : AccountAppService, IAccountService
 {
     private readonly IAevatarAccountEmailer _aevatarAccountEmailer;
     private readonly AccountOptions _accountOptions;
-    private readonly IDistributedCache<string,string> _registerCode;
+    private readonly IDistributedCache<string, string> _registerCode;
     private readonly DistributedCacheEntryOptions _defaultCacheOptions;
 
     public AccountService(IdentityUserManager userManager, IIdentityRoleRepository roleRepository,
@@ -66,13 +66,13 @@ public class AccountService : AccountAppService, IAccountService
         {
             throw new UserFriendlyException($"The email: {input.Email} has been registered.");
         }
-        
+
         user = await UserManager.FindByNameAsync(input.UserName);
         if (user != null)
         {
             throw new UserFriendlyException($"The user name: {input.UserName} has been registered.");
         }
-        
+
         var code = GenerateVerificationCode();
         await _registerCode.SetAsync(GetRegisterCodeKey(input.Email), code, _defaultCacheOptions);
         await _aevatarAccountEmailer.SendRegisterCodeAsync(input.Email, code);
@@ -90,7 +90,7 @@ public class AccountService : AccountAppService, IAccountService
         var resetToken = await UserManager.GeneratePasswordResetTokenAsync(user);
         await _aevatarAccountEmailer.SendPasswordResetLinkAsync(user, resetToken);
     }
-    
+
     private string GenerateVerificationCode()
     {
         var random = new Random();

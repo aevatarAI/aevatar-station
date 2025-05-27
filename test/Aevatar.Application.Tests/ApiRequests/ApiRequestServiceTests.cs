@@ -57,7 +57,7 @@ public abstract class ApiRequestServiceTests<TStartupModule> : AevatarApplicatio
             DomainName = "App"
         };
         var project1 = await _projectService.CreateAsync(createProjectInput);
-        
+
         var createProjectInput2 = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
@@ -69,19 +69,19 @@ public abstract class ApiRequestServiceTests<TStartupModule> : AevatarApplicatio
         await _projectAppIdService.CreateAsync(project1.Id, "TestKey1", _currentUser.Id);
         var apps = await _projectAppIdService.GetApiKeysAsync(project1.Id);
         var appId1 = apps[0].AppId;
-        
+
         await _projectAppIdService.CreateAsync(project2.Id, "TestKey2", _currentUser.Id);
         apps = await _projectAppIdService.GetApiKeysAsync(project2.Id);
         var appId2 = apps[0].AppId;
 
         var startTime = new DateTime(2025, 1, 1, 10, 0, 0, DateTimeKind.Utc);
-        
+
         await _apiRequestProvider.IncreaseRequestAsync(appId1, startTime.AddMinutes(1).AddSeconds(1));
         await _apiRequestProvider.IncreaseRequestAsync(appId1, startTime.AddHours(2).AddMinutes(2).AddSeconds(2));
         await _apiRequestProvider.IncreaseRequestAsync(appId2, startTime.AddHours(2).AddMinutes(3).AddSeconds(3));
 
         await _apiRequestProvider.FlushAsync();
-        
+
         await _apiRequestProvider.IncreaseRequestAsync(appId1, startTime.AddMinutes(11).AddSeconds(1));
         await _apiRequestProvider.IncreaseRequestAsync(appId1, startTime.AddHours(2).AddMinutes(12).AddSeconds(2));
         await _apiRequestProvider.IncreaseRequestAsync(appId2, startTime.AddHours(2).AddMinutes(13).AddSeconds(3));
@@ -94,33 +94,33 @@ public abstract class ApiRequestServiceTests<TStartupModule> : AevatarApplicatio
             StartTime = DateTimeHelper.ToUnixTimeMilliseconds(startTime),
             EndTime = DateTimeHelper.ToUnixTimeMilliseconds(DateTime.UtcNow)
         });
-        
+
         apiRequests.Items.Count.ShouldBe(2);
         apiRequests.Items[0].Count.ShouldBe(2);
         apiRequests.Items[0].Time.ShouldBe(DateTimeHelper.ToUnixTimeMilliseconds(startTime));
         apiRequests.Items[1].Count.ShouldBe(4);
         apiRequests.Items[1].Time.ShouldBe(DateTimeHelper.ToUnixTimeMilliseconds(startTime.AddHours(2)));
-        
+
         apiRequests = await _apiRequestService.GetListAsync(new GetApiRequestDto
         {
             OrganizationId = project1.Id,
             StartTime = DateTimeHelper.ToUnixTimeMilliseconds(startTime),
             EndTime = DateTimeHelper.ToUnixTimeMilliseconds(DateTime.UtcNow)
         });
-        
+
         apiRequests.Items.Count.ShouldBe(2);
         apiRequests.Items[0].Count.ShouldBe(2);
         apiRequests.Items[0].Time.ShouldBe(DateTimeHelper.ToUnixTimeMilliseconds(startTime));
         apiRequests.Items[1].Count.ShouldBe(2);
         apiRequests.Items[1].Time.ShouldBe(DateTimeHelper.ToUnixTimeMilliseconds(startTime.AddHours(2)));
-        
+
         apiRequests = await _apiRequestService.GetListAsync(new GetApiRequestDto
         {
             OrganizationId = project2.Id,
             StartTime = DateTimeHelper.ToUnixTimeMilliseconds(startTime),
             EndTime = DateTimeHelper.ToUnixTimeMilliseconds(DateTime.UtcNow)
         });
-        
+
         apiRequests.Items.Count.ShouldBe(1);
         apiRequests.Items[0].Count.ShouldBe(2);
         apiRequests.Items[0].Time.ShouldBe(DateTimeHelper.ToUnixTimeMilliseconds(startTime.AddHours(2)));

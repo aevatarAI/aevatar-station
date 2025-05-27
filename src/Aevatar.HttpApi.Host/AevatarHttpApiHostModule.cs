@@ -28,7 +28,6 @@ using Volo.Abp.Account.Web;
 using Volo.Abp.AspNetCore.Mvc;
 using Volo.Abp.AspNetCore.Mvc.Libs;
 using Volo.Abp.AspNetCore.Mvc.UI.Bundling;
-using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
 using Volo.Abp.BackgroundWorkers;
@@ -38,7 +37,6 @@ using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
 using Volo.Abp.Swashbuckle;
 using Volo.Abp.Threading;
-using Volo.Abp.VirtualFileSystem;
 
 namespace Aevatar;
 
@@ -69,7 +67,6 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
 
         ConfigureAuthentication(context, configuration);
         ConfigureBundles();
-        // ConfigureUrls(configuration);
         ConfigureConventionalControllers();
         ConfigureVirtualFileSystem(context);
         ConfigureAutoResponseWrapper(context);
@@ -77,7 +74,6 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         ConfigureDataProtection(context, configuration, hostingEnvironment);
         ConfigCache(context, configuration);
         ConfigureCors(context, configuration);
-        //context.Services.AddDaprClient();
 
         context.Services.AddMvc(options => { options.Filters.Add(new IgnoreAntiforgeryTokenAttribute()); })
             .AddNewtonsoftJson();
@@ -95,7 +91,7 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
                     .WithOrigins(configuration["App:CorsOrigins"]?
                         .Split(",", StringSplitOptions.RemoveEmptyEntries)
                         .Select(o => o.RemovePostFix("/"))
-                        .ToArray() ?? Array.Empty<string>())
+                        .ToArray() ?? [])
                     .WithAbpExposedHeaders()
                     .SetIsOriginAllowedToAllowWildcardSubdomains()
                     .AllowAnyHeader()
@@ -134,20 +130,21 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
                 options.RequireHttpsMetadata = Convert.ToBoolean(configuration["AuthServer:RequireHttpsMetadata"]);
                 options.Audience = "Aevatar";
                 options.MapInboundClaims = false;
-                
+
                 options.Events = new JwtBearerEvents
                 {
-                    OnTokenValidated = async tokenValidatedContext  =>
+                    OnTokenValidated = async tokenValidatedContext =>
                     {
                         var userId = tokenValidatedContext.Principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
-                        var securityStamp = tokenValidatedContext.Principal.FindFirst(AevatarConsts.SecurityStampClaimType)
+                        var securityStamp = tokenValidatedContext.Principal
+                            .FindFirst(AevatarConsts.SecurityStampClaimType)
                             ?.Value;
                         if (!userId.IsNullOrWhiteSpace() && !securityStamp.IsNullOrWhiteSpace())
                         {
                             var userManager = tokenValidatedContext.HttpContext.RequestServices
                                 .GetRequiredService<IdentityUserManager>();
                             var user = await userManager.FindByIdAsync(userId);
-                            
+
                             if (user == null || user.SecurityStamp != securityStamp)
                             {
                                 tokenValidatedContext.Fail("Token is no longer valid.");
@@ -162,6 +159,7 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
                             // Read the token out of the query string
                             messageReceivedContext.Token = accessToken;
                         }
+
                         return Task.CompletedTask;
                     }
                 };
@@ -185,21 +183,6 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
 
         if (hostingEnvironment.IsDevelopment())
         {
-            // Configure<AbpVirtualFileSystemOptions>(options =>
-            // {
-            //     options.FileSets.ReplaceEmbeddedByPhysical<AevatarDomainSharedModule>(
-            //         Path.Combine(hostingEnvironment.ContentRootPath,
-            //             $"..{Path.DirectorySeparatorChar}Aevatar.Domain.Shared"));
-            //     options.FileSets.ReplaceEmbeddedByPhysical<AevatarDomainModule>(
-            //         Path.Combine(hostingEnvironment.ContentRootPath,
-            //             $"..{Path.DirectorySeparatorChar}Aevatar.Domain"));
-            //     options.FileSets.ReplaceEmbeddedByPhysical<AevatarApplicationContractsModule>(
-            //         Path.Combine(hostingEnvironment.ContentRootPath,
-            //             $"..{Path.DirectorySeparatorChar}Aevatar.Application.Contracts"));
-            //     options.FileSets.ReplaceEmbeddedByPhysical<AevatarApplicationModule>(
-            //         Path.Combine(hostingEnvironment.ContentRootPath,
-            //             $"..{Path.DirectorySeparatorChar}Aevatar.Application"));
-            // });
         }
     }
 
@@ -235,7 +218,7 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
                         {
                             Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
                         },
-                        new string[] { }
+                        []
                     }
                 });
             }
@@ -250,7 +233,7 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         app.UseCorrelationId();
         app.UseStaticFiles();
         app.UseRouting();
-        
+
         app.UseCors();
         app.UseAuthentication();
         app.UseAuthorization();
@@ -269,14 +252,12 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
             c.OAuthScopes("Aevatar");
         });
         app.UseHealthChecks("/health");
-        
+
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();
         app.UseConfiguredEndpoints();
         var statePermissionProvider = context.ServiceProvider.GetRequiredService<IStatePermissionProvider>();
         AsyncHelper.RunSync(async () => await statePermissionProvider.SaveAllStatePermissionAsync());
-        
-        
         AsyncHelper.RunSync(() => context.AddBackgroundWorkerAsync<ApiRequestWorker>());
     }
 }

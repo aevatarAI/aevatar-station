@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
 using Aevatar.Application.Grains.Agents.Code;
 using Aevatar.Common;
@@ -48,6 +47,7 @@ public class WebhookService : ApplicationService, IWebhookService
         {
             result[file.Key] = Convert.ToBase64String(file.Value);
         }
+
         return result;
     }
 
@@ -56,7 +56,7 @@ public class WebhookService : ApplicationService, IWebhookService
         // Clear all CodeFiles in ICodeGAgent by uploading an empty dictionary
         await _clusterClient.GetGrain<ICodeGAgent>(GuidUtil.StringToGuid(inputWebhookId)).UploadCodeAsync(
             inputWebhookId, inputVersion, new Dictionary<string, byte[]>());
-        
+
         await _hostDeployManager.DestroyWebHookAsync(inputWebhookId, inputVersion);
     }
 

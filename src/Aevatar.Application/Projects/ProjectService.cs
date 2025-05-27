@@ -83,7 +83,7 @@ public class ProjectService : OrganizationService, IProjectService
             AevatarPermissions.ApiRequests.Default
         ];
     }
-    
+
     protected override List<string> GetReaderPermissions()
     {
         return
@@ -128,7 +128,7 @@ public class ProjectService : OrganizationService, IProjectService
         }
 
         var result = new List<ProjectDto>();
-        foreach (var organization in organizations.OrderBy(o=>o.CreationTime))
+        foreach (var organization in organizations.OrderBy(o => o.CreationTime))
         {
             var projectDto = ObjectMapper.Map<OrganizationUnit, ProjectDto>(organization);
             projectDto.MemberCount = await UserRepository.CountAsync(u =>
@@ -163,7 +163,7 @@ public class ProjectService : OrganizationService, IProjectService
         (await IdentityUserManager.UpdateSecurityStampAsync(user)).CheckErrors();
         await IdentityUserManager.AddToOrganizationUnitAsync(user.Id, organizationId);
     }
-    
+
     protected override async Task RemoveMemberAsync(Guid organizationId, IdentityUser user)
     {
         var children = await OrganizationUnitManager.FindChildrenAsync(organizationId, true);

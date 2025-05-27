@@ -3,7 +3,4 @@ using Volo.Abp.Domain.Repositories;
 
 namespace Aevatar.ApiRequests;
 
-public interface IApiRequestSnapshotRepository : IRepository<ApiRequestSnapshot, Guid>
-{
-    
-}
+public interface IApiRequestSnapshotRepository : IRepository<ApiRequestSnapshot, Guid>;

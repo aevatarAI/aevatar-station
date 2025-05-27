@@ -19,11 +19,12 @@ public class ApiRequestService : AevatarAppService, IApiRequestService
     public async Task<ListResultDto<ApiRequestDto>> GetListAsync(GetApiRequestDto input)
     {
         var organizationId = input.ProjectId.HasValue ? input.ProjectId.Value : input.OrganizationId.Value;
-        
+
         var query = await _apiRequestSnapshotRepository.GetQueryableAsync();
         query = query.Where(o =>
-            o.OrganizationId == organizationId && o.Time >= DateTimeHelper.FromUnixTimeMilliseconds(input.StartTime) &&
-            o.Time <= DateTimeHelper.FromUnixTimeMilliseconds(input.EndTime))
+                o.OrganizationId == organizationId &&
+                o.Time >= DateTimeHelper.FromUnixTimeMilliseconds(input.StartTime) &&
+                o.Time <= DateTimeHelper.FromUnixTimeMilliseconds(input.EndTime))
             .OrderBy(o => o.Time);
         var list = query.ToList();
 

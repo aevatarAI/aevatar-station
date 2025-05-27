@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.ApiKey;
 using Aevatar.ApiKeys;
@@ -25,7 +24,8 @@ public class ProjectAppIdService : IProjectAppIdService, ITransientDependency
     private readonly IdentityUserManager _identityUserManager;
 
     public ProjectAppIdService(IProjectAppIdRepository projectAppIdRepository, ILogger<ProjectAppIdService> logger,
-        IOrganizationPermissionChecker organizationPermission, IUserAppService userAppService, IdentityUserManager identityUserManager)
+        IOrganizationPermissionChecker organizationPermission, IUserAppService userAppService,
+        IdentityUserManager identityUserManager)
     {
         _projectAppIdRepository = projectAppIdRepository;
         _logger = logger;
@@ -33,7 +33,6 @@ public class ProjectAppIdService : IProjectAppIdService, ITransientDependency
         _userAppService = userAppService;
         _identityUserManager = identityUserManager;
     }
-
 
     public async Task CreateAsync(Guid projectId, string keyName, Guid? currentUserId)
     {
@@ -51,7 +50,7 @@ public class ProjectAppIdService : IProjectAppIdService, ITransientDependency
             CreationTime = DateTime.Now,
             CreatorId = currentUserId,
         };
-        
+
         await _userAppService.RegisterClientAuthentication(appId, appSecret);
         await _projectAppIdRepository.InsertAsync(projectAppIdInfo);
     }
@@ -63,7 +62,7 @@ public class ProjectAppIdService : IProjectAppIdService, ITransientDependency
         {
             throw new UserFriendlyException("Api key not found");
         }
-        
+
         await _organizationPermission.AuthenticateAsync(appIdInfo.ProjectId, AevatarPermissions.ApiKeys.Delete);
         await _projectAppIdRepository.HardDeleteAsync(f => f.Id == appId);
         await _userAppService.DeleteClientAndAuthentication(appIdInfo.AppId);
@@ -91,7 +90,6 @@ public class ProjectAppIdService : IProjectAppIdService, ITransientDependency
             throw new BusinessException(message: "AppId is the same ");
         }
 
-
         appIdInfo.AppName = keyName;
 
         await _projectAppIdRepository.UpdateAsync(appIdInfo);
@@ -99,16 +97,20 @@ public class ProjectAppIdService : IProjectAppIdService, ITransientDependency
 
     public async Task<List<ProjectAppIdListResponseDto>> GetApiKeysAsync(Guid projectId)
     {
-        APIKeyPagedRequestDto requestDto = new APIKeyPagedRequestDto()
-            { ProjectId = projectId, MaxResultCount = 10, SkipCount = 0 };
+        var requestDto = new APIKeyPagedRequestDto
+        {
+            ProjectId = projectId,
+            MaxResultCount = 10,
+            SkipCount = 0
+        };
 
         var appIdList = await _projectAppIdRepository.GetProjectAppIds(requestDto);
-        
+
         var result = new List<ProjectAppIdListResponseDto>();
         foreach (var item in appIdList.Items)
         {
             var creatorInfo = await _identityUserManager.GetByIdAsync((Guid)item.CreatorId!);
-            result.Add(new ProjectAppIdListResponseDto()
+            result.Add(new ProjectAppIdListResponseDto
             {
                 Id = item.Id,
                 AppId = item.AppId,

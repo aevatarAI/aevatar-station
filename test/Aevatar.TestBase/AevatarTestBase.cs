@@ -18,30 +18,30 @@ public abstract class AevatarTestBase<TStartupModule> : AbpIntegratedTest<TStart
     {
         options.UseAutofac();
     }
-    
+
     protected override void BeforeAddApplication(IServiceCollection services)
     {
         var builder = new ConfigurationBuilder();
-        
+
         // 基础配置文件
         builder.AddJsonFile("appsettings.json", optional: false);
-        
+
         // 根据环境变量加载不同的配置
         string env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Testing";
         builder.AddJsonFile($"appsettings.{env}.json", optional: true);
-        
+
         // MongoDB特定配置，只在需要时加载
         if (ShouldUseMongoDB())
         {
             builder.AddJsonFile("appsettings.MongoDB.json", optional: true);
         }
-        
+
         // 秘钥配置
         builder.AddJsonFile("appsettings.secrets.json", optional: true);
-        
+
         // 环境变量
         builder.AddEnvironmentVariables();
-        
+
         services.ReplaceConfiguration(builder.Build());
     }
 
@@ -62,17 +62,13 @@ public abstract class AevatarTestBase<TStartupModule> : AbpIntegratedTest<TStart
 
     protected virtual async Task WithUnitOfWorkAsync(AbpUnitOfWorkOptions options, Func<Task> action)
     {
-        using (var scope = ServiceProvider.CreateScope())
-        {
-            var uowManager = scope.ServiceProvider.GetRequiredService<IUnitOfWorkManager>();
+        using var scope = ServiceProvider.CreateScope();
+        var uowManager = scope.ServiceProvider.GetRequiredService<IUnitOfWorkManager>();
 
-            using (var uow = uowManager.Begin(options))
-            {
-                await action();
+        using var uow = uowManager.Begin(options);
+        await action();
 
-                await uow.CompleteAsync();
-            }
-        }
+        await uow.CompleteAsync();
     }
 
     protected virtual Task<TResult> WithUnitOfWorkAsync<TResult>(Func<Task<TResult>> func)
@@ -80,18 +76,15 @@ public abstract class AevatarTestBase<TStartupModule> : AbpIntegratedTest<TStart
         return WithUnitOfWorkAsync(new AbpUnitOfWorkOptions(), func);
     }
 
-    protected virtual async Task<TResult> WithUnitOfWorkAsync<TResult>(AbpUnitOfWorkOptions options, Func<Task<TResult>> func)
+    protected virtual async Task<TResult> WithUnitOfWorkAsync<TResult>(AbpUnitOfWorkOptions options,
+        Func<Task<TResult>> func)
     {
-        using (var scope = ServiceProvider.CreateScope())
-        {
-            var uowManager = scope.ServiceProvider.GetRequiredService<IUnitOfWorkManager>();
+        using var scope = ServiceProvider.CreateScope();
+        var uowManager = scope.ServiceProvider.GetRequiredService<IUnitOfWorkManager>();
 
-            using (var uow = uowManager.Begin(options))
-            {
-                var result = await func();
-                await uow.CompleteAsync();
-                return result;
-            }
-        }
+        using var uow = uowManager.Begin(options);
+        var result = await func();
+        await uow.CompleteAsync();
+        return result;
     }
 }

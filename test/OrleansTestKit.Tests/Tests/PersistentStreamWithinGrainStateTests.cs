@@ -62,7 +62,7 @@ public class PersistentStreamWithinGrainStateTests : TestKitBase
         //Assert
         Assert.Equal(1, _stream.Subscribed);
         Assert.NotNull(_stateWithHandle.ChatMessageStreamSubscriptionHandle);
-        
+
         var stats = Silo.StorageManager.GetStorageStats("listenerStateWithHandler");
         Assert.Equal(1, stats.Writes);
     }

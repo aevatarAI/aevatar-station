@@ -9,7 +9,6 @@ using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Authorization;
 using Volo.Abp.Identity;
-using Volo.Abp.PermissionManagement;
 
 namespace Aevatar.Controllers;
 
@@ -40,7 +39,7 @@ public class ProjectRoleController : AevatarController
 
         return await _organizationRoleService.GetListAsync(projectId);
     }
-    
+
     [HttpPost]
     public virtual async Task<IdentityRoleDto> CreateAsync(Guid projectId, IdentityRoleCreateDto input)
     {

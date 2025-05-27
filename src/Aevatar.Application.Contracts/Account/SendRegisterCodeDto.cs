@@ -10,10 +10,9 @@ public class SendRegisterCodeDto
     [EmailAddress]
     [DynamicStringLength(typeof(IdentityUserConsts), nameof(IdentityUserConsts.MaxEmailLength))]
     public string Email { get; set; }
-    
-    [Required]
-    public string AppName { get; set; }
-    
+
+    [Required] public string AppName { get; set; }
+
     [Required]
     [DynamicStringLength(typeof(IdentityUserConsts), nameof(IdentityUserConsts.MaxUserNameLength))]
     public string UserName { get; set; }

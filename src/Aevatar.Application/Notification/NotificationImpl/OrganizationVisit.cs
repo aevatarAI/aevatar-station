@@ -14,7 +14,8 @@ public class OrganizationVisit : NotificationHandlerBase<OrganizationVisitInfo>
     private readonly IdentityUserManager _userManager;
     private readonly ILogger<OrganizationVisit> _logger;
 
-    public OrganizationVisit(IOrganizationService organizationService, IdentityUserManager userManager, ILogger<OrganizationVisit> logger)
+    public OrganizationVisit(IOrganizationService organizationService, IdentityUserManager userManager,
+        ILogger<OrganizationVisit> logger)
     {
         _organizationService = organizationService;
         _userManager = userManager;
@@ -34,10 +35,10 @@ public class OrganizationVisit : NotificationHandlerBase<OrganizationVisitInfo>
         stopWatch.Start();
         var creator = await _userManager.GetByIdAsync(input.Creator);
         var organization = await _organizationService.GetAsync(input.OrganizationId);
-        
+
         stopWatch.Stop();
         _logger.LogInformation($"StopWatch GetContentForShowAsync use time:{stopWatch.ElapsedMilliseconds}");
-        
+
         return $"{creator!.Name} has invited you to join {organization.DisplayName}";
     }
 

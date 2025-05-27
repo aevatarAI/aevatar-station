@@ -20,7 +20,7 @@ public class OrganizationPermissionService : AevatarAppService, IOrganizationPer
     protected readonly IPermissionManager PermissionManager;
     protected readonly IPermissionDefinitionManager PermissionDefinitionManager;
     protected readonly ISimpleStateCheckerManager<PermissionDefinition> SimpleStateCheckerManager;
-    
+
     public OrganizationPermissionService(
         IPermissionManager permissionManager,
         IPermissionDefinitionManager permissionDefinitionManager,
@@ -43,7 +43,7 @@ public class OrganizationPermissionService : AevatarAppService, IOrganizationPer
         var result = new GetPermissionListResultDto
         {
             EntityDisplayName = providerKey,
-            Groups = new List<PermissionGroupDto>()
+            Groups = []
         };
 
         foreach (var group in (await PermissionDefinitionManager.GetGroupsAsync()).Where(o =>
@@ -112,15 +112,16 @@ public class OrganizationPermissionService : AevatarAppService, IOrganizationPer
         return result;
     }
 
-    public async Task UpdateAsync(Guid organizationId, string providerName, string providerKey, UpdatePermissionsDto input)
+    public async Task UpdateAsync(Guid organizationId, string providerName, string providerKey,
+        UpdatePermissionsDto input)
     {
         OrganizationRoleHelper.CheckRoleInOrganization(organizationId, providerKey);
-        
+
         if (OrganizationRoleHelper.IsOwner(providerKey))
         {
             throw new UserFriendlyException("The owner role cannot be modified.");
         }
-        
+
         await CheckProviderPolicy(providerName);
 
         foreach (var permissionDto in input.Permissions)
@@ -128,22 +129,23 @@ public class OrganizationPermissionService : AevatarAppService, IOrganizationPer
             await PermissionManager.SetAsync(permissionDto.Name, providerName, providerKey, permissionDto.IsGranted);
         }
     }
-    
+
     private PermissionGrantInfoDto CreatePermissionGrantInfoDto(PermissionDefinition permission)
     {
-        return new PermissionGrantInfoDto {
+        return new PermissionGrantInfoDto
+        {
             Name = permission.Name,
             DisplayName = permission.DisplayName?.Localize(StringLocalizerFactory),
             ParentName = permission.Parent?.Name,
             AllowedProviders = permission.Providers,
-            GrantedProviders = new List<ProviderInfoDto>()
+            GrantedProviders = []
         };
     }
 
     private PermissionGroupDto CreatePermissionGroupDto(PermissionGroupDefinition group)
     {
         var localizableDisplayName = group.DisplayName as LocalizableString;
-        
+
         return new PermissionGroupDto
         {
             Name = group.Name,
@@ -155,13 +157,14 @@ public class OrganizationPermissionService : AevatarAppService, IOrganizationPer
             Permissions = new List<PermissionGrantInfoDto>()
         };
     }
-    
+
     protected virtual async Task CheckProviderPolicy(string providerName)
     {
         var policyName = Options.ProviderPolicies.GetOrDefault(providerName);
         if (policyName.IsNullOrEmpty())
         {
-            throw new AbpException($"No policy defined to get/set permissions for the provider '{providerName}'. Use {nameof(PermissionManagementOptions)} to map the policy.");
+            throw new AbpException(
+                $"No policy defined to get/set permissions for the provider '{providerName}'. Use {nameof(PermissionManagementOptions)} to map the policy.");
         }
     }
 }

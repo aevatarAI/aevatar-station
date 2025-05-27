@@ -20,7 +20,7 @@ namespace Aevatar;
     typeof(AbpPermissionManagementHttpApiModule),
     typeof(AevatarDeveloperLoggerModule),
     typeof(AbpAspNetCoreSignalRModule)
-    )]
+)]
 public class AevatarHttpApiModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
@@ -38,10 +38,7 @@ public class AevatarHttpApiModule : AbpModule
                     typeof(AbpUiResource)
                 );
         });
-        
-        Configure<MvcOptions>(options =>
-        {
-            options.Conventions.Add(new ApplicationDescription());
-        });
+
+        Configure<MvcOptions>(options => { options.Conventions.Add(new ApplicationDescription()); });
     }
 }

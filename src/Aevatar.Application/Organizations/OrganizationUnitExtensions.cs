@@ -18,10 +18,11 @@ public static class OrganizationUnitExtensions
         value = default;
         return false;
     }
-    
+
     public static bool TryGetOrganizationRoles(this OrganizationUnit organizationUnit, out List<Guid> value)
     {
-        if (organizationUnit.TryGetExtraPropertyValue<List<object>>(AevatarConsts.OrganizationRoleKey, out var valueObject))
+        if (organizationUnit.TryGetExtraPropertyValue<List<object>>(AevatarConsts.OrganizationRoleKey,
+                out var valueObject))
         {
             value = valueObject.OfType<Guid>().ToList();
             return true;

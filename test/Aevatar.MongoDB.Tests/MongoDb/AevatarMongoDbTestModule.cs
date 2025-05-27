@@ -1,5 +1,4 @@
-﻿using System;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.Data;
 using Volo.Abp.Modularity;
@@ -17,7 +16,7 @@ public class AevatarMongoDbTestModule : AbpModule
     {
         var configuration = context.Services.GetConfiguration();
         var useMongoDbFixture = configuration["TestingEnvironment"] != "MongoDB";
-        
+
         Configure<AbpDbConnectionOptions>(options =>
         {
             if (useMongoDbFixture)
@@ -35,7 +34,7 @@ public class AevatarMongoDbTestModule : AbpModule
                 }
             }
         });
-        
+
         Configure<AbpUnitOfWorkDefaultOptions>(options =>
         {
             options.TransactionBehavior = UnitOfWorkTransactionBehavior.Disabled;

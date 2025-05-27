@@ -41,7 +41,6 @@ public class ContestAgentsDto
     public List<HostAgent> HostAgentList { get; set; }
 }
 
-
 public class Network
 {
     public List<string> ConstentList { get; set; }
@@ -50,9 +49,7 @@ public class Network
     public List<string> HostList { get; set; }
     public string CallbackAddress { get; set; }
     public string Name { get; set; }
-    
     public string Round { get; set; }
-    
 }
 
 public class NetworksDto
@@ -70,12 +67,10 @@ public class AgentReponse
 [GenerateSerializer]
 public class AgentResponse
 {
-    [Id(0)] public List<AgentReponse> ContestantAgentList { get; set; } =  new List<AgentReponse>();
+    [Id(0)] public List<AgentReponse> ContestantAgentList { get; set; } = new List<AgentReponse>();
     [Id(1)] public List<AgentReponse> JudgeAgentList { get; set; } = new List<AgentReponse>();
     [Id(2)] public List<AgentReponse> HostAgentList { get; set; } = new List<AgentReponse>();
-    
 }
-
 
 public class GroupDetail
 {
@@ -87,7 +82,6 @@ public class GroupResponse
 {
     public List<GroupDetail> GroupDetails { get; set; } = new List<GroupDetail>();
 }
-
 
 public class GroupDto
 {

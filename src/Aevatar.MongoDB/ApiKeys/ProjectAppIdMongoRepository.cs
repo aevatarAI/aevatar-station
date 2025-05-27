@@ -13,8 +13,8 @@ using Volo.Abp.MongoDB;
 
 namespace Aevatar.ApiKeys;
 
-public class ProjectAppIdMongoRepository : MongoDbRepository<AevatarMongoDbContext, ProjectAppIdInfo, Guid>, IProjectAppIdRepository,
-    ITransientDependency
+public class ProjectAppIdMongoRepository : MongoDbRepository<AevatarMongoDbContext, ProjectAppIdInfo, Guid>,
+    IProjectAppIdRepository, ITransientDependency
 {
     public ProjectAppIdMongoRepository(IMongoDbContextProvider<AevatarMongoDbContext> dbContextProvider) : base(
         dbContextProvider)
@@ -35,12 +35,11 @@ public class ProjectAppIdMongoRepository : MongoDbRepository<AevatarMongoDbConte
             .Take(requestDto.MaxResultCount)
             .Skip(requestDto.SkipCount).ToListAsync();
 
-        
         if (queryResponse != null)
         {
             result = queryResponse;
         }
-        
+
         return new PagedResultDto<ProjectAppIdInfo>(result.Count, result.AsReadOnly());
     }
 

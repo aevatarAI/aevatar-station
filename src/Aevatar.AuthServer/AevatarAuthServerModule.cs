@@ -48,7 +48,7 @@ namespace Aevatar.AuthServer;
     typeof(AbpOpenIddictDomainModule),
     typeof(AevatarMongoDbModule),
     typeof(AevatarApplicationContractsModule)
-    )]
+)]
 public class AevatarAuthServerModule : AbpModule
 {
     public override void PreConfigureServices(ServiceConfigurationContext context)
@@ -74,7 +74,7 @@ public class AevatarAuthServerModule : AbpModule
                 options.UseAspNetCore();
             });
         });
-        
+
         //add signature grant type
         PreConfigure<OpenIddictServerBuilder>(builder =>
         {
@@ -90,21 +90,18 @@ public class AevatarAuthServerModule : AbpModule
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
         var configuration = context.Services.GetConfiguration();
-        
+
         context.Services.Configure<SignatureGrantOptions>(configuration.GetSection("Signature"));
         context.Services.Configure<ChainOptions>(configuration.GetSection("Chains"));
-        Configure<AbpMvcLibsOptions>(options =>
-        {
-            options.CheckLibs = false; 
-        });
+        Configure<AbpMvcLibsOptions>(options => { options.CheckLibs = false; });
         context.Services.Configure<AbpOpenIddictExtensionGrantsOptions>(options =>
         {
             options.Grants.Add(GrantTypeConstants.SIGNATURE, new SignatureGrantHandler());
-            options.Grants.Add(GrantTypeConstants.GOOGLE, 
-                new GoogleGrantHandler(context.Services.GetRequiredService<IConfiguration>(), 
+            options.Grants.Add(GrantTypeConstants.GOOGLE,
+                new GoogleGrantHandler(context.Services.GetRequiredService<IConfiguration>(),
                     context.Services.GetRequiredService<ILogger<GoogleGrantHandler>>()));
-            options.Grants.Add(GrantTypeConstants.APPLE, 
-                new AppleGrantHandler(context.Services.GetRequiredService<IConfiguration>(), 
+            options.Grants.Add(GrantTypeConstants.APPLE,
+                new AppleGrantHandler(context.Services.GetRequiredService<IConfiguration>(),
                     context.Services.GetRequiredService<ILogger<AppleGrantHandler>>()));
         });
 
@@ -141,18 +138,15 @@ public class AevatarAuthServerModule : AbpModule
         {
             options.StyleBundles.Configure(
                 LeptonXLiteThemeBundles.Styles.Global,
-                bundle =>
-                {
-                    bundle.AddFiles("/global-styles.css");
-                }
+                bundle => { bundle.AddFiles("/global-styles.css"); }
             );
         });
 
         Configure<AbpAuditingOptions>(options =>
         {
-                //options.IsEnabledForGetRequests = true;
-                options.ApplicationName = "AuthServer";
-                options.IsEnabled = false;//Disables the auditing system
+            //options.IsEnabledForGetRequests = true;
+            options.ApplicationName = "AuthServer";
+            options.IsEnabled = false; //Disables the auditing system
         });
 
         Configure<AppUrlOptions>(options =>
@@ -163,24 +157,15 @@ public class AevatarAuthServerModule : AbpModule
             options.Applications["Angular"].Urls[AccountUrlNames.PasswordReset] = "account/reset-password";
         });
 
-        Configure<AbpBackgroundJobOptions>(options =>
-        {
-            options.IsJobExecutionEnabled = false;
-        });
+        Configure<AbpBackgroundJobOptions>(options => { options.IsJobExecutionEnabled = false; });
 
-        Configure<AbpDistributedCacheOptions>(options =>
-        {
-            options.KeyPrefix = "Aevatar:";
-        });
-      
+        Configure<AbpDistributedCacheOptions>(options => { options.KeyPrefix = "Aevatar:"; });
+
         var dataProtectionBuilder = context.Services.AddDataProtection().SetApplicationName("AevatarAuthServer");
-        
+
         context.Services.AddHealthChecks();
-        
-        Configure<MvcOptions>(options =>
-        {
-            options.Conventions.Add(new ApplicationDescription());
-        });
+
+        Configure<MvcOptions>(options => { options.Conventions.Add(new ApplicationDescription()); });
     }
 
     public override void OnApplicationInitialization(ApplicationInitializationContext context)
@@ -199,7 +184,7 @@ public class AevatarAuthServerModule : AbpModule
         {
             app.UseErrorPage();
         }
-        
+
         app.UseHealthChecks("/health");
 
         app.UseCorrelationId();
@@ -208,8 +193,6 @@ public class AevatarAuthServerModule : AbpModule
         app.UseAuthentication();
         app.UseAbpOpenIddictValidation();
 
-        //app.UseMultiTenancy();
-        
         app.UseUnitOfWork();
         app.UseAuthorization();
         app.UseAuditing();

@@ -1,13 +1,12 @@
-namespace Aevatar.Silo.IdGeneration
+namespace Aevatar.Silo.IdGeneration;
+
+/// <summary>
+/// Interface for generating deterministic IDs
+/// </summary>
+public interface IDeterministicIdGenerator
 {
     /// <summary>
-    /// Interface for generating deterministic IDs
+    /// Creates a deterministic GUID based on a string input
     /// </summary>
-    public interface IDeterministicIdGenerator
-    {
-        /// <summary>
-        /// Creates a deterministic GUID based on a string input
-        /// </summary>
-        Guid CreateDeterministicGuid(string input);
-    }
-} 
+    Guid CreateDeterministicGuid(string input);
+}

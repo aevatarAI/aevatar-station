@@ -14,13 +14,13 @@ public abstract class AccountServiceTests<TStartupModule> : AevatarApplicationTe
     where TStartupModule : IAbpModule
 {
     private readonly IAccountService _accountService;
-    private readonly IDistributedCache<string,string> _registerCode;
+    private readonly IDistributedCache<string, string> _registerCode;
     private readonly IdentityUserManager _identityUserManager;
 
     protected AccountServiceTests()
     {
         _accountService = GetRequiredService<IAccountService>();
-        _registerCode = GetRequiredService<IDistributedCache<string,string>>();
+        _registerCode = GetRequiredService<IDistributedCache<string, string>>();
         _identityUserManager = GetRequiredService<IdentityUserManager>();
     }
 
@@ -31,7 +31,7 @@ public abstract class AccountServiceTests<TStartupModule> : AevatarApplicationTe
 
         var user = await _identityUserManager.FindByEmailAsync(email);
         user.ShouldBeNull();
-        
+
         await _accountService.SendRegisterCodeAsync(new SendRegisterCodeDto
         {
             Email = email,
@@ -63,25 +63,26 @@ public abstract class AccountServiceTests<TStartupModule> : AevatarApplicationTe
             EmailAddress = email,
             UserName = "Tester"
         };
-        
-        await Should.ThrowAsync<UserFriendlyException>(async ()=> await _accountService.RegisterAsync(registerInput));
+
+        await Should.ThrowAsync<UserFriendlyException>(async () => await _accountService.RegisterAsync(registerInput));
 
         registerInput.Code = code;
         await _accountService.RegisterAsync(registerInput);
-        
+
         user = await _identityUserManager.FindByEmailAsync(email);
         user.UserName.ShouldBe(registerInput.UserName);
         user.Email.ShouldBe(registerInput.EmailAddress);
 
         var checkPassword = await _identityUserManager.CheckPasswordAsync(user, registerInput.Password);
         checkPassword.ShouldBeTrue();
-        
-        await Should.ThrowAsync<UserFriendlyException>(async ()=> await _accountService.SendRegisterCodeAsync(new SendRegisterCodeDto
-        {
-            Email = email,
-            AppName = "Aevatar",
-            UserName = "Tester"
-        }));
+
+        await Should.ThrowAsync<UserFriendlyException>(async () => await _accountService.SendRegisterCodeAsync(
+            new SendRegisterCodeDto
+            {
+                Email = email,
+                AppName = "Aevatar",
+                UserName = "Tester"
+            }));
     }
 
     [Fact]
@@ -95,19 +96,20 @@ public abstract class AccountServiceTests<TStartupModule> : AevatarApplicationTe
             Email = user.Email,
             AppName = "Aevatar"
         });
-        
-        var verifyResult = await _accountService.VerifyPasswordResetTokenAsync(new  VerifyPasswordResetTokenInput()
+
+        var verifyResult = await _accountService.VerifyPasswordResetTokenAsync(new VerifyPasswordResetTokenInput()
         {
             UserId = user.Id,
             ResetToken = "wrong token",
         });
         verifyResult.ShouldBeFalse();
-        
-        await Should.ThrowAsync<AbpIdentityResultException>(async ()=> await _accountService.ResetPasswordAsync(new ResetPasswordDto()
-        {
-            UserId = user.Id,
-            Password = "Abc@123",
-            ResetToken = "wrong token"
-        }));
+
+        await Should.ThrowAsync<AbpIdentityResultException>(async () => await _accountService.ResetPasswordAsync(
+            new ResetPasswordDto
+            {
+                UserId = user.Id,
+                Password = "Abc@123",
+                ResetToken = "wrong token"
+            }));
     }
 }

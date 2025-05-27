@@ -21,12 +21,12 @@ public class MetricsElasticIndexingService : IIndexingService
     private readonly IIndexingService _inner;
     private readonly ILogger<MetricsElasticIndexingService> _logger;
     private readonly ActivitySource _activitySource;
-    
+
     // Metrics for SaveOrUpdateStateIndexBatchAsync
     private readonly Histogram<double> _bulkDurationHistogram;
     private readonly Counter<long> _bulkSuccessCounter;
     private readonly Counter<long> _bulkFailCounter;
-    
+
     // Metrics for CheckExistOrCreateStateIndex
     private readonly Histogram<double> _checkOrCreateDurationHistogram;
     private readonly Counter<long> _checkOrCreateSuccessCounter;
@@ -48,22 +48,34 @@ public class MetricsElasticIndexingService : IIndexingService
         _logger = logger;
         _activitySource = new ActivitySource("Aevatar.CQRS");
         var meter = new Meter("Aevatar.CQRS");
-        
-        _bulkDurationHistogram = meter.CreateHistogram<double>("es.bulk.duration", "ms", "ElasticSearch bulk operation duration");
-        _bulkSuccessCounter = meter.CreateCounter<long>("es.bulk.success", "count", "ElasticSearch bulk operations succeeded");
-        _bulkFailCounter = meter.CreateCounter<long>("es.bulk.failure", "count", "ElasticSearch bulk operations failed");
 
-        _checkOrCreateDurationHistogram = meter.CreateHistogram<double>("es.check_create.duration", "ms", "ElasticSearch check or create index operation duration");
-        _checkOrCreateSuccessCounter = meter.CreateCounter<long>("es.check_create.success", "count", "ElasticSearch check or create index operations succeeded");
-        _checkOrCreateFailCounter = meter.CreateCounter<long>("es.check_create.failure", "count", "ElasticSearch check or create index operations failed");
+        _bulkDurationHistogram =
+            meter.CreateHistogram<double>("es.bulk.duration", "ms", "ElasticSearch bulk operation duration");
+        _bulkSuccessCounter =
+            meter.CreateCounter<long>("es.bulk.success", "count", "ElasticSearch bulk operations succeeded");
+        _bulkFailCounter =
+            meter.CreateCounter<long>("es.bulk.failure", "count", "ElasticSearch bulk operations failed");
 
-        _getDocumentsDurationHistogram = meter.CreateHistogram<double>("es.get_documents.duration", "ms", "ElasticSearch get documents operation duration");
-        _getDocumentsSuccessCounter = meter.CreateCounter<long>("es.get_documents.success", "count", "ElasticSearch get documents operations succeeded");
-        _getDocumentsFailCounter = meter.CreateCounter<long>("es.get_documents.failure", "count", "ElasticSearch get documents operations failed");
+        _checkOrCreateDurationHistogram = meter.CreateHistogram<double>("es.check_create.duration", "ms",
+            "ElasticSearch check or create index operation duration");
+        _checkOrCreateSuccessCounter = meter.CreateCounter<long>("es.check_create.success", "count",
+            "ElasticSearch check or create index operations succeeded");
+        _checkOrCreateFailCounter = meter.CreateCounter<long>("es.check_create.failure", "count",
+            "ElasticSearch check or create index operations failed");
 
-        _queryLuceneDurationHistogram = meter.CreateHistogram<double>("es.query_lucene.duration", "ms", "ElasticSearch Lucene query operation duration");
-        _queryLuceneSuccessCounter = meter.CreateCounter<long>("es.query_lucene.success", "count", "ElasticSearch Lucene query operations succeeded");
-        _queryLuceneFailCounter = meter.CreateCounter<long>("es.query_lucene.failure", "count", "ElasticSearch Lucene query operations failed");
+        _getDocumentsDurationHistogram = meter.CreateHistogram<double>("es.get_documents.duration", "ms",
+            "ElasticSearch get documents operation duration");
+        _getDocumentsSuccessCounter = meter.CreateCounter<long>("es.get_documents.success", "count",
+            "ElasticSearch get documents operations succeeded");
+        _getDocumentsFailCounter = meter.CreateCounter<long>("es.get_documents.failure", "count",
+            "ElasticSearch get documents operations failed");
+
+        _queryLuceneDurationHistogram = meter.CreateHistogram<double>("es.query_lucene.duration", "ms",
+            "ElasticSearch Lucene query operation duration");
+        _queryLuceneSuccessCounter = meter.CreateCounter<long>("es.query_lucene.success", "count",
+            "ElasticSearch Lucene query operations succeeded");
+        _queryLuceneFailCounter = meter.CreateCounter<long>("es.query_lucene.failure", "count",
+            "ElasticSearch Lucene query operations failed");
     }
 
     public async Task SaveOrUpdateStateIndexBatchAsync(IEnumerable<SaveStateCommand> commands)
@@ -77,7 +89,8 @@ public class MetricsElasticIndexingService : IIndexingService
             _bulkSuccessCounter.Add(1);
             _bulkDurationHistogram.Record(stopwatch.ElapsedMilliseconds);
             activity?.SetTag("es.bulk.success", 1);
-            _logger.LogInformation("[ES-Bulk] traceId:{traceId} spanId:{spanId} success", activity?.TraceId, activity?.SpanId);
+            _logger.LogInformation("[ES-Bulk] traceId:{traceId} spanId:{spanId} success", activity?.TraceId,
+                activity?.SpanId);
         }
         catch (Exception ex)
         {
@@ -85,7 +98,8 @@ public class MetricsElasticIndexingService : IIndexingService
             _bulkFailCounter.Add(1);
             activity?.SetTag("exception", true);
             activity?.SetTag("exception.message", ex.Message);
-            _logger.LogError(ex, "[ES-Bulk-Error] traceId:{traceId} spanId:{spanId}", activity?.TraceId, activity?.SpanId);
+            _logger.LogError(ex, "[ES-Bulk-Error] traceId:{traceId} spanId:{spanId}", activity?.TraceId,
+                activity?.SpanId);
             throw;
         }
         finally
@@ -105,7 +119,8 @@ public class MetricsElasticIndexingService : IIndexingService
             _checkOrCreateDurationHistogram.Record(stopwatch.Elapsed.TotalMilliseconds);
             _checkOrCreateSuccessCounter.Add(1);
             activity?.SetTag("es.check_create.success", 1);
-            _logger.LogInformation("[ES-CheckOrCreate] traceId:{traceId} spanId:{spanId} success", activity?.TraceId, activity?.SpanId);
+            _logger.LogInformation("[ES-CheckOrCreate] traceId:{traceId} spanId:{spanId} success", activity?.TraceId,
+                activity?.SpanId);
         }
         catch (Exception ex)
         {
@@ -114,7 +129,8 @@ public class MetricsElasticIndexingService : IIndexingService
             _checkOrCreateFailCounter.Add(1);
             activity?.SetTag("exception", true);
             activity?.SetTag("exception.message", ex.Message);
-            _logger.LogError(ex, "[ES-CheckOrCreate-Error] traceId:{traceId} spanId:{spanId}", activity?.TraceId, activity?.SpanId);
+            _logger.LogError(ex, "[ES-CheckOrCreate-Error] traceId:{traceId} spanId:{spanId}", activity?.TraceId,
+                activity?.SpanId);
             throw;
         }
         finally
@@ -123,7 +139,8 @@ public class MetricsElasticIndexingService : IIndexingService
         }
     }
 
-    public async Task<string> GetStateIndexDocumentsAsync(string stateName, Action<QueryDescriptor<dynamic>> query, int skip = 0, int limit = 1000)
+    public async Task<string> GetStateIndexDocumentsAsync(string stateName, Action<QueryDescriptor<dynamic>> query,
+        int skip = 0, int limit = 1000)
     {
         using var activity = _activitySource.StartActivity("GetStateIndexDocumentsAsync", ActivityKind.Client);
         var stopwatch = Stopwatch.StartNew();
@@ -134,7 +151,8 @@ public class MetricsElasticIndexingService : IIndexingService
             _getDocumentsDurationHistogram.Record(stopwatch.Elapsed.TotalMilliseconds);
             _getDocumentsSuccessCounter.Add(1);
             activity?.SetTag("es.get_documents.success", 1);
-            _logger.LogInformation("[ES-GetDocs] traceId:{traceId} spanId:{spanId} success", activity?.TraceId, activity?.SpanId);
+            _logger.LogInformation("[ES-GetDocs] traceId:{traceId} spanId:{spanId} success", activity?.TraceId,
+                activity?.SpanId);
             return result;
         }
         catch (Exception ex)
@@ -144,7 +162,8 @@ public class MetricsElasticIndexingService : IIndexingService
             _getDocumentsFailCounter.Add(1);
             activity?.SetTag("exception", true);
             activity?.SetTag("exception.message", ex.Message);
-            _logger.LogError(ex, "[ES-GetDocs-Error] traceId:{traceId} spanId:{spanId}", activity?.TraceId, activity?.SpanId);
+            _logger.LogError(ex, "[ES-GetDocs-Error] traceId:{traceId} spanId:{spanId}", activity?.TraceId,
+                activity?.SpanId);
             throw;
         }
         finally
@@ -164,7 +183,8 @@ public class MetricsElasticIndexingService : IIndexingService
             _queryLuceneDurationHistogram.Record(stopwatch.Elapsed.TotalMilliseconds);
             _queryLuceneSuccessCounter.Add(1);
             activity?.SetTag("es.query_lucene.success", 1);
-            _logger.LogInformation("[ES-LuceneQuery] traceId:{traceId} spanId:{spanId} success", activity?.TraceId, activity?.SpanId);
+            _logger.LogInformation("[ES-LuceneQuery] traceId:{traceId} spanId:{spanId} success", activity?.TraceId,
+                activity?.SpanId);
             return result;
         }
         catch (Exception ex)
@@ -174,7 +194,8 @@ public class MetricsElasticIndexingService : IIndexingService
             _queryLuceneFailCounter.Add(1);
             activity?.SetTag("exception", true);
             activity?.SetTag("exception.message", ex.Message);
-            _logger.LogError(ex, "[ES-LuceneQuery-Error] traceId:{traceId} spanId:{spanId}", activity?.TraceId, activity?.SpanId);
+            _logger.LogError(ex, "[ES-LuceneQuery-Error] traceId:{traceId} spanId:{spanId}", activity?.TraceId,
+                activity?.SpanId);
             throw;
         }
         finally
@@ -182,4 +203,4 @@ public class MetricsElasticIndexingService : IIndexingService
             activity?.SetTag("es.query_lucene.elapsedMs", stopwatch.ElapsedMilliseconds);
         }
     }
-} 
+}
