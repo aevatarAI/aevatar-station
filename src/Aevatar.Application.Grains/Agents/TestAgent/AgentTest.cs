@@ -107,6 +107,9 @@ public class FrontInitConfig : ConfigurationBase
 
     [Id(4)] public string Memo { get; set; }
     
+    [Id(5)] public bool IsDelete { get; set; }
+
+    [Id(6)] public School School { get; set; }
 }
 
 [GenerateSerializer]
