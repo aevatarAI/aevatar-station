@@ -251,7 +251,9 @@ public class AgentService : ApplicationService, IAgentService
             AgentType = dto.AgentType,
             Name = dto.Name,
             GrainId = businessAgent.GetGrainId(),
-            Properties = dto.Properties,
+            Properties = agentData.Properties.IsNullOrWhiteSpace()
+                ? null
+                : JsonConvert.DeserializeObject<Dictionary<string, object>>(agentData.Properties),
             AgentGuid = businessAgent.GetPrimaryKey(),
             BusinessAgentGrainId = businessAgent.GetGrainId().ToString()
         };
@@ -339,6 +341,7 @@ public class AgentService : ApplicationService, IAgentService
 
         var businessAgent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
 
+        string properties = null;
         if (!dto.Properties.IsNullOrEmpty())
         {
             var updatedParam = JsonConvert.SerializeObject(dto.Properties);
@@ -347,10 +350,15 @@ public class AgentService : ApplicationService, IAgentService
             {
                 var config = SetupConfigurationData(configuration, updatedParam);
                 await businessAgent.ConfigAsync(config);
+                properties = JsonConvert.SerializeObject(config, new JsonSerializerSettings
+                {
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                    ContractResolver = new CamelCasePropertyNamesContractResolver()
+                });
                 await creatorAgent.UpdateAgentAsync(new UpdateAgentInput
                 {
                     Name = dto.Name,
-                    Properties = JsonConvert.SerializeObject(dto.Properties)
+                    Properties = properties
                 });
             }
             else
@@ -365,7 +373,9 @@ public class AgentService : ApplicationService, IAgentService
             AgentType = agentState.AgentType,
             Name = dto.Name,
             GrainId = agentState.BusinessAgentGrainId,
-            Properties = dto.Properties,
+            Properties = properties.IsNullOrWhiteSpace()
+                ? null
+                : JsonConvert.DeserializeObject<Dictionary<string, object>>(properties),
             BusinessAgentGrainId = agentState.BusinessAgentGrainId.ToString()
         };
 
