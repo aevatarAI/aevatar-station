@@ -2,7 +2,8 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-
+using System.Text.Json;
+using System.IO;
 
 using Orleans;
 using Orleans.Configuration;
@@ -11,6 +12,11 @@ using Orleans.Providers.MongoDB.Configuration;
 using Orleans.Streams.Kafka.Config;
 using E2E.Grains;
 using System.Diagnostics;
+using VerifyDbIssue545;
+
+// Parse command line arguments
+bool useStoredIds = args.Length > 0 && args[0].ToLower() == "--use-stored-ids";
+Console.WriteLine($"Using stored agent IDs: {useStoredIds}");
 
 IHostBuilder builder = Host.CreateDefaultBuilder(args)
     .UseOrleansClient(client =>
@@ -29,8 +35,8 @@ IHostBuilder builder = Host.CreateDefaultBuilder(args)
                 options.ClusterId = "AevatarSiloCluster";
                 options.ServiceId = "AevatarBasicService";
             })
-            .AddActivityPropagation();
-        client.UseLocalhostClustering(gatewayPort: 20001)
+            .AddActivityPropagation()
+            // client.UseLocalhostClustering(gatewayPort: 20001)
             // .AddMemoryStreams(AevatarCoreConstants.StreamProvider);
             .AddKafka("Aevatar")
             .WithOptions(options =>
@@ -61,51 +67,165 @@ using IHost host = builder.Build();
 await host.StartAsync();
 
 var client = host.Services.GetRequiredService<IClusterClient>();
-const int subscriberCount = 0;
+const int subscriberCount = 12000;
+var agentIdsFilePath = Path.Combine(Directory.GetCurrentDirectory(), "agent_ids.json");
+
+// Function to save agent IDs to JSON file
+async Task SaveAgentIdsAsync(AgentIds agentIds)
+{
+    try
+    {
+        var options = new JsonSerializerOptions { WriteIndented = true };
+        string jsonString = JsonSerializer.Serialize(agentIds, options);
+        await File.WriteAllTextAsync(agentIdsFilePath, jsonString);
+        Console.WriteLine($"Agent IDs saved to {agentIdsFilePath}");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error saving agent IDs: {ex.Message}");
+    }
+}
+
+// Function to load agent IDs from JSON file
+async Task<AgentIds> LoadAgentIdsAsync()
+{
+    try
+    {
+        if (!File.Exists(agentIdsFilePath))
+        {
+            Console.WriteLine($"No agent IDs file found at {agentIdsFilePath}");
+            return new AgentIds();
+        }
+
+        string jsonString = await File.ReadAllTextAsync(agentIdsFilePath);
+        var agentIds = JsonSerializer.Deserialize<AgentIds>(jsonString);
+        if (agentIds == null)
+        {
+            Console.WriteLine("Failed to deserialize agent IDs, creating new ones");
+            return new AgentIds();
+        }
+        Console.WriteLine($"Loaded {agentIds.SubAgentIds.Count} sub-agent IDs and pub-agent ID from {agentIdsFilePath}");
+        return agentIds;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error loading agent IDs: {ex.Message}");
+        return new AgentIds();
+    }
+}
 
 var sw = new Stopwatch();
 sw.Start();
 // Create a new grain instance for the sub-agent
 var subAgents = new List<ITestDbGAgent>();
-for (var i = 0; i < subscriberCount; ++i)
+var agentIds = new AgentIds();
+
+// Create a dictionary to store initial counts for each agent
+var initialCounts = new Dictionary<int, int>();
+
+// Load existing IDs or create new ones
+if (useStoredIds && File.Exists(agentIdsFilePath))
 {
-    var sws = new Stopwatch();
-    var subAgentId = Guid.NewGuid();
-    //0693d7631939428ab6910fe4a0e77bed working
-    //6a963e2daf8a443a9b793a89d3a48670 not working
-    //  var subAgentId = Guid.Parse("abd8518a9c134fae9694d182fa327944");
-    Console.WriteLine("subAgent Guid: {0}", subAgentId.ToString("N"));
-    var subAgent = client.GetGrain<ITestDbGAgent>(subAgentId);
-    // Console.WriteLine("subAgent count: {0}", await subAgent.GetCount());
+    agentIds = await LoadAgentIdsAsync();
+    Console.WriteLine($"Found {agentIds.SubAgentIds.Count} stored sub-agent IDs");
     
-    sws.Start();
-    await subAgent.ActivateAsync();
-    sws.Stop();
-    Console.WriteLine("Time taken to create agent-{0}: {1} ms", i, sws.ElapsedMilliseconds);
-    subAgents.Add(subAgent);
+    // Create agents with stored IDs
+    for (var i = 0; i < Math.Min(subscriberCount, agentIds.SubAgentIds.Count); ++i)
+    {
+        var sws = new Stopwatch();
+        var subAgentId = Guid.Parse(agentIds.SubAgentIds[i]);
+        // var subAgentId = Guid.Parse("df22c65b73fe41259082f98bce405e54");
+
+        Console.WriteLine($"Using stored subAgent-{i}: {subAgentId.ToString("N")}");
+        var subAgent = client.GetGrain<ITestDbGAgent>(subAgentId);
+        
+        sws.Start();
+        await subAgent.ActivateAsync();
+        // Store the initial count for this agent
+        initialCounts[i] = await subAgent.GetCount();
+        sws.Stop();
+        Console.WriteLine($"Time taken to activate agent-{i}: {sws.ElapsedMilliseconds} ms, initial count: {initialCounts[i]}");
+        subAgents.Add(subAgent);
+    }
+    
+    // If we need more agents than were stored
+    if (subscriberCount > agentIds.SubAgentIds.Count)
+    {
+        Console.WriteLine($"Need to create {subscriberCount - agentIds.SubAgentIds.Count} additional sub-agents");
+        for (var i = agentIds.SubAgentIds.Count; i < subscriberCount; ++i)
+        {
+            var sws = new Stopwatch();
+            var subAgentId = Guid.NewGuid();
+            agentIds.SubAgentIds.Add(subAgentId.ToString());
+            Console.WriteLine($"Created new subAgent-{i}: {subAgentId.ToString("N")}");
+            var subAgent = client.GetGrain<ITestDbGAgent>(subAgentId);
+            
+            sws.Start();
+            await subAgent.ActivateAsync();
+            // Store the initial count for this agent
+            initialCounts[i] = await subAgent.GetCount();
+            sws.Stop();
+            Console.WriteLine($"Time taken to activate agent-{i}: {sws.ElapsedMilliseconds} ms, initial count: {initialCounts[i]}");
+            subAgents.Add(subAgent);
+        }
+    }
 }
+else
+{
+    // Create new agents with new IDs
+    Console.WriteLine($"Creating {subscriberCount} new sub-agents");
+    agentIds = new AgentIds();
+    for (var i = 0; i < subscriberCount; ++i)
+    {
+        var sws = new Stopwatch();
+        var subAgentId = Guid.NewGuid();
+        agentIds.SubAgentIds.Add(subAgentId.ToString());
+        Console.WriteLine($"Created new subAgent-{i}: {subAgentId.ToString("N")}");
+        var subAgent = client.GetGrain<ITestDbGAgent>(subAgentId);
+        
+        sws.Start();
+        await subAgent.ActivateAsync();
+        // Store the initial count for this agent
+        initialCounts[i] = await subAgent.GetCount();
+        sws.Stop();
+        Console.WriteLine($"Time taken to activate agent-{i}: {sws.ElapsedMilliseconds} ms, initial count: {initialCounts[i]}");
+        subAgents.Add(subAgent);
+    }
+}
+
 sw.Stop();
 Console.WriteLine("Time taken to create {0} sub-agents: {1} ms", subscriberCount, sw.ElapsedMilliseconds);
-// Create a new grain instance for the publisher agent
-// var pubAgentId = Guid.NewGuid();
-//subagent bc8aeb04bb0043008b49e5caf4d86fe7
-var pubAgentId = Guid.Parse("48733802aa084964bccb978f720c0486");
+
+// Get or create publisher agent ID
+Guid pubAgentId;
+if (useStoredIds && !string.IsNullOrEmpty(agentIds.PubAgentId))
+{
+    pubAgentId = Guid.Parse(agentIds.PubAgentId);
+    Console.WriteLine($"Using stored pubAgent: {pubAgentId.ToString("N")} from {agentIdsFilePath}");
+}
+else
+{
+    pubAgentId = Guid.NewGuid();
+    agentIds.PubAgentId = pubAgentId.ToString();
+    Console.WriteLine($"Created new pubAgent: {pubAgentId.ToString("N")} and will save to {agentIdsFilePath}");
+}
+
+// Save all IDs to the JSON file
+await SaveAgentIdsAsync(agentIds);
 
 var pubAgent = client.GetGrain<ITestDbScheduleGAgent>(pubAgentId);
 
-Console.WriteLine("pubAgent: {0}", pubAgentId.ToString("N"));
-if (subscriberCount > 0)
-{
-    Console.WriteLine("subAgent-{0} Count {1}", subscriberCount, await subAgents[subscriberCount - 1].GetCount());
-}
+// Define the event number
+int eventNumber = 100;
 
 var TestDbEvent = new TestDbEvent
 {
-    Number = 100,
+    Number = eventNumber, // Using the defined variable
     CorrelationId = Guid.NewGuid(),
     PublisherGrainId = pubAgent.GetGrainId(),
 };
 
+Console.WriteLine($"Broadcasting event with Number = {eventNumber}");
 await pubAgent.BroadCastEventAsync("TestDbScheduleGAgent", TestDbEvent);
 
 // Wait for the event to be processed
@@ -114,43 +234,43 @@ await Task.Delay(1000);
 var count = 0;
 for (var i = 0; i < subscriberCount; ++i)
 {
-    if (await subAgents[i].GetCount() != 100)
+    int currentCount = await subAgents[i].GetCount();
+    int expectedCount = initialCounts[i] + eventNumber;
+    
+    if (currentCount != expectedCount)
     {
-        Console.WriteLine("subAgent-{0} Count {1}", i, await subAgents[i].GetCount());
+        Console.WriteLine($"subAgent-{i} Count: {currentCount}, Expected: {expectedCount} (Initial: {initialCounts[i]} + Event: {eventNumber})");
         count++;
     }
 }
 
 if (count > 0)
 {
-    Console.WriteLine("Total missing is {0}", count);
+    Console.WriteLine($"Total agents with incorrect counts: {count}");
+}
+else
+{
+    Console.WriteLine($"All {subscriberCount} agents received the correct count increment of {eventNumber}");
 }
 
 if (subscriberCount > 0)
 {
-    Console.WriteLine("subAgent-{0} Count {1}", subscriberCount, await subAgents[subscriberCount - 1].GetCount());
+    int lastAgentIndex = subscriberCount - 1;
+    int finalCount = await subAgents[lastAgentIndex].GetCount();
+    int expectedFinalCount = initialCounts[lastAgentIndex] + eventNumber;
+    Console.WriteLine($"Last subAgent-{lastAgentIndex} Count: {finalCount}, Expected: {expectedFinalCount} (Initial: {initialCounts[lastAgentIndex]} + Event: {eventNumber})");
 }
 
-// await pubAgent.BroadCastEventAsync("TestDbScheduleGAgent", TestDbEvent);
-
-// Wait for the event to be processed
-// await Task.Delay(1000);
-
-// count = 0;
-// for (var i = 0; i < subscriberCount; ++i)
-// {
-//     if (await subAgents[i].GetCount() != 200)
-//     {
-//        count++;
-//     }
-// }
-
-// if (count > 0)
-// {
-//     Console.WriteLine("Total missing is {0}", count);
-// }
-
-// Console.WriteLine("pubAgent: {0} subAgent-{1} Count {2}, subAgent-{3} Count {4}",pubAgentId.ToString("N"),  subscriberCount-2,await subAgents[subscriberCount-2].GetCount(), subscriberCount-1,await subAgents[subscriberCount-1].GetCount());
+// Add summary
+if (useStoredIds && File.Exists(agentIdsFilePath))
+{
+    Console.WriteLine($"Test completed using stored agent IDs from {agentIdsFilePath}");
+}
+else
+{
+    Console.WriteLine($"Test completed using newly generated agent IDs, saved to {agentIdsFilePath}");
+}
+Console.WriteLine($"Run with --use-stored-ids to reuse the same agent IDs in future tests");
 
 Console.WriteLine("Press any key to exit...");
 
