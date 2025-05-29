@@ -7,10 +7,10 @@
     <AevatarGAgentVerion>1.4.16</AevatarGAgentVerion>
   </PropertyGroup>
   <ItemGroup>
-
-    <PackageVersion Include="GodGPT.GAgents" Version="1.0.7-alpha-role-1" />
+      
+    <PackageVersion Include="GodGPT.GAgents" Version="1.0.7-alpha-role-2" />
     <PackageVersion Include="Stripe.net" Version="48.1.0"/>
-    <PackageVersion Include="GodGPT.Webhook" Version="1.0.7-alpha-role-1" />
+    <PackageVersion Include="GodGPT.Webhook" Version="1.0.7-alpha-role-2" />
     
     <!-- AElf packages -->
     <PackageVersion Include="AElf.Client" Version="1.1.0" />
