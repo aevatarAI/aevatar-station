@@ -1,4 +1,5 @@
-﻿using Aevatar.Core.Abstractions;
+﻿using Aevatar.Application.Grains.Common.Options;
+using Aevatar.Core.Abstractions;
 using Aevatar.Developer.Logger;
 using Localization.Resources.AbpUi;
 using Aevatar.Localization;
@@ -20,7 +21,8 @@ namespace Aevatar;
     typeof(AbpIdentityHttpApiModule),
     typeof(AbpPermissionManagementHttpApiModule),
     typeof(AevatarDeveloperLoggerModule),
-    typeof(AbpAspNetCoreSignalRModule)
+    typeof(AbpAspNetCoreSignalRModule),
+    typeof(AevatarGodGPTModule)
     )]
 public class AevatarHttpApiModule : AbpModule
 {
@@ -30,6 +32,7 @@ public class AevatarHttpApiModule : AbpModule
 
         var configuration = context.Services.GetConfiguration();
         Configure<AevatarOptions>(configuration.GetSection("Aevatar"));
+        Configure<StripeOptions>(configuration.GetSection("Stripe"));
     }
 
     private void ConfigureLocalization()

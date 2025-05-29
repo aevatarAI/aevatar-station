@@ -12,6 +12,7 @@
         <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj" />
         <ProjectReference Include="..\Aevatar.Application\Aevatar.Application.csproj" />
         <ProjectReference Include="..\Aevatar.Developer.Logger\Aevatar.Developer.Logger.csproj" />
+        <ProjectReference Include="..\Aevatar.GodGPT\Aevatar.GodGPT.csproj" />
     </ItemGroup>
 
     <ItemGroup>
