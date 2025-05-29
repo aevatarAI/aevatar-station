@@ -126,7 +126,7 @@
     <PackageVersion Include="Microsoft.Orleans.EventSourcing" Version="$(OrleansVerion)" />
     <PackageVersion Include="Microsoft.Orleans.Hosting" Version="$(OrleansVerion)" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(OrleansVerion)" />
-    <PackageVersion Include="Orleans.Streams.Kafka" Version="8.0.2" />
+    <PackageVersion Include="Orleans.Streams.Kafka" Version="8.0.3-thread.1" />
     <PackageVersion Include="Microsoft.Orleans.Reminders" Version="$(OrleansVerion)" />
     <PackageVersion Include="Microsoft.Orleans.Runtime" Version="$(OrleansVerion)" />
     <PackageVersion Include="Microsoft.Orleans.Sdk" Version="$(OrleansVerion)" />
