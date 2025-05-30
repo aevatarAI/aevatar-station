@@ -12,7 +12,7 @@ public abstract class AevatarSyncWorker<TRequest, TResponse> : SyncWorker<TReque
     where TResponse : EventBase
 {
     private readonly ILogger<AevatarSyncWorker<TRequest, TResponse>> _logger;
-    private IAsyncStream<EventWrapperBase> _asyncStream;
+    private IAsyncStream<EventWrapperBase>? _asyncStream;
 
     public AevatarSyncWorker(ILogger<AevatarSyncWorker<TRequest, TResponse>> logger,
         LimitedConcurrencyLevelTaskScheduler limitedConcurrencyScheduler) : base(
@@ -29,7 +29,10 @@ public abstract class AevatarSyncWorker<TRequest, TResponse> : SyncWorker<TReque
         {
             var response = await PerformLongRunTask(request);
             _logger.LogInformation($"Performed long run task for request of type {typeof(TRequest).FullName}, response is {response}");
-            await _asyncStream.OnNextAsync(new EventWrapper<TResponse>(response, Guid.NewGuid(), this.GetGrainId()));
+            if (_asyncStream != null)
+            {
+                await _asyncStream.OnNextAsync(new EventWrapper<TResponse>(response, Guid.NewGuid(), this.GetGrainId()));
+            }
             return response;
         }
         catch (Exception ex)

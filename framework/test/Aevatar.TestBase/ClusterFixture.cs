@@ -2,7 +2,6 @@ using System.Collections.Immutable;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Core.Abstractions.Extensions;
-using Aevatar.Core.Tests;
 using Aevatar.Extensions;
 using Aevatar.PermissionManagement.Extensions;
 using Aevatar.Plugins;
@@ -25,7 +24,7 @@ namespace Aevatar.TestBase;
 
 public class ClusterFixture : IDisposable, ISingletonDependency
 {
-    public static MockLoggerProvider LoggerProvider { get; set; }
+    public static MockLoggerProvider? LoggerProvider { get; set; }
 
     public ClusterFixture()
     {
@@ -106,7 +105,7 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                         }
                     }
                     services.AddSingleton(grainTypeMap);
-                    services.AddSingleton<IStateProjector, TestStateProjector>();
+                    services.AddSingleton<IStateProjector>(provider => new SimpleTestStateProjector());
                     services.AddSingleton<IStateDispatcher, StateDispatcher>();
                     
                     services.Configure<PluginGAgentLoadOptions>(services.GetConfiguration().GetSection("Plugins"));
@@ -127,12 +126,29 @@ public class ClusterFixture : IDisposable, ISingletonDependency
 
     public class MapperAccessor : IMapperAccessor
     {
-        public IMapper Mapper { get; set; }
+        private IMapper? _mapper;
+        
+        public IMapper? Mapper 
+        { 
+            get => _mapper; 
+            set => _mapper = value; 
+        }
+        
+        IMapper IMapperAccessor.Mapper => _mapper ?? throw new InvalidOperationException("Mapper is not initialized");
     }
 
     private class TestClientBuilderConfigurator : IClientBuilderConfigurator
     {
         public void Configure(IConfiguration configuration, IClientBuilder clientBuilder) => clientBuilder
             .AddMemoryStreams("Aevatar");
+    }
+}
+
+public class SimpleTestStateProjector : IStateProjector
+{
+    public Task ProjectAsync<T>(T state) where T : StateWrapperBase
+    {
+        // Simple test implementation that does nothing
+        return Task.CompletedTask;
     }
 }
