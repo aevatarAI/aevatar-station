@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Moq;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
@@ -28,6 +29,7 @@ public abstract class GithubGrantHandlerTests<TStartupModule> : AevatarAuthServe
     private readonly IdentityUserManager _identityUserManager;
     private readonly IdentityRoleManager _identityRoleManager;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
+    private readonly ILogger<GithubGrantHandler> _logger;
 
     protected GithubGrantHandlerTests()
     {
@@ -35,8 +37,8 @@ public abstract class GithubGrantHandlerTests<TStartupModule> : AevatarAuthServe
         _serviceProvider = GetRequiredService<IServiceProvider>();
         _identityRoleManager = GetRequiredService<IdentityRoleManager>();
         _userRepository = GetRequiredService<IRepository<IdentityUser, Guid>>();
+        _logger = GetRequiredService<ILogger<GithubGrantHandler>>();
     }
-
 
     [Fact]
     public async Task Handle_Success_Test()
@@ -49,7 +51,7 @@ public abstract class GithubGrantHandlerTests<TStartupModule> : AevatarAuthServe
         };
         githubProvider.Setup(o => o.GetUserInfoAsync(It.IsAny<string>())).ReturnsAsync(githubUser);
 
-        var handler = new GithubGrantHandler(githubProvider.Object);
+        var handler = new GithubGrantHandler(githubProvider.Object, _logger);
         
         var httpContext = new DefaultHttpContext
         {
@@ -83,7 +85,7 @@ public abstract class GithubGrantHandlerTests<TStartupModule> : AevatarAuthServe
         };
         githubProvider.Setup(o => o.GetUserInfoAsync(It.IsAny<string>())).ReturnsAsync(githubUser);
 
-        var handler = new GithubGrantHandler(githubProvider.Object);
+        var handler = new GithubGrantHandler(githubProvider.Object, _logger);
 
         var httpContext = new DefaultHttpContext
         {
@@ -106,7 +108,7 @@ public abstract class GithubGrantHandlerTests<TStartupModule> : AevatarAuthServe
         var githubProvider = new Mock<IGithubProvider>();
         githubProvider.Setup(o => o.GetUserInfoAsync(It.IsAny<string>())).ReturnsAsync((GithubUser)null);
 
-        var handler = new GithubGrantHandler(githubProvider.Object);
+        var handler = new GithubGrantHandler(githubProvider.Object, _logger);
 
         var httpContext = new DefaultHttpContext
         {

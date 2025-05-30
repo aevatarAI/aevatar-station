@@ -21,14 +21,15 @@ namespace Aevatar.AuthServer.Grants;
 
 public class GoogleGrantHandler : ITokenExtensionGrant
 {
-    public ILogger<GoogleGrantHandler> Logger { get; set; }
+    private readonly ILogger<GoogleGrantHandler> _logger;
     private readonly IGoogleProvider _googleProvider;
 
     public string Name => GrantTypeConstants.GOOGLE;
     
-    public GoogleGrantHandler(IGoogleProvider googleProvider)
+    public GoogleGrantHandler(IGoogleProvider googleProvider, ILogger<GoogleGrantHandler> logger)
     {
         _googleProvider = googleProvider;
+        _logger = logger;
     }
 
     public async Task<IActionResult> HandleAsync(ExtensionGrantContext context)
@@ -36,7 +37,7 @@ public class GoogleGrantHandler : ITokenExtensionGrant
         var idToken = context.Request.GetParameter("id_token").ToString();
         var source = context.Request.GetParameter("source")?.ToString();
         
-        Logger.LogDebug("GoogleGrantHandler.HandleAsync source: {source} idToken: {idToken}", source, idToken);
+        _logger.LogDebug("GoogleGrantHandler.HandleAsync source: {source} idToken: {idToken}", source, idToken);
         if (string.IsNullOrEmpty(idToken))
         {
             return new ForbidResult(
@@ -53,7 +54,7 @@ public class GoogleGrantHandler : ITokenExtensionGrant
         var clientId = await _googleProvider.GetClientIdAsync(source);
         if (string.IsNullOrEmpty(clientId))
         {
-            Logger.LogDebug("GoogleGrantHandler.HandleAsync: clientId not found");
+            _logger.LogDebug("GoogleGrantHandler.HandleAsync: clientId not found");
             return new ForbidResult(
                 OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                 new AuthenticationProperties(new Dictionary<string, string?>
@@ -67,10 +68,10 @@ public class GoogleGrantHandler : ITokenExtensionGrant
             );
         }
         
-        Logger.LogDebug("GoogleGrantHandler.HandleAsync: clientId: {clientId}", clientId);
+        _logger.LogDebug("GoogleGrantHandler.HandleAsync: clientId: {clientId}", clientId);
         
         var payload = await _googleProvider.ValidateGoogleTokenAsync(idToken, clientId);
-        Logger.LogDebug("GoogleGrantHandler.HandleAsync: payload: {payload}", payload);
+        _logger.LogDebug("GoogleGrantHandler.HandleAsync: payload: {payload}", payload);
         
         if (payload == null)
         {
@@ -86,7 +87,7 @@ public class GoogleGrantHandler : ITokenExtensionGrant
         }
         
         var email = payload.Email;
-        Logger.LogDebug("GoogleGrantHandler.HandleAsync: email: {email}", email);
+        _logger.LogDebug("GoogleGrantHandler.HandleAsync: email: {email}", email);
         var userManager = context.HttpContext.RequestServices.GetRequiredService<IdentityUserManager>();
 
         var user = await userManager.FindByLoginAsync(GrantTypeConstants.GOOGLE, payload.Subject);

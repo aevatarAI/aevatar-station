@@ -22,14 +22,15 @@ namespace Aevatar.AuthServer.Grants;
 
 public class GithubGrantHandler : ITokenExtensionGrant
 {
-    public ILogger<GithubGrantHandler> Logger { get; set; }
+    private readonly ILogger<GithubGrantHandler> _logger;
     private readonly IGithubProvider _githubProvider;
 
     public string Name => GrantTypeConstants.Github;
     
-    public GithubGrantHandler(IGithubProvider githubProvider)
+    public GithubGrantHandler(IGithubProvider githubProvider, ILogger<GithubGrantHandler> logger)
     {
         _githubProvider = githubProvider;
+        _logger = logger;
     }
 
     public async Task<IActionResult> HandleAsync(ExtensionGrantContext context)
@@ -96,7 +97,7 @@ public class GithubGrantHandler : ITokenExtensionGrant
         
         if (!createResult.Succeeded)
         {
-            Logger.LogError("User creation failed: {Errors}", 
+            _logger.LogError("User creation failed: {Errors}", 
                 string.Join(", ", createResult.Errors.Select(e => e.Description)));
             return null;
         }

@@ -38,13 +38,17 @@ public class AevatarAuthServerGrantsModule : AbpModule
             .Configure<IServiceProvider>((options, serviceProvider) =>
             {
                 options.Grants.Add(GrantTypeConstants.SIGNATURE,
-                    new SignatureGrantHandler(context.Services.GetRequiredService<IWalletLoginProvider>()));
+                    new SignatureGrantHandler(context.Services.GetRequiredService<IWalletLoginProvider>(),
+                        context.Services.GetRequiredService<ILogger<SignatureGrantHandler>>()));
                 options.Grants.Add(GrantTypeConstants.GOOGLE, 
-                    new GoogleGrantHandler(context.Services.GetRequiredService<IGoogleProvider>()));
+                    new GoogleGrantHandler(context.Services.GetRequiredService<IGoogleProvider>(),
+                        context.Services.GetRequiredService<ILogger<GoogleGrantHandler>>()));
                 options.Grants.Add(GrantTypeConstants.APPLE, 
-                    new AppleGrantHandler(context.Services.GetRequiredService<IAppleProvider>()));
+                    new AppleGrantHandler(context.Services.GetRequiredService<IAppleProvider>(),
+                        context.Services.GetRequiredService<ILogger<AppleGrantHandler>>()));
                 options.Grants.Add(GrantTypeConstants.Github, 
-                    new GithubGrantHandler(context.Services.GetRequiredService<IGithubProvider>()));
+                    new GithubGrantHandler(context.Services.GetRequiredService<IGithubProvider>(),
+                        context.Services.GetRequiredService<ILogger<GithubGrantHandler>>()));
             });
     }
 

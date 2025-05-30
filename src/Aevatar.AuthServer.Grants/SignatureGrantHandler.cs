@@ -18,14 +18,15 @@ namespace Aevatar.AuthServer.Grants;
 
 public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
 {
-    public ILogger<SignatureGrantHandler> Logger { get; set; }
+    private readonly ILogger<SignatureGrantHandler> _logger;
     private IWalletLoginProvider _walletLoginProvider;
 
     public string Name { get; } = GrantTypeConstants.SIGNATURE;
 
-    public SignatureGrantHandler(IWalletLoginProvider walletLoginProvider)
+    public SignatureGrantHandler(IWalletLoginProvider walletLoginProvider, ILogger<SignatureGrantHandler> logger)
     {
         _walletLoginProvider = walletLoginProvider;
+        _logger = logger;
     }
 
     public async Task<IActionResult> HandleAsync(ExtensionGrantContext context)
@@ -62,7 +63,7 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "[SignatureGrantHandler] Signature validation failed");
+            _logger.LogError(e, "[SignatureGrantHandler] Signature validation failed");
             throw;
         }
 

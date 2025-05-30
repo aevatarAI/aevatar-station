@@ -29,14 +29,15 @@ namespace Aevatar.AuthServer.Grants;
 
 public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
 {
-    public ILogger<AppleGrantHandler> Logger { get; set; }
+    private readonly ILogger<AppleGrantHandler> _logger;
     private readonly IAppleProvider _appleProvider;
 
     public string Name => GrantTypeConstants.APPLE;
 
-    public AppleGrantHandler(IAppleProvider appleProvider)
+    public AppleGrantHandler(IAppleProvider appleProvider, ILogger<AppleGrantHandler> logger)
     {
         _appleProvider = appleProvider;
+        _logger = logger;
     }
 
     public async Task<IActionResult> HandleAsync(ExtensionGrantContext context)
@@ -47,14 +48,14 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
             var idToken = context.Request.GetParameter("id_token")?.ToString();
             var source = context.Request.GetParameter("source")?.ToString();
             
-            Logger.LogDebug("AppleGrantHandler.HandleAsync source: {source} idToken: {idToken} code: {code}", 
+            _logger.LogDebug("AppleGrantHandler.HandleAsync source: {source} idToken: {idToken} code: {code}", 
                 source, idToken, code);
             
             if (string.IsNullOrEmpty(idToken))
             {
                 if (string.IsNullOrEmpty(code))
                 {
-                    Logger.LogDebug("Missing both id_token and code");
+                    _logger.LogDebug("Missing both id_token and code");
                     return ErrorResult("Missing both id_token and code");
                 }
                 
@@ -75,7 +76,7 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
             var appleUser = ExtractAppleUser(principal);
 
             var email = appleUser.Email;
-            Logger.LogDebug("AppleGrantHandler.HandleAsync: email: {email}", email);
+            _logger.LogDebug("AppleGrantHandler.HandleAsync: email: {email}", email);
             var userManager = context.HttpContext.RequestServices.GetRequiredService<IdentityUserManager>();
 
             var user = await userManager.FindByLoginAsync(GrantTypeConstants.APPLE, appleUser.SubjectId);
@@ -128,7 +129,7 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "APPLE login failed");
+            _logger.LogError(ex, "APPLE login failed");
             return ErrorResult("Internal server error");
         }
     }
