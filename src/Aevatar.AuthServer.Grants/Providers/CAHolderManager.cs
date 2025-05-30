@@ -1,4 +1,4 @@
-namespace Aevatar.Dtos;
+namespace Aevatar.AuthServer.Grants.Providers;
 
 public class CAHolderManagerInfo
 {

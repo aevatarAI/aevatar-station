@@ -1,7 +1,9 @@
 ﻿using System;
+using Aevatar.AuthServer.Grants;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.Data;
+using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
 using Volo.Abp.Uow;
 
@@ -9,7 +11,8 @@ namespace Aevatar.MongoDB;
 
 [DependsOn(
     typeof(AevatarApplicationTestModule),
-    typeof(AevatarMongoDbModule)
+    typeof(AevatarMongoDbModule),
+    typeof(AevatarAuthServerGrantsModule)
 )]
 public class AevatarMongoDbTestModule : AbpModule
 {

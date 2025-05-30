@@ -11,6 +11,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Aevatar.MongoDB\Aevatar.MongoDB.csproj" />
     <ProjectReference Include="..\Aevatar.Application.Tests\Aevatar.Application.Tests.csproj" />
+    <ProjectReference Include="..\Aevatar.AuthServer.Grants.Tests\Aevatar.AuthServer.Grants.Tests.csproj" />
   </ItemGroup>
 
   <ItemGroup>

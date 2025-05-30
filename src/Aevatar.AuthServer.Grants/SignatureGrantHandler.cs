@@ -1,9 +1,11 @@
 using System.Collections.Immutable;
+using Aevatar.AuthServer.Grants.Providers;
 using Aevatar.OpenIddict;
 using Aevatar.Permissions;
-using Aevatar.Provider;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
 using Volo.Abp;
@@ -12,14 +14,19 @@ using Volo.Abp.Identity;
 using Volo.Abp.OpenIddict;
 using Volo.Abp.OpenIddict.ExtensionGrantTypes;
 
-namespace Aevatar;
+namespace Aevatar.AuthServer.Grants;
 
 public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
 {
-    private ILogger<SignatureGrantHandler> _logger;
+    public ILogger<SignatureGrantHandler> Logger { get; set; }
     private IWalletLoginProvider _walletLoginProvider;
 
     public string Name { get; } = GrantTypeConstants.SIGNATURE;
+
+    public SignatureGrantHandler(IWalletLoginProvider walletLoginProvider)
+    {
+        _walletLoginProvider = walletLoginProvider;
+    }
 
     public async Task<IActionResult> HandleAsync(ExtensionGrantContext context)
     {
@@ -28,11 +35,7 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
         var chainId = context.Request.GetParameter("chain_id").ToString();
         var caHash = context.Request.GetParameter("ca_hash").ToString();
         var plainText = context.Request.GetParameter("plain_text").ToString();
-
-        _walletLoginProvider = context.HttpContext.RequestServices.GetRequiredService<IWalletLoginProvider>();
-        _logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<SignatureGrantHandler>>();
-
-
+        
         var errors = _walletLoginProvider.CheckParams(publicKeyVal, signatureVal, chainId, plainText);
         if (errors.Count > 0)
         {
@@ -59,8 +62,7 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
         }
         catch (Exception e)
         {
-            _logger.LogError("[SignatureGrantHandler] Signature validation failed: {e}",
-                e.Message);
+            Logger.LogError(e, "[SignatureGrantHandler] Signature validation failed");
             throw;
         }
 

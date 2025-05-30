@@ -1,4 +1,4 @@
-namespace Aevatar.Constants;
+namespace Aevatar.AuthServer.Grants.Providers;
 
 public static class AppleConstants
 {

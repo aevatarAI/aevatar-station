@@ -1,36 +1,35 @@
 using System.Collections.Immutable;
 using System.Security.Claims;
+using Aevatar.AuthServer.Grants.Providers;
 using Aevatar.OpenIddict;
 using Aevatar.Permissions;
-using Google.Apis.Auth;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Octokit;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
-using Volo.Abp;
 using Volo.Abp.Identity;
 using Volo.Abp.OpenIddict;
 using Volo.Abp.OpenIddict.ExtensionGrantTypes;
 using IdentityUser = Volo.Abp.Identity.IdentityUser;
 using SignInResult = Microsoft.AspNetCore.Mvc.SignInResult;
 
-namespace Aevatar;
+namespace Aevatar.AuthServer.Grants;
 
 public class GithubGrantHandler : ITokenExtensionGrant
 {
-    private readonly IConfiguration _configuration;
-    private readonly ILogger<GithubGrantHandler> _logger;
+    public ILogger<GithubGrantHandler> Logger { get; set; }
+    private readonly IGithubProvider _githubProvider;
 
     public string Name => GrantTypeConstants.Github;
     
-    public GithubGrantHandler(
-        IConfiguration configuration, 
-        ILogger<GithubGrantHandler> logger)
+    public GithubGrantHandler(IGithubProvider githubProvider)
     {
-        _configuration = configuration;
-        _logger = logger;
+        _githubProvider = githubProvider;
     }
 
     public async Task<IActionResult> HandleAsync(ExtensionGrantContext context)
@@ -42,7 +41,7 @@ public class GithubGrantHandler : ITokenExtensionGrant
             return ErrorResult("Missing code parameter");
         }
 
-        var githubUser = await GetUserInfoAsync(code);
+        var githubUser = await _githubProvider.GetUserInfoAsync(code);
         if (githubUser == null)
         {
             return ErrorResult("Invalid code");
@@ -97,7 +96,7 @@ public class GithubGrantHandler : ITokenExtensionGrant
         
         if (!createResult.Succeeded)
         {
-            _logger.LogError("User creation failed: {Errors}", 
+            Logger.LogError("User creation failed: {Errors}", 
                 string.Join(", ", createResult.Errors.Select(e => e.Description)));
             return null;
         }
@@ -136,48 +135,6 @@ public class GithubGrantHandler : ITokenExtensionGrant
             }));
     }
 
-
-    private async Task<GithubUser> GetUserInfoAsync(string code)
-    {
-        var clientId = _configuration["Github:ClientId"];
-        var secret = _configuration["Github:ClientSecret"];
-        
-        var client = new GitHubClient(new ProductHeaderValue("Aevatar"));
-        
-        var oauthRequest = new OauthTokenRequest(
-            clientId, 
-            secret, 
-            code
-        );
-        
-        var token = await client.Oauth.CreateAccessToken(oauthRequest);
-
-        if (token.AccessToken.IsNullOrWhiteSpace())
-        {
-            return null;
-        }
-
-        client.Credentials = new Credentials(token.AccessToken);
-
-        var user = await client.User.Current();
-        var email = user.Email;
-        if (email.IsNullOrWhiteSpace())
-        {
-            var emails = await client.User.Email.GetAll();
-            if (emails.Count > 0)
-            {
-                email = emails.FirstOrDefault(o=>o.Primary)?.Email;
-            }
-        }
-
-        return new GithubUser
-        {
-            Id = user.Id,
-            Email = email
-        };
-    }
-
-
     private async Task<IEnumerable<string>> GetResourcesAsync(ExtensionGrantContext context,
         ImmutableArray<string> scopes)
     {
@@ -195,10 +152,4 @@ public class GithubGrantHandler : ITokenExtensionGrant
 
         return resources;
     }
-}
-
-public class GithubUser
-{
-    public long Id { get; set; }
-    public string Email { get; set; }
 }

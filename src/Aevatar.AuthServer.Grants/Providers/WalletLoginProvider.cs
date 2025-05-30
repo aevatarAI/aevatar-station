@@ -4,19 +4,19 @@ using AElf.Client.Dto;
 using AElf.Client.Service;
 using AElf.Cryptography;
 using AElf.Types;
-using Aevatar.Dtos;
-using Aevatar.Options;
+using Aevatar.AuthServer.Grants.Options;
 using Aevatar.User;
 using Google.Protobuf;
 using GraphQL;
 using GraphQL.Client.Http;
 using GraphQL.Client.Serializer.Newtonsoft;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Portkey.Contracts.CA;
 using Volo.Abp;
 using Volo.Abp.DependencyInjection;
 
-namespace Aevatar.Provider;
+namespace Aevatar.AuthServer.Grants.Providers;
 
 public class WalletLoginProvider: IWalletLoginProvider, ISingletonDependency
 {
