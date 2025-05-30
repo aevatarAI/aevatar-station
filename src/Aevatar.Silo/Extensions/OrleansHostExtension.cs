@@ -10,7 +10,6 @@ using Aevatar.Extensions;
 using Aevatar.PermissionManagement.Extensions;
 using Aevatar.SignalR;
 using Aevatar.Silo.Startup;
-using E2E.Grains;
 
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
