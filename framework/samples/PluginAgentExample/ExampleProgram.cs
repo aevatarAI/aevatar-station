@@ -488,13 +488,53 @@ public class MockAgentReference : IAgentReference
                     return typedResult;
                 }
                 
-                // Try to convert the result
-                if (result != null && typeof(TResult) == typeof(string))
+                // Handle null results
+                if (result == null)
+                {
+                    if (typeof(TResult).IsValueType && Nullable.GetUnderlyingType(typeof(TResult)) == null)
+                    {
+                        return Activator.CreateInstance<TResult>();
+                    }
+                    return (TResult)(object)null!;
+                }
+                
+                // Try string conversion first
+                if (typeof(TResult) == typeof(string))
                 {
                     return (TResult)(object)result.ToString()!;
                 }
                 
-                return (TResult)Convert.ChangeType(result, typeof(TResult))!;
+                // Handle value types
+                if (typeof(TResult).IsValueType)
+                {
+                    try
+                    {
+                        return (TResult)Convert.ChangeType(result, typeof(TResult))!;
+                    }
+                    catch (InvalidCastException)
+                    {
+                        // If conversion fails, try to return default value
+                        _logger.LogWarning("Cannot convert result of type {ResultType} to {TargetType}, returning default", 
+                            result.GetType().Name, typeof(TResult).Name);
+                        return Activator.CreateInstance<TResult>();
+                    }
+                }
+                
+                // For reference types, try direct cast or return default
+                try
+                {
+                    return (TResult)result;
+                }
+                catch (InvalidCastException)
+                {
+                    _logger.LogWarning("Cannot cast result of type {ResultType} to {TargetType}, returning default", 
+                        result.GetType().Name, typeof(TResult).Name);
+                    if (typeof(TResult).IsValueType)
+                    {
+                        return Activator.CreateInstance<TResult>();
+                    }
+                    return (TResult)(object)null!;
+                }
             }
             catch (Exception ex)
             {

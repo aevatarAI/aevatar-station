@@ -14,13 +14,13 @@ namespace PluginAgentExample;
 /// </summary>
 public class ProxyGeneratorExample
 {
-    public static async Task Main(string[] args)
+    public static async Task RunExampleAsync(ILoggerFactory loggerFactory)
     {
         Console.WriteLine("🚀 Orleans Grain Proxy Generator Example");
         Console.WriteLine("=========================================");
 
         // Create host with logging and DI
-        var host = CreateHost();
+        var host = CreateHost(loggerFactory);
         var logger = host.Services.GetRequiredService<ILogger<ProxyGeneratorExample>>();
         var methodRouter = host.Services.GetRequiredService<OrleansMethodRouter>();
         var proxyGenerator = host.Services.GetRequiredService<OrleansGrainProxyGenerator>();
@@ -30,12 +30,12 @@ public class ProxyGeneratorExample
             // Create the weather service plugin
             var weatherPlugin = new WeatherServicePlugin();
             logger.LogInformation("Created weather service plugin: {PluginName} v{Version}", 
-                weatherPlugin.Name, weatherPlugin.Version);
+                weatherPlugin.GetType().Name, "1.0.0");
 
             // Demonstrate both approaches
             await DemonstrateReflectionEmitApproach(proxyGenerator, weatherPlugin, logger);
             await DemonstrateCastleDynamicProxyApproach(proxyGenerator, weatherPlugin, logger);
-            await CompareOrleansAttributeSupport(proxyGenerator, weatherPlugin, logger);
+            CompareOrleansAttributeSupport(proxyGenerator, weatherPlugin, logger);
         }
         catch (Exception ex)
         {
@@ -204,7 +204,7 @@ public class ProxyGeneratorExample
     /// <summary>
     /// Compare Orleans attribute support between both approaches
     /// </summary>
-    private static async Task CompareOrleansAttributeSupport(OrleansGrainProxyGenerator proxyGenerator, 
+    private static void CompareOrleansAttributeSupport(OrleansGrainProxyGenerator proxyGenerator, 
         WeatherServicePlugin weatherPlugin, ILogger logger)
     {
         Console.WriteLine("\n📊 === Orleans Attribute Support Comparison ===");
@@ -254,7 +254,7 @@ public class ProxyGeneratorExample
         Console.WriteLine($"| {attributeName} | {reflectionEmitStatus} | {castleProxyStatus} |");
     }
 
-    private static IHost CreateHost()
+    private static IHost CreateHost(ILoggerFactory loggerFactory)
     {
         return Host.CreateDefaultBuilder()
             .ConfigureServices(services =>
@@ -366,7 +366,7 @@ public class WeatherServicePlugin : AgentPluginBase
         await Task.CompletedTask;
     }
 
-    [AgentMethod("GetCurrentWeatherAsync")]
+    [AgentMethod("GetCurrentWeather")]
     public async Task<string> GetCurrentWeatherAsync(string location)
     {
         await Task.Delay(Random.Shared.Next(10, 50)); // Simulate API call
@@ -382,58 +382,54 @@ public class WeatherServicePlugin : AgentPluginBase
         return $"{location}: {conditions}, {temp}°C";
     }
 
-    [AgentMethod("GetTemperatureAsync", IsReadOnly = true)]
+    [AgentMethod("GetTemperature", IsReadOnly = true)]
     public async Task<decimal> GetTemperatureAsync(string location)
     {
         await Task.Delay(5); // Fast read operation
         return _temperatures.GetValueOrDefault(location, 20.0m);
     }
 
-    [AgentMethod("StartMonitoringAsync", AlwaysInterleave = true)]
+    [AgentMethod("StartMonitoring", AlwaysInterleave = true)]
     public async Task StartMonitoringAsync(string location, int intervalMinutes)
     {
-        await Task.Delay(20); // Simulate setup time
-        
-        if (!_monitoredLocations.Contains(location))
-        {
-            _monitoredLocations.Add(location);
-        }
-        
-        Logger?.LogInformation($"Started monitoring {location} every {intervalMinutes} minutes");
+        await Task.Delay(100);
+        // Simulate starting monitoring
+        Console.WriteLine($"Started monitoring {location} every {intervalMinutes} minutes");
     }
 
-    [AgentMethod("LogWeatherEventAsync", OneWay = true)]
+    [AgentMethod("LogWeatherEvent", OneWay = true)]
     public async Task LogWeatherEventAsync(string eventMessage)
     {
-        await Task.Delay(1);
-        _events.Add($"{DateTime.UtcNow:HH:mm:ss}: {eventMessage}");
-        Logger?.LogDebug($"Logged weather event: {eventMessage}");
+        await Task.Delay(10);
+        // Simulate logging
+        Console.WriteLine($"Weather Event: {eventMessage}");
     }
 
-    [AgentMethod("GetExtendedForecastAsync")]
+    [AgentMethod("GetExtendedForecast")]
     public async Task<List<string>> GetExtendedForecastAsync(string location, int days, bool includeDetails)
     {
-        await Task.Delay(30); // Simulate complex calculation
+        await Task.Delay(Random.Shared.Next(50, 150));
         
         var forecast = new List<string>();
-        var baseTemp = _temperatures.GetValueOrDefault(location, 20.0m);
-        
-        for (int i = 0; i < days; i++)
+        for (int i = 1; i <= days; i++)
         {
-            var dayTemp = baseTemp + (decimal)(Random.Shared.NextDouble() - 0.5) * 10;
+            var temp = Random.Shared.Next(15, 30);
             var conditions = GetRandomConditions();
             
-            var entry = includeDetails 
-                ? $"Day {i + 1}: {conditions}, {dayTemp:F1}°C (detailed forecast with humidity and pressure data)"
-                : $"Day {i + 1}: {conditions}, {dayTemp:F1}°C";
-                
-            forecast.Add(entry);
+            if (includeDetails)
+            {
+                forecast.Add($"Day {i}: {temp}°C, {conditions}, Humidity: {Random.Shared.Next(40, 80)}%, Wind: {Random.Shared.Next(5, 25)} km/h");
+            }
+            else
+            {
+                forecast.Add($"Day {i}: {temp}°C, {conditions}");
+            }
         }
         
         return forecast;
     }
 
-    [AgentMethod("GetWeatherStatsAsync", IsReadOnly = true)]
+    [AgentMethod("GetWeatherStats", IsReadOnly = true)]
     public async Task<WeatherStats> GetWeatherStatsAsync(string location)
     {
         await Task.Delay(10);
