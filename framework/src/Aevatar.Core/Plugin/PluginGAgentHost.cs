@@ -16,7 +16,7 @@ namespace Aevatar.Core.Plugin;
 [GAgent]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
-public class PluginGAgentHost : GAgentBase<PluginAgentState, PluginStateLogEvent>
+public class PluginGAgentHost : GAgentBase<PluginAgentState, PluginStateLogEvent>, IPluginGAgentHost
 {
     private readonly IAgentPluginLoader _pluginLoader;
     private readonly IAgentPluginRegistry _pluginRegistry;
@@ -173,7 +173,7 @@ public class PluginGAgentHost : GAgentBase<PluginAgentState, PluginStateLogEvent
     /// <summary>
     /// Get plugin metadata
     /// </summary>
-    public AgentPluginMetadata? GetPluginMetadata()
+    public async Task<AgentPluginMetadata?> GetPluginMetadataAsync()
     {
         return _plugin?.Metadata;
     }
@@ -185,18 +185,59 @@ public class PluginGAgentHost : GAgentBase<PluginAgentState, PluginStateLogEvent
     {
         if (_plugin != null)
         {
-            await _plugin.DisposeAsync();
+            try
+            {
+                await _plugin.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Error disposing plugin during reload for agent: {AgentId}", this.GetGrainId());
+            }
             _pluginRegistry.UnregisterPlugin(this.GetGrainId().ToString());
         }
 
         await LoadPluginAsync(cancellationToken);
         
-        if (_plugin != null && _pluginContext != null)
+        if (_plugin != null)
         {
+            // Always recreate the context during reload
+            _pluginContext = CreatePluginContext();
             await _plugin.InitializeAsync(_pluginContext, cancellationToken);
             _pluginRegistry.RegisterPlugin(this.GetGrainId().ToString(), _plugin);
             CacheExposedMethods();
         }
+    }
+
+    /// <summary>
+    /// Initialize plugin configuration (called by factory)
+    /// </summary>
+    public async Task InitializePluginConfigurationAsync(string pluginName, string? pluginVersion, Dictionary<string, object>? configuration)
+    {
+        RaiseEvent(new SetPluginConfigurationEvent
+        {
+            PluginName = pluginName,
+            PluginVersion = pluginVersion,
+            Configuration = configuration,
+            ChangeType = "Initialize"
+        });
+        await ConfirmEvents();
+    }
+
+    protected override void GAgentTransitionState(PluginAgentState state, StateLogEventBase<PluginStateLogEvent> @event)
+    {
+        if (@event is SetPluginConfigurationEvent setConfigEvent)
+        {
+            state.PluginName = setConfigEvent.PluginName;
+            state.PluginVersion = setConfigEvent.PluginVersion;
+            state.Configuration = setConfigEvent.Configuration;
+            state.LastLoadTime = DateTime.UtcNow;
+        }
+        else if (@event is UpdatePluginStateEvent updateStateEvent)
+        {
+            state.PluginState = updateStateEvent.PluginStateChange;
+        }
+
+        base.GAgentTransitionState(state, @event);
     }
 
     // Private helper methods
@@ -289,6 +330,23 @@ public class PluginStateLogEvent : StateLogEventBase<PluginStateLogEvent>
 }
 
 /// <summary>
+/// Event for setting plugin configuration
+/// </summary>
+[GenerateSerializer]
+public class SetPluginConfigurationEvent : PluginStateLogEvent
+{
+    [Id(0)] public Dictionary<string, object>? Configuration { get; set; }
+}
+
+/// <summary>
+/// Event for updating plugin state
+/// </summary>
+[GenerateSerializer]
+public class UpdatePluginStateEvent : PluginStateLogEvent
+{
+}
+
+/// <summary>
 /// Factory for creating plugin-based GAgents
 /// </summary>
 public interface IPluginGAgentFactory
@@ -296,12 +354,12 @@ public interface IPluginGAgentFactory
     /// <summary>
     /// Create a plugin-based GAgent
     /// </summary>
-    Task<PluginGAgentHost> CreatePluginGAgentAsync(string agentId, string pluginName, string? pluginVersion = null);
+    Task<IPluginGAgentHost> CreatePluginGAgentAsync(string agentId, string pluginName, string? pluginVersion = null);
     
     /// <summary>
     /// Create a plugin-based GAgent with custom configuration
     /// </summary>
-    Task<PluginGAgentHost> CreatePluginGAgentAsync(string agentId, string pluginName, string? pluginVersion, Dictionary<string, object>? configuration);
+    Task<IPluginGAgentHost> CreatePluginGAgentAsync(string agentId, string pluginName, string? pluginVersion, Dictionary<string, object>? configuration);
 }
 
 /// <summary>
@@ -318,22 +376,30 @@ public class PluginGAgentFactory : IPluginGAgentFactory
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<PluginGAgentHost> CreatePluginGAgentAsync(string agentId, string pluginName, string? pluginVersion = null)
+    public async Task<IPluginGAgentHost> CreatePluginGAgentAsync(string agentId, string pluginName, string? pluginVersion = null)
     {
+        // Parameter validation
+        if (string.IsNullOrWhiteSpace(agentId))
+            throw new ArgumentException("Agent ID cannot be null or empty", nameof(agentId));
+        if (string.IsNullOrWhiteSpace(pluginName))
+            throw new ArgumentException("Plugin name cannot be null or empty", nameof(pluginName));
+            
         return await CreatePluginGAgentAsync(agentId, pluginName, pluginVersion, null);
     }
 
-    public async Task<PluginGAgentHost> CreatePluginGAgentAsync(string agentId, string pluginName, string? pluginVersion, Dictionary<string, object>? configuration)
+    public async Task<IPluginGAgentHost> CreatePluginGAgentAsync(string agentId, string pluginName, string? pluginVersion, Dictionary<string, object>? configuration)
     {
+        // Parameter validation
+        if (string.IsNullOrWhiteSpace(agentId))
+            throw new ArgumentException("Agent ID cannot be null or empty", nameof(agentId));
+        if (string.IsNullOrWhiteSpace(pluginName))
+            throw new ArgumentException("Plugin name cannot be null or empty", nameof(pluginName));
+            
         var grainId = GrainId.Create("PluginGAgent", agentId);
-        var grain = _grainFactory.GetGrain<PluginGAgentHost>(grainId);
+        var grain = _grainFactory.GetGrain<IPluginGAgentHost>(grainId);
         
-        // Initialize the grain's state with plugin information
-        var state = await grain.GetStateAsync();
-        state.PluginName = pluginName;
-        state.PluginVersion = pluginVersion;
-        state.Configuration = configuration;
-        state.LastLoadTime = DateTime.UtcNow;
+        // Initialize the grain's state with plugin information using event sourcing
+        await grain.InitializePluginConfigurationAsync(pluginName, pluginVersion, configuration);
         
         _logger.LogInformation("Created plugin GAgent: {AgentId} with plugin: {PluginName}:{PluginVersion}", 
             agentId, pluginName, pluginVersion);
