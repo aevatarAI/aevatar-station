@@ -1,0 +1,20 @@
+---
+description: unit test
+globs: 
+alwaysApply: false
+---
+Output `Running and Fixing Unit Tests`
+
+Use context7 for Orleans related issues.
+Use max context to understand the problems in detail.
+
+You MUST iterate implementing and fixing unit tests until all the following criteria are met:
+- All unit test cases passes.
+- Execute `dotnet test` and it yields no compile error.
+Do not fix warnings.
+
+Use openmemory to get relevant context.
+
+For file specific unit test, run command like these examples:
+- `dotnet test framework/test/Aevatar.Core.Tests --filter "FullyQualifiedName~OrleansGrainProxyGeneratorTests" --verbosity normal`
+- `dotnet test framework/test/Aevatar.Core.Tests --filter "FullyQualifiedName~AgentPluginTests" --verbosity normal`
