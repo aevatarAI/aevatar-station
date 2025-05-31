@@ -4,7 +4,7 @@
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVerion>9.0.1</OrleansVerion>
     <AevatarVerion>1.4.13-alpha.1</AevatarVerion>
-    <AevatarGAgentVerion>1.4.16-alpha-x.12</AevatarGAgentVerion>
+    <AevatarGAgentVerion>1.4.16-alpha-x.13</AevatarGAgentVerion>
   </PropertyGroup>
   <ItemGroup>
     <!-- AElf packages -->
@@ -196,9 +196,9 @@
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client.Core" Version="9.0.2" />
     <PackageVersion Include="MineAiFun.GAgents" Version="1.1.13" />
     <PackageVersion Include="Neo4j.Driver" Version="5.27.0" />
-    <PackageVersion Include="XWorkerAgent" Version="0.0.217" />
-    <PackageVersion Include="TelegramWorkerAgent" Version="0.0.217" />
-    <PackageVersion Include="AevatarTemplate.TelegramBot" Version="0.0.217" />
+    <PackageVersion Include="XWorkerAgent" Version="0.0.218" />
+    <PackageVersion Include="TelegramWorkerAgent" Version="0.0.218" />
+    <PackageVersion Include="AevatarTemplate.TelegramBot" Version="0.0.218" />
     <PackageVersion Include="WTelegramClient" Version="4.3.1" />
   </ItemGroup>
 </Project>
