@@ -43,5 +43,13 @@ public class AevatarModule : AbpModule
         context.Services.AddTransient<IPluginGAgentFactory, PluginGAgentFactory>();
         context.Services.AddTransient<IAgentPluginLoader, AgentPluginLoader>();
         context.Services.AddSingleton<IAgentPluginRegistry, AgentPluginRegistry>();
+        
+        // Agent context service registrations
+        context.Services.AddTransient<IAgentContext, AgentContext>();
+        context.Services.AddTransient<IAgentLogger, AgentLoggerAdapter>();
+        context.Services.AddTransient<IAgentReference, AgentReference>();
+        
+        // Orleans method router for plugin integration
+        context.Services.AddSingleton<OrleansMethodRouter>();
     }
 }
