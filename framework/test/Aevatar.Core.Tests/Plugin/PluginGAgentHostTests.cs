@@ -506,10 +506,10 @@ public class PluginGAgentFactoryTests : TestKitBase
     public async Task CreatePluginGAgentAsync_ValidParameters_ReturnsGrain()
     {
         // Arrange
-        var agentId = "test-agent-123";
+        var agentId = Guid.NewGuid();
         var pluginName = "TestPlugin";
         
-        _grainFactoryMock.Setup(f => f.GetGrain<IPluginGAgentHost>(It.IsAny<GrainId>()))
+        _grainFactoryMock.Setup(f => f.GetGrain<IPluginGAgentHost>(It.IsAny<Guid>(), null))
                         .Returns(_mockHost.Object);
 
         // Act
@@ -518,7 +518,7 @@ public class PluginGAgentFactoryTests : TestKitBase
         // Assert
         Assert.NotNull(result);
         Assert.Equal(_mockHost.Object, result);
-        _grainFactoryMock.Verify(f => f.GetGrain<IPluginGAgentHost>(It.IsAny<GrainId>()), Times.Once);
+        _grainFactoryMock.Verify(f => f.GetGrain<IPluginGAgentHost>(It.IsAny<Guid>(), null), Times.Once);
         _mockHost.Verify(h => h.InitializePluginConfigurationAsync(pluginName, null, null), Times.Once);
     }
 
@@ -526,12 +526,12 @@ public class PluginGAgentFactoryTests : TestKitBase
     public async Task CreatePluginGAgentAsync_WithConfiguration_SetsConfiguration()
     {
         // Arrange
-        var agentId = "test-agent-123";
+        var agentId = Guid.NewGuid();
         var pluginName = "TestPlugin";
         var pluginVersion = "2.0.0";
         var configuration = new Dictionary<string, object> { { "key", "value" } };
         
-        _grainFactoryMock.Setup(f => f.GetGrain<IPluginGAgentHost>(It.IsAny<GrainId>()))
+        _grainFactoryMock.Setup(f => f.GetGrain<IPluginGAgentHost>(It.IsAny<Guid>(), null))
                         .Returns(_mockHost.Object);
 
         // Act
@@ -539,7 +539,7 @@ public class PluginGAgentFactoryTests : TestKitBase
 
         // Assert
         Assert.NotNull(result);
-        _grainFactoryMock.Verify(f => f.GetGrain<IPluginGAgentHost>(It.IsAny<GrainId>()), Times.Once);
+        _grainFactoryMock.Verify(f => f.GetGrain<IPluginGAgentHost>(It.IsAny<Guid>(), null), Times.Once);
         _mockHost.Verify(h => h.InitializePluginConfigurationAsync(pluginName, pluginVersion, configuration), Times.Once);
     }
 
@@ -551,22 +551,22 @@ public class PluginGAgentFactoryTests : TestKitBase
     }
 
     [Fact]
-    public async Task CreatePluginGAgentAsync_NullAgentId_ThrowsArgumentException()
+    public async Task CreatePluginGAgentAsync_EmptyAgentId_ThrowsArgumentException()
     {
         // Arrange
-        string? agentId = null;
+        var agentId = Guid.Empty;
         var pluginName = "TestPlugin";
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
-            () => _factory.CreatePluginGAgentAsync(agentId!, pluginName));
+            () => _factory.CreatePluginGAgentAsync(agentId, pluginName));
     }
 
     [Fact]
     public async Task CreatePluginGAgentAsync_NullPluginName_ThrowsArgumentException()
     {
         // Arrange
-        var agentId = "test-agent";
+        var agentId = Guid.NewGuid();
         string? pluginName = null;
 
         // Act & Assert
