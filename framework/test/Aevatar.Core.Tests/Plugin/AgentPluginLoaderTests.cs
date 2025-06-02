@@ -113,6 +113,82 @@ public class AgentPluginLoaderTests : IDisposable
         // Should not throw
     }
 
+    [Fact]
+    public async Task LoadPluginFromBytesAsync_UpdatesAvailablePlugins()
+    {
+        // Arrange
+        var assemblyBytes = CreateTestPluginAssembly();
+        
+        // Act
+        var plugin = await _pluginLoader.LoadPluginFromBytesAsync(assemblyBytes, typeof(TestAgentPlugin).FullName);
+        var availablePlugins = await _pluginLoader.GetAvailablePluginsAsync();
+        
+        // Assert
+        Assert.NotNull(plugin);
+        var pluginInRegistry = availablePlugins.FirstOrDefault(p => p.Name == "TestAgent");
+        Assert.NotNull(pluginInRegistry);
+        Assert.Equal("1.0.0", pluginInRegistry.Version);
+        Assert.Equal("Test Agent Plugin", pluginInRegistry.Description);
+    }
+
+    [Fact]
+    public async Task LoadPluginFromAssemblyAsync_UpdatesAvailablePlugins()
+    {
+        // Arrange
+        var assemblyPath = CreateTestPluginFile();
+        
+        // Act
+        var plugin = await _pluginLoader.LoadPluginFromAssemblyAsync(assemblyPath, typeof(TestAgentPlugin).FullName);
+        var availablePlugins = await _pluginLoader.GetAvailablePluginsAsync();
+        
+        // Assert
+        Assert.NotNull(plugin);
+        var pluginInRegistry = availablePlugins.FirstOrDefault(p => p.Name == "TestAgent");
+        Assert.NotNull(pluginInRegistry);
+        Assert.Equal("1.0.0", pluginInRegistry.Version);
+        Assert.Equal("Test Agent Plugin", pluginInRegistry.Description);
+    }
+
+    [Fact]
+    public async Task LoadPluginFromBytesAsync_MultipleVersions_KeepsAllInRegistry()
+    {
+        // Arrange
+        var assemblyBytes = CreateTestPluginAssembly();
+        
+        // Act - Load same plugin multiple times (simulating different versions)
+        var plugin1 = await _pluginLoader.LoadPluginFromBytesAsync(assemblyBytes, typeof(TestAgentPlugin).FullName);
+        var plugin2 = await _pluginLoader.LoadPluginFromBytesAsync(assemblyBytes, typeof(TestAgentPlugin).FullName);
+        var availablePlugins = await _pluginLoader.GetAvailablePluginsAsync();
+        
+        // Assert
+        Assert.NotNull(plugin1);
+        Assert.NotNull(plugin2);
+        var pluginsInRegistry = availablePlugins.Where(p => p.Name == "TestAgent").ToList();
+        Assert.Single(pluginsInRegistry); // Should have one entry (latest overwrites)
+    }
+
+    [Fact]
+    public async Task LoadPlugin_ConsistentBehavior_BetweenLoadMethods()
+    {
+        // Arrange
+        var assemblyPath = CreateTestPluginFile();
+        var assemblyBytes = File.ReadAllBytes(assemblyPath);
+        
+        // Act
+        var pluginFromFile = await _pluginLoader.LoadPluginFromAssemblyAsync(assemblyPath, typeof(TestAgentPlugin).FullName);
+        var pluginFromBytes = await _pluginLoader.LoadPluginFromBytesAsync(assemblyBytes, typeof(TestAgentPlugin).FullName);
+        var availablePlugins = await _pluginLoader.GetAvailablePluginsAsync();
+        
+        // Assert
+        Assert.NotNull(pluginFromFile);
+        Assert.NotNull(pluginFromBytes);
+        Assert.Equal(pluginFromFile.Metadata.Name, pluginFromBytes.Metadata.Name);
+        Assert.Equal(pluginFromFile.Metadata.Version, pluginFromBytes.Metadata.Version);
+        
+        var pluginsInRegistry = availablePlugins.Where(p => p.Name == "TestAgent").ToList();
+        Assert.Single(pluginsInRegistry); // Should have one entry despite loading twice
+    }
+
     private byte[] CreateTestPluginAssembly()
     {
         // Get the current assembly that contains our test plugin

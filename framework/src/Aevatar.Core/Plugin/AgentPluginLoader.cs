@@ -58,7 +58,12 @@ public class AgentPluginLoader : IAgentPluginLoader, IDisposable
         try
         {
             var assemblyBytes = await File.ReadAllBytesAsync(assemblyPath, cancellationToken);
-            return await LoadPluginFromBytesAsync(assemblyBytes, typeName, cancellationToken);
+            var plugin = await LoadPluginFromBytesAsync(assemblyBytes, typeName, cancellationToken);
+            
+            // Update _availablePlugins registry for consistency
+            await UpdateAvailablePluginsFromLoadedPlugin(plugin, assemblyPath, cancellationToken);
+            
+            return plugin;
         }
         catch (Exception ex)
         {
@@ -103,6 +108,9 @@ public class AgentPluginLoader : IAgentPluginLoader, IDisposable
             {
                 throw new InvalidOperationException($"Failed to create instance of plugin type: {pluginType.FullName}");
             }
+
+            // Update _availablePlugins registry for consistency
+            await UpdateAvailablePluginsFromAssembly(assembly, cancellationToken);
 
             _logger.LogInformation("Successfully loaded plugin: {PluginType}", pluginType.FullName);
             return plugin;
@@ -225,6 +233,59 @@ public class AgentPluginLoader : IAgentPluginLoader, IDisposable
                 }
             }
         }, cancellationToken);
+    }
+
+    private async Task UpdateAvailablePluginsFromLoadedPlugin(IAgentPlugin plugin, string assemblyPath, CancellationToken cancellationToken)
+    {
+        await Task.Run(() =>
+        {
+            try
+            {
+                var assembly = Assembly.LoadFrom(assemblyPath);
+                UpdateAvailablePluginsFromAssemblySync(assembly);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to update _availablePlugins from loaded plugin at: {AssemblyPath}", assemblyPath);
+            }
+        }, cancellationToken);
+    }
+
+    private async Task UpdateAvailablePluginsFromAssembly(Assembly assembly, CancellationToken cancellationToken)
+    {
+        await Task.Run(() =>
+        {
+            UpdateAvailablePluginsFromAssemblySync(assembly);
+        }, cancellationToken);
+    }
+
+    private void UpdateAvailablePluginsFromAssemblySync(Assembly assembly)
+    {
+        try
+        {
+            var pluginType = FindPluginType(assembly, null);
+            if (pluginType != null)
+            {
+                var attr = pluginType.GetCustomAttribute<AgentPluginAttribute>();
+                var assemblyName = assembly.GetName();
+                
+                var metadata = new AgentPluginMetadata(
+                    attr?.Name ?? assemblyName.Name ?? "Unknown",
+                    attr?.Version ?? assemblyName.Version?.ToString() ?? "1.0.0",
+                    attr?.Description ?? "Dynamically loaded plugin"
+                );
+                
+                var key = $"{metadata.Name}:{metadata.Version}";
+                _availablePlugins[key] = metadata;
+                
+                _logger.LogDebug("Updated _availablePlugins registry with plugin: {PluginName}:{Version}", 
+                    metadata.Name, metadata.Version);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to extract plugin metadata from assembly");
+        }
     }
 
     public void Dispose()
