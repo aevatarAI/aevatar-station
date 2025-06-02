@@ -11,7 +11,7 @@ var builder = Host.CreateDefaultBuilder(args)
     {
         client.UseLocalhostClustering()
             .AddMemoryStreams(AevatarCoreConstants.StreamProvider)
-            .UseAevatar();
+            .UseAevatar(includingAbpServices: true);
     })
     .ConfigureLogging(logging => logging.AddConsole())
     .UseConsoleLifetime();
@@ -74,9 +74,6 @@ catch (Exception ex)
 {
     logger.LogError(ex, "Error running WeatherAgent Plugin client");
 }
-
-Console.WriteLine("\nPress any key to exit...");
-Console.ReadKey();
 
 // Helper methods
 static async Task DemonstrateWeatherFunctionality(IPluginGAgentHost weatherAgent, ILogger logger)
