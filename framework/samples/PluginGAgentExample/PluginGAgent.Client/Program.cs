@@ -28,7 +28,7 @@ logger.LogInformation("WeatherAgent Plugin Client starting...");
 try
 {
     // Create a WeatherAgent plugin instance
-    var weatherAgentId = "weather-agent-001";
+    var weatherAgentId = Guid.NewGuid();
     var pluginName = "WeatherAgent";
     var pluginVersion = "1.0.0";
     
@@ -162,7 +162,7 @@ static async Task DemonstrateInterAgentCommunication(
     try
     {
         // Create a second weather agent for different location
-        var secondAgentId = "weather-agent-002";
+        var secondAgentId = Guid.NewGuid();
         var secondAgentConfig = new Dictionary<string, object>
         {
             ["Location"] = "Tokyo",
