@@ -395,7 +395,7 @@ public class PluginGAgentFactory : IPluginGAgentFactory
         if (string.IsNullOrWhiteSpace(pluginName))
             throw new ArgumentException("Plugin name cannot be null or empty", nameof(pluginName));
             
-        var grainId = GrainId.Create("PluginGAgent", agentId);
+        var grainId = GrainId.Create("IPluginGAgentHost", agentId);
         var grain = _grainFactory.GetGrain<IPluginGAgentHost>(grainId);
         
         // Initialize the grain's state with plugin information using event sourcing
