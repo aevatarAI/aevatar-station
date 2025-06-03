@@ -11,6 +11,8 @@ using Aevatar.Extensions;
 using Aevatar.PermissionManagement.Extensions;
 using Aevatar.SignalR;
 using Aevatar.Silo.Startup;
+using E2E.Grains;
+
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,6 +21,7 @@ using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using Newtonsoft.Json;
 using Orleans.Configuration;
+using Orleans.Providers.MongoDB.StorageProviders.Serializers;
 using Orleans.Providers.MongoDB.Configuration;
 using Orleans.Runtime.Placement;
 using Orleans.Serialization;
@@ -73,7 +76,18 @@ public static class OrleansHostExtension
                         siloPort: siloPort,
                         gatewayPort: gatewayPort,
                         listenOnAnyHostAddress: true)
-                    .UseMongoDBClient(configSection.GetValue<string>("MongoDBClient"))
+                    .UseMongoDBClient(proivder => {
+                        var setting = MongoClientSettings.FromConnectionString(configSection.GetValue<string>("MongoDBClient"));
+                        
+                        // Read MongoDB client settings from configuration with MongoDB driver default values
+                        var clientSection = configSection.GetSection("MongoDBClientSettings");
+                        setting.MaxConnectionPoolSize = clientSection.GetValue<int>("MaxConnectionPoolSize", 512);
+                        setting.MinConnectionPoolSize = clientSection.GetValue<int>("MinConnectionPoolSize", 16);
+                        setting.WaitQueueSize = clientSection.GetValue<int>("WaitQueueSize", MongoDefaults.ComputedWaitQueueSize);
+                        setting.WaitQueueTimeout = clientSection.GetValue<TimeSpan>("WaitQueueTimeout", MongoDefaults.WaitQueueTimeout);
+                        setting.MaxConnecting = clientSection.GetValue<int>("MaxConnecting", 4);
+                        return setting;
+                    })
                     .UseMongoDBClustering(options =>
                     {
                         options.DatabaseName = configSection.GetValue<string>("DataBase");
@@ -87,6 +101,14 @@ public static class OrleansHostExtension
                             settings.DefaultValueHandling = DefaultValueHandling.Populate;
                             settings.ObjectCreationHandling = ObjectCreationHandling.Replace;
                         })
+                    .Configure<GrainCollectionOptions>(options =>
+                    {
+                        // Set default collection age for all grains (in minutes)
+                        options.CollectionAge = TimeSpan.FromHours(24);
+                        
+                        // Optionally, set specific collection ages for particular grain types
+                        // options.ClassSpecificCollectionAge[typeof(UserGridGAgent).FullName] = TimeSpan.FromMinutes(10);
+                    })
                     .AddMongoDBGrainStorage("Default", (MongoDBGrainStorageOptions op) =>
                     {
                         op.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" : $"Orleans{hostId}";
@@ -148,6 +170,14 @@ public static class OrleansHostExtension
                     {
                         options.ClientSettings =
                             MongoClientSettings.FromConnectionString(configSection.GetValue<string>("MongoDBClient"));
+
+                        // Read MongoDB ES client settings from configuration
+                        var esClientSection = configSection.GetSection("MongoDBESClientSettings");
+                        options.ClientSettings.WaitQueueSize = esClientSection.GetValue<int>("WaitQueueSize", 81920);
+                        options.ClientSettings.MaxConnectionPoolSize = esClientSection.GetValue<int>("MinConnectionPoolSize", 512);
+                        options.ClientSettings.MinConnectionPoolSize = esClientSection.GetValue<int>("MinConnectionPoolSize", 16);
+                        options.ClientSettings.WaitQueueTimeout = esClientSection.GetValue<TimeSpan>("WaitQueueTimeout", MongoDefaults.WaitQueueTimeout);
+                        options.ClientSettings.MaxConnecting = esClientSection.GetValue<int>("MaxConnecting", 8);
                         options.Database = configSection.GetValue<string>("DataBase");
                     });
                 }
@@ -196,6 +226,7 @@ public static class OrleansHostExtension
                     .RegisterHub<AevatarSignalRHub>();
             }).ConfigureServices((context, services) =>
             {
+                services.AddSingleton<IGrainStateSerializer, BinaryGrainStateSerializer>();
                 // services.Configure<AzureOpenAIConfig>(context.Configuration.GetSection("AIServices:AzureOpenAI"));
                 // services.Configure<AzureDeepSeekConfig>(context.Configuration.GetSection("AIServices:DeepSeek"));
                 services.Configure<QdrantConfig>(context.Configuration.GetSection("VectorStores:Qdrant"));

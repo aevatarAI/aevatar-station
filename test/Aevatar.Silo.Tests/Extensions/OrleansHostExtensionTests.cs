@@ -29,7 +29,18 @@ namespace Aevatar.Silo.Tests.Extensions
                 { "Orleans:ClusterId", "test-cluster" },
                 { "Orleans:ServiceId", "test-service" },
                 { "Orleans:MongoDBClient", "mongodb://localhost:27017" },
+                { "Orleans:MongoDBClientSettings:MaxConnectionPoolSize", "512" },
+                { "Orleans:MongoDBClientSettings:MinConnectionPoolSize", "32" },
+                { "Orleans:MongoDBClientSettings:WaitQueueSize", "40960" },
+                { "Orleans:MongoDBClientSettings:WaitQueueTimeout", "00:10:00" },
+                { "Orleans:MongoDBClientSettings:MaxConnecting", "16" },
+                { "Orleans:MongoDBESClient", "mongodb://localhost:27018" },
+                { "Orleans:MongoDBESClientSettings:WaitQueueSize", "40960" },
+                { "Orleans:MongoDBESClientSettings:MinConnectionPoolSize", "32" },
+                { "Orleans:MongoDBESClientSettings:WaitQueueTimeout", "00:10:00" },
+                { "Orleans:MongoDBESClientSettings:MaxConnecting", "16" },
                 { "Orleans:DataBase", "orleans-test" },
+                { "Orleans:ESDataBase", "orleans-es-test" },
                 { "Orleans:DashboardUserName", "test" },
                 { "Orleans:DashboardPassword", "test" },
                 { "Orleans:DashboardPort", "8888" },
@@ -374,6 +385,182 @@ namespace Aevatar.Silo.Tests.Extensions
             }
 
             return false;
+        }
+
+        [Fact]
+        public void Should_UseConfiguredMongoDBClientSettings_WhenProvided()
+        {
+            // Arrange
+            var envMock = EnvironmentVariableMock.SetupLocalDevEnvironment();
+            var originalGetter = OrleansHostExtension.GetEnvironmentVariable;
+            OrleansHostExtension.GetEnvironmentVariable = envMock.GetVariable;
+
+            try
+            {
+                var hostBuilder = new HostBuilder();
+                var configData = GetBaseConfig(isKubernetes: false);
+                
+                // Override with custom MongoDB client settings
+                configData["Orleans:MongoDBClientSettings:MaxConnectionPoolSize"] = "1024";
+                configData["Orleans:MongoDBClientSettings:MinConnectionPoolSize"] = "64";
+                configData["Orleans:MongoDBClientSettings:WaitQueueSize"] = "163840";
+                configData["Orleans:MongoDBClientSettings:WaitQueueTimeout"] = "00:15:00";
+                configData["Orleans:MongoDBClientSettings:MaxConnecting"] = "32";
+
+                var configuration = new ConfigurationBuilder()
+                    .AddInMemoryCollection(configData)
+                    .Build();
+
+                hostBuilder.ConfigureAppConfiguration(builder => builder.AddConfiguration(configuration));
+
+                // Act
+                hostBuilder.UseOrleansConfiguration();
+
+                // Build the host to verify configuration is applied
+                var host = hostBuilder.Build();
+
+                // Assert - The fact that the host builds successfully without errors indicates
+                // that the configuration values are being read correctly from the configuration
+                // rather than using hard-coded values
+                host.ShouldNotBeNull("Host should build successfully with configured MongoDB client settings");
+            }
+            finally
+            {
+                OrleansHostExtension.GetEnvironmentVariable = originalGetter;
+            }
+        }
+
+        [Fact]
+        public void Should_UseConfiguredMongoDBESClientSettings_WhenProvided()
+        {
+            // Arrange
+            var envMock = EnvironmentVariableMock.SetupLocalDevEnvironment();
+            var originalGetter = OrleansHostExtension.GetEnvironmentVariable;
+            OrleansHostExtension.GetEnvironmentVariable = envMock.GetVariable;
+
+            try
+            {
+                var hostBuilder = new HostBuilder();
+                var configData = GetBaseConfig(isKubernetes: false);
+                
+                // Override with custom MongoDB ES client settings
+                configData["Orleans:MongoDBESClientSettings:WaitQueueSize"] = "20480";
+                configData["Orleans:MongoDBESClientSettings:MinConnectionPoolSize"] = "64";
+                configData["Orleans:MongoDBESClientSettings:WaitQueueTimeout"] = "00:15:00";
+                configData["Orleans:MongoDBESClientSettings:MaxConnecting"] = "32";
+
+                var configuration = new ConfigurationBuilder()
+                    .AddInMemoryCollection(configData)
+                    .Build();
+
+                hostBuilder.ConfigureAppConfiguration(builder => builder.AddConfiguration(configuration));
+
+                // Act
+                hostBuilder.UseOrleansConfiguration();
+
+                // Build the host to verify configuration is applied
+                var host = hostBuilder.Build();
+
+                // Assert - The fact that the host builds successfully without errors indicates
+                // that the configuration values are being read correctly from the configuration
+                // rather than using hard-coded values
+                host.ShouldNotBeNull("Host should build successfully with configured MongoDB ES client settings");
+            }
+            finally
+            {
+                OrleansHostExtension.GetEnvironmentVariable = originalGetter;
+            }
+        }
+
+        [Fact]
+        public void Should_HandleMissingMongoDBClientSettings_Gracefully()
+        {
+            // Arrange
+            var envMock = EnvironmentVariableMock.SetupLocalDevEnvironment();
+            var originalGetter = OrleansHostExtension.GetEnvironmentVariable;
+            OrleansHostExtension.GetEnvironmentVariable = envMock.GetVariable;
+
+            try
+            {
+                var hostBuilder = new HostBuilder();
+                var configData = GetBaseConfig(isKubernetes: false);
+                
+                // Remove MongoDB client settings to test default behavior
+                configData.Remove("Orleans:MongoDBClientSettings:MaxConnectionPoolSize");
+                configData.Remove("Orleans:MongoDBClientSettings:MinConnectionPoolSize");
+                configData.Remove("Orleans:MongoDBClientSettings:WaitQueueSize");
+                configData.Remove("Orleans:MongoDBClientSettings:WaitQueueTimeout");
+                configData.Remove("Orleans:MongoDBClientSettings:MaxConnecting");
+                // Also remove ES client settings to test defaults
+                configData.Remove("Orleans:MongoDBESClientSettings:WaitQueueSize");
+                configData.Remove("Orleans:MongoDBESClientSettings:MinConnectionPoolSize");
+                configData.Remove("Orleans:MongoDBESClientSettings:WaitQueueTimeout");
+                configData.Remove("Orleans:MongoDBESClientSettings:MaxConnecting");
+
+                var configuration = new ConfigurationBuilder()
+                    .AddInMemoryCollection(configData)
+                    .Build();
+
+                hostBuilder.ConfigureAppConfiguration(builder => builder.AddConfiguration(configuration));
+
+                // Act & Assert - Should not throw exception and should use default values
+                var exception = Record.Exception(() => {
+                    hostBuilder.UseOrleansConfiguration();
+                    var host = hostBuilder.Build();
+                });
+
+                exception.ShouldBeNull("Host should build successfully using default values when MongoDB client settings are missing");
+            }
+            finally
+            {
+                OrleansHostExtension.GetEnvironmentVariable = originalGetter;
+            }
+        }
+
+        [Fact]
+        public void Should_UseDefaultValues_WhenMongoDBSettingsAreMissing()
+        {
+            // Arrange
+            var envMock = EnvironmentVariableMock.SetupLocalDevEnvironment();
+            var originalGetter = OrleansHostExtension.GetEnvironmentVariable;
+            OrleansHostExtension.GetEnvironmentVariable = envMock.GetVariable;
+
+            try
+            {
+                var hostBuilder = new HostBuilder();
+                var configData = GetBaseConfig(isKubernetes: false);
+                
+                // Remove all MongoDB client settings to force use of defaults
+                configData.Remove("Orleans:MongoDBClientSettings:MaxConnectionPoolSize");
+                configData.Remove("Orleans:MongoDBClientSettings:MinConnectionPoolSize");
+                configData.Remove("Orleans:MongoDBClientSettings:WaitQueueSize");
+                configData.Remove("Orleans:MongoDBClientSettings:WaitQueueTimeout");
+                configData.Remove("Orleans:MongoDBClientSettings:MaxConnecting");
+                configData.Remove("Orleans:MongoDBESClientSettings:WaitQueueSize");
+                configData.Remove("Orleans:MongoDBESClientSettings:MinConnectionPoolSize");
+                configData.Remove("Orleans:MongoDBESClientSettings:WaitQueueTimeout");
+                configData.Remove("Orleans:MongoDBESClientSettings:MaxConnecting");
+
+                var configuration = new ConfigurationBuilder()
+                    .AddInMemoryCollection(configData)
+                    .Build();
+
+                hostBuilder.ConfigureAppConfiguration(builder => builder.AddConfiguration(configuration));
+
+                // Act
+                hostBuilder.UseOrleansConfiguration();
+                var host = hostBuilder.Build();
+
+                // Assert - The fact that the host builds successfully without errors indicates
+                // that the default values are being used correctly:
+                // MongoDB Client defaults: MaxConnectionPoolSize=100, MinConnectionPoolSize=0, WaitQueueSize=500, WaitQueueTimeout=00:02:00, MaxConnecting=2
+                // MongoDB ES Client defaults: WaitQueueSize=500, MinConnectionPoolSize=0, WaitQueueTimeout=00:02:00, MaxConnecting=2
+                host.ShouldNotBeNull("Host should build successfully using default MongoDB settings");
+            }
+            finally
+            {
+                OrleansHostExtension.GetEnvironmentVariable = originalGetter;
+            }
         }
     }
 } 

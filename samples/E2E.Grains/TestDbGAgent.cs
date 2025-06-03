@@ -35,6 +35,7 @@ public class TestDbGState : BroadCastGState
     //     Count = Count + @event.AddMe;
     // }
 }
+
 public interface ITestDbGAgent : IBroadCastGAgent
 {
     Task<int> GetCount();
