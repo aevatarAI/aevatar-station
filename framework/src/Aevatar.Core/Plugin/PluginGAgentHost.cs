@@ -354,12 +354,12 @@ public interface IPluginGAgentFactory
     /// <summary>
     /// Create a plugin-based GAgent
     /// </summary>
-    Task<IPluginGAgentHost> CreatePluginGAgentAsync(string agentId, string pluginName, string? pluginVersion = null);
+    Task<IPluginGAgentHost> CreatePluginGAgentAsync(Guid agentId, string pluginName, string? pluginVersion = null);
     
     /// <summary>
     /// Create a plugin-based GAgent with custom configuration
     /// </summary>
-    Task<IPluginGAgentHost> CreatePluginGAgentAsync(string agentId, string pluginName, string? pluginVersion, Dictionary<string, object>? configuration);
+    Task<IPluginGAgentHost> CreatePluginGAgentAsync(Guid agentId, string pluginName, string? pluginVersion, Dictionary<string, object>? configuration);
 }
 
 /// <summary>
@@ -376,27 +376,26 @@ public class PluginGAgentFactory : IPluginGAgentFactory
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<IPluginGAgentHost> CreatePluginGAgentAsync(string agentId, string pluginName, string? pluginVersion = null)
+    public async Task<IPluginGAgentHost> CreatePluginGAgentAsync(Guid agentId, string pluginName, string? pluginVersion = null)
     {
         // Parameter validation
-        if (string.IsNullOrWhiteSpace(agentId))
-            throw new ArgumentException("Agent ID cannot be null or empty", nameof(agentId));
+        if (agentId == Guid.Empty)
+            throw new ArgumentException("Agent ID cannot be empty", nameof(agentId));
         if (string.IsNullOrWhiteSpace(pluginName))
             throw new ArgumentException("Plugin name cannot be null or empty", nameof(pluginName));
             
         return await CreatePluginGAgentAsync(agentId, pluginName, pluginVersion, null);
     }
 
-    public async Task<IPluginGAgentHost> CreatePluginGAgentAsync(string agentId, string pluginName, string? pluginVersion, Dictionary<string, object>? configuration)
+    public async Task<IPluginGAgentHost> CreatePluginGAgentAsync(Guid agentId, string pluginName, string? pluginVersion, Dictionary<string, object>? configuration)
     {
         // Parameter validation
-        if (string.IsNullOrWhiteSpace(agentId))
-            throw new ArgumentException("Agent ID cannot be null or empty", nameof(agentId));
+        if (agentId == Guid.Empty)
+            throw new ArgumentException("Agent ID cannot be empty", nameof(agentId));
         if (string.IsNullOrWhiteSpace(pluginName))
             throw new ArgumentException("Plugin name cannot be null or empty", nameof(pluginName));
             
-        var grainId = GrainId.Create("IPluginGAgentHost", agentId);
-        var grain = _grainFactory.GetGrain<IPluginGAgentHost>(grainId);
+        var grain = _grainFactory.GetGrain<IPluginGAgentHost>(agentId);
         
         // Initialize the grain's state with plugin information using event sourcing
         await grain.InitializePluginConfigurationAsync(pluginName, pluginVersion, configuration);
