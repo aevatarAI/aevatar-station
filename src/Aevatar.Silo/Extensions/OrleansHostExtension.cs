@@ -103,7 +103,7 @@ public static class OrleansHostExtension
                     .Configure<GrainCollectionOptions>(options =>
                     {
                         // Set default collection age for all grains (in minutes)
-                        options.CollectionAge = TimeSpan.FromHours(24);
+                        options.CollectionAge = TimeSpan.FromDays(180);
                         
                         // Optionally, set specific collection ages for particular grain types
                         // options.ClassSpecificCollectionAge[typeof(UserGridGAgent).FullName] = TimeSpan.FromMinutes(10);
