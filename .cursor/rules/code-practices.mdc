@@ -17,6 +17,7 @@ Breakdown complex tasks into manageable parts, use Mutually Exclusive, Collectiv
 
 Keep answers concise and direct.
 Prioritize technical details over generic advice.
+Create new file for a new class.
 
 Iterate until the implementation adheres to the following:
 - SOLID principles
