@@ -20,12 +20,12 @@ using SignInResult = Microsoft.AspNetCore.Mvc.SignInResult;
 
 namespace Aevatar.AuthServer.Grants;
 
-public class GithubGrantHandler : ITokenExtensionGrant
+public class GithubGrantHandler : GrantHandlerBase
 {
     private readonly ILogger<GithubGrantHandler> _logger;
     private readonly IGithubProvider _githubProvider;
 
-    public string Name => GrantTypeConstants.Github;
+    public override string Name => GrantTypeConstants.Github;
     
     public GithubGrantHandler(IGithubProvider githubProvider, ILogger<GithubGrantHandler> logger)
     {
@@ -33,28 +33,28 @@ public class GithubGrantHandler : ITokenExtensionGrant
         _logger = logger;
     }
 
-    public async Task<IActionResult> HandleAsync(ExtensionGrantContext context)
+    public override async Task<IActionResult> HandleAsync(ExtensionGrantContext context)
     {
         var code = context.Request.GetParameter("code").ToString();
         
         if (string.IsNullOrEmpty(code))
         {
-            return ErrorResult("Missing code parameter");
+            return CreateForbidResult("Missing code parameter");
         }
 
         var githubUser = await _githubProvider.GetUserInfoAsync(code);
         if (githubUser == null)
         {
-            return ErrorResult("Invalid code");
+            return CreateForbidResult("Invalid code");
         }
         
         var user = await GetOrCreateUserAsync(context, githubUser);
         if (user == null)
         {
-            return ErrorResult("Failed to create or retrieve user");
+            return CreateForbidResult("Failed to create or retrieve user");
         }
         
-        var claimsPrincipal = await CreateUserClaimsPrincipalAsync(context, user);
+        var claimsPrincipal = await CreateUserClaimsPrincipalWithSignInManagerAsync(context, user);
 
         return new SignInResult(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme, claimsPrincipal);
     }
@@ -106,51 +106,4 @@ public class GithubGrantHandler : ITokenExtensionGrant
         
         return user;
     }
-    
-    private async Task<ClaimsPrincipal> CreateUserClaimsPrincipalAsync(ExtensionGrantContext context, IdentityUser user)
-    {
-        var signInManager = context.HttpContext.RequestServices.GetRequiredService<SignInManager<IdentityUser>>();
-        var claimsPrincipal = await signInManager.CreateUserPrincipalAsync(user);
-        
-        claimsPrincipal.SetScopes(context.Request.GetScopes());
-        claimsPrincipal.SetResources(await GetResourcesAsync(context, claimsPrincipal.GetScopes()));
-        claimsPrincipal.SetAudiences("Aevatar");
-        
-        await context.HttpContext.RequestServices
-            .GetRequiredService<AbpOpenIddictClaimsPrincipalManager>()
-            .HandleAsync(context.Request, claimsPrincipal);
-
-        return claimsPrincipal;
-    }
-    
-    private ForbidResult ErrorResult(string errorDescription)
-    {
-        return new ForbidResult(
-            OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-            new AuthenticationProperties(new Dictionary<string, string?>
-            {
-                [OpenIddictServerAspNetCoreConstants.Properties.Error] = 
-                    OpenIddictConstants.Errors.InvalidRequest,
-                [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = 
-                    errorDescription
-            }));
-    }
-
-    private async Task<IEnumerable<string>> GetResourcesAsync(ExtensionGrantContext context,
-        ImmutableArray<string> scopes)
-    {
-        var resources = new List<string>();
-        if (!scopes.Any())
-        {
-            return resources;
-        }
-
-        await foreach (var resource in context.HttpContext.RequestServices.GetRequiredService<IOpenIddictScopeManager>()
-                           .ListResourcesAsync(scopes))
-        {
-            resources.Add(resource);
-        }
-
-        return resources;
-    }
-}
+} 

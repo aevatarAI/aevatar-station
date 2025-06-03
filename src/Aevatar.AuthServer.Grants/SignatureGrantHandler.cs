@@ -16,12 +16,12 @@ using Volo.Abp.OpenIddict.ExtensionGrantTypes;
 
 namespace Aevatar.AuthServer.Grants;
 
-public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
+public class SignatureGrantHandler : GrantHandlerBase, ITransientDependency
 {
     private readonly ILogger<SignatureGrantHandler> _logger;
     private IWalletLoginProvider _walletLoginProvider;
 
-    public string Name { get; } = GrantTypeConstants.SIGNATURE;
+    public override string Name { get; } = GrantTypeConstants.SIGNATURE;
 
     public SignatureGrantHandler(IWalletLoginProvider walletLoginProvider, ILogger<SignatureGrantHandler> logger)
     {
@@ -29,7 +29,7 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
         _logger = logger;
     }
 
-    public async Task<IActionResult> HandleAsync(ExtensionGrantContext context)
+    public override async Task<IActionResult> HandleAsync(ExtensionGrantContext context)
     {
         var publicKeyVal = context.Request.GetParameter("pubkey").ToString();
         var signatureVal = context.Request.GetParameter("signature").ToString();
@@ -40,14 +40,7 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
         var errors = _walletLoginProvider.CheckParams(publicKeyVal, signatureVal, chainId, plainText);
         if (errors.Count > 0)
         {
-            return new ForbidResult(
-                new[] { OpenIddictServerAspNetCoreDefaults.AuthenticationScheme },
-                properties: new AuthenticationProperties(new Dictionary<string, string>
-                {
-                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidRequest,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
-                        _walletLoginProvider.GetErrorMessage(errors)
-                }!));
+            return CreateForbidResult(_walletLoginProvider.GetErrorMessage(errors));
         }
 
         string walletAddress = string.Empty;
@@ -58,8 +51,7 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
         }
         catch (UserFriendlyException verifyException)
         {
-            return GetForbidResult(OpenIddictConstants.Errors.InvalidRequest,
-                verifyException.Message);
+            return CreateForbidResult(verifyException.Message);
         }
         catch (Exception e)
         {
@@ -83,55 +75,8 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
         }
 
         var identityUser = await userManager.FindByNameAsync(walletAddress);
-        var identityRoleManager = context.HttpContext.RequestServices.GetRequiredService<IdentityRoleManager>();
-        var roleNames = new List<string>();
-        foreach (var userRole in identityUser.Roles)
-        {
-            var role = await identityRoleManager.GetByIdAsync(userRole.RoleId);
-            roleNames.Add(role.Name);
-        }
-
-
-        var userClaimsPrincipalFactory = context.HttpContext.RequestServices
-            .GetRequiredService<Microsoft.AspNetCore.Identity.IUserClaimsPrincipalFactory<IdentityUser>>();
-        var claimsPrincipal = await userClaimsPrincipalFactory.CreateAsync(user);
-        claimsPrincipal.SetClaim(OpenIddictConstants.Claims.Subject, user.Id.ToString());
-        claimsPrincipal.SetClaim(OpenIddictConstants.Claims.Role, string.Join(",", roleNames));
-        claimsPrincipal.SetScopes(context.Request.GetScopes());
-        claimsPrincipal.SetResources(await GetResourcesAsync(context, claimsPrincipal.GetScopes()));
-        claimsPrincipal.SetAudiences("Aevatar");
-        await context.HttpContext.RequestServices.GetRequiredService<AbpOpenIddictClaimsPrincipalManager>()
-            .HandleAsync(context.Request, claimsPrincipal);
+        var claimsPrincipal = await CreateUserClaimsPrincipalWithFactoryAsync(context, identityUser);
 
         return new SignInResult(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme, claimsPrincipal);
     }
-
-    private ForbidResult GetForbidResult(string errorType, string errorDescription)
-    {
-        return new ForbidResult(
-            new[] { OpenIddictServerAspNetCoreDefaults.AuthenticationScheme },
-            properties: new AuthenticationProperties(new Dictionary<string, string>
-            {
-                [OpenIddictServerAspNetCoreConstants.Properties.Error] = errorType,
-                [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = errorDescription
-            }));
-    }
-
-    private async Task<IEnumerable<string>> GetResourcesAsync(ExtensionGrantContext context,
-        ImmutableArray<string> scopes)
-    {
-        var resources = new List<string>();
-        if (!scopes.Any())
-        {
-            return resources;
-        }
-
-        await foreach (var resource in context.HttpContext.RequestServices.GetRequiredService<IOpenIddictScopeManager>()
-                           .ListResourcesAsync(scopes))
-        {
-            resources.Add(resource);
-        }
-
-        return resources;
-    }
-}
+} 

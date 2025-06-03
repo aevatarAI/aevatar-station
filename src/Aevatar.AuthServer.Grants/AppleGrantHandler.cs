@@ -27,12 +27,12 @@ using SignInResult = Microsoft.AspNetCore.Mvc.SignInResult;
 
 namespace Aevatar.AuthServer.Grants;
 
-public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
+public class AppleGrantHandler : GrantHandlerBase, ITransientDependency
 {
     private readonly ILogger<AppleGrantHandler> _logger;
     private readonly IAppleProvider _appleProvider;
 
-    public string Name => GrantTypeConstants.APPLE;
+    public override string Name => GrantTypeConstants.APPLE;
 
     public AppleGrantHandler(IAppleProvider appleProvider, ILogger<AppleGrantHandler> logger)
     {
@@ -40,7 +40,7 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
         _logger = logger;
     }
 
-    public async Task<IActionResult> HandleAsync(ExtensionGrantContext context)
+    public override async Task<IActionResult> HandleAsync(ExtensionGrantContext context)
     {
         try
         {
@@ -56,21 +56,21 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
                 if (string.IsNullOrEmpty(code))
                 {
                     _logger.LogDebug("Missing both id_token and code");
-                    return ErrorResult("Missing both id_token and code");
+                    return CreateForbidResult("Missing both id_token and code");
                 }
                 
                 idToken = await _appleProvider.ExchangeCodeForTokenAsync(code, source);
 
                 if (idToken.IsNullOrEmpty())
                 {
-                    return ErrorResult("Code invalid or expired");
+                    return CreateForbidResult("Code invalid or expired");
                 }
             }
             
             var (isValid, principal) = await _appleProvider.ValidateAppleTokenAsync(idToken, source);
             if (!isValid)
             {
-                return ErrorResult("Invalid APPLE token");
+                return CreateForbidResult("Invalid APPLE token");
             }
 
             var appleUser = ExtractAppleUser(principal);
@@ -106,31 +106,14 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
                     GrantTypeConstants.APPLE));
             }
 
-            var identityRoleManager = context.HttpContext.RequestServices.GetRequiredService<IdentityRoleManager>();
-            var roleNames = new List<string>();
-            foreach (var userRole in user.Roles)
-            {
-                var role = await identityRoleManager.GetByIdAsync(userRole.RoleId);
-                roleNames.Add(role.Name);
-            }
-
-            var userClaimsPrincipalFactory = context.HttpContext.RequestServices
-                .GetRequiredService<Microsoft.AspNetCore.Identity.IUserClaimsPrincipalFactory<IdentityUser>>();
-            var claimsPrincipal = await userClaimsPrincipalFactory.CreateAsync(user);
-            claimsPrincipal.SetClaim(OpenIddictConstants.Claims.Subject, user.Id.ToString());
-            claimsPrincipal.SetClaim(OpenIddictConstants.Claims.Role, string.Join(",", roleNames));
-            claimsPrincipal.SetScopes(context.Request.GetScopes());
-            claimsPrincipal.SetResources(await GetResourcesAsync(context, claimsPrincipal.GetScopes()));
-            claimsPrincipal.SetAudiences("Aevatar");
-            await context.HttpContext.RequestServices.GetRequiredService<AbpOpenIddictClaimsPrincipalManager>()
-                .HandleAsync(context.Request, claimsPrincipal);
+            var claimsPrincipal = await CreateUserClaimsPrincipalWithFactoryAsync(context, user);
 
             return new SignInResult(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme, claimsPrincipal);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "APPLE login failed");
-            return ErrorResult("Internal server error");
+            return CreateForbidResult("Internal server error");
         }
     }
 
@@ -153,36 +136,5 @@ public class AppleGrantHandler : ITokenExtensionGrant, ITransientDependency
             FirstName = firstName,
             LastName = lastName
         };
-    }
-
-    private ForbidResult ErrorResult(string errorDescription)
-    {
-        return new ForbidResult(
-            new[] { OpenIddictServerAspNetCoreDefaults.AuthenticationScheme },
-            properties: new AuthenticationProperties(new Dictionary<string, string?>
-            {
-                [OpenIddictServerAspNetCoreConstants.Properties.Error] =
-                    OpenIddictConstants.Errors.InvalidRequest,
-                [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
-                    errorDescription
-            }));
-    }
-
-    private async Task<IEnumerable<string>> GetResourcesAsync(ExtensionGrantContext context,
-        ImmutableArray<string> scopes)
-    {
-        var resources = new List<string>();
-        if (!scopes.Any())
-        {
-            return resources;
-        }
-
-        await foreach (var resource in context.HttpContext.RequestServices.GetRequiredService<IOpenIddictScopeManager>()
-                           .ListResourcesAsync(scopes))
-        {
-            resources.Add(resource);
-        }
-
-        return resources;
     }
 }

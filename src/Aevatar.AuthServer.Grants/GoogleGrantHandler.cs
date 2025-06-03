@@ -19,12 +19,12 @@ using SignInResult = Microsoft.AspNetCore.Mvc.SignInResult;
 
 namespace Aevatar.AuthServer.Grants;
 
-public class GoogleGrantHandler : ITokenExtensionGrant
+public class GoogleGrantHandler : GrantHandlerBase
 {
     private readonly ILogger<GoogleGrantHandler> _logger;
     private readonly IGoogleProvider _googleProvider;
 
-    public string Name => GrantTypeConstants.GOOGLE;
+    public override string Name => GrantTypeConstants.GOOGLE;
     
     public GoogleGrantHandler(IGoogleProvider googleProvider, ILogger<GoogleGrantHandler> logger)
     {
@@ -32,7 +32,7 @@ public class GoogleGrantHandler : ITokenExtensionGrant
         _logger = logger;
     }
 
-    public async Task<IActionResult> HandleAsync(ExtensionGrantContext context)
+    public override async Task<IActionResult> HandleAsync(ExtensionGrantContext context)
     {
         var idToken = context.Request.GetParameter("id_token").ToString();
         var source = context.Request.GetParameter("source")?.ToString();
@@ -40,32 +40,14 @@ public class GoogleGrantHandler : ITokenExtensionGrant
         _logger.LogDebug("GoogleGrantHandler.HandleAsync source: {source} idToken: {idToken}", source, idToken);
         if (string.IsNullOrEmpty(idToken))
         {
-            return new ForbidResult(
-                OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                new AuthenticationProperties(new Dictionary<string, string?>
-                {
-                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = 
-                        OpenIddictConstants.Errors.InvalidRequest,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = 
-                        "Missing id_token parameter"
-                }));
+            return CreateForbidResult("Missing id_token parameter");
         }
 
         var clientId = await _googleProvider.GetClientIdAsync(source);
         if (string.IsNullOrEmpty(clientId))
         {
             _logger.LogDebug("GoogleGrantHandler.HandleAsync: clientId not found");
-            return new ForbidResult(
-                OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                new AuthenticationProperties(new Dictionary<string, string?>
-                    {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] =
-                            OpenIddictConstants.Errors.InvalidRequest,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
-                            "client Id not found"
-                    }
-                )
-            );
+            return CreateForbidResult("client Id not found");
         }
         
         _logger.LogDebug("GoogleGrantHandler.HandleAsync: clientId: {clientId}", clientId);
@@ -75,15 +57,7 @@ public class GoogleGrantHandler : ITokenExtensionGrant
         
         if (payload == null)
         {
-            return new ForbidResult(
-                OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                new AuthenticationProperties(new Dictionary<string, string?>
-                {
-                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = 
-                        OpenIddictConstants.Errors.InvalidGrant,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = 
-                        "Invalid Google token"
-                }));
+            return CreateForbidResult(OpenIddictConstants.Errors.InvalidGrant, "Invalid Google token");
         }
         
         var email = payload.Email;
@@ -118,44 +92,8 @@ public class GoogleGrantHandler : ITokenExtensionGrant
                 GrantTypeConstants.GOOGLE));
         }
         
-        var identityRoleManager = context.HttpContext.RequestServices.GetRequiredService<IdentityRoleManager>();
-        var roleNames = new List<string>();
-        foreach (var userRole in user.Roles)
-        {
-            var role = await identityRoleManager.GetByIdAsync(userRole.RoleId);
-            roleNames.Add(role.Name);
-        }
-        
-        
-        var userClaimsPrincipalFactory = context.HttpContext.RequestServices
-            .GetRequiredService<Microsoft.AspNetCore.Identity.IUserClaimsPrincipalFactory<IdentityUser>>();
-        var claimsPrincipal = await userClaimsPrincipalFactory.CreateAsync(user);
-        claimsPrincipal.SetClaim(OpenIddictConstants.Claims.Subject, user.Id.ToString());
-        claimsPrincipal.SetClaim(OpenIddictConstants.Claims.Role, string.Join(",",roleNames));
-        claimsPrincipal.SetScopes(context.Request.GetScopes());
-        claimsPrincipal.SetResources(await GetResourcesAsync(context, claimsPrincipal.GetScopes()));
-        claimsPrincipal.SetAudiences("Aevatar");
-        await context.HttpContext.RequestServices.GetRequiredService<AbpOpenIddictClaimsPrincipalManager>()
-            .HandleAsync(context.Request, claimsPrincipal);
+        var claimsPrincipal = await CreateUserClaimsPrincipalWithFactoryAsync(context, user);
 
         return new SignInResult(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme, claimsPrincipal);
-    }
-    
-    private async Task<IEnumerable<string>> GetResourcesAsync(ExtensionGrantContext context,
-        ImmutableArray<string> scopes)
-    {
-        var resources = new List<string>();
-        if (!scopes.Any())
-        {
-            return resources;
-        }
-
-        await foreach (var resource in context.HttpContext.RequestServices.GetRequiredService<IOpenIddictScopeManager>()
-                           .ListResourcesAsync(scopes))
-        {
-            resources.Add(resource);
-        }
-
-        return resources;
     }
 }
