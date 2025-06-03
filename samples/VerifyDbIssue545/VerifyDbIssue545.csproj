@@ -16,7 +16,7 @@
     <PackageReference Include="MongoDB.Driver.Core.Extensions.DiagnosticSources" />
     <PackageReference Include="MongoDB.Driver" />
     <PackageReference Include="Orleans.Streams.Kafka" />
-</ItemGroup>
+  </ItemGroup>
 
 <ItemGroup>
     <!-- <ProjectReference Include="..\..\..\aevatar-framework\src\Aevatar.Core\Aevatar.Core.csproj" /> -->

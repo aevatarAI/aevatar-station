@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Reflection;
 using Aevatar.Core.Abstractions;
+using Aevatar.Core.Abstractions.Extensions;
 using Aevatar.PermissionManagement;
 
 namespace Aevatar.Permissions;
@@ -18,7 +19,7 @@ public class PermissionHelper
 
         foreach (var assembly in assemblies)
         {
-            foreach (var type in assembly.GetTypes()
+            foreach (var type in assembly.GetTypesIgnoringLoadException()
                          .Where(t => t.IsSubclassOf(baseType) && !t.IsAbstract))
             {
                 var attr = type.GetCustomAttribute<PermissionAttribute>();
