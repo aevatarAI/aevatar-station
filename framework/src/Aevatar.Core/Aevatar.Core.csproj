@@ -19,6 +19,7 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.Orleans.EventSourcing" />
         <PackageReference Include="AElf.OpenTelemetry" />
+        <PackageReference Include="Castle.Core" />
     </ItemGroup>
 
     <ItemGroup>
