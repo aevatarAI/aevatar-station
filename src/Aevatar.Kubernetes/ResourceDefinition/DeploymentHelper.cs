@@ -300,6 +300,27 @@ public class DeploymentHelper
             },
             new V1VolumeMount
             {
+                Name = "config-volume",
+                MountPath = KubernetesConstants
+                    .AppSettingSharedFileMountPath,
+                SubPath = KubernetesConstants.AppSettingSharedFileName
+            },
+            new V1VolumeMount
+            {
+                Name = "config-volume",
+                MountPath = KubernetesConstants
+                    .AppSettingHttpApiHostSharedFileMountPath,
+                SubPath = KubernetesConstants.AppSettingHttpApiHostSharedFileName
+            },
+            new V1VolumeMount
+            {
+                Name = "config-volume",
+                MountPath = KubernetesConstants
+                    .AppSettingSiloSharedFileMountPath,
+                SubPath = KubernetesConstants.AppSettingSiloSharedFileName
+            },
+            new V1VolumeMount
+            {
                 Name = "log-volume",
                 MountPath = KubernetesConstants.AppLogFileMountPath
             }
@@ -340,6 +361,21 @@ public class DeploymentHelper
                         {
                             Key = KubernetesConstants.AppSettingFileName,
                             Path = KubernetesConstants.AppSettingFileName
+                        },
+                        new V1KeyToPath
+                        {
+                            Key = KubernetesConstants.AppSettingSharedFileName,
+                            Path = KubernetesConstants.AppSettingSharedFileName
+                        },
+                        new V1KeyToPath
+                        {
+                            Key = KubernetesConstants.AppSettingHttpApiHostSharedFileName,
+                            Path = KubernetesConstants.AppSettingHttpApiHostSharedFileName
+                        },
+                        new V1KeyToPath
+                        {
+                            Key = KubernetesConstants.AppSettingSiloSharedFileName,
+                            Path = KubernetesConstants.AppSettingSiloSharedFileName
                         }
                     }
                 }
