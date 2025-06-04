@@ -51,8 +51,6 @@ public class Program
         Host.CreateDefaultBuilder(args)
             .ConfigureServices((hostContext, services) =>
             {
-                // Configure OpenTelemetry
-                services.AddAevatarOpenTelemetry(hostContext.Configuration);
                 services.AddApplication<SiloModule>();
             })
             .UseOrleansConfiguration()
@@ -60,6 +58,8 @@ public class Program
             .UseSerilog()
             .ConfigureServices((context, services) =>
             {
+                // Configure OpenTelemetry
+                services.AddAevatarOpenTelemetry(context.Configuration);
                 services.UseGrainStorageWithMetrics();
             });
 }
