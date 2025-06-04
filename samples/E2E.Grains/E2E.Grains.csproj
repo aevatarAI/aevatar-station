@@ -13,9 +13,7 @@
     <PackageReference Include="Volo.Abp.AutoMapper"/>
     <PackageReference Include="Volo.Abp.EventBus.Abstractions"/>
     <PackageReference Include="Aevatar.SignalR"/>
-    <PackageReference Include="MineAiFun.GAgents"/>
     <PackageReference Include="XWorkerAgent"/>
-    <PackageReference Include="TelegramWorkerAgent"/>
     
     <PackageReference Include="Aevatar.Core"/>
     <PackageReference Include="Aevatar.Core.Abstractions"/>
