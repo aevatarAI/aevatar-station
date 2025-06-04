@@ -15,6 +15,12 @@ Use openmemory to search for related fixes or changes.
 
 Breakdown complex tasks into manageable parts, use Mutually Exclusive, Collectively Exhaustive principles.
 
+After receiving tool results, carefully reflect on their quality and determine optimal next steps before proceeding. Use your thinking to plan and iterate based on this new information, and then take the best next action.
+
+For maximum efficiency, whenever you need to perform multiple independent operations, invoke all relevant tools simultaneously rather than sequentially.
+
+If you create any temporary new files, scripts, or helper files for iteration, clean up these files by removing them at the end of the task.
+
 Keep answers concise and direct.
 Prioritize technical details over generic advice.
 Create new file for a new class.
