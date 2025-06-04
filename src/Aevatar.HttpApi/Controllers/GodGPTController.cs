@@ -14,6 +14,7 @@ using Aevatar.Quantum;
 using Aevatar.Service;
 using Asp.Versioning;
 using HandlebarsDotNet;
+using Json.Schema;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -60,11 +61,22 @@ public class GodGPTController : AevatarController
         return Task.FromResult(Version);
     }
 
-    [HttpPost("gotgpt/create-session")]
+    [HttpPost("godgpt/create-session")]
     public async Task<Guid> CreateSessionAsync(CreateSessionRequestDto request)
     {
         var stopwatch = Stopwatch.StartNew();
         var sessionId = await _godGptService.CreateSessionAsync((Guid)CurrentUser.Id!, _defaultLLM, _defaultPrompt, request.Guider);
+        _logger.LogDebug("[GodGPTController][CreateSessionAsync] sessionId: {0}, duration: {1}ms",
+            sessionId.ToString(), stopwatch.ElapsedMilliseconds);
+        return sessionId;
+    }
+    
+    //Deprecated
+    [HttpPost("gotgpt/create-session")]
+    public async Task<Guid> CreateSessionAsync()
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var sessionId = await _godGptService.CreateSessionAsync((Guid)CurrentUser.Id!, _defaultLLM, _defaultPrompt, "");
         _logger.LogDebug("[GodGPTController][CreateSessionAsync] sessionId: {0}, duration: {1}ms",
             sessionId.ToString(), stopwatch.ElapsedMilliseconds);
         return sessionId;
@@ -173,6 +185,26 @@ public class GodGPTController : AevatarController
         _logger.LogDebug("[GodGPTController][GetSessionListAsync] userId: {0}, duration: {1}ms",
             currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
         return sessionList;
+    }
+
+    [HttpGet("godgpt/session-info/{sessionId}")]
+    public async Task<Aevatar.Quantum.SessionCreationInfoDto?> GetSessionCreationInfoAsync(Guid sessionId)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        
+        // Validate sessionId format (Guid validation is automatic by ASP.NET Core)
+        if (sessionId == Guid.Empty)
+        {
+            _logger.LogWarning("[GodGPTController][GetSessionCreationInfoAsync] Invalid sessionId: {0}", sessionId);
+            return new Aevatar.Quantum.SessionCreationInfoDto();
+        }
+
+        var sessionInfo = await _godGptService.GetSessionCreationInfoAsync(currentUserId, sessionId);
+        _logger.LogDebug("[GodGPTController][GetSessionCreationInfoAsync] sessionId: {0}, found: {1}, duration: {2}ms",
+            sessionId, sessionInfo != null, stopwatch.ElapsedMilliseconds);
+        
+        return sessionInfo;
     }
 
     [HttpGet("godgpt/chat/{sessionId}")]
