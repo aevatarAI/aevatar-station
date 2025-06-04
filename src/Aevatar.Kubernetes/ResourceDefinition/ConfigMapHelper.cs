@@ -22,23 +22,15 @@ public class ConfigMapHelper
     /// Create appsettings.json configmap resource definition
     /// </summary>
     /// <param name="configMapName">appsettings-config</param>
-    /// <param name="configFileName">appsettings.json</param>
-    /// <param name="nameSpace">nameSpace</param>
-    /// <param name="appSettingsContent">File.ReadAllText(appSettingsPath)</param>
+    /// <param name="configFiles">Dictionary of config files</param>
     /// <returns></returns>
-    public static V1ConfigMap CreateAppSettingConfigMapDefinition(string configMapName,
-        string appSettingsContent)
+    public static V1ConfigMap CreateAppSettingConfigMapDefinition(string configMapName, Dictionary<string, string> configFiles)
     {
-        // Create a ConfigMap
         var configMap = new V1ConfigMap
         {
             Metadata = new V1ObjectMeta { Name = configMapName, NamespaceProperty = KubernetesConstants.AppNameSpace },
-            Data = new Dictionary<string, string>
-            {
-                { KubernetesConstants.AppSettingFileName, appSettingsContent }
-            }
+            Data = configFiles
         };
-
         return configMap;
     }
     
@@ -46,21 +38,15 @@ public class ConfigMapHelper
     /// Create filebeat.yml configmap resource definition
     /// </summary>
     /// <param name="configMapName"></param>
-    /// <param name="configFileContent"></param>
+    /// <param name="configFiles"></param>
     /// <returns></returns>
-    public static V1ConfigMap CreateFileBeatConfigMapDefinition(string configMapName,
-        string configFileContent)
+    public static V1ConfigMap CreateFileBeatConfigMapDefinition(string configMapName, Dictionary<string, string> configFiles)
     {
-        // Create a ConfigMap
         var configMap = new V1ConfigMap
         {
             Metadata = new V1ObjectMeta { Name = configMapName, NamespaceProperty = KubernetesConstants.AppNameSpace },
-            Data = new Dictionary<string, string>
-            {
-                { KubernetesConstants.FileBeatConfigFileName, configFileContent }
-            }
+            Data = configFiles
         };
-
         return configMap;
     }
 }
