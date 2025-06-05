@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using Aevatar.Webhook.Extensions;
 using Microsoft.AspNetCore.Hosting;
@@ -14,6 +15,7 @@ public class Program
     public async static Task<int> Main(string[] args)
     {
         var configuration = new ConfigurationBuilder()
+            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
             .AddJsonFile("appsettings.json")
             .Build();
 
@@ -33,7 +35,13 @@ public class Program
         try
         {
             Log.Information("Starting Aevatar.Developer.Host.");
-            await CreateHostBuilder(args).Build().RunAsync();
+            var builder = CreateHostBuilder(args);
+            builder.ConfigureHostConfiguration(config =>
+            {
+                config.AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
+                    .AddJsonFile("appsettings.json");
+            });
+            await builder.Build().RunAsync();
             return 0;
         }
         catch (Exception ex)
