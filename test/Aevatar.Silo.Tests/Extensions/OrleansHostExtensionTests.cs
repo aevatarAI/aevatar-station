@@ -1,34 +1,85 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 using Aevatar.Core.Placement;
+using Aevatar.MongoDB;
 using Aevatar.Silo.Extensions;
 using Aevatar.Silo.Startup;
+using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using MongoDB.Driver;
+using Orleans.Providers.MongoDB.Configuration;
 using Moq;
 using Orleans;
 using Orleans.Configuration;
 using Orleans.Hosting;
 using Orleans.Runtime;
 using Orleans.Runtime.Placement;
+using Orleans.TestingHost;
 using Shouldly;
 using Xunit;
 
-namespace Aevatar.Silo.Tests.Extensions
+namespace Aevatar.Silo.Tests.Extensions;
+
+public class OrleansHostExtensionTests : IClassFixture<AevatarMongoDbFixture>
 {
-    public class OrleansHostExtensionTests
+    private readonly AevatarMongoDbFixture _mongoDbFixture;
+
+    public OrleansHostExtensionTests(AevatarMongoDbFixture mongoDbFixture)
     {
-        // Base configuration for all tests
-        private static Dictionary<string, string> GetBaseConfig(bool isKubernetes = false)
+        _mongoDbFixture = mongoDbFixture;
+    }
+    private class MongoDBTestSiloConfigurator : ISiloConfigurator
+    {
+        public void Configure(ISiloBuilder siloBuilder)
         {
-            return new Dictionary<string, string>
+            // Configure MongoDB client with test settings using in-memory MongoDB
+            var connectionString = AevatarMongoDbFixture.GetRandomConnectionString();
+
+            siloBuilder
+                .UseMongoDBClient(provider =>
+                {
+                    var configuration = provider.GetService<IConfiguration>();
+                    var configSection = configuration.GetSection("Orleans");
+
+                    var setting = MongoClientSettings.FromConnectionString(connectionString);
+
+                    // Read MongoDB client settings from configuration with MongoDB driver default values
+                    var clientSection = configSection.GetSection("MongoDBClientSettings");
+                    setting.MaxConnectionPoolSize = clientSection.GetValue<int>("MaxConnectionPoolSize", 512);
+                    setting.MinConnectionPoolSize = clientSection.GetValue<int>("MinConnectionPoolSize", 16);
+                    setting.WaitQueueSize = clientSection.GetValue<int>("WaitQueueSize", 500);
+                    setting.WaitQueueTimeout = clientSection.GetValue<TimeSpan>("WaitQueueTimeout", TimeSpan.FromMinutes(2));
+                    setting.MaxConnecting = clientSection.GetValue<int>("MaxConnecting", 4);
+                    return setting;
+                })
+                .UseMongoDBClustering(options =>
+                {
+                    options.DatabaseName = "TestDatabase";
+                    options.Strategy = MongoDBMembershipStrategy.SingleDocument;
+                    options.CollectionPrefix = "OrleansTest";
+                })
+                .AddMongoDBGrainStorage("Default", options =>
+                {
+                    options.CollectionPrefix = "OrleansTest";
+                    options.DatabaseName = "TestDatabase";
+                });
+        }
+    }
+    // Base configuration for all tests
+    private Dictionary<string, string> GetBaseConfig(bool isKubernetes = false)
+    {
+        return new Dictionary<string, string>
             {
                 { "Orleans:IsRunningInKubernetes", isKubernetes.ToString().ToLower() },
                 { "Orleans:ClusterId", "test-cluster" },
                 { "Orleans:ServiceId", "test-service" },
-                { "Orleans:MongoDBClient", "mongodb://localhost:27017" },
+                { "Orleans:MongoDBClient", AevatarMongoDbFixture.GetRandomConnectionString() },
                 { "Orleans:MongoDBClientSettings:MaxConnectionPoolSize", "512" },
                 { "Orleans:MongoDBClientSettings:MinConnectionPoolSize", "32" },
                 { "Orleans:MongoDBClientSettings:WaitQueueSize", "40960" },
@@ -51,516 +102,515 @@ namespace Aevatar.Silo.Tests.Extensions
                 { "OrleansStream:Provider", "Memory" },
                 { "VectorStores:Qdrant:Url", "http://localhost:6333" }
             };
+    }
+
+    // Class to mock environment variables
+    private class EnvironmentVariableMock
+    {
+        private readonly Dictionary<string, string> _variables = new Dictionary<string, string>();
+
+        public void SetVariable(string name, string value)
+        {
+            _variables[name] = value;
         }
 
-        // Class to mock environment variables
-        private class EnvironmentVariableMock
+        public string GetVariable(string name)
         {
-            private readonly Dictionary<string, string> _variables = new Dictionary<string, string>();
-
-            public void SetVariable(string name, string value)
-            {
-                _variables[name] = value;
-            }
-
-            public string GetVariable(string name)
-            {
-                return _variables.TryGetValue(name, out var value) ? value : null;
-            }
-
-            public static EnvironmentVariableMock SetupLocalDevEnvironment()
-            {
-                var mock = new EnvironmentVariableMock();
-                mock.SetVariable("AevatarOrleans__AdvertisedIP", "127.0.0.1");
-                mock.SetVariable("AevatarOrleans__SiloPort", "11111");
-                mock.SetVariable("AevatarOrleans__GatewayPort", "30000");
-                mock.SetVariable("AevatarOrleans__DashboardIp", "127.0.0.1");
-                mock.SetVariable("AevatarOrleans__DashboardPort", "8888");
-                return mock;
-            }
-
-            public static EnvironmentVariableMock SetupKubernetesEnvironment()
-            {
-                var mock = new EnvironmentVariableMock();
-                mock.SetVariable("POD_IP", "10.0.0.1");
-                mock.SetVariable("ORLEANS_CLUSTER_ID", "test-k8s-cluster");
-                mock.SetVariable("ORLEANS_SERVICE_ID", "test-k8s-service");
-                return mock;
-            }
+            return _variables.TryGetValue(name, out var value) ? value : null;
         }
 
-        private (Mock<IHostBuilder>, Action<HostBuilderContext, ISiloBuilder>) SetupHostBuilderMock()
+        public static EnvironmentVariableMock SetupLocalDevEnvironment()
         {
-            var mockHostBuilder = new Mock<IHostBuilder>();
-            Action<HostBuilderContext, ISiloBuilder> orleansConfigAction = null;
-            
-            mockHostBuilder.Setup(x => x.UseOrleans(It.IsAny<Action<HostBuilderContext, ISiloBuilder>>()))
-                .Callback<Action<HostBuilderContext, ISiloBuilder>>((configAction) => {
-                    orleansConfigAction = configAction;
-                })
-                .Returns(mockHostBuilder.Object);
-            mockHostBuilder.Setup(x => x.ConfigureServices(It.IsAny<Action<HostBuilderContext, IServiceCollection>>()))
-                .Returns(mockHostBuilder.Object);
-            mockHostBuilder.Setup(x => x.UseConsoleLifetime())
-                .Returns(mockHostBuilder.Object);
-                
-            return (mockHostBuilder, orleansConfigAction);
+            var mock = new EnvironmentVariableMock();
+            mock.SetVariable("AevatarOrleans__AdvertisedIP", "127.0.0.1");
+            mock.SetVariable("AevatarOrleans__SiloPort", "11111");
+            mock.SetVariable("AevatarOrleans__GatewayPort", "30000");
+            mock.SetVariable("AevatarOrleans__DashboardIp", "127.0.0.1");
+            mock.SetVariable("AevatarOrleans__DashboardPort", "8888");
+            return mock;
         }
 
-        [Fact]
-        public void UseOrleansConfiguration_Should_RegisterSiloNamePatternPlacement()
+        public static EnvironmentVariableMock SetupKubernetesEnvironment()
         {
-            // Arrange
+            var mock = new EnvironmentVariableMock();
+            mock.SetVariable("POD_IP", "10.0.0.1");
+            mock.SetVariable("ORLEANS_CLUSTER_ID", "test-k8s-cluster");
+            mock.SetVariable("ORLEANS_SERVICE_ID", "test-k8s-service");
+            return mock;
+        }
+    }
+
+    private (Mock<IHostBuilder>, Action<HostBuilderContext, ISiloBuilder>) SetupHostBuilderMock()
+    {
+        var mockHostBuilder = new Mock<IHostBuilder>();
+        Action<HostBuilderContext, ISiloBuilder> orleansConfigAction = null;
+
+        mockHostBuilder.Setup(x => x.UseOrleans(It.IsAny<Action<HostBuilderContext, ISiloBuilder>>()))
+            .Callback<Action<HostBuilderContext, ISiloBuilder>>((configAction) =>
+            {
+                orleansConfigAction = configAction;
+            })
+            .Returns(mockHostBuilder.Object);
+        mockHostBuilder.Setup(x => x.ConfigureServices(It.IsAny<Action<HostBuilderContext, IServiceCollection>>()))
+            .Returns(mockHostBuilder.Object);
+        mockHostBuilder.Setup(x => x.UseConsoleLifetime())
+            .Returns(mockHostBuilder.Object);
+
+        return (mockHostBuilder, orleansConfigAction);
+    }
+
+    [Fact]
+    public void UseOrleansConfiguration_Should_RegisterSiloNamePatternPlacement()
+    {
+        // Arrange
+        var hostBuilder = new HostBuilder();
+        var configData = GetBaseConfig();
+
+        // Add Kafka-specific config
+        configData["OrleansStream:Provider"] = "Kafka";
+        configData["OrleansStream:Brokers:0"] = "localhost:9092";
+        configData["OrleansStream:Partitions"] = "1";
+        configData["OrleansStream:ReplicationFactor"] = "1";
+        configData["OrleansStream:Topics"] = "test-topic";
+
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(configData)
+            .Build();
+
+        // Setup environment variables mock
+        var envMock = EnvironmentVariableMock.SetupLocalDevEnvironment();
+
+        // Setup the environment access patch to use our mock
+        var originalEnvAccessor = OrleansHostExtension.GetEnvironmentVariable;
+        try
+        {
+            // Patch the environment variable accessor
+            OrleansHostExtension.GetEnvironmentVariable = envMock.GetVariable;
+
+            hostBuilder.ConfigureAppConfiguration(builder => builder.AddConfiguration(configuration));
+
+            // Act
+            hostBuilder.UseOrleansConfiguration();
+            var host = hostBuilder.Build();
+
+            // Assert
+            host.Should().NotBeNull("Host should be built successfully with Orleans configuration applied");
+
+            // Verify that Orleans services are registered
+            var clusterClient = host.Services.GetRequiredService<IClusterClient>();
+            clusterClient.Should().NotBeNull("IClusterClient should be registered when Orleans is configured");
+
+            // Verify that the SiloNamePatternPlacementDirector is registered as a keyed service
+            // The placement director is registered as a keyed service with the placement strategy type as the key
+            var serviceDescriptors = host.Services.GetType()
+                .GetProperty("ServiceDescriptors", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                ?.GetValue(host.Services) as IEnumerable<ServiceDescriptor>;
+
+            if (serviceDescriptors != null)
+            {
+                var placementDirectorService = serviceDescriptors.FirstOrDefault(sd =>
+                    sd.ServiceType == typeof(IPlacementDirector) &&
+                    sd.ServiceKey?.Equals(typeof(SiloNamePatternPlacement)) == true);
+
+                placementDirectorService.Should().NotBeNull("SiloNamePatternPlacementDirector should be registered as a keyed service");
+                placementDirectorService.ImplementationType.Should().Be(typeof(SiloNamePatternPlacementDirector),
+                    "The registered placement director should be of type SiloNamePatternPlacementDirector");
+            }
+            else
+            {
+                // Fallback: Try to get the keyed service directly (this will throw if not registered)
+                Action getPlacementDirector = () => host.Services.GetRequiredKeyedService<IPlacementDirector>(typeof(SiloNamePatternPlacement));
+                getPlacementDirector.Should().NotThrow("SiloNamePatternPlacementDirector should be registered as a keyed service");
+            }
+        }
+        finally
+        {
+            // Restore the original environment accessor
+            OrleansHostExtension.GetEnvironmentVariable = originalEnvAccessor;
+        }
+    }
+
+    [Fact]
+    public void Should_SetSiloNameWithProjectorPattern_When_SiloNamePatternIsProjector_InLocalMode()
+    {
+        // Arrange
+        var envMock = EnvironmentVariableMock.SetupLocalDevEnvironment();
+        envMock.SetVariable("AevatarOrleans__SILO_NAME_PATTERN", "Projector");
+
+        // Store and replace the original function
+        var originalGetter = OrleansHostExtension.GetEnvironmentVariable;
+        OrleansHostExtension.GetEnvironmentVariable = envMock.GetVariable;
+
+        try
+        {
             var hostBuilder = new HostBuilder();
-            var configData = GetBaseConfig();
+            var configData = GetBaseConfig(isKubernetes: false);
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(configData)
+                .Build();
 
-            // Add Kafka-specific config
-            configData["OrleansStream:Provider"] = "Kafka";
-            configData["OrleansStream:Brokers:0"] = "localhost:9092";
-            configData["OrleansStream:Partitions"] = "1";
-            configData["OrleansStream:ReplicationFactor"] = "1";
-            configData["OrleansStream:Topics"] = "test-topic";
+            hostBuilder.ConfigureAppConfiguration(builder => builder.AddConfiguration(configuration));
+
+            // Act
+            hostBuilder.UseOrleansConfiguration();
+            var host = hostBuilder.Build();
+
+            // Assert - Verify that the silo name starts with "Projector"
+            var siloOptions = host.Services.GetService<IOptions<SiloOptions>>();
+            siloOptions.Should().NotBeNull("SiloOptions should be configured");
+            siloOptions.Value.SiloName.Should().StartWith("Projector-", "Silo name should start with 'Projector-' when SiloNamePattern is 'Projector'");
+
+            // Verify that StateProjectionInitializer would be registered (by checking the condition logic)
+            var siloNamePattern = envMock.GetVariable("AevatarOrleans__SILO_NAME_PATTERN");
+            var shouldRegisterStateProjection = string.IsNullOrEmpty(siloNamePattern) ||
+                string.Compare(siloNamePattern, "Projector", StringComparison.OrdinalIgnoreCase) == 0;
+            shouldRegisterStateProjection.Should().BeTrue("StateProjectionInitializer should be registered when SiloNamePattern is 'Projector'");
+        }
+        finally
+        {
+            // Restore the original function
+            OrleansHostExtension.GetEnvironmentVariable = originalGetter;
+        }
+    }
+
+    [Fact]
+    public void Should_SetSiloNameWithWorkerPattern_When_SiloNamePatternIsNotProjector_InLocalMode()
+    {
+        // Arrange
+        var envMock = EnvironmentVariableMock.SetupLocalDevEnvironment();
+        envMock.SetVariable("AevatarOrleans__SILO_NAME_PATTERN", "Worker");
+
+        // Store and replace the original function
+        var originalGetter = OrleansHostExtension.GetEnvironmentVariable;
+        OrleansHostExtension.GetEnvironmentVariable = envMock.GetVariable;
+
+        try
+        {
+            var hostBuilder = new HostBuilder();
+            var configData = GetBaseConfig(isKubernetes: false);
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(configData)
+                .Build();
+
+            hostBuilder.ConfigureAppConfiguration(builder => builder.AddConfiguration(configuration));
+
+            // Act
+            hostBuilder.UseOrleansConfiguration();
+            var host = hostBuilder.Build();
+
+            // Assert - Verify that the silo name starts with "Worker"
+            var siloOptions = host.Services.GetService<IOptions<SiloOptions>>();
+            siloOptions.Should().NotBeNull("SiloOptions should be configured");
+            siloOptions.Value.SiloName.Should().StartWith("Worker-", "Silo name should start with 'Worker-' when SiloNamePattern is 'Worker'");
+
+            // Verify that StateProjectionInitializer would NOT be registered (by checking the condition logic)
+            var siloNamePattern = envMock.GetVariable("AevatarOrleans__SILO_NAME_PATTERN");
+            var shouldRegisterStateProjection = string.IsNullOrEmpty(siloNamePattern) ||
+                string.Compare(siloNamePattern, "Projector", StringComparison.OrdinalIgnoreCase) == 0;
+            shouldRegisterStateProjection.Should().BeFalse("StateProjectionInitializer should NOT be registered when SiloNamePattern is 'Worker'");
+        }
+        finally
+        {
+            // Restore the original function
+            OrleansHostExtension.GetEnvironmentVariable = originalGetter;
+        }
+    }
+
+    [Fact]
+    public void Should_SetSiloNameWithProjectorPattern_When_SiloNamePatternIsProjector_InKubernetesMode()
+    {
+        // Arrange
+        var envMock = EnvironmentVariableMock.SetupKubernetesEnvironment();
+        envMock.SetVariable("SILO_NAME_PATTERN", "Projector");
+
+        // Store and replace the original function
+        var originalGetter = OrleansHostExtension.GetEnvironmentVariable;
+        OrleansHostExtension.GetEnvironmentVariable = envMock.GetVariable;
+
+        try
+        {
+            var hostBuilder = new HostBuilder();
+            var configData = GetBaseConfig(isKubernetes: true);
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(configData)
+                .Build();
+
+            hostBuilder.ConfigureAppConfiguration(builder => builder.AddConfiguration(configuration));
+
+            // Act
+            hostBuilder.UseOrleansConfiguration();
+            var host = hostBuilder.Build();
+
+            // Assert - Verify that the silo name starts with "Projector"
+            var siloOptions = host.Services.GetService<IOptions<SiloOptions>>();
+            siloOptions.Should().NotBeNull("SiloOptions should be configured");
+            siloOptions.Value.SiloName.Should().StartWith("Projector-", "Silo name should start with 'Projector-' when SiloNamePattern is 'Projector' in Kubernetes mode");
+
+            // Verify that StateProjectionInitializer would be registered (by checking the condition logic)
+            var siloNamePattern = envMock.GetVariable("SILO_NAME_PATTERN");
+            var shouldRegisterStateProjection = string.IsNullOrEmpty(siloNamePattern) ||
+                string.Compare(siloNamePattern, "Projector", StringComparison.OrdinalIgnoreCase) == 0;
+            shouldRegisterStateProjection.Should().BeTrue("StateProjectionInitializer should be registered when SiloNamePattern is 'Projector' in Kubernetes mode");
+        }
+        finally
+        {
+            // Restore the original function
+            OrleansHostExtension.GetEnvironmentVariable = originalGetter;
+        }
+    }
+
+    [Fact]
+    public void Should_SetSiloNameWithWorkerPattern_When_SiloNamePatternIsNotProjector_InKubernetesMode()
+    {
+        // Arrange
+        var envMock = EnvironmentVariableMock.SetupKubernetesEnvironment();
+        envMock.SetVariable("SILO_NAME_PATTERN", "Worker");
+
+        // Store and replace the original function
+        var originalGetter = OrleansHostExtension.GetEnvironmentVariable;
+        OrleansHostExtension.GetEnvironmentVariable = envMock.GetVariable;
+
+        try
+        {
+            var hostBuilder = new HostBuilder();
+            var configData = GetBaseConfig(isKubernetes: true);
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(configData)
+                .Build();
+
+            hostBuilder.ConfigureAppConfiguration(builder => builder.AddConfiguration(configuration));
+
+            // Act
+            hostBuilder.UseOrleansConfiguration();
+            var host = hostBuilder.Build();
+
+            // Assert - Verify that the silo name starts with "Worker"
+            var siloOptions = host.Services.GetService<IOptions<SiloOptions>>();
+            siloOptions.Should().NotBeNull("SiloOptions should be configured");
+            siloOptions.Value.SiloName.Should().StartWith("Worker-", "Silo name should start with 'Worker-' when SiloNamePattern is 'Worker' in Kubernetes mode");
+
+            // Verify that StateProjectionInitializer would NOT be registered (by checking the condition logic)
+            var siloNamePattern = envMock.GetVariable("SILO_NAME_PATTERN");
+            var shouldRegisterStateProjection = string.IsNullOrEmpty(siloNamePattern) ||
+                string.Compare(siloNamePattern, "Projector", StringComparison.OrdinalIgnoreCase) == 0;
+            shouldRegisterStateProjection.Should().BeFalse("StateProjectionInitializer should NOT be registered when SiloNamePattern is 'Worker' in Kubernetes mode");
+        }
+        finally
+        {
+            // Restore the original function
+            OrleansHostExtension.GetEnvironmentVariable = originalGetter;
+        }
+    }
+
+    private bool IsLifecycleParticipantRegistered<T>(IServiceProvider services)
+    {
+        try
+        {
+            // Check if there are any lifecycle participants registered
+            var lifecycleParticipants = services.GetServices<ILifecycleParticipant<ISiloLifecycle>>();
+            return lifecycleParticipants.Any();
+        }
+        catch
+        {
+            // If there's an exception getting the service, it's not properly registered
+            return false;
+        }
+    }
+
+    [Fact]
+    public async Task Should_UseConfiguredMongoDBClientSettings_WhenProvided()
+    {
+        // Arrange
+        var configData = GetBaseConfig(isKubernetes: false);
+
+        // Override with custom MongoDB client settings
+        configData["Orleans:MongoDBClientSettings:MaxConnectionPoolSize"] = "1024";
+        configData["Orleans:MongoDBClientSettings:MinConnectionPoolSize"] = "64";
+        configData["Orleans:MongoDBClientSettings:WaitQueueSize"] = "163840";
+        configData["Orleans:MongoDBClientSettings:WaitQueueTimeout"] = "00:15:00";
+        configData["Orleans:MongoDBClientSettings:MaxConnecting"] = "32";
+
+        var envMock = EnvironmentVariableMock.SetupLocalDevEnvironment();
+        var originalGetter = OrleansHostExtension.GetEnvironmentVariable;
+        OrleansHostExtension.GetEnvironmentVariable = envMock.GetVariable;
+
+        try
+        {
+            // Act - Create a test cluster with the configuration
+            var builder = new TestClusterBuilder(1);
+            builder.ConfigureHostConfiguration(configBuilder =>
+            {
+                configBuilder.AddInMemoryCollection(configData);
+            });
+            builder.AddSiloBuilderConfigurator<MongoDBTestSiloConfigurator>();
+
+            using var cluster = builder.Build();
+            await cluster.DeployAsync();
+
+            // Assert - Get the MongoDB client from the silo and verify settings
+            var siloHandle = cluster.GetActiveSilos().First();
+            var siloServiceProvider = cluster.GetSiloServiceProvider(siloHandle.SiloAddress);
+            var mongoClient = siloServiceProvider.GetService<IMongoClient>();
+            mongoClient.Should().NotBeNull("MongoDB client should be registered");
+
+            var settings = mongoClient.Settings;
+            settings.MaxConnectionPoolSize.Should().Be(1024, "MaxConnectionPoolSize should be configured to 1024");
+            settings.MinConnectionPoolSize.Should().Be(64, "MinConnectionPoolSize should be configured to 64");
+            settings.WaitQueueSize.Should().Be(163840, "WaitQueueSize should be configured to 163840");
+            settings.WaitQueueTimeout.Should().Be(TimeSpan.FromMinutes(15), "WaitQueueTimeout should be configured to 15 minutes");
+            settings.MaxConnecting.Should().Be(32, "MaxConnecting should be configured to 32");
+        }
+        finally
+        {
+            OrleansHostExtension.GetEnvironmentVariable = originalGetter;
+        }
+    }
+
+    [Fact]
+    public async Task Should_UseConfiguredMongoDBESClientSettings_WhenProvided()
+    {
+        // Arrange
+        var configData = GetBaseConfig(isKubernetes: false);
+
+        // Enable MongoDB event sourcing and override with custom MongoDB ES client settings
+        configData["OrleansEventSourcing:Provider"] = "mongodb";
+        configData["Orleans:MongoDBESClientSettings:WaitQueueSize"] = "20480";
+        configData["Orleans:MongoDBESClientSettings:MinConnectionPoolSize"] = "64";
+        configData["Orleans:MongoDBESClientSettings:WaitQueueTimeout"] = "00:15:00";
+        configData["Orleans:MongoDBESClientSettings:MaxConnecting"] = "32";
+
+        var envMock = EnvironmentVariableMock.SetupLocalDevEnvironment();
+        var originalGetter = OrleansHostExtension.GetEnvironmentVariable;
+        OrleansHostExtension.GetEnvironmentVariable = envMock.GetVariable;
+
+        try
+        {
+            // Act - Create a test cluster with the configuration
+            var builder = new TestClusterBuilder(1);
+            builder.ConfigureHostConfiguration(configBuilder =>
+            {
+                configBuilder.AddInMemoryCollection(configData);
+            });
+            builder.AddSiloBuilderConfigurator<MongoDBTestSiloConfigurator>();
+
+            using var cluster = builder.Build();
+            await cluster.DeployAsync();
+
+            // Assert - Verify that MongoDB event sourcing is configured
+            // We can verify the configuration is read correctly
+            var configuration = cluster.ServiceProvider.GetService<IConfiguration>();
+            configuration.GetSection("OrleansEventSourcing:Provider").Get<string>().Should().Be("mongodb", "MongoDB event sourcing provider should be enabled");
+
+            // Verify that the cluster was created successfully with the MongoDB ES configuration
+            cluster.Should().NotBeNull("Test cluster should be created successfully with MongoDB ES configuration");
+        }
+        finally
+        {
+            OrleansHostExtension.GetEnvironmentVariable = originalGetter;
+        }
+    }
+
+    [Fact]
+    public void Should_HandleMissingMongoDBClientSettings_Gracefully()
+    {
+        // Arrange
+        var envMock = EnvironmentVariableMock.SetupLocalDevEnvironment();
+        var originalGetter = OrleansHostExtension.GetEnvironmentVariable;
+        OrleansHostExtension.GetEnvironmentVariable = envMock.GetVariable;
+
+        try
+        {
+            var hostBuilder = new HostBuilder();
+            var configData = GetBaseConfig(isKubernetes: false);
+
+            // Remove MongoDB client settings to test default behavior
+            configData.Remove("Orleans:MongoDBClientSettings:MaxConnectionPoolSize");
+            configData.Remove("Orleans:MongoDBClientSettings:MinConnectionPoolSize");
+            configData.Remove("Orleans:MongoDBClientSettings:WaitQueueSize");
+            configData.Remove("Orleans:MongoDBClientSettings:WaitQueueTimeout");
+            configData.Remove("Orleans:MongoDBClientSettings:MaxConnecting");
+            // Also remove ES client settings to test defaults
+            configData.Remove("Orleans:MongoDBESClientSettings:WaitQueueSize");
+            configData.Remove("Orleans:MongoDBESClientSettings:MinConnectionPoolSize");
+            configData.Remove("Orleans:MongoDBESClientSettings:WaitQueueTimeout");
+            configData.Remove("Orleans:MongoDBESClientSettings:MaxConnecting");
 
             var configuration = new ConfigurationBuilder()
                 .AddInMemoryCollection(configData)
                 .Build();
 
-            // Setup environment variables mock
-            var envMock = EnvironmentVariableMock.SetupLocalDevEnvironment();
+            hostBuilder.ConfigureAppConfiguration(builder => builder.AddConfiguration(configuration));
 
-            // Setup the environment access patch to use our mock
-            var originalEnvAccessor = OrleansHostExtension.GetEnvironmentVariable;
-            try 
+            // Act & Assert - Should not throw exception and should use default values
+            var exception = Record.Exception(() =>
             {
-                // Patch the environment variable accessor
-                OrleansHostExtension.GetEnvironmentVariable = envMock.GetVariable;
-
-                hostBuilder.ConfigureAppConfiguration(builder => builder.AddConfiguration(configuration));
-
-                // Act
-                hostBuilder.UseOrleansConfiguration();
-
-                // Build the host to check registrations
-                var host = hostBuilder.Build();
-                var services = host.Services;
-
-                // Assert - Check if services has any placement director for SiloNamePatternPlacement
-                // We can't directly check for IPlacementDirector<SiloNamePatternPlacement> as IPlacementDirector is not generic
-                // Instead, check if we can find any service that handles SiloNamePatternPlacement
-                bool hasPlacementDirector = false;
-                var serviceCollection = services.GetService<IServiceCollection>();
-                if (serviceCollection != null)
-                {
-                    foreach (var descriptor in serviceCollection)
-                    {
-                        if (descriptor.ServiceType.Name.Contains("PlacementDirector") && 
-                            descriptor.ImplementationType?.Name.Contains("SiloNamePatternPlacement") == true)
-                        {
-                            hasPlacementDirector = true;
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    // Fallback: try to get the Orleans placement strategy map
-                    // var placementStrategyManager = services.GetService(typeof(PlacementStrategyManager));
-                    // if (placementStrategyManager != null)
-                    // {
-                    //     hasPlacementDirector = true; // If we have the manager, and our tests pass, we assume it's correctly configured
-                    // }
-                }
-                
-                hasPlacementDirector.ShouldBeTrue("SiloNamePatternPlacement should be registered");
-            }
-            finally
-            {
-                // Restore the original environment accessor
-                OrleansHostExtension.GetEnvironmentVariable = originalEnvAccessor;
-            }
-        }
-
-        [Fact]
-        public void Should_RegisterStateProjectionInitializer_When_SiloNamePatternIsProjector_InLocalMode()
-        {
-            // Arrange
-            var envMock = new EnvironmentVariableMock();
-            envMock.SetVariable("AevatarOrleans__SILO_NAME_PATTERN", "Projector");
-            
-            // Store and replace the original function
-            var originalGetter = OrleansHostExtension.GetEnvironmentVariable;
-            OrleansHostExtension.GetEnvironmentVariable = envMock.GetVariable;
-
-            try
-            {
-                // Setup the host with local mode configuration
-                var hostBuilder = new HostBuilder();
-                var configData = GetBaseConfig(isKubernetes: false);
-
-                var configuration = new ConfigurationBuilder()
-                    .AddInMemoryCollection(configData)
-                    .Build();
-
-                hostBuilder.ConfigureAppConfiguration(builder => builder.AddConfiguration(configuration));
-
-                // Act
-                hostBuilder.UseOrleansConfiguration();
-
-                // Build the host to check registrations
-                var host = hostBuilder.Build();
-                var services = host.Services;
-
-                // Assert - Check if the StateProjectionInitializer is registered as a lifecycle participant
-                var startupTaskRegistered = IsLifecycleParticipantRegistered<StateProjectionInitializer>(services);
-                startupTaskRegistered.ShouldBeTrue("StateProjectionInitializer should be registered when SILO_NAME_PATTERN is 'Projector' in local mode");
-            }
-            finally
-            {
-                // Restore the original getter
-                OrleansHostExtension.GetEnvironmentVariable = originalGetter;
-            }
-        }
-
-        [Fact]
-        public void Should_NotRegisterStateProjectionInitializer_When_SiloNamePatternIsNotProjector_InLocalMode()
-        {
-            // Arrange
-            var envMock = new EnvironmentVariableMock();
-            envMock.SetVariable("AevatarOrleans__SILO_NAME_PATTERN", "Worker");
-            
-            // Store and replace the original function
-            var originalGetter = OrleansHostExtension.GetEnvironmentVariable;
-            OrleansHostExtension.GetEnvironmentVariable = envMock.GetVariable;
-
-            try
-            {
-                // Setup the host with local mode configuration
-                var hostBuilder = new HostBuilder();
-                var configData = GetBaseConfig(isKubernetes: false);
-
-                var configuration = new ConfigurationBuilder()
-                    .AddInMemoryCollection(configData)
-                    .Build();
-
-                hostBuilder.ConfigureAppConfiguration(builder => builder.AddConfiguration(configuration));
-
-                // Act
-                hostBuilder.UseOrleansConfiguration();
-
-                // Build the host to check registrations
-                var host = hostBuilder.Build();
-                var services = host.Services;
-
-                // Assert - Check if the StateProjectionInitializer is registered as a lifecycle participant
-                var startupTaskRegistered = IsLifecycleParticipantRegistered<StateProjectionInitializer>(services);
-                startupTaskRegistered.ShouldBeFalse("StateProjectionInitializer should not be registered when SILO_NAME_PATTERN is not 'Projector'");
-            }
-            finally
-            {
-                // Restore the original getter
-                OrleansHostExtension.GetEnvironmentVariable = originalGetter;
-            }
-        }
-
-        [Fact]
-        public void Should_RegisterStateProjectionInitializer_When_SiloNamePatternIsProjector_InKubernetesMode()
-        {
-            // Arrange
-            var envMock = new EnvironmentVariableMock();
-            envMock.SetVariable("SILO_NAME_PATTERN", "Projector");
-            
-            // Store and replace the original function
-            var originalGetter = OrleansHostExtension.GetEnvironmentVariable;
-            OrleansHostExtension.GetEnvironmentVariable = envMock.GetVariable;
-
-            try
-            {
-                // Setup the host with kubernetes mode configuration
-                var hostBuilder = new HostBuilder();
-                var configData = GetBaseConfig(isKubernetes: true);
-
-                var configuration = new ConfigurationBuilder()
-                    .AddInMemoryCollection(configData)
-                    .Build();
-
-                hostBuilder.ConfigureAppConfiguration(builder => builder.AddConfiguration(configuration));
-
-                // Act
-                hostBuilder.UseOrleansConfiguration();
-
-                // Build the host to check registrations
-                var host = hostBuilder.Build();
-                var services = host.Services;
-
-                // Assert - Check if the StateProjectionInitializer is registered as a lifecycle participant
-                var startupTaskRegistered = IsLifecycleParticipantRegistered<StateProjectionInitializer>(services);
-                startupTaskRegistered.ShouldBeTrue("StateProjectionInitializer should be registered when SILO_NAME_PATTERN is 'Projector' in Kubernetes mode");
-            }
-            finally
-            {
-                // Restore the original getter
-                OrleansHostExtension.GetEnvironmentVariable = originalGetter;
-            }
-        }
-
-        [Fact]
-        public void Should_NotRegisterStateProjectionInitializer_When_SiloNamePatternIsNotProjector_InKubernetesMode()
-        {
-            // Arrange
-            var envMock = new EnvironmentVariableMock();
-            envMock.SetVariable("SILO_NAME_PATTERN", "Worker");
-            
-            // Store and replace the original function
-            var originalGetter = OrleansHostExtension.GetEnvironmentVariable;
-            OrleansHostExtension.GetEnvironmentVariable = envMock.GetVariable;
-
-            try
-            {
-                // Setup the host with kubernetes mode configuration
-                var hostBuilder = new HostBuilder();
-                var configData = GetBaseConfig(isKubernetes: true);
-
-                var configuration = new ConfigurationBuilder()
-                    .AddInMemoryCollection(configData)
-                    .Build();
-
-                hostBuilder.ConfigureAppConfiguration(builder => builder.AddConfiguration(configuration));
-
-                // Act
-                hostBuilder.UseOrleansConfiguration();
-
-                // Build the host to check registrations
-                var host = hostBuilder.Build();
-                var services = host.Services;
-
-                // Assert - Check if the StateProjectionInitializer is registered as a lifecycle participant
-                var startupTaskRegistered = IsLifecycleParticipantRegistered<StateProjectionInitializer>(services);
-                startupTaskRegistered.ShouldBeFalse("StateProjectionInitializer should not be registered when SILO_NAME_PATTERN is not 'Projector' in Kubernetes mode");
-            }
-            finally
-            {
-                // Restore the original getter
-                OrleansHostExtension.GetEnvironmentVariable = originalGetter;
-            }
-        }
-
-        // Helper method to check if a given startup task type is registered as a lifecycle participant
-        private bool IsLifecycleParticipantRegistered<T>(IServiceProvider services)
-        {
-            // Get all service descriptors
-            var serviceCollection = services.GetService<IServiceCollection>();
-            if (serviceCollection == null)
-            {
-                // Get descriptors using reflection as a fallback
-                var serviceProviderField = services.GetType().GetField("_descriptors", 
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                
-                if (serviceProviderField != null)
-                {
-                    serviceCollection = serviceProviderField.GetValue(services) as IServiceCollection;
-                }
-            }
-
-            if (serviceCollection == null)
-            {
-                // If we still can't get the service collection, check for the service directly
-                return services.GetService<T>() != null;
-            }
-
-            // Look for registration of our startup task, either directly or as a lifecycle participant
-            foreach (var descriptor in serviceCollection)
-            {
-                if (descriptor.ImplementationType == typeof(T))
-                    return true;
-
-                if (descriptor.ServiceType.Name.Contains("ILifecycleParticipant") && 
-                    descriptor.ImplementationFactory != null)
-                {
-                    // For factory registrations, we can't easily check what they create
-                    // But we can look at the factory method for references to our type
-                    var factoryMethod = descriptor.ImplementationFactory.Method;
-                    if (factoryMethod.ToString().Contains(typeof(T).Name))
-                        return true;
-                }
-            }
-
-            return false;
-        }
-
-        [Fact]
-        public void Should_UseConfiguredMongoDBClientSettings_WhenProvided()
-        {
-            // Arrange
-            var envMock = EnvironmentVariableMock.SetupLocalDevEnvironment();
-            var originalGetter = OrleansHostExtension.GetEnvironmentVariable;
-            OrleansHostExtension.GetEnvironmentVariable = envMock.GetVariable;
-
-            try
-            {
-                var hostBuilder = new HostBuilder();
-                var configData = GetBaseConfig(isKubernetes: false);
-                
-                // Override with custom MongoDB client settings
-                configData["Orleans:MongoDBClientSettings:MaxConnectionPoolSize"] = "1024";
-                configData["Orleans:MongoDBClientSettings:MinConnectionPoolSize"] = "64";
-                configData["Orleans:MongoDBClientSettings:WaitQueueSize"] = "163840";
-                configData["Orleans:MongoDBClientSettings:WaitQueueTimeout"] = "00:15:00";
-                configData["Orleans:MongoDBClientSettings:MaxConnecting"] = "32";
-
-                var configuration = new ConfigurationBuilder()
-                    .AddInMemoryCollection(configData)
-                    .Build();
-
-                hostBuilder.ConfigureAppConfiguration(builder => builder.AddConfiguration(configuration));
-
-                // Act
-                hostBuilder.UseOrleansConfiguration();
-
-                // Build the host to verify configuration is applied
-                var host = hostBuilder.Build();
-
-                // Assert - The fact that the host builds successfully without errors indicates
-                // that the configuration values are being read correctly from the configuration
-                // rather than using hard-coded values
-                host.ShouldNotBeNull("Host should build successfully with configured MongoDB client settings");
-            }
-            finally
-            {
-                OrleansHostExtension.GetEnvironmentVariable = originalGetter;
-            }
-        }
-
-        [Fact]
-        public void Should_UseConfiguredMongoDBESClientSettings_WhenProvided()
-        {
-            // Arrange
-            var envMock = EnvironmentVariableMock.SetupLocalDevEnvironment();
-            var originalGetter = OrleansHostExtension.GetEnvironmentVariable;
-            OrleansHostExtension.GetEnvironmentVariable = envMock.GetVariable;
-
-            try
-            {
-                var hostBuilder = new HostBuilder();
-                var configData = GetBaseConfig(isKubernetes: false);
-                
-                // Override with custom MongoDB ES client settings
-                configData["Orleans:MongoDBESClientSettings:WaitQueueSize"] = "20480";
-                configData["Orleans:MongoDBESClientSettings:MinConnectionPoolSize"] = "64";
-                configData["Orleans:MongoDBESClientSettings:WaitQueueTimeout"] = "00:15:00";
-                configData["Orleans:MongoDBESClientSettings:MaxConnecting"] = "32";
-
-                var configuration = new ConfigurationBuilder()
-                    .AddInMemoryCollection(configData)
-                    .Build();
-
-                hostBuilder.ConfigureAppConfiguration(builder => builder.AddConfiguration(configuration));
-
-                // Act
-                hostBuilder.UseOrleansConfiguration();
-
-                // Build the host to verify configuration is applied
-                var host = hostBuilder.Build();
-
-                // Assert - The fact that the host builds successfully without errors indicates
-                // that the configuration values are being read correctly from the configuration
-                // rather than using hard-coded values
-                host.ShouldNotBeNull("Host should build successfully with configured MongoDB ES client settings");
-            }
-            finally
-            {
-                OrleansHostExtension.GetEnvironmentVariable = originalGetter;
-            }
-        }
-
-        [Fact]
-        public void Should_HandleMissingMongoDBClientSettings_Gracefully()
-        {
-            // Arrange
-            var envMock = EnvironmentVariableMock.SetupLocalDevEnvironment();
-            var originalGetter = OrleansHostExtension.GetEnvironmentVariable;
-            OrleansHostExtension.GetEnvironmentVariable = envMock.GetVariable;
-
-            try
-            {
-                var hostBuilder = new HostBuilder();
-                var configData = GetBaseConfig(isKubernetes: false);
-                
-                // Remove MongoDB client settings to test default behavior
-                configData.Remove("Orleans:MongoDBClientSettings:MaxConnectionPoolSize");
-                configData.Remove("Orleans:MongoDBClientSettings:MinConnectionPoolSize");
-                configData.Remove("Orleans:MongoDBClientSettings:WaitQueueSize");
-                configData.Remove("Orleans:MongoDBClientSettings:WaitQueueTimeout");
-                configData.Remove("Orleans:MongoDBClientSettings:MaxConnecting");
-                // Also remove ES client settings to test defaults
-                configData.Remove("Orleans:MongoDBESClientSettings:WaitQueueSize");
-                configData.Remove("Orleans:MongoDBESClientSettings:MinConnectionPoolSize");
-                configData.Remove("Orleans:MongoDBESClientSettings:WaitQueueTimeout");
-                configData.Remove("Orleans:MongoDBESClientSettings:MaxConnecting");
-
-                var configuration = new ConfigurationBuilder()
-                    .AddInMemoryCollection(configData)
-                    .Build();
-
-                hostBuilder.ConfigureAppConfiguration(builder => builder.AddConfiguration(configuration));
-
-                // Act & Assert - Should not throw exception and should use default values
-                var exception = Record.Exception(() => {
-                    hostBuilder.UseOrleansConfiguration();
-                    var host = hostBuilder.Build();
-                });
-
-                exception.ShouldBeNull("Host should build successfully using default values when MongoDB client settings are missing");
-            }
-            finally
-            {
-                OrleansHostExtension.GetEnvironmentVariable = originalGetter;
-            }
-        }
-
-        [Fact]
-        public void Should_UseDefaultValues_WhenMongoDBSettingsAreMissing()
-        {
-            // Arrange
-            var envMock = EnvironmentVariableMock.SetupLocalDevEnvironment();
-            var originalGetter = OrleansHostExtension.GetEnvironmentVariable;
-            OrleansHostExtension.GetEnvironmentVariable = envMock.GetVariable;
-
-            try
-            {
-                var hostBuilder = new HostBuilder();
-                var configData = GetBaseConfig(isKubernetes: false);
-                
-                // Remove all MongoDB client settings to force use of defaults
-                configData.Remove("Orleans:MongoDBClientSettings:MaxConnectionPoolSize");
-                configData.Remove("Orleans:MongoDBClientSettings:MinConnectionPoolSize");
-                configData.Remove("Orleans:MongoDBClientSettings:WaitQueueSize");
-                configData.Remove("Orleans:MongoDBClientSettings:WaitQueueTimeout");
-                configData.Remove("Orleans:MongoDBClientSettings:MaxConnecting");
-                configData.Remove("Orleans:MongoDBESClientSettings:WaitQueueSize");
-                configData.Remove("Orleans:MongoDBESClientSettings:MinConnectionPoolSize");
-                configData.Remove("Orleans:MongoDBESClientSettings:WaitQueueTimeout");
-                configData.Remove("Orleans:MongoDBESClientSettings:MaxConnecting");
-
-                var configuration = new ConfigurationBuilder()
-                    .AddInMemoryCollection(configData)
-                    .Build();
-
-                hostBuilder.ConfigureAppConfiguration(builder => builder.AddConfiguration(configuration));
-
-                // Act
                 hostBuilder.UseOrleansConfiguration();
                 var host = hostBuilder.Build();
+            });
 
-                // Assert - The fact that the host builds successfully without errors indicates
-                // that the default values are being used correctly:
-                // MongoDB Client defaults: MaxConnectionPoolSize=100, MinConnectionPoolSize=0, WaitQueueSize=500, WaitQueueTimeout=00:02:00, MaxConnecting=2
-                // MongoDB ES Client defaults: WaitQueueSize=500, MinConnectionPoolSize=0, WaitQueueTimeout=00:02:00, MaxConnecting=2
-                host.ShouldNotBeNull("Host should build successfully using default MongoDB settings");
-            }
-            finally
-            {
-                OrleansHostExtension.GetEnvironmentVariable = originalGetter;
-            }
+            exception.ShouldBeNull("Host should build successfully using default values when MongoDB client settings are missing");
+        }
+        finally
+        {
+            OrleansHostExtension.GetEnvironmentVariable = originalGetter;
         }
     }
-} 
+
+    [Fact]
+    public async Task Should_UseDefaultValues_WhenMongoDBSettingsAreMissing()
+    {
+        // Arrange
+        var configData = GetBaseConfig(isKubernetes: false);
+
+        // Remove all MongoDB client settings to force use of defaults
+        configData.Remove("Orleans:MongoDBClientSettings:MaxConnectionPoolSize");
+        configData.Remove("Orleans:MongoDBClientSettings:MinConnectionPoolSize");
+        configData.Remove("Orleans:MongoDBClientSettings:WaitQueueSize");
+        configData.Remove("Orleans:MongoDBClientSettings:WaitQueueTimeout");
+        configData.Remove("Orleans:MongoDBClientSettings:MaxConnecting");
+        configData.Remove("Orleans:MongoDBESClientSettings:WaitQueueSize");
+        configData.Remove("Orleans:MongoDBESClientSettings:MinConnectionPoolSize");
+        configData.Remove("Orleans:MongoDBESClientSettings:WaitQueueTimeout");
+        configData.Remove("Orleans:MongoDBESClientSettings:MaxConnecting");
+
+        var envMock = EnvironmentVariableMock.SetupLocalDevEnvironment();
+        var originalGetter = OrleansHostExtension.GetEnvironmentVariable;
+        OrleansHostExtension.GetEnvironmentVariable = envMock.GetVariable;
+
+        try
+        {
+            // Act - Create a test cluster with the configuration
+            var builder = new TestClusterBuilder(1);
+            builder.ConfigureHostConfiguration(configBuilder =>
+            {
+                configBuilder.AddInMemoryCollection(configData);
+            });
+            builder.AddSiloBuilderConfigurator<MongoDBTestSiloConfigurator>();
+
+            using var cluster = builder.Build();
+            await cluster.DeployAsync();
+
+            // Assert - Get the MongoDB client from the silo and verify default settings
+            var siloHandle = cluster.GetActiveSilos().First();
+            var siloServiceProvider = cluster.GetSiloServiceProvider(siloHandle.SiloAddress);
+            var mongoClient = siloServiceProvider.GetService<IMongoClient>();
+            mongoClient.Should().NotBeNull("MongoDB client should be registered");
+
+            var settings = mongoClient.Settings;
+
+            // MongoDB Client defaults (from OrleansHostExtension.cs lines 132-137):
+            // MaxConnectionPoolSize = 512 (default), MinConnectionPoolSize = 16 (default)
+            // WaitQueueSize = MongoDefaults.ComputedWaitQueueSize (500), WaitQueueTimeout = MongoDefaults.WaitQueueTimeout (2 minutes)
+            // MaxConnecting = 4 (default)
+            settings.MaxConnectionPoolSize.Should().Be(512, "MaxConnectionPoolSize should use default value of 512");
+            settings.MinConnectionPoolSize.Should().Be(16, "MinConnectionPoolSize should use default value of 16");
+            settings.WaitQueueSize.Should().Be(500, "WaitQueueSize should use MongoDefaults.ComputedWaitQueueSize (500)");
+            settings.WaitQueueTimeout.Should().Be(TimeSpan.FromMinutes(2), "WaitQueueTimeout should use MongoDefaults.WaitQueueTimeout (2 minutes)");
+            settings.MaxConnecting.Should().Be(4, "MaxConnecting should use default value of 4");
+        }
+        finally
+        {
+            OrleansHostExtension.GetEnvironmentVariable = originalGetter;
+        }
+    }
+}

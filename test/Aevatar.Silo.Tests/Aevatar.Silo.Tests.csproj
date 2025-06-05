@@ -12,6 +12,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Aevatar.Silo\Aevatar.Silo.csproj" />
     <ProjectReference Include="..\Aevatar.Orleans.TestBase\Aevatar.Orleans.TestBase.csproj" />
+    <ProjectReference Include="..\Aevatar.MongoDB.Tests\Aevatar.MongoDB.Tests.csproj" />
   </ItemGroup>
 
   <ItemGroup>
