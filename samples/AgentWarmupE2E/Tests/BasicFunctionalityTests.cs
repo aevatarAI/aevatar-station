@@ -5,7 +5,7 @@ using Xunit.Abstractions;
 using Aevatar.Silo.AgentWarmup;
 using Aevatar.Silo.AgentWarmup.Extensions;
 using AgentWarmupE2E.Fixtures;
-using E2E.Agents;
+using E2E.Grains;
 using AgentWarmupE2E.Utilities;
 
 namespace AgentWarmupE2E.Tests;

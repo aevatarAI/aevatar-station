@@ -1,21 +1,21 @@
-# Grain Warmup System - End-to-End Test Plan
+# Agent Warmup System - End-to-End Test Plan
 
 ## Overview
 
-This document outlines the comprehensive test plan for validating the Grain Warmup System in a real end-to-end testing environment. The tests focus on GUID-based grains and validate the system's ability to proactively load grains into memory while preventing MongoDB access spikes.
+This document outlines the comprehensive test plan for validating the Agent Warmup System in a real end-to-end testing environment. The tests focus on GUID-based agents and validate the system's ability to proactively load agents into memory while preventing MongoDB access spikes.
 
 ## Test Environment Setup
 
 ### Prerequisites
 - Aevatar.Aspire project running (starts the silo) project Path: /Users/charles/workspace/github/aevatar-station/src/Aevatar.Aspire
 - MongoDB instance available
-- Test grains deployed to the silo
-- Grain warmup system configured and enabled
+- Test agents deployed to the silo
+- Agent warmup system configured and enabled
 
 ### Test Infrastructure
-- **Test Location**: `aevatar-station/samples/GrainWarmupE2E/`
+- **Test Location**: `aevatar-station/samples/AgentWarmupE2E/`
 - **Silo Startup**: Via Aevatar.Aspire project or Orleans TestCluster
-- **Grain Type**: GUID-based grains only (current system support)
+- **Agent Type**: GUID-based agents only (current system support)
 - **Database**: MongoDB with isolated test database
 - **Configuration**: Test-specific settings in `test-appsettings.json`
 
@@ -23,7 +23,7 @@ This document outlines the comprehensive test plan for validating the Grain Warm
 
 ### Test Project Structure
 ```
-GrainWarmupE2E/
+AgentWarmupE2E/
 ├── Tests/                          # Test implementations
 │   ├── BasicFunctionalityTests.cs  # Core functionality validation
 │   ├── PerformanceTests.cs         # Performance and latency tests
@@ -31,11 +31,11 @@ GrainWarmupE2E/
 │   ├── ConfigurationTests.cs       # Configuration validation
 │   ├── ErrorHandlingTests.cs       # Error scenarios
 │   └── IntegrationTests.cs         # Orleans integration
-├── TestGrains/                     # Test grain implementations
-│   ├── ITestWarmupGrain.cs         # GUID-based test grain interface
-│   └── TestWarmupGrain.cs          # Test grain with tracking
+├── TestAgents/                     # Test agent implementations
+│   ├── ITestWarmupAgent.cs         # GUID-based test agent interface
+│   └── TestWarmupAgent.cs          # Test agent with tracking
 ├── Fixtures/                       # Test infrastructure
-│   └── GrainWarmupTestFixture.cs   # Orleans TestCluster setup
+│   └── AgentWarmupTestFixture.cs   # Orleans TestCluster setup
 ├── Utilities/                      # Test utilities
 │   ├── PerformanceMonitor.cs       # Performance measurement
 │   ├── TestDataGenerator.cs        # GUID generation utilities
@@ -46,18 +46,18 @@ GrainWarmupE2E/
 └── README.md                       # Test execution guide
 ```
 
-### Test Grain Design
+### Test Agent Design
 
-#### ITestWarmupGrain Interface
+#### ITestWarmupAgent Interface
 ```csharp
-public interface ITestWarmupGrain : IGrainWithGuidKey
+public interface ITestWarmupAgent : IAgentWithGuidKey
 {
     Task<string> PingAsync();
     Task<DateTime> GetActivationTimeAsync();
     Task<int> ComputeAsync(int input);
     Task<int> GetAccessCountAsync();
     Task<string> SimulateDatabaseOperationAsync(int delayMs = 100);
-    Task<GrainMetadata> GetMetadataAsync();
+    Task<AgentMetadata> GetMetadataAsync();
 }
 ```
 
@@ -65,7 +65,7 @@ public interface ITestWarmupGrain : IGrainWithGuidKey
 - **GUID-based keys**: Uses `IGrainWithGuidKey` for current system compatibility
 - **Activation tracking**: Records activation time and access patterns
 - **Performance simulation**: Includes database operation simulation
-- **Metadata collection**: Provides grain state information for validation
+- **Metadata collection**: Provides agent state information for validation
 
 ## Test Categories and Scenarios
 
@@ -90,25 +90,25 @@ public interface ITestWarmupGrain : IGrainWithGuidKey
 ##### TC-BF-002: Strategy Registration
 - **Objective**: Validate strategy registration mechanism
 - **Steps**:
-  1. Create PredefinedGrainWarmupStrategy with test GUIDs
+  1. Create PredefinedAgentWarmupStrategy with test GUIDs
   2. Register strategy with warmup service
   3. Verify strategy count increases
 - **Expected Result**: Strategy registered successfully
 
-##### TC-BF-003: Basic Grain Warmup
-- **Objective**: Ensure grains are activated during warmup
+##### TC-BF-003: Basic Agent Warmup
+- **Objective**: Ensure agents are activated during warmup
 - **Steps**:
-  1. Generate 10 test GUID-based grain identifiers
-  2. Register warmup strategy for these grains
+  1. Generate 10 test GUID-based agent identifiers
+  2. Register warmup strategy for these agents
   3. Start warmup process
   4. Wait for completion
-  5. Verify all grains respond to ping
-- **Expected Result**: All 10 grains warmed up successfully
+  5. Verify all agents respond to ping
+- **Expected Result**: All 10 agents warmed up successfully
 
 ##### TC-BF-004: Progress Monitoring
 - **Objective**: Validate progress tracking accuracy
 - **Steps**:
-  1. Register strategy with known grain count
+  1. Register strategy with known agent count
   2. Monitor progress during warmup
   3. Verify initial and final status
 - **Expected Result**: Progress accurately reflects warmup state
@@ -116,7 +116,7 @@ public interface ITestWarmupGrain : IGrainWithGuidKey
 ##### TC-BF-005: Multiple Strategies
 - **Objective**: Test sequential execution of multiple strategies
 - **Steps**:
-  1. Register two strategies with different grain sets
+  1. Register two strategies with different agent sets
   2. Start warmup
   3. Verify both strategies execute
 - **Expected Result**: Both strategies complete successfully
@@ -124,7 +124,7 @@ public interface ITestWarmupGrain : IGrainWithGuidKey
 ##### TC-BF-006: Graceful Cancellation
 - **Objective**: Ensure warmup can be stopped gracefully
 - **Steps**:
-  1. Start warmup with large grain set
+  1. Start warmup with large agent set
   2. Cancel after partial completion
   3. Verify graceful shutdown
 - **Expected Result**: Warmup stops without errors
@@ -132,41 +132,41 @@ public interface ITestWarmupGrain : IGrainWithGuidKey
 ### 2. Performance Tests
 
 #### Test Objectives
-- Validate latency improvements from grain warmup
+- Validate latency improvements from agent warmup
 - Measure system throughput and efficiency
 - Ensure performance meets defined thresholds
 - Test system behavior under load
 
 #### Performance Thresholds
-- **Warmed Grain Latency**: < 50ms (P95)
-- **Cold Grain Latency**: < 200ms (P95)
+- **Warmed Agent Latency**: < 50ms (P95)
+- **Cold Agent Latency**: < 200ms (P95)
 - **Latency Improvement**: > 50% reduction
 - **Success Rate**: > 95%
-- **Throughput**: > 20 grains/second
+- **Throughput**: > 20 agents/second
 
 #### Test Cases
 
 ##### TC-PF-001: Activation Latency Comparison
 - **Objective**: Demonstrate latency improvement from warmup
 - **Steps**:
-  1. Generate two sets of test grains (warmed vs cold)
+  1. Generate two sets of test agents (warmed vs cold)
   2. Warm up first set using warmup service
   3. Measure activation latency for both sets
   4. Compare results
-- **Expected Result**: Warmed grains show significant latency improvement
+- **Expected Result**: Warmed agents show significant latency improvement
 
 ##### TC-PF-002: Concurrent Access Performance
 - **Objective**: Validate performance under concurrent load
 - **Steps**:
-  1. Warm up 100 test grains
-  2. Access grains concurrently from 10 threads
+  1. Warm up 100 test agents
+  2. Access agents concurrently from 10 threads
   3. Measure latency and success rate
 - **Expected Result**: Maintains low latency under concurrent access
 
 ##### TC-PF-003: Large Scale Warmup
-- **Objective**: Test system with large grain counts
+- **Objective**: Test system with large agent counts
 - **Steps**:
-  1. Generate 1000+ test grain identifiers
+  1. Generate 1000+ test agent identifiers
   2. Execute warmup process
   3. Measure completion time and success rate
 - **Expected Result**: Completes within time limit with high success rate
@@ -174,9 +174,9 @@ public interface ITestWarmupGrain : IGrainWithGuidKey
 ##### TC-PF-004: Throughput Validation
 - **Objective**: Ensure minimum throughput requirements
 - **Steps**:
-  1. Warm up 200 grains
+  1. Warm up 200 agents
   2. Measure total time and calculate throughput
-- **Expected Result**: Achieves minimum 20 grains/second throughput
+- **Expected Result**: Achieves minimum 20 agents/second throughput
 
 ##### TC-PF-005: Progressive Warmup Efficiency
 - **Objective**: Validate progressive batching improves efficiency
@@ -277,12 +277,12 @@ public interface ITestWarmupGrain : IGrainWithGuidKey
 
 #### Test Cases
 
-##### TC-EH-001: Grain Activation Failures
-- **Objective**: Handle individual grain activation failures
+##### TC-EH-001: Agent Activation Failures
+- **Objective**: Handle individual agent activation failures
 - **Steps**:
-  1. Include invalid grain identifiers in warmup set
+  1. Include invalid agent identifiers in warmup set
   2. Execute warmup process
-  3. Verify system continues with valid grains
+  3. Verify system continues with valid agents
 - **Expected Result**: System handles failures gracefully
 
 ##### TC-EH-002: Database Connectivity Issues
@@ -297,14 +297,14 @@ public interface ITestWarmupGrain : IGrainWithGuidKey
 - **Objective**: Ensure proper timeout behavior
 - **Steps**:
   1. Configure short timeouts
-  2. Execute warmup with slow-responding grains
+  2. Execute warmup with slow-responding agents
   3. Verify timeout handling
 - **Expected Result**: Timeouts handled without system failure
 
 ##### TC-EH-004: Partial Failure Scenarios
 - **Objective**: Test mixed success/failure scenarios
 - **Steps**:
-  1. Create warmup set with mix of valid/invalid grains
+  1. Create warmup set with mix of valid/invalid agents
   2. Execute warmup
   3. Verify partial success handling
 - **Expected Result**: System reports accurate success/failure counts
@@ -352,28 +352,28 @@ public interface ITestWarmupGrain : IGrainWithGuidKey
 ### Test Data Categories
 ```csharp
 // Basic functionality tests
-var basicGrains = TestDataGenerator.TestCategories.GenerateBasicTestGrains(count);
+var basicAgents = TestDataGenerator.TestCategories.GenerateBasicTestAgents(count);
 
 // Performance tests
-var perfGrains = TestDataGenerator.TestCategories.GeneratePerformanceTestGrains(count);
+var perfAgents = TestDataGenerator.TestCategories.GeneratePerformanceTestAgents(count);
 
 // Warmup-specific tests
-var warmupGrains = TestDataGenerator.TestCategories.GenerateWarmupTestGrains(count);
+var warmupAgents = TestDataGenerator.TestCategories.GenerateWarmupTestAgents(count);
 
-// Cold grain tests
-var coldGrains = TestDataGenerator.TestCategories.GenerateColdTestGrains(count);
+// Cold agent tests
+var coldAgents = TestDataGenerator.TestCategories.GenerateColdTestAgents(count);
 
 // Error handling tests
-var errorGrains = TestDataGenerator.TestCategories.GenerateErrorTestGrains(count);
+var errorAgents = TestDataGenerator.TestCategories.GenerateErrorTestAgents(count);
 
 // Large-scale tests
-var largeGrains = TestDataGenerator.TestCategories.GenerateLargeScaleTestGrains(count);
+var largeAgents = TestDataGenerator.TestCategories.GenerateLargeScaleTestAgents(count);
 ```
 
 ### Data Isolation
 - Each test category uses distinct GUID prefixes
 - Test runs use isolated MongoDB databases
-- Grain activations cleared between test categories
+- Agent activations cleared between test categories
 
 ## Performance Monitoring
 
@@ -442,16 +442,16 @@ The test suite integrates with CI/CD pipelines:
 
 ### Functional Requirements
 - ✅ All basic functionality tests pass
-- ✅ Grain warmup reduces activation latency by >50%
-- ✅ System handles 1000+ grains within time limits
+- ✅ Agent warmup reduces activation latency by >50%
+- ✅ System handles 1000+ agents within time limits
 - ✅ MongoDB rate limiting prevents access spikes
 - ✅ Error scenarios handled gracefully
 - ✅ Configuration validation works correctly
 
 ### Performance Requirements
-- ✅ Warmed grain latency < 50ms (P95)
-- ✅ Cold grain latency < 200ms (P95)
-- ✅ Throughput > 20 grains/second
+- ✅ Warmed agent latency < 50ms (P95)
+- ✅ Cold agent latency < 200ms (P95)
+- ✅ Throughput > 20 agents/second
 - ✅ Success rate > 95%
 - ✅ Memory usage within acceptable bounds
 - ✅ No connection pool exhaustion
@@ -478,7 +478,7 @@ The test suite integrates with CI/CD pipelines:
 - **Test Coverage**: Error handling tests validate resilience
 
 #### Scalability Risks
-- **Risk**: System doesn't scale to production grain counts
+- **Risk**: System doesn't scale to production agent counts
 - **Mitigation**: Large-scale testing and optimization
 - **Test Coverage**: Large-scale tests validate scalability
 
@@ -516,7 +516,7 @@ The test suite integrates with CI/CD pipelines:
 
 ## Conclusion
 
-This comprehensive test plan ensures the Grain Warmup System meets all functional, performance, and quality requirements. The test suite provides:
+This comprehensive test plan ensures the Agent Warmup System meets all functional, performance, and quality requirements. The test suite provides:
 
 1. **Complete Coverage**: All system components and scenarios tested
 2. **Performance Validation**: Latency improvements and throughput verified
@@ -524,4 +524,4 @@ This comprehensive test plan ensures the Grain Warmup System meets all functiona
 4. **Integration Verification**: Orleans and MongoDB integration confirmed
 5. **Quality Metrics**: Coverage, performance, and stability measured
 
-The test implementation provides a robust foundation for validating the grain warmup system in both development and production environments, ensuring it delivers the expected benefits of reduced grain activation latency and MongoDB protection. 
+The test implementation provides a robust foundation for validating the agent warmup system in both development and production environments, ensuring it delivers the expected benefits of reduced agent activation latency and MongoDB protection. 

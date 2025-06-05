@@ -1,6 +1,6 @@
 using Orleans;
 
-namespace AgentWarmupE2E.TestAgents;
+namespace E2E.Grains;
 
 /// <summary>
 /// Test agent interface for warmup validation

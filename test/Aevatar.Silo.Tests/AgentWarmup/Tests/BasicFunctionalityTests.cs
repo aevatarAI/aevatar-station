@@ -38,7 +38,7 @@ public class BasicFunctionalityTests : IAsyncLifetime
         client.ShouldNotBeNull();
         
         // Verify we can access agent factory
-        var agentFactory = _fixture.Cluster.AgentFactory;
+        var agentFactory = _fixture.Cluster.GrainFactory;
         agentFactory.ShouldNotBeNull();
         
         _output.WriteLine("Successfully verified silo connection");
@@ -49,7 +49,7 @@ public class BasicFunctionalityTests : IAsyncLifetime
     {
         // Arrange
         var agentId = Guid.NewGuid();
-        var agent = _fixture.Cluster.AgentFactory.GetGrain<ITestWarmupAgent>(agentId);
+        var agent = _fixture.Cluster.GrainFactory.GetGrain<ITestWarmupAgent>(agentId);
 
         // Act
         var result = await agent.PingAsync();
@@ -69,7 +69,7 @@ public class BasicFunctionalityTests : IAsyncLifetime
         // Act
         var tasks = agentIds.Select(async agentId =>
         {
-            var agent = _fixture.Cluster.AgentFactory.GetGrain<ITestWarmupAgent>(agentId);
+            var agent = _fixture.Cluster.GrainFactory.GetGrain<ITestWarmupAgent>(agentId);
             return await agent.PingAsync();
         });
 
@@ -87,7 +87,7 @@ public class BasicFunctionalityTests : IAsyncLifetime
     {
         // Arrange - Use fresh GUID to ensure new agent activation
         var agentId = Guid.NewGuid();
-        var agent = _fixture.Cluster.AgentFactory.GetGrain<ITestWarmupAgent>(agentId);
+        var agent = _fixture.Cluster.GrainFactory.GetGrain<ITestWarmupAgent>(agentId);
 
         // Act - First activation and get activation time
         var result = await agent.PingAsync();
@@ -105,7 +105,7 @@ public class BasicFunctionalityTests : IAsyncLifetime
     {
         // Arrange
         var agentId = Guid.NewGuid();
-        var agent = _fixture.Cluster.AgentFactory.GetGrain<ITestWarmupAgent>(agentId);
+        var agent = _fixture.Cluster.GrainFactory.GetGrain<ITestWarmupAgent>(agentId);
 
         // Act
         await agent.PingAsync(); // First call
@@ -122,7 +122,7 @@ public class BasicFunctionalityTests : IAsyncLifetime
     {
         // Arrange
         var agentId = Guid.NewGuid();
-        var agent = _fixture.Cluster.AgentFactory.GetGrain<ITestWarmupAgent>(agentId);
+        var agent = _fixture.Cluster.GrainFactory.GetGrain<ITestWarmupAgent>(agentId);
         var input = 42;
 
         // Act
@@ -138,7 +138,7 @@ public class BasicFunctionalityTests : IAsyncLifetime
     {
         // Arrange
         var agentId = Guid.NewGuid();
-        var agent = _fixture.Cluster.AgentFactory.GetGrain<ITestWarmupAgent>(agentId);
+        var agent = _fixture.Cluster.GrainFactory.GetGrain<ITestWarmupAgent>(agentId);
         var delayMs = 50;
 
         // Act
@@ -159,7 +159,7 @@ public class BasicFunctionalityTests : IAsyncLifetime
     {
         // Arrange - Use fresh GUID to ensure new agent activation
         var agentId = Guid.NewGuid();
-        var agent = _fixture.Cluster.AgentFactory.GetGrain<ITestWarmupAgent>(agentId);
+        var agent = _fixture.Cluster.GrainFactory.GetGrain<ITestWarmupAgent>(agentId);
 
         // Act
         await agent.PingAsync(); // Activate the agent

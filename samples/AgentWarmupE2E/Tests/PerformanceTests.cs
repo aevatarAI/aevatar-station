@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using Xunit.Abstractions;
 using AgentWarmupE2E.Fixtures;
-using E2E.Agents;
+using E2E.Grains;
 using AgentWarmupE2E.Utilities;
 using System.Diagnostics;
 

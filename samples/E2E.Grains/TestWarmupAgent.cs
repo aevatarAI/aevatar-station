@@ -2,13 +2,13 @@ using Microsoft.Extensions.Logging;
 using Orleans;
 using Orleans.Runtime;
 
-namespace AgentWarmupE2E.TestAgents;
+namespace E2E.Grains;
 
 /// <summary>
 /// Test agent implementation for warmup validation
 /// Tracks activation time and access patterns
 /// </summary>
-public class TestWarmupAgent : Agent, ITestWarmupAgent
+public class TestWarmupAgent : Grain, ITestWarmupAgent
 {
     private readonly ILogger<TestWarmupAgent> _logger;
     private DateTime _activationTime;

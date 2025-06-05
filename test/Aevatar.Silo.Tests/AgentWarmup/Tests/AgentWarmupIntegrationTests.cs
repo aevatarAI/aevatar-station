@@ -89,7 +89,7 @@ public class AgentWarmupIntegrationTests : IAsyncLifetime
             var batch = agentIds.Skip(i).Take(batchSize);
             var batchTasks = batch.Select(async agentId =>
             {
-                var agent = _fixture.Cluster.AgentFactory.GetGrain<ITestWarmupAgent>(agentId);
+                var agent = _fixture.Cluster.GrainFactory.GetGrain<ITestWarmupAgent>(agentId);
                 await agent.PingAsync(); // Activate the agent
                 return agent;
             });
@@ -130,7 +130,7 @@ public class AgentWarmupIntegrationTests : IAsyncLifetime
             await semaphore.WaitAsync();
             try
             {
-                var agent = _fixture.Cluster.AgentFactory.GetGrain<ITestWarmupAgent>(agentId);
+                var agent = _fixture.Cluster.GrainFactory.GetGrain<ITestWarmupAgent>(agentId);
                 var result = await agent.PingAsync();
                 return new { AgentId = agentId, Result = result, Timestamp = DateTime.UtcNow };
             }
@@ -170,7 +170,7 @@ public class AgentWarmupIntegrationTests : IAsyncLifetime
         
         var tasks = agentIds.Select(async agentId =>
         {
-            var agent = _fixture.Cluster.AgentFactory.GetGrain<ITestWarmupAgent>(agentId);
+            var agent = _fixture.Cluster.GrainFactory.GetGrain<ITestWarmupAgent>(agentId);
             var activationTime = DateTime.UtcNow;
             await agent.PingAsync();
             return new { AgentId = agentId, ActivationTime = activationTime };

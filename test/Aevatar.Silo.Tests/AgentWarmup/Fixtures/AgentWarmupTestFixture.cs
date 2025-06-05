@@ -79,9 +79,9 @@ public class AgentWarmupTestFixture : IAsyncLifetime
                 })
                 // Use memory storage for testing (following existing test infrastructure pattern)
                 .UseInMemoryReminderService()
-                .AddMemoryAgentStorageAsDefault()
-                .AddMemoryAgentStorage("PubSubStore")  // Required for TestStreams
-                .AddMemoryAgentStorage("TestStreams")  // Required for TestStreams
+                .AddMemoryGrainStorageAsDefault()
+                .AddMemoryGrainStorage("PubSubStore")  // Required for TestStreams
+                .AddMemoryGrainStorage("TestStreams")  // Required for TestStreams
                 .AddMemoryStreams("TestStreams")
                 // Configure logging
                 .ConfigureLogging(logging => logging.AddConsole().SetMinimumLevel(LogLevel.Information));

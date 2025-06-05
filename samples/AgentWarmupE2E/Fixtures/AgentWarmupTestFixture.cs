@@ -6,7 +6,7 @@ using Orleans.Configuration;
 using Orleans.Hosting;
 using Orleans.Providers.MongoDB.Configuration;
 using Orleans.Streams.Kafka.Config;
-using E2E.Agents;
+using E2E.Grains;
 
 namespace AgentWarmupE2E.Fixtures;
 
@@ -104,7 +104,7 @@ public class AgentWarmupTestFixture : IAsyncDisposable
     /// </summary>
     public ITestWarmupAgent GetTestAgent(Guid agentId)
     {
-        return AgentFactory.Get<ITestWarmupAgent>(agentId);
+        return AgentFactory.GetGrain<ITestWarmupAgent>(agentId);
     }
 
     /// <summary>
