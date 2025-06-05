@@ -1,4 +1,5 @@
 using System.Net;
+using System.Linq;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Core.Placement;
@@ -78,23 +79,45 @@ public static class OrleansHostExtension
                     siloBuilder
                     .AddAgentWarmup<Guid>(options =>
                     {
-                        // Configure grain warmup options
-                        options.Enabled = true;
-                        options.MaxConcurrency = 5;
-                        options.InitialBatchSize = 10;
-                        options.MaxBatchSize = 50;
-                        options.DelayBetweenBatchesMs = 500;
-                        options.AgentActivationTimeoutMs = 10000;
+                        // Bind configuration from appsettings.json with fallback to defaults
+                        var agentWarmupSection = configuration.GetSection("AgentWarmup");
                         
-                        // Configure MongoDB integration for grain warmup
+                        // Main configuration properties with defaults
+                        options.Enabled = agentWarmupSection.GetValue<bool>("Enabled", true);
+                        options.MaxConcurrency = agentWarmupSection.GetValue<int>("MaxConcurrency", 10);
+                        options.InitialBatchSize = agentWarmupSection.GetValue<int>("InitialBatchSize", 5);
+                        options.MaxBatchSize = agentWarmupSection.GetValue<int>("MaxBatchSize", 200);
+                        options.BatchSizeIncreaseFactor = agentWarmupSection.GetValue<double>("BatchSizeIncreaseFactor", 1.5);
+                        options.DelayBetweenBatchesMs = agentWarmupSection.GetValue<int>("DelayBetweenBatchesMs", 0);
+                        options.AgentActivationTimeoutMs = agentWarmupSection.GetValue<int>("AgentActivationTimeoutMs", 5000);
+                        options.MaxRetryAttempts = agentWarmupSection.GetValue<int>("MaxRetryAttempts", 3);
+                        options.RetryDelayMs = agentWarmupSection.GetValue<int>("RetryDelayMs", 1000);
+                        
+                        // MongoDB rate limit configuration with defaults
+                        var rateLimitSection = agentWarmupSection.GetSection("MongoDbRateLimit");
+                        options.MongoDbRateLimit.MaxOperationsPerSecond = rateLimitSection.GetValue<int>("MaxOperationsPerSecond", 50);
+                        options.MongoDbRateLimit.BurstAllowance = rateLimitSection.GetValue<int>("BurstAllowance", 10);
+                        options.MongoDbRateLimit.TimeWindowMs = rateLimitSection.GetValue<int>("TimeWindowMs", 1000);
+                        
+                        // Auto discovery configuration with defaults
+                        var autoDiscoverySection = agentWarmupSection.GetSection("AutoDiscovery");
+                        options.AutoDiscovery.Enabled = autoDiscoverySection.GetValue<bool>("Enabled", true);
+                        options.AutoDiscovery.BaseTypes = new List<Type>(); // BaseTypes are complex, leave empty for now
+                        options.AutoDiscovery.RequiredAttributes = autoDiscoverySection.GetSection("RequiredAttributes").Get<string[]>()?.ToList() ?? new List<string> { "StorageProvider" };
+                        options.AutoDiscovery.StorageProviderName = autoDiscoverySection.GetValue<string>("StorageProviderName", "PubSubStore");
+                        options.AutoDiscovery.ExcludedAgentTypes = autoDiscoverySection.GetSection("ExcludedAgentTypes").Get<string[]>()?.ToList() ?? new List<string> { "Orleans.", "Microsoft.Orleans.", "System.", "Microsoft." };
+                        options.AutoDiscovery.IncludedAssemblies = autoDiscoverySection.GetSection("IncludedAssemblies").Get<string[]>()?.ToList() ?? new List<string>();
+                        
+                        // Configure MongoDB integration for agent warmup
                         // Collection prefix matches PubSubStore pattern for consistency
                         options.MongoDbIntegration.CollectionPrefix = hostId.IsNullOrEmpty() ? "StreamStorage" : $"Stream{hostId}";
                         options.MongoDbIntegration.CollectionNamingStrategy = "FullTypeName";
                         options.MongoDbIntegration.BatchSize = 100;
                         options.MongoDbIntegration.QueryTimeoutMs = 30000;
                         
-                        // Configure default strategy for high-volume grain warmup
-                        options.DefaultStrategy.MaxIdentifiersPerType = 10_000_000; // 10 million identifiers per grain type
+                        // Configure default strategy for high-volume agent warmup
+                        var defaultStrategySection = agentWarmupSection.GetSection("DefaultStrategy");
+                        options.DefaultStrategy.MaxIdentifiersPerType = defaultStrategySection.GetValue<int>("MaxIdentifiersPerType", 1000000);
                     });
                 }
                     

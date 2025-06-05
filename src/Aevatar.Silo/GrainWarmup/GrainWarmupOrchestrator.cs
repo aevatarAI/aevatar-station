@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Orleans;
 using Aevatar.Core.Abstractions;
 
@@ -17,12 +18,15 @@ public class AgentWarmupOrchestrator<TIdentifier> : IAgentWarmupOrchestrator<TId
 {
     private readonly IGrainFactory _agentFactory;
     private readonly ILogger<AgentWarmupOrchestrator<TIdentifier>> _logger;
+    private readonly AgentWarmupConfiguration _config;
 
     public AgentWarmupOrchestrator(
         IGrainFactory agentFactory,
+        IOptions<AgentWarmupConfiguration> options,
         ILogger<AgentWarmupOrchestrator<TIdentifier>> logger)
     {
         _agentFactory = agentFactory;
+        _config = options.Value;
         _logger = logger;
     }
 
@@ -183,7 +187,7 @@ public class AgentWarmupOrchestrator<TIdentifier> : IAgentWarmupOrchestrator<TId
     }
 
     /// <summary>
-    /// Executes a strategy for a specific agent type
+    /// Executes a strategy for a specific agent type with true concurrent processing
     /// </summary>
     private async Task ExecuteStrategyForAgentTypeAsync(
         IAgentWarmupStrategy<TIdentifier> strategy, 
@@ -194,34 +198,144 @@ public class AgentWarmupOrchestrator<TIdentifier> : IAgentWarmupOrchestrator<TId
             strategy.Name, agentType.Name);
 
         var agentCount = 0;
+        var failedCount = 0;
 
         // Get the agent interface for this agent type
         var agentInterface = GetAgentInterface(agentType);
         _logger.LogDebug("Using agent interface {AgentInterface} for agent type {AgentType}", 
             agentInterface.Name, agentType.Name);
 
+        // Create semaphore for concurrency control
+        using var semaphore = new SemaphoreSlim(_config.MaxConcurrency, _config.MaxConcurrency);
+        var activationTasks = new List<Task<bool>>();
+        var batchCount = 0;
+        var currentBatchSize = _config.InitialBatchSize;
+
         await foreach (var identifier in strategy.GenerateAgentIdentifiersAsync(agentType, cancellationToken))
         {
             if (cancellationToken.IsCancellationRequested)
                 break;
 
-            try
+            // Start activation task without awaiting (true concurrency)
+            var activationTask = ActivateAgentConcurrentlyAsync(agentInterface, identifier, semaphore, cancellationToken);
+            activationTasks.Add(activationTask);
+
+            batchCount++;
+
+            // Process batch when reaching current batch size
+            if (batchCount >= currentBatchSize)
             {
-                // Create agent reference using agent interface (required by Orleans)
-                var agent = CreateAgentReference(agentInterface, identifier);
-                await agent.ActivateAsync();
+                // Wait for current batch to complete
+                var completedTasks = await Task.WhenAll(activationTasks);
                 
-                agentCount++;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to warm up agent {AgentType} with identifier {Identifier}", 
-                    agentType.Name, identifier);
+                // Count successes and failures
+                var batchSuccesses = completedTasks.Count(success => success);
+                var batchFailures = completedTasks.Count(success => !success);
+                
+                agentCount += batchSuccesses;
+                failedCount += batchFailures;
+
+                _logger.LogDebug("Batch completed for {AgentType}: {Successes} successes, {Failures} failures", 
+                    agentType.Name, batchSuccesses, batchFailures);
+
+                // Clear completed tasks
+                activationTasks.Clear();
+                batchCount = 0;
+
+                // Progressive batch size increase
+                if (currentBatchSize < _config.MaxBatchSize)
+                {
+                    currentBatchSize = Math.Min(_config.MaxBatchSize, 
+                        (int)(currentBatchSize * _config.BatchSizeIncreaseFactor));
+                }
+
+                // Delay between batches
+                if (_config.DelayBetweenBatchesMs > 0)
+                {
+                    await Task.Delay(_config.DelayBetweenBatchesMs, cancellationToken);
+                }
             }
         }
 
-        _logger.LogInformation("Strategy {StrategyName} warmed up {Count} agents of type {AgentType}", 
-            strategy.Name, agentCount, agentType.Name);
+        // Process remaining tasks
+        if (activationTasks.Any())
+        {
+            var completedTasks = await Task.WhenAll(activationTasks);
+            var remainingSuccesses = completedTasks.Count(success => success);
+            var remainingFailures = completedTasks.Count(success => !success);
+            
+            agentCount += remainingSuccesses;
+            failedCount += remainingFailures;
+        }
+
+        _logger.LogInformation("Strategy {StrategyName} completed for agent type {AgentType}: {SuccessCount} activated, {FailedCount} failed", 
+            strategy.Name, agentType.Name, agentCount, failedCount);
+    }
+
+    /// <summary>
+    /// Activates a single agent concurrently with proper semaphore management
+    /// </summary>
+    private async Task<bool> ActivateAgentConcurrentlyAsync(
+        Type agentInterface, 
+        TIdentifier identifier, 
+        SemaphoreSlim semaphore, 
+        CancellationToken cancellationToken)
+    {
+        // Wait for semaphore slot
+        await semaphore.WaitAsync(cancellationToken);
+        
+        try
+        {
+            var retryCount = 0;
+            while (retryCount <= _config.MaxRetryAttempts)
+            {
+                try
+                {
+                    // Create agent reference using agent interface (required by Orleans)
+                    var agent = CreateAgentReference(agentInterface, identifier);
+                    
+                    // Activate with timeout by calling ActivateAsync
+                    using var timeoutCts = new CancellationTokenSource(_config.AgentActivationTimeoutMs);
+                    using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+                    
+                    // Properly activate the grain
+                    await agent.ActivateAsync();
+                    
+                    return true; // Success
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    // Overall cancellation requested
+                    return false;
+                }
+                catch (Exception ex) when (retryCount < _config.MaxRetryAttempts)
+                {
+                    // Retry on failure
+                    retryCount++;
+                    _logger.LogDebug(ex, "Agent activation failed (attempt {Attempt}/{MaxAttempts}) for identifier {Identifier}, retrying...", 
+                        retryCount, _config.MaxRetryAttempts + 1, identifier);
+                    
+                    if (_config.RetryDelayMs > 0)
+                    {
+                        await Task.Delay(_config.RetryDelayMs, cancellationToken);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Final failure after all retries
+                    _logger.LogWarning(ex, "Failed to activate agent with identifier {Identifier} after {Attempts} attempts", 
+                        identifier, _config.MaxRetryAttempts + 1);
+                    return false;
+                }
+            }
+            
+            return false; // Should not reach here
+        }
+        finally
+        {
+            // Always release semaphore
+            semaphore.Release();
+        }
     }
 
     /// <summary>
