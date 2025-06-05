@@ -7,86 +7,86 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Aevatar.Silo.GrainWarmup.Strategies;
+using Aevatar.Silo.AgentWarmup.Strategies;
 using Microsoft.Extensions.Configuration;
 using MongoDB.Driver;
 
-namespace Aevatar.Silo.GrainWarmup.Extensions;
+namespace Aevatar.Silo.AgentWarmup.Extensions;
 
 /// <summary>
-/// Extension methods for integrating grain warmup with Orleans
+/// Extension methods for integrating agent warmup with Orleans
 /// 
 /// Usage Examples:
 /// 
-/// For GUID-based grains:
-/// services.AddGrainWarmup<Guid>();
-/// builder.AddGrainWarmup<Guid>();
+/// For GUID-based agents:
+/// services.AddAgentWarmup<Guid>();
+/// builder.AddAgentWarmup<Guid>();
 /// 
-/// For string-based grains:
-/// services.AddGrainWarmup<string>();
-/// builder.AddGrainWarmup<string>();
+/// For string-based agents:
+/// services.AddAgentWarmup<string>();
+/// builder.AddAgentWarmup<string>();
 /// 
-/// For long-based grains:
-/// services.AddGrainWarmup<long>();
-/// builder.AddGrainWarmup<long>();
+/// For long-based agents:
+/// services.AddAgentWarmup<long>();
+/// builder.AddAgentWarmup<long>();
 /// 
 /// With configuration:
-/// services.AddGrainWarmup<Guid>(options => {
+/// services.AddAgentWarmup<Guid>(options => {
 ///     options.Enabled = true;
 ///     options.MaxConcurrency = 10;
 /// });
 /// </summary>
-public static class GrainWarmupExtensions
+public static class AgentWarmupExtensions
 {
     /// <summary>
-    /// Adds grain warmup services for GUID-based grains to the service collection
+    /// Adds agent warmup services for GUID-based agents to the service collection
     /// </summary>
     /// <param name="services">The service collection</param>
     /// <param name="configureOptions">Optional configuration action</param>
     /// <returns>The service collection for chaining</returns>
-    public static IServiceCollection AddGrainWarmupForGuid(
+    public static IServiceCollection AddAgentWarmupForGuid(
         this IServiceCollection services,
-        Action<GrainWarmupConfiguration>? configureOptions = null)
+        Action<AgentWarmupConfiguration>? configureOptions = null)
     {
-        return AddGrainWarmup<Guid>(services, configureOptions);
+        return AddAgentWarmup<Guid>(services, configureOptions);
     }
 
     /// <summary>
-    /// Adds grain warmup services for string-based grains to the service collection
+    /// Adds agent warmup services for string-based agents to the service collection
     /// </summary>
     /// <param name="services">The service collection</param>
     /// <param name="configureOptions">Optional configuration action</param>
     /// <returns>The service collection for chaining</returns>
-    public static IServiceCollection AddGrainWarmupForString(
+    public static IServiceCollection AddAgentWarmupForString(
         this IServiceCollection services,
-        Action<GrainWarmupConfiguration>? configureOptions = null)
+        Action<AgentWarmupConfiguration>? configureOptions = null)
     {
-        return AddGrainWarmup<string>(services, configureOptions);
+        return AddAgentWarmup<string>(services, configureOptions);
     }
 
     /// <summary>
-    /// Adds grain warmup services for long-based grains to the service collection
+    /// Adds agent warmup services for long-based agents to the service collection
     /// </summary>
     /// <param name="services">The service collection</param>
     /// <param name="configureOptions">Optional configuration action</param>
     /// <returns>The service collection for chaining</returns>
-    public static IServiceCollection AddGrainWarmupForLong(
+    public static IServiceCollection AddAgentWarmupForLong(
         this IServiceCollection services,
-        Action<GrainWarmupConfiguration>? configureOptions = null)
+        Action<AgentWarmupConfiguration>? configureOptions = null)
     {
-        return AddGrainWarmup<long>(services, configureOptions);
+        return AddAgentWarmup<long>(services, configureOptions);
     }
 
     /// <summary>
-    /// Adds grain warmup services for a specific identifier type to the service collection
+    /// Adds agent warmup services for a specific identifier type to the service collection
     /// </summary>
     /// <typeparam name="TIdentifier">The identifier type (Guid, string, long, int)</typeparam>
     /// <param name="services">The service collection</param>
     /// <param name="configureOptions">Optional configuration action</param>
     /// <returns>The service collection for chaining</returns>
-    public static IServiceCollection AddGrainWarmup<TIdentifier>(
+    public static IServiceCollection AddAgentWarmup<TIdentifier>(
         this IServiceCollection services,
-        Action<GrainWarmupConfiguration>? configureOptions = null)
+        Action<AgentWarmupConfiguration>? configureOptions = null)
     {
         // Register configuration
         if (configureOptions != null)
@@ -99,7 +99,7 @@ public static class GrainWarmupExtensions
         {
             var mongoClient = provider.GetRequiredService<IMongoClient>();
             var configuration = provider.GetRequiredService<IConfiguration>();
-            var logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger("GrainWarmup.MongoDB");
+            var logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger("AgentWarmup.MongoDB");
             
             // Use the same database name that Orleans is configured to use
             var orleansSection = configuration.GetSection("Orleans");
@@ -107,173 +107,173 @@ public static class GrainWarmupExtensions
             
             if (string.IsNullOrEmpty(databaseName))
             {
-                throw new InvalidOperationException("Orleans:DataBase configuration is required for grain warmup MongoDB access");
+                throw new InvalidOperationException("Orleans:DataBase configuration is required for agent warmup MongoDB access");
             }
             
-            logger.LogInformation("Grain warmup using Orleans MongoDB database: {DatabaseName}", databaseName);
+            logger.LogInformation("Agent warmup using Orleans MongoDB database: {DatabaseName}", databaseName);
             return mongoClient.GetDatabase(databaseName);
         });
         
         // Register core services
-        services.AddSingleton<IGrainDiscoveryService, GrainDiscoveryService>();
-        services.AddSingleton<IMongoDbGrainIdentifierService, MongoDbGrainIdentifierService>();
-        services.AddSingleton<IGrainWarmupOrchestrator<TIdentifier>, GrainWarmupOrchestrator<TIdentifier>>();
+        services.AddSingleton<IAgentDiscoveryService, AgentDiscoveryService>();
+        services.AddSingleton<IMongoDbAgentIdentifierService, MongoDbAgentIdentifierService>();
+        services.AddSingleton<IAgentWarmupOrchestrator<TIdentifier>, AgentWarmupOrchestrator<TIdentifier>>();
         
         // Register default strategy for the specific identifier type
-        services.AddSingleton<IGrainWarmupStrategy>(provider =>
+        services.AddSingleton<IAgentWarmupStrategy>(provider =>
         {
-            var logger = provider.GetRequiredService<ILogger<DefaultGrainWarmupStrategy<TIdentifier>>>();
-            return new DefaultGrainWarmupStrategy<TIdentifier>(
-                provider.GetRequiredService<IMongoDbGrainIdentifierService>(),
-                provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<GrainWarmupConfiguration>>(),
+            var logger = provider.GetRequiredService<ILogger<DefaultAgentWarmupStrategy<TIdentifier>>>();
+            return new DefaultAgentWarmupStrategy<TIdentifier>(
+                provider.GetRequiredService<IMongoDbAgentIdentifierService>(),
+                provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<AgentWarmupConfiguration>>(),
                 logger);
         });
         
         // Register the warmup service using standard hosted service pattern
-        services.AddSingleton<IGrainWarmupService, GrainWarmupService<TIdentifier>>();
-        services.AddHostedService<GrainWarmupService<TIdentifier>>();
+        services.AddSingleton<IAgentWarmupService, AgentWarmupService<TIdentifier>>();
+        services.AddHostedService<AgentWarmupService<TIdentifier>>();
         
         return services;
     }
     
     /// <summary>
-    /// Adds grain warmup services to the Orleans silo builder for GUID-based grains
+    /// Adds agent warmup services to the Orleans silo builder for GUID-based agents
     /// </summary>
     /// <param name="builder">The silo builder</param>
     /// <param name="configureOptions">Optional configuration action</param>
     /// <returns>The silo builder for chaining</returns>
-    public static ISiloBuilder AddGrainWarmupForGuid(
+    public static ISiloBuilder AddAgentWarmupForGuid(
         this ISiloBuilder builder,
-        Action<GrainWarmupConfiguration>? configureOptions = null)
+        Action<AgentWarmupConfiguration>? configureOptions = null)
     {
-        builder.ConfigureServices(services => services.AddGrainWarmupForGuid(configureOptions));
+        builder.ConfigureServices(services => services.AddAgentWarmupForGuid(configureOptions));
         return builder;
     }
 
     /// <summary>
-    /// Adds grain warmup services to the Orleans silo builder for string-based grains
+    /// Adds agent warmup services to the Orleans silo builder for string-based agents
     /// </summary>
     /// <param name="builder">The silo builder</param>
     /// <param name="configureOptions">Optional configuration action</param>
     /// <returns>The silo builder for chaining</returns>
-    public static ISiloBuilder AddGrainWarmupForString(
+    public static ISiloBuilder AddAgentWarmupForString(
         this ISiloBuilder builder,
-        Action<GrainWarmupConfiguration>? configureOptions = null)
+        Action<AgentWarmupConfiguration>? configureOptions = null)
     {
-        builder.ConfigureServices(services => services.AddGrainWarmupForString(configureOptions));
+        builder.ConfigureServices(services => services.AddAgentWarmupForString(configureOptions));
         return builder;
     }
 
     /// <summary>
-    /// Adds grain warmup services to the Orleans silo builder for long-based grains
+    /// Adds agent warmup services to the Orleans silo builder for long-based agents
     /// </summary>
     /// <param name="builder">The silo builder</param>
     /// <param name="configureOptions">Optional configuration action</param>
     /// <returns>The silo builder for chaining</returns>
-    public static ISiloBuilder AddGrainWarmupForLong(
+    public static ISiloBuilder AddAgentWarmupForLong(
         this ISiloBuilder builder,
-        Action<GrainWarmupConfiguration>? configureOptions = null)
+        Action<AgentWarmupConfiguration>? configureOptions = null)
     {
-        builder.ConfigureServices(services => services.AddGrainWarmupForLong(configureOptions));
+        builder.ConfigureServices(services => services.AddAgentWarmupForLong(configureOptions));
         return builder;
     }
 
     /// <summary>
-    /// Adds grain warmup services to the Orleans silo builder for a specific identifier type
+    /// Adds agent warmup services to the Orleans silo builder for a specific identifier type
     /// </summary>
     /// <typeparam name="TIdentifier">The identifier type (Guid, string, long, int)</typeparam>
     /// <param name="builder">The silo builder</param>
     /// <param name="configureOptions">Optional configuration action</param>
     /// <returns>The silo builder for chaining</returns>
-    public static ISiloBuilder AddGrainWarmup<TIdentifier>(
+    public static ISiloBuilder AddAgentWarmup<TIdentifier>(
         this ISiloBuilder builder,
-        Action<GrainWarmupConfiguration>? configureOptions = null)
+        Action<AgentWarmupConfiguration>? configureOptions = null)
     {
-        builder.ConfigureServices(services => services.AddGrainWarmup<TIdentifier>(configureOptions));
+        builder.ConfigureServices(services => services.AddAgentWarmup<TIdentifier>(configureOptions));
         return builder;
     }
     
     /// <summary>
-    /// Registers a custom grain warmup strategy
+    /// Registers a custom agent warmup strategy
     /// </summary>
     /// <typeparam name="TStrategy">The strategy implementation type</typeparam>
     /// <param name="services">The service collection</param>
     /// <returns>The service collection for chaining</returns>
-    public static IServiceCollection AddGrainWarmupStrategy<TStrategy>(
+    public static IServiceCollection AddAgentWarmupStrategy<TStrategy>(
         this IServiceCollection services)
-        where TStrategy : class, IGrainWarmupStrategy
+        where TStrategy : class, IAgentWarmupStrategy
     {
-        services.AddSingleton<IGrainWarmupStrategy, TStrategy>();
+        services.AddSingleton<IAgentWarmupStrategy, TStrategy>();
         return services;
     }
     
     /// <summary>
-    /// Registers a custom grain warmup strategy with a factory
+    /// Registers a custom agent warmup strategy with a factory
     /// </summary>
     /// <param name="services">The service collection</param>
     /// <param name="strategyFactory">Factory function to create the strategy</param>
     /// <returns>The service collection for chaining</returns>
-    public static IServiceCollection AddGrainWarmupStrategy(
+    public static IServiceCollection AddAgentWarmupStrategy(
         this IServiceCollection services,
-        Func<IServiceProvider, IGrainWarmupStrategy> strategyFactory)
+        Func<IServiceProvider, IAgentWarmupStrategy> strategyFactory)
     {
         services.AddSingleton(strategyFactory);
         return services;
     }
 
     /// <summary>
-    /// Configure grain warmup with direct Type-based base types (for grain discovery)
+    /// Configure agent warmup with direct Type-based base types (for agent discovery)
     /// </summary>
-    /// <typeparam name="TBaseType">The base grain type for discovery</typeparam>
+    /// <typeparam name="TBaseType">The base agent type for discovery</typeparam>
     /// <param name="services">The service collection</param>
     /// <returns>The service collection for chaining</returns>
-    public static IServiceCollection AddGrainWarmupWithBaseType<TBaseType>(this IServiceCollection services)
+    public static IServiceCollection AddAgentWarmupWithBaseType<TBaseType>(this IServiceCollection services)
         where TBaseType : class
     {
-        return services.AddGrainWarmup<Guid>(config =>
+        return services.AddAgentWarmup<Guid>(config =>
         {
             config.AutoDiscovery.BaseTypes.Add(typeof(TBaseType));
         });
     }
 
     /// <summary>
-    /// Configure grain warmup with multiple base types directly (for grain discovery)
+    /// Configure agent warmup with multiple base types directly (for agent discovery)
     /// </summary>
     /// <param name="services">The service collection</param>
-    /// <param name="baseTypes">The base grain types for discovery</param>
+    /// <param name="baseTypes">The base agent types for discovery</param>
     /// <returns>The service collection for chaining</returns>
-    public static IServiceCollection AddGrainWarmupWithBaseTypes(this IServiceCollection services, params Type[] baseTypes)
+    public static IServiceCollection AddAgentWarmupWithBaseTypes(this IServiceCollection services, params Type[] baseTypes)
     {
-        return services.AddGrainWarmup<Guid>(config =>
+        return services.AddAgentWarmup<Guid>(config =>
         {
             config.AutoDiscovery.BaseTypes.AddRange(baseTypes);
         });
     }
 
     /// <summary>
-    /// Configure grain warmup for Orleans silo with direct Type-based base types (for grain discovery)
+    /// Configure agent warmup for Orleans silo with direct Type-based base types (for agent discovery)
     /// </summary>
-    /// <typeparam name="TBaseType">The base grain type for discovery</typeparam>
+    /// <typeparam name="TBaseType">The base agent type for discovery</typeparam>
     /// <param name="builder">The silo builder</param>
     /// <returns>The silo builder for chaining</returns>
-    public static ISiloBuilder AddGrainWarmupWithBaseType<TBaseType>(this ISiloBuilder builder)
+    public static ISiloBuilder AddAgentWarmupWithBaseType<TBaseType>(this ISiloBuilder builder)
         where TBaseType : class
     {
-        return builder.AddGrainWarmup<Guid>(config =>
+        return builder.AddAgentWarmup<Guid>(config =>
         {
             config.AutoDiscovery.BaseTypes.Add(typeof(TBaseType));
         });
     }
 
     /// <summary>
-    /// Configure grain warmup for Orleans silo with multiple base types directly (for grain discovery)
+    /// Configure agent warmup for Orleans silo with multiple base types directly (for agent discovery)
     /// </summary>
     /// <param name="builder">The silo builder</param>
-    /// <param name="baseTypes">The base grain types for discovery</param>
+    /// <param name="baseTypes">The base agent types for discovery</param>
     /// <returns>The silo builder for chaining</returns>
-    public static ISiloBuilder AddGrainWarmupWithBaseTypes(this ISiloBuilder builder, params Type[] baseTypes)
+    public static ISiloBuilder AddAgentWarmupWithBaseTypes(this ISiloBuilder builder, params Type[] baseTypes)
     {
-        return builder.AddGrainWarmup<Guid>(config =>
+        return builder.AddAgentWarmup<Guid>(config =>
         {
             config.AutoDiscovery.BaseTypes.AddRange(baseTypes);
         });

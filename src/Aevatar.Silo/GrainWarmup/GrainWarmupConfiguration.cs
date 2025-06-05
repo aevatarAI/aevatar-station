@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 
-namespace Aevatar.Silo.GrainWarmup;
+namespace Aevatar.Silo.AgentWarmup;
 
 /// <summary>
-/// Configuration for the grain warmup system
+/// Configuration for the agent warmup system
 /// </summary>
-public class GrainWarmupConfiguration
+public class AgentWarmupConfiguration
 {
     /// <summary>
     /// Whether the warmup system is enabled
@@ -38,12 +38,12 @@ public class GrainWarmupConfiguration
     public int DelayBetweenBatchesMs { get; set; } = 100;
     
     /// <summary>
-    /// Timeout for individual grain activation in milliseconds
+    /// Timeout for individual agent activation in milliseconds
     /// </summary>
-    public int GrainActivationTimeoutMs { get; set; } = 5000;
+    public int AgentActivationTimeoutMs { get; set; } = 5000;
     
     /// <summary>
-    /// Maximum retry attempts for failed grain activations
+    /// Maximum retry attempts for failed agent activations
     /// </summary>
     public int MaxRetryAttempts { get; set; } = 3;
     
@@ -58,7 +58,7 @@ public class GrainWarmupConfiguration
     public MongoDbRateLimitConfiguration MongoDbRateLimit { get; set; } = new();
     
     /// <summary>
-    /// Automatic grain discovery configuration
+    /// Automatic agent discovery configuration
     /// </summary>
     public AutoDiscoveryConfiguration AutoDiscovery { get; set; } = new();
     
@@ -95,7 +95,7 @@ public class MongoDbRateLimitConfiguration
 }
 
 /// <summary>
-/// Configuration for automatic grain discovery
+/// Configuration for automatic agent discovery
 /// </summary>
 public class AutoDiscoveryConfiguration
 {
@@ -105,24 +105,24 @@ public class AutoDiscoveryConfiguration
     public bool Enabled { get; set; } = true;
     
     /// <summary>
-    /// Base types that grains must inherit from or implement
+    /// Base types that agents must inherit from or implement
     /// </summary>
     public List<Type> BaseTypes { get; set; } = new();
     
     /// <summary>
-    /// Required attributes that grains must have
+    /// Required attributes that agents must have
     /// </summary>
     public List<string> RequiredAttributes { get; set; } = new() { "StorageProvider" };
     
     /// <summary>
-    /// Storage provider name that grains must use
+    /// Storage provider name that agents must use
     /// </summary>
     public string StorageProviderName { get; set; } = "PubSubStore";
     
     /// <summary>
-    /// Grain types to exclude from discovery
+    /// Agent types to exclude from discovery
     /// </summary>
-    public List<string> ExcludedGrainTypes { get; set; } = new();
+    public List<string> ExcludedAgentTypes { get; set; } = new();
     
     /// <summary>
     /// Assemblies to include in discovery (empty = all loaded assemblies)
@@ -146,12 +146,12 @@ public class DefaultStrategyConfiguration
     public bool Enabled { get; set; } = true;
     
     /// <summary>
-    /// Source for grain identifiers (MongoDB, Predefined, Range)
+    /// Source for agent identifiers (MongoDB, Predefined, Range)
     /// </summary>
     public string IdentifierSource { get; set; } = "MongoDB";
     
     /// <summary>
-    /// Maximum identifiers per grain type
+    /// Maximum identifiers per agent type
     /// </summary>
     public int MaxIdentifiersPerType { get; set; } = 1000;
     

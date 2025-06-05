@@ -9,31 +9,31 @@ using Orleans;
 using Orleans.Storage;
 using Orleans.Providers;
 
-namespace Aevatar.Silo.GrainWarmup;
+namespace Aevatar.Silo.AgentWarmup;
 
 /// <summary>
-/// Service for automatically discovering warmup-eligible grain types from assemblies
+/// Service for automatically discovering warmup-eligible agent types from assemblies
 /// </summary>
-public class GrainDiscoveryService : IGrainDiscoveryService
+public class AgentDiscoveryService : IAgentDiscoveryService
 {
     private readonly AutoDiscoveryConfiguration _config;
-    private readonly ILogger<GrainDiscoveryService> _logger;
-    private readonly ConcurrentDictionary<Type, Type> _grainTypeMapping = new();
+    private readonly ILogger<AgentDiscoveryService> _logger;
+    private readonly ConcurrentDictionary<Type, Type> _agentTypeMapping = new();
     private readonly Lazy<IEnumerable<Type>> _discoveredTypes;
 
-    public GrainDiscoveryService(
-        IOptions<GrainWarmupConfiguration> options,
-        ILogger<GrainDiscoveryService> logger)
+    public AgentDiscoveryService(
+        IOptions<AgentWarmupConfiguration> options,
+        ILogger<AgentDiscoveryService> logger)
     {
         _config = options.Value.AutoDiscovery;
         _logger = logger;
         _discoveredTypes = new Lazy<IEnumerable<Type>>(DiscoverTypesInternal);
     }
 
-    public IEnumerable<Type> DiscoverWarmupEligibleGrainTypes(IEnumerable<Type>? excludedTypes = null)
+    public IEnumerable<Type> DiscoverWarmupEligibleAgentTypes(IEnumerable<Type>? excludedTypes = null)
     {
         var excluded = excludedTypes?.ToHashSet() ?? new HashSet<Type>();
-        var configExcluded = _config.ExcludedGrainTypes
+        var configExcluded = _config.ExcludedAgentTypes
             .Select(typeName => Type.GetType(typeName))
             .Where(t => t != null)
             .ToHashSet();
@@ -42,29 +42,29 @@ public class GrainDiscoveryService : IGrainDiscoveryService
             .Where(t => !excluded.Contains(t) && !configExcluded.Contains(t));
     }
 
-    public bool IsWarmupEligible(Type grainType)
+    public bool IsWarmupEligible(Type agentType)
     {
         try
         {
-            // Check if it's a grain type
-            if (!IsGrainType(grainType))
+            // Check if it's a agent type
+            if (!IsAgentType(agentType))
                 return false;
 
             // Check base type requirement - simple and efficient
             if (_config.BaseTypes.Any())
             {
-                var hasRequiredBaseType = _config.BaseTypes.Any(baseType => grainType.IsAssignableTo(baseType));
+                var hasRequiredBaseType = _config.BaseTypes.Any(baseType => agentType.IsAssignableTo(baseType));
                 if (!hasRequiredBaseType)
                 {
-                    _logger.LogDebug("Grain type {GrainType} does not inherit from any required base types", grainType.Name);
+                    _logger.LogDebug("Agent type {AgentType} does not inherit from any required base types", agentType.Name);
                     return false;
                 }
             }
 
             // Check required attributes
-            if (!HasRequiredAttributes(grainType))
+            if (!HasRequiredAttributes(agentType))
             {
-                _logger.LogDebug("Grain type {GrainType} does not have required attributes", grainType.Name);
+                _logger.LogDebug("Agent type {AgentType} does not have required attributes", agentType.Name);
                 return false;
             }
 
@@ -72,38 +72,38 @@ public class GrainDiscoveryService : IGrainDiscoveryService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Error checking warmup eligibility for type {GrainType}", grainType.Name);
+            _logger.LogWarning(ex, "Error checking warmup eligibility for type {AgentType}", agentType.Name);
             return false;
         }
     }
 
-    public Type GetGrainIdentifierType(Type grainType)
+    public Type GetAgentIdentifierType(Type agentType)
     {
-        if (_grainTypeMapping.TryGetValue(grainType, out var cachedType))
+        if (_agentTypeMapping.TryGetValue(agentType, out var cachedType))
             return cachedType;
 
-        var identifierType = DetermineIdentifierType(grainType);
-        _grainTypeMapping.TryAdd(grainType, identifierType);
+        var identifierType = DetermineIdentifierType(agentType);
+        _agentTypeMapping.TryAdd(agentType, identifierType);
         return identifierType;
     }
 
-    public Dictionary<Type, Type> GetGrainTypeMapping()
+    public Dictionary<Type, Type> GetAgentTypeMapping()
     {
         // Ensure all discovered types are processed
         var discoveredTypes = _discoveredTypes.Value.ToList();
         
         // Build mapping for all discovered types
-        foreach (var grainType in discoveredTypes)
+        foreach (var agentType in discoveredTypes)
         {
-            GetGrainIdentifierType(grainType);
+            GetAgentIdentifierType(agentType);
         }
 
-        return new Dictionary<Type, Type>(_grainTypeMapping);
+        return new Dictionary<Type, Type>(_agentTypeMapping);
     }
 
     private IEnumerable<Type> DiscoverTypesInternal()
     {
-        _logger.LogInformation("Starting automatic grain discovery...");
+        _logger.LogInformation("Starting automatic agent discovery...");
         
         var assemblies = GetTargetAssemblies();
         var discoveredTypes = new List<Type>();
@@ -120,18 +120,18 @@ public class GrainDiscoveryService : IGrainDiscoveryService
                 
                 if (types.Any())
                 {
-                    _logger.LogInformation("Discovered {Count} warmup-eligible grain types in assembly {Assembly}", 
+                    _logger.LogInformation("Discovered {Count} warmup-eligible agent types in assembly {Assembly}", 
                         types.Count, assembly.GetName().Name);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Error scanning assembly {Assembly} for grain types", 
+                _logger.LogWarning(ex, "Error scanning assembly {Assembly} for agent types", 
                     assembly.GetName().Name);
             }
         }
 
-        _logger.LogInformation("Grain discovery completed. Found {Count} eligible grain types", 
+        _logger.LogInformation("Agent discovery completed. Found {Count} eligible agent types", 
             discoveredTypes.Count);
 
         return discoveredTypes;
@@ -180,12 +180,12 @@ public class GrainDiscoveryService : IGrainDiscoveryService
         }
     }
 
-    private bool IsGrainType(Type type)
+    private bool IsAgentType(Type type)
     {
         if (type.IsAbstract || type.IsInterface)
             return false;
 
-        // Check if it implements any Orleans grain interface
+        // Check if it implements any Orleans agent interface
         return type.GetInterfaces().Any(i => 
             typeof(IGrainWithGuidKey).IsAssignableFrom(i) ||
             typeof(IGrainWithStringKey).IsAssignableFrom(i) ||
@@ -194,14 +194,14 @@ public class GrainDiscoveryService : IGrainDiscoveryService
             typeof(IGrainWithIntegerCompoundKey).IsAssignableFrom(i));
     }
 
-    private bool HasRequiredAttributes(Type grainType)
+    private bool HasRequiredAttributes(Type agentType)
     {
         foreach (var requiredAttribute in _config.RequiredAttributes)
         {
             switch (requiredAttribute.ToLowerInvariant())
             {
                 case "storageprovider":
-                    var storageAttr = grainType.GetCustomAttribute<StorageProviderAttribute>();
+                    var storageAttr = agentType.GetCustomAttribute<StorageProviderAttribute>();
                     if (storageAttr == null)
                         return false;
                     
@@ -212,7 +212,7 @@ public class GrainDiscoveryService : IGrainDiscoveryService
 
                 default:
                     // Try to find attribute by name
-                    var hasAttribute = grainType.GetCustomAttributes()
+                    var hasAttribute = agentType.GetCustomAttributes()
                         .Any(attr => attr.GetType().Name.Contains(requiredAttribute, StringComparison.OrdinalIgnoreCase));
                     if (!hasAttribute)
                         return false;
@@ -223,9 +223,9 @@ public class GrainDiscoveryService : IGrainDiscoveryService
         return true;
     }
 
-    private Type DetermineIdentifierType(Type grainType)
+    private Type DetermineIdentifierType(Type agentType)
     {
-        var interfaces = grainType.GetInterfaces();
+        var interfaces = agentType.GetInterfaces();
 
         if (interfaces.Any(i => typeof(IGrainWithGuidKey).IsAssignableFrom(i)))
             return typeof(Guid);
@@ -243,8 +243,8 @@ public class GrainDiscoveryService : IGrainDiscoveryService
             return typeof(long);
 
         // Default to Guid if we can't determine
-        _logger.LogWarning("Could not determine identifier type for grain {GrainType}, defaulting to Guid", 
-            grainType.Name);
+        _logger.LogWarning("Could not determine identifier type for agent {AgentType}, defaulting to Guid", 
+            agentType.Name);
         return typeof(Guid);
     }
 } 

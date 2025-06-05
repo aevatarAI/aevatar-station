@@ -10,28 +10,28 @@ using Orleans;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 
-namespace Aevatar.Silo.GrainWarmup;
+namespace Aevatar.Silo.AgentWarmup;
 
 /// <summary>
-/// Background service that manages grain warmup operations
+/// Background service that manages agent warmup operations
 /// </summary>
-/// <typeparam name="TIdentifier">The identifier type used by all grains (e.g., Guid, string, long)</typeparam>
-public class GrainWarmupService<TIdentifier> : BackgroundService, IGrainWarmupService
+/// <typeparam name="TIdentifier">The identifier type used by all agents (e.g., Guid, string, long)</typeparam>
+public class AgentWarmupService<TIdentifier> : BackgroundService, IAgentWarmupService
 {
-    private readonly IGrainDiscoveryService _discoveryService;
-    private readonly IGrainWarmupOrchestrator<TIdentifier> _orchestrator;
-    private readonly GrainWarmupConfiguration _config;
-    private readonly ILogger<GrainWarmupService<TIdentifier>> _logger;
-    private readonly IEnumerable<IGrainWarmupStrategy> _strategies;
-    private readonly GrainWarmupStatus _status = new();
+    private readonly IAgentDiscoveryService _discoveryService;
+    private readonly IAgentWarmupOrchestrator<TIdentifier> _orchestrator;
+    private readonly AgentWarmupConfiguration _config;
+    private readonly ILogger<AgentWarmupService<TIdentifier>> _logger;
+    private readonly IEnumerable<IAgentWarmupStrategy> _strategies;
+    private readonly AgentWarmupStatus _status = new();
     private readonly object _lock = new();
 
-    public GrainWarmupService(
-        IGrainDiscoveryService discoveryService,
-        IGrainWarmupOrchestrator<TIdentifier> orchestrator,
-        IEnumerable<IGrainWarmupStrategy> strategies,
-        IOptions<GrainWarmupConfiguration> options,
-        ILogger<GrainWarmupService<TIdentifier>> logger)
+    public AgentWarmupService(
+        IAgentDiscoveryService discoveryService,
+        IAgentWarmupOrchestrator<TIdentifier> orchestrator,
+        IEnumerable<IAgentWarmupStrategy> strategies,
+        IOptions<AgentWarmupConfiguration> options,
+        ILogger<AgentWarmupService<TIdentifier>> logger)
     {
         _discoveryService = discoveryService;
         _orchestrator = orchestrator;
@@ -39,7 +39,7 @@ public class GrainWarmupService<TIdentifier> : BackgroundService, IGrainWarmupSe
         _config = options.Value;
         _logger = logger;
         
-        _logger.LogInformation("GrainWarmupService<{IdentifierType}> initialized with {Count} strategies", 
+        _logger.LogInformation("AgentWarmupService<{IdentifierType}> initialized with {Count} strategies", 
             typeof(TIdentifier).Name, _strategies.Count());
     }
 
@@ -52,7 +52,7 @@ public class GrainWarmupService<TIdentifier> : BackgroundService, IGrainWarmupSe
     {
         if (!_config.Enabled)
         {
-            _logger.LogInformation("Grain warmup is disabled");
+            _logger.LogInformation("Agent warmup is disabled");
             return;
         }
 
@@ -67,37 +67,37 @@ public class GrainWarmupService<TIdentifier> : BackgroundService, IGrainWarmupSe
             _status.IsRunning = true;
             _status.StartTime = DateTime.UtcNow;
             _status.EndTime = null;
-            _status.TotalGrains = 0;
-            _status.WarmedUpGrains = 0;
-            _status.FailedGrains = 0;
+            _status.TotalAgents = 0;
+            _status.WarmedUpAgents = 0;
+            _status.FailedAgents = 0;
         }
 
         try
         {
-            _logger.LogInformation("Starting grain warmup process...");
+            _logger.LogInformation("Starting agent warmup process...");
 
-            // Discover grain types
-            var grainTypes = _discoveryService.DiscoverWarmupEligibleGrainTypes().ToList();
-            _logger.LogInformation("Discovered {Count} warmup-eligible grain types", grainTypes.Count);
+            // Discover agent types
+            var agentTypes = _discoveryService.DiscoverWarmupEligibleAgentTypes().ToList();
+            _logger.LogInformation("Discovered {Count} warmup-eligible agent types", agentTypes.Count);
 
-            if (!grainTypes.Any())
+            if (!agentTypes.Any())
             {
-                _logger.LogInformation("No grain types found for warmup");
+                _logger.LogInformation("No agent types found for warmup");
                 return;
             }
 
             // Create execution plan
             var strategies = _strategies.ToList();
-            var plan = _orchestrator.CreateExecutionPlan(grainTypes, strategies);
+            var plan = _orchestrator.CreateExecutionPlan(agentTypes, strategies);
 
             // Execute warmup plan
             await _orchestrator.ExecuteWarmupPlanAsync(plan, cancellationToken);
 
-            _logger.LogInformation("Grain warmup process completed successfully");
+            _logger.LogInformation("Agent warmup process completed successfully");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during grain warmup process");
+            _logger.LogError(ex, "Error during agent warmup process");
             throw;
         }
         finally
@@ -137,16 +137,16 @@ public class GrainWarmupService<TIdentifier> : BackgroundService, IGrainWarmupSe
     /// Gets the current warmup status
     /// </summary>
     /// <returns>The current warmup status</returns>
-    public GrainWarmupStatus GetStatus()
+    public AgentWarmupStatus GetStatus()
     {
         lock (_lock)
         {
-            return new GrainWarmupStatus
+            return new AgentWarmupStatus
             {
                 IsRunning = _status.IsRunning,
-                TotalGrains = _status.TotalGrains,
-                WarmedUpGrains = _status.WarmedUpGrains,
-                FailedGrains = _status.FailedGrains,
+                TotalAgents = _status.TotalAgents,
+                WarmedUpAgents = _status.WarmedUpAgents,
+                FailedAgents = _status.FailedAgents,
                 StartTime = _status.StartTime,
                 EndTime = _status.EndTime
             };
@@ -162,7 +162,7 @@ public class GrainWarmupService<TIdentifier> : BackgroundService, IGrainWarmupSe
     {
         if (!_config.Enabled)
         {
-            _logger.LogInformation("Grain warmup is disabled, background service will not start");
+            _logger.LogInformation("Agent warmup is disabled, background service will not start");
             return;
         }
 
@@ -175,11 +175,11 @@ public class GrainWarmupService<TIdentifier> : BackgroundService, IGrainWarmupSe
         }
         catch (OperationCanceledException)
         {
-            _logger.LogInformation("Grain warmup background service was cancelled");
+            _logger.LogInformation("Agent warmup background service was cancelled");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error in grain warmup background service");
+            _logger.LogError(ex, "Error in agent warmup background service");
         }
     }
 }

@@ -2,23 +2,23 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using Xunit.Abstractions;
-using Aevatar.Silo.GrainWarmup;
-using Aevatar.Silo.GrainWarmup.Extensions;
-using GrainWarmupE2E.Fixtures;
-using E2E.Grains;
-using GrainWarmupE2E.Utilities;
+using Aevatar.Silo.AgentWarmup;
+using Aevatar.Silo.AgentWarmup.Extensions;
+using AgentWarmupE2E.Fixtures;
+using E2E.Agents;
+using AgentWarmupE2E.Utilities;
 
-namespace GrainWarmupE2E.Tests;
+namespace AgentWarmupE2E.Tests;
 
 /// <summary>
-/// Basic functionality tests for grain system (testing against real silo)
+/// Basic functionality tests for agent system (testing against real silo)
 /// </summary>
-public class BasicFunctionalityTests : IClassFixture<GrainWarmupTestFixture>, IAsyncLifetime
+public class BasicFunctionalityTests : IClassFixture<AgentWarmupTestFixture>, IAsyncLifetime
 {
-    private readonly GrainWarmupTestFixture _fixture;
+    private readonly AgentWarmupTestFixture _fixture;
     private readonly ITestOutputHelper _output;
 
-    public BasicFunctionalityTests(GrainWarmupTestFixture fixture, ITestOutputHelper output)
+    public BasicFunctionalityTests(AgentWarmupTestFixture fixture, ITestOutputHelper output)
     {
         _fixture = fixture;
         _output = output;
@@ -40,40 +40,40 @@ public class BasicFunctionalityTests : IClassFixture<GrainWarmupTestFixture>, IA
         var client = _fixture.Client;
         client.Should().NotBeNull();
         
-        // Verify we can access grain factory
-        var grainFactory = _fixture.GrainFactory;
-        grainFactory.Should().NotBeNull();
+        // Verify we can access agent factory
+        var agentFactory = _fixture.AgentFactory;
+        agentFactory.Should().NotBeNull();
         
         _output.WriteLine("Successfully verified silo connection");
     }
 
     [Fact]
-    public async Task ShouldActivateGrain()
+    public async Task ShouldActivateAgent()
     {
         // Arrange
-        var grainId = TestDataGenerator.GenerateTestGuid(1);
-        var grain = _fixture.GetTestGrain(grainId);
+        var agentId = TestDataGenerator.GenerateTestGuid(1);
+        var agent = _fixture.GetTestAgent(agentId);
 
         // Act
-        var result = await grain.PingAsync();
+        var result = await agent.PingAsync();
 
         // Assert
         result.Should().Contain("Pong");
-        result.Should().Contain(grainId.ToString());
-        _output.WriteLine($"Successfully activated grain {grainId} and received: {result}");
+        result.Should().Contain(agentId.ToString());
+        _output.WriteLine($"Successfully activated agent {agentId} and received: {result}");
     }
 
     [Fact]
-    public async Task ShouldActivateMultipleGrains()
+    public async Task ShouldActivateMultipleAgents()
     {
         // Arrange
-        var grainIds = GrainWarmupTestFixture.GenerateTestGrainIds(5, "basic");
+        var agentIds = AgentWarmupTestFixture.GenerateTestAgentIds(5, "basic");
         
         // Act
-        var tasks = grainIds.Select(async grainId =>
+        var tasks = agentIds.Select(async agentId =>
         {
-            var grain = _fixture.GetTestGrain(grainId);
-            return await grain.PingAsync();
+            var agent = _fixture.GetTestAgent(agentId);
+            return await agent.PingAsync();
         });
 
         var results = await Task.WhenAll(tasks);
@@ -82,54 +82,54 @@ public class BasicFunctionalityTests : IClassFixture<GrainWarmupTestFixture>, IA
         results.Should().AllSatisfy(result => result.Should().Contain("Pong"));
         results.Should().HaveCount(5);
         
-        _output.WriteLine($"Successfully activated {results.Length} grains");
+        _output.WriteLine($"Successfully activated {results.Length} agents");
     }
 
     [Fact]
-    public async Task ShouldTrackGrainActivationTime()
+    public async Task ShouldTrackAgentActivationTime()
     {
-        // Arrange - Use fresh GUID to ensure new grain activation
-        var grainId = Guid.NewGuid();
-        var grain = _fixture.GetTestGrain(grainId);
+        // Arrange - Use fresh GUID to ensure new agent activation
+        var agentId = Guid.NewGuid();
+        var agent = _fixture.GetTestAgent(agentId);
 
         // Act - First activation and get activation time
-        var result = await grain.PingAsync();
-        var activationTime = await grain.GetActivationTimeAsync();
+        var result = await agent.PingAsync();
+        var activationTime = await agent.GetActivationTimeAsync();
 
         // Assert
         result.Should().Contain("Pong");
         activationTime.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
         
-        _output.WriteLine($"Grain {grainId} activated at: {activationTime}");
+        _output.WriteLine($"Agent {agentId} activated at: {activationTime}");
     }
 
     [Fact]
     public async Task ShouldTrackAccessCount()
     {
         // Arrange
-        var grainId = TestDataGenerator.GenerateTestGuid(3);
-        var grain = _fixture.GetTestGrain(grainId);
+        var agentId = TestDataGenerator.GenerateTestGuid(3);
+        var agent = _fixture.GetTestAgent(agentId);
 
         // Act
-        await grain.PingAsync(); // First call
-        await grain.PingAsync(); // Second call
-        var accessCount = await grain.GetAccessCountAsync();
+        await agent.PingAsync(); // First call
+        await agent.PingAsync(); // Second call
+        var accessCount = await agent.GetAccessCountAsync();
 
         // Assert
         accessCount.Should().BeGreaterOrEqualTo(2);
-        _output.WriteLine($"Grain {grainId} access count: {accessCount}");
+        _output.WriteLine($"Agent {agentId} access count: {accessCount}");
     }
 
     [Fact]
     public async Task ShouldPerformComputation()
     {
         // Arrange
-        var grainId = TestDataGenerator.GenerateTestGuid(4);
-        var grain = _fixture.GetTestGrain(grainId);
+        var agentId = TestDataGenerator.GenerateTestGuid(4);
+        var agent = _fixture.GetTestAgent(agentId);
         var input = 42;
 
         // Act
-        var result = await grain.ComputeAsync(input);
+        var result = await agent.ComputeAsync(input);
 
         // Assert
         result.Should().BeGreaterThan(input);
@@ -137,95 +137,95 @@ public class BasicFunctionalityTests : IClassFixture<GrainWarmupTestFixture>, IA
     }
 
     [Fact]
-    public async Task ShouldWaitForGrainActivations()
+    public async Task ShouldWaitForAgentActivations()
     {
         // Arrange
-        var grainIds = GrainWarmupTestFixture.GenerateTestGrainIds(3, "wait");
+        var agentIds = AgentWarmupTestFixture.GenerateTestAgentIds(3, "wait");
         var timeout = TimeSpan.FromSeconds(10);
 
         // Act
         var startTime = DateTime.UtcNow;
-        await _fixture.WaitForGrainActivationsAsync(grainIds, timeout);
+        await _fixture.WaitForAgentActivationsAsync(agentIds, timeout);
         var elapsed = DateTime.UtcNow - startTime;
 
         // Assert
         elapsed.Should().BeLessThan(timeout);
         
-        // Verify all grains are actually activated by checking their access count
-        foreach (var grainId in grainIds)
+        // Verify all agents are actually activated by checking their access count
+        foreach (var agentId in agentIds)
         {
-            var grain = _fixture.GetTestGrain(grainId);
-            var accessCount = await grain.GetAccessCountAsync();
-            accessCount.Should().BeGreaterThan(0, $"Grain {grainId} should have been accessed");
+            var agent = _fixture.GetTestAgent(agentId);
+            var accessCount = await agent.GetAccessCountAsync();
+            accessCount.Should().BeGreaterThan(0, $"Agent {agentId} should have been accessed");
         }
         
-        _output.WriteLine($"Successfully waited for {grainIds.Count} grain activations in {elapsed.TotalMilliseconds:F2}ms");
+        _output.WriteLine($"Successfully waited for {agentIds.Count} agent activations in {elapsed.TotalMilliseconds:F2}ms");
     }
 
     [Fact]
     public async Task ShouldSimulateDatabaseOperations()
     {
         // Arrange
-        var grainId = TestDataGenerator.GenerateTestGuid(5);
-        var grain = _fixture.GetTestGrain(grainId);
+        var agentId = TestDataGenerator.GenerateTestGuid(5);
+        var agent = _fixture.GetTestAgent(agentId);
         var delayMs = 50;
 
         // Act
         var startTime = DateTime.UtcNow;
-        var result = await grain.SimulateDatabaseOperationAsync(delayMs);
+        var result = await agent.SimulateDatabaseOperationAsync(delayMs);
         var elapsed = DateTime.UtcNow - startTime;
 
         // Assert
         result.Should().Contain("Database operation completed");
-        result.Should().Contain(grainId.ToString());
+        result.Should().Contain(agentId.ToString());
         elapsed.Should().BeGreaterThan(TimeSpan.FromMilliseconds(delayMs - 10)); // Allow some tolerance
         
         _output.WriteLine($"Database simulation completed in {elapsed.TotalMilliseconds:F2}ms: {result}");
     }
 
     [Fact]
-    public async Task ShouldProvideGrainMetadata()
+    public async Task ShouldProvideAgentMetadata()
     {
-        // Arrange - Use fresh GUID to ensure new grain activation
-        var grainId = Guid.NewGuid();
-        var grain = _fixture.GetTestGrain(grainId);
+        // Arrange - Use fresh GUID to ensure new agent activation
+        var agentId = Guid.NewGuid();
+        var agent = _fixture.GetTestAgent(agentId);
 
         // Act
-        await grain.PingAsync(); // Activate the grain
-        var metadata = await grain.GetMetadataAsync();
+        await agent.PingAsync(); // Activate the agent
+        var metadata = await agent.GetMetadataAsync();
 
         // Assert
         metadata.Should().NotBeNull();
-        metadata.GrainId.Should().Be(grainId);
+        metadata.AgentId.Should().Be(agentId);
         metadata.ActivationTime.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
         metadata.AccessCount.Should().BeGreaterThan(0);
         metadata.SiloAddress.Should().NotBeNullOrEmpty();
         
-        _output.WriteLine($"Grain metadata: ID={metadata.GrainId}, ActivationTime={metadata.ActivationTime}, AccessCount={metadata.AccessCount}");
+        _output.WriteLine($"Agent metadata: ID={metadata.AgentId}, ActivationTime={metadata.ActivationTime}, AccessCount={metadata.AccessCount}");
     }
 
     [Fact]
-    public async Task ShouldGenerateUniqueGrainIds()
+    public async Task ShouldGenerateUniqueAgentIds()
     {
         // Arrange & Act
-        var grainIds1 = GrainWarmupTestFixture.GenerateTestGrainIds(10, "unique1");
-        var grainIds2 = GrainWarmupTestFixture.GenerateTestGrainIds(10, "unique2");
-        var grainIds3 = GrainWarmupTestFixture.GenerateTestGrainIds(10); // No prefix
+        var agentIds1 = AgentWarmupTestFixture.GenerateTestAgentIds(10, "unique1");
+        var agentIds2 = AgentWarmupTestFixture.GenerateTestAgentIds(10, "unique2");
+        var agentIds3 = AgentWarmupTestFixture.GenerateTestAgentIds(10); // No prefix
 
         // Assert
-        grainIds1.Should().HaveCount(10);
-        grainIds2.Should().HaveCount(10);
-        grainIds3.Should().HaveCount(10);
+        agentIds1.Should().HaveCount(10);
+        agentIds2.Should().HaveCount(10);
+        agentIds3.Should().HaveCount(10);
         
-        grainIds1.Should().OnlyHaveUniqueItems();
-        grainIds2.Should().OnlyHaveUniqueItems();
-        grainIds3.Should().OnlyHaveUniqueItems();
+        agentIds1.Should().OnlyHaveUniqueItems();
+        agentIds2.Should().OnlyHaveUniqueItems();
+        agentIds3.Should().OnlyHaveUniqueItems();
         
         // Verify different prefixes generate different IDs
-        grainIds1.Should().NotIntersectWith(grainIds2);
-        grainIds1.Should().NotIntersectWith(grainIds3);
-        grainIds2.Should().NotIntersectWith(grainIds3);
+        agentIds1.Should().NotIntersectWith(agentIds2);
+        agentIds1.Should().NotIntersectWith(agentIds3);
+        agentIds2.Should().NotIntersectWith(agentIds3);
         
-        _output.WriteLine($"Generated unique grain ID sets: {grainIds1.Count}, {grainIds2.Count}, {grainIds3.Count}");
+        _output.WriteLine($"Generated unique agent ID sets: {agentIds1.Count}, {agentIds2.Count}, {agentIds3.Count}");
     }
 } 

@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace GrainWarmupE2E.Utilities;
+namespace AgentWarmupE2E.Utilities;
 
 /// <summary>
 /// Utility class for generating consistent test data
@@ -65,32 +65,32 @@ public class TestDataGenerator
     /// </summary>
     public static class TestCategories
     {
-        public static List<Guid> GenerateBasicTestGrains(int count) =>
+        public static List<Guid> GenerateBasicTestAgents(int count) =>
             Enumerable.Range(0, count)
                 .Select(i => GenerateGuidWithPrefix("basic", i))
                 .ToList();
 
-        public static List<Guid> GeneratePerformanceTestGrains(int count) =>
+        public static List<Guid> GeneratePerformanceTestAgents(int count) =>
             Enumerable.Range(0, count)
                 .Select(i => GenerateGuidWithPrefix("perf", i))
                 .ToList();
 
-        public static List<Guid> GenerateWarmupTestGrains(int count) =>
+        public static List<Guid> GenerateWarmupTestAgents(int count) =>
             Enumerable.Range(0, count)
                 .Select(i => GenerateGuidWithPrefix("warmup", i))
                 .ToList();
 
-        public static List<Guid> GenerateColdTestGrains(int count) =>
+        public static List<Guid> GenerateColdTestAgents(int count) =>
             Enumerable.Range(0, count)
                 .Select(i => GenerateGuidWithPrefix("cold", i))
                 .ToList();
 
-        public static List<Guid> GenerateErrorTestGrains(int count) =>
+        public static List<Guid> GenerateErrorTestAgents(int count) =>
             Enumerable.Range(0, count)
                 .Select(i => GenerateGuidWithPrefix("error", i))
                 .ToList();
 
-        public static List<Guid> GenerateLargeScaleTestGrains(int count) =>
+        public static List<Guid> GenerateLargeScaleTestAgents(int count) =>
             Enumerable.Range(0, count)
                 .Select(i => GenerateGuidWithPrefix("large", i))
                 .ToList();
@@ -103,38 +103,38 @@ public class TestDataGenerator
     {
         public static (List<Guid> warmed, List<Guid> cold) GenerateLatencyComparisonSet(int count)
         {
-            var warmed = TestCategories.GenerateWarmupTestGrains(count);
-            var cold = TestCategories.GenerateColdTestGrains(count);
+            var warmed = TestCategories.GenerateWarmupTestAgents(count);
+            var cold = TestCategories.GenerateColdTestAgents(count);
             return (warmed, cold);
         }
 
-        public static List<Guid> GenerateConcurrentAccessSet(int threadCount, int grainsPerThread)
+        public static List<Guid> GenerateConcurrentAccessSet(int threadCount, int agentsPerThread)
         {
-            var grains = new List<Guid>();
+            var agents = new List<Guid>();
             for (int thread = 0; thread < threadCount; thread++)
             {
-                for (int grain = 0; grain < grainsPerThread; grain++)
+                for (int agent = 0; agent < agentsPerThread; agent++)
                 {
-                    grains.Add(GenerateGuidWithPrefix($"concurrent-t{thread}", grain));
+                    agents.Add(GenerateGuidWithPrefix($"concurrent-t{thread}", agent));
                 }
             }
-            return grains;
+            return agents;
         }
 
         public static List<Guid> GenerateProgressiveWarmupSet(int totalCount, int batchCount)
         {
-            var grains = new List<Guid>();
-            var grainsPerBatch = totalCount / batchCount;
+            var agents = new List<Guid>();
+            var agentsPerBatch = totalCount / batchCount;
             
             for (int batch = 0; batch < batchCount; batch++)
             {
-                for (int grain = 0; grain < grainsPerBatch; grain++)
+                for (int agent = 0; agent < agentsPerBatch; agent++)
                 {
-                    grains.Add(GenerateGuidWithPrefix($"progressive-b{batch}", grain));
+                    agents.Add(GenerateGuidWithPrefix($"progressive-b{batch}", agent));
                 }
             }
             
-            return grains;
+            return agents;
         }
     }
 

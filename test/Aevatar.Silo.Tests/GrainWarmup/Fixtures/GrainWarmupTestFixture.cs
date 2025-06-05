@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Aevatar.Silo.Tests.GrainWarmup.TestGrains;
-using Aevatar.Silo.GrainWarmup;
-using Aevatar.Silo.GrainWarmup.Extensions;
-using Aevatar.Silo.GrainWarmup.Strategies;
+using Aevatar.Silo.Tests.AgentWarmup.TestAgents;
+using Aevatar.Silo.AgentWarmup;
+using Aevatar.Silo.AgentWarmup.Extensions;
+using Aevatar.Silo.AgentWarmup.Strategies;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -18,12 +18,12 @@ using Orleans.Hosting;
 using Orleans.TestingHost;
 using Xunit;
 
-namespace Aevatar.Silo.Tests.GrainWarmup.Fixtures;
+namespace Aevatar.Silo.Tests.AgentWarmup.Fixtures;
 
 /// <summary>
-/// Test fixture for grain warmup testing integrated with Aevatar.Silo.Tests infrastructure
+/// Test fixture for agent warmup testing integrated with Aevatar.Silo.Tests infrastructure
 /// </summary>
-public class GrainWarmupTestFixture : IAsyncLifetime
+public class AgentWarmupTestFixture : IAsyncLifetime
 {
     private TestCluster? _cluster;
 
@@ -57,7 +57,7 @@ public class GrainWarmupTestFixture : IAsyncLifetime
                 {
                     { "Orleans:ClusterId", "test-cluster" },
                     { "Orleans:ServiceId", "test-service" },
-                    { "Orleans:DataBase", "grain-warmup-test" },
+                    { "Orleans:DataBase", "agent-warmup-test" },
                     { "Orleans:MongoDBClient", "mongodb://localhost:27017" } // Placeholder for config
                 })
                 .Build();
@@ -74,14 +74,14 @@ public class GrainWarmupTestFixture : IAsyncLifetime
                     // Register mock MongoDB services for testing (in-memory)
                     RegisterInMemoryMongoDbServices(services);
                     
-                    // Register grain warmup services manually for testing
-                    RegisterGrainWarmupServicesForTesting(services);
+                    // Register agent warmup services manually for testing
+                    RegisterAgentWarmupServicesForTesting(services);
                 })
                 // Use memory storage for testing (following existing test infrastructure pattern)
                 .UseInMemoryReminderService()
-                .AddMemoryGrainStorageAsDefault()
-                .AddMemoryGrainStorage("PubSubStore")  // Required for TestStreams
-                .AddMemoryGrainStorage("TestStreams")  // Required for TestStreams
+                .AddMemoryAgentStorageAsDefault()
+                .AddMemoryAgentStorage("PubSubStore")  // Required for TestStreams
+                .AddMemoryAgentStorage("TestStreams")  // Required for TestStreams
                 .AddMemoryStreams("TestStreams")
                 // Configure logging
                 .ConfigureLogging(logging => logging.AddConsole().SetMinimumLevel(LogLevel.Information));
@@ -106,18 +106,18 @@ public class GrainWarmupTestFixture : IAsyncLifetime
             services.AddSingleton(mockDatabase.Object);
         }
         
-        private static void RegisterGrainWarmupServicesForTesting(IServiceCollection services)
+        private static void RegisterAgentWarmupServicesForTesting(IServiceCollection services)
         {
             // Use the same registration pattern as production code
-            // This calls the AddGrainWarmup<Guid> extension method which handles all service registration
-            services.AddGrainWarmup<Guid>(options =>
+            // This calls the AddAgentWarmup<Guid> extension method which handles all service registration
+            services.AddAgentWarmup<Guid>(options =>
             {
                 options.Enabled = true;
                 options.MaxConcurrency = 3;
                 options.InitialBatchSize = 5;
                 options.MaxBatchSize = 10;
                 options.DelayBetweenBatchesMs = 100;
-                options.GrainActivationTimeoutMs = 5000;
+                options.AgentActivationTimeoutMs = 5000;
                 
                 // Configure auto-discovery for test environment
                 options.AutoDiscovery.Enabled = true;
@@ -153,9 +153,9 @@ public class GrainWarmupTestFixture : IAsyncLifetime
 }
 
 /// <summary>
-/// Collection definition for grain warmup tests
+/// Collection definition for agent warmup tests
 /// </summary>
-[CollectionDefinition("GrainWarmup")]
-public class GrainWarmupTestCollection : ICollectionFixture<GrainWarmupTestFixture>
+[CollectionDefinition("AgentWarmup")]
+public class AgentWarmupTestCollection : ICollectionFixture<AgentWarmupTestFixture>
 {
 } 

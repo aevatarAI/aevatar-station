@@ -6,28 +6,28 @@ using Orleans.Configuration;
 using Orleans.Hosting;
 using Orleans.Providers.MongoDB.Configuration;
 using Orleans.Streams.Kafka.Config;
-using E2E.Grains;
+using E2E.Agents;
 
-namespace GrainWarmupE2E.Fixtures;
+namespace AgentWarmupE2E.Fixtures;
 
 /// <summary>
 /// Test fixture for Orleans client connecting to a real silo
 /// This connects to an existing silo instead of creating an in-memory cluster
 /// </summary>
-public class GrainWarmupTestFixture : IAsyncDisposable
+public class AgentWarmupTestFixture : IAsyncDisposable
 {
     private IHost? _host;
     private IClusterClient? _client;
-    private readonly ILogger<GrainWarmupTestFixture> _logger;
+    private readonly ILogger<AgentWarmupTestFixture> _logger;
 
-    public GrainWarmupTestFixture()
+    public AgentWarmupTestFixture()
     {
         using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-        _logger = loggerFactory.CreateLogger<GrainWarmupTestFixture>();
+        _logger = loggerFactory.CreateLogger<AgentWarmupTestFixture>();
     }
 
     public IClusterClient Client => _client ?? throw new InvalidOperationException("Client not initialized");
-    public IGrainFactory GrainFactory => Client;
+    public IGrainFactory AgentFactory => Client;
 
     public async Task InitializeAsync()
     {
@@ -100,28 +100,28 @@ public class GrainWarmupTestFixture : IAsyncDisposable
     }
 
     /// <summary>
-    /// Gets a test warmup grain instance
+    /// Gets a test warmup agent instance
     /// </summary>
-    public ITestWarmupGrain GetTestGrain(Guid grainId)
+    public ITestWarmupAgent GetTestAgent(Guid agentId)
     {
-        return GrainFactory.GetGrain<ITestWarmupGrain>(grainId);
+        return AgentFactory.Get<ITestWarmupAgent>(agentId);
     }
 
     /// <summary>
-    /// Generates test grain IDs with optional prefix
+    /// Generates test agent IDs with optional prefix
     /// </summary>
-    public static List<Guid> GenerateTestGrainIds(int count, string? prefix = null)
+    public static List<Guid> GenerateTestAgentIds(int count, string? prefix = null)
     {
-        var grainIds = new List<Guid>();
+        var agentIds = new List<Guid>();
         
         for (var i = 0; i < count; i++)
         {
             var seedValue = prefix != null ? $"{prefix}_{i}" : i.ToString();
-            var grainId = GenerateTestGuidFromSeed(seedValue);
-            grainIds.Add(grainId);
+            var agentId = GenerateTestGuidFromSeed(seedValue);
+            agentIds.Add(agentId);
         }
         
-        return grainIds;
+        return agentIds;
     }
 
     /// <summary>
@@ -137,15 +137,15 @@ public class GrainWarmupTestFixture : IAsyncDisposable
     }
 
     /// <summary>
-    /// Waits for grain activations to complete within specified timeout
+    /// Waits for agent activations to complete within specified timeout
     /// </summary>
-    public async Task WaitForGrainActivationsAsync(List<Guid> grainIds, TimeSpan timeout)
+    public async Task WaitForAgentActivationsAsync(List<Guid> agentIds, TimeSpan timeout)
     {
-        var tasks = grainIds.Select(async grainId =>
+        var tasks = agentIds.Select(async agentId =>
         {
-            var grain = GetTestGrain(grainId);
-            // Activate grain by calling a method
-            await grain.PingAsync();
+            var agent = GetTestAgent(agentId);
+            // Activate agent by calling a method
+            await agent.PingAsync();
         });
 
         using var cts = new CancellationTokenSource(timeout);
@@ -155,7 +155,7 @@ public class GrainWarmupTestFixture : IAsyncDisposable
         }
         catch (OperationCanceledException)
         {
-            throw new TimeoutException($"Timeout waiting for {grainIds.Count} grain activations after {timeout}");
+            throw new TimeoutException($"Timeout waiting for {agentIds.Count} agent activations after {timeout}");
         }
     }
 } 

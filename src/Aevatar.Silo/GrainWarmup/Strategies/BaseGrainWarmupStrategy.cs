@@ -5,17 +5,17 @@ using System.Threading;
 using Microsoft.Extensions.Logging;
 using Orleans;
 
-namespace Aevatar.Silo.GrainWarmup.Strategies;
+namespace Aevatar.Silo.AgentWarmup.Strategies;
 
 /// <summary>
-/// Base class for grain warmup strategies providing common functionality
+/// Base class for agent warmup strategies providing common functionality
 /// </summary>
 /// <typeparam name="TIdentifier">The identifier type (Guid, string, int, long)</typeparam>
-public abstract class BaseGrainWarmupStrategy<TIdentifier> : IGrainWarmupStrategy<TIdentifier>
+public abstract class BaseAgentWarmupStrategy<TIdentifier> : IAgentWarmupStrategy<TIdentifier>
 {
     protected readonly ILogger Logger;
 
-    protected BaseGrainWarmupStrategy(ILogger logger)
+    protected BaseAgentWarmupStrategy(ILogger logger)
     {
         Logger = logger;
     }
@@ -26,9 +26,9 @@ public abstract class BaseGrainWarmupStrategy<TIdentifier> : IGrainWarmupStrateg
     public abstract string Name { get; }
 
     /// <summary>
-    /// Grain types this strategy applies to (empty = applies to all)
+    /// Agent types this strategy applies to (empty = applies to all)
     /// </summary>
-    public abstract IEnumerable<Type> ApplicableGrainTypes { get; }
+    public abstract IEnumerable<Type> ApplicableAgentTypes { get; }
 
     /// <summary>
     /// Priority for execution order (higher = earlier)
@@ -36,117 +36,117 @@ public abstract class BaseGrainWarmupStrategy<TIdentifier> : IGrainWarmupStrateg
     public abstract int Priority { get; }
 
     /// <summary>
-    /// Gets the primary grain type (for interface compatibility)
+    /// Gets the primary agent type (for interface compatibility)
     /// </summary>
-    public virtual Type GrainType => ApplicableGrainTypes.FirstOrDefault() ?? typeof(object);
+    public virtual Type AgentType => ApplicableAgentTypes.FirstOrDefault() ?? typeof(object);
 
     /// <summary>
-    /// Gets the estimated number of grains that will be warmed up
+    /// Gets the estimated number of agents that will be warmed up
     /// </summary>
-    public abstract int EstimatedGrainCount { get; }
+    public abstract int EstimatedAgentCount { get; }
 
     /// <summary>
-    /// Generates grain identifiers for a specific grain type
+    /// Generates agent identifiers for a specific agent type
     /// </summary>
-    /// <param name="grainType">The grain type to generate identifiers for</param>
+    /// <param name="agentType">The agent type to generate identifiers for</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Async enumerable of grain identifiers</returns>
-    public abstract IAsyncEnumerable<TIdentifier> GenerateGrainIdentifiersAsync(
-        Type grainType, 
+    /// <returns>Async enumerable of agent identifiers</returns>
+    public abstract IAsyncEnumerable<TIdentifier> GenerateAgentIdentifiersAsync(
+        Type agentType, 
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Generates the grain identifiers to warm up (strongly typed version)
+    /// Generates the agent identifiers to warm up (strongly typed version)
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Enumerable of strongly typed grain identifiers</returns>
-    public virtual IAsyncEnumerable<TIdentifier> GenerateGrainIdentifiersAsync(CancellationToken cancellationToken = default)
+    /// <returns>Enumerable of strongly typed agent identifiers</returns>
+    public virtual IAsyncEnumerable<TIdentifier> GenerateAgentIdentifiersAsync(CancellationToken cancellationToken = default)
     {
-        return GenerateGrainIdentifiersAsync(GrainType, cancellationToken);
+        return GenerateAgentIdentifiersAsync(AgentType, cancellationToken);
     }
 
     /// <summary>
-    /// Generates the grain identifiers to warm up (non-generic version)
+    /// Generates the agent identifiers to warm up (non-generic version)
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Enumerable of grain identifiers as objects</returns>
-    async IAsyncEnumerable<object> IGrainWarmupStrategy.GenerateGrainIdentifiersAsync(CancellationToken cancellationToken)
+    /// <returns>Enumerable of agent identifiers as objects</returns>
+    async IAsyncEnumerable<object> IAgentWarmupStrategy.GenerateAgentIdentifiersAsync(CancellationToken cancellationToken)
     {
-        await foreach (var identifier in GenerateGrainIdentifiersAsync(GrainType, cancellationToken))
+        await foreach (var identifier in GenerateAgentIdentifiersAsync(AgentType, cancellationToken))
         {
             yield return identifier!;
         }
     }
 
     /// <summary>
-    /// Checks if strategy applies to a grain type
+    /// Checks if strategy applies to a agent type
     /// </summary>
-    /// <param name="grainType">The grain type to check</param>
-    /// <returns>True if the strategy applies to this grain type</returns>
-    public virtual bool AppliesTo(Type grainType)
+    /// <param name="agentType">The agent type to check</param>
+    /// <returns>True if the strategy applies to this agent type</returns>
+    public virtual bool AppliesTo(Type agentType)
     {
-        var applicableTypes = ApplicableGrainTypes.ToList();
+        var applicableTypes = ApplicableAgentTypes.ToList();
         
         // If no specific types are defined, applies to all
         if (!applicableTypes.Any())
             return true;
 
-        // Check if the grain type is in the applicable types list
-        return applicableTypes.Contains(grainType) || 
-               applicableTypes.Any(t => t.IsAssignableFrom(grainType));
+        // Check if the agent type is in the applicable types list
+        return applicableTypes.Contains(agentType) || 
+               applicableTypes.Any(t => t.IsAssignableFrom(agentType));
     }
 
     /// <summary>
-    /// Creates grain reference for a specific grain type and identifier
+    /// Creates agent reference for a specific agent type and identifier
     /// </summary>
-    /// <typeparam name="T">The grain interface type that inherits from IGrainBase</typeparam>
-    /// <param name="grainFactory">The grain factory</param>
-    /// <param name="grainType">The grain type</param>
-    /// <param name="identifier">The grain identifier</param>
-    /// <returns>The grain reference of type T</returns>
-    public virtual T CreateGrainReference<T>(IGrainFactory grainFactory, Type grainType, TIdentifier identifier) where T : IGrainBase
+    /// <typeparam name="T">The agent interface type that inherits from IGrainBase</typeparam>
+    /// <param name="agentFactory">The agent factory</param>
+    /// <param name="agentType">The agent type</param>
+    /// <param name="identifier">The agent identifier</param>
+    /// <returns>The agent reference of type T</returns>
+    public virtual T CreateAgentReference<T>(IGrainFactory agentFactory, Type agentType, TIdentifier identifier) where T : IGrainBase
     {
         try
         {
-            // Determine the grain interface type
-            var grainInterface = GetGrainInterface(grainType);
-            if (grainInterface == null)
+            // Determine the agent interface type
+            var agentInterface = GetAgentInterface(agentType);
+            if (agentInterface == null)
             {
-                throw new InvalidOperationException($"Could not determine grain interface for type {grainType.Name}");
+                throw new InvalidOperationException($"Could not determine agent interface for type {agentType.Name}");
             }
 
-            // Create grain reference using non-generic GetGrain and cast to T
-            var grain = typeof(TIdentifier) switch
+            // Create agent reference using non-generic GetGrain and cast to T
+            var agent = typeof(TIdentifier) switch
             {
-                var t when t == typeof(Guid) => grainFactory.GetGrain(grainInterface, (Guid)(object)identifier!),
-                var t when t == typeof(string) => grainFactory.GetGrain(grainInterface, (string)(object)identifier!),
-                var t when t == typeof(long) => grainFactory.GetGrain(grainInterface, (long)(object)identifier!),
-                var t when t == typeof(int) => grainFactory.GetGrain(grainInterface, (long)(int)(object)identifier!),
+                var t when t == typeof(Guid) => agentFactory.GetGrain(agentInterface, (Guid)(object)identifier!),
+                var t when t == typeof(string) => agentFactory.GetGrain(agentInterface, (string)(object)identifier!),
+                var t when t == typeof(long) => agentFactory.GetGrain(agentInterface, (long)(object)identifier!),
+                var t when t == typeof(int) => agentFactory.GetGrain(agentInterface, (long)(int)(object)identifier!),
                 _ => throw new NotSupportedException($"Identifier type {typeof(TIdentifier).Name} is not supported")
             };
 
-            return (T)grain;
+            return (T)agent;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error creating grain reference for type {GrainType} with identifier {Identifier}", 
-                grainType.Name, identifier);
+            Logger.LogError(ex, "Error creating agent reference for type {AgentType} with identifier {Identifier}", 
+                agentType.Name, identifier);
             throw;
         }
     }
 
     /// <summary>
-    /// Gets the grain interface type for a grain implementation type
+    /// Gets the agent interface type for a agent implementation type
     /// </summary>
-    /// <param name="grainType">The grain implementation type</param>
-    /// <returns>The grain interface type</returns>
-    protected virtual Type? GetGrainInterface(Type grainType)
+    /// <param name="agentType">The agent implementation type</param>
+    /// <returns>The agent interface type</returns>
+    protected virtual Type? GetAgentInterface(Type agentType)
     {
-        // Look for Orleans grain interfaces
-        var interfaces = grainType.GetInterfaces();
+        // Look for Orleans agent interfaces
+        var interfaces = agentType.GetInterfaces();
         
-        // Find the most specific grain interface
-        var grainInterfaces = interfaces.Where(i => 
+        // Find the most specific agent interface
+        var agentInterfaces = interfaces.Where(i => 
             typeof(IGrainWithGuidKey).IsAssignableFrom(i) ||
             typeof(IGrainWithStringKey).IsAssignableFrom(i) ||
             typeof(IGrainWithIntegerKey).IsAssignableFrom(i) ||
@@ -155,23 +155,23 @@ public abstract class BaseGrainWarmupStrategy<TIdentifier> : IGrainWarmupStrateg
             .ToList();
 
         // Return the most specific interface (not the base Orleans interfaces)
-        return grainInterfaces
+        return agentInterfaces
             .Where(i => i != typeof(IGrainWithGuidKey) && 
                        i != typeof(IGrainWithStringKey) && 
                        i != typeof(IGrainWithIntegerKey) &&
                        i != typeof(IGrainWithGuidCompoundKey) &&
                        i != typeof(IGrainWithIntegerCompoundKey))
-            .FirstOrDefault() ?? grainInterfaces.FirstOrDefault();
+            .FirstOrDefault() ?? agentInterfaces.FirstOrDefault();
     }
 
     /// <summary>
-    /// Validates that the identifier type matches the grain's expected identifier type
+    /// Validates that the identifier type matches the agent's expected identifier type
     /// </summary>
-    /// <param name="grainType">The grain type</param>
+    /// <param name="agentType">The agent type</param>
     /// <returns>True if the identifier type is compatible</returns>
-    protected virtual bool ValidateIdentifierType(Type grainType)
+    protected virtual bool ValidateIdentifierType(Type agentType)
     {
-        var interfaces = grainType.GetInterfaces();
+        var interfaces = agentType.GetInterfaces();
 
         if (typeof(TIdentifier) == typeof(Guid))
         {
@@ -196,36 +196,36 @@ public abstract class BaseGrainWarmupStrategy<TIdentifier> : IGrainWarmupStrateg
     /// <summary>
     /// Logs strategy execution information
     /// </summary>
-    /// <param name="grainType">The grain type being processed</param>
+    /// <param name="agentType">The agent type being processed</param>
     /// <param name="identifierCount">Number of identifiers being processed</param>
-    protected virtual void LogStrategyExecution(Type grainType, int identifierCount)
+    protected virtual void LogStrategyExecution(Type agentType, int identifierCount)
     {
-        Logger.LogInformation("Strategy {StrategyName} processing {Count} identifiers for grain type {GrainType}", 
-            Name, identifierCount, grainType.Name);
+        Logger.LogInformation("Strategy {StrategyName} processing {Count} identifiers for agent type {AgentType}", 
+            Name, identifierCount, agentType.Name);
     }
 
     /// <summary>
-    /// Creates a grain reference for the given identifier (strongly typed version)
+    /// Creates a agent reference for the given identifier (strongly typed version)
     /// </summary>
-    /// <typeparam name="T">The grain interface type that inherits from IGrainBase</typeparam>
-    /// <param name="grainFactory">The grain factory</param>
-    /// <param name="identifier">The strongly typed grain identifier</param>
-    /// <returns>The grain reference of type T</returns>
-    public virtual T CreateGrainReference<T>(IGrainFactory grainFactory, TIdentifier identifier) where T : IGrainBase
+    /// <typeparam name="T">The agent interface type that inherits from IGrainBase</typeparam>
+    /// <param name="agentFactory">The agent factory</param>
+    /// <param name="identifier">The strongly typed agent identifier</param>
+    /// <returns>The agent reference of type T</returns>
+    public virtual T CreateAgentReference<T>(IGrainFactory agentFactory, TIdentifier identifier) where T : IGrainBase
     {
-        return CreateGrainReference<T>(grainFactory, GrainType, identifier);
+        return CreateAgentReference<T>(agentFactory, AgentType, identifier);
     }
 
     /// <summary>
-    /// Creates a grain reference for the given identifier (non-generic version)
+    /// Creates a agent reference for the given identifier (non-generic version)
     /// </summary>
-    /// <typeparam name="T">The grain interface type that inherits from IGrainBase</typeparam>
-    /// <param name="grainFactory">The grain factory</param>
-    /// <param name="identifier">The grain identifier</param>
-    /// <returns>The grain reference of type T</returns>
-    public virtual T CreateGrainReference<T>(IGrainFactory grainFactory, object identifier) where T : IGrainBase
+    /// <typeparam name="T">The agent interface type that inherits from IGrainBase</typeparam>
+    /// <param name="agentFactory">The agent factory</param>
+    /// <param name="identifier">The agent identifier</param>
+    /// <returns>The agent reference of type T</returns>
+    public virtual T CreateAgentReference<T>(IGrainFactory agentFactory, object identifier) where T : IGrainBase
     {
-        return CreateGrainReference<T>(grainFactory, (TIdentifier)identifier);
+        return CreateAgentReference<T>(agentFactory, (TIdentifier)identifier);
     }
 
     /// <summary>
@@ -234,6 +234,6 @@ public abstract class BaseGrainWarmupStrategy<TIdentifier> : IGrainWarmupStrateg
     /// <returns>True if valid, false otherwise</returns>
     public virtual bool IsValid()
     {
-        return ApplicableGrainTypes.Any() && EstimatedGrainCount > 0;
+        return ApplicableAgentTypes.Any() && EstimatedAgentCount > 0;
     }
 } 

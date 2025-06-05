@@ -1,37 +1,37 @@
 using System;
 using System.Collections.Generic;
 
-namespace Aevatar.Silo.GrainWarmup;
+namespace Aevatar.Silo.AgentWarmup;
 
 /// <summary>
-/// Service for automatically discovering warmup-eligible grain types from assemblies
+/// Service for automatically discovering warmup-eligible agent types from assemblies
 /// </summary>
-public interface IGrainDiscoveryService
+public interface IAgentDiscoveryService
 {
     /// <summary>
-    /// Discovers all warmup-eligible grain types from loaded assemblies
+    /// Discovers all warmup-eligible agent types from loaded assemblies
     /// </summary>
     /// <param name="excludedTypes">Optional types to exclude from discovery</param>
-    /// <returns>Collection of discovered grain types</returns>
-    IEnumerable<Type> DiscoverWarmupEligibleGrainTypes(IEnumerable<Type>? excludedTypes = null);
+    /// <returns>Collection of discovered agent types</returns>
+    IEnumerable<Type> DiscoverWarmupEligibleAgentTypes(IEnumerable<Type>? excludedTypes = null);
     
     /// <summary>
-    /// Checks if a grain type is eligible for warmup
+    /// Checks if a agent type is eligible for warmup
     /// </summary>
-    /// <param name="grainType">The grain type to check</param>
-    /// <returns>True if the grain type is eligible for warmup</returns>
-    bool IsWarmupEligible(Type grainType);
+    /// <param name="agentType">The agent type to check</param>
+    /// <returns>True if the agent type is eligible for warmup</returns>
+    bool IsWarmupEligible(Type agentType);
     
     /// <summary>
-    /// Gets the identifier type for a grain type
+    /// Gets the identifier type for a agent type
     /// </summary>
-    /// <param name="grainType">The grain type</param>
+    /// <param name="agentType">The agent type</param>
     /// <returns>The identifier type (Guid, string, int, long)</returns>
-    Type GetGrainIdentifierType(Type grainType);
+    Type GetAgentIdentifierType(Type agentType);
     
     /// <summary>
-    /// Gets a mapping of grain types to their identifier types
+    /// Gets a mapping of agent types to their identifier types
     /// </summary>
-    /// <returns>Dictionary mapping grain types to identifier types</returns>
-    Dictionary<Type, Type> GetGrainTypeMapping();
+    /// <returns>Dictionary mapping agent types to identifier types</returns>
+    Dictionary<Type, Type> GetAgentTypeMapping();
 } 

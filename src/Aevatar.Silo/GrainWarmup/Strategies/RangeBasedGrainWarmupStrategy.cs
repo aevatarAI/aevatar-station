@@ -1,30 +1,30 @@
 using Microsoft.Extensions.Logging;
 
-namespace Aevatar.Silo.GrainWarmup.Strategies;
+namespace Aevatar.Silo.AgentWarmup.Strategies;
 
 /// <summary>
-/// Warmup strategy for grains with range-based identifiers (numeric types)
+/// Warmup strategy for agents with range-based identifiers (numeric types)
 /// </summary>
-/// <typeparam name="TIdentifier">The type of grain identifier (int, long)</typeparam>
-public class RangeBasedGrainWarmupStrategy<TIdentifier> : BaseGrainWarmupStrategy<TIdentifier>
+/// <typeparam name="TIdentifier">The type of agent identifier (int, long)</typeparam>
+public class RangeBasedAgentWarmupStrategy<TIdentifier> : BaseAgentWarmupStrategy<TIdentifier>
     where TIdentifier : struct, IComparable<TIdentifier>, IConvertible
 {
-    private readonly Type _grainType;
+    private readonly Type _agentType;
     private readonly TIdentifier _startId;
     private readonly TIdentifier _endId;
     private readonly int _batchSize;
     private readonly string _name;
     
-    public RangeBasedGrainWarmupStrategy(
+    public RangeBasedAgentWarmupStrategy(
         string name,
-        Type grainType,
+        Type agentType,
         TIdentifier startId,
         TIdentifier endId,
-        ILogger<RangeBasedGrainWarmupStrategy<TIdentifier>> logger,
+        ILogger<RangeBasedAgentWarmupStrategy<TIdentifier>> logger,
         int batchSize = 100) : base(logger)
     {
         _name = name ?? throw new ArgumentNullException(nameof(name));
-        _grainType = grainType ?? throw new ArgumentNullException(nameof(grainType));
+        _agentType = agentType ?? throw new ArgumentNullException(nameof(agentType));
         _startId = startId;
         _endId = endId;
         _batchSize = batchSize > 0 ? batchSize : throw new ArgumentException("Batch size must be positive", nameof(batchSize));
@@ -45,20 +45,20 @@ public class RangeBasedGrainWarmupStrategy<TIdentifier> : BaseGrainWarmupStrateg
     public override string Name => _name;
     
     /// <inheritdoc />
-    public override IEnumerable<Type> ApplicableGrainTypes => new[] { _grainType };
+    public override IEnumerable<Type> ApplicableAgentTypes => new[] { _agentType };
     
     /// <inheritdoc />
     public override int Priority => 50; // Medium priority for range-based strategies
     
     /// <inheritdoc />
-    public override int EstimatedGrainCount => CalculateGrainCount();
+    public override int EstimatedAgentCount => CalculateAgentCount();
     
     /// <inheritdoc />
-    public override async IAsyncEnumerable<TIdentifier> GenerateGrainIdentifiersAsync(
-        Type grainType,
+    public override async IAsyncEnumerable<TIdentifier> GenerateAgentIdentifiersAsync(
+        Type agentType,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        Logger.LogDebug("Generating range-based grain identifiers from {StartId} to {EndId} for strategy {StrategyName}", 
+        Logger.LogDebug("Generating range-based agent identifiers from {StartId} to {EndId} for strategy {StrategyName}", 
             _startId, _endId, Name);
         
         var current = _startId;
@@ -82,14 +82,14 @@ public class RangeBasedGrainWarmupStrategy<TIdentifier> : BaseGrainWarmupStrateg
             }
         }
         
-        Logger.LogDebug("Completed generating range-based grain identifiers for strategy {StrategyName}", Name);
+        Logger.LogDebug("Completed generating range-based agent identifiers for strategy {StrategyName}", Name);
     }
     
     /// <summary>
-    /// Calculates the total number of grains in the range
+    /// Calculates the total number of agents in the range
     /// </summary>
-    /// <returns>The number of grains</returns>
-    private int CalculateGrainCount()
+    /// <returns>The number of agents</returns>
+    private int CalculateAgentCount()
     {
         if (typeof(TIdentifier) == typeof(int))
         {

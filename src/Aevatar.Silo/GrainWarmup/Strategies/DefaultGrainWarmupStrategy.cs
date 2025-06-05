@@ -5,22 +5,22 @@ using System.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Aevatar.Silo.GrainWarmup.Strategies;
+namespace Aevatar.Silo.AgentWarmup.Strategies;
 
 /// <summary>
-/// Default strategy that applies to all grain types not covered by specific strategies
+/// Default strategy that applies to all agent types not covered by specific strategies
 /// Uses MongoDB integration for automatic identifier retrieval
 /// </summary>
 /// <typeparam name="TIdentifier">The identifier type (Guid, string, int, long)</typeparam>
-public class DefaultGrainWarmupStrategy<TIdentifier> : BaseGrainWarmupStrategy<TIdentifier>
+public class DefaultAgentWarmupStrategy<TIdentifier> : BaseAgentWarmupStrategy<TIdentifier>
 {
-    private readonly IMongoDbGrainIdentifierService _mongoDbService;
+    private readonly IMongoDbAgentIdentifierService _mongoDbService;
     private readonly DefaultStrategyConfiguration _config;
 
-    public DefaultGrainWarmupStrategy(
-        IMongoDbGrainIdentifierService mongoDbService,
-        IOptions<GrainWarmupConfiguration> options,
-        ILogger<DefaultGrainWarmupStrategy<TIdentifier>> logger)
+    public DefaultAgentWarmupStrategy(
+        IMongoDbAgentIdentifierService mongoDbService,
+        IOptions<AgentWarmupConfiguration> options,
+        ILogger<DefaultAgentWarmupStrategy<TIdentifier>> logger)
         : base(logger)
     {
         _mongoDbService = mongoDbService;
@@ -33,9 +33,9 @@ public class DefaultGrainWarmupStrategy<TIdentifier> : BaseGrainWarmupStrategy<T
     public override string Name => "DefaultStrategy";
 
     /// <summary>
-    /// Grain types this strategy applies to (empty = applies to all)
+    /// Agent types this strategy applies to (empty = applies to all)
     /// </summary>
-    public override IEnumerable<Type> ApplicableGrainTypes => Enumerable.Empty<Type>();
+    public override IEnumerable<Type> ApplicableAgentTypes => Enumerable.Empty<Type>();
 
     /// <summary>
     /// Priority for execution order (lowest priority - executes last)
@@ -43,54 +43,54 @@ public class DefaultGrainWarmupStrategy<TIdentifier> : BaseGrainWarmupStrategy<T
     public override int Priority => _config.Priority;
 
     /// <summary>
-    /// Gets the estimated number of grains that will be warmed up
+    /// Gets the estimated number of agents that will be warmed up
     /// </summary>
-    public override int EstimatedGrainCount => _config.MaxIdentifiersPerType;
+    public override int EstimatedAgentCount => _config.MaxIdentifiersPerType;
 
     /// <summary>
-    /// Generates grain identifiers for a specific grain type using MongoDB
+    /// Generates agent identifiers for a specific agent type using MongoDB
     /// </summary>
-    /// <param name="grainType">The grain type to generate identifiers for</param>
+    /// <param name="agentType">The agent type to generate identifiers for</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Async enumerable of grain identifiers</returns>
-    public override async IAsyncEnumerable<TIdentifier> GenerateGrainIdentifiersAsync(
-        Type grainType, 
+    /// <returns>Async enumerable of agent identifiers</returns>
+    public override async IAsyncEnumerable<TIdentifier> GenerateAgentIdentifiersAsync(
+        Type agentType, 
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         if (!_config.Enabled)
         {
-            Logger.LogDebug("Default strategy is disabled, skipping grain type {GrainType}", grainType.Name);
+            Logger.LogDebug("Default strategy is disabled, skipping agent type {AgentType}", agentType.Name);
             yield break;
         }
 
-        if (!ValidateIdentifierType(grainType))
+        if (!ValidateIdentifierType(agentType))
         {
-            Logger.LogWarning("Identifier type {IdentifierType} is not compatible with grain type {GrainType}", 
-                typeof(TIdentifier).Name, grainType.Name);
+            Logger.LogWarning("Identifier type {IdentifierType} is not compatible with agent type {AgentType}", 
+                typeof(TIdentifier).Name, agentType.Name);
             yield break;
         }
 
-        Logger.LogInformation("Default strategy generating identifiers for grain type {GrainType} using {IdentifierSource}", 
-            grainType.Name, _config.IdentifierSource);
+        Logger.LogInformation("Default strategy generating identifiers for agent type {AgentType} using {IdentifierSource}", 
+            agentType.Name, _config.IdentifierSource);
 
         switch (_config.IdentifierSource.ToLowerInvariant())
         {
             case "mongodb":
-                await foreach (var identifier in GenerateFromMongoDb(grainType, cancellationToken))
+                await foreach (var identifier in GenerateFromMongoDb(agentType, cancellationToken))
                 {
                     yield return identifier;
                 }
                 break;
 
             case "predefined":
-                await foreach (var identifier in GeneratePredefinedIdentifiers(grainType, cancellationToken))
+                await foreach (var identifier in GeneratePredefinedIdentifiers(agentType, cancellationToken))
                 {
                     yield return identifier;
                 }
                 break;
 
             case "range":
-                await foreach (var identifier in GenerateRangeIdentifiers(grainType, cancellationToken))
+                await foreach (var identifier in GenerateRangeIdentifiers(agentType, cancellationToken))
                 {
                     yield return identifier;
                 }
@@ -99,7 +99,7 @@ public class DefaultGrainWarmupStrategy<TIdentifier> : BaseGrainWarmupStrategy<T
             default:
                 Logger.LogWarning("Unknown identifier source {IdentifierSource}, falling back to MongoDB", 
                     _config.IdentifierSource);
-                await foreach (var identifier in GenerateFromMongoDb(grainType, cancellationToken))
+                await foreach (var identifier in GenerateFromMongoDb(agentType, cancellationToken))
                 {
                     yield return identifier;
                 }
@@ -111,40 +111,40 @@ public class DefaultGrainWarmupStrategy<TIdentifier> : BaseGrainWarmupStrategy<T
     /// Generates identifiers from MongoDB collections
     /// </summary>
     private async IAsyncEnumerable<TIdentifier> GenerateFromMongoDb(
-        Type grainType, 
+        Type agentType, 
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var identifiers = new List<TIdentifier>();
         try
         {
             // Check if collection exists
-            if (!await _mongoDbService.CollectionExistsAsync(grainType))
+            if (!await _mongoDbService.CollectionExistsAsync(agentType))
             {
-                Logger.LogInformation("No MongoDB collection found for grain type {GrainType}, skipping", grainType.Name);
+                Logger.LogInformation("No MongoDB collection found for agent type {AgentType}, skipping", agentType.Name);
                 yield break;
             }
 
             var count = 0;
-            await foreach (var identifier in _mongoDbService.GetGrainIdentifiersAsync<TIdentifier>(
-                grainType, _config.MaxIdentifiersPerType, cancellationToken))
+            await foreach (var identifier in _mongoDbService.GetAgentIdentifiersAsync<TIdentifier>(
+                agentType, _config.MaxIdentifiersPerType, cancellationToken))
             {
                 identifiers.Add(identifier);
                 count++;
 
                 if (count >= _config.MaxIdentifiersPerType)
                 {
-                    Logger.LogInformation("Reached maximum identifier limit {MaxCount} for grain type {GrainType}", 
-                        _config.MaxIdentifiersPerType, grainType.Name);
+                    Logger.LogInformation("Reached maximum identifier limit {MaxCount} for agent type {AgentType}", 
+                        _config.MaxIdentifiersPerType, agentType.Name);
                     break;
                 }
             }
 
-            Logger.LogInformation("Generated {Count} identifiers from MongoDB for grain type {GrainType}", 
-                count, grainType.Name);
+            Logger.LogInformation("Generated {Count} identifiers from MongoDB for agent type {AgentType}", 
+                count, agentType.Name);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error generating identifiers from MongoDB for grain type {GrainType}", grainType.Name);
+            Logger.LogError(ex, "Error generating identifiers from MongoDB for agent type {AgentType}", agentType.Name);
         }
 
         foreach (var identifier in identifiers)
@@ -157,11 +157,11 @@ public class DefaultGrainWarmupStrategy<TIdentifier> : BaseGrainWarmupStrategy<T
     /// Generates predefined identifiers (for testing or specific scenarios)
     /// </summary>
     private async IAsyncEnumerable<TIdentifier> GeneratePredefinedIdentifiers(
-        Type grainType, 
+        Type agentType, 
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
         // This could be extended to read from configuration or external sources
-        Logger.LogInformation("Generating predefined identifiers for grain type {GrainType}", grainType.Name);
+        Logger.LogInformation("Generating predefined identifiers for agent type {AgentType}", agentType.Name);
 
         if (typeof(TIdentifier) == typeof(Guid))
         {
@@ -183,7 +183,7 @@ public class DefaultGrainWarmupStrategy<TIdentifier> : BaseGrainWarmupStrategy<T
                 if (cancellationToken.IsCancellationRequested)
                     yield break;
 
-                yield return (TIdentifier)(object)$"test-{grainType.Name}-{i}";
+                yield return (TIdentifier)(object)$"test-{agentType.Name}-{i}";
                 await Task.Delay(1, cancellationToken);
             }
         }
@@ -205,10 +205,10 @@ public class DefaultGrainWarmupStrategy<TIdentifier> : BaseGrainWarmupStrategy<T
     /// Generates range-based identifiers
     /// </summary>
     private async IAsyncEnumerable<TIdentifier> GenerateRangeIdentifiers(
-        Type grainType, 
+        Type agentType, 
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        Logger.LogInformation("Generating range-based identifiers for grain type {GrainType}", grainType.Name);
+        Logger.LogInformation("Generating range-based identifiers for agent type {AgentType}", agentType.Name);
 
         if (typeof(TIdentifier) == typeof(Guid))
         {
@@ -218,9 +218,9 @@ public class DefaultGrainWarmupStrategy<TIdentifier> : BaseGrainWarmupStrategy<T
                 if (cancellationToken.IsCancellationRequested)
                     yield break;
 
-                // Create a deterministic GUID based on grain type and index
+                // Create a deterministic GUID based on agent type and index
                 var guidBytes = new byte[16];
-                var typeHash = grainType.GetHashCode();
+                var typeHash = agentType.GetHashCode();
                 BitConverter.GetBytes(typeHash).CopyTo(guidBytes, 0);
                 BitConverter.GetBytes(i).CopyTo(guidBytes, 4);
                 
@@ -248,7 +248,7 @@ public class DefaultGrainWarmupStrategy<TIdentifier> : BaseGrainWarmupStrategy<T
                 if (cancellationToken.IsCancellationRequested)
                     yield break;
 
-                yield return (TIdentifier)(object)$"{grainType.Name}-{i:D6}";
+                yield return (TIdentifier)(object)$"{agentType.Name}-{i:D6}";
                 await Task.Delay(1, cancellationToken);
             }
         }

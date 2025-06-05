@@ -4,19 +4,19 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Xunit;
 using Moq;
-using Aevatar.Silo.GrainWarmup;
+using Aevatar.Silo.AgentWarmup;
 using MongoDB.Bson;
 using System.Reflection;
 
-namespace GrainWarmupE2E.Tests;
+namespace AgentWarmupE2E.Tests;
 
-public class MongoDbGrainIdentifierServiceTests
+public class MongoDbAgentIdentifierServiceTests
 {
     [Fact]
     public void GetCollectionName_WithoutPrefix_ReturnsBaseName()
     {
         // Arrange
-        var config = new GrainWarmupConfiguration
+        var config = new AgentWarmupConfiguration
         {
             MongoDbIntegration = new MongoDbIntegrationConfiguration
             {
@@ -26,7 +26,7 @@ public class MongoDbGrainIdentifierServiceTests
         };
         
         var options = Options.Create(config);
-        var logger = Mock.Of<ILogger<MongoDbGrainIdentifierService>>();
+        var logger = Mock.Of<ILogger<MongoDbAgentIdentifierService>>();
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new[]
             {
@@ -35,20 +35,20 @@ public class MongoDbGrainIdentifierServiceTests
             })
             .Build();
 
-        var service = new MongoDbGrainIdentifierService(options, logger, configuration);
+        var service = new MongoDbAgentIdentifierService(options, logger, configuration);
 
         // Act
-        var collectionName = service.GetCollectionName(typeof(TestGrain));
+        var collectionName = service.GetCollectionName(typeof(TestAgent));
 
         // Assert
-        Assert.Equal("GrainWarmupE2E.Tests.TestGrain", collectionName);
+        Assert.Equal("AgentWarmupE2E.Tests.TestAgent", collectionName);
     }
 
     [Fact]
     public void GetCollectionName_WithPrefix_ReturnsPrefixedName()
     {
         // Arrange
-        var config = new GrainWarmupConfiguration
+        var config = new AgentWarmupConfiguration
         {
             MongoDbIntegration = new MongoDbIntegrationConfiguration
             {
@@ -58,7 +58,7 @@ public class MongoDbGrainIdentifierServiceTests
         };
         
         var options = Options.Create(config);
-        var logger = Mock.Of<ILogger<MongoDbGrainIdentifierService>>();
+        var logger = Mock.Of<ILogger<MongoDbAgentIdentifierService>>();
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new[]
             {
@@ -67,20 +67,20 @@ public class MongoDbGrainIdentifierServiceTests
             })
             .Build();
 
-        var service = new MongoDbGrainIdentifierService(options, logger, configuration);
+        var service = new MongoDbAgentIdentifierService(options, logger, configuration);
 
         // Act
-        var collectionName = service.GetCollectionName(typeof(TestGrain));
+        var collectionName = service.GetCollectionName(typeof(TestAgent));
 
         // Assert
-        Assert.Equal("StreamStorageGrainWarmupE2E.Tests.TestGrain", collectionName);
+        Assert.Equal("StreamStorageAgentWarmupE2E.Tests.TestAgent", collectionName);
     }
 
     [Fact]
     public void GetCollectionName_WithTypeNameStrategy_ReturnsTypeNameWithPrefix()
     {
         // Arrange
-        var config = new GrainWarmupConfiguration
+        var config = new AgentWarmupConfiguration
         {
             MongoDbIntegration = new MongoDbIntegrationConfiguration
             {
@@ -90,7 +90,7 @@ public class MongoDbGrainIdentifierServiceTests
         };
         
         var options = Options.Create(config);
-        var logger = Mock.Of<ILogger<MongoDbGrainIdentifierService>>();
+        var logger = Mock.Of<ILogger<MongoDbAgentIdentifierService>>();
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new[]
             {
@@ -99,20 +99,20 @@ public class MongoDbGrainIdentifierServiceTests
             })
             .Build();
 
-        var service = new MongoDbGrainIdentifierService(options, logger, configuration);
+        var service = new MongoDbAgentIdentifierService(options, logger, configuration);
 
         // Act
-        var collectionName = service.GetCollectionName(typeof(TestGrain));
+        var collectionName = service.GetCollectionName(typeof(TestAgent));
 
         // Assert
-        Assert.Equal("StreamDevTestGrain", collectionName);
+        Assert.Equal("StreamDevTestAgent", collectionName);
     }
 
     [Fact]
     public void GetCollectionName_WithCustomStrategy_AppliesPrefix()
     {
         // Arrange
-        var config = new GrainWarmupConfiguration
+        var config = new AgentWarmupConfiguration
         {
             MongoDbIntegration = new MongoDbIntegrationConfiguration
             {
@@ -122,7 +122,7 @@ public class MongoDbGrainIdentifierServiceTests
         };
         
         var options = Options.Create(config);
-        var logger = Mock.Of<ILogger<MongoDbGrainIdentifierService>>();
+        var logger = Mock.Of<ILogger<MongoDbAgentIdentifierService>>();
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new[]
             {
@@ -131,13 +131,13 @@ public class MongoDbGrainIdentifierServiceTests
             })
             .Build();
 
-        var service = new MongoDbGrainIdentifierService(options, logger, configuration);
+        var service = new MongoDbAgentIdentifierService(options, logger, configuration);
 
         // Act
-        var collectionName = service.GetCollectionName(typeof(TestGrain));
+        var collectionName = service.GetCollectionName(typeof(TestAgent));
 
         // Assert
-        Assert.Equal("CustomPrefixgrains_testgrain", collectionName);
+        Assert.Equal("CustomPrefixagents_testagent", collectionName);
     }
 
     #region ExtractIdentifier Tests
@@ -333,9 +333,9 @@ public class MongoDbGrainIdentifierServiceTests
 
     #region Helper Methods
 
-    private MongoDbGrainIdentifierService CreateService()
+    private MongoDbAgentIdentifierService CreateService()
     {
-        var config = new GrainWarmupConfiguration
+        var config = new AgentWarmupConfiguration
         {
             MongoDbIntegration = new MongoDbIntegrationConfiguration
             {
@@ -345,7 +345,7 @@ public class MongoDbGrainIdentifierServiceTests
         };
         
         var options = Options.Create(config);
-        var logger = Mock.Of<ILogger<MongoDbGrainIdentifierService>>();
+        var logger = Mock.Of<ILogger<MongoDbAgentIdentifierService>>();
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new[]
             {
@@ -354,13 +354,13 @@ public class MongoDbGrainIdentifierServiceTests
             })
             .Build();
 
-        return new MongoDbGrainIdentifierService(options, logger, configuration);
+        return new MongoDbAgentIdentifierService(options, logger, configuration);
     }
 
-    private TIdentifier? InvokeExtractIdentifier<TIdentifier>(MongoDbGrainIdentifierService service, BsonDocument document)
+    private TIdentifier? InvokeExtractIdentifier<TIdentifier>(MongoDbAgentIdentifierService service, BsonDocument document)
     {
         // Use reflection to call the private ExtractIdentifier method
-        var method = typeof(MongoDbGrainIdentifierService)
+        var method = typeof(MongoDbAgentIdentifierService)
             .GetMethod("ExtractIdentifier", BindingFlags.NonPublic | BindingFlags.Instance);
         
         var genericMethod = method!.MakeGenericMethod(typeof(TIdentifier));
@@ -370,8 +370,8 @@ public class MongoDbGrainIdentifierServiceTests
     #endregion
 }
 
-// Test grain class for testing
-public class TestGrain
+// Test agent class for testing
+public class TestAgent
 {
     // Empty test class
 } 

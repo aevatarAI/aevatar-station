@@ -1,11 +1,11 @@
 using Orleans;
 
-namespace Aevatar.Silo.GrainWarmup;
+namespace Aevatar.Silo.AgentWarmup;
 
 /// <summary>
-/// Base interface for grain warmup strategies (non-generic for service compatibility)
+/// Base interface for agent warmup strategies (non-generic for service compatibility)
 /// </summary>
-public interface IGrainWarmupStrategy
+public interface IAgentWarmupStrategy
 {
     /// <summary>
     /// Gets the name of this warmup strategy
@@ -13,9 +13,9 @@ public interface IGrainWarmupStrategy
     string Name { get; }
     
     /// <summary>
-    /// Gets the grain type that this strategy applies to
+    /// Gets the agent type that this strategy applies to
     /// </summary>
-    Type GrainType { get; }
+    Type AgentType { get; }
     
     /// <summary>
     /// Gets the priority for execution order (higher = earlier)
@@ -23,25 +23,25 @@ public interface IGrainWarmupStrategy
     int Priority { get; }
     
     /// <summary>
-    /// Gets the estimated number of grains that will be warmed up
+    /// Gets the estimated number of agents that will be warmed up
     /// </summary>
-    int EstimatedGrainCount { get; }
+    int EstimatedAgentCount { get; }
     
     /// <summary>
-    /// Generates the grain identifiers to warm up (non-generic version)
+    /// Generates the agent identifiers to warm up (non-generic version)
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Enumerable of grain identifiers as objects</returns>
-    IAsyncEnumerable<object> GenerateGrainIdentifiersAsync(CancellationToken cancellationToken = default);
+    /// <returns>Enumerable of agent identifiers as objects</returns>
+    IAsyncEnumerable<object> GenerateAgentIdentifiersAsync(CancellationToken cancellationToken = default);
     
     /// <summary>
-    /// Creates a grain reference for the given identifier (generic version)
+    /// Creates a agent reference for the given identifier (generic version)
     /// </summary>
-    /// <typeparam name="T">The grain interface type that inherits from IGrainBase</typeparam>
-    /// <param name="grainFactory">The grain factory</param>
-    /// <param name="identifier">The grain identifier</param>
-    /// <returns>The grain reference of type T</returns>
-    T CreateGrainReference<T>(IGrainFactory grainFactory, object identifier) where T : IGrainBase;
+    /// <typeparam name="T">The agent interface type that inherits from IGrainBase</typeparam>
+    /// <param name="agentFactory">The agent factory</param>
+    /// <param name="identifier">The agent identifier</param>
+    /// <returns>The agent reference of type T</returns>
+    T CreateAgentReference<T>(IGrainFactory agentFactory, object identifier) where T : IGrainBase;
     
     /// <summary>
     /// Validates that the strategy configuration is correct
@@ -50,50 +50,50 @@ public interface IGrainWarmupStrategy
     bool IsValid();
     
     /// <summary>
-    /// Checks if strategy applies to a grain type
+    /// Checks if strategy applies to a agent type
     /// </summary>
-    /// <param name="grainType">The grain type to check</param>
-    /// <returns>True if the strategy applies to this grain type</returns>
-    bool AppliesTo(Type grainType);
+    /// <param name="agentType">The agent type to check</param>
+    /// <returns>True if the strategy applies to this agent type</returns>
+    bool AppliesTo(Type agentType);
 }
 
 /// <summary>
-/// Generic interface for grain warmup strategies with strong typing for identifiers
+/// Generic interface for agent warmup strategies with strong typing for identifiers
 /// </summary>
-/// <typeparam name="TIdentifier">The type of grain identifier (Guid, string, int, long)</typeparam>
-public interface IGrainWarmupStrategy<TIdentifier> : IGrainWarmupStrategy
+/// <typeparam name="TIdentifier">The type of agent identifier (Guid, string, int, long)</typeparam>
+public interface IAgentWarmupStrategy<TIdentifier> : IAgentWarmupStrategy
 {
     /// <summary>
-    /// Generates the grain identifiers to warm up (strongly typed version)
+    /// Generates the agent identifiers to warm up (strongly typed version)
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Enumerable of strongly typed grain identifiers</returns>
-    new IAsyncEnumerable<TIdentifier> GenerateGrainIdentifiersAsync(CancellationToken cancellationToken = default);
+    /// <returns>Enumerable of strongly typed agent identifiers</returns>
+    new IAsyncEnumerable<TIdentifier> GenerateAgentIdentifiersAsync(CancellationToken cancellationToken = default);
     
     /// <summary>
-    /// Generates the grain identifiers to warm up for a specific grain type
+    /// Generates the agent identifiers to warm up for a specific agent type
     /// </summary>
-    /// <param name="grainType">The grain type to generate identifiers for</param>
+    /// <param name="agentType">The agent type to generate identifiers for</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Enumerable of strongly typed grain identifiers</returns>
-    IAsyncEnumerable<TIdentifier> GenerateGrainIdentifiersAsync(Type grainType, CancellationToken cancellationToken = default);
+    /// <returns>Enumerable of strongly typed agent identifiers</returns>
+    IAsyncEnumerable<TIdentifier> GenerateAgentIdentifiersAsync(Type agentType, CancellationToken cancellationToken = default);
     
     /// <summary>
-    /// Creates a grain reference for the given identifier (strongly typed version)
+    /// Creates a agent reference for the given identifier (strongly typed version)
     /// </summary>
-    /// <typeparam name="T">The grain interface type that inherits from IGrainBase</typeparam>
-    /// <param name="grainFactory">The grain factory</param>
-    /// <param name="identifier">The strongly typed grain identifier</param>
-    /// <returns>The grain reference of type T</returns>
-    T CreateGrainReference<T>(IGrainFactory grainFactory, TIdentifier identifier) where T : IGrainBase;
+    /// <typeparam name="T">The agent interface type that inherits from IGrainBase</typeparam>
+    /// <param name="agentFactory">The agent factory</param>
+    /// <param name="identifier">The strongly typed agent identifier</param>
+    /// <returns>The agent reference of type T</returns>
+    T CreateAgentReference<T>(IGrainFactory agentFactory, TIdentifier identifier) where T : IGrainBase;
     
     /// <summary>
-    /// Creates a grain reference for a specific grain type and identifier
+    /// Creates a agent reference for a specific agent type and identifier
     /// </summary>
-    /// <typeparam name="T">The grain interface type that inherits from IGrainBase</typeparam>
-    /// <param name="grainFactory">The grain factory</param>
-    /// <param name="grainType">The grain type</param>
-    /// <param name="identifier">The grain identifier</param>
-    /// <returns>The grain reference of type T</returns>
-    T CreateGrainReference<T>(IGrainFactory grainFactory, Type grainType, TIdentifier identifier) where T : IGrainBase;
+    /// <typeparam name="T">The agent interface type that inherits from IGrainBase</typeparam>
+    /// <param name="agentFactory">The agent factory</param>
+    /// <param name="agentType">The agent type</param>
+    /// <param name="identifier">The agent identifier</param>
+    /// <returns>The agent reference of type T</returns>
+    T CreateAgentReference<T>(IGrainFactory agentFactory, Type agentType, TIdentifier identifier) where T : IGrainBase;
 } 

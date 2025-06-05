@@ -6,22 +6,22 @@ using Shouldly;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using Xunit.Abstractions;
-using Aevatar.Silo.GrainWarmup;
-using Aevatar.Silo.Tests.GrainWarmup.Fixtures;
-using Aevatar.Silo.Tests.GrainWarmup.TestGrains;
+using Aevatar.Silo.AgentWarmup;
+using Aevatar.Silo.Tests.AgentWarmup.Fixtures;
+using Aevatar.Silo.Tests.AgentWarmup.TestAgents;
 
-namespace Aevatar.Silo.Tests.GrainWarmup.Tests;
+namespace Aevatar.Silo.Tests.AgentWarmup.Tests;
 
 /// <summary>
-/// Basic functionality tests for grain warmup system integrated with Aevatar.Silo.Tests infrastructure
+/// Basic functionality tests for agent warmup system integrated with Aevatar.Silo.Tests infrastructure
 /// </summary>
-[Collection("GrainWarmup")]
+[Collection("AgentWarmup")]
 public class BasicFunctionalityTests : IAsyncLifetime
 {
-    private readonly GrainWarmupTestFixture _fixture;
+    private readonly AgentWarmupTestFixture _fixture;
     private readonly ITestOutputHelper _output;
 
-    public BasicFunctionalityTests(GrainWarmupTestFixture fixture, ITestOutputHelper output)
+    public BasicFunctionalityTests(AgentWarmupTestFixture fixture, ITestOutputHelper output)
     {
         _fixture = fixture;
         _output = output;
@@ -37,40 +37,40 @@ public class BasicFunctionalityTests : IAsyncLifetime
         var client = _fixture.Cluster.Client;
         client.ShouldNotBeNull();
         
-        // Verify we can access grain factory
-        var grainFactory = _fixture.Cluster.GrainFactory;
-        grainFactory.ShouldNotBeNull();
+        // Verify we can access agent factory
+        var agentFactory = _fixture.Cluster.AgentFactory;
+        agentFactory.ShouldNotBeNull();
         
         _output.WriteLine("Successfully verified silo connection");
     }
 
     [Fact]
-    public async Task ShouldActivateGrain()
+    public async Task ShouldActivateAgent()
     {
         // Arrange
-        var grainId = Guid.NewGuid();
-        var grain = _fixture.Cluster.GrainFactory.GetGrain<ITestWarmupGrain>(grainId);
+        var agentId = Guid.NewGuid();
+        var agent = _fixture.Cluster.AgentFactory.GetGrain<ITestWarmupAgent>(agentId);
 
         // Act
-        var result = await grain.PingAsync();
+        var result = await agent.PingAsync();
 
         // Assert
         result.ShouldContain("Pong");
-        result.ShouldContain(grainId.ToString());
-        _output.WriteLine($"Successfully activated grain {grainId} and received: {result}");
+        result.ShouldContain(agentId.ToString());
+        _output.WriteLine($"Successfully activated agent {agentId} and received: {result}");
     }
 
     [Fact]
-    public async Task ShouldActivateMultipleGrains()
+    public async Task ShouldActivateMultipleAgents()
     {
         // Arrange
-        var grainIds = Enumerable.Range(1, 5).Select(_ => Guid.NewGuid()).ToList();
+        var agentIds = Enumerable.Range(1, 5).Select(_ => Guid.NewGuid()).ToList();
         
         // Act
-        var tasks = grainIds.Select(async grainId =>
+        var tasks = agentIds.Select(async agentId =>
         {
-            var grain = _fixture.Cluster.GrainFactory.GetGrain<ITestWarmupGrain>(grainId);
-            return await grain.PingAsync();
+            var agent = _fixture.Cluster.AgentFactory.GetGrain<ITestWarmupAgent>(agentId);
+            return await agent.PingAsync();
         });
 
         var results = await Task.WhenAll(tasks);
@@ -79,54 +79,54 @@ public class BasicFunctionalityTests : IAsyncLifetime
         results.ShouldAllBe(result => result.Contains("Pong"));
         results.Length.ShouldBe(5);
         
-        _output.WriteLine($"Successfully activated {results.Length} grains");
+        _output.WriteLine($"Successfully activated {results.Length} agents");
     }
 
     [Fact]
-    public async Task ShouldTrackGrainActivationTime()
+    public async Task ShouldTrackAgentActivationTime()
     {
-        // Arrange - Use fresh GUID to ensure new grain activation
-        var grainId = Guid.NewGuid();
-        var grain = _fixture.Cluster.GrainFactory.GetGrain<ITestWarmupGrain>(grainId);
+        // Arrange - Use fresh GUID to ensure new agent activation
+        var agentId = Guid.NewGuid();
+        var agent = _fixture.Cluster.AgentFactory.GetGrain<ITestWarmupAgent>(agentId);
 
         // Act - First activation and get activation time
-        var result = await grain.PingAsync();
-        var activationTime = await grain.GetActivationTimeAsync();
+        var result = await agent.PingAsync();
+        var activationTime = await agent.GetActivationTimeAsync();
 
         // Assert
         result.ShouldContain("Pong");
         activationTime.ShouldBeInRange(DateTime.UtcNow.AddMinutes(-1), DateTime.UtcNow.AddMinutes(1));
         
-        _output.WriteLine($"Grain {grainId} activated at: {activationTime}");
+        _output.WriteLine($"Agent {agentId} activated at: {activationTime}");
     }
 
     [Fact]
     public async Task ShouldTrackAccessCount()
     {
         // Arrange
-        var grainId = Guid.NewGuid();
-        var grain = _fixture.Cluster.GrainFactory.GetGrain<ITestWarmupGrain>(grainId);
+        var agentId = Guid.NewGuid();
+        var agent = _fixture.Cluster.AgentFactory.GetGrain<ITestWarmupAgent>(agentId);
 
         // Act
-        await grain.PingAsync(); // First call
-        await grain.PingAsync(); // Second call
-        var accessCount = await grain.GetAccessCountAsync();
+        await agent.PingAsync(); // First call
+        await agent.PingAsync(); // Second call
+        var accessCount = await agent.GetAccessCountAsync();
 
         // Assert
         accessCount.ShouldBeGreaterThanOrEqualTo(2);
-        _output.WriteLine($"Grain {grainId} access count: {accessCount}");
+        _output.WriteLine($"Agent {agentId} access count: {accessCount}");
     }
 
     [Fact]
     public async Task ShouldPerformComputation()
     {
         // Arrange
-        var grainId = Guid.NewGuid();
-        var grain = _fixture.Cluster.GrainFactory.GetGrain<ITestWarmupGrain>(grainId);
+        var agentId = Guid.NewGuid();
+        var agent = _fixture.Cluster.AgentFactory.GetGrain<ITestWarmupAgent>(agentId);
         var input = 42;
 
         // Act
-        var result = await grain.ComputeAsync(input);
+        var result = await agent.ComputeAsync(input);
 
         // Assert
         result.ShouldBeGreaterThan(input);
@@ -137,61 +137,61 @@ public class BasicFunctionalityTests : IAsyncLifetime
     public async Task ShouldSimulateDatabaseOperations()
     {
         // Arrange
-        var grainId = Guid.NewGuid();
-        var grain = _fixture.Cluster.GrainFactory.GetGrain<ITestWarmupGrain>(grainId);
+        var agentId = Guid.NewGuid();
+        var agent = _fixture.Cluster.AgentFactory.GetGrain<ITestWarmupAgent>(agentId);
         var delayMs = 50;
 
         // Act
         var startTime = DateTime.UtcNow;
-        var result = await grain.SimulateDatabaseOperationAsync(delayMs);
+        var result = await agent.SimulateDatabaseOperationAsync(delayMs);
         var elapsed = DateTime.UtcNow - startTime;
 
         // Assert
         result.ShouldContain("Database operation completed");
-        result.ShouldContain(grainId.ToString());
+        result.ShouldContain(agentId.ToString());
         elapsed.ShouldBeGreaterThan(TimeSpan.FromMilliseconds(delayMs - 10)); // Allow some tolerance
         
         _output.WriteLine($"Database simulation completed in {elapsed.TotalMilliseconds:F2}ms: {result}");
     }
 
     [Fact]
-    public async Task ShouldProvideGrainMetadata()
+    public async Task ShouldProvideAgentMetadata()
     {
-        // Arrange - Use fresh GUID to ensure new grain activation
-        var grainId = Guid.NewGuid();
-        var grain = _fixture.Cluster.GrainFactory.GetGrain<ITestWarmupGrain>(grainId);
+        // Arrange - Use fresh GUID to ensure new agent activation
+        var agentId = Guid.NewGuid();
+        var agent = _fixture.Cluster.AgentFactory.GetGrain<ITestWarmupAgent>(agentId);
 
         // Act
-        await grain.PingAsync(); // Activate the grain
-        var metadata = await grain.GetMetadataAsync();
+        await agent.PingAsync(); // Activate the agent
+        var metadata = await agent.GetMetadataAsync();
 
         // Assert
         metadata.ShouldNotBeNull();
-        metadata.GrainId.ShouldBe(grainId);
+        metadata.AgentId.ShouldBe(agentId);
         metadata.ActivationTime.ShouldBeInRange(DateTime.UtcNow.AddMinutes(-1), DateTime.UtcNow.AddMinutes(1));
         metadata.AccessCount.ShouldBeGreaterThan(0);
         metadata.SiloAddress.ShouldNotBeNullOrEmpty();
         
-        _output.WriteLine($"Grain metadata: Id={metadata.GrainId}, " +
+        _output.WriteLine($"Agent metadata: Id={metadata.AgentId}, " +
                          $"ActivationTime={metadata.ActivationTime}, " +
                          $"AccessCount={metadata.AccessCount}, " +
                          $"SiloAddress={metadata.SiloAddress}");
     }
 
     [Fact]
-    public async Task ShouldVerifyGrainWarmupServiceIsRegistered()
+    public async Task ShouldVerifyAgentWarmupServiceIsRegistered()
     {
         // Arrange - Get the primary silo's service provider
         var primarySilo = _fixture.Cluster.Primary;
         var services = _fixture.Cluster.GetSiloServiceProvider(primarySilo.SiloAddress);
 
         // Act & Assert
-        var grainWarmupService = services.GetService<IGrainWarmupService>();
-        grainWarmupService.ShouldNotBeNull("Grain warmup service should be registered");
+        var agentWarmupService = services.GetService<IAgentWarmupService>();
+        agentWarmupService.ShouldNotBeNull("Agent warmup service should be registered");
         
-        var grainWarmupOrchestrator = services.GetService<IGrainWarmupOrchestrator<Guid>>();
-        grainWarmupOrchestrator.ShouldNotBeNull("Grain warmup orchestrator should be registered");
+        var agentWarmupOrchestrator = services.GetService<IAgentWarmupOrchestrator<Guid>>();
+        agentWarmupOrchestrator.ShouldNotBeNull("Agent warmup orchestrator should be registered");
         
-        _output.WriteLine("Successfully verified grain warmup services are registered");
+        _output.WriteLine("Successfully verified agent warmup services are registered");
     }
 } 

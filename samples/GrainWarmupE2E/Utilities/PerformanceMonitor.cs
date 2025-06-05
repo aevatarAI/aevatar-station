@@ -2,10 +2,10 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 
-namespace GrainWarmupE2E.Utilities;
+namespace AgentWarmupE2E.Utilities;
 
 /// <summary>
-/// Performance monitoring utility for grain warmup tests
+/// Performance monitoring utility for agent warmup tests
 /// </summary>
 public class PerformanceMonitor
 {
@@ -67,19 +67,19 @@ public class PerformanceMonitor
     }
 
     /// <summary>
-    /// Measures grain activation latency
+    /// Measures agent activation latency
     /// </summary>
-    public async Task<TimeSpan> MeasureGrainActivationLatencyAsync<T>(Func<Task<T>> grainOperation)
+    public async Task<TimeSpan> MeasureAgentActivationLatencyAsync<T>(Func<Task<T>> agentOperation)
     {
         var stopwatch = Stopwatch.StartNew();
-        await grainOperation();
+        await agentOperation();
         stopwatch.Stop();
         
         return stopwatch.Elapsed;
     }
 
     /// <summary>
-    /// Measures multiple grain operations concurrently
+    /// Measures multiple agent operations concurrently
     /// </summary>
     public async Task<ConcurrentOperationResult> MeasureConcurrentOperationsAsync<T>(
         string operationName,

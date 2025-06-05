@@ -3,44 +3,44 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Aevatar.Silo.GrainWarmup;
+namespace Aevatar.Silo.AgentWarmup;
 
 /// <summary>
-/// Service for retrieving grain identifiers directly from MongoDB collections
+/// Service for retrieving agent identifiers directly from MongoDB collections
 /// </summary>
-public interface IMongoDbGrainIdentifierService
+public interface IMongoDbAgentIdentifierService
 {
     /// <summary>
-    /// Gets grain identifiers from MongoDB for a specific grain type
+    /// Gets agent identifiers from MongoDB for a specific agent type
     /// </summary>
     /// <typeparam name="TIdentifier">The identifier type (Guid, string, int, long)</typeparam>
-    /// <param name="grainType">The grain type</param>
+    /// <param name="agentType">The agent type</param>
     /// <param name="maxCount">Maximum number of identifiers to retrieve</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Async enumerable of grain identifiers</returns>
-    IAsyncEnumerable<TIdentifier> GetGrainIdentifiersAsync<TIdentifier>(
-        Type grainType, 
+    /// <returns>Async enumerable of agent identifiers</returns>
+    IAsyncEnumerable<TIdentifier> GetAgentIdentifiersAsync<TIdentifier>(
+        Type agentType, 
         int? maxCount = null,
         CancellationToken cancellationToken = default);
     
     /// <summary>
-    /// Gets the MongoDB collection name for a grain type
+    /// Gets the MongoDB collection name for a agent type
     /// </summary>
-    /// <param name="grainType">The grain type</param>
+    /// <param name="agentType">The agent type</param>
     /// <returns>The collection name</returns>
-    string GetCollectionName(Type grainType);
+    string GetCollectionName(Type agentType);
     
     /// <summary>
-    /// Checks if a collection exists for the grain type
+    /// Checks if a collection exists for the agent type
     /// </summary>
-    /// <param name="grainType">The grain type</param>
+    /// <param name="agentType">The agent type</param>
     /// <returns>True if the collection exists</returns>
-    Task<bool> CollectionExistsAsync(Type grainType);
+    Task<bool> CollectionExistsAsync(Type agentType);
     
     /// <summary>
-    /// Gets the count of documents in a grain collection
+    /// Gets the count of documents in a agent collection
     /// </summary>
-    /// <param name="grainType">The grain type</param>
+    /// <param name="agentType">The agent type</param>
     /// <returns>The number of documents in the collection</returns>
-    Task<long> GetGrainCountAsync(Type grainType);
+    Task<long> GetAgentCountAsync(Type agentType);
 } 

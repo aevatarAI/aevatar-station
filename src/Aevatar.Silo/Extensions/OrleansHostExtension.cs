@@ -12,7 +12,7 @@ using Aevatar.PermissionManagement.Extensions;
 using Aevatar.SignalR;
 using Aevatar.Silo.Startup;
 using E2E.Grains;
-using Aevatar.Silo.GrainWarmup.Extensions;
+using Aevatar.Silo.AgentWarmup.Extensions;
 
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
@@ -76,7 +76,7 @@ public static class OrleansHostExtension
                 if (string.IsNullOrEmpty(siloNamePattern) || string.Compare(siloNamePattern, "Scheduler", StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     siloBuilder
-                    .AddGrainWarmup<Guid>(options =>
+                    .AddAgentWarmup<Guid>(options =>
                     {
                         // Configure grain warmup options
                         options.Enabled = true;
@@ -84,7 +84,7 @@ public static class OrleansHostExtension
                         options.InitialBatchSize = 10;
                         options.MaxBatchSize = 50;
                         options.DelayBetweenBatchesMs = 500;
-                        options.GrainActivationTimeoutMs = 10000;
+                        options.AgentActivationTimeoutMs = 10000;
                         
                         // Configure MongoDB integration for grain warmup
                         // Collection prefix matches PubSubStore pattern for consistency

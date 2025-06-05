@@ -3,32 +3,32 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Aevatar.Silo.GrainWarmup;
+namespace Aevatar.Silo.AgentWarmup;
 
 /// <summary>
-/// Status of grain warmup operation
+/// Status of agent warmup operation
 /// </summary>
-public class GrainWarmupStatus
+public class AgentWarmupStatus
 {
     public bool IsRunning { get; set; }
     public int TotalStrategies { get; set; }
     public int CompletedStrategies { get; set; }
-    public int TotalGrains { get; set; }
-    public int WarmedUpGrains { get; set; }
-    public int FailedGrains { get; set; }
+    public int TotalAgents { get; set; }
+    public int WarmedUpAgents { get; set; }
+    public int FailedAgents { get; set; }
     public DateTime? StartTime { get; set; }
     public DateTime? EndTime { get; set; }
     public TimeSpan? Duration => EndTime.HasValue && StartTime.HasValue ? EndTime - StartTime : null;
     public string? CurrentStrategy { get; set; }
-    public double ProgressPercentage => TotalGrains > 0 ? (double)(WarmedUpGrains + FailedGrains) / TotalGrains * 100 : 0;
-    public double SuccessRate => (WarmedUpGrains + FailedGrains) > 0 ? (double)WarmedUpGrains / (WarmedUpGrains + FailedGrains) * 100 : 0;
+    public double ProgressPercentage => TotalAgents > 0 ? (double)(WarmedUpAgents + FailedAgents) / TotalAgents * 100 : 0;
+    public double SuccessRate => (WarmedUpAgents + FailedAgents) > 0 ? (double)WarmedUpAgents / (WarmedUpAgents + FailedAgents) * 100 : 0;
     public List<string> Errors { get; set; } = new();
 }
 
 /// <summary>
-/// Service for warming up Orleans grains to reduce activation latency
+/// Service for warming up Orleans agents to reduce activation latency
 /// </summary>
-public interface IGrainWarmupService
+public interface IAgentWarmupService
 {
     /// <summary>
     /// Starts the warmup process for all registered strategies
@@ -48,5 +48,5 @@ public interface IGrainWarmupService
     /// Gets the current warmup status
     /// </summary>
     /// <returns>The current warmup status</returns>
-    GrainWarmupStatus GetStatus();
+    AgentWarmupStatus GetStatus();
 } 

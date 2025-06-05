@@ -9,20 +9,20 @@ using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
-namespace Aevatar.Silo.GrainWarmup;
+namespace Aevatar.Silo.AgentWarmup;
 
 /// <summary>
-/// Service for retrieving grain identifiers directly from MongoDB collections
+/// Service for retrieving agent identifiers directly from MongoDB collections
 /// </summary>
-public class MongoDbGrainIdentifierService : IMongoDbGrainIdentifierService
+public class MongoDbAgentIdentifierService : IMongoDbAgentIdentifierService
 {
     private readonly MongoDbIntegrationConfiguration _config;
-    private readonly ILogger<MongoDbGrainIdentifierService> _logger;
+    private readonly ILogger<MongoDbAgentIdentifierService> _logger;
     private readonly IMongoDatabase _database;
 
-    public MongoDbGrainIdentifierService(
-        IOptions<GrainWarmupConfiguration> options,
-        ILogger<MongoDbGrainIdentifierService> logger,
+    public MongoDbAgentIdentifierService(
+        IOptions<AgentWarmupConfiguration> options,
+        ILogger<MongoDbAgentIdentifierService> logger,
         IConfiguration configuration)
     {
         _config = options.Value.MongoDbIntegration;
@@ -36,18 +36,18 @@ public class MongoDbGrainIdentifierService : IMongoDbGrainIdentifierService
         _database = client.GetDatabase(databaseName);
     }
 
-    public async IAsyncEnumerable<TIdentifier> GetGrainIdentifiersAsync<TIdentifier>(
-        Type grainType, 
+    public async IAsyncEnumerable<TIdentifier> GetAgentIdentifiersAsync<TIdentifier>(
+        Type agentType, 
         int? maxCount = null,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var collectionName = GetCollectionName(grainType);
+        var collectionName = GetCollectionName(agentType);
         
         // Check if collection exists first
-        if (!await CollectionExistsAsync(grainType))
+        if (!await CollectionExistsAsync(agentType))
         {
-            _logger.LogWarning("Collection {CollectionName} does not exist for grain type {GrainType}", 
-                collectionName, grainType.Name);
+            _logger.LogWarning("Collection {CollectionName} does not exist for agent type {AgentType}", 
+                collectionName, agentType.Name);
             yield break;
         }
 
@@ -58,8 +58,8 @@ public class MongoDbGrainIdentifierService : IMongoDbGrainIdentifierService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error setting up identifier retrieval from collection {CollectionName} for grain type {GrainType}", 
-                collectionName, grainType.Name);
+            _logger.LogError(ex, "Error setting up identifier retrieval from collection {CollectionName} for agent type {AgentType}", 
+                collectionName, agentType.Name);
             yield break;
         }
 
@@ -113,14 +113,14 @@ public class MongoDbGrainIdentifierService : IMongoDbGrainIdentifierService
             processedCount, collectionName);
     }
 
-    public string GetCollectionName(Type grainType)
+    public string GetCollectionName(Type agentType)
     {
         var baseName = _config.CollectionNamingStrategy.ToLowerInvariant() switch
         {
-            "typename" => grainType.Name,
-            "fulltypename" => grainType.FullName ?? grainType.Name,
-            "custom" => GetCustomCollectionName(grainType),
-            _ => grainType.FullName ?? grainType.Name
+            "typename" => agentType.Name,
+            "fulltypename" => agentType.FullName ?? agentType.Name,
+            "custom" => GetCustomCollectionName(agentType),
+            _ => agentType.FullName ?? agentType.Name
         };
 
         // Prepend collection prefix if configured
@@ -129,11 +129,11 @@ public class MongoDbGrainIdentifierService : IMongoDbGrainIdentifierService
             : $"{_config.CollectionPrefix}{baseName}";
     }
 
-    public async Task<bool> CollectionExistsAsync(Type grainType)
+    public async Task<bool> CollectionExistsAsync(Type agentType)
     {
         try
         {
-            var collectionName = GetCollectionName(grainType);
+            var collectionName = GetCollectionName(agentType);
             _logger.LogInformation("Checking if collection {CollectionName} exists", collectionName);
             var collections = await _database.ListCollectionNamesAsync();
             
@@ -143,23 +143,23 @@ public class MongoDbGrainIdentifierService : IMongoDbGrainIdentifierService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking if collection exists for grain type {GrainType}", grainType.Name);
+            _logger.LogError(ex, "Error checking if collection exists for agent type {AgentType}", agentType.Name);
             return false;
         }
     }
 
-    public async Task<long> GetGrainCountAsync(Type grainType)
+    public async Task<long> GetAgentCountAsync(Type agentType)
     {
         try
         {
-            var collectionName = GetCollectionName(grainType);
+            var collectionName = GetCollectionName(agentType);
             var collection = _database.GetCollection<BsonDocument>(collectionName);
             
             return await collection.CountDocumentsAsync(Builders<BsonDocument>.Filter.Empty);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting grain count for collection {CollectionName}", GetCollectionName(grainType));
+            _logger.LogError(ex, "Error getting agent count for collection {CollectionName}", GetCollectionName(agentType));
             return 0;
         }
     }
@@ -171,11 +171,11 @@ public class MongoDbGrainIdentifierService : IMongoDbGrainIdentifierService
             if (!document.TryGetValue("_id", out var idValue))
                 return default;
 
-            // MongoDB _id format is "{graintypestring-lower-case}/{identifier}"
+            // MongoDB _id format is "{agenttypestring-lower-case}/{identifier}"
             // e.g., "testdbgagent/99f2e278ae5e4a759075b15d64b4e749"
             if (!idValue.IsString)
             {
-                _logger.LogWarning("Expected MongoDB _id to be string in format 'graintype/identifier', but got {IdType}", 
+                _logger.LogWarning("Expected MongoDB _id to be string in format 'agenttype/identifier', but got {IdType}", 
                     idValue.BsonType);
                 return default;
             }
@@ -185,12 +185,12 @@ public class MongoDbGrainIdentifierService : IMongoDbGrainIdentifierService
             
             if (parts.Length != 2)
             {
-                _logger.LogWarning("MongoDB _id '{IdString}' does not match expected format 'graintype/identifier'", 
+                _logger.LogWarning("MongoDB _id '{IdString}' does not match expected format 'agenttype/identifier'", 
                     idString);
                 return default;
             }
 
-            var grainTypePart = parts[0]; // e.g., "testdbgagent"
+            var agentTypePart = parts[0]; // e.g., "testdbgagent"
             var identifierPart = parts[1]; // e.g., "99f2e278ae5e4a759075b15d64b4e749"
 
             // Convert the identifier part to the requested type
@@ -250,10 +250,10 @@ public class MongoDbGrainIdentifierService : IMongoDbGrainIdentifierService
         }
     }
 
-    private string GetCustomCollectionName(Type grainType)
+    private string GetCustomCollectionName(Type agentType)
     {
         // Default custom naming strategy - can be overridden by configuration
-        // Format: grains_{typename_lowercase}
-        return $"grains_{grainType.Name.ToLowerInvariant()}";
+        // Format: agents_{typename_lowercase}
+        return $"agents_{agentType.Name.ToLowerInvariant()}";
     }
 } 

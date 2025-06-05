@@ -1,30 +1,30 @@
 using Microsoft.Extensions.Logging;
 
-namespace Aevatar.Silo.GrainWarmup.Strategies;
+namespace Aevatar.Silo.AgentWarmup.Strategies;
 
 /// <summary>
-/// Warmup strategy for grains with predefined identifiers
+/// Warmup strategy for agents with predefined identifiers
 /// </summary>
-/// <typeparam name="TIdentifier">The type of grain identifier (Guid, string, int, long)</typeparam>
-public class PredefinedGrainWarmupStrategy<TIdentifier> : BaseGrainWarmupStrategy<TIdentifier>
+/// <typeparam name="TIdentifier">The type of agent identifier (Guid, string, int, long)</typeparam>
+public class PredefinedAgentWarmupStrategy<TIdentifier> : BaseAgentWarmupStrategy<TIdentifier>
 {
-    private readonly IReadOnlyCollection<TIdentifier> _grainIdentifiers;
-    private readonly Type _grainType;
+    private readonly IReadOnlyCollection<TIdentifier> _agentIdentifiers;
+    private readonly Type _agentType;
     private readonly string _name;
     
-    public PredefinedGrainWarmupStrategy(
+    public PredefinedAgentWarmupStrategy(
         string name,
-        Type grainType,
-        IEnumerable<TIdentifier> grainIdentifiers,
-        ILogger<PredefinedGrainWarmupStrategy<TIdentifier>> logger) : base(logger)
+        Type agentType,
+        IEnumerable<TIdentifier> agentIdentifiers,
+        ILogger<PredefinedAgentWarmupStrategy<TIdentifier>> logger) : base(logger)
     {
         _name = name ?? throw new ArgumentNullException(nameof(name));
-        _grainType = grainType ?? throw new ArgumentNullException(nameof(grainType));
-        _grainIdentifiers = grainIdentifiers?.ToList() ?? throw new ArgumentNullException(nameof(grainIdentifiers));
+        _agentType = agentType ?? throw new ArgumentNullException(nameof(agentType));
+        _agentIdentifiers = agentIdentifiers?.ToList() ?? throw new ArgumentNullException(nameof(agentIdentifiers));
         
-        if (!_grainIdentifiers.Any())
+        if (!_agentIdentifiers.Any())
         {
-            throw new ArgumentException("At least one grain identifier must be provided", nameof(grainIdentifiers));
+            throw new ArgumentException("At least one agent identifier must be provided", nameof(agentIdentifiers));
         }
     }
     
@@ -32,23 +32,23 @@ public class PredefinedGrainWarmupStrategy<TIdentifier> : BaseGrainWarmupStrateg
     public override string Name => _name;
     
     /// <inheritdoc />
-    public override IEnumerable<Type> ApplicableGrainTypes => new[] { _grainType };
+    public override IEnumerable<Type> ApplicableAgentTypes => new[] { _agentType };
     
     /// <inheritdoc />
     public override int Priority => 100; // High priority for predefined strategies
     
     /// <inheritdoc />
-    public override int EstimatedGrainCount => _grainIdentifiers.Count;
+    public override int EstimatedAgentCount => _agentIdentifiers.Count;
     
     /// <inheritdoc />
-    public override async IAsyncEnumerable<TIdentifier> GenerateGrainIdentifiersAsync(
-        Type grainType,
+    public override async IAsyncEnumerable<TIdentifier> GenerateAgentIdentifiersAsync(
+        Type agentType,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        Logger.LogDebug("Generating {Count} predefined grain identifiers for strategy {StrategyName}", 
-            _grainIdentifiers.Count, Name);
+        Logger.LogDebug("Generating {Count} predefined agent identifiers for strategy {StrategyName}", 
+            _agentIdentifiers.Count, Name);
         
-        foreach (var identifier in _grainIdentifiers)
+        foreach (var identifier in _agentIdentifiers)
         {
             cancellationToken.ThrowIfCancellationRequested();
             
@@ -58,7 +58,7 @@ public class PredefinedGrainWarmupStrategy<TIdentifier> : BaseGrainWarmupStrateg
             await Task.Delay(1, cancellationToken);
         }
         
-        Logger.LogDebug("Completed generating grain identifiers for strategy {StrategyName}", Name);
+        Logger.LogDebug("Completed generating agent identifiers for strategy {StrategyName}", Name);
     }
     
     /// <summary>
@@ -67,21 +67,21 @@ public class PredefinedGrainWarmupStrategy<TIdentifier> : BaseGrainWarmupStrateg
     /// <returns>True if configuration is valid</returns>
     protected virtual bool ValidateStrategySpecificConfiguration()
     {
-        if (!_grainIdentifiers.Any())
+        if (!_agentIdentifiers.Any())
         {
-            Logger.LogError("No grain identifiers provided for strategy {StrategyName}", Name);
+            Logger.LogError("No agent identifiers provided for strategy {StrategyName}", Name);
             return false;
         }
         
         // Check for null identifiers
-        if (_grainIdentifiers.Any(id => id == null))
+        if (_agentIdentifiers.Any(id => id == null))
         {
             Logger.LogError("Strategy {StrategyName} contains null identifiers", Name);
             return false;
         }
         
         Logger.LogDebug("Strategy {StrategyName} configuration is valid with {Count} identifiers", 
-            Name, _grainIdentifiers.Count);
+            Name, _agentIdentifiers.Count);
         
         return true;
     }

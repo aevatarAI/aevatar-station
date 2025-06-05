@@ -3,23 +3,23 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Aevatar.Silo.GrainWarmup;
+namespace Aevatar.Silo.AgentWarmup;
 
 /// <summary>
-/// Orchestrator for managing strategy execution order and grain type assignment
+/// Orchestrator for managing strategy execution order and agent type assignment
 /// </summary>
-/// <typeparam name="TIdentifier">The identifier type used by all grains (e.g., Guid, string, long)</typeparam>
-public interface IGrainWarmupOrchestrator<TIdentifier>
+/// <typeparam name="TIdentifier">The identifier type used by all agents (e.g., Guid, string, long)</typeparam>
+public interface IAgentWarmupOrchestrator<TIdentifier>
 {
     /// <summary>
-    /// Plans warmup execution based on discovered grains and registered strategies
+    /// Plans warmup execution based on discovered agents and registered strategies
     /// </summary>
-    /// <param name="grainTypes">The grain types to warm up</param>
+    /// <param name="agentTypes">The agent types to warm up</param>
     /// <param name="strategies">The available strategies</param>
     /// <returns>The execution plan</returns>
     WarmupExecutionPlan CreateExecutionPlan(
-        IEnumerable<Type> grainTypes, 
-        IEnumerable<IGrainWarmupStrategy> strategies);
+        IEnumerable<Type> agentTypes, 
+        IEnumerable<IAgentWarmupStrategy> strategies);
     
     /// <summary>
     /// Executes the warmup plan
