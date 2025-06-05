@@ -12,6 +12,7 @@ using Aevatar.PermissionManagement.Extensions;
 using Aevatar.SignalR;
 using Aevatar.Silo.Startup;
 using E2E.Grains;
+using Aevatar.Silo.GrainWarmup.Extensions;
 
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
@@ -19,6 +20,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
+using Orleans.Providers.MongoDB.StorageProviders.Serializers;
 using Newtonsoft.Json;
 using Orleans.Configuration;
 using Orleans.Providers.MongoDB.StorageProviders.Serializers;
@@ -70,6 +72,31 @@ public static class OrleansHostExtension
                     // This will run during silo startup at ServiceLifecycleStage.ApplicationServices (default)
                     siloBuilder.AddStartupTask<StateProjectionInitializer>();
                 }
+
+                if (string.IsNullOrEmpty(siloNamePattern) || string.Compare(siloNamePattern, "Scheduler", StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    siloBuilder
+                    .AddGrainWarmup<Guid>(options =>
+                    {
+                        // Configure grain warmup options
+                        options.Enabled = true;
+                        options.MaxConcurrency = 5;
+                        options.InitialBatchSize = 10;
+                        options.MaxBatchSize = 50;
+                        options.DelayBetweenBatchesMs = 500;
+                        options.GrainActivationTimeoutMs = 10000;
+                        
+                        // Configure MongoDB integration for grain warmup
+                        // Collection prefix matches PubSubStore pattern for consistency
+                        options.MongoDbIntegration.CollectionPrefix = hostId.IsNullOrEmpty() ? "StreamStorage" : $"Stream{hostId}";
+                        options.MongoDbIntegration.CollectionNamingStrategy = "FullTypeName";
+                        options.MongoDbIntegration.BatchSize = 100;
+                        options.MongoDbIntegration.QueryTimeoutMs = 30000;
+                        
+                        // Configure default strategy for high-volume grain warmup
+                        options.DefaultStrategy.MaxIdentifiersPerType = 10_000_000; // 10 million identifiers per grain type
+                    });
+                }
                     
                 siloBuilder
                     .ConfigureEndpoints(advertisedIP: IPAddress.Parse(advertisedIP),
@@ -103,8 +130,8 @@ public static class OrleansHostExtension
                         })
                     .Configure<GrainCollectionOptions>(options =>
                     {
-                        // Set default collection age for all grains (in minutes)
-                        options.CollectionAge = TimeSpan.FromHours(24);
+                        // Set default collection age for all grains (in days)
+                        options.CollectionAge = TimeSpan.FromDays(180);
                         
                         // Optionally, set specific collection ages for particular grain types
                         // options.ClassSpecificCollectionAge[typeof(UserGridGAgent).FullName] = TimeSpan.FromMinutes(10);
@@ -226,6 +253,7 @@ public static class OrleansHostExtension
                     .RegisterHub<AevatarSignalRHub>();
             }).ConfigureServices((context, services) =>
             {
+                // services.AddSingleton<ICancellationTokenProvider, NullCancellationTokenProvider>();
                 services.AddSingleton<IGrainStateSerializer, BinaryGrainStateSerializer>();
                 // services.Configure<AzureOpenAIConfig>(context.Configuration.GetSection("AIServices:AzureOpenAI"));
                 // services.Configure<AzureDeepSeekConfig>(context.Configuration.GetSection("AIServices:DeepSeek"));

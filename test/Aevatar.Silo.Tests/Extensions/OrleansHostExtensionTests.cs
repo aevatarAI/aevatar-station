@@ -164,11 +164,11 @@ namespace Aevatar.Silo.Tests.Extensions
                 else
                 {
                     // Fallback: try to get the Orleans placement strategy map
-                    var placementStrategyManager = services.GetService(typeof(PlacementStrategyManager));
-                    if (placementStrategyManager != null)
-                    {
-                        hasPlacementDirector = true; // If we have the manager, and our tests pass, we assume it's correctly configured
-                    }
+                    // var placementStrategyManager = services.GetService(typeof(PlacementStrategyManager));
+                    // if (placementStrategyManager != null)
+                    // {
+                    //     hasPlacementDirector = true; // If we have the manager, and our tests pass, we assume it's correctly configured
+                    // }
                 }
                 
                 hasPlacementDirector.ShouldBeTrue("SiloNamePatternPlacement should be registered");
