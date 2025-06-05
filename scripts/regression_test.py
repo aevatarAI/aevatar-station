@@ -363,6 +363,7 @@ def test_permission(api_headers, api_admin_headers):
         f"{API_HOST}/api/query/es",
         params={
             "stateName": PERMISSION_STATE_NAME,
+            "queryString": f"_id:{agent_id}",
             "pageSize": 10
         },
         headers=api_headers
@@ -375,6 +376,7 @@ def test_permission(api_headers, api_admin_headers):
         f"{API_HOST}/api/query/es",
         params={
             "stateName": PERMISSION_STATE_NAME,
+            "queryString": f"_id:{agent_id}",
             "pageSize": 10
         },
         headers=api_admin_headers
