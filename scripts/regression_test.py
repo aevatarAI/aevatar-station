@@ -335,6 +335,8 @@ def test_permission(api_headers, api_admin_headers):
     assert_status_code(response)
     assert agent_id in response.json()["data"]["subAgents"]
 
+    time.sleep(5)
+    
     # publish event
     response = requests.get(
         f"{API_HOST}/api/identity/users/by-username/{ADMIN_USERNAME}",
