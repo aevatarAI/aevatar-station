@@ -187,6 +187,7 @@ public class GodGPTController : AevatarController
         return sessionList;
     }
 
+    [AllowAnonymous]
     [HttpGet("godgpt/session-info/{sessionId}")]
     public async Task<Aevatar.Quantum.SessionCreationInfoDto?> GetSessionCreationInfoAsync(Guid sessionId)
     {
