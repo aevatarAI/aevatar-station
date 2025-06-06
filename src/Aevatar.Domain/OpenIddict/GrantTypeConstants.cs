@@ -7,4 +7,5 @@ public class GrantTypeConstants
     public const string PERMISSIONS_SIGNATURE = "gt:signature";
     public const string GOOGLE = "google";
     public const string APPLE = "apple";
+    public const string Github = "github";
 }

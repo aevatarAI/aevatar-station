@@ -12,6 +12,8 @@ public class Program
     public async static Task<int> Main(string[] args)
     {
         var configuration = new ConfigurationBuilder()
+            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
+            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Silo.Shared.json"))
             .AddJsonFile("appsettings.json")
             .AddJsonFile("appsettings.secrets.json", optional: true)
             .Build();
@@ -24,6 +26,12 @@ public class Program
         {
             Log.Information("Starting Silo");
             var builder = CreateHostBuilder(args);
+            builder.ConfigureHostConfiguration(config =>
+            {
+                config.AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
+                    .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Silo.Shared.json"))
+                    .AddJsonFile("appsettings.json");
+            });
             var app = builder.Build();
             await app.RunAsync();
             return 0;
@@ -43,8 +51,6 @@ public class Program
         Host.CreateDefaultBuilder(args)
             .ConfigureServices((hostContext, services) =>
             {
-                // Configure OpenTelemetry
-                services.AddAevatarOpenTelemetry(hostContext.Configuration);
                 services.AddApplication<SiloModule>();
             })
             .UseOrleansConfiguration()
@@ -52,6 +58,8 @@ public class Program
             .UseSerilog()
             .ConfigureServices((context, services) =>
             {
+                // Configure OpenTelemetry
+                services.AddAevatarOpenTelemetry(context.Configuration);
                 services.UseGrainStorageWithMetrics();
             });
 }
