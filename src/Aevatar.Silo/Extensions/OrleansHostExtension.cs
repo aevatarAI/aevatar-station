@@ -84,7 +84,7 @@ public static class OrleansHostExtension
                         settings =>
                         {
                             settings.NullValueHandling = NullValueHandling.Include;
-                            settings.DefaultValueHandling = DefaultValueHandling.Populate;
+                            settings.DefaultValueHandling = DefaultValueHandling.Include;
                             settings.ObjectCreationHandling = ObjectCreationHandling.Replace;
                         })
                     .AddMongoDBGrainStorage("Default", (MongoDBGrainStorageOptions op) =>
