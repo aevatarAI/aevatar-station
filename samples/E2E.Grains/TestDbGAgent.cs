@@ -45,6 +45,7 @@ public interface ITestDbGAgent : IBroadCastGAgent
     Task PublishAsync<T>(GrainId grainId,T @event) where T : EventBase;
 }
 
+[KeepAlive]
 [SiloNamePatternPlacement("User")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]

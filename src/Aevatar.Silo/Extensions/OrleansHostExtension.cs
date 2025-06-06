@@ -1,4 +1,5 @@
 using System.Net;
+using System.Linq;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Core.Placement;
@@ -12,6 +13,7 @@ using Aevatar.PermissionManagement.Extensions;
 using Aevatar.SignalR;
 using Aevatar.Silo.Startup;
 using E2E.Grains;
+using Aevatar.Silo.AgentWarmup.Extensions;
 
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
@@ -19,6 +21,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
+using Orleans.Providers.MongoDB.StorageProviders.Serializers;
 using Newtonsoft.Json;
 using Orleans.Configuration;
 using Orleans.Providers.MongoDB.StorageProviders.Serializers;
@@ -70,6 +73,53 @@ public static class OrleansHostExtension
                     // This will run during silo startup at ServiceLifecycleStage.ApplicationServices (default)
                     siloBuilder.AddStartupTask<StateProjectionInitializer>();
                 }
+
+                if (string.IsNullOrEmpty(siloNamePattern) || string.Compare(siloNamePattern, "Scheduler", StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    siloBuilder
+                    .AddAgentWarmup<Guid>(options =>
+                    {
+                        // Bind configuration from appsettings.json with fallback to defaults
+                        var agentWarmupSection = configuration.GetSection("AgentWarmup");
+                        
+                        // Main configuration properties with defaults
+                        options.Enabled = agentWarmupSection.GetValue<bool>("Enabled", true);
+                        options.MaxConcurrency = agentWarmupSection.GetValue<int>("MaxConcurrency", 10);
+                        options.InitialBatchSize = agentWarmupSection.GetValue<int>("InitialBatchSize", 5);
+                        options.MaxBatchSize = agentWarmupSection.GetValue<int>("MaxBatchSize", 200);
+                        options.BatchSizeIncreaseFactor = agentWarmupSection.GetValue<double>("BatchSizeIncreaseFactor", 1.5);
+                        options.DelayBetweenBatchesMs = agentWarmupSection.GetValue<int>("DelayBetweenBatchesMs", 0);
+                        options.AgentActivationTimeoutMs = agentWarmupSection.GetValue<int>("AgentActivationTimeoutMs", 5000);
+                        options.MaxRetryAttempts = agentWarmupSection.GetValue<int>("MaxRetryAttempts", 3);
+                        options.RetryDelayMs = agentWarmupSection.GetValue<int>("RetryDelayMs", 1000);
+                        
+                        // MongoDB rate limit configuration with defaults
+                        var rateLimitSection = agentWarmupSection.GetSection("MongoDbRateLimit");
+                        options.MongoDbRateLimit.MaxOperationsPerSecond = rateLimitSection.GetValue<int>("MaxOperationsPerSecond", 50);
+                        options.MongoDbRateLimit.BurstAllowance = rateLimitSection.GetValue<int>("BurstAllowance", 10);
+                        options.MongoDbRateLimit.TimeWindowMs = rateLimitSection.GetValue<int>("TimeWindowMs", 1000);
+                        
+                        // Auto discovery configuration with defaults
+                        var autoDiscoverySection = agentWarmupSection.GetSection("AutoDiscovery");
+                        options.AutoDiscovery.Enabled = autoDiscoverySection.GetValue<bool>("Enabled", true);
+                        options.AutoDiscovery.BaseTypes = new List<Type>(); // BaseTypes are complex, leave empty for now
+                        options.AutoDiscovery.RequiredAttributes = autoDiscoverySection.GetSection("RequiredAttributes").Get<string[]>()?.ToList() ?? new List<string> { "StorageProvider" };
+                        options.AutoDiscovery.StorageProviderName = autoDiscoverySection.GetValue<string>("StorageProviderName", "PubSubStore");
+                        options.AutoDiscovery.ExcludedAgentTypes = autoDiscoverySection.GetSection("ExcludedAgentTypes").Get<string[]>()?.ToList() ?? new List<string> { "Orleans.", "Microsoft.Orleans.", "System.", "Microsoft." };
+                        options.AutoDiscovery.IncludedAssemblies = autoDiscoverySection.GetSection("IncludedAssemblies").Get<string[]>()?.ToList() ?? new List<string>();
+                        
+                        // Configure MongoDB integration for agent warmup
+                        // Collection prefix matches PubSubStore pattern for consistency
+                        options.MongoDbIntegration.CollectionPrefix = hostId.IsNullOrEmpty() ? "StreamStorage" : $"Stream{hostId}";
+                        options.MongoDbIntegration.CollectionNamingStrategy = "FullTypeName";
+                        options.MongoDbIntegration.BatchSize = 100;
+                        options.MongoDbIntegration.QueryTimeoutMs = 30000;
+                        
+                        // Configure default strategy for high-volume agent warmup
+                        var defaultStrategySection = agentWarmupSection.GetSection("DefaultStrategy");
+                        options.DefaultStrategy.MaxIdentifiersPerType = defaultStrategySection.GetValue<int>("MaxIdentifiersPerType", 1000000);
+                    });
+                }
                     
                 siloBuilder
                     .ConfigureEndpoints(advertisedIP: IPAddress.Parse(advertisedIP),
@@ -103,8 +153,8 @@ public static class OrleansHostExtension
                         })
                     .Configure<GrainCollectionOptions>(options =>
                     {
-                        // Set default collection age for all grains (in minutes)
-                        options.CollectionAge = TimeSpan.FromHours(24);
+                        // Set default collection age for all grains (in days)
+                        options.CollectionAge = TimeSpan.FromDays(180);
                         
                         // Optionally, set specific collection ages for particular grain types
                         // options.ClassSpecificCollectionAge[typeof(UserGridGAgent).FullName] = TimeSpan.FromMinutes(10);
@@ -226,6 +276,7 @@ public static class OrleansHostExtension
                     .RegisterHub<AevatarSignalRHub>();
             }).ConfigureServices((context, services) =>
             {
+                // services.AddSingleton<ICancellationTokenProvider, NullCancellationTokenProvider>();
                 services.AddSingleton<IGrainStateSerializer, BinaryGrainStateSerializer>();
                 // services.Configure<AzureOpenAIConfig>(context.Configuration.GetSection("AIServices:AzureOpenAI"));
                 // services.Configure<AzureDeepSeekConfig>(context.Configuration.GetSection("AIServices:DeepSeek"));
