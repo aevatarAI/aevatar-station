@@ -34,7 +34,7 @@ public class Program
             //builder.Services.AddSignalR(options => { options.EnableDetailedErrors = true; }).AddOrleans();
             builder.Services.AddSignalR(options =>
             {
-                options.MaximumReceiveMessageSize = 1 * 1024 * 1024;
+                options.MaximumReceiveMessageSize = 5 * 1024 * 1024;
                 options.EnableDetailedErrors = true;
             }).AddOrleans();
             builder.Services
