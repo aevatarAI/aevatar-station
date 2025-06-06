@@ -1,0 +1,15 @@
+{
+  "Orleans": {
+    "ClusterId": "test-cluster",
+    "ServiceId": "test-service",
+    "DataBase": "grain-warmup-test",
+    "MongoDBClient": "mongodb://localhost:27017"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Orleans": "Warning",
+      "Microsoft": "Warning"
+    }
+  }
+} 
