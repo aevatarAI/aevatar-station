@@ -144,4 +144,14 @@ public class AgentController : AevatarController
         _logger.LogInformation("PermissionAgentState: {State}", JsonConvert.SerializeObject(state));
         return state;
     }
+    
+    [HttpGet("test2/{guid}")]
+    public async Task<StateTestState> GetTest2Agent(Guid guid)
+    {
+        _logger.LogInformation("Get Agent: {guid}", guid);
+        var agent = _clusterClient.GetGrain<IAgentStateTest>(guid);
+        var state = await agent.GetStateAsync();
+        _logger.LogInformation("StateTestState: {State}", JsonConvert.SerializeObject(state));
+        return state;
+    }
 }
