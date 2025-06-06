@@ -24,6 +24,7 @@
 | F004 | Test coverage improvement | ✅ | High | feature/test-cov | 42:82:57:47:65:d3 | 100% | ✓ | ✓ | Completed on 2025-04-28 |
 | F005 | Improve OrleansHostExtension unit tests | ✅ | High | dev | 3e:58:e5:c6:ab:31 | 100% | ✓ | ✓ | Fixed StateProjectionInitializer registration tests |
 | F006 | Grain Warmup System | ✅ | High | feature/grain-warmup | 3e:58:e5:c6:ab:30 | 95% | ✓ | ✓ | Complete grain warmup system with E2E tests, MongoDB rate limiting, progressive batching |
+| F007 | Upgrade pod template | 🚧 | High | feature/upgrade-pod-template | 42:82:57:47:65:d3 | - | - | - | 新增功能：支持pod模板升级 |
 
 ## Technical Debt & Refactoring
 
