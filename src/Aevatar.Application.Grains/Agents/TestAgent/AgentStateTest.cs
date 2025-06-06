@@ -49,8 +49,7 @@ public class AgentStateTest : GAgentBase<StateTestState, StateTestEvent>,IAgentS
 [GenerateSerializer]
 public class StateTestState : StateBase
 {
-    [Id(0)]
-    public bool BoolValue { get; set; }
+    [Id(0)] public bool BoolValue { get; set; } = true;
 }
 
 [GenerateSerializer]
