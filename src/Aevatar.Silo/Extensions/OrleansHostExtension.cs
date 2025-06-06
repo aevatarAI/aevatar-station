@@ -139,6 +139,10 @@ public static class OrleansHostExtension
                     .Configure<SiloOptions>(options =>
                     {
                         options.SiloName = $"{siloNamePattern}-{Guid.NewGuid().ToString("N").Substring(0, 6)}";                        
+                    })
+                    .Configure<OrleansJsonSerializerOptions>(options =>
+                    {
+                        options.JsonSerializerSettings.DefaultValueHandling = DefaultValueHandling.Include;
                     });
 
                 var eventSourcingProvider = configuration.GetSection("OrleansEventSourcing:Provider").Get<string>();
