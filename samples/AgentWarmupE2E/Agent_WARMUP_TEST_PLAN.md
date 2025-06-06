@@ -18,6 +18,7 @@ This document outlines the comprehensive test plan for validating the Agent Warm
 - **Agent Type**: GUID-based agents only (current system support)
 - **Database**: MongoDB with isolated test database
 - **Configuration**: Test-specific settings in `test-appsettings.json`
+- **Test Agents**: Implemented in `E2E.Grains` project for single DLL grain deployment
 
 ## Test Architecture
 
@@ -31,9 +32,6 @@ AgentWarmupE2E/
 │   ├── ConfigurationTests.cs       # Configuration validation
 │   ├── ErrorHandlingTests.cs       # Error scenarios
 │   └── IntegrationTests.cs         # Orleans integration
-├── TestAgents/                     # Test agent implementations
-│   ├── ITestWarmupAgent.cs         # GUID-based test agent interface
-│   └── TestWarmupAgent.cs          # Test agent with tracking
 ├── Fixtures/                       # Test infrastructure
 │   └── AgentWarmupTestFixture.cs   # Orleans TestCluster setup
 ├── Utilities/                      # Test utilities
@@ -44,13 +42,19 @@ AgentWarmupE2E/
 │   └── test-appsettings.json       # Test-specific settings
 ├── GRAIN_WARMUP_TEST_PLAN.md       # This document
 └── README.md                       # Test execution guide
+
+E2E.Grains/                         # Shared test agent implementations
+├── ITestWarmupAgent.cs             # GUID-based test agent interface
+└── TestWarmupAgent.cs              # Test agent with tracking
 ```
 
 ### Test Agent Design
 
+The test agents are implemented in the **E2E.Grains** project to allow the silo project to reference all grains from a single DLL. This approach ensures proper grain discovery and deployment.
+
 #### ITestWarmupAgent Interface
 ```csharp
-public interface ITestWarmupAgent : IAgentWithGuidKey
+public interface ITestWarmupAgent : IGrainWithGuidKey
 {
     Task<string> PingAsync();
     Task<DateTime> GetActivationTimeAsync();
@@ -66,6 +70,7 @@ public interface ITestWarmupAgent : IAgentWithGuidKey
 - **Activation tracking**: Records activation time and access patterns
 - **Performance simulation**: Includes database operation simulation
 - **Metadata collection**: Provides agent state information for validation
+- **Shared deployment**: Located in E2E.Grains project for single DLL reference by silo
 
 ## Test Categories and Scenarios
 

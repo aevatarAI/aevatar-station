@@ -38,44 +38,7 @@ namespace Aevatar.Silo.AgentWarmup.Extensions;
 /// </summary>
 public static class AgentWarmupExtensions
 {
-    /// <summary>
-    /// Adds agent warmup services for GUID-based agents to the service collection
-    /// </summary>
-    /// <param name="services">The service collection</param>
-    /// <param name="configureOptions">Optional configuration action</param>
-    /// <returns>The service collection for chaining</returns>
-    public static IServiceCollection AddAgentWarmupForGuid(
-        this IServiceCollection services,
-        Action<AgentWarmupConfiguration>? configureOptions = null)
-    {
-        return AddAgentWarmup<Guid>(services, configureOptions);
-    }
 
-    /// <summary>
-    /// Adds agent warmup services for string-based agents to the service collection
-    /// </summary>
-    /// <param name="services">The service collection</param>
-    /// <param name="configureOptions">Optional configuration action</param>
-    /// <returns>The service collection for chaining</returns>
-    public static IServiceCollection AddAgentWarmupForString(
-        this IServiceCollection services,
-        Action<AgentWarmupConfiguration>? configureOptions = null)
-    {
-        return AddAgentWarmup<string>(services, configureOptions);
-    }
-
-    /// <summary>
-    /// Adds agent warmup services for long-based agents to the service collection
-    /// </summary>
-    /// <param name="services">The service collection</param>
-    /// <param name="configureOptions">Optional configuration action</param>
-    /// <returns>The service collection for chaining</returns>
-    public static IServiceCollection AddAgentWarmupForLong(
-        this IServiceCollection services,
-        Action<AgentWarmupConfiguration>? configureOptions = null)
-    {
-        return AddAgentWarmup<long>(services, configureOptions);
-    }
 
     /// <summary>
     /// Adds agent warmup services for a specific identifier type to the service collection
@@ -136,47 +99,7 @@ public static class AgentWarmupExtensions
         return services;
     }
     
-    /// <summary>
-    /// Adds agent warmup services to the Orleans silo builder for GUID-based agents
-    /// </summary>
-    /// <param name="builder">The silo builder</param>
-    /// <param name="configureOptions">Optional configuration action</param>
-    /// <returns>The silo builder for chaining</returns>
-    public static ISiloBuilder AddAgentWarmupForGuid(
-        this ISiloBuilder builder,
-        Action<AgentWarmupConfiguration>? configureOptions = null)
-    {
-        builder.ConfigureServices(services => services.AddAgentWarmupForGuid(configureOptions));
-        return builder;
-    }
 
-    /// <summary>
-    /// Adds agent warmup services to the Orleans silo builder for string-based agents
-    /// </summary>
-    /// <param name="builder">The silo builder</param>
-    /// <param name="configureOptions">Optional configuration action</param>
-    /// <returns>The silo builder for chaining</returns>
-    public static ISiloBuilder AddAgentWarmupForString(
-        this ISiloBuilder builder,
-        Action<AgentWarmupConfiguration>? configureOptions = null)
-    {
-        builder.ConfigureServices(services => services.AddAgentWarmupForString(configureOptions));
-        return builder;
-    }
-
-    /// <summary>
-    /// Adds agent warmup services to the Orleans silo builder for long-based agents
-    /// </summary>
-    /// <param name="builder">The silo builder</param>
-    /// <param name="configureOptions">Optional configuration action</param>
-    /// <returns>The silo builder for chaining</returns>
-    public static ISiloBuilder AddAgentWarmupForLong(
-        this ISiloBuilder builder,
-        Action<AgentWarmupConfiguration>? configureOptions = null)
-    {
-        builder.ConfigureServices(services => services.AddAgentWarmupForLong(configureOptions));
-        return builder;
-    }
 
     /// <summary>
     /// Adds agent warmup services to the Orleans silo builder for a specific identifier type
@@ -222,15 +145,42 @@ public static class AgentWarmupExtensions
     }
 
     /// <summary>
+    /// Adds a predefined agent warmup strategy for a specific agent type with predefined identifiers
+    /// </summary>
+    /// <typeparam name="TAgent">The agent type to warm up</typeparam>
+    /// <typeparam name="TIdentifier">The identifier type (Guid, string, int, long)</typeparam>
+    /// <param name="services">The service collection</param>
+    /// <param name="strategyName">Name for the strategy</param>
+    /// <param name="agentIdentifiers">Collection of predefined agent identifiers</param>
+    /// <returns>The service collection for chaining</returns>
+    public static IServiceCollection AddPredefinedAgentWarmupStrategy<TAgent, TIdentifier>(
+        this IServiceCollection services,
+        string strategyName,
+        IEnumerable<TIdentifier> agentIdentifiers)
+    {
+        services.AddSingleton<IAgentWarmupStrategy>(provider =>
+        {
+            var logger = provider.GetRequiredService<ILogger<PredefinedAgentWarmupStrategy<TIdentifier>>>();
+            return new PredefinedAgentWarmupStrategy<TIdentifier>(
+                strategyName,
+                typeof(TAgent),
+                agentIdentifiers,
+                logger);
+        });
+        return services;
+    }
+
+    /// <summary>
     /// Configure agent warmup with direct Type-based base types (for agent discovery)
     /// </summary>
+    /// <typeparam name="TIdentifier">The identifier type (Guid, string, long, int)</typeparam>
     /// <typeparam name="TBaseType">The base agent type for discovery</typeparam>
     /// <param name="services">The service collection</param>
     /// <returns>The service collection for chaining</returns>
-    public static IServiceCollection AddAgentWarmupWithBaseType<TBaseType>(this IServiceCollection services)
+    public static IServiceCollection AddAgentWarmupWithBaseType<TIdentifier, TBaseType>(this IServiceCollection services)
         where TBaseType : class
     {
-        return services.AddAgentWarmup<Guid>(config =>
+        return services.AddAgentWarmup<TIdentifier>(config =>
         {
             config.AutoDiscovery.BaseTypes.Add(typeof(TBaseType));
         });
@@ -239,12 +189,13 @@ public static class AgentWarmupExtensions
     /// <summary>
     /// Configure agent warmup with multiple base types directly (for agent discovery)
     /// </summary>
+    /// <typeparam name="TIdentifier">The identifier type (Guid, string, long, int)</typeparam>
     /// <param name="services">The service collection</param>
     /// <param name="baseTypes">The base agent types for discovery</param>
     /// <returns>The service collection for chaining</returns>
-    public static IServiceCollection AddAgentWarmupWithBaseTypes(this IServiceCollection services, params Type[] baseTypes)
+    public static IServiceCollection AddAgentWarmupWithBaseTypes<TIdentifier>(this IServiceCollection services, params Type[] baseTypes)
     {
-        return services.AddAgentWarmup<Guid>(config =>
+        return services.AddAgentWarmup<TIdentifier>(config =>
         {
             config.AutoDiscovery.BaseTypes.AddRange(baseTypes);
         });
@@ -253,13 +204,14 @@ public static class AgentWarmupExtensions
     /// <summary>
     /// Configure agent warmup for Orleans silo with direct Type-based base types (for agent discovery)
     /// </summary>
+    /// <typeparam name="TIdentifier">The identifier type (Guid, string, long, int)</typeparam>
     /// <typeparam name="TBaseType">The base agent type for discovery</typeparam>
     /// <param name="builder">The silo builder</param>
     /// <returns>The silo builder for chaining</returns>
-    public static ISiloBuilder AddAgentWarmupWithBaseType<TBaseType>(this ISiloBuilder builder)
+    public static ISiloBuilder AddAgentWarmupWithBaseType<TIdentifier, TBaseType>(this ISiloBuilder builder)
         where TBaseType : class
     {
-        return builder.AddAgentWarmup<Guid>(config =>
+        return builder.AddAgentWarmup<TIdentifier>(config =>
         {
             config.AutoDiscovery.BaseTypes.Add(typeof(TBaseType));
         });
@@ -268,12 +220,13 @@ public static class AgentWarmupExtensions
     /// <summary>
     /// Configure agent warmup for Orleans silo with multiple base types directly (for agent discovery)
     /// </summary>
+    /// <typeparam name="TIdentifier">The identifier type (Guid, string, long, int)</typeparam>
     /// <param name="builder">The silo builder</param>
     /// <param name="baseTypes">The base agent types for discovery</param>
     /// <returns>The silo builder for chaining</returns>
-    public static ISiloBuilder AddAgentWarmupWithBaseTypes(this ISiloBuilder builder, params Type[] baseTypes)
+    public static ISiloBuilder AddAgentWarmupWithBaseTypes<TIdentifier>(this ISiloBuilder builder, params Type[] baseTypes)
     {
-        return builder.AddAgentWarmup<Guid>(config =>
+        return builder.AddAgentWarmup<TIdentifier>(config =>
         {
             config.AutoDiscovery.BaseTypes.AddRange(baseTypes);
         });
