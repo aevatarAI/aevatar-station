@@ -3,6 +3,10 @@ import os
 import time
 import pytest
 import requests
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 TEST_AGENT = "agenttest"
 STATE_NAME = "FrontAgentState"
@@ -370,6 +374,7 @@ def test_permission(api_headers, api_admin_headers):
     )
 
     assert_status_code(response)
+    logger.debug(response.json()["data"])
     assert response.json()["data"]["totalCount"] == 0
     
     response = requests.get(
@@ -383,4 +388,5 @@ def test_permission(api_headers, api_admin_headers):
     )
     
     assert_status_code(response)
+    logger.debug(response.json()["data"])
     assert response.json()["data"]["totalCount"] > 0
