@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using Aevatar.Core.Abstractions;
 using System;
+using Newtonsoft.Json;
 
 namespace Aevatar;
 
@@ -72,6 +73,7 @@ public class MetricsElasticIndexingService : IIndexingService
         var stopwatch = Stopwatch.StartNew();
         try
         {
+            _logger.LogInformation("[ES-Bulk] traceId:{traceId} spanId:{spanId} data: {data}", activity?.TraceId, activity?.SpanId,JsonConvert.SerializeObject(commands));
             await _inner.SaveOrUpdateStateIndexBatchAsync(commands);
             stopwatch.Stop();
             _bulkSuccessCounter.Add(1);

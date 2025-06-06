@@ -10,6 +10,7 @@ using Aevatar.Options;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 using Orleans.Runtime;
 using Volo.Abp.DependencyInjection;
 
@@ -58,7 +59,7 @@ public class AevatarStateProjector : IStateProjector, ISingletonDependency, IDis
             StateBase wrapperState = wrapper.State;
             int version = wrapper.Version;
             
-            _logger.LogDebug("AevatarStateProjector GrainId {GrainId} Version {Version}", grainId.ToString(), version);
+            _logger.LogDebug("AevatarStateProjector GrainId {GrainId} Version {Version} Data1 {Data1} Data2 {Data2}", grainId.ToString(), version, JsonConvert.SerializeObject(state), JsonConvert.SerializeObject(wrapperState));
             
             var command = new SaveStateCommand
             {
