@@ -437,15 +437,11 @@ public class AgentService : ApplicationService, IAgentService
         var subAgentGrainIds = await GetSubAgentGrainIds(agent);
 
         // add parent events and make creator agent child of business agent in order to publish events
-        var children = await agent.GetChildrenAsync();
-        if (children.IsNullOrEmpty())
+        await agent.RegisterAsync(creatorAgent);
+        var parentEventData = await agent.GetAllSubscribedEventsAsync();
+        if (parentEventData != null)
         {
-            await agent.RegisterAsync(creatorAgent);
-            var parentEventData = await agent.GetAllSubscribedEventsAsync();
-            if (parentEventData != null)
-            {
-                allEventsHandled.AddRange(parentEventData);
-            }
+            allEventsHandled.AddRange(parentEventData);
         }
 
         // register sub agent and add their events to parent agent
