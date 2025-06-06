@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Agent;
+using Aevatar.Application.Grains.Agents.TestAgent;
 using Aevatar.Controllers;
 using Aevatar.CQRS.Dto;
 using Aevatar.Permissions;
@@ -11,6 +12,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Orleans;
 
 [Route("api/agent")]
 public class AgentController : AevatarController
@@ -18,14 +20,16 @@ public class AgentController : AevatarController
     private readonly ILogger<AgentController> _logger;
     private readonly IAgentService _agentService;
     private readonly SubscriptionAppService _subscriptionAppService;
+    private readonly IClusterClient _clusterClient;
 
     public AgentController(
         ILogger<AgentController> logger,
         SubscriptionAppService subscriptionAppService,
-        IAgentService agentService)
+        IAgentService agentService, IClusterClient clusterClient)
     {
         _logger = logger;
         _agentService = agentService;
+        _clusterClient = clusterClient;
         _subscriptionAppService = subscriptionAppService;
     }
 
@@ -129,5 +133,15 @@ public class AgentController : AevatarController
     public async Task PublishAsync([FromBody] PublishEventDto input)
     {
         await _subscriptionAppService.PublishEventAsync(input);
+    }
+    
+    [HttpGet("test/{guid}")]
+    public async Task<PermissionAgentState> GetTestAgent(Guid guid)
+    {
+        _logger.LogInformation("Get Agent: {guid}", guid);
+        var agent = _clusterClient.GetGrain<IAgentPermissionTest>(guid);
+        var state = await agent.GetStateAsync();
+        _logger.LogInformation("PermissionAgentState: {State}", JsonConvert.SerializeObject(state));
+        return state;
     }
 }
