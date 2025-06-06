@@ -63,6 +63,7 @@ IHostBuilder builder = Host.CreateDefaultBuilder(args)
     })
     .ConfigureLogging(logging => logging.AddConsole())
     .UseConsoleLifetime();
+
 using IHost host = builder.Build();
 await host.StartAsync();
 
@@ -229,7 +230,7 @@ Console.WriteLine($"Broadcasting event with Number = {eventNumber}");
 await pubAgent.BroadCastEventAsync("TestDbScheduleGAgent", TestDbEvent);
 
 // Wait for the event to be processed
-await Task.Delay(1000);
+await Task.Delay(5000);
 
 var count = 0;
 for (var i = 0; i < subscriberCount; ++i)
