@@ -189,10 +189,43 @@ public class GodGPTController : AevatarController
 
     [AllowAnonymous]
     [HttpGet("godgpt/session-info/{sessionId}")]
-    public async Task<Aevatar.Quantum.SessionCreationInfoDto?> GetSessionCreationInfoAsync(Guid sessionId)
+    public async Task<Aevatar.Quantum.SessionCreationInfoDto?> GetSessionCreationInfoAsync(Guid sessionId, [FromQuery] string? shareId = null)
     {
         var stopwatch = Stopwatch.StartNew();
-        var currentUserId = (Guid)CurrentUser.Id!;
+        Guid currentUserId;
+        
+        // Check if shareId is provided
+        if (!string.IsNullOrWhiteSpace(shareId))
+        {
+            try
+            {
+                // Extract userId from shareId using GuidCompressor
+                (currentUserId, var extractedSessionId, var extractedShareId) = GuidCompressor.DecompressGuids(shareId);
+                
+                // Validate that the sessionId matches
+                if (extractedSessionId != sessionId)
+                {
+                    _logger.LogWarning("[GodGPTController][GetSessionCreationInfoAsync] SessionId mismatch. URL sessionId: {0}, extracted sessionId: {1}", 
+                        sessionId, extractedSessionId);
+                    return new Aevatar.Quantum.SessionCreationInfoDto();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[GodGPTController][GetSessionCreationInfoAsync] Failed to decompress shareId: {0}", shareId);
+                return new Aevatar.Quantum.SessionCreationInfoDto();
+            }
+        }
+        else
+        {
+            // Regular sessionId format - requires authentication
+            if (CurrentUser?.Id == null)
+            {
+                _logger.LogWarning("[GodGPTController][GetSessionCreationInfoAsync] Authentication required for regular sessionId access");
+                return new Aevatar.Quantum.SessionCreationInfoDto();
+            }
+            currentUserId = (Guid)CurrentUser.Id!;
+        }
         
         // Validate sessionId format (Guid validation is automatic by ASP.NET Core)
         if (sessionId == Guid.Empty)
@@ -202,8 +235,8 @@ public class GodGPTController : AevatarController
         }
 
         var sessionInfo = await _godGptService.GetSessionCreationInfoAsync(currentUserId, sessionId);
-        _logger.LogDebug("[GodGPTController][GetSessionCreationInfoAsync] sessionId: {0}, found: {1}, duration: {2}ms",
-            sessionId, sessionInfo != null, stopwatch.ElapsedMilliseconds);
+        _logger.LogDebug("[GodGPTController][GetSessionCreationInfoAsync] sessionId: {0}, userId: {1}, found: {2}, duration: {3}ms",
+            sessionId, currentUserId, sessionInfo != null, stopwatch.ElapsedMilliseconds);
         
         return sessionInfo;
     }
