@@ -1,7 +1,9 @@
 name: Run Aevatar Station Regression Test on Ephemeral Test Environment
 
 on:
-  workflow_dispatch
+  workflow_dispatch:
+  pull_request_review:
+    types: [submitted]
 
 run-name: Run Aevatar Station Regression Test on Ephemeral Test Environment on ${{ github.ref_name }} from ${{ github.sha }}
 
@@ -16,7 +18,54 @@ env:
   DOTNET_INSTALL_DIR: "./.dotnet"
 
 jobs:
+  approval-count:
+    if: github.event.review.state == 'approved' || github.event_name == 'workflow_dispatch'
+    runs-on: ephemeral-env-runner
+    outputs:
+      approved_enough: ${{ steps.check.outputs.approved_enough }}
+    steps:
+      - name: Install GitHub CLI
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Skip Install GitHub CLI"
+            exit 0
+          fi
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt update
+          sudo apt install gh -y
+      - name: Check Approve Count
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Skip approval count check"
+            exit 0
+          fi
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          REPO=${{ github.repository }}
+          OWNER=$(echo "$REPO" | cut -d'/' -f1)
+          REPO_NAME=$(echo "$REPO" | cut -d'/' -f2)
+          gh pr view $PR_NUMBER -R $REPO --json reviews > reviews.json
+          jq '[.reviews | group_by(.author.login) | map(.[-1]) | map(select(.state=="APPROVED")) | .[].author.login] | unique' reviews.json > approved_users.json
+          APPROVED_COUNT=0
+          for user in $(jq -r '.[]' approved_users.json); do
+            PERM=$(gh api repos/$OWNER/$REPO_NAME/collaborators/$user/permission --jq '.permission')
+            if [[ "$PERM" == "admin" || "$PERM" == "write" ]]; then
+              APPROVED_COUNT=$((APPROVED_COUNT+1))
+            fi
+          done
+          echo "Approve count: $APPROVED_COUNT"
+          if [ "$APPROVED_COUNT" -eq 1 ]; then
+            echo "approved_enough=true" >> $GITHUB_OUTPUT
+          else
+            echo "approved_enough=false" >> $GITHUB_OUTPUT
+          fi
+
   publish:
+    if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
+    needs: approval-count
     runs-on: ephemeral-env-runner
     strategy:
       matrix:
@@ -56,6 +105,7 @@ jobs:
           retention-days: 1
 
   build-and-push-image:
+    if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
     needs: publish
     runs-on: ephemeral-env-runner
     strategy:
@@ -106,6 +156,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
   setup-ephermeral-test-env:
+    if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ephemeral-env-runner
     needs: build-and-push-image
     outputs:
@@ -229,6 +280,7 @@ jobs:
           echo "- **APP URL**: \`${{ steps.extract.outputs.app_url }}\`" >> $GITHUB_STEP_SUMMARY
 
   run-regression-test:
+    if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
     needs: setup-ephermeral-test-env 
     runs-on: ephemeral-env-runner
     env:
