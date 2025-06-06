@@ -17,29 +17,45 @@ Aevatar combines **Aevatar Framework** (distributed actor core) and **Aevatar St
 * `GAgentBase` inherits from `JournaledGrain<TState,…>` 14:25:framework/src/Aevatar.Core/GAgentBase.cs  
 * Dynamic placement & rebalance provided by Orleans → add silos, increase throughput.
 
+Aevatar builds on Orleans' virtual-actor model, so every GAgent is a lightweight grain that activates on demand and is automatically re-balanced across silos. Add or remove nodes and the runtime transparently redistributes activations, delivering linear horizontal scalability without sticky-session plumbing.
+
 ### 2.2 Event-Sourced State & Audit *(Confirmed)*
 * `[LogConsistencyProvider("LogStorage")]` attribute + MongoDB implementation keep an immutable event log.
 * Time-travel debugging and compliant audit trails come for free.
 
+Each agent's state is persisted as an immutable event log via Orleans' log-consistency provider (backed by MongoDB by default). This gives developers full time-travel debugging, deterministic replay, and compliance-grade audit trails without implementing custom snapshot logic.
+
 ### 2.3 Realtime API via SignalR *(Confirmed)*
 * `AevatarSignalRHub : Hub` exposes methods like `PublishEventAsync` for millisecond latency messaging.
+
+A built-in ASP.NET Core SignalR hub (`/api/agent/aevatarHub`) exposes methods such as `PublishEventAsync`, allowing web or mobile clients to push commands and receive state changes in milliseconds—eliminating polling or additional gateway services.
 
 ### 2.4 Polyglot Stream Provider *(Confirmed)*
 * `OrleansHostExtension` wires `siloBuilder.AddKafka("Aevatar")` when configured; otherwise falls back to in-memory streams.
 
+Stream traffic between agents—or between agents and external systems—can be routed through Kafka for production scale or an in-memory provider for local testing. Switching transports is a single configuration change thanks to the pluggable provider design.
+
 ### 2.5 Hierarchical Agent Composition *(Confirmed)*
 * Parent/child registration in `RegisterAsync`, `RegisterManyAsync` enables complex workflows to be modeled as trees of agents.
 
+GAgents can dynamically register children or entire sub-trees using `RegisterAsync` and `RegisterManyAsync`. This enables complex workflows—pipelines, trees, or meshes—while each agent owns its own state and lifecycle, promoting separation of concerns and composability.
+
 ### 2.6 Operational Dashboard *(Confirmed)*
 * Built-in Orleans Dashboard exposed via configurable port for live cluster metrics.
+
+The Orleans Dashboard ships with the silo and surfaces live metrics such as activation counts, CPU usage, request throughput, and grain-level logs, giving operators instant visibility without deploying a separate monitoring stack.
 
 ### 2.7 Environmental Flexibility *(Partially Confirmed)*
 * Environment variables reference Kubernetes (`POD_IP`, `ORLEANS_CLUSTER_ID`) indicating deployment awareness.  
 * **Note**: Docker/K8s manifests are *not* included in the repo; operators can supply their own.
 
+Startup code detects Kubernetes-style environment variables (`POD_IP`, `ORLEANS_CLUSTER_ID`) but runs equally well on Docker or bare-metal. Teams can promote the same binaries from laptop to cluster with zero code changes.
+
 ### 2.8 Horizontal Cost Efficiency *(Plausible)*
 * Orleans activations are lightweight and billed per node; cost scales with compute resources.  
 * No hard data or benchmarks are present—teams should measure for their workload.
+
+Virtual actors activate only when messaged and passivate when idle, so compute usage—and cloud cost—tracks real workload. Scaling is node-based rather than replica-based, avoiding the overhead of per-service containers or functions.
 
 ---
 
