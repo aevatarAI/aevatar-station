@@ -4,6 +4,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Aevatar.Silo.Extensions;
 using Aevatar.Silo.Observability;
 using Serilog;
+using Autofac;
+using Autofac.Extensions.DependencyInjection;
+using System.Linq;
 
 namespace Aevatar.Silo;
 
@@ -54,7 +57,7 @@ public class Program
                 services.AddApplication<SiloModule>();
             })
             .UseOrleansConfiguration()
-            .UseAutofac()
+            .UseServiceProviderFactory(new DiagnosticAutofacServiceProviderFactory())
             .UseSerilog()
             .ConfigureServices((context, services) =>
             {
