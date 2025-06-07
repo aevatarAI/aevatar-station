@@ -212,7 +212,7 @@ public static class OrleansHostExtension
                         options.SiloName = $"{siloNamePattern}-{Guid.NewGuid().ToString("N").Substring(0, 6)}";                        
                     }).Configure<OrleansJsonSerializerOptions>(options =>
                     {
-                        options.JsonSerializerSettings.DefaultValueHandling = DefaultValueHandling.Include;
+                        options.JsonSerializerSettings.DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate;
                     });
 
                 var eventSourcingProvider = configuration.GetSection("OrleansEventSourcing:Provider").Get<string>();
