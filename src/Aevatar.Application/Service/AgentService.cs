@@ -20,6 +20,8 @@ using Aevatar.Schema;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
+using NJsonSchema.Validation;
 using Orleans;
 using Orleans.Metadata;
 using Orleans.Runtime;
@@ -197,7 +199,10 @@ public class AgentService : ApplicationService, IAgentService
 
         var config = (ConfigurationBase)actualDto!;
         var schema = _schemaProvider.GetTypeSchema(config.GetType());
-        var validateResponse = schema.Validate(propertiesString);
+        var validateResponse = schema.Validate(propertiesString, new JsonSchemaValidatorSettings
+        {
+            PropertyStringComparer = StringComparer.CurrentCultureIgnoreCase
+        });
         if (validateResponse.Count > 0)
         {
             var validateDic = _schemaProvider.ConvertValidateError(validateResponse);
@@ -222,16 +227,22 @@ public class AgentService : ApplicationService, IAgentService
         {
             UserId = userId,
             AgentType = dto.AgentType,
-            Properties = JsonConvert.SerializeObject(dto.Properties),
             Name = dto.Name
         };
 
         var initializationParam =
             dto.Properties.IsNullOrEmpty() ? string.Empty : JsonConvert.SerializeObject(dto.Properties);
-        var businessAgent = await InitializeBusinessAgent(guid, dto.AgentType, initializationParam);
+        var initialization = await InitializeBusinessAgent(guid, dto.AgentType, initializationParam);
+        var businessAgent = initialization.Item1;
 
         var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
         agentData.BusinessAgentGrainId = businessAgent.GetGrainId();
+        agentData.Properties = JsonConvert.SerializeObject(initialization.Item2, new JsonSerializerSettings
+        {
+            ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+            ContractResolver = new CamelCasePropertyNamesContractResolver()
+        });
+
         await creatorAgent.CreateAgentAsync(agentData);
 
         var resp = new AgentDto
@@ -240,9 +251,18 @@ public class AgentService : ApplicationService, IAgentService
             AgentType = dto.AgentType,
             Name = dto.Name,
             GrainId = businessAgent.GetGrainId(),
-            Properties = dto.Properties,
-            AgentGuid = businessAgent.GetPrimaryKey()
+            Properties = agentData.Properties.IsNullOrWhiteSpace()
+                ? null
+                : JsonConvert.DeserializeObject<Dictionary<string, object>>(agentData.Properties),
+            AgentGuid = businessAgent.GetPrimaryKey(),
+            BusinessAgentGrainId = businessAgent.GetGrainId().ToString()
         };
+        
+        var configuration = await GetAgentConfigurationAsync(businessAgent);
+        if (configuration != null)
+        {
+            resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration.DtoType).ToJson();
+        }
 
         return resp;
     }
@@ -272,6 +292,8 @@ public class AgentService : ApplicationService, IAgentService
                 ? null
                 : JsonConvert.DeserializeObject<Dictionary<string, object>>((string)state["properties"]),
             AgentType = (string)state["agentType"],
+            BusinessAgentGrainId =
+                state.TryGetValue("formattedBusinessAgentGrainId", out var value) ? (string)value : null
         }));
 
         return result;
@@ -292,7 +314,7 @@ public class AgentService : ApplicationService, IAgentService
         }
     }
 
-    private async Task<IGAgent> InitializeBusinessAgent(Guid primaryKey, string agentType,
+    private async Task<Tuple<IGAgent, ConfigurationBase>> InitializeBusinessAgent(Guid primaryKey, string agentType,
         string agentProperties)
     {
         var grainId = GrainId.Create(agentType, GuidUtil.GuidToGrainKey(primaryKey));
@@ -303,9 +325,11 @@ public class AgentService : ApplicationService, IAgentService
         {
             var config = SetupConfigurationData(initializationData, agentProperties);
             await businessAgent.ConfigAsync(config);
+            
+            return new Tuple<IGAgent, ConfigurationBase>(businessAgent, config);
         }
 
-        return businessAgent;
+        return new Tuple<IGAgent, ConfigurationBase>(businessAgent, null);
     }
 
     public async Task<AgentDto> UpdateAgentAsync(Guid guid, UpdateAgentInputDto dto)
@@ -317,6 +341,7 @@ public class AgentService : ApplicationService, IAgentService
 
         var businessAgent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
 
+        string properties = null;
         if (!dto.Properties.IsNullOrEmpty())
         {
             var updatedParam = JsonConvert.SerializeObject(dto.Properties);
@@ -325,10 +350,15 @@ public class AgentService : ApplicationService, IAgentService
             {
                 var config = SetupConfigurationData(configuration, updatedParam);
                 await businessAgent.ConfigAsync(config);
+                properties = JsonConvert.SerializeObject(config, new JsonSerializerSettings
+                {
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                    ContractResolver = new CamelCasePropertyNamesContractResolver()
+                });
                 await creatorAgent.UpdateAgentAsync(new UpdateAgentInput
                 {
                     Name = dto.Name,
-                    Properties = JsonConvert.SerializeObject(dto.Properties)
+                    Properties = properties
                 });
             }
             else
@@ -343,7 +373,10 @@ public class AgentService : ApplicationService, IAgentService
             AgentType = agentState.AgentType,
             Name = dto.Name,
             GrainId = agentState.BusinessAgentGrainId,
-            Properties = dto.Properties
+            Properties = properties.IsNullOrWhiteSpace()
+                ? null
+                : JsonConvert.DeserializeObject<Dictionary<string, object>>(properties),
+            BusinessAgentGrainId = agentState.BusinessAgentGrainId.ToString()
         };
 
         return resp;
@@ -364,7 +397,8 @@ public class AgentService : ApplicationService, IAgentService
             Name = agentState.Name,
             GrainId = agentState.BusinessAgentGrainId,
             Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentState.Properties),
-            AgentGuid = agentState.BusinessAgentGrainId.GetGuidKey()
+            AgentGuid = agentState.BusinessAgentGrainId.GetGuidKey(),
+            BusinessAgentGrainId = agentState.BusinessAgentGrainId.ToString()
         };
 
         var businessAgent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
@@ -403,15 +437,11 @@ public class AgentService : ApplicationService, IAgentService
         var subAgentGrainIds = await GetSubAgentGrainIds(agent);
 
         // add parent events and make creator agent child of business agent in order to publish events
-        var children = await agent.GetChildrenAsync();
-        if (children.IsNullOrEmpty())
+        await agent.RegisterAsync(creatorAgent);
+        var parentEventData = await agent.GetAllSubscribedEventsAsync();
+        if (parentEventData != null)
         {
-            await agent.RegisterAsync(creatorAgent);
-            var parentEventData = await agent.GetAllSubscribedEventsAsync();
-            if (parentEventData != null)
-            {
-                allEventsHandled.AddRange(parentEventData);
-            }
+            allEventsHandled.AddRange(parentEventData);
         }
 
         // register sub agent and add their events to parent agent
