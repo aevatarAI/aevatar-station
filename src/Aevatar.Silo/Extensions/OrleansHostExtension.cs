@@ -12,7 +12,6 @@ using Aevatar.Extensions;
 using Aevatar.PermissionManagement.Extensions;
 using Aevatar.SignalR;
 using Aevatar.Silo.Startup;
-using E2E.Grains;
 using Aevatar.Silo.AgentWarmup.Extensions;
 
 using Microsoft.AspNetCore.SignalR;
