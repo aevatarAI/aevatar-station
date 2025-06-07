@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using NJsonSchema;
 using NJsonSchema.Generation;
 using NJsonSchema.Validation;
@@ -26,6 +27,10 @@ public class SchemaProvider : ISchemaProvider, ISingletonDependency
                 FlattenInheritanceHierarchy = true,
                 GenerateEnumMappingDescription = true,
                 SchemaProcessors ={ new IgnoreSpecificBaseProcessor() }
+            };
+            settings.SerializerOptions = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };
 
             var schemaData = JsonSchema.FromType(type, settings);
