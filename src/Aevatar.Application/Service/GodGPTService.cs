@@ -28,13 +28,14 @@ namespace Aevatar.Service;
 
 public interface IGodGPTService
 {
-    Task<Guid> CreateSessionAsync(Guid userId, string systemLLM, string prompt);
+    Task<Guid> CreateSessionAsync(Guid userId, string systemLLM, string prompt, string? guider = null);
 
     Task<Tuple<string, string>> ChatWithSessionAsync(Guid userId, Guid sessionId, string sysmLLM, string content,
         ExecutionPromptSettings promptSettings = null);
 
     Task<List<SessionInfoDto>> GetSessionListAsync(Guid userId);
     Task<List<ChatMessage>> GetSessionMessageListAsync(Guid userId, Guid sessionId);
+    Task<Aevatar.Quantum.SessionCreationInfoDto?> GetSessionCreationInfoAsync(Guid userId, Guid sessionId);
     Task<Guid> DeleteSessionAsync(Guid userId, Guid sessionId);
     Task<Guid> RenameSessionAsync(Guid userId, Guid sessionId, string title);
 
@@ -76,10 +77,10 @@ public class GodGPTService : ApplicationService, IGodGPTService
         _stripeClient = new StripeClient(_stripeOptions.CurrentValue.SecretKey);
     }
 
-    public async Task<Guid> CreateSessionAsync(Guid userId, string systemLLM, string prompt)
+    public async Task<Guid> CreateSessionAsync(Guid userId, string systemLLM, string prompt, string? guider = null)
     {
         var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
-        return await manager.CreateSessionAsync(systemLLM, prompt);
+        return await manager.CreateSessionAsync(systemLLM, prompt, null, guider);
     }
 
     public async Task<Tuple<string, string>> ChatWithSessionAsync(Guid userId, Guid sessionId, string sysmLLM,
@@ -100,6 +101,25 @@ public class GodGPTService : ApplicationService, IGodGPTService
     {
         var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
         return await manager.GetSessionMessageListAsync(sessionId);
+    }
+
+    public async Task<Aevatar.Quantum.SessionCreationInfoDto?> GetSessionCreationInfoAsync(Guid userId, Guid sessionId)
+    {
+        var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
+        var grainsResult = await manager.GetSessionCreationInfoAsync(sessionId);
+        
+        if (grainsResult != null)
+        {
+            return new Aevatar.Quantum.SessionCreationInfoDto
+            {
+                SessionId = grainsResult.SessionId,
+                Title = grainsResult.Title,
+                CreateAt = grainsResult.CreateAt,
+                Guider = grainsResult.Guider
+            };
+        }
+        
+        return null;
     }
 
     public async Task<Guid> DeleteSessionAsync(Guid userId, Guid sessionId)
