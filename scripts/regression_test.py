@@ -112,6 +112,7 @@ def test_agent_operations(api_headers, test_agent):
     )
     assert_status_code(response)
     assert response.json()["data"]["name"] == AGENT_NAME
+    assert response.json()["data"]["businessAgentGrainId"] == f"{TEST_AGENT}/{test_agent.replace('-', '')}"
 
     # update agent
     update_data = {
@@ -124,6 +125,7 @@ def test_agent_operations(api_headers, test_agent):
     )
     assert_status_code(response)
     assert response.json()["data"]["name"] == AGENT_NAME_MODIFIED
+    assert response.json()["data"]["businessAgentGrainId"] == f"{TEST_AGENT}/{test_agent.replace('-', '')}"
 
     # test my agent list
     time.sleep(3)
