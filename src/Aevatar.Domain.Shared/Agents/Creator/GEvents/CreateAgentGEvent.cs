@@ -14,4 +14,5 @@ public class CreateAgentGEvent : CreatorAgentGEvent
     [Id(4)] public Guid AgentId { get; set; }
     [Id(5)] public string Properties { get; set; }
     [Id(6)] public GrainId BusinessAgentGrainId { get; set; }
+    [Id(7)] public string FormattedBusinessAgentGrainId { get; set; }
 }
