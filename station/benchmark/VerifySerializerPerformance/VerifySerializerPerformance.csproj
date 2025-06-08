@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -21,12 +21,12 @@
     <PackageReference Include="Orleans.Providers.MongoDB" />
     <PackageReference Include="Orleans.Streams.Kafka" />
     <PackageReference Include="Newtonsoft.Json" />
-    <PackageReference Include="Aevatar" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
-    <ProjectReference Include="..\..\src\E2E.Grains\E2E.Grains.csproj" />
+    <ProjectReference Include="..\..\samples\E2E.Grains\E2E.Grains.csproj" />
+    <ProjectReference Include="..\..\..\framework\src\Aevatar\Aevatar.csproj" />
+    <ProjectReference Include="..\..\..\framework\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
   </ItemGroup>
 
 </Project> 

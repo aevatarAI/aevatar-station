@@ -39,4 +39,9 @@
         <ProjectReference Include="..\Aevatar.MongoDB\Aevatar.MongoDB.csproj" />
     </ItemGroup>
    
+    <ItemGroup>
+        <Content Include="../../configurations/appsettings.Shared.json" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" Link="appsettings.Shared.json" />
+        <Content Include="../../configurations/appsettings.HttpApi.Host.Shared.json" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" Link="appsettings.HttpApi.Host.Shared.json" />
+    </ItemGroup>
+   
 </Project>

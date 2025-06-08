@@ -24,6 +24,7 @@
         <PackageReference Include="Google.Apis.Auth" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
         <PackageReference Include="Microsoft.Orleans.Core" />
+        <PackageReference Include="Octokit" />
         <PackageReference Include="Serilog" />
         <PackageReference Include="Serilog.Extensions.Hosting" />
         <PackageReference Include="Serilog.Formatting.Compact" />

@@ -83,6 +83,7 @@ public class AevatarAuthServerModule : AbpModule
                 openIddictServerOptions.GrantTypes.Add(GrantTypeConstants.SIGNATURE);
                 openIddictServerOptions.GrantTypes.Add(GrantTypeConstants.GOOGLE);
                 openIddictServerOptions.GrantTypes.Add(GrantTypeConstants.APPLE);
+                openIddictServerOptions.GrantTypes.Add(GrantTypeConstants.Github);
             });
         });
     }
@@ -106,6 +107,9 @@ public class AevatarAuthServerModule : AbpModule
             options.Grants.Add(GrantTypeConstants.APPLE, 
                 new AppleGrantHandler(context.Services.GetRequiredService<IConfiguration>(), 
                     context.Services.GetRequiredService<ILogger<AppleGrantHandler>>()));
+            options.Grants.Add(GrantTypeConstants.Github, 
+                new GithubGrantHandler(context.Services.GetRequiredService<IConfiguration>(), 
+                    context.Services.GetRequiredService<ILogger<GithubGrantHandler>>()));
         });
 
         Configure<AbpLocalizationOptions>(options =>
