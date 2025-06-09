@@ -48,6 +48,7 @@ public class AevatarDeveloperHostModule : AbpModule
         context.Services.AddHealthChecks();
         context.Services.AddAutoResponseWrapper();
         var configuration = context.Services.GetConfiguration();
+        var hostingEnvironment = context.Services.GetHostingEnvironment();
         ConfigureAuthentication(context, configuration);
         ConfigureVirtualFileSystem(context);
         ConfigureCors(context, configuration);
@@ -55,6 +56,7 @@ public class AevatarDeveloperHostModule : AbpModule
         Configure<GoogleLoginOptions>(configuration.GetSection("GoogleLogin"));
         context.Services.AddMvc(options => { options.Filters.Add(new IgnoreAntiforgeryTokenAttribute()); })
             .AddNewtonsoftJson();
+        ConfigureDataProtection(context, configuration, hostingEnvironment);
     }
     
     private void ConfigureDataProtection(
