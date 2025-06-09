@@ -25,6 +25,7 @@
 | F005 | Improve OrleansHostExtension unit tests | ✅ | High | dev | 3e:58:e5:c6:ab:31 | 100% | ✓ | ✓ | Fixed StateProjectionInitializer registration tests |
 | F006 | Grain Warmup System | ✅ | High | feature/grain-warmup | 3e:58:e5:c6:ab:30 | 95% | ✓ | ✓ | Complete grain warmup system with E2E tests, MongoDB rate limiting, progressive batching |
 | F007 | Upgrade pod template | 🚧 | High | feature/upgrade-pod-template | 42:82:57:47:65:d3 | - | - | - | 新增功能：支持pod模板升级 |
+| F008 | Agent Warmup Unit Tests Implementation | ✅ | High | feature/agent-warmup-unit-tests | 3e:58:e5:c6:ab:31 | 100% | ✓ | ✓ | Implemented comprehensive unit tests for SampleBasedAgentWarmupStrategy - 30 tests covering all aspects with 100% pass rate |
 
 ## Technical Debt & Refactoring
 
