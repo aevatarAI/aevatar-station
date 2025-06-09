@@ -1,4 +1,5 @@
 using Aevatar.AuthServer.Grants;
+using System.Text;
 using Aevatar.Localization;
 using Aevatar.MongoDB;
 using Aevatar.OpenIddict;
@@ -6,6 +7,7 @@ using Aevatar.Options;
 using Localization.Resources.AbpUi;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 using Volo.Abp;
 using Volo.Abp.Account;
 using Volo.Abp.Account.Web;
@@ -76,6 +78,11 @@ public class AevatarAuthServerModule : AbpModule
                 options.AddAudiences("Aevatar");
                 options.UseLocalServer();
                 options.UseAspNetCore();
+                if (!string.IsNullOrEmpty(configuration["StringEncryption:DefaultPassPhrase"]))
+                {
+                    options.AddSigningKey(new SymmetricSecurityKey(
+                        Encoding.ASCII.GetBytes(configuration["StringEncryption:DefaultPassPhrase"])));
+                }
             });
         });
 
