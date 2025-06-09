@@ -1,0 +1,272 @@
+# GodGPT订阅系统功能需求梳理 - API层改造
+
+## 概述
+当前系统中基于Stripe的订阅功能梳理，包含查看订阅类型、发起订阅、取消订阅、以及对话限频逻辑等核心功能。
+
+**🔥 新增需求**: 在现有Standard订阅基础上，新增Ultimate订阅模式，提供无限对话访问权限。
+
+## 职责边界明确
+
+### ✅ **Aevatar.Developer.Host 项目职责** (我们的范围)
+- API接口层实现
+- HTTP请求接收和响应
+- 参数验证和传递  
+- 错误处理和状态码返回
+- 路由和控制器管理
+- **新增**: 支持Ultimate PlanType枚举值 (5, 6, 7)
+
+### 🔄 **GodGPT.GAgents 包职责** (下游依赖)
+- 订阅时间长度计算和管理
+- 双订阅状态处理
+- 时间冻结/累积逻辑
+- Ultimate权限检测 (内置在IsActionAllowedAsync/ExecuteActionAsync中)
+- Orleans Grain状态管理
+
+## 1. 查看订阅类型相关接口
+
+### 1.1 获取Stripe产品列表
+**接口路径**: `GET /api/godgpt/payment/products`
+**控制器**: `GodGPTPaymentController.GetStripeProductsAsync()`
+**服务调用**: `IGodGPTService.GetStripeProductsAsync()`
+
+**🆕 Ultimate改造需求**:
+- ✅ 确保接口能正确返回Ultimate订阅产品
+- ✅ 验证新的PlanType值在API响应中正确显示:
+  ```csharp
+  WeekUltimate = 5     // 周Ultimate订阅
+  MonthUltimate = 6    // 月Ultimate订阅  
+  YearUltimate = 7     // 年Ultimate订阅
+  ```
+- ✅ 保持现有API响应格式不变
+
+**我们的具体任务**:
+```csharp
+// 确保这个调用继续工作，支持Ultimate产品
+var productDtos = await _godGptService.GetStripeProductsAsync(currentUserId);
+return productDtos; // 应该包含Ultimate产品，PlanType为5,6,7
+```
+
+### 1.2 获取客户信息
+**接口路径**: `POST /api/godgpt/payment/customer`
+**控制器**: `GodGPTPaymentController.GetStripeCustomerAsync()`
+
+**🆕 Ultimate改造需求**:
+- ✅ 确保接口能返回用户的订阅状态（包括Ultimate）
+- ✅ 验证双订阅状态的正确显示
+
+## 2. Web端和App端发起订阅接口
+
+### 2.1 创建结账会话
+**接口路径**: `POST /api/godgpt/payment/create-checkout-session`
+**控制器**: `GodGPTPaymentController.CreateCheckoutSessionAsync()`
+
+**我们的任务**:
+```csharp
+// 确保Ultimate PriceId能正确传递给下游
+var result = await _godGptService.CreateCheckoutSessionAsync(currentUserId, createCheckoutSessionInput);
+```
+
+**🆕 Ultimate改造验证**:
+- ✅ Ultimate产品的PriceId能正确接收
+- ✅ `CreateCheckoutSessionInput.PriceId` 支持Ultimate产品
+- ✅ 参数验证正常工作
+- ✅ 错误处理保持一致
+
+### 2.2 直接创建订阅
+**接口路径**: `POST /api/godgpt/payment/create-subscription`
+**控制器**: `GodGPTPaymentController.CreateSubscriptionAsync()`
+
+**我们的任务**:
+```csharp
+// 确保Ultimate订阅创建请求正确传递
+var responseDto = await _godGptService.CreateSubscriptionAsync(currentUserId, input);
+return responseDto;
+```
+
+**🆕 Ultimate改造验证**:
+- ✅ `CreateSubscriptionInput.PriceId` 支持Ultimate产品的PriceId
+- ✅ DevicePlatform字段支持Ultimate订阅
+- ✅ 返回响应格式保持一致
+
+## 3. 取消订阅相关接口
+
+### 3.1 取消订阅
+**接口路径**: `POST /api/godgpt/payment/cancel-subscription`
+**控制器**: `GodGPTPaymentController.CancelSubscriptionAsync()`
+
+**我们的任务**:
+```csharp
+// 确保取消请求正确传递，下游自动处理Ultimate/Standard识别
+var cancelSubscription = await _godGptService.CancelSubscriptionAsync(currentUserId, input);
+return cancelSubscription;
+```
+
+**🆕 Ultimate改造验证**:
+- ✅ 取消Ultimate订阅的请求正确处理
+- ✅ 错误响应格式保持一致
+- ✅ 状态码正确返回
+
+### 3.2 获取支付历史
+**接口路径**: `GET /api/godgpt/payment/list`
+
+**🆕 Ultimate改造验证**:
+- ✅ Ultimate订阅的支付记录正确显示
+- ✅ 分页功能正常工作
+
+## 4. 对话限频逻辑 - 无需API层修改
+
+### 4.1 限频中间件 - 无需修改
+**实现位置**: `ChatMiddleware.InvokeAsync()`
+**路径匹配**: `/api/gotgpt/chat`
+
+**✅ Ultimate改造结论**:
+基于GodGPT.GAgents的实现逻辑，Ultimate权限检查已经内置在下游业务逻辑中：
+
+```
+用户请求 → IsActionAllowedAsync() → HasUnlimitedAccessAsync() (内置)
+           ↓
+      ExecuteActionAsync() → HasUnlimitedAccessAsync() (内置)
+```
+
+**我们的中间件无需修改**:
+- ✅ Ultimate用户会自动走快速路径
+- ✅ Standard用户继续应用现有限制
+- ✅ 错误处理保持一致
+
+## 5. Webhook事件处理
+
+### 5.1 Stripe Webhook
+**接口路径**: `POST /api/godgpt/payment/webhook`
+**控制器**: `GodGPTPaymentController.Webhook()`
+
+**🆕 Ultimate改造验证**:
+- ✅ Ultimate订阅的Webhook事件正确处理
+- ✅ 现有事件处理逻辑无破坏性变更
+- ✅ 用户ID提取逻辑正常工作
+
+**我们的任务**:
+```csharp
+// 确保现有Webhook处理继续工作，下游自动处理Ultimate事件
+var result = await _godGptService.HandleStripeWebhookEventAsync(userId, json, Request.Headers["Stripe-Signature"]);
+```
+
+## 6. 不需要新增的接口
+
+### 6.1 HasUnlimitedAccessAsync 不需要单独暴露
+根据GodGPT.GAgents的实现逻辑，Ultimate权限检查已经内置在：
+- `IsActionAllowedAsync()` - 对话权限检查时自动判断Ultimate
+- `ExecuteActionAsync()` - 执行动作时自动跳过Ultimate用户的扣费
+
+**我们的API层无需单独调用**，继续使用现有的业务接口即可。
+
+## 7. 配置更新需求
+
+### 7.1 Stripe配置
+需要确保配置支持Ultimate产品：
+
+```json
+{
+  "Stripe": {
+    "Products": [
+      {
+        "PlanType": 6,
+        "PriceId": "price_month_ultimate",
+        "Mode": "subscription", 
+        "Amount": 19.99,
+        "Currency": "USD"
+      }
+    ]
+  }
+}
+```
+
+## 8. 支持的PlanType枚举值
+
+### 8.1 API层需要支持的新枚举值
+我们的API需要能够接收和传递以下新的PlanType值：
+
+```csharp
+// 现有值保持不变
+None = 0,            // 无订阅
+Day = 1,            // 历史兼容 - 按7天处理  
+Month = 2,          // 月订阅
+Year = 3,           // 年订阅
+Week = 4,           // 周订阅
+
+// 新增Ultimate枚举值
+WeekUltimate = 5,   // 周Ultimate订阅
+MonthUltimate = 6,  // 月Ultimate订阅  
+YearUltimate = 7    // 年Ultimate订阅
+```
+
+**验证要点**:
+- ✅ API能正确接收PlanType值5,6,7
+- ✅ 响应中正确显示Ultimate枚举值
+- ✅ 参数验证支持新枚举值
+
+## 9. 测试验证清单
+
+### 9.1 API接口测试
+- ✅ Ultimate产品在产品列表中正确显示 (PlanType 5,6,7)
+- ✅ Ultimate订阅创建流程端到端工作
+- ✅ Ultimate订阅取消流程正常
+- ✅ Ultimate用户对话不受限制 (下游自动处理)
+- ✅ Standard用户体验无变化
+- ✅ Webhook事件正确处理
+
+### 9.2 参数验证测试
+- ✅ CreateSubscriptionInput支持Ultimate PriceId
+- ✅ CreateCheckoutSessionInput支持Ultimate PriceId
+- ✅ PlanType枚举值5,6,7正确处理
+
+### 9.3 错误处理测试
+- ✅ 无效Ultimate PriceId正确返回错误
+- ✅ 支付失败错误正确处理
+- ✅ 网络异常错误响应正确
+
+### 9.4 向后兼容性测试
+- ✅ 现有Standard订阅功能无影响
+- ✅ 现有API调用方式无需改变
+- ✅ 历史数据正确处理
+
+## 10. 部署检查清单
+
+### 10.1 依赖更新
+- ✅ 确保引用最新版本的GodGPT.GAgents包
+- ✅ 验证包版本兼容性
+- ✅ 检查是否有破坏性变更
+
+### 10.2 配置更新
+- ✅ 更新Stripe产品配置，添加Ultimate产品
+- ✅ 确认webhook配置无需变更
+- ✅ 验证环境变量正确
+
+### 10.3 监控设置
+- ✅ 添加Ultimate订阅相关的监控指标
+- ✅ 设置关键API的成功率监控
+- ✅ 配置异常告警
+
+## 总结
+
+基于职责边界重新梳理，我们的核心任务精简为：
+
+### 🎯 **我们的关注重点**
+1. **参数支持** - 确保正确接收和传递Ultimate相关参数 (PlanType 5,6,7)
+2. **参数验证** - 验证新的PlanType和Ultimate PriceId
+3. **错误处理** - 保持一致的错误响应格式
+4. **配置管理** - 支持Ultimate产品配置
+5. **集成测试** - 验证端到端流程正常工作
+
+### 🔄 **完全依赖下游处理**
+- 订阅时间计算和管理
+- 双订阅状态逻辑
+- Ultimate权限检测 (内置在IsActionAllowedAsync/ExecuteActionAsync)
+- 限频逻辑的具体实现
+
+### ✅ **无需修改的部分**
+- 中间件 (ChatMiddleware)
+- 现有业务接口
+- 错误处理逻辑
+- Webhook处理逻辑
+
+这样的职责分工使我们能够专注于API层面的参数传递和格式兼容，而将所有Ultimate业务逻辑交给专门的GodGPT.GAgents包自动处理。
