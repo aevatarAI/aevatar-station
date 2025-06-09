@@ -77,7 +77,7 @@ public class AevatarAuthServerModule : AbpModule
                 options.UseAspNetCore();
             });
         });
-        
+
         //add signature grant type
         PreConfigure<OpenIddictServerBuilder>(builder =>
         {
@@ -133,18 +133,15 @@ public class AevatarAuthServerModule : AbpModule
         {
             options.StyleBundles.Configure(
                 LeptonXLiteThemeBundles.Styles.Global,
-                bundle =>
-                {
-                    bundle.AddFiles("/global-styles.css");
-                }
+                bundle => { bundle.AddFiles("/global-styles.css"); }
             );
         });
 
         Configure<AbpAuditingOptions>(options =>
         {
-                //options.IsEnabledForGetRequests = true;
-                options.ApplicationName = "AuthServer";
-                options.IsEnabled = false;//Disables the auditing system
+            //options.IsEnabledForGetRequests = true;
+            options.ApplicationName = "AuthServer";
+            options.IsEnabled = false; //Disables the auditing system
         });
 
         Configure<AppUrlOptions>(options =>
@@ -155,27 +152,19 @@ public class AevatarAuthServerModule : AbpModule
             options.Applications["Angular"].Urls[AccountUrlNames.PasswordReset] = "account/reset-password";
         });
 
-        Configure<AbpBackgroundJobOptions>(options =>
-        {
-            options.IsJobExecutionEnabled = false;
-        });
+        Configure<AbpBackgroundJobOptions>(options => { options.IsJobExecutionEnabled = false; });
 
-        Configure<AbpDistributedCacheOptions>(options =>
-        {
-            options.KeyPrefix = "Aevatar:";
-        });
-      
-        var dataProtectionBuilder = context.Services.AddDataProtection().SetApplicationName("AevatarAuthServer");
+        Configure<AbpDistributedCacheOptions>(options => { options.KeyPrefix = "Aevatar:"; });
+
+        var dataProtectionBuilder = context.Services.AddDataProtection().SetApplicationName("AevatarAuthServer")
+            .DisableAutomaticKeyGeneration();
         var redisConfig = configuration["Redis:Configuration"];
         var redis = ConnectionMultiplexer.Connect(redisConfig);
         dataProtectionBuilder.PersistKeysToStackExchangeRedis(redis, "Aevatar-DataProtection-Keys");
-        
+
         context.Services.AddHealthChecks();
-        
-        Configure<MvcOptions>(options =>
-        {
-            options.Conventions.Add(new ApplicationDescription());
-        });
+
+        Configure<MvcOptions>(options => { options.Conventions.Add(new ApplicationDescription()); });
     }
 
     public override void OnApplicationInitialization(ApplicationInitializationContext context)
@@ -194,7 +183,7 @@ public class AevatarAuthServerModule : AbpModule
         {
             app.UseErrorPage();
         }
-        
+
         app.UseHealthChecks("/health");
 
         app.UseCorrelationId();
@@ -204,7 +193,7 @@ public class AevatarAuthServerModule : AbpModule
         app.UseAbpOpenIddictValidation();
 
         //app.UseMultiTenancy();
-        
+
         app.UseUnitOfWork();
         app.UseAuthorization();
         app.UseAuditing();
