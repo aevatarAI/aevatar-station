@@ -62,6 +62,7 @@ public class AevatarAuthServerModule : AbpModule
                 options.UseAspNetCore().DisableTransportSecurityRequirement();
                 options.SetIssuer(new Uri(configuration["AuthServer:IssuerUri"]!));
                 // options.IgnoreGrantTypePermissions();
+                options.SetRefreshTokenLifetime(TimeSpan.FromDays(30));
                 int.TryParse(configuration["ExpirationHour"], out int expirationHour);
                 if (expirationHour > 0)
                 {
@@ -162,12 +163,11 @@ public class AevatarAuthServerModule : AbpModule
         Configure<AbpBackgroundJobOptions>(options => { options.IsJobExecutionEnabled = false; });
 
         Configure<AbpDistributedCacheOptions>(options => { options.KeyPrefix = "Aevatar:"; });
-
-        var dataProtectionBuilder = context.Services.AddDataProtection().SetApplicationName("AevatarAuthServer")
-            .DisableAutomaticKeyGeneration();
-        var redisConfig = configuration["Redis:Configuration"];
-        var redis = ConnectionMultiplexer.Connect(redisConfig);
-        dataProtectionBuilder.PersistKeysToStackExchangeRedis(redis, "Aevatar-DataProtection-Keys");
+        var redis = ConnectionMultiplexer.Connect(configuration["Redis:Configuration"]);
+        context.Services
+            .AddDataProtection()
+            .PersistKeysToStackExchangeRedis(redis, "Aevatar-DataProtection-Keys")
+            .SetApplicationName("AevatarAuthServer");
 
         context.Services.AddHealthChecks();
 
