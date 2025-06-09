@@ -64,11 +64,11 @@ public class AevatarDeveloperHostModule : AbpModule
         IConfiguration configuration,
         IWebHostEnvironment hostingEnvironment)
     {
-        var dataProtectionBuilder = context.Services.AddDataProtection().SetApplicationName("AeFinder");
+        var dataProtectionBuilder = context.Services.AddDataProtection().SetApplicationName("AevatarAuthServer");
         if (!hostingEnvironment.IsDevelopment())
         {
             var redis = ConnectionMultiplexer.Connect(configuration["Redis:Configuration"]);
-            dataProtectionBuilder.PersistKeysToStackExchangeRedis(redis, "Aevatar-Protection-Keys");
+            dataProtectionBuilder.PersistKeysToStackExchangeRedis(redis, "Aevatar-DataProtection-Keys");
         }
     }
 
