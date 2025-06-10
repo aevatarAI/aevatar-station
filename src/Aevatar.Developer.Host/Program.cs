@@ -40,7 +40,7 @@ public class Program
             Log.Information("Starting Developer.Host.");
             var builder = WebApplication.CreateBuilder(args);
             builder.Host
-                .UseOrleansClientConfigration()
+               // .UseOrleansClientConfigration()
                 .ConfigureDefaults(args)
                 .UseAutofac()
                 .UseSerilog();
@@ -48,7 +48,7 @@ public class Program
             await builder.AddApplicationAsync<AevatarDeveloperHostModule>();
             var app = builder.Build();
             await app.InitializeApplicationAsync();
-            app.MapHub<AevatarSignalRHub>("api/agent/aevatarHub");
+         //   app.MapHub<AevatarSignalRHub>("api/agent/aevatarHub");
             await app.RunAsync();
             return 0;
         }

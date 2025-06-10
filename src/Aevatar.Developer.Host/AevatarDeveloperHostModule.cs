@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using AElf.OpenTelemetry;
 using Aevatar.MongoDB;
 using Aevatar.Permissions;
@@ -12,6 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Volo.Abp;
 using Volo.Abp.Account.Web;
@@ -60,7 +62,44 @@ public class AevatarDeveloperHostModule : AbpModule
                 options.RequireHttpsMetadata = Convert.ToBoolean(configuration["AuthServer:RequireHttpsMetadata"]);
                 options.Audience = "Aevatar";
                 options.MapInboundClaims = false;
+                
+                // Configure symmetric key validation for tokens signed with HMAC
+                if (!string.IsNullOrEmpty(configuration["StringEncryption:DefaultPassPhrase"]))
+                {
+                    var keyBytes = Convert.FromBase64String(configuration["StringEncryption:DefaultPassPhrase"]);
+                    var signingKey = LoadRsaKey(keyBytes);
+                    
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuerSigningKey = true,
+                        IssuerSigningKey = signingKey,
+                        ValidateIssuer = true,
+                        ValidIssuer = configuration["AuthServer:Authority"],
+                        ValidateAudience = true,
+                        ValidAudience = "Aevatar",
+                        ValidateLifetime = true,
+                        ClockSkew = TimeSpan.FromMinutes(5)
+                    };
+                }
             });
+    }
+
+    private static SecurityKey LoadRsaKey(byte[] keyBytes)
+    {
+        if (keyBytes.Length < 32)
+        {
+            var salt = new byte[] { 0x49, 0x76, 0x61, 0x6e, 0x20, 0x4d, 0x65, 0x64 }; // "Ivan Med"
+            using var pbkdf2 = new Rfc2898DeriveBytes(keyBytes, salt, 10000);
+            keyBytes = pbkdf2.GetBytes(32); // 生成256位密钥
+        }
+        else if (keyBytes.Length > 32)
+        {
+            var truncatedKey = new byte[32];
+            Array.Copy(keyBytes, 0, truncatedKey, 0, 32);
+            keyBytes = truncatedKey;
+        }
+
+        return new SymmetricSecurityKey(keyBytes);
     }
 
     private void ConfigureVirtualFileSystem(ServiceConfigurationContext context)

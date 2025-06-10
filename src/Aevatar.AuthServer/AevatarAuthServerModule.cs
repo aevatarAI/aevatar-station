@@ -70,6 +70,12 @@ public class AevatarAuthServerModule : AbpModule
                 {
                     options.SetAccessTokenLifetime(DateTime.Now.AddHours(expirationHour) - DateTime.Now);
                 }
+
+                if (!string.IsNullOrEmpty(configuration["StringEncryption:DefaultPassPhrase"]))
+                {
+                    var keyBytes = Convert.FromBase64String(configuration["StringEncryption:DefaultPassPhrase"]);
+                    options.AddSigningKey(LoadRsaKey(keyBytes));
+                }
             });
 
             builder.AddValidation(options =>
@@ -77,6 +83,12 @@ public class AevatarAuthServerModule : AbpModule
                 options.AddAudiences("Aevatar");
                 options.UseLocalServer();
                 options.UseAspNetCore();
+
+                if (!string.IsNullOrEmpty(configuration["StringEncryption:DefaultPassPhrase"]))
+                {
+                    var keyBytes = Convert.FromBase64String(configuration["StringEncryption:DefaultPassPhrase"]);
+                    options.AddSigningKey(LoadRsaKey(keyBytes));
+                }
             });
         });
 
@@ -210,5 +222,22 @@ public class AevatarAuthServerModule : AbpModule
         app.UseAbpSerilogEnrichers();
         app.UseConfiguredEndpoints();
     }
-    
+
+    private static SecurityKey LoadRsaKey(byte[] keyBytes)
+    {
+        if (keyBytes.Length < 32)
+        {
+            var salt = new byte[] { 0x49, 0x76, 0x61, 0x6e, 0x20, 0x4d, 0x65, 0x64 }; // "Ivan Med"
+            using var pbkdf2 = new Rfc2898DeriveBytes(keyBytes, salt, 10000);
+            keyBytes = pbkdf2.GetBytes(32); // 生成256位密钥
+        }
+        else if (keyBytes.Length > 32)
+        {
+            var truncatedKey = new byte[32];
+            Array.Copy(keyBytes, 0, truncatedKey, 0, 32);
+            keyBytes = truncatedKey;
+        }
+
+        return new SymmetricSecurityKey(keyBytes);
+    }
 }
