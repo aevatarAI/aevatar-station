@@ -77,6 +77,9 @@ public class AevatarAuthServerModule : AbpModule
                 var encryptionKey = LoadEncryptionKey(configuration);
                 options.AddEncryptionKey(encryptionKey);
                 Console.WriteLine($"[OpenIddict] 🔑 Loaded encryption key ID: {encryptionKey.KeyId}");
+                var signingKey = LoadSigningKey(configuration);
+                options.AddSigningKey(signingKey);
+                Console.WriteLine($"[OpenIddict] ✍️ Loaded signing key ID: {signingKey.KeyId}");
             });
 
             builder.AddValidation(options =>
@@ -245,6 +248,36 @@ public class AevatarAuthServerModule : AbpModule
         catch (Exception ex)
         {
             Console.WriteLine($"[LoadEncryptionKey] ❌ Failed to load encryption key: {ex.Message}");
+            throw;
+        }
+    }
+
+    private static SecurityKey LoadSigningKey(IConfiguration configuration)
+    {
+        try
+        {
+            // 使用StringEncryption:DefaultPassPhrase作为种子生成固定签名密钥
+            var passPhrase = configuration["StringEncryption:DefaultPassPhrase"] ?? "DVb2B8QjyeArjCTY";
+
+            // 生成一个256位的HMAC密钥用于签名
+            using var pbkdf2 = new Rfc2898DeriveBytes(
+                passPhrase,
+                Encoding.UTF8.GetBytes("aevatar-signing-salt"),
+                10000,
+                HashAlgorithmName.SHA256);
+
+            var keyBytes = pbkdf2.GetBytes(32); // 256 bits
+            var key = new SymmetricSecurityKey(keyBytes)
+            {
+                KeyId = "AEVATAR_FIXED_SIGNING_KEY"
+            };
+
+            Console.WriteLine($"[LoadSigningKey] ✓ Generated fixed signing key with ID: {key.KeyId}");
+            return key;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[LoadSigningKey] ❌ Failed to load signing key: {ex.Message}");
             throw;
         }
     }
