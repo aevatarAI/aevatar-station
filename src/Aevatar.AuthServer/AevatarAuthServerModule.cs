@@ -64,6 +64,15 @@ public class AevatarAuthServerModule : AbpModule
             {
                 options.UseAspNetCore().DisableTransportSecurityRequirement();
                 options.SetIssuer(new Uri(configuration["AuthServer:IssuerUri"]!));
+
+                // 配置OpenIddict endpoints
+                options.SetAuthorizationEndpointUris("connect/authorize")
+                    .SetTokenEndpointUris("connect/token")
+                    .SetUserinfoEndpointUris("connect/userinfo")
+                    .SetLogoutEndpointUris("connect/logout")
+                    .SetIntrospectionEndpointUris("connect/introspect")
+                    .SetRevocationEndpointUris("connect/revoke");
+
                 options.AddDevelopmentEncryptionCertificate()
                     .AddDevelopmentSigningCertificate();
 
