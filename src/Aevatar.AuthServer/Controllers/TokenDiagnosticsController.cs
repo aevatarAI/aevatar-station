@@ -11,6 +11,7 @@ using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using Volo.Abp.AspNetCore.Mvc;
 using Volo.Abp.OpenIddict.Applications;
+using Volo.Abp.OpenIddict.Tokens;
 
 namespace Aevatar.AuthServer.Controllers;
 
@@ -20,14 +21,17 @@ public class TokenDiagnosticsController : AbpControllerBase
 {
     private readonly IConfiguration _configuration;
     private readonly IOpenIddictApplicationRepository _applicationRepository;
+    private readonly IOpenIddictTokenRepository _tokenRepository;
     private readonly JwtSecurityTokenHandler _tokenHandler;
 
     public TokenDiagnosticsController(
         IConfiguration configuration,
-        IOpenIddictApplicationRepository applicationRepository)
+        IOpenIddictApplicationRepository applicationRepository,
+        IOpenIddictTokenRepository tokenRepository)
     {
         _configuration = configuration;
         _applicationRepository = applicationRepository;
+        _tokenRepository = tokenRepository;
         _tokenHandler = new JwtSecurityTokenHandler();
     }
 
@@ -47,14 +51,55 @@ public class TokenDiagnosticsController : AbpControllerBase
                 TokenLength = refreshToken.Length,
                 TokenStart = refreshToken.Substring(0, Math.Min(20, refreshToken.Length)) + "..."
             },
-            Step2_DataProtectionTest = await TestDataProtectionDecryption(refreshToken),
-            Step3_IssuerValidation = TestIssuerConfiguration(),
-            Step4_SystemTime = TestSystemTime(),
-            Step5_DatabaseConnection = await TestDatabaseConnection(),
+            Step2_ReferenceTokenTest = await TestReferenceTokenStorage(refreshToken),
+            Step3_DataProtectionTest = await TestDataProtectionDecryption(refreshToken),
+            Step4_IssuerValidation = TestIssuerConfiguration(),
+            Step5_SystemTime = TestSystemTime(),
+            Step6_DatabaseConnection = await TestDatabaseConnection(),
             Recommendations = GetRecommendations()
         };
 
         return Ok(diagnostics);
+    }
+
+    private async Task<object> TestReferenceTokenStorage(string refreshToken)
+    {
+        try
+        {
+            // 尝试通过引用令牌查找数据库中的令牌记录
+            var token = await _tokenRepository.FindByReferenceIdAsync(refreshToken);
+            
+            if (token == null)
+            {
+                return new
+                {
+                    Status = "❌ Failed",
+                    Error = "Reference token not found in database",
+                    Issue = "Token may have been deleted, expired, or created on different server",
+                    ReferenceTokenId = refreshToken,
+                    Recommendation = "Check if token exists in MongoDB collection OpenIddictTokens"
+                };
+            }
+
+            return new
+            {
+                Status = "✓ Success",
+                TokenFound = true,
+                Message = "Reference token found in database",
+                CurrentTime = DateTime.UtcNow,
+                Note = "Token exists in database - this means UseReferenceRefreshTokens() is working"
+            };
+        }
+        catch (Exception ex)
+        {
+            return new
+            {
+                Status = "❌ Failed",
+                Error = ex.Message,
+                Issue = "Database query failed",
+                Recommendation = "Check MongoDB connection and OpenIddict token collection"
+            };
+        }
     }
 
     private async Task<object> TestDataProtectionDecryption(string token)
