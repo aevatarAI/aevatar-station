@@ -74,16 +74,8 @@ public class AevatarAuthServerModule : AbpModule
                     options.SetAccessTokenLifetime(DateTime.Now.AddHours(expirationHour) - DateTime.Now);
                 }
 
-                if (!string.IsNullOrEmpty(configuration["StringEncryption:DefaultPassPhrase"]))
-                {
-                    var keyBytes = Convert.FromBase64String(configuration["StringEncryption:DefaultPassPhrase"]);
-                    var signingKey = CreateSigningKey(keyBytes);
-                    var keyId = Convert.ToBase64String(SHA256.HashData(signingKey.Key))[..8];
-                    Console.WriteLine(
-                        $"[AuthServer] OpenIddict Server Signing Key ID: {keyId}, Key Length: {signingKey.Key.Length * 8} bits");
-
-                    options.AddSigningKey(signingKey);
-                }
+                // 使用引用令牌模式来避免加密问题
+                options.UseReferenceRefreshTokens();
             });
 
             builder.AddValidation(options =>
@@ -92,16 +84,7 @@ public class AevatarAuthServerModule : AbpModule
                 options.UseLocalServer();
                 options.UseAspNetCore();
 
-                if (!string.IsNullOrEmpty(configuration["StringEncryption:DefaultPassPhrase"]))
-                {
-                    var keyBytes = Convert.FromBase64String(configuration["StringEncryption:DefaultPassPhrase"]);
-                    var validationKey = CreateSigningKey(keyBytes);
-                    var validationKeyId = Convert.ToBase64String(SHA256.HashData(validationKey.Key))[..8];
-                    Console.WriteLine(
-                        $"[AuthServer] OpenIddict Validation Signing Key ID: {validationKeyId}, Key Length: {validationKey.Key.Length * 8} bits");
-
-                    options.AddSigningKey(validationKey);
-                }
+                // Validation不需要额外配置，使用Server的配置
             });
         });
 
@@ -234,23 +217,5 @@ public class AevatarAuthServerModule : AbpModule
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();
         app.UseConfiguredEndpoints();
-    }
-
-    private static SymmetricSecurityKey CreateSigningKey(byte[] keyBytes)
-    {
-        if (keyBytes.Length < 32)
-        {
-            var salt = new byte[] { 0x49, 0x76, 0x61, 0x6e, 0x20, 0x4d, 0x65, 0x64 };
-            using var pbkdf2 = new Rfc2898DeriveBytes(keyBytes, salt, 10000, HashAlgorithmName.SHA256);
-            keyBytes = pbkdf2.GetBytes(32);
-        }
-        else if (keyBytes.Length > 32)
-        {
-            var truncatedKey = new byte[32];
-            Array.Copy(keyBytes, 0, truncatedKey, 0, 32);
-            keyBytes = truncatedKey;
-        }
-
-        return new SymmetricSecurityKey(keyBytes);
     }
 }
