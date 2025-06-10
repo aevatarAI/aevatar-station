@@ -74,8 +74,9 @@ public class AevatarAuthServerModule : AbpModule
                     options.SetAccessTokenLifetime(DateTime.Now.AddHours(expirationHour) - DateTime.Now);
                 }
 
-                // 使用引用令牌模式来避免加密问题
-                options.UseReferenceRefreshTokens();
+                var encryptionKey = LoadEncryptionKey(configuration);
+                options.AddEncryptionKey(encryptionKey);
+                Console.WriteLine($"[OpenIddict] 🔑 Loaded encryption key ID: {encryptionKey.KeyId}");
             });
 
             builder.AddValidation(options =>
@@ -217,5 +218,34 @@ public class AevatarAuthServerModule : AbpModule
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();
         app.UseConfiguredEndpoints();
+    }
+
+    private static SecurityKey LoadEncryptionKey(IConfiguration configuration)
+    {
+        try
+        {
+            // 使用StringEncryption:DefaultPassPhrase作为种子生成固定密钥
+            var passPhrase = configuration["StringEncryption:DefaultPassPhrase"] ?? "DVb2B8QjyeArjCTY";
+
+            using var pbkdf2 = new Rfc2898DeriveBytes(
+                passPhrase,
+                Encoding.UTF8.GetBytes("aevatar-openiddict-salt"),
+                10000,
+                HashAlgorithmName.SHA256);
+
+            var keyBytes = pbkdf2.GetBytes(32); // 256 bits
+            var key = new SymmetricSecurityKey(keyBytes)
+            {
+                KeyId = "AEVATAR_FIXED_ENCRYPTION_KEY"
+            };
+
+            Console.WriteLine($"[LoadEncryptionKey] ✓ Generated fixed encryption key with ID: {key.KeyId}");
+            return key;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[LoadEncryptionKey] ❌ Failed to load encryption key: {ex.Message}");
+            throw;
+        }
     }
 }
