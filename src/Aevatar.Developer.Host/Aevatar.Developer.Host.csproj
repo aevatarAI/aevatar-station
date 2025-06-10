@@ -31,6 +31,8 @@
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
         <PackageReference Include="Microsoft.CodeAnalysis.Common" />
         <PackageReference Include="Orleans.Streams.Kafka" />
+        <PackageReference Include="StackExchange.Redis" />
+        <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis"/>
     </ItemGroup>
 
     <ItemGroup>
