@@ -3,7 +3,7 @@ name: Package Staging
 on:
   push:
     branches:
-      - "release/*"
+      - "test/auth-symmetric-key"
 
 run-name: Deploy Aevatar Station on ${{ github.ref }} to Staging from ${{ github.sha }}
 
@@ -21,11 +21,7 @@ jobs:
       matrix:
         servicename:
           [
-            Aevatar.HttpApi.Host,
-            Aevatar.Silo,
-            Aevatar.AuthServer,
-            Aevatar.WebHook.Host,
-            Aevatar.DbMigrator
+            Aevatar.AuthServer
           ]
     steps:
       - name: Checkout code
@@ -62,11 +58,7 @@ jobs:
       matrix:
         servicename:
           [
-            Aevatar.HttpApi.Host,
-            Aevatar.Silo,
-            Aevatar.AuthServer,
-            Aevatar.WebHook.Host,
-            Aevatar.DbMigrator
+            Aevatar.AuthServer
           ]
     permissions:
       contents: read
@@ -117,10 +109,10 @@ jobs:
             await github.rest.actions.createWorkflowDispatch({
               owner: 'AElfDevops',
               repo: 'devops',
-              workflow_id: 'aevatar-station-deploy.yaml',
+              workflow_id: 'aevatar-station-deploy-pre.yaml',
               ref: 'main',
               inputs: {
-                env: 'staging',
+                env: 'pre-staging',
                 commit_sha: 'sha-${{ needs.build-and-push-image.outputs.short_sha }}',
               }
             })
