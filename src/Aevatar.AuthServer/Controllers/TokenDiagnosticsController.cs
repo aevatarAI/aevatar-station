@@ -62,13 +62,89 @@ public class TokenDiagnosticsController : AbpControllerBase
         return Ok(diagnostics);
     }
 
+    [HttpGet("audience-debug")]
+    public IActionResult DebugAudienceIssue([FromQuery] string accessToken)
+    {
+        if (string.IsNullOrEmpty(accessToken))
+        {
+            return BadRequest(new { Error = "access_token parameter is required" });
+        }
+
+        try
+        {
+            // 解码JWT token（不验证签名，只读取内容）
+            var token = _tokenHandler.ReadJwtToken(accessToken);
+
+            var audienceClaims = token.Claims.Where(c => c.Type == "aud").ToList();
+            var issuer = token.Claims.FirstOrDefault(c => c.Type == "iss")?.Value;
+            var subject = token.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
+            var scopes = token.Claims.Where(c => c.Type == "scope").Select(c => c.Value).ToList();
+
+            var diagnostics = new
+            {
+                TokenHeader = new
+                {
+                    Algorithm = token.Header.Alg,
+                    Type = token.Header.Typ,
+                    KeyId = token.Header.Kid
+                },
+                AudienceAnalysis = new
+                {
+                    ExpectedAudience = "Aevatar",
+                    ActualAudiences = audienceClaims.Select(c => c.Value).ToList(),
+                    AudienceCount = audienceClaims.Count,
+                    HasCorrectAudience = audienceClaims.Any(c => c.Value == "Aevatar"),
+                    Status = audienceClaims.Any(c => c.Value == "Aevatar") ? "✓ Success" : "❌ Failed",
+                    Issue = !audienceClaims.Any(c => c.Value == "Aevatar")
+                        ? "Token does not contain expected audience 'Aevatar'"
+                        : null
+                },
+                TokenClaims = new
+                {
+                    Issuer = issuer,
+                    Subject = subject,
+                    Scopes = scopes,
+                    IssuedAt = token.Claims.FirstOrDefault(c => c.Type == "iat")?.Value,
+                    ExpiresAt = token.Claims.FirstOrDefault(c => c.Type == "exp")?.Value,
+                    AllClaims = token.Claims.Select(c => new { c.Type, c.Value }).ToList()
+                },
+                ValidationConfiguration = new
+                {
+                    AuthServerConfiguration = new
+                    {
+                        IssuerUri = _configuration["AuthServer:IssuerUri"],
+                        ExpectedAudience = "Aevatar"
+                    },
+                    ClientConfiguration = new
+                    {
+                        ExpectedAuthority = _configuration["AuthServer:Authority"] ?? "Not configured in AuthServer",
+                        ExpectedAudience = "Aevatar"
+                    }
+                },
+                Recommendations = GetAudienceRecommendations(audienceClaims.Any(c => c.Value == "Aevatar"))
+            };
+
+            return Ok(diagnostics);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new
+            {
+                Error = "Failed to decode token",
+                Message = ex.Message,
+                Issue = "Token may be malformed or encrypted",
+                Recommendation = "Ensure you're using an access_token (JWT format), not a refresh_token"
+            });
+        }
+    }
+
     private async Task<object> TestReferenceTokenStorage(string refreshToken)
     {
         try
         {
             // 尝试通过引用令牌查找数据库中的令牌记录
             var token = await _tokenRepository.FindByReferenceIdAsync(refreshToken);
-            
+
             if (token == null)
             {
                 return new
@@ -231,6 +307,41 @@ public class TokenDiagnosticsController : AbpControllerBase
                     "# Restore to new server",
                     "redis-cli --pipe < dump.rdb"
                 }
+            }
+        };
+    }
+
+    private object GetAudienceRecommendations(bool hasCorrectAudience)
+    {
+        if (hasCorrectAudience)
+        {
+            return new
+            {
+                Status = "Token audience is correct",
+                Note = "If client validation still fails, check client-side JWT configuration"
+            };
+        }
+
+        return new
+        {
+            PossibleCauses = new[]
+            {
+                "AuthServer grant handlers not setting audience correctly",
+                "OpenIddict validation configuration missing AddAudiences()",
+                "Token issued before audience configuration was added"
+            },
+            Solutions = new[]
+            {
+                "Verify all grant handlers call claimsPrincipal.SetAudiences(\"Aevatar\")",
+                "Check OpenIddict validation configuration has options.AddAudiences(\"Aevatar\")",
+                "Request a new token after configuration changes"
+            },
+            GrantHandlersToCheck = new[]
+            {
+                "SignatureGrantHandler.cs",
+                "GoogleGrantHandler.cs",
+                "AppleGrantHandler.cs",
+                "Standard OAuth2 grant handlers"
             }
         };
     }

@@ -64,6 +64,9 @@ public class AevatarAuthServerModule : AbpModule
             {
                 options.UseAspNetCore().DisableTransportSecurityRequirement();
                 options.SetIssuer(new Uri(configuration["AuthServer:IssuerUri"]!));
+                options.AddDevelopmentEncryptionCertificate()
+                    .AddDevelopmentSigningCertificate();
+
                 // options.IgnoreGrantTypePermissions();
 
                 options.DisableAccessTokenEncryption();
@@ -73,13 +76,6 @@ public class AevatarAuthServerModule : AbpModule
                 {
                     options.SetAccessTokenLifetime(DateTime.Now.AddHours(expirationHour) - DateTime.Now);
                 }
-
-                var encryptionKey = LoadEncryptionKey(configuration);
-                options.AddEncryptionKey(encryptionKey);
-                Console.WriteLine($"[OpenIddict] 🔑 Loaded encryption key ID: {encryptionKey.KeyId}");
-                var signingKey = LoadSigningKey(configuration);
-                options.AddSigningKey(signingKey);
-                Console.WriteLine($"[OpenIddict] ✍️ Loaded signing key ID: {signingKey.KeyId}");
             });
 
             builder.AddValidation(options =>
@@ -87,8 +83,6 @@ public class AevatarAuthServerModule : AbpModule
                 options.AddAudiences("Aevatar");
                 options.UseLocalServer();
                 options.UseAspNetCore();
-
-                // Validation不需要额外配置，使用Server的配置
             });
         });
 
@@ -221,64 +215,5 @@ public class AevatarAuthServerModule : AbpModule
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();
         app.UseConfiguredEndpoints();
-    }
-
-    private static SecurityKey LoadEncryptionKey(IConfiguration configuration)
-    {
-        try
-        {
-            // 使用StringEncryption:DefaultPassPhrase作为种子生成固定密钥
-            var passPhrase = configuration["StringEncryption:DefaultPassPhrase"] ?? "DVb2B8QjyeArjCTY";
-
-            using var pbkdf2 = new Rfc2898DeriveBytes(
-                passPhrase,
-                Encoding.UTF8.GetBytes("aevatar-openiddict-salt"),
-                10000,
-                HashAlgorithmName.SHA256);
-
-            var keyBytes = pbkdf2.GetBytes(32); // 256 bits
-            var key = new SymmetricSecurityKey(keyBytes)
-            {
-                KeyId = "AEVATAR_FIXED_ENCRYPTION_KEY"
-            };
-
-            Console.WriteLine($"[LoadEncryptionKey] ✓ Generated fixed encryption key with ID: {key.KeyId}");
-            return key;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[LoadEncryptionKey] ❌ Failed to load encryption key: {ex.Message}");
-            throw;
-        }
-    }
-
-    private static SecurityKey LoadSigningKey(IConfiguration configuration)
-    {
-        try
-        {
-            // 使用StringEncryption:DefaultPassPhrase作为种子生成固定签名密钥
-            var passPhrase = configuration["StringEncryption:DefaultPassPhrase"] ?? "DVb2B8QjyeArjCTY";
-
-            // 生成一个256位的HMAC密钥用于签名
-            using var pbkdf2 = new Rfc2898DeriveBytes(
-                passPhrase,
-                Encoding.UTF8.GetBytes("aevatar-signing-salt"),
-                10000,
-                HashAlgorithmName.SHA256);
-
-            var keyBytes = pbkdf2.GetBytes(32); // 256 bits
-            var key = new SymmetricSecurityKey(keyBytes)
-            {
-                KeyId = "AEVATAR_FIXED_SIGNING_KEY"
-            };
-
-            Console.WriteLine($"[LoadSigningKey] ✓ Generated fixed signing key with ID: {key.KeyId}");
-            return key;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[LoadSigningKey] ❌ Failed to load signing key: {ex.Message}");
-            throw;
-        }
     }
 }
