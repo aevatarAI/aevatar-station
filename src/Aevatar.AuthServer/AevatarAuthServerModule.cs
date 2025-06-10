@@ -74,7 +74,11 @@ public class AevatarAuthServerModule : AbpModule
                 if (!string.IsNullOrEmpty(configuration["StringEncryption:DefaultPassPhrase"]))
                 {
                     var keyBytes = Convert.FromBase64String(configuration["StringEncryption:DefaultPassPhrase"]);
-                    options.AddSigningKey(LoadRsaKey(keyBytes));
+                                        var signingKey = CreateSigningKey(keyBytes); 
+                    var keyId = Convert.ToBase64String(SHA256.HashData(signingKey.Key))[..8];
+                    Console.WriteLine($"[AuthServer] OpenIddict Server Signing Key ID: {keyId}, Key Length: {signingKey.Key.Length * 8} bits");
+
+                    options.AddSigningKey(signingKey);
                 }
             });
 
@@ -87,7 +91,11 @@ public class AevatarAuthServerModule : AbpModule
                 if (!string.IsNullOrEmpty(configuration["StringEncryption:DefaultPassPhrase"]))
                 {
                     var keyBytes = Convert.FromBase64String(configuration["StringEncryption:DefaultPassPhrase"]);
-                    options.AddSigningKey(LoadRsaKey(keyBytes));
+                    var validationKey = CreateSigningKey(keyBytes);
+                    var validationKeyId = Convert.ToBase64String(SHA256.HashData(validationKey.Key))[..8];
+                    Console.WriteLine($"[AuthServer] OpenIddict Validation Signing Key ID: {validationKeyId}, Key Length: {validationKey.Key.Length * 8} bits");
+
+                    options.AddSigningKey(validationKey);
                 }
             });
         });
@@ -223,13 +231,13 @@ public class AevatarAuthServerModule : AbpModule
         app.UseConfiguredEndpoints();
     }
 
-    private static SecurityKey LoadRsaKey(byte[] keyBytes)
+    private static SymmetricSecurityKey CreateSigningKey(byte[] keyBytes)
     {
         if (keyBytes.Length < 32)
         {
-            var salt = new byte[] { 0x49, 0x76, 0x61, 0x6e, 0x20, 0x4d, 0x65, 0x64 }; // "Ivan Med"
-            using var pbkdf2 = new Rfc2898DeriveBytes(keyBytes, salt, 10000);
-            keyBytes = pbkdf2.GetBytes(32); // 生成256位密钥
+            var salt = new byte[] { 0x49, 0x76, 0x61, 0x6e, 0x20, 0x4d, 0x65, 0x64 };
+            using var pbkdf2 = new Rfc2898DeriveBytes(keyBytes, salt, 10000, HashAlgorithmName.SHA256);
+            keyBytes = pbkdf2.GetBytes(32);
         }
         else if (keyBytes.Length > 32)
         {
