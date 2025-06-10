@@ -23,14 +23,14 @@ using Volo.Abp.Autofac;
 using Volo.Abp.BackgroundJobs;
 using Volo.Abp.Caching;
 using Volo.Abp.Identity;
-using Volo.Abp.Identity.EntityFrameworkCore;
+using Volo.Abp.Identity.MongoDB;
 using Volo.Abp.Localization;
 using Volo.Abp.Modularity;
 using Volo.Abp.OpenIddict;
-using Volo.Abp.OpenIddict.EntityFrameworkCore;
+using Volo.Abp.OpenIddict.MongoDB;
 using Volo.Abp.OpenIddict.ExtensionGrantTypes;
 using Volo.Abp.PermissionManagement;
-using Volo.Abp.PermissionManagement.EntityFrameworkCore;
+using Volo.Abp.PermissionManagement.MongoDB;
 using Volo.Abp.UI.Navigation.Urls;
 using StackExchange.Redis;
 
@@ -45,9 +45,9 @@ namespace Aevatar.AuthServer;
     typeof(AbpAspNetCoreSerilogModule),
     typeof(AbpIdentityApplicationModule),
     typeof(AbpPermissionManagementApplicationModule),
-    typeof(AbpOpenIddictEntityFrameworkCoreModule),
-    typeof(AbpIdentityEntityFrameworkCoreModule),
-    typeof(AbpPermissionManagementEntityFrameworkCoreModule),
+    typeof(AbpOpenIddictMongoDbModule),
+    typeof(AbpIdentityMongoDbModule),
+    typeof(AbpPermissionManagementMongoDbModule),
     typeof(AbpAuthorizationModule),
     typeof(AbpOpenIddictDomainModule),
     typeof(AevatarMongoDbModule),
@@ -69,12 +69,6 @@ public class AevatarAuthServerModule : AbpModule
                 if (expirationHour > 0)
                 {
                     options.SetAccessTokenLifetime(DateTime.Now.AddHours(expirationHour) - DateTime.Now);
-                }
-
-                if (!string.IsNullOrEmpty(configuration["StringEncryption:DefaultPassPhrase"]))
-                {
-                    var keyBytes = Convert.FromBase64String(configuration["StringEncryption:DefaultPassPhrase"]);
-                    options.AddSigningKey(LoadRsaKey(keyBytes));
                 }
             });
 
@@ -216,18 +210,5 @@ public class AevatarAuthServerModule : AbpModule
         app.UseAbpSerilogEnrichers();
         app.UseConfiguredEndpoints();
     }
-
-    private static SecurityKey LoadRsaKey(byte[] keyBytes)
-    {
-        // 如果密钥长度不足，使用PBKDF2扩展到所需长度
-        if (keyBytes.Length < 32)
-        {
-            using var pbkdf2 = new Rfc2898DeriveBytes(keyBytes,
-                new byte[] { 0x49, 0x76, 0x61, 0x6e, 0x20, 0x4d, 0x65, 0x64 }, 10000);
-            keyBytes = pbkdf2.GetBytes(32); // 生成256位密钥
-        }
-
-        // 创建对称密钥用于HMAC签名
-        return new SymmetricSecurityKey(keyBytes);
-    }
+    
 }
