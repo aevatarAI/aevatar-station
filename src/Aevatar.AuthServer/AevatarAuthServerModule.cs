@@ -65,6 +65,9 @@ public class AevatarAuthServerModule : AbpModule
                 options.UseAspNetCore().DisableTransportSecurityRequirement();
                 options.SetIssuer(new Uri(configuration["AuthServer:IssuerUri"]!));
                 // options.IgnoreGrantTypePermissions();
+
+                options.DisableAccessTokenEncryption();
+
                 int.TryParse(configuration["ExpirationHour"], out int expirationHour);
                 if (expirationHour > 0)
                 {
@@ -74,9 +77,10 @@ public class AevatarAuthServerModule : AbpModule
                 if (!string.IsNullOrEmpty(configuration["StringEncryption:DefaultPassPhrase"]))
                 {
                     var keyBytes = Convert.FromBase64String(configuration["StringEncryption:DefaultPassPhrase"]);
-                                        var signingKey = CreateSigningKey(keyBytes); 
+                    var signingKey = CreateSigningKey(keyBytes);
                     var keyId = Convert.ToBase64String(SHA256.HashData(signingKey.Key))[..8];
-                    Console.WriteLine($"[AuthServer] OpenIddict Server Signing Key ID: {keyId}, Key Length: {signingKey.Key.Length * 8} bits");
+                    Console.WriteLine(
+                        $"[AuthServer] OpenIddict Server Signing Key ID: {keyId}, Key Length: {signingKey.Key.Length * 8} bits");
 
                     options.AddSigningKey(signingKey);
                 }
@@ -93,7 +97,8 @@ public class AevatarAuthServerModule : AbpModule
                     var keyBytes = Convert.FromBase64String(configuration["StringEncryption:DefaultPassPhrase"]);
                     var validationKey = CreateSigningKey(keyBytes);
                     var validationKeyId = Convert.ToBase64String(SHA256.HashData(validationKey.Key))[..8];
-                    Console.WriteLine($"[AuthServer] OpenIddict Validation Signing Key ID: {validationKeyId}, Key Length: {validationKey.Key.Length * 8} bits");
+                    Console.WriteLine(
+                        $"[AuthServer] OpenIddict Validation Signing Key ID: {validationKeyId}, Key Length: {validationKey.Key.Length * 8} bits");
 
                     options.AddSigningKey(validationKey);
                 }
