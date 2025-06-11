@@ -73,24 +73,21 @@ public class AevatarAuthServerModule : AbpModule
                 var certPassword = configuration["OpenIddict:Certificate:CertificatePassword"] ??
                                    "00000000-0000-0000-0000-000000000000";
 
+
                 if (!hostingEnvironment.IsDevelopment() || useProductionCert)
                 {
                     PreConfigure<AbpOpenIddictAspNetCoreOptions>(options =>
                     {
                         options.AddDevelopmentEncryptionAndSigningCertificate = false;
                     });
-
-                    PreConfigure<OpenIddictServerBuilder>(serverBuilder =>
+                    if (File.Exists(certPath))
                     {
-                        if (File.Exists(certPath))
-                        {
-                            serverBuilder.AddProductionEncryptionAndSigningCertificate(certPath, certPassword);
-                        }
-                        else
-                        {
-                            throw new FileNotFoundException($"OpenIddict certificate file not found: {certPath}");
-                        }
-                    });
+                        options.AddProductionEncryptionAndSigningCertificate(certPath, certPassword);
+                    }
+                    else
+                    {
+                        throw new FileNotFoundException($"OpenIddict certificate file not found: {certPath}");
+                    }
                 }
 
                 // options.IgnoreGrantTypePermissions();
