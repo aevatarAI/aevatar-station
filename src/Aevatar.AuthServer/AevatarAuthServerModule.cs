@@ -74,7 +74,7 @@ public class AevatarAuthServerModule : AbpModule
                                    "00000000-0000-0000-0000-000000000000";
 
 
-                if (!hostingEnvironment.IsDevelopment() || useProductionCert)
+                if ( useProductionCert)
                 {
                     PreConfigure<AbpOpenIddictAspNetCoreOptions>(options =>
                     {
@@ -88,6 +88,7 @@ public class AevatarAuthServerModule : AbpModule
                     {
                         throw new FileNotFoundException($"OpenIddict certificate file not found: {certPath}");
                     }
+                   
                 }
 
                 // options.IgnoreGrantTypePermissions();
