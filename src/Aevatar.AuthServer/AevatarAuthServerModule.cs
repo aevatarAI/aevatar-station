@@ -6,8 +6,6 @@ using Aevatar.Options;
 using Localization.Resources.AbpUi;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
-using System.Security.Cryptography;
 using Volo.Abp;
 using Volo.Abp.Account;
 using Volo.Abp.Account.Web;
@@ -64,7 +62,33 @@ public class AevatarAuthServerModule : AbpModule
             {
                 options.UseAspNetCore().DisableTransportSecurityRequirement();
                 options.SetIssuer(new Uri(configuration["AuthServer:IssuerUri"]!));
+
+                var useProductionCert = configuration.GetValue<bool>("OpenIddict:Certificate:UseProductionCertificate");
+                var certPath = configuration["OpenIddict:Certificate:CertificatePath"] ?? "openiddict.pfx";
+                var certPassword = configuration["OpenIddict:Certificate:CertificatePassword"] ??
+                                   "00000000-0000-0000-0000-000000000000";
+
+
+                if (useProductionCert)
+                {
+                    PreConfigure<AbpOpenIddictAspNetCoreOptions>(options =>
+                    {
+                        options.AddDevelopmentEncryptionAndSigningCertificate = false;
+                    });
+                    if (File.Exists(certPath))
+                    {
+                        options.AddProductionEncryptionAndSigningCertificate(certPath, certPassword);
+                    }
+                    else
+                    {
+                        throw new FileNotFoundException($"OpenIddict certificate file not found: {certPath}");
+                    }
+                }
+
                 // options.IgnoreGrantTypePermissions();
+
+                options.DisableAccessTokenEncryption();
+
                 int.TryParse(configuration["ExpirationHour"], out int expirationHour);
                 if (expirationHour > 0)
                 {
@@ -210,5 +234,4 @@ public class AevatarAuthServerModule : AbpModule
         app.UseAbpSerilogEnrichers();
         app.UseConfiguredEndpoints();
     }
-    
 }
