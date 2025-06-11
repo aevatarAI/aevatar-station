@@ -33,6 +33,7 @@ using Volo.Abp.PermissionManagement;
 using Volo.Abp.PermissionManagement.MongoDB;
 using Volo.Abp.UI.Navigation.Urls;
 using StackExchange.Redis;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Aevatar.AuthServer;
 
@@ -58,6 +59,8 @@ public class AevatarAuthServerModule : AbpModule
     public override void PreConfigureServices(ServiceConfigurationContext context)
     {
         var configuration = context.Services.GetConfiguration();
+        var hostingEnvironment = context.Services.GetHostingEnvironment();
+
         PreConfigure<OpenIddictBuilder>(builder =>
         {
             builder.AddServer(options =>
@@ -65,16 +68,30 @@ public class AevatarAuthServerModule : AbpModule
                 options.UseAspNetCore().DisableTransportSecurityRequirement();
                 options.SetIssuer(new Uri(configuration["AuthServer:IssuerUri"]!));
 
-                // 配置OpenIddict endpoints
-                options.SetAuthorizationEndpointUris("connect/authorize")
-                    .SetTokenEndpointUris("connect/token")
-                    .SetUserinfoEndpointUris("connect/userinfo")
-                    .SetLogoutEndpointUris("connect/logout")
-                    .SetIntrospectionEndpointUris("connect/introspect")
-                    .SetRevocationEndpointUris("connect/revoke");
+                var useProductionCert = configuration.GetValue<bool>("OpenIddict:Certificate:UseProductionCertificate");
+                var certPath = configuration["OpenIddict:Certificate:CertificatePath"] ?? "openiddict.pfx";
+                var certPassword = configuration["OpenIddict:Certificate:CertificatePassword"] ??
+                                   "00000000-0000-0000-0000-000000000000";
 
-                options.AddDevelopmentEncryptionCertificate()
-                    .AddDevelopmentSigningCertificate();
+                if (!hostingEnvironment.IsDevelopment() || useProductionCert)
+                {
+                    PreConfigure<AbpOpenIddictAspNetCoreOptions>(options =>
+                    {
+                        options.AddDevelopmentEncryptionAndSigningCertificate = false;
+                    });
+
+                    PreConfigure<OpenIddictServerBuilder>(serverBuilder =>
+                    {
+                        if (File.Exists(certPath))
+                        {
+                            serverBuilder.AddProductionEncryptionAndSigningCertificate(certPath, certPassword);
+                        }
+                        else
+                        {
+                            throw new FileNotFoundException($"OpenIddict certificate file not found: {certPath}");
+                        }
+                    });
+                }
 
                 // options.IgnoreGrantTypePermissions();
 
@@ -224,5 +241,20 @@ public class AevatarAuthServerModule : AbpModule
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();
         app.UseConfiguredEndpoints();
+    }
+
+    private static void CreateSelfSignedCertificate(string certPath, string password)
+    {
+        using var algorithm = RSA.Create(keySizeInBits: 2048);
+
+        var subject = new X500DistinguishedName("CN=Aevatar OpenIddict Signing Certificate");
+        var request = new CertificateRequest(subject, algorithm, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        request.CertificateExtensions.Add(
+            new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment,
+                critical: true));
+
+        var certificate = request.CreateSelfSigned(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddYears(5));
+
+        File.WriteAllBytes(certPath, certificate.Export(X509ContentType.Pkcs12, password));
     }
 }
