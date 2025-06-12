@@ -4,6 +4,7 @@ using NJsonSchema;
 using NJsonSchema.Generation;
 using NJsonSchema.Validation;
 using Volo.Abp.DependencyInjection;
+using System.Text.Json;
 
 namespace Aevatar.Schema;
 
@@ -27,7 +28,10 @@ public class SchemaProvider : ISchemaProvider, ISingletonDependency
                 GenerateEnumMappingDescription = true,
                 SchemaProcessors ={ new IgnoreSpecificBaseProcessor() }
             };
-
+            settings.SerializerOptions = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
             var schemaData = JsonSchema.FromType(type, settings);
             _schemaDic.Add(type, schemaData);
             return schemaData;
