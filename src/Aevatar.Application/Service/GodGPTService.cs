@@ -58,6 +58,7 @@ public interface IGodGPTService
     Task<CancelSubscriptionResponseDto> CancelSubscriptionAsync(Guid currentUserId, CancelSubscriptionInput input);
     Task<List<AppleProductDto>> GetAppleProductsAsync(Guid currentUserId);
     Task<AppStoreSubscriptionResponseDto> VerifyAppStoreReceiptAsync(Guid currentUserId, VerifyAppStoreReceiptInput input);
+    Task<GrainResultDto<int>> UpdateUserCreditsAsync(Guid currentUserId, UpdateUserCreditsInput input);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -371,9 +372,15 @@ public class GodGPTService : ApplicationService, IGodGPTService
         {
             UserId = currentUserId.ToString(),
             SandboxMode = input.SandboxMode,
-            ProductId = input.ProductId,
-            ReceiptData = input.ReceiptData
+            TransactionId = input.TransactionId
         });
+    }
+
+    public async Task<GrainResultDto<int>> UpdateUserCreditsAsync(Guid currentUserId, UpdateUserCreditsInput input)
+    {
+        var userQuotaGrain =
+            _clusterClient.GetGrain<IUserQuotaGrain>(CommonHelper.GetUserQuotaGAgentId(input.UserId));
+        return await userQuotaGrain.UpdateCreditsAsync(currentUserId.ToString(), input.Credits);
     }
 
     private bool TryGetUserIdFromMetadata(IDictionary<string, string> metadata, out string userId)
