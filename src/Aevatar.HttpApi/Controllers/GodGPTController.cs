@@ -187,6 +187,23 @@ public class GodGPTController : AevatarController
         return sessionList;
     }
 
+    [HttpGet("godgpt/sessions/search")]
+    public async Task<List<SessionInfoDto>> SearchSessionsAsync([FromQuery] string keyword)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        
+        if (string.IsNullOrWhiteSpace(keyword))
+        {
+            return new List<SessionInfoDto>();
+        }
+        
+        var searchResults = await _godGptService.SearchSessionsAsync(currentUserId, keyword);
+        _logger.LogDebug("[GodGPTController][SearchSessionsAsync] userId: {0}, keyword: {1}, results: {2}, duration: {3}ms",
+            currentUserId, keyword, searchResults.Count, stopwatch.ElapsedMilliseconds);
+        return searchResults;
+    }
+
     [AllowAnonymous]
     [HttpGet("godgpt/session-info/{sessionId}")]
     public async Task<Aevatar.Quantum.SessionCreationInfoDto?> GetSessionCreationInfoAsync(Guid sessionId, [FromQuery] string? shareId = null)
