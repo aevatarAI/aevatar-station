@@ -64,6 +64,17 @@ public class GodGPTPaymentController : AevatarController
         return productDtos;
     }
 
+    [HttpGet("iap-products")]
+    public async Task<List<AppleProductDto>> GetAppleProductsAsync()
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var productDtos = await _godGptService.GetAppleProductsAsync(currentUserId);
+        _logger.LogDebug("[GodGPTPaymentController][GetAppleProductsAsync] userId: {0}, duration: {1}ms",
+            currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
+        return productDtos;
+    }
+
     [HttpPost("create-checkout-session")]
     public async Task<IActionResult> CreateCheckoutSessionAsync(CreateCheckoutSessionInput createCheckoutSessionInput)
     {
@@ -139,6 +150,17 @@ public class GodGPTPaymentController : AevatarController
     public async Task<bool> RefundedAsync()
     {
         return true;
+    }
+
+    [HttpPost("verify-receipt")]
+    public async Task<AppStoreSubscriptionResponseDto> VerifyAppStoreReceiptAsync(VerifyAppStoreReceiptInput input)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var response = await _godGptService.VerifyAppStoreReceiptAsync(currentUserId, input);
+        _logger.LogDebug("[GodGPTPaymentController][VerifyAppStoreReceiptAsync] userId: {0}, duration: {1}ms",
+            currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
+        return response;
     }
 
     [AllowAnonymous]

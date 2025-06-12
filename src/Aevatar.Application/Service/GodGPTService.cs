@@ -56,6 +56,8 @@ public interface IGodGPTService
     Task<GetCustomerResponseDto> GetStripeCustomerAsync(Guid currentUserId);
     Task<SubscriptionResponseDto> CreateSubscriptionAsync(Guid currentUserId, CreateSubscriptionInput input);
     Task<CancelSubscriptionResponseDto> CancelSubscriptionAsync(Guid currentUserId, CancelSubscriptionInput input);
+    Task<List<AppleProductDto>> GetAppleProductsAsync(Guid currentUserId);
+    Task<AppStoreSubscriptionResponseDto> VerifyAppStoreReceiptAsync(Guid currentUserId, VerifyAppStoreReceiptInput input);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -351,6 +353,26 @@ public class GodGPTService : ApplicationService, IGodGPTService
             SubscriptionId = input.SubscriptionId,
             CancellationReason = string.Empty,
             CancelAtPeriodEnd = true
+        });
+    }
+
+    public async Task<List<AppleProductDto>> GetAppleProductsAsync(Guid currentUserId)
+    {
+        var userBillingGrain =
+            _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(currentUserId));
+        return await userBillingGrain.GetAppleProductsAsync();
+    }
+
+    public async Task<AppStoreSubscriptionResponseDto> VerifyAppStoreReceiptAsync(Guid currentUserId, VerifyAppStoreReceiptInput input)
+    {
+        var userBillingGrain =
+            _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(currentUserId));
+        return await userBillingGrain.CreateAppStoreSubscriptionAsync(new CreateAppStoreSubscriptionDto
+        {
+            UserId = currentUserId.ToString(),
+            SandboxMode = input.SandboxMode,
+            ProductId = input.ProductId,
+            ReceiptData = input.ReceiptData
         });
     }
 
