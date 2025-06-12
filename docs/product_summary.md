@@ -57,6 +57,12 @@ Startup code detects Kubernetes-style environment variables (`POD_IP`, `ORLEANS_
 
 Virtual actors activate only when messaged and passivate when idle, so compute usage—and cloud cost—tracks real workload. Scaling is node-based rather than replica-based, avoiding the overhead of per-service containers or functions.
 
+### 2.9 Cloud-Agnostic Deployment *(Confirmed)*
+* All runtime components rely solely on open-source, self-hosted services (Kafka, MongoDB, Redis) or pure .NET binaries—there is **no dependency on any cloud-specific managed service**.
+* Identical container images run unmodified on Docker Compose, Kubernetes (EKS, AKS, GKE), or bare-metal VMs—`Orleans` auto-detects cluster settings via environment variables at startup.
+
+Aevatar ships as a set of OCI-compliant containers, letting teams deploy to AWS, Azure, GCP, on-prem, or hybrid environments with the same CI/CD pipeline. This eliminates vendor lock-in, enables multi-cloud disaster recovery, and provides negotiating power on infrastructure costs.
+
 ---
 
 ## 3. Technical Stack
