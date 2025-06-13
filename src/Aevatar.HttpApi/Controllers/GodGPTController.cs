@@ -28,6 +28,7 @@ using Orleans;
 using Orleans.Runtime;
 using Orleans.Streams;
 using Volo.Abp;
+using Aevatar.Account;
 
 namespace Aevatar.Controllers;
 
@@ -43,16 +44,18 @@ public class GodGPTController : AevatarController
     private readonly string _defaultPrompt = "you are a robot";
     private readonly IOptions<AevatarOptions> _aevatarOptions;
     private readonly ILogger<GodGPTController> _logger;
+    private readonly IAccountService _accountService;
     const string Version = "1.13.0";
 
 
     public GodGPTController(IGodGPTService godGptService, IClusterClient clusterClient,
-        IOptions<AevatarOptions> aevatarOptions, ILogger<GodGPTController> logger)
+        IOptions<AevatarOptions> aevatarOptions, ILogger<GodGPTController> logger, IAccountService accountService)
     {
         _godGptService = godGptService;
         _clusterClient = clusterClient;
         _aevatarOptions = aevatarOptions;
         _logger = logger;
+        _accountService = accountService;
     }
 
     [AllowAnonymous]
@@ -348,5 +351,37 @@ public class GodGPTController : AevatarController
         _logger.LogDebug("[GodGPTController][GetShareMessageListAsync] shareString: {0} duration: {1}ms",
             shareString, stopwatch.ElapsedMilliseconds);
         return response;
+    }
+
+    /// <summary>
+    /// Check if the email is registered. Returns a strict structure for frontend compatibility.
+    /// </summary>
+    /// <param name="email">Email address to check</param>
+    /// <returns>Registration status in strict JSON structure</returns>
+    [AllowAnonymous]
+    [HttpGet("godgpt/check-email-registered")]
+    public async Task<IActionResult> CheckEmailRegisteredAsync([FromQuery] string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return BadRequest(new
+            {
+                error = new { code = 1, message = "Email is required" },
+                data = new { result = false }
+            });
+        }
+        var result = await _accountService.CheckEmailRegisteredAsync(new CheckEmailRegisteredDto { EmailAddress = email });
+        if (result)
+        {
+            return Ok(new { data = new { result = true } });
+        }
+        else
+        {
+            return Ok(new
+            {
+                error = new { code = 0, message = "User not registered" },
+                data = new { result = false }
+            });
+        }
     }
 }
