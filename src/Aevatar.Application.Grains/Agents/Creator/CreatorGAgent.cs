@@ -45,7 +45,8 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
             AgentType = agentData.AgentType,
             Properties = agentData.Properties,
             Name = agentData.Name,
-            BusinessAgentGrainId = agentData.BusinessAgentGrainId
+            BusinessAgentGrainId = agentData.BusinessAgentGrainId,
+            FormattedBusinessAgentGrainId = agentData.BusinessAgentGrainId.ToString()
         });
         await ConfirmEvents();
     }
@@ -121,6 +122,7 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
                 State.Name = createAgentGEvent.Name;
                 State.BusinessAgentGrainId = createAgentGEvent.BusinessAgentGrainId;
                 State.CreateTime = DateTime.Now;
+                State.FormattedBusinessAgentGrainId = createAgentGEvent.FormattedBusinessAgentGrainId;
                 break;
             case UpdateAgentGEvent updateAgentGEvent:
                 State.Properties = updateAgentGEvent.Properties;

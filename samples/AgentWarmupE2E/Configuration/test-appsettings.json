@@ -1,0 +1,66 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft": "Warning",
+      "Microsoft.Hosting.Lifetime": "Information",
+      "Orleans": "Information",
+      "GrainWarmupE2E": "Debug",
+      "Aevatar.Silo.GrainWarmup": "Debug"
+    }
+  },
+  "Orleans": {
+    "ClusterId": "GrainWarmupE2ECluster",
+    "ServiceId": "GrainWarmupE2EService",
+    "Clustering": {
+      "Provider": "InMemory"
+    },
+    "Persistence": {
+      "Provider": "InMemory"
+    }
+  },
+  "GrainWarmup": {
+    "Enabled": true,
+    "MaxConcurrency": 5,
+    "BatchDelayMs": 50,
+    "InitialBatchSize": 2,
+    "MaxBatchSize": 10,
+    "BatchSizeIncrement": 2,
+    "BatchesBeforeIncrement": 2,
+    "GrainActivationTimeoutMs": 3000,
+    "MaxRetryAttempts": 2,
+    "RetryBaseDelayMs": 500,
+    "EnableProgressiveWarmup": true,
+    "AutoStartOnSiloStartup": false,
+    "StartupDelayMs": 1000,
+    "EnableDetailedLogging": true,
+    "ProgressLoggingIntervalMs": 2000,
+    "MongoDbRateLimit": {
+      "MaxOperationsPerSecond": 20,
+      "TimeWindowMs": 1000,
+      "MaxBurstSize": 5
+    }
+  },
+  "TestConfiguration": {
+    "TestGrainCount": 100,
+    "PerformanceTestGrainCount": 1000,
+    "LargeScaleTestGrainCount": 5000,
+    "LatencyTestIterations": 50,
+    "ConcurrentAccessThreads": 10,
+    "TestTimeoutMs": 30000,
+    "WarmupTimeoutMs": 60000,
+    "PerformanceThresholds": {
+      "ColdGrainMaxLatencyMs": 200,
+      "WarmedGrainMaxLatencyMs": 50,
+      "LatencyImprovementRatio": 0.5,
+      "SuccessRateThreshold": 0.95
+    }
+  },
+  "MongoDB": {
+    "ConnectionString": "mongodb://localhost:27017",
+    "DatabaseName": "GrainWarmupE2ETest",
+    "MaxConnectionPoolSize": 20,
+    "ConnectTimeoutMs": 5000,
+    "ServerSelectionTimeoutMs": 5000
+  }
+} 
