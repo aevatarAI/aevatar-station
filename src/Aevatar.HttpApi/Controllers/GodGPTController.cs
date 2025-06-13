@@ -367,20 +367,20 @@ public class GodGPTController : AevatarController
             return BadRequest(new
             {
                 error = new { code = 1, message = "Email is required" },
-                data = new { result = false }
+                result = false
             });
         }
         var result = await _accountService.CheckEmailRegisteredAsync(new CheckEmailRegisteredDto { EmailAddress = email });
         if (result)
         {
-            return Ok(new { data = new { result = true } });
+            return Ok(new { result = true });
         }
         else
         {
             return Ok(new
             {
                 error = new { code = 0, message = "User not registered" },
-                data = new { result = false }
+                result = false
             });
         }
     }
