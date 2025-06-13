@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 
-namespace Aevatar.Profile
+namespace Aevatar.Profiles
 {
     /// <summary>
     /// Profile service interface for user information

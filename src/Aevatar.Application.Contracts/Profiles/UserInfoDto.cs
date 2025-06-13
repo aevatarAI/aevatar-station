@@ -1,6 +1,6 @@
 using System;
 
-namespace Aevatar.Profile
+namespace Aevatar.Profiles
 {
     /// <summary>
     /// User information Data Transfer Object

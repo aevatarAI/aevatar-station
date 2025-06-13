@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using Aevatar.Profile;
+using Aevatar.Profiles;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
