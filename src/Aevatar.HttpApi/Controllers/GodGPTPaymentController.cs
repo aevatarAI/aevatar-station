@@ -159,8 +159,8 @@ public class GodGPTPaymentController : AevatarController
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
         var response = await _godGptService.VerifyAppStoreReceiptAsync(currentUserId, input);
-        _logger.LogDebug("[GodGPTPaymentController][VerifyAppStoreReceiptAsync] userId: {0}, input={1},duration: {2}ms",
-            currentUserId.ToString(), JsonConvert.SerializeObject(input) ,stopwatch.ElapsedMilliseconds);
+        _logger.LogDebug("[GodGPTPaymentController][VerifyAppStoreReceiptAsync] userId: {0}, sandboxMode: {1}, duration: {2}ms",
+            currentUserId.ToString(), input.SandboxMode, stopwatch.ElapsedMilliseconds);
         return response;
     }
 
