@@ -33,34 +33,35 @@ public class KubernetesConstants
      public const string PlaceHolderNameSpace = "[NameSpace]";
      public static readonly List<string> WebhookCommand = new() { "dotnet", "Aevatar.WebHook.Host.dll" };
 
-     public const int WebhookContainerTargetPort = 8308;
-     public const string QueryPodMaxSurge = "50%";
-     public const string QueryPodMaxUnavailable = "0";
-     
-     //Host manager
-     public const string HostSiloSettingTemplateFilePath = "HostConfigTemplate/silo-appsettings-template.json";
-     public const string HostClientSettingTemplateFilePath = "HostConfigTemplate/client-appsettings-template.json";
-     public const string HostFileBeatConfigTemplateFilePath = "HostConfigTemplate/filebeat-template.yml";
-     public const string HostPlaceHolderAppId = "[HostId]";
-     public const string HostPlaceHolderVersion = "[Version]";
-     public const string HostPlaceHolderNameSpace = "[NameSpace]";
-     public const string HostSilo = "silo";
-     public const string HostClient = "client";
-     public const string HostClientCors = "[Cors]";
-     
-     public static readonly List<string> HostSiloCommand = new() { "dotnet", "Aevatar.Silo.dll" };
-     public static readonly List<string> HostClientCommand = new() { "dotnet", "Aevatar.Developer.Host.dll" };
-     
-     public const string HostQueryPodMaxSurge = "50%";
-     public const string HostQueryPodMaxUnavailable = "0";
-     //Prometheus
-     public const string MonitorLabelKey = "monitor";
-     public const string MonitorGroup = "monitoring.coreos.com";
-     public const string MonitorPlural = "servicemonitors";
-     public const string MetricsPath = "/metrics";
-     
-     public static void Initialize(IConfiguration configuration)
-     {
-          AppNameSpace = configuration["Kubernetes:AppNameSpace"] ?? "Aevatar-webhook";
-     }
+    public const int WebhookContainerTargetPort = 8308;
+    public const int SiloContainerTargetPort = 8080;
+    public const string QueryPodMaxSurge = "50%";
+    public const string QueryPodMaxUnavailable = "0";
+
+    //Host manager
+    public const string HostSiloSettingTemplateFilePath = "HostConfigTemplate/silo-appsettings-template.json";
+    public const string HostClientSettingTemplateFilePath = "HostConfigTemplate/client-appsettings-template.json";
+    public const string HostFileBeatConfigTemplateFilePath = "HostConfigTemplate/filebeat-template.yml";
+    public const string HostPlaceHolderAppId = "[HostId]";
+    public const string HostPlaceHolderVersion = "[Version]";
+    public const string HostPlaceHolderNameSpace = "[NameSpace]";
+    public const string HostSilo = "silo";
+    public const string HostClient = "client";
+    public const string HostClientCors = "[Cors]";
+
+    public static readonly List<string> HostSiloCommand = new() { "dotnet", "Aevatar.Silo.dll" };
+    public static readonly List<string> HostClientCommand = new() { "dotnet", "Aevatar.Developer.Host.dll" };
+
+    public const string HostQueryPodMaxSurge = "50%";
+    public const string HostQueryPodMaxUnavailable = "0";
+    //Prometheus
+    public const string MonitorLabelKey = "monitor";
+    public const string MonitorGroup = "monitoring.coreos.com";
+    public const string MonitorPlural = "servicemonitors";
+    public const string MetricsPath = "/metrics";
+
+    public static void Initialize(IConfiguration configuration)
+    {
+        AppNameSpace = configuration["Kubernetes:AppNameSpace"] ?? "Aevatar-webhook";
+    }
 }

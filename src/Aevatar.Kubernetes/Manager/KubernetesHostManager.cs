@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Aevatar.Kubernetes.Adapter;
 using Aevatar.Kubernetes.ResourceDefinition;
 using Aevatar.Options;
@@ -145,36 +146,40 @@ public async Task UpdateDockerImageAsync(string appId, string version, string ne
         }
     }  
 
-private static string GetWebhookConfigContent(string appId, string version, string templateFilePath)
-{
-    string configContent = File.ReadAllText(templateFilePath)
-        .Replace(KubernetesConstants.PlaceHolderAppId, appId.ToLower())
-        .Replace(KubernetesConstants.PlaceHolderVersion, version.ToLower())
-        .Replace(KubernetesConstants.PlaceHolderNameSpace, KubernetesConstants.AppNameSpace.ToLower());
-    return configContent;
-}
-
-private static string GetHostSiloConfigContent(string appId, string version, string templateFilePath)
-{
-    string configContent = File.ReadAllText(templateFilePath)
-        .Replace(KubernetesConstants.HostPlaceHolderAppId, appId.ToLower())
-        .Replace(KubernetesConstants.HostPlaceHolderVersion, version.ToLower())
-        .Replace(KubernetesConstants.HostPlaceHolderNameSpace, KubernetesConstants.AppNameSpace.ToLower());
-    return configContent;
-}
-
-private static string GetHostClientConfigContent(string appId, string version, string templateFilePath,[CanBeNull] string corsUrls)
-{
-    string configContent = File.ReadAllText(templateFilePath)
-        .Replace(KubernetesConstants.HostPlaceHolderAppId, appId.ToLower())
-        .Replace(KubernetesConstants.HostPlaceHolderVersion, version.ToLower())
-        .Replace(KubernetesConstants.HostPlaceHolderNameSpace, KubernetesConstants.AppNameSpace.ToLower());
-    if (corsUrls != null)
+    private static string GetWebhookConfigContent(string appId, string version, string templateFilePath)
     {
-        configContent = configContent.Replace(KubernetesConstants.HostClientCors, corsUrls);
+        var rawContent = File.ReadAllText(templateFilePath);
+        var unescapedContent = Regex.Unescape(rawContent);
+        return unescapedContent
+            .Replace(KubernetesConstants.PlaceHolderAppId, appId.ToLower())
+            .Replace(KubernetesConstants.PlaceHolderVersion, version.ToLower())
+            .Replace(KubernetesConstants.PlaceHolderNameSpace, KubernetesConstants.AppNameSpace.ToLower());
     }
-    return configContent;
-}
+
+    private static string GetHostSiloConfigContent(string appId, string version, string templateFilePath)
+    {
+        var configContent = File.ReadAllText(templateFilePath);
+        var unescapedContent = Regex.Unescape(configContent);
+        return unescapedContent.Replace(KubernetesConstants.HostPlaceHolderAppId, appId.ToLower())
+            .Replace(KubernetesConstants.HostPlaceHolderVersion, version.ToLower())
+            .Replace(KubernetesConstants.HostPlaceHolderNameSpace, KubernetesConstants.AppNameSpace.ToLower());
+    }
+
+    private static string GetHostClientConfigContent(string appId, string version, string templateFilePath,
+        [CanBeNull] string corsUrls)
+    {
+        var configContent = File.ReadAllText(templateFilePath);
+        var unescapedContent = Regex.Unescape(configContent);
+        unescapedContent = unescapedContent.Replace(KubernetesConstants.HostPlaceHolderAppId, appId.ToLower())
+            .Replace(KubernetesConstants.HostPlaceHolderVersion, version.ToLower())
+            .Replace(KubernetesConstants.HostPlaceHolderNameSpace, KubernetesConstants.AppNameSpace.ToLower());
+        if (corsUrls != null)
+        {
+            unescapedContent = unescapedContent.Replace(KubernetesConstants.HostClientCors, corsUrls);
+        }
+
+        return unescapedContent;
+    }
 
 private async Task EnsureDeploymentAsync(
     string appId, string version, string imageName, string deploymentName, 
@@ -363,14 +368,21 @@ private async Task EnsureIngressAsync(
         string deploymentLabelName = DeploymentHelper.GetAppDeploymentLabelName(appId, version);
         string containerName = ContainerHelper.GetAppContainerName(appId, version);
         await EnsureDeploymentAsync(
-            appId, version, imageName, 
-            deploymentName, deploymentLabelName, containerName, 
+            appId, version, imageName,
+            deploymentName, deploymentLabelName, containerName,
             KubernetesConstants.HostSiloCommand,
-            _kubernetesOptions.AppPodReplicas, 
-            KubernetesConstants.WebhookContainerTargetPort, 
-            KubernetesConstants.QueryPodMaxSurge, 
-            KubernetesConstants.QueryPodMaxUnavailable, 
-            "",true);
+            _kubernetesOptions.AppPodReplicas,
+            KubernetesConstants.SiloContainerTargetPort,
+            KubernetesConstants.QueryPodMaxSurge,
+            KubernetesConstants.QueryPodMaxUnavailable,
+            "", true);
+
+        // Ensure Service is created
+        string serviceName = ServiceHelper.GetAppServiceName(appId, version);
+        await EnsureServiceAsync(
+            appId, version, serviceName,
+            DeploymentHelper.GetAppDeploymentLabelName(appId, version),
+            KubernetesConstants.SiloContainerTargetPort);
     }
 
     private async Task EnsurePhaAsync(string appId, string version)
