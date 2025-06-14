@@ -160,7 +160,7 @@ public class GodGPTPaymentController : AevatarController
         var currentUserId = (Guid)CurrentUser.Id!;
         var response = await _godGptService.VerifyAppStoreReceiptAsync(currentUserId, input);
         _logger.LogDebug("[GodGPTPaymentController][VerifyAppStoreReceiptAsync] userId: {0}, sandboxMode: {1}, duration: {2}ms",
-            currentUserId.ToString(), input.SandboxMode, stopwatch.ElapsedMilliseconds);
+            currentUserId.ToString(), input.SandboxMode.ToString(), stopwatch.ElapsedMilliseconds);
         return response;
     }
 
