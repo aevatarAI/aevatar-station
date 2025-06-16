@@ -97,7 +97,7 @@ public class AevatarAuthServerModule : AbpModule
                 int.TryParse(configuration["ExpirationHour"], out int expirationHour);
                 if (expirationHour > 0)
                 {
-                    options.SetAccessTokenLifetime(DateTime.Now.AddHours(expirationHour) - DateTime.Now);
+                    options.SetAccessTokenLifetime(DateTime.Now.AddMinutes(expirationHour) - DateTime.Now);
                 }
             });
 
