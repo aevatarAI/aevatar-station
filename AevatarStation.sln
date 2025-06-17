@@ -83,6 +83,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.AuthServer.Grants",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.AuthServer.Grants.Tests", "test\Aevatar.AuthServer.Grants.Tests\Aevatar.AuthServer.Grants.Tests.csproj", "{E834928B-B7F0-4596-B1FF-AC29A071B881}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VerifySerializerPerformance", "benchmark\VerifySerializerPerformance\VerifySerializerPerformance.csproj", "{10CC4DBE-3BB8-4229-876C-472CDE9CACFC}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "benchmark", "benchmark", "{8B30D54E-F76B-41EC-9862-A8B07DCC9CAD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -537,6 +541,18 @@ Global
 		{E834928B-B7F0-4596-B1FF-AC29A071B881}.Release|x64.Build.0 = Release|Any CPU
 		{E834928B-B7F0-4596-B1FF-AC29A071B881}.Release|x86.ActiveCfg = Release|Any CPU
 		{E834928B-B7F0-4596-B1FF-AC29A071B881}.Release|x86.Build.0 = Release|Any CPU
+		{10CC4DBE-3BB8-4229-876C-472CDE9CACFC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10CC4DBE-3BB8-4229-876C-472CDE9CACFC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10CC4DBE-3BB8-4229-876C-472CDE9CACFC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{10CC4DBE-3BB8-4229-876C-472CDE9CACFC}.Debug|x64.Build.0 = Debug|Any CPU
+		{10CC4DBE-3BB8-4229-876C-472CDE9CACFC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{10CC4DBE-3BB8-4229-876C-472CDE9CACFC}.Debug|x86.Build.0 = Debug|Any CPU
+		{10CC4DBE-3BB8-4229-876C-472CDE9CACFC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10CC4DBE-3BB8-4229-876C-472CDE9CACFC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{10CC4DBE-3BB8-4229-876C-472CDE9CACFC}.Release|x64.ActiveCfg = Release|Any CPU
+		{10CC4DBE-3BB8-4229-876C-472CDE9CACFC}.Release|x64.Build.0 = Release|Any CPU
+		{10CC4DBE-3BB8-4229-876C-472CDE9CACFC}.Release|x86.ActiveCfg = Release|Any CPU
+		{10CC4DBE-3BB8-4229-876C-472CDE9CACFC}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -579,6 +595,7 @@ Global
 		{64F10B47-10FE-4CF9-A498-817A3F0D2CB5} = {5D20AA90-6969-D8BD-9DCD-8634F4692FDA}
 		{F68C4098-4B55-4C62-A476-D72864680DA9} = {CA9AC87F-097E-4F15-8393-4BC07735A5B0}
 		{E834928B-B7F0-4596-B1FF-AC29A071B881} = {04DBDB01-70F4-4E06-B468-8F87850B22BE}
+		{10CC4DBE-3BB8-4229-876C-472CDE9CACFC} = {8B30D54E-F76B-41EC-9862-A8B07DCC9CAD}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {28315BFD-90E7-4E14-A2EA-F3D23AF4126F}

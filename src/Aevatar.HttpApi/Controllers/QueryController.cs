@@ -45,7 +45,22 @@ public class QueryController : AevatarController
             throw new UserFriendlyException(result.Errors[0].ErrorMessage);
         }
 
+        request.QueryString = GetQueryWithPermissionFilter(request);
         var resp = await _indexingService.QueryWithLuceneAsync(request);
         return resp;
+    }
+    
+    private string GetQueryWithPermissionFilter(LuceneQueryDto queryDto)
+    {
+        var userId = CurrentUser.Id.HasValue ? CurrentUser.Id.ToString() : "null";
+        var permissionFilter = $"((isPublic:true) OR (authorizedUserIds.keyword:{userId}) OR (NOT _exists_:isPublic AND NOT _exists_:authorizedUserIds))";
+        if (queryDto.QueryString.IsNullOrWhiteSpace())
+        {
+            return permissionFilter;
+        }
+        else
+        {
+            return $"({queryDto.QueryString}) AND {permissionFilter}";
+        }
     }
 }
