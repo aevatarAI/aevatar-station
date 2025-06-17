@@ -13,6 +13,7 @@
         <ProjectReference Include="..\Aevatar.Domain.Tests\Aevatar.Domain.Tests.csproj" />
         <ProjectReference Include="..\Aevatar.Orleans.TestBase\Aevatar.Orleans.TestBase.csproj" />
         <ProjectReference Include="..\..\src\Aevatar.CQRS\Aevatar.CQRS.csproj" />
+        <ProjectReference Include="..\..\src\Aevatar.Station.Feature\Aevatar.Station.Feature.csproj" />
     </ItemGroup>
 
     <ItemGroup>
