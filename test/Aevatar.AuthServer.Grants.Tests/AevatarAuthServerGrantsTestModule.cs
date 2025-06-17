@@ -1,5 +1,11 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
+using Volo.Abp;
 using Volo.Abp.Autofac;
+using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
+using Volo.Abp.Threading;
+using IdentityRole = Volo.Abp.Identity.IdentityRole;
 
 namespace Aevatar.AuthServer.Grants;
 
@@ -13,5 +19,20 @@ public class AevatarAuthServerGrantsTestModule : AbpModule
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
         
+    }
+    
+    
+    public override void OnApplicationInitialization(ApplicationInitializationContext context)
+    {
+        AsyncHelper.RunSync(async () => await InitBasicRoleAsync(context));
+    }
+
+    private async Task InitBasicRoleAsync(ApplicationInitializationContext context)
+    {
+        var roleManager = context.ServiceProvider.GetRequiredService<IdentityRoleManager>();
+        var role = new IdentityRole(
+            Guid.NewGuid(),
+            Permissions.AevatarPermissions.BasicUser);
+        (await roleManager.CreateAsync(role)).CheckErrors();
     }
 } 

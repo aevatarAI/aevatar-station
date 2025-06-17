@@ -12,7 +12,7 @@ namespace Aevatar.MongoDB;
 [DependsOn(
     typeof(AevatarApplicationTestModule),
     typeof(AevatarMongoDbModule),
-    typeof(AevatarAuthServerGrantsModule)
+    typeof(AevatarAuthServerGrantsTestModule)
 )]
 public class AevatarMongoDbTestModule : AbpModule
 {

@@ -51,18 +51,4 @@ public class AevatarAuthServerGrantsModule : AbpModule
                         context.Services.GetRequiredService<ILogger<GithubGrantHandler>>()));
             });
     }
-
-    public override void OnApplicationInitialization(ApplicationInitializationContext context)
-    {
-        AsyncHelper.RunSync(async () => await InitBasicRoleAsync(context));
-    }
-
-    private async Task InitBasicRoleAsync(ApplicationInitializationContext context)
-    {
-        var roleManager = context.ServiceProvider.GetRequiredService<IdentityRoleManager>();
-        var role = new IdentityRole(
-            Guid.NewGuid(),
-            Permissions.AevatarPermissions.BasicUser);
-        (await roleManager.CreateAsync(role)).CheckErrors();
-    }
 } 
