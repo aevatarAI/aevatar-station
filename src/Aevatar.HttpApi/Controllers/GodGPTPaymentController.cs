@@ -166,6 +166,16 @@ public class GodGPTPaymentController : AevatarController
         return response;
     }
 
+    [HttpGet("has-apple-subscription")]
+    public async Task<bool> HasActiveAppleSubscriptionAsync()
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var result = await _godGptService.HasActiveAppleSubscriptionAsync(currentUserId);
+        _logger.LogDebug($"[GodGPTPaymentController][HasActiveAppleSubscriptionAsync] userId: {currentUserId.ToString()}, result: {result}, duration: {stopwatch.ElapsedMilliseconds}ms");
+        return result;
+    }
+
     [AllowAnonymous]
     [HttpPost("webhook")]
     public async Task<IActionResult> Webhook()
