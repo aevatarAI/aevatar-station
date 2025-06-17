@@ -23,6 +23,7 @@ using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using Orleans.Providers.MongoDB.StorageProviders.Serializers;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using Orleans.Configuration;
 using Orleans.Providers.MongoDB.StorageProviders.Serializers;
 using Orleans.Providers.MongoDB.Configuration;
@@ -211,6 +212,10 @@ public static class OrleansHostExtension
                     .Configure<SiloOptions>(options =>
                     {
                         options.SiloName = $"{siloNamePattern}-{Guid.NewGuid().ToString("N").Substring(0, 6)}";                        
+                    })
+                    .Configure<OrleansJsonSerializerOptions>(options =>
+                    {
+                        options.JsonSerializerSettings.DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate;
                     });
 
                 var eventSourcingProvider = configuration.GetSection("OrleansEventSourcing:Provider").Get<string>();
