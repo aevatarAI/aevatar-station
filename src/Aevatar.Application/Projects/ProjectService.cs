@@ -44,10 +44,12 @@ public class ProjectService : OrganizationService, IProjectService
 
         var ownerRoleId = await AddOwnerRoleAsync(project.Id);
         var readerRoleId = await AddReaderRoleAsync(project.Id);
+        var apiKeyRoleId = await AddApiKeyRoleAsync(project.Id);
 
         project.ExtraProperties[AevatarConsts.OrganizationTypeKey] = OrganizationType.Project;
         project.ExtraProperties[AevatarConsts.OrganizationRoleKey] = new List<Guid> { ownerRoleId, readerRoleId };
         project.ExtraProperties[AevatarConsts.ProjectDomainNameKey] = input.DomainName;
+        project.ExtraProperties[AevatarConsts.ProjectApiKeyRoleKey] = apiKeyRoleId;
 
         try
         {
@@ -159,6 +161,10 @@ public class ProjectService : OrganizationService, IProjectService
         }
 
         user.AddRole(roleId.Value);
+        
+        var apiRole = await GetApiKeyRoleIdAsync(organizationId);
+        user.AddRole(apiRole);
+        
         (await IdentityUserManager.UpdateAsync(user)).CheckErrors();
         (await IdentityUserManager.UpdateSecurityStampAsync(user)).CheckErrors();
         await IdentityUserManager.AddToOrganizationUnitAsync(user.Id, organizationId);
@@ -174,5 +180,26 @@ public class ProjectService : OrganizationService, IProjectService
 
         var organization = await OrganizationUnitRepository.GetAsync(organizationId);
         await RemoveMemberAsync(organization, user.Id);
+        
+        user = await IdentityUserManager.GetByIdAsync(user.Id);
+        var apiKeyRoleId = await GetApiKeyRoleIdAsync(organizationId);
+        user.RemoveRole(apiKeyRoleId);
+        (await IdentityUserManager.UpdateAsync(user)).CheckErrors();
+    }
+    
+    private async Task<Guid> AddApiKeyRoleAsync(Guid organizationId)
+    {
+        var role = new IdentityRole(
+            GuidGenerator.Create(),
+            OrganizationRoleHelper.GetRoleName(organizationId, AevatarConsts.ProjectApiKeyRoleName)
+        );
+        (await RoleManager.CreateAsync(role)).CheckErrors();
+        return role.Id;
+    }
+    
+    private async Task<Guid> GetApiKeyRoleIdAsync(Guid projectId)
+    {
+        var project = await OrganizationUnitRepository.GetAsync(projectId);
+        return (Guid)project.ExtraProperties[AevatarConsts.ProjectApiKeyRoleKey];
     }
 }
