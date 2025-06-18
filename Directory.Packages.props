@@ -7,9 +7,10 @@
     <AevatarGAgentVerion>1.4.16</AevatarGAgentVerion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="GodGPT.GAgents" Version="1.0.7-alpha-searchsessionbytitle-2" />
+
+    <PackageVersion Include="GodGPT.GAgents" Version="1.0.9-alpha-searchsessionbytitle-1" />
     <PackageVersion Include="Stripe.net" Version="48.1.0"/>
-    <PackageVersion Include="GodGPT.Webhook" Version="1.0.7-alpha-searchsessionbytitle-2" />
+    <PackageVersion Include="GodGPT.Webhook" Version="1.0.9-alpha-searchsessionbytitle-1" />
     
     <!-- AElf packages -->
     <PackageVersion Include="AElf.Client" Version="1.1.0" />
@@ -186,7 +187,7 @@
     <PackageVersion Include="AutoResponseWrapper" Version="1.1.3" />
     <PackageVersion Include="System.Text.Json" Version="9.0.0" />
     <PackageVersion Include="OpenIddict.Server.AspNetCore" Version="5.5.0" />
-    <PackageVersion Include="StackExchange.Redis" Version="2.6.122" />
+    <PackageVersion Include="StackExchange.Redis" Version="2.7.27" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="MediatR" Version="12.4.1" />
     <PackageVersion Include="Elastic.Clients.Elasticsearch" Version="8.17.3" />
@@ -211,5 +212,6 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.5.7" />
     <PackageVersion Include="coverlet.collector" Version="6.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Serialization.TestKit" Version="9.0.1" />
+    <PackageVersion Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="9.0.0"/>
   </ItemGroup>
 </Project>

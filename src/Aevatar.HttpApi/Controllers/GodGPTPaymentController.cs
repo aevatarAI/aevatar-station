@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 using OpenIddict.Abstractions;
 using Orleans;
 using Stripe;
@@ -60,6 +61,17 @@ public class GodGPTPaymentController : AevatarController
         var currentUserId = (Guid)CurrentUser.Id!;
         var productDtos = await _godGptService.GetStripeProductsAsync(currentUserId);
         _logger.LogDebug("[GodGPTPaymentController][GetStripeProductsAsync] userId: {0}, duration: {1}ms",
+            currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
+        return productDtos;
+    }
+
+    [HttpGet("iap-products")]
+    public async Task<List<AppleProductDto>> GetAppleProductsAsync()
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var productDtos = await _godGptService.GetAppleProductsAsync(currentUserId);
+        _logger.LogDebug("[GodGPTPaymentController][GetAppleProductsAsync] userId: {0}, duration: {1}ms",
             currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
         return productDtos;
     }
@@ -139,6 +151,29 @@ public class GodGPTPaymentController : AevatarController
     public async Task<bool> RefundedAsync()
     {
         return true;
+    }
+
+    [HttpPost("verify-receipt")]
+    public async Task<AppStoreSubscriptionResponseDto> VerifyAppStoreReceiptAsync(VerifyAppStoreReceiptInput input)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var response = await _godGptService.VerifyAppStoreReceiptAsync(currentUserId, input);
+        // _logger.LogDebug("[GodGPTPaymentController][VerifyAppStoreReceiptAsync] userId: {0}, sandboxMode: {1}, duration: {2}ms",
+        //     currentUserId.ToString(), input.SandboxMode.ToString(), stopwatch.ElapsedMilliseconds);
+        _logger.LogDebug($"[GodGPTPaymentController][VerifyAppStoreReceiptAsync] userId: {currentUserId.ToString()}, sandboxMode: {input.SandboxMode.ToString()}, duration: {stopwatch.ElapsedMilliseconds}ms");
+        _logger.LogDebug($"[GodGPTPaymentController][VerifyAppStoreReceiptAsync] result: {response.Success}, {response.Error}");
+        return response;
+    }
+
+    [HttpGet("has-apple-subscription")]
+    public async Task<bool> HasActiveAppleSubscriptionAsync()
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var result = await _godGptService.HasActiveAppleSubscriptionAsync(currentUserId);
+        _logger.LogDebug($"[GodGPTPaymentController][HasActiveAppleSubscriptionAsync] userId: {currentUserId.ToString()}, result: {result}, duration: {stopwatch.ElapsedMilliseconds}ms");
+        return result;
     }
 
     [AllowAnonymous]

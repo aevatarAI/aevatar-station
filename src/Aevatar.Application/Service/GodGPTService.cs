@@ -57,6 +57,10 @@ public interface IGodGPTService
     Task<GetCustomerResponseDto> GetStripeCustomerAsync(Guid currentUserId);
     Task<SubscriptionResponseDto> CreateSubscriptionAsync(Guid currentUserId, CreateSubscriptionInput input);
     Task<CancelSubscriptionResponseDto> CancelSubscriptionAsync(Guid currentUserId, CancelSubscriptionInput input);
+    Task<List<AppleProductDto>> GetAppleProductsAsync(Guid currentUserId);
+    Task<AppStoreSubscriptionResponseDto> VerifyAppStoreReceiptAsync(Guid currentUserId, VerifyAppStoreReceiptInput input);
+    Task<GrainResultDto<int>> UpdateUserCreditsAsync(Guid currentUserId, UpdateUserCreditsInput input);
+    Task<bool> HasActiveAppleSubscriptionAsync(Guid currentUserId);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -381,6 +385,39 @@ public class GodGPTService : ApplicationService, IGodGPTService
             CancellationReason = string.Empty,
             CancelAtPeriodEnd = true
         });
+    }
+
+    public async Task<List<AppleProductDto>> GetAppleProductsAsync(Guid currentUserId)
+    {
+        var userBillingGrain =
+            _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(currentUserId));
+        return await userBillingGrain.GetAppleProductsAsync();
+    }
+
+    public async Task<AppStoreSubscriptionResponseDto> VerifyAppStoreReceiptAsync(Guid currentUserId, VerifyAppStoreReceiptInput input)
+    {
+        var userBillingGrain =
+            _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(currentUserId));
+        return await userBillingGrain.CreateAppStoreSubscriptionAsync(new CreateAppStoreSubscriptionDto
+        {
+            UserId = currentUserId.ToString(),
+            SandboxMode = input.SandboxMode,
+            TransactionId = input.TransactionId
+        });
+    }
+
+    public async Task<GrainResultDto<int>> UpdateUserCreditsAsync(Guid currentUserId, UpdateUserCreditsInput input)
+    {
+        var userQuotaGrain =
+            _clusterClient.GetGrain<IUserQuotaGrain>(CommonHelper.GetUserQuotaGAgentId(input.UserId));
+        return await userQuotaGrain.UpdateCreditsAsync(currentUserId.ToString(), input.Credits);
+    }
+
+    public async Task<bool> HasActiveAppleSubscriptionAsync(Guid currentUserId)
+    {
+        var userBillingGrain =
+            _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(currentUserId));
+        return await userBillingGrain.HasActiveAppleSubscriptionAsync();
     }
 
     private bool TryGetUserIdFromMetadata(IDictionary<string, string> metadata, out string userId)
