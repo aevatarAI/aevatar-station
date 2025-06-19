@@ -20,6 +20,7 @@ using MongoDB.Driver;
 using Newtonsoft.Json;
 using Orleans.Configuration;
 using Orleans.Providers.MongoDB.Configuration;
+using Orleans.Providers.MongoDB.StorageProviders.Serializers;
 using Orleans.Serialization;
 using Orleans.Streams.Kafka.Config;
 
@@ -170,6 +171,7 @@ public static class OrleansHostExtension
                     .RegisterHub<AevatarSignalRHub>();
             }).ConfigureServices((context, services) =>
             {
+                services.AddSingleton<IGrainStateSerializer, HybridGrainStateSerializer>();
                 services.Configure<QdrantConfig>(context.Configuration.GetSection("VectorStores:Qdrant"));
                 services.Configure<SystemLLMConfigOptions>(context.Configuration);
                 services.Configure<AzureOpenAIEmbeddingsConfig>(
