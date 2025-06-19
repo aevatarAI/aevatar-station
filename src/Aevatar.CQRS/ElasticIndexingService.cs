@@ -48,7 +48,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
 
     public string GetIndexName(string index)
     {
-        return $"{CqrsConstant.IndexPrefix}-{_options.Value.HostId}-{index}{CqrsConstant.IndexSuffix}".ToLower();
+        return $"{CqrsConstant.IndexPrefix}-{_options.Value.HostId}-test-{index}{CqrsConstant.IndexSuffix}".ToLower();
     }
 
     public async Task CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase
