@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="BenchmarkDotNet"/>
+        <PackageReference Include="Microsoft.Extensions.Hosting"/>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Console"/>
+        <PackageReference Include="Microsoft.Extensions.Options"/>
+        <PackageReference Include="Microsoft.Orleans.Client"/>
+        <PackageReference Include="Microsoft.Orleans.Server"/>
+        <PackageReference Include="Microsoft.Orleans.Runtime"/>
+        <PackageReference Include="Microsoft.Orleans.Core"/>
+        <PackageReference Include="Microsoft.Orleans.TestingHost"/>
+        <PackageReference Include="Orleans.Providers.MongoDB"/>
+        <PackageReference Include="Microsoft.Orleans.Clustering.ZooKeeper"/>
+        <PackageReference Include="MongoDB.Driver"/>
+        <PackageReference Include="Newtonsoft.Json"/>
+        <PackageReference Include="EphemeralMongo.Core"/>
+        <PackageReference Include="EphemeralMongo6.runtime.osx-x64"/>
+        <PackageReference Include="EphemeralMongo6.runtime.linux-x64"/>
+        <PackageReference Include="EphemeralMongo6.runtime.win-x64"/>
+        <PackageReference Include="Serilog"/>
+        <PackageReference Include="Serilog.Extensions.Hosting"/>
+        <PackageReference Include="Serilog.Settings.Configuration"/>
+        <PackageReference Include="Serilog.Sinks.Console"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\samples\E2E.Grains\E2E.Grains.csproj"/>
+    </ItemGroup>
+
+</Project> 

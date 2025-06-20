@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AbpVersion>9.0.3</AbpVersion>
-    <OrleansVerion>9.0.1</OrleansVerion>
+    <OrleansVerion>9.1.2</OrleansVerion>
     <AevatarVerion>1.5.1-alpha.1</AevatarVerion>
     <AevatarGAgentVerion>1.5.0-workflow-2</AevatarGAgentVerion>
   </PropertyGroup>
@@ -151,6 +151,7 @@
     <PackageVersion Include="MongoDB.Driver" Version="2.29.0" />
     <PackageVersion Include="MongoDB.Bson" Version="2.29.0" />
     <PackageVersion Include="Orleans.Providers.MongoDB" Version="8.1.0" />
+    <PackageVersion Include="Microsoft.Orleans.Clustering.ZooKeeper" Version="9.1.2" />
     <!-- Serilog packages -->
     <PackageVersion Include="Serilog" Version="4.0.2" />
     <PackageVersion Include="Serilog.Extensions.Hosting" Version="8.0.0" />
