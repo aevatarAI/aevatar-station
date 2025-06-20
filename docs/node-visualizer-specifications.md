@@ -101,15 +101,16 @@ Enable users to upload, manage, and utilize plugins, making them available as ag
 
 **Key Requirements:**
 - Dedicated page for uploading and managing plugins (e.g., custom AI agents, tools).
+- Project-Level Plugin Upload: Plugins can be uploaded at the 'Project' level. Any user within the project will be able to use the uploaded plugin in their workflows.
 - List view of all uploaded plugins with metadata (name, version, description, status).
 - Ability to upload new plugins and update or remove existing ones.
 - Validation and feedback for plugin upload (success, failure, compatibility).
-- Plugins that pass validation should automatically appear as selectable agent nodes in the workflow designer palette.
+- Plugins that pass validation should automatically appear as selectable agent nodes in the workflow designer palette for all project users.
 - Search and filter functionality for plugins.
 - Support for plugin versioning and rollback.
 
 **Acceptance Criteria:**
-- Users can upload, update, and remove plugins via the management page.
-- Successfully uploaded plugins are available as agent nodes in the workflow designer.
+- Users can upload, update, and remove plugins via the management page at the project level.
+- Successfully uploaded plugins are available as agent nodes in the workflow designer for all users in the project.
 - Invalid or incompatible plugins are clearly flagged and not loaded into the designer.
 - Users receive clear feedback on plugin management actions.
