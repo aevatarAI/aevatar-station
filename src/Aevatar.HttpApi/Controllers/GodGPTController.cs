@@ -45,7 +45,7 @@ public class GodGPTController : AevatarController
     private readonly IOptions<AevatarOptions> _aevatarOptions;
     private readonly ILogger<GodGPTController> _logger;
     private readonly IAccountService _accountService;
-    const string Version = "1.18.0";
+    const string Version = "1.18.1";
 
 
     public GodGPTController(IGodGPTService godGptService, IClusterClient clusterClient,
