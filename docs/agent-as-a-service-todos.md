@@ -23,7 +23,8 @@ This document outlines the prioritized feature set for launching an "AI Agents a
 - [ ] **Enhanced resource quotas per workspace/tenant** (partial implementation exists)
 - [x] ~~Set up tenant onboarding flow~~
 - [ ] **Complete billing/subscription management per tenant** (80% complete)
-- [ ] Advanced permission management user flow (AevatarPermissions, OrganizationPermissionChecker)
+- [ ] **Advanced permission management user flow** (AevatarPermissions, OrganizationPermissionChecker)
+- [ ] **Plugin Upload and Setup, complete user flow**
 
 **Implementation Evidence:**
 - Complete RBAC with `PermissionCheckFilter`, `UserContext`, `ClaimsPrincipal`
@@ -42,9 +43,9 @@ This document outlines the prioritized feature set for launching an "AI Agents a
 
 **Remaining TODO Items:**
 - [ ] **Build visual workflow designer (drag-and-drop interface)** - PRIMARY GAP
-- [ ] Integrate a debug mode overlay into the visual workflow designer that, after running, displays the agent's state for inspection (without step-through, breakpoints, or variable-level inspection).
+- [ ] **Debugger** - Integrate a debug mode overlay into the visual workflow designer that, after running, displays the agent's state for inspection (without step-through, breakpoints, or variable-level inspection).
     - [ ] Ensure the user is authenticated before allowing access to the agent's state information in the debug overlay.
-- [ ] **Implement node-based architecture UI** - CRITICAL MISSING COMPONENT
+- [ ] **Implement node-based architecture UI** (30% in progress)
 - [x] ~~Create agent execution runtime with queue-based processing~~
 - [x] ~~Build state management system across agent runs~~
 - [x] ~~Add basic retry mechanisms and error handling~~
@@ -98,6 +99,7 @@ This document outlines the prioritized feature set for launching an "AI Agents a
 - [ ] **Implement code nodes (JavaScript/Python) for inline scripting**
 - [ ] **Build core data transformer nodes (Merge, Loop, Filter, Aggregate, Dedupe, Split-Out, Summarize)**
 - [ ] **Create expression & templating language for dynamic parameters**
+- [ ] **Implement tool calling functionality (invoke tools from agent workflows)**
 
 **Note**: Tool ecosystem is the largest remaining development area.
 
@@ -139,8 +141,6 @@ This document outlines the prioritized feature set for launching an "AI Agents a
 - [ ] **Build JSON-based workflow configuration schema optimized for LLM generation**
 - [ ] **Create bidirectional natural language ↔ JSON workflow translation engine with intent recognition**
 - [ ] **Implement workflow validation and auto-correction system for LLM-generated configurations**
-- [ ] **Build semantic workflow templates with intelligent understanding capabilities**
-- [ ] **Implement configuration drift detection and auto-healing for production workflows**
 
 **Implementation Evidence:**
 - Sophisticated `GAgentBase<TState, TStateLogEvent, TEvent, TConfiguration>` 
