@@ -129,7 +129,7 @@ jobs:
         run: |
           echo "Calling UpdateDockerImage for hostType=${{ env.hostType }} with imageName=${{ steps.meta.outputs.tags }}"
 
-          curl -X 'POST' "https://station-dev-staging-new.aevatar.ai/api/users/updateDockerImage?hostType=${{ env.hostType }}&imageName=$(echo '${{ steps.meta.outputs.tags }}' | sed 's/:/%3A/g')" \
+          curl -X 'POST' "https://station-dev-staging.aevatar.ai/api/users/updateDockerImage?hostType=${{ env.hostType }}&imageName=$(echo '${{ steps.meta.outputs.tags }}' | sed 's/:/%3A/g')" \
             -H "accept: */*" \
             -H "Authorization: Bearer ${{ env.access_token }}" \
             -H "X-Requested-With: XMLHttpRequest" \
