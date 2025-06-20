@@ -12,11 +12,13 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Aevatar.Silo\Aevatar.Silo.csproj" />
     <ProjectReference Include="..\Aevatar.Orleans.TestBase\Aevatar.Orleans.TestBase.csproj" />
+    <ProjectReference Include="..\Aevatar.MongoDB.Tests\Aevatar.MongoDB.Tests.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Orleans.TestingHost" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="FluentAssertions" />
     <PackageReference Include="Moq" />
     <PackageReference Include="Shouldly" />
     <PackageReference Include="xunit" />

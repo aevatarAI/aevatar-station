@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using Aevatar.Developer.Host.Extensions;
 using Aevatar.SignalR;
@@ -17,6 +18,8 @@ public class Program
     public async static Task<int> Main(string[] args)
     {
         var configuration = new ConfigurationBuilder()
+            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
+            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json"))
             .AddJsonFile("appsettings.json")
             .Build();
         
@@ -39,6 +42,10 @@ public class Program
         {
             Log.Information("Starting Developer.Host.");
             var builder = WebApplication.CreateBuilder(args);
+            builder.Configuration
+                .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
+                .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json"))
+                .AddJsonFile("appsettings.json");
             builder.Host
                 .UseOrleansClientConfigration()
                 .ConfigureDefaults(args)

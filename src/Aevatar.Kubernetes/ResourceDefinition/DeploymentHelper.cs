@@ -52,11 +52,13 @@ public class DeploymentHelper
         bool isSilo, string readinessProbeHealthPath = null)
     {
         var labels = CreateLabels(deploymentLabelName, appId, version);
-        V1EnvVar[] env = null;
+        V1EnvVar[] MainEnv = null;
         if (isSilo)
         {
-            env = GetV1Env(RemoveSuffix(appId.ToLower(),"-"+KubernetesConstants.HostSilo));
+            MainEnv = GetSiloV1Env(RemoveSuffix(appId.ToLower(), "-" + KubernetesConstants.HostSilo));
         }
+
+        V1EnvVar[] otherEnv = GetV1Env();
         var deployment = new V1Deployment
         {
             Metadata = new V1ObjectMeta
@@ -76,8 +78,8 @@ public class DeploymentHelper
                     {
                         Affinity = CreateNodeAffinity(),
                         Tolerations = CreateNodeTolerations(),
-                        Containers = CreateContainers(imageName, containerName, command,containerPort,
-                            requestCpu, requestMemory, readinessProbeHealthPath, env),
+                        Containers = CreateContainers(imageName, containerName, command, containerPort,
+                            requestCpu, requestMemory, readinessProbeHealthPath, isSilo ? MainEnv : otherEnv, otherEnv),
                         Volumes = CreatePodTemplateVolumes(configMapName, sideCarConfigMapName)
                     }
                 }
@@ -95,16 +97,17 @@ public class DeploymentHelper
             { KubernetesConstants.MonitorLabelKey, appId },
             { KubernetesConstants.AppIdLabelKey, appId },
             { KubernetesConstants.AppVersionLabelKey, version }
-          //  { KubernetesConstants.AppPodTypeLabelKey, podType }
+            //  { KubernetesConstants.AppPodTypeLabelKey, podType }
         };
     }
-    
+
     public static string RemoveSuffix(string str, string suffix)
     {
         if (str.EndsWith(suffix))
         {
             return str.Substring(0, str.Length - suffix.Length);
         }
+
         return str;
     }
 
@@ -123,13 +126,16 @@ public class DeploymentHelper
 
     private static IList<V1Toleration> CreateNodeTolerations()
     {
-        return [new V1Toleration
-        {
-            Effect = "NoSchedule",
-            Key = "kubernetes.io/dedicated",
-            OperatorProperty = "Equal",
-            Value = "ai"
-        }];
+        return
+        [
+            new V1Toleration
+            {
+                Effect = "NoSchedule",
+                Key = "kubernetes.io/dedicated",
+                OperatorProperty = "Equal",
+                Value = "ai"
+            }
+        ];
     }
 
     private static V1Affinity CreateNodeAffinity()
@@ -165,29 +171,27 @@ public class DeploymentHelper
             }
         };
     }
-    
+
     private static List<V1Container> CreateContainers(string imageName, string containerName, List<string> command,
         int containerPort,
-        string requestCpu, string requestMemory, string readinessProbeHealthPath, V1EnvVar[] env)
+        string requestCpu, string requestMemory, string readinessProbeHealthPath, V1EnvVar[] env, V1EnvVar[] sidecarEnv)
     {
         // Main container
         var mainContainer = new V1Container
         {
             Name = containerName,
             Image = imageName,
-            Command = command ,
+            Command = command,
             Ports = new List<V1ContainerPort> { new V1ContainerPort(containerPort) },
             VolumeMounts = CreateMainContainerVolumeMounts(),
             Resources = CreateResources(requestCpu, requestMemory),
+            Env = env
         };
-        if (env != null) 
-        {
-            mainContainer.Env = env;
-        }
-        if (!string.IsNullOrEmpty(readinessProbeHealthPath)) 
+        if (!string.IsNullOrEmpty(readinessProbeHealthPath))
         {
             mainContainer.ReadinessProbe = CreateQueryPodReadinessProbe(readinessProbeHealthPath, containerPort);
         }
+
         // Filebeat side car container
         var sideCarContainer = new V1Container
         {
@@ -198,16 +202,36 @@ public class DeploymentHelper
                 "-c", KubernetesConstants.FileBeatConfigMountPath,
                 "-e",
             },
+            Env = sidecarEnv,
             VolumeMounts = CreateSideCarContainerVolumeMounts()
         };
-        
+
         return new List<V1Container>
         {
             mainContainer, sideCarContainer
         };
     }
 
-    private static V1EnvVar[] GetV1Env(string appId) {
+    private static V1EnvVar[] GetV1Env()
+    {
+        return new V1EnvVar[]
+        {
+            new V1EnvVar
+            {
+                Name = "POD_IP",
+                ValueFrom = new V1EnvVarSource
+                {
+                    FieldRef = new V1ObjectFieldSelector
+                    {
+                        FieldPath = "status.podIP"
+                    }
+                }
+            }
+        };
+    }
+
+    private static V1EnvVar[] GetSiloV1Env(string appId)
+    {
         return new V1EnvVar[]
         {
             new V1EnvVar("ORLEANS_SERVICE_ID", $"{appId}BasicService"),
@@ -260,7 +284,7 @@ public class DeploymentHelper
             }
         };
     }
-    
+
     private static V1Probe CreateQueryPodReadinessProbe(string readinessProbeHealthPath, int containerPort)
     {
         return new V1Probe()
@@ -286,7 +310,7 @@ public class DeploymentHelper
             FailureThreshold = 10
         };
     }
-    
+
     private static List<V1VolumeMount> CreateMainContainerVolumeMounts()
     {
         return new List<V1VolumeMount>
@@ -300,12 +324,33 @@ public class DeploymentHelper
             },
             new V1VolumeMount
             {
+                Name = "config-volume",
+                MountPath = KubernetesConstants
+                    .AppSettingSharedFileMountPath,
+                SubPath = KubernetesConstants.AppSettingSharedFileName
+            },
+            new V1VolumeMount
+            {
+                Name = "config-volume",
+                MountPath = KubernetesConstants
+                    .AppSettingHttpApiHostSharedFileMountPath,
+                SubPath = KubernetesConstants.AppSettingHttpApiHostSharedFileName
+            },
+            new V1VolumeMount
+            {
+                Name = "config-volume",
+                MountPath = KubernetesConstants
+                    .AppSettingSiloSharedFileMountPath,
+                SubPath = KubernetesConstants.AppSettingSiloSharedFileName
+            },
+            new V1VolumeMount
+            {
                 Name = "log-volume",
                 MountPath = KubernetesConstants.AppLogFileMountPath
             }
         };
     }
-    
+
     private static List<V1VolumeMount> CreateSideCarContainerVolumeMounts()
     {
         return new List<V1VolumeMount>
@@ -340,6 +385,21 @@ public class DeploymentHelper
                         {
                             Key = KubernetesConstants.AppSettingFileName,
                             Path = KubernetesConstants.AppSettingFileName
+                        },
+                        new V1KeyToPath
+                        {
+                            Key = KubernetesConstants.AppSettingSharedFileName,
+                            Path = KubernetesConstants.AppSettingSharedFileName
+                        },
+                        new V1KeyToPath
+                        {
+                            Key = KubernetesConstants.AppSettingHttpApiHostSharedFileName,
+                            Path = KubernetesConstants.AppSettingHttpApiHostSharedFileName
+                        },
+                        new V1KeyToPath
+                        {
+                            Key = KubernetesConstants.AppSettingSiloSharedFileName,
+                            Path = KubernetesConstants.AppSettingSiloSharedFileName
                         }
                     }
                 }

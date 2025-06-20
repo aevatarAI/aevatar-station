@@ -17,6 +17,7 @@ using Aevatar.Exceptions;
 using Aevatar.Options;
 using Aevatar.Query;
 using Aevatar.Schema;
+using Aevatar.Station.Feature.CreatorGAgent;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -27,6 +28,7 @@ using Orleans.Metadata;
 using Orleans.Runtime;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
+using ICreatorGAgent = Aevatar.Application.Grains.Agents.Creator.ICreatorGAgent;
 
 namespace Aevatar.Service;
 

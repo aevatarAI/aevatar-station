@@ -3,6 +3,10 @@ import os
 import time
 import pytest
 import requests
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 TEST_AGENT = "agenttest"
 STATE_NAME = "FrontAgentState"
@@ -17,6 +21,12 @@ CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 INDEX_NAME = f"aevatar-{CLIENT_ID}-testagentstateindex"
 
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD ="1q2W3e*"
+
+PERMISSION_AGENT = "agentpermissiontest"
+PERMISSION_STATE_NAME = "PermissionAgentState"
+PERMISSION_EVENT_TYPE = "Aevatar.Application.Grains.Agents.TestAgent.SetAuthorizedUserEvent"
 
 @pytest.fixture(scope="session")
 def access_token():
@@ -277,3 +287,108 @@ def test_query_agent_list(api_headers, test_agent):
     assert_status_code(response)
     assert any(at["agentType"] == TEST_AGENT for at in response.json()["data"])
 
+
+@pytest.fixture(scope="session")
+def admin_access_token():
+    """get access token"""
+    auth_data = {
+        "grant_type": "password",
+        "username": ADMIN_USERNAME,
+        "password": ADMIN_PASSWORD,
+        "scope": "Aevatar",
+        "client_id": "AevatarAuthServer"
+    }
+
+    response = requests.post(
+        f"{AUTH_HOST}/connect/token",
+        data=auth_data,
+        headers={"Content-Type": "application/x-www-form-urlencoded"}
+    )
+    assert_status_code(response)
+    return response.json()["access_token"]
+
+
+@pytest.fixture
+def api_admin_headers(admin_access_token):
+    """generate request header with access token"""
+    return {
+        "Authorization": f"Bearer {admin_access_token}",
+        "Content-Type": "application/json"
+    }
+    
+
+def test_permission(api_headers, api_admin_headers):
+    """test event operations"""
+    # create sub agent
+    agent_data = {
+        "agentType": PERMISSION_AGENT,
+        "name": "permission agent"
+    }
+    response = requests.post(
+        f"{API_HOST}/api/agent",
+        json=agent_data,
+        headers=api_headers
+    )
+    assert_status_code(response)
+    agent_id = response.json()["data"]["id"]
+
+    # add to group
+    response = requests.post(
+        f"{API_HOST}/api/agent/{agent_id}/add-subagent",
+        json={"subAgents": [agent_id]},
+        headers=api_headers
+    )
+    assert_status_code(response)
+    assert agent_id in response.json()["data"]["subAgents"]
+
+    time.sleep(5)
+    
+    # publish event
+    response = requests.get(
+        f"{API_HOST}/api/identity/users/by-username/{ADMIN_USERNAME}",
+        headers=api_admin_headers
+    )
+    admin_id = response.json()["data"]["id"]
+    
+    event_data = {
+        "agentId": agent_id,
+        "eventType": PERMISSION_EVENT_TYPE,
+        "eventProperties": {"UserId": admin_id}
+    }
+    response = requests.post(
+        f"{API_HOST}/api/agent/publishEvent",
+        json=event_data,
+        headers=api_headers
+    )
+    assert_status_code(response)
+
+    time.sleep(5)
+    
+    # query es
+    response = requests.get(
+        f"{API_HOST}/api/query/es",
+        params={
+            "stateName": PERMISSION_STATE_NAME,
+            "queryString": f"_id:{agent_id}",
+            "pageSize": 10
+        },
+        headers=api_headers
+    )
+
+    assert_status_code(response)
+    logger.debug(response.json()["data"])
+    assert response.json()["data"]["totalCount"] == 0
+    
+    response = requests.get(
+        f"{API_HOST}/api/query/es",
+        params={
+            "stateName": PERMISSION_STATE_NAME,
+            "queryString": f"_id:{agent_id}",
+            "pageSize": 10
+        },
+        headers=api_admin_headers
+    )
+    
+    assert_status_code(response)
+    logger.debug(response.json()["data"])
+    assert response.json()["data"]["totalCount"] > 0
