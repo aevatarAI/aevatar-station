@@ -15,7 +15,6 @@ This document outlines the prioritized feature set for launching an "AI Agents a
 - ✅ User authentication & authorization system (OpenIddict OAuth, comprehensive RBAC)
 - ✅ Tenant data segregation and security architecture (MongoDB tenant prefixing, Orleans grains)
 - ✅ Tenant onboarding flow (automated user creation, role assignment)
-- ✅ Advanced permission management (AevatarPermissions, OrganizationPermissionChecker)
 
 **Remaining TODO Items:**
 - [x] ~~Implement workspace isolation for different customers~~
@@ -24,6 +23,7 @@ This document outlines the prioritized feature set for launching an "AI Agents a
 - [ ] **Enhanced resource quotas per workspace/tenant** (partial implementation exists)
 - [x] ~~Set up tenant onboarding flow~~
 - [ ] **Complete billing/subscription management per tenant** (80% complete)
+- [ ] Advanced permission management user flow (AevatarPermissions, OrganizationPermissionChecker)
 
 **Implementation Evidence:**
 - Complete RBAC with `PermissionCheckFilter`, `UserContext`, `ClaimsPrincipal`
@@ -42,6 +42,8 @@ This document outlines the prioritized feature set for launching an "AI Agents a
 
 **Remaining TODO Items:**
 - [ ] **Build visual workflow designer (drag-and-drop interface)** - PRIMARY GAP
+- [ ] Integrate a debug mode overlay into the visual workflow designer that, after running, displays the agent's state for inspection (without step-through, breakpoints, or variable-level inspection).
+    - [ ] Ensure the user is authenticated before allowing access to the agent's state information in the debug overlay.
 - [ ] **Implement node-based architecture UI** - CRITICAL MISSING COMPONENT
 - [x] ~~Create agent execution runtime with queue-based processing~~
 - [x] ~~Build state management system across agent runs~~
