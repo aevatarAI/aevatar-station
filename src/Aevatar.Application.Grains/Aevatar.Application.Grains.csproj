@@ -9,7 +9,6 @@
 
     <ItemGroup>
         <PackageReference Include="Aevatar.GAgents.ChatAgent" />
-        <PackageReference Include="Aevatar.Station.Feature" />
         <PackageReference Include="AutoGen.Core" />
         <PackageReference Include="Microsoft.Extensions.Options" />
         <PackageReference Include="Microsoft.Orleans.Sdk" />

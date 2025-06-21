@@ -26,7 +26,6 @@
         <PackageReference Include="AElf.OpenTelemetry" />
         <PackageReference Include="FluentValidation" />
         <PackageReference Include="Aevatar" />
-        <PackageReference Include="Aevatar.Station.Feature" />
 
     </ItemGroup>
 
