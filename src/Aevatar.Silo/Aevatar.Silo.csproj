@@ -34,7 +34,6 @@
         <PackageReference Include="Aevatar.GAgents.Basic" />
 -->
         <PackageReference Include="Aevatar.GAgents.GroupChat" />
-        <PackageReference Include="Aevatar.Station.Feature" />
 
     </ItemGroup>
 
