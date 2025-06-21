@@ -36,6 +36,9 @@
         <ProjectReference Include="..\Aevatar.Domain.Grains\Aevatar.Domain.Grains.csproj" />
         <ProjectReference Include="..\Aevatar.Domain\Aevatar.Domain.csproj" />
         <ProjectReference Include="..\Aevatar.Neo4JStore\Aevatar.Neo4JStore.csproj" />
+        <ProjectReference Include="..\Aevatar.Neo4JStore\Aevatar.Neo4JStore.csproj" />
+        <ProjectReference Include="..\Aevatar.Station.Feature\Aevatar.Station.Feature.csproj" />
+
     </ItemGroup>
 
     <ItemGroup>

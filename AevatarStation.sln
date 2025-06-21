@@ -83,6 +83,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VerifySerializerPerformance
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "benchmark", "benchmark", "{8B30D54E-F76B-41EC-9862-A8B07DCC9CAD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Station.Feature", "src\Aevatar.Station.Feature\Aevatar.Station.Feature.csproj", "{DE32978C-0376-403D-B238-725A8B58800B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -525,6 +527,18 @@ Global
 		{10CC4DBE-3BB8-4229-876C-472CDE9CACFC}.Release|x64.Build.0 = Release|Any CPU
 		{10CC4DBE-3BB8-4229-876C-472CDE9CACFC}.Release|x86.ActiveCfg = Release|Any CPU
 		{10CC4DBE-3BB8-4229-876C-472CDE9CACFC}.Release|x86.Build.0 = Release|Any CPU
+		{DE32978C-0376-403D-B238-725A8B58800B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DE32978C-0376-403D-B238-725A8B58800B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DE32978C-0376-403D-B238-725A8B58800B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{DE32978C-0376-403D-B238-725A8B58800B}.Debug|x64.Build.0 = Debug|Any CPU
+		{DE32978C-0376-403D-B238-725A8B58800B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{DE32978C-0376-403D-B238-725A8B58800B}.Debug|x86.Build.0 = Debug|Any CPU
+		{DE32978C-0376-403D-B238-725A8B58800B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DE32978C-0376-403D-B238-725A8B58800B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DE32978C-0376-403D-B238-725A8B58800B}.Release|x64.ActiveCfg = Release|Any CPU
+		{DE32978C-0376-403D-B238-725A8B58800B}.Release|x64.Build.0 = Release|Any CPU
+		{DE32978C-0376-403D-B238-725A8B58800B}.Release|x86.ActiveCfg = Release|Any CPU
+		{DE32978C-0376-403D-B238-725A8B58800B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -566,6 +580,7 @@ Global
 		{55E2C369-C501-43DA-A8CA-A6C4D765DD8F} = {5D20AA90-6969-D8BD-9DCD-8634F4692FDA}
 		{64F10B47-10FE-4CF9-A498-817A3F0D2CB5} = {5D20AA90-6969-D8BD-9DCD-8634F4692FDA}
 		{10CC4DBE-3BB8-4229-876C-472CDE9CACFC} = {8B30D54E-F76B-41EC-9862-A8B07DCC9CAD}
+		{DE32978C-0376-403D-B238-725A8B58800B} = {CA9AC87F-097E-4F15-8393-4BC07735A5B0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {28315BFD-90E7-4E14-A2EA-F3D23AF4126F}
