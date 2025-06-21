@@ -6,6 +6,7 @@ using Aevatar.Agents.Creator.GEvents;
 using Aevatar.Agents.Creator.Models;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
+using Aevatar.PermissionManagement;
 using Aevatar.Station.Feature.CreatorGAgent;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -99,7 +100,7 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
         _logger.LogInformation("UpdateAvailableEventsAsync Finish {list}", JsonConvert.SerializeObject(eventDescriptionList));
     }
     
-    public async Task PublishEventAsync<T>(T @event) where T : EventBase
+    public async Task PublishEventAsync<T>(T @event) where T : PermissionEventBase
     {
         if (@event == null)
         {
@@ -148,6 +149,6 @@ public interface ICreatorGAgent : IStateGAgent<CreatorGAgentState>
     Task CreateAgentAsync(AgentData agentData);
     Task UpdateAgentAsync(UpdateAgentInput dto);
     Task DeleteAgentAsync();
-    Task PublishEventAsync<T>(T @event) where T : EventBase;
+    Task PublishEventAsync<T>(T @event) where T : PermissionEventBase;
     Task UpdateAvailableEventsAsync(List<Type>? eventTypeList);
 }

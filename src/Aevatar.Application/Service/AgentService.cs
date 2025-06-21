@@ -204,7 +204,7 @@ public class AgentService : ApplicationService, IAgentService
         var validateResponse = schema.Validate(propertiesString, new JsonSchemaValidatorSettings
         {
             PropertyStringComparer = StringComparer.CurrentCultureIgnoreCase
-        });        
+        });
         if (validateResponse.Count > 0)
         {
             var validateDic = _schemaProvider.ConvertValidateError(validateResponse);
@@ -236,6 +236,7 @@ public class AgentService : ApplicationService, IAgentService
             dto.Properties.IsNullOrEmpty() ? string.Empty : JsonConvert.SerializeObject(dto.Properties);
         var initialization = await InitializeBusinessAgent(guid, dto.AgentType, initializationParam);
         var businessAgent = initialization.Item1;
+
         var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
         agentData.BusinessAgentGrainId = businessAgent.GetGrainId();
         agentData.Properties = JsonConvert.SerializeObject(initialization.Item2, new JsonSerializerSettings
@@ -243,8 +244,7 @@ public class AgentService : ApplicationService, IAgentService
             ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
             ContractResolver = new CamelCasePropertyNamesContractResolver()
         });
-        
-        
+
         await creatorAgent.CreateAgentAsync(agentData);
 
         var resp = new AgentDto
@@ -259,12 +259,13 @@ public class AgentService : ApplicationService, IAgentService
             AgentGuid = businessAgent.GetPrimaryKey(),
             BusinessAgentGrainId = businessAgent.GetGrainId().ToString()
         };
-
+        
         var configuration = await GetAgentConfigurationAsync(businessAgent);
         if (configuration != null)
         {
             resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration.DtoType).ToJson();
         }
+
         return resp;
     }
 
@@ -330,7 +331,6 @@ public class AgentService : ApplicationService, IAgentService
             return new Tuple<IGAgent, ConfigurationBase>(businessAgent, config);
         }
 
-        
         return new Tuple<IGAgent, ConfigurationBase>(businessAgent, null);
     }
 
@@ -346,28 +346,26 @@ public class AgentService : ApplicationService, IAgentService
         string properties = null;
         if (!dto.Properties.IsNullOrEmpty())
         {
-            var updatedParam = JsonConvert.SerializeObject(dto.Properties);
             var configuration = await GetAgentConfigurationAsync(businessAgent);
-            if (configuration != null && !updatedParam.IsNullOrEmpty())
+            if (configuration != null)
             {
-                var config = SetupConfigurationData(configuration, updatedParam);
+                var config = SetupConfigurationData(configuration, JsonConvert.SerializeObject(dto.Properties));
                 await businessAgent.ConfigAsync(config);
                 properties = JsonConvert.SerializeObject(config, new JsonSerializerSettings
                 {
                     ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                     ContractResolver = new CamelCasePropertyNamesContractResolver()
                 });
-                await creatorAgent.UpdateAgentAsync(new UpdateAgentInput
-                {
-                    Name = dto.Name,
-                    Properties = properties
-                });
-            }
-            else
-            {
-                _logger.LogError("no properties to be updated, id: {id}", guid);
             }
         }
+
+        var updateAgentInputDto = new UpdateAgentInput
+        {
+            Name = dto.Name,
+            Properties = properties
+        };
+
+        await creatorAgent.UpdateAgentAsync(updateAgentInputDto);
 
         var resp = new AgentDto
         {
@@ -375,11 +373,16 @@ public class AgentService : ApplicationService, IAgentService
             AgentType = agentState.AgentType,
             Name = dto.Name,
             GrainId = agentState.BusinessAgentGrainId,
-            Properties = properties.IsNullOrWhiteSpace()
-                ? null
-                : JsonConvert.DeserializeObject<Dictionary<string, object>>(properties),
+            Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(properties ?? "{}"),
+            AgentGuid = agentState.BusinessAgentGrainId.GetGuidKey(),
             BusinessAgentGrainId = agentState.BusinessAgentGrainId.ToString()
         };
+
+        var configuration2 = await GetAgentConfigurationAsync(businessAgent);
+        if (configuration2 != null)
+        {
+            resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration2.DtoType).ToJson();
+        }
 
         return resp;
     }
@@ -573,7 +576,7 @@ public class AgentService : ApplicationService, IAgentService
         var agentState = await creatorAgent.GetAgentAsync();
 
         var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
-        var subAgentGrainIds = await GetSubAgentGrainIds(agent);
+        var subAgentGrainIds = await agent.GetChildrenAsync();
         await RemoveSubAgentAsync(guid,
             new RemoveSubAgentDto { RemovedSubAgents = subAgentGrainIds.Select(x => x.GetGuidKey()).ToList() });
     }
