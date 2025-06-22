@@ -30,6 +30,7 @@ using Orleans.Providers.MongoDB.Configuration;
 using Orleans.Runtime.Placement;
 using Orleans.Serialization;
 using Orleans.Streams.Kafka.Config;
+using Orleans.Configuration;
 
 namespace Aevatar.Silo.Extensions;
 
@@ -126,12 +127,58 @@ public static class OrleansHostExtension
                     });
                 }
                     
+                // Check if ZooKeeper configuration is available
+                var zookeeperSection = configSection.GetSection("ZooKeeper");
+                var zookeeperConnectionString = zookeeperSection.GetValue<string>("ConnectionString");
+                
                 siloBuilder
                     .ConfigureEndpoints(advertisedIP: IPAddress.Parse(advertisedIP),
                         siloPort: siloPort,
                         gatewayPort: gatewayPort,
-                        listenOnAnyHostAddress: true)
+                        listenOnAnyHostAddress: true);
+                
+                // Configure clustering based on available provider
+                if (!string.IsNullOrEmpty(zookeeperConnectionString))
+                {
+                    // Use ZooKeeper clustering
+                    siloBuilder.UseZooKeeperClustering(options =>
+                    {
+                        options.ConnectionString = zookeeperConnectionString;
+                    })
+                    .Configure<ClusterMembershipOptions>(options =>
+                    {
+                        // Read ZooKeeper cluster membership configuration with defaults from benchmark
+                        var membershipSection = zookeeperSection.GetSection("ClusterMembership");
+                        options.DefunctSiloCleanupPeriod = membershipSection.GetValue<TimeSpan>("DefunctSiloCleanupPeriod", TimeSpan.FromMinutes(1));
+                        options.DefunctSiloExpiration = membershipSection.GetValue<TimeSpan>("DefunctSiloExpiration", TimeSpan.FromMinutes(2));
+                        options.IAmAliveTablePublishTimeout = membershipSection.GetValue<TimeSpan>("IAmAliveTablePublishTimeout", TimeSpan.FromSeconds(30));
+                        options.MaxJoinAttemptTime = membershipSection.GetValue<TimeSpan>("MaxJoinAttemptTime", TimeSpan.FromSeconds(30));
+                        options.ProbeTimeout = membershipSection.GetValue<TimeSpan>("ProbeTimeout", TimeSpan.FromSeconds(10));
+                        options.TableRefreshTimeout = membershipSection.GetValue<TimeSpan>("TableRefreshTimeout", TimeSpan.FromSeconds(30));
+                        options.DeathVoteExpirationTimeout = membershipSection.GetValue<TimeSpan>("DeathVoteExpirationTimeout", TimeSpan.FromMinutes(2));
+                        options.NumMissedProbesLimit = membershipSection.GetValue<int>("NumMissedProbesLimit", 2);
+                        options.NumProbedSilos = membershipSection.GetValue<int>("NumProbedSilos", 2);
+                        options.NumVotesForDeathDeclaration = membershipSection.GetValue<int>("NumVotesForDeathDeclaration", 1);
+                        options.UseLivenessGossip = membershipSection.GetValue<bool>("UseLivenessGossip", false);
+                    })
+                    // Still need MongoDB client for storage and reminders
                     .UseMongoDBClient(proivder => {
+                        var setting = MongoClientSettings.FromConnectionString(configSection.GetValue<string>("MongoDBClient"));
+                        
+                        // Read MongoDB client settings from configuration with MongoDB driver default values
+                        var clientSection = configSection.GetSection("MongoDBClientSettings");
+                        setting.MaxConnectionPoolSize = clientSection.GetValue<int>("MaxConnectionPoolSize", 512);
+                        setting.MinConnectionPoolSize = clientSection.GetValue<int>("MinConnectionPoolSize", 16);
+                        setting.WaitQueueSize = clientSection.GetValue<int>("WaitQueueSize", MongoDefaults.ComputedWaitQueueSize);
+                        setting.WaitQueueTimeout = clientSection.GetValue<TimeSpan>("WaitQueueTimeout", MongoDefaults.WaitQueueTimeout);
+                        setting.MaxConnecting = clientSection.GetValue<int>("MaxConnecting", 4);
+                        return setting;
+                    });
+                }
+                else
+                {
+                    // Use MongoDB clustering (existing behavior)
+                    siloBuilder.UseMongoDBClient(proivder => {
                         var setting = MongoClientSettings.FromConnectionString(configSection.GetValue<string>("MongoDBClient"));
                         
                         // Read MongoDB client settings from configuration with MongoDB driver default values
@@ -148,7 +195,10 @@ public static class OrleansHostExtension
                         options.DatabaseName = configSection.GetValue<string>("DataBase");
                         options.Strategy = MongoDBMembershipStrategy.SingleDocument;
                         options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" : $"Orleans{hostId}";
-                    })
+                    });
+                }
+                
+                siloBuilder
                     .Configure<JsonGrainStateSerializerOptions>(options => options.ConfigureJsonSerializerSettings =
                         settings =>
                         {

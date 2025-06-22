@@ -16,6 +16,7 @@
         <PackageReference Include="Microsoft.Orleans.Runtime" />
         <PackageReference Include="Microsoft.Orleans.Reminders" />
         <PackageReference Include="Orleans.Providers.MongoDB" />
+        <PackageReference Include="Microsoft.Orleans.Clustering.ZooKeeper" />
         <PackageReference Include="OrleansDashboard" />
         <PackageReference Include="Serilog.AspNetCore" />
         <PackageReference Include="Volo.Abp.AspNetCore.Serilog" />
