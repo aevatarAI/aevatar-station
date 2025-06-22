@@ -45,23 +45,27 @@ public static class OrleansHostExtension
                 var configuration = context.Configuration;
                 var hostId = configuration.GetValue<string>("Host:HostId");
                 var configSection = context.Configuration.GetSection("Orleans");
+                var UseEnvironmentVariables =
+                    bool.TryParse(GetEnvironmentVariable("UseEnvironmentVariables"), out var flag) && flag;
                 var isRunningInKubernetes = configSection.GetValue<bool>("IsRunningInKubernetes");
-                var advertisedIP = isRunningInKubernetes
-                    ? GetEnvironmentVariable("POD_IP")
-                    : GetEnvironmentVariable("AevatarOrleans__AdvertisedIP");
+                var advertisedIP = UseEnvironmentVariables
+                    ? GetEnvironmentVariable("AevatarOrleans__AdvertisedIP")
+                    : isRunningInKubernetes
+                        ? Environment.GetEnvironmentVariable("POD_IP")
+                        : configSection.GetValue<string>("AdvertisedIP");
                 var clusterId = isRunningInKubernetes
-                    ? GetEnvironmentVariable("ORLEANS_CLUSTER_ID")
+                    ? Environment.GetEnvironmentVariable("ORLEANS_CLUSTER_ID")
                     : configSection.GetValue<string>("ClusterId");
                 var serviceId = isRunningInKubernetes
-                    ? GetEnvironmentVariable("ORLEANS_SERVICE_ID")
+                    ? Environment.GetEnvironmentVariable("ORLEANS_SERVICE_ID")
                     : configSection.GetValue<string>("ServiceId");
-                var siloPort = isRunningInKubernetes
-                    ? configSection.GetValue<int>("SiloPort")
-                    : int.Parse(GetEnvironmentVariable("AevatarOrleans__SiloPort"));
-                var gatewayPort = isRunningInKubernetes
-                    ? configSection.GetValue<int>("GatewayPort")
-                    :int.Parse(GetEnvironmentVariable("AevatarOrleans__GatewayPort"));
-                
+                var siloPort = UseEnvironmentVariables
+                    ? int.Parse(GetEnvironmentVariable("AevatarOrleans__SiloPort"))
+                    : configSection.GetValue<int>("SiloPort");
+                var gatewayPort = UseEnvironmentVariables
+                    ? int.Parse(GetEnvironmentVariable("AevatarOrleans__GatewayPort"))
+                    : configSection.GetValue<int>("GatewayPort");
+
                 // Read the silo name pattern from environment variable or configuration
                 var siloNamePattern = isRunningInKubernetes
                     ? GetEnvironmentVariable("SILO_NAME_PATTERN")
@@ -189,10 +193,12 @@ public static class OrleansHostExtension
                     {
                         options.Username = configSection.GetValue<string>("DashboardUserName");
                         options.Password = configSection.GetValue<string>("DashboardPassword");
-                        options.Host = isRunningInKubernetes ? "*" 
-                        : GetEnvironmentVariable("AevatarOrleans__DashboardIp");
-                        options.Port = isRunningInKubernetes ? configSection.GetValue<int>("DashboardPort") 
-                        : int.Parse(GetEnvironmentVariable("AevatarOrleans__DashboardPort"));
+                        options.Host = UseEnvironmentVariables
+                            ? GetEnvironmentVariable("AevatarOrleans__DashboardIp")
+                            : "*";
+                        options.Port = UseEnvironmentVariables
+                            ? int.Parse(GetEnvironmentVariable("AevatarOrleans__DashboardPort"))
+                            : configSection.GetValue<int>("DashboardPort");
                         options.HostSelf = true;
                         options.CounterUpdateIntervalMs =
                             configSection.GetValue<int>("DashboardCounterUpdateIntervalMs");
