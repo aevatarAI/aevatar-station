@@ -3,8 +3,8 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVersion>9.0.1</OrleansVersion>
-    <AevatarVersion>1.5.1-alpha.0</AevatarVersion>
-    <AevatarGAgentVersion>1.4.17-alpha-1</AevatarGAgentVersion>
+    <AevatarVerion>1.5.1-alpha.3</AevatarVerion>
+    <AevatarGAgentVersion>1.5.0-workflow-2</AevatarGAgentVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- AElf packages -->
@@ -28,6 +28,11 @@
     <PackageVersion Include="Aevatar.GAgents.Twitter" Version="$(AevatarGAgentVersion)" />
     <PackageVersion Include="Aevatar.GAgents.ChatAgent" Version="$(AevatarGAgentVersion)" />
     <PackageVersion Include="Aevatar.GAgents.GroupChat" Version="$(AevatarGAgentVersion)" />
+<!--
+    <PackageVersion Include="Aevatar.Station.Feature" Version="1.1.4" />
+-->
+
+
     <!-- AI and Analysis packages -->
     <PackageVersion Include="AutoGen" Version="0.2.1" />
     <PackageVersion Include="AutoGen.Core" Version="0.2.1" />

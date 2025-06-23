@@ -31,6 +31,14 @@
         <PackageReference Include="Aevatar" />
         <PackageReference Include="Aevatar.SignalR" />
         <PackageReference Include="Aevatar.PermissionManagement" />
+        <PackageReference Include="Aevatar.GAgents.GroupChat" />
+        <PackageReference Include="Aevatar.Core" />
+        <PackageReference Include="Aevatar.Core.Abstractions"/>
+
+
+        <!--
+                <PackageReference Include="Aevatar.Station.Feature" />
+        -->
     </ItemGroup>
 
     <ItemGroup>

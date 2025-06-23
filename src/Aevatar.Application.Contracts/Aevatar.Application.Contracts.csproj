@@ -27,6 +27,8 @@
         <PackageReference Include="AElf.Types"/>
         <PackageReference Include="AElf.Sdk.CSharp"/>
         <PackageReference Include="Elastic.Clients.Elasticsearch"/>
+        <PackageReference Include="Aevatar.Core.Abstractions"/>
+
     </ItemGroup>
 
 </Project>

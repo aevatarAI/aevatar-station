@@ -10,6 +10,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj" />
+        <PackageReference Include="Aevatar.Core.Abstractions"/>
     </ItemGroup>
 
 </Project>
