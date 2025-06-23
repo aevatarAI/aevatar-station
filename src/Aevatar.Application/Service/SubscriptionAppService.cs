@@ -181,7 +181,7 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
                 throw new UserFriendlyException("event could not be instantiated");
             case PermissionEventBase permissionEvent:
                 permissionEvent.UserContext = userContext;
-                await agent.PublishEventWithPermissionAsync(permissionEvent);
+                await agent.PublishEventAsync(permissionEvent);
                 break;
             case EventBase baseEvent:
                 await agent.PublishEventAsync(baseEvent);

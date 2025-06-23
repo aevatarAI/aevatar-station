@@ -100,15 +100,7 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
         await ConfirmEvents();
         _logger.LogInformation("UpdateAvailableEventsAsync Finish {list}", JsonConvert.SerializeObject(eventDescriptionList));
     }
-    
-    public async Task PublishEventWithPermissionAsync<T>(T @event) where T : PermissionEventBase
-    {
-        ArgumentNullException.ThrowIfNull(@event);
 
-        Logger.LogInformation( "publish event: {event}", @event);
-        await PublishAsync(@event);
-    }
-    
     public async Task PublishEventAsync<T>(T @event) where T : EventBase
     {
         ArgumentNullException.ThrowIfNull(@event);
@@ -155,7 +147,6 @@ public interface ICreatorGAgent : IStateGAgent<CreatorGAgentState>
     Task CreateAgentAsync(AgentData agentData);
     Task UpdateAgentAsync(UpdateAgentInput dto);
     Task DeleteAgentAsync();
-    Task PublishEventWithPermissionAsync<T>(T @event) where T : PermissionEventBase;
     Task PublishEventAsync<T>(T @event) where T : EventBase;
 
     Task UpdateAvailableEventsAsync(List<Type>? eventTypeList);
