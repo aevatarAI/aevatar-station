@@ -79,6 +79,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VerifyJsonDesIssue", "sampl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VerifyStreamApp", "samples\VerifyStreamApp\VerifyStreamApp.csproj", "{64F10B47-10FE-4CF9-A498-817A3F0D2CB5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Station.Feature", "src\Aevatar.Station.Feature\Aevatar.Station.Feature.csproj", "{D100EB51-2AF6-475D-9EFF-52D0F5DEC0C9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -509,6 +511,18 @@ Global
 		{64F10B47-10FE-4CF9-A498-817A3F0D2CB5}.Release|x64.Build.0 = Release|Any CPU
 		{64F10B47-10FE-4CF9-A498-817A3F0D2CB5}.Release|x86.ActiveCfg = Release|Any CPU
 		{64F10B47-10FE-4CF9-A498-817A3F0D2CB5}.Release|x86.Build.0 = Release|Any CPU
+		{D100EB51-2AF6-475D-9EFF-52D0F5DEC0C9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D100EB51-2AF6-475D-9EFF-52D0F5DEC0C9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D100EB51-2AF6-475D-9EFF-52D0F5DEC0C9}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D100EB51-2AF6-475D-9EFF-52D0F5DEC0C9}.Debug|x64.Build.0 = Debug|Any CPU
+		{D100EB51-2AF6-475D-9EFF-52D0F5DEC0C9}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D100EB51-2AF6-475D-9EFF-52D0F5DEC0C9}.Debug|x86.Build.0 = Debug|Any CPU
+		{D100EB51-2AF6-475D-9EFF-52D0F5DEC0C9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D100EB51-2AF6-475D-9EFF-52D0F5DEC0C9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D100EB51-2AF6-475D-9EFF-52D0F5DEC0C9}.Release|x64.ActiveCfg = Release|Any CPU
+		{D100EB51-2AF6-475D-9EFF-52D0F5DEC0C9}.Release|x64.Build.0 = Release|Any CPU
+		{D100EB51-2AF6-475D-9EFF-52D0F5DEC0C9}.Release|x86.ActiveCfg = Release|Any CPU
+		{D100EB51-2AF6-475D-9EFF-52D0F5DEC0C9}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -549,6 +563,7 @@ Global
 		{9367124E-A85D-4067-98C8-42F672DC95AC} = {5D20AA90-6969-D8BD-9DCD-8634F4692FDA}
 		{55E2C369-C501-43DA-A8CA-A6C4D765DD8F} = {5D20AA90-6969-D8BD-9DCD-8634F4692FDA}
 		{64F10B47-10FE-4CF9-A498-817A3F0D2CB5} = {5D20AA90-6969-D8BD-9DCD-8634F4692FDA}
+		{D100EB51-2AF6-475D-9EFF-52D0F5DEC0C9} = {CA9AC87F-097E-4F15-8393-4BC07735A5B0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {28315BFD-90E7-4E14-A2EA-F3D23AF4126F}

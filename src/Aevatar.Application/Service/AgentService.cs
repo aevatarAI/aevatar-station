@@ -27,6 +27,9 @@ using Orleans.Metadata;
 using Orleans.Runtime;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
+using Aevatar.Station.Feature.CreatorGAgent;
+using AgentData = Aevatar.Station.Feature.CreatorGAgent.AgentData;
+using ICreatorGAgent = Aevatar.Application.Grains.Agents.Creator.ICreatorGAgent;
 
 namespace Aevatar.Service;
 
