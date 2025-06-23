@@ -24,6 +24,13 @@
         <PackageReference Include="Aevatar.GAgents.AI.Abstractions"/>
         <PackageReference Include="MineAiFun.GAgents"/>
         <PackageReference Include="Aevatar.GAgents.Twitter"/>
+<<<<<<< HEAD
+        <PackageReference Include="Aevatar.GAgents.SocialGAgent"/>
+        <PackageReference Include="Orleans.SyncWork"/>
+=======
+>>>>>>> feature/creator-agent
+        <PackageReference Include="Aevatar.GAgents.GroupChat"/>
+        <PackageReference Include="MineAiFun.GAgents"/>
         <PackageReference Include="Aevatar.GAgents.SocialGAgent"/>
         <PackageReference Include="Orleans.SyncWork"/>
         <PackageReference Include="Aevatar.GAgents.GroupChat"/>

@@ -17,6 +17,7 @@ using Aevatar.Exceptions;
 using Aevatar.Options;
 using Aevatar.Query;
 using Aevatar.Schema;
+using Aevatar.Station.Feature.CreatorGAgent;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -27,6 +28,7 @@ using Orleans.Metadata;
 using Orleans.Runtime;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
+using ICreatorGAgent = Aevatar.Application.Grains.Agents.Creator.ICreatorGAgent;
 
 namespace Aevatar.Service;
 
@@ -202,7 +204,7 @@ public class AgentService : ApplicationService, IAgentService
         var validateResponse = schema.Validate(propertiesString, new JsonSchemaValidatorSettings
         {
             PropertyStringComparer = StringComparer.CurrentCultureIgnoreCase
-        });        
+        });
         if (validateResponse.Count > 0)
         {
             var validateDic = _schemaProvider.ConvertValidateError(validateResponse);
@@ -234,6 +236,7 @@ public class AgentService : ApplicationService, IAgentService
             dto.Properties.IsNullOrEmpty() ? string.Empty : JsonConvert.SerializeObject(dto.Properties);
         var initialization = await InitializeBusinessAgent(guid, dto.AgentType, initializationParam);
         var businessAgent = initialization.Item1;
+
         var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
         agentData.BusinessAgentGrainId = businessAgent.GetGrainId();
         agentData.Properties = JsonConvert.SerializeObject(initialization.Item2, new JsonSerializerSettings
@@ -241,8 +244,7 @@ public class AgentService : ApplicationService, IAgentService
             ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
             ContractResolver = new CamelCasePropertyNamesContractResolver()
         });
-        
-        
+
         await creatorAgent.CreateAgentAsync(agentData);
 
         var resp = new AgentDto
@@ -257,12 +259,13 @@ public class AgentService : ApplicationService, IAgentService
             AgentGuid = businessAgent.GetPrimaryKey(),
             BusinessAgentGrainId = businessAgent.GetGrainId().ToString()
         };
-
+        
         var configuration = await GetAgentConfigurationAsync(businessAgent);
         if (configuration != null)
         {
             resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration.DtoType).ToJson();
         }
+
         return resp;
     }
 
@@ -274,7 +277,7 @@ public class AgentService : ApplicationService, IAgentService
             await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
             {
                 QueryString = "userId.keyword:" + currentUserId,
-                State = nameof(CreatorGAgentState),
+                StateName = nameof(CreatorGAgentState),
                 PageSize = pageSize,
                 PageIndex = pageIndex
             });
@@ -328,7 +331,6 @@ public class AgentService : ApplicationService, IAgentService
             return new Tuple<IGAgent, ConfigurationBase>(businessAgent, config);
         }
 
-        
         return new Tuple<IGAgent, ConfigurationBase>(businessAgent, null);
     }
 

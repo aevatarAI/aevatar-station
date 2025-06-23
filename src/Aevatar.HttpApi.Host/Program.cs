@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IdentityModel.Tokens.Jwt;
+using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
@@ -26,6 +27,10 @@ public class Program
         {
             Log.Information("Starting HttpApi.Host.");
             var builder = WebApplication.CreateBuilder(args);
+            builder.Configuration
+                .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
+                .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json"))
+                .AddJsonFile("appsettings.json");
             builder.Host
                 .UseOrleansClientConfiguration()
                 .ConfigureDefaults(args)
@@ -67,6 +72,8 @@ public class Program
     private static void ConfigureLogger(LoggerConfiguration? loggerConfiguration = null)
     {
         var configuration = new ConfigurationBuilder()
+            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
+            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json"))
             .AddJsonFile("appsettings.json")
             .Build();
         Log.Logger = (loggerConfiguration ?? new LoggerConfiguration())

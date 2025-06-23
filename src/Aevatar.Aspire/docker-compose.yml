@@ -1,4 +1,4 @@
-version: '3.8'
+# version: '3.8'
 
 networks:
   aevatar-network:
@@ -14,6 +14,17 @@ services:
       - "27017:27017"
     volumes:
       - mongodb-data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=AevatarDb
+  
+  mongodb-es:
+    image: mongo:latest
+    network_mode: bridge
+    container_name: mongodb-es
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongodb-es-data:/data/db
     environment:
       - MONGO_INITDB_DATABASE=AevatarDb
 
@@ -37,9 +48,9 @@ services:
     environment:
       - KAFKA_CFG_NODE_ID=1
       - KAFKA_CFG_PROCESS_ROLES=controller,broker
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@localhost:9093
       - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
       - ALLOW_PLAINTEXT_LISTENER=yes
@@ -133,6 +144,7 @@ services:
 
 volumes:
   mongodb-data:
+  mongodb-es-data:
   redis-data:
   kafka-data:
   elasticsearch-data:
