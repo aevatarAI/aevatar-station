@@ -348,18 +348,20 @@ public class AgentService : ApplicationService, IAgentService
         string properties = null;
         if (!dto.Properties.IsNullOrEmpty())
         {
-            var updatedParam = JsonConvert.SerializeObject(dto.Properties);
+           // var updatedParam = JsonConvert.SerializeObject(dto.Properties);
             var configuration = await GetAgentConfigurationAsync(businessAgent);
-            if (configuration != null && !updatedParam.IsNullOrEmpty())
-            {
-                var config = SetupConfigurationData(configuration, updatedParam);
+          //  if (configuration != null && !updatedParam.IsNullOrEmpty())
+          if (configuration != null)
+          {
+                //var config = SetupConfigurationData(configuration, updatedParam);
+                var config = SetupConfigurationData(configuration, JsonConvert.SerializeObject(dto.Properties));
                 await businessAgent.ConfigAsync(config);
                 properties = JsonConvert.SerializeObject(config, new JsonSerializerSettings
                 {
                     ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                     ContractResolver = new CamelCasePropertyNamesContractResolver()
                 });
-                await creatorAgent.UpdateAgentAsync(new UpdateAgentInput
+                /*await creatorAgent.UpdateAgentAsync(new UpdateAgentInput
                 {
                     Name = dto.Name,
                     Properties = properties
@@ -367,22 +369,34 @@ public class AgentService : ApplicationService, IAgentService
             }
             else
             {
-                _logger.LogError("no properties to be updated, id: {id}", guid);
+                _logger.LogError("no properties to be updated, id: {id}", guid);*/
             }
         }
-
+        var updateAgentInputDto = new UpdateAgentInput
+        {
+            Name = dto.Name,
+            Properties = properties
+        };
+        await creatorAgent.UpdateAgentAsync(updateAgentInputDto);
+        
         var resp = new AgentDto
         {
             Id = guid,
             AgentType = agentState.AgentType,
             Name = dto.Name,
             GrainId = agentState.BusinessAgentGrainId,
-            Properties = properties.IsNullOrWhiteSpace()
+            /*Properties = properties.IsNullOrWhiteSpace()
                 ? null
-                : JsonConvert.DeserializeObject<Dictionary<string, object>>(properties),
+                : JsonConvert.DeserializeObject<Dictionary<string, object>>(properties),*/
+            Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(properties ?? "{}"),
+            AgentGuid = agentState.BusinessAgentGrainId.GetGuidKey(),
             BusinessAgentGrainId = agentState.BusinessAgentGrainId.ToString()
         };
-
+        var configuration2 = await GetAgentConfigurationAsync(businessAgent);
+        if (configuration2 != null)
+        {
+            resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration2.DtoType).ToJson();
+        }
         return resp;
     }
 
@@ -558,7 +572,10 @@ public class AgentService : ApplicationService, IAgentService
 
 
         var parentGrainId = await agent.GetParentAsync();
-        var subAgentGrainIds = await GetSubAgentGrainIds(agent);
+        //var subAgentGrainIds = await GetSubAgentGrainIds(agent);
+        var subAgentGrainIds = await agent.GetChildrenAsync();
+
+
         var subAgentGuids = subAgentGrainIds.Select(x => x.GetGuidKey()).ToList();
 
         return new AgentRelationshipDto

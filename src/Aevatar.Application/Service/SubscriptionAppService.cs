@@ -18,6 +18,8 @@ using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Auditing;
 using Volo.Abp.ObjectMapping;
+using Aevatar.PermissionManagement;
+
 
 namespace Aevatar.Service;
 
@@ -139,12 +141,12 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
         var agentState = await agent.GetAgentAsync();
         _logger.LogInformation("PublishEventAsync id: {id} state: {state}", dto.AgentId, JsonConvert.SerializeObject(agentState));
         
-        /*var currentUserId = _userAppService.GetCurrentUserId();
+        var currentUserId = _userAppService.GetCurrentUserId();
         if (agentState.UserId != currentUserId)
         {
             _logger.LogInformation("User {userId} is not allowed to publish event {eventType}.", currentUserId, dto.EventType);
             throw new UserFriendlyException("User is not allowed to publish event");
-        }*/
+        }
         
         var eventList = agentState.EventInfoList;
         var eventDescription = eventList.Find(i => i.EventType.FullName == dto.EventType);
@@ -164,14 +166,27 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
         }
         
         var propertiesString = JsonConvert.SerializeObject(dto.EventProperties);
-        var eventInstance = JsonConvert.DeserializeObject(propertiesString, eventDescription.EventType) as EventBase;
-        
+        //var eventInstance = JsonConvert.DeserializeObject(propertiesString, eventDescription.EventType) as EventBase;
+        var eventInstance = JsonConvert.DeserializeObject(propertiesString, eventDescription.EventType) as PermissionEventBase;
+
+
         if (eventInstance == null)
         {
             _logger.LogError("Event {type} could not be instantiated with param {param}", dto.EventType, propertiesString);
             throw new UserFriendlyException("event could not be instantiated");
         }
-        
+        eventInstance.UserContext = new UserContext
+        {
+            UserId = currentUserId,
+            Roles = CurrentUser.Roles.ToArray(),
+            ClientId = CurrentUser.GetAllClaims().First(o => o.Type == "client_id").Value
+        };
+
+        _logger.LogInformation("Setting UserContext with UserId {userId}, Roles {roles}, ClientId {clientId} to event {eventType}", 
+            currentUserId, 
+            string.Join(",", CurrentUser.Roles), 
+            CurrentUser.GetAllClaims().First(o => o.Type == "client_id").Value,
+            dto.EventType);
         await agent.PublishEventAsync(eventInstance);
         
     }
