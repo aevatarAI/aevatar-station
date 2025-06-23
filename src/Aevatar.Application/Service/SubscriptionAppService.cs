@@ -166,29 +166,37 @@ public class SubscriptionAppService : ApplicationService, ISubscriptionAppServic
         }
         
         var propertiesString = JsonConvert.SerializeObject(dto.EventProperties);
-        //var eventInstance = JsonConvert.DeserializeObject(propertiesString, eventDescription.EventType) as EventBase;
-        var eventInstance = JsonConvert.DeserializeObject(propertiesString, eventDescription.EventType) as PermissionEventBase;
-
-
-        if (eventInstance == null)
-        {
-            _logger.LogError("Event {type} could not be instantiated with param {param}", dto.EventType, propertiesString);
-            throw new UserFriendlyException("event could not be instantiated");
-        }
-        eventInstance.UserContext = new UserContext
+        var userContext = new UserContext
         {
             UserId = currentUserId,
             Roles = CurrentUser.Roles.ToArray(),
             ClientId = CurrentUser.GetAllClaims().First(o => o.Type == "client_id").Value
         };
-
-        _logger.LogInformation("Setting UserContext with UserId {userId}, Roles {roles}, ClientId {clientId} to event {eventType}", 
-            currentUserId, 
-            string.Join(",", CurrentUser.Roles), 
+        
+        var eventInstance = JsonConvert.DeserializeObject(propertiesString, eventDescription.EventType);
+        switch (eventInstance)
+        {
+            case null:
+                _logger.LogError("Event {type} could not be instantiated with param {param}", dto.EventType, propertiesString);
+                throw new UserFriendlyException("event could not be instantiated");
+            case PermissionEventBase permissionEvent:
+                permissionEvent.UserContext = userContext;
+                await agent.PublishEventWithPermissionAsync(permissionEvent);
+                break;
+            case EventBase baseEvent:
+                await agent.PublishEventAsync(baseEvent);
+                break;
+            default:
+                _logger.LogError("Event {type} is not a recognized event type", dto.EventType);
+                throw new UserFriendlyException("unrecognized event type");
+        }
+        
+        _logger.LogInformation(
+            "Setting UserContext with UserId {userId}, Roles {roles}, ClientId {clientId} to event {eventType}",
+            currentUserId,
+            string.Join(",", CurrentUser.Roles),
             CurrentUser.GetAllClaims().First(o => o.Type == "client_id").Value,
             dto.EventType);
-        await agent.PublishEventAsync(eventInstance);
-        
     }
     
     private async Task RefreshEventListAsync(ICreatorGAgent creatorAgent)
