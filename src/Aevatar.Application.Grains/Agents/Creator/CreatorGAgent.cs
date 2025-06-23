@@ -9,6 +9,7 @@ using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Aevatar.Station.Feature.CreatorGAgent;
+using AgentData = Aevatar.Station.Feature.CreatorGAgent.AgentData;
 
 namespace Aevatar.Application.Grains.Agents.Creator;
 

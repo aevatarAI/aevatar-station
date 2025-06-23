@@ -1,4 +1,3 @@
-using AElf.Sdk.CSharp.State;
 using Aevatar.Agents.Publisher;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;

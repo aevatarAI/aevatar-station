@@ -10,6 +10,7 @@ using Aevatar.Kubernetes;
 using Aevatar.Kubernetes.Manager;
 using Aevatar.Notification;
 using Aevatar.Options;
+using Aevatar.Plugins;
 using Aevatar.Schema;
 using Aevatar.WebHook.Deploy;
 using Microsoft.Extensions.DependencyInjection;
@@ -39,7 +40,8 @@ namespace Aevatar;
     typeof(AevatarWebhookDeployModule),
     typeof(AevatarKubernetesModule),
     typeof(AbpAutoMapperModule),
-    typeof(AbpEventBusModule)
+    typeof(AbpEventBusModule),
+    typeof(AevatarModule)
 )]
 public class AevatarApplicationModule : AbpModule
 {
@@ -58,7 +60,7 @@ public class AevatarApplicationModule : AbpModule
         var configuration = context.Services.GetConfiguration();
         Configure<NameContestOptions>(configuration.GetSection("NameContest"));
         context.Services.AddSingleton<IGAgentFactory>(sp => new GAgentFactory(context.Services.GetRequiredService<IClusterClient>()));
-        context.Services.AddSingleton<IGAgentManager>(sp => new GAgentManager(context.Services.GetRequiredService<IClusterClient>()));
+        //context.Services.AddSingleton<IGAgentManager>(sp => new GAgentManager(context.Services.GetRequiredService<IClusterClient>()));
         context.Services.AddSingleton<ISchemaProvider, SchemaProvider>();
         Configure<WebhookDeployOptions>(configuration.GetSection("WebhookDeploy"));
         Configure<AgentOptions>(configuration.GetSection("Agent"));
