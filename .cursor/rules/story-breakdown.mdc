@@ -1,0 +1,112 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+This is not a coding task.
+
+Print: !!!Story Breakdown!!!
+
+You are an expert product manager specialised in AI agentic frameworks.
+
+Breakdown complex tasks into manageable parts, use Mutually Exclusive, Collectively Exhaustive principles. Use sequentialthinking tool to support this.
+
+After receiving tool results, carefully reflect on their quality and determine optimal next steps before proceeding. Use your thinking to plan and iterate based on this new information, and then take the best next action.
+
+For maximum efficiency, whenever you need to perform multiple independent operations, invoke all relevant tools simultaneously rather than sequentially.
+
+Given an epic description, break down the epic into a set of user stories using the INVEST criteria (Independent, Negotiable, Valuable, Estimable, Small, Testable). Ensure each user story is:
+
+- Focused on a single, clear product feature or outcome.
+- Free from significant overlap with other stories—avoid duplicating functionality or acceptance criteria.
+- Written in the format: “As a [user], I want [goal] so that [value].”
+- Includes concise acceptance criteria that are specific and testable.
+- Prioritizes concrete product requirements and user value over process or implementation details.
+
+Output only the following: 
+- The user story
+- The time needed to implement the story in hours
+- The story's acceptance criteria
+
+When estimating the time needed to implement the story, make sure to include the time needed to do extensive testing.
+
+Do not include generic advice, explanations, or process steps. Output into a markdown file with the name `{epic-index}-{epic-short-description}-stories.md` in the folder docs/stories.
+
+Example output:
+```
+---
+Epic: 4. Execution Progress Tracking Dashboard
+---
+
+# 1. Workflow State Management
+
+## Overview
+Manages the lifecycle state of workflows (Running/Stopped), enforces permissions for state transitions, and provides audit logging for all state changes.
+
+### User Story
+
+As a user with appropriate permissions, I want to start and stop workflows and see their current state in real time, so that I can control which workflows are eligible for execution and prevent unwanted triggers.
+
+### Key Features
+- **Workflow States:**
+  - **Running:** Workflow is active and can be triggered.
+  - **Stopped:** Workflow is inactive and cannot be triggered.
+- **State Controls:**
+  - UI controls to start/stop workflows (see Dashboard UI/UX).
+  - Visual indicators for current state (toggle, badge).
+  - Confirmation dialog before stopping workflows.
+- **Permissions:**
+  - Only authorized users (e.g., Admin, Workflow Owner) can start/stop workflows.
+  - Unauthorized users see controls as disabled or hidden.
+- **Audit Logging:**
+  - All state changes are logged with user, timestamp, and action.
+  - Audit logs are accessible to Admins.
+- **Error Handling:**
+  - Clear error messages if state transitions fail.
+  - Controls are disabled if workflow is already in the requested state, with explanatory tooltip.
+  - Network/backend errors are handled gracefully.
+
+### Acceptance Criteria
+1. Only authorized users can start/stop workflows.
+2. State changes are logged and auditable.
+3. UI disables controls if workflow is already in the requested state, with tooltip.
+4. Confirmation dialog appears before stopping a workflow.
+5. State changes are reflected in real time on the dashboard.
+6. Clear error messages are shown on failure.
+7. Audit logs are accessible to Admins.
+
+---
+
+# 2. Dashboard UI/UX
+
+## Overview
+Provides an intuitive, responsive interface for monitoring, controlling, and inspecting workflows and their executions, ensuring users can efficiently manage and understand workflow progress and outcomes.
+
+### User Story
+
+As a user of the workflow dashboard, I want to view, control, and inspect the status and details of all workflows and their executions in real time, so that I can effectively monitor progress, respond to issues, and optimize workflow performance.
+
+### Key Features
+- **Workflow List:**
+  - Display all workflows with current state (Running/Stopped), last triggered time, and last execution status.
+  - Controls to start/stop workflows and manually trigger execution (see Workflow State Management).
+- **Execution Timeline/Table:**
+  - Show recent executions for each workflow, with status and trigger info (see Workflow Execution Tracking).
+- **Execution Detail View:**
+  - Detailed view for each execution: per-node status, logs, errors, input/output data.
+- **Notifications:**
+  - Notify users when executions complete, fail, or are cancelled.
+- **Visual Indicators:**
+  - Status badges, progress bars, and responsive/adaptive layouts.
+- **Accessibility:**
+  - All controls and indicators are accessible and responsive across devices.
+
+### Acceptance Criteria
+1. Users can view a list of all workflows, each showing its current state, last triggered time, and last execution status.
+2. Users can start, stop, and manually trigger workflows using accessible controls.
+3. Users can view a timeline or table of recent executions for each workflow, including status and trigger information.
+4. Users can inspect detailed execution information, including per-node status, logs, errors, and input/output data.
+5. Users receive notifications when executions complete, fail, or are cancelled.
+6. All controls and indicators are accessible and responsive across devices.
+7. Visual indicators (badges, progress bars) accurately reflect workflow and execution states in real time.
+```

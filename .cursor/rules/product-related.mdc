@@ -20,3 +20,140 @@ Use web search whenever you need more data.
 
 When analysing:
 - ALWAYS validate facts
+
+When creating specifications for product epics, follow the following example structure:
+Example 1 -
+```
+
+## 1. Visual Workflow Designer (Drag-and-Drop Interface)
+**Objective:**  
+Empower users to intuitively build, modify, and comprehend agent workflows through a user-friendly drag-and-drop interface.
+
+**Key Requirements:**
+- Canvas-based, node-centric environment for assembling workflows.
+- A palette featuring agent actions, triggers, and connectors.
+- Ability to link nodes to establish execution logic, including sequential, parallel, and conditional flows.
+- Features for zooming, panning, and undoing/redoing actions.
+- Instant validation of workflow integrity (e.g., detection of unconnected nodes).
+- Optimized for desktop browser responsiveness.
+- The designer must enable users to choose nodes from these groups when constructing workflows:
+  - **Agent Node:** AI agents such as Summarizer, Retriever, Planner
+  - **Event Node:** Triggers like Time-based or Webhook events
+  - **Output Node:** Actions such as Save to DB, Send Email, or Webhook
+- Each node group should have a distinct visual style in the palette.
+- Connectors (Tools) should be available to attach to agent nodes, offering extra functionalities (e.g., search, external API integration).
+- The interface should allow users to filter or search node types by their category.
+- **Connector Usage Rule:**
+  - Connectors (Tools) are permitted only to link into Agent Nodes. They cannot connect directly to Event Nodes or Output Nodes.
+  - The UI must enforce this rule, blocking any invalid connections.
+
+**Acceptance Criteria:**
+- Users can add, modify, and remove nodes and their connections.
+- The system visually highlights invalid workflow configurations.
+- All modifications are accurately represented in the underlying workflow data model.
+```
+Example 2 -
+```
+## 2. Debugger Overlay (Read-Only State Inspection)
+**Objective:**
+Allow users to inspect the agent's state after workflow execution for troubleshooting and validation.
+
+**Key Requirements:**
+- Debug mode toggle in the workflow designer.
+- Overlay displays agent state (inputs, outputs, intermediate data) post-execution.
+- No step-through or breakpoints; read-only inspection only.
+- Access restricted to authenticated users.
+- Clear indication when in debug mode.
+
+**Acceptance Criteria:**
+- Only authenticated users can access debug overlay.
+- Users can view state snapshots for each node after execution.
+- No ability to modify state from the overlay.
+```
+
+When creating detail specification in the form of INVEST story, create a story document in markdown format with the name `{epic-index}-{epic-description}.md` and place them in the docs/stories folder. It should follow the following example structure:
+Example 1 - 
+```
+---
+Epic: 4. Execution Progress Tracking Dashboard
+---
+
+# Workflow Lifecycle Management
+
+## Overview
+Manages the state of workflows (Running/Stopped), controls their eligibility for triggering, and provides UI for state transitions.
+
+### User Story
+
+As a user of the workflow dashboard, I want to be able to start and stop workflows and see their current state in real time, so that I can control which workflows are eligible for execution and prevent unwanted triggers.
+
+### Key Features
+- **Workflow States:**
+  - **Running:** Workflow is published and can be triggered by events or manually.
+  - **Stopped:** Workflow is inactive and cannot be triggered until restarted.
+- **State Controls:**
+  - UI controls to start/stop workflows.
+  - Visual indicators for current state (toggle, badge).
+  - Confirmation dialog before stopping workflows.
+- **Permissions:**
+  - Only users with the appropriate role (e.g., Admin, Workflow Owner) can start or stop workflows.
+  - Unauthorized users cannot access state controls and will see controls as disabled or hidden.
+- **Logging & Audit:**
+  - All state changes (start, stop) are logged with user, timestamp, and action details.
+  - Audit logs are accessible to Admins for review.
+- **Edge Cases & Error Handling:**
+  - If a workflow fails to start or stop, the user receives a clear error message and the state remains unchanged.
+  - If a workflow is already in the requested state, the control is disabled and a tooltip explains why.
+  - Network or backend errors are handled gracefully with retry options or support contact info.
+
+### Acceptance Criteria
+1. When I publish a workflow, its state is set to "Running" and it can be triggered.
+2. When I stop a workflow, it cannot be triggered until restarted.
+3. I can start or stop workflows using UI controls (e.g., toggle, button) on the dashboard, if I have the required permissions.
+4. The current state of each workflow is visually indicated (e.g., toggle, badge).
+5. I am prompted with a confirmation dialog before stopping a workflow.
+6. State changes are reflected in real time on the dashboard.
+7. Unauthorized users cannot access or interact with state controls.
+8. All state changes are logged with user, timestamp, and action details, and are accessible to Admins.
+9. If a state transition fails, I receive a clear error message and the workflow state does not change.
+10. Controls are disabled if the workflow is already in the requested state, with an explanatory tooltip. 
+```
+Example 2 -
+```
+---
+Epic: 4. Execution Progress Tracking Dashboard
+---
+
+# Dashboard UI/UX
+
+## Overview
+Provides an intuitive, responsive interface for monitoring, controlling, and inspecting workflows and their executions, ensuring users can efficiently manage and understand workflow progress and outcomes.
+
+### User Story
+
+As a user of the workflow dashboard, I want to view, control, and inspect the status and details of all workflows and their executions in real time, so that I can effectively monitor progress, respond to issues, and optimize workflow performance.
+
+### Key Features
+- **Workflow List:**
+  - Display all workflows with current state (Running/Stopped), last triggered time, and last execution status.
+  - Controls to start/stop workflows and manually trigger execution (see Workflow State Management).
+- **Execution Timeline/Table:**
+  - Show recent executions for each workflow, with status and trigger info (see Workflow Execution Tracking).
+- **Execution Detail View:**
+  - Detailed view for each execution: per-node status, logs, errors, input/output data.
+- **Notifications:**
+  - Notify users when executions complete, fail, or are cancelled.
+- **Visual Indicators:**
+  - Status badges, progress bars, and responsive/adaptive layouts.
+- **Accessibility:**
+  - All controls and indicators are accessible and responsive across devices.
+
+### Acceptance Criteria
+1. Users can view a list of all workflows, each showing its current state, last triggered time, and last execution status.
+2. Users can start, stop, and manually trigger workflows using accessible controls.
+3. Users can view a timeline or table of recent executions for each workflow, including status and trigger information.
+4. Users can inspect detailed execution information, including per-node status, logs, errors, and input/output data.
+5. Users receive notifications when executions complete, fail, or are cancelled.
+6. All controls and indicators are accessible and responsive across devices.
+7. Visual indicators (badges, progress bars) accurately reflect workflow and execution states in real time.
+```
