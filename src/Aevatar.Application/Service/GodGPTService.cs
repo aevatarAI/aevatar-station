@@ -10,6 +10,7 @@ using Aevatar.Application.Grains.ChatManager.UserBilling;
 using Aevatar.Application.Grains.ChatManager.UserQuota;
 using Aevatar.Application.Grains.Common.Constants;
 using Aevatar.Application.Grains.Common.Options;
+using Aevatar.Application.Grains.Invitation;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
 using Aevatar.GodGPT.Dtos;
@@ -60,6 +61,9 @@ public interface IGodGPTService
     Task<AppStoreSubscriptionResponseDto> VerifyAppStoreReceiptAsync(Guid currentUserId, VerifyAppStoreReceiptInput input);
     Task<GrainResultDto<int>> UpdateUserCreditsAsync(Guid currentUserId, UpdateUserCreditsInput input);
     Task<bool> HasActiveAppleSubscriptionAsync(Guid currentUserId);
+    Task<GetInvitationInfoResponse> GetInvitationInfoAsync(Guid currentUserId);
+    Task<RedeemInviteCodeResponse> RedeemInviteCodeAsync(Guid currentUserId,
+        RedeemInviteCodeRequest redeemInviteCodeRequest);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -389,6 +393,33 @@ public class GodGPTService : ApplicationService, IGodGPTService
         var userBillingGrain =
             _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(currentUserId));
         return await userBillingGrain.HasActiveAppleSubscriptionAsync();
+    }
+
+    public async Task<GetInvitationInfoResponse> GetInvitationInfoAsync(Guid currentUserId)
+    {
+        var invitationAgent =  _clusterClient.GetGrain<IInvitationGAgent>(currentUserId);
+        var inviteCode = await invitationAgent.GenerateInviteCodeAsync();
+        var invitationStatsDto = await invitationAgent.GetInvitationStatsAsync();
+        var rewardTierDtos = await invitationAgent.GetRewardTiersAsync();
+        return new GetInvitationInfoResponse
+        {
+            InviteCode = inviteCode,
+            TotalInvites = invitationStatsDto.TotalInvites,
+            ValidInvites = invitationStatsDto.ValidInvites,
+            TotalCreditsEarned = invitationStatsDto.TotalCreditsEarned,
+            RewardTiers = rewardTierDtos
+        };
+    }
+
+    public async Task<RedeemInviteCodeResponse> RedeemInviteCodeAsync(Guid currentUserId,
+        RedeemInviteCodeRequest input)
+    {
+        var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
+        var result = await manager.RedeemInviteCodeAsync(input.InviteCode);
+        return new RedeemInviteCodeResponse
+        {
+            IsValid = result
+        };
     }
 
     private bool TryGetUserIdFromMetadata(IDictionary<string, string> metadata, out string userId)

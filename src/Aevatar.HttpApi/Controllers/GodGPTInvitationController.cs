@@ -61,7 +61,7 @@ public class GodGPTInvitationController : AevatarController
     {
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
-        var response = await _godGptService.RedeemInviteCodeAsync(currentUserId);
+        var response = await _godGptService.RedeemInviteCodeAsync(currentUserId, input);
         _logger.LogDebug("[GodGPTInvitationController][RedeemInviteCodeAsync] userId: {0}, duration: {1}ms",
             currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
         return response;

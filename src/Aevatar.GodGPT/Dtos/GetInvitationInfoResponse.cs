@@ -1,3 +1,5 @@
+using Aevatar.Application.Grains.Invitation;
+
 namespace Aevatar.GodGPT.Dtos;
 
 public class GetInvitationInfoResponse
