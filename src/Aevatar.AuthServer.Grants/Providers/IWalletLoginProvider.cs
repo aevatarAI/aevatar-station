@@ -1,4 +1,4 @@
-namespace Aevatar.Provider;
+namespace Aevatar.AuthServer.Grants.Providers;
 
 public interface IWalletLoginProvider
 {

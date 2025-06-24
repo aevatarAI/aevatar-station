@@ -1,8 +1,6 @@
 using Newtonsoft.Json;
-using Aevatar.Dtos;
-using Serilog;
 
-namespace Aevatar;
+namespace Aevatar.AuthServer.Grants.Providers;
 
 public class ManagerCheckHelper
 {
@@ -20,7 +18,6 @@ public class ManagerCheckHelper
         }
         catch (Exception e)
         {
-            Log.ForContext<ManagerCheckHelper>().Error($"CheckManagerFromCache fail ${e.Message}", e);
             return false;
         }
     }

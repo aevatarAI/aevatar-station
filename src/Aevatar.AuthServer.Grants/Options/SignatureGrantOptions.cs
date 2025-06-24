@@ -1,4 +1,4 @@
-namespace Aevatar.Options;
+namespace Aevatar.AuthServer.Grants.Options;
 
 public class SignatureGrantOptions
 {
