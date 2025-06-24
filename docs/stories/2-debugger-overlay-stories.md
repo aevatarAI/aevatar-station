@@ -10,6 +10,8 @@ Enables authenticated users to inspect the agent's state (inputs, outputs, inter
 ### User Story
 As an authenticated user, I want to enable a debug mode in the workflow designer that overlays a read-only view of agent state (including inputs, outputs, and intermediate data) after execution, so that I can troubleshoot and validate workflow behavior without risk of accidental changes.
 
+**Time Estimate: 24 hours**
+
 ### Key Features
 - Debug mode toggle in the workflow designer.
 - Overlay displays agent state (inputs, outputs, intermediate data) post-execution.

@@ -7,6 +7,8 @@ Epic: 6. Plugin Management Page
 ## User Story
 As a project user, I want to upload plugins via a dedicated management page so that I can extend the system with custom agent nodes.
 
+**Estimated Time: 16 hours**
+
 ### Acceptance Criteria
 1. Users can upload plugin files through the management page at the project level.
 2. The system validates uploaded plugins for compatibility and integrity.
@@ -19,6 +21,8 @@ As a project user, I want to upload plugins via a dedicated management page so t
 
 ## User Story
 As a project user, I want to view, update, and remove all uploaded plugins in a list with metadata so that I can manage available plugins efficiently.
+
+**Estimated Time: 18 hours**
 
 ### Acceptance Criteria
 1. Users can see a list of all uploaded plugins with metadata (name, version, description, status).
@@ -33,6 +37,8 @@ As a project user, I want to view, update, and remove all uploaded plugins in a 
 ## User Story
 As a project user, I want successfully uploaded plugins to appear as selectable agent nodes in the workflow designer palette so that I can use them in my workflows.
 
+**Estimated Time: 14 hours**
+
 ### Acceptance Criteria
 1. Successfully uploaded and validated plugins automatically appear as agent nodes in the workflow designer palette for all project users.
 2. Invalid or incompatible plugins are clearly flagged and not loaded into the designer.
@@ -45,6 +51,8 @@ As a project user, I want successfully uploaded plugins to appear as selectable 
 ## User Story
 As a project user, I want to search and filter plugins in the management page so that I can quickly find the plugin I need.
 
+**Estimated Time: 10 hours**
+
 ### Acceptance Criteria
 1. Users can search plugins by name, version, or description.
 2. Users can filter plugins by status or other relevant metadata.
@@ -56,6 +64,8 @@ As a project user, I want to search and filter plugins in the management page so
 
 ## User Story
 As a project user, I want to manage plugin versions and roll back to previous versions so that I can ensure compatibility and recover from issues.
+
+**Estimated Time: 12 hours**
 
 ### Acceptance Criteria
 1. Users can view the version history of each plugin.

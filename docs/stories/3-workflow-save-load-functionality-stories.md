@@ -10,6 +10,8 @@ Enables users to persist and retrieve workflow configurations, including version
 ### User Story
 As a workflow designer user, I want to save my current workflow (with versioning) and load existing workflows (including from JSON files and templates) so that I can efficiently manage, reuse, and recover my workflow configurations without data loss.
 
+**Time Estimate: 28 hours**
+
 ### Acceptance Criteria
 1. Users can save the current workflow to the backend, and each save creates a new version.
 2. Users can load existing workflows from the backend, including selecting specific versions.
