@@ -36,16 +36,16 @@
         <PackageReference Include="Aevatar.Core.Abstractions"/>
 
 
-        <!--
-                <PackageReference Include="Aevatar.Station.Feature" />
-        -->
+        <PackageReference Include="Aevatar.Station.Feature" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\Aevatar.MongoDB\Aevatar.MongoDB.csproj" />
         <ProjectReference Include="..\Aevatar.Domain.Grains\Aevatar.Domain.Grains.csproj" />
         <ProjectReference Include="..\Aevatar.Application.Grains\Aevatar.Application.Grains.csproj" />
+<!--
         <ProjectReference Include="..\Aevatar.Station.Feature\Aevatar.Station.Feature.csproj" />
+-->
     </ItemGroup>
 
     <ItemGroup>

@@ -28,9 +28,7 @@
     <PackageVersion Include="Aevatar.GAgents.Twitter" Version="$(AevatarGAgentVersion)" />
     <PackageVersion Include="Aevatar.GAgents.ChatAgent" Version="$(AevatarGAgentVersion)" />
     <PackageVersion Include="Aevatar.GAgents.GroupChat" Version="$(AevatarGAgentVersion)" />
-<!--
     <PackageVersion Include="Aevatar.Station.Feature" Version="1.1.4" />
--->
 
 
     <!-- AI and Analysis packages -->
