@@ -8,10 +8,13 @@ using Aevatar.Silo.Grains.Activation;
 using Aevatar.Silo.IdGeneration;
 using Aevatar.Silo.TypeDiscovery;
 using Aevatar.PermissionManagement;
+using Microsoft.Extensions.Configuration;
 using Serilog;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
 using Volo.Abp.AutoMapper;
+using Volo.Abp.BlobStoring;
+using Volo.Abp.BlobStoring.Aws;
 using Volo.Abp.Modularity;
 using Volo.Abp.PermissionManagement;
 
@@ -22,7 +25,8 @@ namespace Aevatar.Silo;
     typeof(AbpAutofacModule),
     typeof(OpenTelemetryModule),
     typeof(AevatarModule),
-    typeof(AevatarPermissionManagementModule)
+    typeof(AevatarPermissionManagementModule),
+    typeof(AbpBlobStoringAwsModule)
 )]
 public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
 {
@@ -47,5 +51,20 @@ public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
         
         context.Services.Configure<HostOptions>(context.Services.GetConfiguration().GetSection("Host"));
         context.Services.Configure<SystemLLMConfigOptions>(configuration);
+        
+        Configure<AbpBlobStoringOptions>(options =>
+        {
+            options.Containers.ConfigureDefault(container =>
+            {
+                var configSection = configuration.GetSection("AwsS3");
+                container.UseAws(o =>
+                {
+                    o.AccessKeyId = configSection.GetValue<string>("AccessKeyId");
+                    o.SecretAccessKey = configSection.GetValue<string>("SecretAccessKey");
+                    o.Region = configSection.GetValue<string>("Region");
+                    o.ContainerName = configSection.GetValue<string>("ContainerName");
+                }); 
+            });
+        });
     }
 }

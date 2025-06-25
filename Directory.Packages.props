@@ -112,6 +112,8 @@
     <PackageVersion Include="Volo.Abp.Swashbuckle" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.TestBase" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Uow" Version="$(AbpVersion)" />
+    <PackageVersion Include="Volo.Abp.BlobStoring" Version="$(AbpVersion)" />
+    <PackageVersion Include="Volo.Abp.BlobStoring.Aws" Version="$(AbpVersion)" />
     <!-- Microsoft packages -->
     <PackageVersion Include="DotNetAnalyzers.DocumentationAnalyzers" Version="1.0.0-beta.59" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="4.11.0" />

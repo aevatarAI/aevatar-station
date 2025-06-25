@@ -33,6 +33,7 @@
         <PackageReference Include="Orleans.Streams.Kafka" />
         <PackageReference Include="StackExchange.Redis" />
         <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis"/>
+        <PackageReference Include="Volo.Abp.BlobStoring.Aws" />
     </ItemGroup>
 
     <ItemGroup>
