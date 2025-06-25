@@ -39,6 +39,7 @@ public interface IGodGPTService
     Task<Aevatar.Quantum.SessionCreationInfoDto?> GetSessionCreationInfoAsync(Guid userId, Guid sessionId);
     Task<Guid> DeleteSessionAsync(Guid userId, Guid sessionId);
     Task<Guid> RenameSessionAsync(Guid userId, Guid sessionId, string title);
+    Task<List<SessionInfoDto>> SearchSessionsAsync(Guid userId, string keyword);
 
     Task<string> GetSystemPromptAsync();
     Task UpdateSystemPromptAsync(GodGPTConfigurationDto godGptConfigurationDto);
@@ -140,6 +141,34 @@ public class GodGPTService : ApplicationService, IGodGPTService
     {
         var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
         return await manager.RenameSessionAsync(sessionId, title);
+    }
+
+    public async Task<List<SessionInfoDto>> SearchSessionsAsync(Guid userId, string keyword)
+    {
+        // Input validation according to downstream team requirements
+        if (string.IsNullOrWhiteSpace(keyword))
+        {
+            return new List<SessionInfoDto>(); // Return empty list for empty keyword
+        }
+
+        // Length limit validation
+        if (keyword.Length > 200)
+        {
+            _logger.LogWarning($"Search keyword too long: {keyword.Length} characters");
+            return new List<SessionInfoDto>();
+        }
+
+        try
+        {
+            var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
+            return await manager.SearchSessionsAsync(keyword.Trim(), 1000);
+        }
+        catch (Exception ex)
+        {
+            // Error handling according to downstream team requirements
+            _logger.LogError(ex, $"Search sessions failed for keyword: {keyword}");
+            return new List<SessionInfoDto>();
+        }
     }
 
     public Task<string> GetSystemPromptAsync()
