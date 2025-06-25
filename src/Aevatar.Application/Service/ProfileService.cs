@@ -41,7 +41,7 @@ namespace Aevatar.Service
                 };
             }
             string email = identityUser.Email;
-            string userName = identityUser.UserName;
+            //string userName = identityUser.UserName;
 
             // 2. Profile info
             string? fullName = null;
@@ -62,8 +62,7 @@ namespace Aevatar.Service
                 Uid = userId,
                 Email = email,
                 Avatar = null, // not support user logo
-                Name = fullName,
-                UserName = userName
+                Name = fullName
             };
         }
     }

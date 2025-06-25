@@ -26,10 +26,5 @@ namespace Aevatar.Profiles
         /// User full name from GodGPT Profile
         /// </summary>
         public string? Name { get; set; }
-
-        /// <summary>
-        /// UserName as an alternative display
-        /// </summary>
-        public string? UserName { get; set; }
     }
 } 
