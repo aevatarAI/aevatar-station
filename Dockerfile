@@ -3,6 +3,9 @@
 # making the final container smaller and more secure compared to the full SDK image.
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 
+# Declare build argument to retrieve servicename
+ARG servicename
+
 # Create group and user with GID and UID 1000
 RUN addgroup --gid 1000 appgroup && \
     adduser --uid 1000 --ingroup appgroup --disabled-password --gecos "" appuser
