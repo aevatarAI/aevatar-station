@@ -18,6 +18,7 @@ using Orleans;
 using Volo.Abp.Account;
 using Volo.Abp.AspNetCore.Mvc.Dapr;
 using Volo.Abp.AutoMapper;
+using Volo.Abp.BlobStoring;
 using Volo.Abp.Dapr;
 using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
@@ -42,7 +43,8 @@ namespace Aevatar;
     typeof(AbpAutoMapperModule),
     typeof(AbpEventBusModule),
     typeof(AevatarPluginsModule),
-    typeof(AevatarModule)
+    typeof(AevatarModule),
+    typeof(AbpBlobStoringModule)
 )]
 public class AevatarApplicationModule : AbpModule
 {

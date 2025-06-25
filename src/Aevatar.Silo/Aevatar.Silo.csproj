@@ -30,6 +30,7 @@
         <PackageReference Include="Aevatar" />
         <PackageReference Include="Aevatar.SignalR" />
         <PackageReference Include="Aevatar.PermissionManagement" />
+        <PackageReference Include="Volo.Abp.BlobStoring.Aws" />
     </ItemGroup>
 
     <ItemGroup>

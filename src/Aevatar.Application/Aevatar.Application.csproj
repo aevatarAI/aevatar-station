@@ -26,6 +26,7 @@
         <PackageReference Include="AElf.OpenTelemetry"/>
         <PackageReference Include="FluentValidation"/>
         <PackageReference Include="Aevatar" />
+        <PackageReference Include="Volo.Abp.BlobStoring" />
     </ItemGroup>
 
     <ItemGroup>
