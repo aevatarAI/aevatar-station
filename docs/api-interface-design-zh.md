@@ -35,13 +35,14 @@ AevatarStation是一个用于开发、管理和部署AI智能体的全栈平台�
 ## 目录 / Table of Contents
 
 - [概述](#概述)
-- [1. 代理系统模块 (Agent) - 11 APIs](#1-代理系统模块-agent)  
+- [1. 代理系统模块 (Agent) - 12 APIs](#1-代理系统模块-agent)  
 - [2. 插件管理模块 (Plugin) - 4 APIs](#2-插件管理模块-plugin)
 - [3. 通知管理模块 (Notification) - 7 APIs](#3-通知管理模块-notification)
 - [4. Webhook管理模块 (Webhook) - 4 APIs](#4-webhook管理模块-webhook)
 - [5. 订阅管理模块 (Subscription) - 4 APIs](#5-订阅管理模块-subscription)
 - [6. API密钥管理模块 (API Key) - 4 APIs](#6-api密钥管理模块-api-key)
 - [7. API请求统计模块 (Statistics) - 1 API](#7-api请求统计模块-statistics)
+- [8. 查询服务模块 (Query) - 1 API](#8-查询服务模块-query)
 
 ---
 
@@ -139,7 +140,7 @@ GAgent（智能代理）系统是AevatarStation的核心，实现了"智能体�
 
 **权限要求**: Authorize
 
-**请求示例**:
+**请求示例 (OpenAI智能体)**:
 ```json
 {
   "agentType": "OpenAIAgent",
@@ -148,6 +149,42 @@ GAgent（智能代理）系统是AevatarStation的核心，实现了"智能体�
     "apiKey": "sk-proj-xxxxxxxxxxxx",
     "model": "gpt-4",
     "temperature": 0.7
+  }
+}
+```
+
+**请求示例 (工作流协调器)**:
+```json
+{
+  "agentType": "Aevatar.GAgents.GroupChat.WorkflowCoordinator.WorkflowCoordinatorGAgent",
+  "name": "数据处理工作流",
+  "properties": {
+    "workflowUnitList": [
+      {
+        "grainId": "grain1",
+        "nextGrainId": "grain2",
+        "extendedData": {
+          "taskType": "dataValidation",
+          "timeout": 30
+        }
+      },
+      {
+        "grainId": "grain2",
+        "nextGrainId": "grain3",
+        "extendedData": {
+          "taskType": "dataTransformation",
+          "timeout": 60
+        }
+      },
+      {
+        "grainId": "grain3",
+        "nextGrainId": null,
+        "extendedData": {
+          "taskType": "dataOutput",
+          "timeout": 15
+        }
+      }
+    ]
   }
 }
 ```

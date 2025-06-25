@@ -35,13 +35,14 @@ All interfaces follow standard RESTful response formats with Orleans grain-based
 ## Table of Contents
 
 - [Overview](#overview)
-- [1. Agent System Module - 11 APIs](#1-agent-system-module)  
+- [1. Agent System Module - 12 APIs](#1-agent-system-module)  
 - [2. Plugin Management Module - 4 APIs](#2-plugin-management-module)
 - [3. Notification Management Module - 7 APIs](#3-notification-management-module)
 - [4. Webhook Management Module - 4 APIs](#4-webhook-management-module)
 - [5. Subscription Management Module - 4 APIs](#5-subscription-management-module)
 - [6. API Key Management Module - 4 APIs](#6-api-key-management-module)
 - [7. API Request Statistics Module - 1 API](#7-api-request-statistics-module)
+- [8. Query Service Module - 1 API](#8-query-service-module)
 
 ---
 
@@ -139,7 +140,7 @@ The GAgent (Intelligent Agent) system is the core of AevatarStation, implementin
 
 **Authorization**: Required
 
-**Request Example**:
+**Request Example (OpenAI Agent)**:
 ```json
 {
   "agentType": "OpenAIAgent",
@@ -152,16 +153,59 @@ The GAgent (Intelligent Agent) system is the core of AevatarStation, implementin
 }
 ```
 
+**Request Example (Workflow Coordinator)**:
+```json
+{
+  "agentType": "Aevatar.GAgents.GroupChat.WorkflowCoordinator.WorkflowCoordinatorGAgent",
+  "name": "Data Processing Workflow",
+  "properties": {
+    "workflowUnitList": [
+      {
+        "grainId": "grain1",
+        "nextGrainId": "grain2",
+        "extendedData": {
+          "taskType": "dataValidation",
+          "timeout": 30
+        }
+      },
+      {
+        "grainId": "grain2",
+        "nextGrainId": "grain3",
+        "extendedData": {
+          "taskType": "dataTransformation",
+          "timeout": 60
+        }
+      },
+      {
+        "grainId": "grain3",
+        "nextGrainId": null,
+        "extendedData": {
+          "taskType": "dataOutput",
+          "timeout": 15
+        }
+      }
+    ]
+  }
+}
+```
+
 **Response Example**:
 ```json
 {
   "id": "123e4567-e89b-12d3-a456-426614174000",
-  "agentType": "OpenAIAgent",
-  "name": "My AI Assistant",
+  "agentType": "Aevatar.GAgents.GroupChat.WorkflowCoordinator.WorkflowCoordinatorGAgent",
+  "name": "Data Processing Workflow",
   "properties": {
-    "apiKey": "sk-proj-xxxxxxxxxxxx",
-    "model": "gpt-4",
-    "temperature": 0.7
+    "workflowUnitList": [
+      {
+        "grainId": "grain1",
+        "nextGrainId": "grain2",
+        "extendedData": {
+          "taskType": "dataValidation",
+          "timeout": 30
+        }
+      }
+    ]
   },
   "grainId": "agent_123e4567-e89b-12d3-a456-426614174000",
   "agentGuid": "123e4567-e89b-12d3-a456-426614174000",
@@ -324,7 +368,7 @@ The GAgent (Intelligent Agent) system is the core of AevatarStation, implementin
 
 **Authorization**: Required
 
-**Request Example**:
+**Request Example (OpenAI Agent)**:
 ```json
 {
   "name": "Updated AI Assistant",
@@ -335,16 +379,58 @@ The GAgent (Intelligent Agent) system is the core of AevatarStation, implementin
 }
 ```
 
+**Request Example (Workflow Coordinator - Update Workflow Units)**:
+```json
+{
+  "name": "Updated Data Processing Workflow",
+  "properties": {
+    "workflowUnitList": [
+      {
+        "grainId": "grain1",
+        "nextGrainId": "grain2",
+        "extendedData": {
+          "taskType": "enhancedValidation",
+          "timeout": 45
+        }
+      },
+      {
+        "grainId": "grain2",
+        "nextGrainId": "grain4",
+        "extendedData": {
+          "taskType": "advancedTransformation",
+          "timeout": 90
+        }
+      },
+      {
+        "grainId": "grain4",
+        "nextGrainId": null,
+        "extendedData": {
+          "taskType": "finalOutput",
+          "timeout": 20
+        }
+      }
+    ]
+  }
+}
+```
+
 **Response Example**:
 ```json
 {
   "id": "123e4567-e89b-12d3-a456-426614174000",
-  "agentType": "OpenAIAgent",
-  "name": "Updated AI Assistant",
+  "agentType": "Aevatar.GAgents.GroupChat.WorkflowCoordinator.WorkflowCoordinatorGAgent",
+  "name": "Updated Data Processing Workflow",
   "properties": {
-    "apiKey": "sk-proj-xxxxxxxxxxxx",
-    "model": "gpt-4-turbo",
-    "temperature": 0.8
+    "workflowUnitList": [
+      {
+        "grainId": "grain1",
+        "nextGrainId": "grain2",
+        "extendedData": {
+          "taskType": "enhancedValidation",
+          "timeout": 45
+        }
+      }
+    ]
   },
   "updatedAt": "2025-01-29T15:45:00Z"
 }
@@ -419,6 +505,56 @@ The GAgent (Intelligent Agent) system is the core of AevatarStation, implementin
   "status": "Restarting",
   "message": "Agent restart initiated successfully",
   "timestamp": "2025-01-29T15:45:00Z"
+}
+```
+
+### 1.12 Publish Event to Agent
+**POST** `/publishEvent`
+
+**Description**: Publish an event to trigger agent actions, such as starting a workflow coordinator.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| agentId | Guid | Yes | Target agent unique identifier |
+| eventType | string | Yes | Event type to publish |
+| eventProperties | Dictionary<string, object>? | No | Event-specific properties |
+
+**Authorization**: Required
+
+**Request Example (Start Workflow Coordinator)**:
+```json
+{
+  "agentId": "123e4567-e89b-12d3-a456-426614174000",
+  "eventType": "Aevatar.GAgents.GroupChat.WorkflowCoordinator.GEvent.StartWorkflowCoordinatorEvent",
+  "eventProperties": {
+    "initContent": "Process customer data batch #12345"
+  }
+}
+```
+
+**Request Example (Custom Event)**:
+```json
+{
+  "agentId": "456e7890-e89b-12d3-a456-426614174000",
+  "eventType": "CustomAgent.Events.ProcessDataEvent",
+  "eventProperties": {
+    "dataSource": "database",
+    "batchSize": 1000,
+    "priority": "high"
+  }
+}
+```
+
+**Response Example**:
+```json
+{
+  "eventId": "event-789f0123-e89b-12d3-a456-426614174000",
+  "agentId": "123e4567-e89b-12d3-a456-426614174000",
+  "eventType": "Aevatar.GAgents.GroupChat.WorkflowCoordinator.GEvent.StartWorkflowCoordinatorEvent",
+  "status": "Published",
+  "publishedAt": "2025-01-29T16:00:00Z",
+  "message": "Event successfully published to agent"
 }
 ```
 
@@ -1357,6 +1493,97 @@ The API Request Statistics system provides comprehensive monitoring and analytic
   "timeRange": {
     "startDate": "2025-01-01T00:00:00Z",
     "endDate": "2025-01-31T23:59:59Z"
+  }
+}
+```
+
+---
+
+[⬆️ Back to Table of Contents](#table-of-contents)
+
+## 8. Query Service Module
+
+### Base Path: `/api/query`
+
+The Query Service module provides advanced search capabilities through ElasticSearch integration:
+
+- **ElasticSearch Integration**: Direct access to indexed agent states and workflow data
+- **State Querying**: Query agent states including WorkflowCoordinatorState
+- **Real-time Search**: Live search across distributed Orleans grain states
+- **Flexible Filtering**: Support for complex queries and filtering criteria
+
+### 8.1 Query ElasticSearch
+**GET** `/es`
+
+**Description**: Query ElasticSearch for agent states, workflow information, and other indexed data.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| state | string? | No | State type to query (e.g., WorkflowCoordinatorState) |
+| agentId | Guid? | No | Filter by specific agent ID |
+| query | string? | No | ElasticSearch query string |
+| from | int | No | Starting index for pagination (default: 0) |
+| size | int | No | Number of results to return (default: 10) |
+
+**Authorization**: Required
+
+**Request Example (Query Workflow States)**:
+`GET /api/query/es?state=WorkflowCoordinatorState&agentId=123e4567-e89b-12d3-a456-426614174000&size=20`
+
+**Request Example (General Query)**:
+`GET /api/query/es?query=status:active AND agentType:WorkflowCoordinator&from=0&size=50`
+
+**Response Example (Workflow Coordinator State)**:
+```json
+{
+  "items": [
+    {
+      "agentId": "123e4567-e89b-12d3-a456-426614174000",
+      "state": "WorkflowCoordinatorState",
+      "currentWorkUnitInfos": "{\"activeUnit\":\"grain2\",\"status\":\"processing\",\"startTime\":\"2025-01-29T16:00:00Z\",\"currentStep\":2,\"totalSteps\":3}",
+      "workflowStatus": "Running",
+      "lastUpdated": "2025-01-29T16:15:00Z",
+      "metadata": {
+        "workflowId": "wf-12345",
+        "initiatedBy": "user123",
+        "priority": "high"
+      }
+    },
+    {
+      "agentId": "456e7890-e89b-12d3-a456-426614174000",
+      "state": "WorkflowCoordinatorState",
+      "currentWorkUnitInfos": "{\"activeUnit\":\"grain1\",\"status\":\"completed\",\"completedTime\":\"2025-01-29T15:45:00Z\",\"currentStep\":3,\"totalSteps\":3}",
+      "workflowStatus": "Completed",
+      "lastUpdated": "2025-01-29T15:45:00Z",
+      "metadata": {
+        "workflowId": "wf-12346",
+        "initiatedBy": "user456",
+        "priority": "normal"
+      }
+    }
+  ],
+  "totalCount": 2,
+  "from": 0,
+  "size": 20
+}
+```
+
+**Workflow Unit Info JSON Structure**:
+```json
+{
+  "activeUnit": "grain2",
+  "status": "processing",
+  "startTime": "2025-01-29T16:00:00Z",
+  "currentStep": 2,
+  "totalSteps": 3,
+  "completedUnits": ["grain1"],
+  "pendingUnits": ["grain3"],
+  "errors": [],
+  "executionContext": {
+    "batchId": "batch-789",
+    "retryCount": 0,
+    "timeout": 300
   }
 }
 ```
