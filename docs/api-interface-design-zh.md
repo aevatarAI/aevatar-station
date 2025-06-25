@@ -2,16 +2,35 @@
 
 ## 概述
 
-AevatarStation是一个基于.NET的微服务平台，提供了专业的RESTful API接口用于代理系统、插件管理、通知系统、Webhook管理等核心业务功能。
+AevatarStation是一个用于开发、管理和部署AI智能体的全栈平台，基于"智能体是语言的自指结构"这一核心理念构建。平台采用分布式、事件驱动和可插拔的设计原则，支持灵活扩展和高可用部署。
+
+### 平台架构特点
+- **Orleans分布式系统**: 基于Microsoft Orleans的Actor模型分布式计算
+- **事件溯源与CQRS**: 所有智能体状态变更以事件形式存储，命令查询分离
+- **多Silo架构**: 三个专门的Orleans Silo（调度器、投影器、用户）处理不同工作负载
+- **热插拔扩展**: WebHook.Host支持动态DLL加载和多态IWebhookHandler发现
+- **实时通信**: SignalR集成实现智能体与前端的实时交互
 
 ### 基础信息
 - **基础URL**: `/api`
-- **认证方式**: Bearer Token (JWT)
+- **认证方式**: Bearer Token (JWT) 通过AuthServer
 - **内容类型**: `application/json`
 - **API版本**: v1
+- **服务端点**:
+  - HttpApi.Host: `http://localhost:7002` (主要API，包含Swagger UI)
+  - Developer.Host: `http://localhost:7003` (开发者API，包含Swagger UI)
+  - AuthServer: `http://localhost:7001` (认证服务)
+
+### 基础设施组件
+- **MongoDB**: 事件溯源和状态持久化
+- **Redis**: 分布式缓存和集群协调
+- **Kafka**: 事件流和智能体间通信
+- **ElasticSearch**: 搜索和分析功能
+- **Qdrant**: AI嵌入向量数据库
+- **Aspire**: 统一编排和服务管理
 
 ### 通用响应格式
-所有接口都遵循标准的RESTful响应格式，包含标准的错误处理和分页支持。
+所有接口都遵循标准的RESTful响应格式，基于Orleans Grain处理，包含完善的错误处理、分页支持和事件溯源能力。
 
 ## 目录 / Table of Contents
 
@@ -26,9 +45,17 @@ AevatarStation是一个基于.NET的微服务平台，提供了专业的RESTful 
 
 ---
 
-## 1. 代理系统模块 (Agent)
+## 1. 代理系统模块 (GAgent)
 
 ### 基础路径: `/api/agent`
+
+GAgent（智能代理）系统是AevatarStation的核心，实现了"智能体是语言的自指结构"这一理念。每个智能体作为Orleans Grain运行，具有以下特征：
+
+- **事件溯源**: 所有状态变更都作为事件存储在MongoDB事件存储中
+- **状态管理**: 通过重放事件重建当前状态，持久化在状态存储中
+- **流通信**: 使用Kafka流提供者进行智能体间消息广播和订阅
+- **层次关系**: 支持智能体注册、订阅和组合，形成智能体网络
+- **可扩展性**: GAgent是抽象基类，支持各种智能体类型和自定义扩展
 
 ### 1.1 获取所有代理类型
 **GET** `/agent-type-info-list`
@@ -401,6 +428,13 @@ AevatarStation是一个基于.NET的微服务平台，提供了专业的RESTful 
 ## 2. 插件管理模块 (Plugin)
 
 ### 基础路径: `/api/plugins`
+
+插件管理系统通过WebHook.Host实现热插拔扩展，支持：
+
+- **动态DLL加载**: 远程注入和加载插件程序集，无需系统重启
+- **多态发现**: 自动发现和注册IWebhookHandler实现
+- **多租户隔离**: 安全的插件执行环境，支持租户特定上下文
+- **热插拔架构**: 添加、更新或移除插件而不影响系统可用性
 
 ### 2.1 获取插件列表
 **GET** `/`

@@ -2,16 +2,35 @@
 
 ## Overview
 
-AevatarStation is a .NET-based microservices platform that provides professional RESTful API interfaces for core business functions including agent systems, plugin management, notification systems, and webhook management.
+AevatarStation is a full-stack platform for developing, managing, and deploying AI agents, built on the core philosophy that "an agent is a self-referential structure of language." The platform employs distributed, event-driven, and pluggable design principles, supporting flexible extension and high-availability deployment.
+
+### Platform Architecture
+- **Orleans-based Distributed System**: Leverages Microsoft Orleans for actor-model-based distributed computing
+- **Event Sourcing & CQRS**: All agent state changes are stored as events with command-query separation
+- **Multi-Silo Architecture**: Three specialized Orleans silos (Scheduler, Projector, User) for different workloads
+- **Hot-Pluggable Extensions**: WebHook.Host supports dynamic DLL loading and polymorphic IWebhookHandler discovery
+- **Real-time Communication**: SignalR integration for live agent-frontend interaction
 
 ### Basic Information
 - **Base URL**: `/api`
-- **Authentication**: Bearer Token (JWT)
+- **Authentication**: Bearer Token (JWT) via AuthServer
 - **Content Type**: `application/json`
 - **API Version**: v1
+- **Service Endpoints**:
+  - HttpApi.Host: `http://localhost:7002` (Main API with Swagger UI)
+  - Developer.Host: `http://localhost:7003` (Developer API with Swagger UI)
+  - AuthServer: `http://localhost:7001` (Authentication service)
+
+### Infrastructure Components
+- **MongoDB**: Event sourcing and state persistence
+- **Redis**: Distributed cache and cluster coordination  
+- **Kafka**: Event streaming and inter-agent communication
+- **ElasticSearch**: Search and analytics capabilities
+- **Qdrant**: Vector database for AI embeddings
+- **Aspire**: Unified orchestration and service management
 
 ### Common Response Format
-All interfaces follow standard RESTful response formats, including standard error handling and pagination support.
+All interfaces follow standard RESTful response formats with Orleans grain-based processing, including comprehensive error handling, pagination support, and event sourcing capabilities.
 
 ## Table of Contents
 
@@ -26,9 +45,17 @@ All interfaces follow standard RESTful response formats, including standard erro
 
 ---
 
-## 1. Agent System Module
+## 1. Agent System Module (GAgent)
 
 ### Base Path: `/api/agent`
+
+The GAgent (Intelligent Agent) system is the core of AevatarStation, implementing the philosophy that "an agent is a self-referential structure of language." Each agent operates as an Orleans grain with the following characteristics:
+
+- **Event Sourcing**: All state changes are stored as events in MongoDB Event Store
+- **State Management**: Current state is rebuilt by replaying events, persisted in State Store
+- **Stream Communication**: Uses Kafka Stream Provider for inter-agent message broadcasting and subscription
+- **Hierarchical Relationships**: Supports agent registration, subscription, and composition forming an agent network
+- **Extensibility**: GAgent is an abstract base class supporting various agent types and custom extensions
 
 ### 1.1 Get All Agent Types
 **GET** `/agent-type-info-list`
@@ -403,6 +430,13 @@ All interfaces follow standard RESTful response formats, including standard erro
 
 ### Base Path: `/api/plugins`
 
+The Plugin Management system enables hot-pluggable extensions through WebHook.Host, supporting:
+
+- **Dynamic DLL Loading**: Remote injection and loading of plugin assemblies without system restart
+- **Polymorphic Discovery**: Automatic discovery and registration of IWebhookHandler implementations
+- **Multi-tenant Isolation**: Secure plugin execution with tenant-specific contexts
+- **Hot-Plug Architecture**: Add, update, or remove plugins without affecting system availability
+
 ### 2.1 Upload Plugin Package
 **POST** `/upload`
 
@@ -541,6 +575,14 @@ version: "1.0.0"
 ## 3. Notification Management Module
 
 ### Base Path: `/api/notification`
+
+The Notification Management system provides event-driven messaging capabilities integrated with the Orleans cluster:
+
+- **Multi-Channel Support**: Email, SMS, Push notifications, and WebSocket real-time messaging
+- **Event-Driven Architecture**: Integrates with Kafka event streaming for reliable message delivery
+- **SignalR Integration**: Real-time notifications through SignalR connections to frontend clients
+- **Template System**: Reusable notification templates with variable substitution
+- **Delivery Tracking**: Comprehensive delivery status tracking and retry mechanisms
 
 ### 3.1 Send Notification
 **POST** `/send`
@@ -785,6 +827,14 @@ version: "1.0.0"
 
 ### Base Path: `/api/admin`
 
+The Webhook Management system provides dynamic code deployment and execution capabilities:
+
+- **Multi-DLL Loading**: Supports loading multiple DLL assemblies for complex webhook scenarios
+- **Runtime Environment Support**: Compatible with Node.js, Python, .NET, and other runtime environments
+- **Dynamic Deployment**: Deploy and update webhook code without system downtime
+- **Environment Isolation**: Separate deployment environments (Development, Staging, Production) with specific configurations
+- **Health Monitoring**: Real-time health checks and performance monitoring for deployed webhooks
+
 ### 4.1 Upload Code Package
 **POST** `/upload-code`
 
@@ -949,6 +999,14 @@ runtime: "Node.js"
 ## 5. Subscription Management Module
 
 ### Base Path: `/api/subscription`
+
+The Subscription Management system enables event-driven communication through Orleans Streams and Kafka:
+
+- **Event Stream Integration**: Leverages Orleans Streams with Kafka Stream Provider for reliable event delivery
+- **Agent Event Subscription**: Subscribe to specific agent events and state changes
+- **Webhook Callbacks**: Automatic webhook notifications when subscribed events occur
+- **Filtering Capabilities**: Advanced event filtering based on agent types, priorities, and custom criteria
+- **Stream Reliability**: Built-in retry mechanisms and delivery guarantees through Orleans Streams
 
 ### 5.1 Create Subscription
 **POST** `/`
@@ -1243,6 +1301,14 @@ runtime: "Node.js"
 ## 7. API Request Statistics Module
 
 ### Base Path: `/api/api-requests`
+
+The API Request Statistics system provides comprehensive monitoring and analytics for the distributed Orleans cluster:
+
+- **Multi-Silo Monitoring**: Aggregates statistics across Scheduler, Projector, and User silos
+- **Real-time Metrics**: Integration with Prometheus for real-time performance monitoring
+- **Distributed Tracing**: Jaeger integration for request tracing across Orleans grains
+- **Performance Analytics**: Response time analysis, error rate tracking, and throughput metrics
+- **Grafana Dashboards**: Pre-configured dashboards for visualizing API usage patterns and system health
 
 ### 7.1 Get API Request Statistics
 **GET** `/`
