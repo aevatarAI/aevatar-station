@@ -1,6 +1,9 @@
 # AI Agent Workflow Engine – Product Specifications
 
 ## 1. Visual Workflow Designer (Drag-and-Drop Interface)
+**Version**
+v0.4
+
 **Objective:**  
 Empower users to intuitively build, modify, and comprehend agent workflows through a user-friendly drag-and-drop interface.
 
@@ -37,6 +40,9 @@ Empower users to intuitively build, modify, and comprehend agent workflows throu
 ---
 
 ## 2. Debugger Overlay (Read-Only State Inspection)
+**Version**
+v0.5
+
 **Objective:**
 Allow users to inspect the agent's state after workflow execution for troubleshooting and validation.
 
@@ -57,6 +63,9 @@ Allow users to inspect the agent's state after workflow execution for troublesho
 ---
 
 ## 3. Workflow Save/Load Functionality via UI
+**Version**
+v0.4
+
 **Objective:**
 Allow users to persist and retrieve workflow configurations.
 
@@ -72,6 +81,9 @@ Allow users to persist and retrieve workflow configurations.
 ---
 
 ## 4. Execution Progress Tracking Dashboard
+**Version**
+v0.5
+
 **Objective:**
 Provide real-time visibility into workflow execution status and progress.
 
@@ -90,6 +102,9 @@ Provide real-time visibility into workflow execution status and progress.
 ---
 
 ## 5. Workflow Template Library
+**Version**
+v1.0
+
 **Objective:**
 Accelerate user onboarding and workflow creation with pre-built automation blueprints.
 
@@ -106,6 +121,9 @@ Accelerate user onboarding and workflow creation with pre-built automation bluep
 ---
 
 ## 6. Plugin Management Page
+**Version**
+v1.0
+
 **Objective:**
 Enable users to upload, manage, and utilize plugins, making them available as agent nodes within the visual workflow designer.
 
