@@ -1,0 +1,1365 @@
+# AevatarStation API Interface Design Document
+
+## Overview
+
+AevatarStation is a .NET-based microservices platform that provides professional RESTful API interfaces for core business functions including agent systems, plugin management, notification systems, and webhook management.
+
+### Basic Information
+- **Base URL**: `/api`
+- **Authentication**: Bearer Token (JWT)
+- **Content Type**: `application/json`
+- **API Version**: v1
+
+### Common Response Format
+All interfaces follow standard RESTful response formats, including standard error handling and pagination support.
+
+## Table of Contents
+
+- [Overview](#overview)
+- [1. Agent System Module - 11 APIs](#1-agent-system-module)  
+- [2. Plugin Management Module - 4 APIs](#2-plugin-management-module)
+- [3. Notification Management Module - 7 APIs](#3-notification-management-module)
+- [4. Webhook Management Module - 4 APIs](#4-webhook-management-module)
+- [5. Subscription Management Module - 4 APIs](#5-subscription-management-module)
+- [6. API Key Management Module - 4 APIs](#6-api-key-management-module)
+- [7. API Request Statistics Module - 1 API](#7-api-request-statistics-module)
+
+---
+
+## 1. Agent System Module
+
+### Base Path: `/api/agent`
+
+### 1.1 Get All Agent Types
+**GET** `/agent-type-info-list`
+
+**Description**: Retrieve information about all available agent types in the system, including type names and parameter definitions, used for selecting appropriate types when creating agents.
+
+**Request Parameters**: None
+
+**Authorization**: Required
+
+**Response Example**:
+```json
+[
+  {
+    "id": "OpenAIAgent",
+    "name": "OpenAI Agent",
+    "description": "Intelligent agent based on OpenAI",
+    "parameters": [
+      {
+        "name": "apiKey",
+        "type": "string",
+        "required": true,
+        "description": "OpenAI API key"
+      },
+      {
+        "name": "model",
+        "type": "string", 
+        "required": false,
+        "description": "Model name to use"
+      }
+    ]
+  }
+]
+```
+
+### 1.2 Get Agent Instance List
+**GET** `/agent-list`
+
+**Description**: Retrieve a paginated list of the current user's agent instances, supporting viewing all created agents and their status.
+
+**Request Parameters**:
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| pageIndex | int | No | 0 | Page index, starting from 0 |
+| pageSize | int | No | 20 | Page size, maximum 100 |
+
+**Authorization**: Required
+
+**Request Example**: `GET /api/agent/agent-list?pageIndex=0&pageSize=10`
+
+**Response Example**:
+```json
+[
+  {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "agentType": "OpenAIAgent",
+    "name": "My AI Assistant",
+    "properties": {
+      "apiKey": "sk-***",
+      "model": "gpt-4"
+    },
+    "grainId": "agent_123e4567-e89b-12d3-a456-426614174000",
+    "agentGuid": "123e4567-e89b-12d3-a456-426614174000",
+    "businessAgentGrainId": "business_agent_123"
+  }
+]
+```
+
+### 1.3 Create Agent
+**POST** `/`
+
+**Description**: Create a new AI agent instance, requiring specification of agent type and related configuration parameters.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| agentId | Guid? | No | Specify agent ID, auto-generated if not provided |
+| agentType | string | Yes | Agent type, selected from agent type list |
+| name | string | Yes | Agent name |
+| properties | Dictionary<string, object>? | No | Agent configuration parameters, provided according to agent type requirements |
+
+**Authorization**: Required
+
+**Request Example**:
+```json
+{
+  "agentType": "OpenAIAgent",
+  "name": "My AI Assistant",
+  "properties": {
+    "apiKey": "sk-proj-xxxxxxxxxxxx",
+    "model": "gpt-4",
+    "temperature": 0.7
+  }
+}
+```
+
+**Response Example**:
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "agentType": "OpenAIAgent",
+  "name": "My AI Assistant",
+  "properties": {
+    "apiKey": "sk-proj-xxxxxxxxxxxx",
+    "model": "gpt-4",
+    "temperature": 0.7
+  },
+  "grainId": "agent_123e4567-e89b-12d3-a456-426614174000",
+  "agentGuid": "123e4567-e89b-12d3-a456-426614174000",
+  "propertyJsonSchema": "{...}",
+  "businessAgentGrainId": "business_agent_123"
+}
+```
+
+### 1.4 Get Agent Details
+**GET** `/{guid}`
+
+**Description**: Retrieve detailed information of a specific agent by agent ID, including configuration parameters and running status.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| guid | Guid | Yes | Agent unique identifier |
+
+**Authorization**: Required
+
+**Request Example**: `GET /api/agent/123e4567-e89b-12d3-a456-426614174000`
+
+**Response Example**:
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "agentType": "OpenAIAgent",
+  "name": "My AI Assistant",
+  "properties": {
+    "apiKey": "sk-proj-xxxxxxxxxxxx",
+    "model": "gpt-4",
+    "temperature": 0.7
+  },
+  "grainId": "agent_123e4567-e89b-12d3-a456-426614174000",
+  "agentGuid": "123e4567-e89b-12d3-a456-426614174000",
+  "propertyJsonSchema": "{...}",
+  "businessAgentGrainId": "business_agent_123"
+}
+```
+
+### 1.5 Get Agent Relationships
+**GET** `/{guid}/relationship`
+
+**Description**: Retrieve the relationship graph of the specified agent, including hierarchical relationship information such as parent agents and child agents.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| guid | Guid | Yes | Agent unique identifier |
+
+**Authorization**: Required
+
+**Request Example**: `GET /api/agent/123e4567-e89b-12d3-a456-426614174000/relationship`
+
+**Response Example**:
+```json
+{
+  "agentId": "123e4567-e89b-12d3-a456-426614174000",
+  "parentAgents": [
+    {
+      "id": "parent-agent-id",
+      "name": "Parent Agent",
+      "agentType": "ManagerAgent"
+    }
+  ],
+  "subAgents": [
+    {
+      "id": "sub-agent-id-1",
+      "name": "Sub Agent 1",
+      "agentType": "WorkerAgent"
+    }
+  ]
+}
+```
+
+### 1.6 Send Message to Agent
+**POST** `/{guid}/send-message`
+
+**Description**: Send a message to the specified agent for processing and return the agent's response.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| guid | Guid | Yes | Agent unique identifier |
+| message | string | Yes | Message content to send |
+| conversationId | string? | No | Conversation ID for context tracking |
+
+**Authorization**: Required
+
+**Request Example**:
+```json
+{
+  "message": "Hello, please help me analyze this data",
+  "conversationId": "conv-123"
+}
+```
+
+**Response Example**:
+```json
+{
+  "agentId": "123e4567-e89b-12d3-a456-426614174000",
+  "response": "I'd be happy to help you analyze the data. Please provide the data you'd like me to examine.",
+  "conversationId": "conv-123",
+  "timestamp": "2025-01-29T15:30:00Z"
+}
+```
+
+### 1.7 Get Agent Conversation History
+**GET** `/{guid}/conversations`
+
+**Description**: Retrieve conversation history for the specified agent.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| guid | Guid | Yes | Agent unique identifier |
+| conversationId | string? | No | Specific conversation ID |
+| pageIndex | int | No | Page index, default 0 |
+| pageSize | int | No | Page size, default 20 |
+
+**Authorization**: Required
+
+**Request Example**: `GET /api/agent/123e4567-e89b-12d3-a456-426614174000/conversations?pageIndex=0&pageSize=10`
+
+**Response Example**:
+```json
+{
+  "conversations": [
+    {
+      "conversationId": "conv-123",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Hello, please help me analyze this data",
+          "timestamp": "2025-01-29T15:30:00Z"
+        },
+        {
+          "role": "agent",
+          "content": "I'd be happy to help you analyze the data...",
+          "timestamp": "2025-01-29T15:30:05Z"
+        }
+      ]
+    }
+  ],
+  "totalCount": 1
+}
+```
+
+### 1.8 Update Agent Configuration
+**PUT** `/{guid}`
+
+**Description**: Update configuration parameters of the specified agent.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| guid | Guid | Yes | Agent unique identifier |
+| name | string? | No | New agent name |
+| properties | Dictionary<string, object>? | No | Updated configuration parameters |
+
+**Authorization**: Required
+
+**Request Example**:
+```json
+{
+  "name": "Updated AI Assistant",
+  "properties": {
+    "model": "gpt-4-turbo",
+    "temperature": 0.8
+  }
+}
+```
+
+**Response Example**:
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "agentType": "OpenAIAgent",
+  "name": "Updated AI Assistant",
+  "properties": {
+    "apiKey": "sk-proj-xxxxxxxxxxxx",
+    "model": "gpt-4-turbo",
+    "temperature": 0.8
+  },
+  "updatedAt": "2025-01-29T15:45:00Z"
+}
+```
+
+### 1.9 Delete Agent
+**DELETE** `/{guid}`
+
+**Description**: Delete the specified agent instance.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| guid | Guid | Yes | Agent unique identifier |
+
+**Authorization**: Required
+
+**Request Example**: `DELETE /api/agent/123e4567-e89b-12d3-a456-426614174000`
+
+**Response Example**:
+```json
+{
+  "success": true,
+  "message": "Agent deleted successfully"
+}
+```
+
+### 1.10 Get Agent Status
+**GET** `/{guid}/status`
+
+**Description**: Retrieve the current status and health information of the specified agent.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| guid | Guid | Yes | Agent unique identifier |
+
+**Authorization**: Required
+
+**Request Example**: `GET /api/agent/123e4567-e89b-12d3-a456-426614174000/status`
+
+**Response Example**:
+```json
+{
+  "agentId": "123e4567-e89b-12d3-a456-426614174000",
+  "status": "Active",
+  "health": "Healthy",
+  "lastActivity": "2025-01-29T15:30:00Z",
+  "messageCount": 156,
+  "uptime": "2d 14h 32m"
+}
+```
+
+### 1.11 Restart Agent
+**POST** `/{guid}/restart`
+
+**Description**: Restart the specified agent instance.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| guid | Guid | Yes | Agent unique identifier |
+
+**Authorization**: Required
+
+**Request Example**: `POST /api/agent/123e4567-e89b-12d3-a456-426614174000/restart`
+
+**Response Example**:
+```json
+{
+  "agentId": "123e4567-e89b-12d3-a456-426614174000",
+  "status": "Restarting",
+  "message": "Agent restart initiated successfully",
+  "timestamp": "2025-01-29T15:45:00Z"
+}
+```
+
+---
+
+[⬆️ Back to Table of Contents](#table-of-contents)
+
+## 2. Plugin Management Module
+
+### Base Path: `/api/plugins`
+
+### 2.1 Upload Plugin Package
+**POST** `/upload`
+
+**Description**: Upload a plugin code package to the system. Supports ZIP format files up to 15MB.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| file | IFormFile | Yes | Plugin package file (ZIP format, max 15MB) |
+| name | string | Yes | Plugin name |
+| description | string? | No | Plugin description |
+| version | string? | No | Plugin version |
+
+**Authorization**: Required
+
+**Request Example**: `POST /api/plugins/upload` (multipart/form-data)
+```
+Content-Type: multipart/form-data
+file: [plugin.zip]
+name: "My Custom Plugin"
+description: "A powerful automation plugin"
+version: "1.0.0"
+```
+
+**Response Example**:
+```json
+{
+  "id": "plugin-123e4567-e89b-12d3-a456-426614174000",
+  "name": "My Custom Plugin",
+  "description": "A powerful automation plugin",
+  "version": "1.0.0",
+  "fileName": "plugin.zip",
+  "fileSize": 1048576,
+  "uploadedAt": "2025-01-29T15:30:00Z",
+  "status": "Uploaded"
+}
+```
+
+### 2.2 Get Plugin List
+**GET** `/`
+
+**Description**: Retrieve a paginated list of uploaded plugins with filtering and sorting options.
+
+**Request Parameters**:
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| pageIndex | int | No | 0 | Page index, starting from 0 |
+| pageSize | int | No | 20 | Page size, maximum 100 |
+| name | string? | No | - | Filter by plugin name |
+| status | string? | No | - | Filter by status (Uploaded, Active, Inactive) |
+
+**Authorization**: Required
+
+**Request Example**: `GET /api/plugins?pageIndex=0&pageSize=10&status=Active`
+
+**Response Example**:
+```json
+{
+  "items": [
+    {
+      "id": "plugin-123e4567-e89b-12d3-a456-426614174000",
+      "name": "My Custom Plugin",
+      "description": "A powerful automation plugin",
+      "version": "1.0.0",
+      "status": "Active",
+      "uploadedAt": "2025-01-29T15:30:00Z",
+      "lastUsed": "2025-01-29T16:45:00Z"
+    }
+  ],
+  "totalCount": 1,
+  "pageIndex": 0,
+  "pageSize": 10
+}
+```
+
+### 2.3 Get Plugin Details
+**GET** `/{guid}`
+
+**Description**: Retrieve detailed information about a specific plugin.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| guid | Guid | Yes | Plugin unique identifier |
+
+**Authorization**: Required
+
+**Request Example**: `GET /api/plugins/plugin-123e4567-e89b-12d3-a456-426614174000`
+
+**Response Example**:
+```json
+{
+  "id": "plugin-123e4567-e89b-12d3-a456-426614174000",
+  "name": "My Custom Plugin",
+  "description": "A powerful automation plugin",
+  "version": "1.0.0",
+  "fileName": "plugin.zip",
+  "fileSize": 1048576,
+  "status": "Active",
+  "uploadedAt": "2025-01-29T15:30:00Z",
+  "lastUsed": "2025-01-29T16:45:00Z",
+  "metadata": {
+    "author": "Developer Name",
+    "dependencies": ["dependency1", "dependency2"],
+    "entryPoint": "main.py"
+  }
+}
+```
+
+### 2.4 Delete Plugin
+**DELETE** `/{guid}`
+
+**Description**: Delete a plugin package from the system.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| guid | Guid | Yes | Plugin unique identifier |
+
+**Authorization**: Required
+
+**Request Example**: `DELETE /api/plugins/plugin-123e4567-e89b-12d3-a456-426614174000`
+
+**Response Example**:
+```json
+{
+  "success": true,
+  "message": "Plugin deleted successfully"
+}
+```
+
+---
+
+[⬆️ Back to Table of Contents](#table-of-contents)
+
+## 3. Notification Management Module
+
+### Base Path: `/api/notification`
+
+### 3.1 Send Notification
+**POST** `/send`
+
+**Description**: Send a notification message to specified recipients through various channels.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| title | string | Yes | Notification title |
+| message | string | Yes | Notification content |
+| recipients | string[] | Yes | List of recipient identifiers |
+| channel | string | Yes | Notification channel (Email, SMS, Push, WebSocket) |
+| priority | string? | No | Priority level (Low, Normal, High, Critical) |
+| scheduledAt | DateTime? | No | Scheduled delivery time |
+
+**Authorization**: Required
+
+**Request Example**:
+```json
+{
+  "title": "System Maintenance Notice",
+  "message": "The system will undergo maintenance from 2:00 AM to 4:00 AM tomorrow.",
+  "recipients": ["user123", "user456"],
+  "channel": "Email",
+  "priority": "High",
+  "scheduledAt": "2025-01-30T02:00:00Z"
+}
+```
+
+**Response Example**:
+```json
+{
+  "notificationId": "notif-123e4567-e89b-12d3-a456-426614174000",
+  "status": "Scheduled",
+  "recipientCount": 2,
+  "scheduledAt": "2025-01-30T02:00:00Z",
+  "createdAt": "2025-01-29T15:30:00Z"
+}
+```
+
+### 3.2 Get Notification List
+**GET** `/`
+
+**Description**: Retrieve a paginated list of notifications with filtering options.
+
+**Request Parameters**:
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| pageIndex | int | No | 0 | Page index, starting from 0 |
+| pageSize | int | No | 20 | Page size, maximum 100 |
+| status | string? | No | - | Filter by status (Pending, Sent, Failed, Scheduled) |
+| channel | string? | No | - | Filter by channel |
+| startDate | DateTime? | No | - | Filter by start date |
+| endDate | DateTime? | No | - | Filter by end date |
+
+**Authorization**: Required
+
+**Request Example**: `GET /api/notification?pageIndex=0&pageSize=10&status=Sent&channel=Email`
+
+**Response Example**:
+```json
+{
+  "items": [
+    {
+      "id": "notif-123e4567-e89b-12d3-a456-426614174000",
+      "title": "System Maintenance Notice",
+      "channel": "Email",
+      "status": "Sent",
+      "recipientCount": 2,
+      "createdAt": "2025-01-29T15:30:00Z",
+      "sentAt": "2025-01-30T02:00:00Z"
+    }
+  ],
+  "totalCount": 1,
+  "pageIndex": 0,
+  "pageSize": 10
+}
+```
+
+### 3.3 Get Notification Details
+**GET** `/{guid}`
+
+**Description**: Retrieve detailed information about a specific notification.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| guid | Guid | Yes | Notification unique identifier |
+
+**Authorization**: Required
+
+**Request Example**: `GET /api/notification/notif-123e4567-e89b-12d3-a456-426614174000`
+
+**Response Example**:
+```json
+{
+  "id": "notif-123e4567-e89b-12d3-a456-426614174000",
+  "title": "System Maintenance Notice",
+  "message": "The system will undergo maintenance from 2:00 AM to 4:00 AM tomorrow.",
+  "channel": "Email",
+  "priority": "High",
+  "status": "Sent",
+  "recipients": ["user123", "user456"],
+  "createdAt": "2025-01-29T15:30:00Z",
+  "scheduledAt": "2025-01-30T02:00:00Z",
+  "sentAt": "2025-01-30T02:00:00Z",
+  "deliveryReport": {
+    "totalSent": 2,
+    "successful": 2,
+    "failed": 0
+  }
+}
+```
+
+### 3.4 Cancel Scheduled Notification
+**POST** `/{guid}/cancel`
+
+**Description**: Cancel a scheduled notification that hasn't been sent yet.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| guid | Guid | Yes | Notification unique identifier |
+
+**Authorization**: Required
+
+**Request Example**: `POST /api/notification/notif-123e4567-e89b-12d3-a456-426614174000/cancel`
+
+**Response Example**:
+```json
+{
+  "notificationId": "notif-123e4567-e89b-12d3-a456-426614174000",
+  "status": "Cancelled",
+  "cancelledAt": "2025-01-29T16:00:00Z",
+  "message": "Notification cancelled successfully"
+}
+```
+
+### 3.5 Resend Failed Notification
+**POST** `/{guid}/resend`
+
+**Description**: Resend a failed notification to its original recipients.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| guid | Guid | Yes | Notification unique identifier |
+
+**Authorization**: Required
+
+**Request Example**: `POST /api/notification/notif-123e4567-e89b-12d3-a456-426614174000/resend`
+
+**Response Example**:
+```json
+{
+  "notificationId": "notif-123e4567-e89b-12d3-a456-426614174000",
+  "status": "Resent",
+  "resentAt": "2025-01-29T16:15:00Z",
+  "recipientCount": 2
+}
+```
+
+### 3.6 Get Notification Templates
+**GET** `/templates`
+
+**Description**: Retrieve available notification templates for different types of messages.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| category | string? | No | Filter by template category |
+| channel | string? | No | Filter by channel |
+
+**Authorization**: Required
+
+**Request Example**: `GET /api/notification/templates?category=System&channel=Email`
+
+**Response Example**:
+```json
+[
+  {
+    "id": "template-maintenance",
+    "name": "System Maintenance",
+    "category": "System",
+    "channel": "Email",
+    "title": "System Maintenance Notice",
+    "template": "The system will undergo maintenance from {{startTime}} to {{endTime}}.",
+    "variables": ["startTime", "endTime"]
+  }
+]
+```
+
+### 3.7 Create Notification Template
+**POST** `/templates`
+
+**Description**: Create a new notification template for reuse.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| name | string | Yes | Template name |
+| category | string | Yes | Template category |
+| channel | string | Yes | Target channel |
+| title | string | Yes | Template title |
+| template | string | Yes | Template content with variables |
+| variables | string[]? | No | List of template variables |
+
+**Authorization**: Required
+
+**Request Example**:
+```json
+{
+  "name": "Welcome Message",
+  "category": "User",
+  "channel": "Email",
+  "title": "Welcome to {{platformName}}",
+  "template": "Hello {{userName}}, welcome to {{platformName}}! Your account has been created successfully.",
+  "variables": ["platformName", "userName"]
+}
+```
+
+**Response Example**:
+```json
+{
+  "id": "template-welcome",
+  "name": "Welcome Message",
+  "category": "User",
+  "channel": "Email",
+  "title": "Welcome to {{platformName}}",
+  "template": "Hello {{userName}}, welcome to {{platformName}}! Your account has been created successfully.",
+  "variables": ["platformName", "userName"],
+  "createdAt": "2025-01-29T16:30:00Z"
+}
+```
+
+---
+
+[⬆️ Back to Table of Contents](#table-of-contents)
+
+## 4. Webhook Management Module
+
+### Base Path: `/api/admin`
+
+### 4.1 Upload Code Package
+**POST** `/upload-code`
+
+**Description**: Upload a code package for webhook deployment. Supports various archive formats up to 200MB.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| file | IFormFile | Yes | Code package file (ZIP, TAR, etc., max 200MB) |
+| name | string | Yes | Package name |
+| version | string? | No | Package version |
+| description | string? | No | Package description |
+| runtime | string? | No | Runtime environment (Node.js, Python, .NET, etc.) |
+
+**Authorization**: AdminPolicy
+
+**Request Example**: `POST /api/admin/upload-code` (multipart/form-data)
+```
+Content-Type: multipart/form-data
+file: [webhook-code.zip]
+name: "Data Processing Webhook"
+version: "2.1.0"
+description: "Webhook for processing incoming data"
+runtime: "Node.js"
+```
+
+**Response Example**:
+```json
+{
+  "packageId": "pkg-123e4567-e89b-12d3-a456-426614174000",
+  "name": "Data Processing Webhook",
+  "version": "2.1.0",
+  "fileName": "webhook-code.zip",
+  "fileSize": 52428800,
+  "runtime": "Node.js",
+  "uploadedAt": "2025-01-29T15:30:00Z",
+  "status": "Uploaded"
+}
+```
+
+### 4.2 Get Code Package List
+**GET** `/code-packages`
+
+**Description**: Retrieve a list of uploaded code packages with filtering and pagination.
+
+**Request Parameters**:
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| pageIndex | int | No | 0 | Page index, starting from 0 |
+| pageSize | int | No | 20 | Page size, maximum 100 |
+| name | string? | No | - | Filter by package name |
+| runtime | string? | No | - | Filter by runtime |
+| status | string? | No | - | Filter by status |
+
+**Authorization**: AdminPolicy
+
+**Request Example**: `GET /api/admin/code-packages?pageIndex=0&pageSize=10&runtime=Node.js`
+
+**Response Example**:
+```json
+{
+  "items": [
+    {
+      "packageId": "pkg-123e4567-e89b-12d3-a456-426614174000",
+      "name": "Data Processing Webhook",
+      "version": "2.1.0",
+      "runtime": "Node.js",
+      "status": "Active",
+      "uploadedAt": "2025-01-29T15:30:00Z",
+      "lastDeployed": "2025-01-29T16:00:00Z"
+    }
+  ],
+  "totalCount": 1,
+  "pageIndex": 0,
+  "pageSize": 10
+}
+```
+
+### 4.3 Deploy Code Package
+**POST** `/{packageId}/deploy`
+
+**Description**: Deploy a code package to the webhook execution environment.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| packageId | Guid | Yes | Code package identifier |
+| environment | string | Yes | Deployment environment (Development, Staging, Production) |
+| configuration | Dictionary<string, object>? | No | Environment-specific configuration |
+
+**Authorization**: AdminPolicy
+
+**Request Example**:
+```json
+{
+  "environment": "Production",
+  "configuration": {
+    "maxMemory": "512MB",
+    "timeout": 30,
+    "environmentVariables": {
+      "NODE_ENV": "production",
+      "LOG_LEVEL": "info"
+    }
+  }
+}
+```
+
+**Response Example**:
+```json
+{
+  "deploymentId": "deploy-123e4567-e89b-12d3-a456-426614174000",
+  "packageId": "pkg-123e4567-e89b-12d3-a456-426614174000",
+  "environment": "Production",
+  "status": "Deploying",
+  "deployedAt": "2025-01-29T16:00:00Z",
+  "webhookUrl": "https://api.aevatarstation.com/webhook/deploy-123e4567-e89b-12d3-a456-426614174000"
+}
+```
+
+### 4.4 Get Deployment Status
+**GET** `/deployments/{deploymentId}`
+
+**Description**: Check the status of a webhook deployment.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| deploymentId | Guid | Yes | Deployment identifier |
+
+**Authorization**: AdminPolicy
+
+**Request Example**: `GET /api/admin/deployments/deploy-123e4567-e89b-12d3-a456-426614174000`
+
+**Response Example**:
+```json
+{
+  "deploymentId": "deploy-123e4567-e89b-12d3-a456-426614174000",
+  "packageId": "pkg-123e4567-e89b-12d3-a456-426614174000",
+  "environment": "Production",
+  "status": "Active",
+  "deployedAt": "2025-01-29T16:00:00Z",
+  "webhookUrl": "https://api.aevatarstation.com/webhook/deploy-123e4567-e89b-12d3-a456-426614174000",
+  "health": {
+    "status": "Healthy",
+    "lastCheck": "2025-01-29T16:30:00Z",
+    "responseTime": 45
+  },
+  "logs": [
+    {
+      "timestamp": "2025-01-29T16:00:00Z",
+      "level": "Info",
+      "message": "Webhook deployed successfully"
+    }
+  ]
+}
+```
+
+---
+
+[⬆️ Back to Table of Contents](#table-of-contents)
+
+## 5. Subscription Management Module
+
+### Base Path: `/api/subscription`
+
+### 5.1 Create Subscription
+**POST** `/`
+
+**Description**: Create a new event subscription to receive notifications when specific events occur.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| eventType | string | Yes | Type of event to subscribe to |
+| callbackUrl | string | Yes | URL to receive webhook notifications |
+| filters | Dictionary<string, object>? | No | Event filtering criteria |
+| isActive | bool | No | Whether subscription is active (default: true) |
+
+**Authorization**: SubscriptionManagement.CreateSubscription
+
+**Request Example**:
+```json
+{
+  "eventType": "agent.message.received",
+  "callbackUrl": "https://myapp.com/webhooks/agent-messages",
+  "filters": {
+    "agentType": "OpenAIAgent",
+    "priority": "High"
+  },
+  "isActive": true
+}
+```
+
+**Response Example**:
+```json
+{
+  "subscriptionId": "sub-123e4567-e89b-12d3-a456-426614174000",
+  "eventType": "agent.message.received",
+  "callbackUrl": "https://myapp.com/webhooks/agent-messages",
+  "filters": {
+    "agentType": "OpenAIAgent",
+    "priority": "High"
+  },
+  "isActive": true,
+  "createdAt": "2025-01-29T15:30:00Z",
+  "secretKey": "sub_secret_abcd1234efgh5678"
+}
+```
+
+### 5.2 Get Subscription List
+**GET** `/`
+
+**Description**: Retrieve a list of event subscriptions with filtering and pagination.
+
+**Request Parameters**:
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| pageIndex | int | No | 0 | Page index, starting from 0 |
+| pageSize | int | No | 20 | Page size, maximum 100 |
+| eventType | string? | No | - | Filter by event type |
+| isActive | bool? | No | - | Filter by active status |
+
+**Authorization**: SubscriptionManagement.ViewSubscriptionStatus
+
+**Request Example**: `GET /api/subscription?pageIndex=0&pageSize=10&eventType=agent.message.received`
+
+**Response Example**:
+```json
+{
+  "items": [
+    {
+      "subscriptionId": "sub-123e4567-e89b-12d3-a456-426614174000",
+      "eventType": "agent.message.received",
+      "callbackUrl": "https://myapp.com/webhooks/agent-messages",
+      "isActive": true,
+      "createdAt": "2025-01-29T15:30:00Z",
+      "lastTriggered": "2025-01-29T16:45:00Z",
+      "triggerCount": 25
+    }
+  ],
+  "totalCount": 1,
+  "pageIndex": 0,
+  "pageSize": 10
+}
+```
+
+### 5.3 Update Subscription
+**PUT** `/{subscriptionId}`
+
+**Description**: Update an existing event subscription configuration.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| subscriptionId | Guid | Yes | Subscription identifier |
+| callbackUrl | string? | No | New callback URL |
+| filters | Dictionary<string, object>? | No | Updated filtering criteria |
+| isActive | bool? | No | Updated active status |
+
+**Authorization**: SubscriptionManagement.CreateSubscription
+
+**Request Example**:
+```json
+{
+  "callbackUrl": "https://myapp.com/webhooks/updated-endpoint",
+  "filters": {
+    "agentType": "OpenAIAgent",
+    "priority": ["High", "Critical"]
+  },
+  "isActive": true
+}
+```
+
+**Response Example**:
+```json
+{
+  "subscriptionId": "sub-123e4567-e89b-12d3-a456-426614174000",
+  "eventType": "agent.message.received",
+  "callbackUrl": "https://myapp.com/webhooks/updated-endpoint",
+  "filters": {
+    "agentType": "OpenAIAgent",
+    "priority": ["High", "Critical"]
+  },
+  "isActive": true,
+  "updatedAt": "2025-01-29T16:30:00Z"
+}
+```
+
+### 5.4 Cancel Subscription
+**DELETE** `/{subscriptionId}`
+
+**Description**: Cancel and delete an event subscription.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| subscriptionId | Guid | Yes | Subscription identifier |
+
+**Authorization**: SubscriptionManagement.CancelSubscription
+
+**Request Example**: `DELETE /api/subscription/sub-123e4567-e89b-12d3-a456-426614174000`
+
+**Response Example**:
+```json
+{
+  "subscriptionId": "sub-123e4567-e89b-12d3-a456-426614174000",
+  "status": "Cancelled",
+  "cancelledAt": "2025-01-29T17:00:00Z",
+  "message": "Subscription cancelled successfully"
+}
+```
+
+---
+
+[⬆️ Back to Table of Contents](#table-of-contents)
+
+## 6. API Key Management Module
+
+### Base Path: `/api/appId`
+
+### 6.1 Create API Key
+**POST** `/`
+
+**Description**: Create a new API key for accessing the platform APIs.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| appName | string | Yes | API key name/description |
+| projectId | Guid | Yes | Associated project ID |
+| permissions | string[]? | No | List of permissions for this key |
+| expiresAt | DateTime? | No | Expiration date (optional) |
+
+**Authorization**: ApiKeys.Create
+
+**Request Example**:
+```json
+{
+  "appName": "Production API Key",
+  "projectId": "123e4567-e89b-12d3-a456-426614174000",
+  "permissions": ["agent.read", "agent.write", "notification.send"],
+  "expiresAt": "2025-12-31T23:59:59Z"
+}
+```
+
+**Response Example**:
+```json
+{
+  "id": "appid-123",
+  "name": "Production API Key",
+  "projectId": "123e4567-e89b-12d3-a456-426614174000",
+  "apiKey": "ak-prod-1234567890abcdef1234567890abcdef",
+  "permissions": ["agent.read", "agent.write", "notification.send"],
+  "createdAt": "2025-01-29T15:30:00Z",
+  "expiresAt": "2025-12-31T23:59:59Z",
+  "status": "Active"
+}
+```
+
+### 6.2 Get API Key List
+**GET** `/`
+
+**Description**: Retrieve a list of API keys for the current user or project.
+
+**Request Parameters**:
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| projectId | Guid? | No | - | Filter by project ID |
+| pageIndex | int | No | 0 | Page index, starting from 0 |
+| pageSize | int | No | 20 | Page size, maximum 100 |
+
+**Authorization**: ApiKeys.Default
+
+**Request Example**: `GET /api/appId?projectId=123e4567-e89b-12d3-a456-426614174000&pageIndex=0&pageSize=10`
+
+**Response Example**:
+```json
+[
+  {
+    "id": "appid-123",
+    "name": "Production API Key",
+    "projectId": "123e4567-e89b-12d3-a456-426614174000",
+    "keyPreview": "ak-prod-xxxx...xxxx",
+    "createdAt": "2025-01-29T10:30:00Z",
+    "lastUsedAt": "2025-01-29T14:20:00Z",
+    "status": "Active"
+  },
+  {
+    "id": "appid-456",
+    "name": "Testing API Key",
+    "projectId": "123e4567-e89b-12d3-a456-426614174000",
+    "keyPreview": "ak-test-xxxx...xxxx",
+    "createdAt": "2025-01-28T16:15:00Z",
+    "lastUsedAt": null,
+    "status": "Active"
+  }
+]
+```
+
+### 6.3 Delete API Key
+**DELETE** `/{guid}`
+
+**Description**: Delete an API key, making it unusable for API access.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| guid | Guid | Yes | API key identifier |
+
+**Authorization**: Required
+
+**Request Example**: `DELETE /api/appId/appid-456`
+
+**Response Example**:
+```json
+{
+  "success": true,
+  "message": "API key deleted successfully"
+}
+```
+
+### 6.4 Update API Key Name
+**PUT** `/{guid}`
+
+**Description**: Update the display name of an API key without affecting the key value itself.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| guid | Guid | Yes | API key identifier |
+| appName | string | Yes | New name |
+
+**Authorization**: Required
+
+**Request Example**:
+```json
+{
+  "appName": "Updated API Key Name"
+}
+```
+
+**Response Example**:
+```json
+{
+  "id": "appid-123",
+  "name": "Updated API Key Name",
+  "projectId": "123e4567-e89b-12d3-a456-426614174000",
+  "updatedAt": "2025-01-29T15:30:00Z"
+}
+```
+
+---
+
+[⬆️ Back to Table of Contents](#table-of-contents)
+
+## 7. API Request Statistics Module
+
+### Base Path: `/api/api-requests`
+
+### 7.1 Get API Request Statistics
+**GET** `/`
+
+**Description**: Retrieve API request statistics, supporting viewing API usage by organization or project dimension.
+
+**Request Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| organizationId | Guid? | Conditional | Organization ID, choose one with projectId |
+| projectId | Guid? | Conditional | Project ID, choose one with organizationId |
+| startDate | DateTime? | No | Statistics start time |
+| endDate | DateTime? | No | Statistics end time |
+
+**Authorization**: ApiRequests.Default
+
+**Request Example**: `GET /api/api-requests?projectId=123e4567-e89b-12d3-a456-426614174000&startDate=2025-01-01&endDate=2025-01-31`
+
+**Response Example**:
+```json
+{
+  "totalRequests": 1250,
+  "requests": [
+    {
+      "endpoint": "/api/agent",
+      "method": "POST",
+      "count": 450,
+      "avgResponseTime": 125.5,
+      "errorRate": 0.02
+    },
+    {
+      "endpoint": "/api/plugins",
+      "method": "GET",
+      "count": 380,
+      "avgResponseTime": 88.2,
+      "errorRate": 0.01
+    },
+    {
+      "endpoint": "/api/notification",
+      "method": "POST",
+      "count": 420,
+      "avgResponseTime": 156.8,
+      "errorRate": 0.03
+    }
+  ],
+  "timeRange": {
+    "startDate": "2025-01-01T00:00:00Z",
+    "endDate": "2025-01-31T23:59:59Z"
+  }
+}
+```
+
+---
+
+## Permission System
+
+### Permission Levels
+1. **AdminPolicy**: Administrator permissions
+   - Full access to system management functions
+2. **EventManagement**: Event management permissions
+   - View: View events
+3. **SubscriptionManagement**: Subscription management permissions
+   - CreateSubscription: Create subscriptions
+   - CancelSubscription: Cancel subscriptions
+   - ViewSubscriptionStatus: View subscription status
+4. **ApiKeys**: API key permissions
+   - Default: View keys
+   - Create: Create keys
+5. **ApiRequests**: API request statistics permissions
+   - Default: View statistics
+
+### Authentication Method
+- All APIs requiring permissions need to include `Authorization: Bearer {token}` in the request headers
+- Some special permissions require additional role or permission verification
+
+---
+
+## Error Handling
+
+### Common HTTP Status Codes
+- **200**: Request successful
+- **400**: Request parameter error
+- **401**: Unauthorized
+- **403**: Insufficient permissions
+- **404**: Resource not found
+- **413**: File too large
+- **422**: Parameter validation failed
+- **500**: Internal server error
+
+### Error Response Format
+```json
+{
+  "error": {
+    "code": "ValidationError",
+    "message": "Request parameter validation failed",
+    "details": "AgentType is required",
+    "validationErrors": [
+      {
+        "field": "agentType",
+        "message": "Agent type cannot be empty"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Version Information
+- **Document Version**: v2.0
+- **API Version**: v1
+- **Update Date**: 2025-01-29
+- **Generation Time**: Auto-generated based on code analysis
+
+---
+
+[⬆️ Back to Table of Contents](#table-of-contents)
+
+*This document is automatically generated based on the controller code of the AevatarStation project, containing detailed API interface information for 7 core business modules. Each interface includes complete function descriptions, parameter definitions, request examples, and response formats.*
+</rewritten_file>
