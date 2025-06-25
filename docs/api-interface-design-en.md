@@ -59,7 +59,8 @@ The GAgent (Intelligent Agent) system is the core of AevatarStation, implementin
 - **Extensibility**: GAgent is an abstract base class supporting various agent types and custom extensions
 
 ### 1.1 Get All Agent Types
-**GET** `/agent-type-info-list`
+**Method**: GET  
+**URL**: `/agent-type-info-list`
 
 **Description**: Retrieve information about all available agent types in the system, including type names and parameter definitions, used for selecting appropriate types when creating agents.
 
@@ -93,15 +94,16 @@ The GAgent (Intelligent Agent) system is the core of AevatarStation, implementin
 ```
 
 ### 1.2 Get Agent Instance List
-**GET** `/agent-list`
+**Method**: GET
+**URL**: `/agent-list`
 
 **Description**: Retrieve a paginated list of the current user's agent instances, supporting viewing all created agents and their status.
 
 **Request Parameters**:
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| pageIndex | int | No | 0 | Page index, starting from 0 |
-| pageSize | int | No | 20 | Page size, maximum 100 |
+| pageIndex | int | ❌ | 0 | Page index, starting from 0 |
+| pageSize | int | ❌ | 20 | Page size, maximum 100 |
 
 **Authorization**: Required
 
@@ -126,17 +128,18 @@ The GAgent (Intelligent Agent) system is the core of AevatarStation, implementin
 ```
 
 ### 1.3 Create Agent
-**POST** `/`
+**Method**: POST
+**URL**: `/`
 
 **Description**: Create a new AI agent instance, requiring specification of agent type and related configuration parameters.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| agentId | Guid? | No | Specify agent ID, auto-generated if not provided |
-| agentType | string | Yes | Agent type, selected from agent type list |
-| name | string | Yes | Agent name |
-| properties | Dictionary<string, object>? | No | Agent configuration parameters, provided according to agent type requirements |
+| agentId | Guid? | ❌ | Specify agent ID, auto-generated if not provided |
+| agentType | string | ✅ | Agent type, selected from agent type list |
+| name | string | ✅ | Agent name |
+| properties | Dictionary<string, object>? | ❌ | Agent configuration parameters, provided according to agent type requirements |
 
 **Authorization**: Required
 
@@ -215,14 +218,15 @@ The GAgent (Intelligent Agent) system is the core of AevatarStation, implementin
 ```
 
 ### 1.4 Get Agent Details
-**GET** `/{guid}`
+**Method**: GET
+**URL**: `/{guid}`
 
 **Description**: Retrieve detailed information of a specific agent by agent ID, including configuration parameters and running status.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| guid | Guid | Yes | Agent unique identifier |
+| guid | Guid | ✅ | Agent unique identifier |
 
 **Authorization**: Required
 
@@ -247,14 +251,15 @@ The GAgent (Intelligent Agent) system is the core of AevatarStation, implementin
 ```
 
 ### 1.5 Get Agent Relationships
-**GET** `/{guid}/relationship`
+**Method**: GET
+**URL**: `/{guid}/relationship`
 
 **Description**: Retrieve the relationship graph of the specified agent, including hierarchical relationship information such as parent agents and child agents.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| guid | Guid | Yes | Agent unique identifier |
+| guid | Guid | ✅ | Agent unique identifier |
 
 **Authorization**: Required
 
@@ -282,16 +287,17 @@ The GAgent (Intelligent Agent) system is the core of AevatarStation, implementin
 ```
 
 ### 1.6 Send Message to Agent
-**POST** `/{guid}/send-message`
+**Method**: POST
+**URL**: `/{guid}/send-message`
 
 **Description**: Send a message to the specified agent for processing and return the agent's response.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| guid | Guid | Yes | Agent unique identifier |
-| message | string | Yes | Message content to send |
-| conversationId | string? | No | Conversation ID for context tracking |
+| guid | Guid | ✅ | Agent unique identifier |
+| message | string | ✅ | Message content to send |
+| conversationId | string? | ❌ | Conversation ID for context tracking |
 
 **Authorization**: Required
 
@@ -314,17 +320,18 @@ The GAgent (Intelligent Agent) system is the core of AevatarStation, implementin
 ```
 
 ### 1.7 Get Agent Conversation History
-**GET** `/{guid}/conversations`
+**Method**: GET
+**URL**: `/{guid}/conversations`
 
 **Description**: Retrieve conversation history for the specified agent.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| guid | Guid | Yes | Agent unique identifier |
-| conversationId | string? | No | Specific conversation ID |
-| pageIndex | int | No | Page index, default 0 |
-| pageSize | int | No | Page size, default 20 |
+| guid | Guid | ✅ | Agent unique identifier |
+| conversationId | string? | ❌ | Specific conversation ID |
+| pageIndex | int | ❌ | Page index, default 0 |
+| pageSize | int | ❌ | Page size, default 20 |
 
 **Authorization**: Required
 
@@ -355,16 +362,17 @@ The GAgent (Intelligent Agent) system is the core of AevatarStation, implementin
 ```
 
 ### 1.8 Update Agent Configuration
-**PUT** `/{guid}`
+**Method**: PUT
+**URL**: `/{guid}`
 
 **Description**: Update configuration parameters of the specified agent.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| guid | Guid | Yes | Agent unique identifier |
-| name | string? | No | New agent name |
-| properties | Dictionary<string, object>? | No | Updated configuration parameters |
+| guid | Guid | ✅ | Agent unique identifier |
+| name | string? | ❌ | New agent name |
+| properties | Dictionary<string, object>? | ❌ | Updated configuration parameters |
 
 **Authorization**: Required
 
@@ -437,14 +445,15 @@ The GAgent (Intelligent Agent) system is the core of AevatarStation, implementin
 ```
 
 ### 1.9 Delete Agent
-**DELETE** `/{guid}`
+**Method**: DELETE
+**URL**: `/{guid}`
 
 **Description**: Delete the specified agent instance.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| guid | Guid | Yes | Agent unique identifier |
+| guid | Guid | ✅ | Agent unique identifier |
 
 **Authorization**: Required
 
@@ -459,14 +468,15 @@ The GAgent (Intelligent Agent) system is the core of AevatarStation, implementin
 ```
 
 ### 1.10 Get Agent Status
-**GET** `/{guid}/status`
+**Method**: GET
+**URL**: `/{guid}/status`
 
 **Description**: Retrieve the current status and health information of the specified agent.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| guid | Guid | Yes | Agent unique identifier |
+| guid | Guid | ✅ | Agent unique identifier |
 
 **Authorization**: Required
 
@@ -485,14 +495,15 @@ The GAgent (Intelligent Agent) system is the core of AevatarStation, implementin
 ```
 
 ### 1.11 Restart Agent
-**POST** `/{guid}/restart`
+**Method**: POST
+**URL**: `/{guid}/restart`
 
 **Description**: Restart the specified agent instance.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| guid | Guid | Yes | Agent unique identifier |
+| guid | Guid | ✅ | Agent unique identifier |
 
 **Authorization**: Required
 
@@ -509,16 +520,17 @@ The GAgent (Intelligent Agent) system is the core of AevatarStation, implementin
 ```
 
 ### 1.12 Publish Event to Agent
-**POST** `/publishEvent`
+**Method**: POST
+**URL**: `/publishEvent`
 
 **Description**: Publish an event to trigger agent actions, such as starting a workflow coordinator.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| agentId | Guid | Yes | Target agent unique identifier |
-| eventType | string | Yes | Event type to publish |
-| eventProperties | Dictionary<string, object>? | No | Event-specific properties |
+| agentId | Guid | ✅ | Target agent unique identifier |
+| eventType | string | ✅ | Event type to publish |
+| eventProperties | Dictionary<string, object>? | ❌ | Event-specific properties |
 
 **Authorization**: Required
 
@@ -574,17 +586,18 @@ The Plugin Management system enables hot-pluggable extensions through WebHook.Ho
 - **Hot-Plug Architecture**: Add, update, or remove plugins without affecting system availability
 
 ### 2.1 Upload Plugin Package
-**POST** `/upload`
+**Method**: POST
+**URL**: `/upload`
 
 **Description**: Upload a plugin code package to the system. Supports ZIP format files up to 15MB.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| file | IFormFile | Yes | Plugin package file (ZIP format, max 15MB) |
-| name | string | Yes | Plugin name |
-| description | string? | No | Plugin description |
-| version | string? | No | Plugin version |
+| file | IFormFile | ✅ | Plugin package file (ZIP format, max 15MB) |
+| name | string | ✅ | Plugin name |
+| description | string? | ❌ | Plugin description |
+| version | string? | ❌ | Plugin version |
 
 **Authorization**: Required
 
@@ -612,17 +625,18 @@ version: "1.0.0"
 ```
 
 ### 2.2 Get Plugin List
-**GET** `/`
+**Method**: GET
+**URL**: `/`
 
 **Description**: Retrieve a paginated list of uploaded plugins with filtering and sorting options.
 
 **Request Parameters**:
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| pageIndex | int | No | 0 | Page index, starting from 0 |
-| pageSize | int | No | 20 | Page size, maximum 100 |
-| name | string? | No | - | Filter by plugin name |
-| status | string? | No | - | Filter by status (Uploaded, Active, Inactive) |
+| pageIndex | int | ❌ | 0 | Page index, starting from 0 |
+| pageSize | int | ❌ | 20 | Page size, maximum 100 |
+| name | string? | ❌ | - | Filter by plugin name |
+| status | string? | ❌ | - | Filter by status (Uploaded, Active, Inactive) |
 
 **Authorization**: Required
 
@@ -649,14 +663,15 @@ version: "1.0.0"
 ```
 
 ### 2.3 Get Plugin Details
-**GET** `/{guid}`
+**Method**: GET
+**URL**: `/{guid}`
 
 **Description**: Retrieve detailed information about a specific plugin.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| guid | Guid | Yes | Plugin unique identifier |
+| guid | Guid | ✅ | Plugin unique identifier |
 
 **Authorization**: Required
 
@@ -683,14 +698,15 @@ version: "1.0.0"
 ```
 
 ### 2.4 Delete Plugin
-**DELETE** `/{guid}`
+**Method**: DELETE
+**URL**: `/{guid}`
 
 **Description**: Delete a plugin package from the system.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| guid | Guid | Yes | Plugin unique identifier |
+| guid | Guid | ✅ | Plugin unique identifier |
 
 **Authorization**: Required
 
@@ -721,19 +737,20 @@ The Notification Management system provides event-driven messaging capabilities 
 - **Delivery Tracking**: Comprehensive delivery status tracking and retry mechanisms
 
 ### 3.1 Send Notification
-**POST** `/send`
+**Method**: POST
+**URL**: `/send`
 
 **Description**: Send a notification message to specified recipients through various channels.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| title | string | Yes | Notification title |
-| message | string | Yes | Notification content |
-| recipients | string[] | Yes | List of recipient identifiers |
-| channel | string | Yes | Notification channel (Email, SMS, Push, WebSocket) |
-| priority | string? | No | Priority level (Low, Normal, High, Critical) |
-| scheduledAt | DateTime? | No | Scheduled delivery time |
+| title | string | ✅ | Notification title |
+| message | string | ✅ | Notification content |
+| recipients | string[] | ✅ | List of recipient identifiers |
+| channel | string | ✅ | Notification channel (Email, SMS, Push, WebSocket) |
+| priority | string? | ❌ | Priority level (Low, Normal, High, Critical) |
+| scheduledAt | DateTime? | ❌ | Scheduled delivery time |
 
 **Authorization**: Required
 
@@ -761,19 +778,20 @@ The Notification Management system provides event-driven messaging capabilities 
 ```
 
 ### 3.2 Get Notification List
-**GET** `/`
+**Method**: GET
+**URL**: `/`
 
 **Description**: Retrieve a paginated list of notifications with filtering options.
 
 **Request Parameters**:
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| pageIndex | int | No | 0 | Page index, starting from 0 |
-| pageSize | int | No | 20 | Page size, maximum 100 |
-| status | string? | No | - | Filter by status (Pending, Sent, Failed, Scheduled) |
-| channel | string? | No | - | Filter by channel |
-| startDate | DateTime? | No | - | Filter by start date |
-| endDate | DateTime? | No | - | Filter by end date |
+| pageIndex | int | ❌ | 0 | Page index, starting from 0 |
+| pageSize | int | ❌ | 20 | Page size, maximum 100 |
+| status | string? | ❌ | - | Filter by status (Pending, Sent, Failed, Scheduled) |
+| channel | string? | ❌ | - | Filter by channel |
+| startDate | DateTime? | ❌ | - | Filter by start date |
+| endDate | DateTime? | ❌ | - | Filter by end date |
 
 **Authorization**: Required
 
@@ -800,14 +818,15 @@ The Notification Management system provides event-driven messaging capabilities 
 ```
 
 ### 3.3 Get Notification Details
-**GET** `/{guid}`
+**Method**: GET
+**URL**: `/{guid}`
 
 **Description**: Retrieve detailed information about a specific notification.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| guid | Guid | Yes | Notification unique identifier |
+| guid | Guid | ✅ | Notification unique identifier |
 
 **Authorization**: Required
 
@@ -835,14 +854,15 @@ The Notification Management system provides event-driven messaging capabilities 
 ```
 
 ### 3.4 Cancel Scheduled Notification
-**POST** `/{guid}/cancel`
+**Method**: POST
+**URL**: `/{guid}/cancel`
 
 **Description**: Cancel a scheduled notification that hasn't been sent yet.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| guid | Guid | Yes | Notification unique identifier |
+| guid | Guid | ✅ | Notification unique identifier |
 
 **Authorization**: Required
 
@@ -859,14 +879,15 @@ The Notification Management system provides event-driven messaging capabilities 
 ```
 
 ### 3.5 Resend Failed Notification
-**POST** `/{guid}/resend`
+**Method**: POST
+**URL**: `/{guid}/resend`
 
 **Description**: Resend a failed notification to its original recipients.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| guid | Guid | Yes | Notification unique identifier |
+| guid | Guid | ✅ | Notification unique identifier |
 
 **Authorization**: Required
 
@@ -883,15 +904,16 @@ The Notification Management system provides event-driven messaging capabilities 
 ```
 
 ### 3.6 Get Notification Templates
-**GET** `/templates`
+**Method**: GET
+**URL**: `/templates`
 
 **Description**: Retrieve available notification templates for different types of messages.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| category | string? | No | Filter by template category |
-| channel | string? | No | Filter by channel |
+| category | string? | ❌ | Filter by template category |
+| channel | string? | ❌ | Filter by channel |
 
 **Authorization**: Required
 
@@ -913,19 +935,20 @@ The Notification Management system provides event-driven messaging capabilities 
 ```
 
 ### 3.7 Create Notification Template
-**POST** `/templates`
+**Method**: POST
+**URL**: `/templates`
 
 **Description**: Create a new notification template for reuse.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| name | string | Yes | Template name |
-| category | string | Yes | Template category |
-| channel | string | Yes | Target channel |
-| title | string | Yes | Template title |
-| template | string | Yes | Template content with variables |
-| variables | string[]? | No | List of template variables |
+| name | string | ✅ | Template name |
+| category | string | ✅ | Template category |
+| channel | string | ✅ | Target channel |
+| title | string | ✅ | Template title |
+| template | string | ✅ | Template content with variables |
+| variables | string[]? | ❌ | List of template variables |
 
 **Authorization**: Required
 
@@ -972,18 +995,19 @@ The Webhook Management system provides dynamic code deployment and execution cap
 - **Health Monitoring**: Real-time health checks and performance monitoring for deployed webhooks
 
 ### 4.1 Upload Code Package
-**POST** `/upload-code`
+**Method**: POST
+**URL**: `/upload-code`
 
 **Description**: Upload a code package for webhook deployment. Supports various archive formats up to 200MB.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| file | IFormFile | Yes | Code package file (ZIP, TAR, etc., max 200MB) |
-| name | string | Yes | Package name |
-| version | string? | No | Package version |
-| description | string? | No | Package description |
-| runtime | string? | No | Runtime environment (Node.js, Python, .NET, etc.) |
+| file | IFormFile | ✅ | Code package file (ZIP, TAR, etc., max 200MB) |
+| name | string | ✅ | Package name |
+| version | string? | ❌ | Package version |
+| description | string? | ❌ | Package description |
+| runtime | string? | ❌ | Runtime environment (Node.js, Python, .NET, etc.) |
 
 **Authorization**: AdminPolicy
 
@@ -1012,18 +1036,19 @@ runtime: "Node.js"
 ```
 
 ### 4.2 Get Code Package List
-**GET** `/code-packages`
+**Method**: GET
+**URL**: `/code-packages`
 
 **Description**: Retrieve a list of uploaded code packages with filtering and pagination.
 
 **Request Parameters**:
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| pageIndex | int | No | 0 | Page index, starting from 0 |
-| pageSize | int | No | 20 | Page size, maximum 100 |
-| name | string? | No | - | Filter by package name |
-| runtime | string? | No | - | Filter by runtime |
-| status | string? | No | - | Filter by status |
+| pageIndex | int | ❌ | 0 | Page index, starting from 0 |
+| pageSize | int | ❌ | 20 | Page size, maximum 100 |
+| name | string? | ❌ | - | Filter by package name |
+| runtime | string? | ❌ | - | Filter by runtime |
+| status | string? | ❌ | - | Filter by status |
 
 **Authorization**: AdminPolicy
 
@@ -1050,16 +1075,17 @@ runtime: "Node.js"
 ```
 
 ### 4.3 Deploy Code Package
-**POST** `/{packageId}/deploy`
+**Method**: POST
+**URL**: `/{packageId}/deploy`
 
 **Description**: Deploy a code package to the webhook execution environment.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| packageId | Guid | Yes | Code package identifier |
-| environment | string | Yes | Deployment environment (Development, Staging, Production) |
-| configuration | Dictionary<string, object>? | No | Environment-specific configuration |
+| packageId | Guid | ✅ | Code package identifier |
+| environment | string | ✅ | Deployment environment (Development, Staging, Production) |
+| configuration | Dictionary<string, object>? | ❌ | Environment-specific configuration |
 
 **Authorization**: AdminPolicy
 
@@ -1091,14 +1117,15 @@ runtime: "Node.js"
 ```
 
 ### 4.4 Get Deployment Status
-**GET** `/deployments/{deploymentId}`
+**Method**: GET
+**URL**: `/deployments/{deploymentId}`
 
 **Description**: Check the status of a webhook deployment.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| deploymentId | Guid | Yes | Deployment identifier |
+| deploymentId | Guid | ✅ | Deployment identifier |
 
 **Authorization**: AdminPolicy
 
@@ -1145,17 +1172,18 @@ The Subscription Management system enables event-driven communication through Or
 - **Stream Reliability**: Built-in retry mechanisms and delivery guarantees through Orleans Streams
 
 ### 5.1 Create Subscription
-**POST** `/`
+**Method**: POST
+**URL**: `/`
 
 **Description**: Create a new event subscription to receive notifications when specific events occur.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| eventType | string | Yes | Type of event to subscribe to |
-| callbackUrl | string | Yes | URL to receive webhook notifications |
-| filters | Dictionary<string, object>? | No | Event filtering criteria |
-| isActive | bool | No | Whether subscription is active (default: true) |
+| eventType | string | ✅ | Type of event to subscribe to |
+| callbackUrl | string | ✅ | URL to receive webhook notifications |
+| filters | Dictionary<string, object>? | ❌ | Event filtering criteria |
+| isActive | bool | ❌ | Whether subscription is active (default: true) |
 
 **Authorization**: SubscriptionManagement.CreateSubscription
 
@@ -1189,17 +1217,18 @@ The Subscription Management system enables event-driven communication through Or
 ```
 
 ### 5.2 Get Subscription List
-**GET** `/`
+**Method**: GET
+**URL**: `/`
 
 **Description**: Retrieve a list of event subscriptions with filtering and pagination.
 
 **Request Parameters**:
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| pageIndex | int | No | 0 | Page index, starting from 0 |
-| pageSize | int | No | 20 | Page size, maximum 100 |
-| eventType | string? | No | - | Filter by event type |
-| isActive | bool? | No | - | Filter by active status |
+| pageIndex | int | ❌ | 0 | Page index, starting from 0 |
+| pageSize | int | ❌ | 20 | Page size, maximum 100 |
+| eventType | string? | ❌ | - | Filter by event type |
+| isActive | bool? | ❌ | - | Filter by active status |
 
 **Authorization**: SubscriptionManagement.ViewSubscriptionStatus
 
@@ -1226,17 +1255,18 @@ The Subscription Management system enables event-driven communication through Or
 ```
 
 ### 5.3 Update Subscription
-**PUT** `/{subscriptionId}`
+**Method**: PUT
+**URL**: `/{subscriptionId}`
 
 **Description**: Update an existing event subscription configuration.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| subscriptionId | Guid | Yes | Subscription identifier |
-| callbackUrl | string? | No | New callback URL |
-| filters | Dictionary<string, object>? | No | Updated filtering criteria |
-| isActive | bool? | No | Updated active status |
+| subscriptionId | Guid | ✅ | Subscription identifier |
+| callbackUrl | string? | ❌ | New callback URL |
+| filters | Dictionary<string, object>? | ❌ | Updated filtering criteria |
+| isActive | bool? | ❌ | Updated active status |
 
 **Authorization**: SubscriptionManagement.CreateSubscription
 
@@ -1268,14 +1298,15 @@ The Subscription Management system enables event-driven communication through Or
 ```
 
 ### 5.4 Cancel Subscription
-**DELETE** `/{subscriptionId}`
+**Method**: DELETE
+**URL**: `/{subscriptionId}`
 
 **Description**: Cancel and delete an event subscription.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| subscriptionId | Guid | Yes | Subscription identifier |
+| subscriptionId | Guid | ✅ | Subscription identifier |
 
 **Authorization**: SubscriptionManagement.CancelSubscription
 
@@ -1300,17 +1331,18 @@ The Subscription Management system enables event-driven communication through Or
 ### Base Path: `/api/appId`
 
 ### 6.1 Create API Key
-**POST** `/`
+**Method**: POST
+**URL**: `/`
 
 **Description**: Create a new API key for accessing the platform APIs.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| appName | string | Yes | API key name/description |
-| projectId | Guid | Yes | Associated project ID |
-| permissions | string[]? | No | List of permissions for this key |
-| expiresAt | DateTime? | No | Expiration date (optional) |
+| appName | string | ✅ | API key name/description |
+| projectId | Guid | ✅ | Associated project ID |
+| permissions | string[]? | ❌ | List of permissions for this key |
+| expiresAt | DateTime? | ❌ | Expiration date (optional) |
 
 **Authorization**: ApiKeys.Create
 
@@ -1339,16 +1371,17 @@ The Subscription Management system enables event-driven communication through Or
 ```
 
 ### 6.2 Get API Key List
-**GET** `/`
+**Method**: GET
+**URL**: `/`
 
 **Description**: Retrieve a list of API keys for the current user or project.
 
 **Request Parameters**:
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| projectId | Guid? | No | - | Filter by project ID |
-| pageIndex | int | No | 0 | Page index, starting from 0 |
-| pageSize | int | No | 20 | Page size, maximum 100 |
+| projectId | Guid? | ❌ | - | Filter by project ID |
+| pageIndex | int | ❌ | 0 | Page index, starting from 0 |
+| pageSize | int | ❌ | 20 | Page size, maximum 100 |
 
 **Authorization**: ApiKeys.Default
 
@@ -1379,14 +1412,15 @@ The Subscription Management system enables event-driven communication through Or
 ```
 
 ### 6.3 Delete API Key
-**DELETE** `/{guid}`
+**Method**: DELETE
+**URL**: `/{guid}`
 
 **Description**: Delete an API key, making it unusable for API access.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| guid | Guid | Yes | API key identifier |
+| guid | Guid | ✅ | API key identifier |
 
 **Authorization**: Required
 
@@ -1401,15 +1435,16 @@ The Subscription Management system enables event-driven communication through Or
 ```
 
 ### 6.4 Update API Key Name
-**PUT** `/{guid}`
+**Method**: PUT
+**URL**: `/{guid}`
 
 **Description**: Update the display name of an API key without affecting the key value itself.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| guid | Guid | Yes | API key identifier |
-| appName | string | Yes | New name |
+| guid | Guid | ✅ | API key identifier |
+| appName | string | ✅ | New name |
 
 **Authorization**: Required
 
@@ -1447,7 +1482,8 @@ The API Request Statistics system provides comprehensive monitoring and analytic
 - **Grafana Dashboards**: Pre-configured dashboards for visualizing API usage patterns and system health
 
 ### 7.1 Get API Request Statistics
-**GET** `/`
+**Method**: GET
+**URL**: `/`
 
 **Description**: Retrieve API request statistics, supporting viewing API usage by organization or project dimension.
 
@@ -1456,8 +1492,8 @@ The API Request Statistics system provides comprehensive monitoring and analytic
 |-----------|------|----------|-------------|
 | organizationId | Guid? | Conditional | Organization ID, choose one with projectId |
 | projectId | Guid? | Conditional | Project ID, choose one with organizationId |
-| startDate | DateTime? | No | Statistics start time |
-| endDate | DateTime? | No | Statistics end time |
+| startDate | DateTime? | ❌ | Statistics start time |
+| endDate | DateTime? | ❌ | Statistics end time |
 
 **Authorization**: ApiRequests.Default
 
@@ -1513,18 +1549,19 @@ The Query Service module provides advanced search capabilities through ElasticSe
 - **Flexible Filtering**: Support for complex queries and filtering criteria
 
 ### 8.1 Query ElasticSearch
-**GET** `/es`
+**Method**: GET
+**URL**: `/es`
 
 **Description**: Query ElasticSearch for agent states, workflow information, and other indexed data.
 
 **Request Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| state | string? | No | State type to query (e.g., WorkflowCoordinatorState) |
-| agentId | Guid? | No | Filter by specific agent ID |
-| query | string? | No | ElasticSearch query string |
-| from | int | No | Starting index for pagination (default: 0) |
-| size | int | No | Number of results to return (default: 10) |
+| state | string? | ❌ | State type to query (e.g., WorkflowCoordinatorState) |
+| agentId | Guid? | ❌ | Filter by specific agent ID |
+| query | string? | ❌ | ElasticSearch query string |
+| from | int | ❌ | Starting index for pagination (default: 0) |
+| size | int | ❌ | Number of results to return (default: 10) |
 
 **Authorization**: Required
 
