@@ -157,7 +157,7 @@
     <PackageVersion Include="MongoDB.Driver" Version="2.29.0" />
     <PackageVersion Include="MongoDB.Bson" Version="2.29.0" />
     <PackageVersion Include="Orleans.Providers.MongoDB" Version="8.1.0" />
-    <PackageVersion Include="Microsoft.Orleans.Clustering.ZooKeeper" Version="9.1.2" />
+    <PackageVersion Include="Microsoft.Orleans.Clustering.ZooKeeper" Version="9.0.1" />
     <!-- Serilog packages -->
     <PackageVersion Include="Serilog" Version="4.0.2" />
     <PackageVersion Include="Serilog.Extensions.Hosting" Version="8.0.0" />
