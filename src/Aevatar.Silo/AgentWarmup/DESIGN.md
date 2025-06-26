@@ -202,15 +202,66 @@ public class DefaultAgentWarmupStrategy<TIdentifier> : BaseAgentWarmupStrategy<T
 }
 ```
 
-#### Agent-Specific Strategies
-Strategies that target specific agent types using the flexible PredefinedAgentWarmupStrategy:
+#### PredefinedAgentWarmupStrategy
+Strategy for warming up specific known agents with predefined identifiers:
 
 ```csharp
-// Use PredefinedAgentWarmupStrategy for agent-specific scenarios
+// Use PredefinedAgentWarmupStrategy for specific known agents
 services.AddPredefinedAgentWarmupStrategy<UserGAgent, Guid>("CriticalUsers", criticalUserIds);
 services.AddPredefinedAgentWarmupStrategy<SystemGAgent, Guid>("CriticalSystems", criticalSystemIds);
 services.AddPredefinedAgentWarmupStrategy<OrderGAgent, Guid>("HighPriorityOrders", importantOrderIds);
 ```
+
+#### SampleBasedAgentWarmupStrategy
+Strategy that randomly samples a percentage of agents from MongoDB collections:
+
+```csharp
+public class SampleBasedAgentWarmupStrategy<TIdentifier> : BaseAgentWarmupStrategy<TIdentifier>
+{
+    public override string Name => _name;
+    public override IEnumerable<Type> ApplicableAgentTypes => new[] { _agentType };
+    public override int Priority => 75; // Higher priority than default strategy
+    
+    public override async IAsyncEnumerable<TIdentifier> GenerateAgentIdentifiersAsync(
+        Type agentType, 
+        CancellationToken cancellationToken = default)
+    {
+        // 1. Get all identifiers from MongoDB
+        // 2. Randomly sample specified percentage using Fisher-Yates shuffle
+        // 3. Return sampled identifiers with batch delays
+    }
+}
+```
+
+**Features**:
+- **Random Sampling**: Uses Fisher-Yates shuffle algorithm for true randomness
+- **Configurable Ratio**: Sample any percentage from 0.1% to 100%
+- **Deterministic Testing**: Optional random seed for reproducible results
+- **Memory Efficient**: Loads all identifiers then samples in-memory
+- **MongoDB Integration**: Retrieves identifiers directly from collections
+- **All Identifier Types**: Supports Guid, string, int, long identifiers
+
+**Usage Examples**:
+```csharp
+// Sample 10% of users randomly
+services.AddSampleBasedAgentWarmupStrategy<UserGAgent, Guid>("UserSample", 0.1);
+
+// Sample 5% of products with deterministic seed for testing
+services.AddSampleBasedAgentWarmupStrategy<ProductGAgent, Guid>("ProductSample", 0.05, randomSeed: 12345);
+
+// Sample 20% of orders with custom batch size
+services.AddSampleBasedAgentWarmupStrategy<OrderGAgent, Guid>("OrderSample", 0.2, batchSize: 50);
+
+// Sample 1% of large datasets efficiently
+services.AddSampleBasedAgentWarmupStrategy<LogGAgent, string>("LogSample", 0.01);
+```
+
+**Use Cases**:
+- **Load Testing**: Warm up a representative sample for performance testing
+- **Gradual Rollout**: Start with small percentage, increase over time
+- **Resource Management**: Limit warmup impact on large collections
+- **Statistical Sampling**: Get random representative subset of agents
+- **Development/Staging**: Use smaller samples in non-production environments
 
 ### 4. Strategy Orchestration
 
@@ -510,6 +561,10 @@ services.AddAgentWarmup(config =>
 // Add specific strategies for important agents
 services.AddPredefinedAgentWarmupStrategy<UserGAgent, Guid>("ImportantUsers", importantUserIds);
 services.AddPredefinedAgentWarmupStrategy<OrderGAgent, Guid>("ImportantOrders", importantOrderIds);
+
+// Add sampling strategies for load testing
+services.AddSampleBasedAgentWarmupStrategy<ProductGAgent, Guid>("ProductSample", 0.1); // 10% sample
+services.AddSampleBasedAgentWarmupStrategy<CategoryGAgent, Guid>("CategorySample", 0.2); // 20% sample
 ```
 
 ### Advanced Configuration
@@ -529,6 +584,21 @@ services.AddAgentWarmup(config =>
     config.MaxConcurrency = 20;
     config.MongoDbRateLimit.MaxOperationsPerSecond = 100;
 });
+
+// Add sample-based strategies for different environments
+#if DEBUG
+// Development: Use smaller samples for faster startup
+services.AddSampleBasedAgentWarmupStrategy<UserGAgent, Guid>("DevUserSample", 0.01); // 1%
+services.AddSampleBasedAgentWarmupStrategy<ProductGAgent, Guid>("DevProductSample", 0.02); // 2%
+#elif STAGING
+// Staging: Use moderate samples for realistic testing
+services.AddSampleBasedAgentWarmupStrategy<UserGAgent, Guid>("StagingUserSample", 0.1); // 10%
+services.AddSampleBasedAgentWarmupStrategy<ProductGAgent, Guid>("StagingProductSample", 0.05); // 5%
+#else
+// Production: Use larger samples for performance
+services.AddSampleBasedAgentWarmupStrategy<UserGAgent, Guid>("ProdUserSample", 0.2); // 20%
+services.AddSampleBasedAgentWarmupStrategy<ProductGAgent, Guid>("ProdProductSample", 0.1); // 10%
+#endif
 
 // Custom collection naming is handled internally by MongoDbAgentIdentifierService
 // No additional registration required - can be enhanced in future if needed
