@@ -7,6 +7,7 @@ using Serilog;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using System.Linq;
+using Orleans.Runtime;
 
 namespace Aevatar.Silo;
 
@@ -14,6 +15,8 @@ public class Program
 {
     public async static Task<int> Main(string[] args)
     {
+        // Register the label provider before building the silo host
+        HistogramAggregatorExtension.SetLabelProvider(new AevatarMetricLabelProvider());
         var configuration = new ConfigurationBuilder()
             .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
             .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Silo.Shared.json"))
@@ -65,4 +68,25 @@ public class Program
                 services.AddAevatarOpenTelemetry(context.Configuration);
                 services.UseGrainStorageWithMetrics();
             });
+
+    // Pluggable metric label provider for Orleans metrics
+    public class AevatarMetricLabelProvider : IMetricLabelProvider
+    {
+        public IEnumerable<KeyValuePair<string, object>> GetLabels(object context = null)
+        {
+            if (context != null)
+            {
+                var msgProp = context.GetType().GetProperty("Message");
+                var reqProp = context.GetType().GetProperty("Request");
+                var msg = msgProp?.GetValue(context, null);
+                var req = reqProp?.GetValue(context, null);
+                var grainClassTypeProp = msg?.GetType().GetProperty("GrainClassType");
+                var grainClassType = grainClassTypeProp?.GetValue(msg, null) as Type;
+                var grainType = grainClassType != null ? grainClassType.Name : msg?.GetType().GetProperty("InterfaceType")?.GetValue(msg, null)?.ToString() ?? "unknown";
+                var methodName = req?.GetType().GetMethod("GetMethodName")?.Invoke(req, null)?.ToString() ?? "unknown";
+                yield return new KeyValuePair<string, object>("grain_type", grainType);
+                yield return new KeyValuePair<string, object>("method_name", methodName);
+            }
+        }
+    }
 }
