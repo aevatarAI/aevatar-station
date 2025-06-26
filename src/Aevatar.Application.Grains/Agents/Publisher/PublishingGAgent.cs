@@ -1,9 +1,9 @@
 using Aevatar.Agents.Publisher;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
-using Aevatar.Sender;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
+using IPublishingGAgent = Aevatar.Sender.IPublishingGAgent;
 
 namespace Aevatar.Application.Grains.Agents.Publisher;
 
