@@ -1,6 +1,5 @@
 ﻿using Aevatar.Agents;
 using Aevatar.Application.Grains.Agents.Group;
-using Aevatar.Application.Grains.Agents.Publisher;
 using Aevatar.Sender;
 
 namespace Orleans.TestKit;
