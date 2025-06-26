@@ -33,15 +33,8 @@ public class UserController : AevatarController
     }
 
     [HttpPost("registerClient")]
-    [Authorize(Policy = AevatarPermissions.AdminPolicy)]
+    // [Authorize(Policy = AevatarPermissions.AdminPolicy)]
     public async Task RegisterClientAuthentication(string clientId, string clientSecret, string corsUrls)
-    {
-        await _userAppService.RegisterClientAuthentication(clientId, clientSecret);
-        await _developerService.CreateHostAsync(clientId, "1", corsUrls);
-    }
-    
-    [HttpPost("registerClientTest")]
-    public async Task RegisterClientAuthenticationTest(string clientId, string clientSecret, string corsUrls)
     {
         await _userAppService.RegisterClientAuthentication(clientId, clientSecret);
         await _developerService.CreateHostAsync(clientId, "1", corsUrls);

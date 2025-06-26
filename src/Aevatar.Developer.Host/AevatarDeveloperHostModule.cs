@@ -26,7 +26,7 @@ using Volo.Abp.VirtualFileSystem;
 namespace Aevatar.Developer.Host;
 
 [DependsOn(
-    typeof(AevatarHttpApiAdminModule),
+    typeof(AevatarHttpApiModule),
     typeof(AbpAutofacModule),
     typeof(AevatarApplicationModule),
     typeof(AevatarMongoDbModule),
