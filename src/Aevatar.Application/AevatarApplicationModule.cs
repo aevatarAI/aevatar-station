@@ -3,6 +3,7 @@ using System.Linq;
 using Aevatar.Account;
 using Aevatar.ApiRequests;
 using Aevatar.Application.Grains;
+using Aevatar.BlobStorings;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
@@ -72,5 +73,6 @@ public class AevatarApplicationModule : AbpModule
         
         Configure<AccountOptions>(configuration.GetSection("Account"));
         Configure<ApiRequestOptions>(configuration.GetSection("ApiRequest"));
+        Configure<BlobStoringOptions>(configuration.GetSection("BlobStoring"));
     }
 }
