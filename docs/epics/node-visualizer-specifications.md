@@ -14,16 +14,10 @@ Empower users to intuitively build, modify, and comprehend agent workflows throu
 - Features for zooming, panning, and undoing/redoing actions.
 - Instant validation of workflow integrity (e.g., detection of unconnected nodes).
 - Optimized for desktop browser responsiveness.
-- The designer must enable users to choose nodes from these groups when constructing workflows:
-  - **Agent Node:** AI agents such as Summarizer, Retriever, Planner
-  - **Event Node:** Triggers like Time-based or Webhook events
-  - **Output Node:** Actions such as Save to DB, Send Email, or Webhook
-- Each node group should have a distinct visual style in the palette.
-- Connectors (Tools) should be available to attach to agent nodes, offering extra functionalities (e.g., search, external API integration).
-- The interface should allow users to filter or search node types by their category.
-- **Connector Usage Rule:**
-  - Connectors (Tools) are permitted only to link into Agent Nodes. They cannot connect directly to Event Nodes or Output Nodes.
-  - The UI must enforce this rule, blocking any invalid connections.
+- The designer must enable users to choose from available Agent Nodes when constructing workflows:
+  - **Agent Node:** AI agents such as Summarizer, Retriever, Planner, and other custom agents
+- Agent nodes should have a consistent visual style in the palette.
+- The interface should allow users to filter or search agent types by their functionality or name.
 - **Play Button:**
   - A prominent "Play" button is available in the designer UI, allowing users to trigger the execution of the currently loaded workflow.
   - The button is only enabled when the workflow passes validation (no critical errors).
