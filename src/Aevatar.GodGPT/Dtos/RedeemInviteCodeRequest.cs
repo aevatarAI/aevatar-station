@@ -12,6 +12,4 @@ public class RedeemInviteCodeRequest
 public class RedeemInviteCodeResponse
 {
     public bool IsValid { get; set; }
-    public string InviterId { get; set; }
-    public int RewardCredits { get; set; }
 }
