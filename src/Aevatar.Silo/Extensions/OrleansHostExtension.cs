@@ -31,6 +31,7 @@ using Orleans.Runtime.Placement;
 using Orleans.Serialization;
 using Orleans.Streams.Kafka.Config;
 using Orleans.Configuration;
+using Aevatar.Core.Streaming.Extensions;
 
 namespace Aevatar.Silo.Extensions;
 
@@ -300,34 +301,33 @@ public static class OrleansHostExtension
                 var streamProvider = configuration.GetSection("OrleansStream:Provider").Get<string>();
                 if (string.Compare(streamProvider, "Kafka", StringComparison.OrdinalIgnoreCase) == 0)
                 {
-                    siloBuilder.AddKafka("Aevatar")
-                        .WithOptions(options =>
-                        {
-                            options.BrokerList = configuration.GetSection("OrleansStream:Brokers").Get<List<string>>();
-                            options.ConsumerGroupId = "Aevatar";
-                            options.ConsumeMode = ConsumeMode.LastCommittedMessage;
+                    // Use Aevatar monitored Kafka streaming provider
+                    siloBuilder.AddAevatarKafkaStreaming("Aevatar", options =>
+                    {
+                        options.BrokerList = configuration.GetSection("OrleansStream:Brokers").Get<List<string>>();
+                        options.ConsumerGroupId = "Aevatar";
+                        options.ConsumeMode = ConsumeMode.LastCommittedMessage;
 
-                            var partitions = configuration.GetSection("OrleansStream:Partitions").Get<int>();
-                            var replicationFactor =
-                                configuration.GetSection("OrleansStream:ReplicationFactor").Get<short>();
-                            var topics = configuration.GetSection("OrleansStream:Topics").Get<string>();
-                            topics = topics.IsNullOrEmpty() ? CommonConstants.StreamNamespace : topics;
-                            foreach (var topic in topics.Split(','))
+                        var partitions = configuration.GetSection("OrleansStream:Partitions").Get<int>();
+                        var replicationFactor =
+                            configuration.GetSection("OrleansStream:ReplicationFactor").Get<short>();
+                        var topics = configuration.GetSection("OrleansStream:Topics").Get<string>();
+                        topics = topics.IsNullOrEmpty() ? CommonConstants.StreamNamespace : topics;
+                        foreach (var topic in topics.Split(','))
+                        {
+                            options.AddTopic(topic.Trim(), new TopicCreationConfig
                             {
-                                options.AddTopic(topic.Trim(), new TopicCreationConfig
-                                {
-                                    AutoCreate = true,
-                                    Partitions = partitions,
-                                    ReplicationFactor = replicationFactor
-                                });
-                            }
-                        })
-                        .AddJson()
-                        .AddLoggingTracker()
-                        .Build();
+                                AutoCreate = true,
+                                Partitions = partitions,
+                                ReplicationFactor = replicationFactor
+                            });
+                        }
+                    });
                 }
                 else
                 {
+                    // Use Aevatar monitored Memory streaming provider
+                    // Use Orleans built-in memory streaming instead of custom wrapper
                     siloBuilder.AddMemoryStreams("Aevatar");
                 }
 

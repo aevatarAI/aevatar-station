@@ -96,7 +96,7 @@ services:
       - COLLECTOR_OTLP_ENABLED=true
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.88.0
+    image: otel/opentelemetry-collector-contrib:0.128.0
     container_name: otel-collector
     networks:
       - aevatar-network
@@ -123,11 +123,13 @@ services:
       - '--web.enable-lifecycle'
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml
       - prometheus-data:/prometheus
     ports:
       - "9091:9090"  # Using 9091 on host to avoid conflict with otel-collector
     depends_on:
       - otel-collector
+      - blackbox-exporter
 
   # Add Grafana for better visualization
   grafana:
@@ -137,10 +139,23 @@ services:
       - aevatar-network
     volumes:
       - grafana-data:/var/lib/grafana
+      - ./grafana-provisioning/datasources:/etc/grafana/provisioning/datasources
     ports:
       - "3000:3000"
     depends_on:
       - prometheus
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:latest
+    container_name: blackbox-exporter
+    ports:
+      - "9115:9115"
+    volumes:
+      - ./blackbox.yml:/config/blackbox.yml
+    command:
+      - '--config.file=/config/blackbox.yml'
+    networks:
+      - aevatar-network
 
 volumes:
   mongodb-data:

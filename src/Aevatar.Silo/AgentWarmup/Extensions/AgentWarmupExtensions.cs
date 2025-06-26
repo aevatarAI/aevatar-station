@@ -171,6 +171,40 @@ public static class AgentWarmupExtensions
     }
 
     /// <summary>
+    /// Adds a sample-based agent warmup strategy that randomly selects a percentage of agents from MongoDB
+    /// </summary>
+    /// <typeparam name="TAgent">The agent type to warm up</typeparam>
+    /// <typeparam name="TIdentifier">The identifier type (Guid, string, int, long)</typeparam>
+    /// <param name="services">The service collection</param>
+    /// <param name="strategyName">Name for the strategy</param>
+    /// <param name="sampleRatio">The ratio of agents to sample (0.0 to 1.0, e.g., 0.1 for 10%)</param>
+    /// <param name="randomSeed">Optional random seed for deterministic sampling (useful for testing)</param>
+    /// <param name="batchSize">Number of agents to process before adding a small delay</param>
+    /// <returns>The service collection for chaining</returns>
+    public static IServiceCollection AddSampleBasedAgentWarmupStrategy<TAgent, TIdentifier>(
+        this IServiceCollection services,
+        string strategyName,
+        double sampleRatio,
+        int? randomSeed = null,
+        int batchSize = 100)
+    {
+        services.AddSingleton<IAgentWarmupStrategy>(provider =>
+        {
+            var mongoDbService = provider.GetRequiredService<IMongoDbAgentIdentifierService>();
+            var logger = provider.GetRequiredService<ILogger<SampleBasedAgentWarmupStrategy<TIdentifier>>>();
+            return new SampleBasedAgentWarmupStrategy<TIdentifier>(
+                strategyName,
+                typeof(TAgent),
+                sampleRatio,
+                mongoDbService,
+                logger,
+                randomSeed,
+                batchSize);
+        });
+        return services;
+    }
+
+    /// <summary>
     /// Configure agent warmup with direct Type-based base types (for agent discovery)
     /// </summary>
     /// <typeparam name="TIdentifier">The identifier type (Guid, string, long, int)</typeparam>
