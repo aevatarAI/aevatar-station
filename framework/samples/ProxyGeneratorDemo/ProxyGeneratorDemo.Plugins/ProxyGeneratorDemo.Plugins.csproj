@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- NO Orleans dependencies! Only core abstractions -->
+    <ProjectReference Include="../../../src/Aevatar.Core.Abstractions/Aevatar.Core.Abstractions.csproj" />
+  </ItemGroup>
+
+
+</Project>

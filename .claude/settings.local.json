@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(chmod:*)",
+      "Bash(dotnet build)",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet run:*)",
+      "Bash(ls:*)",
+      "Bash(./cleanup-unused-files.sh:*)",
+      "mcp__ide__executeCode"
+    ]
+  },
+  "enableAllProjectMcpServers": false
+}

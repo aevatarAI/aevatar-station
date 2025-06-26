@@ -1,0 +1,30 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PluginGAgentHostDemo.Silo", "PluginGAgentHostDemo.Silo\PluginGAgentHostDemo.Silo.csproj", "{1C7A8DEF-F123-4567-8901-234567890ABC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PluginGAgentHostDemo.Client", "PluginGAgentHostDemo.Client\PluginGAgentHostDemo.Client.csproj", "{2C7A8DEF-F123-4567-8901-234567890ABC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProxyGeneratorDemo.Plugins", "ProxyGeneratorDemo.Plugins\ProxyGeneratorDemo.Plugins.csproj", "{3C7A8DEF-F123-4567-8901-234567890ABC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1C7A8DEF-F123-4567-8901-234567890ABC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1C7A8DEF-F123-4567-8901-234567890ABC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1C7A8DEF-F123-4567-8901-234567890ABC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1C7A8DEF-F123-4567-8901-234567890ABC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2C7A8DEF-F123-4567-8901-234567890ABC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2C7A8DEF-F123-4567-8901-234567890ABC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2C7A8DEF-F123-4567-8901-234567890ABC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2C7A8DEF-F123-4567-8901-234567890ABC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3C7A8DEF-F123-4567-8901-234567890ABC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3C7A8DEF-F123-4567-8901-234567890ABC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3C7A8DEF-F123-4567-8901-234567890ABC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3C7A8DEF-F123-4567-8901-234567890ABC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

@@ -6,7 +6,6 @@ alwaysApply: false
 Output `Running and Fixing Unit Tests`
 
 Use context7 for Orleans related issues.
-Use max context to understand the problems in detail.
 
 When working on unit tests, do the following:
 1. Output "!!!Implementing Unit Test Cases!!!".
