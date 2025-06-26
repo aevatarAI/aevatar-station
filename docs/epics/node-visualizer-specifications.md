@@ -33,26 +33,40 @@ Empower users to intuitively build, modify, and comprehend agent workflows throu
 
 ---
 
-## 2. Debugger Overlay (Read-Only State Inspection)
+## 2. Interactive Debugger Overlay (Real-Time Workflow Testing)
 **Version**
-v0.5
+v0.6
 
 **Objective:**
-Allow users to inspect the agent's state after workflow execution for troubleshooting and validation.
+Allow users to test and debug workflows in real-time through an interactive debugging environment with live data streaming capabilities.
 
 **Key Requirements:**
 - Debug mode toggle in the workflow designer.
-- Overlay displays agent state (inputs, outputs, intermediate data) post-execution.
-- No step-through or breakpoints; read-only inspection only.
+- **Debug Pod Infrastructure:**
+  - A dedicated debug pod/container spins up when debug mode is activated.
+  - Debug pods are user-specific and can be reused across different workflows by the same user.
+  - Users can play/test multiple workflows within the same debug environment without needing to recreate the pod.
+  - Isolated execution environment to prevent interference with production workflows.
+- **Real-Time Data Streaming:**
+  - All agents in the workflow are instrumented with debugging streams.
+  - Events and state changes are streamed live to the debugging overlay.
+  - Users can observe data flow and transformations as they happen during execution.
+- **Interactive Testing:**
+  - Users can trigger workflow execution directly from the debug overlay.
+  - Real-time progress tracking with live updates of agent states.
+  - Ability to see intermediate results and data transformations as they occur.
 - Access restricted to authenticated users.
 - Clear indication when in debug mode.
-- Debug mode shows clearly the timeline of execution.
+- Debug mode shows clearly the timeline of execution with live updates.
 
 **Acceptance Criteria:**
 - Only authenticated users can access debug overlay.
-- Users can view state snapshots for each node after execution.
-- No ability to modify state from the overlay.
-- Execution sequence of agents is shown.
+- A user-specific debug pod automatically spins up when debug mode is first activated and can be reused for subsequent workflow debugging sessions.
+- Users can execute multiple different workflows within the same debug environment and see real-time results.
+- All agent events and state changes are streamed live to the debugging overlay.
+- Users can observe data flow and transformations in real-time during workflow execution.
+- Debug environment is isolated from production workflows and other users' debug sessions.
+- Execution sequence and progress are shown with live updates.
 
 ---
 

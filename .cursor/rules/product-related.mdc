@@ -21,6 +21,8 @@ Use web search whenever you need more data.
 When analysing:
 - ALWAYS validate facts
 
+When an existing specifications for product epics is changed, make sure to find the corresponding story document in `docs/stories` directory and update it accordingly.
+
 When creating specifications for product epics, follow the following example structure:
 Example 1 -
 ```
