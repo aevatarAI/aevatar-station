@@ -2,34 +2,40 @@
 Epic: 4. Execution Progress Tracking Dashboard
 ---
 
-# 1. Dashboard View of Workflow Executions
+# 1. Workflow List and Navigation
+
+## User Story
+As a user, I want to view all saved workflows and click on a workflow to visit the visual workflow designer with the corresponding clicked workflow so that I can access and edit my workflows.
+
+**Version:** v0.4
+
+**Estimated Time:** 8 hours
+
+### Acceptance Criteria
+1. Users can see a list of all saved workflows with their names and basic metadata.
+2. Users can click on any workflow to navigate to the visual workflow designer.
+3. The visual workflow designer loads with the selected workflow's configuration.
+
+# 2. Workflow Execution Status Dashboard
 
 ## User Story
 As a user, I want to view all workflow executions (running, completed, failed) in a dashboard so that I can monitor their status in real time.
 
-**Estimated Time:** 16 hours
+**Version:** v0.5
+
+**Estimated Time:** 8 hours
 
 ### Acceptance Criteria
 1. Users can see a list of all workflow executions with their current status (running, completed, failed).
 2. Status updates in real time as executions progress.
 3. Errors and progress are clearly displayed.
 
-# 2. Per-Node Execution Status
-
-## User Story
-As a user, I want to see the execution status of each node within a workflow (pending, running, succeeded, failed) so that I can identify bottlenecks or failures.
-
-**Estimated Time:** 18 hours
-
-### Acceptance Criteria
-1. Users can expand a workflow execution to see the status of each node in the visual workflow designer.
-2. Node statuses are updated in real time.
-3. Failed nodes are visually distinguished from succeeded or running nodes.
-
 # 3. Filtering and Search Capabilities
 
 ## User Story
 As a user, I want to filter and search workflow executions so that I can quickly find relevant executions or errors.
+
+**Version:** v0.5
 
 **Estimated Time:** 12 hours
 
@@ -42,6 +48,8 @@ As a user, I want to filter and search workflow executions so that I can quickly
 
 ## User Story
 As a user, I want executions triggered from the workflow designer's Play button to appear immediately in the execution dashboard so that I can monitor their progress in real time.
+
+**Version:** v0.5
 
 **Estimated Time:** 10 hours
 

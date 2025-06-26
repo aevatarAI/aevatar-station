@@ -82,7 +82,7 @@ Allow users to persist and retrieve workflow configurations.
 
 ## 4. Execution Progress Tracking Dashboard
 **Version**
-v0.5
+v0.4, v0.5
 
 **Objective:**
 Provide real-time visibility into workflow execution status and progress.
