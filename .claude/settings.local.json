@@ -14,5 +14,5 @@
       "mcp__ide__executeCode"
     ]
   },
-  "enableAllProjectMcpServers": false
+  "enableAllProjectMcpServers": true
 }
