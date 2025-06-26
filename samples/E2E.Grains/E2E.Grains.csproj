@@ -10,14 +10,11 @@
     <PackageReference Include="Microsoft.Extensions.Options"/>
     <PackageReference Include="Microsoft.Orleans.Sdk"/>
     <PackageReference Include="AElf.OpenTelemetry"/>
-    <PackageReference Include="Volo.Abp.AutoMapper"/>
-    <PackageReference Include="Volo.Abp.EventBus.Abstractions"/>
-    <PackageReference Include="Aevatar.SignalR"/>
-    <PackageReference Include="XWorkerAgent"/>
     
     <PackageReference Include="Aevatar.Core"/>
     <PackageReference Include="Aevatar.Core.Abstractions"/>
     <PackageReference Include="Microsoft.Orleans.Runtime" />
 </ItemGroup>
+
 
 </Project>
