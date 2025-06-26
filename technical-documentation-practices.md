@@ -187,6 +187,7 @@ Common issues and resolution steps.
 - **Link Verification**: All internal references and links must be accurate
 - **Diagram Accuracy**: All diagrams must reflect actual code relationships and data flows
 - **Completeness Check**: Ensure all major components and features are documented
+- **Correctness Check**: Ensure contents are correct according to the codebase.
 
 ## Output Constraints
 
