@@ -17,8 +17,7 @@ public interface IDeveloperService
 public class DeveloperService: ApplicationService, IDeveloperService
 {
     private readonly IHostDeployManager _hostDeployManager;
-    public DeveloperService(IHostDeployManager hostDeployManager
-       )
+    public DeveloperService(IHostDeployManager hostDeployManager)
     {
         _hostDeployManager = hostDeployManager;
     }
