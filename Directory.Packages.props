@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVerion>9.0.1</OrleansVerion>
-    <AevatarVerion>1.5.1-alpha.1</AevatarVerion>
+    <AevatarVerion>1.5.2</AevatarVerion>
     <AevatarGAgentVerion>1.5.0-chat-image-2</AevatarGAgentVerion>
   </PropertyGroup>
   <ItemGroup>
@@ -44,6 +44,12 @@
     <PackageVersion Include="NJsonSchema" Version="11.1.0" />
     <PackageVersion Include="Octokit" Version="14.0.0" />
     <PackageVersion Include="OpenAI.API" Version="1.0.0" />
+    <PackageVersion Include="OpenTelemetry" Version="1.12.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.12.0-beta.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.10.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.10.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.10.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.10.0" />
     <PackageVersion Include="Orleans.SyncWork" Version="8.1.12" />
     <PackageVersion Include="Serilog.Formatting.Compact" Version="2.0.0" />
     <!-- ABP packages -->
@@ -139,7 +145,7 @@
     <PackageVersion Include="Microsoft.Orleans.Server" Version="$(OrleansVerion)" />
     <PackageVersion Include="Microsoft.Orleans.Streaming" Version="$(OrleansVerion)" />
     <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="$(OrleansVerion)" />
-    <PackageVersion Include="Microsoft.Orleans.Core" Version="$(OrleansVerion)" />
+    <PackageVersion Include="Microsoft.Orleans.Core" Version="9.0.3" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.6" />
     <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="9.0.0" />
@@ -153,6 +159,7 @@
     <PackageVersion Include="MongoDB.Driver" Version="2.29.0" />
     <PackageVersion Include="MongoDB.Bson" Version="2.29.0" />
     <PackageVersion Include="Orleans.Providers.MongoDB" Version="8.1.0" />
+    <PackageVersion Include="Microsoft.Orleans.Clustering.ZooKeeper" Version="9.0.1" />
     <!-- Serilog packages -->
     <PackageVersion Include="Serilog" Version="4.0.2" />
     <PackageVersion Include="Serilog.Extensions.Hosting" Version="8.0.0" />

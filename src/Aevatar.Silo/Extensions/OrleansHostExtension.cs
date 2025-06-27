@@ -30,6 +30,8 @@ using Orleans.Providers.MongoDB.Configuration;
 using Orleans.Runtime.Placement;
 using Orleans.Serialization;
 using Orleans.Streams.Kafka.Config;
+using Orleans.Configuration;
+using Aevatar.Core.Streaming.Extensions;
 
 namespace Aevatar.Silo.Extensions;
 
@@ -45,23 +47,27 @@ public static class OrleansHostExtension
                 var configuration = context.Configuration;
                 var hostId = configuration.GetValue<string>("Host:HostId");
                 var configSection = context.Configuration.GetSection("Orleans");
+                var UseEnvironmentVariables =
+                    bool.TryParse(GetEnvironmentVariable("UseEnvironmentVariables"), out var flag) && flag;
                 var isRunningInKubernetes = configSection.GetValue<bool>("IsRunningInKubernetes");
-                var advertisedIP = isRunningInKubernetes
-                    ? GetEnvironmentVariable("POD_IP")
-                    : GetEnvironmentVariable("AevatarOrleans__AdvertisedIP");
+                var advertisedIP = UseEnvironmentVariables
+                    ? GetEnvironmentVariable("AevatarOrleans__AdvertisedIP")
+                    : isRunningInKubernetes
+                        ? Environment.GetEnvironmentVariable("POD_IP")
+                        : configSection.GetValue<string>("AdvertisedIP");
                 var clusterId = isRunningInKubernetes
-                    ? GetEnvironmentVariable("ORLEANS_CLUSTER_ID")
+                    ? Environment.GetEnvironmentVariable("ORLEANS_CLUSTER_ID")
                     : configSection.GetValue<string>("ClusterId");
                 var serviceId = isRunningInKubernetes
-                    ? GetEnvironmentVariable("ORLEANS_SERVICE_ID")
+                    ? Environment.GetEnvironmentVariable("ORLEANS_SERVICE_ID")
                     : configSection.GetValue<string>("ServiceId");
-                var siloPort = isRunningInKubernetes
-                    ? configSection.GetValue<int>("SiloPort")
-                    : int.Parse(GetEnvironmentVariable("AevatarOrleans__SiloPort"));
-                var gatewayPort = isRunningInKubernetes
-                    ? configSection.GetValue<int>("GatewayPort")
-                    :int.Parse(GetEnvironmentVariable("AevatarOrleans__GatewayPort"));
-                
+                var siloPort = UseEnvironmentVariables
+                    ? int.Parse(GetEnvironmentVariable("AevatarOrleans__SiloPort"))
+                    : configSection.GetValue<int>("SiloPort");
+                var gatewayPort = UseEnvironmentVariables
+                    ? int.Parse(GetEnvironmentVariable("AevatarOrleans__GatewayPort"))
+                    : configSection.GetValue<int>("GatewayPort");
+
                 // Read the silo name pattern from environment variable or configuration
                 var siloNamePattern = isRunningInKubernetes
                     ? GetEnvironmentVariable("SILO_NAME_PATTERN")
@@ -122,12 +128,58 @@ public static class OrleansHostExtension
                     });
                 }
                     
+                // Check if ZooKeeper configuration is available
+                var zookeeperSection = configSection.GetSection("ZooKeeper");
+                var zookeeperConnectionString = zookeeperSection.GetValue<string>("ConnectionString");
+                
                 siloBuilder
                     .ConfigureEndpoints(advertisedIP: IPAddress.Parse(advertisedIP),
                         siloPort: siloPort,
                         gatewayPort: gatewayPort,
-                        listenOnAnyHostAddress: true)
+                        listenOnAnyHostAddress: true);
+                
+                // Configure clustering based on available provider
+                if (!string.IsNullOrEmpty(zookeeperConnectionString))
+                {
+                    // Use ZooKeeper clustering
+                    siloBuilder.UseZooKeeperClustering(options =>
+                    {
+                        options.ConnectionString = zookeeperConnectionString;
+                    })
+                    .Configure<ClusterMembershipOptions>(options =>
+                    {
+                        // Read ZooKeeper cluster membership configuration with defaults from benchmark
+                        var membershipSection = zookeeperSection.GetSection("ClusterMembership");
+                        options.DefunctSiloCleanupPeriod = membershipSection.GetValue<TimeSpan>("DefunctSiloCleanupPeriod", TimeSpan.FromMinutes(1));
+                        options.DefunctSiloExpiration = membershipSection.GetValue<TimeSpan>("DefunctSiloExpiration", TimeSpan.FromMinutes(2));
+                        options.IAmAliveTablePublishTimeout = membershipSection.GetValue<TimeSpan>("IAmAliveTablePublishTimeout", TimeSpan.FromSeconds(30));
+                        options.MaxJoinAttemptTime = membershipSection.GetValue<TimeSpan>("MaxJoinAttemptTime", TimeSpan.FromSeconds(30));
+                        options.ProbeTimeout = membershipSection.GetValue<TimeSpan>("ProbeTimeout", TimeSpan.FromSeconds(10));
+                        options.TableRefreshTimeout = membershipSection.GetValue<TimeSpan>("TableRefreshTimeout", TimeSpan.FromSeconds(30));
+                        options.DeathVoteExpirationTimeout = membershipSection.GetValue<TimeSpan>("DeathVoteExpirationTimeout", TimeSpan.FromMinutes(2));
+                        options.NumMissedProbesLimit = membershipSection.GetValue<int>("NumMissedProbesLimit", 2);
+                        options.NumProbedSilos = membershipSection.GetValue<int>("NumProbedSilos", 2);
+                        options.NumVotesForDeathDeclaration = membershipSection.GetValue<int>("NumVotesForDeathDeclaration", 1);
+                        options.UseLivenessGossip = membershipSection.GetValue<bool>("UseLivenessGossip", false);
+                    })
+                    // Still need MongoDB client for storage and reminders
                     .UseMongoDBClient(proivder => {
+                        var setting = MongoClientSettings.FromConnectionString(configSection.GetValue<string>("MongoDBClient"));
+                        
+                        // Read MongoDB client settings from configuration with MongoDB driver default values
+                        var clientSection = configSection.GetSection("MongoDBClientSettings");
+                        setting.MaxConnectionPoolSize = clientSection.GetValue<int>("MaxConnectionPoolSize", 512);
+                        setting.MinConnectionPoolSize = clientSection.GetValue<int>("MinConnectionPoolSize", 16);
+                        setting.WaitQueueSize = clientSection.GetValue<int>("WaitQueueSize", MongoDefaults.ComputedWaitQueueSize);
+                        setting.WaitQueueTimeout = clientSection.GetValue<TimeSpan>("WaitQueueTimeout", MongoDefaults.WaitQueueTimeout);
+                        setting.MaxConnecting = clientSection.GetValue<int>("MaxConnecting", 4);
+                        return setting;
+                    });
+                }
+                else
+                {
+                    // Use MongoDB clustering (existing behavior)
+                    siloBuilder.UseMongoDBClient(proivder => {
                         var setting = MongoClientSettings.FromConnectionString(configSection.GetValue<string>("MongoDBClient"));
                         
                         // Read MongoDB client settings from configuration with MongoDB driver default values
@@ -144,7 +196,10 @@ public static class OrleansHostExtension
                         options.DatabaseName = configSection.GetValue<string>("DataBase");
                         options.Strategy = MongoDBMembershipStrategy.SingleDocument;
                         options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" : $"Orleans{hostId}";
-                    })
+                    });
+                }
+                
+                siloBuilder
                     .Configure<JsonGrainStateSerializerOptions>(options => options.ConfigureJsonSerializerSettings =
                         settings =>
                         {
@@ -189,10 +244,12 @@ public static class OrleansHostExtension
                     {
                         options.Username = configSection.GetValue<string>("DashboardUserName");
                         options.Password = configSection.GetValue<string>("DashboardPassword");
-                        options.Host = isRunningInKubernetes ? "*" 
-                        : GetEnvironmentVariable("AevatarOrleans__DashboardIp");
-                        options.Port = isRunningInKubernetes ? configSection.GetValue<int>("DashboardPort") 
-                        : int.Parse(GetEnvironmentVariable("AevatarOrleans__DashboardPort"));
+                        options.Host = UseEnvironmentVariables
+                            ? GetEnvironmentVariable("AevatarOrleans__DashboardIp")
+                            : "*";
+                        options.Port = UseEnvironmentVariables
+                            ? int.Parse(GetEnvironmentVariable("AevatarOrleans__DashboardPort"))
+                            : configSection.GetValue<int>("DashboardPort");
                         options.HostSelf = true;
                         options.CounterUpdateIntervalMs =
                             configSection.GetValue<int>("DashboardCounterUpdateIntervalMs");
@@ -244,34 +301,33 @@ public static class OrleansHostExtension
                 var streamProvider = configuration.GetSection("OrleansStream:Provider").Get<string>();
                 if (string.Compare(streamProvider, "Kafka", StringComparison.OrdinalIgnoreCase) == 0)
                 {
-                    siloBuilder.AddKafka("Aevatar")
-                        .WithOptions(options =>
-                        {
-                            options.BrokerList = configuration.GetSection("OrleansStream:Brokers").Get<List<string>>();
-                            options.ConsumerGroupId = "Aevatar";
-                            options.ConsumeMode = ConsumeMode.LastCommittedMessage;
+                    // Use Aevatar monitored Kafka streaming provider
+                    siloBuilder.AddAevatarKafkaStreaming("Aevatar", options =>
+                    {
+                        options.BrokerList = configuration.GetSection("OrleansStream:Brokers").Get<List<string>>();
+                        options.ConsumerGroupId = "Aevatar";
+                        options.ConsumeMode = ConsumeMode.LastCommittedMessage;
 
-                            var partitions = configuration.GetSection("OrleansStream:Partitions").Get<int>();
-                            var replicationFactor =
-                                configuration.GetSection("OrleansStream:ReplicationFactor").Get<short>();
-                            var topics = configuration.GetSection("OrleansStream:Topics").Get<string>();
-                            topics = topics.IsNullOrEmpty() ? CommonConstants.StreamNamespace : topics;
-                            foreach (var topic in topics.Split(','))
+                        var partitions = configuration.GetSection("OrleansStream:Partitions").Get<int>();
+                        var replicationFactor =
+                            configuration.GetSection("OrleansStream:ReplicationFactor").Get<short>();
+                        var topics = configuration.GetSection("OrleansStream:Topics").Get<string>();
+                        topics = topics.IsNullOrEmpty() ? CommonConstants.StreamNamespace : topics;
+                        foreach (var topic in topics.Split(','))
+                        {
+                            options.AddTopic(topic.Trim(), new TopicCreationConfig
                             {
-                                options.AddTopic(topic.Trim(), new TopicCreationConfig
-                                {
-                                    AutoCreate = true,
-                                    Partitions = partitions,
-                                    ReplicationFactor = replicationFactor
-                                });
-                            }
-                        })
-                        .AddJson()
-                        .AddLoggingTracker()
-                        .Build();
+                                AutoCreate = true,
+                                Partitions = partitions,
+                                ReplicationFactor = replicationFactor
+                            });
+                        }
+                    });
                 }
                 else
                 {
+                    // Use Aevatar monitored Memory streaming provider
+                    // Use Orleans built-in memory streaming instead of custom wrapper
                     siloBuilder.AddMemoryStreams("Aevatar");
                 }
 
