@@ -44,22 +44,24 @@ namespace Aevatar.Service
 
             // _logger.LogWarning("GetUserInfoAsync:+{A}",JsonConvert.SerializeObject(identityUser));
 
+            // 2. Profile info
+            
+            string? fullName = null;
+            // Profile info for private relay users
+            try
+            {
+                var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
+                var userProfile = await manager.GetUserProfileAsync();
+                fullName = !string.IsNullOrWhiteSpace(userProfile?.FullName) ? userProfile.FullName : null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to get user profile from GodGPT for user {UserId}", userId);
+            }
+            
             // Check for Apple private relay email (privacy protection)
             if (IsApplePrivateRelay(identityUser.UserName))
             {
-                // 2. Profile info for private relay users
-                string? fullName = null;
-                try
-                {
-                    var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
-                    var userProfile = await manager.GetUserProfileAsync();
-                    fullName = !string.IsNullOrWhiteSpace(userProfile?.FullName) ? userProfile.FullName : null;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to get user profile from GodGPT for user {UserId}", userId);
-                }
-
                 return new UserInfoDto
                 {
                     Uid = userId,
@@ -71,19 +73,6 @@ namespace Aevatar.Service
 
             // Extract email based on login type
             string email = ExtractRealEmail(identityUser.UserName, identityUser.Email);
-
-            // 2. Profile info
-            string? fullName = null;
-            try
-            {
-                var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
-                var userProfile = await manager.GetUserProfileAsync();
-                fullName = !string.IsNullOrWhiteSpace(userProfile?.FullName) ? userProfile.FullName : null;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to get user profile from GodGPT for user {UserId}", userId);
-            }
 
             // Extract display name
             string displayName = ExtractDisplayName(identityUser.UserName, email, fullName);
