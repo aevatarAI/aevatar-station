@@ -31,6 +31,14 @@ public class UserController : AevatarController
         _developerService = developerService;
         _logger = logger;
     }
+    
+    [HttpPost("registerClientTest")]
+    // [Authorize(Policy = AevatarPermissions.AdminPolicy)]
+    public async Task RegisterClientAuthenticationTest(string clientId, string clientSecret, string corsUrls)
+    {
+        await Task.CompletedTask;
+    }
+
 
     [HttpPost("registerClient")]
     // [Authorize(Policy = AevatarPermissions.AdminPolicy)]
