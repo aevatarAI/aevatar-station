@@ -42,7 +42,7 @@ namespace Aevatar.Service
                 };
             }
 
-                       // _logger.LogWarning("GetUserInfoAsync:+{A}",JsonConvert.SerializeObject(identityUser));
+            _logger.LogWarning("GetUserInfoAsync:+{A}",JsonConvert.SerializeObject(identityUser));
 
             // Extract email based on login type
             string email = ExtractRealEmail(identityUser.UserName, identityUser.Email);
@@ -61,8 +61,12 @@ namespace Aevatar.Service
             }
 
             // Extract display name
-            string displayName = ExtractDisplayName(identityUser.UserName, email, fullName);
-
+            string displayName = fullName;
+            if (displayName.IsNullOrEmpty())
+            {
+                displayName = ExtractDisplayName(identityUser.UserName, email, fullName);
+            }
+            
             // 3. 
             return new UserInfoDto
             {
