@@ -351,6 +351,7 @@ public class Program
     {
         return builder.AddProject(projectName, "../Aevatar.Silo/Aevatar.Silo.csproj")
             // Configure the Orleans silo properly
+            .WithEnvironment("UseEnvironmentVariables", "True")
             .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
             // MongoDB connection string
             .WithEnvironment("MongoDB__ConnectionString", "{mongodb.connectionString}")

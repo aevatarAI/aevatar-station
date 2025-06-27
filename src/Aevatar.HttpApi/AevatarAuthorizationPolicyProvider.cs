@@ -52,8 +52,6 @@ public class AevatarAuthorizationPolicyProvider : AbpAuthorizationPolicyProvider
             var tenantId = _pluginGAgentLoadOptions.TenantId;
             var hasApiRole = user.HasClaim(AbpClaimTypes.Role,$"{tenantId.ToString()}_ApiKey");
             
-            context.User.FindClientId()
-            
             return hasApiRole;
         });
 
