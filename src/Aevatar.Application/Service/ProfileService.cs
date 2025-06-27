@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Aevatar.Application.Grains.Agents.ChatManager;
 using Aevatar.Profiles;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using Orleans;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Identity;
@@ -40,6 +41,8 @@ namespace Aevatar.Service
                     Uid = userId
                 };
             }
+
+            _logger.LogWarning("GetUserInfoAsync:+{A}",JsonConvert.SerializeObject(identityUser));
             string email = identityUser.Email;
             //string userName = identityUser.UserName;
 
