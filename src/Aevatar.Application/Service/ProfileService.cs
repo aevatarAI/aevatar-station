@@ -42,7 +42,32 @@ namespace Aevatar.Service
                 };
             }
 
-            _logger.LogWarning("GetUserInfoAsync:+{A}",JsonConvert.SerializeObject(identityUser));
+            // _logger.LogWarning("GetUserInfoAsync:+{A}",JsonConvert.SerializeObject(identityUser));
+
+            // Check for Apple private relay email (privacy protection)
+            if (IsApplePrivateRelay(identityUser.UserName))
+            {
+                // 2. Profile info for private relay users
+                string? fullName = null;
+                try
+                {
+                    var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
+                    var userProfile = await manager.GetUserProfileAsync();
+                    fullName = !string.IsNullOrWhiteSpace(userProfile?.FullName) ? userProfile.FullName : null;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to get user profile from GodGPT for user {UserId}", userId);
+                }
+
+                return new UserInfoDto
+                {
+                    Uid = userId,
+                    Email = null, // Privacy protection - no email for private relay
+                    Avatar = null, // not support user logo
+                    Name = fullName
+                };
+            }
 
             // Extract email based on login type
             string email = ExtractRealEmail(identityUser.UserName, identityUser.Email);
@@ -61,12 +86,8 @@ namespace Aevatar.Service
             }
 
             // Extract display name
-            string displayName = fullName;
-            if (displayName.IsNullOrEmpty())
-            {
-                displayName = ExtractDisplayName(identityUser.UserName, email, fullName);
-            }
-            
+            string displayName = ExtractDisplayName(identityUser.UserName, email, fullName);
+
             // 3. 
             return new UserInfoDto
             {
@@ -167,6 +188,14 @@ namespace Aevatar.Service
             
             // Remove common number suffixes and make it more readable
             return emailPrefix;
+        }
+
+        /// <summary>
+        /// Check if the username is Apple's private relay format
+        /// </summary>
+        private bool IsApplePrivateRelay(string userName)
+        {
+            return userName?.EndsWith("@apple.privaterelay.com@apple", StringComparison.OrdinalIgnoreCase) == true;
         }
     }
 } 
