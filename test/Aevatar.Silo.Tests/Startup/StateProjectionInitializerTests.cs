@@ -1,3 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
 using Aevatar.Silo.Grains.Activation;
 using Aevatar.Silo.Startup;
@@ -6,8 +11,6 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Orleans.Runtime;
 using Orleans;
-using System.Net;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Aevatar.Silo.Tests.Startup
@@ -156,7 +159,7 @@ namespace Aevatar.Silo.Tests.Startup
             cts.Cancel();
 
             // Act & Assert
-            await Assert.ThrowsAsync<OperationCanceledException>(() => _initializer.Execute(cts.Token));
+            await Assert.ThrowsAsync<TaskCanceledException>(() => _initializer.Execute(cts.Token));
         }
 
         [Fact]

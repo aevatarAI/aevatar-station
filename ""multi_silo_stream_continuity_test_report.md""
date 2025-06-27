@@ -1,0 +1,30 @@
+# Multi-Silo Stream Continuity Test Report
+
+**Test Date**: Fri Jun 27 15:29:40 CST 2025
+**Silo Count**: 2
+**Test Duration**: 120s
+**Rolling Update Interval**: 20s
+
+## Test Objective
+Test Orleans Stream Processing Enhancement in real K8s rolling update scenarios:
+- ✅ **Stream Continuity**: Verify streams continue processing during silo replacements
+- ✅ **StateProjectionInitializer**: Verify enhanced initialization with stagger delays
+- ✅ **Fault Tolerance**: Verify retry mechanisms during temporary failures
+- ✅ **Cluster Resilience**: Verify cluster stability during rolling updates
+
+## Test Configuration
+- **MongoDB**: mongodb://localhost:27017 (Fresh container)
+- **Orleans Cluster**: TestStreamCluster
+- **Service**: TestStreamService  
+- **Silo Name Pattern**: Projector (triggers StateProjectionInitializer)
+- **Database**: TestStreamDb (clean state)
+
+## StateProjectionInitializer Enhancement Features
+1. ✅ **Stagger Delays**: 0-5 second delays based on silo address hash
+2. ✅ **Retry Logic**: 3 attempts with exponential backoff (1s, 2s, 4s)
+3. ✅ **Health Checking**: Conservative activation strategy  
+4. ✅ **Parallel Processing**: Multiple state types processed concurrently
+5. ✅ **Consistent Grain IDs**: Deterministic placement for stream continuity
+
+## Detailed Log Analysis
+

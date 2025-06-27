@@ -46,7 +46,7 @@ public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
         context.Services.AddTransient<IStateTypeDiscoverer, StateTypeDiscoverer>();
         context.Services.AddTransient<IDeterministicIdGenerator, MD5DeterministicIdGenerator>();
         context.Services.AddTransient<IProjectionGrainActivator, ProjectionGrainActivator>();
-        context.Services.AddTransient<StreamSubscriptionHealthChecker>();
+        // StreamSubscriptionHealthChecker removed - Orleans handles stream recovery automatically
         
         context.Services.Configure<HostOptions>(context.Services.GetConfiguration().GetSection("Host"));
         context.Services.Configure<SystemLLMConfigOptions>(configuration);
