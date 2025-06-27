@@ -51,7 +51,13 @@ namespace Aevatar.Silo.Startup
 
                 // Get all types that inherit from StateBase
                 var stateBaseTypes = _typeDiscoverer.GetAllInheritedTypesOf(typeof(StateBase));
-                _logger.LogInformation("Found {Count} StateBase inherited types", stateBaseTypes.Count);
+                _logger.LogInformation("🔍 Found {Count} StateBase inherited types for stream processing", stateBaseTypes.Count);
+                
+                // Log each state type for monitoring purposes
+                foreach (var stateType in stateBaseTypes)
+                {
+                    _logger.LogInformation("📋 State type discovered: {StateType} - will initialize stream subscriptions", stateType.Name);
+                }
                 
                 // Process types with retry and coordination logic
                 var tasks = stateBaseTypes.Select(stateType => 
@@ -59,7 +65,7 @@ namespace Aevatar.Silo.Startup
                 
                 await Task.WhenAll(tasks);
 
-                _logger.LogInformation("Completed initializing StateProjectionGrains for silo {SiloAddress}", 
+                _logger.LogInformation("🎉 Completed initializing StateProjectionGrains for silo {SiloAddress} - All stream subscriptions are ready", 
                     _siloDetails.SiloAddress);
             }
             catch (Exception ex)
@@ -84,14 +90,14 @@ namespace Aevatar.Silo.Startup
                     // Check if projection grains are already active before activating
                     if (await AreProjectionGrainsAlreadyActive(stateType, cancellationToken))
                     {
-                        _logger.LogInformation("StateProjectionGrains for {StateType} are already active, skipping activation", 
+                        _logger.LogInformation("✅ StateProjectionGrains for {StateType} are already active, skipping activation", 
                             stateType.Name);
                         return;
                     }
 
                     await _grainActivator.ActivateProjectionGrainAsync(stateType, cancellationToken);
                     
-                    _logger.LogInformation("Successfully initialized StateProjectionGrain for {StateType} on attempt {Attempt}", 
+                    _logger.LogInformation("🎯 Successfully initialized StateProjectionGrain for {StateType} on attempt {Attempt} - Stream subscriptions are now active", 
                         stateType.Name, attempt);
                     return;
                 }
