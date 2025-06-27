@@ -46,6 +46,7 @@ public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
         context.Services.AddTransient<IStateTypeDiscoverer, StateTypeDiscoverer>();
         context.Services.AddTransient<IDeterministicIdGenerator, MD5DeterministicIdGenerator>();
         context.Services.AddTransient<IProjectionGrainActivator, ProjectionGrainActivator>();
+        context.Services.AddTransient<StreamSubscriptionHealthChecker>();
         
         context.Services.Configure<HostOptions>(context.Services.GetConfiguration().GetSection("Host"));
         context.Services.Configure<SystemLLMConfigOptions>(configuration);
