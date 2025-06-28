@@ -15,48 +15,34 @@ namespace Aevatar.Silo.Startup
         private readonly IStateTypeDiscoverer _typeDiscoverer;
         private readonly IProjectionGrainActivator _grainActivator;
         private readonly ILogger<StateProjectionInitializer> _logger;
-        private readonly IGrainFactory _grainFactory;
         private readonly ILocalSiloDetails _siloDetails;
 
         public StateProjectionInitializer(
             IStateTypeDiscoverer typeDiscoverer,
             IProjectionGrainActivator grainActivator,
             ILogger<StateProjectionInitializer> logger,
-            IGrainFactory grainFactory,
             ILocalSiloDetails siloDetails)
         {
             _typeDiscoverer = typeDiscoverer;
             _grainActivator = grainActivator;
             _logger = logger;
-            _grainFactory = grainFactory;
             _siloDetails = siloDetails;
         }
 
         public async Task Execute(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Starting StateProjectionGrains initialization for silo {SiloAddress}...", 
-                _siloDetails.SiloAddress);
-            
             try
             {
                 // Add delay to stagger initialization across pods during rolling updates
                 var staggerDelay = CalculateStaggerDelay();
                 if (staggerDelay > TimeSpan.Zero)
                 {
-                    _logger.LogInformation("Applying stagger delay of {Delay}ms to avoid K8s rolling update conflicts", 
-                        staggerDelay.TotalMilliseconds);
                     await Task.Delay(staggerDelay, cancellationToken);
                 }
 
                 // Get all types that inherit from StateBase
                 var stateBaseTypes = _typeDiscoverer.GetAllInheritedTypesOf(typeof(StateBase));
-                _logger.LogInformation("🔍 Found {Count} StateBase inherited types for stream processing", stateBaseTypes.Count);
-                
-                // Log each state type for monitoring purposes
-                foreach (var stateType in stateBaseTypes)
-                {
-                    _logger.LogInformation("📋 State type discovered: {StateType} - will initialize stream subscriptions", stateType.Name);
-                }
+                _logger.LogInformation("Initializing StateProjectionGrains for {Count} state types", stateBaseTypes.Count);
                 
                 // Process types with retry and coordination logic
                 var tasks = stateBaseTypes.Select(stateType => 
@@ -64,14 +50,14 @@ namespace Aevatar.Silo.Startup
                 
                 await Task.WhenAll(tasks);
 
-                _logger.LogInformation("🎉 Completed initializing StateProjectionGrains for silo {SiloAddress} - All stream subscriptions are ready", 
+                _logger.LogInformation("StateProjectionGrains initialization completed for silo {SiloAddress}", 
                     _siloDetails.SiloAddress);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during StateProjectionGrains initialization on silo {SiloAddress}", 
+                _logger.LogError(ex, "StateProjectionGrains initialization failed on silo {SiloAddress}", 
                     _siloDetails.SiloAddress);
-                throw; // Rethrow to fail the silo startup if initialization fails
+                throw;
             }
         }
 
@@ -89,21 +75,24 @@ namespace Aevatar.Silo.Startup
                     // Orleans ActivateAsync is idempotent - if grain is already active, it won't process again
                     await _grainActivator.ActivateProjectionGrainAsync(stateType, cancellationToken);
                     
-                    _logger.LogInformation("🎯 Successfully initialized StateProjectionGrain for {StateType} on attempt {Attempt} - Stream subscriptions are now active", 
-                        stateType.Name, attempt);
+                    if (attempt > 1)
+                    {
+                        _logger.LogInformation("StateProjectionGrain initialized for {StateType} on attempt {Attempt}", 
+                            stateType.Name, attempt);
+                    }
                     return;
                 }
                 catch (Exception ex) when (attempt < maxRetries)
                 {
                     var delay = TimeSpan.FromMilliseconds(baseDelayMs * Math.Pow(2, attempt - 1));
-                    _logger.LogWarning(ex, "Failed to initialize StateProjectionGrain for {StateType} on attempt {Attempt}, retrying in {Delay}ms", 
-                        stateType.Name, attempt, delay.TotalMilliseconds);
+                    _logger.LogWarning(ex, "StateProjectionGrain initialization failed for {StateType}, attempt {Attempt}/{MaxRetries}, retrying in {Delay}ms", 
+                        stateType.Name, attempt, maxRetries, delay.TotalMilliseconds);
                     
                     await Task.Delay(delay, cancellationToken);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to initialize StateProjectionGrain for {StateType} after {MaxRetries} attempts", 
+                    _logger.LogError(ex, "StateProjectionGrain initialization failed for {StateType} after {MaxRetries} attempts", 
                         stateType.Name, maxRetries);
                     throw;
                 }
