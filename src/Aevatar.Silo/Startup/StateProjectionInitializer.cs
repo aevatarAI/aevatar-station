@@ -33,13 +33,6 @@ namespace Aevatar.Silo.Startup
         {
             try
             {
-                // Add delay to stagger initialization across pods during rolling updates
-                var staggerDelay = CalculateStaggerDelay();
-                if (staggerDelay > TimeSpan.Zero)
-                {
-                    await Task.Delay(staggerDelay, cancellationToken);
-                }
-
                 // Get all types that inherit from StateBase
                 var stateBaseTypes = _typeDiscoverer.GetAllInheritedTypesOf(typeof(StateBase));
                 _logger.LogInformation("Initializing StateProjectionGrains for {Count} state types", stateBaseTypes.Count);
@@ -101,20 +94,6 @@ namespace Aevatar.Silo.Startup
 
 
 
-        private TimeSpan CalculateStaggerDelay()
-        {
-            try
-            {
-                // Use silo address hash to create consistent but different delays across pods
-                var hash = _siloDetails.SiloAddress.GetHashCode();
-                var delayMs = Math.Abs(hash % 5000); // 0-5 second stagger
-                return TimeSpan.FromMilliseconds(delayMs);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to calculate stagger delay, using no delay");
-                return TimeSpan.Zero;
-            }
-        }
+
     }
 } 
