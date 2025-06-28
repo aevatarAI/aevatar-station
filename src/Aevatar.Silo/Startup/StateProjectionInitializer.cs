@@ -1,5 +1,4 @@
 using Aevatar.Core.Abstractions;
-using Aevatar.Core.Abstractions.Projections;
 using Aevatar.Silo.Grains.Activation;
 using Aevatar.Silo.TypeDiscovery;
 using Microsoft.Extensions.Logging;
@@ -87,14 +86,7 @@ namespace Aevatar.Silo.Startup
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     
-                    // Check if projection grains are already active before activating
-                    if (await AreProjectionGrainsAlreadyActive(stateType, cancellationToken))
-                    {
-                        _logger.LogInformation("✅ StateProjectionGrains for {StateType} are already active, skipping activation", 
-                            stateType.Name);
-                        return;
-                    }
-
+                    // Orleans ActivateAsync is idempotent - if grain is already active, it won't process again
                     await _grainActivator.ActivateProjectionGrainAsync(stateType, cancellationToken);
                     
                     _logger.LogInformation("🎯 Successfully initialized StateProjectionGrain for {StateType} on attempt {Attempt} - Stream subscriptions are now active", 
@@ -118,28 +110,7 @@ namespace Aevatar.Silo.Startup
             }
         }
 
-        private async Task<bool> AreProjectionGrainsAlreadyActive(Type stateType, CancellationToken cancellationToken)
-        {
-            try
-            {
-                // Check if any of the projection grains for this state type are already active
-                // This helps prevent duplicate activations during rolling updates
-                var grainType = typeof(IProjectionGrain<>).MakeGenericType(stateType);
-                
-                // Check first grain instance to see if it's active
-                var grainId = _grainFactory.GetGrain(grainType, Guid.NewGuid()).GetPrimaryKey();
-                
-                // Use a lightweight health check method if available
-                // For now, we'll catch exceptions to determine if grain is active
-                return false; // Conservative approach - always try to activate
-            }
-            catch (Exception ex)
-            {
-                _logger.LogDebug(ex, "Error checking if StateProjectionGrains are active for {StateType}, proceeding with activation", 
-                    stateType.Name);
-                return false;
-            }
-        }
+
 
         private TimeSpan CalculateStaggerDelay()
         {

@@ -70,6 +70,7 @@ namespace Aevatar.Silo.Grains.Activation
             try
             {
                 // Create a deterministic GUID based on the state type name
+                // This ensures all silos reference the same singleton grain instances
                 var grainId = _idGenerator.CreateDeterministicGuid(stateType.FullName + index.ToString());
                 RequestContext.Set("id", index);
                 
