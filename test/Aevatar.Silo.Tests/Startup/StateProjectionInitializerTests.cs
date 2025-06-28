@@ -23,7 +23,6 @@ namespace Aevatar.Silo.Tests.Startup
         private readonly Mock<IStateTypeDiscoverer> _mockTypeDiscoverer;
         private readonly Mock<IProjectionGrainActivator> _mockGrainActivator;
         private readonly Mock<ILogger<StateProjectionInitializer>> _mockLogger;
-        private readonly Mock<IGrainFactory> _mockGrainFactory;
         private readonly Mock<ILocalSiloDetails> _mockSiloDetails;
         private readonly StateProjectionInitializer _initializer;
 
@@ -32,14 +31,12 @@ namespace Aevatar.Silo.Tests.Startup
             _mockTypeDiscoverer = new Mock<IStateTypeDiscoverer>();
             _mockGrainActivator = new Mock<IProjectionGrainActivator>();
             _mockLogger = new Mock<ILogger<StateProjectionInitializer>>();
-            _mockGrainFactory = new Mock<IGrainFactory>();
             _mockSiloDetails = new Mock<ILocalSiloDetails>();
 
             _initializer = new StateProjectionInitializer(
                 _mockTypeDiscoverer.Object,
                 _mockGrainActivator.Object,
                 _mockLogger.Object,
-                _mockGrainFactory.Object,
                 _mockSiloDetails.Object);
         }
 
@@ -63,8 +60,8 @@ namespace Aevatar.Silo.Tests.Startup
             // Assert
             _mockGrainActivator.Verify(x => x.ActivateProjectionGrainAsync(testStateType, It.IsAny<CancellationToken>()), 
                 Times.Once);
-            VerifyLogInformation("Starting StateProjectionGrains initialization for silo");
-            VerifyLogInformation("Completed initializing StateProjectionGrains for silo");
+            VerifyLogInformation("Initializing StateProjectionGrains for");
+            VerifyLogInformation("StateProjectionGrains initialization completed");
         }
 
         [Fact]
@@ -119,7 +116,7 @@ namespace Aevatar.Silo.Tests.Startup
             // Assert
             _mockGrainActivator.Verify(x => x.ActivateProjectionGrainAsync(testStateType, It.IsAny<CancellationToken>()), 
                 Times.Exactly(3));
-            VerifyLogWarning("Failed to initialize StateProjectionGrain");
+            VerifyLogWarning("StateProjectionGrain initialization failed");
         }
 
         [Fact]
@@ -203,7 +200,7 @@ namespace Aevatar.Silo.Tests.Startup
             // Assert
             _mockGrainActivator.Verify(x => x.ActivateProjectionGrainAsync(It.IsAny<Type>(), It.IsAny<CancellationToken>()), 
                 Times.Never);
-            VerifyLogInformation("Found 0 StateBase inherited types");
+            VerifyLogInformation("Initializing StateProjectionGrains for 0 state types");
         }
 
         private void VerifyLogInformation(string message)
