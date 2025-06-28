@@ -159,29 +159,7 @@ namespace Aevatar.Silo.Tests.Startup
             await Assert.ThrowsAsync<TaskCanceledException>(() => _initializer.Execute(cts.Token));
         }
 
-        [Fact]
-        public void CalculateStaggerDelay_WithDifferentSiloAddresses_ShouldProduceDifferentDelays()
-        {
-            // This test checks that different silo addresses produce different but consistent delays
-            // We can't test the private method directly, but we can verify the behavior through execution timing
-            
-            // Arrange
-            var stateTypes = new List<Type> { typeof(TestStateBase) };
-            var siloAddress1 = SiloAddress.New(IPAddress.Parse("127.0.0.1"), 11111, 30000);
-            var siloAddress2 = SiloAddress.New(IPAddress.Parse("127.0.0.2"), 11111, 30000);
-            
-            _mockTypeDiscoverer.Setup(x => x.GetAllInheritedTypesOf(typeof(StateBase)))
-                .Returns(stateTypes);
-            _mockGrainActivator.Setup(x => x.ActivateProjectionGrainAsync(It.IsAny<Type>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.CompletedTask);
 
-            // Test with first silo address
-            _mockSiloDetails.Setup(x => x.SiloAddress).Returns(siloAddress1);
-            var stopwatch1 = System.Diagnostics.Stopwatch.StartNew();
-            
-            // Act & Assert - we expect this test structure to validate stagger delay behavior
-            Assert.NotNull(_initializer);
-        }
 
         [Fact]
         public async Task Execute_WithEmptyStateTypes_ShouldCompleteWithoutActivation()
