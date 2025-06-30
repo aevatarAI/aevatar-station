@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using Volo.Abp;
 using Volo.Abp.Account;
 using Volo.Abp.Account.Emailing;
@@ -20,16 +21,19 @@ public class AccountService : AccountAppService, IAccountService
     private readonly AccountOptions _accountOptions;
     private readonly IDistributedCache<string,string> _registerCode;
     private readonly DistributedCacheEntryOptions _defaultCacheOptions;
+    private readonly ILogger<AccountService> _logger;
 
     public AccountService(IdentityUserManager userManager, IIdentityRoleRepository roleRepository,
         IAccountEmailer accountEmailer, IdentitySecurityLogManager identitySecurityLogManager,
         IOptions<IdentityOptions> identityOptions, IAevatarAccountEmailer aevatarAccountEmailer,
-        IOptionsSnapshot<AccountOptions> accountOptions, IDistributedCache<string, string> registerCode)
+        IOptionsSnapshot<AccountOptions> accountOptions, IDistributedCache<string, string> registerCode,
+        ILogger<AccountService> logger)
         : base(userManager, roleRepository, accountEmailer, identitySecurityLogManager, identityOptions)
     {
         _aevatarAccountEmailer = aevatarAccountEmailer;
         _registerCode = registerCode;
         _accountOptions = accountOptions.Value;
+        _logger = logger;
 
         _defaultCacheOptions = new DistributedCacheEntryOptions
         {
@@ -105,6 +109,26 @@ public class AccountService : AccountAppService, IAccountService
     {
         var existingUser = await UserManager.FindByEmailAsync(input.EmailAddress);
         return existingUser != null;
+    }
+    
+    public async Task<bool> VerifyEmailRegistrationWithTimeAsync(CheckEmailRegisteredDto input)
+    {
+        var existingUser = await UserManager.FindByEmailAsync(input.EmailAddress);
+        if (existingUser == null)
+        {
+            _logger.LogDebug("[AccountService][CheckEmailRegisteredAsync] Email not registered: {0}", input.EmailAddress);
+            return false;
+        }
+        
+        // Check if the user was registered within the last 24 hours
+        var twentyFourHoursAgo = DateTime.UtcNow.AddHours(-24);
+        _logger.LogDebug(
+            "[AccountService][CheckEmailRegisteredAsync] User found. Email: {0}, CreationTime: {1}, ThresholdTime: {2}", 
+            input.EmailAddress, 
+            existingUser.CreationTime, 
+            twentyFourHoursAgo
+        );
+        return existingUser.CreationTime >= twentyFourHoursAgo;
     }
     
     private string GenerateVerificationCode()
