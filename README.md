@@ -193,6 +193,15 @@ The GAgent combines these components to provide:
 
 Each GAgent transitions state by applying events through the `GAgentTransitionState` method, which updates the agent's state based on the events stored in the event log.
 
+## Environment Variables
+
+### General Configuration
+| Variable Name | Description | Example |
+|---------------|-------------|---------|
+| POD_IP | IP address of the current pod when running in Kubernetes | 192.168.1.100 |
+| ORLEANS_CLUSTER_ID | Orleans cluster identifier | aevatar-cluster |
+| ORLEANS_SERVICE_ID | Orleans service identifier | aevatar-service |
+| SILO_NAME_PATTERN | Pattern to match silo names for SiloNamePatternPlacement | compute- |
 
 ## Contributing
 

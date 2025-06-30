@@ -31,12 +31,18 @@
         <PackageReference Include="Microsoft.CodeAnalysis.Common" />
         <PackageReference Include="Aevatar.SignalR" />
         <PackageReference Include="Orleans.Streams.Kafka" />
+        <PackageReference Include="Volo.Abp.BlobStoring.Aws" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\Aevatar.Application\Aevatar.Application.csproj" />
         <ProjectReference Include="..\Aevatar.HttpApi\Aevatar.HttpApi.csproj" />  
         <ProjectReference Include="..\Aevatar.MongoDB\Aevatar.MongoDB.csproj" />
+    </ItemGroup>
+   
+    <ItemGroup>
+        <Content Include="../../configurations/appsettings.Shared.json" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" Link="appsettings.Shared.json" />
+        <Content Include="../../configurations/appsettings.HttpApi.Host.Shared.json" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" Link="appsettings.HttpApi.Host.Shared.json" />
     </ItemGroup>
    
 </Project>

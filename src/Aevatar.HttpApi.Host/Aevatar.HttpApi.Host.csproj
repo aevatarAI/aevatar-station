@@ -37,7 +37,7 @@
     <PackageReference Include="Microsoft.CodeAnalysis.Common" />
     <PackageReference Include="Aevatar.SignalR" />
     <PackageReference Include="Orleans.Streams.Kafka" />
-
+    <PackageReference Include="Volo.Abp.BlobStoring.Aws" />
   </ItemGroup>
 
   <ItemGroup>
@@ -55,5 +55,8 @@
     <Content Remove="Logs\**" />
     <EmbeddedResource Remove="Logs\**" />
     <None Remove="Logs\**" />
+    <Content Include="../../configurations/appsettings.Shared.json" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" Link="appsettings.Shared.json" />
+    <Content Include="../../configurations/appsettings.HttpApi.Host.Shared.json" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" Link="appsettings.HttpApi.Host.Shared.json" />
+    <Content Include="../../configurations/appsettings.Silo.Shared.json" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" Link="appsettings.Silo.Shared.json" />
   </ItemGroup>
 </Project>

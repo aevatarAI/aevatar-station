@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using Aevatar.Webhook.Extensions;
 using Microsoft.AspNetCore.Hosting;
@@ -14,9 +15,10 @@ public class Program
     public async static Task<int> Main(string[] args)
     {
         var configuration = new ConfigurationBuilder()
+            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
             .AddJsonFile("appsettings.json")
             .Build();
-        
+
         var webhookId = configuration["Webhook:WebhookId"];
         var version = configuration["Webhook:Version"];
         Log.Logger = new LoggerConfiguration()
@@ -27,16 +29,19 @@ public class Program
 #endif
             .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
             .Enrich.FromLogContext()
-            .Enrich.WithProperty("WebhookId", webhookId)
-            .Enrich.WithProperty("Version", version)
             .ReadFrom.Configuration(configuration)
-            .WriteTo.Async(c => c.Console())
             .CreateLogger();
 
         try
         {
             Log.Information("Starting Aevatar.Developer.Host.");
-            await CreateHostBuilder(args).Build().RunAsync();
+            var builder = CreateHostBuilder(args);
+            builder.ConfigureHostConfiguration(config =>
+            {
+                config.AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
+                    .AddJsonFile("appsettings.json");
+            });
+            await builder.Build().RunAsync();
             return 0;
         }
         catch (Exception ex)
@@ -49,10 +54,10 @@ public class Program
             Log.CloseAndFlush();
         }
     }
-    
+
     private static IHostBuilder CreateHostBuilder(string[] args)
     {
-        return OrleansHostExtensions.UseOrleansClient(Host.CreateDefaultBuilder(args))
+        return Host.CreateDefaultBuilder(args).UseOrleansClientConfigration()
             .UseAutofac()
             .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); })
             .UseSerilog();

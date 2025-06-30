@@ -71,17 +71,26 @@ public abstract class OrganizationServiceTests<TStartupModule> : AevatarApplicat
         var ownerPermissions =
             await _permissionManager.GetAllForRoleAsync(ownerRole.Name);
         ownerPermissions = ownerPermissions.Where(o => o.IsGranted).ToList();
-        ownerPermissions.Count.ShouldBe(10);
+        ownerPermissions.Count.ShouldBe(19);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Organizations.Default);
-        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Organizations.Create);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Organizations.Edit);
-        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Organizations.Delete);
-        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.OrganizationMembers.Default);
-        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.OrganizationMembers.Manage);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Projects.Default);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Projects.Create);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Projects.Edit);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Projects.Delete);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Members.Default);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Members.Manage);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ApiKeys.Default);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ApiKeys.Create);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ApiKeys.Edit);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ApiKeys.Delete);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Roles.Default);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Roles.Create);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Roles.Edit);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Roles.Delete);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Dashboard);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.LLMSModels.Default);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.LLMSModels.Default);
 
         var readerRole = roles.Items.First(o => o.Name.EndsWith("Reader"));
         var readerPermissions =
@@ -89,7 +98,7 @@ public abstract class OrganizationServiceTests<TStartupModule> : AevatarApplicat
         readerPermissions = readerPermissions.Where(o => o.IsGranted).ToList();
         readerPermissions.Count.ShouldBe(2);
         readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Organizations.Default);
-        readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.OrganizationMembers.Default);
+        readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Members.Default);
 
         var user = await _identityUserManager.GetByIdAsync(_currentUser.Id.Value);
         var isInRole = await _identityUserManager.IsInRoleAsync(user, ownerRole.Name);
@@ -203,7 +212,8 @@ public abstract class OrganizationServiceTests<TStartupModule> : AevatarApplicat
         var readerMember = members.Items.First(o => o.Id == readerUser.Id);
         readerMember.UserName.ShouldBe(readerUser.UserName);
         readerMember.Email.ShouldBe(readerUser.Email);
-        readerMember.RoleId.ShouldBe(readerRole.Id);
+        readerMember.RoleId.ShouldBe(null);
+        readerMember.Status.ShouldBe(MemberStatus.Inviting);
 
         await _organizationService.SetMemberRoleAsync(organization.Id, new SetOrganizationMemberRoleDto
         {
@@ -216,6 +226,72 @@ public abstract class OrganizationServiceTests<TStartupModule> : AevatarApplicat
         members.Items.Count.ShouldBe(2);
         readerMember = members.Items.First(o => o.Id == readerUser.Id);
         readerMember.RoleId.ShouldBe(ownerRole.Id);
+        readerMember.Status.ShouldBe(MemberStatus.Joined);
+        
+        await _organizationService.SetMemberAsync(organization.Id, new SetOrganizationMemberDto
+        {
+            Email = readerUser.Email,
+            Join = false
+        });
+        
+        organization = await _organizationService.GetAsync(organization.Id);
+        organization.MemberCount.ShouldBe(1);
+
+        members =
+            await _organizationService.GetMemberListAsync(organization.Id, new GetOrganizationMemberListDto());
+        members.Items.Count.ShouldBe(1);
+
+        readerUser = await _identityUserManager.GetByIdAsync(readerUser.Id);
+        readerUser.IsInOrganizationUnit(organization.Id).ShouldBeFalse();
+    }
+    
+    [Fact]
+    public async Task Organization_DeletePendingMember_Test()
+    {
+        var owner = new IdentityUser(_currentUser.Id.Value, "owner", "owner@email.io");
+        await _identityUserManager.CreateAsync(owner);
+
+        var createInput = new CreateOrganizationDto
+        {
+            DisplayName = "Test"
+        };
+        var organization = await _organizationService.CreateAsync(createInput);
+        
+        var roles = await _organizationService.GetRoleListAsync(organization.Id);
+        var ownerRole = roles.Items.First(o => o.Name.EndsWith("Owner"));
+        var readerRole = roles.Items.First(o => o.Name.EndsWith("Reader"));
+        
+        organization = await _organizationService.GetAsync(organization.Id);
+        organization.MemberCount.ShouldBe(1);
+
+        var members =
+            await _organizationService.GetMemberListAsync(organization.Id, new GetOrganizationMemberListDto());
+        members.Items.Count.ShouldBe(1);
+        members.Items[0].UserName.ShouldBe(owner.UserName);
+        members.Items[0].Email.ShouldBe(owner.Email);
+        members.Items[0].RoleId.ShouldBe(ownerRole.Id);
+
+        var readerUser = new IdentityUser(Guid.NewGuid(), "reader", "reader@email.io");
+        await _identityUserManager.CreateAsync(readerUser);
+
+        await _organizationService.SetMemberAsync(organization.Id, new SetOrganizationMemberDto
+        {
+            Email = readerUser.Email,
+            Join = true,
+            RoleId = readerRole.Id
+        });
+        
+        organization = await _organizationService.GetAsync(organization.Id);
+        organization.MemberCount.ShouldBe(2);
+        
+        members =
+            await _organizationService.GetMemberListAsync(organization.Id, new GetOrganizationMemberListDto());
+        members.Items.Count.ShouldBe(2);
+        var readerMember = members.Items.First(o => o.Id == readerUser.Id);
+        readerMember.UserName.ShouldBe(readerUser.UserName);
+        readerMember.Email.ShouldBe(readerUser.Email);
+        readerMember.RoleId.ShouldBe(null);
+        readerMember.Status.ShouldBe(MemberStatus.Inviting);
         
         await _organizationService.SetMemberAsync(organization.Id, new SetOrganizationMemberDto
         {

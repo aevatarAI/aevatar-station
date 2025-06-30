@@ -1,14 +1,19 @@
 {
   "Serilog": {
     "Properties": {
-      "Application": "Aevatar.Developer.Host",
-      "Environment": "Development"
+      "Application": "Aevatar.Developer.Host"
     },
     "WriteTo": [
       {
-        "Name": "Console",
+        "Name": "Console"
+      },
+      {
+        "Name": "File",
         "Args": {
-          "formatter": "Serilog.Formatting.Compact.RenderedCompactJsonFormatter, Serilog.Formatting.Compact"
+          "Path": "Logs/log-.log",
+          "formatter": {
+            "type": "Serilog.Formatting.Compact.RenderedCompactJsonFormatter, Serilog.Formatting.Compact"
+          }
         }
       }
     ]
@@ -23,42 +28,17 @@
   "ConnectionStrings": {
     "Default": "mongodb://localhost:27017/Aevatar"
   },
-  "AuthServer": {
-    "Authority": "http://localhost:8082",
-    "RequireHttpsMetadata": false,
-    "SwaggerClientId": "Aevatar_Swagger",
-    "SwaggerClientSecret": "1q2w3e*"
-  },
   "StringEncryption": {
     "DefaultPassPhrase": "RpedX3sEVmQ2o9Lm"
   },
   "Orleans": {
     "ClusterId": "AevatarSiloCluster",
     "ServiceId": "AevatarBasicService",
-    "MongoDBClient": "mongodb://localhost:27017/AevatarDb",
     "DataBase": "AevatarDb"
   },
   "OpenTelemetry": {
-    "CollectorEndpoint": "http://localhost:4315",
     "ServiceName": "Aevatar.HttpApi.Host",
     "ServiceVersion": "1.0.0"
-  },
-  "ElasticUris": {
-    "Uris": [
-      "http://127.0.0.1:9200"
-    ]
-  },
-  "Agent": {
-    "SystemAgentList": [
-      "GroupGAgent",
-      "PublishingGAgent",
-      "SubscriptionGAgent",
-      "AtomicGAgent",
-      "CombinationGAgent",
-      "CodeGAgent",
-      "TenantPluginCodeGAgent",
-      "PluginCodeStorageGAgent"
-    ]
   },
   "Host": {
     "HostId": "[HostId]",

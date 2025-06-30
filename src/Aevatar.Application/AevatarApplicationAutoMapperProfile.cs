@@ -3,11 +3,13 @@ using Aevatar.Subscription;
 using Aevatar.Agents.Creator;
 using Aevatar.ApiKey;
 using Aevatar.ApiKeys;
+using Aevatar.ApiRequests;
 using Aevatar.CQRS;
 using Aevatar.CQRS.Dto;
 using Aevatar.Domain.Grains.Subscription;
 using Aevatar.Notification;
 using Aevatar.Organizations;
+using Aevatar.Plugins;
 using Aevatar.Projects;
 using AutoMapper;
 using Volo.Abp.Identity;
@@ -36,5 +38,16 @@ public class AevatarApplicationAutoMapperProfile : Profile
                     s.ExtraProperties.ContainsKey(AevatarConsts.ProjectDomainNameKey)
                         ? s.ExtraProperties[AevatarConsts.ProjectDomainNameKey].ToString()
                         : null));
+        
+        CreateMap<ApiRequestSnapshot, ApiRequestDto>()
+            .ForMember(d => d.Time, m => m.MapFrom(s => DateTimeHelper.ToUnixTimeMilliseconds(s.Time)));
+
+        CreateMap<Plugin, PluginDto>()
+            .ForMember(d => d.CreationTime, m => m.MapFrom(s => DateTimeHelper.ToUnixTimeMilliseconds(s.CreationTime)))
+            .ForMember(d => d.LastModificationTime,
+                m => m.MapFrom(s =>
+                    s.LastModificationTime.HasValue
+                        ? DateTimeHelper.ToUnixTimeMilliseconds(s.LastModificationTime.Value)
+                        : 0));
     }
 }
