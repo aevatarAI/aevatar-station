@@ -45,12 +45,15 @@ public class PluginController : AevatarController
         return await _pluginService.CreateAsync(input.ProjectId, input.Code.FileName, input.Code.GetAllBytes());
     }
 
-    // [HttpPut]
-    // [Route("{id}")]
-    // public async Task<PluginDto> UpdateAsync(Guid id, [FromForm] UpdatePluginDto input)
-    // {
-    //     return await _pluginService.UpdateAsync(id, input.Code.FileName, input.Code.GetAllBytes());
-    // }
+    [HttpPut]
+    [Route("{id}")]
+    public async Task<PluginDto> UpdateAsync(Guid id, [FromForm] UpdatePluginDto input)
+    {
+        var plugin = await _pluginService.GetAsync(id);
+        await _permissionChecker.AuthenticateAsync(plugin.ProjectId, AevatarPermissions.Plugins.Edit);
+        
+        return await _pluginService.UpdateAsync(id, input.Code.FileName, input.Code.GetAllBytes());
+    }
 
     [HttpDelete]
     [Route("{id}")]
