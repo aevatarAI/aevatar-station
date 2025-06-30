@@ -52,8 +52,8 @@ public static class OrleansHostExtensions
 
             clientBuilder.Configure<ClusterOptions>(options =>
                 {
-                    configSection.GetValue<string>("ClusterId");
-                    configSection.GetValue<string>("ServiceId");
+                    options.ClusterId = configSection.GetValue<string>("ClusterId");
+                    options.ServiceId = configSection.GetValue<string>("ServiceId");
                 })
                 .Configure<ExceptionSerializationOptions>(options =>
                 {
