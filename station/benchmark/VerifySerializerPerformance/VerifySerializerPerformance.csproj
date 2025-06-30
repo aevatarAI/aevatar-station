@@ -14,8 +14,8 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Console" />
     <PackageReference Include="Microsoft.Extensions.Options" />
     <PackageReference Include="Microsoft.Orleans.Client" />
-    <PackageReference Include="Microsoft.Orleans.Serialization" />
-    <PackageReference Include="Microsoft.Orleans.Core" />
+    <!-- <PackageReference Include="Microsoft.Orleans.Serialization" /> -->
+    <!-- <PackageReference Include="Microsoft.Orleans.Core" /> -->
     <PackageReference Include="MongoDB.Bson" />
     <PackageReference Include="MongoDB.Driver" />
     <PackageReference Include="Orleans.Providers.MongoDB" />

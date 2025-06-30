@@ -33,4 +33,8 @@
         <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" />
     </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Aevatar.Station.Feature\Aevatar.Station.Feature.csproj" />
+  </ItemGroup>
+
 </Project>

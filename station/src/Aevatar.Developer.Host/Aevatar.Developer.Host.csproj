@@ -30,6 +30,7 @@
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
         <PackageReference Include="Microsoft.CodeAnalysis.Common" />
         <PackageReference Include="Orleans.Streams.Kafka" />
+        <PackageReference Include="Volo.Abp.BlobStoring.Aws" />
     </ItemGroup>
 
     <ItemGroup>

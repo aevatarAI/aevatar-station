@@ -13,6 +13,7 @@ using Orleans.Streams.Kafka.Config;
 using E2E.Grains;
 using System.Diagnostics;
 using VerifyDbIssue545;
+using Aevatar.Core.Streaming.Extensions;
 
 // Parse command line arguments
 bool useStoredIds = args.Length > 0 && args[0].ToLower() == "--use-stored-ids";
@@ -23,7 +24,7 @@ IHostBuilder builder = Host.CreateDefaultBuilder(args)
     {
         //client.UseLocalhostClustering();
         var hostId = "Aevatar";
-        client.UseMongoDBClient("mongodb://localhost:27017/?maxPoolSize=15000")
+        client.UseMongoDBClient("mongodb://localhost:27017")
             .UseMongoDBClustering(options =>
             {
                 options.DatabaseName = "AevatarDb";
@@ -38,10 +39,9 @@ IHostBuilder builder = Host.CreateDefaultBuilder(args)
             .AddActivityPropagation()
             // client.UseLocalhostClustering(gatewayPort: 20001)
             // .AddMemoryStreams(AevatarCoreConstants.StreamProvider);
-            .AddKafka("Aevatar")
-            .WithOptions(options =>
+            .AddAevatarKafkaStreaming("Aevatar", options =>
             {
-                options.BrokerList = new List<string> { "localhost:9092" };  // BrokerList expects List<string>
+                options.BrokerList = new List<string> { "localhost:9092" };
                 options.ConsumerGroupId = "Aevatar";
                 options.ConsumeMode = ConsumeMode.LastCommittedMessage;
 
@@ -57,9 +57,13 @@ IHostBuilder builder = Host.CreateDefaultBuilder(args)
                         ReplicationFactor = replicationFactor
                     });
                 }
-            })
-            .AddJson()  // Add logging tracker for better observability
-            .Build();
+            });
+            // .WithOptions(options =>
+            // {
+                
+            // })
+            // .AddJson()  // Add logging tracker for better observability
+            // .Build();
     })
     .ConfigureLogging(logging => logging.AddConsole())
     .UseConsoleLifetime();
@@ -68,7 +72,7 @@ using IHost host = builder.Build();
 await host.StartAsync();
 
 var client = host.Services.GetRequiredService<IClusterClient>();
-const int subscriberCount = 12000;
+const int subscriberCount = 1;
 var agentIdsFilePath = Path.Combine(Directory.GetCurrentDirectory(), "agent_ids.json");
 
 // Function to save agent IDs to JSON file

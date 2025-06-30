@@ -1,3 +1,4 @@
+using Aevatar.AuthServer.Grants;
 using Aevatar.Localization;
 using Aevatar.MongoDB;
 using Aevatar.OpenIddict;
@@ -47,7 +48,8 @@ namespace Aevatar.AuthServer;
     typeof(AbpAuthorizationModule),
     typeof(AbpOpenIddictDomainModule),
     typeof(AevatarMongoDbModule),
-    typeof(AevatarApplicationContractsModule)
+    typeof(AevatarApplicationContractsModule),
+    typeof(AevatarAuthServerGrantsModule)
     )]
 public class AevatarAuthServerModule : AbpModule
 {
@@ -92,24 +94,9 @@ public class AevatarAuthServerModule : AbpModule
     {
         var configuration = context.Services.GetConfiguration();
         
-        context.Services.Configure<SignatureGrantOptions>(configuration.GetSection("Signature"));
-        context.Services.Configure<ChainOptions>(configuration.GetSection("Chains"));
         Configure<AbpMvcLibsOptions>(options =>
         {
             options.CheckLibs = false; 
-        });
-        context.Services.Configure<AbpOpenIddictExtensionGrantsOptions>(options =>
-        {
-            options.Grants.Add(GrantTypeConstants.SIGNATURE, new SignatureGrantHandler());
-            options.Grants.Add(GrantTypeConstants.GOOGLE, 
-                new GoogleGrantHandler(context.Services.GetRequiredService<IConfiguration>(), 
-                    context.Services.GetRequiredService<ILogger<GoogleGrantHandler>>()));
-            options.Grants.Add(GrantTypeConstants.APPLE, 
-                new AppleGrantHandler(context.Services.GetRequiredService<IConfiguration>(), 
-                    context.Services.GetRequiredService<ILogger<AppleGrantHandler>>()));
-            options.Grants.Add(GrantTypeConstants.Github, 
-                new GithubGrantHandler(context.Services.GetRequiredService<IConfiguration>(), 
-                    context.Services.GetRequiredService<ILogger<GithubGrantHandler>>()));
         });
 
         Configure<AbpLocalizationOptions>(options =>

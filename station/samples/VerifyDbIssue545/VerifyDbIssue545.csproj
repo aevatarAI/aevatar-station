@@ -19,6 +19,7 @@
   </ItemGroup>
 
 <ItemGroup>
+    <ProjectReference Include="..\..\src\Aevatar.Silo\Aevatar.Silo.csproj" />
     <ProjectReference Include="..\E2E.Grains\E2E.Grains.csproj" />
 </ItemGroup>
 </Project>

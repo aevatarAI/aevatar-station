@@ -50,6 +50,10 @@ jobs:
           - name: Aevatar.WebHook.SDK
             path: src/Aevatar.WebHook.SDK
             project_root: station
+          - name: Aevatar.Station.Feature
+            path: src/Aevatar.Station.Feature
+            project_root: station
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3

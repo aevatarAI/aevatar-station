@@ -51,6 +51,7 @@
     
     <ItemGroup>
       <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj" />
+      <ProjectReference Include="..\Aevatar.AuthServer.Grants\Aevatar.AuthServer.Grants.csproj" />
       <ProjectReference Include="..\Aevatar.Domain.Shared\Aevatar.Domain.Shared.csproj" />
       <ProjectReference Include="..\Aevatar.MongoDB\Aevatar.MongoDB.csproj" />
     </ItemGroup>

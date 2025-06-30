@@ -38,4 +38,4 @@ public static class OpenTelemetryConstants
     public const string ErrorTypeTag = "error.type";
     public const string ErrorMessageTag = "error.message";
     public const string ErrorStackTraceTag = "error.stack_trace";
-} 
+}
