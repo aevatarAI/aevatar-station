@@ -41,6 +41,9 @@ jobs:
           - name: Aevatar.Plugins
             path: src/Aevatar.Plugins
             project_root: framework
+          - name: Aevatar.TestKit
+            path: src/Aevatar.TestKit
+            project_root: framework
           - name: Aevatar.SignalR
             path: src/Aevatar.SignalR
             project_root: signalR

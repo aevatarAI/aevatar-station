@@ -116,6 +116,7 @@
     <PackageVersion Include="Microsoft.CodeCoverage" Version="17.9.0" />
     <PackageVersion Include="Microsoft.Extensions.AI" Version="9.0.1-preview.1.24570.5" />
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="9.0.1-preview.1.24570.5" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Http.Polly" Version="8.0.3" />
@@ -123,8 +124,8 @@
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Client" Version="$(OrleansVersion)" />
+    <PackageVersion Include="Microsoft.Orleans.Core" Version="9.0.3" />
     <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="$(OrleansVersion)" />
     <PackageVersion Include="Microsoft.Orleans.EventSourcing" Version="$(OrleansVersion)" />
     <PackageVersion Include="Microsoft.Orleans.Hosting" Version="$(OrleansVersion)" />
@@ -137,7 +138,6 @@
     <PackageVersion Include="Microsoft.Orleans.Server" Version="$(OrleansVersion)" />
     <PackageVersion Include="Microsoft.Orleans.Streaming" Version="$(OrleansVersion)" />
     <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="$(OrleansVersion)" />
-    <PackageVersion Include="Microsoft.Orleans.Core" Version="$(OrleansVersion)" />
     <PackageVersion Include="Microsoft.Orleans.Clustering.ZooKeeper" Version="$(OrleansVersion)" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.6" />
