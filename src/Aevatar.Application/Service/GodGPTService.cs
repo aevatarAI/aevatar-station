@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Application.Grains.Agents.ChatManager;
+using Aevatar.Application.Grains.Agents.ChatManager.Chat;
 using Aevatar.Application.Grains.Agents.ChatManager.Common;
 using Aevatar.Application.Grains.Agents.ChatManager.ConfigAgent;
 using Aevatar.Application.Grains.Agents.ChatManager.Dtos;
@@ -65,6 +66,7 @@ public interface IGodGPTService
     Task<GetInvitationInfoResponse> GetInvitationInfoAsync(Guid currentUserId);
     Task<RedeemInviteCodeResponse> RedeemInviteCodeAsync(Guid currentUserId,
         RedeemInviteCodeRequest redeemInviteCodeRequest);
+    Task<QuantumShareResponseDto> GetShareKeyWordWithAIAsync(Guid sessionId, string? content, string? region, SessionType sessionType);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -448,6 +450,33 @@ public class GodGPTService : ApplicationService, IGodGPTService
         return new RedeemInviteCodeResponse
         {
             IsValid = result
+        };
+    }
+
+    public async Task<QuantumShareResponseDto> GetShareKeyWordWithAIAsync(Guid sessionId, string? content, string? region, SessionType sessionType)
+    {
+        _logger.LogDebug($"[GodGPTService][GetShareKeyWordWithAIAsync] http start: sessionId={sessionId}, sessionType={sessionType}");
+        var responseContent = "";
+        try
+        {
+            var godChat = _clusterClient.GetGrain<IGodChat>(sessionId);
+            var chatId = Guid.NewGuid().ToString();
+            var response = await godChat.ChatWithHistory(sessionId, string.Empty, SessionTypeExtensions.SharePrompt,
+                chatId, null, true, region);
+            responseContent = response.IsNullOrEmpty() ? sessionType.GetDefaultContent() : response.FirstOrDefault().Content;
+            _logger.LogDebug(
+                $"[GodGPTService][GetShareKeyWordWithAIAsync] completed for sessionId={sessionId}, responseContent:{responseContent}");
+        }
+        catch (Exception ex)
+        {
+            responseContent = sessionType.GetDefaultContent();
+            _logger.LogError(ex, $"[GodGPTService][GetShareKeyWordWithAIAsync] error for sessionId={sessionId}, sessionType={sessionType}");
+        }
+
+        return new QuantumShareResponseDto()
+        {
+            Success = true,
+            Content = responseContent,
         };
     }
 
