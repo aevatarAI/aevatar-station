@@ -10,6 +10,7 @@ using Orleans.Providers.MongoDB.Configuration;
 using Orleans.Serialization;
 using Orleans.Streams.Kafka.Config;
 using Serilog;
+using MongoDB.Driver;
 
 namespace Aevatar.Developer.Host.Extensions;
 
@@ -24,17 +25,42 @@ public static class OrleansHostExtensions
             var hostId = context.Configuration.GetValue<string>("Host:HostId");
             if (configSection == null)
                 throw new ArgumentNullException(nameof(configSection), "The Orleans config node is missing");
-            clientBuilder.UseMongoDBClient(configSection.GetValue<string>("MongoDBClient"))
-                .UseMongoDBClustering(options =>
+
+            // Check if ZooKeeper configuration is available
+            var zookeeperSection = configSection.GetSection("ZooKeeper");
+            var zookeeperConnectionString = zookeeperSection.GetValue<string>("ConnectionString");
+            
+            // Configure clustering based on available provider
+            if (!string.IsNullOrEmpty(zookeeperConnectionString))
+            {
+                // Use ZooKeeper clustering
+                clientBuilder.UseZooKeeperClustering(options =>
                 {
-                    options.DatabaseName = configSection.GetValue<string>("DataBase");
-                    options.Strategy = MongoDBMembershipStrategy.SingleDocument;
-                    options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" :$"Orleans{hostId}";
-                })
-                .Configure<ClusterOptions>(options =>
+                    options.ConnectionString = zookeeperConnectionString;
+                });
+            }
+            else
+            {
+                // Use MongoDB clustering (existing behavior)
+                clientBuilder.UseMongoDBClient(configSection.GetValue<string>("MongoDBClient"))
+                    .UseMongoDBClustering(options =>
+                    {
+                        options.DatabaseName = configSection.GetValue<string>("DataBase");
+                        options.Strategy = MongoDBMembershipStrategy.SingleDocument;
+                        options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" : $"Orleans{hostId}";
+                    });
+            }
+            
+            clientBuilder.Configure<ClusterOptions>(options =>
                 {
-                    options.ClusterId = configSection.GetValue<string>("ClusterId");
-                    options.ServiceId = configSection.GetValue<string>("ServiceId");
+                    // Read cluster configuration from environment variables if running in Kubernetes
+                    var isRunningInKubernetes = configSection.GetValue<bool>("IsRunningInKubernetes");
+                    options.ClusterId = isRunningInKubernetes
+                        ? Environment.GetEnvironmentVariable("ORLEANS_CLUSTER_ID")
+                        : configSection.GetValue<string>("ClusterId");
+                    options.ServiceId = isRunningInKubernetes
+                        ? Environment.GetEnvironmentVariable("ORLEANS_SERVICE_ID")
+                        : configSection.GetValue<string>("ServiceId");
                 })
                 .Configure<ExceptionSerializationOptions>(options =>
                 {
