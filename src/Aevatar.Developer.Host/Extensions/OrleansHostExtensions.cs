@@ -10,7 +10,6 @@ using Orleans.Providers.MongoDB.Configuration;
 using Orleans.Serialization;
 using Orleans.Streams.Kafka.Config;
 using Serilog;
-using MongoDB.Driver;
 
 namespace Aevatar.Developer.Host.Extensions;
 
@@ -29,7 +28,7 @@ public static class OrleansHostExtensions
             // Check if ZooKeeper configuration is available
             var zookeeperSection = configSection.GetSection("ZooKeeper");
             var zookeeperConnectionString = zookeeperSection.GetValue<string>("ConnectionString");
-            
+
             // Configure clustering based on available provider
             if (!string.IsNullOrEmpty(zookeeperConnectionString))
             {
@@ -50,17 +49,11 @@ public static class OrleansHostExtensions
                         options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" : $"Orleans{hostId}";
                     });
             }
-            
+
             clientBuilder.Configure<ClusterOptions>(options =>
                 {
-                    // Read cluster configuration from environment variables if running in Kubernetes
-                    var isRunningInKubernetes = configSection.GetValue<bool>("IsRunningInKubernetes");
-                    options.ClusterId = isRunningInKubernetes
-                        ? Environment.GetEnvironmentVariable("ORLEANS_CLUSTER_ID")
-                        : configSection.GetValue<string>("ClusterId");
-                    options.ServiceId = isRunningInKubernetes
-                        ? Environment.GetEnvironmentVariable("ORLEANS_SERVICE_ID")
-                        : configSection.GetValue<string>("ServiceId");
+                    configSection.GetValue<string>("ClusterId");
+                    configSection.GetValue<string>("ServiceId");
                 })
                 .Configure<ExceptionSerializationOptions>(options =>
                 {
@@ -69,7 +62,7 @@ public static class OrleansHostExtensions
                     options.SupportedNamespacePrefixes.Add("MongoDB.Driver");
                 })
                 .AddActivityPropagation();
-                
+
             var streamProvider = config.GetSection("OrleansStream:Provider").Get<string>();
             Log.Information("Stream Provider: {streamProvider}", streamProvider);
             if (string.Equals("kafka", streamProvider, StringComparison.CurrentCultureIgnoreCase))
@@ -97,6 +90,7 @@ public static class OrleansHostExtensions
                                 ReplicationFactor = replicationFactor
                             });
                         }
+
                         Log.Information("Kafka Options: {@options}", options);
                     })
                     .AddJson()
