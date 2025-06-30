@@ -26,6 +26,7 @@
 | F006 | Grain Warmup System | ✅ | High | feature/grain-warmup | 3e:58:e5:c6:ab:30 | 95% | ✓ | ✓ | Complete grain warmup system with E2E tests, MongoDB rate limiting, progressive batching |
 | F007 | Upgrade pod template | 🚧 | High | feature/upgrade-pod-template | 42:82:57:47:65:d3 | - | - | - | 新增功能：支持pod模板升级 |
 | F008 | Agent Warmup Unit Tests Implementation | ✅ | High | feature/agent-warmup-unit-tests | 3e:58:e5:c6:ab:31 | 100% | ✓ | ✓ | Implemented comprehensive unit tests for SampleBasedAgentWarmupStrategy - 30 tests covering all aspects with 100% pass rate |
+| F009 | Developer Service v0.4 Implementation | 🚧 | High | feature/developer-v0.4-dev | 5c:e9:1e:b6:c3:49 | - | - | - | Host服务生命周期管理：创建、销毁、更新、重启应用配置功能<br/>✅ k8s连接修复完成：删除过期认证配置，使用系统kubectl配置<br/>✅ 应用程序健康检查正常，k8s API连接成功 |
 
 ## Technical Debt & Refactoring
 

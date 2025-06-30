@@ -44,29 +44,38 @@ public static class OrleansHostExtension
         return hostBuilder.UseOrleans((context, siloBuilder) =>
             {
                 var configuration = context.Configuration;
-                var hostId = configuration.GetValue<string>("Host:HostId");
-                var configSection = context.Configuration.GetSection("Orleans");
-                var isRunningInKubernetes = configSection.GetValue<bool>("IsRunningInKubernetes");
-                var advertisedIP = isRunningInKubernetes
-                    ? GetEnvironmentVariable("POD_IP")
-                    : GetEnvironmentVariable("AevatarOrleans__AdvertisedIP");
-                var clusterId = isRunningInKubernetes
-                    ? GetEnvironmentVariable("ORLEANS_CLUSTER_ID")
-                    : configSection.GetValue<string>("ClusterId");
-                var serviceId = isRunningInKubernetes
-                    ? GetEnvironmentVariable("ORLEANS_SERVICE_ID")
-                    : configSection.GetValue<string>("ServiceId");
-                var siloPort = isRunningInKubernetes
-                    ? configSection.GetValue<int>("SiloPort")
-                    : int.Parse(GetEnvironmentVariable("AevatarOrleans__SiloPort"));
-                var gatewayPort = isRunningInKubernetes
-                    ? configSection.GetValue<int>("GatewayPort")
-                    :int.Parse(GetEnvironmentVariable("AevatarOrleans__GatewayPort"));
+                var configSection = configuration.GetSection("Orleans");
+                var isRunningInKubernetes = true;
+                var advertisedIP = "127.0.0.1";
+                var hostId = configSection.GetValue<string>("Host:HostId");
+                var clusterId = configSection.GetValue<string>(key: "ClusterId");
+                var serviceId = configSection.GetValue<string>(key: "ServiceId");
+                var siloPort = configSection.GetValue<int>(key: "SiloPort");
+                var gatewayPort = configSection.GetValue<int>(key: "GatewayPort");
+                var siloNamePattern = "Projector"; 
                 
-                // Read the silo name pattern from environment variable or configuration
-                var siloNamePattern = isRunningInKubernetes
-                    ? GetEnvironmentVariable("SILO_NAME_PATTERN")
-                    : GetEnvironmentVariable("AevatarOrleans__SILO_NAME_PATTERN");
+                // var hostId = configuration.GetValue<string>("Host:HostId");
+                // var isRunningInKubernetes = configSection.GetValue<bool>("IsRunningInKubernetes");
+                // var advertisedIP = isRunningInKubernetes
+                //     ? GetEnvironmentVariable("POD_IP")
+                //     : GetEnvironmentVariable("AevatarOrleans__AdvertisedIP");
+                // var clusterId = isRunningInKubernetes
+                //     ? GetEnvironmentVariable("ORLEANS_CLUSTER_ID")
+                //     : configSection.GetValue<string>("ClusterId");
+                // var serviceId = isRunningInKubernetes
+                //     ? GetEnvironmentVariable("ORLEANS_SERVICE_ID")
+                //     : configSection.GetValue<string>("ServiceId");
+                // var siloPort = isRunningInKubernetes
+                //     ? configSection.GetValue<int>("SiloPort")
+                //     : int.Parse(GetEnvironmentVariable("AevatarOrleans__SiloPort"));
+                // var gatewayPort = isRunningInKubernetes
+                //     ? configSection.GetValue<int>("GatewayPort")
+                //     :int.Parse(GetEnvironmentVariable("AevatarOrleans__GatewayPort"));
+                //
+                // // Read the silo name pattern from environment variable or configuration
+                // var siloNamePattern = isRunningInKubernetes
+                //     ? GetEnvironmentVariable("SILO_NAME_PATTERN")
+                //     : GetEnvironmentVariable("AevatarOrleans__SILO_NAME_PATTERN");
                 
                 // Register StateProjectionInitializer when SiloNamePattern is "Projector"
                 if (string.IsNullOrEmpty(siloNamePattern) || string.Compare(siloNamePattern, "Projector", StringComparison.OrdinalIgnoreCase) == 0)
