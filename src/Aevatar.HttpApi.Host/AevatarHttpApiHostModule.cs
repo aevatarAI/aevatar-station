@@ -32,6 +32,8 @@ using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
 using Volo.Abp.BackgroundWorkers;
+using Volo.Abp.BlobStoring;
+using Volo.Abp.BlobStoring.Aws;
 using Volo.Abp.Caching;
 using Volo.Abp.Caching.StackExchangeRedis;
 using Volo.Abp.Identity;
@@ -52,7 +54,8 @@ namespace Aevatar;
     typeof(AbpAccountWebOpenIddictModule),
     typeof(AbpAspNetCoreSerilogModule),
     typeof(AbpSwashbuckleModule),
-    typeof(OpenTelemetryModule)
+    typeof(OpenTelemetryModule),
+    typeof(AbpBlobStoringAwsModule)
 )]
 public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrainsModule
 {
@@ -83,6 +86,21 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
             .AddNewtonsoftJson();
 
         context.Services.AddHealthChecks();
+        
+        Configure<AbpBlobStoringOptions>(options =>
+        {
+            options.Containers.ConfigureDefault(container =>
+            {
+                var configSection = configuration.GetSection("AwsS3");
+                container.UseAws(o =>
+                {
+                    o.AccessKeyId = configSection.GetValue<string>("AccessKeyId");
+                    o.SecretAccessKey = configSection.GetValue<string>("SecretAccessKey");
+                    o.Region = configSection.GetValue<string>("Region");
+                    o.ContainerName = configSection.GetValue<string>("ContainerName");
+                }); 
+            });
+        });
     }
 
     private void ConfigureCors(ServiceConfigurationContext context, IConfiguration configuration)

@@ -73,6 +73,12 @@ public class PluginService : AevatarAppService, IPluginService
         };
     }
 
+    public async Task<PluginDto> GetAsync(Guid id)
+    {
+        var plugin = await _pluginRepository.GetAsync(id);
+        return ObjectMapper.Map<Plugin, PluginDto>(plugin);
+    }
+
     public async Task<PluginDto> CreateAsync(Guid projectId, string name, byte[] code)
     {
         var id = await _pluginGAgentManager.AddPluginAsync(new AddPluginDto

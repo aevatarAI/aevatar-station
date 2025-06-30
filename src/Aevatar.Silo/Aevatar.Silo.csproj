@@ -20,6 +20,7 @@
         <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
         <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
         <PackageReference Include="Orleans.Providers.MongoDB" />
+        <PackageReference Include="Microsoft.Orleans.Clustering.ZooKeeper" />
         <PackageReference Include="OrleansDashboard" />
         <PackageReference Include="Serilog.AspNetCore" />
         <PackageReference Include="Volo.Abp.AspNetCore.Serilog" />
@@ -34,6 +35,7 @@
         <PackageReference Include="Aevatar" />
         <PackageReference Include="Aevatar.SignalR" />
         <PackageReference Include="Aevatar.PermissionManagement" />
+        <PackageReference Include="Volo.Abp.BlobStoring.Aws" />
     </ItemGroup>
 
     <ItemGroup>

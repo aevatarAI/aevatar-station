@@ -18,6 +18,8 @@ using Volo.Abp.Account.Web;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
+using Volo.Abp.BlobStoring;
+using Volo.Abp.BlobStoring.Aws;
 using Volo.Abp.Modularity;
 using Volo.Abp.Swashbuckle;
 using Volo.Abp.Threading;
@@ -34,7 +36,8 @@ namespace Aevatar.Developer.Host;
     typeof(AbpAccountWebOpenIddictModule),
     typeof(AbpAspNetCoreSerilogModule),
     typeof(AbpSwashbuckleModule),
-    typeof(OpenTelemetryModule)
+    typeof(OpenTelemetryModule),
+    typeof(AbpBlobStoringAwsModule)
 )]
 public class AevatarDeveloperHostModule : AbpModule
 {
@@ -49,6 +52,21 @@ public class AevatarDeveloperHostModule : AbpModule
         ConfigureSwaggerServices(context, configuration);
         context.Services.AddMvc(options => { options.Filters.Add(new IgnoreAntiforgeryTokenAttribute()); })
             .AddNewtonsoftJson();
+        
+        Configure<AbpBlobStoringOptions>(options =>
+        {
+            options.Containers.ConfigureDefault(container =>
+            {
+                var configSection = configuration.GetSection("AwsS3");
+                container.UseAws(o =>
+                {
+                    o.AccessKeyId = configSection.GetValue<string>("AccessKeyId");
+                    o.SecretAccessKey = configSection.GetValue<string>("SecretAccessKey");
+                    o.Region = configSection.GetValue<string>("Region");
+                    o.ContainerName = configSection.GetValue<string>("ContainerName");
+                }); 
+            });
+        });
     }
 
     private void ConfigureAuthentication(ServiceConfigurationContext context, IConfiguration configuration)

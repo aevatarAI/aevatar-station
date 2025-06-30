@@ -21,18 +21,28 @@ namespace Aevatar.Projects;
 [RemoteService(IsEnabled = false)]
 public class ProjectService : OrganizationService, IProjectService
 {
+    private readonly IProjectDomainRepository _domainRepository;
+    
     public ProjectService(OrganizationUnitManager organizationUnitManager, IdentityUserManager identityUserManager,
         IRepository<OrganizationUnit, Guid> organizationUnitRepository, IdentityRoleManager roleManager,
         IPermissionManager permissionManager, IOrganizationPermissionChecker permissionChecker,
         IPermissionDefinitionManager permissionDefinitionManager, IRepository<IdentityUser, Guid> userRepository,
-        INotificationService notificationService) :
+        INotificationService notificationService, IProjectDomainRepository domainRepository) :
         base(organizationUnitManager, identityUserManager, organizationUnitRepository, roleManager, permissionManager,
             permissionChecker, permissionDefinitionManager, userRepository, notificationService)
     {
+        _domainRepository = domainRepository;
     }
 
     public async Task<ProjectDto> CreateAsync(CreateProjectDto input)
     {
+        var domain = await _domainRepository.FirstOrDefaultAsync(o =>
+            o.NormalizedDomainName == input.DomainName.ToUpperInvariant() && o.IsDeleted == false);
+        if (domain != null)
+        {
+            throw new UserFriendlyException($"DomainName: {input.DomainName} already exists");
+        }
+
         var organization = await OrganizationUnitRepository.GetAsync(input.OrganizationId);
 
         var displayName = input.DisplayName.Trim();
@@ -42,12 +52,19 @@ public class ProjectService : OrganizationService, IProjectService
             parentId: organization.Id
         );
 
+        await _domainRepository.InsertAsync(new ProjectDomain
+        {
+            OrganizationId = organization.Id,
+            ProjectId = project.Id,
+            DomainName = input.DomainName,
+            NormalizedDomainName = input.DomainName.ToUpperInvariant()
+        });
+
         var ownerRoleId = await AddOwnerRoleAsync(project.Id);
         var readerRoleId = await AddReaderRoleAsync(project.Id);
 
         project.ExtraProperties[AevatarConsts.OrganizationTypeKey] = OrganizationType.Project;
         project.ExtraProperties[AevatarConsts.OrganizationRoleKey] = new List<Guid> { ownerRoleId, readerRoleId };
-        project.ExtraProperties[AevatarConsts.ProjectDomainNameKey] = input.DomainName;
 
         try
         {
@@ -59,7 +76,10 @@ public class ProjectService : OrganizationService, IProjectService
             throw new UserFriendlyException("The same project name already exists");
         }
 
-        return ObjectMapper.Map<OrganizationUnit, ProjectDto>(project);
+        var dto = ObjectMapper.Map<OrganizationUnit, ProjectDto>(project);
+        dto.DomainName = input.DomainName;
+
+        return dto;
     }
 
     protected override List<string> GetOwnerPermissions()
@@ -80,7 +100,14 @@ public class ProjectService : OrganizationService, IProjectService
             AevatarPermissions.Roles.Delete,
             AevatarPermissions.Dashboard,
             AevatarPermissions.LLMSModels.Default,
-            AevatarPermissions.ApiRequests.Default
+            AevatarPermissions.ApiRequests.Default,
+            AevatarPermissions.ProjectCorsOrigins.Default,
+            AevatarPermissions.ProjectCorsOrigins.Create,
+            AevatarPermissions.ProjectCorsOrigins.Delete,
+            AevatarPermissions.Plugins.Default,
+            AevatarPermissions.Plugins.Create,
+            AevatarPermissions.Plugins.Edit,
+            AevatarPermissions.Plugins.Delete
         ];
     }
     
@@ -93,7 +120,9 @@ public class ProjectService : OrganizationService, IProjectService
             AevatarPermissions.ApiKeys.Default,
             AevatarPermissions.Dashboard,
             AevatarPermissions.LLMSModels.Default,
-            AevatarPermissions.ApiRequests.Default
+            AevatarPermissions.ApiRequests.Default,
+            AevatarPermissions.ProjectCorsOrigins.Default,
+            AevatarPermissions.Plugins.Default
         ];
     }
 
@@ -101,7 +130,6 @@ public class ProjectService : OrganizationService, IProjectService
     {
         var organization = await OrganizationUnitRepository.GetAsync(id);
         organization.DisplayName = input.DisplayName.Trim();
-        organization.ExtraProperties[AevatarConsts.ProjectDomainNameKey] = input.DomainName.Trim();
         await OrganizationUnitManager.UpdateAsync(organization);
         return ObjectMapper.Map<OrganizationUnit, ProjectDto>(organization);
     }
@@ -127,12 +155,17 @@ public class ProjectService : OrganizationService, IProjectService
                 type == OrganizationType.Project).ToList();
         }
 
+        var domains =
+            await _domainRepository.GetListAsync(o => o.OrganizationId == input.OrganizationId && o.IsDeleted == false);
+        var domainDic = domains.ToDictionary(o => o.ProjectId, o => o.DomainName);
+
         var result = new List<ProjectDto>();
         foreach (var organization in organizations.OrderBy(o=>o.CreationTime))
         {
             var projectDto = ObjectMapper.Map<OrganizationUnit, ProjectDto>(organization);
             projectDto.MemberCount = await UserRepository.CountAsync(u =>
                 u.OrganizationUnits.Any(ou => ou.OrganizationUnitId == organization.Id));
+            projectDto.DomainName = domainDic[projectDto.Id];
             result.Add(projectDto);
         }
 
@@ -145,10 +178,14 @@ public class ProjectService : OrganizationService, IProjectService
     public async Task<ProjectDto> GetProjectAsync(Guid id)
     {
         var organization = await OrganizationUnitRepository.GetAsync(id);
-        var organizationDto = ObjectMapper.Map<OrganizationUnit, ProjectDto>(organization);
+        var projectDto = ObjectMapper.Map<OrganizationUnit, ProjectDto>(organization);
         var members = await IdentityUserManager.GetUsersInOrganizationUnitAsync(organization, true);
-        organizationDto.MemberCount = members.Count;
-        return organizationDto;
+        projectDto.MemberCount = members.Count;
+
+        var domain = await _domainRepository.GetAsync(o => o.ProjectId == id && o.IsDeleted == false);
+        projectDto.DomainName = domain.DomainName; 
+        
+        return projectDto;
     }
 
     protected override async Task AddMemberAsync(Guid organizationId, IdentityUser user, Guid? roleId)
@@ -174,5 +211,11 @@ public class ProjectService : OrganizationService, IProjectService
 
         var organization = await OrganizationUnitRepository.GetAsync(organizationId);
         await RemoveMemberAsync(organization, user.Id);
+    }
+
+    public override async Task DeleteAsync(Guid id)
+    {
+        await base.DeleteAsync(id);
+        await _domainRepository.DeleteAsync(o => o.ProjectId == id);
     }
 }

@@ -3,6 +3,7 @@ using System.Linq;
 using Aevatar.Account;
 using Aevatar.ApiRequests;
 using Aevatar.Application.Grains;
+using Aevatar.BlobStorings;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
@@ -18,6 +19,7 @@ using Orleans;
 using Volo.Abp.Account;
 using Volo.Abp.AspNetCore.Mvc.Dapr;
 using Volo.Abp.AutoMapper;
+using Volo.Abp.BlobStoring;
 using Volo.Abp.Dapr;
 using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
@@ -42,7 +44,8 @@ namespace Aevatar;
     typeof(AbpAutoMapperModule),
     typeof(AbpEventBusModule),
     typeof(AevatarPluginsModule),
-    typeof(AevatarModule)
+    typeof(AevatarModule),
+    typeof(AbpBlobStoringModule)
 )]
 public class AevatarApplicationModule : AbpModule
 {
@@ -70,5 +73,6 @@ public class AevatarApplicationModule : AbpModule
         
         Configure<AccountOptions>(configuration.GetSection("Account"));
         Configure<ApiRequestOptions>(configuration.GetSection("ApiRequest"));
+        Configure<BlobStoringOptions>(configuration.GetSection("BlobStoring"));
     }
 }
