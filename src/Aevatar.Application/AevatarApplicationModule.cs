@@ -9,7 +9,9 @@ using Aevatar.Kubernetes;
 using Aevatar.Kubernetes.Manager;
 using Aevatar.Notification;
 using Aevatar.Options;
+using Aevatar.Profiles;
 using Aevatar.Schema;
+using Aevatar.Service;
 using Aevatar.WebHook.Deploy;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans;
@@ -68,5 +70,6 @@ public class AevatarApplicationModule : AbpModule
         context.Services.Configure<AppleAuthOption>(configuration.GetSection("AppleAuth"));
         
         Configure<AccountOptions>(configuration.GetSection("Account"));
+        context.Services.AddTransient<IProfileService, ProfileService>();
     }
 }
