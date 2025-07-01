@@ -31,17 +31,9 @@ public class UserController : AevatarController
         _developerService = developerService;
         _logger = logger;
     }
-    
-    [HttpPost("registerClientTest")]
-    // [Authorize(Policy = AevatarPermissions.AdminPolicy)]
-    public async Task RegisterClientAuthenticationTest(string clientId, string clientSecret, string corsUrls)
-    {
-        await Task.CompletedTask;
-    }
-
 
     [HttpPost("registerClient")]
-    // [Authorize(Policy = AevatarPermissions.AdminPolicy)]
+    [Authorize(Policy = AevatarPermissions.AdminPolicy)]
     public async Task RegisterClientAuthentication(string clientId, string clientSecret, string corsUrls)
     {
         await _userAppService.RegisterClientAuthentication(clientId, clientSecret);
@@ -96,12 +88,5 @@ public class UserController : AevatarController
     {
         await _developerService.UpdateDockerImageAsync(hostId + "-" + hostType, "1",
             imageName);
-    }
-
-    [Authorize(Policy = AevatarPermissions.AdminPolicy)]
-    [HttpPost("restartToApplyConfig")]
-    public async Task<RestartConfigResponseDto> RestartToApplyConfigAsync(string clientId)
-    {
-        return await _developerService.RestartAsync(clientId);
     }
 }

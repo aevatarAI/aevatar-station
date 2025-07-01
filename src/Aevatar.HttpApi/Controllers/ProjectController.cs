@@ -71,7 +71,8 @@ public class ProjectController : AevatarController
 
     [HttpGet]
     [Route("{projectId}/members")]
-    public async Task<ListResultDto<OrganizationMemberDto>> GetMemberListAsync(Guid projectId, GetOrganizationMemberListDto input)
+    public async Task<ListResultDto<OrganizationMemberDto>> GetMemberListAsync(Guid projectId,
+        GetOrganizationMemberListDto input)
     {
         await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.Members.Default);
         return await _projectService.GetMemberListAsync(projectId, input);
@@ -107,9 +108,9 @@ public class ProjectController : AevatarController
     }
 
     [HttpPost("{projectId}/restart")]
-    public async Task<RestartConfigResponseDto> RestartAsync(Guid projectId,string clientId)
+    public async Task<RestartConfigResponseDto> RestartAsync(Guid projectId, string clientId)
     {
         await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.Members.Manage);
-        return await _developerService.RestartAsync(clientId);
+        return await _developerService.RestartAsync(projectId, clientId);
     }
 }

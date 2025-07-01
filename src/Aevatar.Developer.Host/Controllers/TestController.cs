@@ -24,19 +24,21 @@ public class TestController : AbpControllerBase
     /// 测试Cross-URL获取接口（Mock数据）
     /// </summary>
     [HttpGet("cors-urls")]
-    public async Task<IActionResult> TestGetCorsUrls([FromQuery] string clientId = "test-client")
+    public async Task<IActionResult> TestGetCorsUrls([FromQuery] string clientId = "test-client", [FromQuery] Guid? projectId = null)
     {
         try
         {
             _logger.LogInformation($"Testing CORS URLs retrieval for client: {clientId}");
             
-            // 调用服务重启接口，这会内部调用GetCorsUrlsForClientAsync
-            var result = await _developerService.RestartAsync(clientId);
+            // 使用提供的projectId，如果没有则使用默认的Guid
+            var testProjectId = projectId ?? Guid.Parse("00000000-0000-0000-0000-000000000001");
+            var result = await _developerService.RestartAsync(testProjectId, clientId);
             
             return Ok(new
             {
                 Message = "CORS URLs test completed",
                 ClientId = clientId,
+                ProjectId = testProjectId,
                 RestartResult = result,
                 Timestamp = DateTime.UtcNow
             });
@@ -72,18 +74,20 @@ public class TestController : AbpControllerBase
     /// 测试K8s连接状态
     /// </summary>
     [HttpGet("k8s-status")]
-    public async Task<IActionResult> TestK8sConnection()
+    public async Task<IActionResult> TestK8sConnection([FromQuery] Guid? projectId = null)
     {
         try
         {
             // 通过调用RestartAsync来间接测试K8s连接
             // 这个方法会调用K8s API来检查服务状态
-            var result = await _developerService.RestartAsync("k8s-test-client");
+            var testProjectId = projectId ?? Guid.Parse("00000000-0000-0000-0000-000000000002");
+            var result = await _developerService.RestartAsync(testProjectId, "k8s-test-client");
             
             return Ok(new
             {
                 Message = "K8s connection test completed",
                 K8sConnectionWorking = true,
+                ProjectId = testProjectId,
                 TestResult = result,
                 Timestamp = DateTime.UtcNow
             });
