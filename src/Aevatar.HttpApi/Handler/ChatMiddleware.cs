@@ -303,13 +303,7 @@ public class ChatMiddleware
                         userHashId, stopwatch.ElapsedMilliseconds);
                 }
 
-                // Simplify response for guest users (remove unnecessary fields)
-                var guestResponse = new {
-                    content = chatResponse.Response,
-                    isLastChunk = chatResponse.IsLastChunk
-                };
-
-                var responseData = $"data: {JsonConvert.SerializeObject(guestResponse)}\n\n";
+                var responseData = $"data: {JsonConvert.SerializeObject(chatResponse.ConvertToHttpResponse())}\n\n";
                 await context.Response.WriteAsync(responseData);
                 await context.Response.Body.FlushAsync();
 
