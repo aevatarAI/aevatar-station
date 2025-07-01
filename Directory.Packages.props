@@ -7,7 +7,7 @@
     <AevatarGAgentVerion>1.4.16</AevatarGAgentVerion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="GodGPT.GAgents" Version="1.0.9-alpha-invitation-22" />
+    <PackageVersion Include="GodGPT.GAgents" Version="1.0.9-alpha-invitation-23" />
     <PackageVersion Include="Stripe.net" Version="48.1.0"/>
     <PackageVersion Include="GodGPT.Webhook" Version="1.0.9-alpha-invitation-18" />
     
