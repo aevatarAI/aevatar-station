@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Aevatar.Organizations;
 using Aevatar.Permissions;
 using Aevatar.Projects;
-using Aevatar.Service;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,16 +19,12 @@ namespace Aevatar.Controllers;
 public class ProjectController : AevatarController
 {
     private readonly IProjectService _projectService;
-    // private readonly IDeveloperService _developerService;
     private readonly IOrganizationPermissionChecker _permissionChecker;
 
     public ProjectController(IProjectService projectService,
-        IOrganizationPermissionChecker permissionChecker
-        // IDeveloperService developerService
-            )
+        IOrganizationPermissionChecker permissionChecker)
     {
         _projectService = projectService;
-        // _developerService = developerService;
         _permissionChecker = permissionChecker;
     }
 
@@ -72,8 +67,7 @@ public class ProjectController : AevatarController
 
     [HttpGet]
     [Route("{projectId}/members")]
-    public async Task<ListResultDto<OrganizationMemberDto>> GetMemberListAsync(Guid projectId,
-        GetOrganizationMemberListDto input)
+    public async Task<ListResultDto<OrganizationMemberDto>> GetMemberListAsync(Guid projectId, GetOrganizationMemberListDto input)
     {
         await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.Members.Default);
         return await _projectService.GetMemberListAsync(projectId, input);
@@ -108,10 +102,5 @@ public class ProjectController : AevatarController
         return await _projectService.GetPermissionListAsync(projectId);
     }
 
-    // [HttpPost("{projectId}/restart")]
-    // public async Task<RestartConfigResponseDto> RestartAsync(Guid projectId, string clientId)
-    // {
-    //     await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.Members.Manage);
-    //     return await _developerService.RestartAsync(projectId, clientId);
-    // }
+
 }

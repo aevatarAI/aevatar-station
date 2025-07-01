@@ -1,0 +1,35 @@
+using System;
+using System.Threading.Tasks;
+using Aevatar.Organizations;
+using Aevatar.Permissions;
+using Aevatar.Service;
+using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Volo.Abp;
+
+namespace Aevatar.Controllers;
+
+[RemoteService]
+[ControllerName("Developer")]
+[Route("api/developers")]
+[Authorize]
+public class DeveloperController : AevatarController
+{
+    private readonly IDeveloperService _developerService;
+    private readonly IOrganizationPermissionChecker _permissionChecker;
+
+    public DeveloperController(IDeveloperService developerService,
+        IOrganizationPermissionChecker permissionChecker)
+    {
+        _developerService = developerService;
+        _permissionChecker = permissionChecker;
+    }
+
+    [HttpPost("restart")]
+    public async Task<RestartConfigResponseDto> RestartAsync(Guid projectId, string clientId)
+    {
+        await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.Members.Manage);
+        return await _developerService.RestartAsync(clientId);
+    }
+} 
