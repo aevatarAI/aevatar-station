@@ -534,7 +534,7 @@ public class GodGPTService : ApplicationService, IGodGPTService
         try
         {
             // Use a dummy IP to get configuration from AnonymousUserGAgent
-            var configGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>("AnonymousUser_config");
+            var configGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(CommonHelper.GetAnonymousUserGAgentId("127.0.0.1"));
             return await configGrain.GetMaxChatCountAsync();
         }
         catch (Exception ex)
