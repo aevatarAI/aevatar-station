@@ -387,7 +387,7 @@ public class GodGPTController : AevatarController
                 result = false
             });
         }
-        var result = await _accountService.CheckEmailRegisteredAsync(new CheckEmailRegisteredDto { EmailAddress = email });
+        var result = await _accountService.VerifyEmailRegistrationWithTimeAsync(new CheckEmailRegisteredDto { EmailAddress = email });
         if (result)
         {
             return Ok(new { result = true });
