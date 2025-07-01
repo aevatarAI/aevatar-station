@@ -121,7 +121,10 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         Dictionary<string, string> configContent,
         Func<string, Dictionary<string, string>, V1ConfigMap> createConfigMapDefinitionFunc)
     {
-        string configMapName = getConfigMapNameFunc(appId, version);
+        // Ensure namespace exists before creating ConfigMap
+        await EnsureNamespaceAsync(KubernetesConstants.AppNameSpace);
+
+        var configMapName = getConfigMapNameFunc(appId, version);
         var configMaps = await _kubernetesClientAdapter.ListConfigMapAsync(KubernetesConstants.AppNameSpace);
         var configMap = createConfigMapDefinitionFunc(configMapName, configContent);
         if (!configMaps.Items.Any(configMap => configMap.Metadata.Name == configMapName))
@@ -133,6 +136,24 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         {
             await _kubernetesClientAdapter.ReplaceNamespacedConfigMapAsync(configMap, configMapName,
                 KubernetesConstants.AppNameSpace);
+        }
+    }
+
+    private async Task EnsureNamespaceAsync(string namespaceName, CancellationToken cancellationToken = default)
+    {
+        var namespaceExists = await _kubernetesClientAdapter.NamespaceExistsAsync(namespaceName, cancellationToken);
+
+        if (!namespaceExists)
+        {
+            var namespaceDefinition = new V1Namespace
+            {
+                ApiVersion = "v1",
+                Kind = "Namespace",
+                Metadata = new() { Name = namespaceName }
+            };
+
+            await _kubernetesClientAdapter.CreateNamespaceAsync(namespaceDefinition, cancellationToken);
+            _logger.LogInformation("[KubernetesHostManager] Namespace {namespaceName} created", namespaceName);
         }
     }
 
@@ -215,6 +236,9 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         string deploymentLabelName, string containerName, List<string> command, int replicas,
         int containerPort, string maxSurge, string maxUnavailable, string healthPath, bool isSilo = false)
     {
+        // Ensure namespace exists before creating Deployment
+        await EnsureNamespaceAsync(KubernetesConstants.AppNameSpace);
+
         var configMapName = ConfigMapHelper.GetAppSettingConfigMapName(appId, version);
         var sideCarConfigName = ConfigMapHelper.GetAppFileBeatConfigMapName(appId, version);
 
@@ -241,6 +265,9 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         string appId, string version, string serviceName,
         string deploymentLabelName, int targetPort)
     {
+        // Ensure namespace exists before creating Service
+        await EnsureNamespaceAsync(KubernetesConstants.AppNameSpace);
+
         var services = await _kubernetesClientAdapter.ListServiceAsync(KubernetesConstants.AppNameSpace);
         if (!services.Items.Any(item => item.Metadata.Name == serviceName))
         {
@@ -260,6 +287,9 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         string appId, string version,
         string hostName, string rulePath, string serviceName, int targetPort)
     {
+        // Ensure namespace exists before creating Ingress
+        await EnsureNamespaceAsync(KubernetesConstants.AppNameSpace);
+
         var ingressName = IngressHelper.GetAppIngressName(appId, version);
         var ingresses = await _kubernetesClientAdapter.ListIngressAsync(KubernetesConstants.AppNameSpace);
         if (!ingresses.Items.Any(item => item.Metadata.Name == ingressName))
@@ -381,23 +411,7 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
 
     private async Task CreateHostSiloAsync(string appId, string version, string imageName, string hostSiloConfigContent)
     {
-        var appSettingsContent = hostSiloConfigContent;
-        var configFiles = new Dictionary<string, string>
-        {
-            { KubernetesConstants.AppSettingFileName, appSettingsContent },
-            {
-                KubernetesConstants.AppSettingSharedFileName,
-                GetHostSiloConfigContent(appId, version, KubernetesConstants.AppSettingSharedFileName)
-            },
-            {
-                KubernetesConstants.AppSettingHttpApiHostSharedFileName,
-                GetHostSiloConfigContent(appId, version, KubernetesConstants.AppSettingHttpApiHostSharedFileName)
-            },
-            {
-                KubernetesConstants.AppSettingSiloSharedFileName,
-                GetHostSiloConfigContent(appId, version, KubernetesConstants.AppSettingSiloSharedFileName)
-            }
-        };
+        var configFiles = GetHostSiloConfigFiles(appId, version);
         await EnsureConfigMapAsync(
             appId,
             version,
@@ -514,5 +528,89 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
             KubernetesConstants.AppNameSpace);
         _logger.LogInformation(
             $"[KubernetesAppManager] Deployment {deploymentName} restarted at {annotations["kubectl.kubernetes.io/restartedAt"]}");
+    }
+
+    public async Task UpdateHostAsync(string appId, string version, string corsUrls)
+    {
+        _logger.LogInformation($"Updating service configuration for: {appId} with CORS URLs: {corsUrls}");
+
+        try
+        {
+            await UpdateHostSiloConfigMapAsync(appId, version);
+            await UpdateHostClientConfigMapAsync(appId, version, corsUrls);
+
+            _logger.LogInformation($"Service configuration updated and restarted successfully: {appId}");
+
+            var siloAppId = GetHostName(appId, KubernetesConstants.HostSilo);
+            var siloDeploymentName = DeploymentHelper.GetAppDeploymentName(siloAppId, version);
+            await RestartDeploymentAsync(siloDeploymentName);
+
+            var clientAppId = GetHostName(appId, KubernetesConstants.HostClient);
+            var clientDeploymentName = DeploymentHelper.GetAppDeploymentName(clientAppId, version);
+            await RestartDeploymentAsync(clientDeploymentName);
+
+            _logger.LogInformation(
+                $"Restarting Host services: Silo={siloDeploymentName}, Client={clientDeploymentName}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Failed to update service configuration: {appId}");
+            throw;
+        }
+    }
+
+    private async Task UpdateHostSiloConfigMapAsync(string appId, string version)
+    {
+        var hostSiloId = GetHostName(appId, KubernetesConstants.HostSilo);
+        var configFiles = GetHostSiloConfigFiles(hostSiloId, version);
+
+        await EnsureConfigMapAsync(
+            hostSiloId,
+            version,
+            ConfigMapHelper.GetAppSettingConfigMapName,
+            configFiles,
+            ConfigMapHelper.CreateAppSettingConfigMapDefinition);
+    }
+
+    private async Task UpdateHostClientConfigMapAsync(string appId, string version, string corsUrls)
+    {
+        var hostClientId = GetHostName(appId, KubernetesConstants.HostClient);
+        var hostClientConfigContent = GetHostClientConfigContent(hostClientId, version,
+            KubernetesConstants.HostClientSettingTemplateFilePath, corsUrls);
+
+        var configFiles = new Dictionary<string, string>
+        {
+            { KubernetesConstants.AppSettingFileName, hostClientConfigContent }
+        };
+
+        await EnsureConfigMapAsync(
+            hostClientId,
+            version,
+            ConfigMapHelper.GetAppSettingConfigMapName,
+            configFiles,
+            ConfigMapHelper.CreateAppSettingConfigMapDefinition);
+    }
+
+    private Dictionary<string, string> GetHostSiloConfigFiles(string hostSiloId, string version)
+    {
+        var hostSiloConfigContent =
+            GetHostSiloConfigContent(hostSiloId, version, KubernetesConstants.HostSiloSettingTemplateFilePath);
+
+        return new Dictionary<string, string>
+        {
+            { KubernetesConstants.AppSettingFileName, hostSiloConfigContent },
+            {
+                KubernetesConstants.AppSettingSharedFileName,
+                GetHostSiloConfigContent(hostSiloId, version, KubernetesConstants.AppSettingSharedFileName)
+            },
+            {
+                KubernetesConstants.AppSettingHttpApiHostSharedFileName,
+                GetHostSiloConfigContent(hostSiloId, version, KubernetesConstants.AppSettingHttpApiHostSharedFileName)
+            },
+            {
+                KubernetesConstants.AppSettingSiloSharedFileName,
+                GetHostSiloConfigContent(hostSiloId, version, KubernetesConstants.AppSettingSiloSharedFileName)
+            }
+        };
     }
 }

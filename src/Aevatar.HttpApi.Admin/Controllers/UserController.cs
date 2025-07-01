@@ -97,4 +97,11 @@ public class UserController : AevatarController
         await _developerService.UpdateDockerImageAsync(hostId + "-" + hostType, "1",
             imageName);
     }
+
+    [Authorize(Policy = AevatarPermissions.AdminPolicy)]
+    [HttpPost("restartToApplyConfig")]
+    public async Task<RestartConfigResponseDto> RestartToApplyConfigAsync(string clientId)
+    {
+        return await _developerService.RestartAsync(clientId);
+    }
 }

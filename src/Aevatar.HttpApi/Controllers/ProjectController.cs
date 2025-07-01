@@ -3,12 +3,12 @@ using System.Threading.Tasks;
 using Aevatar.Organizations;
 using Aevatar.Permissions;
 using Aevatar.Projects;
+using Aevatar.Service;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
-using Volo.Abp.Identity;
 using Volo.Abp.PermissionManagement;
 
 namespace Aevatar.Controllers;
@@ -20,12 +20,15 @@ namespace Aevatar.Controllers;
 public class ProjectController : AevatarController
 {
     private readonly IProjectService _projectService;
+    private readonly IDeveloperService _developerService;
     private readonly IOrganizationPermissionChecker _permissionChecker;
 
     public ProjectController(IProjectService projectService,
-        IOrganizationPermissionChecker permissionChecker)
+        IOrganizationPermissionChecker permissionChecker,
+        IDeveloperService developerService)
     {
         _projectService = projectService;
+        _developerService = developerService;
         _permissionChecker = permissionChecker;
     }
 
@@ -87,19 +90,26 @@ public class ProjectController : AevatarController
     public async Task SetMemberRoleAsync(Guid projectId, SetOrganizationMemberRoleDto input)
     {
         await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.Members.Manage);
-        
+
         if (input.UserId == CurrentUser.Id)
         {
             throw new UserFriendlyException("Unable to set your own role.");
         }
-        
+
         await _projectService.SetMemberRoleAsync(projectId, input);
     }
-    
+
     [HttpGet]
     [Route("{projectId}/permissions")]
     public async Task<ListResultDto<PermissionGrantInfoDto>> GetPermissionsListAsync(Guid projectId)
     {
         return await _projectService.GetPermissionListAsync(projectId);
+    }
+
+    [HttpPost("{projectId}/restart")]
+    public async Task<RestartConfigResponseDto> RestartAsync(Guid projectId,string clientId)
+    {
+        await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.Members.Manage);
+        return await _developerService.RestartAsync(clientId);
     }
 }
