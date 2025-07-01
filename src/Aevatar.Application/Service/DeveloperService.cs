@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Aevatar.Kubernetes;
 using Aevatar.Kubernetes.Adapter;
 using Aevatar.Kubernetes.ResourceDefinition;
+using Aevatar.Projects;
 using Aevatar.WebHook.Deploy;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
@@ -30,11 +31,13 @@ public class DeveloperService : ApplicationService, IDeveloperService
     private readonly ILogger<DeveloperService> _logger;
     private readonly IHostDeployManager _hostDeployManager;
     private readonly IKubernetesClientAdapter _kubernetesClientAdapter;
+    private readonly IProjectCorsOriginService _projectCorsOriginService;
 
     public DeveloperService(IHostDeployManager hostDeployManager, IKubernetesClientAdapter kubernetesClientAdapter,
-        ILogger<DeveloperService> logger)
+        ILogger<DeveloperService> logger, IProjectCorsOriginService projectCorsOriginService)
     {
         _logger = logger;
+        _projectCorsOriginService = projectCorsOriginService;
         _hostDeployManager = hostDeployManager;
         _kubernetesClientAdapter = kubernetesClientAdapter;
     }
@@ -70,8 +73,9 @@ public class DeveloperService : ApplicationService, IDeveloperService
             throw new UserFriendlyException($"No Host service found to restart for client: {clientId}");
         }
 
-        var corsUrls = await GetCorsUrlsForClientAsync(clientId);
-        var corsUrlsString = string.Join(",", corsUrls);
+
+        var corsUrls = await _projectCorsOriginService.GetListAsync(projectId);
+        var corsUrlsString = string.Join(",", corsUrls.Items.Select(x => x.Domain));
         await _hostDeployManager.UpdateHostAsync(clientId, DefaultVersion, corsUrlsString, projectId);
 
         _logger.LogInformation($"Business service restart completed successfully for client: {clientId}");
@@ -94,8 +98,8 @@ public class DeveloperService : ApplicationService, IDeveloperService
                 $"Host service partially or fully exists for client: {clientId}. Please delete existing services first.");
         }
 
-        var corsUrls = await GetCorsUrlsForClientAsync(clientId);
-        var corsUrlsString = string.Join(",", corsUrls);
+        var corsUrls = await _projectCorsOriginService.GetListAsync(projectId);
+        var corsUrlsString = string.Join(",", corsUrls.Items.Select(x => x.Domain));
         await _hostDeployManager.CreateHostAsync(clientId, DefaultVersion, corsUrlsString, projectId);
 
         _logger.LogInformation($"Developer service created successfully for client: {clientId}");
