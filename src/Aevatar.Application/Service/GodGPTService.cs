@@ -13,6 +13,7 @@ using Aevatar.Application.Grains.ChatManager.UserBilling;
 using Aevatar.Application.Grains.ChatManager.UserQuota;
 using Aevatar.Application.Grains.Common.Constants;
 using Aevatar.Application.Grains.Common.Options;
+using Aevatar.Application.Grains.Invitation;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
 using Aevatar.GodGPT.Dtos;
@@ -41,6 +42,7 @@ public interface IGodGPTService
     Task<Aevatar.Quantum.SessionCreationInfoDto?> GetSessionCreationInfoAsync(Guid userId, Guid sessionId);
     Task<Guid> DeleteSessionAsync(Guid userId, Guid sessionId);
     Task<Guid> RenameSessionAsync(Guid userId, Guid sessionId, string title);
+    Task<List<SessionInfoDto>> SearchSessionsAsync(Guid userId, string keyword);
 
     Task<string> GetSystemPromptAsync();
     Task UpdateSystemPromptAsync(GodGPTConfigurationDto godGptConfigurationDto);
@@ -67,6 +69,9 @@ public interface IGodGPTService
     Task GuestChatAsync(string clientIp, string content, string chatId);
     Task<GuestChatLimitsResponseDto> GetGuestChatLimitsAsync(string clientIp);
     Task<bool> CanGuestChatAsync(string clientIp);
+    Task<GetInvitationInfoResponse> GetInvitationInfoAsync(Guid currentUserId);
+    Task<RedeemInviteCodeResponse> RedeemInviteCodeAsync(Guid currentUserId,
+        RedeemInviteCodeRequest redeemInviteCodeRequest);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -145,6 +150,34 @@ public class GodGPTService : ApplicationService, IGodGPTService
     {
         var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
         return await manager.RenameSessionAsync(sessionId, title);
+    }
+
+    public async Task<List<SessionInfoDto>> SearchSessionsAsync(Guid userId, string keyword)
+    {
+        // Input validation according to downstream team requirements
+        if (string.IsNullOrWhiteSpace(keyword))
+        {
+            return new List<SessionInfoDto>(); // Return empty list for empty keyword
+        }
+
+        // Length limit validation
+        if (keyword.Length > 200)
+        {
+            _logger.LogWarning($"Search keyword too long: {keyword.Length} characters");
+            return new List<SessionInfoDto>();
+        }
+
+        try
+        {
+            var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
+            return await manager.SearchSessionsAsync(keyword.Trim(), 1000);
+        }
+        catch (Exception ex)
+        {
+            // Error handling according to downstream team requirements
+            _logger.LogError(ex, $"Search sessions failed for keyword: {keyword}");
+            return new List<SessionInfoDto>();
+        }
     }
 
     public Task<string> GetSystemPromptAsync()
@@ -473,6 +506,33 @@ public class GodGPTService : ApplicationService, IGodGPTService
     {
         var options = _anonymousOptions?.CurrentValue;
         return options?.MaxChatCount > 0 ? options.MaxChatCount : 3;
+    }
+
+    public async Task<GetInvitationInfoResponse> GetInvitationInfoAsync(Guid currentUserId)
+    {
+        var invitationAgent =  _clusterClient.GetGrain<IInvitationGAgent>(currentUserId);
+        var inviteCode = await invitationAgent.GenerateInviteCodeAsync();
+        var invitationStatsDto = await invitationAgent.GetInvitationStatsAsync();
+        var rewardTierDtos = await invitationAgent.GetRewardTiersAsync();
+        return new GetInvitationInfoResponse
+        {
+            InviteCode = inviteCode,
+            TotalInvites = invitationStatsDto.TotalInvites,
+            ValidInvites = invitationStatsDto.ValidInvites,
+            TotalCreditsEarned = invitationStatsDto.TotalCreditsEarned,
+            RewardTiers = rewardTierDtos
+        };
+    }
+
+    public async Task<RedeemInviteCodeResponse> RedeemInviteCodeAsync(Guid currentUserId,
+        RedeemInviteCodeRequest input)
+    {
+        var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
+        var result = await manager.RedeemInviteCodeAsync(input.InviteCode);
+        return new RedeemInviteCodeResponse
+        {
+            IsValid = result
+        };
     }
 
     private bool TryGetUserIdFromMetadata(IDictionary<string, string> metadata, out string userId)
