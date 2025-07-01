@@ -44,4 +44,8 @@
         <Content Include="../../configurations/appsettings.HttpApi.Host.Shared.json" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" Link="appsettings.HttpApi.Host.Shared.json" />
     </ItemGroup>
    
+    <ItemGroup>
+      <Folder Include="Controllers" />
+    </ItemGroup>
+   
 </Project>
