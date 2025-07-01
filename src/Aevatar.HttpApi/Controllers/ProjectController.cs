@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
-using Volo.Abp.Identity;
 using Volo.Abp.PermissionManagement;
 
 namespace Aevatar.Controllers;
@@ -17,7 +16,7 @@ namespace Aevatar.Controllers;
 [RemoteService]
 [ControllerName("Project")]
 [Route("api/projects")]
-// [Authorize]
+[Authorize]
 public class ProjectController : AevatarController
 {
     private readonly IProjectService _projectService;
@@ -110,7 +109,7 @@ public class ProjectController : AevatarController
     [HttpPost("{projectId}/restart")]
     public async Task<RestartConfigResponseDto> RestartAsync(Guid projectId,string clientId)
     {
-        // await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.Members.Manage);
+        await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.Members.Manage);
         return await _developerService.RestartAsync(clientId);
     }
 }

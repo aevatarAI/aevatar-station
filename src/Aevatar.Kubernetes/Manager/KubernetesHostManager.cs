@@ -121,7 +121,10 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         Dictionary<string, string> configContent,
         Func<string, Dictionary<string, string>, V1ConfigMap> createConfigMapDefinitionFunc)
     {
-        string configMapName = getConfigMapNameFunc(appId, version);
+        // Ensure namespace exists before creating ConfigMap
+        await EnsureNamespaceAsync(KubernetesConstants.AppNameSpace);
+
+        var configMapName = getConfigMapNameFunc(appId, version);
         var configMaps = await _kubernetesClientAdapter.ListConfigMapAsync(KubernetesConstants.AppNameSpace);
         var configMap = createConfigMapDefinitionFunc(configMapName, configContent);
         if (!configMaps.Items.Any(configMap => configMap.Metadata.Name == configMapName))
@@ -133,6 +136,24 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         {
             await _kubernetesClientAdapter.ReplaceNamespacedConfigMapAsync(configMap, configMapName,
                 KubernetesConstants.AppNameSpace);
+        }
+    }
+
+    private async Task EnsureNamespaceAsync(string namespaceName, CancellationToken cancellationToken = default)
+    {
+        var namespaceExists = await _kubernetesClientAdapter.NamespaceExistsAsync(namespaceName, cancellationToken);
+
+        if (!namespaceExists)
+        {
+            var namespaceDefinition = new V1Namespace
+            {
+                ApiVersion = "v1",
+                Kind = "Namespace",
+                Metadata = new() { Name = namespaceName }
+            };
+
+            await _kubernetesClientAdapter.CreateNamespaceAsync(namespaceDefinition, cancellationToken);
+            _logger.LogInformation("[KubernetesHostManager] Namespace {namespaceName} created", namespaceName);
         }
     }
 
@@ -193,16 +214,6 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
             .Replace(KubernetesConstants.HostPlaceHolderVersion, version.ToLower())
             .Replace(KubernetesConstants.HostPlaceHolderNameSpace, KubernetesConstants.AppNameSpace.ToLower());
     }
-    
-    private static string GetHostSiloConfigContentMock(string appId, string version, string fileName)
-    {
-        var templateFilePath = "/Users/tangchen/Project/github/aevatar-station/configurations/" + fileName;
-        var configContent = File.ReadAllText(templateFilePath);
-        var unescapedContent = Regex.Unescape(configContent);
-        return unescapedContent.Replace(KubernetesConstants.HostPlaceHolderAppId, appId.ToLower())
-            .Replace(KubernetesConstants.HostPlaceHolderVersion, version.ToLower())
-            .Replace(KubernetesConstants.HostPlaceHolderNameSpace, KubernetesConstants.AppNameSpace.ToLower());
-    }
 
     private static string GetHostClientConfigContent(string appId, string version, string templateFilePath,
         [CanBeNull] string corsUrls)
@@ -225,6 +236,9 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         string deploymentLabelName, string containerName, List<string> command, int replicas,
         int containerPort, string maxSurge, string maxUnavailable, string healthPath, bool isSilo = false)
     {
+        // Ensure namespace exists before creating Deployment
+        await EnsureNamespaceAsync(KubernetesConstants.AppNameSpace);
+
         var configMapName = ConfigMapHelper.GetAppSettingConfigMapName(appId, version);
         var sideCarConfigName = ConfigMapHelper.GetAppFileBeatConfigMapName(appId, version);
 
@@ -251,6 +265,9 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         string appId, string version, string serviceName,
         string deploymentLabelName, int targetPort)
     {
+        // Ensure namespace exists before creating Service
+        await EnsureNamespaceAsync(KubernetesConstants.AppNameSpace);
+
         var services = await _kubernetesClientAdapter.ListServiceAsync(KubernetesConstants.AppNameSpace);
         if (!services.Items.Any(item => item.Metadata.Name == serviceName))
         {
@@ -270,6 +287,9 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         string appId, string version,
         string hostName, string rulePath, string serviceName, int targetPort)
     {
+        // Ensure namespace exists before creating Ingress
+        await EnsureNamespaceAsync(KubernetesConstants.AppNameSpace);
+
         var ingressName = IngressHelper.GetAppIngressName(appId, version);
         var ingresses = await _kubernetesClientAdapter.ListIngressAsync(KubernetesConstants.AppNameSpace);
         if (!ingresses.Items.Any(item => item.Metadata.Name == ingressName))
@@ -509,7 +529,7 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         _logger.LogInformation(
             $"[KubernetesAppManager] Deployment {deploymentName} restarted at {annotations["kubectl.kubernetes.io/restartedAt"]}");
     }
-    
+
     public async Task UpdateHostAsync(string appId, string version, string corsUrls)
     {
         _logger.LogInformation($"Updating service configuration for: {appId} with CORS URLs: {corsUrls}");
@@ -571,9 +591,6 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
             ConfigMapHelper.CreateAppSettingConfigMapDefinition);
     }
 
-    /// <summary>
-    /// 生成Host Silo的配置文件集合
-    /// </summary>
     private Dictionary<string, string> GetHostSiloConfigFiles(string hostSiloId, string version)
     {
         var hostSiloConfigContent =
@@ -584,18 +601,15 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
             { KubernetesConstants.AppSettingFileName, hostSiloConfigContent },
             {
                 KubernetesConstants.AppSettingSharedFileName,
-                // GetHostSiloConfigContent(hostSiloId, version, KubernetesConstants.AppSettingSharedFileName)
-                GetHostSiloConfigContentMock(hostSiloId, version, KubernetesConstants.AppSettingSharedFileName)
+                GetHostSiloConfigContent(hostSiloId, version, KubernetesConstants.AppSettingSharedFileName)
             },
             {
                 KubernetesConstants.AppSettingHttpApiHostSharedFileName,
-                // GetHostSiloConfigContent(hostSiloId, version, KubernetesConstants.AppSettingHttpApiHostSharedFileName)
-                GetHostSiloConfigContentMock(hostSiloId, version, KubernetesConstants.AppSettingHttpApiHostSharedFileName)
+                GetHostSiloConfigContent(hostSiloId, version, KubernetesConstants.AppSettingHttpApiHostSharedFileName)
             },
             {
                 KubernetesConstants.AppSettingSiloSharedFileName,
-                // GetHostSiloConfigContent(hostSiloId, version, KubernetesConstants.AppSettingSiloSharedFileName)
-                GetHostSiloConfigContentMock(hostSiloId, version, KubernetesConstants.AppSettingSiloSharedFileName)
+                GetHostSiloConfigContent(hostSiloId, version, KubernetesConstants.AppSettingSiloSharedFileName)
             }
         };
     }
