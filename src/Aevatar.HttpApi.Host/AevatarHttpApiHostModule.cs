@@ -215,6 +215,10 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         {
             config.UseMiddleware<ChatMiddleware>();
         });
+        app.Map("/api/godgpt/guest/chat", config =>
+        {
+            config.UseMiddleware<ChatMiddleware>();
+        });
         app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
         app.UseSwagger();
         app.UseAbpSwaggerUI(c =>
