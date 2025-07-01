@@ -467,7 +467,8 @@ public class GodGPTService : ApplicationService, IGodGPTService
     /// </summary>
     public async Task<CreateGuestSessionResponseDto> CreateGuestSessionAsync(string clientIp, string? guider = null)
     {
-        var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(CommonHelper.GetAnonymousUserGAgentId(clientIp));
+        var grainId = CommonHelper.StringToGuid(CommonHelper.GetAnonymousUserGAgentId(clientIp));
+        var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(grainId);
         
         // Check if user can still chat
         if (!await anonymousUserGrain.CanChatAsync())
@@ -496,7 +497,8 @@ public class GodGPTService : ApplicationService, IGodGPTService
     /// </summary>
     public async Task GuestChatAsync(string clientIp, string content, string chatId)
     {
-        var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(CommonHelper.GetAnonymousUserGAgentId(clientIp));
+        var grainId = CommonHelper.StringToGuid(CommonHelper.GetAnonymousUserGAgentId(clientIp));
+        var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(grainId);
         await anonymousUserGrain.GuestChatAsync(content, chatId);
     }
 
@@ -505,7 +507,8 @@ public class GodGPTService : ApplicationService, IGodGPTService
     /// </summary>
     public async Task<GuestChatLimitsResponseDto> GetGuestChatLimitsAsync(string clientIp)
     {
-        var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(CommonHelper.GetAnonymousUserGAgentId(clientIp));
+                    var grainId = CommonHelper.StringToGuid(CommonHelper.GetAnonymousUserGAgentId(clientIp));
+            var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(grainId);
         var remaining = await anonymousUserGrain.GetRemainingChatsAsync();
         
         return new GuestChatLimitsResponseDto
@@ -520,7 +523,8 @@ public class GodGPTService : ApplicationService, IGodGPTService
     /// </summary>
     public async Task<bool> CanGuestChatAsync(string clientIp)
     {
-        var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(CommonHelper.GetAnonymousUserGAgentId(clientIp));
+        var grainId = CommonHelper.StringToGuid(CommonHelper.GetAnonymousUserGAgentId(clientIp));
+        var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(grainId);
         return await anonymousUserGrain.CanChatAsync();
     }
 
@@ -534,7 +538,8 @@ public class GodGPTService : ApplicationService, IGodGPTService
         try
         {
             // Use a dummy IP to get configuration from AnonymousUserGAgent
-            var configGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(CommonHelper.GetAnonymousUserGAgentId("127.0.0.1"));
+            var grainId = CommonHelper.StringToGuid(CommonHelper.GetAnonymousUserGAgentId("127.0.0.1"));
+            var configGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(grainId);
             return await configGrain.GetMaxChatCountAsync();
         }
         catch (Exception ex)

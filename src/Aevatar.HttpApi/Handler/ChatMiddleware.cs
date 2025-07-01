@@ -41,14 +41,21 @@ public class ChatMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        var path = context.Request.Path.Value ?? "";
+        var pathBase = context.Request.PathBase.Value ?? "";
+        var fullPath = pathBase + path;
+        
+        _logger.LogDebug("[ChatMiddleware] Processing request - PathBase: {0}, Path: {1}, FullPath: {2}", 
+            pathBase, path, fullPath);
+        
         // Handle regular authenticated chat
-        if (context.Request.PathBase == "/api/gotgpt/chat")
+        if (pathBase == "/api/gotgpt/chat" || fullPath.Contains("/api/gotgpt/chat"))
         {
             await HandleAuthenticatedChatAsync(context);
             return;
         }
         // Handle guest (anonymous) chat
-        else if (context.Request.PathBase == "/api/godgpt/guest/chat")
+        else if (pathBase == "/api/godgpt/guest/chat" || fullPath.Contains("/api/godgpt/guest/chat"))
         {
             await HandleGuestChatAsync(context);
             return;
@@ -232,7 +239,8 @@ public class ChatMiddleware
             _logger.LogDebug("[GuestChatMiddleware] Start processing guest chat for user: {0}", userHashId);
 
             // Get or create anonymous user grain for this IP
-            var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(CommonHelper.GetAnonymousUserGAgentId(clientIp));
+            var grainId = CommonHelper.StringToGuid(CommonHelper.GetAnonymousUserGAgentId(clientIp));
+            var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(grainId);
             
             // Check if user can still chat
             if (!await anonymousUserGrain.CanChatAsync())
@@ -358,6 +366,32 @@ public class ChatMiddleware
             _logger.LogWarning(ex, "[GuestChatMiddleware] User friendly error for user: {0}, message: {1}", userHashId, ex.Message);
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             await context.Response.WriteAsync(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Handle specific business logic errors that might contain error codes
+            var statusCode = StatusCodes.Status500InternalServerError;
+            if (ex.Data.Contains("Code") && int.TryParse(ex.Data["Code"]?.ToString(), out var code))
+            {
+                if (code == ExecuteActionStatus.InsufficientCredits)
+                {
+                    statusCode = StatusCodes.Status402PaymentRequired;
+                } 
+                else if (code == ExecuteActionStatus.RateLimitExceeded)
+                {
+                    statusCode = StatusCodes.Status429TooManyRequests;
+                }
+                // Ensure we never use business error codes as HTTP status codes
+                else if (code >= 10000) // Business error codes are typically large numbers
+                {
+                    statusCode = StatusCodes.Status400BadRequest;
+                    _logger.LogWarning("[GuestChatMiddleware] Business error code {0} converted to 400 for user: {1}", code, userHashId);
+                }
+            }
+            
+            context.Response.StatusCode = statusCode;
+            await context.Response.WriteAsync(ex.Message);
+            _logger.LogWarning(ex, "[GuestChatMiddleware] Operation error for user: {0}, status: {1}", userHashId, statusCode);
         }
         catch (Exception ex)
         {
