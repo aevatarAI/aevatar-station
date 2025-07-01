@@ -11,10 +11,13 @@ using Aevatar.Application.Grains.ChatManager.UserQuota;
 using Aevatar.Application.Grains.Common.Constants;
 using Aevatar.Application.Grains.Common.Options;
 using Aevatar.Application.Grains.Invitation;
+using Aevatar.Application.Grains.Twitter;
+using Aevatar.Application.Grains.Twitter.Dtos;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
 using Aevatar.GodGPT.Dtos;
 using Aevatar.Quantum;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
@@ -65,6 +68,11 @@ public interface IGodGPTService
     Task<GetInvitationInfoResponse> GetInvitationInfoAsync(Guid currentUserId);
     Task<RedeemInviteCodeResponse> RedeemInviteCodeAsync(Guid currentUserId,
         RedeemInviteCodeRequest redeemInviteCodeRequest);
+
+    Task<TwitterAuthResultDto> TwitterAuthVerifyAsync(TwitterAuthVerifyInput input);
+    Task<PagedResultDto<RewardHistoryDto>> GetCreditsHistoryAsync(Guid currentUserId,
+        GetCreditsHistoryInput getCreditsHistoryInput);
+    Task<TwitterAuthParamsDto> GetTwitterAuthParamsAsync(Guid currentUserId);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -436,7 +444,8 @@ public class GodGPTService : ApplicationService, IGodGPTService
             TotalInvites = invitationStatsDto.TotalInvites,
             ValidInvites = invitationStatsDto.ValidInvites,
             TotalCreditsEarned = invitationStatsDto.TotalCreditsEarned,
-            RewardTiers = rewardTierDtos
+            RewardTiers = rewardTierDtos,
+            IsBound = invitationStatsDto.IsBound
         };
     }
 
@@ -449,6 +458,35 @@ public class GodGPTService : ApplicationService, IGodGPTService
         {
             IsValid = result
         };
+    }
+
+    public async Task<TwitterAuthResultDto> TwitterAuthVerifyAsync(TwitterAuthVerifyInput input)
+    {
+        if (!Guid.TryParse(input.State, out var userId))
+        {
+            return new TwitterAuthResultDto();
+        }
+
+        var twitterAuthGAgent = _clusterClient.GetGrain<ITwitterAuthGAgent>(userId);
+        return await twitterAuthGAgent.VerifyAuthCodeAsync(input.Platform, input.Code);
+    }
+
+    public async Task<PagedResultDto<RewardHistoryDto>> GetCreditsHistoryAsync(Guid currentUserId,
+        GetCreditsHistoryInput input)
+    {
+        var invitationAgent =  _clusterClient.GetGrain<IInvitationGAgent>(currentUserId);
+        var rewardHistoryDtos = await invitationAgent.GetRewardHistoryAsync(new GetRewardHistoryRequestDto
+        {
+            PageNo = input.Page,
+            PageSize = input.PageSize
+        });
+        return rewardHistoryDtos;
+    }
+
+    public async Task<TwitterAuthParamsDto> GetTwitterAuthParamsAsync(Guid currentUserId)
+    {
+        var twitterAuthGAgent = _clusterClient.GetGrain<ITwitterAuthGAgent>(currentUserId);
+        return await twitterAuthGAgent.GetAuthParamsAsync();
     }
 
     private bool TryGetUserIdFromMetadata(IDictionary<string, string> metadata, out string userId)
