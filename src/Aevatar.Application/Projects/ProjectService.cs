@@ -212,10 +212,4 @@ public class ProjectService : OrganizationService, IProjectService
         var organization = await OrganizationUnitRepository.GetAsync(organizationId);
         await RemoveMemberAsync(organization, user.Id);
     }
-
-    public override async Task DeleteAsync(Guid id)
-    {
-        await base.DeleteAsync(id);
-        await _domainRepository.DeleteAsync(o => o.ProjectId == id);
-    }
 }
