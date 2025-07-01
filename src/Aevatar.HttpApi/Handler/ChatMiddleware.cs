@@ -253,25 +253,103 @@ public class ChatMiddleware
                 return;
             }
 
-            var chatId = Guid.NewGuid().ToString("N")[..8];
+            var chatId = Guid.NewGuid().ToString();
             var sessionId = sessionInfo.SessionId;
 
             _logger.LogDebug("[GuestChatMiddleware] Found session {0} for user: {1}", sessionId, userHashId);
 
-            // Execute chat through grain
+            // Set up SSE response headers
+            var streamProvider = _clusterClient.GetStreamProvider("Aevatar");
+            var streamId = StreamId.Create(_aevatarOptions.Value.StreamNamespace, sessionId);
+            _logger.LogDebug("[GuestChatMiddleware] sessionId {0}, namespace {1}, streamId {2}", 
+                sessionId, _aevatarOptions.Value.StreamNamespace, streamId.ToString());
+            
+            context.Response.ContentType = "text/event-stream";
+            context.Response.Headers.Connection = "keep-alive";
+            context.Response.Headers.CacheControl = "no-cache";
+            
+            var responseStream = streamProvider.GetStream<ResponseStreamGodChat>(streamId);
+
+            // Execute chat through grain (this will trigger the stream)
             await anonymousUserGrain.GuestChatAsync(request.Content, chatId);
+            _logger.LogDebug("[GuestChatMiddleware] Guest chat executed for user: {0}, ChatId: {1}", userHashId, chatId);
 
-            // Set up SSE response
-            await SetupSseResponse(context);
+            // Handle streaming response
+            var exitSignal = new TaskCompletionSource();
+            StreamSubscriptionHandle<ResponseStreamGodChat>? subscription = null;
+            var firstFlag = false;
+            var ifLastChunk = false;
 
-            // Subscribe to SignalR hub for streaming response
-            var hubConnection = _hubContext.Clients.Group(chatId);
-            
-            // Track connection for cleanup
-            var connectionTask = StartSseConnection(context, chatId, stopwatch);
-            
-            await connectionTask;
-            
+            subscription = await responseStream.SubscribeAsync(async (chatResponse, token) =>
+            {
+                if (chatResponse.ChatId != chatId)
+                {
+                    return;
+                }
+
+                if (!firstFlag)
+                {
+                    await context.Response.StartAsync();
+                    firstFlag = true;
+                    _logger.LogDebug("[GuestChatMiddleware] First message received for user: {0}, duration: {1}ms", 
+                        userHashId, stopwatch.ElapsedMilliseconds);
+                }
+
+                // Simplify response for guest users (remove unnecessary fields)
+                var guestResponse = new {
+                    content = chatResponse.Content,
+                    isLastChunk = chatResponse.IsLastChunk
+                };
+
+                var responseData = $"data: {JsonConvert.SerializeObject(guestResponse)}\n\n";
+                await context.Response.WriteAsync(responseData);
+                await context.Response.Body.FlushAsync();
+
+                if (chatResponse.IsLastChunk)
+                {
+                    await context.Response.WriteAsync("event: completed\n");
+                    context.Response.Body.Close();
+                    ifLastChunk = true;
+                    exitSignal.TrySetResult();
+                    if (subscription != null)
+                    {
+                        await subscription.UnsubscribeAsync();
+                    }
+                }
+            }, ex =>
+            {
+                _logger.LogError("[GuestChatMiddleware] Stream error for user: {0}, ChatId: {1}, Error: {2}", 
+                    userHashId, chatId, ex.Message);
+                exitSignal.TrySetException(ex);
+                return Task.CompletedTask;
+            }, () =>
+            {
+                _logger.LogDebug("[GuestChatMiddleware] Stream completed for user: {0}", userHashId);
+                exitSignal.TrySetResult();
+                return Task.CompletedTask;
+            });
+
+            try
+            {
+                await exitSignal.Task.WaitAsync(context.RequestAborted);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("[GuestChatMiddleware] Error waiting for stream completion: {0}", ex.Message);
+            }
+            finally
+            {
+                if (subscription != null)
+                {
+                    await subscription.UnsubscribeAsync();
+                }
+            }
+
+            if (!ifLastChunk)
+            {
+                _logger.LogDebug("[GuestChatMiddleware] No LastChunk received for user: {0}, ChatId: {1}", userHashId, chatId);
+            }
+
             _logger.LogDebug("[GuestChatMiddleware] Completed guest chat for user: {0}, duration: {1}ms", 
                 userHashId, stopwatch.ElapsedMilliseconds);
         }

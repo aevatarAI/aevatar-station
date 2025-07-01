@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Anonymous;
 using Aevatar.Application.Grains.Agents.Anonymous;
-using Aevatar.Application.Grains.Agents.Anonymous.Options;
 using Aevatar.Application.Grains.Agents.ChatManager;
 using Aevatar.Application.Grains.Agents.ChatManager.Common;
 using Aevatar.Application.Grains.Agents.ChatManager.ConfigAgent;
@@ -81,16 +80,14 @@ public class GodGPTService : ApplicationService, IGodGPTService
     private readonly IClusterClient _clusterClient;
     private readonly ILogger<GodGPTService> _logger;
     private readonly IOptionsMonitor<StripeOptions> _stripeOptions;
-    private readonly IOptionsMonitor<AnonymousGodGPTOptions> _anonymousOptions;
 
     private readonly StripeClient _stripeClient;
 
-    public GodGPTService(IClusterClient clusterClient, ILogger<GodGPTService> logger, IOptionsMonitor<StripeOptions> stripeOptions, IOptionsMonitor<AnonymousGodGPTOptions> anonymousOptions)
+    public GodGPTService(IClusterClient clusterClient, ILogger<GodGPTService> logger, IOptionsMonitor<StripeOptions> stripeOptions)
     {
         _clusterClient = clusterClient;
         _logger = logger;
         _stripeOptions = stripeOptions;
-        _anonymousOptions = anonymousOptions;
 
         _stripeClient = new StripeClient(_stripeOptions.CurrentValue.SecretKey);
     }
@@ -476,7 +473,7 @@ public class GodGPTService : ApplicationService, IGodGPTService
             return new CreateGuestSessionResponseDto
             {
                 RemainingChats = remainingChats,
-                TotalAllowed = GetMaxChatCount()
+                TotalAllowed = await GetMaxChatCountAsync()
             };
         }
 
@@ -487,7 +484,7 @@ public class GodGPTService : ApplicationService, IGodGPTService
         return new CreateGuestSessionResponseDto
         {
             RemainingChats = remaining,
-            TotalAllowed = GetMaxChatCount()
+            TotalAllowed = await GetMaxChatCountAsync()
         };
     }
 
@@ -511,7 +508,7 @@ public class GodGPTService : ApplicationService, IGodGPTService
         return new GuestChatLimitsResponseDto
         {
             RemainingChats = remaining,
-            TotalAllowed = GetMaxChatCount()
+            TotalAllowed = await GetMaxChatCountAsync()
         };
     }
 
@@ -527,12 +524,21 @@ public class GodGPTService : ApplicationService, IGodGPTService
     #endregion
 
     /// <summary>
-    /// Get max chat count from configuration, default to 3 if configuration is null or empty
+    /// Get max chat count from AnonymousUserGAgent configuration, default to 3 if unable to retrieve
     /// </summary>
-    private int GetMaxChatCount()
+    private async Task<int> GetMaxChatCountAsync()
     {
-        var options = _anonymousOptions?.CurrentValue;
-        return options?.MaxChatCount > 0 ? options.MaxChatCount : 3;
+        try
+        {
+            // Use a dummy IP to get configuration from AnonymousUserGAgent
+            var configGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>("AnonymousUser_config");
+            return await configGrain.GetMaxChatCountAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get max chat count from configuration, using default: 3");
+            return 3;
+        }
     }
 
     private bool TryGetUserIdFromMetadata(IDictionary<string, string> metadata, out string userId)
