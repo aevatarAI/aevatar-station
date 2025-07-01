@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Aevatar.Anonymous;
+using Aevatar.Application.Grains.Agents.Anonymous;
+using Aevatar.Application.Grains.Agents.Anonymous.Options;
 using Aevatar.Application.Grains.Agents.ChatManager;
 using Aevatar.Application.Grains.Agents.ChatManager.Common;
 using Aevatar.Application.Grains.Agents.ChatManager.ConfigAgent;
@@ -60,6 +63,10 @@ public interface IGodGPTService
     Task<AppStoreSubscriptionResponseDto> VerifyAppStoreReceiptAsync(Guid currentUserId, VerifyAppStoreReceiptInput input);
     Task<GrainResultDto<int>> UpdateUserCreditsAsync(Guid currentUserId, UpdateUserCreditsInput input);
     Task<bool> HasActiveAppleSubscriptionAsync(Guid currentUserId);
+    Task<CreateGuestSessionResponseDto> CreateGuestSessionAsync(string clientIp, string? guider = null);
+    Task GuestChatAsync(string clientIp, string content, string chatId);
+    Task<GuestChatLimitsResponseDto> GetGuestChatLimitsAsync(string clientIp);
+    Task<bool> CanGuestChatAsync(string clientIp);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -69,14 +76,16 @@ public class GodGPTService : ApplicationService, IGodGPTService
     private readonly IClusterClient _clusterClient;
     private readonly ILogger<GodGPTService> _logger;
     private readonly IOptionsMonitor<StripeOptions> _stripeOptions;
+    private readonly IOptionsMonitor<AnonymousGodGPTOptions> _anonymousOptions;
 
     private readonly StripeClient _stripeClient;
 
-    public GodGPTService(IClusterClient clusterClient, ILogger<GodGPTService> logger, IOptionsMonitor<StripeOptions> stripeOptions)
+    public GodGPTService(IClusterClient clusterClient, ILogger<GodGPTService> logger, IOptionsMonitor<StripeOptions> stripeOptions, IOptionsMonitor<AnonymousGodGPTOptions> anonymousOptions)
     {
         _clusterClient = clusterClient;
         _logger = logger;
         _stripeOptions = stripeOptions;
+        _anonymousOptions = anonymousOptions;
 
         _stripeClient = new StripeClient(_stripeOptions.CurrentValue.SecretKey);
     }
@@ -389,6 +398,81 @@ public class GodGPTService : ApplicationService, IGodGPTService
         var userBillingGrain =
             _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(currentUserId));
         return await userBillingGrain.HasActiveAppleSubscriptionAsync();
+    }
+
+    #region Anonymous User Methods
+
+    /// <summary>
+    /// Create guest session for anonymous users (IP-based)
+    /// </summary>
+    public async Task<CreateGuestSessionResponseDto> CreateGuestSessionAsync(string clientIp, string? guider = null)
+    {
+        var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(CommonHelper.GetAnonymousUserGAgentId(clientIp));
+        
+        // Check if user can still chat
+        if (!await anonymousUserGrain.CanChatAsync())
+        {
+            var remainingChats = await anonymousUserGrain.GetRemainingChatsAsync();
+            return new CreateGuestSessionResponseDto
+            {
+                RemainingChats = remainingChats,
+                TotalAllowed = GetMaxChatCount()
+            };
+        }
+
+        // Create new session (this will replace any existing session for the IP)
+        await anonymousUserGrain.CreateGuestSessionAsync(guider);
+        
+        var remaining = await anonymousUserGrain.GetRemainingChatsAsync();
+        return new CreateGuestSessionResponseDto
+        {
+            RemainingChats = remaining,
+            TotalAllowed = GetMaxChatCount()
+        };
+    }
+
+    /// <summary>
+    /// Execute guest chat for anonymous users
+    /// </summary>
+    public async Task GuestChatAsync(string clientIp, string content, string chatId)
+    {
+        var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(CommonHelper.GetAnonymousUserGAgentId(clientIp));
+        await anonymousUserGrain.GuestChatAsync(content, chatId);
+    }
+
+    /// <summary>
+    /// Get chat limits for anonymous users
+    /// </summary>
+    public async Task<GuestChatLimitsResponseDto> GetGuestChatLimitsAsync(string clientIp)
+    {
+        var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(CommonHelper.GetAnonymousUserGAgentId(clientIp));
+        var remaining = await anonymousUserGrain.GetRemainingChatsAsync();
+        
+        return new GuestChatLimitsResponseDto
+        {
+            RemainingChats = remaining,
+            TotalAllowed = GetMaxChatCount()
+        };
+    }
+
+    /// <summary>
+    /// Check if anonymous user can chat
+    /// </summary>
+    public async Task<bool> CanGuestChatAsync(string clientIp)
+    {
+        var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(CommonHelper.GetAnonymousUserGAgentId(clientIp));
+        return await anonymousUserGrain.CanChatAsync();
+    }
+
+    #endregion
+
+    /// <summary>
+    /// Get max chat count from configuration, default to 3 if configuration is null or empty
+    /// </summary>
+    private int GetMaxChatCount()
+    {
+        var options = _anonymousOptions?.CurrentValue;
+        return options?.MaxChatCount > 0 ? options.MaxChatCount : 3;
     }
 
     private bool TryGetUserIdFromMetadata(IDictionary<string, string> metadata, out string userId)

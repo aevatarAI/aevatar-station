@@ -3,10 +3,14 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Aevatar.Anonymous;
+using Aevatar.Application.Grains.Agents.Anonymous;
 using Aevatar.Application.Grains.Agents.ChatManager;
 using Aevatar.Application.Grains.Agents.ChatManager.Chat;
+using Aevatar.Application.Grains.Agents.ChatManager.Common;
 using Aevatar.Application.Grains.ChatManager.UserQuota;
 using Aevatar.Core.Abstractions;
+using Aevatar.Extensions;
 using Aevatar.Quantum;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -37,158 +41,251 @@ public class ChatMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        // Handle regular authenticated chat
         if (context.Request.PathBase == "/api/gotgpt/chat")
         {
-            if (context.User?.Identity == null || !context.User.Identity.IsAuthenticated)
+            await HandleAuthenticatedChatAsync(context);
+            return;
+        }
+        // Handle guest (anonymous) chat
+        else if (context.Request.PathBase == "/api/godgpt/guest/chat")
+        {
+            await HandleGuestChatAsync(context);
+            return;
+        }
+        else
+        {
+            await _next(context);
+        }
+    }
+
+    private async Task HandleAuthenticatedChatAsync(HttpContext context)
+    {
+        if (context.User?.Identity == null || !context.User.Identity.IsAuthenticated)
+        {
+            _logger.LogDebug("[GodGPTController][ChatWithSessionAsync] Unauthorized: User is not authenticated");
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await context.Response.WriteAsync("Unauthorized: User is not authenticated.");
+            await context.Response.Body.FlushAsync();
+            return;
+        }
+        
+        var userIdStr = context.User.FindFirst("sub")?.Value ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (userIdStr.IsNullOrWhiteSpace() || !Guid.TryParse(userIdStr, out var userId))
+        {
+            _logger.LogDebug("[GodGPTController][ChatWithSessionAsync] Unauthorized: Unable to retrieve UserId.");
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await context.Response.WriteAsync("Unauthorized: Unable to retrieve UserId.");
+            await context.Response.Body.FlushAsync();
+            return;
+        }
+
+        var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
+        var request = JsonConvert.DeserializeObject<QuantumChatRequestDto>(body);
+        try
+        {
+            var stopwatch = Stopwatch.StartNew();
+            _logger.LogDebug(
+                $"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}, userId {userId}");
+
+            var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
+            if (!await manager.IsUserSessionAsync(request.SessionId))
             {
-                _logger.LogDebug("[GodGPTController][ChatWithSessionAsync] Unauthorized: User is not authenticated");
-                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                await context.Response.WriteAsync("Unauthorized: User is not authenticated.");
-                await context.Response.Body.FlushAsync();
-                return;
-            }
-            
-            var userIdStr = context.User.FindFirst("sub")?.Value ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (userIdStr.IsNullOrWhiteSpace() || !Guid.TryParse(userIdStr, out var userId))
-            {
-                _logger.LogDebug("[GodGPTController][ChatWithSessionAsync] Unauthorized: Unable to retrieve UserId.");
-                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                await context.Response.WriteAsync("Unauthorized: Unable to retrieve UserId.");
+                _logger.LogError("[GodGPTController][ChatWithSessionAsync] sessionInfoIsNull sessionId={A}",
+                    request.SessionId);
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                await context.Response.WriteAsync($"Unable to load conversation {request.SessionId}");
                 await context.Response.Body.FlushAsync();
                 return;
             }
 
-            var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
-            var request = JsonConvert.DeserializeObject<QuantumChatRequestDto>(body);
-            try
-            {
-                var stopwatch = Stopwatch.StartNew();
-                _logger.LogDebug(
-                    $"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}, userId {userId}");
+            var streamProvider = _clusterClient.GetStreamProvider("Aevatar");
+            var streamId = StreamId.Create(_aevatarOptions.Value.StreamNamespace, request.SessionId);
+            _logger.LogDebug(
+                $"[GodGPTController][ChatWithSessionAsync] sessionId {request.SessionId}, namespace {_aevatarOptions.Value.StreamNamespace}, streamId {streamId.ToString()}");
+            context.Response.ContentType = "text/event-stream";
+            context.Response.Headers.Connection = "keep-alive";
+            context.Response.Headers.CacheControl = "no-cache";
+            var responseStream = streamProvider.GetStream<ResponseStreamGodChat>(streamId);
+            var godChat = _clusterClient.GetGrain<IGodChat>(request.SessionId);
 
-                var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
-                if (!await manager.IsUserSessionAsync(request.SessionId))
+            var chatId = Guid.NewGuid().ToString();
+            await godChat.StreamChatWithSessionAsync(request.SessionId, string.Empty, request.Content,
+                chatId, null, true, request.Region);
+            _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] http request llm:{request.SessionId}");
+            var exitSignal = new TaskCompletionSource();
+            StreamSubscriptionHandle<ResponseStreamGodChat>? subscription = null;
+            var firstFlag = false;
+            var ifLastChunk = false;
+            subscription = await responseStream.SubscribeAsync(async (chatResponse, token) =>
+            {
+                if (chatResponse.ChatId != chatId)
                 {
-                    _logger.LogError("[GodGPTController][ChatWithSessionAsync] sessionInfoIsNull sessionId={A}",
-                        request.SessionId);
-                    context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                    await context.Response.WriteAsync($"Unable to load conversation {request.SessionId}");
-                    await context.Response.Body.FlushAsync();
                     return;
                 }
 
-                var streamProvider = _clusterClient.GetStreamProvider("Aevatar");
-                var streamId = StreamId.Create(_aevatarOptions.Value.StreamNamespace, request.SessionId);
-                _logger.LogDebug(
-                    $"[GodGPTController][ChatWithSessionAsync] sessionId {request.SessionId}, namespace {_aevatarOptions.Value.StreamNamespace}, streamId {streamId.ToString()}");
-                context.Response.ContentType = "text/event-stream";
-                context.Response.Headers.Connection = "keep-alive";
-                context.Response.Headers.CacheControl = "no-cache";
-                var responseStream = streamProvider.GetStream<ResponseStreamGodChat>(streamId);
-                var godChat = _clusterClient.GetGrain<IGodChat>(request.SessionId);
-
-                var chatId = Guid.NewGuid().ToString();
-                await godChat.StreamChatWithSessionAsync(request.SessionId, string.Empty, request.Content,
-                    chatId, null, true, request.Region);
-                _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] http request llm:{request.SessionId}");
-                var exitSignal = new TaskCompletionSource();
-                StreamSubscriptionHandle<ResponseStreamGodChat>? subscription = null;
-                var firstFlag = false;
-                var ifLastChunk = false;
-                subscription = await responseStream.SubscribeAsync(async (chatResponse, token) =>
+                if (firstFlag == false)
                 {
-                    if (chatResponse.ChatId != chatId)
-                    {
-                        return;
-                    }
+                    await context.Response.StartAsync();
+                    firstFlag = true;
+                    _logger.LogDebug(
+                        $"[GodGPTController][ChatWithSessionAsync] SubscribeAsync get first message:{request.SessionId}, duration: {stopwatch.ElapsedMilliseconds}ms");
+                }
 
-                    if (firstFlag == false)
-                    {
-                        await context.Response.StartAsync();
-                        firstFlag = true;
-                        _logger.LogDebug(
-                            $"[GodGPTController][ChatWithSessionAsync] SubscribeAsync get first message:{request.SessionId}, duration: {stopwatch.ElapsedMilliseconds}ms");
-                    }
+                var responseData = $"data: {JsonConvert.SerializeObject(chatResponse.ConvertToHttpResponse())}\n\n";
+                await context.Response.WriteAsync(responseData);
+                await context.Response.Body.FlushAsync();
 
-                    var responseData = $"data: {JsonConvert.SerializeObject(chatResponse.ConvertToHttpResponse())}\n\n";
-                    await context.Response.WriteAsync(responseData);
-                    await context.Response.Body.FlushAsync();
-
-                    if (chatResponse.IsLastChunk)
-                    {
-                        await context.Response.WriteAsync("event: completed\n");
-                        context.Response.Body.Close();
-                        ifLastChunk = true;
-                        exitSignal.TrySetResult();
-                        if (subscription != null)
-                        {
-                            await subscription.UnsubscribeAsync();
-                        }
-                    }
-                }, ex =>
+                if (chatResponse.IsLastChunk)
                 {
-                    _logger.LogError(
-                        $"[GodGPTController][ChatWithSessionAsync] on stream error async:{ex.Message} - session:{request.SessionId.ToString()}, chatId:{chatId}");
-                    exitSignal.TrySetException(ex);
-                    return Task.CompletedTask;
-                }, () =>
-                {
-                    _logger.LogError($"[GodGPTController][ChatWithSessionAsync] oncomplete");
+                    await context.Response.WriteAsync("event: completed\n");
+                    context.Response.Body.Close();
+                    ifLastChunk = true;
                     exitSignal.TrySetResult();
-                    return Task.CompletedTask;
-                });
-
-                try
-                {
-                    await exitSignal.Task.WaitAsync(context.RequestAborted);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError($"[GodGPTController][ChatWithSessionAsync] catch error:{ex.ToString()}");
-                }
-                finally
-                {
                     if (subscription != null)
                     {
                         await subscription.UnsubscribeAsync();
                     }
                 }
-
-                if (ifLastChunk == false)
-                {
-                    _logger.LogDebug(
-                        $"[GodGPTController][ChatWithSessionAsync] No LastChunk:{request.SessionId},chatId:{chatId}");
-                }
-
-                _logger.LogDebug(
-                    $"[GodGPTController][ChatWithSessionAsync] complete done sessionId:{request.SessionId}");
-            }
-            catch (InvalidOperationException e)
+            }, ex =>
             {
-                var statusCode = StatusCodes.Status500InternalServerError;
-                if (e.Data.Contains("Code") && int.TryParse((string)e.Data["Code"], out var code))
-                {
-                    if (code == ExecuteActionStatus.InsufficientCredits)
-                    {
-                        statusCode = StatusCodes.Status402PaymentRequired;
-                    } else if (code == ExecuteActionStatus.RateLimitExceeded)
-                    {
-                        statusCode = StatusCodes.Status429TooManyRequests;
-                    }
-                }
-                context.Response.StatusCode = statusCode;
-                await context.Response.WriteAsync(e.Message);
-                await context.Response.Body.FlushAsync();
-                _logger.LogDebug("[GodGPTController][ChatWithSessionAsync] {0}", e.Message);
+                _logger.LogError(
+                    $"[GodGPTController][ChatWithSessionAsync] on stream error async:{ex.Message} - session:{request.SessionId.ToString()}, chatId:{chatId}");
+                exitSignal.TrySetException(ex);
+                return Task.CompletedTask;
+            }, () =>
+            {
+                _logger.LogError($"[GodGPTController][ChatWithSessionAsync] oncomplete");
+                exitSignal.TrySetResult();
+                return Task.CompletedTask;
+            });
+
+            try
+            {
+                await exitSignal.Task.WaitAsync(context.RequestAborted);
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error in SSE stream: {ex.Message}");
+                _logger.LogError($"[GodGPTController][ChatWithSessionAsync] catch error:{ex.ToString()}");
             }
+            finally
+            {
+                if (subscription != null)
+                {
+                    await subscription.UnsubscribeAsync();
+                }
+            }
+
+            if (ifLastChunk == false)
+            {
+                _logger.LogDebug(
+                    $"[GodGPTController][ChatWithSessionAsync] No LastChunk:{request.SessionId},chatId:{chatId}");
+            }
+
+            _logger.LogDebug(
+                $"[GodGPTController][ChatWithSessionAsync] complete done sessionId:{request.SessionId}");
         }
-        else
+        catch (InvalidOperationException e)
         {
-            await _next(context);
+            var statusCode = StatusCodes.Status500InternalServerError;
+            if (e.Data.Contains("Code") && int.TryParse((string)e.Data["Code"], out var code))
+            {
+                if (code == ExecuteActionStatus.InsufficientCredits)
+                {
+                    statusCode = StatusCodes.Status402PaymentRequired;
+                } else if (code == ExecuteActionStatus.RateLimitExceeded)
+                {
+                    statusCode = StatusCodes.Status429TooManyRequests;
+                }
+            }
+            context.Response.StatusCode = statusCode;
+            await context.Response.WriteAsync(e.Message);
+            await context.Response.Body.FlushAsync();
+            _logger.LogDebug("[GodGPTController][ChatWithSessionAsync] {0}", e.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Error in SSE stream: {ex.Message}");
+        }
+    }
+
+    private async Task HandleGuestChatAsync(HttpContext context)
+    {
+        var clientIp = context.GetClientIpAddress();
+        var userHashId = CommonHelper.GetAnonymousUserGAgentId(clientIp).Replace("AnonymousUser_", "");
+        _logger.LogDebug("[GuestChatMiddleware] Processing request for user: {0}", userHashId);
+        
+        try
+        {
+            var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
+            var request = JsonConvert.DeserializeObject<GuestChatRequestDto>(body);
+            
+            if (request == null || string.IsNullOrWhiteSpace(request.Content))
+            {
+                _logger.LogWarning("[GuestChatMiddleware] Invalid request body for user: {0}", userHashId);
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                await context.Response.WriteAsync("Invalid request body");
+                return;
+            }
+
+            var stopwatch = Stopwatch.StartNew();
+            _logger.LogDebug("[GuestChatMiddleware] Start processing guest chat for user: {0}", userHashId);
+
+            // Get or create anonymous user grain for this IP
+            var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(CommonHelper.GetAnonymousUserGAgentId(clientIp));
+            
+            // Check if user can still chat
+            if (!await anonymousUserGrain.CanChatAsync())
+            {
+                _logger.LogWarning("[GuestChatMiddleware] Chat limit exceeded for user: {0}", userHashId);
+                context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                await context.Response.WriteAsync("Daily chat limit exceeded");
+                return;
+            }
+
+            // Get current session
+            var sessionInfo = await anonymousUserGrain.GetCurrentSessionAsync();
+            if (sessionInfo == null)
+            {
+                _logger.LogWarning("[GuestChatMiddleware] No active session for user: {0}", userHashId);
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                await context.Response.WriteAsync("No active guest session. Please create a session first.");
+                return;
+            }
+
+            var chatId = Guid.NewGuid().ToString("N")[..8];
+            var sessionId = sessionInfo.SessionId;
+
+            _logger.LogDebug("[GuestChatMiddleware] Found session {0} for user: {1}", sessionId, userHashId);
+
+            // Execute chat through grain
+            await anonymousUserGrain.GuestChatAsync(request.Content, chatId);
+
+            // Set up SSE response
+            await SetupSseResponse(context);
+
+            // Subscribe to SignalR hub for streaming response
+            var hubConnection = _hubContext.Clients.Group(chatId);
+            
+            // Track connection for cleanup
+            var connectionTask = StartSseConnection(context, chatId, stopwatch);
+            
+            await connectionTask;
+            
+            _logger.LogDebug("[GuestChatMiddleware] Completed guest chat for user: {0}, duration: {1}ms", 
+                userHashId, stopwatch.ElapsedMilliseconds);
+        }
+        catch (UserFriendlyException ex)
+        {
+            _logger.LogWarning(ex, "[GuestChatMiddleware] User friendly error for user: {0}, message: {1}", userHashId, ex.Message);
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await context.Response.WriteAsync(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[GuestChatMiddleware] Unexpected error for user: {0}", userHashId);
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            await context.Response.WriteAsync("Internal server error");
         }
     }
 }
