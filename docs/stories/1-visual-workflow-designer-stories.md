@@ -20,15 +20,17 @@ As a user, I want to assemble workflows by dragging and dropping agent nodes ont
 # 2. Node Palette with Search and Filter
 
 ## User Story
-As a user, I want a searchable and filterable palette of agent nodes, so that I can easily find and add the right agents to my workflow.
+As a user, I want a searchable and filterable palette of agent nodes with descriptive tooltips, so that I can easily find and add the right agents to my workflow based on their name, description, or functionality.
 
-**Estimated Time: 12 hours**
+**Estimated Time: 16 hours**
 
 ### Acceptance Criteria
 1. Palette displays all available agent nodes with consistent visual styling.
-2. Users can search and filter agent nodes by functionality or name.
-3. Only valid agent nodes can be added to the canvas.
-4. Agent nodes are clearly categorized by their primary function or type.
+2. Users can search and filter agent nodes by functionality, name, OR description.
+3. Tooltips display the agent's description when hovering over any agent node in the palette.
+4. Only valid agent nodes can be added to the canvas.
+5. Agent nodes are clearly categorized by their primary function or type.
+6. Search results highlight matching text in both agent names and descriptions.
 
 ---
 
