@@ -36,6 +36,7 @@ public class DeveloperService : ApplicationService, IDeveloperService
         ILogger<DeveloperService> logger, IProjectCorsOriginService projectCorsOriginService)
     {
         _logger = logger;
+        _projectCorsOriginService = projectCorsOriginService;
         _hostDeployManager = hostDeployManager;
         _kubernetesClientAdapter = kubernetesClientAdapter;
         _projectCorsOriginService = projectCorsOriginService;
