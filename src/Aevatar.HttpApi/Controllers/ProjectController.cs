@@ -20,15 +20,16 @@ namespace Aevatar.Controllers;
 public class ProjectController : AevatarController
 {
     private readonly IProjectService _projectService;
-    private readonly IDeveloperService _developerService;
+    // private readonly IDeveloperService _developerService;
     private readonly IOrganizationPermissionChecker _permissionChecker;
 
     public ProjectController(IProjectService projectService,
-        IOrganizationPermissionChecker permissionChecker,
-        IDeveloperService developerService)
+        IOrganizationPermissionChecker permissionChecker
+        // IDeveloperService developerService
+            )
     {
         _projectService = projectService;
-        _developerService = developerService;
+        // _developerService = developerService;
         _permissionChecker = permissionChecker;
     }
 
@@ -107,10 +108,10 @@ public class ProjectController : AevatarController
         return await _projectService.GetPermissionListAsync(projectId);
     }
 
-    [HttpPost("{projectId}/restart")]
-    public async Task<RestartConfigResponseDto> RestartAsync(Guid projectId, string clientId)
-    {
-        await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.Members.Manage);
-        return await _developerService.RestartAsync(projectId, clientId);
-    }
+    // [HttpPost("{projectId}/restart")]
+    // public async Task<RestartConfigResponseDto> RestartAsync(Guid projectId, string clientId)
+    // {
+    //     await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.Members.Manage);
+    //     return await _developerService.RestartAsync(projectId, clientId);
+    // }
 }
