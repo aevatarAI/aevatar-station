@@ -297,7 +297,7 @@ public class ChatMiddleware
 
                 // Simplify response for guest users (remove unnecessary fields)
                 var guestResponse = new {
-                    content = chatResponse.Content,
+                    content = chatResponse.Response,
                     isLastChunk = chatResponse.IsLastChunk
                 };
 
