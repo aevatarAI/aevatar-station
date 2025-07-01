@@ -30,6 +30,6 @@ public class DeveloperController : AevatarController
     public async Task<RestartConfigResponseDto> RestartAsync(Guid projectId, string clientId)
     {
         await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.Members.Manage);
-        return await _developerService.RestartAsync(clientId);
+        return await _developerService.RestartAsync(projectId, clientId);
     }
-} 
+}
