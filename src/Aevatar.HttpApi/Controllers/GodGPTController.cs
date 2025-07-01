@@ -402,7 +402,7 @@ public class GodGPTController : AevatarController
         }
     }
     
-    [HttpGet("gotgpt/share/keyword")]
+    [HttpGet("godgpt/share/keyword")]
     public async Task<QuantumShareResponseDto> GetShareKeyWordWithAIAsync(
         [FromQuery] Guid sessionId, 
         [FromQuery] string? content, 
