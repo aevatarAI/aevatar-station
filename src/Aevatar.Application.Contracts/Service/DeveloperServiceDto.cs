@@ -1,9 +1,16 @@
+using System;
+using System.ComponentModel.DataAnnotations;
+
 namespace Aevatar.Service;
 
-public class RestartConfigResponseDto
+public class DeveloperServiceOperationDto
 {
-    public bool IsSuccess { get; set; }
-    public string Message { get; set; } = string.Empty;
+    [Required(ErrorMessage = "ProjectId is required")]
+    public Guid ProjectId { get; set; }
+
+    [Required(ErrorMessage = "ClientId is required")]
+    [StringLength(200, ErrorMessage = "ClientId cannot exceed 200 characters")]
+    public string ClientId { get; set; } = string.Empty;
 }
 
  

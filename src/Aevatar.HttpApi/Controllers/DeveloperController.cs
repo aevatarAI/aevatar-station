@@ -19,17 +19,30 @@ public class DeveloperController : AevatarController
     private readonly IDeveloperService _developerService;
     private readonly IOrganizationPermissionChecker _permissionChecker;
 
-    public DeveloperController(IDeveloperService developerService,
-        IOrganizationPermissionChecker permissionChecker)
+    public DeveloperController(IDeveloperService developerService, IOrganizationPermissionChecker permissionChecker)
     {
         _developerService = developerService;
         _permissionChecker = permissionChecker;
     }
 
-    [HttpPost("restart")]
-    public async Task<RestartConfigResponseDto> RestartAsync(Guid projectId, string clientId)
+    [HttpPut("service")]
+    public async Task DeveloperServiceStartAsync([FromBody] DeveloperServiceOperationDto request)
     {
-        await _permissionChecker.AuthenticateAsync(projectId, AevatarPermissions.Members.Manage);
-        return await _developerService.RestartAsync(projectId, clientId);
+        await _permissionChecker.AuthenticateAsync(request.ProjectId, AevatarPermissions.Members.Manage);
+        await _developerService.CreateAsync(request.ClientId, request.ProjectId);
+    }
+
+    [HttpPost("service")]
+    public async Task DeveloperServiceRestartAsync([FromBody] DeveloperServiceOperationDto request)
+    {
+        await _permissionChecker.AuthenticateAsync(request.ProjectId, AevatarPermissions.Members.Manage);
+        await _developerService.RestartAsync(request.ClientId, request.ProjectId);
+    }
+
+    [HttpDelete("service")]
+    public async Task DeveloperServiceDeleteAsync([FromBody] DeveloperServiceOperationDto request)
+    {
+        await _permissionChecker.AuthenticateAsync(request.ProjectId, AevatarPermissions.Members.Manage);
+        await _developerService.DeleteAsync(request.ClientId);
     }
 }

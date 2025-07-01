@@ -53,6 +53,7 @@ public class KubernetesConstants
     public const string HostPlaceHolderAppId = "[HostId]";
     public const string HostPlaceHolderVersion = "[Version]";
     public const string HostPlaceHolderNameSpace = "[NameSpace]";
+    public const string HostPlaceHolderProjectId = "[ProjectId]";
     public const string HostSilo = "silo";
     public const string HostClient = "client";
     public const string HostClientCors = "[Cors]";
