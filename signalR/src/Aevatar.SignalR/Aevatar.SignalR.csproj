@@ -18,9 +18,4 @@
         <ProjectReference Include="..\..\..\framework\src\Aevatar.Core\Aevatar.Core.csproj" />
     </ItemGroup>
 
-    <PropertyGroup>
-        <RestoreSources>https://www.myget.org/F/aelf-project-dev/api/v3/index.json;https://api.nuget.org/v3/index.json
-        </RestoreSources>
-    </PropertyGroup>
-
 </Project>
