@@ -53,15 +53,17 @@
 
 **第二阶段: Node Palette API (8小时) ✅**
 - ✅ `AgentSearchRequest` - Agent搜索请求参数 (SearchTerm, Types, SortBy, SortOrder)
-- ✅ `AgentSearchResponse` - 搜索响应结构 (Agents列表, TypeCounts, 分页信息)
-- ✅ `AgentItemDto` - Agent节点信息传输对象
+- ✅ `AgentSearchResponse` - 搜索响应结构 (复用AgentInstanceDto列表, TypeCounts, 分页信息)
+- ✅ 复用现有 `AgentInstanceDto` - 避免重复创建，保持架构一致性
 - ✅ `IAgentService` - 扩展AgentService接口，添加SearchAgentsWithLucene方法
 - ✅ `AgentService` - 实现Lucene查询逻辑，用户隔离，多类型过滤，排序功能
 - ✅ `AgentController` - 添加POST /api/agents/search端点
 - ✅ Lucene查询优化: 用户ID隔离 + 多类型过滤 + 搜索词匹配
 - ✅ 全面的单元测试覆盖 (211个测试全部通过)
-- **完成时间**: 2025-01-29 23:45
+- ✅ 项目依赖优化: Application.Contracts引用Domain项目
+- **完成时间**: 2025-01-29 23:55
 - **实际耗时**: 8小时 (符合预期)
+- **重要变更**: 复用AgentInstanceDto替代AgentItemDto，保持架构简洁性
 
 **第三阶段: 前端集成 (1周)**
 - 类型选择器(区分系统/业务类型)

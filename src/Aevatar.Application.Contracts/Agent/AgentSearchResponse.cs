@@ -10,7 +10,7 @@ public class AgentSearchResponse
     /// <summary>
     /// Agent列表
     /// </summary>
-    public List<AgentItemDto> Agents { get; set; } = new List<AgentItemDto>();
+    public List<AgentInstanceDto> Agents { get; set; } = new List<AgentInstanceDto>();
     
     /// <summary>
     /// 当前结果中的可用类型

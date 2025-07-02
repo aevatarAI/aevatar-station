@@ -327,7 +327,7 @@ public class AgentService : ApplicationService, IAgentService
         {
             return new AgentSearchResponse
             {
-                Agents = new List<AgentItemDto>(),
+                Agents = new List<AgentInstanceDto>(),
                 AvailableTypes = new List<string>(),
                 TypeCounts = new Dictionary<string, int>(),
                 Total = 0,
@@ -402,16 +402,14 @@ public class AgentService : ApplicationService, IAgentService
         return input;
     }
 
-    private AgentItemDto MapToAgentItem(Dictionary<string, object> state)
+    private AgentInstanceDto MapToAgentItem(Dictionary<string, object> state)
     {
         // Align with existing data conversion logic
         var properties = state["properties"] == null
             ? null
             : JsonConvert.DeserializeObject<Dictionary<string, object>>((string)state["properties"]);
         
-        var description = ExtractDescription(properties);
-        
-        return new AgentItemDto
+        return new AgentInstanceDto
         {
             Id = (string)state["id"],
             Name = (string)state["name"],
@@ -419,26 +417,13 @@ public class AgentService : ApplicationService, IAgentService
             Properties = properties,
             BusinessAgentGrainId = state.TryGetValue("formattedBusinessAgentGrainId", out var value) 
                 ? (string)value 
-                : null,
-            Description = description
+                : null
         };
     }
 
-    private string? ExtractDescription(Dictionary<string, object>? properties)
-    {
-        // Extract description information from Properties
-        if (properties?.ContainsKey("description") == true)
-        {
-            return properties["description"]?.ToString();
-        }
-        if (properties?.ContainsKey("Description") == true)
-        {
-            return properties["Description"]?.ToString();
-        }
-        return null;
-    }
 
-    private List<AgentItemDto> ApplySorting(List<AgentItemDto> agents, string? sortBy, string? sortOrder)
+
+    private List<AgentInstanceDto> ApplySorting(List<AgentInstanceDto> agents, string? sortBy, string? sortOrder)
     {
         if (string.IsNullOrEmpty(sortBy)) return agents;
         
@@ -459,7 +444,7 @@ public class AgentService : ApplicationService, IAgentService
         };
     }
 
-    private List<AgentItemDto> ApplyDateSorting(List<AgentItemDto> agents, string dateField, bool isDescending)
+    private List<AgentInstanceDto> ApplyDateSorting(List<AgentInstanceDto> agents, string dateField, bool isDescending)
     {
         var sorted = agents.Select(a => new 
         {
