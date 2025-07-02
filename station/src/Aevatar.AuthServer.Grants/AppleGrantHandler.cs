@@ -141,14 +141,10 @@ public class AppleGrantHandler : GrantHandlerBase, ITransientDependency
         var lastName = principal.FindFirstValue(ClaimTypes.Surname);
         var sub = principal.FindFirstValue(ClaimTypes.NameIdentifier);
         
-        if (email?.EndsWith("@privaterelay.appleid.com") == true)
+        if (email.IsNullOrWhiteSpace() || email.EndsWith("@privaterelay.appleid.com"))
         {
             email = $"{sub}@apple.privaterelay.com";
         } 
-        if (email.IsNullOrWhiteSpace())
-        {
-            email = $"{sub}@apple.privaterelay.com";
-        }
 
         return new AppleUserInfo
         {
