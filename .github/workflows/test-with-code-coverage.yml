@@ -3,7 +3,6 @@ name: Test with code coverage
 on:
   push:
     branches:
-      - '**'
       - 'main'
       - 'dev'
   pull_request:
