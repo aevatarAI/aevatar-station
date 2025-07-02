@@ -299,7 +299,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cache/pip
-          key: ${{ runner.arch }}-pip-${{ hashFiles('requirements.txt') }}
+          key: ${{ runner.arch }}-pip-${{ hashFiles('station/requirements.txt') }}
           restore-keys: |
             ${{ runner.arch }}-pip-
 
@@ -309,6 +309,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
+        working-directory: ./station
         run: |
           python -m venv venv
           source venv/bin/activate
@@ -316,6 +317,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run Python Script
+        working-directory: ./station
         run: |
           source venv/bin/activate
           pytest -s -v scripts/regression_test.py
