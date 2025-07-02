@@ -355,17 +355,21 @@ public class ChatMiddleware
             _logger.LogDebug("[GuestChatMiddleware] Completed guest chat for user: {0}, duration: {1}ms", 
                 userHashId, stopwatch.ElapsedMilliseconds);
         }
-        catch (UserFriendlyException ex)
-        {
-            _logger.LogWarning(ex, "[GuestChatMiddleware] User friendly error for user: {0}, message: {1}", userHashId, ex.Message);
-            context.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await context.Response.WriteAsync(ex.Message);
-        }
         catch (InvalidOperationException ex)
         {
+            // Handle guest chat specific errors with appropriate status codes
+            var statusCode = StatusCodes.Status400BadRequest;
+            
+            if (ex.Message.Contains("Daily chat limit exceeded"))
+            {
+                statusCode = StatusCodes.Status429TooManyRequests;
+            }
+            else if (ex.Message.Contains("No active guest session"))
+            {
+                statusCode = StatusCodes.Status400BadRequest;
+            }
             // Handle specific business logic errors that might contain error codes
-            var statusCode = StatusCodes.Status500InternalServerError;
-            if (ex.Data.Contains("Code") && int.TryParse(ex.Data["Code"]?.ToString(), out var code))
+            else if (ex.Data.Contains("Code") && int.TryParse(ex.Data["Code"]?.ToString(), out var code))
             {
                 if (code == ExecuteActionStatus.InsufficientCredits)
                 {
