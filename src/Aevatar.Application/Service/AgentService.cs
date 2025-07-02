@@ -301,6 +301,190 @@ public class AgentService : ApplicationService, IAgentService
         return result;
     }
 
+    public async Task<AgentSearchResponse> SearchAgentsWithLucene(
+        AgentSearchRequest request, 
+        int pageIndex, 
+        int pageSize)
+    {
+        _logger.LogInformation("Search Agents, SearchTerm: {SearchTerm}", request.SearchTerm);
+        
+        // 1. Get current user ID (align with existing logic)
+        var currentUserId = _userAppService.GetCurrentUserId();
+        
+        // 2. Build Lucene query string
+        var queryString = BuildLuceneQuery(request, currentUserId);
+        
+        // 3. Execute query (using existing IndexingService)
+        var response = await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
+        {
+            QueryString = queryString,
+            StateName = nameof(CreatorGAgentState),
+            PageSize = pageSize,
+            PageIndex = pageIndex
+        });
+        
+        if (response.TotalCount == 0)
+        {
+            return new AgentSearchResponse
+            {
+                Agents = new List<AgentItemDto>(),
+                AvailableTypes = new List<string>(),
+                TypeCounts = new Dictionary<string, int>(),
+                Total = 0,
+                PageIndex = pageIndex,
+                PageSize = pageSize,
+                HasMore = false
+            };
+        }
+        
+        // 4. Convert data (align with existing pattern)
+        var agents = response.Items.Select(MapToAgentItem).ToList();
+        
+        // 5. Apply client-side sorting (if needed)
+        agents = ApplySorting(agents, request.SortBy, request.SortOrder);
+        
+        // 6. Calculate type statistics
+        var typeCounts = agents.GroupBy(a => a.AgentType)
+                              .ToDictionary(g => g.Key, g => g.Count());
+        
+        _logger.LogInformation("Search completed, returned {Count} Agents", agents.Count);
+        
+        return new AgentSearchResponse
+        {
+            Agents = agents,
+            AvailableTypes = typeCounts.Keys.ToList(),
+            TypeCounts = typeCounts,
+            Total = (int)response.TotalCount,
+            PageIndex = pageIndex,
+            PageSize = pageSize,
+            HasMore = (pageIndex + 1) * pageSize < response.TotalCount
+        };
+    }
+
+    private string BuildLuceneQuery(AgentSearchRequest request, Guid currentUserId)
+    {
+        var queryParts = new List<string>();
+        
+        // 1. User ID filter (required condition, align with existing logic)
+        queryParts.Add($"userId.keyword:{currentUserId}");
+        
+        // 2. Type filter (multi-select support)
+        if (request.Types?.Any() == true)
+        {
+            var typeQuery = string.Join(" OR ", 
+                request.Types.Select(type => $"agentType.keyword:\"{type}\""));
+            queryParts.Add($"({typeQuery})");
+        }
+        
+        // 3. Search term filter (name and properties description)
+        if (!string.IsNullOrEmpty(request.SearchTerm))
+        {
+            var searchTerm = EscapeLuceneString(request.SearchTerm);
+            var nameQuery = $"name:*{searchTerm}*";
+            var descQuery = $"properties.description:*{searchTerm}*";
+            queryParts.Add($"({nameQuery} OR {descQuery})");
+        }
+        
+        // Combine all conditions (AND logic)
+        return string.Join(" AND ", queryParts);
+    }
+
+    private string EscapeLuceneString(string input)
+    {
+        // Escape Lucene special characters
+        if (string.IsNullOrEmpty(input)) return input;
+        
+        var specialChars = new[] { '+', '-', '!', '(', ')', '{', '}', '[', ']', '^', '"', '~', '*', '?', ':', '\\' };
+        foreach (var c in specialChars)
+        {
+            input = input.Replace(c.ToString(), "\\" + c);
+        }
+        return input;
+    }
+
+    private AgentItemDto MapToAgentItem(Dictionary<string, object> state)
+    {
+        // Align with existing data conversion logic
+        var properties = state["properties"] == null
+            ? null
+            : JsonConvert.DeserializeObject<Dictionary<string, object>>((string)state["properties"]);
+        
+        var description = ExtractDescription(properties);
+        
+        return new AgentItemDto
+        {
+            Id = (string)state["id"],
+            Name = (string)state["name"],
+            AgentType = (string)state["agentType"],
+            Properties = properties,
+            BusinessAgentGrainId = state.TryGetValue("formattedBusinessAgentGrainId", out var value) 
+                ? (string)value 
+                : null,
+            Description = description
+        };
+    }
+
+    private string? ExtractDescription(Dictionary<string, object>? properties)
+    {
+        // Extract description information from Properties
+        if (properties?.ContainsKey("description") == true)
+        {
+            return properties["description"]?.ToString();
+        }
+        if (properties?.ContainsKey("Description") == true)
+        {
+            return properties["Description"]?.ToString();
+        }
+        return null;
+    }
+
+    private List<AgentItemDto> ApplySorting(List<AgentItemDto> agents, string? sortBy, string? sortOrder)
+    {
+        if (string.IsNullOrEmpty(sortBy)) return agents;
+        
+        var isDescending = sortOrder?.ToLower() == "desc";
+        
+        return sortBy.ToLower() switch
+        {
+            "name" => isDescending 
+                ? agents.OrderByDescending(a => a.Name).ToList()
+                : agents.OrderBy(a => a.Name).ToList(),
+            "agenttype" => isDescending
+                ? agents.OrderByDescending(a => a.AgentType).ToList()
+                : agents.OrderBy(a => a.AgentType).ToList(),
+            // CreateTime/UpdateTime need to be extracted from Properties
+            "createtime" => ApplyDateSorting(agents, "createTime", isDescending),
+            "updatetime" => ApplyDateSorting(agents, "updateTime", isDescending),
+            _ => agents // Default: no sorting, keep Lucene query result order
+        };
+    }
+
+    private List<AgentItemDto> ApplyDateSorting(List<AgentItemDto> agents, string dateField, bool isDescending)
+    {
+        var sorted = agents.Select(a => new 
+        {
+            Agent = a,
+            Date = ExtractDateFromProperties(a.Properties, dateField)
+        })
+        .OrderBy(x => isDescending ? -x.Date.Ticks : x.Date.Ticks)
+        .Select(x => x.Agent)
+        .ToList();
+        
+        return sorted;
+    }
+
+    private DateTime ExtractDateFromProperties(Dictionary<string, object>? properties, string field)
+    {
+        if (properties?.ContainsKey(field) == true)
+        {
+            if (DateTime.TryParse(properties[field]?.ToString(), out var date))
+            {
+                return date;
+            }
+        }
+        return DateTime.MinValue; // Default value
+    }
+
     private void CheckCreateParam(CreateAgentInputDto createDto)
     {
         if (createDto.AgentType.IsNullOrEmpty())
@@ -573,7 +757,7 @@ public class AgentService : ApplicationService, IAgentService
         var agentState = await creatorAgent.GetAgentAsync();
 
         var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
-        var subAgentGrainIds = await GetSubAgentGrainIds(agent);
+        var subAgentGrainIds = await agent.GetChildrenAsync();
         await RemoveSubAgentAsync(guid,
             new RemoveSubAgentDto { RemovedSubAgents = subAgentGrainIds.Select(x => x.GetGuidKey()).ToList() });
     }

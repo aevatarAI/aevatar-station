@@ -12,6 +12,12 @@ public interface IAgentService
 
     Task<AgentDto> CreateAgentAsync(CreateAgentInputDto dto);
     Task<List<AgentInstanceDto>> GetAllAgentInstances(int pageIndex, int pageSize);
+    
+    /// <summary>
+    /// 搜索和过滤Agent (支持Node Palette)
+    /// </summary>
+    Task<AgentSearchResponse> SearchAgentsWithLucene(AgentSearchRequest request, int pageIndex, int pageSize);
+    
     Task<AgentDto> GetAgentAsync(Guid guid);
     Task<AgentDto> UpdateAgentAsync(Guid guid, UpdateAgentInputDto dto);
     Task<SubAgentDto> AddSubAgentAsync(Guid guid, AddSubAgentDto addSubAgentDto);
