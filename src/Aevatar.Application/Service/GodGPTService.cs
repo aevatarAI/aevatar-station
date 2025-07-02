@@ -445,6 +445,7 @@ public class GodGPTService : ApplicationService, IGodGPTService
             ValidInvites = invitationStatsDto.ValidInvites,
             TotalCreditsEarned = invitationStatsDto.TotalCreditsEarned,
             RewardTiers = rewardTierDtos,
+            TotalCreditsFromX = invitationStatsDto.TotalCreditsFromX,
             IsBound = invitationStatsDto.IsBound
         };
     }

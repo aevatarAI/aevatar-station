@@ -81,7 +81,7 @@ public class GodGPTInvitationController : AevatarController
     }
     
     [HttpGet("twitter/params")]
-    public async Task<TwitterAuthParamsDto> GetTwitterAuthParamsAsync(TwitterAuthVerifyInput input)
+    public async Task<TwitterAuthParamsDto> GetTwitterAuthParamsAsync()
     {
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
