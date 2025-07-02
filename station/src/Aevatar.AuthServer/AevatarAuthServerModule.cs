@@ -30,6 +30,7 @@ using Volo.Abp.OpenIddict.ExtensionGrantTypes;
 using Volo.Abp.PermissionManagement;
 using Volo.Abp.PermissionManagement.EntityFrameworkCore;
 using Volo.Abp.UI.Navigation.Urls;
+using StackExchange.Redis;
 
 namespace Aevatar.AuthServer;
 
@@ -165,6 +166,9 @@ public class AevatarAuthServerModule : AbpModule
         });
       
         var dataProtectionBuilder = context.Services.AddDataProtection().SetApplicationName("AevatarAuthServer");
+        var redisConfig = configuration["Redis:Configuration"];
+        var redis = ConnectionMultiplexer.Connect(redisConfig);
+        dataProtectionBuilder.PersistKeysToStackExchangeRedis(redis, "Aevatar-DataProtection-Keys");
         
         context.Services.AddHealthChecks();
         
