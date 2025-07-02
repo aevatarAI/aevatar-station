@@ -2,28 +2,18 @@ using System.Collections.Generic;
 
 namespace Aevatar.Agent;
 
-/// <summary>
-/// Agent搜索过滤请求DTO
-/// </summary>
+// Agent search filter request DTO
 public class AgentSearchRequest
 {
-    /// <summary>
-    /// 搜索关键词 (匹配名称、描述)
-    /// </summary>
+    // Search keyword (matches name, description)
     public string? SearchTerm { get; set; }
     
-    /// <summary>
-    /// 多类型过滤 ["ChatAgent", "WorkflowAgent"]
-    /// </summary>
+    // Multi-type filter ["ChatAgent", "WorkflowAgent"]
     public List<string>? Types { get; set; }
     
-    /// <summary>
-    /// 排序字段 CreateTime/Name/UpdateTime/Relevance
-    /// </summary>
+    // Sort field CreateTime/Name/UpdateTime/Relevance
     public string? SortBy { get; set; } = "CreateTime";
     
-    /// <summary>
-    /// 排序方向 Asc/Desc
-    /// </summary>
+    // Sort direction Asc/Desc
     public string? SortOrder { get; set; } = "Desc";
 } 

@@ -328,8 +328,6 @@ public class AgentService : ApplicationService, IAgentService
             return new AgentSearchResponse
             {
                 Agents = new List<AgentInstanceDto>(),
-                AvailableTypes = new List<string>(),
-                TypeCounts = new Dictionary<string, int>(),
                 Total = 0,
                 PageIndex = pageIndex,
                 PageSize = pageSize,
@@ -343,17 +341,11 @@ public class AgentService : ApplicationService, IAgentService
         // 5. Apply client-side sorting (if needed)
         agents = ApplySorting(agents, request.SortBy, request.SortOrder);
         
-        // 6. Calculate type statistics
-        var typeCounts = agents.GroupBy(a => a.AgentType)
-                              .ToDictionary(g => g.Key, g => g.Count());
-        
         _logger.LogInformation("Search completed, returned {Count} Agents", agents.Count);
         
         return new AgentSearchResponse
         {
             Agents = agents,
-            AvailableTypes = typeCounts.Keys.ToList(),
-            TypeCounts = typeCounts,
             Total = (int)response.TotalCount,
             PageIndex = pageIndex,
             PageSize = pageSize,

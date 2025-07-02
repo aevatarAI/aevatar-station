@@ -1,44 +1,23 @@
 using System.Collections.Generic;
+using Aevatar.Agent;
 
 namespace Aevatar.Agent;
 
-/// <summary>
-/// Agent搜索响应DTO
-/// </summary>
+// Agent search response DTO
 public class AgentSearchResponse
 {
-    /// <summary>
-    /// Agent列表
-    /// </summary>
+    // Agent list
     public List<AgentInstanceDto> Agents { get; set; } = new List<AgentInstanceDto>();
     
-    /// <summary>
-    /// 当前结果中的可用类型
-    /// </summary>
-    public List<string> AvailableTypes { get; set; } = new List<string>();
-    
-    /// <summary>
-    /// 每种类型的数量统计
-    /// </summary>
-    public Dictionary<string, int> TypeCounts { get; set; } = new Dictionary<string, int>();
-    
-    /// <summary>
-    /// 总数
-    /// </summary>
+    // Total count
     public int Total { get; set; }
     
-    /// <summary>
-    /// 页索引
-    /// </summary>
+    // Page index
     public int PageIndex { get; set; }
     
-    /// <summary>
-    /// 页大小
-    /// </summary>
+    // Page size
     public int PageSize { get; set; }
     
-    /// <summary>
-    /// 是否有更多数据
-    /// </summary>
+    // Whether there is more data
     public bool HasMore { get; set; }
 } 
