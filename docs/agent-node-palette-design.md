@@ -85,11 +85,6 @@ public class AgentSearchRequest
     public List<string>? Types { get; set; }
     
     /// <summary>
-    /// 用户ID过滤(如果需要)
-    /// </summary>
-    public string? UserId { get; set; }
-    
-    /// <summary>
     /// 排序字段 CreateTime/Name/UpdateTime/Relevance
     /// </summary>
     public string? SortBy { get; set; } = "CreateTime";
@@ -143,7 +138,7 @@ public class AgentSearchResponse
 }
 ```
 
-### 4.3 Agent项目DTO
+### 4.3 Agent项目DTO (对齐现有结构)
 
 ```csharp
 public class AgentItemDto
@@ -161,26 +156,26 @@ public class AgentItemDto
     /// <summary>
     /// Agent类型 (直接使用原始AgentType)
     /// </summary>
-    public string Type { get; set; }
+    public string AgentType { get; set; }
     
     /// <summary>
-    /// Agent描述
+    /// Agent属性信息
     /// </summary>
-    public string Description { get; set; }
+    public Dictionary<string, object>? Properties { get; set; }
     
     /// <summary>
-    /// 创建时间
+    /// 业务Agent Grain ID
     /// </summary>
-    public DateTime CreateTime { get; set; }
+    public string? BusinessAgentGrainId { get; set; }
     
     /// <summary>
-    /// 更新时间
+    /// Agent描述 (从Properties中提取)
     /// </summary>
-    public DateTime? UpdateTime { get; set; }
+    public string? Description { get; set; }
 }
 ```
 
-### 4.4 API接口设计
+### 4.4 API接口设计 (对齐现有模式)
 
 ```csharp
 [Route("api/agents")]
@@ -205,7 +200,7 @@ public class AgentController : ControllerBase
     {
         try
         {
-            var result = await _agentService.SearchAgentsWithES(request, pageIndex, pageSize);
+            var result = await _agentService.SearchAgentsWithLucene(request, pageIndex, pageSize);
             return Ok(result);
         }
         catch (Exception ex)
@@ -224,208 +219,235 @@ public class AgentController : ControllerBase
 ```csharp
 public interface IAgentService
 {
-    Task<AgentSearchResponse> SearchAgentsWithES(
+    Task<AgentSearchResponse> SearchAgentsWithLucene(
         AgentSearchRequest request, 
         int pageIndex, 
         int pageSize);
 }
 ```
 
-### 5.2 ES查询实现 (高性能)
+### 5.2 基于现有架构的Lucene查询实现
 
 ```csharp
-public async Task<AgentSearchResponse> SearchAgentsWithES(
-    AgentSearchRequest request, 
-    int pageIndex, 
-    int pageSize)
+public class AgentService : IAgentService
 {
-    var searchDescriptor = new SearchDescriptor<CreatorGAgentState>()
-        .Index("your_agent_index")
-        .From(pageIndex * pageSize)
-        .Size(pageSize);
+    private readonly IIndexingService _indexingService;
+    private readonly IUserAppService _userAppService;
+    private readonly ILogger<AgentService> _logger;
+    
+    public AgentService(
+        IIndexingService indexingService,
+        IUserAppService userAppService,
+        ILogger<AgentService> logger)
+    {
+        _indexingService = indexingService;
+        _userAppService = userAppService;
+        _logger = logger;
+    }
+    
+    public async Task<AgentSearchResponse> SearchAgentsWithLucene(
+        AgentSearchRequest request, 
+        int pageIndex, 
+        int pageSize)
+    {
+        _logger.LogInformation("开始搜索Agent，搜索词: {SearchTerm}", request.SearchTerm);
+        
+        // 1. 获取当前用户ID (对齐现有逻辑)
+        var currentUserId = _userAppService.GetCurrentUserId();
+        
+        // 2. 构建Lucene查询字符串
+        var queryString = BuildLuceneQuery(request, currentUserId);
+        
+        // 3. 执行查询 (使用现有的IndexingService)
+        var response = await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
+        {
+            QueryString = queryString,
+            StateName = nameof(CreatorGAgentState),
+            PageSize = pageSize,
+            PageIndex = pageIndex
+        });
+        
+        if (response.TotalCount == 0)
+        {
+            return new AgentSearchResponse
+            {
+                Agents = new List<AgentItemDto>(),
+                AvailableTypes = new List<string>(),
+                TypeCounts = new Dictionary<string, int>(),
+                Total = 0,
+                PageIndex = pageIndex,
+                PageSize = pageSize,
+                HasMore = false
+            };
+        }
+        
+        // 4. 转换数据 (对齐现有模式)
+        var agents = response.Items.Select(MapToAgentItem).ToList();
+        
+        // 5. 应用客户端排序 (如果需要)
+        agents = ApplySorting(agents, request.SortBy, request.SortOrder);
+        
+        // 6. 统计类型信息
+        var typeCounts = agents.GroupBy(a => a.AgentType)
+                              .ToDictionary(g => g.Key, g => g.Count());
+        
+        _logger.LogInformation("搜索完成，返回 {Count} 个Agent", agents.Count);
+        
+        return new AgentSearchResponse
+        {
+            Agents = agents,
+            AvailableTypes = typeCounts.Keys.ToList(),
+            TypeCounts = typeCounts,
+            Total = (int)response.TotalCount,
+            PageIndex = pageIndex,
+            PageSize = pageSize,
+            HasMore = (pageIndex + 1) * pageSize < response.TotalCount
+        };
+    }
+}
+```
 
-    // 构建ES查询条件
-    var queries = new List<QueryContainer>();
+### 5.3 Lucene查询字符串构建
 
-    // 1. 多类型过滤 (Terms Query)
+```csharp
+private string BuildLuceneQuery(AgentSearchRequest request, string currentUserId)
+{
+    var queryParts = new List<string>();
+    
+    // 1. 用户ID过滤 (必须条件，对齐现有逻辑)
+    queryParts.Add($"userId.keyword:{currentUserId}");
+    
+    // 2. 类型过滤 (多选支持)
     if (request.Types?.Any() == true)
     {
-        queries.Add(Query<CreatorGAgentState>.Terms(t => t
-            .Field(f => f.AgentType)
-            .Terms(request.Types)));
+        var typeQuery = string.Join(" OR ", 
+            request.Types.Select(type => $"agentType.keyword:\"{type}\""));
+        queryParts.Add($"({typeQuery})");
     }
-
-    // 2. 搜索词过滤 (Multi Match)
+    
+    // 3. 搜索词过滤 (名称和属性描述)
     if (!string.IsNullOrEmpty(request.SearchTerm))
     {
-        queries.Add(Query<CreatorGAgentState>.MultiMatch(m => m
-            .Fields(f => f
-                .Field(ff => ff.Name, boost: 2.0)      // name权重更高
-                .Field(ff => ff.Properties.Description) // description
-            )
-            .Query(request.SearchTerm)
-            .Type(TextQueryType.BestFields)
-            .Fuzziness(Fuzziness.Auto)));
+        var searchTerm = EscapeLuceneString(request.SearchTerm);
+        var nameQuery = $"name:*{searchTerm}*";
+        var descQuery = $"properties.description:*{searchTerm}*";
+        queryParts.Add($"({nameQuery} OR {descQuery})");
     }
-
-    // 3. 用户ID过滤 (如果需要)
-    if (!string.IsNullOrEmpty(request.UserId))
-    {
-        queries.Add(Query<CreatorGAgentState>.Term(t => t
-            .Field(f => f.UserId)
-            .Value(request.UserId)));
-    }
-
-    // 4. 组合查询
-    if (queries.Any())
-    {
-        searchDescriptor.Query(q => q.Bool(b => b.Must(queries.ToArray())));
-    }
-
-    // 5. 添加聚合查询 (获取类型统计)
-    searchDescriptor.Aggregations(a => a
-        .Terms("types_agg", t => t
-            .Field(f => f.AgentType)
-            .Size(50)));
-
-    // 6. 动态排序
-    searchDescriptor.Sort(BuildSortDescriptor(request));
-
-    // 执行ES查询
-    var response = await _elasticClient.SearchAsync<CreatorGAgentState>(searchDescriptor);
-
-    // 7. 处理结果
-    var agents = response.Documents.Select(MapToAgentItem).ToList();
     
-    var typeAggregation = response.Aggregations.Terms("types_agg");
-    var typeCounts = typeAggregation.Buckets.ToDictionary(
-        b => b.Key, 
-        b => (int)b.DocCount);
+    // 组合所有条件 (AND逻辑)
+    return string.Join(" AND ", queryParts);
+}
 
-    return new AgentSearchResponse
+private string EscapeLuceneString(string input)
+{
+    // 转义Lucene特殊字符
+    if (string.IsNullOrEmpty(input)) return input;
+    
+    var specialChars = new[] { '+', '-', '!', '(', ')', '{', '}', '[', ']', '^', '"', '~', '*', '?', ':', '\\' };
+    foreach (var c in specialChars)
     {
-        Agents = agents,
-        AvailableTypes = typeCounts.Keys.ToList(),
-        TypeCounts = typeCounts,
-        Total = (int)response.Total,
-        PageIndex = pageIndex,
-        PageSize = pageSize,
-        HasMore = (pageIndex + 1) * pageSize < response.Total
-    };
+        input = input.Replace(c.ToString(), "\\" + c);
+    }
+    return input;
 }
 ```
 
-### 5.3 动态排序实现
+### 5.4 数据转换和映射 (对齐现有模式)
 
 ```csharp
-private Func<SortDescriptor<CreatorGAgentState>, ISortDescriptor<CreatorGAgentState>> BuildSortDescriptor(
-    AgentSearchRequest request)
+private AgentItemDto MapToAgentItem(Dictionary<string, object> state)
 {
-    return s =>
-    {
-        var sortOrder = request.SortOrder?.ToLower() == "asc" ? 
-            SortOrder.Ascending : SortOrder.Descending;
-
-        return request.SortBy?.ToLower() switch
-        {
-            "createtime" => s.Field(f => f.CreateTime, sortOrder),
-            "name" => s.Field(f => f.Name.Suffix("keyword"), sortOrder), // 使用keyword字段排序
-            "updatetime" => s.Field(f => f.UpdateTime, sortOrder),
-            "relevance" => s.Score(sortOrder), // 按相关性评分排序
-            _ => s.Field(f => f.CreateTime, SortOrder.Descending) // 默认
-        };
-    };
-}
-
-/// <summary>
-/// 排序选项常量
-/// </summary>
-public static class AgentSortOptions
-{
-    public const string CreateTime = "CreateTime";    // 创建时间
-    public const string Name = "Name";                // 名称字母序
-    public const string UpdateTime = "UpdateTime";    // 更新时间
-    public const string Relevance = "Relevance";      // 相关性(有搜索词时)
-}
-
-public static class SortDirection
-{
-    public const string Asc = "Asc";     // 升序
-    public const string Desc = "Desc";   // 降序
-}
-```
-
-### 5.4 数据转换和映射
-
-```csharp
-private AgentItemDto MapToAgentItem(CreatorGAgentState agentState)
-{
+    // 对齐现有的数据转换逻辑
+    var properties = state["properties"] == null
+        ? null
+        : JsonConvert.DeserializeObject<Dictionary<string, object>>((string)state["properties"]);
+    
+    var description = ExtractDescription(properties);
+    
     return new AgentItemDto
     {
-        Id = agentState.AgentType,
-        Name = ExtractAgentName(agentState.Name ?? agentState.AgentType),
-        Type = agentState.AgentType,
-        Description = ExtractDescription(agentState.Properties),
-        CreateTime = agentState.CreateTime,
-        UpdateTime = agentState.UpdateTime
+        Id = (string)state["id"],
+        Name = (string)state["name"],
+        AgentType = (string)state["agentType"],
+        Properties = properties,
+        BusinessAgentGrainId = state.TryGetValue("formattedBusinessAgentGrainId", out var value) 
+            ? (string)value 
+            : null,
+        Description = description
     };
 }
 
-private string ExtractAgentName(string fullName)
-{
-    // 从完整类名中提取Agent名称
-    return fullName.Split('.').Last().Replace("Agent", "");
-}
-
-private string ExtractDescription(Dictionary<string, object> properties)
+private string? ExtractDescription(Dictionary<string, object>? properties)
 {
     // 从Properties中提取描述信息
+    if (properties?.ContainsKey("description") == true)
+    {
+        return properties["description"]?.ToString();
+    }
     if (properties?.ContainsKey("Description") == true)
     {
-        return properties["Description"].ToString();
+        return properties["Description"]?.ToString();
     }
-    return "Agent描述信息";
+    return null;
 }
 ```
 
-### 5.5 ES查询DSL示例
+### 5.5 客户端排序实现
 
-用户选择多个类型 + 搜索词的ES查询：
-```json
+```csharp
+private List<AgentItemDto> ApplySorting(List<AgentItemDto> agents, string? sortBy, string? sortOrder)
 {
-  "from": 0,
-  "size": 20,
-  "query": {
-    "bool": {
-      "must": [
-        {
-          "terms": {
-            "agentType": ["ChatAgent", "WorkflowAgent"]
-          }
-        },
-        {
-          "multi_match": {
-            "query": "chat assistant",
-            "fields": ["name^2", "properties.description"],
-            "type": "best_fields",
-            "fuzziness": "AUTO"
-          }
-        }
-      ]
-    }
-  },
-  "aggs": {
-    "types_agg": {
-      "terms": {
-        "field": "agentType",
-        "size": 50
-      }
-    }
-  },
-  "sort": [
-    { "createTime": { "order": "desc" } }
-  ]
+    if (string.IsNullOrEmpty(sortBy)) return agents;
+    
+    var isDescending = sortOrder?.ToLower() == "desc";
+    
+    return sortBy.ToLower() switch
+    {
+        "name" => isDescending 
+            ? agents.OrderByDescending(a => a.Name).ToList()
+            : agents.OrderBy(a => a.Name).ToList(),
+        "agenttype" => isDescending
+            ? agents.OrderByDescending(a => a.AgentType).ToList()
+            : agents.OrderBy(a => a.AgentType).ToList(),
+        // CreateTime/UpdateTime需要从Properties中提取
+        "createtime" => ApplyDateSorting(agents, "createTime", isDescending),
+        "updatetime" => ApplyDateSorting(agents, "updateTime", isDescending),
+        _ => agents // 默认不排序，保持Lucene查询结果顺序
+    };
 }
+
+private List<AgentItemDto> ApplyDateSorting(List<AgentItemDto> agents, string dateField, bool isDescending)
+{
+    var sorted = agents.Select(a => new 
+    {
+        Agent = a,
+        Date = ExtractDateFromProperties(a.Properties, dateField)
+    })
+    .OrderBy(x => isDescending ? -x.Date.Ticks : x.Date.Ticks)
+    .Select(x => x.Agent)
+    .ToList();
+    
+    return sorted;
+}
+
+private DateTime ExtractDateFromProperties(Dictionary<string, object>? properties, string field)
+{
+    if (properties?.ContainsKey(field) == true)
+    {
+        if (DateTime.TryParse(properties[field]?.ToString(), out var date))
+        {
+            return date;
+        }
+    }
+    return DateTime.MinValue; // 默认值
+}
+```
+
+### 5.6 Lucene查询示例
+
+用户选择多个类型 + 搜索词的Lucene查询：
+```
+userId.keyword:user123 AND (agentType.keyword:"ChatAgent" OR agentType.keyword:"WorkflowAgent") AND (name:*chat* OR properties.description:*chat*)
 ```
 
 ## 6. 实施计划
@@ -461,10 +483,10 @@ public async Task SearchAgents_WithMultipleTypes_ShouldReturnCorrectResults()
     };
     
     // Act
-    var result = await _agentService.SearchAgentsWithES(request, 0, 20);
+    var result = await _agentService.SearchAgentsWithLucene(request, 0, 20);
     
     // Assert
-    Assert.That(result.Agents.All(a => request.Types.Contains(a.Type)));
+    Assert.That(result.Agents.All(a => request.Types.Contains(a.AgentType)));
     Assert.That(result.TypeCounts.Keys, Is.SubsetOf(request.Types));
 }
 
@@ -480,7 +502,7 @@ public async Task SearchAgents_WithSearchTermAndSort_ShouldReturnSortedResults()
     };
     
     // Act
-    var result = await _agentService.SearchAgentsWithES(request, 0, 20);
+    var result = await _agentService.SearchAgentsWithLucene(request, 0, 20);
     
     // Assert
     Assert.That(result.Agents, Is.Ordered.By("Name"));
@@ -492,53 +514,59 @@ public async Task SearchAgents_WithSearchTermAndSort_ShouldReturnSortedResults()
 
 ## 8. 性能优势
 
-### 8.1 ES原生查询优势
-- ✅ **高性能**: 直接在ES层面过滤，无需加载到内存
-- ✅ **模糊搜索**: 支持全文搜索、权重排序、相关性评分
-- ✅ **聚合统计**: 一次查询获取数据和统计信息
-- ✅ **可扩展性**: 支持百万级数据的高效查询
+### 8.1 基于现有架构的优势
+- ✅ **架构对齐**: 完全复用现有的IIndexingService和IUserAppService
+- ✅ **Lucene查询**: 原生Lucene语法支持复杂查询条件
+- ✅ **用户隔离**: 自动应用用户ID过滤，安全可靠
+- ✅ **分页支持**: 复用现有分页逻辑，性能稳定
 
-### 8.2 分页和排序优势
-- ✅ **灵活排序**: 支持多字段、多方向排序
-- ✅ **深度分页**: ES原生支持，性能稳定
-- ✅ **用户体验**: 返回HasMore标识，支持无限滚动
+### 8.2 查询性能优势
+- ✅ **索引查询**: 基于Lucene索引的高效查询
+- ✅ **复合条件**: 支持AND/OR逻辑的复杂条件组合
+- ✅ **模糊搜索**: 通配符搜索支持名称和描述过滤
+- ✅ **类型过滤**: 高效的多值Terms查询
 
-### 8.3 多条件组合优势
-- ✅ **Terms查询**: 高效的多值匹配
-- ✅ **Bool查询**: 灵活的条件组合
-- ✅ **动态构建**: 根据请求参数动态生成查询条件
+### 8.3 数据处理优势
+- ✅ **客户端排序**: 灵活的多字段排序支持
+- ✅ **实时统计**: 内存中统计类型分布
+- ✅ **数据转换**: 对齐现有DTO结构，无缝集成
+- ✅ **属性提取**: 智能提取Properties中的描述信息
 
 ## 9. 总结
 
-本设计文档提供了基于ES的高性能Agent搜索API实现方案：
+本设计文档提供了基于现有架构的Agent搜索API实现方案：
 
 **核心特点:**
-- ✅ ES原生查询，性能卓越
+- ✅ 完全对齐现有架构 (IIndexingService + IUserAppService)
+- ✅ Lucene原生查询，性能可靠
+- ✅ 自动用户隔离，安全性保障
 - ✅ 直接使用AgentType原始值，无额外分类逻辑
-- ✅ 支持多类型同时过滤
-- ✅ 灵活的排序选项 (时间、名称、相关性)
+- ✅ 支持多类型同时过滤和搜索词过滤
+- ✅ 灵活的客户端排序选项
 - ✅ 完整的分页和统计信息
-- ✅ 一个接口处理所有搜索场景
+- ✅ 复用现有数据结构和转换逻辑
 - ✅ 8小时内可完成的高效实现
 
 **API接口总览:**
 - `POST /api/agents/search` - 统一的搜索过滤接口，支持分页和排序
 
-**ES查询特性:**
-- Terms查询支持多类型过滤
-- Multi Match支持智能搜索和权重
-- 聚合查询提供实时统计
-- 动态排序满足不同用户需求
+**Lucene查询特性:**
+- 用户ID自动过滤 (userId.keyword)
+- 多类型OR查询 (agentType.keyword)
+- 名称和描述模糊搜索 (name:*term* OR properties.description:*term*)
+- 复合条件AND组合
+- 特殊字符自动转义
 
 **设计原则:**
-- 🎯 极简设计：直接使用AgentType，无需额外分类判断
-- 🚀 高性能：ES原生查询，支持大规模数据
+- 🎯 架构对齐：完全复用现有服务和接口
+- 🚀 性能优化：Lucene索引查询 + 客户端排序
 - 🔧 易维护：一个接口，统一逻辑，清晰架构
+- 🛡️ 安全性：自动用户隔离，权限控制
 
 ---
 
-**文档版本**: v2.1 (极简ES版)  
+**文档版本**: v2.2 (现有架构对齐版)  
 **创建时间**: 2025-01-29  
 **更新时间**: 2025-01-29  
 **责任人**: HyperEcho  
-**预计完成**: 8小时 (基于ES的极简高性能后端API) 
+**预计完成**: 8小时 (基于现有架构的Lucene查询实现) 
