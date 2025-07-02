@@ -301,10 +301,7 @@ public class AgentService : ApplicationService, IAgentService
         return result;
     }
 
-    public async Task<AgentSearchResponse> SearchAgentsWithLucene(
-        AgentSearchRequest request, 
-        int pageIndex, 
-        int pageSize)
+    public async Task<AgentSearchResponse> SearchAgentsWithLucene(AgentSearchRequest request)
     {
         _logger.LogInformation("Search Agents, SearchTerm: {SearchTerm}", request.SearchTerm);
         
@@ -319,8 +316,8 @@ public class AgentService : ApplicationService, IAgentService
         {
             QueryString = queryString,
             StateName = nameof(CreatorGAgentState),
-            PageSize = pageSize,
-            PageIndex = pageIndex
+            PageSize = request.PageSize,
+            PageIndex = request.PageIndex
         });
         
         if (response.TotalCount == 0)
@@ -329,8 +326,8 @@ public class AgentService : ApplicationService, IAgentService
             {
                 Agents = new List<AgentInstanceDto>(),
                 Total = 0,
-                PageIndex = pageIndex,
-                PageSize = pageSize,
+                PageIndex = request.PageIndex,
+                PageSize = request.PageSize,
                 HasMore = false
             };
         }
@@ -347,9 +344,9 @@ public class AgentService : ApplicationService, IAgentService
         {
             Agents = agents,
             Total = (int)response.TotalCount,
-            PageIndex = pageIndex,
-            PageSize = pageSize,
-            HasMore = (pageIndex + 1) * pageSize < response.TotalCount
+            PageIndex = request.PageIndex,
+            PageSize = request.PageSize,
+            HasMore = (request.PageIndex + 1) * request.PageSize < response.TotalCount
         };
     }
 

@@ -45,19 +45,14 @@ public class AgentController : AevatarController
         return await _agentService.GetAllAgentInstances(pageIndex, pageSize);
     }
 
-    /// <summary>
-    /// Search and filter Agents (support Node Palette)
-    /// </summary>
+    // Search and filter Agents (support Node Palette)
     [HttpPost("search")]
     [Authorize]
-    public async Task<ActionResult<AgentSearchResponse>> SearchAgents(
-        [FromBody] AgentSearchRequest request,
-        int pageIndex = 0, 
-        int pageSize = 20)
+    public async Task<ActionResult<AgentSearchResponse>> SearchAgents([FromBody] AgentSearchRequest request)
     {
         try
         {
-            var result = await _agentService.SearchAgentsWithLucene(request, pageIndex, pageSize);
+            var result = await _agentService.SearchAgentsWithLucene(request);
             return Ok(result);
         }
         catch (Exception ex)

@@ -16,4 +16,10 @@ public class AgentSearchRequest
     
     // Sort direction Asc/Desc
     public string? SortOrder { get; set; } = "Desc";
+    
+    // Page index (0-based)
+    public int PageIndex { get; set; } = 0;
+    
+    // Page size
+    public int PageSize { get; set; } = 20;
 } 
