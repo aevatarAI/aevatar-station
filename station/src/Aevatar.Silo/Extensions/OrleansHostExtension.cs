@@ -72,9 +72,9 @@ public static class OrleansHostExtension
                 var siloNamePattern = isRunningInKubernetes
                     ? GetEnvironmentVariable("SILO_NAME_PATTERN")
                     : GetEnvironmentVariable("AevatarOrleans__SILO_NAME_PATTERN");
-                
+               
                 // Register StateProjectionInitializer when SiloNamePattern is "Projector"
-                if (string.IsNullOrEmpty(siloNamePattern) || string.Compare(siloNamePattern, "Projector", StringComparison.OrdinalIgnoreCase) == 0)
+                if ( string.IsNullOrEmpty(siloNamePattern) || string.Compare(siloNamePattern, "Projector", StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     // Register our StateProjectionInitializer as a startup task
                     // This will run during silo startup at ServiceLifecycleStage.ApplicationServices (default)
@@ -268,6 +268,7 @@ public static class OrleansHostExtension
                     .ConfigureLogging(logging => { logging.SetMinimumLevel(LogLevel.Debug).AddConsole(); })
                     .Configure<SiloOptions>(options =>
                     {
+                        siloNamePattern = string.IsNullOrEmpty(siloNamePattern) ? "Projector" : siloNamePattern;
                         options.SiloName = $"{siloNamePattern}-{Guid.NewGuid().ToString("N").Substring(0, 6)}";                        
                     })
                     .Configure<OrleansJsonSerializerOptions>(options =>
