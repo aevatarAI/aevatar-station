@@ -388,10 +388,7 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         _logger.LogInformation($"Creating Host service for appId: {appId}, version: {version}, project: {projectId}");
 
         await CreateHostSiloAsync(GetHostName(appId, KubernetesConstants.HostSilo), version,
-            _HostDeployOptions.HostSiloImageName,
-            GetHostSiloConfigContent(appId, version, KubernetesConstants.HostSiloSettingTemplateFilePath, projectId),
-            projectId);
-        // await EnsurePhaAsync(appId, version);
+            _HostDeployOptions.HostSiloImageName, projectId);
         await CreatePodAsync(GetHostName(appId, KubernetesConstants.HostClient), version,
             _HostDeployOptions.HostClientImageName,
             GetHostClientConfigContent(appId, version, KubernetesConstants.HostClientSettingTemplateFilePath, corsUrls,
@@ -400,13 +397,9 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         return "";
     }
 
-    private string GetHostName(string appId, string appType)
-    {
-        return $"{appId}-{appType}";
-    }
+    private string GetHostName(string appId, string appType) => $"{appId}-{appType}";
 
-    private async Task CreateHostSiloAsync(string appId, string version, string imageName, string hostSiloConfigContent,
-        Guid projectId)
+    private async Task CreateHostSiloAsync(string appId, string version, string imageName, Guid projectId)
     {
         var configFiles = GetHostSiloConfigFiles(appId, version, projectId);
         await EnsureConfigMapAsync(
@@ -512,9 +505,8 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
     private async Task ApplyRollingRestartAsync(string deploymentName)
     {
         // Read the existing deployment
-        var deployment =
-            await _kubernetesClientAdapter.ReadNamespacedDeploymentAsync(deploymentName,
-                KubernetesConstants.AppNameSpace);
+        var deployment = await _kubernetesClientAdapter.ReadNamespacedDeploymentAsync(deploymentName,
+            KubernetesConstants.AppNameSpace);
 
         // Add or update the 'restartedAt' annotation to trigger the restart
         var annotations = deployment.Spec.Template.Metadata.Annotations ?? new Dictionary<string, string>();
