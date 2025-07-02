@@ -316,11 +316,10 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run Python Script
-        working-directory: ./station
         run: |
           source venv/bin/activate
-          pytest -s -v scripts/regression_test.py
-          pytest -s -v scripts/regression_test_signalr.py
+          pytest -s -v station/scripts/regression_test.py
+          pytest -s -v station/scripts/regression_test_signalr.py
 
       - name: Lark Notification on Success
         if: success()
