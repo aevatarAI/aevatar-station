@@ -271,34 +271,21 @@ public class AgentService : ApplicationService, IAgentService
 
     public async Task<List<AgentInstanceDto>> GetAllAgentInstances(int pageIndex, int pageSize)
     {
-        var result = new List<AgentInstanceDto>();
+        _logger.LogInformation("Get All Agent Instances, PageIndex: {PageIndex}, PageSize: {PageSize}", pageIndex, pageSize);
+        
         var currentUserId = _userAppService.GetCurrentUserId();
-        var response =
-            await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
-            {
-                QueryString = "userId.keyword:" + currentUserId,
-                StateName = nameof(CreatorGAgentState),
-                PageSize = pageSize,
-                PageIndex = pageIndex
-            });
-        if (response.TotalCount == 0)
+        var response = await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
         {
-            return result;
-        }
+            QueryString = "userId.keyword:" + currentUserId,
+            StateName = nameof(CreatorGAgentState),
+            PageSize = pageSize,
+            PageIndex = pageIndex
+        });
 
-        result.AddRange(response.Items.Select(state => new AgentInstanceDto()
-        {
-            Id = (string)state["id"],
-            Name = (string)state["name"],
-            Properties = state["properties"] == null
-                ? null
-                : JsonConvert.DeserializeObject<Dictionary<string, object>>((string)state["properties"]),
-            AgentType = (string)state["agentType"],
-            BusinessAgentGrainId =
-                state.TryGetValue("formattedBusinessAgentGrainId", out var value) ? (string)value : null
-        }));
+        _logger.LogInformation("Get All Agent Instances completed, Total: {TotalCount}, Returned: {ReturnedCount}", 
+            response.TotalCount, response.Items.Count);
 
-        return result;
+        return response.Items.Select(MapToAgentItem).ToList();
     }
 
     public async Task<List<AgentInstanceDto>> SearchAgentsWithLucene(AgentSearchRequest request)
@@ -311,13 +298,17 @@ public class AgentService : ApplicationService, IAgentService
         // 2. Build Lucene query string
         var queryString = BuildLuceneQuery(request, currentUserId);
         
-        // 3. Execute query (using existing IndexingService)
+        // 3. Build sort fields for server-side sorting
+        var sortFields = BuildSortFields(request.SortBy, request.SortOrder);
+        
+        // 4. Execute query with server-side sorting
         var response = await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
         {
             QueryString = queryString,
             StateName = nameof(CreatorGAgentState),
             PageSize = request.PageSize,
-            PageIndex = request.PageIndex
+            PageIndex = request.PageIndex,
+            SortFields = sortFields
         });
         
         if (response.TotalCount == 0)
@@ -325,11 +316,8 @@ public class AgentService : ApplicationService, IAgentService
             return new List<AgentInstanceDto>();
         }
         
-        // 4. Convert data (align with existing pattern)
+        // 5. Convert data (align with existing pattern)
         var agents = response.Items.Select(MapToAgentItem).ToList();
-        
-        // 5. Apply client-side sorting (if needed)
-        agents = ApplySorting(agents, request.SortBy, request.SortOrder);
         
         _logger.LogInformation("Search completed, returned {Count} Agents", agents.Count);
         
@@ -377,6 +365,29 @@ public class AgentService : ApplicationService, IAgentService
         return input;
     }
 
+    private List<string> BuildSortFields(string? sortBy, string? sortOrder)
+    {
+        if (string.IsNullOrEmpty(sortBy))
+        {
+            // Default sorting by create time descending
+            return new List<string> { "cTime:desc" };
+        }
+        
+        var order = sortOrder?.ToLower() == "asc" ? "asc" : "desc";
+        
+        // Map frontend sort field names to Elasticsearch field names
+        var esFieldName = sortBy.ToLower() switch
+        {
+            "name" => "name.keyword",
+            "agenttype" => "agentType.keyword", 
+            "createtime" => "cTime",
+            "updatetime" => "uTime",
+            _ => "cTime" // Default fallback
+        };
+        
+        return new List<string> { $"{esFieldName}:{order}" };
+    }
+
     private AgentInstanceDto MapToAgentItem(Dictionary<string, object> state)
     {
         // Align with existing data conversion logic
@@ -394,55 +405,6 @@ public class AgentService : ApplicationService, IAgentService
                 ? (string)value 
                 : null
         };
-    }
-
-
-
-    private List<AgentInstanceDto> ApplySorting(List<AgentInstanceDto> agents, string? sortBy, string? sortOrder)
-    {
-        if (string.IsNullOrEmpty(sortBy)) return agents;
-        
-        var isDescending = sortOrder?.ToLower() == "desc";
-        
-        return sortBy.ToLower() switch
-        {
-            "name" => isDescending 
-                ? agents.OrderByDescending(a => a.Name).ToList()
-                : agents.OrderBy(a => a.Name).ToList(),
-            "agenttype" => isDescending
-                ? agents.OrderByDescending(a => a.AgentType).ToList()
-                : agents.OrderBy(a => a.AgentType).ToList(),
-            // CreateTime/UpdateTime need to be extracted from Properties
-            "createtime" => ApplyDateSorting(agents, "createTime", isDescending),
-            "updatetime" => ApplyDateSorting(agents, "updateTime", isDescending),
-            _ => agents // Default: no sorting, keep Lucene query result order
-        };
-    }
-
-    private List<AgentInstanceDto> ApplyDateSorting(List<AgentInstanceDto> agents, string dateField, bool isDescending)
-    {
-        var sorted = agents.Select(a => new 
-        {
-            Agent = a,
-            Date = ExtractDateFromProperties(a.Properties, dateField)
-        })
-        .OrderBy(x => isDescending ? -x.Date.Ticks : x.Date.Ticks)
-        .Select(x => x.Agent)
-        .ToList();
-        
-        return sorted;
-    }
-
-    private DateTime ExtractDateFromProperties(Dictionary<string, object>? properties, string field)
-    {
-        if (properties?.ContainsKey(field) == true)
-        {
-            if (DateTime.TryParse(properties[field]?.ToString(), out var date))
-            {
-                return date;
-            }
-        }
-        return DateTime.MinValue; // Default value
     }
 
     private void CheckCreateParam(CreateAgentInputDto createDto)
