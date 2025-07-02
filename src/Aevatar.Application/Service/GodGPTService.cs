@@ -69,7 +69,7 @@ public interface IGodGPTService
     Task<RedeemInviteCodeResponse> RedeemInviteCodeAsync(Guid currentUserId,
         RedeemInviteCodeRequest redeemInviteCodeRequest);
 
-    Task<TwitterAuthResultDto> TwitterAuthVerifyAsync(TwitterAuthVerifyInput input);
+    Task<TwitterAuthResultDto> TwitterAuthVerifyAsync(Guid currentUserId, TwitterAuthVerifyInput input);
     Task<PagedResultDto<RewardHistoryDto>> GetCreditsHistoryAsync(Guid currentUserId,
         GetCreditsHistoryInput getCreditsHistoryInput);
     Task<TwitterAuthParamsDto> GetTwitterAuthParamsAsync(Guid currentUserId);
@@ -461,15 +461,10 @@ public class GodGPTService : ApplicationService, IGodGPTService
         };
     }
 
-    public async Task<TwitterAuthResultDto> TwitterAuthVerifyAsync(TwitterAuthVerifyInput input)
+    public async Task<TwitterAuthResultDto> TwitterAuthVerifyAsync(Guid currentUserId, TwitterAuthVerifyInput input)
     {
-        if (!Guid.TryParse(input.State, out var userId))
-        {
-            return new TwitterAuthResultDto();
-        }
-
-        var twitterAuthGAgent = _clusterClient.GetGrain<ITwitterAuthGAgent>(userId);
-        return await twitterAuthGAgent.VerifyAuthCodeAsync(input.Platform, input.Code);
+        var twitterAuthGAgent = _clusterClient.GetGrain<ITwitterAuthGAgent>(currentUserId);
+        return await twitterAuthGAgent.VerifyAuthCodeAsync(input.Platform, input.Code, input.RedirectUri);
     }
 
     public async Task<PagedResultDto<RewardHistoryDto>> GetCreditsHistoryAsync(Guid currentUserId,

@@ -91,18 +91,14 @@ public class GodGPTInvitationController : AevatarController
         return response;
     }
 
-    [AllowAnonymous]
     [HttpGet("twitter/verify")]
-    public async Task<IActionResult> TwitterAuthVerifyAsync(TwitterAuthVerifyInput input)
+    public async Task<TwitterAuthResultDto> TwitterAuthVerifyAsync(TwitterAuthVerifyInput input)
     {
         var stopwatch = Stopwatch.StartNew();
-        var response = await _godGptService.TwitterAuthVerifyAsync(input);
-        _logger.LogDebug("[GodGPTInvitationController][TwitterAuthVerifyAsync] State: {0}, duration: {1}ms",
-            input.State, stopwatch.ElapsedMilliseconds);
-        if (string.IsNullOrWhiteSpace(response.RedirectUri))
-        {
-            return BadRequest();
-        }
-        return Redirect(response.RedirectUri);
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var response = await _godGptService.TwitterAuthVerifyAsync(currentUserId, input);
+        _logger.LogDebug("[GodGPTInvitationController][TwitterAuthVerifyAsync] userId: {0}, duration: {1}ms",
+            currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
+        return response;
     }
 }
