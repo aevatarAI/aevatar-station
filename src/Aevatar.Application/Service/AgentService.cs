@@ -301,7 +301,7 @@ public class AgentService : ApplicationService, IAgentService
         return result;
     }
 
-    public async Task<AgentSearchResponse> SearchAgentsWithLucene(AgentSearchRequest request)
+    public async Task<List<AgentInstanceDto>> SearchAgentsWithLucene(AgentSearchRequest request)
     {
         _logger.LogInformation("Search Agents, SearchTerm: {SearchTerm}", request.SearchTerm);
         
@@ -322,14 +322,7 @@ public class AgentService : ApplicationService, IAgentService
         
         if (response.TotalCount == 0)
         {
-            return new AgentSearchResponse
-            {
-                Agents = new List<AgentInstanceDto>(),
-                Total = 0,
-                PageIndex = request.PageIndex,
-                PageSize = request.PageSize,
-                HasMore = false
-            };
+            return new List<AgentInstanceDto>();
         }
         
         // 4. Convert data (align with existing pattern)
@@ -340,14 +333,7 @@ public class AgentService : ApplicationService, IAgentService
         
         _logger.LogInformation("Search completed, returned {Count} Agents", agents.Count);
         
-        return new AgentSearchResponse
-        {
-            Agents = agents,
-            Total = (int)response.TotalCount,
-            PageIndex = request.PageIndex,
-            PageSize = request.PageSize,
-            HasMore = (request.PageIndex + 1) * request.PageSize < response.TotalCount
-        };
+        return agents;
     }
 
     private string BuildLuceneQuery(AgentSearchRequest request, Guid currentUserId)

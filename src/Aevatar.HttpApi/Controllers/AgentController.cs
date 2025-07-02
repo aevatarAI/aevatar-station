@@ -48,18 +48,9 @@ public class AgentController : AevatarController
     // Search and filter Agents (support Node Palette)
     [HttpPost("search")]
     [Authorize]
-    public async Task<ActionResult<AgentSearchResponse>> SearchAgents([FromBody] AgentSearchRequest request)
+    public async Task<List<AgentInstanceDto>> SearchAgents([FromBody] AgentSearchRequest request)
     {
-        try
-        {
-            var result = await _agentService.SearchAgentsWithLucene(request);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to search agents");
-            return BadRequest($"Search failed: {ex.Message}");
-        }
+        return await _agentService.SearchAgentsWithLucene(request);
     }
 
     [HttpPost]

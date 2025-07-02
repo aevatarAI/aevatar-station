@@ -14,7 +14,7 @@ public interface IAgentService
     Task<List<AgentInstanceDto>> GetAllAgentInstances(int pageIndex, int pageSize);
     
     // Search and filter Agents (supports Node Palette)
-    Task<AgentSearchResponse> SearchAgentsWithLucene(AgentSearchRequest request);
+    Task<List<AgentInstanceDto>> SearchAgentsWithLucene(AgentSearchRequest request);
     
     Task<AgentDto> GetAgentAsync(Guid guid);
     Task<AgentDto> UpdateAgentAsync(Guid guid, UpdateAgentInputDto dto);
