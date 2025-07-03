@@ -46,6 +46,8 @@ Client → SignalR Hub → Orleans Grains → Event Sourcing → State Persisten
 - @~/framework/TECHNICAL_DOCUMENTATION.md - Framework architecture & patterns
 - @~/station/TECHNICAL_DOCUMENTATION.md - Station platform implementation
 - @~/framework/docs/MODULE_DOCUMENTATION.md - Module-specific details
+- @source-control.md - Source control management strategies and workflows
+- @technical-documentation-practices.md - Practices for creating and maintaining technical documentation
 
 ---
 
