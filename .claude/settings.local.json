@@ -14,7 +14,8 @@
       "mcp__ide__executeCode",
       "mcp__sequentialthinking__sequentialthinking",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(gh pr create:*)"
     ]
   },
   "enableAllProjectMcpServers": true
