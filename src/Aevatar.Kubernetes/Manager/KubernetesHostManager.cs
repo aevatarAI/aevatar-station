@@ -122,7 +122,7 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         Func<string, Dictionary<string, string>, V1ConfigMap> createConfigMapDefinitionFunc)
     {
         // Ensure namespace exists before creating ConfigMap
-        await EnsureNamespaceAsync(KubernetesConstants.AppNameSpace);
+        // await EnsureNamespaceAsync(KubernetesConstants.AppNameSpace);
 
         var configMapName = getConfigMapNameFunc(appId, version);
         var configMaps = await _kubernetesClientAdapter.ListConfigMapAsync(KubernetesConstants.AppNameSpace);
@@ -139,23 +139,23 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         }
     }
 
-    private async Task EnsureNamespaceAsync(string namespaceName, CancellationToken cancellationToken = default)
-    {
-        var namespaceExists = await _kubernetesClientAdapter.NamespaceExistsAsync(namespaceName, cancellationToken);
-
-        if (!namespaceExists)
-        {
-            var namespaceDefinition = new V1Namespace
-            {
-                ApiVersion = "v1",
-                Kind = "Namespace",
-                Metadata = new() { Name = namespaceName }
-            };
-
-            await _kubernetesClientAdapter.CreateNamespaceAsync(namespaceDefinition, cancellationToken);
-            _logger.LogInformation("[KubernetesHostManager] Namespace {namespaceName} created", namespaceName);
-        }
-    }
+    // private async Task EnsureNamespaceAsync(string namespaceName, CancellationToken cancellationToken = default)
+    // {
+    //     var namespaceExists = await _kubernetesClientAdapter.NamespaceExistsAsync(namespaceName, cancellationToken);
+    //
+    //     if (!namespaceExists)
+    //     {
+    //         var namespaceDefinition = new V1Namespace
+    //         {
+    //             ApiVersion = "v1",
+    //             Kind = "Namespace",
+    //             Metadata = new() { Name = namespaceName }
+    //         };
+    //
+    //         await _kubernetesClientAdapter.CreateNamespaceAsync(namespaceDefinition, cancellationToken);
+    //         _logger.LogInformation("[KubernetesHostManager] Namespace {namespaceName} created", namespaceName);
+    //     }
+    // }
 
     public async Task UpdateDockerImageAsync(string appId, string version, string newImage)
     {
@@ -256,7 +256,7 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         int containerPort, string maxSurge, string maxUnavailable, string healthPath, bool isSilo = false)
     {
         // Ensure namespace exists before creating Deployment
-        await EnsureNamespaceAsync(KubernetesConstants.AppNameSpace);
+        // await EnsureNamespaceAsync(KubernetesConstants.AppNameSpace);
 
         var configMapName = ConfigMapHelper.GetAppSettingConfigMapName(appId, version);
         var sideCarConfigName = ConfigMapHelper.GetAppFileBeatConfigMapName(appId, version);
@@ -285,7 +285,7 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         string deploymentLabelName, int targetPort)
     {
         // Ensure namespace exists before creating Service
-        await EnsureNamespaceAsync(KubernetesConstants.AppNameSpace);
+        // await EnsureNamespaceAsync(KubernetesConstants.AppNameSpace);
 
         var services = await _kubernetesClientAdapter.ListServiceAsync(KubernetesConstants.AppNameSpace);
         if (!services.Items.Any(item => item.Metadata.Name == serviceName))
@@ -307,7 +307,7 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         string hostName, string rulePath, string serviceName, int targetPort)
     {
         // Ensure namespace exists before creating Ingress
-        await EnsureNamespaceAsync(KubernetesConstants.AppNameSpace);
+        // await EnsureNamespaceAsync(KubernetesConstants.AppNameSpace);
 
         var ingressName = IngressHelper.GetAppIngressName(appId, version);
         var ingresses = await _kubernetesClientAdapter.ListIngressAsync(KubernetesConstants.AppNameSpace);
