@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Kubernetes;
@@ -37,9 +36,9 @@ public class DeveloperService : ApplicationService, IDeveloperService
         ILogger<DeveloperService> logger, IProjectCorsOriginService projectCorsOriginService)
     {
         _logger = logger;
-        _projectCorsOriginService = projectCorsOriginService;
         _hostDeployManager = hostDeployManager;
         _kubernetesClientAdapter = kubernetesClientAdapter;
+        _projectCorsOriginService = projectCorsOriginService;
     }
 
     public async Task CreateHostAsync(string HostId, string version, string corsUrls)
@@ -72,7 +71,6 @@ public class DeveloperService : ApplicationService, IDeveloperService
             _logger.LogWarning($"No Host service found for client: {clientId}");
             throw new UserFriendlyException($"No Host service found to restart for client: {clientId}");
         }
-
 
         var corsUrls = await _projectCorsOriginService.GetListAsync(projectId);
         var corsUrlsString = string.Join(",", corsUrls.Items.Select(x => x.Domain));
@@ -165,22 +163,22 @@ public class DeveloperService : ApplicationService, IDeveloperService
         return canCreate;
     }
 
-    private async Task<List<string>> GetCorsUrlsForClientAsync(string clientId)
-    {
-        _logger.LogInformation($"Getting CORS URLs for client: {clientId}");
-
-        var mockCorsUrls = new List<string>
-        {
-            "https://api.example.com",
-            "https://app.test.com",
-            "https://webhook.demo.org",
-            "http://localhost:3000",
-            "https://staging.myapp.com"
-        };
-
-        _logger.LogInformation($"Retrieved {mockCorsUrls.Count} CORS URLs for client: {clientId}");
-
-        await Task.CompletedTask;
-        return mockCorsUrls;
-    }
+    // private async Task<List<string>> GetCorsUrlsForClientAsync(string clientId)
+    // {
+    //     _logger.LogInformation($"Getting CORS URLs for client: {clientId}");
+    //
+    //     var mockCorsUrls = new List<string>
+    //     {
+    //         "https://api.example.com",
+    //         "https://app.test.com",
+    //         "https://webhook.demo.org",
+    //         "http://localhost:3000",
+    //         "https://staging.myapp.com"
+    //     };
+    //
+    //     _logger.LogInformation($"Retrieved {mockCorsUrls.Count} CORS URLs for client: {clientId}");
+    //
+    //     await Task.CompletedTask;
+    //     return mockCorsUrls;
+    // }
 }

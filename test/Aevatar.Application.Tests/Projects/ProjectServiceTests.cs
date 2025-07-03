@@ -11,6 +11,7 @@ using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
 using Volo.Abp.PermissionManagement;
 using Volo.Abp.Users;
+using Volo.Abp.Validation;
 using Xunit;
 
 namespace Aevatar.Projects;
@@ -162,6 +163,33 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
     }
 
     [Fact]
+    public async Task Project_WrongDomain_Test()
+    {
+        await _identityUserManager.CreateAsync(
+            new IdentityUser(
+                _currentUser.Id.Value,
+                "test",
+                "test@email.io"));
+
+        var createOrganizationInput = new CreateOrganizationDto
+        {
+            DisplayName = "Test Organization"
+        };
+        var organization = await _organizationService.CreateAsync(createOrganizationInput);
+
+        var createProjectInput = new CreateProjectDto()
+        {
+            OrganizationId = organization.Id,
+            DisplayName = "Test Project",
+            DomainName = "App 2"
+        };
+        await Should.ThrowAsync<AbpValidationException>(async () => await _projectService.CreateAsync(createProjectInput));
+
+        createProjectInput.DomainName = "App@";
+        await Should.ThrowAsync<AbpValidationException>(async () => await _projectService.CreateAsync(createProjectInput));
+    }
+
+    [Fact]
     public async Task Project_Update_Test()
     {
         await _identityUserManager.CreateAsync(
@@ -231,7 +259,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
 
         var domain =
             await _domainRepository.FirstOrDefaultAsync(o => o.ProjectId == project.Id && o.IsDeleted == false);
-        domain.ShouldBeNull();
+        domain.DomainName.ShouldBe("App");
     }
 
     [Fact]
