@@ -91,7 +91,7 @@ public class GodGPTInvitationController : AevatarController
         return response;
     }
 
-    [HttpGet("twitter/verify")]
+    [HttpPost("twitter/verify")]
     public async Task<TwitterAuthResultDto> TwitterAuthVerifyAsync(TwitterAuthVerifyInput input)
     {
         var stopwatch = Stopwatch.StartNew();
