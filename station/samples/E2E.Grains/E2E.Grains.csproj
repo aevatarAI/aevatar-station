@@ -13,9 +13,6 @@
         <PackageReference Include="AElf.OpenTelemetry"/>
         <PackageReference Include="Volo.Abp.AutoMapper"/>
         <PackageReference Include="Volo.Abp.EventBus.Abstractions"/>
-        <PackageReference Include="MineAiFun.GAgents"/>
-        <PackageReference Include="XWorkerAgent"/>
-        <PackageReference Include="TelegramWorkerAgent"/>
         <PackageReference Include="Microsoft.Orleans.Runtime" />
     </ItemGroup>
 

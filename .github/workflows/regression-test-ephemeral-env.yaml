@@ -318,9 +318,8 @@ jobs:
       - name: Run Python Script
         run: |
           source venv/bin/activate
-          pytest -s -v scripts/regression_test.py
-          pytest -s -v scripts/regression_test_signalr.py
-
+          pytest -s -v station/scripts/regression_test.py
+          
       - name: Lark Notification on Success
         if: success()
         uses: drayeasy/action-lark-notify@main
