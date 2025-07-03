@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+    <Import Project="..\..\common.props" />
+    <PropertyGroup>
+        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+        <RootNamespace>Aevatar.Developer.Host</RootNamespace>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
+        <PackageReference Include="Serilog.AspNetCore" />
+        <PackageReference Include="Serilog.Sinks.Async" />
+        <PackageReference Include="Serilog.Sinks.Console" />
+        <PackageReference Include="Serilog.Sinks.OpenTelemetry" />
+        <PackageReference Include="Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite" />
+        <PackageReference Include="Volo.Abp.Autofac" />
+        <PackageReference Include="Volo.Abp.AspNetCore.Serilog" />
+        <PackageReference Include="Volo.Abp.Swashbuckle" />
+        <PackageReference Include="Volo.Abp.Account.Web.OpenIddict" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" />
+        <PackageReference Include="Microsoft.Extensions.Logging" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+        <PackageReference Include="Microsoft.Orleans.Client" />
+        <PackageReference Include="Microsoft.Orleans.Clustering.ZooKeeper" />
+        <PackageReference Include="Orleans.Providers.MongoDB" />
+        <PackageReference Include="MongoDB.Driver.Core.Extensions.DiagnosticSources" />
+        <PackageReference Include="AElf.OpenTelemetry" />
+        <PackageReference Include="AutoResponseWrapper" />
+        <PackageReference Include="MongoDB.Driver" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+        <PackageReference Include="Microsoft.CodeAnalysis.Common" />
+        <PackageReference Include="Orleans.Streams.Kafka" />
+        <PackageReference Include="Volo.Abp.BlobStoring.Aws" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\signalR\src\Aevatar.SignalR\Aevatar.SignalR.csproj" />
+        <ProjectReference Include="..\Aevatar.Application\Aevatar.Application.csproj" />
+        <ProjectReference Include="..\Aevatar.HttpApi\Aevatar.HttpApi.csproj" />  
+        <ProjectReference Include="..\Aevatar.MongoDB\Aevatar.MongoDB.csproj" />
+    </ItemGroup>
+   
+    <ItemGroup>
+        <Content Include="../../configurations/appsettings.Shared.json" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" Link="appsettings.Shared.json" />
+        <Content Include="../../configurations/appsettings.HttpApi.Host.Shared.json" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" Link="appsettings.HttpApi.Host.Shared.json" />
+    </ItemGroup>
+   
+</Project>
