@@ -11,7 +11,10 @@
       "Bash(dotnet run:*)",
       "Bash(ls:*)",
       "Bash(./cleanup-unused-files.sh:*)",
-      "mcp__ide__executeCode"
+      "mcp__ide__executeCode",
+      "mcp__sequentialthinking__sequentialthinking",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   },
   "enableAllProjectMcpServers": true
