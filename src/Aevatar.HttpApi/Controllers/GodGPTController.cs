@@ -420,25 +420,36 @@ public class GodGPTController : AevatarController
         
         try
         {
+            // Always check limits first to provide graceful response
+            var limits = await _godGptService.GetGuestChatLimitsAsync(clientIp);
+            
+            // If no remaining chats, return limits info without creating session
+            if (limits.RemainingChats <= 0)
+            {
+                _logger.LogDebug("[GodGPTController][CreateGuestSessionAsync] User: {0} has no remaining chats, returning limits", userHashId);
+                return Ok(new CreateGuestSessionResponseDto
+                {
+                    RemainingChats = limits.RemainingChats,
+                    TotalAllowed = limits.TotalAllowed
+                });
+            }
+            
+            // User has remaining chats, proceed with session creation
             var result = await _godGptService.CreateGuestSessionAsync(clientIp, request.Guider);
             _logger.LogDebug("[GodGPTController][CreateGuestSessionAsync] User: {0}, guider: {1}, remaining: {2}, duration: {3}ms",
                 userHashId, request.Guider, result.RemainingChats, stopwatch.ElapsedMilliseconds);
             
             return Ok(result);
         }
-        catch (UserFriendlyException ex)
+        catch (Exception ex)
         {
-            _logger.LogWarning(ex, "[GodGPTController][CreateGuestSessionAsync] User: {0}, error: {1}", userHashId, ex.Message);
-            return StatusCode(429, new CreateGuestSessionResponseDto
+            _logger.LogError(ex, "[GodGPTController][CreateGuestSessionAsync] User: {0}, unexpected error", userHashId);
+            // Return default limits instead of error
+            return Ok(new CreateGuestSessionResponseDto
             {
                 RemainingChats = 0,
                 TotalAllowed = 3
             });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "[GodGPTController][CreateGuestSessionAsync] User: {0}, unexpected error", userHashId);
-            return StatusCode(500, new { error = "Internal server error" });
         }
     }
 
