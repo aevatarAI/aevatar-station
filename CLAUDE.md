@@ -100,10 +100,14 @@ Shall I proceed with this approach?
 - ❌ **NEVER** implement mock modes - use real data/APIs
 - ❌ **NEVER** name things as 'improved', 'new', 'enhanced'
 - ❌ **NEVER** start coding without analysis and proposed solution
+- ❌ **NEVER** write implementation code before writing tests
+- ❌ **NEVER** skip writing tests unless explicitly authorized
 - ✅ **ALWAYS** analyze and propose BEFORE implementing
+- ✅ **ALWAYS** write failing tests FIRST before any implementation
 - ✅ **ALWAYS** ask for clarification vs assumptions
 - ✅ **ALWAYS** add `ABOUTME:` comments to new files (2 lines)
 - ✅ **ALWAYS** preserve unrelated working code
+- ✅ **ALWAYS** follow strict TDD: Red → Green → Refactor cycle
 
 ### Implementation Standards
 ```csharp
@@ -129,19 +133,73 @@ public class MyAgent : GAgentBase<MyState, MyEvent>, IMyAgent
 
 ## Testing Requirements
 
-### TDD Process (Mandatory)
-1. Write failing test defining desired behavior
-2. Run test to confirm failure
-3. Write minimal code to pass test
-4. Refactor while keeping tests green
-5. Repeat cycle
+### STRICT TEST-DRIVEN DEVELOPMENT (TDD) - ABSOLUTELY MANDATORY
+
+#### TDD is NOT OPTIONAL - It is a REQUIREMENT for ALL code changes
+
+**The TDD Cycle MUST be followed for EVERY feature, bug fix, or code modification:**
+
+1. **RED PHASE** - Write failing test FIRST
+   - Define expected behavior through test
+   - Run test to confirm it fails (proves test is valid)
+   - NO implementation code allowed at this stage
+   
+2. **GREEN PHASE** - Write MINIMAL code to pass
+   - Implement ONLY enough code to make test pass
+   - No extra features or "nice to have" additions
+   - Run test to confirm it passes
+   
+3. **REFACTOR PHASE** - Improve code quality
+   - Clean up implementation while tests stay green
+   - Extract methods, improve naming, reduce duplication
+   - Run all tests after each change
+   
+4. **REPEAT** - Continue cycle for next requirement
+
+#### TDD Enforcement Rules
+
+**BEFORE writing ANY implementation code, you MUST:**
+- Write at least one failing test
+- Run the test to verify it fails correctly
+- Show the failing test output
+- Only THEN proceed to implementation
+
+**VIOLATIONS of TDD will occur if you:**
+- Write implementation code before tests
+- Skip writing tests "to save time"
+- Write tests after implementation
+- Modify code without updating tests first
+
+**Test-First Development Example:**
+```csharp
+// STEP 1: Write failing test FIRST
+[Fact]
+public async Task Should_CalculateDiscount_When_CustomerIsVIP()
+{
+    // This test MUST be written BEFORE the CalculateDiscount method exists
+    var service = new PricingService();
+    var result = await service.CalculateDiscount(customerId: "VIP123", amount: 100);
+    
+    result.ShouldBe(10); // 10% discount for VIP
+}
+
+// STEP 2: Run test - it MUST fail (method doesn't exist yet)
+// STEP 3: Write MINIMAL implementation to pass
+// STEP 4: Refactor if needed
+// STEP 5: Write next failing test for next requirement
+```
 
 ### Test Coverage (Non-negotiable)
-- **Unit tests** - Method-level logic
-- **Integration tests** - Component interactions  
-- **End-to-end tests** - Full system workflows
+- **Unit tests** - Method-level logic (MUST be written FIRST)
+- **Integration tests** - Component interactions (MUST be written FIRST)
+- **End-to-end tests** - Full system workflows (MUST be written FIRST)
 
-Authorization required to skip: "I AUTHORIZE YOU TO SKIP WRITING TESTS THIS TIME"
+**IMPORTANT:** Tests must ALWAYS be written BEFORE implementation code.
+
+**The ONLY exception:** User provides explicit authorization:
+"I AUTHORIZE YOU TO SKIP WRITING TESTS THIS TIME"
+
+**Without this exact authorization, you MUST follow TDD strictly.**
 
 ### Test Implementation
 ```csharp
@@ -175,14 +233,20 @@ Before ANY implementation:
 2. **Use sequentialthinking** - Break down into MECE components
 3. **Research existing patterns** - Use openmemory and grep/find tools
 4. **Propose solution approach** - Present plan BEFORE coding
-5. **Get confirmation** - Ensure alignment before proceeding
+5. **Design test cases** - Outline what tests will be written FIRST
+6. **Get confirmation** - Ensure alignment before proceeding
+7. **Write failing tests** - Start with RED phase of TDD
+8. **Then implement** - Only after tests are written and failing
 
 ### Task Execution
 1. **Use TodoWrite** for complex multi-step tasks
 2. **Analyze existing code** before modifications
-3. **Execute parallel operations** when possible
-4. **Validate with tests** after implementation
-5. **Clean up temporary files** at completion
+3. **Write failing tests FIRST** for the changes needed
+4. **Execute parallel operations** when possible
+5. **Implement minimal code** to make tests pass
+6. **Refactor** while keeping tests green
+7. **Validate all tests pass** before considering task complete
+8. **Clean up temporary files** at completion
 
 ### Development Tools
 - **sequentialthinking** - Break down complex tasks using MECE (Mutually Exclusive, Collectively Exhaustive) principles
@@ -221,4 +285,9 @@ Before ANY implementation:
 
 ---
 
-**REMEMBER: Analyze → Propose → Confirm → Implement. Always prioritize maintainability, follow TDD, and ask for clarification when uncertain.**
+**REMEMBER: Analyze → Propose → Confirm → Write Tests → See Tests Fail → Implement → See Tests Pass → Refactor. 
+
+TDD is MANDATORY - NO EXCEPTIONS without explicit authorization. 
+Always prioritize maintainability, STRICTLY follow TDD, and ask for clarification when uncertain.
+
+The sequence is ALWAYS: RED (failing test) → GREEN (minimal implementation) → REFACTOR (improve code).**
