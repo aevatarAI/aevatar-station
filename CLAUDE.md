@@ -48,6 +48,7 @@ Client → SignalR Hub → Orleans Grains → Event Sourcing → State Persisten
 - @~/framework/docs/MODULE_DOCUMENTATION.md - Module-specific details
 - @source-control.md - Source control management strategies and workflows
 - @technical-documentation-practices.md - Practices for creating and maintaining technical documentation
+- @test-case-generation-guidelines.md - Guidelines for generating test cases when working on TDD
 
 ---
 
@@ -170,6 +171,38 @@ public class MyAgent : GAgentBase<MyState, MyEvent>, IMyAgent
 - Write tests after implementation
 - Modify code without updating tests first
 
+#### Test Case Documentation (Mandatory)
+
+**During the RED PHASE of TDD, you MUST also:**
+- Generate comprehensive test case documentation following @test-case-generation-guidelines.md
+- Apply ALL six mandatory test design methods:
+  1. **Equivalence Class Partitioning** - Valid/invalid input classes
+  2. **Boundary Value Analysis** - Min/max/edge conditions
+  3. **Decision Table Testing** - Multiple condition combinations
+  4. **Scenario-Based Testing** - Real-world user workflows
+  5. **Error Guessing** - Predict potential defects
+  6. **State Transition Testing** - State changes and events
+
+**Test Case Documentation Requirements:**
+- Create/update markdown files in: `test-cases/{version}/{feature-name}-test-cases.md`
+- Follow the hierarchical structure (H1-H6) for XMind compatibility
+- Document BEFORE writing the actual test code
+- Update documentation when tests change
+- Include positive, negative, boundary, and exception cases
+
+**Documentation Example:**
+```markdown
+# PricingService Test Cases
+## Discount Calculation
+### VIP Customer Discounts
+#### Standard VIP Discount Rules
+##### VIP customer receives 10% discount on orders over $100
+###### Expected Result
+- Discount amount equals 10% of order total
+- Final amount is reduced by discount
+- Discount is recorded in order history
+```
+
 **Test-First Development Example:**
 ```csharp
 // STEP 1: Write failing test FIRST
@@ -225,6 +258,8 @@ public async Task Should_UpdateState_When_EventReceived()
 - 🔍 Boundary cases (edge conditions)
 - 💥 Exception cases (error handling)
 
+**All categories MUST be documented using the test case generation guidelines before implementation.**
+
 ## Development Workflow
 
 ### Task Analysis Protocol (MANDATORY)
@@ -233,20 +268,23 @@ Before ANY implementation:
 2. **Use sequentialthinking** - Break down into MECE components
 3. **Research existing patterns** - Use openmemory and grep/find tools
 4. **Propose solution approach** - Present plan BEFORE coding
-5. **Design test cases** - Outline what tests will be written FIRST
-6. **Get confirmation** - Ensure alignment before proceeding
-7. **Write failing tests** - Start with RED phase of TDD
-8. **Then implement** - Only after tests are written and failing
+5. **Design test cases** - Apply six test design methods from @test-case-generation-guidelines.md
+6. **Document test cases** - Generate markdown documentation in test-cases directory
+7. **Get confirmation** - Ensure alignment before proceeding
+8. **Write failing tests** - Start with RED phase of TDD based on documented cases
+9. **Then implement** - Only after tests are written and failing
 
 ### Task Execution
 1. **Use TodoWrite** for complex multi-step tasks
 2. **Analyze existing code** before modifications
-3. **Write failing tests FIRST** for the changes needed
-4. **Execute parallel operations** when possible
-5. **Implement minimal code** to make tests pass
-6. **Refactor** while keeping tests green
-7. **Validate all tests pass** before considering task complete
-8. **Clean up temporary files** at completion
+3. **Generate test case documentation** using six design methods
+4. **Write failing tests FIRST** based on documented test cases
+5. **Execute parallel operations** when possible
+6. **Implement minimal code** to make tests pass
+7. **Refactor** while keeping tests green
+8. **Update test documentation** if tests change during refactoring
+9. **Validate all tests pass** before considering task complete
+10. **Clean up temporary files** at completion
 
 ### Development Tools
 - **sequentialthinking** - Break down complex tasks using MECE (Mutually Exclusive, Collectively Exhaustive) principles
