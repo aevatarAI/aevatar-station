@@ -74,6 +74,7 @@ public class DeveloperService : ApplicationService, IDeveloperService
 
         var corsUrls = await _projectCorsOriginService.GetListAsync(projectId);
         var corsUrlsString = string.Join(",", corsUrls.Items.Select(x => x.Domain));
+        _logger.LogInformation($"[DeveloperService] Processing CORS URLs for client: {clientId}, projectId: {projectId}, count: {corsUrls.Items.Count}, corsUrlsString: {corsUrlsString}");
         await _hostDeployManager.UpdateHostAsync(clientId, DefaultVersion, corsUrlsString, projectId);
 
         _logger.LogInformation($"Business service restart completed successfully for client: {clientId}");
@@ -98,6 +99,7 @@ public class DeveloperService : ApplicationService, IDeveloperService
 
         var corsUrls = await _projectCorsOriginService.GetListAsync(projectId);
         var corsUrlsString = string.Join(",", corsUrls.Items.Select(x => x.Domain));
+        _logger.LogInformation($"[DeveloperService] Processing CORS URLs for client: {clientId}, projectId: {projectId}, count: {corsUrls.Items.Count}, corsUrlsString: {corsUrlsString}");
         await _hostDeployManager.CreateHostAsync(clientId, DefaultVersion, corsUrlsString, projectId);
 
         _logger.LogInformation($"Developer service created successfully for client: {clientId}");
