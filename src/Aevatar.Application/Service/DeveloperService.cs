@@ -1,10 +1,10 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Kubernetes;
 using Aevatar.Kubernetes.Adapter;
 using Aevatar.Kubernetes.ResourceDefinition;
+using Aevatar.Projects;
 using Aevatar.WebHook.Deploy;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
@@ -30,13 +30,15 @@ public class DeveloperService : ApplicationService, IDeveloperService
     private readonly ILogger<DeveloperService> _logger;
     private readonly IHostDeployManager _hostDeployManager;
     private readonly IKubernetesClientAdapter _kubernetesClientAdapter;
+    private readonly IProjectCorsOriginService _projectCorsOriginService;
 
     public DeveloperService(IHostDeployManager hostDeployManager, IKubernetesClientAdapter kubernetesClientAdapter,
-        ILogger<DeveloperService> logger)
+        ILogger<DeveloperService> logger, IProjectCorsOriginService projectCorsOriginService)
     {
         _logger = logger;
         _hostDeployManager = hostDeployManager;
         _kubernetesClientAdapter = kubernetesClientAdapter;
+        _projectCorsOriginService = projectCorsOriginService;
     }
 
     public async Task CreateHostAsync(string HostId, string version, string corsUrls)
@@ -70,8 +72,8 @@ public class DeveloperService : ApplicationService, IDeveloperService
             throw new UserFriendlyException($"No Host service found to restart for client: {clientId}");
         }
 
-        var corsUrls = await GetCorsUrlsForClientAsync(clientId);
-        var corsUrlsString = string.Join(",", corsUrls);
+        var corsUrls = await _projectCorsOriginService.GetListAsync(projectId);
+        var corsUrlsString = string.Join(",", corsUrls.Items.Select(x => x.Domain));
         await _hostDeployManager.UpdateHostAsync(clientId, DefaultVersion, corsUrlsString, projectId);
 
         _logger.LogInformation($"Business service restart completed successfully for client: {clientId}");
@@ -94,8 +96,8 @@ public class DeveloperService : ApplicationService, IDeveloperService
                 $"Host service partially or fully exists for client: {clientId}. Please delete existing services first.");
         }
 
-        var corsUrls = await GetCorsUrlsForClientAsync(clientId);
-        var corsUrlsString = string.Join(",", corsUrls);
+        var corsUrls = await _projectCorsOriginService.GetListAsync(projectId);
+        var corsUrlsString = string.Join(",", corsUrls.Items.Select(x => x.Domain));
         await _hostDeployManager.CreateHostAsync(clientId, DefaultVersion, corsUrlsString, projectId);
 
         _logger.LogInformation($"Developer service created successfully for client: {clientId}");
@@ -161,22 +163,22 @@ public class DeveloperService : ApplicationService, IDeveloperService
         return canCreate;
     }
 
-    private async Task<List<string>> GetCorsUrlsForClientAsync(string clientId)
-    {
-        _logger.LogInformation($"Getting CORS URLs for client: {clientId}");
-
-        var mockCorsUrls = new List<string>
-        {
-            "https://api.example.com",
-            "https://app.test.com",
-            "https://webhook.demo.org",
-            "http://localhost:3000",
-            "https://staging.myapp.com"
-        };
-
-        _logger.LogInformation($"Retrieved {mockCorsUrls.Count} CORS URLs for client: {clientId}");
-
-        await Task.CompletedTask;
-        return mockCorsUrls;
-    }
+    // private async Task<List<string>> GetCorsUrlsForClientAsync(string clientId)
+    // {
+    //     _logger.LogInformation($"Getting CORS URLs for client: {clientId}");
+    //
+    //     var mockCorsUrls = new List<string>
+    //     {
+    //         "https://api.example.com",
+    //         "https://app.test.com",
+    //         "https://webhook.demo.org",
+    //         "http://localhost:3000",
+    //         "https://staging.myapp.com"
+    //     };
+    //
+    //     _logger.LogInformation($"Retrieved {mockCorsUrls.Count} CORS URLs for client: {clientId}");
+    //
+    //     await Task.CompletedTask;
+    //     return mockCorsUrls;
+    // }
 }
