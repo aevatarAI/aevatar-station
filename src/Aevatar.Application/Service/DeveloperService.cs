@@ -7,6 +7,7 @@ using Aevatar.Kubernetes.ResourceDefinition;
 using Aevatar.Projects;
 using Aevatar.WebHook.Deploy;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
 
@@ -27,15 +28,18 @@ public interface IDeveloperService
 public class DeveloperService : ApplicationService, IDeveloperService
 {
     private const string DefaultVersion = "1";
+    private readonly IConfiguration _configuration;
     private readonly ILogger<DeveloperService> _logger;
     private readonly IHostDeployManager _hostDeployManager;
     private readonly IKubernetesClientAdapter _kubernetesClientAdapter;
     private readonly IProjectCorsOriginService _projectCorsOriginService;
 
     public DeveloperService(IHostDeployManager hostDeployManager, IKubernetesClientAdapter kubernetesClientAdapter,
-        ILogger<DeveloperService> logger, IProjectCorsOriginService projectCorsOriginService)
+        ILogger<DeveloperService> logger, IProjectCorsOriginService projectCorsOriginService,
+        IConfiguration configuration)
     {
         _logger = logger;
+        _configuration = configuration;
         _hostDeployManager = hostDeployManager;
         _kubernetesClientAdapter = kubernetesClientAdapter;
         _projectCorsOriginService = projectCorsOriginService;
@@ -72,9 +76,9 @@ public class DeveloperService : ApplicationService, IDeveloperService
             throw new UserFriendlyException($"No Host service found to restart for client: {clientId}");
         }
 
-        var corsUrls = await _projectCorsOriginService.GetListAsync(projectId);
-        var corsUrlsString = string.Join(",", corsUrls.Items.Select(x => x.Domain));
-        _logger.LogInformation($"[DeveloperService] Processing CORS URLs for client: {clientId}, projectId: {projectId}, count: {corsUrls.Items.Count}, corsUrlsString: {corsUrlsString}");
+        var corsUrlsString = await GetCombinedCorsUrlsAsync(projectId);
+        _logger.LogInformation(
+            $"[DeveloperService] Processing combined CORS URLs for client: {clientId}, projectId: {projectId}, corsUrlsString: {corsUrlsString}");
         await _hostDeployManager.UpdateHostAsync(clientId, DefaultVersion, corsUrlsString, projectId);
 
         _logger.LogInformation($"Business service restart completed successfully for client: {clientId}");
@@ -97,9 +101,9 @@ public class DeveloperService : ApplicationService, IDeveloperService
                 $"Host service partially or fully exists for client: {clientId}. Please delete existing services first.");
         }
 
-        var corsUrls = await _projectCorsOriginService.GetListAsync(projectId);
-        var corsUrlsString = string.Join(",", corsUrls.Items.Select(x => x.Domain));
-        _logger.LogInformation($"[DeveloperService] Processing CORS URLs for client: {clientId}, projectId: {projectId}, count: {corsUrls.Items.Count}, corsUrlsString: {corsUrlsString}");
+        var corsUrlsString = await GetCombinedCorsUrlsAsync(projectId);
+        _logger.LogInformation(
+            $"[DeveloperService] Processing combined CORS URLs for client: {clientId}, projectId: {projectId}, corsUrlsString: {corsUrlsString}");
         await _hostDeployManager.CreateHostAsync(clientId, DefaultVersion, corsUrlsString, projectId);
 
         _logger.LogInformation($"Developer service created successfully for client: {clientId}");
@@ -165,22 +169,49 @@ public class DeveloperService : ApplicationService, IDeveloperService
         return canCreate;
     }
 
-    // private async Task<List<string>> GetCorsUrlsForClientAsync(string clientId)
-    // {
-    //     _logger.LogInformation($"Getting CORS URLs for client: {clientId}");
-    //
-    //     var mockCorsUrls = new List<string>
-    //     {
-    //         "https://api.example.com",
-    //         "https://app.test.com",
-    //         "https://webhook.demo.org",
-    //         "http://localhost:3000",
-    //         "https://staging.myapp.com"
-    //     };
-    //
-    //     _logger.LogInformation($"Retrieved {mockCorsUrls.Count} CORS URLs for client: {clientId}");
-    //
-    //     await Task.CompletedTask;
-    //     return mockCorsUrls;
-    // }
+    private async Task<string> GetCombinedCorsUrlsAsync(Guid projectId)
+    {
+        _logger.LogInformation($"Getting combined CORS URLs for project: {projectId}");
+        
+        // Get default platform CORS URLs from configuration
+        var defaultCorsUrls = _configuration["App:DefaultCorsOrigins"]?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(defaultCorsUrls))
+        {
+            _logger.LogWarning("No default platform CORS origins configured in App:DefaultCorsOrigins");
+        }
+        else
+        {
+            _logger.LogInformation($"Default platform CORS URLs: {defaultCorsUrls}");
+        }
+        
+        // Get business CORS URLs from project
+        var businessCorsUrls = await _projectCorsOriginService.GetListAsync(projectId);
+        var businessCorsUrlsString = string.Join(",", businessCorsUrls.Items.Select(x => x.Domain));
+        _logger.LogInformation($"Business CORS URLs for project {projectId}: {businessCorsUrlsString}");
+        
+        // Combine URLs
+        var hasDefault = !string.IsNullOrWhiteSpace(defaultCorsUrls);
+        var hasBusiness = !string.IsNullOrWhiteSpace(businessCorsUrlsString);
+        
+        string combinedCorsUrls;
+        if (hasDefault && hasBusiness)
+        {
+            combinedCorsUrls = $"{defaultCorsUrls},{businessCorsUrlsString}";
+        }
+        else if (hasDefault)
+        {
+            combinedCorsUrls = defaultCorsUrls;
+        }
+        else if (hasBusiness)
+        {
+            combinedCorsUrls = businessCorsUrlsString;
+        }
+        else
+        {
+            combinedCorsUrls = string.Empty;
+        }
+        
+        _logger.LogInformation($"Combined CORS URLs for project {projectId}: {combinedCorsUrls}");
+        return combinedCorsUrls;
+    }
 }
