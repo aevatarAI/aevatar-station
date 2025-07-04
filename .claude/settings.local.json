@@ -15,7 +15,10 @@
       "mcp__sequentialthinking__sequentialthinking",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(gh pr create:*)"
+      "Bash(gh pr create:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs",
+      "WebFetch(domain:learn.microsoft.com)"
     ]
   },
   "enableAllProjectMcpServers": true
