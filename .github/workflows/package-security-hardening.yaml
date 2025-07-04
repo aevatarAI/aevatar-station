@@ -98,6 +98,32 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          
+      - name: Install Syft
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Generate SBOM
+        run: |
+          syft dir:out/${{ matrix.servicename }} -o cyclonedx-json > sbom-${{ matrix.servicename }}.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.servicename }}
+          path: sbom-${{ matrix.servicename }}.json
+          retention-days: 1
+
+      - name: Install Trivy
+        run: |
+          sudo apt-get update && sudo apt-get install -y wget
+          wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.50.1_Linux-64bit.deb
+          sudo dpkg -i trivy_0.50.1_Linux-64bit.deb
+
+      - name: Scan SBOM with Trivy
+        run: |
+          trivy sbom --input sbom-${{ matrix.servicename }}.json --format table --exit-code 1
+
   # dispatch:
   #   runs-on: aismart-runner
   #   needs: build-and-push-image
