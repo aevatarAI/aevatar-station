@@ -233,6 +233,64 @@ public interface IMetaDataState
     DateTime CreateTime { get; set; }
     AgentStatus Status { get; set; }
     DateTime LastActivity { get; set; }
+    
+    // Apply method for event sourcing
+    void Apply(MetaDataStateLogEvent @event);
+}
+
+// Event log entry for metadata changes
+[GenerateSerializer]
+public class MetaDataEventLog
+{
+    [Id(0)] public Guid EventId { get; set; }
+    [Id(1)] public DateTime Timestamp { get; set; }
+    [Id(2)] public string EventType { get; set; }
+    [Id(3)] public string Description { get; set; }
+    [Id(4)] public Dictionary<string, string> Properties { get; set; }
+}
+
+// Base event for metadata state changes
+[GenerateSerializer]
+public abstract class MetaDataStateLogEvent : StateLogEventBase<MetaDataStateLogEvent>
+{
+    [Id(0)] public string EventType { get; set; }
+    [Id(1)] public string Description { get; set; }
+    [Id(2)] public Dictionary<string, string> EventData { get; set; } = new();
+}
+
+// Specific event types for metadata changes
+[GenerateSerializer]
+public class AgentCreatedEvent : MetaDataStateLogEvent
+{
+    [Id(0)] public Guid AgentId { get; set; }
+    [Id(1)] public Guid UserId { get; set; }
+    [Id(2)] public string AgentType { get; set; }
+    [Id(3)] public string Name { get; set; }
+    [Id(4)] public GrainId AgentGrainId { get; set; }
+}
+
+[GenerateSerializer]
+public class AgentStatusChangedEvent : MetaDataStateLogEvent
+{
+    [Id(0)] public AgentStatus OldStatus { get; set; }
+    [Id(1)] public AgentStatus NewStatus { get; set; }
+    [Id(2)] public string Reason { get; set; }
+}
+
+[GenerateSerializer]
+public class AgentPropertiesUpdatedEvent : MetaDataStateLogEvent
+{
+    [Id(0)] public Dictionary<string, string> OldProperties { get; set; }
+    [Id(1)] public Dictionary<string, string> NewProperties { get; set; }
+    [Id(2)] public List<string> ChangedKeys { get; set; }
+}
+
+[GenerateSerializer]
+public class AgentActivityUpdatedEvent : MetaDataStateLogEvent
+{
+    [Id(0)] public DateTime PreviousActivity { get; set; }
+    [Id(1)] public DateTime CurrentActivity { get; set; }
+    [Id(2)] public string ActivityType { get; set; }
 }
 
 // Refactored AgentInstanceState using IMetaDataState
@@ -243,11 +301,44 @@ public class AgentInstanceState : StateBase, IMetaDataState
     [Id(1)] public Guid UserId { get; set; }
     [Id(2)] public string AgentType { get; set; }
     [Id(3)] public string Name { get; set; }
-    [Id(4)] public Dictionary<string, string> Properties { get; set; }
+    [Id(4)] public Dictionary<string, string> Properties { get; set; } = new();
     [Id(5)] public GrainId AgentGrainId { get; set; }
     [Id(6)] public DateTime CreateTime { get; set; }
     [Id(7)] public AgentStatus Status { get; set; }
     [Id(8)] public DateTime LastActivity { get; set; }
+    
+    // Apply method for event sourcing
+    public void Apply(MetaDataStateLogEvent @event)
+    {
+        // Apply state changes based on event type
+        switch (@event)
+        {
+            case AgentCreatedEvent created:
+                Id = created.AgentId;
+                UserId = created.UserId;
+                AgentType = created.AgentType;
+                Name = created.Name;
+                AgentGrainId = created.AgentGrainId;
+                CreateTime = created.Ctime;
+                Status = AgentStatus.Initializing;
+                LastActivity = created.Ctime;
+                break;
+                
+            case AgentStatusChangedEvent statusChanged:
+                Status = statusChanged.NewStatus;
+                LastActivity = statusChanged.Ctime;
+                break;
+                
+            case AgentPropertiesUpdatedEvent propertiesUpdated:
+                Properties = propertiesUpdated.NewProperties;
+                LastActivity = propertiesUpdated.Ctime;
+                break;
+                
+            case AgentActivityUpdatedEvent activityUpdated:
+                LastActivity = activityUpdated.CurrentActivity;
+                break;
+        }
+    }
 }
 
 [GenerateSerializer]
