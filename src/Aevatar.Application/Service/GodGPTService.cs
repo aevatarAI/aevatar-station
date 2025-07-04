@@ -13,6 +13,8 @@ using Aevatar.Application.Grains.Common.Options;
 using Aevatar.Application.Grains.Invitation;
 using Aevatar.Application.Grains.Twitter;
 using Aevatar.Application.Grains.Twitter.Dtos;
+using Aevatar.Application.Grains.TwitterInteraction;
+using Aevatar.Application.Grains.TwitterInteraction.Dtos;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
 using Aevatar.GodGPT.Dtos;
@@ -73,6 +75,19 @@ public interface IGodGPTService
     Task<PagedResultDto<RewardHistoryDto>> GetCreditsHistoryAsync(Guid currentUserId,
         GetCreditsHistoryInput getCreditsHistoryInput);
     Task<TwitterAuthParamsDto> GetTwitterAuthParamsAsync(Guid currentUserId);
+    
+    // Twitter Monitor Management Methods
+    Task<TwitterOperationResultDto> FetchTweetsManuallyAsync();
+    Task<TwitterOperationResultDto> RefetchTweetsByTimeRangeAsync(long startTimeUtcSecond, long endTimeUtcSecond);
+    Task<TwitterOperationResultDto> StartTweetMonitoringAsync();
+    Task<TwitterOperationResultDto> StopTweetMonitoringAsync();
+    Task<TwitterOperationResultDto> GetTweetMonitoringStatusAsync();
+    
+    // Twitter Reward Management Methods
+    Task<TwitterOperationResultDto> TriggerRewardCalculationAsync(long targetDateUtcSeconds);
+    Task<TwitterOperationResultDto> ClearRewardByDayAsync(long targetDateUtcSeconds);
+    Task<TwitterOperationResultDto> StartRewardCalculationAsync();
+    Task<TwitterOperationResultDto> StopRewardCalculationAsync();
 }
 
 [RemoteService(IsEnabled = false)]
@@ -82,16 +97,49 @@ public class GodGPTService : ApplicationService, IGodGPTService
     private readonly IClusterClient _clusterClient;
     private readonly ILogger<GodGPTService> _logger;
     private readonly IOptionsMonitor<StripeOptions> _stripeOptions;
+    private readonly IOptionsMonitor<TwitterRewardOptions> _twitterRewardOptions;
 
     private readonly StripeClient _stripeClient;
 
-    public GodGPTService(IClusterClient clusterClient, ILogger<GodGPTService> logger, IOptionsMonitor<StripeOptions> stripeOptions)
+    public GodGPTService(IClusterClient clusterClient, ILogger<GodGPTService> logger, IOptionsMonitor<StripeOptions> stripeOptions, IOptionsMonitor<TwitterRewardOptions> twitterRewardOptions)
     {
         _clusterClient = clusterClient;
         _logger = logger;
         _stripeOptions = stripeOptions;
+        _twitterRewardOptions = twitterRewardOptions;
 
         _stripeClient = new StripeClient(_stripeOptions.CurrentValue.SecretKey);
+        
+        // Initialize Twitter Grains with configuration validation
+        InitializeTwitterGrains();
+    }
+    
+    /// <summary>
+    /// Initialize Twitter Grains with configuration validation and error handling
+    /// </summary>
+    private void InitializeTwitterGrains()
+    {
+        try
+        {
+            // Validate PullTaskTargetId configuration
+            if (string.IsNullOrEmpty(_twitterRewardOptions.CurrentValue.PullTaskTargetId))
+            {
+                _logger.LogError("Twitter configuration error: PullTaskTargetId is null or empty");
+                throw new SystemException("Init ITweetMonitorGrain, _twitterRewardOptions.CurrentValue.PullTaskTargetId is null");
+            }
+            
+            // Validate RewardTaskTargetId configuration
+            if (string.IsNullOrEmpty(_twitterRewardOptions.CurrentValue.RewardTaskTargetId))
+            {
+                _logger.LogError("Twitter configuration error: RewardTaskTargetId is null or empty");
+                throw new SystemException("Init ITwitterRewardGrain, _twitterRewardOptions.CurrentValue.RewardTaskTargetId is null");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to initialize Twitter Grains");
+            throw;
+        }
     }
 
     public async Task<Guid> CreateSessionAsync(Guid userId, string systemLLM, string prompt, string? guider = null)
@@ -483,6 +531,250 @@ public class GodGPTService : ApplicationService, IGodGPTService
     {
         var twitterAuthGAgent = _clusterClient.GetGrain<ITwitterAuthGAgent>(currentUserId);
         return await twitterAuthGAgent.GetAuthParamsAsync();
+    }
+
+    // Twitter Monitor Management Methods Implementation
+    
+    /// <summary>
+    /// Manually trigger tweets fetching with default configuration
+    /// </summary>
+    /// <returns>Operation result with success status</returns>
+    public async Task<TwitterOperationResultDto> FetchTweetsManuallyAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Starting manual tweet fetch operation");
+            
+            // Initialize Twitter Monitor Grain
+            ITwitterMonitorGrain tweetMonitorGrain = _clusterClient.GetGrain<ITwitterMonitorGrain>(_twitterRewardOptions.CurrentValue.PullTaskTargetId);
+            _logger.LogInformation("Twitter Monitor Grain initialized with target ID: {PullTaskTargetId}", _twitterRewardOptions.CurrentValue.PullTaskTargetId);
+
+            var result = await tweetMonitorGrain.FetchTweetsManuallyAsync();
+            _logger.LogInformation("Manual tweet fetch operation completed with result: {Result}", result);
+            return new TwitterOperationResultDto { IsSuccess = result?.IsSuccess ?? false, ErrorMessage = result?.ErrorMessage };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch tweets manually");
+            return new TwitterOperationResultDto { IsSuccess = false, ErrorMessage = ex.Message };
+        }
+    }
+
+    /// <summary>
+    /// Refetch tweets by specified time range
+    /// </summary>
+    /// <param name="startTimeUtcSecond">Start time as UTC timestamp in seconds</param>
+    /// <param name="endTimeUtcSecond">End time as UTC timestamp in seconds</param>
+    /// <returns>Operation result with success status</returns>
+    public async Task<TwitterOperationResultDto> RefetchTweetsByTimeRangeAsync(long startTimeUtcSecond, long endTimeUtcSecond)
+    {
+        try
+        {
+            _logger.LogInformation("Starting refetch tweets by time range: {StartTime} to {EndTime}", 
+                startTimeUtcSecond, endTimeUtcSecond);
+            
+            var timeRange = new TimeRangeDto
+            {
+                StartTimeUtcSecond = startTimeUtcSecond,
+                EndTimeUtcSecond = endTimeUtcSecond
+            };
+            
+            // Initialize Twitter Monitor Grain
+            ITwitterMonitorGrain tweetMonitorGrain = _clusterClient.GetGrain<ITwitterMonitorGrain>(_twitterRewardOptions.CurrentValue.PullTaskTargetId);
+            _logger.LogInformation("Twitter Monitor Grain initialized with target ID: {PullTaskTargetId}", _twitterRewardOptions.CurrentValue.PullTaskTargetId);
+            
+            var result = await tweetMonitorGrain.RefetchTweetsByTimeRangeAsync(timeRange);
+            _logger.LogInformation("Refetch tweets by time range completed with result: {Result}", result);
+            return new TwitterOperationResultDto { IsSuccess = result?.IsSuccess ?? false, ErrorMessage = result?.ErrorMessage };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to refetch tweets by time range: {StartTime} to {EndTime}", 
+                startTimeUtcSecond, endTimeUtcSecond);
+            return new TwitterOperationResultDto { IsSuccess = false, ErrorMessage = ex.Message };
+        }
+    }
+
+    /// <summary>
+    /// Start automatic tweet monitoring task
+    /// </summary>
+    /// <returns>Operation result with success status</returns>
+    public async Task<TwitterOperationResultDto> StartTweetMonitoringAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Starting tweet monitoring task");
+            // Initialize Twitter Monitor Grain
+            ITwitterMonitorGrain tweetMonitorGrain = _clusterClient.GetGrain<ITwitterMonitorGrain>(_twitterRewardOptions.CurrentValue.PullTaskTargetId);
+            _logger.LogInformation("Twitter Monitor Grain initialized with target ID: {PullTaskTargetId}", _twitterRewardOptions.CurrentValue.PullTaskTargetId);
+            
+            var result = await tweetMonitorGrain.StartMonitoringAsync();
+            _logger.LogInformation("Tweet monitoring task start result: {Result}", result);
+            return new TwitterOperationResultDto { IsSuccess = result?.IsSuccess ?? false, ErrorMessage = result?.ErrorMessage };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to start tweet monitoring task");
+            return new TwitterOperationResultDto { IsSuccess = false, ErrorMessage = ex.Message };
+        }
+    }
+
+    /// <summary>
+    /// Stop automatic tweet monitoring task
+    /// </summary>
+    /// <returns>Operation result with success status</returns>
+    public async Task<TwitterOperationResultDto> StopTweetMonitoringAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Stopping tweet monitoring task");
+            // Initialize Twitter Monitor Grain
+            ITwitterMonitorGrain tweetMonitorGrain = _clusterClient.GetGrain<ITwitterMonitorGrain>(_twitterRewardOptions.CurrentValue.PullTaskTargetId);
+            _logger.LogInformation("Twitter Monitor Grain initialized with target ID: {PullTaskTargetId}", _twitterRewardOptions.CurrentValue.PullTaskTargetId);
+            
+            var result = await tweetMonitorGrain.StopMonitoringAsync();
+            _logger.LogInformation("Tweet monitoring task stop result: {Result}", result);
+            return new TwitterOperationResultDto { IsSuccess = result?.IsSuccess ?? false, ErrorMessage = result?.ErrorMessage };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to stop tweet monitoring task");
+            return new TwitterOperationResultDto { IsSuccess = false, ErrorMessage = ex.Message };
+        }
+    }
+
+    /// <summary>
+    /// Get current status of tweet monitoring task
+    /// </summary>
+    /// <returns>Operation result with success status</returns>
+    public async Task<TwitterOperationResultDto> GetTweetMonitoringStatusAsync()
+    {
+        try
+        {
+            _logger.LogDebug("Getting tweet monitoring task status");
+            // Initialize Twitter Monitor Grain
+            ITwitterMonitorGrain tweetMonitorGrain = _clusterClient.GetGrain<ITwitterMonitorGrain>(_twitterRewardOptions.CurrentValue.PullTaskTargetId);
+            _logger.LogInformation("Twitter Monitor Grain initialized with target ID: {PullTaskTargetId}", _twitterRewardOptions.CurrentValue.PullTaskTargetId);
+            
+            var result = await tweetMonitorGrain.GetMonitoringStatusAsync();
+            _logger.LogDebug("Retrieved tweet monitoring task status result: {Result}", result);
+            return new TwitterOperationResultDto { IsSuccess = result?.IsSuccess ?? false, ErrorMessage = result?.ErrorMessage };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get tweet monitoring task status");
+            return new TwitterOperationResultDto { IsSuccess = false, ErrorMessage = ex.Message };
+        }
+    }
+
+    // Twitter Reward Management Methods Implementation
+    
+    /// <summary>
+    /// Manually trigger reward calculation for specific date
+    /// </summary>
+    /// <param name="targetDateUtcSeconds">Target date as UTC timestamp in seconds</param>
+    /// <returns>Operation result with success status</returns>
+    public async Task<TwitterOperationResultDto> TriggerRewardCalculationAsync(long targetDateUtcSeconds)
+    {
+        try
+        {
+            _logger.LogInformation("Starting manual reward calculation for date: {TargetDate}", targetDateUtcSeconds);
+
+            // Initialize Twitter Reward Grain
+            ITwitterRewardGrain twitterRewardGrain = _clusterClient.GetGrain<ITwitterRewardGrain>(_twitterRewardOptions.CurrentValue.RewardTaskTargetId);
+            _logger.LogInformation("Twitter Reward Grain initialized with target ID: {RewardTaskTargetId}", _twitterRewardOptions.CurrentValue.RewardTaskTargetId);
+            
+            // Convert UTC timestamp in seconds to UTC DateTime and truncate to day precision (ignore time part)
+            var targetDate = DateTimeOffset.FromUnixTimeSeconds(targetDateUtcSeconds).UtcDateTime.Date;
+            _logger.LogDebug("Converted timestamp {TargetDateUtcSeconds} to UTC Date (day precision): {TargetDate}", targetDateUtcSeconds, targetDate);
+            
+            var result = await twitterRewardGrain.TriggerRewardCalculationAsync(targetDate);
+            _logger.LogInformation("Manual reward calculation completed for date: {TargetDate} with result: {Result}", targetDateUtcSeconds, result);
+            return new TwitterOperationResultDto { IsSuccess = result?.IsSuccess ?? false, ErrorMessage = result?.ErrorMessage };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to trigger reward calculation for date: {TargetDate}", targetDateUtcSeconds);
+            return new TwitterOperationResultDto { IsSuccess = false, ErrorMessage = ex.Message };
+        }
+    }
+
+    /// <summary>
+    /// Clear reward records for specific date (for testing purposes)
+    /// </summary>
+    /// <param name="targetDateUtcSeconds">Target date as UTC timestamp in seconds</param>
+    /// <returns>Operation result with success status</returns>
+    public async Task<TwitterOperationResultDto> ClearRewardByDayAsync(long targetDateUtcSeconds)
+    {
+        try
+        {
+            _logger.LogInformation("Starting clear reward records for date: {TargetDate}", targetDateUtcSeconds);
+            // Initialize Twitter Reward Grain
+            ITwitterRewardGrain twitterRewardGrain = _clusterClient.GetGrain<ITwitterRewardGrain>(_twitterRewardOptions.CurrentValue.RewardTaskTargetId);
+            _logger.LogInformation("Twitter Reward Grain initialized with target ID: {RewardTaskTargetId}", _twitterRewardOptions.CurrentValue.RewardTaskTargetId);
+            
+            // Convert UTC timestamp in seconds to UTC DateTime and truncate to day precision (ignore time part)
+            var targetDate = DateTimeOffset.FromUnixTimeSeconds(targetDateUtcSeconds).UtcDateTime.Date;
+            // Convert back to UTC seconds for the day start (00:00:00)
+            var targetDateDayStartUtcSeconds = ((DateTimeOffset)targetDate).ToUnixTimeSeconds();
+            _logger.LogDebug("Converted timestamp {TargetDateUtcSeconds} to UTC Date (day precision): {TargetDate}, day start seconds: {DayStartSeconds}", 
+                targetDateUtcSeconds, targetDate, targetDateDayStartUtcSeconds);
+            
+            var result = await twitterRewardGrain.ClearRewardByDayUtcSecondAsync(targetDateDayStartUtcSeconds);
+            _logger.LogInformation("Clear reward records completed for date: {TargetDate} with result: {Result}", targetDateUtcSeconds, result);
+            return new TwitterOperationResultDto { IsSuccess = result?.IsSuccess ?? false, ErrorMessage = result?.ErrorMessage };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to clear reward records for date: {TargetDate}", targetDateUtcSeconds);
+            return new TwitterOperationResultDto { IsSuccess = false, ErrorMessage = ex.Message };
+        }
+    }
+
+    /// <summary>
+    /// Start automatic reward calculation task
+    /// </summary>
+    /// <returns>Operation result with success status</returns>
+    public async Task<TwitterOperationResultDto> StartRewardCalculationAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Starting reward calculation task");
+            // Initialize Twitter Reward Grain
+            ITwitterRewardGrain twitterRewardGrain = _clusterClient.GetGrain<ITwitterRewardGrain>(_twitterRewardOptions.CurrentValue.RewardTaskTargetId);
+            _logger.LogInformation("Twitter Reward Grain initialized with target ID: {RewardTaskTargetId}", _twitterRewardOptions.CurrentValue.RewardTaskTargetId);
+            var result = await twitterRewardGrain.StartRewardCalculationAsync();
+            _logger.LogInformation("Reward calculation task start result: {Result}", result);
+            return new TwitterOperationResultDto { IsSuccess = result?.IsSuccess ?? false, ErrorMessage = result?.ErrorMessage };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to start reward calculation task");
+            return new TwitterOperationResultDto { IsSuccess = false, ErrorMessage = ex.Message };
+        }
+    }
+
+    /// <summary>
+    /// Stop automatic reward calculation task
+    /// </summary>
+    /// <returns>Operation result with success status</returns>
+    public async Task<TwitterOperationResultDto> StopRewardCalculationAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Stopping reward calculation task");
+            // Initialize Twitter Reward Grain
+            ITwitterRewardGrain twitterRewardGrain = _clusterClient.GetGrain<ITwitterRewardGrain>(_twitterRewardOptions.CurrentValue.RewardTaskTargetId);
+            _logger.LogInformation("Twitter Reward Grain initialized with target ID: {RewardTaskTargetId}", _twitterRewardOptions.CurrentValue.RewardTaskTargetId);
+            var result = await twitterRewardGrain.StopRewardCalculationAsync();
+            _logger.LogInformation("Reward calculation task stop result: {Result}", result);
+            return new TwitterOperationResultDto { IsSuccess = result?.IsSuccess ?? false, ErrorMessage = result?.ErrorMessage };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to stop reward calculation task");
+            return new TwitterOperationResultDto { IsSuccess = false, ErrorMessage = ex.Message };
+        }
     }
 
     private bool TryGetUserIdFromMetadata(IDictionary<string, string> metadata, out string userId)
