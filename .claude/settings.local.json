@@ -18,7 +18,8 @@
       "Bash(gh pr create:*)",
       "mcp__context7__resolve-library-id",
       "mcp__context7__get-library-docs",
-      "WebFetch(domain:learn.microsoft.com)"
+      "WebFetch(domain:learn.microsoft.com)",
+      "Bash(rg:*)"
     ]
   },
   "enableAllProjectMcpServers": true
