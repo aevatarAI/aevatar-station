@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This proposal outlines an improved architecture for agent management in the Aevatar Station platform that **eliminates CreatorGAgent** while retaining all its essential features. The new architecture provides direct business agent access, improved performance, and better separation of concerns by building upon the AgentRegistry-ElasticSearch-Lite design.
+This proposal outlines an improved architecture for agent management in the Aevatar Station platform that **eliminates CreatorGAgent** while retaining all its essential features. The new architecture provides direct GAgent access, improved performance, better separation of concerns, and **Kafka-based event delivery** that eliminates the need for GAgents to implement outbound event publishing.
 
 ## Problem Statement
 
@@ -27,6 +27,7 @@ graph TB
     subgraph "Service Layer"
         ALS[AgentLifecycleService]
         DS[DiscoveryService]
+        EP[EventPublisher]
     end
     
     subgraph "Type Metadata (Static)"
@@ -44,31 +45,36 @@ graph TB
         Pipeline[State Projection]
     end
     
-    subgraph "Event System"
+    subgraph "Event Infrastructure"
+        K[Kafka Topics]
         OStreams[Orleans Streams]
-        EP[Event Publishers]
     end
     
     API --> ALS
     API --> DS
+    API --> EP
+    EP --> OStreams
+    OStreams --> K
+    K --> GA
     SH --> GA
     ALS --> TMS
     ALS --> AF
-    ALS --> GA
+    ALS --> EP
     DS --> TMS
     DS --> ES
     GA --> Pipeline
-    GA --> OStreams
     Pipeline --> ES
     TMS --> Registry
     
     classDef service fill:#e1f5fe
     classDef data fill:#f3e5f5
     classDef agent fill:#e8f5e8
+    classDef kafka fill:#ff9999
     
-    class ALS,DS,TMS service
+    class ALS,DS,TMS,EP service
     class ES,Registry,Pipeline data
     class GA,AF agent
+    class K kafka
 ```
 
 ### Key Components
@@ -84,6 +90,18 @@ public interface IAgentLifecycleService
     Task DeleteAgentAsync(Guid agentId);
     Task<AgentInfo> GetAgentAsync(Guid agentId);
     Task<List<AgentInfo>> GetUserAgentsAsync(Guid userId);
+    Task SendEventToAgentAsync(Guid agentId, EventBase @event);
+}
+
+public class AgentLifecycleService : IAgentLifecycleService
+{
+    private readonly IEventPublisher _eventPublisher;
+    
+    public async Task SendEventToAgentAsync(Guid agentId, EventBase @event)
+    {
+        // Publish event to Orleans stream for agent consumption
+        await _eventPublisher.PublishEventAsync(@event, agentId.ToString());
+    }
 }
 
 public class CreateAgentRequest
@@ -109,10 +127,11 @@ public class AgentInfo
 ```
 
 #### 2. Standard GAgent Interface
-**Purpose**: All agents inherit directly from GAgentBase with standardized lifecycle management.
+**Purpose**: All agents inherit directly from GAgentBase which automatically handles stream subscription and event processing.
 
 ```csharp
 // All agents inherit directly from GAgentBase
+// GAgentBase already handles stream initialization and subscription
 [GAgent]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
@@ -133,11 +152,33 @@ public class MyAgent : GAgentBase<MyAgentState, MyAgentEvent>, IMyAgent
         await ConfirmEvents();
     }
     
-    public async Task PublishEventAsync<T>(T @event) where T : EventBase
+    // Handle events from external sources (Kafka) via event handlers
+    [EventHandler]
+    public async Task HandleAgentCommandAsync(AgentCommandEvent command)
     {
-        if (@event == null) throw new ArgumentNullException(nameof(@event));
-        Logger.LogInformation("Publishing event: {Event}", @event);
-        await PublishAsync(@event);
+        Logger.LogInformation("Processing command: {CommandType}", command.CommandType);
+        // Process command and update state
+        RaiseEvent(new CommandProcessedEvent 
+        { 
+            CommandId = command.Id,
+            ProcessedAt = DateTime.UtcNow 
+        });
+        await ConfirmEvents();
+    }
+    
+    [EventHandler]
+    public async Task HandleAgentQueryAsync(AgentQueryEvent query)
+    {
+        Logger.LogInformation("Processing query: {QueryType}", query.QueryType);
+        // Process query - no state changes for queries typically
+        // Response would be sent back via state projection or direct query
+    }
+    
+    // Note: PublishEventAsync removed - external events come through Kafka
+    // For internal agent-to-agent communication, use Orleans streams directly
+    protected async Task PublishInternalEventAsync<T>(T @event) where T : EventBase
+    {
+        await PublishAsync(@event); // Orleans stream publish for internal events
     }
     
     public virtual Task<string> GetDescriptionAsync()
@@ -268,6 +309,94 @@ public class AgentDiscoveryService : IAgentDiscoveryService
 }
 ```
 
+#### 6. Orleans Event Publisher
+**Purpose**: Publishes events from API layer to Orleans streams (which can be backed by Kafka) for agent consumption.
+
+```csharp
+public interface IEventPublisher
+{
+    Task PublishEventAsync<T>(T @event, string agentId) where T : EventBase;
+    Task PublishBroadcastEventAsync<T>(T @event, string streamNamespace) where T : EventBase;
+}
+
+public class EventPublisher : IEventPublisher
+{
+    private readonly IClusterClient _clusterClient;
+    private readonly ILogger<EventPublisher> _logger;
+    
+    public EventPublisher(IClusterClient clusterClient, ILogger<EventPublisher> logger)
+    {
+        _clusterClient = clusterClient;
+        _logger = logger;
+    }
+    
+    public async Task PublishEventAsync<T>(T @event, string agentId) where T : EventBase
+    {
+        var wrapper = new EventWrapper
+        {
+            Event = @event,
+            Timestamp = DateTime.UtcNow,
+            SourceId = "API",
+            TargetAgentId = agentId
+        };
+        
+        try
+        {
+            // Get the stream provider (can be Kafka-backed or memory)
+            var streamProvider = _clusterClient.GetStreamProvider("Aevatar");
+            
+            // Create stream ID for the specific agent
+            var streamId = StreamId.Create("agent-events", agentId);
+            var stream = streamProvider.GetStream<EventWrapper>(streamId);
+            
+            // Publish to Orleans stream (Orleans handles Kafka integration)
+            await stream.OnNextAsync(wrapper);
+            
+            _logger.LogInformation("Published event to Orleans stream: agent-events/{AgentId}", agentId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to publish event to Orleans stream for agent {AgentId}", agentId);
+            throw;
+        }
+    }
+    
+    public async Task PublishBroadcastEventAsync<T>(T @event, string streamNamespace) where T : EventBase
+    {
+        var wrapper = new EventWrapper
+        {
+            Event = @event,
+            Timestamp = DateTime.UtcNow,
+            SourceId = "API",
+            TargetAgentId = "*" // Broadcast indicator
+        };
+        
+        try
+        {
+            var streamProvider = _clusterClient.GetStreamProvider("Aevatar");
+            var streamId = StreamId.Create(streamNamespace, "broadcast");
+            var stream = streamProvider.GetStream<EventWrapper>(streamId);
+            
+            await stream.OnNextAsync(wrapper);
+            
+            _logger.LogInformation("Published broadcast event to Orleans stream: {StreamNamespace}", streamNamespace);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to publish broadcast event to Orleans stream {StreamNamespace}", streamNamespace);
+            throw;
+        }
+    }
+}
+
+public class EventWrapper
+{
+    public EventBase Event { get; set; }
+    public DateTime Timestamp { get; set; }
+    public string SourceId { get; set; }
+    public string TargetAgentId { get; set; }
+}
+```
 
 ## Data Flow Diagrams
 
@@ -318,13 +447,34 @@ sequenceDiagram
     API-->>Client: [AgentInfo]
 ```
 
-### Direct Agent Interaction Flow
+### External Event Flow (API to Agent via Orleans Streams)
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API
+    participant EP as EventPublisher
+    participant OS as Orleans Streams
+    participant K as Kafka
+    participant GA as GAgent
+    participant ES as Elasticsearch
+    
+    Client->>API: POST /agents/{id}/events
+    API->>EP: PublishEventAsync(event, agentId)
+    EP->>OS: OnNextAsync(EventWrapper)
+    OS->>K: Stream to Kafka (if configured)
+    K->>GA: Event delivered to GAgent
+    GA->>GA: Process via [EventHandler]
+    GA->>GA: Update state
+    GA->>ES: Project state changes
+    GA-->>API: Success (via state query)
+```
+
+### Direct Agent Interaction Flow (SignalR)
 ```mermaid
 sequenceDiagram
     participant Client
     participant SH as SignalR Hub
     participant GA as GAgent
-    participant OS as Orleans Streams
     participant ES as Elasticsearch
     
     Client->>SH: Send message to agent
@@ -332,9 +482,12 @@ sequenceDiagram
     GA->>GA: Handle business logic
     GA->>GA: Update state
     GA->>ES: Project state changes
-    GA->>OS: PublishEventAsync(event)
     GA-->>SH: Response
     SH-->>Client: Agent response
+    
+    Note over GA: GAgentBase handles stream subscription automatically
+    Note over GA: Events processed via [EventHandler] methods
+    Note over GA: Internal events use PublishInternalEventAsync
 ```
 
 ## Feature Preservation
@@ -348,9 +501,12 @@ sequenceDiagram
 - **Metadata**: Stored in `AgentInstanceState` and projected to Elasticsearch
 
 #### ✅ Event Management System
-- **Event Publishing**: `GAgent.PublishEventAsync()` replaces `CreatorGAgent.PublishEventAsync()`
+- **External Event Delivery**: API → Orleans Streams → GAgents (streams can be Kafka-backed)
+- **Internal Event Publishing**: `GAgent.PublishInternalEventAsync()` for agent-to-agent communication
 - **Event Registry**: `TypeMetadataService.GetTypeMetadataAsync()` provides capabilities
 - **Event Discovery**: Automatic discovery through reflection at startup
+- **Stream Subscription**: GAgentBase automatically subscribes to Orleans streams (Kafka-backed)
+- **Event Processing**: External events handled via `[EventHandler]` attributed methods
 
 #### ✅ State Management
 - **State Persistence**: `AgentInstanceState` replaces `CreatorGAgentState`
@@ -386,6 +542,13 @@ sequenceDiagram
 - Direct grain references for client interactions
 - Simplified debugging and monitoring
 
+#### 🆕 Orleans Stream-Based Event Delivery
+- API publishes events to Orleans streams using IClusterClient
+- Orleans streams can be backed by Kafka for scalability
+- GAgents consume events via existing stream infrastructure
+- Eliminates need for outbound PublishEventAsync in GAgents
+- Better integration with Orleans ecosystem
+
 #### 🆕 Enhanced Discovery
 - Type-based capability filtering
 - Efficient Elasticsearch queries
@@ -412,6 +575,7 @@ sequenceDiagram
    - Elasticsearch mappings for new indices
    - Orleans grain registration
    - Dependency injection configuration
+   - IClusterClient configuration for stream publishing in API layer
 
 ### Phase 2: Parallel Implementation (Weeks 3-4)
 1. **Implement New Architecture**
@@ -423,6 +587,7 @@ sequenceDiagram
    - Keep existing `CreatorGAgent` operational
    - Add feature flags for new vs old architecture
    - Implement bridge patterns for migration
+   - Configure Orleans Kafka stream provider (already exists)
 
 ### Phase 3: Migration (Weeks 5-6)
 1. **Data Migration**
@@ -458,6 +623,8 @@ sequenceDiagram
 - **Better Scalability**: Elasticsearch handles large-scale queries efficiently
 - **Simplified Development**: Direct GAgent interfaces
 - **Reduced Complexity**: Eliminate unnecessary abstraction layers
+- **Stream-Based Integration**: Orleans streams provide consistent event delivery
+- **Configurable Backend**: Streams can use Kafka or other providers as needed
 
 ### Operational Benefits
 - **Easier Debugging**: Direct access to agent logic
@@ -532,5 +699,7 @@ This architecture proposal successfully eliminates the CreatorGAgent proxy layer
 - **Maintained audit trail** through GAgentBase built-in event sourcing
 - **Preserved multi-tenancy** and security features
 - **Simplified development model** for GAgent interactions
+- **Orleans stream-based event delivery** eliminating outbound PublishEventAsync needs
+- **External system integration** through configurable stream providers (Kafka, etc.)
 
 The phased implementation approach ensures minimal disruption while providing clear benefits in terms of performance, maintainability, and scalability. The architecture supports the long-term goals of the Aevatar Station platform while eliminating unnecessary complexity.
