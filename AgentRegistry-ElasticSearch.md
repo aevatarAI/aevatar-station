@@ -46,6 +46,63 @@ graph TB
     DA --> QE
 ```
 
+## Type Metadata Data Flow
+
+### Complete Type Metadata Lifecycle
+
+```mermaid
+sequenceDiagram
+    participant Startup as Silo Startup
+    participant TMS as AgentTypeMetadataService
+    participant Registry as IAgentTypeMetadataRegistry
+    participant Discovery as AgentDiscoveryService
+    participant Client as API Client
+    participant ES as Elasticsearch
+    
+    Note over Startup,Registry: 1. Initialization Phase
+    Startup->>TMS: InitializeAsync()
+    TMS->>TMS: Scan AppDomain assemblies for [GAgent] types
+    TMS->>TMS: ExtractTypeMetadata(capabilities, versions, schema)
+    loop For each discovered agent type
+        TMS->>TMS: Store in local _typeVersionCache
+        TMS->>Registry: RegisterTypeMetadataAsync(metadata)
+        Registry->>Registry: Store in cluster-wide _typeVersions
+    end
+    
+    Note over Discovery,Client: 2. Discovery Request with Capabilities
+    Client->>Discovery: FindAgentsAsync(query with ["TaskCompleted"])
+    Discovery->>TMS: GetTypesByCapabilityAsync("TaskCompleted")
+    TMS->>TMS: GetAllTypesAsync()
+    
+    Note over TMS,Registry: 3. Metadata Retrieval & Merging
+    TMS->>TMS: Get local metadata from _typeVersionCache
+    TMS->>Registry: GetAllTypeMetadataAsync()
+    Registry-->>TMS: Return cluster-wide metadata
+    TMS->>TMS: MergeTypeMetadata(local + cluster, latest versions)
+    TMS->>TMS: Filter types by capability ("TaskCompleted")
+    TMS-->>Discovery: Return eligible agent types: ["BusinessAgent", "TaskAgent"]
+    
+    Note over Discovery,ES: 4. Instance Filtering & Combination
+    Discovery->>ES: Query instances where AgentType IN ["BusinessAgent", "TaskAgent"]
+    ES-->>Discovery: Return matching AgentInstanceState documents
+    
+    loop For each instance
+        Discovery->>TMS: GetTypeMetadataAsync(instance.AgentType)
+        TMS-->>Discovery: Return type metadata (capabilities, schema, etc.)
+        Discovery->>Discovery: Combine instance data + type metadata
+    end
+    
+    Discovery-->>Client: Return complete AgentInfo list
+```
+
+### Key Data Flow Points
+
+1. **Assembly Introspection**: Each silo discovers its own agent types at startup
+2. **Local + Cluster Storage**: Metadata stored both locally (performance) and cluster-wide (consistency) 
+3. **Capability Filtering**: Discovery service filters agent types by capabilities BEFORE querying instances
+4. **Instance Query**: Only eligible agent types are queried in Elasticsearch
+5. **Result Combination**: Type metadata combined with instance data for complete response
+
 ## Component Design
 
 ### 1. Type Metadata Service with Rolling Update Support
