@@ -15,7 +15,7 @@ namespace Aevatar.Controllers;
 [RemoteService]
 [ControllerName("Project")]
 [Route("api/projects")]
-[Authorize]
+// [Authorize]
 public class ProjectController : AevatarController
 {
     private readonly IProjectService _projectService;

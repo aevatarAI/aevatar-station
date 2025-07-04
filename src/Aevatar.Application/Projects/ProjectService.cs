@@ -14,6 +14,7 @@ using Volo.Abp.EventBus.Distributed;
 using Volo.Abp.Identity;
 using Volo.Abp.PermissionManagement;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using IdentityRole = Volo.Abp.Identity.IdentityRole;
 using IdentityUser = Volo.Abp.Identity.IdentityUser;
 
@@ -24,26 +25,32 @@ public class ProjectService : OrganizationService, IProjectService
 {
     private readonly IProjectDomainRepository _domainRepository;
     private readonly IDeveloperService _developerService;
+    private readonly ILogger<ProjectService> _logger;
 
     public ProjectService(OrganizationUnitManager organizationUnitManager, IdentityUserManager identityUserManager,
         IRepository<OrganizationUnit, Guid> organizationUnitRepository, IdentityRoleManager roleManager,
         IPermissionManager permissionManager, IOrganizationPermissionChecker permissionChecker,
         IPermissionDefinitionManager permissionDefinitionManager, IRepository<IdentityUser, Guid> userRepository,
         INotificationService notificationService, IProjectDomainRepository domainRepository,
-        IDeveloperService developerService) :
+        IDeveloperService developerService, ILogger<ProjectService> logger) :
         base(organizationUnitManager, identityUserManager, organizationUnitRepository, roleManager, permissionManager,
             permissionChecker, permissionDefinitionManager, userRepository, notificationService)
     {
         _domainRepository = domainRepository;
         _developerService = developerService;
+        _logger = logger;
     }
 
     public async Task<ProjectDto> CreateAsync(CreateProjectDto input)
     {
+        _logger.LogInformation("Creating project: DomainName={DomainName}, DisplayName={DisplayName}, OrganizationId={OrganizationId}", 
+            input.DomainName, input.DisplayName, input.OrganizationId);
+            
         var domain = await _domainRepository.FirstOrDefaultAsync(o =>
             o.NormalizedDomainName == input.DomainName.ToUpperInvariant() && o.IsDeleted == false);
         if (domain != null)
         {
+            _logger.LogWarning("Domain name conflict detected: DomainName={DomainName}", input.DomainName);
             throw new UserFriendlyException($"DomainName: {input.DomainName} already exists");
         }
 
@@ -77,13 +84,20 @@ public class ProjectService : OrganizationService, IProjectService
         catch (BusinessException ex)
             when (ex.Code == IdentityErrorCodes.DuplicateOrganizationUnitDisplayName)
         {
+            _logger.LogWarning("Duplicate project name detected: DisplayName={DisplayName}, OrganizationId={OrganizationId}", 
+                displayName, input.OrganizationId);
             throw new UserFriendlyException("The same project name already exists");
         }
 
+        _logger.LogInformation("Starting to create developer service: DomainName={DomainName}, ProjectId={ProjectId}", input.DomainName, project.Id);
         await _developerService.CreateAsync(input.DomainName, project.Id);
+        _logger.LogInformation("Completed creating developer service: DomainName={DomainName}, ProjectId={ProjectId}", input.DomainName, project.Id);
 
         var dto = ObjectMapper.Map<OrganizationUnit, ProjectDto>(project);
         dto.DomainName = input.DomainName;
+
+        _logger.LogInformation("Project created successfully: ProjectId={ProjectId}, DomainName={DomainName}", 
+            project.Id, input.DomainName);
 
         return dto;
     }
