@@ -221,7 +221,7 @@ public class AgentFactory : IAgentFactory
 **Purpose**: Replaces CreatorGAgentState with automatic Elasticsearch projection using IMetaDataState interface.
 
 ```csharp
-// IMetaDataState interface with Orleans serialization support
+// IMetaDataState interface with Orleans serialization support and default Apply implementation
 public interface IMetaDataState
 {
     Guid Id { get; set; }
@@ -234,19 +234,38 @@ public interface IMetaDataState
     AgentStatus Status { get; set; }
     DateTime LastActivity { get; set; }
     
-    // Apply method for event sourcing
-    void Apply(MetaDataStateLogEvent @event);
-}
-
-// Event log entry for metadata changes
-[GenerateSerializer]
-public class MetaDataEventLog
-{
-    [Id(0)] public Guid EventId { get; set; }
-    [Id(1)] public DateTime Timestamp { get; set; }
-    [Id(2)] public string EventType { get; set; }
-    [Id(3)] public string Description { get; set; }
-    [Id(4)] public Dictionary<string, string> Properties { get; set; }
+    // Default Apply method implementation for event sourcing (.NET 8+ feature)
+    void Apply(MetaDataStateLogEvent @event)
+    {
+        // Apply state changes based on event type
+        switch (@event)
+        {
+            case AgentCreatedEvent created:
+                Id = created.AgentId;
+                UserId = created.UserId;
+                AgentType = created.AgentType;
+                Name = created.Name;
+                AgentGrainId = created.AgentGrainId;
+                CreateTime = created.Ctime;
+                Status = AgentStatus.Initializing;
+                LastActivity = created.Ctime;
+                break;
+                
+            case AgentStatusChangedEvent statusChanged:
+                Status = statusChanged.NewStatus;
+                LastActivity = statusChanged.Ctime;
+                break;
+                
+            case AgentPropertiesUpdatedEvent propertiesUpdated:
+                Properties = propertiesUpdated.NewProperties;
+                LastActivity = propertiesUpdated.Ctime;
+                break;
+                
+            case AgentActivityUpdatedEvent activityUpdated:
+                LastActivity = activityUpdated.CurrentActivity;
+                break;
+        }
+    }
 }
 
 // Base event for metadata state changes
@@ -293,7 +312,7 @@ public class AgentActivityUpdatedEvent : MetaDataStateLogEvent
     [Id(2)] public string ActivityType { get; set; }
 }
 
-// Refactored AgentInstanceState using IMetaDataState
+// Refactored AgentInstanceState using IMetaDataState with default Apply implementation
 [GenerateSerializer]
 public class AgentInstanceState : StateBase, IMetaDataState
 {
@@ -307,38 +326,6 @@ public class AgentInstanceState : StateBase, IMetaDataState
     [Id(7)] public AgentStatus Status { get; set; }
     [Id(8)] public DateTime LastActivity { get; set; }
     
-    // Apply method for event sourcing
-    public void Apply(MetaDataStateLogEvent @event)
-    {
-        // Apply state changes based on event type
-        switch (@event)
-        {
-            case AgentCreatedEvent created:
-                Id = created.AgentId;
-                UserId = created.UserId;
-                AgentType = created.AgentType;
-                Name = created.Name;
-                AgentGrainId = created.AgentGrainId;
-                CreateTime = created.Ctime;
-                Status = AgentStatus.Initializing;
-                LastActivity = created.Ctime;
-                break;
-                
-            case AgentStatusChangedEvent statusChanged:
-                Status = statusChanged.NewStatus;
-                LastActivity = statusChanged.Ctime;
-                break;
-                
-            case AgentPropertiesUpdatedEvent propertiesUpdated:
-                Properties = propertiesUpdated.NewProperties;
-                LastActivity = propertiesUpdated.Ctime;
-                break;
-                
-            case AgentActivityUpdatedEvent activityUpdated:
-                LastActivity = activityUpdated.CurrentActivity;
-                break;
-        }
-    }
 }
 
 [GenerateSerializer]
