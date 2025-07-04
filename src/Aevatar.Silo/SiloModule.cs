@@ -54,19 +54,19 @@ public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
         context.Services.Configure<HostOptions>(context.Services.GetConfiguration().GetSection("Host"));
         context.Services.Configure<SystemLLMConfigOptions>(configuration);
         
-        Configure<AbpBlobStoringOptions>(options =>
-        {
-            options.Containers.ConfigureDefault(container =>
-            {
-                var configSection = configuration.GetSection("AwsS3");
-                container.UseAws(o =>
-                {
-                    o.AccessKeyId = configSection.GetValue<string>("AccessKeyId");
-                    o.SecretAccessKey = configSection.GetValue<string>("SecretAccessKey");
-                    o.Region = configSection.GetValue<string>("Region");
-                    o.ContainerName = configSection.GetValue<string>("ContainerName");
-                }); 
-            });
-        });
+        // Configure<AbpBlobStoringOptions>(options =>
+        // {
+        //     options.Containers.ConfigureDefault(container =>
+        //     {
+        //         var configSection = configuration.GetSection("AwsS3");
+        //         container.UseAws(o =>
+        //         {
+        //             o.AccessKeyId = configSection.GetValue<string>("AccessKeyId");
+        //             o.SecretAccessKey = configSection.GetValue<string>("SecretAccessKey");
+        //             o.Region = configSection.GetValue<string>("Region");
+        //             o.ContainerName = configSection.GetValue<string>("ContainerName");
+        //         }); 
+        //     });
+        // });
     }
 }
