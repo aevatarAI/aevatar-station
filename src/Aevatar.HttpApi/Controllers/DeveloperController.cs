@@ -30,4 +30,10 @@ public class DeveloperController : AevatarController
         await _permissionChecker.AuthenticateAsync(request.ProjectId, AevatarPermissions.Members.Manage);
         await _developerService.RestartAsync(request.ClientId, request.ProjectId);
     }
+    
+    [HttpPost("test")]
+    public async Task DeveloperServiceTestAsync([FromBody] DeveloperServiceOperationDto request)
+    {
+       
+    }
 }
