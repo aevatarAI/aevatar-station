@@ -49,6 +49,7 @@ Client → SignalR Hub → Orleans Grains → Event Sourcing → State Persisten
 - @source-control.md - Source control management strategies and workflows
 - @technical-documentation-practices.md - Practices for creating and maintaining technical documentation
 - @test-case-generation-guidelines.md - Guidelines for generating test cases when working on TDD
+- @~/station/GAGENT_DATA_FLOW_LIFECYCLE.md - GAgent data flow lifecycle in station platform.
 
 ---
 
