@@ -174,15 +174,10 @@ public class DeveloperService : ApplicationService, IDeveloperService
         _logger.LogInformation($"Getting combined CORS URLs for project: {projectId}");
         
         // Get default platform CORS URLs from configuration
-        var defaultCorsUrls = _configuration["App:DefaultCorsOrigins"]?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(defaultCorsUrls))
-        {
-            _logger.LogWarning("No default platform CORS origins configured in App:DefaultCorsOrigins");
-        }
-        else
-        {
-            _logger.LogInformation($"Default platform CORS URLs: {defaultCorsUrls}");
-        }
+        var defaultCorsUrls = GetConfigValue("App:DefaultCorsOrigins", "App:CorsOrigins");
+        _logger.LogInformation(string.IsNullOrWhiteSpace(defaultCorsUrls) 
+            ? "No platform CORS origins configured" 
+            : $"Using platform CORS URLs: {defaultCorsUrls}");
         
         // Get business CORS URLs from project
         var businessCorsUrls = await _projectCorsOriginService.GetListAsync(projectId);
@@ -214,4 +209,8 @@ public class DeveloperService : ApplicationService, IDeveloperService
         _logger.LogInformation($"Combined CORS URLs for project {projectId}: {combinedCorsUrls}");
         return combinedCorsUrls;
     }
+
+    private string GetConfigValue(params string[] keys) => 
+        keys.Select(key => _configuration[key]?.Trim())
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
 }
