@@ -218,41 +218,46 @@ public class AgentFactory : IAgentFactory
 ```
 
 #### 4. Agent Instance State
-**Purpose**: Replaces CreatorGAgentState with automatic Elasticsearch projection.
+**Purpose**: Replaces CreatorGAgentState with automatic Elasticsearch projection using IMetaDataState interface.
 
 ```csharp
-public class AgentInstanceState : StateBase
+// IMetaDataState interface with Orleans serialization support
+public interface IMetaDataState
 {
-    public Guid Id { get; set; }
-    public Guid UserId { get; set; }
-    public string AgentType { get; set; }
-    public string Name { get; set; }
-    public Dictionary<string, object> Properties { get; set; }
-    public AgentStatus Status { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime LastActivity { get; set; }
-    public AgentMetrics Metrics { get; set; }
-    
-    // Inherited from StateBase for automatic projection
-    public override string GetIndexName() => "agent-instances";
-    public override string GetDocumentId() => Id.ToString();
+    Guid Id { get; set; }
+    Guid UserId { get; set; }
+    string AgentType { get; set; }
+    string Name { get; set; }
+    Dictionary<string, string> Properties { get; set; }
+    GrainId AgentGrainId { get; set; }
+    DateTime CreateTime { get; set; }
+    AgentStatus Status { get; set; }
+    DateTime LastActivity { get; set; }
 }
 
+// Refactored AgentInstanceState using IMetaDataState
+[GenerateSerializer]
+public class AgentInstanceState : StateBase, IMetaDataState
+{
+    [Id(0)] public Guid Id { get; set; }
+    [Id(1)] public Guid UserId { get; set; }
+    [Id(2)] public string AgentType { get; set; }
+    [Id(3)] public string Name { get; set; }
+    [Id(4)] public Dictionary<string, string> Properties { get; set; }
+    [Id(5)] public GrainId AgentGrainId { get; set; }
+    [Id(6)] public DateTime CreateTime { get; set; }
+    [Id(7)] public AgentStatus Status { get; set; }
+    [Id(8)] public DateTime LastActivity { get; set; }
+}
+
+[GenerateSerializer]
 public enum AgentStatus
 {
-    Initializing,
-    Active,
-    Inactive,
-    Error,
-    Deleted
-}
-
-public class AgentMetrics
-{
-    public int EventsProcessed { get; set; }
-    public int EventsPublished { get; set; }
-    public DateTime LastEventTime { get; set; }
-    public TimeSpan TotalProcessingTime { get; set; }
+    [Id(0)] Initializing,
+    [Id(1)] Active,
+    [Id(2)] Inactive,
+    [Id(3)] Error,
+    [Id(4)] Deleted
 }
 ```
 
