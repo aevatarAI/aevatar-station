@@ -15,7 +15,7 @@ namespace Aevatar.Controllers;
 [RemoteService]
 [ControllerName("Project")]
 [Route("api/projects")]
-[Authorize]
+// [Authorize]
 public class ProjectController : AevatarController
 {
     private readonly IProjectService _projectService;
@@ -47,6 +47,12 @@ public class ProjectController : AevatarController
     {
         await _permissionChecker.AuthenticateAsync(input.OrganizationId, AevatarPermissions.Projects.Create);
         return await _projectService.CreateAsync(input);
+    }
+    
+    [HttpPost("/test")]
+    public async Task CreateTestAsync(CreateProjectDto input)
+    {
+       
     }
 
     [HttpPut]
