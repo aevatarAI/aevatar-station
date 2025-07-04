@@ -464,8 +464,7 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
             $"Creating Host service for appResourceId: {appId}, version: {version}, project: {projectId}");
 
         await CreateHostSiloAsync(appId, version, _HostDeployOptions.HostSiloImageName, projectId);
-        await CreatePodAsync(GetHostName(appId, KubernetesConstants.HostClient), version,
-            _HostDeployOptions.HostClientImageName,
+        await CreatePodAsync(appId, version, _HostDeployOptions.HostClientImageName,
             GetHostClientConfigContent(appId, version, KubernetesConstants.HostClientSettingTemplateFilePath, corsUrls,
                 projectId),
             KubernetesConstants.HostClientCommand, _kubernetesOptions.DeveloperHostName);
