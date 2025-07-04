@@ -35,7 +35,7 @@ graph TB
     end
     
     subgraph "Agent Layer"
-        BA[Business Agents]
+        GA[GAgents]
         AF[AgentFactory]
     end
     
@@ -51,14 +51,14 @@ graph TB
     
     API --> ALS
     API --> DS
-    SH --> BA
+    SH --> GA
     ALS --> TMS
     ALS --> AF
-    ALS --> BA
+    ALS --> GA
     DS --> TMS
     DS --> ES
-    BA --> Pipeline
-    BA --> OStreams
+    GA --> Pipeline
+    GA --> OStreams
     Pipeline --> ES
     TMS --> Registry
     
@@ -68,7 +68,7 @@ graph TB
     
     class ALS,DS,TMS service
     class ES,Registry,Pipeline data
-    class BA,AF agent
+    class GA,AF agent
 ```
 
 ### Key Components
@@ -108,22 +108,17 @@ public class AgentInfo
 }
 ```
 
-#### 2. Enhanced Business Agent Interface
-**Purpose**: Business agents become the primary interface with standardized lifecycle management.
+#### 2. Standard GAgent Interface
+**Purpose**: All agents inherit directly from GAgentBase with standardized lifecycle management.
 
 ```csharp
-public interface IBusinessAgent : IGrain
-{
-    Task InitializeAsync(AgentConfiguration config);
-    Task<AgentInstanceState> GetStateAsync();
-    Task UpdateConfigurationAsync(AgentConfiguration config);
-    Task PublishEventAsync<T>(T @event) where T : EventBase;
-    Task<string> GetDescriptionAsync();
-}
-
-public abstract class BusinessAgentBase<TState, TEvent> : GAgentBase<TState, TEvent>, IBusinessAgent
-    where TState : AgentInstanceState, new()
-    where TEvent : EventBase
+// All agents inherit directly from GAgentBase
+[GAgent]
+[StorageProvider(ProviderName = "PubSubStore")]
+[LogConsistencyProvider(ProviderName = "LogStorage")]
+public class MyAgent : GAgentBase<MyAgentState, MyAgentEvent>, IMyAgent
+    where MyAgentState : AgentInstanceState, new()
+    where MyAgentEvent : EventBase
 {
     public async Task InitializeAsync(AgentConfiguration config)
     {
@@ -158,7 +153,7 @@ public abstract class BusinessAgentBase<TState, TEvent> : GAgentBase<TState, TEv
 ```csharp
 public interface IAgentFactory
 {
-    Task<IBusinessAgent> CreateAgentAsync(string agentType, AgentConfiguration config);
+    Task<IGAgent> CreateAgentAsync(string agentType, AgentConfiguration config);
     Task<bool> SupportsAgentTypeAsync(string agentType);
 }
 
@@ -167,14 +162,14 @@ public class AgentFactory : IAgentFactory
     private readonly IGrainFactory _grainFactory;
     private readonly ITypeMetadataService _typeMetadataService;
     
-    public async Task<IBusinessAgent> CreateAgentAsync(string agentType, AgentConfiguration config)
+    public async Task<IGAgent> CreateAgentAsync(string agentType, AgentConfiguration config)
     {
         var typeMetadata = await _typeMetadataService.GetTypeMetadataAsync(agentType);
         if (typeMetadata == null)
             throw new InvalidOperationException($"Unknown agent type: {agentType}");
             
         var grainId = GrainId.Create(agentType, config.Id.ToString());
-        var agent = _grainFactory.GetGrain<IBusinessAgent>(grainId);
+        var agent = _grainFactory.GetGrain<IGAgent>(grainId);
         
         return agent;
     }
@@ -284,7 +279,7 @@ sequenceDiagram
     participant ALS as AgentLifecycleService
     participant TMS as TypeMetadataService
     participant AF as AgentFactory
-    participant BA as BusinessAgent
+    participant GA as GAgent
     participant ES as Elasticsearch
     
     Client->>API: POST /agents (CreateAgentRequest)
@@ -292,12 +287,12 @@ sequenceDiagram
     ALS->>TMS: GetTypeMetadataAsync(agentType)
     TMS-->>ALS: AgentTypeMetadata
     ALS->>AF: CreateAgentAsync(agentType, config)
-    AF-->>ALS: IBusinessAgent
-    ALS->>BA: InitializeAsync(config)
-    BA->>BA: RaiseEvent(AgentInitializedEvent)
-    BA->>BA: Update State
-    BA->>ES: Project State (via StateBase)
-    BA-->>ALS: Success
+    AF-->>ALS: IGAgent
+    ALS->>GA: InitializeAsync(config)
+    GA->>GA: RaiseEvent(AgentInitializedEvent)
+    GA->>GA: Update State
+    GA->>ES: Project State (via StateBase)
+    GA-->>ALS: Success
     ALS-->>API: AgentInfo
     API-->>Client: AgentInfo
 ```
@@ -328,17 +323,17 @@ sequenceDiagram
 sequenceDiagram
     participant Client
     participant SH as SignalR Hub
-    participant BA as BusinessAgent
+    participant GA as GAgent
     participant OS as Orleans Streams
     participant ES as Elasticsearch
     
     Client->>SH: Send message to agent
-    SH->>BA: ProcessMessageAsync(message)
-    BA->>BA: Handle business logic
-    BA->>BA: Update state
-    BA->>ES: Project state changes
-    BA->>OS: PublishEventAsync(event)
-    BA-->>SH: Response
+    SH->>GA: ProcessMessageAsync(message)
+    GA->>GA: Handle business logic
+    GA->>GA: Update state
+    GA->>ES: Project state changes
+    GA->>OS: PublishEventAsync(event)
+    GA-->>SH: Response
     SH-->>Client: Agent response
 ```
 
@@ -353,14 +348,14 @@ sequenceDiagram
 - **Metadata**: Stored in `AgentInstanceState` and projected to Elasticsearch
 
 #### ✅ Event Management System
-- **Event Publishing**: `BusinessAgent.PublishEventAsync()` replaces `CreatorGAgent.PublishEventAsync()`
+- **Event Publishing**: `GAgent.PublishEventAsync()` replaces `CreatorGAgent.PublishEventAsync()`
 - **Event Registry**: `TypeMetadataService.GetTypeMetadataAsync()` provides capabilities
 - **Event Discovery**: Automatic discovery through reflection at startup
 
 #### ✅ State Management
 - **State Persistence**: `AgentInstanceState` replaces `CreatorGAgentState`
-- **Event Sourcing**: Maintained through `BusinessAgentBase<TState, TEvent>`
-- **State Transitions**: Handled directly in business agents
+- **Event Sourcing**: Maintained through `GAgentBase<TState, TEvent>`
+- **State Transitions**: Handled directly in GAgents
 
 #### ✅ Multi-Tenancy Support
 - **User Isolation**: Maintained through `UserId` in all operations
@@ -373,7 +368,7 @@ sequenceDiagram
 - **User Activity**: Tracked through built-in event sourcing mechanisms
 
 #### ✅ Orleans Integration
-- **Grain Management**: Business agents are Orleans grains
+- **Grain Management**: GAgents are Orleans grains
 - **Clustering**: Automatic distribution across cluster nodes
 - **Persistence**: State persistence through Orleans providers
 - **Streaming**: Event publishing through Orleans streams
@@ -386,7 +381,7 @@ sequenceDiagram
 
 ### New Features Added
 
-#### 🆕 Direct Business Agent Access
+#### 🆕 Direct GAgent Access
 - Eliminate proxy layer for better performance
 - Direct grain references for client interactions
 - Simplified debugging and monitoring
@@ -410,7 +405,6 @@ sequenceDiagram
    - `AgentFactory`
 
 2. **Create Base Classes**
-   - `BusinessAgentBase<TState, TEvent>`
    - `AgentInstanceState`
    - Standard interfaces
 
@@ -421,7 +415,7 @@ sequenceDiagram
 
 ### Phase 2: Parallel Implementation (Weeks 3-4)
 1. **Implement New Architecture**
-   - Create new agent types using `BusinessAgentBase`
+   - Create new agent types using `GAgentBase`
    - Implement `AgentLifecycleService` operations
    - Set up state projection pipeline
 
@@ -462,11 +456,11 @@ sequenceDiagram
 ### Architectural Benefits
 - **Cleaner Separation**: Type metadata separate from instance state
 - **Better Scalability**: Elasticsearch handles large-scale queries efficiently
-- **Simplified Development**: Direct business agent interfaces
+- **Simplified Development**: Direct GAgent interfaces
 - **Reduced Complexity**: Eliminate unnecessary abstraction layers
 
 ### Operational Benefits
-- **Easier Debugging**: Direct access to business logic
+- **Easier Debugging**: Direct access to agent logic
 - **Better Monitoring**: Clear separation of concerns
 - **Improved Testability**: Mock individual services independently
 - **Faster Development**: Simpler mental model
@@ -532,11 +526,11 @@ sequenceDiagram
 
 This architecture proposal successfully eliminates the CreatorGAgent proxy layer while preserving all essential functionality. The new design provides:
 
-- **Direct business agent access** for improved performance
+- **Direct GAgent access** for improved performance
 - **Enhanced discovery capabilities** through the AgentRegistry-ElasticSearch-Lite design
 - **Better separation of concerns** with dedicated services
 - **Maintained audit trail** through GAgentBase built-in event sourcing
 - **Preserved multi-tenancy** and security features
-- **Simplified development model** for agent interactions
+- **Simplified development model** for GAgent interactions
 
 The phased implementation approach ensures minimal disruption while providing clear benefits in terms of performance, maintainability, and scalability. The architecture supports the long-term goals of the Aevatar Station platform while eliminating unnecessary complexity.
