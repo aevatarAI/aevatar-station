@@ -130,7 +130,6 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
             }
         };
         await EnsureConfigMapAsync(
-            // appId,
             appHostName,
             version,
             ConfigMapHelper.GetAppSettingConfigMapName,
@@ -140,7 +139,6 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
             $"keys=[{string.Join(",", configFiles.Keys)}]", appId, version);
 
         await EnsureConfigMapAsync(
-            // appId,
             appHostName,
             version,
             ConfigMapHelper.GetAppFileBeatConfigMapName,
@@ -169,11 +167,11 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         var serviceName = ServiceHelper.GetAppServiceName(appHostName, version);
         await EnsureServiceAsync(
             appHostName, version, serviceName,
-            DeploymentHelper.GetAppDeploymentLabelName(appId, version),
+            DeploymentHelper.GetAppDeploymentLabelName(appHostName, version),
             KubernetesConstants.WebhookContainerTargetPort);
 
         // Ensure Ingress is created
-        var rulePath = $"/{appId}".ToLower();
+        var rulePath = $"/{appHostName}".ToLower();
         await EnsureIngressAsync(appHostName, version, hostName, rulePath, serviceName,
             KubernetesConstants.WebhookContainerTargetPort);
 
