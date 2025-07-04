@@ -28,7 +28,7 @@ namespace Aevatar.Silo;
     typeof(AevatarModule),
     typeof(AevatarPluginsModule),
     typeof(AevatarPermissionManagementModule),
-    typeof(AbpBlobStoringAwsModule)
+    typeof(AbpBlobStoringModule)
 )]
 public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
 {
