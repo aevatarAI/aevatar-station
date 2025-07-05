@@ -129,6 +129,8 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
                 GetHostClientConfigContent(appId, version, KubernetesConstants.AppSettingSiloSharedFileName, null)
             }
         };
+
+        // set client config map
         await EnsureConfigMapAsync(
             appHostName,
             version,
@@ -138,6 +140,7 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         LogResourceOperation("ConfigMap", "Injection", $"appResourceId={appId}",
             $"keys=[{string.Join(",", configFiles.Keys)}]", appId, version);
 
+        // set sidecar container config map
         await EnsureConfigMapAsync(
             appHostName,
             version,
@@ -462,10 +465,12 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
             $"Creating Host service for appResourceId: {appId}, version: {version}, project: {projectId}");
 
         await CreateHostSiloAsync(appId, version, _HostDeployOptions.HostSiloImageName, projectId);
-        await CreatePodAsync(appId, version, _HostDeployOptions.HostClientImageName,
-            GetHostClientConfigContent(appId, version, KubernetesConstants.HostClientSettingTemplateFilePath, corsUrls,
-                projectId),
+
+        var hostClientConfigContent = GetHostClientConfigContent(appId, version,
+            KubernetesConstants.HostClientSettingTemplateFilePath, corsUrls, projectId);
+        await CreatePodAsync(appId, version, _HostDeployOptions.HostClientImageName, hostClientConfigContent,
             KubernetesConstants.HostClientCommand, _kubernetesOptions.DeveloperHostName);
+        
         return "";
     }
 
