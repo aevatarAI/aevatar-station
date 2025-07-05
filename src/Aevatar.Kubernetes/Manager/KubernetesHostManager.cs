@@ -547,6 +547,16 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         // Delete SideCar ConfigMap
         var sideCarConfigMapName = ConfigMapHelper.GetAppFileBeatConfigMapName(appId, version);
         await EnsureConfigMapDeletedAsync(sideCarConfigMapName);
+
+        // Delete Service
+        var serviceName = ServiceHelper.GetAppServiceName(appId, version);
+        await EnsureServiceDeletedAsync(serviceName);
+
+        // Delete Ingress
+        var ingressName = IngressHelper.GetAppIngressName(appId, version);
+        await EnsureIngressDeletedAsync(ingressName);
+
+        _logger.LogInformation($"[KubernetesHostManager] Successfully destroyed Host Silo resources for appId: {appId}, version: {version}");
     }
 
     public async Task RestartHostAsync(string appId, string version)
