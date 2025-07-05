@@ -24,6 +24,7 @@ using Volo.Abp.Modularity;
 using Volo.Abp.Swashbuckle;
 using Volo.Abp.Threading;
 using Volo.Abp.VirtualFileSystem;
+using Microsoft.Extensions.Logging;
 
 namespace Aevatar.Developer.Host;
 
@@ -71,13 +72,41 @@ public class AevatarDeveloperHostModule : AbpModule
 
     private void ConfigureAuthentication(ServiceConfigurationContext context, IConfiguration configuration)
     {
+        var logger = context.Services.GetSingletonInstance<ILoggerFactory>()?.CreateLogger<AevatarDeveloperHostModule>();
+        
+        // 读取AuthServer配置
+        var authority = configuration["AuthServer:Authority"];
+        var requireHttpsMetadata = configuration["AuthServer:RequireHttpsMetadata"];
+        var swaggerClientId = configuration["AuthServer:SwaggerClientId"];
+        var swaggerClientSecret = configuration["AuthServer:SwaggerClientSecret"];
+        
+        // 详细记录AuthServer配置信息
+        logger?.LogInformation("=== Developer.Host AuthServer Configuration ===");
+        logger?.LogInformation("AuthServer:Authority = {Authority}", authority ?? "NOT SET");
+        logger?.LogInformation("AuthServer:RequireHttpsMetadata = {RequireHttpsMetadata}", requireHttpsMetadata ?? "NOT SET");
+        logger?.LogInformation("AuthServer:SwaggerClientId = {SwaggerClientId}", swaggerClientId ?? "NOT SET");
+        logger?.LogInformation("AuthServer:SwaggerClientSecret = {SwaggerClientSecret}", 
+            string.IsNullOrEmpty(swaggerClientSecret) ? "NOT SET" : "***CONFIGURED***");
+        logger?.LogInformation("JWT Audience = Aevatar");
+        logger?.LogInformation("JWT MapInboundClaims = false");
+        logger?.LogInformation("===============================================");
+        
+        // 验证必要配置
+        if (string.IsNullOrEmpty(authority))
+        {
+            logger?.LogError("CRITICAL: AuthServer:Authority is not configured!");
+            throw new InvalidOperationException("AuthServer:Authority configuration is required but not found.");
+        }
+        
         context.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
-                options.Authority = configuration["AuthServer:Authority"];
-                options.RequireHttpsMetadata = Convert.ToBoolean(configuration["AuthServer:RequireHttpsMetadata"]);
+                options.Authority = authority;
+                options.RequireHttpsMetadata = Convert.ToBoolean(requireHttpsMetadata);
                 options.Audience = "Aevatar";
                 options.MapInboundClaims = false;
+                
+                logger?.LogInformation("JWT Bearer authentication configured with Authority: {Authority}", authority);
             });
     }
 

@@ -9,8 +9,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
-using Volo.Abp.Identity;
-using Volo.Abp.PermissionManagement;
 
 namespace Aevatar.Controllers;
 
@@ -34,7 +32,7 @@ public class PluginController : AevatarController
     [HttpGet]
     public async Task<ListResultDto<PluginDto>> GetListAsync(GetPluginDto input)
     {
-        // await _permissionChecker.AuthenticateAsync(input.ProjectId, AevatarPermissions.Plugins.Default);
+        await _permissionChecker.AuthenticateAsync(input.ProjectId, AevatarPermissions.Plugins.Default);
         return await _pluginService.GetListAsync(input);
     }
 
