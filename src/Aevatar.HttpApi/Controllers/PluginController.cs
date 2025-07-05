@@ -34,7 +34,7 @@ public class PluginController : AevatarController
     [HttpGet]
     public async Task<ListResultDto<PluginDto>> GetListAsync(GetPluginDto input)
     {
-        await _permissionChecker.AuthenticateAsync(input.ProjectId, AevatarPermissions.Plugins.Default);
+        // await _permissionChecker.AuthenticateAsync(input.ProjectId, AevatarPermissions.Plugins.Default);
         return await _pluginService.GetListAsync(input);
     }
 
