@@ -17,7 +17,7 @@ namespace Aevatar.Controllers;
 [RemoteService]
 [ControllerName("Plugin")]
 [Route("api/plugins")]
-// [Authorize]
+[Authorize]
 [RequestFormLimits(MultipartBodyLengthLimit = 15 * 1024 * 1024)] // 15MB
 public class PluginController : AevatarController
 {
