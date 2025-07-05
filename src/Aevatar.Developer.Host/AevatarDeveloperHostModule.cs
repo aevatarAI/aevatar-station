@@ -72,41 +72,19 @@ public class AevatarDeveloperHostModule : AbpModule
 
     private void ConfigureAuthentication(ServiceConfigurationContext context, IConfiguration configuration)
     {
-        var logger = context.Services.GetSingletonInstance<ILoggerFactory>()?.CreateLogger<AevatarDeveloperHostModule>();
-        
-        // 读取AuthServer配置
         var authority = configuration["AuthServer:Authority"];
-        var requireHttpsMetadata = configuration["AuthServer:RequireHttpsMetadata"];
-        var swaggerClientId = configuration["AuthServer:SwaggerClientId"];
-        var swaggerClientSecret = configuration["AuthServer:SwaggerClientSecret"];
-        
-        // 详细记录AuthServer配置信息
-        logger?.LogInformation("=== Developer.Host AuthServer Configuration ===");
-        logger?.LogInformation("AuthServer:Authority = {Authority}", authority ?? "NOT SET");
-        logger?.LogInformation("AuthServer:RequireHttpsMetadata = {RequireHttpsMetadata}", requireHttpsMetadata ?? "NOT SET");
-        logger?.LogInformation("AuthServer:SwaggerClientId = {SwaggerClientId}", swaggerClientId ?? "NOT SET");
-        logger?.LogInformation("AuthServer:SwaggerClientSecret = {SwaggerClientSecret}", 
-            string.IsNullOrEmpty(swaggerClientSecret) ? "NOT SET" : "***CONFIGURED***");
-        logger?.LogInformation("JWT Audience = Aevatar");
-        logger?.LogInformation("JWT MapInboundClaims = false");
-        logger?.LogInformation("===============================================");
-        
-        // 验证必要配置
-        if (string.IsNullOrEmpty(authority))
+        if (authority == "http://localhost:8082")
         {
-            logger?.LogError("CRITICAL: AuthServer:Authority is not configured!");
-            throw new InvalidOperationException("AuthServer:Authority configuration is required but not found.");
+            throw new InvalidOperationException("FATAL: AuthServer Authority is configured to use localhost:8082 which is not allowed in this environment! Please check your configuration files.");
         }
-        
+
         context.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
                 options.Authority = authority;
-                options.RequireHttpsMetadata = Convert.ToBoolean(requireHttpsMetadata);
+                options.RequireHttpsMetadata = Convert.ToBoolean(configuration["AuthServer:RequireHttpsMetadata"]);
                 options.Audience = "Aevatar";
                 options.MapInboundClaims = false;
-                
-                logger?.LogInformation("JWT Bearer authentication configured with Authority: {Authority}", authority);
             });
     }
 
@@ -193,6 +171,13 @@ public class AevatarDeveloperHostModule : AbpModule
     {
         var app = context.GetApplicationBuilder();
         var env = context.GetEnvironment();
+        
+        // 获取配置和日志记录器
+        var configuration = context.ServiceProvider.GetRequiredService<IConfiguration>();
+        var logger = context.ServiceProvider.GetRequiredService<ILogger<AevatarDeveloperHostModule>>();
+        
+        // 记录AuthServer配置信息
+        LogAuthServerConfiguration(configuration, logger);
 
         if (env.IsDevelopment())
         {
@@ -215,7 +200,6 @@ public class AevatarDeveloperHostModule : AbpModule
         {
             c.SwaggerEndpoint("/swagger/v1/swagger.json", "Aevatar API");
 
-            var configuration = context.ServiceProvider.GetRequiredService<IConfiguration>();
             c.OAuthClientId(configuration["AuthServer:SwaggerClientId"]);
             c.OAuthScopes("Aevatar");
         });
@@ -224,6 +208,40 @@ public class AevatarDeveloperHostModule : AbpModule
         app.UseConfiguredEndpoints();
         var statePermissionProvider = context.ServiceProvider.GetRequiredService<IStatePermissionProvider>();
         AsyncHelper.RunSync(async () => await statePermissionProvider.SaveAllStatePermissionAsync());
+    }
+    
+    private void LogAuthServerConfiguration(IConfiguration configuration, ILogger logger)
+    {
+        // 读取AuthServer配置
+        var authority = configuration["AuthServer:Authority"];
+        var requireHttpsMetadata = configuration["AuthServer:RequireHttpsMetadata"];
+        var swaggerClientId = configuration["AuthServer:SwaggerClientId"];
+        var swaggerClientSecret = configuration["AuthServer:SwaggerClientSecret"];
+        
+        // 详细记录AuthServer配置信息
+        logger.LogInformation("=== Developer.Host AuthServer Configuration ===");
+        logger.LogInformation("AuthServer:Authority = {Authority}", authority ?? "NOT SET");
+        logger.LogInformation("AuthServer:RequireHttpsMetadata = {RequireHttpsMetadata}", requireHttpsMetadata ?? "NOT SET");
+        logger.LogInformation("AuthServer:SwaggerClientId = {SwaggerClientId}", swaggerClientId ?? "NOT SET");
+        logger.LogInformation("AuthServer:SwaggerClientSecret = {SwaggerClientSecret}", 
+            string.IsNullOrEmpty(swaggerClientSecret) ? "NOT SET" : "***CONFIGURED***");
+        logger.LogInformation("JWT Audience = Aevatar");
+        logger.LogInformation("JWT MapInboundClaims = false");
+        logger.LogInformation("===============================================");
+        
+        // 配置验证和警告
+        if (authority == "http://localhost:8082")
+        {
+            logger.LogCritical("FATAL: AuthServer Authority is configured to use localhost:8082 which should not be used in production!");
+        }
+        else if (string.IsNullOrEmpty(authority))
+        {
+            logger.LogError("CRITICAL: AuthServer:Authority is not configured!");
+        }
+        else
+        {
+            logger.LogInformation("JWT Bearer authentication configured with Authority: {Authority}", authority);
+        }
     }
 
     public override void OnApplicationShutdown(ApplicationShutdownContext context)
