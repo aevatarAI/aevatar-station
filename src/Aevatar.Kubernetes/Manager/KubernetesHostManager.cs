@@ -366,14 +366,12 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         }
     }
 
-    private string GetHealthPath()
-    {
-        return "";
-    }
-
+    private string GetHealthPath() => "";
 
     private async Task DestroyPodsAsync(string appId, string version)
     {
+        _logger.LogInformation($"[KubernetesHostManager] Starting to destroy Host Client resources for appId: {appId}, version: {version}");
+
         // Delete Deployment
         var deploymentName = DeploymentHelper.GetAppDeploymentName(appId, version);
         await EnsureDeploymentDeletedAsync(deploymentName);
@@ -393,6 +391,8 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         // Delete Ingress
         var ingressName = IngressHelper.GetAppIngressName(appId, version);
         await EnsureIngressDeletedAsync(ingressName);
+
+        _logger.LogInformation($"[KubernetesHostManager] Successfully destroyed Host Client resources for appId: {appId}, version: {version}");
     }
 
     private async Task EnsureIngressDeletedAsync(string ingressName)
