@@ -1,6 +1,7 @@
 // ABOUTME: This file provides a base implementation of IMetaDataState for concrete state classes
 // ABOUTME: Contains the default Apply method logic that can be inherited by state implementations
 
+using Aevatar.Core.Abstractions;
 using Aevatar.MetaData.Enums;
 using Aevatar.MetaData.Events;
 
@@ -10,7 +11,7 @@ namespace Aevatar.MetaData;
 /// Base implementation of IMetaDataState that provides default Apply method behavior.
 /// </summary>
 [GenerateSerializer]
-public abstract class MetaDataStateBase : IMetaDataState
+public abstract class MetaDataStateBase : StateBase, IMetaDataState
 {
     /// <summary>
     /// The unique identifier for the agent.
@@ -152,4 +153,5 @@ public abstract class MetaDataStateBase : IMetaDataState
     {
         LastActivity = activityEvent.ActivityTime;
     }
+    
 }

@@ -20,7 +20,19 @@
     </ItemGroup>
 
     <ItemGroup>
+        <Using Include="Xunit"/>
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\..\src\Aevatar.MetaData\Aevatar.MetaData.csproj" />
+        <ProjectReference Include="..\..\src\Aevatar.Core\Aevatar.Core.csproj" />
+        <ProjectReference Include="..\..\src\Aevatar.TestKit\Aevatar.TestKit.csproj" />
+        <ProjectReference Include="..\..\src\Aevatar.PermissionManagement\Aevatar.PermissionManagement.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
+        <PackageReference Include="Microsoft.Orleans.Streaming" />
     </ItemGroup>
 
 </Project>
