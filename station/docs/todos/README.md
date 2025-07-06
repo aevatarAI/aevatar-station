@@ -24,27 +24,29 @@ Each TODO file follows a consistent structure:
 Core components that other services depend on:
 
 1. **[TODO-002: IMetaDataState Interface](./TODO-002-IMetaDataState.md)** - Foundation interface for state management
-2. **[TODO-003: AgentInstanceState](./TODO-003-AgentInstanceState.md)** - Concrete state implementation
-3. **[TODO-004: TypeMetadataService](./TODO-004-TypeMetadataService.md)** - Static type information service
-4. **[TODO-005: AgentLifecycleService](./TODO-005-AgentLifecycleService.md)** - CRUD operations service
-5. **[TODO-006: EventPublisher](./TODO-006-EventPublisher.md)** - Orleans streams event publishing
-6. **[TODO-007: AgentFactory](./TODO-007-AgentFactory.md)** - Standardized agent creation
-7. **[TODO-008: AgentDiscoveryService](./TODO-008-AgentDiscoveryService.md)** - Elasticsearch-based discovery
+2. **[TODO-016: IMetaDataStateEventRaiser](./TODO-016-IMetaDataStateEventRaiser.md)** - Helper interface with TDD implementation, tests, and documentation
+3. **[TODO-003: AgentInstanceState](./TODO-003-AgentInstanceState.md)** - Concrete state implementation
+4. **[TODO-004: TypeMetadataService](./TODO-004-TypeMetadataService.md)** - Static type information service
+5. **[TODO-005: AgentLifecycleService](./TODO-005-AgentLifecycleService.md)** - CRUD operations service
+6. **[TODO-006: EventPublisher](./TODO-006-EventPublisher.md)** - Orleans streams event publishing
+7. **[TODO-007: AgentFactory](./TODO-007-AgentFactory.md)** - Standardized agent creation
+8. **[TODO-008: AgentDiscoveryService](./TODO-008-AgentDiscoveryService.md)** - Elasticsearch-based discovery
 
 ### Phase 2: Infrastructure (Medium Priority)
 Supporting infrastructure and integration:
 
-8. **[TODO-009: GAgentBase Streams](./TODO-009-GAgentBase-Streams.md)** - Enhanced stream support
-9. **[TODO-010: Update AgentService](./TODO-010-Update-AgentService.md)** - Service layer migration
-10. **[TODO-011: Update SubscriptionAppService](./TODO-011-Update-SubscriptionAppService.md)** - Subscription service migration
-11. **[TODO-012: Elasticsearch Mapping](./TODO-012-Elasticsearch-Mapping.md)** - Optimized index mapping
-12. **[TODO-013: Dependency Injection](./TODO-013-DependencyInjection.md)** - Service configuration
+9. **[TODO-009: GAgentBase Streams](./TODO-009-GAgentBase-Streams.md)** - Enhanced stream support
+10. **[TODO-010: Update AgentService](./TODO-010-Update-AgentService.md)** - Service layer migration
+11. **[TODO-011: Update SubscriptionAppService](./TODO-011-Update-SubscriptionAppService.md)** - Subscription service migration
+12. **[TODO-012: Elasticsearch Mapping](./TODO-012-Elasticsearch-Mapping.md)** - Optimized index mapping
+13. **[TODO-013: Dependency Injection](./TODO-013-DependencyInjection.md)** - Service configuration
+14. **[TODO-020: EventRaiser Validation](./TODO-020-EventRaiser-Validation.md)** - Parameter validation and error handling
 
 ### Phase 3: Validation and Migration (Low Priority)
 Testing and migration procedures:
 
-13. **[TODO-014: Integration Tests](./TODO-014-Integration-Tests.md)** - Comprehensive testing suite
-14. **[TODO-015: Migration Guide](./TODO-015-Migration-Guide.md)** - Migration procedures and documentation
+15. **[TODO-014: Integration Tests](./TODO-014-Integration-Tests.md)** - Comprehensive testing suite
+16. **[TODO-015: Migration Guide](./TODO-015-Migration-Guide.md)** - Migration procedures and documentation
 
 ## Dependency Graph
 
@@ -52,6 +54,7 @@ Testing and migration procedures:
 graph TD
     A[TODO-002: IMetaDataState] --> B[TODO-003: AgentInstanceState]
     A --> D[TODO-004: TypeMetadataService]
+    A --> P[TODO-016: IMetaDataStateEventRaiser]
     B --> E[TODO-005: AgentLifecycleService]
     B --> H[TODO-008: AgentDiscoveryService]
     B --> L[TODO-012: Elasticsearch Mapping]
@@ -71,11 +74,14 @@ graph TD
     G --> M
     H --> M
     
+    P --> T[TODO-020: EventRaiser Validation]
+    
     I[TODO-009: GAgentBase Streams] --> N[TODO-014: Integration Tests]
     J --> N
     K --> N
     L --> N
     M --> N
+    P --> N
     
     N --> O[TODO-015: Migration Guide]
 ```
