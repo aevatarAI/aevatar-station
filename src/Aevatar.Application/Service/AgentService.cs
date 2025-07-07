@@ -283,13 +283,13 @@ public class AgentService : ApplicationService, IAgentService
             var queryString = "userId.keyword:" + currentUserId;
             
             // Add agentType fuzzy query condition
-            if (!string.IsNullOrWhiteSpace(queryDto.AgentType))
+            if (!string.IsNullOrEmpty(queryDto.AgentType))
             {
                 // Use fuzzy query with ~ operator for better matching
                 queryString += " AND agentType:(" + queryDto.AgentType + "~ OR " + queryDto.AgentType + "*)";
             }
             
-            _logger.LogDebug("GetAllAgentInstances query built - UserId: {UserId}, QueryString: {QueryString}",
+            _logger.LogInformation("GetAllAgentInstances query built - UserId: {UserId}, QueryString: {QueryString}",
                 currentUserId, queryString);
             
             var response =
