@@ -1,13 +1,13 @@
-# TODO-016: Implement IMetaDataStateEventRaiser Interface
+# TODO-016: Implement IMetaDataStateGAgent Interface
 
 ## Task Overview
-Implement the `IMetaDataStateEventRaiser<TState>` helper interface that provides default method implementations for common event-raising patterns in GAgent-based systems.
+Implement the `IMetaDataStateGAgent<TState>` helper interface that provides default method implementations for common event-raising patterns in GAgent-based systems.
 
 ## Description
 Create a helper interface that works alongside GAgentBase to reduce boilerplate code when raising common metadata events. This interface uses .NET 8+ default interface methods and is optional for agents to implement.
 
 ## Acceptance Criteria
-- [ ] Create `IMetaDataStateEventRaiser<TState>` interface in Aevatar.MetaData project
+- [ ] Create `IMetaDataStateGAgent<TState>` interface in Aevatar.MetaData project
 - [ ] Write failing unit tests FIRST for all default methods (TDD Red phase)
 - [ ] Implement all default methods to make tests pass (TDD Green phase)
 - [ ] Refactor implementation while keeping tests green (TDD Refactor phase)
@@ -17,7 +17,7 @@ Create a helper interface that works alongside GAgentBase to reduce boilerplate 
 - [ ] Write developer documentation as part of the implementation
 
 ## File Location
-- `framework/src/Aevatar.MetaData/IMetaDataStateEventRaiser.cs`
+- `framework/src/Aevatar.MetaData/IMetaDataStateGAgent.cs`
 
 ## Implementation Details
 
@@ -25,7 +25,11 @@ Create a helper interface that works alongside GAgentBase to reduce boilerplate 
 ```csharp
 namespace Aevatar.MetaData
 {
-    public interface IMetaDataStateEventRaiser<TState> where TState : IMetaDataState
+    /// <summary>
+    /// Provides default implementations for common event-raising operations on metadata state.
+    /// </summary>
+    /// <typeparam name="TState">The state type that implements IMetaDataState</typeparam>
+    public interface IMetaDataStateGAgent<TState> : IStateGAgent<TState> where TState : IMetaDataState
     {
         // Required methods that implementing class must provide
         void RaiseEvent(MetaDataStateLogEvent @event);
@@ -48,7 +52,8 @@ namespace Aevatar.MetaData
 ## Dependencies
 - IMetaDataState interface (from TODO-002)
 - MetaDataStateLogEvent and derived event classes
-- GAgentBase (no modifications needed)
+- GAgentBase public methods (from TODO-021)
+- IStateGAgent<TState> interface
 
 ## Testing Requirements (TDD Approach)
 

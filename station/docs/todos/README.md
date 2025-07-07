@@ -25,7 +25,7 @@ Core components that other services depend on:
 
 1. **[TODO-002: IMetaDataState Interface](./TODO-002-IMetaDataState.md)** - Foundation interface for state management
 2. **[TODO-021: GAgentBase Public Methods](./TODO-021-GAgentBase-Public-Methods.md)** - Make RaiseEvent and ConfirmEvents public for interface compatibility
-3. **[TODO-016: IMetaDataStateEventRaiser](./TODO-016-IMetaDataStateEventRaiser.md)** - Helper interface with TDD implementation, tests, and documentation
+3. **[TODO-016: IMetaDataStateGAgent](./TODO-016-IMetaDataStateGAgent.md)** - Helper interface with TDD implementation, tests, and documentation
 4. **[TODO-003: AgentInstanceState](./TODO-003-AgentInstanceState.md)** - Concrete state implementation
 5. **[TODO-004: TypeMetadataService](./TODO-004-TypeMetadataService.md)** - Static type information service
 6. **[TODO-005: AgentLifecycleService](./TODO-005-AgentLifecycleService.md)** - CRUD operations service
@@ -56,7 +56,7 @@ graph TD
     A[TODO-002: IMetaDataState] --> B[TODO-003: AgentInstanceState]
     A --> D[TODO-004: TypeMetadataService]
     A --> R[TODO-021: GAgentBase Public Methods]
-    R --> P[TODO-016: IMetaDataStateEventRaiser]
+    R --> P[TODO-016: IMetaDataStateGAgent]
     B --> E[TODO-005: AgentLifecycleService]
     B --> H[TODO-008: AgentDiscoveryService]
     B --> L[TODO-012: Elasticsearch Mapping]
