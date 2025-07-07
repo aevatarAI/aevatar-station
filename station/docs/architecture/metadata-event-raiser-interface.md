@@ -1,10 +1,10 @@
-# IMetaDataStateEventRaiser Interface Design
+# IMetaDataStateGAgent Interface Design
 
 ## Overview
 
-This document describes the design of the `IMetaDataStateEventRaiser<TState>` interface, which provides default method implementations for common event-raising patterns in GAgent-based systems. This interface leverages .NET 8+ default interface methods to reduce boilerplate code and standardize event creation across all agents.
+This document describes the design of the `IMetaDataStateGAgent<TState>` interface, which provides default method implementations for common event-raising patterns in GAgent-based systems. This interface leverages .NET 8+ default interface methods to reduce boilerplate code and standardize event creation across all agents.
 
-**Important**: `IMetaDataStateEventRaiser` is a helper interface that works alongside `GAgentBase`, not something that modifies or is implemented by `GAgentBase` itself. Agents can optionally implement this interface to gain access to convenient default methods for common operations.
+**Important**: `IMetaDataStateGAgent` is a helper interface that works alongside `GAgentBase`, not something that modifies or is implemented by `GAgentBase` itself. Agents can optionally implement this interface to gain access to convenient default methods for common operations.
 
 ## Motivation
 
@@ -23,7 +23,7 @@ By providing an interface with default event-raising methods, we can:
 
 ## Design
 
-### Core Interface: IMetaDataStateEventRaiser<TState>
+### Core Interface: IMetaDataStateGAgent<TState>
 
 ```csharp
 namespace Aevatar.MetaData
@@ -32,7 +32,7 @@ namespace Aevatar.MetaData
     /// Provides default implementations for common event-raising operations on metadata state.
     /// </summary>
     /// <typeparam name="TState">The state type that implements IMetaDataState</typeparam>
-    public interface IMetaDataStateEventRaiser<TState> where TState : IMetaDataState
+    public interface IMetaDataStateGAgent<TState> : IStateGAgent<TState> where TState : IMetaDataState
     {
         // Required methods - must be implemented by the consuming class (e.g., GAgentBase)
         /// <summary>
@@ -252,26 +252,26 @@ public interface IMetaDataState
 
 ### Working Alongside GAgentBase
 
-The key insight is that `IMetaDataStateEventRaiser` works alongside `GAgentBase` as a helper interface, NOT as something GAgentBase implements:
+The key insight is that `IMetaDataStateGAgent` works alongside `GAgentBase` as a helper interface, NOT as something GAgentBase implements:
 
 ```csharp
-// Your agent implements BOTH GAgentBase AND IMetaDataStateEventRaiser
+// Your agent implements BOTH GAgentBase AND IMetaDataStateGAgent
 [GAgent]
 public class UserProfileAgent : GAgentBase<UserProfileState, MetaDataStateLogEvent>, 
-                                 IMetaDataStateEventRaiser<UserProfileState>,
+                                 IMetaDataStateGAgent<UserProfileState>,
                                  IUserProfileAgent
 {
-    // GAgentBase provides these methods that IMetaDataStateEventRaiser needs
+    // GAgentBase provides these methods that IMetaDataStateGAgent needs
     public UserProfileState GetState() => State;
     public GrainId GetGrainId() => this.GetGrainId();
     // RaiseEvent and ConfirmEvents are already provided by GAgentBase
     
-    // Now you can use all the default methods from IMetaDataStateEventRaiser
+    // Now you can use all the default methods from IMetaDataStateGAgent
     public async Task<Guid> InitializeAsync(string userName, Guid userId)
     {
         var agentId = Guid.NewGuid();
         
-        // This method comes from IMetaDataStateEventRaiser's default implementation
+        // This method comes from IMetaDataStateGAgent's default implementation
         await CreateAgentAsync(agentId, userId, userName, "UserProfile");
         
         return agentId;
@@ -295,7 +295,7 @@ public class UserProfileState : IMetaDataState
 
 This separation ensures:
 - **GAgentBase** remains unchanged and provides core event sourcing functionality
-- **IMetaDataStateEventRaiser** is an optional helper interface agents can implement
+- **IMetaDataStateGAgent** is an optional helper interface agents can implement
 - **Composition over inheritance** - agents choose to add this functionality
 - **No modifications** to existing framework code
 
@@ -306,10 +306,10 @@ This separation ensures:
 ```csharp
 [GAgent]
 public class UserProfileAgent : GAgentBase<UserProfileState, MetaDataStateLogEvent>, 
-                                IMetaDataStateEventRaiser<UserProfileState>,
+                                IMetaDataStateGAgent<UserProfileState>,
                                 IUserProfileAgent
 {
-    // Implement required methods from IMetaDataStateEventRaiser
+    // Implement required methods from IMetaDataStateGAgent
     public UserProfileState GetState() => State;
     public GrainId GetGrainId() => this.GetGrainId();
     // RaiseEvent and ConfirmEvents are inherited from GAgentBase
@@ -358,10 +358,10 @@ public class UserProfileAgent : GAgentBase<UserProfileState, MetaDataStateLogEve
 ```csharp
 [GAgent]
 public class ProjectAgent : GAgentBase<ProjectState, MetaDataStateLogEvent>, 
-                            IMetaDataStateEventRaiser<ProjectState>,
+                            IMetaDataStateGAgent<ProjectState>,
                             IProjectAgent
 {
-    // Implement required methods from IMetaDataStateEventRaiser
+    // Implement required methods from IMetaDataStateGAgent
     public ProjectState GetState() => State;
     public GrainId GetGrainId() => this.GetGrainId();
     
@@ -399,10 +399,10 @@ public class ProjectAgent : GAgentBase<ProjectState, MetaDataStateLogEvent>,
 ```csharp
 [GAgent]
 public class AdvancedAgent : GAgentBase<AdvancedState, MetaDataStateLogEvent>, 
-                             IMetaDataStateEventRaiser<AdvancedState>,
+                             IMetaDataStateGAgent<AdvancedState>,
                              IAdvancedAgent
 {
-    // Implement required methods from IMetaDataStateEventRaiser
+    // Implement required methods from IMetaDataStateGAgent
     public AdvancedState GetState() => State;
     public GrainId GetGrainId() => this.GetGrainId();
     
@@ -490,9 +490,9 @@ public async Task CreateUser(string name, Guid userId)
 ### Separation of Concerns
 
 1. **IMetaDataState** - Pure state interface with data properties and Apply method
-2. **IMetaDataStateEventRaiser** - Optional helper interface providing default method implementations
+2. **IMetaDataStateGAgent** - Optional helper interface providing default method implementations
 3. **GAgentBase** - Core event sourcing functionality, unchanged
-4. **Your Agent** - Inherits from GAgentBase AND optionally implements IMetaDataStateEventRaiser
+4. **Your Agent** - Inherits from GAgentBase AND optionally implements IMetaDataStateGAgent
 
 This separation is crucial because:
 - **No framework modifications** - GAgentBase remains untouched
@@ -509,7 +509,7 @@ This separation is crucial because:
 
 ## Conclusion
 
-The `IMetaDataStateEventRaiser<TState>` interface provides a powerful abstraction that simplifies agent development while maintaining the flexibility of the underlying event sourcing system. By designing it as a helper interface that works alongside `GAgentBase` (rather than modifying GAgentBase), we achieve:
+The `IMetaDataStateGAgent<TState>` interface provides a powerful abstraction that simplifies agent development while maintaining the flexibility of the underlying event sourcing system. By designing it as a helper interface that works alongside `GAgentBase` (rather than modifying GAgentBase), we achieve:
 
 - **Zero framework changes** - GAgentBase remains untouched
 - **Opt-in simplicity** - Agents choose to implement the helper interface
