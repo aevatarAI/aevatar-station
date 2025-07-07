@@ -269,6 +269,38 @@ public class AgentService : ApplicationService, IAgentService
         return resp;
     }
 
+    public async Task<List<AgentInstanceDto>> OriginGetAllAgentInstances(int pageIndex, int pageSize)
+    {
+        var result = new List<AgentInstanceDto>();
+        var currentUserId = _userAppService.GetCurrentUserId();
+        var response =
+            await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
+            {
+                QueryString = "userId.keyword:" + currentUserId,
+                StateName = nameof(CreatorGAgentState),
+                PageSize = pageSize,
+                PageIndex = pageIndex
+            });
+        if (response.TotalCount == 0)
+        {
+            return result;
+        }
+
+        result.AddRange(response.Items.Select(state => new AgentInstanceDto()
+        {
+            Id = (string)state["id"],
+            Name = (string)state["name"],
+            Properties = state["properties"] == null
+                ? null
+                : JsonConvert.DeserializeObject<Dictionary<string, object>>((string)state["properties"]),
+            AgentType = (string)state["agentType"],
+            BusinessAgentGrainId =
+                state.TryGetValue("formattedBusinessAgentGrainId", out var value) ? (string)value : null
+        }));
+
+        return result;
+    }
+
     public async Task<List<AgentInstanceDto>> GetAllAgentInstances(GetAllAgentInstancesQueryDto queryDto)
     {
         _logger.LogInformation("GetAllAgentInstances started - PageIndex: {PageIndex}, PageSize: {PageSize}, AgentType: {AgentType}",

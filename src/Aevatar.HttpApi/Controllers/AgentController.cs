@@ -44,6 +44,13 @@ public class AgentController : AevatarController
     {
         return await _agentService.GetAllAgentInstances(queryDto);
     }
+    
+    [HttpGet("agent-list-test")]
+    [Authorize]
+    public async Task<List<AgentInstanceDto>> OriginGetAllAgentInstance(int pageIndex, int pageSize)
+    {
+        return await _agentService.OriginGetAllAgentInstances(pageIndex,pageSize);
+    }
 
     [HttpPost]
     // [Authorize(Policy = AevatarPermissions.Agent.Create)]
