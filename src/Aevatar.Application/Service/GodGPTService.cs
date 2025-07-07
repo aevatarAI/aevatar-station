@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using Aevatar.Anonymous;
+using Aevatar.Application.Grains.Agents.Anonymous;
 using Aevatar.Application.Grains.Agents.ChatManager;
+using Aevatar.Application.Grains.Agents.ChatManager.Chat;
 using Aevatar.Application.Grains.Agents.ChatManager.Common;
 using Aevatar.Application.Grains.Agents.ChatManager.ConfigAgent;
 using Aevatar.Application.Grains.Agents.ChatManager.Dtos;
@@ -70,6 +74,10 @@ public interface IGodGPTService
     Task<GetInvitationInfoResponse> GetInvitationInfoAsync(Guid currentUserId);
     Task<RedeemInviteCodeResponse> RedeemInviteCodeAsync(Guid currentUserId,
         RedeemInviteCodeRequest redeemInviteCodeRequest);
+    Task<CreateGuestSessionResponseDto> CreateGuestSessionAsync(string clientIp, string? guider = null);
+    Task GuestChatAsync(string clientIp, string content, string chatId);
+    Task<GuestChatLimitsResponseDto> GetGuestChatLimitsAsync(string clientIp);
+    Task<bool> CanGuestChatAsync(string clientIp);
 
     Task<TwitterAuthResultDto> TwitterAuthVerifyAsync(Guid currentUserId, TwitterAuthVerifyInput input);
     Task<PagedResultDto<RewardHistoryDto>> GetCreditsHistoryAsync(Guid currentUserId,
@@ -478,6 +486,95 @@ public class GodGPTService : ApplicationService, IGodGPTService
         {
             IsValid = result
         };
+    }
+
+    #region Anonymous User Methods
+
+    /// <summary>
+    /// Create guest session for anonymous users (IP-based)
+    /// </summary>
+    public async Task<CreateGuestSessionResponseDto> CreateGuestSessionAsync(string clientIp, string? guider = null)
+    {
+        var grainId = CommonHelper.StringToGuid(CommonHelper.GetAnonymousUserGAgentId(clientIp));
+        var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(grainId);
+        
+        // Check if user can still chat
+        if (!await anonymousUserGrain.CanChatAsync())
+        {
+            var remainingChats = await anonymousUserGrain.GetRemainingChatsAsync();
+            return new CreateGuestSessionResponseDto
+            {
+                RemainingChats = remainingChats,
+                TotalAllowed = await GetMaxChatCountAsync()
+            };
+        }
+
+        // Create new session (this will replace any existing session for the IP)
+        await anonymousUserGrain.CreateGuestSessionAsync(guider);
+        
+        var remaining = await anonymousUserGrain.GetRemainingChatsAsync();
+        return new CreateGuestSessionResponseDto
+        {
+            RemainingChats = remaining,
+            TotalAllowed = await GetMaxChatCountAsync()
+        };
+    }
+
+    /// <summary>
+    /// Execute guest chat for anonymous users
+    /// </summary>
+    public async Task GuestChatAsync(string clientIp, string content, string chatId)
+    {
+        var grainId = CommonHelper.StringToGuid(CommonHelper.GetAnonymousUserGAgentId(clientIp));
+        var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(grainId);
+        await anonymousUserGrain.GuestChatAsync(content, chatId);
+    }
+
+    /// <summary>
+    /// Get chat limits for anonymous users
+    /// </summary>
+    public async Task<GuestChatLimitsResponseDto> GetGuestChatLimitsAsync(string clientIp)
+    {
+                    var grainId = CommonHelper.StringToGuid(CommonHelper.GetAnonymousUserGAgentId(clientIp));
+            var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(grainId);
+        var remaining = await anonymousUserGrain.GetRemainingChatsAsync();
+        
+        return new GuestChatLimitsResponseDto
+        {
+            RemainingChats = remaining,
+            TotalAllowed = await GetMaxChatCountAsync()
+        };
+    }
+
+    /// <summary>
+    /// Check if anonymous user can chat
+    /// </summary>
+    public async Task<bool> CanGuestChatAsync(string clientIp)
+    {
+        var grainId = CommonHelper.StringToGuid(CommonHelper.GetAnonymousUserGAgentId(clientIp));
+        var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(grainId);
+        return await anonymousUserGrain.CanChatAsync();
+    }
+
+    #endregion
+
+    /// <summary>
+    /// Get max chat count from AnonymousUserGAgent configuration, default to 3 if unable to retrieve
+    /// </summary>
+    private async Task<int> GetMaxChatCountAsync()
+    {
+        try
+        {
+            // Use a dummy IP to get configuration from AnonymousUserGAgent
+            var grainId = CommonHelper.StringToGuid(CommonHelper.GetAnonymousUserGAgentId("127.0.0.1"));
+            var configGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(grainId);
+            return await configGrain.GetMaxChatCountAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get max chat count from configuration, using default: 3");
+            return 3;
+        }
     }
 
     public async Task<TwitterAuthResultDto> TwitterAuthVerifyAsync(Guid currentUserId, TwitterAuthVerifyInput input)
