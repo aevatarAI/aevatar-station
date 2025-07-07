@@ -3,12 +3,16 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+using Aevatar.Account;
+using Aevatar.Anonymous;
 using Aevatar.Application.Grains.Agents.ChatManager;
 using Aevatar.Application.Grains.Agents.ChatManager.Chat;
+using Aevatar.Application.Grains.Agents.ChatManager.Common;
 using Aevatar.Application.Grains.Agents.ChatManager.Dtos;
 using Aevatar.Application.Grains.ChatManager.Dtos;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
+using Aevatar.Extensions;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GodGPT.Dtos;
 using Aevatar.Quantum;
@@ -28,7 +32,6 @@ using Orleans;
 using Orleans.Runtime;
 using Orleans.Streams;
 using Volo.Abp;
-using Aevatar.Account;
 
 namespace Aevatar.Controllers;
 
@@ -401,4 +404,80 @@ public class GodGPTController : AevatarController
             });
         }
     }
+
+    #region Guest Chat APIs for Anonymous Users
+
+    /// <summary>
+    /// Create guest session for anonymous users
+    /// </summary>
+    [AllowAnonymous]
+    [HttpPost("godgpt/guest/create-session")]
+    public async Task<IActionResult> CreateGuestSessionAsync([FromBody] CreateGuestSessionRequestDto request)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var clientIp = HttpContext.GetClientIpAddress();
+        var userHashId = CommonHelper.GetAnonymousUserGAgentId(clientIp).Replace("AnonymousUser_", "");
+        
+        try
+        {
+            // Always check limits first to provide graceful response
+            var limits = await _godGptService.GetGuestChatLimitsAsync(clientIp);
+            
+            // If no remaining chats, return limits info without creating session
+            if (limits.RemainingChats <= 0)
+            {
+                _logger.LogDebug("[GodGPTController][CreateGuestSessionAsync] User: {0} has no remaining chats, returning limits", userHashId);
+                return Ok(new CreateGuestSessionResponseDto
+                {
+                    RemainingChats = limits.RemainingChats,
+                    TotalAllowed = limits.TotalAllowed
+                });
+            }
+            
+            // User has remaining chats, proceed with session creation
+            var result = await _godGptService.CreateGuestSessionAsync(clientIp, request.Guider);
+            _logger.LogDebug("[GodGPTController][CreateGuestSessionAsync] User: {0}, guider: {1}, remaining: {2}, duration: {3}ms",
+                userHashId, request.Guider, result.RemainingChats, stopwatch.ElapsedMilliseconds);
+            
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[GodGPTController][CreateGuestSessionAsync] User: {0}, unexpected error", userHashId);
+            // Return default limits instead of error
+            return Ok(new CreateGuestSessionResponseDto
+            {
+                RemainingChats = 0,
+                TotalAllowed = 3
+            });
+        }
+    }
+
+    /// <summary>
+    /// Get chat limits for anonymous users
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("godgpt/guest/limits")]
+    public async Task<IActionResult> GetGuestChatLimitsAsync()
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var clientIp = HttpContext.GetClientIpAddress();
+        var userHashId = CommonHelper.GetAnonymousUserGAgentId(clientIp).Replace("AnonymousUser_", "");
+        
+        try
+        {
+            var result = await _godGptService.GetGuestChatLimitsAsync(clientIp);
+            _logger.LogDebug("[GodGPTController][GetGuestChatLimitsAsync] User: {0}, remaining: {1}, duration: {2}ms",
+                userHashId, result.RemainingChats, stopwatch.ElapsedMilliseconds);
+            
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[GodGPTController][GetGuestChatLimitsAsync] User: {0}, unexpected error", userHashId);
+            return StatusCode(500, new { error = "Internal server error" });
+        }
+    }
+
+    #endregion
 }
