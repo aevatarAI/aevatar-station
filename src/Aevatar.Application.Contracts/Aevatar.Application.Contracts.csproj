@@ -15,6 +15,7 @@
 
     <ItemGroup>
         <PackageReference Include="Aevatar.PermissionManagement" />
+        <PackageReference Include="GodGPT.GAgents" />
         <PackageReference Include="Microsoft.Orleans.Streaming" />
         <PackageReference Include="NJsonSchema" />
         <PackageReference Include="Volo.Abp.Dapr" />
