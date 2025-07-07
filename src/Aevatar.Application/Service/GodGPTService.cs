@@ -75,6 +75,7 @@ public interface IGodGPTService
     Task GuestChatAsync(string clientIp, string content, string chatId);
     Task<GuestChatLimitsResponseDto> GetGuestChatLimitsAsync(string clientIp);
     Task<bool> CanGuestChatAsync(string clientIp);
+    Task<QuantumShareResponseDto> GetShareKeyWordWithAIAsync(Guid sessionId, string? content, string? region, SessionType sessionType);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -548,6 +549,33 @@ public class GodGPTService : ApplicationService, IGodGPTService
             _logger.LogWarning(ex, "Failed to get max chat count from configuration, using default: 3");
             return 3;
         }
+    }
+
+    public async Task<QuantumShareResponseDto> GetShareKeyWordWithAIAsync(Guid sessionId, string? content, string? region, SessionType sessionType)
+    {
+        _logger.LogDebug($"[GodGPTService][GetShareKeyWordWithAIAsync] http start: sessionId={sessionId}, sessionType={sessionType}");
+        var responseContent = "";
+        try
+        {
+            var godChat = _clusterClient.GetGrain<IGodChat>(sessionId);
+            var chatId = Guid.NewGuid().ToString();
+            var response = await godChat.ChatWithHistory(sessionId, string.Empty, SessionTypeExtensions.SharePrompt,
+                chatId, null, true, region);
+            responseContent = response.IsNullOrEmpty() ? sessionType.GetDefaultContent() : response.FirstOrDefault().Content;
+            _logger.LogDebug(
+                $"[GodGPTService][GetShareKeyWordWithAIAsync] completed for sessionId={sessionId}, responseContent:{responseContent}");
+        }
+        catch (Exception ex)
+        {
+            responseContent = sessionType.GetDefaultContent();
+            _logger.LogError(ex, $"[GodGPTService][GetShareKeyWordWithAIAsync] error for sessionId={sessionId}, sessionType={sessionType}");
+        }
+
+        return new QuantumShareResponseDto()
+        {
+            Success = true,
+            Content = responseContent,
+        };
     }
 
     private bool TryGetUserIdFromMetadata(IDictionary<string, string> metadata, out string userId)
