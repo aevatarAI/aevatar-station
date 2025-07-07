@@ -15,6 +15,8 @@ using Aevatar.Application.Grains.ChatManager.UserQuota;
 using Aevatar.Application.Grains.Common.Constants;
 using Aevatar.Application.Grains.Common.Options;
 using Aevatar.Application.Grains.Invitation;
+using Aevatar.Application.Grains.UserBilling;
+using Aevatar.Application.Grains.UserQuota;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
 using Aevatar.GodGPT.Dtos;
@@ -249,23 +251,23 @@ public class GodGPTService : ApplicationService, IGodGPTService
 
     public async Task UpdateShowToastAsync(Guid currentUserId)
     {
-        var userQuotaGrain = _clusterClient.GetGrain<IUserQuotaGrain>(CommonHelper.GetUserQuotaGAgentId(currentUserId));
-        await userQuotaGrain.SetShownCreditsToastAsync(true);
+        var userQuotaGAgent = _clusterClient.GetGrain<IUserQuotaGAgent>(currentUserId);
+        await userQuotaGAgent.SetShownCreditsToastAsync(true);
     }
 
     public async Task<List<StripeProductDto>> GetStripeProductsAsync(Guid currentUserId)
     {
-        var userBillingGrain =
-            _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(currentUserId));
-        return await userBillingGrain.GetStripeProductsAsync();
+        var userBillingGAgent =
+            _clusterClient.GetGrain<IUserBillingGAgent>(currentUserId);
+        return await userBillingGAgent.GetStripeProductsAsync();
     }
 
     public async Task<string> CreateCheckoutSessionAsync(Guid currentUserId,
         CreateCheckoutSessionInput createCheckoutSessionInput)
     {
-        var userBillingGrain =
-            _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(currentUserId));
-        var result = await userBillingGrain.CreateCheckoutSessionAsync(new CreateCheckoutSessionDto
+        var userBillingGAgent =
+            _clusterClient.GetGrain<IUserBillingGAgent>(currentUserId);
+        var result = await userBillingGAgent.CreateCheckoutSessionAsync(new CreateCheckoutSessionDto
         {
             UserId = currentUserId.ToString(),
             PriceId = createCheckoutSessionInput.PriceId,
@@ -350,30 +352,30 @@ public class GodGPTService : ApplicationService, IGodGPTService
 
     public async Task<bool> HandleStripeWebhookEventAsync(Guid internalUserId, string json, StringValues stripeSignature)
     {
-        var userBillingGrain =
-            _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(internalUserId));
-        return await userBillingGrain.HandleStripeWebhookEventAsync(json, stripeSignature);
+        var userBillingGAgent =
+            _clusterClient.GetGrain<IUserBillingGAgent>(internalUserId);
+        return await userBillingGAgent.HandleStripeWebhookEventAsync(json, stripeSignature);
     }
 
     public async Task<List<PaymentSummary>> GetPaymentHistoryAsync(Guid currentUserId, GetPaymentHistoryInput input)
     {
-        var userBillingGrain =
-            _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(currentUserId));
-        return await userBillingGrain.GetPaymentHistoryAsync(input.Page, input.PageSize);
+        var userBillingGAgent =
+            _clusterClient.GetGrain<IUserBillingGAgent>(currentUserId);
+        return await userBillingGAgent.GetPaymentHistoryAsync(input.Page, input.PageSize);
     }
 
     public async Task<GetCustomerResponseDto> GetStripeCustomerAsync(Guid currentUserId)
     {
-        var userBillingGrain =
-            _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(currentUserId));
-        return await userBillingGrain.GetStripeCustomerAsync(currentUserId.ToString());
+        var userBillingGAgent =
+            _clusterClient.GetGrain<IUserBillingGAgent>(currentUserId);
+        return await userBillingGAgent.GetStripeCustomerAsync(currentUserId.ToString());
     }
 
     public async Task<SubscriptionResponseDto> CreateSubscriptionAsync(Guid currentUserId, CreateSubscriptionInput input)
     {
-        var userBillingGrain =
-            _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(currentUserId));
-        return await userBillingGrain.CreateSubscriptionAsync(new CreateSubscriptionDto
+        var userBillingGAgent =
+            _clusterClient.GetGrain<IUserBillingGAgent>(currentUserId);
+        return await userBillingGAgent.CreateSubscriptionAsync(new CreateSubscriptionDto
         {
             UserId = currentUserId,
             PriceId = input.PriceId,
@@ -388,9 +390,9 @@ public class GodGPTService : ApplicationService, IGodGPTService
 
     public async Task<CancelSubscriptionResponseDto> CancelSubscriptionAsync(Guid currentUserId, CancelSubscriptionInput input)
     {
-        var userBillingGrain =
-            _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(currentUserId));
-        return await userBillingGrain.CancelSubscriptionAsync(new CancelSubscriptionDto
+        var userBillingGAgent =
+            _clusterClient.GetGrain<IUserBillingGAgent>(currentUserId);
+        return await userBillingGAgent.CancelSubscriptionAsync(new CancelSubscriptionDto
         {
             UserId = currentUserId,
             SubscriptionId = input.SubscriptionId,
@@ -401,16 +403,16 @@ public class GodGPTService : ApplicationService, IGodGPTService
 
     public async Task<List<AppleProductDto>> GetAppleProductsAsync(Guid currentUserId)
     {
-        var userBillingGrain =
-            _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(currentUserId));
-        return await userBillingGrain.GetAppleProductsAsync();
+        var userBillingGAgent =
+            _clusterClient.GetGrain<IUserBillingGAgent>(currentUserId);
+        return await userBillingGAgent.GetAppleProductsAsync();
     }
 
     public async Task<AppStoreSubscriptionResponseDto> VerifyAppStoreReceiptAsync(Guid currentUserId, VerifyAppStoreReceiptInput input)
     {
-        var userBillingGrain =
-            _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(currentUserId));
-        return await userBillingGrain.CreateAppStoreSubscriptionAsync(new CreateAppStoreSubscriptionDto
+        var userBillingGAgent =
+            _clusterClient.GetGrain<IUserBillingGAgent>(currentUserId);
+        return await userBillingGAgent.CreateAppStoreSubscriptionAsync(new CreateAppStoreSubscriptionDto
         {
             UserId = currentUserId.ToString(),
             SandboxMode = input.SandboxMode,
@@ -420,16 +422,16 @@ public class GodGPTService : ApplicationService, IGodGPTService
 
     public async Task<GrainResultDto<int>> UpdateUserCreditsAsync(Guid currentUserId, UpdateUserCreditsInput input)
     {
-        var userQuotaGrain =
-            _clusterClient.GetGrain<IUserQuotaGrain>(CommonHelper.GetUserQuotaGAgentId(input.UserId));
-        return await userQuotaGrain.UpdateCreditsAsync(currentUserId.ToString(), input.Credits);
+        var userQuotaGAgent =
+            _clusterClient.GetGrain<IUserQuotaGAgent>(input.UserId);
+        return await userQuotaGAgent.UpdateCreditsAsync(currentUserId.ToString(), input.Credits);
     }
 
     public async Task<bool> HasActiveAppleSubscriptionAsync(Guid currentUserId)
     {
-        var userBillingGrain =
-            _clusterClient.GetGrain<IUserBillingGrain>(CommonHelper.GetUserBillingGAgentId(currentUserId));
-        return await userBillingGrain.HasActiveAppleSubscriptionAsync();
+        var userBillingGAgent =
+            _clusterClient.GetGrain<IUserBillingGAgent>(currentUserId);
+        return await userBillingGAgent.HasActiveAppleSubscriptionAsync();
     }
 
     public async Task<GetInvitationInfoResponse> GetInvitationInfoAsync(Guid currentUserId)
