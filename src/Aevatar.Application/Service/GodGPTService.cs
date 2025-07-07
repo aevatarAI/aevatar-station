@@ -97,50 +97,21 @@ public class GodGPTService : ApplicationService, IGodGPTService
     private readonly IClusterClient _clusterClient;
     private readonly ILogger<GodGPTService> _logger;
     private readonly IOptionsMonitor<StripeOptions> _stripeOptions;
-    private readonly IOptionsMonitor<TwitterRewardOptions> _twitterRewardOptions;
 
     private readonly StripeClient _stripeClient;
+    private const string PullTaskTargetId = "aevatar-twitter-monitor-PullTaskTargetId";
+    private const string RewardTaskTargetId = "aevatar-twitter-reward-RewardTaskTargetId";
 
-    public GodGPTService(IClusterClient clusterClient, ILogger<GodGPTService> logger, IOptionsMonitor<StripeOptions> stripeOptions, IOptionsMonitor<TwitterRewardOptions> twitterRewardOptions)
+    public GodGPTService(IClusterClient clusterClient, ILogger<GodGPTService> logger, IOptionsMonitor<StripeOptions> stripeOptions)
     {
         _clusterClient = clusterClient;
         _logger = logger;
         _stripeOptions = stripeOptions;
-        _twitterRewardOptions = twitterRewardOptions;
 
         _stripeClient = new StripeClient(_stripeOptions.CurrentValue.SecretKey);
-        
-        // Initialize Twitter Grains with configuration validation
-        InitializeTwitterGrains();
     }
     
-    /// <summary>
-    /// Initialize Twitter Grains with configuration validation and error handling
-    /// </summary>
-    private void InitializeTwitterGrains()
-    {
-        try
-        {
-            // Validate PullTaskTargetId configuration
-            if (string.IsNullOrEmpty(_twitterRewardOptions.CurrentValue.PullTaskTargetId))
-            {
-                _logger.LogError("Twitter configuration error: PullTaskTargetId is null or empty");
-                throw new SystemException("Init ITweetMonitorGrain, _twitterRewardOptions.CurrentValue.PullTaskTargetId is null");
-            }
-            
-            // Validate RewardTaskTargetId configuration
-            if (string.IsNullOrEmpty(_twitterRewardOptions.CurrentValue.RewardTaskTargetId))
-            {
-                _logger.LogError("Twitter configuration error: RewardTaskTargetId is null or empty");
-                throw new SystemException("Init ITwitterRewardGrain, _twitterRewardOptions.CurrentValue.RewardTaskTargetId is null");
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to initialize Twitter Grains");
-            throw;
-        }
-    }
+    
 
     public async Task<Guid> CreateSessionAsync(Guid userId, string systemLLM, string prompt, string? guider = null)
     {
@@ -546,8 +517,8 @@ public class GodGPTService : ApplicationService, IGodGPTService
             _logger.LogInformation("Starting manual tweet fetch operation");
             
             // Initialize Twitter Monitor Grain
-            ITwitterMonitorGrain tweetMonitorGrain = _clusterClient.GetGrain<ITwitterMonitorGrain>(_twitterRewardOptions.CurrentValue.PullTaskTargetId);
-            _logger.LogInformation("Twitter Monitor Grain initialized with target ID: {PullTaskTargetId}", _twitterRewardOptions.CurrentValue.PullTaskTargetId);
+            ITwitterMonitorGrain tweetMonitorGrain = _clusterClient.GetGrain<ITwitterMonitorGrain>(PullTaskTargetId);
+            _logger.LogInformation("Twitter Monitor Grain initialized with target ID: {PullTaskTargetId}", PullTaskTargetId);
 
             var result = await tweetMonitorGrain.FetchTweetsManuallyAsync();
             _logger.LogInformation("Manual tweet fetch operation completed with result: {Result}", result);
@@ -580,8 +551,8 @@ public class GodGPTService : ApplicationService, IGodGPTService
             };
             
             // Initialize Twitter Monitor Grain
-            ITwitterMonitorGrain tweetMonitorGrain = _clusterClient.GetGrain<ITwitterMonitorGrain>(_twitterRewardOptions.CurrentValue.PullTaskTargetId);
-            _logger.LogInformation("Twitter Monitor Grain initialized with target ID: {PullTaskTargetId}", _twitterRewardOptions.CurrentValue.PullTaskTargetId);
+            ITwitterMonitorGrain tweetMonitorGrain = _clusterClient.GetGrain<ITwitterMonitorGrain>(PullTaskTargetId);
+            _logger.LogInformation("Twitter Monitor Grain initialized with target ID: {PullTaskTargetId}", PullTaskTargetId);
             
             var result = await tweetMonitorGrain.RefetchTweetsByTimeRangeAsync(timeRange);
             _logger.LogInformation("Refetch tweets by time range completed with result: {Result}", result);
@@ -605,8 +576,8 @@ public class GodGPTService : ApplicationService, IGodGPTService
         {
             _logger.LogInformation("Starting tweet monitoring task");
             // Initialize Twitter Monitor Grain
-            ITwitterMonitorGrain tweetMonitorGrain = _clusterClient.GetGrain<ITwitterMonitorGrain>(_twitterRewardOptions.CurrentValue.PullTaskTargetId);
-            _logger.LogInformation("Twitter Monitor Grain initialized with target ID: {PullTaskTargetId}", _twitterRewardOptions.CurrentValue.PullTaskTargetId);
+            ITwitterMonitorGrain tweetMonitorGrain = _clusterClient.GetGrain<ITwitterMonitorGrain>(PullTaskTargetId);
+            _logger.LogInformation("Twitter Monitor Grain initialized with target ID: {PullTaskTargetId}", PullTaskTargetId);
             
             var result = await tweetMonitorGrain.StartMonitoringAsync();
             _logger.LogInformation("Tweet monitoring task start result: {Result}", result);
@@ -629,8 +600,8 @@ public class GodGPTService : ApplicationService, IGodGPTService
         {
             _logger.LogInformation("Stopping tweet monitoring task");
             // Initialize Twitter Monitor Grain
-            ITwitterMonitorGrain tweetMonitorGrain = _clusterClient.GetGrain<ITwitterMonitorGrain>(_twitterRewardOptions.CurrentValue.PullTaskTargetId);
-            _logger.LogInformation("Twitter Monitor Grain initialized with target ID: {PullTaskTargetId}", _twitterRewardOptions.CurrentValue.PullTaskTargetId);
+            ITwitterMonitorGrain tweetMonitorGrain = _clusterClient.GetGrain<ITwitterMonitorGrain>(PullTaskTargetId);
+            _logger.LogInformation("Twitter Monitor Grain initialized with target ID: {PullTaskTargetId}", PullTaskTargetId);
             
             var result = await tweetMonitorGrain.StopMonitoringAsync();
             _logger.LogInformation("Tweet monitoring task stop result: {Result}", result);
@@ -653,8 +624,8 @@ public class GodGPTService : ApplicationService, IGodGPTService
         {
             _logger.LogDebug("Getting tweet monitoring task status");
             // Initialize Twitter Monitor Grain
-            ITwitterMonitorGrain tweetMonitorGrain = _clusterClient.GetGrain<ITwitterMonitorGrain>(_twitterRewardOptions.CurrentValue.PullTaskTargetId);
-            _logger.LogInformation("Twitter Monitor Grain initialized with target ID: {PullTaskTargetId}", _twitterRewardOptions.CurrentValue.PullTaskTargetId);
+            ITwitterMonitorGrain tweetMonitorGrain = _clusterClient.GetGrain<ITwitterMonitorGrain>(PullTaskTargetId);
+            _logger.LogInformation("Twitter Monitor Grain initialized with target ID: {PullTaskTargetId}", PullTaskTargetId);
             
             var result = await tweetMonitorGrain.GetMonitoringStatusAsync();
             _logger.LogDebug("Retrieved tweet monitoring task status result: {Result}", result);
@@ -681,8 +652,8 @@ public class GodGPTService : ApplicationService, IGodGPTService
             _logger.LogInformation("Starting manual reward calculation for date: {TargetDate}", targetDateUtcSeconds);
 
             // Initialize Twitter Reward Grain
-            ITwitterRewardGrain twitterRewardGrain = _clusterClient.GetGrain<ITwitterRewardGrain>(_twitterRewardOptions.CurrentValue.RewardTaskTargetId);
-            _logger.LogInformation("Twitter Reward Grain initialized with target ID: {RewardTaskTargetId}", _twitterRewardOptions.CurrentValue.RewardTaskTargetId);
+            ITwitterRewardGrain twitterRewardGrain = _clusterClient.GetGrain<ITwitterRewardGrain>(RewardTaskTargetId);
+            _logger.LogInformation("Twitter Reward Grain initialized with target ID: {RewardTaskTargetId}", RewardTaskTargetId);
             
             // Convert UTC timestamp in seconds to UTC DateTime and truncate to day precision (ignore time part)
             var targetDate = DateTimeOffset.FromUnixTimeSeconds(targetDateUtcSeconds).UtcDateTime.Date;
@@ -710,8 +681,8 @@ public class GodGPTService : ApplicationService, IGodGPTService
         {
             _logger.LogInformation("Starting clear reward records for date: {TargetDate}", targetDateUtcSeconds);
             // Initialize Twitter Reward Grain
-            ITwitterRewardGrain twitterRewardGrain = _clusterClient.GetGrain<ITwitterRewardGrain>(_twitterRewardOptions.CurrentValue.RewardTaskTargetId);
-            _logger.LogInformation("Twitter Reward Grain initialized with target ID: {RewardTaskTargetId}", _twitterRewardOptions.CurrentValue.RewardTaskTargetId);
+            ITwitterRewardGrain twitterRewardGrain = _clusterClient.GetGrain<ITwitterRewardGrain>(RewardTaskTargetId);
+            _logger.LogInformation("Twitter Reward Grain initialized with target ID: {RewardTaskTargetId}", RewardTaskTargetId);
             
             // Convert UTC timestamp in seconds to UTC DateTime and truncate to day precision (ignore time part)
             var targetDate = DateTimeOffset.FromUnixTimeSeconds(targetDateUtcSeconds).UtcDateTime.Date;
@@ -741,8 +712,8 @@ public class GodGPTService : ApplicationService, IGodGPTService
         {
             _logger.LogInformation("Starting reward calculation task");
             // Initialize Twitter Reward Grain
-            ITwitterRewardGrain twitterRewardGrain = _clusterClient.GetGrain<ITwitterRewardGrain>(_twitterRewardOptions.CurrentValue.RewardTaskTargetId);
-            _logger.LogInformation("Twitter Reward Grain initialized with target ID: {RewardTaskTargetId}", _twitterRewardOptions.CurrentValue.RewardTaskTargetId);
+            ITwitterRewardGrain twitterRewardGrain = _clusterClient.GetGrain<ITwitterRewardGrain>(RewardTaskTargetId);
+            _logger.LogInformation("Twitter Reward Grain initialized with target ID: {RewardTaskTargetId}", RewardTaskTargetId);
             var result = await twitterRewardGrain.StartRewardCalculationAsync();
             _logger.LogInformation("Reward calculation task start result: {Result}", result);
             return new TwitterOperationResultDto { IsSuccess = result?.IsSuccess ?? false, ErrorMessage = result?.ErrorMessage };
@@ -764,8 +735,8 @@ public class GodGPTService : ApplicationService, IGodGPTService
         {
             _logger.LogInformation("Stopping reward calculation task");
             // Initialize Twitter Reward Grain
-            ITwitterRewardGrain twitterRewardGrain = _clusterClient.GetGrain<ITwitterRewardGrain>(_twitterRewardOptions.CurrentValue.RewardTaskTargetId);
-            _logger.LogInformation("Twitter Reward Grain initialized with target ID: {RewardTaskTargetId}", _twitterRewardOptions.CurrentValue.RewardTaskTargetId);
+            ITwitterRewardGrain twitterRewardGrain = _clusterClient.GetGrain<ITwitterRewardGrain>(RewardTaskTargetId);
+            _logger.LogInformation("Twitter Reward Grain initialized with target ID: {RewardTaskTargetId}", RewardTaskTargetId);
             var result = await twitterRewardGrain.StopRewardCalculationAsync();
             _logger.LogInformation("Reward calculation task stop result: {Result}", result);
             return new TwitterOperationResultDto { IsSuccess = result?.IsSuccess ?? false, ErrorMessage = result?.ErrorMessage };
