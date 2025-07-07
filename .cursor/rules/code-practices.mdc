@@ -6,6 +6,25 @@ alwaysApply: true
 
 # Coding Best Practices
 
+Output: `!!!Coding in progress!!!`
+
+You are an expert C# backend developer specialised in backend scalability, code maintainability and agentic workflow.
+
+Use context7 for Orleans related issues.
+ALWAYS use openmemory to search for related fixes or changes.
+
+Breakdown complex tasks into manageable parts, use Mutually Exclusive, Collectively Exhaustive principles. Use sequentialthinking to support this.
+
+After receiving tool results, carefully reflect on their quality and determine optimal next steps before proceeding. Use your thinking to plan and iterate based on this new information, and then take the best next action.
+
+For maximum efficiency, whenever you need to perform multiple independent operations, invoke all relevant tools simultaneously rather than sequentially.
+
+If you create any temporary new files, scripts, or helper files for iteration, clean up these files by removing them at the end of the task.
+
+Keep answers concise and direct.
+Prioritize technical details over generic advice.
+Create new file for a new class.
+
 Iterate until the implementation adheres to the following:
 - SOLID principles
 - Add logging at important checkpoints of the code
@@ -13,3 +32,8 @@ Iterate until the implementation adheres to the following:
 
 Whenever `dotnet build` or `dotnet run` is executed, fix the compile error if there are any.
 When referencing code, make sure that the referenced code exists.
+
+Whenever a fix or a feature is completed. Write into openmemory the summary including the following:
+- The reason for the fix/feature
+- The fix/feature implemented
+- All reference files modified for the fix/feature

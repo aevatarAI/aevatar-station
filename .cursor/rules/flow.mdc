@@ -69,9 +69,13 @@ project_tracker.md = [project_tracker.md](mdc:ai/project_tracker.md)
    e. 标记[功能名]在project_tracker.md为已完成
 
 6. 【代码集成】
-   a. 提交仓库内所有未提交内容, 全部加进来: `git add -A&& git commit -a -m "Function implementation: Function name"`
+   a. 提交仓库内所有未提交内容, 全部加进来: `git add -A&& git commit -a -m "实现功能: 功能名"`
    b. 同步: `git pull origin dev --no-edit`
-   c. 解决冲突并验证: `git add . && git commit -m "Resolve merge conflicts" --no-edit`
+   c. 解决冲突并验证: `git add . && git commit -m "解决合并冲突" --no-edit`
+   d. 合并到dev: `git checkout dev && git merge feature/功能名 --no-edit`
+   e. 推送: `git push origin dev`
+
+7. 输出"继续自动化开发", 回到[开发循环起点]
 
 【⚠️ 命令防卡住策略】
 - 所有命令设置超时: 命令前加 `timeout 30s` (如: `timeout 30s git pull`)
