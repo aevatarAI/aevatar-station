@@ -180,6 +180,17 @@ public class AevatarDeveloperHostModule : AbpModule
         app.UseCors();
         app.UseAuthentication();
         app.UseAuthorization();
+        
+        // Redirect root path to swagger
+        app.Use(async (context, next) =>
+        {
+            if (context.Request.Path == "/" && context.Request.Method == "GET")
+            {
+                context.Response.Redirect("/swagger");
+                return;
+            }
+            await next();
+        });
 
         app.UseUnitOfWork();
         app.UseDynamicClaims();
