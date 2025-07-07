@@ -185,6 +185,8 @@ public class AevatarDeveloperHostModule : AbpModule
         app.UseDynamicClaims();
         app.Map("/api/gotgpt/chat", config => { config.UseMiddleware<ChatMiddleware>(); });
         app.Map("/api/godgpt/guest/chat", config => { config.UseMiddleware<ChatMiddleware>(); });
+        app.Map("/api/godgpt/voice/chat", config => { config.UseMiddleware<ChatMiddleware>(); });
+
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapHealthChecks("/health");

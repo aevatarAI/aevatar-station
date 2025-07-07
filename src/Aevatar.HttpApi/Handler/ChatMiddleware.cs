@@ -54,6 +54,12 @@ public class ChatMiddleware
             await HandleAuthenticatedChatAsync(context);
             return;
         }
+        // Handle voice chat
+        else if (pathBase == "/api/godgpt/voice/chat" || fullPath.Contains("/api/godgpt/voice/chat"))
+        {
+            await HandleVoiceChatAsync(context);
+            return;
+        }
         // Handle guest (anonymous) chat
         else if (pathBase == "/api/godgpt/guest/chat" || fullPath.Contains("/api/godgpt/guest/chat"))
         {
@@ -394,6 +400,194 @@ public class ChatMiddleware
         catch (Exception ex)
         {
             _logger.LogError(ex, "[GuestChatMiddleware] Unexpected error for user: {0}", userHashId);
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            await context.Response.WriteAsync("Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Handle voice chat requests with streaming SSE response
+    /// </summary>
+    /// <param name="context">HTTP context</param>
+    private async Task HandleVoiceChatAsync(HttpContext context)
+    {
+        // Check user authentication
+        if (context.User?.Identity == null || !context.User.Identity.IsAuthenticated)
+        {
+            _logger.LogDebug("[VoiceChatMiddleware] Unauthorized: User is not authenticated");
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await context.Response.WriteAsync("Unauthorized: User is not authenticated.");
+            await context.Response.Body.FlushAsync();
+            return;
+        }
+        
+        // Extract user ID from claims
+        var userIdStr = context.User.FindFirst("sub")?.Value ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (userIdStr.IsNullOrWhiteSpace() || !Guid.TryParse(userIdStr, out var userId))
+        {
+            _logger.LogDebug("[VoiceChatMiddleware] Unauthorized: Unable to retrieve UserId.");
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await context.Response.WriteAsync("Unauthorized: Unable to retrieve UserId.");
+            await context.Response.Body.FlushAsync();
+            return;
+        }
+
+        // Parse request body
+        var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
+        var request = JsonConvert.DeserializeObject<VoiceChatRequestDto>(body);
+        
+        if (request == null || string.IsNullOrWhiteSpace(request.Content))
+        {
+            _logger.LogWarning("[VoiceChatMiddleware] Invalid request body for user: {0}", userId);
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await context.Response.WriteAsync("Invalid request body");
+            return;
+        }
+
+        try
+        {
+            var stopwatch = Stopwatch.StartNew();
+            _logger.LogDebug("[VoiceChatMiddleware] HTTP start - SessionId: {0}, UserId: {1}, MessageType: {2}, VoiceLanguage: {3}",
+                request.SessionId, userId, request.MessageType, request.VoiceLanguage);
+
+            // Validate session access
+            var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
+            if (!await manager.IsUserSessionAsync(request.SessionId))
+            {
+                _logger.LogError("[VoiceChatMiddleware] Session not found or access denied - SessionId: {0}, UserId: {1}",
+                    request.SessionId, userId);
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                await context.Response.WriteAsync($"Unable to load conversation {request.SessionId}");
+                await context.Response.Body.FlushAsync();
+                return;
+            }
+
+            // Set up streaming infrastructure
+            var streamProvider = _clusterClient.GetStreamProvider("Aevatar");
+            var streamId = StreamId.Create(_aevatarOptions.Value.StreamNamespace, request.SessionId);
+            _logger.LogDebug("[VoiceChatMiddleware] SessionId: {0}, Namespace: {1}, StreamId: {2}",
+                request.SessionId, _aevatarOptions.Value.StreamNamespace, streamId.ToString());
+
+            // Set SSE response headers
+            context.Response.ContentType = "text/event-stream";
+            context.Response.Headers.Connection = "keep-alive";
+            context.Response.Headers.CacheControl = "no-cache";
+            
+            var responseStream = streamProvider.GetStream<ResponseStreamGodChat>(streamId);
+            var godChat = _clusterClient.GetGrain<IGodChat>(request.SessionId);
+
+            // Generate unique chat ID and initiate voice chat
+            var chatId = Guid.NewGuid().ToString();
+            await godChat.StreamVoiceChatWithSessionAsync(request.SessionId, string.Empty, request.Content,
+                chatId, null, true, request.Region, request.MessageType, request.VoiceLanguage);
+            
+            _logger.LogDebug("[VoiceChatMiddleware] Voice chat initiated - SessionId: {0}, ChatId: {1}",
+                request.SessionId, chatId);
+
+            // Handle streaming response
+            var exitSignal = new TaskCompletionSource();
+            StreamSubscriptionHandle<ResponseStreamGodChat>? subscription = null;
+            var firstFlag = false;
+            var ifLastChunk = false;
+
+            subscription = await responseStream.SubscribeAsync(async (chatResponse, token) =>
+            {
+                if (chatResponse.ChatId != chatId)
+                {
+                    return;
+                }
+
+                if (!firstFlag)
+                {
+                    await context.Response.StartAsync();
+                    firstFlag = true;
+                    _logger.LogDebug("[VoiceChatMiddleware] First message received - SessionId: {0}, Duration: {1}ms",
+                        request.SessionId, stopwatch.ElapsedMilliseconds);
+                }
+
+                var responseData = $"data: {JsonConvert.SerializeObject(chatResponse.ConvertToHttpResponse())}\n\n";
+                await context.Response.WriteAsync(responseData);
+                await context.Response.Body.FlushAsync();
+
+                if (chatResponse.IsLastChunk)
+                {
+                    await context.Response.WriteAsync("event: completed\n");
+                    context.Response.Body.Close();
+                    ifLastChunk = true;
+                    exitSignal.TrySetResult();
+                    if (subscription != null)
+                    {
+                        await subscription.UnsubscribeAsync();
+                    }
+                }
+            }, ex =>
+            {
+                _logger.LogError("[VoiceChatMiddleware] Stream error - SessionId: {0}, ChatId: {1}, Error: {2}",
+                    request.SessionId, chatId, ex.Message);
+                exitSignal.TrySetException(ex);
+                return Task.CompletedTask;
+            }, () =>
+            {
+                _logger.LogDebug("[VoiceChatMiddleware] Stream completed - SessionId: {0}", request.SessionId);
+                exitSignal.TrySetResult();
+                return Task.CompletedTask;
+            });
+
+            try
+            {
+                await exitSignal.Task.WaitAsync(context.RequestAborted);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("[VoiceChatMiddleware] Error waiting for stream completion - SessionId: {0}, Error: {1}",
+                    request.SessionId, ex.Message);
+            }
+            finally
+            {
+                if (subscription != null)
+                {
+                    await subscription.UnsubscribeAsync();
+                }
+            }
+
+            if (!ifLastChunk)
+            {
+                _logger.LogDebug("[VoiceChatMiddleware] No LastChunk received - SessionId: {0}, ChatId: {1}",
+                    request.SessionId, chatId);
+            }
+
+            _logger.LogDebug("[VoiceChatMiddleware] Voice chat completed - SessionId: {0}, Duration: {1}ms",
+                request.SessionId, stopwatch.ElapsedMilliseconds);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Handle voice chat specific errors with appropriate status codes
+            var statusCode = StatusCodes.Status500InternalServerError;
+            if (ex.Data.Contains("Code") && int.TryParse(ex.Data["Code"]?.ToString(), out var code))
+            {
+                if (code == ExecuteActionStatus.InsufficientCredits)
+                {
+                    statusCode = StatusCodes.Status402PaymentRequired;
+                } 
+                else if (code == ExecuteActionStatus.RateLimitExceeded)
+                {
+                    statusCode = StatusCodes.Status429TooManyRequests;
+                }
+                // Ensure we never use business error codes as HTTP status codes
+                else if (code >= 10000) // Business error codes are typically large numbers
+                {
+                    statusCode = StatusCodes.Status400BadRequest;
+                    _logger.LogWarning("[VoiceChatMiddleware] Business error code {0} converted to 400 for SessionId: {1}", code, request.SessionId);
+                }
+            }
+            
+            context.Response.StatusCode = statusCode;
+            await context.Response.WriteAsync(ex.Message);
+            _logger.LogWarning(ex, "[VoiceChatMiddleware] Operation error - SessionId: {0}, Status: {1}", request.SessionId, statusCode);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[VoiceChatMiddleware] Unexpected error - SessionId: {0}", request.SessionId);
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
             await context.Response.WriteAsync("Internal server error");
         }
