@@ -52,7 +52,7 @@ namespace Aevatar.Service
             {
                 var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
                 var userProfile = await manager.GetUserProfileAsync();
-                fullName = !string.IsNullOrWhiteSpace(userProfile?.FullName) ? userProfile.FullName : null;
+                //fullName = !string.IsNullOrWhiteSpace(userProfile?.FullName) ? userProfile.FullName : null;
             }
             catch (Exception ex)
             {

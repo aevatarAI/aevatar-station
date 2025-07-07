@@ -480,4 +480,18 @@ public class GodGPTController : AevatarController
     }
 
     #endregion
+    
+    [HttpGet("godgpt/share/keyword")]
+    public async Task<QuantumShareResponseDto> GetShareKeyWordWithAIAsync(
+        [FromQuery] Guid sessionId, 
+        [FromQuery] string? content, 
+        [FromQuery] string? region, 
+        [FromQuery] SessionType sessionType)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var response = await _godGptService.GetShareKeyWordWithAIAsync(sessionId, content, region, sessionType);
+        _logger.LogDebug(
+            $"[GodGPTController][GetShareKeyWordWithAIAsync] completed for sessionId={sessionId}, duration: {stopwatch.ElapsedMilliseconds}ms");
+        return response;
+    }
 }
