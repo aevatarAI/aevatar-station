@@ -73,7 +73,9 @@ Allow users to inspect the agent's state after workflow execution for troublesho
 - No ability to modify state from the overlay.
 ```
 
-When creating detail specification in the form of INVEST story, create a story document in markdown format with the name `{epic-index}-{epic-description}.md` and place them in the docs/stories folder. It should follow the following example structure:
+When creating epics, the name of the document should be `{epic-category-index}-{epic-category-description}.md` and placed in the docs/epics folder.
+
+When creating detail specification in the form of INVEST story, create a story document in markdown format with the name `{epic-category-index}-{epic-index}-{epic-short-description}-stories.md` and place them in the docs/stories folder. It should follow the following example structure:
 Example 1 - 
 ```
 ---

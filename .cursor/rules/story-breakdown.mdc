@@ -30,7 +30,7 @@ Output only the following:
 
 When estimating the time needed to implement the story, make sure to include the time needed to do extensive testing.
 
-Do not include generic advice, explanations, or process steps. Output into a markdown file with the name `{epic-index}-{epic-short-description}-stories.md` in the folder docs/stories.
+Do not include generic advice, explanations, or process steps. Output into a markdown file with the name `{epic-category-index}-{epic-index}-{epic-short-description}-stories.md` in the folder docs/stories.
 
 Example output:
 ```
