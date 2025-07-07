@@ -341,81 +341,74 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         _logger.LogInformation("[Lucene Query] Index: {Index}, Query: {QueryString}",
             queryDto.StateName, queryDto.QueryString);
 
-        try
+        var sortOptions = new List<SortOptions>();
+        foreach (var sortField in queryDto.SortFields)
         {
-            var sortOptions = new List<SortOptions>();
-            foreach (var sortField in queryDto.SortFields)
+            var parts = sortField.Split(':', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length != 2)
             {
-                var parts = sortField.Split(':', StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length != 2)
-                {
-                    _logger.LogWarning("Invalid sort field: {SortField}", sortField);
-                    continue;
-                }
-
-                var fieldName = parts[0].Trim();
-                var sortOrder = parts[1].Trim().ToLower();
-                if (sortOrder != "asc" && sortOrder != "desc")
-                {
-                    _logger.LogWarning("Invalid sort order for field: {Field}. Expected 'asc' or 'desc'.", fieldName);
-                    continue;
-                }
-
-                var order = sortOrder == "desc" ? SortOrder.Desc : SortOrder.Asc;
-
-                var field = new Field(fieldName);
-                var fieldSort = new FieldSort { Order = order };
-                sortOptions.Add(SortOptions.Field(field, fieldSort));
+                _logger.LogWarning("Invalid sort field: {SortField}", sortField);
+                continue;
             }
 
-            var from = queryDto.PageIndex * queryDto.PageSize;
-            var size = queryDto.PageSize;
-
-            var index = GetIndexName(queryDto.StateName);
-
-
-            var searchRequest = new SearchRequest<Dictionary<string, object>>(index)
+            var fieldName = parts[0].Trim();
+            var sortOrder = parts[1].Trim().ToLower();
+            if (sortOrder != "asc" && sortOrder != "desc")
             {
-                From = from,
-                Size = size,
+                _logger.LogWarning("Invalid sort order for field: {Field}. Expected 'asc' or 'desc'.", fieldName);
+                continue;
+            }
 
-                Sort = sortOptions
+            var order = sortOrder == "desc" ? SortOrder.Desc : SortOrder.Asc;
+
+            var field = new Field(fieldName);
+            var fieldSort = new FieldSort { Order = order };
+            sortOptions.Add(SortOptions.Field(field, fieldSort));
+        }
+
+        var from = queryDto.PageIndex * queryDto.PageSize;
+        var size = queryDto.PageSize;
+
+        var index = GetIndexName(queryDto.StateName);
+
+
+        var searchRequest = new SearchRequest<Dictionary<string, object>>(index)
+        {
+            From = from,
+            Size = size,
+
+            Sort = sortOptions
+        };
+        if (!queryDto.QueryString.IsNullOrEmpty())
+        {
+            searchRequest.Query = new QueryStringQuery
+            {
+                Query = queryDto.QueryString,
+                AllowLeadingWildcard = false
             };
-            if (!queryDto.QueryString.IsNullOrEmpty())
-            {
-                searchRequest.Query = new QueryStringQuery
-                {
-                    Query = queryDto.QueryString,
-                    AllowLeadingWildcard = false
-                };
-            }
-
-            var response = await _client.SearchAsync<Dictionary<string, object>>(searchRequest);
-
-            if (!response.IsValidResponse)
-            {
-                var error = response.ElasticsearchServerError?.Error?.Reason ?? "Unknown error";
-                _logger.LogError("Elasticsearch query failed: {Error}, Debug: {Debug}",
-                    error, response.DebugInformation);
-                throw new UserFriendlyException($"ES Query Failed: {error}");
-            }
-
-            var total = response.Total;
-            var results = response.Hits
-                .Select(h => ConvertJsonElementToDictionary(h.Source))
-                .Where(s => s != null)
-                .ToList();
-
-            _logger.LogInformation("[Lucene Query] Index: {Index}, Found {Count} results",
-                queryDto.StateName, results.Count);
-
-            return new PagedResultDto<Dictionary<string, object>>(total, results);
         }
-        catch (Exception ex)
+
+        var response = await _client.SearchAsync<Dictionary<string, object>>(searchRequest);
+
+        if (!response.IsValidResponse)
         {
-            _logger.LogError(ex, "[Lucene Query] Exception occurred. Index: {Index}", queryDto.StateName);
-            throw new UserFriendlyException(ex.Message);
+            var error = response.ElasticsearchServerError?.Error?.Reason ?? "Unknown error";
+            var errorType = response.ElasticsearchServerError?.Error?.Type;
+            _logger.LogError("Elasticsearch query failed: {Error}, Debug: {Debug}",
+                error, response.DebugInformation);
+            throw new UserFriendlyException($"ES Query Failed: {error}", code: errorType);
         }
+
+        var total = response.Total;
+        var results = response.Hits
+            .Select(h => ConvertJsonElementToDictionary(h.Source))
+            .Where(s => s != null)
+            .ToList();
+
+        _logger.LogInformation("[Lucene Query] Index: {Index}, Found {Count} results",
+            queryDto.StateName, results.Count);
+
+        return new PagedResultDto<Dictionary<string, object>>(total, results);
     }
 
     private static Dictionary<string, object?> ConvertJsonElementToDictionary(Dictionary<string, object?> source)
