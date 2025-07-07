@@ -479,7 +479,7 @@ public class ChatMiddleware
             // Generate unique chat ID and initiate voice chat
             var chatId = Guid.NewGuid().ToString();
             await godChat.StreamVoiceChatWithSessionAsync(request.SessionId, string.Empty, request.Content, "",
-                chatId, null, true, request.Region,request.VoiceLanguage);
+                chatId, null, true, request.Region, (int)request.VoiceLanguage);
             _logger.LogDebug("[VoiceChatMiddleware] Voice chat initiated - SessionId: {0}, ChatId: {1}",
                 request.SessionId, chatId);
 
