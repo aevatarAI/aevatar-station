@@ -37,4 +37,9 @@ public class VoiceChatRequestDto
     /// Voice language type - defaults to English if not specified
     /// </summary>
     public VoiceLanguageEnum VoiceLanguage { get; set; } = VoiceLanguageEnum.English;
+    
+    /// <summary>
+    /// Duration of the voice message in seconds (provided by frontend)
+    /// </summary>
+    public double VoiceDurationSeconds { get; set; }
 } 
