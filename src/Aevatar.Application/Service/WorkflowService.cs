@@ -88,7 +88,6 @@ public class WorkflowService : ApplicationService, IWorkflowService
                 AiAgentId = aiAgentDto.Id,
                 TwitterAgentId = twitterAgentDto.Id,
                 SocialAgentId = socialAgentDto.Id,
-                WorkflowUnits = workflowUnits,
                 Success = true,
                 Message = "Workflow created successfully, all agents initialized"
             };
