@@ -17,32 +17,12 @@
         <PackageReference Include="Volo.Abp.EventBus.Abstractions"/>
         <PackageReference Include="Aevatar.GAgents.AIGAgent"/>
         <PackageReference Include="Aevatar.GAgents.SemanticKernel"/>
-<<<<<<< HEAD:src/Aevatar.Application.Grains/Aevatar.Application.Grains.csproj
-        <PackageReference Include="Aevatar.PermissionManagement"/>
-
-
-=======
->>>>>>> origin/dev:station/src/Aevatar.Application.Grains/Aevatar.Application.Grains.csproj
         <PackageReference Include="Aevatar.GAgents.AI.Abstractions"/>
-        <PackageReference Include="MineAiFun.GAgents"/>
-        <PackageReference Include="Aevatar.GAgents.SocialGAgent"/>
-        <PackageReference Include="Orleans.SyncWork"/>
         <PackageReference Include="Aevatar.GAgents.Twitter"/>
         <PackageReference Include="Aevatar.GAgents.GroupChat"/>
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\..\framework\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
-        <ProjectReference Include="..\..\..\signalR\src\Aevatar.SignalR\Aevatar.SignalR.csproj" />
-        <ProjectReference Include="..\..\..\framework\src\Aevatar.PermissionManagement\Aevatar.PermissionManagement.csproj" />
-        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
-        <PackageReference Include="Aevatar.PermissionManagement"/>
-
-
-        <PackageReference Include="MineAiFun.GAgents"/>
-        <PackageReference Include="Aevatar.GAgents.SocialGAgent"/>
-        <PackageReference Include="Orleans.SyncWork"/>
-        <PackageReference Include="Aevatar.GAgents.GroupChat"/>
         <ProjectReference Include="..\..\..\framework\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
         <ProjectReference Include="..\..\..\signalR\src\Aevatar.SignalR\Aevatar.SignalR.csproj" />
         <ProjectReference Include="..\..\..\framework\src\Aevatar.PermissionManagement\Aevatar.PermissionManagement.csproj" />
