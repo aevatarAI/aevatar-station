@@ -13,5 +13,5 @@ public class TwitterOperationResultDto
     /// <summary>
     /// Error message when operation fails, null when successful
     /// </summary>
-    public string ErrorMessage { get; set; }
+    public string? ErrorMessage { get; set; }
 } 

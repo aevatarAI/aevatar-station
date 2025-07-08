@@ -10,12 +10,12 @@ public class UserRewardRecordDto
     /// <summary>
     /// User identifier
     /// </summary>
-    public string UserId { get; set; }
+    public required string UserId { get; set; }
     
     /// <summary>
     /// Twitter username
     /// </summary>
-    public string TwitterUsername { get; set; }
+    public required string TwitterUsername { get; set; }
     
     /// <summary>
     /// Reward amount in credits
@@ -30,15 +30,15 @@ public class UserRewardRecordDto
     /// <summary>
     /// Reason for the reward
     /// </summary>
-    public string RewardReason { get; set; }
+    public required string RewardReason { get; set; }
     
     /// <summary>
     /// Transaction ID or reference
     /// </summary>
-    public string TransactionId { get; set; }
+    public required string TransactionId { get; set; }
     
     /// <summary>
     /// Status of the reward (e.g., "Pending", "Completed", "Failed")
     /// </summary>
-    public string Status { get; set; }
+    public required string Status { get; set; }
 } 

@@ -14,10 +14,10 @@ public class TwitterApiResultDto<T>
     /// <summary>
     /// Error message when operation fails, null when successful
     /// </summary>
-    public string ErrorMessage { get; set; }
+    public string? ErrorMessage { get; set; }
     
     /// <summary>
     /// The actual data returned by the operation
     /// </summary>
-    public T Data { get; set; }
+    public T? Data { get; set; }
 } 
