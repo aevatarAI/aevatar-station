@@ -1,4 +1,6 @@
 using Aevatar.CQRS;
+using Aevatar.GAgents.Common;
+using Aevatar.GAgents.SocialChat;
 using Aevatar.GAgents.Twitter;
 using Aevatar.Neo4JStore;
 using Org.BouncyCastle.Asn1.X509.Qualified;
@@ -14,10 +16,12 @@ namespace Aevatar.Application.Grains;
     typeof(AevatarApplicationContractsModule),
     typeof(AevatarCQRSModule),
     typeof(AevatarNeo4JStoreModule),
-    typeof(AevatarGAgentsTwitterModule)
+    typeof(AevatarGAgentsTwitterModule),
+    typeof(AISmartGAgentSocialGAgentModule),
+    typeof(AevatarGAgentsCommonModule)
 )]
 public class AIApplicationGrainsModule : AbpModule
- 
+
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
