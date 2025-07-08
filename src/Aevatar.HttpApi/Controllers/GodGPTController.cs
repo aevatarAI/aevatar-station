@@ -18,6 +18,7 @@ using Aevatar.GodGPT.Dtos;
 using Aevatar.Quantum;
 using Aevatar.Service;
 using Asp.Versioning;
+using GodGPT.GAgents.SpeechChat;
 using HandlebarsDotNet;
 using Json.Schema;
 using Microsoft.AspNetCore.Authorization;
@@ -478,6 +479,15 @@ public class GodGPTController : AevatarController
             return StatusCode(500, new { error = "Internal server error" });
         }
     }
-
+    [HttpPost("godgpt/voice/set")]
+    public async Task<UserProfileDto> SetVoiceLanguageAsync(VoiceLanguageEnum voiceLanguage)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var userProfileDto = await _godGptService.SetVoiceLanguageAsync(currentUserId, voiceLanguage);
+        _logger.LogDebug("[GodGPTController][SetVoiceLanguageAsync] userId: {0},voiceLanguage:{1} duration: {2}ms",
+            currentUserId, voiceLanguage, stopwatch.ElapsedMilliseconds);
+        return userProfileDto;
+    }
     #endregion
 }
