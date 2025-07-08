@@ -1,11 +1,9 @@
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Aevatar.GodGPT.Dtos;
 using Aevatar.Service;
 using Asp.Versioning;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Orleans;
@@ -218,7 +216,7 @@ public class GodGPTTwitterManagementController : AevatarController
     /// <param name="userId">User ID to retrieve rewards for</param>
     /// <returns>TwitterApiResultDto containing dictionary of date keys and reward records</returns>
     [HttpGet("rewards/user/{userId}")]
-    public async Task<TwitterApiResultDto<Dictionary<string, List<UserRewardRecordDto>>>> GetUserRewardsByUserIdAsync([FromRoute] string userId)
+    public async Task<Dictionary<string, List<ManagerUserRewardRecordDto>>> GetUserRewardsByUserIdAsync([FromRoute] string userId)
     {
         var stopwatch = Stopwatch.StartNew();
         _logger.LogInformation("[GodGPTTwitterManagementController][GetUserRewardsByUserIdAsync] Getting user rewards for user ID: {UserId}", userId);
@@ -226,7 +224,7 @@ public class GodGPTTwitterManagementController : AevatarController
         var result = await _godGptService.GetUserRewardsByUserIdAsync(userId);
         
         _logger.LogDebug("[GodGPTTwitterManagementController][GetUserRewardsByUserIdAsync] completed with success: {Success}, duration: {Duration}ms",
-            result.IsSuccess, stopwatch.ElapsedMilliseconds);
+            true, stopwatch.ElapsedMilliseconds);
         
         return result;
     }

@@ -101,9 +101,9 @@ public interface IGodGPTService
     Task<TwitterOperationResultDto> StopRewardCalculationAsync();
     
     /// <summary>
-    /// Get user rewards by user ID (returns dateKey and filtered UserRewardRecordDto list)
+    /// Get user rewards by user ID (returns dateKey and filtered ManagerUserRewardRecordDto list)
     /// </summary>
-    Task<TwitterApiResultDto<Dictionary<string, List<UserRewardRecordDto>>>> GetUserRewardsByUserIdAsync(string userId);
+    Task<Dictionary<string, List<ManagerUserRewardRecordDto>>> GetUserRewardsByUserIdAsync(string userId);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -881,11 +881,11 @@ public class GodGPTService : ApplicationService, IGodGPTService
     }
 
     /// <summary>
-    /// Get user rewards by user ID (returns dateKey and filtered UserRewardRecordDto list)
+    /// Get user rewards by user ID (returns dateKey and filtered ManagerUserRewardRecordDto list)
     /// </summary>
     /// <param name="userId">User ID to retrieve rewards for</param>
     /// <returns>TwitterApiResultDto containing dictionary of date keys and reward records</returns>
-    public async Task<TwitterApiResultDto<Dictionary<string, List<UserRewardRecordDto>>>> GetUserRewardsByUserIdAsync(string userId)
+    public async Task<Dictionary<string, List<ManagerUserRewardRecordDto>>> GetUserRewardsByUserIdAsync(string userId)
     {
         try
         {
@@ -898,23 +898,44 @@ public class GodGPTService : ApplicationService, IGodGPTService
             var result = await twitterRewardGrain.GetUserRewardsByUserIdAsync(userId);
             _logger.LogInformation("Get user rewards completed for user ID: {UserId} with result: {Result}", userId, result);
             
-            return new TwitterApiResultDto<Dictionary<string, List<UserRewardRecordDto>>> 
-            { 
-                IsSuccess = result?.IsSuccess ?? false, 
-                ErrorMessage = result?.ErrorMessage,
-                Data = result?.Data
-            };
+            // Convert UserRewardRecordDto to ManagerUserRewardRecordDto
+            if (result?.Data != null)
+            {
+                var convertedData = new Dictionary<string, List<ManagerUserRewardRecordDto>>();
+                foreach (var kvp in result.Data)
+                {
+                    var convertedRecords = kvp.Value.Select(ConvertToManagerUserRewardRecordDto).ToList();
+                    convertedData[kvp.Key] = convertedRecords;
+                }
+                return convertedData;
+            }
+            
+            return null;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get user rewards for user ID: {UserId}", userId);
-            return new TwitterApiResultDto<Dictionary<string, List<UserRewardRecordDto>>> 
-            { 
-                IsSuccess = false, 
-                ErrorMessage = ex.Message,
-                Data = null
-            };
+            return null;
         }
+    }
+
+    /// <summary>
+    /// Convert UserRewardRecordDto to ManagerUserRewardRecordDto
+    /// </summary>
+    /// <param name="userReward">Source UserRewardRecordDto</param>
+    /// <returns>Converted ManagerUserRewardRecordDto</returns>
+    private static ManagerUserRewardRecordDto ConvertToManagerUserRewardRecordDto(UserRewardRecordDto userReward)
+    {
+        return new ManagerUserRewardRecordDto
+        {
+            UserId = userReward.UserId,
+            TwitterUsername = userReward.UserHandle,
+            RewardAmount = userReward.FinalCredits,
+            RewardDate = userReward.RewardDate ?? DateTime.UnixEpoch.AddSeconds(userReward.RewardDateUtc),
+            RewardReason = $"Tweet rewards: {userReward.TweetCount} tweets, Regular: {userReward.RegularCredits}, Bonus: {userReward.BonusCredits}",
+            TransactionId = userReward.RewardTransactionId,
+            Status = userReward.IsRewardSent ? "Completed" : "Pending"
+        };
     }
 
     private bool TryGetUserIdFromMetadata(IDictionary<string, string> metadata, out string userId)

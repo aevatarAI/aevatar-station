@@ -5,7 +5,7 @@ namespace Aevatar.GodGPT.Dtos;
 /// <summary>
 /// Data transfer object for user reward record information
 /// </summary>
-public class UserRewardRecordDto
+public class ManagerUserRewardRecordDto
 {
     /// <summary>
     /// User identifier
@@ -41,4 +41,4 @@ public class UserRewardRecordDto
     /// Status of the reward (e.g., "Pending", "Completed", "Failed")
     /// </summary>
     public required string Status { get; set; }
-} 
+}
