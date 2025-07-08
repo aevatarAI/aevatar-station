@@ -1,9 +1,6 @@
 using Aevatar.CQRS;
-using Aevatar.GAgents.Common;
-using Aevatar.GAgents.SocialChat;
 using Aevatar.GAgents.Twitter;
 using Aevatar.Neo4JStore;
-using Org.BouncyCastle.Asn1.X509.Qualified;
 using Volo.Abp.AutoMapper;
 using Volo.Abp.EventBus;
 using Volo.Abp.Modularity;
