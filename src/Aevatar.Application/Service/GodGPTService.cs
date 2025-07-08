@@ -99,6 +99,11 @@ public interface IGodGPTService
     Task<TwitterOperationResultDto> ClearRewardByDayAsync(long targetDateUtcSeconds);
     Task<TwitterOperationResultDto> StartRewardCalculationAsync();
     Task<TwitterOperationResultDto> StopRewardCalculationAsync();
+    
+    /// <summary>
+    /// Get user rewards by user ID (returns dateKey and filtered UserRewardRecordDto list)
+    /// </summary>
+    Task<TwitterApiResultDto<Dictionary<string, List<UserRewardRecordDto>>>> GetUserRewardsByUserIdAsync(string userId);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -872,6 +877,43 @@ public class GodGPTService : ApplicationService, IGodGPTService
         {
             _logger.LogError(ex, "Failed to stop reward calculation task");
             return new TwitterOperationResultDto { IsSuccess = false, ErrorMessage = ex.Message };
+        }
+    }
+
+    /// <summary>
+    /// Get user rewards by user ID (returns dateKey and filtered UserRewardRecordDto list)
+    /// </summary>
+    /// <param name="userId">User ID to retrieve rewards for</param>
+    /// <returns>TwitterApiResultDto containing dictionary of date keys and reward records</returns>
+    public async Task<TwitterApiResultDto<Dictionary<string, List<UserRewardRecordDto>>>> GetUserRewardsByUserIdAsync(string userId)
+    {
+        try
+        {
+            _logger.LogInformation("Getting user rewards for user ID: {UserId}", userId);
+            
+            // Initialize Twitter Reward Grain
+            ITwitterRewardGrain twitterRewardGrain = _clusterClient.GetGrain<ITwitterRewardGrain>(RewardTaskTargetId);
+            _logger.LogInformation("Twitter Reward Grain initialized with target ID: {RewardTaskTargetId}", RewardTaskTargetId);
+            
+            var result = await twitterRewardGrain.GetUserRewardsByUserIdAsync(userId);
+            _logger.LogInformation("Get user rewards completed for user ID: {UserId} with result: {Result}", userId, result);
+            
+            return new TwitterApiResultDto<Dictionary<string, List<UserRewardRecordDto>>> 
+            { 
+                IsSuccess = result?.IsSuccess ?? false, 
+                ErrorMessage = result?.ErrorMessage,
+                Data = result?.Data
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get user rewards for user ID: {UserId}", userId);
+            return new TwitterApiResultDto<Dictionary<string, List<UserRewardRecordDto>>> 
+            { 
+                IsSuccess = false, 
+                ErrorMessage = ex.Message,
+                Data = null
+            };
         }
     }
 

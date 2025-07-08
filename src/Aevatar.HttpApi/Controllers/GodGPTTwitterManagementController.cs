@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Aevatar.GodGPT.Dtos;
@@ -206,6 +207,25 @@ public class GodGPTTwitterManagementController : AevatarController
         var result = await _godGptService.StopRewardCalculationAsync();
         
         _logger.LogDebug("[GodGPTTwitterManagementController][StopRewardCalculationAsync] completed with success: {Success}, duration: {Duration}ms",
+            result.IsSuccess, stopwatch.ElapsedMilliseconds);
+        
+        return result;
+    }
+
+    /// <summary>
+    /// Get user rewards by user ID (returns dateKey and filtered UserRewardRecordDto list)
+    /// </summary>
+    /// <param name="userId">User ID to retrieve rewards for</param>
+    /// <returns>TwitterApiResultDto containing dictionary of date keys and reward records</returns>
+    [HttpGet("rewards/user/{userId}")]
+    public async Task<TwitterApiResultDto<Dictionary<string, List<UserRewardRecordDto>>>> GetUserRewardsByUserIdAsync([FromRoute] string userId)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        _logger.LogInformation("[GodGPTTwitterManagementController][GetUserRewardsByUserIdAsync] Getting user rewards for user ID: {UserId}", userId);
+        
+        var result = await _godGptService.GetUserRewardsByUserIdAsync(userId);
+        
+        _logger.LogDebug("[GodGPTTwitterManagementController][GetUserRewardsByUserIdAsync] completed with success: {Success}, duration: {Duration}ms",
             result.IsSuccess, stopwatch.ElapsedMilliseconds);
         
         return result;
