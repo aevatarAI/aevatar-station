@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+        <Version>$(AevatarSourceCodeVersion)</Version>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <PackageType>Dependency</PackageType>
+        <PackageId>Aevatar.Plugins</PackageId>
+        <Title>aevatar Framework</Title>
+        <Authors>AElf</Authors>
+        <Description>The plugin GAgent mechanism implementation for aevatar framework.</Description>
+        <PackageTags>agent</PackageTags>
+        <RepositoryUrl>https://github.com/aevatarAI/aevatar-framework</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageProjectUrl>https://github.com/aevatarAI/aevatar-framework</PackageProjectUrl>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Aevatar.Core\Aevatar.Core.csproj" />
+      <ProjectReference Include="..\Aevatar.EventSourcing.Core\Aevatar.EventSourcing.Core.csproj" />
+      <ProjectReference Include="..\Aevatar.EventSourcing.MongoDB\Aevatar.EventSourcing.MongoDB.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Volo.Abp.Autofac" />
+      <PackageReference Include="Volo.Abp.AutoMapper" />
+      <PackageReference Include="Volo.Abp.Core" />
+      <PackageReference Include="Volo.Abp.Data" />
+      <PackageReference Include="Volo.Abp.Ddd.Application" />
+      <PackageReference Include="Volo.Abp.MongoDB" />
+    </ItemGroup>
+
+</Project>

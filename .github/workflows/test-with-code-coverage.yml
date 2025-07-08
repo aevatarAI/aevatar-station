@@ -12,7 +12,36 @@ env:
   DOTNET_INSTALL_DIR: "./.dotnet"
 
 jobs:
-  test:
+  test-framework:
+    runs-on: ubuntu-22.04
+    permissions:
+      pull-requests: write
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: chown (if needed)
+        run: |
+          if [ -d /home/runneradmin ]; then sudo chown -R $USER:$USER /home/runneradmin; fi
+      - name: Install dependencies
+        run: cd framework && dotnet restore --verbosity quiet
+      - name: Build
+        run: cd framework && dotnet build --no-restore /clp:ErrorsOnly /p:GeneratePackageOnBuild=false --verbosity quiet
+      - name: Test
+        run: |
+          cd framework && dotnet test --no-restore --no-build --verbosity normal --logger trx --settings ../CodeCoverage.runsettings --results-directory ../coverage-framework --collect:"XPlat Code Coverage"
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          fail_ci_if_error: true
+          files: coverage-framework/*/coverage.cobertura.xml
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+  test-signalr:
     runs-on: ubuntu-22.04
     permissions:
       pull-requests: write
@@ -25,19 +54,42 @@ jobs:
         with:
           dotnet-version: '9.0.x'
       - name: Install dependencies
-        run: dotnet restore --verbosity quiet
-
+        run: cd signalR && dotnet restore --verbosity quiet
       - name: Build
-        run: dotnet build --no-restore /clp:ErrorsOnly /p:GeneratePackageOnBuild=false --verbosity quiet
-
+        run: cd signalR && dotnet build --no-restore /clp:ErrorsOnly /p:GeneratePackageOnBuild=false --verbosity quiet
       - name: Test
         run: |
-          dotnet test --no-restore --no-build --verbosity normal --logger trx --settings CodeCoverage.runsettings --collect:"XPlat Code Coverage"
-
+          cd signalR && dotnet test --no-restore --no-build --verbosity normal --logger trx --settings ../CodeCoverage.runsettings --results-directory ../coverage-signalr --collect:"XPlat Code Coverage"
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: true
-          files: coverage/*/coverage.cobertura.xml
+          files: coverage-signalr/*/coverage.cobertura.xml
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+  test-station:
+    runs-on: ubuntu-22.04
+    permissions:
+      pull-requests: write
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Install dependencies
+        run: cd station && dotnet restore --verbosity quiet
+      - name: Build
+        run: cd station && dotnet build --no-restore /clp:ErrorsOnly /p:GeneratePackageOnBuild=false --verbosity quiet
+      - name: Test
+        run: |
+          cd station && dotnet test --no-restore --no-build --verbosity normal --logger trx --settings ../CodeCoverage.runsettings --results-directory ../coverage-station --collect:"XPlat Code Coverage"
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          fail_ci_if_error: true
+          files: coverage-station/*/coverage.cobertura.xml
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }} 

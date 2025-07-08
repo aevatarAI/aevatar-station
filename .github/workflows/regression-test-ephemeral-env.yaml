@@ -1,6 +1,7 @@
 name: Run Aevatar Station Regression Test on Ephemeral Test Environment
 
 on:
+  workflow_dispatch:
   pull_request_review:
     types: [submitted]
 
@@ -18,13 +19,17 @@ env:
 
 jobs:
   approval-count:
-    if: github.event.review.state == 'approved'
+    if: github.event.review.state == 'approved' || github.event_name == 'workflow_dispatch'
     runs-on: ephemeral-env-runner
     outputs:
       approved_enough: ${{ steps.check.outputs.approved_enough }}
     steps:
       - name: Install GitHub CLI
         run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Skip Install GitHub CLI"
+            exit 0
+          fi
           curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
           echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
           sudo apt update
@@ -34,6 +39,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Skip approval count check"
+            exit 0
+          fi
           PR_NUMBER=${{ github.event.pull_request.number }}
           REPO=${{ github.repository }}
           OWNER=$(echo "$REPO" | cut -d'/' -f1)
@@ -55,7 +64,7 @@ jobs:
           fi
 
   publish:
-    if: needs.approval-count.outputs.approved_enough == 'true'
+    if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
     needs: approval-count
     runs-on: ephemeral-env-runner
     strategy:
@@ -87,7 +96,7 @@ jobs:
         if: ${{ steps.nuget-packages.outputs.cache-hit == 'true' }}
         continue-on-error: true
         run: ls -lh ~/.nuget/packages
-      - run: dotnet publish src/${{ matrix.servicename }}/${{ matrix.servicename }}.csproj -o out/${{ matrix.servicename }}
+      - run: dotnet publish station/src/${{ matrix.servicename }}/${{ matrix.servicename }}.csproj -o out/${{ matrix.servicename }}
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -96,7 +105,7 @@ jobs:
           retention-days: 1
 
   build-and-push-image:
-    if: needs.approval-count.outputs.approved_enough == 'true'
+    if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
     needs: publish
     runs-on: ephemeral-env-runner
     strategy:
@@ -147,7 +156,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
   setup-ephermeral-test-env:
-    if: needs.approval-count.outputs.approved_enough == 'true'
+    if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ephemeral-env-runner
     needs: build-and-push-image
     outputs:
@@ -271,7 +280,7 @@ jobs:
           echo "- **APP URL**: \`${{ steps.extract.outputs.app_url }}\`" >> $GITHUB_STEP_SUMMARY
 
   run-regression-test:
-    if: needs.approval-count.outputs.approved_enough == 'true'
+    if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
     needs: setup-ephermeral-test-env 
     runs-on: ephemeral-env-runner
     env:
@@ -309,9 +318,8 @@ jobs:
       - name: Run Python Script
         run: |
           source venv/bin/activate
-          pytest -s -v scripts/regression_test.py
-          pytest -s -v scripts/regression_test_signalr.py
-
+          pytest -s -v station/scripts/regression_test.py
+          
       - name: Lark Notification on Success
         if: success()
         uses: drayeasy/action-lark-notify@main

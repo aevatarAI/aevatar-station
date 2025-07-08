@@ -1,0 +1,84 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4315
+      http:
+
+processors:
+  batch:
+    send_batch_size: 1000
+    timeout: 10s
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 1000
+    spike_limit_mib: 200
+  metricstransform/orleans_latency:
+    transforms:
+      - include: orleans_app_requests_latency_bucket_total
+        match_type: strict
+        action: update
+        operations:
+          - action: update_label
+            label: duration
+            new_label: le
+            value_actions:
+              - value: "1ms"
+                new_value: "0.001"
+              - value: "2ms"
+                new_value: "0.002"
+              - value: "5ms"
+                new_value: "0.005"
+              - value: "10ms"
+                new_value: "0.01"
+              - value: "20ms"
+                new_value: "0.02"
+              - value: "50ms"
+                new_value: "0.05"
+              - value: "100ms"
+                new_value: "0.1"
+              - value: "200ms"
+                new_value: "0.2"
+              - value: "500ms"
+                new_value: "0.5"
+              - value: "1000ms"
+                new_value: "1"
+              - value: "2000ms"
+                new_value: "2"
+              - value: "5000ms"
+                new_value: "5"
+              - value: "10000ms"
+                new_value: "10"
+  transform/promote_resource_labels:
+    metric_statements:
+      - context: datapoint
+        statements:
+          - set(attributes["cluster_id"], resource.attributes["cluster_id"])
+          - set(attributes["silo_id"], resource.attributes["silo_id"])
+
+exporters:
+  otlp:
+    endpoint: "jaeger:4317"
+    tls:
+      insecure: true
+  debug:
+    verbosity: detailed
+  prometheus:
+    endpoint: "0.0.0.0:9090"
+  elasticsearch:
+    endpoints: ["http://elasticsearch:9200"]
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch, memory_limiter]
+      exporters: [otlp, elasticsearch, debug]
+    metrics:
+      receivers: [otlp]
+      processors: [transform/promote_resource_labels, batch, memory_limiter, metricstransform/orleans_latency]
+      exporters: [prometheus, debug]
+    logs:
+      receivers: [otlp]
+      processors: [batch, memory_limiter]
+      exporters: [elasticsearch, debug]
