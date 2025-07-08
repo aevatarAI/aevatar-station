@@ -3,35 +3,91 @@
 ## Overview
 Dify provides an extensive ecosystem of tools and plugins through its marketplace, enabling users to extend their AI applications with a wide range of functionalities. The marketplace features models, tools, datasources, agent strategies, extensions, and bundles from both Dify and third-party developers.
 
+## Dify Marketplace Visual Interface
+
+### Marketplace Homepage
+The Dify Marketplace (https://marketplace.dify.ai) presents a comprehensive catalog:
+- **Header Navigation**: "Dify logo Marketplace", "Request a plugin", "Publish plugins" buttons
+- **Hero Section**: "Empower your AI development" with subtitle describing the marketplace scope
+- **Category Filters**: Visual buttons for All, Models, Tools, Datasources, Agent Strategies, Extensions, Bundles
+- **Search Functionality**: Prominent search bar for plugin discovery
+- **Tag System**: Visual tag filtering for enhanced discoverability
+
+### Plugin Cards Design
+Each plugin is displayed with:
+- **Plugin Icon/Logo**: Visual brand representation
+- **Plugin Type Badge**: Color-coded category identifier (Tool, Model, Extension, etc.)
+- **Name and Developer**: Clear attribution with developer namespace
+- **Description**: Concise functionality explanation
+- **Download Count**: Social proof with usage statistics
+- **Category Tags**: Functional categorization (#Search, #Image, #Productivity, etc.)
+- **"From marketplace" Link**: Direct link to detailed plugin page
+
 ## Marketplace Categories
 
 ### 1. Models
 **Description**: AI models from various providers integrated into the Dify platform
-**Popular Models**:
-- **OpenAI** (GPT-3.5-Turbo, GPT-4): 28,549+ downloads
-- **Azure OpenAI**: 30,075+ downloads
-- **Amazon Bedrock**: 14,743+ downloads
-- **Jina** (Embedding and Rerank): 17,099+ downloads
-- **SiliconFlow**: 140,737+ downloads
-- **OpenRouter**: 30,610+ downloads
-- **Vertex AI (Google Cloud)**: Various models
-- **Gemini** (Google's Gemini model): Latest models
+**Visual Layout**: Model category shows provider logos and model capabilities
+
+**Popular Models** (with download counts observed):
+- **SiliconFlow**: 140,878+ downloads - Multi-model provider with LLMs, embedding, TTS
+- **OpenRouter**: 30,643+ downloads - Access to diverse language models
+- **Azure OpenAI**: 30,122+ downloads - Microsoft Azure integration
+- **OpenAI**: Models like GPT-3.5-Turbo, GPT-4
+- **Amazon Bedrock**: 14,754+ downloads - AWS AI services
+- **Jina**: 17,133+ downloads - Embedding and rerank models
+- **Gemini**: Google's latest models
 - **DeepSeek**: Advanced coding models
 - **TONGYI**: Alibaba's language models
-- **PPIO**: Cost-effective GPU computing services
+- **PPIO**: 1,381+ downloads - Cost-effective GPU computing services
 
 ### 2. Tools
 **Description**: Functional tools that extend application capabilities
-**Categories**:
-- **Search Tools**: 8 major search engines and platforms
-- **Image Generation**: 8 different image generation services
-- **Data Processing**: 6 data manipulation and analysis tools
-- **Developer Tools**: 4 development-focused utilities
-- **Communication**: 4 platform integrations
-- **Business Tools**: Various enterprise integrations
+**Visual Organization**: Tools are categorized with clear functional groupings
+
+**Search Tools** (with download statistics):
+- **Tavily**: 52,933+ downloads - AI-native search engine with web extraction
+- **Google**: 42,006+ downloads - Google SERP search with snippet extraction
+- **Bing**: 32,266+ downloads - Microsoft Bing integration
+- **DuckDuckGo**: 20,028+ downloads - Privacy-focused search
+- **Perplexity**: 8,860+ downloads - AI-powered conversational search
+- **SearchApi**: 7,527+ downloads - Multi-engine search with structured data
+- **ArXiv**: 6,644+ downloads - Academic paper search
+- **Wikipedia**: 23,370+ downloads - Encyclopedia access
+
+**Image Generation Tools**:
+- **DALL-E**: 28,567+ downloads - OpenAI's image generation
+- **ComfyUI**: 18,943+ downloads - Local image generation with workflows
+- **SiliconFlow Tool**: 15,305+ downloads - Flux and Stable Diffusion models
+- **Stability AI**: 12,201+ downloads - Stable Diffusion models
+- **Stable Diffusion**: 10,797+ downloads - Open-source generation
+- **getimg.ai**: 3,860+ downloads - Image generation API
+- **Azure DALL-E**: 3,528+ downloads - Microsoft Azure integration
+- **Novita AI**: 2,527+ downloads - Innovative AI models
+
+**Data Processing Tools**:
+- **JSON Process**: 51,054+ downloads - JSON content processing with jsonpath_ng
+- **Firecrawl**: 31,203+ downloads - Web crawling and scraping API
+- **Jina AI**: 26,299+ downloads - Search foundation with neural capabilities
+- **GitHub**: 18,367+ downloads - Code repository access and integration
+- **Regex**: 17,834+ downloads - Pattern matching and text extraction
+- **Spider**: 6,079+ downloads - LLM-ready web scraping
+
+**Developer Tools**:
+- **Vanna.AI**: 11,637+ downloads - Natural language to SQL conversion
+- **data analysis**: 9,403+ downloads - LLM-based data analysis with visualization
+- **DevDocs**: 3,975+ downloads - Official documentation access
+- **WolframAlpha**: 3,241+ downloads - Computational knowledge engine
+
+**Communication Tools**:
+- **Wecom**: 22,410+ downloads - WeChat Work integration for Chinese market
+- **DingTalk**: 14,250+ downloads - Alibaba's communication platform
+- **Slack**: 3,619+ downloads - Team communication webhooks
+- **Discord**: 2,370+ downloads - Community communication webhooks
 
 ### 3. Datasources
 **Description**: Data integration and processing capabilities
+**Visual Indicators**: Database and connection icons
 **Features**:
 - Direct database connections
 - Cloud storage integration
@@ -41,272 +97,54 @@ Dify provides an extensive ecosystem of tools and plugins through its marketplac
 
 ### 4. Agent Strategies
 **Description**: Different approaches and methodologies for agent behavior
-**Examples**:
-- **Enhancing Agent**: Microsoft EASYTOOL policy integration
+**Visual Design**: Strategy cards with algorithmic representations
+
+**Featured Strategies**:
+- **Enhancing Agent**: 45 downloads - Microsoft EASYTOOL policy integration for task decomposition
 - **Function-calling strategies**: Advanced reasoning capabilities
 - **Multi-step problem solving**: Complex task decomposition
 - **Autonomous decision making**: Self-directed agent behavior
 
 ### 5. Extensions
 **Description**: Platform extensions that add new capabilities
+**Visual Layout**: Extensions shown with integration indicators
+
 **Examples**:
-- **Agora Conversational AI**: Voice assistant integration (4,552+ downloads)
+- **Agora Conversational AI**: 4,552+ downloads - Voice assistant integration
 - **Platform integrations**: Third-party service connections
 - **UI/UX enhancements**: Interface improvements
 - **Workflow extensions**: Process automation additions
 
 ### 6. Bundles
 **Description**: Pre-packaged solutions combining multiple components
+**Visual Design**: Bundle cards showing multiple component icons
 **Features**:
 - **Template collections**: Ready-to-use application templates
 - **Industry solutions**: Domain-specific bundles
 - **Workflow packages**: Complete automation solutions
 - **Enterprise bundles**: Business-focused packages
 
-## Featured Tools by Category
+## Marketplace Visual Organization
 
-### Search Tools
-1. **Tavily** (52,876+ downloads)
-   - AI-native search engine
-   - Web content extraction
-   - Real-time search results
-   - Raw content processing
+### Category-Based Sections
+The marketplace organizes content into clear visual sections:
+- **Partners**: "Partners Plugins verified by Dify partners" with premium positioning
+- **Featured**: "Featured View more" section highlighting popular plugins
+- **Latest**: "Latest View more" section showing newest additions
+- **By Category**: Dedicated sections for Search, Image, Data, Developer, Communication tools
 
-2. **Google Search** (41,936+ downloads)
-   - Google SERP search
-   - Snippet extraction
-   - Webpage content retrieval
-   - Query processing
+### Plugin Discovery Features
+- **Search Integration**: Prominent search bar with placeholder "Search plugins"
+- **Tag Filtering**: Visual tag system with categories like #Search, #Image, #Productivity
+- **Download Metrics**: Social proof through download counts
+- **Developer Attribution**: Clear namespace identification (langgenius/, plutoless/, etc.)
+- **Category Icons**: Visual indicators for different plugin types
 
-3. **Bing Search** (32,241+ downloads)
-   - Microsoft Bing integration
-   - Search result processing
-   - Content extraction
-   - Query optimization
-
-4. **DuckDuckGo** (20,007+ downloads)
-   - Privacy-focused search
-   - Anonymous search capabilities
-   - Clean result formatting
-   - No tracking features
-
-5. **Perplexity** (8,855+ downloads)
-   - AI-powered search
-   - Conversational search interface
-   - Answer generation
-   - Source attribution
-
-6. **SearchApi** (7,524+ downloads)
-   - Multi-engine search
-   - Structured data delivery
-   - Google Search, Jobs, YouTube, News
-   - Real-time SERP data
-
-7. **ArXiv** (6,642+ downloads)
-   - Academic paper search
-   - Research paper access
-   - Scientific literature
-   - Citation management
-
-8. **Wikipedia** (23,343+ downloads)
-   - Encyclopedia access
-   - Structured knowledge
-   - Multi-language support
-   - Reliable information source
-
-### Image Generation Tools
-1. **DALL-E** (28,549+ downloads)
-   - OpenAI's image generation
-   - High-quality art creation
-   - Prompt-based generation
-   - Multiple style support
-
-2. **ComfyUI** (18,924+ downloads)
-   - Local image generation
-   - Workflow-based interface
-   - Advanced customization
-   - Community models
-
-3. **SiliconFlow** (15,289+ downloads)
-   - Flux and Stable Diffusion
-   - API-based generation
-   - High-performance processing
-   - Cost-effective solutions
-
-4. **Stability AI** (12,182+ downloads)
-   - Stable Diffusion models
-   - Generative AI capabilities
-   - Commercial licensing
-   - Enterprise solutions
-
-5. **Stable Diffusion** (10,791+ downloads)
-   - Open-source generation
-   - Local deployment
-   - Community support
-   - Customizable models
-
-6. **getimg.ai** (3,860+ downloads)
-   - Image generation API
-   - Web scraping capabilities
-   - Batch processing
-   - API integration
-
-7. **Azure DALL-E** (3,528+ downloads)
-   - Microsoft Azure integration
-   - Enterprise security
-   - Scalable processing
-   - Azure ecosystem
-
-8. **Novita AI** (2,527+ downloads)
-   - Innovative AI models
-   - Custom image generation
-   - API-first approach
-   - Developer-friendly
-
-### Data Processing Tools
-1. **JSON Process** (50,998+ downloads)
-   - JSON content processing
-   - JSONPath operations
-   - Data transformation
-   - Query capabilities
-
-2. **Jina AI** (26,269+ downloads)
-   - Search foundation
-   - Neural search capabilities
-   - Document processing
-   - Multi-modal search
-
-3. **GitHub** (18,355+ downloads)
-   - Code repository access
-   - Version control integration
-   - Issue management
-   - Developer workflows
-
-4. **Regex** (17,805+ downloads)
-   - Pattern matching
-   - Text extraction
-   - Data validation
-   - String manipulation
-
-5. **Firecrawl** (31,175+ downloads)
-   - Web crawling and scraping
-   - Content extraction
-   - Automated data collection
-   - API integration
-
-6. **Spider** (6,073+ downloads)
-   - Website crawling
-   - LLM-ready data extraction
-   - Automated scraping
-   - Content processing
-
-### Developer Tools
-1. **DevDocs** (3,967+ downloads)
-   - Official documentation access
-   - Developer reference
-   - API documentation
-   - Code examples
-
-2. **Vanna.AI** (11,620+ downloads)
-   - Database query generation
-   - Natural language to SQL
-   - Data insights
-   - Analytics automation
-
-3. **WolframAlpha** (3,237+ downloads)
-   - Computational knowledge
-   - Mathematical calculations
-   - Scientific computing
-   - Data analysis
-
-4. **Data Analysis** (9,363+ downloads)
-   - LLM-based analysis
-   - Natural language interaction
-   - Data visualization
-   - Report generation
-
-### Communication Tools
-1. **Wecom** (22,387+ downloads)
-   - WeChat Work integration
-   - Group bot functionality
-   - Enterprise communication
-   - Chinese market focus
-
-2. **DingTalk** (14,234+ downloads)
-   - Alibaba's communication platform
-   - Group robot features
-   - Enterprise messaging
-   - Workflow integration
-
-3. **Slack** (3,612+ downloads)
-   - Team communication
-   - Webhook integration
-   - Channel management
-   - Automation support
-
-4. **Discord** (2,370+ downloads)
-   - Community communication
-   - Webhook support
-   - Server integration
-   - Bot functionality
-
-### Business Tools
-1. **Supabase** (67+ downloads)
-   - Backend-as-a-service
-   - Real-time database
-   - Authentication system
-   - PostgreSQL integration
-
-2. **Monday.com** (11+ downloads)
-   - Project management
-   - Board interactions
-   - Task management
-   - Team collaboration
-
-3. **Microsoft Todo** (116+ downloads)
-   - Task management
-   - API integration
-   - Productivity tools
-   - Microsoft ecosystem
-
-4. **Pushover** (17+ downloads)
-   - Notification service
-   - Alert management
-   - Push notifications
-   - Mobile integration
-
-## Built-in Tools
-
-### Core Tools
-1. **Audio Tool**
-   - Text-to-speech (TTS)
-   - Automatic speech recognition (ASR)
-   - Voice processing
-   - Audio format support
-
-2. **Code Interpreter**
-   - Code execution
-   - Result processing
-   - Programming language support
-   - Development assistance
-
-3. **WebScraper**
-   - Web content extraction
-   - HTML parsing
-   - Data collection
-   - Automated scraping
-
-4. **CurrentTime**
-   - Time information
-   - Date processing
-   - Timezone support
-   - Temporal queries
-
-5. **Vectorizer.AI**
-   - PNG/JPG to SVG conversion
-   - Image vectorization
-   - AI-powered processing
-   - Format transformation
+### Marketplace Integration
+- **Seamless Integration**: Direct installation from marketplace to Dify platform
+- **Version Information**: Plugin version numbers and update tracking
+- **Developer Links**: Direct links to developer profiles and plugin details
+- **External Resources**: Links to official documentation and support
 
 ## Marketplace Features
 

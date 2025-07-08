@@ -3,10 +3,28 @@
 ## Overview
 Dify is a comprehensive AI application development platform that enables users to build, deploy, and manage AI-powered applications through a visual interface. It provides a full-stack solution for AI application development with support for multiple AI models and extensive tooling.
 
+## Visual Platform Overview
+
+### Main Navigation Interface
+The Dify platform features a clean, intuitive navigation structure:
+- **Left Navigation Bar**: Contains the main sections (Explore, Studio, Knowledge, Tools, Plugins)
+- **Dify Logo**: Located in the top-left, serves as home link
+- **Workspace Selector**: "Dify's Workspace" dropdown for organization management
+- **User Profile**: Located in top-right corner
+
+### Studio Interface (Main Application Dashboard)
+The Studio serves as the central hub for application development:
+- **Application Type Filters**: Visual buttons for All, Workflow, Chatflow, Chatbot, Agent, Completion
+- **Application Grid**: Visual cards showing existing applications with thumbnails and metadata
+- **Create Options**: Prominent buttons for "Create from Blank", "Create from Template", "Import DSL file"
+- **Search Functionality**: Integrated search bar for finding applications
+- **Filter Options**: Tag-based filtering system
+
 ## Core Application Types
 
 ### 1. Workflow
 - **Description**: Agentic flow for intelligent automations
+- **Visual Indicator**: Workflow icon in the application type selector
 - **Use Cases**: Complex multi-step processes, automated decision-making, business process automation
 - **Features**:
   - Visual workflow designer with drag-and-drop interface
@@ -17,6 +35,7 @@ Dify is a comprehensive AI application development platform that enables users t
 
 ### 2. Chatflow
 - **Description**: Workflow enhanced for multi-turn chats
+- **Visual Indicator**: Chat flow icon with conversation elements
 - **Use Cases**: Conversational AI applications, customer service bots, interactive assistants
 - **Features**:
   - Memory features for conversation context
@@ -27,6 +46,7 @@ Dify is a comprehensive AI application development platform that enables users t
 
 ### 3. Chatbot
 - **Description**: LLM-based chatbot with simple setup
+- **Visual Indicator**: Simple chat bubble icon
 - **Use Cases**: Customer support, FAQ bots, simple conversational interfaces
 - **Features**:
   - Quick setup and deployment
@@ -37,6 +57,7 @@ Dify is a comprehensive AI application development platform that enables users t
 
 ### 4. Agent
 - **Description**: Intelligent agent with reasoning and autonomous tool use
+- **Visual Indicator**: Robot/agent icon
 - **Use Cases**: Complex problem-solving, research tasks, autonomous decision-making
 - **Features**:
   - Reasoning capabilities
@@ -47,6 +68,7 @@ Dify is a comprehensive AI application development platform that enables users t
 
 ### 5. Text Generator (Completion)
 - **Description**: AI assistant for text generation tasks
+- **Visual Indicator**: Text/document icon
 - **Use Cases**: Content creation, copywriting, text processing, document generation
 - **Features**:
   - Single-turn text generation
@@ -54,6 +76,59 @@ Dify is a comprehensive AI application development platform that enables users t
   - Template-based generation
   - Batch processing capabilities
   - Output formatting options
+
+## Knowledge Management Interface
+
+### Knowledge Dashboard
+The Knowledge section provides comprehensive data management:
+- **Knowledge Base List**: Visual cards showing existing knowledge bases
+- **Create Knowledge**: Prominent button with upload icon for new knowledge creation
+- **External Knowledge Connection**: Dedicated button for connecting external data sources
+- **API Access**: External Knowledge API button for programmatic access
+- **Search and Filter**: Integrated search with tag-based filtering
+
+### Key Visual Elements:
+- **"Create Knowledge"**: Import your own text data or write data in real-time via Webhook
+- **"Connect to an External Knowledge Base"**: Direct integration option
+- **Visual Indicators**: Clear icons for different knowledge source types
+
+## Tools and Marketplace Interface
+
+### Tools Dashboard
+The Tools section showcases the extensive plugin ecosystem:
+- **Tool Categories**: Visual organization by function (Search, Image, Data, Developer, Communication)
+- **Tool Cards**: Each tool displays with icon, name, description, and download count
+- **Marketplace Link**: Prominent link to "Dify Marketplace" with external icon
+- **Search and Filter**: Comprehensive filtering by categories and tags
+
+### Popular Tools Visible:
+- **Search Tools**: Tavily (52,933+ downloads), Google (42,006+ downloads), Bing, Perplexity
+- **Image Generation**: DALL-E (28,567+ downloads), Stable Diffusion, ComfyUI
+- **Data Processing**: JSON Process (51,054+ downloads), Firecrawl, GitHub integration
+- **Communication**: Slack, Discord, WeChat Work (Wecom), DingTalk
+
+## Plugins Interface
+
+### Plugin Management
+The Plugins section provides:
+- **Plugin Categories**: Models, Tools, Agent Strategies, Extensions, Bundles
+- **Install Plugin**: Prominent button for adding new plugins
+- **Plugin Cards**: Visual representation with logos, descriptions, and version information
+- **Marketplace Integration**: Direct links to Dify Marketplace for each plugin
+
+### Featured Plugins Visible:
+- **Models**: OpenAI, Azure OpenAI, Gemini, DeepSeek, TONGYI
+- **Tools**: Brave Search, Firecrawl, Tavily, JSON Process
+- **Extensions**: Various integration options
+
+## Explore/Templates Interface
+
+### Template Discovery
+The Explore section showcases ready-to-use applications:
+- **Template Gallery**: Visual cards for pre-built applications
+- **Featured Templates**: Including "SVG Logo Design", "DeepResearch", "Text Polishing & Translation Tool"
+- **Category Organization**: Templates organized by use case and functionality
+- **Quick Deployment**: One-click template deployment options
 
 ## Studio Features
 
