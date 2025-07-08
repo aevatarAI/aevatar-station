@@ -51,7 +51,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.servicename }}
-          path: out/${{ matrix.servicename }}
+          path: station/out/${{ matrix.servicename }}
           retention-days: 1
 
   build-and-push-image:
