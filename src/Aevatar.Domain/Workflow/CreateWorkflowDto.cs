@@ -41,4 +41,10 @@ public class TwitterConfigDto
     public string EncryptionPassword { get; set; }
     
     public int ReplyLimit { get; set; } = 10;
+    
+    // Twitter Account Binding Fields for BindTwitterAccountGEvent
+    public string UserName { get; set; }
+    public string UserId { get; set; }
+    public string Token { get; set; }
+    public string TokenSecret { get; set; }
 } 

@@ -282,15 +282,30 @@ var temperature = configuration.GetValue<double>("AIGAgent:Temperature", 0.7);
 ```json
 {
   "workflowName": "TestWorkflow",
+  "aiConfig": {
+    "apiKey": "your_openai_api_key",
+    "model": "gpt-4",
+    "maxTokens": 1000,
+    "temperature": 0.7
+  },
   "twitterConfig": {
     "consumerKey": "your_consumer_key",
     "consumerSecret": "your_consumer_secret",
     "bearerToken": "your_bearer_token",
     "encryptionPassword": "your_encryption_password",
-    "replyLimit": 10
+    "replyLimit": 10,
+    "userName": "your_twitter_username",
+    "userId": "your_twitter_user_id",
+    "token": "your_oauth_token",
+    "tokenSecret": "your_oauth_token_secret"
   }
 }
 ```
+
+**注意**: 
+- `userName`, `userId`, `token`, `tokenSecret` 是可选字段，用于绑定Twitter账号
+- 如果提供了这些字段，系统将自动发布 `BindTwitterAccountGEvent` 事件进行账号绑定
+- 这些字段通常通过OAuth流程获得
 
 ### 响应格式
 ```json
@@ -311,6 +326,22 @@ var temperature = configuration.GetValue<double>("AIGAgent:Temperature", 0.7);
   ],
   "success": true,
   "message": "工作流创建并启动成功"
+}
+```
+
+### Twitter账号绑定流程
+1. **创建TwitterGAgent**: 使用应用级别的配置 (consumerKey, consumerSecret, bearerToken等)
+2. **发布BindTwitterAccountGEvent**: 如果请求中包含用户级别的绑定信息，自动发布绑定事件
+3. **账号绑定处理**: TwitterGAgent接收到事件后，将用户凭证与agent关联
+
+### 绑定事件结构
+```csharp
+public class BindTwitterAccountGEvent : EventBase
+{
+    public string UserName { get; set; }      // Twitter用户名
+    public string UserId { get; set; }        // Twitter用户ID
+    public string Token { get; set; }         // OAuth Token
+    public string TokenSecret { get; set; }   // OAuth Token Secret
 }
 ```
 

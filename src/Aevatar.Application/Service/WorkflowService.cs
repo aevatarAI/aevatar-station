@@ -6,6 +6,8 @@ using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.Basic.BasicGAgents.GroupGAgent;
 using Aevatar.GAgents.GroupChat.Feature.Extension;
 using Aevatar.GAgents.GroupChat.WorkflowCoordinator.Dto;
+using Aevatar.GAgents.Twitter.GEvents;
+using Aevatar.Station.Feature.CreatorGAgent;
 using Aevatar.Workflow;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -154,7 +156,28 @@ public class WorkflowService : ApplicationService, IWorkflowService
             }
         };
 
-        return await _agentService.CreateAgentAsync(createAgentDto);
+        var twitterAgent = await _agentService.CreateAgentAsync(createAgentDto);
+        
+        // Publish BindTwitterAccountGEvent to bind Twitter account if binding information is provided
+        if (!string.IsNullOrEmpty(twitterConfig.UserName) || !string.IsNullOrEmpty(twitterConfig.UserId) || 
+            !string.IsNullOrEmpty(twitterConfig.Token) || !string.IsNullOrEmpty(twitterConfig.TokenSecret))
+        {
+            _logger.LogInformation("Publishing BindTwitterAccountGEvent for Twitter account binding");
+            
+            var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(twitterAgent.Id);
+            var bindEvent = new BindTwitterAccountGEvent
+            {
+                UserName = twitterConfig.UserName,
+                UserId = twitterConfig.UserId,
+                Token = twitterConfig.Token,
+                TokenSecret = twitterConfig.TokenSecret
+            };
+            
+            await creatorAgent.PublishEventAsync(bindEvent);
+            _logger.LogInformation("BindTwitterAccountGEvent published successfully");
+        }
+
+        return twitterAgent;
     }
 
     private async Task<AgentDto> CreateSocialAgentAsync()
