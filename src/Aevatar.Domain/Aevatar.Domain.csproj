@@ -14,7 +14,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aevatar.GAgents.GroupChat" />
     <PackageReference Include="NJsonSchema" />
     <PackageReference Include="Volo.Abp.Emailing" />
     <PackageReference Include="Volo.Abp.Identity.Domain" />
