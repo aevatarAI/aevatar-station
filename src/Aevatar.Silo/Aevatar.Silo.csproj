@@ -36,11 +36,6 @@
         <PackageReference Include="Aevatar.SignalR" />
         <PackageReference Include="Aevatar.PermissionManagement" />
         <PackageReference Include="Volo.Abp.BlobStoring.Aws" />
-        <!-- Add GAgent packages that are used in WorkflowService -->
-        <PackageReference Include="Aevatar.GAgents.AIGAgent" />
-        <PackageReference Include="Aevatar.GAgents.Twitter" />
-        <PackageReference Include="Aevatar.GAgents.SocialGAgent" />
-        <PackageReference Include="Aevatar.GAgents.GroupChat" />
     </ItemGroup>
 
     <ItemGroup>
