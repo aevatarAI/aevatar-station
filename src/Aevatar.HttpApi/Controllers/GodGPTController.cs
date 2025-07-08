@@ -480,13 +480,13 @@ public class GodGPTController : AevatarController
         }
     }
     [HttpPost("godgpt/voice/set")]
-    public async Task<UserProfileDto> SetVoiceLanguageAsync(VoiceLanguageEnum voiceLanguage)
+    public async Task<UserProfileDto> SetVoiceLanguageAsync([FromBody] SetVoiceLanguageRequestDto request)
     {
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
-        var userProfileDto = await _godGptService.SetVoiceLanguageAsync(currentUserId, voiceLanguage);
+        var userProfileDto = await _godGptService.SetVoiceLanguageAsync(currentUserId, request.VoiceLanguage);
         _logger.LogDebug("[GodGPTController][SetVoiceLanguageAsync] userId: {0},voiceLanguage:{1} duration: {2}ms",
-            currentUserId, voiceLanguage, stopwatch.ElapsedMilliseconds);
+            currentUserId, request.VoiceLanguage, stopwatch.ElapsedMilliseconds);
         return userProfileDto;
     }
     #endregion
