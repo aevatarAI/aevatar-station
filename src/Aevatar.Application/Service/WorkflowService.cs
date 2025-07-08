@@ -48,6 +48,7 @@ public class WorkflowService : ApplicationService, IWorkflowService
     {
         // Get current user information
         var currentUserId = _userAppService.GetCurrentUserId();
+        // var currentUserId = Guid.NewGuid();
         _logger.LogInformation("Starting workflow creation: {workflowName}, userId: {userId}", dto.WorkflowName, currentUserId);
 
         try
