@@ -1,0 +1,4 @@
+MSBUILD : error MSB1009: Project file does not exist.
+Switch: src/Aevatar.Application.Tests.AgentTypeExplorer/
+
+The build failed. Fix the build errors and run again.
