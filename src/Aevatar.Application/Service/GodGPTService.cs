@@ -104,6 +104,11 @@ public interface IGodGPTService
     /// Get user rewards by user ID (returns dateKey and filtered ManagerUserRewardRecordDto list)
     /// </summary>
     Task<Dictionary<string, List<ManagerUserRewardRecordDto>>> GetUserRewardsByUserIdAsync(string userId);
+    
+    /// <summary>
+    /// Get full calculation history list
+    /// </summary>
+    Task<List<ManagerRewardCalculationHistoryDto>> GetCalculationHistoryListAsync();
 }
 
 [RemoteService(IsEnabled = false)]
@@ -920,6 +925,39 @@ public class GodGPTService : ApplicationService, IGodGPTService
     }
 
     /// <summary>
+    /// Get full calculation history list
+    /// </summary>
+    /// <returns>List of ManagerRewardCalculationHistoryDto</returns>
+    public async Task<List<ManagerRewardCalculationHistoryDto>> GetCalculationHistoryListAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Getting calculation history list");
+            
+            // Initialize Twitter Reward Grain
+            ITwitterRewardGrain twitterRewardGrain = _clusterClient.GetGrain<ITwitterRewardGrain>(RewardTaskTargetId);
+            _logger.LogInformation("Twitter Reward Grain initialized with target ID: {RewardTaskTargetId}", RewardTaskTargetId);
+            
+            var result = await twitterRewardGrain.GetCalculationHistoryListAsync();
+            _logger.LogInformation("Get calculation history list completed with {Count} records", result?.Count ?? 0);
+            
+            // Convert RewardCalculationHistoryDto to ManagerRewardCalculationHistoryDto
+            if (result != null)
+            {
+                var convertedRecords = result.Select(ConvertToManagerRewardCalculationHistoryDto).ToList();
+                return convertedRecords;
+            }
+            
+            return new List<ManagerRewardCalculationHistoryDto>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get calculation history list");
+            return new List<ManagerRewardCalculationHistoryDto>();
+        }
+    }
+
+    /// <summary>
     /// Convert UserRewardRecordDto to ManagerUserRewardRecordDto
     /// </summary>
     /// <param name="userReward">Source UserRewardRecordDto</param>
@@ -935,6 +973,27 @@ public class GodGPTService : ApplicationService, IGodGPTService
             RewardReason = $"Tweet rewards: {userReward.TweetCount} tweets, Regular: {userReward.RegularCredits}, Bonus: {userReward.BonusCredits}",
             TransactionId = userReward.RewardTransactionId,
             Status = userReward.IsRewardSent ? "Completed" : "Pending"
+        };
+    }
+
+    /// <summary>
+    /// Convert RewardCalculationHistoryDto to ManagerRewardCalculationHistoryDto
+    /// </summary>
+    /// <param name="historyRecord">Source RewardCalculationHistoryDto</param>
+    /// <returns>Converted ManagerRewardCalculationHistoryDto</returns>
+    private static ManagerRewardCalculationHistoryDto ConvertToManagerRewardCalculationHistoryDto(RewardCalculationHistoryDto historyRecord)
+    {
+        return new ManagerRewardCalculationHistoryDto
+        {
+            CalculationDate = historyRecord.CalculationDate,
+            CalculationDateUtc = historyRecord.CalculationDateUtc,
+            IsSuccess = historyRecord.IsSuccess,
+            UsersRewarded = historyRecord.UsersRewarded,
+            TotalCreditsDistributed = historyRecord.TotalCreditsDistributed,
+            ProcessingDuration = historyRecord.ProcessingDuration,
+            ErrorMessage = historyRecord.ErrorMessage,
+            ProcessedTimeRangeStart = historyRecord.ProcessedTimeRangeStart,
+            ProcessedTimeRangeEnd = historyRecord.ProcessedTimeRangeEnd
         };
     }
 

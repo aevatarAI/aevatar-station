@@ -228,4 +228,22 @@ public class GodGPTTwitterManagementController : AevatarController
         
         return result;
     }
+
+    /// <summary>
+    /// Get full calculation history list
+    /// </summary>
+    /// <returns>List of ManagerRewardCalculationHistoryDto</returns>
+    [HttpGet("rewards/calculation-history")]
+    public async Task<List<ManagerRewardCalculationHistoryDto>> GetCalculationHistoryListAsync()
+    {
+        var stopwatch = Stopwatch.StartNew();
+        _logger.LogInformation("[GodGPTTwitterManagementController][GetCalculationHistoryListAsync] Getting calculation history list");
+        
+        var result = await _godGptService.GetCalculationHistoryListAsync();
+        
+        _logger.LogDebug("[GodGPTTwitterManagementController][GetCalculationHistoryListAsync] completed with {Count} records, duration: {Duration}ms",
+            result?.Count ?? 0, stopwatch.ElapsedMilliseconds);
+        
+        return result;
+    }
 } 
