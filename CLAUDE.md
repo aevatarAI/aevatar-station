@@ -261,6 +261,49 @@ public async Task Should_UpdateState_When_EventReceived()
 
 **All categories MUST be documented using the test case generation guidelines before implementation.**
 
+### What Tests Should Focus On
+
+**DO TEST these meaningful scenarios:**
+1. **Business Logic**: Validation rules, computed properties, business constraints
+2. **Custom Behavior**: Any custom implementations beyond simple get/set
+3. **Serialization**: Orleans serialization behavior (when not already covered by integration tests)
+4. **Domain Rules**: Specific business rules about capabilities, versions, constraints
+5. **Equality/Comparison**: Custom equality logic implementations
+6. **Complex Interactions**: Multi-step workflows, state transitions
+7. **Error Handling**: Exception scenarios and recovery logic
+8. **Performance**: Critical path optimizations and resource management
+
+**DO NOT TEST these framework/language features:**
+- ❌ Basic C# language features (property get/set, constructors)
+- ❌ .NET Framework behavior (List.Add(), string assignment)
+- ❌ Simple data model properties without validation
+- ❌ Auto-property behavior
+- ❌ Standard collection operations
+- ❌ Null assignment acceptance
+- ❌ Basic object instantiation
+
+**Example of GOOD vs BAD tests:**
+```csharp
+// ❌ BAD: Testing framework behavior
+[Fact]
+public void Should_AcceptNullValue_When_PropertyIsNull()
+{
+    var model = new MyModel();
+    model.Name = null;
+    model.Name.ShouldBeNull(); // This tests C# behavior, not business logic
+}
+
+// ✅ GOOD: Testing business logic
+[Fact]
+public void Should_ThrowException_When_AgentTypeExceedsMaxLength()
+{
+    var metadata = new AgentTypeMetadata();
+    var longName = new string('A', 101); // Exceeds business rule limit
+    
+    Should.Throw<ArgumentException>(() => metadata.SetAgentType(longName));
+}
+```
+
 ## Development Workflow
 
 ### Task Analysis Protocol (MANDATORY)
