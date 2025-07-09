@@ -1,9 +1,12 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Security;
 using System.Threading.Tasks;
 using Aevatar.GodGPT.Dtos;
 using Aevatar.Service;
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Orleans;
@@ -18,7 +21,7 @@ namespace Aevatar.Controllers;
 [RemoteService]
 [ControllerName("TwitterManagement")]
 [Route("api/godgpt/twitter-management")]
-//[Authorize] // TODO: Add specific admin role authorization if needed
+[Authorize]
 public class GodGPTTwitterManagementController : AevatarController
 {
     private readonly ILogger<GodGPTTwitterManagementController> _logger;
@@ -44,6 +47,7 @@ public class GodGPTTwitterManagementController : AevatarController
     [HttpPost("monitor/fetch-manually")]
     public async Task<TwitterOperationResultDto> FetchTweetsManuallyAsync()
     {
+        await BeforeCheckUserIsManager();
         var stopwatch = Stopwatch.StartNew();
         _logger.LogInformation("[GodGPTTwitterManagementController][FetchTweetsManuallyAsync] Starting manual tweet fetch");
         
@@ -66,6 +70,7 @@ public class GodGPTTwitterManagementController : AevatarController
         [FromQuery] long startTimeUtcSecond, 
         [FromQuery] long endTimeUtcSecond)
     {
+        await BeforeCheckUserIsManager();
         var stopwatch = Stopwatch.StartNew();
         _logger.LogInformation("[GodGPTTwitterManagementController][RefetchTweetsByTimeRangeAsync] Starting refetch tweets from {StartTime} to {EndTime}",
             startTimeUtcSecond, endTimeUtcSecond);
@@ -85,6 +90,7 @@ public class GodGPTTwitterManagementController : AevatarController
     [HttpPost("monitor/start")]
     public async Task<TwitterOperationResultDto> StartTweetMonitoringAsync()
     {
+        await BeforeCheckUserIsManager();
         var stopwatch = Stopwatch.StartNew();
         _logger.LogInformation("[GodGPTTwitterManagementController][StartTweetMonitoringAsync] Starting tweet monitoring task");
         
@@ -103,6 +109,7 @@ public class GodGPTTwitterManagementController : AevatarController
     [HttpPost("monitor/stop")]
     public async Task<TwitterOperationResultDto> StopTweetMonitoringAsync()
     {
+        await BeforeCheckUserIsManager();
         var stopwatch = Stopwatch.StartNew();
         _logger.LogInformation("[GodGPTTwitterManagementController][StopTweetMonitoringAsync] Stopping tweet monitoring task");
         
@@ -121,6 +128,7 @@ public class GodGPTTwitterManagementController : AevatarController
     [HttpGet("monitor/status")]
     public async Task<TwitterOperationResultDto> GetTweetMonitoringStatusAsync()
     {
+        await BeforeCheckUserIsManager();
         var stopwatch = Stopwatch.StartNew();
         _logger.LogDebug("[GodGPTTwitterManagementController][GetTweetMonitoringStatusAsync] Getting tweet monitoring status");
         
@@ -142,6 +150,7 @@ public class GodGPTTwitterManagementController : AevatarController
     [HttpPost("rewards/trigger-calculation")]
     public async Task<TwitterOperationResultDto> TriggerRewardCalculationAsync([FromQuery] long targetDateUtcSeconds)
     {
+        await BeforeCheckUserIsManager();
         var stopwatch = Stopwatch.StartNew();
         _logger.LogInformation("[GodGPTTwitterManagementController][TriggerRewardCalculationAsync] Starting manual reward calculation for date: {TargetDate}",
             targetDateUtcSeconds);
@@ -162,6 +171,7 @@ public class GodGPTTwitterManagementController : AevatarController
     [HttpDelete("rewards/clear-by-day")]
     public async Task<TwitterOperationResultDto> ClearRewardByDayAsync([FromQuery] long targetDateUtcSeconds)
     {
+        await BeforeCheckUserIsManager();
         var stopwatch = Stopwatch.StartNew();
         _logger.LogInformation("[GodGPTTwitterManagementController][ClearRewardByDayAsync] Starting clear reward records for date: {TargetDate}",
             targetDateUtcSeconds);
@@ -181,6 +191,7 @@ public class GodGPTTwitterManagementController : AevatarController
     [HttpPost("rewards/start")]
     public async Task<TwitterOperationResultDto> StartRewardCalculationAsync()
     {
+        await BeforeCheckUserIsManager();
         var stopwatch = Stopwatch.StartNew();
         _logger.LogInformation("[GodGPTTwitterManagementController][StartRewardCalculationAsync] Starting reward calculation task");
         
@@ -199,6 +210,7 @@ public class GodGPTTwitterManagementController : AevatarController
     [HttpPost("rewards/stop")]
     public async Task<TwitterOperationResultDto> StopRewardCalculationAsync()
     {
+        await BeforeCheckUserIsManager();
         var stopwatch = Stopwatch.StartNew();
         _logger.LogInformation("[GodGPTTwitterManagementController][StopRewardCalculationAsync] Stopping reward calculation task");
         
@@ -218,6 +230,7 @@ public class GodGPTTwitterManagementController : AevatarController
     [HttpGet("rewards/user/{userId}")]
     public async Task<Dictionary<string, List<ManagerUserRewardRecordDto>>> GetUserRewardsByUserIdAsync([FromRoute] string userId)
     {
+        await BeforeCheckUserIsManager();
         var stopwatch = Stopwatch.StartNew();
         _logger.LogInformation("[GodGPTTwitterManagementController][GetUserRewardsByUserIdAsync] Getting user rewards for user ID: {UserId}", userId);
         
@@ -236,6 +249,7 @@ public class GodGPTTwitterManagementController : AevatarController
     [HttpGet("rewards/calculation-history")]
     public async Task<List<ManagerRewardCalculationHistoryDto>> GetCalculationHistoryListAsync()
     {
+        await BeforeCheckUserIsManager();
         var stopwatch = Stopwatch.StartNew();
         _logger.LogInformation("[GodGPTTwitterManagementController][GetCalculationHistoryListAsync] Getting calculation history list");
         
@@ -245,5 +259,21 @@ public class GodGPTTwitterManagementController : AevatarController
             result?.Count ?? 0, stopwatch.ElapsedMilliseconds);
         
         return result;
+    }
+
+    private async Task BeforeCheckUserIsManager()
+    {
+        var currentUserId = (Guid)CurrentUser.Id!;
+        if (currentUserId == Guid.Empty || currentUserId != null)
+        {
+            throw new SecurityException($"currentUserId is null {currentUserId}");
+        }
+      
+        if (!await _godGptService.CheckIsManager(currentUserId.ToString()))
+        {
+            _logger.LogInformation($"currentUserId is not manager {currentUserId}");
+            throw new SecurityException($"currentUserId is not manager {currentUserId}");
+        }
+        
     }
 } 

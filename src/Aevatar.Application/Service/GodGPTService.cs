@@ -21,6 +21,7 @@ using Aevatar.Application.Grains.TwitterInteraction;
 using Aevatar.Application.Grains.TwitterInteraction.Dtos;
 using Aevatar.Application.Grains.UserBilling;
 using Aevatar.Application.Grains.UserQuota;
+using Aevatar.Common.Options;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
 using Aevatar.GodGPT.Dtos;
@@ -109,6 +110,8 @@ public interface IGodGPTService
     /// Get full calculation history list
     /// </summary>
     Task<List<ManagerRewardCalculationHistoryDto>> GetCalculationHistoryListAsync();
+
+    Task<bool> CheckIsManager(string userId);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -118,16 +121,19 @@ public class GodGPTService : ApplicationService, IGodGPTService
     private readonly IClusterClient _clusterClient;
     private readonly ILogger<GodGPTService> _logger;
     private readonly IOptionsMonitor<StripeOptions> _stripeOptions;
+    private readonly IOptionsMonitor<ManagerOptions> _managerOptions;
 
     private readonly StripeClient _stripeClient;
     private const string PullTaskTargetId = "aevatar-twitter-monitor-PullTaskTargetId";
     private const string RewardTaskTargetId = "aevatar-twitter-reward-RewardTaskTargetId";
 
-    public GodGPTService(IClusterClient clusterClient, ILogger<GodGPTService> logger, IOptionsMonitor<StripeOptions> stripeOptions)
+    public GodGPTService(IClusterClient clusterClient, ILogger<GodGPTService> logger, IOptionsMonitor<StripeOptions> stripeOptions,
+        IOptionsMonitor<ManagerOptions> managerOptions)
     {
         _clusterClient = clusterClient;
         _logger = logger;
         _stripeOptions = stripeOptions;
+        _managerOptions = managerOptions;
 
         _stripeClient = new StripeClient(_stripeOptions.CurrentValue.SecretKey);
     }
@@ -956,6 +962,17 @@ public class GodGPTService : ApplicationService, IGodGPTService
             return new List<ManagerRewardCalculationHistoryDto>();
         }
     }
+
+    public async Task<bool> CheckIsManager(string userId)
+    {
+        if (userId.IsNullOrEmpty())
+        {
+            return false;
+        }
+
+        return _managerOptions.CurrentValue.ManagerIds.Contains(userId);
+    }
+
 
     /// <summary>
     /// Convert UserRewardRecordDto to ManagerUserRewardRecordDto

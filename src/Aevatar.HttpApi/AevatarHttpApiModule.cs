@@ -1,4 +1,5 @@
 ﻿using Aevatar.Application.Grains.Common.Options;
+using Aevatar.Common.Options;
 using Aevatar.Core.Abstractions;
 using Aevatar.Developer.Logger;
 using Localization.Resources.AbpUi;
@@ -33,6 +34,7 @@ public class AevatarHttpApiModule : AbpModule
         var configuration = context.Services.GetConfiguration();
         Configure<AevatarOptions>(configuration.GetSection("Aevatar"));
         Configure<StripeOptions>(configuration.GetSection("Stripe"));
+        Configure<ManagerOptions>(configuration.GetSection("ManagerOptions"));
     }
 
     private void ConfigureLocalization()
