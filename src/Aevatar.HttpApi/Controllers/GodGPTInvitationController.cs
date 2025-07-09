@@ -7,7 +7,9 @@ using Aevatar.Application.Grains.ChatManager.Dtos;
 using Aevatar.Application.Grains.ChatManager.UserBilling;
 using Aevatar.Application.Grains.Common.Constants;
 using Aevatar.Application.Grains.Common.Options;
+using Aevatar.Application.Grains.Invitation;
 using Aevatar.Application.Grains.Payment;
+using Aevatar.Application.Grains.Twitter.Dtos;
 using Aevatar.GodGPT.Dtos;
 using Aevatar.Service;
 using Asp.Versioning;
@@ -63,6 +65,39 @@ public class GodGPTInvitationController : AevatarController
         var currentUserId = (Guid)CurrentUser.Id!;
         var response = await _godGptService.RedeemInviteCodeAsync(currentUserId, input);
         _logger.LogDebug("[GodGPTInvitationController][RedeemInviteCodeAsync] userId: {0}, duration: {1}ms",
+            currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
+        return response;
+    }
+
+    [HttpGet("credits/history")]
+    public async Task<PagedResultDto<RewardHistoryDto>> GetCreditsHistoryAsync(GetCreditsHistoryInput input)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var response = await _godGptService.GetCreditsHistoryAsync(currentUserId, input);
+        _logger.LogDebug("[GodGPTInvitationController][GetCreditsHistoryAsync] userId: {0}, duration: {1}ms",
+            currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
+        return response;
+    }
+    
+    [HttpGet("twitter/params")]
+    public async Task<TwitterAuthParamsDto> GetTwitterAuthParamsAsync()
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var response = await _godGptService.GetTwitterAuthParamsAsync(currentUserId);
+        _logger.LogDebug("[GodGPTInvitationController][GetTwitterAuthParamsAsync] userId: {0}, duration: {1}ms",
+            currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
+        return response;
+    }
+
+    [HttpPost("twitter/verify")]
+    public async Task<TwitterAuthResultDto> TwitterAuthVerifyAsync(TwitterAuthVerifyInput input)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var response = await _godGptService.TwitterAuthVerifyAsync(currentUserId, input);
+        _logger.LogDebug("[GodGPTInvitationController][TwitterAuthVerifyAsync] userId: {0}, duration: {1}ms",
             currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
         return response;
     }

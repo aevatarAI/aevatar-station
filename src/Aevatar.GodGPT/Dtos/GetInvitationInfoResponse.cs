@@ -9,4 +9,6 @@ public class GetInvitationInfoResponse
     public int ValidInvites { get; set; }
     public int TotalCreditsEarned { get; set; }
     public List<RewardTierDto> RewardTiers { get; set; }
+    public int TotalCreditsFromX { get; set; }
+    public bool IsBound { get; set; }
 }
