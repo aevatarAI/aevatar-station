@@ -10,7 +10,8 @@ namespace Aevatar.Application.Grains.Agents.TestAgent;
 [Description("TestAgentWithConfiguration")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
-public class TestAgentWithConfiguration : GAgentBase<TestAgentState, TestAgentEvent, EventBase, AgentConfiguration>, ITestAgentWithConfiguration
+public class TestAgentWithConfiguration : GAgentBase<TestAgentState, TestAgentEvent, EventBase, AgentConfiguration>,
+    ITestAgentWithConfiguration
 {
     private readonly ILogger<TestAgentWithConfiguration> _logger;
 
@@ -23,7 +24,7 @@ public class TestAgentWithConfiguration : GAgentBase<TestAgentState, TestAgentEv
     {
         return Task.FromResult("this is used for front test");
     }
-    
+
     protected override async Task PerformConfigAsync(AgentConfiguration configuration)
     {
         RaiseEvent(new InitializationSEvent
@@ -33,17 +34,32 @@ public class TestAgentWithConfiguration : GAgentBase<TestAgentState, TestAgentEv
         });
         await ConfirmEvents();
     }
-    
+
+    public async Task PublishNumberEventAsync(SetNumberSEvent frontTestCreateEvent)
+    {
+        await HandleAddDataEvent(new SetNumberGEvent
+            {
+                Number = frontTestCreateEvent.Number
+            }
+        );
+    }
 
     [EventHandler]
     public async Task HandleAddDataEvent(SetNumberGEvent @event)
     {
+        _logger.LogInformation("HandleAddDataEvent START - GrainId: {GrainId}, Current State Number: {CurrentNumber}, Event Number: {EventNumber}, Version: {Version}", 
+            this.GetPrimaryKeyString(), State.Number, @event.Number, Version);
+        
         RaiseEvent(new SetNumberSEvent()
         {
             Id = Guid.NewGuid(),
             Number = @event.Number
         });
+        
         await ConfirmEvents();
+        
+        _logger.LogInformation("HandleAddDataEvent END - GrainId: {GrainId}, Updated State Number: {UpdatedNumber}, Version: {Version}", 
+            this.GetPrimaryKeyString(), State.Number, Version);
     }
 
     protected override void GAgentTransitionState(TestAgentState state, StateLogEventBase<TestAgentEvent> @event)
@@ -63,7 +79,7 @@ public class TestAgentWithConfiguration : GAgentBase<TestAgentState, TestAgentEv
 
 public interface ITestAgentWithConfiguration : IGAgent
 {
-    // Task PublishEventAsync(FrontTestCreateEvent frontTestCreateEvent);
+    Task PublishNumberEventAsync(SetNumberSEvent frontTestCreateEvent);
 }
 
 [GenerateSerializer]
@@ -96,7 +112,6 @@ public class SetNumberGEvent : EventBase
 {
     [Id(0)] [Required] public int Number { get; set; }
 }
-
 
 [GenerateSerializer]
 public class AgentConfiguration : ConfigurationBase
