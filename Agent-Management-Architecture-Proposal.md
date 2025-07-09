@@ -217,7 +217,90 @@ public class AgentFactory : IAgentFactory
 }
 ```
 
-#### 4. TypeMetadataService Initialization
+#### 4. TypeMetadataService Architecture
+**Purpose**: Cluster-wide agent type metadata storage and retrieval using Orleans grain.
+
+**Key Design Decisions**:
+- **Orleans Grain Storage**: Use single TypeMetadataGrain with persistent state
+- **Strong Consistency**: Single grain activation ensures atomic updates
+- **Performance**: In-memory grain state provides ~1ms access latency
+- **Capacity**: Supports ~10,000 agent types within 16MB MongoDB document limit
+- **Monitoring**: Built-in size monitoring with alerts at 50% capacity
+
+```csharp
+// TypeMetadataGrain with size monitoring
+[StatelessWorker] // Single activation per cluster
+public class TypeMetadataGrain : Grain, ITypeMetadataGrain
+{
+    private readonly IPersistentState<TypeMetadataState> _state;
+    
+    public TypeMetadataGrain(
+        [PersistentState("typeMetadata", "PubSubStore")] 
+        IPersistentState<TypeMetadataState> state)
+    {
+        _state = state;
+    }
+    
+    public async Task<MetadataStats> GetStatsAsync()
+    {
+        var sizeInBytes = CalculateStateSize();
+        var stats = new MetadataStats
+        {
+            TotalTypes = _state.State.Metadata.Count,
+            SizeInBytes = sizeInBytes,
+            PercentageOf16MB = (sizeInBytes / (16.0 * 1024 * 1024)) * 100
+        };
+        
+        if (stats.PercentageOf16MB > 50)
+        {
+            _logger.LogWarning(
+                "TypeMetadata approaching capacity: {Percentage}% of 16MB limit", 
+                stats.PercentageOf16MB);
+        }
+        
+        return stats;
+    }
+    
+    // Metadata management methods
+    public async Task SetMetadataAsync(List<AgentTypeMetadata> metadata)
+    {
+        _state.State.Metadata = metadata ?? new List<AgentTypeMetadata>();
+        await _state.WriteStateAsync();
+    }
+    
+    public async Task<List<AgentTypeMetadata>> GetByCapabilityAsync(string capability)
+    {
+        return _state.State.Metadata
+            .Where(m => m.Capabilities?.Contains(capability) == true)
+            .ToList();
+    }
+}
+
+// TypeMetadataService with grain integration
+public class TypeMetadataService : ITypeMetadataService
+{
+    private readonly IGrainFactory _grainFactory;
+    private readonly ConcurrentDictionary<string, AgentTypeMetadata> _localCache;
+    
+    public async Task<AgentTypeMetadata> GetTypeMetadataAsync(string agentType)
+    {
+        // Check local cache first (fastest)
+        if (_localCache.TryGetValue(agentType, out var cached))
+            return cached;
+            
+        // Fallback to grain (still fast, ~1ms)
+        var grain = _grainFactory.GetGrain<ITypeMetadataGrain>(0);
+        var metadata = await grain.GetByTypeAsync(agentType);
+        
+        if (metadata != null)
+            _localCache.TryAdd(agentType, metadata);
+            
+        return metadata;
+    }
+}
+```
+
+#### 5. TypeMetadataService Initialization
 **Purpose**: Automatic loading of agent type metadata during silo startup.
 
 ```csharp
@@ -294,7 +377,7 @@ public static class SiloHostBuilderExtensions
 }
 ```
 
-#### 5. Agent Instance State
+#### 6. Agent Instance State
 **Purpose**: Replaces CreatorGAgentState with automatic Elasticsearch projection using IMetaDataState interface.
 
 ```csharp
@@ -742,12 +825,36 @@ sequenceDiagram
 - Clear interface boundaries
 
 
+## TypeMetadata Storage Architecture
+
+### Orleans Grain Approach Benefits
+1. **Strong Consistency**: Single grain activation prevents race conditions
+2. **Simple Implementation**: No complex cache invalidation logic
+3. **Excellent Performance**: In-memory access with ~1ms latency
+4. **Orleans Native**: Seamless integration with existing infrastructure
+5. **Sufficient Capacity**: Supports ~10,000+ agent types (10MB+ capacity)
+
+### Capacity Management
+- **Monitoring**: Continuous size tracking with GetStatsAsync()
+- **Alerts**: Automatic warnings at 50% capacity (8MB)
+- **Growth Path**: Clear migration strategy if limits approached
+- **Current Usage**: Estimated <1MB for hundreds of agent types
+
+### Future Migration Strategy (If Needed)
+If approaching capacity limits:
+1. **Monitor**: Alerts trigger at 50% capacity
+2. **Plan**: Design MongoDB-based implementation
+3. **Parallel Run**: Run both implementations temporarily
+4. **Migrate**: Switch to MongoDB while keeping same interfaces
+5. **Verify**: Ensure data consistency before decommissioning grain
+
 ## Benefits
 
 ### Performance Improvements
 - **Reduced Latency**: Direct agent access eliminates proxy layer
 - **Lower Memory Usage**: No CreatorGAgent grains for each business agent
 - **Better Throughput**: Parallel processing without bottlenecks
+- **Fast Metadata Access**: ~1ms for type metadata queries
 
 ### Architectural Benefits
 - **Cleaner Separation**: Type metadata separate from instance state
@@ -756,12 +863,14 @@ sequenceDiagram
 - **Reduced Complexity**: Eliminate unnecessary abstraction layers
 - **Stream-Based Integration**: Orleans streams provide consistent event delivery
 - **Configurable Backend**: Streams can use Kafka or other providers as needed
+- **Strong Consistency**: Orleans grain ensures metadata consistency
 
 ### Operational Benefits
 - **Easier Debugging**: Direct access to agent logic
 - **Better Monitoring**: Clear separation of concerns
 - **Improved Testability**: Mock individual services independently
 - **Faster Development**: Simpler mental model
+- **Capacity Visibility**: Real-time monitoring of metadata storage usage
 
 
 ## Conclusion

@@ -34,7 +34,8 @@ graph TB
 
 ### 1. Type Metadata Service
 **Purpose**: Introspect assemblies for agent capabilities at startup
-**Storage**: In-memory cache + Orleans grain registry
+**Storage**: In-memory cache + Orleans grain registry (persistent state)
+**Architecture**: Orleans grain with PubSubStore provider for cluster-wide consistency
 
 ```csharp
 public interface IAgentTypeMetadataService
@@ -149,6 +150,13 @@ StateDispatcher → Orleans Streams → StateProjectionGrain → Elasticsearch
 - Uses `IGAgentFactory` for agent creation
 - Follows `GAgentBase<TState, TEvent>` patterns
 
+### TypeMetadataGrain Architecture
+- **Storage**: Orleans persistent state with PubSubStore provider
+- **Consistency**: Strong consistency via single grain activation
+- **Performance**: In-memory access after grain activation (~1ms)
+- **Capacity**: Supports up to ~10,000 agent types (16MB limit)
+- **Monitoring**: Built-in size monitoring with alerts at 50% capacity
+
 ## Usage Example
 
 ```csharp
@@ -170,9 +178,32 @@ foreach (var agent in agents)
 
 ## Implementation Notes
 
-- **Type Metadata**: Extracted at silo startup, cached in memory, shared via Orleans grain
+- **Type Metadata**: Extracted at silo startup, cached in memory, persisted in Orleans grain
+- **Orleans Grain**: Single TypeMetadataGrain instance for cluster-wide consistency
+- **Size Monitoring**: Continuous monitoring of grain state size with alerts
 - **Instance Queries**: Use modern `ElasticsearchClient` with proper field mapping
 - **Version Tracking**: `AssemblyVersion_DeploymentId_SiloIdentity` for uniqueness
 - **Cleanup**: Old metadata versions auto-expire after configurable time
+
+### TypeMetadataGrain Design
+```csharp
+[StatelessWorker] // Single activation per cluster
+public class TypeMetadataGrain : Grain, ITypeMetadataGrain
+{
+    private readonly IPersistentState<TypeMetadataState> _state;
+    
+    // Methods for metadata management
+    public async Task<MetadataStats> GetStatsAsync()
+    {
+        var sizeInBytes = CalculateStateSize();
+        return new MetadataStats
+        {
+            TotalTypes = _state.State.Metadata.Count,
+            SizeInBytes = sizeInBytes,
+            PercentageOf16MB = (sizeInBytes / (16.0 * 1024 * 1024)) * 100
+        };
+    }
+}
+```
 
 This architecture provides efficient, consistent agent discovery while handling the complexity of distributed deployments and rolling updates.

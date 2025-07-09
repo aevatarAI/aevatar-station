@@ -20,8 +20,11 @@ Implement the service that separates static type metadata (capabilities, version
 ## File Locations
 - `station/src/Aevatar.Application/Services/ITypeMetadataService.cs`
 - `station/src/Aevatar.Application/Services/TypeMetadataService.cs`
-- `station/src/Aevatar.Application/Models/AgentTypeMetadata.cs`
+- `station/src/Aevatar.Application.Contracts/Models/AgentTypeMetadata.cs`
 - `station/src/Aevatar.Application.Grains/TypeMetadataGrain.cs`
+- `station/src/Aevatar.Application.Grains/ITypeMetadataGrain.cs`
+- `station/src/Aevatar.Application/Services/TypeMetadataStartupTask.cs`
+- `station/src/Aevatar.Silo/Extensions/SiloHostBuilderExtensions.cs`
 
 ## Implementation Details
 
