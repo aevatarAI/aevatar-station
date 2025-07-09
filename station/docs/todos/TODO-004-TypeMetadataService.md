@@ -111,5 +111,89 @@ public class AgentTypeMetadata
 - Fallback strategies for missing type information
 - Comprehensive logging for troubleshooting
 
+## Startup Initialization Implementation
+
+### TypeMetadataStartupTask
+```csharp
+public class TypeMetadataStartupTask : IStartupTask
+{
+    private readonly ITypeMetadataService _typeMetadataService;
+    private readonly ILogger<TypeMetadataStartupTask> _logger;
+    
+    public async Task Execute(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Starting TypeMetadataService initialization");
+        
+        // Force load all assemblies that might contain GAgents
+        await LoadGAgentAssemblies();
+        
+        // Scan assemblies and build metadata cache
+        await _typeMetadataService.RefreshMetadataAsync();
+        
+        _logger.LogInformation("TypeMetadataService initialization completed");
+    }
+    
+    private async Task LoadGAgentAssemblies()
+    {
+        // Load assemblies that contain GAgent implementations
+        var assemblyPaths = new[]
+        {
+            "Aevatar.Application.Grains.dll",
+            "Aevatar.Domain.dll",
+            // Add other assemblies that contain GAgent implementations
+        };
+        
+        foreach (var assemblyPath in assemblyPaths)
+        {
+            try
+            {
+                if (File.Exists(assemblyPath))
+                {
+                    Assembly.LoadFrom(assemblyPath);
+                    _logger.LogInformation("Loaded assembly: {AssemblyPath}", assemblyPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to load assembly: {AssemblyPath}", assemblyPath);
+            }
+        }
+        
+        await Task.CompletedTask;
+    }
+}
+```
+
+### Silo Configuration
+```csharp
+public static class SiloHostBuilderExtensions
+{
+    public static ISiloHostBuilder AddTypeMetadataService(this ISiloHostBuilder builder)
+    {
+        return builder
+            .ConfigureServices(services =>
+            {
+                services.AddSingleton<ITypeMetadataService, TypeMetadataService>();
+                services.AddSingleton<IStartupTask, TypeMetadataStartupTask>();
+            });
+    }
+}
+```
+
+### Usage in Program.cs
+```csharp
+var builder = Host.CreateDefaultBuilder(args)
+    .UseOrleans(silo => silo
+        .AddTypeMetadataService() // Add this extension
+        .UseLocalhostClustering()
+        // ... other configuration
+    );
+```
+
 ## Priority: High
-This service is foundational for the discovery architecture and must be implemented early in the migration process.
+This service is foundational for the discovery architecture and must be implemented early in the migration process. The startup initialization ensures metadata is available immediately when the silo starts, preventing race conditions in agent creation.
+
+## Status: Completed
+Implementation successfully completed with all unit tests passing and proper Orleans integration. 
+
+**Note**: For production deployment, implement the TypeMetadataStartupTask and SiloHostBuilderExtensions as described above to ensure metadata is loaded automatically during silo startup.

@@ -217,7 +217,84 @@ public class AgentFactory : IAgentFactory
 }
 ```
 
-#### 4. Agent Instance State
+#### 4. TypeMetadataService Initialization
+**Purpose**: Automatic loading of agent type metadata during silo startup.
+
+```csharp
+// Startup task for TypeMetadataService initialization
+public class TypeMetadataStartupTask : IStartupTask
+{
+    private readonly ITypeMetadataService _typeMetadataService;
+    private readonly ILogger<TypeMetadataStartupTask> _logger;
+    
+    public TypeMetadataStartupTask(
+        ITypeMetadataService typeMetadataService,
+        ILogger<TypeMetadataStartupTask> logger)
+    {
+        _typeMetadataService = typeMetadataService;
+        _logger = logger;
+    }
+    
+    public async Task Execute(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Starting TypeMetadataService initialization");
+        
+        // Force load all assemblies that might contain GAgents
+        await LoadGAgentAssemblies();
+        
+        // Scan assemblies and build metadata cache
+        await _typeMetadataService.RefreshMetadataAsync();
+        
+        _logger.LogInformation("TypeMetadataService initialization completed");
+    }
+    
+    private async Task LoadGAgentAssemblies()
+    {
+        // Load assemblies that contain GAgent implementations
+        // This ensures assemblies are loaded before scanning
+        var assemblyPaths = new[]
+        {
+            "Aevatar.Application.Grains.dll",
+            "Aevatar.Domain.dll",
+            // Add other assemblies that contain GAgent implementations
+        };
+        
+        foreach (var assemblyPath in assemblyPaths)
+        {
+            try
+            {
+                if (File.Exists(assemblyPath))
+                {
+                    Assembly.LoadFrom(assemblyPath);
+                    _logger.LogInformation("Loaded assembly: {AssemblyPath}", assemblyPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to load assembly: {AssemblyPath}", assemblyPath);
+            }
+        }
+        
+        await Task.CompletedTask;
+    }
+}
+
+// Silo configuration for startup task registration
+public static class SiloHostBuilderExtensions
+{
+    public static ISiloHostBuilder AddTypeMetadataService(this ISiloHostBuilder builder)
+    {
+        return builder
+            .ConfigureServices(services =>
+            {
+                services.AddSingleton<ITypeMetadataService, TypeMetadataService>();
+                services.AddSingleton<IStartupTask, TypeMetadataStartupTask>();
+            });
+    }
+}
+```
+
+#### 5. Agent Instance State
 **Purpose**: Replaces CreatorGAgentState with automatic Elasticsearch projection using IMetaDataState interface.
 
 ```csharp
@@ -339,7 +416,7 @@ public enum AgentStatus
 }
 ```
 
-#### 5. Discovery Service Enhancement
+#### 6. Discovery Service Enhancement
 **Purpose**: Builds on AgentRegistry-ElasticSearch-Lite design for efficient agent discovery.
 
 ```csharp
@@ -392,7 +469,7 @@ public class AgentDiscoveryService : IAgentDiscoveryService
 }
 ```
 
-#### 6. Orleans Event Publisher
+#### 7. Orleans Event Publisher
 **Purpose**: Publishes events from API layer to Orleans streams (which can be backed by Kafka) for agent consumption.
 
 ```csharp
@@ -483,6 +560,27 @@ public class EventWrapper
 
 ## Data Flow Diagrams
 
+### Silo Startup Flow
+```mermaid
+sequenceDiagram
+    participant Silo
+    participant ST as TypeMetadataStartupTask
+    participant TMS as TypeMetadataService
+    participant AL as AssemblyLoader
+    participant Cache as MetadataCache
+    
+    Silo->>ST: Execute()
+    ST->>AL: LoadGAgentAssemblies()
+    AL->>AL: Load assembly files
+    AL-->>ST: Assemblies loaded
+    ST->>TMS: RefreshMetadataAsync()
+    TMS->>TMS: ScanAssembliesForGAgentTypes()
+    TMS->>Cache: Build metadata cache
+    Cache-->>TMS: Cache populated
+    TMS-->>ST: Metadata refreshed
+    ST-->>Silo: Initialization complete
+```
+
 ### Agent Creation Flow
 ```mermaid
 sequenceDiagram
@@ -497,6 +595,7 @@ sequenceDiagram
     Client->>API: POST /agents (CreateAgentRequest)
     API->>ALS: CreateAgentAsync(request)
     ALS->>TMS: GetTypeMetadataAsync(agentType)
+    Note over TMS: Metadata available from startup cache
     TMS-->>ALS: AgentTypeMetadata
     ALS->>AF: CreateAgentAsync(agentType, config)
     AF-->>ALS: IGAgent
