@@ -89,11 +89,15 @@ Shall I proceed with this approach?
 ```
 
 ### Core Principles
+- **Production-ready code** - All implementations must be enterprise-grade, complete, and robust
 - **Maintainability over performance** - Clean, readable code is paramount
 - **Minimal changes** - Smallest reasonable modifications to achieve goals
 - **Consistency** - Match existing code style within files
 - **SOLID principles** - Apply throughout implementation
 - **Never break existing functionality** - Preserve working code
+- **Complete implementation** - No placeholders, stubs, or TODO comments in production code
+- **Proper error handling** - Comprehensive exception handling and validation
+- **Security-first** - All code must follow security best practices
 
 ### Critical Rules
 - ❌ **NEVER** use `--no-verify` when committing
@@ -104,12 +108,18 @@ Shall I proceed with this approach?
 - ❌ **NEVER** start coding without analysis and proposed solution
 - ❌ **NEVER** write implementation code before writing tests
 - ❌ **NEVER** skip writing tests unless explicitly authorized
+- ❌ **NEVER** write test/development code in production implementation
+- ❌ **NEVER** use placeholder/stub implementations in production code
+- ❌ **NEVER** include debugging/temporary code in production implementation
 - ✅ **ALWAYS** analyze and propose BEFORE implementing
 - ✅ **ALWAYS** write failing tests FIRST before any implementation
 - ✅ **ALWAYS** ask for clarification vs assumptions
 - ✅ **ALWAYS** add `ABOUTME:` comments to new files (2 lines)
 - ✅ **ALWAYS** preserve unrelated working code
 - ✅ **ALWAYS** follow strict TDD: Red → Green → Refactor cycle
+- ✅ **ALWAYS** write production-ready, enterprise-grade code
+- ✅ **ALWAYS** implement complete, robust solutions without shortcuts
+- ✅ **ALWAYS** include proper error handling and validation
 
 ### Implementation Standards
 ```csharp
@@ -146,9 +156,10 @@ public class MyAgent : GAgentBase<MyState, MyEvent>, IMyAgent
    - Run test to confirm it fails (proves test is valid)
    - NO implementation code allowed at this stage
    
-2. **GREEN PHASE** - Write MINIMAL code to pass
-   - Implement ONLY enough code to make test pass
-   - No extra features or "nice to have" additions
+2. **GREEN PHASE** - Write MINIMAL production code to pass
+   - Implement ONLY enough PRODUCTION-READY code that makes test pass
+   - Include proper error handling, validation, and security measures
+   - No shortcuts, placeholders, or stub implementations
    - Run test to confirm it passes
    
 3. **REFACTOR PHASE** - Improve code quality
@@ -324,11 +335,13 @@ Before ANY implementation:
 3. **Generate test case documentation** using six design methods
 4. **Write failing tests FIRST** based on documented test cases
 5. **Execute parallel operations** when possible
-6. **Implement minimal code** to make tests pass
-7. **Refactor** while keeping tests green
-8. **Update test documentation** if tests change during refactoring
-9. **Validate all tests pass** before considering task complete
-10. **Clean up temporary files** at completion
+6. **Implement production-ready code** to make tests pass
+7. **Include comprehensive error handling** and input validation
+8. **Implement security best practices** throughout
+9. **Refactor** while keeping tests green
+10. **Update test documentation** if tests change during refactoring
+11. **Validate all tests pass** before considering task complete
+12. **Clean up temporary files** at completion
 
 ### Development Tools
 - **sequentialthinking** - Break down complex tasks using MECE (Mutually Exclusive, Collectively Exhaustive) principles
@@ -372,4 +385,6 @@ Before ANY implementation:
 TDD is MANDATORY - NO EXCEPTIONS without explicit authorization. 
 Always prioritize maintainability, STRICTLY follow TDD, and ask for clarification when uncertain.
 
-The sequence is ALWAYS: RED (failing test) → GREEN (minimal implementation) → REFACTOR (improve code).**
+The sequence is ALWAYS: RED (failing test) → GREEN (minimal production-ready implementation) → REFACTOR (improve code).
+
+ALL IMPLEMENTATIONS MUST BE PRODUCTION-READY, ENTERPRISE-GRADE CODE - NO SHORTCUTS, PLACEHOLDERS, OR DEVELOPMENT-ONLY CODE.**
