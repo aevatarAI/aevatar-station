@@ -228,3 +228,4 @@ public class AevatarAuthServerModule : AbpModule
         app.UseConfiguredEndpoints();
     }
 }
+
