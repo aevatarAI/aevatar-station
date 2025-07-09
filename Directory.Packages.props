@@ -7,9 +7,9 @@
     <AevatarGAgentVerion>1.4.16</AevatarGAgentVerion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="GodGPT.GAgents" Version="1.20.1-alpha-twitter-oauth-19" />
+    <PackageVersion Include="GodGPT.GAgents" Version="1.20.1-alpha-13" />
     <PackageVersion Include="Stripe.net" Version="48.1.0"/>
-    <PackageVersion Include="GodGPT.Webhook" Version="1.20.1-alpha-twitter-oauth-19" />
+    <PackageVersion Include="GodGPT.Webhook" Version="1.20.1-alpha-13" />
     
     <!-- AElf packages -->
     <PackageVersion Include="AElf.Client" Version="1.1.0" />
