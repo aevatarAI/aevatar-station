@@ -264,7 +264,7 @@ public class GodGPTTwitterManagementController : AevatarController
     private async Task BeforeCheckUserIsManager()
     {
         var currentUserId = (Guid)CurrentUser.Id!;
-        if (currentUserId == Guid.Empty || currentUserId != null)
+        if (currentUserId == Guid.Empty || currentUserId == null)
         {
             throw new SecurityException($"currentUserId is null {currentUserId}");
         }
