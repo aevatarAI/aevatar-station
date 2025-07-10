@@ -195,3 +195,70 @@ Improve user experience when configuring agent nodes by providing smart defaults
 - Default values are clearly distinguishable from user-entered values in the UI
 
 ---
+
+## 8. Prompt-Based Workflow Creation & Editing
+**Version**
+v0.5
+
+**Objective:**  
+Enable users to create sophisticated agent workflows using natural language prompts, with seamless transition to manual editing capabilities for refinement and customization.
+
+**Key Requirements:**
+- **Natural Language Processing Engine:**
+  - AI-powered prompt interpreter capable of understanding workflow intent from user descriptions.
+  - Support for complex workflow patterns including sequential, parallel, and conditional logic.
+  - Ability to parse and identify agent types, triggers, actions, and data flow requirements.
+  - Context-aware suggestions based on available agents, connectors, and output nodes.
+
+- **Prompt Interface:**
+  - Intuitive text input area with rich formatting support.
+  - Real-time prompt validation and suggestions.
+  - Example prompts and templates for common workflow patterns.
+  - Support for both simple single-step and complex multi-step workflow descriptions.
+
+- **Workflow Generation:**
+  - Automatic generation of visual workflow diagrams from prompts.
+  - Intelligent node placement and connection routing.
+  - Proper mapping of described functionality to available node types:
+    - **Agent Nodes:** AI agents (Summarizer, Retriever, Planner, etc.)
+    - **Event Nodes:** Triggers (Time-based, Webhook, Manual, etc.)
+    - **Output Nodes:** Actions (Save to DB, Send Email, Webhook, etc.)
+    - **Connectors:** Tools for external integrations and API connections
+  - Automatic parameter configuration based on prompt context.
+  - Generation of meaningful node names and descriptions.
+
+- **Seamless Editing Transition:**
+  - One-click transition from generated workflow to manual editing mode.
+  - Full compatibility with existing drag-and-drop workflow designer.
+  - Preservation of all prompt-generated configurations and settings.
+  - Ability to regenerate specific portions of workflow from refined prompts.
+  - Undo/redo functionality that maintains prompt generation history.
+
+- **Validation & Error Handling:**
+  - Real-time validation of generated workflows against system constraints.
+  - Clear error messages for ambiguous or impossible prompt requirements.
+  - Suggestions for prompt refinement when generation fails.
+  - Fallback to manual creation when automatic generation is not possible.
+
+- **User Experience Features:**
+  - Integration with existing workflow templates and examples.
+  - Save and reuse successful prompt patterns.
+
+**Technical Constraints:**
+- Generated workflows must comply with existing connector usage rules (Tools only connect to Agent Nodes).
+- All generated nodes must be valid and properly configured.
+- Performance requirement: workflow generation should complete within 10 seconds for typical prompts.
+- Support for multi-language prompts (English primary, with extensibility for other languages).
+
+**Acceptance Criteria:**
+- Users can describe desired workflows in natural language and receive accurate visual representations.
+- Generated workflows are immediately editable using the existing drag-and-drop interface.
+- System correctly interprets complex workflow patterns including branching, loops, and conditional logic.
+- All generated workflows pass validation and are executable without manual intervention.
+- Transition between prompt-based creation and manual editing is seamless and preserves all configurations.
+- Error handling provides clear guidance for prompt improvement when generation fails.
+- Generated workflows maintain proper node relationships and connector usage rules.
+- System performance meets the 10-second generation time requirement for standard prompts.
+- Generated workflows include meaningful names, descriptions, and parameter configurations.
+
+---
