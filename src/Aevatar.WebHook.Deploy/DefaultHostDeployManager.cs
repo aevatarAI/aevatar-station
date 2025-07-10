@@ -37,7 +37,7 @@ public class DefaultHostDeployManager : IHostDeployManager
         return;
     }
 
-    public async Task UpdateHostAsync(string appId, string version, string corsUrls, Guid projectId)
+    public async Task UpgradeApplicationAsync(string appId, string version, string corsUrls, Guid projectId)
     {
         return;
     }
