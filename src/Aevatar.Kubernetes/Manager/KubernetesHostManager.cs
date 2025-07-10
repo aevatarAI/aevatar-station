@@ -53,10 +53,10 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
             fileBeatConfigContent, ConfigMapHelper.CreateFileBeatConfigMapDefinition);
 
         // Ensure Deployment is created
-        var deploymentName = DeploymentHelper.GetAppDeploymentName(appId, version);
-        var deploymentLabel = DeploymentHelper.GetAppDeploymentLabelName(appId, version);
-        var containerName = ContainerHelper.GetAppContainerName(appId, version);
-        await EnsureDeploymentAsync(appId, version, imageName, deploymentName, deploymentLabel, containerName, command,
+        var deploymentName = DeploymentHelper.GetAppDeploymentName(appHostName, version);
+        var deploymentLabel = DeploymentHelper.GetAppDeploymentLabelName(appHostName, version);
+        var containerName = ContainerHelper.GetAppContainerName(appHostName, version);
+        await EnsureDeploymentAsync(appHostName, version, imageName, deploymentName, deploymentLabel, containerName, command,
             _kubernetesOptions.AppPodReplicas, KubernetesConstants.WebhookContainerTargetPort,
             KubernetesConstants.QueryPodMaxSurge, KubernetesConstants.QueryPodMaxUnavailable, GetHealthPath());
 
@@ -169,14 +169,14 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
     }
 
     private async Task EnsureDeploymentAsync(
-        string appId, string version, string imageName, string deploymentName,
+        string applicationName, string version, string imageName, string deploymentName,
         string deploymentLabelName, string containerName, List<string> command, int replicas,
         int containerPort, string maxSurge, string maxUnavailable, string healthPath, bool isSilo = false)
     {
-        var configMapName = ConfigMapHelper.GetAppSettingConfigMapName(appId, version);
-        var sideCarConfigName = ConfigMapHelper.GetAppFileBeatConfigMapName(appId, version);
+        var configMapName = ConfigMapHelper.GetAppSettingConfigMapName(applicationName, version);
+        var sideCarConfigName = ConfigMapHelper.GetAppFileBeatConfigMapName(applicationName, version);
         var deployment = DeploymentHelper.CreateAppDeploymentWithFileBeatSideCarDefinition(
-            appId, version, imageName, deploymentName, deploymentLabelName, command, replicas, containerName,
+            applicationName, version, imageName, deploymentName, deploymentLabelName, command, replicas, containerName,
             containerPort, configMapName, sideCarConfigName,
             _kubernetesOptions.RequestCpuCore, _kubernetesOptions.RequestMemory,
             maxSurge, maxUnavailable, isSilo, healthPath);
