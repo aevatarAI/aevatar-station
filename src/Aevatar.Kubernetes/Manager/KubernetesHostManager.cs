@@ -92,7 +92,7 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
             KubernetesConstants.QueryPodMaxUnavailable, "", true);
 
         // Ensure Service is created
-        await EnsureServiceAsync(hostName, version, DeploymentHelper.GetAppDeploymentLabelName(appId, version),
+        await EnsureServiceAsync(hostName, version, DeploymentHelper.GetAppDeploymentLabelName(hostName, version),
             KubernetesConstants.SiloContainerTargetPort);
     }
 
