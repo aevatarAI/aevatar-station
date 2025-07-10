@@ -37,7 +37,7 @@ public class UserController : AevatarController
     public async Task RegisterClientAuthentication(string clientId, string clientSecret, string corsUrls)
     {
         await _userAppService.RegisterClientAuthentication(clientId, clientSecret);
-        await _developerService.CreateHostAsync(clientId, "1", corsUrls);
+        await _developerService.CreateServiceAsync(clientId, "1", corsUrls);
     }
 
     [HttpPost("grantClientPermissions")]
@@ -51,14 +51,14 @@ public class UserController : AevatarController
     [Authorize(Policy = AevatarPermissions.AdminPolicy)]
     public async Task CreateHost(string clientId, string corsUrls)
     {
-        await _developerService.CreateHostAsync(clientId, "1", corsUrls);
+        await _developerService.CreateServiceAsync(clientId, "1", corsUrls);
     }
 
     [HttpPost("destroyHost")]
     [Authorize(Policy = AevatarPermissions.AdminPolicy)]
     public async Task DestroyHostAsync(string clientId)
     {
-        await _developerService.DestroyHostAsync(clientId, "1");
+        await _developerService.DestroyServiceAsync(clientId, "1");
     }
 
     [Authorize]

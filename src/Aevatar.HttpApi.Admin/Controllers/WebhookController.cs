@@ -73,7 +73,7 @@ public class WebhookController : AevatarController
         var clientId = CurrentUser.GetAllClaims().First(o => o.Type == "client_id").Value;
         if (!clientId.IsNullOrEmpty() && clientId.Contains("Aevatar"))
         {
-            _logger.LogWarning($"UpdateDockerImageAsync unSupport client {clientId} ");
+            _logger.LogWarning($"UpdateCode unSupport client {clientId} ");
             throw new UserFriendlyException("unSupport client");
         }
 

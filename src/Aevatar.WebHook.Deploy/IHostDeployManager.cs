@@ -6,11 +6,11 @@ public interface IHostDeployManager
     Task DestroyWebHookAsync(string appId, string version);
     Task RestartWebHookAsync(string appId,string version);
     
-    Task<string> CreateHostAsync(string appId, string version, string corsUrls, Guid projectId);
-    Task DestroyHostAsync(string appId, string version);
+    Task CreateApplicationAsync(string appId, string version, string corsUrls, Guid tenantId);
+    Task DestroyApplicationAsync(string appId, string version);
+    Task UpgradeApplicationAsync(string appId, string version, string corsUrls, Guid tenantId);
+    
     Task RestartHostAsync(string appId,string version);
+    public Task UpdateDeploymentImageAsync(string appId, string version, string newImage);
 
-    public Task UpdateDockerImageAsync(string appId, string version, string newImage);
-
-    Task UpgradeApplicationAsync(string appId, string version, string corsUrls, Guid projectId);
 }
