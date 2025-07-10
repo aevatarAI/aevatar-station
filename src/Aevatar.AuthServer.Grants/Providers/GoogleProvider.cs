@@ -39,7 +39,7 @@ public class GoogleProvider : IGoogleProvider, ITransientDependency
         {
             "ios" => _configuration["Google:IOSClientId"],
             "android" => _configuration["Google:AndroidClientId"],
-            _ => _configuration["Google:ClientId"]
+            _ => _configuration["Google:DomainName"]
         };
 
         return clientId;
