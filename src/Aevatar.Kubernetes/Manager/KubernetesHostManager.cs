@@ -56,7 +56,8 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         var deploymentName = DeploymentHelper.GetAppDeploymentName(appHostName, version);
         var deploymentLabel = DeploymentHelper.GetAppDeploymentLabelName(appHostName, version);
         var containerName = ContainerHelper.GetAppContainerName(appHostName, version);
-        await EnsureDeploymentAsync(appHostName, version, imageName, deploymentName, deploymentLabel, containerName, command,
+        await EnsureDeploymentAsync(appHostName, version, imageName, deploymentName, deploymentLabel, containerName,
+            command,
             _kubernetesOptions.AppPodReplicas, KubernetesConstants.WebhookContainerTargetPort,
             KubernetesConstants.QueryPodMaxSurge, KubernetesConstants.QueryPodMaxUnavailable, GetHealthPath());
 
@@ -130,7 +131,7 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
             _logger.LogError($"Deployment {deploymentName} does not exist!");
         }
     }
-    
+
     private static string GetWebhookConfigContent(string appId, string version, string templateFilePath)
     {
         var rawContent = File.ReadAllText(templateFilePath);
@@ -344,10 +345,6 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         await EnsureConfigMapAsync(hostName, version, ConfigMapHelper.GetAppFileBeatConfigMapName,
             fileBeatConfigContent, ConfigMapHelper.CreateFileBeatConfigMapDefinition);
 
-        // Ensure Service is created
-        await EnsureServiceAsync(hostName, version, DeploymentHelper.GetAppDeploymentLabelName(appId, version),
-            KubernetesConstants.SiloContainerTargetPort);
-
         // Ensure Deployment is created
         var deploymentName = DeploymentHelper.GetAppDeploymentName(hostName, version);
         var deploymentLabelName = DeploymentHelper.GetAppDeploymentLabelName(hostName, version);
@@ -356,6 +353,10 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
             deploymentLabelName, containerName, KubernetesConstants.HostSiloCommand, _kubernetesOptions.AppPodReplicas,
             KubernetesConstants.WebhookContainerTargetPort, KubernetesConstants.QueryPodMaxSurge,
             KubernetesConstants.QueryPodMaxUnavailable, "", true);
+
+        // Ensure Service is created
+        await EnsureServiceAsync(hostName, version, DeploymentHelper.GetAppDeploymentLabelName(appId, version),
+            KubernetesConstants.SiloContainerTargetPort);
     }
 
     private async Task EnsurePhaAsync(string appId, string version)
@@ -481,7 +482,8 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
             $"[KubernetesHostManager] Starting to update Host Silo ConfigMap for appResourceId: {appId}, version: {version}, projectId: {projectId}");
 
         var hostSiloId = GetHostName(appId, KubernetesConstants.HostSilo);
-        var configFiles = GetHostSiloConfigContent(appId, version, KubernetesConstants.HostSiloSettingTemplateFilePath, projectId);
+        var configFiles = GetHostSiloConfigContent(appId, version, KubernetesConstants.HostSiloSettingTemplateFilePath,
+            projectId);
 
         await EnsureConfigMapAsync(
             hostSiloId,
