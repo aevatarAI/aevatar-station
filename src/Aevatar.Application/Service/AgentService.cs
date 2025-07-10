@@ -273,35 +273,20 @@ public class AgentService : ApplicationService, IAgentService
 
         return resp;
     }
-
-    public async Task<List<AgentInstanceDto>> OriginGetAllAgentInstances(int pageIndex, int pageSize)
+    
+    public async Task<List<AgentInstanceDto>> GetAllAgentInstances(int pageIndex, int pageSize)
     {
         _logger.LogInformation("Get All Agent Instances, PageIndex: {PageIndex}, PageSize: {PageSize}", pageIndex,
             pageSize);
 
         var currentUserId = _userAppService.GetCurrentUserId();
-        PagedResultDto<Dictionary<string, object>> response;
-        try
+        var response = await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
         {
-            response =
-                await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
-                {
-                    QueryString = "userId.keyword:" + currentUserId,
-                    StateName = nameof(CreatorGAgentState),
-                    PageSize = pageSize,
-                    PageIndex = pageIndex
-                });
-        }
-        catch (UserFriendlyException e)
-        {
-            if (e.Code == "index_not_found_exception")
-            {
-                return result;
-            }
-
-            throw;
-        }
-        
+            QueryString = "userId.keyword:" + currentUserId,
+            StateName = nameof(CreatorGAgentState),
+            PageSize = pageSize,
+            PageIndex = pageIndex
+        });
 
         _logger.LogInformation("Get All Agent Instances completed, Total: {TotalCount}, Returned: {ReturnedCount}",
             response.TotalCount, response.Items.Count);
@@ -410,44 +395,30 @@ public class AgentService : ApplicationService, IAgentService
         return new List<string> { $"{esFieldName}:{order}" };
         }
 
-        result.AddRange(response.Items.Select(state => new AgentInstanceDto()
-        {
-            Id = (string)state["id"],
-            Name = (string)state["name"],
-            Properties = state["properties"] == null
-                ? null
-                : JsonConvert.DeserializeObject<Dictionary<string, object>>((string)state["properties"]),
-            AgentType = (string)state["agentType"],
-            BusinessAgentGrainId =
-                state.TryGetValue("formattedBusinessAgentGrainId", out var value) ? (string)value : null
-        }));
-
-        return result;
-    }
-
     public async Task<List<AgentInstanceDto>> GetAllAgentInstances(GetAllAgentInstancesQueryDto queryDto)
     {
-        _logger.LogInformation("GetAllAgentInstances started - PageIndex: {PageIndex}, PageSize: {PageSize}, AgentType: {AgentType}",
+        _logger.LogInformation(
+            "GetAllAgentInstances started - PageIndex: {PageIndex}, PageSize: {PageSize}, AgentType: {AgentType}",
             queryDto.PageIndex, queryDto.PageSize, queryDto.AgentType ?? "null");
 
         try
         {
             var result = new List<AgentInstanceDto>();
             var currentUserId = _userAppService.GetCurrentUserId();
-            
+
             // Build query conditions
             var queryString = "userId.keyword:" + currentUserId;
-            
+
             // Add agentType fuzzy query condition
             if (!string.IsNullOrEmpty(queryDto.AgentType))
             {
                 // Use fuzzy query with ~ operator for better matching
                 queryString += " AND agentType:(" + queryDto.AgentType + "~ OR " + queryDto.AgentType + "*)";
             }
-            
+
             _logger.LogInformation("GetAllAgentInstances query built - UserId: {UserId}, QueryString: {QueryString}",
                 currentUserId, queryString);
-            
+
             var response =
                 await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
                 {
@@ -456,13 +427,15 @@ public class AgentService : ApplicationService, IAgentService
                     PageSize = queryDto.PageSize,
                     PageIndex = queryDto.PageIndex
                 });
-                
-            _logger.LogInformation("GetAllAgentInstances query executed - TotalCount: {TotalCount}, ReturnedItems: {ReturnedItems}",
+
+            _logger.LogInformation(
+                "GetAllAgentInstances query executed - TotalCount: {TotalCount}, ReturnedItems: {ReturnedItems}",
                 response.TotalCount, response.Items.Count);
-                
+
             if (response.TotalCount == 0)
             {
-                _logger.LogInformation("GetAllAgentInstances completed - No agents found for user: {UserId}", currentUserId);
+                _logger.LogInformation("GetAllAgentInstances completed - No agents found for user: {UserId}",
+                    currentUserId);
                 return result;
             }
 
@@ -478,15 +451,20 @@ public class AgentService : ApplicationService, IAgentService
                     state.TryGetValue("formattedBusinessAgentGrainId", out var value) ? (string)value : null
             }));
 
-            _logger.LogInformation("GetAllAgentInstances completed successfully - Returned {Count} agent instances", result.Count);
+            _logger.LogInformation("GetAllAgentInstances completed successfully - Returned {Count} agent instances",
+                result.Count);
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "GetAllAgentInstances failed - PageIndex: {PageIndex}, PageSize: {PageSize}, AgentType: {AgentType}",
+            _logger.LogError(ex,
+                "GetAllAgentInstances failed - PageIndex: {PageIndex}, PageSize: {PageSize}, AgentType: {AgentType}",
                 queryDto.PageIndex, queryDto.PageSize, queryDto.AgentType ?? "null");
             throw;
         }
+    }
+
+
     private AgentInstanceDto MapToAgentItem(Dictionary<string, object> state)
     {
         // Align with existing data conversion logic

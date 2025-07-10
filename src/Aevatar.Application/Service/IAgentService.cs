@@ -11,7 +11,6 @@ public interface IAgentService
 
     Task<AgentDto> CreateAgentAsync(CreateAgentInputDto dto);
     Task<List<AgentInstanceDto>> GetAllAgentInstances(GetAllAgentInstancesQueryDto queryDto);
-    Task<List<AgentInstanceDto>> OriginGetAllAgentInstances(int pageIndex, int pageSize);
     
     // Search and filter Agents (supports Node Palette)
     Task<List<AgentInstanceDto>> SearchAgentsWithLucene(AgentSearchRequest request);
