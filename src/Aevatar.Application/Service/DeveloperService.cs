@@ -64,7 +64,7 @@ public class DeveloperService : ApplicationService, IDeveloperService
     {
         if (string.IsNullOrWhiteSpace(clientId))
         {
-            throw new UserFriendlyException("ClientId cannot be null or empty");
+            throw new UserFriendlyException("DomainName cannot be null or empty");
         }
 
         _logger.LogInformation($"Starting business service restart for client: {clientId} in project: {projectId}");
@@ -88,7 +88,7 @@ public class DeveloperService : ApplicationService, IDeveloperService
     {
         if (string.IsNullOrWhiteSpace(clientId))
         {
-            throw new UserFriendlyException("ClientId cannot be null or empty");
+            throw new UserFriendlyException("DomainName cannot be null or empty");
         }
 
         _logger.LogInformation($"Starting developer service creation for client: {clientId} in project: {projectId}");
@@ -113,7 +113,7 @@ public class DeveloperService : ApplicationService, IDeveloperService
     {
         if (string.IsNullOrWhiteSpace(clientId))
         {
-            throw new UserFriendlyException("ClientId cannot be null or empty");
+            throw new UserFriendlyException("DomainName cannot be null or empty");
         }
 
         var hostServiceExists = await DetermineIfHostServiceExistsAsync(clientId, DefaultVersion);

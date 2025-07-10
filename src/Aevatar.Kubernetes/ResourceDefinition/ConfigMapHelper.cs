@@ -22,15 +22,23 @@ public class ConfigMapHelper
     /// Create appsettings.json configmap resource definition
     /// </summary>
     /// <param name="configMapName">appsettings-config</param>
-    /// <param name="configFiles">Dictionary of config files</param>
+    /// <param name="configFileName">appsettings.json</param>
+    /// <param name="nameSpace">nameSpace</param>
+    /// <param name="appSettingsContent">File.ReadAllText(appSettingsPath)</param>
     /// <returns></returns>
-    public static V1ConfigMap CreateAppSettingConfigMapDefinition(string configMapName, Dictionary<string, string> configFiles)
+    public static V1ConfigMap CreateAppSettingConfigMapDefinition(string configMapName,
+        string appSettingsContent)
     {
+        // Create a ConfigMap
         var configMap = new V1ConfigMap
         {
             Metadata = new V1ObjectMeta { Name = configMapName, NamespaceProperty = KubernetesConstants.AppNameSpace },
-            Data = configFiles
+            Data = new Dictionary<string, string>
+            {
+                { KubernetesConstants.AppSettingFileName, appSettingsContent }
+            }
         };
+
         return configMap;
     }
     
@@ -38,15 +46,21 @@ public class ConfigMapHelper
     /// Create filebeat.yml configmap resource definition
     /// </summary>
     /// <param name="configMapName"></param>
-    /// <param name="configFiles"></param>
+    /// <param name="configFileContent"></param>
     /// <returns></returns>
-    public static V1ConfigMap CreateFileBeatConfigMapDefinition(string configMapName, Dictionary<string, string> configFiles)
+    public static V1ConfigMap CreateFileBeatConfigMapDefinition(string configMapName,
+        string configFileContent)
     {
+        // Create a ConfigMap
         var configMap = new V1ConfigMap
         {
             Metadata = new V1ObjectMeta { Name = configMapName, NamespaceProperty = KubernetesConstants.AppNameSpace },
-            Data = configFiles
+            Data = new Dictionary<string, string>
+            {
+                { KubernetesConstants.FileBeatConfigFileName, configFileContent }
+            }
         };
+
         return configMap;
     }
 }

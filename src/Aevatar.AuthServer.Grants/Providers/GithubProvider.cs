@@ -20,7 +20,7 @@ public class GithubProvider : IGithubProvider, ITransientDependency
     {
         try
         {
-            var clientId = _configuration["Github:ClientId"];
+            var clientId = _configuration["Github:DomainName"];
             var secret = _configuration["Github:ClientSecret"];
             
             var client = new GitHubClient(new ProductHeaderValue("Aevatar"));
