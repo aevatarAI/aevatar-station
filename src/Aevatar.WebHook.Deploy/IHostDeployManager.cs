@@ -12,5 +12,5 @@ public interface IHostDeployManager
 
     public Task UpdateDockerImageAsync(string appId, string version, string newImage);
 
-    Task UpdateHostAsync(string appId, string version, string corsUrls, Guid projectId);
+    Task UpgradeApplicationAsync(string appId, string version, string corsUrls, Guid projectId);
 }
