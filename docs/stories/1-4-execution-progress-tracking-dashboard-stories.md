@@ -46,6 +46,14 @@ As a user, I want to view all workflow executions (running, completed, failed) i
 **When** there are executions with errors or in progress  
 **Then** errors and progress information are clearly displayed with appropriate visual indicators  
 
+**Given** I have workflow executions displayed on the dashboard  
+**When** I view each execution entry  
+**Then** the executed workflow name is clearly displayed for identification  
+
+**Given** I have modified a workflow's name in the designer  
+**When** I view past executions of that workflow on the dashboard  
+**Then** the executed workflow name is updated to reflect the current workflow name  
+
 # 3. Filtering and Search Capabilities
 
 ## User Story

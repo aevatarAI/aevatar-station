@@ -20,13 +20,13 @@ Given an epic description, break down the epic into a set of user stories using 
 - Focused on a single, clear product feature or outcome.
 - Free from significant overlap with other stories—avoid duplicating functionality or acceptance criteria.
 - Written in the format: “As a [user], I want [goal] so that [value].”
-- Includes concise acceptance criteria that are specific and testable.
+- Includes concise Given-When-Then format acceptance criteria that are in specific and testable.
 - Prioritizes concrete product requirements and user value over process or implementation details.
 
 Output only the following: 
 - The user story
 - The time needed to implement the story in hours
-- The story's acceptance criteria
+- The story's acceptance criteria using Given-When-Then format
 
 When estimating the time needed to implement the story, make sure to include the time needed to do extensive testing.
 
@@ -48,9 +48,17 @@ As a user, I want to view all saved workflows and click on a workflow to visit t
 **Estimated Time:** 8 hours
 
 ### Acceptance Criteria
-1. Users can see a list of all saved workflows with their names and basic metadata.
-2. Users can click on any workflow to navigate to the visual workflow designer.
-3. The visual workflow designer loads with the selected workflow's configuration.
+**Given** I have saved workflows in the system  
+**When** I navigate to the workflow list page  
+**Then** I can see a list of all saved workflows with their names and basic metadata  
+
+**Given** I am viewing the workflow list  
+**When** I click on any workflow in the list  
+**Then** I am navigated to the visual workflow designer  
+
+**Given** I have clicked on a specific workflow from the list  
+**When** the visual workflow designer loads  
+**Then** it displays the selected workflow's configuration
 
 # 2. Workflow Execution Status Dashboard
 
@@ -62,7 +70,15 @@ As a user, I want to view all workflow executions (running, completed, failed) i
 **Estimated Time:** 8 hours
 
 ### Acceptance Criteria
-1. Users can see a list of all workflow executions with their current status (running, completed, failed).
-2. Status updates in real time as executions progress.
-3. Errors and progress are clearly displayed.
+**Given** I have workflow executions in the system  
+**When** I navigate to the execution dashboard  
+**Then** I can see a list of all workflow executions with their current status (running, completed, failed)  
+
+**Given** I am viewing the execution dashboard with running workflows  
+**When** executions progress or change status  
+**Then** the status updates in real time without requiring a page refresh  
+
+**Given** I am viewing workflow executions on the dashboard  
+**When** there are executions with errors or in progress  
+**Then** errors and progress information are clearly displayed with appropriate visual indicators
 ```
