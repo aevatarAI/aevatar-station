@@ -12,6 +12,7 @@ using Aevatar.Extensions;
 using Aevatar.PermissionManagement.Extensions;
 using Aevatar.SignalR;
 using Aevatar.Silo.Startup;
+using Aevatar.Application.Services;
 using E2E.Grains;
 using Aevatar.Silo.AgentWarmup.Extensions;
 
@@ -80,6 +81,9 @@ public static class OrleansHostExtension
                     // This will run during silo startup at ServiceLifecycleStage.ApplicationServices (default)
                     siloBuilder.AddStartupTask<StateProjectionInitializer>();
                 }
+
+                // Register TypeMetadataStartupTask for all silo types to ensure metadata is available
+                siloBuilder.AddStartupTask<TypeMetadataStartupTask>();
 
                 if (string.IsNullOrEmpty(siloNamePattern) || string.Compare(siloNamePattern, "Scheduler", StringComparison.OrdinalIgnoreCase) == 0)
                 {

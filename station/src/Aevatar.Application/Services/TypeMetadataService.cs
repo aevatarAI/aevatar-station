@@ -1,84 +1,116 @@
-// ABOUTME: This file implements the TypeMetadataService for assembly scanning and metadata caching
-// ABOUTME: Provides assembly introspection, capability extraction, and in-memory caching of type metadata
+// ABOUTME: This file implements the TypeMetadataService as a stateless facade to TypeMetadataGrain
+// ABOUTME: Provides assembly introspection and delegates storage/caching to Orleans grain for scalability
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Aevatar.Application.Grains;
 using Aevatar.Application.Models;
 using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.Logging;
+using Orleans;
 
 namespace Aevatar.Application.Services
 {
     public class TypeMetadataService : ITypeMetadataService
     {
         private readonly ILogger<TypeMetadataService> _logger;
-        private readonly ConcurrentDictionary<string, AgentTypeMetadata> _typeMetadataCache;
-        private readonly ConcurrentDictionary<string, List<AgentTypeMetadata>> _capabilityIndex;
-        private readonly object _refreshLock = new object();
+        private readonly IGrainFactory _grainFactory;
 
-        public TypeMetadataService(ILogger<TypeMetadataService> logger)
+        public TypeMetadataService(
+            ILogger<TypeMetadataService> logger,
+            IGrainFactory grainFactory)
         {
-            _logger = logger;
-            _typeMetadataCache = new ConcurrentDictionary<string, AgentTypeMetadata>();
-            _capabilityIndex = new ConcurrentDictionary<string, List<AgentTypeMetadata>>();
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _grainFactory = grainFactory ?? throw new ArgumentNullException(nameof(grainFactory));
         }
 
         public async Task<List<AgentTypeMetadata>> GetTypesByCapabilityAsync(string capability)
         {
-            await Task.CompletedTask;
-            
             if (string.IsNullOrEmpty(capability))
             {
                 return new List<AgentTypeMetadata>();
             }
 
-            if (_capabilityIndex.TryGetValue(capability, out var types))
+            try
             {
-                return types.ToList();
+                var grain = _grainFactory.GetGrain<ITypeMetadataGrain>(0);
+                return await grain.GetByCapabilityAsync(capability);
             }
-
-            return new List<AgentTypeMetadata>();
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get types by capability {Capability} from grain", capability);
+                return new List<AgentTypeMetadata>();
+            }
         }
 
         public async Task<AgentTypeMetadata> GetTypeMetadataAsync(string agentType)
         {
-            await Task.CompletedTask;
-            
             if (string.IsNullOrEmpty(agentType))
             {
                 return null;
             }
 
-            _typeMetadataCache.TryGetValue(agentType, out var metadata);
-            return metadata;
+            try
+            {
+                var grain = _grainFactory.GetGrain<ITypeMetadataGrain>(0);
+                return await grain.GetByTypeAsync(agentType);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get type metadata for {AgentType} from grain", agentType);
+                return null;
+            }
         }
 
         public async Task<List<AgentTypeMetadata>> GetAllTypesAsync()
         {
-            await Task.CompletedTask;
-            return _typeMetadataCache.Values.ToList();
+            try
+            {
+                var grain = _grainFactory.GetGrain<ITypeMetadataGrain>(0);
+                return await grain.GetAllMetadataAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get all types from grain");
+                return new List<AgentTypeMetadata>();
+            }
         }
 
         public async Task RefreshMetadataAsync()
         {
-            await Task.CompletedTask;
-            
-            lock (_refreshLock)
+            try
             {
-                _typeMetadataCache.Clear();
-                _capabilityIndex.Clear();
+                _logger.LogInformation("Starting assembly scan for GAgent types...");
                 
-                ScanAssembliesForGAgentTypes();
-                BuildCapabilityIndex();
+                // Scan assemblies for GAgent types
+                var scannedMetadata = ScanAssembliesForGAgentTypes();
+                
+                _logger.LogInformation("Found {TypeCount} GAgent types during assembly scan", scannedMetadata.Count);
+                
+                // Persist to grain
+                var grain = _grainFactory.GetGrain<ITypeMetadataGrain>(0);
+                await grain.SetMetadataAsync(scannedMetadata);
+                
+                // Log size statistics
+                var stats = await grain.GetStatsAsync();
+                _logger.LogInformation(
+                    "TypeMetadata refreshed: {TotalTypes} types, {SizeInBytes} bytes ({PercentageOf16MB:F2}% of 16MB limit)",
+                    stats.TotalTypes, stats.SizeInBytes, stats.PercentageOf16MB);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to refresh metadata");
+                throw;
             }
         }
 
-        private void ScanAssembliesForGAgentTypes()
+        private List<AgentTypeMetadata> ScanAssembliesForGAgentTypes()
         {
+            var scannedMetadata = new List<AgentTypeMetadata>();
+            
             try
             {
                 var assemblies = AppDomain.CurrentDomain.GetAssemblies()
@@ -98,7 +130,7 @@ namespace Aevatar.Application.Services
                             var metadata = ExtractTypeMetadata(type);
                             if (metadata != null)
                             {
-                                _typeMetadataCache.TryAdd(metadata.AgentType, metadata);
+                                scannedMetadata.Add(metadata);
                             }
                         }
                     }
@@ -116,6 +148,8 @@ namespace Aevatar.Application.Services
             {
                 _logger.LogError(ex, "Error during assembly scanning");
             }
+            
+            return scannedMetadata;
         }
 
         private bool IsSystemAssembly(Assembly assembly)
@@ -328,32 +362,27 @@ namespace Aevatar.Application.Services
             return versions;
         }
 
-        private void BuildCapabilityIndex()
+        
+        /// <summary>
+        /// Gets statistics about the metadata storage including size and capacity usage.
+        /// </summary>
+        /// <returns>Metadata statistics from the grain</returns>
+        public async Task<MetadataStats> GetStatsAsync()
         {
             try
             {
-                foreach (var metadata in _typeMetadataCache.Values)
-                {
-                    if (metadata.Capabilities != null)
-                    {
-                        foreach (var capability in metadata.Capabilities)
-                        {
-                            if (!string.IsNullOrEmpty(capability))
-                            {
-                                _capabilityIndex.AddOrUpdate(capability, 
-                                    new List<AgentTypeMetadata> { metadata },
-                                    (key, existing) => {
-                                        existing.Add(metadata);
-                                        return existing;
-                                    });
-                            }
-                        }
-                    }
-                }
+                var grain = _grainFactory.GetGrain<ITypeMetadataGrain>(0);
+                return await grain.GetStatsAsync();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error building capability index");
+                _logger.LogError(ex, "Failed to get metadata statistics from grain");
+                return new MetadataStats
+                {
+                    TotalTypes = 0,
+                    SizeInBytes = 0,
+                    PercentageOf16MB = 0
+                };
             }
         }
     }

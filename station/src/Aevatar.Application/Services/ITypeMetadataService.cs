@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Aevatar.Application.Grains;
 using Aevatar.Application.Models;
 
 namespace Aevatar.Application.Services
@@ -13,5 +14,6 @@ namespace Aevatar.Application.Services
         Task<AgentTypeMetadata> GetTypeMetadataAsync(string agentType);
         Task<List<AgentTypeMetadata>> GetAllTypesAsync();
         Task RefreshMetadataAsync();
+        Task<MetadataStats> GetStatsAsync();
     }
 }

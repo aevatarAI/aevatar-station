@@ -199,4 +199,23 @@ This service is foundational for the discovery architecture and must be implemen
 ## Status: Completed
 Implementation successfully completed with all unit tests passing and proper Orleans integration. 
 
-**Note**: For production deployment, implement the TypeMetadataStartupTask and SiloHostBuilderExtensions as described above to ensure metadata is loaded automatically during silo startup.
+## Production Setup
+
+To enable TypeMetadataService in production, ensure both dependency injection registration and silo startup configuration:
+
+### 1. Dependency Injection Registration
+The `TypeMetadataService` is registered in `AevatarApplicationModule.cs`:
+
+```csharp
+// Register TypeMetadataService
+context.Services.AddSingleton<ITypeMetadataService, TypeMetadataService>();
+```
+
+### 2. Silo Startup Configuration
+Add to your silo configuration in `OrleansHostExtension.cs` or similar:
+
+```csharp
+siloBuilder.ConfigureTypeMetadataService();
+```
+
+This uses the `SiloHostBuilderExtensions.ConfigureTypeMetadataService()` method which registers the Orleans `IStartupTask` to automatically refresh metadata during silo startup.

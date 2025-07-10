@@ -3,6 +3,7 @@ using System.Linq;
 using Aevatar.Account;
 using Aevatar.ApiRequests;
 using Aevatar.Application.Grains;
+using Aevatar.Application.Services;
 using Aevatar.BlobStorings;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
@@ -74,5 +75,8 @@ public class AevatarApplicationModule : AbpModule
         Configure<AccountOptions>(configuration.GetSection("Account"));
         Configure<ApiRequestOptions>(configuration.GetSection("ApiRequest"));
         Configure<BlobStoringOptions>(configuration.GetSection("BlobStoring"));
+        
+        // Register TypeMetadataService as transient for scalability (stateless service)
+        context.Services.AddTransient<ITypeMetadataService, TypeMetadataService>();
     }
 }
