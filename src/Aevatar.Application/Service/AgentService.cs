@@ -93,6 +93,9 @@ public class AgentService : ApplicationService, IAgentService
                     GuidUtil.GuidToGrainKey(
                         GuidUtil.StringToGuid("AgentDefaultId"))); // make sure only one agent instance for each type
                 var agent = await _gAgentFactory.GetGAgentAsync(grainId);
+                var description = await agent.GetDescriptionAsync();
+                agentTypeData.Description = description;
+                
                 var initializeDtoType = await agent.GetConfigurationTypeAsync();
                 if (initializeDtoType == null || initializeDtoType.IsAbstract)
                 {
@@ -171,6 +174,7 @@ public class AgentService : ApplicationService, IAgentService
             {
                 AgentType = kvp.Key,
                 FullName = kvp.Value?.FullName ?? kvp.Key,
+                Description = kvp.Value?.Description
             };
 
             if (kvp.Value != null)
@@ -260,7 +264,7 @@ public class AgentService : ApplicationService, IAgentService
             AgentGuid = businessAgent.GetPrimaryKey(),
             BusinessAgentGrainId = businessAgent.GetGrainId().ToString()
         };
-        
+
         var configuration = await GetAgentConfigurationAsync(businessAgent);
         if (configuration != null)
         {
@@ -272,7 +276,9 @@ public class AgentService : ApplicationService, IAgentService
 
     public async Task<List<AgentInstanceDto>> OriginGetAllAgentInstances(int pageIndex, int pageSize)
     {
-        var result = new List<AgentInstanceDto>();
+        _logger.LogInformation("Get All Agent Instances, PageIndex: {PageIndex}, PageSize: {PageSize}", pageIndex,
+            pageSize);
+
         var currentUserId = _userAppService.GetCurrentUserId();
         PagedResultDto<Dictionary<string, object>> response;
         try
@@ -296,9 +302,112 @@ public class AgentService : ApplicationService, IAgentService
             throw;
         }
         
+
+        _logger.LogInformation("Get All Agent Instances completed, Total: {TotalCount}, Returned: {ReturnedCount}",
+            response.TotalCount, response.Items.Count);
+
+        return response.Items.Select(MapToAgentItem).ToList();
+    }
+
+    public async Task<List<AgentInstanceDto>> SearchAgentsWithLucene(AgentSearchRequest request)
+    {
+        _logger.LogInformation("Search Agents, SearchTerm: {SearchTerm}", request.SearchTerm);
+
+        // 1. Get current user ID (align with existing logic)
+        var currentUserId = _userAppService.GetCurrentUserId();
+
+        // 2. Build Lucene query string
+        var queryString = BuildLuceneQuery(request, currentUserId);
+
+        // 3. Build sort fields for server-side sorting
+        var sortFields = BuildSortFields(request.SortBy, request.SortOrder);
+
+        // 4. Execute query with server-side sorting
+        var response = await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
+        {
+            QueryString = queryString,
+            StateName = nameof(CreatorGAgentState),
+            PageSize = request.PageSize,
+            PageIndex = request.PageIndex,
+            SortFields = sortFields
+        });
+
         if (response.TotalCount == 0)
         {
-            return result;
+            return new List<AgentInstanceDto>();
+        }
+
+        // 5. Convert data (align with existing pattern)
+        var agents = response.Items.Select(MapToAgentItem).ToList();
+
+        _logger.LogInformation("Search completed, returned {Count} Agents", agents.Count);
+
+        return agents;
+    }
+
+    private string BuildLuceneQuery(AgentSearchRequest request, Guid currentUserId)
+    {
+        var queryParts = new List<string>();
+
+        // 1. User ID filter (required condition, align with existing logic)
+        queryParts.Add($"userId.keyword:{currentUserId}");
+
+        // 2. Type filter (multi-select support)
+        if (request.Types?.Any() == true)
+        {
+            var typeQuery = string.Join(" OR ",
+                request.Types.Select(type => $"agentType.keyword:\"{type}\""));
+            queryParts.Add($"({typeQuery})");
+        }
+
+        // 3. Search term filter (name and properties description)
+        if (!string.IsNullOrEmpty(request.SearchTerm))
+        {
+            var searchTerm = EscapeLuceneString(request.SearchTerm);
+            var nameQuery = $"name:*{searchTerm}*";
+            var descQuery = $"properties.description:*{searchTerm}*";
+            queryParts.Add($"({nameQuery} OR {descQuery})");
+        }
+
+        // Combine all conditions (AND logic)
+        return string.Join(" AND ", queryParts);
+    }
+
+    private string EscapeLuceneString(string input)
+    {
+        // Escape Lucene special characters
+        if (string.IsNullOrEmpty(input)) return input;
+
+        var specialChars = new[] { '+', '-', '!', '(', ')', '{', '}', '[', ']', '^', '"', '~', '*', '?', ':', '\\' };
+        foreach (var c in specialChars)
+        {
+            input = input.Replace(c.ToString(), "\\" + c);
+        }
+
+        return input;
+    }
+
+    private List<string> BuildSortFields(string? sortBy, string? sortOrder)
+    {
+        if (string.IsNullOrEmpty(sortBy))
+        {
+            // Default sorting by create time descending
+            return new List<string> { "cTime:desc" };
+        }
+
+        var order = sortOrder?.ToLower() == "asc" ? "asc" : "desc";
+
+        // Map frontend sort field names to Elasticsearch field names
+        var esFieldName = sortBy.ToLower() switch
+        {
+            "name" => "name.keyword",
+            "agenttype" => "agentType.keyword",
+            "createtime" => "cTime",
+            "updatetime" => "uTime",
+            _ => "cTime" // Default fallback
+        };
+
+        return new List<string> { $"{esFieldName}:{order}" };
         }
 
         result.AddRange(response.Items.Select(state => new AgentInstanceDto()
@@ -378,6 +487,23 @@ public class AgentService : ApplicationService, IAgentService
                 queryDto.PageIndex, queryDto.PageSize, queryDto.AgentType ?? "null");
             throw;
         }
+    private AgentInstanceDto MapToAgentItem(Dictionary<string, object> state)
+    {
+        // Align with existing data conversion logic
+        var properties = state["properties"] == null
+            ? null
+            : JsonConvert.DeserializeObject<Dictionary<string, object>>((string)state["properties"]);
+
+        return new AgentInstanceDto
+        {
+            Id = (string)state["id"],
+            Name = (string)state["name"],
+            AgentType = (string)state["agentType"],
+            Properties = properties,
+            BusinessAgentGrainId = state.TryGetValue("formattedBusinessAgentGrainId", out var value)
+                ? (string)value
+                : null
+        };
     }
 
     private void CheckCreateParam(CreateAgentInputDto createDto)
@@ -406,7 +532,7 @@ public class AgentService : ApplicationService, IAgentService
         {
             var config = SetupConfigurationData(initializationData, agentProperties);
             await businessAgent.ConfigAsync(config);
-            
+
             return new Tuple<IGAgent, ConfigurationBase>(businessAgent, config);
         }
 
@@ -539,9 +665,9 @@ public class AgentService : ApplicationService, IAgentService
             businessAgents.Add(businessAgent);
             subAgentGuids.Add(grainId.GetGuidKey());
         }
-        
+
         await agent.RegisterManyAsync(businessAgents);
-        
+
         foreach (var businessAgent in businessAgents)
         {
             var eventsHandledByAgent = await businessAgent.GetAllSubscribedEventsAsync();
@@ -652,7 +778,7 @@ public class AgentService : ApplicationService, IAgentService
         var agentState = await creatorAgent.GetAgentAsync();
 
         var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
-        var subAgentGrainIds = await GetSubAgentGrainIds(agent);
+        var subAgentGrainIds = await agent.GetChildrenAsync();
         await RemoveSubAgentAsync(guid,
             new RemoveSubAgentDto { RemovedSubAgents = subAgentGrainIds.Select(x => x.GetGuidKey()).ToList() });
     }
