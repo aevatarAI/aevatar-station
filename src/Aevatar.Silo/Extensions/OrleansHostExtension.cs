@@ -10,12 +10,14 @@ using Aevatar.GAgents.SemanticKernel.Extensions;
 using Aevatar.Extensions;
 using Aevatar.PermissionManagement.Extensions;
 using Aevatar.SignalR;
+using Aevatar.Silo.Extensions;
 using Aevatar.Silo.Startup;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using Newtonsoft.Json;
 using Orleans.Configuration;
@@ -65,7 +67,7 @@ public static class OrleansHostExtension
                             settings.TypeNameHandling = TypeNameHandling.Auto;
                             settings.SerializationBinder = new GodGPTSerializationBinder();
                         })
-                    .AddMongoDBGrainStorage("Default", (MongoDBGrainStorageOptions op) =>
+                    .AddMongoDBGrainStorageAsDefault(op =>
                     {
                         op.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" : $"Orleans{hostId}";
                         op.DatabaseName = configSection.GetValue<string>("DataBase");
@@ -119,6 +121,7 @@ public static class OrleansHostExtension
                 var eventSourcingProvider = configuration.GetSection("OrleansEventSourcing:Provider").Get<string>();
                 if (string.Equals("mongodb", eventSourcingProvider, StringComparison.CurrentCultureIgnoreCase))
                 {
+                    // Use Aevatar framework's MongoDB EventSourcing with compatibility support
                     siloBuilder.AddMongoDbStorageBasedLogConsistencyProvider("LogStorage", options =>
                     {
                         options.ClientSettings =
@@ -128,6 +131,7 @@ public static class OrleansHostExtension
                 }
                 else
                 {
+                    // Keep Orleans original Memory EventSourcing unchanged
                     siloBuilder.AddLogStorageBasedLogConsistencyProvider("LogStorage");
                 }
 

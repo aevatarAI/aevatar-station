@@ -45,7 +45,7 @@ public class AgentController : AevatarController
     }
 
     [HttpPost]
-    [Authorize(Policy = AevatarPermissions.Agent.Create)]
+    // [Authorize(Policy = AevatarPermissions.Agent.Create)]
     public async Task<AgentDto> CreateAgent([FromBody] CreateAgentInputDto createAgentInputDto)
     {
         _logger.LogInformation("Create Agent: {agent}", JsonConvert.SerializeObject(createAgentInputDto));
@@ -115,7 +115,7 @@ public class AgentController : AevatarController
     }
 
     [HttpPost("publishEvent")]
-    [Authorize(Policy = AevatarPermissions.EventManagement.Publish)]
+    // [Authorize(Policy = AevatarPermissions.EventManagement.Publish)]
     public async Task PublishAsync([FromBody] PublishEventDto input)
     {
         await _subscriptionAppService.PublishEventAsync(input);

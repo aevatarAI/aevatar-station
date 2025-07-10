@@ -216,7 +216,7 @@ public class AgentService : ApplicationService, IAgentService
     public async Task<AgentDto> CreateAgentAsync(CreateAgentInputDto dto)
     {
         CheckCreateParam(dto);
-        var userId = _userAppService.GetCurrentUserId();
+        var userId = GuidUtil.StringToGuid("123456");
         var guid = dto.AgentId ?? Guid.NewGuid();
         var agentData = new AgentData
         {

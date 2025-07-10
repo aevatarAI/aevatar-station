@@ -3,11 +3,11 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVerion>9.0.1</OrleansVerion>
-    <AevatarVerion>1.4.13</AevatarVerion>
+    <AevatarVerion>1.5.1-event.11</AevatarVerion>
     <AevatarGAgentVerion>1.4.16</AevatarGAgentVerion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="GodGPT.GAgents" Version="1.0.9-alpha-guest-3" />
+    <PackageVersion Include="GodGPT.GAgents" Version="1.20.0-share-1" />
     <PackageVersion Include="Stripe.net" Version="48.1.0"/>
     <PackageVersion Include="GodGPT.Webhook" Version="1.0.9-alpha-guest-3" />
     
@@ -201,15 +201,7 @@
     <PackageVersion Include="Neo4j.Driver" Version="5.27.0" />
     <PackageVersion Include="XWorkerAgent" Version="0.0.28" />
     <PackageVersion Include="TelegramWorkerAgent" Version="0.0.8" />
-    <PackageVersion Include="Microsoft.Orleans.Core" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.Orleans.EventSourcing" Version="8.0.0" />
-    <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="JsonSchema.Net.Generation" Version="3.3.2" />
-    <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
-    <PackageVersion Include="xunit" Version="2.7.0" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="2.5.7" />
-    <PackageVersion Include="coverlet.collector" Version="6.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Serialization.TestKit" Version="9.0.1" />
     <PackageVersion Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="9.0.0"/>
   </ItemGroup>

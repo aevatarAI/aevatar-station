@@ -25,8 +25,10 @@
         <PackageReference Include="Serilog.Sinks.Console" />
         <PackageReference Include="Serilog.Sinks.OpenTelemetry" />
         <PackageReference Include="Orleans.Streams.Kafka" />
-        <PackageReference Include="Aevatar.EventSourcing.Core" />
-        <PackageReference Include="Aevatar.EventSourcing.MongoDB" />
+        <!-- Replace NuGet packages with local project references for Orleans compatibility testing -->
+        <!-- Completely remove NuGet packages and use only local project references -->
+        <!-- <PackageReference Include="Aevatar.EventSourcing.Core" /> -->
+        <!-- <PackageReference Include="Aevatar.EventSourcing.MongoDB" /> -->
         <PackageReference Include="Aevatar.Plugins" />
         <PackageReference Include="Aevatar" />
         <PackageReference Include="Aevatar.SignalR" />
@@ -37,6 +39,9 @@
         <ProjectReference Include="..\Aevatar.MongoDB\Aevatar.MongoDB.csproj" />
         <ProjectReference Include="..\Aevatar.Domain.Grains\Aevatar.Domain.Grains.csproj" />
         <ProjectReference Include="..\Aevatar.Application.Grains\Aevatar.Application.Grains.csproj" />
+        <!-- Add local framework project references -->
+        <ProjectReference Include="/Users/liyingpei/Desktop/Code/aevatar-framework/src/Aevatar.EventSourcing.Core/Aevatar.EventSourcing.Core.csproj" />
+        <ProjectReference Include="/Users/liyingpei/Desktop/Code/aevatar-framework/src/Aevatar.EventSourcing.MongoDB/Aevatar.EventSourcing.MongoDB.csproj" />
     </ItemGroup>
 
     <ItemGroup>

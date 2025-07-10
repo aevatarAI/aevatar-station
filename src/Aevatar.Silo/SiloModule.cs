@@ -20,7 +20,7 @@ namespace Aevatar.Silo;
 [DependsOn(
     typeof(AbpAspNetCoreSerilogModule),
     typeof(AbpAutofacModule),
-    typeof(OpenTelemetryModule),
+    // typeof(OpenTelemetryModule), // 临时禁用以避免配置问题
     typeof(AevatarModule),
     typeof(AevatarPermissionManagementModule)
 )]

@@ -16,10 +16,15 @@
     <ItemGroup>
         <PackageReference Include="Aevatar.Core"/>
         <PackageReference Include="Aevatar.Core.Abstractions"/>
-        <PackageReference Include="Aevatar.EventSourcing.Core"/>
+        <!-- <PackageReference Include="Aevatar.EventSourcing.Core"/> Use local project reference instead -->
         <PackageReference Include="Elastic.Clients.Elasticsearch"/>
         <PackageReference Include="Volo.Abp.AutoMapper"/>
         <PackageReference Include="MediatR"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- Local framework project reference for Orleans compatibility testing -->
+        <ProjectReference Include="/Users/liyingpei/Desktop/Code/aevatar-framework/src/Aevatar.EventSourcing.Core/Aevatar.EventSourcing.Core.csproj" />
     </ItemGroup>
 
 </Project>
