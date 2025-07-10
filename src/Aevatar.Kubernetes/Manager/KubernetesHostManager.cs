@@ -34,8 +34,7 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
     public async Task CreateApplicationAsync(string appId, string version, string corsUrls, Guid tenantId)
     {
         await CreateHostSiloAsync(appId, version, _hostDeployOptions.HostSiloImageName, tenantId);
-        await CreateHttpClientAsync(GetHostName(appId, KubernetesConstants.HostClient), version,
-            _hostDeployOptions.HostClientImageName,
+        await CreateHttpClientAsync(appId, version, _hostDeployOptions.HostClientImageName,
             GetHostClientConfigContent(appId, version, KubernetesConstants.HostClientSettingTemplateFilePath, corsUrls),
             KubernetesConstants.HostClientCommand, _kubernetesOptions.DeveloperHostName);
     }
@@ -119,7 +118,7 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
                 GetHostClientConfigContent(appId, version, KubernetesConstants.AppSettingSiloSharedFileName, null)
             }
         };
-        await EnsureConfigMapAsync(appId, version, ConfigMapHelper.GetAppSettingConfigMapName, configFiles,
+        await EnsureConfigMapAsync(appHostName, version, ConfigMapHelper.GetAppSettingConfigMapName, configFiles,
             ConfigMapHelper.CreateAppSettingConfigMapDefinition);
         _logger.LogInformation(
             $"[KubernetesAppManager] ConfigMap injected for appId={appId}, version={version}, keys=[{string.Join(",", configFiles.Keys)}]");
@@ -131,7 +130,7 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
                 GetWebhookConfigContent(appId, version, KubernetesConstants.WebhookFileBeatConfigTemplateFilePath)
             }
         };
-        await EnsureConfigMapAsync(appId, version, ConfigMapHelper.GetAppFileBeatConfigMapName, fileBeatConfigContent,
+        await EnsureConfigMapAsync(appHostName, version, ConfigMapHelper.GetAppFileBeatConfigMapName, fileBeatConfigContent,
             ConfigMapHelper.CreateFileBeatConfigMapDefinition);
 
         // Ensure Deployment is created
