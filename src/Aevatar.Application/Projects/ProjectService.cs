@@ -80,7 +80,7 @@ public class ProjectService : OrganizationService, IProjectService
             throw new UserFriendlyException("The same project name already exists");
         }
 
-        await _developerService.CreateAsync(input.DomainName, project.Id);
+        await _developerService.CreateServiceAsync(input.DomainName, project.Id);
 
         var dto = ObjectMapper.Map<OrganizationUnit, ProjectDto>(project);
         dto.DomainName = input.DomainName;
@@ -226,7 +226,7 @@ public class ProjectService : OrganizationService, IProjectService
 
         if (domain != null)
         {
-            await _developerService.DeleteAsync(domain.DomainName);
+            await _developerService.DeleteServiceAsync(domain.DomainName);
         }
     }
 }
