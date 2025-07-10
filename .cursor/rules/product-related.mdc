@@ -21,7 +21,9 @@ Use web search whenever you need more data.
 When analysing:
 - ALWAYS validate facts
 
-When an existing specifications for product epics is changed, MAKE SURE to find the corresponding story document in `docs/stories` directory and update it accordingly. MAKE SURE to find the corresponding version document in `docs/versions` directory and update it accordingly.
+When an existing specifications for product epics is changed, 
+MAKE SURE to find the corresponding story document in `docs/stories` directory and update it accordingly. For stories related, use the rule `.cursor/rules/story-breakdown.mdc`.`
+MAKE SURE to find the corresponding version document in `docs/versions` directory and update it accordingly. For versions related, use the rule `.cursor/rules/versions-summary.mdc`.`
 
 When creating specifications for product epics, follow the following example structure:
 Example 1 -
