@@ -28,13 +28,33 @@ As an authenticated user, I want the system to automatically create and manage a
   - Resource limits and quotas per user
 
 ### Acceptance Criteria
-1. A user-specific debug pod is automatically created when debug mode is first activated
-2. The same debug pod is reused for subsequent debug sessions by the same user
-3. Debug pods are completely isolated from production environments and other users' pods
-4. Debug pods are automatically cleaned up after a configurable period of inactivity
-5. Resource usage is monitored and limited per user
-6. Pod creation failures provide clear error messages to users
-7. Only authenticated users can have debug pods created
+**Given** I am an authenticated user activating debug mode for the first time  
+**When** I enable debug mode  
+**Then** a user-specific debug pod is automatically created  
+
+**Given** I have an existing debug pod from previous sessions  
+**When** I activate debug mode again  
+**Then** the same debug pod is reused for my debugging session  
+
+**Given** I am using a debug pod  
+**When** other users are also debugging  
+**Then** my debug pod is completely isolated from production environments and other users' pods  
+
+**Given** my debug pod has been inactive for a configurable period  
+**When** the cleanup process runs  
+**Then** the debug pod is automatically cleaned up to free resources  
+
+**Given** I am using debug resources  
+**When** the system monitors resource usage  
+**Then** my usage is limited according to defined quotas per user  
+
+**Given** debug pod creation fails  
+**When** I attempt to enable debug mode  
+**Then** I receive clear error messages explaining the failure  
+
+**Given** I am not authenticated  
+**When** I attempt to access debug functionality  
+**Then** debug pods cannot be created and access is properly restricted  
 
 ---
 
@@ -64,13 +84,33 @@ As a workflow designer user, I want to easily toggle debug mode on and off from 
   - Handling of concurrent debug sessions
 
 ### Acceptance Criteria
-1. Users can easily toggle debug mode on/off with a clear UI control
-2. Debug mode state is visually indicated throughout the workflow designer interface  
-3. Loading indicators show when debug mode is being activated or deactivated
-4. Error messages are displayed if debug mode activation fails
-5. Debug mode state persists during the user session until explicitly disabled
-6. All debug UI elements are only visible to authenticated users
-7. Debug mode toggle is disabled if user lacks debug permissions
+**Given** I am in the workflow designer interface  
+**When** I view the debug controls  
+**Then** I can easily see a clear UI control to toggle debug mode on/off  
+
+**Given** debug mode is active  
+**When** I view the workflow designer interface  
+**Then** debug mode state is visually indicated throughout the interface  
+
+**Given** I am toggling debug mode  
+**When** the system is activating or deactivating debug mode  
+**Then** loading indicators show the transition progress  
+
+**Given** debug mode activation fails  
+**When** I attempt to enable debug mode  
+**Then** clear error messages are displayed explaining the failure  
+
+**Given** I have debug mode enabled during my session  
+**When** I navigate within the application  
+**Then** debug mode state persists until I explicitly disable it  
+
+**Given** I am not authenticated  
+**When** I view the debug controls  
+**Then** debug UI elements are only visible to authenticated users  
+
+**Given** I lack debug permissions  
+**When** I attempt to toggle debug mode  
+**Then** the debug mode toggle is disabled with appropriate feedback  
 
 ---
 
@@ -100,14 +140,37 @@ As a workflow debugger, I want all agents in my workflow to stream their executi
   - Rate limiting and buffering for high-frequency events
 
 ### Acceptance Criteria
-1. All agents in debug mode automatically stream execution data in real-time
-2. Streaming includes inputs, outputs, intermediate states, events, and errors
-3. WebSocket/SSE connection is established when debug mode is activated
-4. Connection automatically reconnects if temporarily lost
-5. Streaming data is properly formatted and structured for UI consumption
-6. High-frequency events are properly buffered and rate-limited
-7. Streaming only occurs for the user's own debug session (no cross-user data leakage)
-8. Streaming stops cleanly when debug mode is disabled
+**Given** I have workflows running in debug mode  
+**When** agents execute  
+**Then** all agents automatically stream execution data in real-time  
+
+**Given** agents are executing in debug mode  
+**When** they process data  
+**Then** streaming includes inputs, outputs, intermediate states, events, and errors  
+
+**Given** I enable debug mode  
+**When** the debug session starts  
+**Then** a WebSocket/SSE connection is established for real-time data delivery  
+
+**Given** my WebSocket/SSE connection is temporarily lost  
+**When** network connectivity is restored  
+**Then** the connection automatically reconnects without data loss  
+
+**Given** agents are streaming execution data  
+**When** I receive the data in the debug interface  
+**Then** the data is properly formatted and structured for UI consumption  
+
+**Given** agents generate high-frequency events  
+**When** data is streamed  
+**Then** events are properly buffered and rate-limited to prevent overwhelming the interface  
+
+**Given** I am debugging my own workflow  
+**When** multiple users are debugging simultaneously  
+**Then** I only receive streaming data from my own debug session with no cross-user data leakage  
+
+**Given** I disable debug mode  
+**When** the debug session ends  
+**Then** streaming stops cleanly and connections are properly closed  
 
 ---
 
@@ -137,14 +200,37 @@ As a workflow debugger, I want to execute workflows directly from the debug inte
   - Proper error handling and user feedback
 
 ### Acceptance Criteria
-1. Users can execute workflows directly from the debug interface
-2. Workflow execution runs in the user's dedicated debug pod
-3. Live progress indicators show the current status of each agent
-4. Users can stop/cancel workflow execution if needed
-5. Execution results are immediately visible in the debug interface
-6. Failed executions show clear error messages and failure points
-7. Multiple workflow executions can be run sequentially in the same debug session
-8. Execution is isolated from production workflows and other users' debug sessions
+**Given** I am in the debug interface  
+**When** I view the execution controls  
+**Then** I can execute workflows directly from the debug interface  
+
+**Given** I trigger a workflow execution  
+**When** the workflow starts  
+**Then** execution runs in my dedicated debug pod  
+
+**Given** a workflow is executing in debug mode  
+**When** agents start, progress, and complete  
+**Then** live progress indicators show the current status of each agent  
+
+**Given** I have a running workflow execution  
+**When** I need to stop it  
+**Then** I can stop/cancel workflow execution and receive immediate feedback  
+
+**Given** a workflow execution completes or fails  
+**When** the execution finishes  
+**Then** execution results are immediately visible in the debug interface  
+
+**Given** a workflow execution fails  
+**When** I view the results  
+**Then** clear error messages and failure points are displayed  
+
+**Given** I want to test multiple variations  
+**When** I run sequential executions  
+**Then** multiple workflow executions can be run in the same debug session  
+
+**Given** I am debugging workflows  
+**When** other users are also debugging  
+**Then** my execution is isolated from production workflows and other users' debug sessions  
 
 ---
 
@@ -174,14 +260,33 @@ As a workflow debugger, I want to see a live timeline visualization of my workfl
   - Error propagation and failure point highlighting
 
 ### Acceptance Criteria
-1. Timeline visualization updates in real-time during workflow execution
-2. Each agent's status (pending, running, completed, failed) is clearly indicated
-3. Execution sequence and timing are visually represented
-4. Parallel agent execution is clearly distinguished from sequential execution
-5. Currently active agents are prominently highlighted
-6. Failed agents and error propagation are clearly marked
-7. Timeline persists after execution completion for post-execution analysis
-8. Timeline is responsive and performs well with complex workflows
+**Given** I have a workflow executing in debug mode  
+**When** agents start, progress, and complete  
+**Then** the timeline visualization updates in real-time during execution  
+
+**Given** I am viewing the timeline  
+**When** agents have different statuses  
+**Then** each agent's status (pending, running, completed, failed) is clearly indicated  
+
+**Given** my workflow has sequential and parallel execution paths  
+**When** I view the timeline  
+**Then** execution sequence and timing are visually represented with clear distinction between sequential and parallel execution  
+
+**Given** agents are currently executing  
+**When** I view the timeline  
+**Then** currently active agents are prominently highlighted  
+
+**Given** my workflow encounters failures  
+**When** I view the timeline  
+**Then** failed agents and error propagation are clearly marked  
+
+**Given** a workflow execution completes  
+**When** I want to analyze what happened  
+**Then** the timeline persists after execution completion for post-execution analysis  
+
+**Given** I have complex workflows with many agents  
+**When** I view the timeline  
+**Then** the timeline is responsive and performs well regardless of workflow complexity  
 
 ---
 
@@ -211,12 +316,38 @@ As a workflow debugger, I want to inspect the detailed inputs, outputs, and inte
   - Tracking of data transformations through the workflow
 
 ### Acceptance Criteria
-1. Users can view detailed inputs and outputs for each agent
-2. Intermediate states and variables are accessible for inspection
-3. Complex data structures are displayed in an organized, readable format
-4. Users can search and filter within the displayed data
-5. Data can be copied or exported for external analysis
-6. Historical data is preserved for comparison and analysis after execution
-7. Data transformations between agents are clearly traceable
-8. Large datasets are handled efficiently with pagination or virtualization
-9. Sensitive data is properly handled according to security policies 
+**Given** I am debugging a workflow  
+**When** I select any agent  
+**Then** I can view detailed inputs and outputs for that agent  
+
+**Given** I am inspecting agent data  
+**When** I view intermediate states and variables  
+**Then** all intermediate states and variables are accessible for inspection  
+
+**Given** I have complex data structures  
+**When** I view them in the inspection interface  
+**Then** they are displayed in an organized, readable format with proper JSON/structured formatting  
+
+**Given** I need to find specific data  
+**When** I use the search and filter capabilities  
+**Then** I can search and filter within the displayed data efficiently  
+
+**Given** I want to analyze data externally  
+**When** I select data in the inspection interface  
+**Then** I can copy or export the data for external analysis  
+
+**Given** I want to understand data flow  
+**When** I analyze execution history  
+**Then** historical data is preserved for comparison and analysis after execution  
+
+**Given** I am tracing data transformations  
+**When** I view data flow between agents  
+**Then** data transformations between agents are clearly traceable  
+
+**Given** I have large datasets  
+**When** I view them in the inspection interface  
+**Then** large datasets are handled efficiently with pagination or virtualization  
+
+**Given** my data contains sensitive information  
+**When** I view it in the debug interface  
+**Then** sensitive data is properly handled according to security policies 

@@ -10,10 +10,21 @@ As a project user, I want to upload plugins via a dedicated management page so t
 **Estimated Time: 16 hours**
 
 ### Acceptance Criteria
-1. Users can upload plugin files through the management page at the project level.
-2. The system validates uploaded plugins for compatibility and integrity.
-3. Users receive clear feedback on upload success or failure, including reasons for any failure.
-4. Successfully uploaded plugins are available for all users in the project.
+**Given** I am a project user with access to the plugin management page  
+**When** I upload plugin files through the management page  
+**Then** the plugins are uploaded at the project level for all users  
+
+**Given** I upload a plugin file  
+**When** the system processes the upload  
+**Then** the system validates the plugin for compatibility and integrity  
+
+**Given** I upload a plugin  
+**When** the upload and validation process completes  
+**Then** I receive clear feedback on upload success or failure, including reasons for any failure  
+
+**Given** I successfully upload a plugin  
+**When** the plugin is processed and validated  
+**Then** the plugin is available for all users in the project  
 
 ---
 
@@ -25,10 +36,21 @@ As a project user, I want to view, update, and remove all uploaded plugins in a 
 **Estimated Time: 18 hours**
 
 ### Acceptance Criteria
-1. Users can see a list of all uploaded plugins with metadata (name, version, description, status).
-2. Users can update existing plugins by uploading a new version.
-3. Users can remove plugins from the project.
-4. The system provides clear feedback for update and removal actions.
+**Given** I access the plugin management page  
+**When** I view the plugin list  
+**Then** I can see a list of all uploaded plugins with metadata (name, version, description, status)  
+
+**Given** I have existing plugins that need updates  
+**When** I upload a new version of a plugin  
+**Then** I can update existing plugins by uploading a new version  
+
+**Given** I want to remove a plugin from the project  
+**When** I select and remove a plugin  
+**Then** I can remove plugins from the project  
+
+**Given** I perform update or removal actions  
+**When** the operations complete  
+**Then** the system provides clear feedback for update and removal actions  
 
 ---
 
@@ -40,9 +62,17 @@ As a project user, I want successfully uploaded plugins to appear as selectable 
 **Estimated Time: 14 hours**
 
 ### Acceptance Criteria
-1. Successfully uploaded and validated plugins automatically appear as agent nodes in the workflow designer palette for all project users.
-2. Invalid or incompatible plugins are clearly flagged and not loaded into the designer.
-3. Users receive clear feedback if a plugin fails to appear in the palette.
+**Given** I have successfully uploaded and validated plugins  
+**When** I access the workflow designer palette  
+**Then** the plugins automatically appear as agent nodes in the palette for all project users  
+
+**Given** I have uploaded plugins with compatibility issues  
+**When** the plugins are processed  
+**Then** invalid or incompatible plugins are clearly flagged and not loaded into the designer  
+
+**Given** a plugin fails to appear in the palette  
+**When** I check the plugin status  
+**Then** I receive clear feedback if a plugin fails to appear in the palette  
 
 ---
 
@@ -54,9 +84,17 @@ As a project user, I want to search and filter plugins in the management page so
 **Estimated Time: 10 hours**
 
 ### Acceptance Criteria
-1. Users can search plugins by name, version, or description.
-2. Users can filter plugins by status or other relevant metadata.
-3. Search and filter results update in real time as criteria are changed.
+**Given** I have multiple plugins in the management page  
+**When** I search by name, version, or description  
+**Then** I can find plugins using the search functionality  
+
+**Given** I need to filter plugins by specific criteria  
+**When** I apply filters by status or other relevant metadata  
+**Then** I can filter plugins to narrow down the results  
+
+**Given** I change my search or filter criteria  
+**When** I modify the search terms or filters  
+**Then** search and filter results update in real time as criteria are changed  
 
 ---
 
@@ -68,6 +106,14 @@ As a project user, I want to manage plugin versions and roll back to previous ve
 **Estimated Time: 12 hours**
 
 ### Acceptance Criteria
-1. Users can view the version history of each plugin.
-2. Users can roll back a plugin to any previous version.
-3. The system provides clear feedback on versioning and rollback actions. 
+**Given** I have plugins with multiple versions  
+**When** I view a plugin's details  
+**Then** I can view the version history of each plugin  
+
+**Given** I need to revert to a previous plugin version  
+**When** I select a previous version for rollback  
+**Then** I can roll back a plugin to any previous version  
+
+**Given** I perform versioning or rollback actions  
+**When** the operations complete  
+**Then** the system provides clear feedback on versioning and rollback actions 

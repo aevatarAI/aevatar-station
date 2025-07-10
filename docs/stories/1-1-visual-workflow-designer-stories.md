@@ -10,10 +10,21 @@ As a user, I want to assemble workflows by dragging and dropping agent nodes ont
 **Estimated Time: 24 hours**
 
 ### Acceptance Criteria
-1. Users can add agent nodes to the canvas via drag-and-drop from the palette.
-2. Users can move, modify, and remove agent nodes on the canvas.
-3. Canvas supports zooming, panning, and undo/redo actions.
-4. All agent node positions and changes are reflected in the workflow data model.
+**Given** I have access to the workflow designer  
+**When** I drag agent nodes from the palette to the canvas  
+**Then** the agent nodes are successfully added to the canvas  
+
+**Given** I have agent nodes on the canvas  
+**When** I move, modify, or remove agent nodes  
+**Then** the changes are reflected in the workflow data model  
+
+**Given** I am working on the canvas  
+**When** I use zoom, pan, or undo/redo actions  
+**Then** the canvas responds appropriately and maintains workflow integrity  
+
+**Given** I make changes to agent node positions  
+**When** the workflow data model is updated  
+**Then** all changes are accurately preserved without data loss  
 
 ---
 
@@ -25,12 +36,25 @@ As a user, I want a searchable and filterable palette of agent nodes with descri
 **Estimated Time: 16 hours**
 
 ### Acceptance Criteria
-1. Palette displays all available agent nodes with consistent visual styling.
-2. Users can search and filter agent nodes by functionality, name, OR description.
-3. Tooltips display the agent's description when hovering over any agent node in the palette.
-4. Only valid agent nodes can be added to the canvas.
-5. Agent nodes are clearly categorized by their primary function or type.
-6. Search results highlight matching text in both agent names and descriptions.
+**Given** I access the node palette  
+**When** I view the available agent nodes  
+**Then** all nodes are displayed with consistent visual styling  
+
+**Given** I want to find specific agent nodes  
+**When** I search or filter by functionality, name, or description  
+**Then** the results show only matching agent nodes with highlighted text  
+
+**Given** I hover over any agent node in the palette  
+**When** the tooltip appears  
+**Then** I can see the agent's description and functionality details  
+
+**Given** I attempt to add nodes to the canvas  
+**When** I select valid agent nodes  
+**Then** only valid nodes can be successfully added  
+
+**Given** I browse the palette  
+**When** I view the agent nodes  
+**Then** nodes are clearly categorized by their primary function or type  
 
 ---
 
@@ -42,10 +66,21 @@ As a user, I want to connect agent nodes to define execution logic, including se
 **Estimated Time: 20 hours**
 
 ### Acceptance Criteria
-1. Users can create connections between agent nodes to define execution order.
-2. Supports sequential, parallel, and conditional connections between agents.
-3. Users can modify or remove connections between agents.
-4. The system prevents creation of invalid connections (e.g., cycles, dead ends).
+**Given** I have multiple agent nodes on the canvas  
+**When** I create connections between them  
+**Then** the connections define the execution order correctly  
+
+**Given** I need to model complex workflows  
+**When** I create sequential, parallel, or conditional connections  
+**Then** all connection types are supported and function correctly  
+
+**Given** I have existing connections between agents  
+**When** I modify or remove connections  
+**Then** the changes are applied successfully to the workflow  
+
+**Given** I attempt to create invalid connections  
+**When** the system detects cycles or dead ends  
+**Then** the invalid connections are prevented and I receive clear feedback  
 
 ---
 
@@ -57,10 +92,21 @@ As a user, I want the system to instantly validate my workflow and visually high
 **Estimated Time: 14 hours**
 
 ### Acceptance Criteria
-1. The system detects and highlights unconnected or misconfigured agent nodes.
-2. Invalid connections between agents are visually indicated and blocked.
-3. Error messages or tooltips explain the nature of each issue.
-4. Validation occurs in real time as the workflow is edited.
+**Given** I have unconnected or misconfigured agent nodes  
+**When** the system performs validation  
+**Then** these issues are detected and visually highlighted  
+
+**Given** I create invalid connections between agents  
+**When** the validation runs  
+**Then** the invalid connections are visually indicated and blocked  
+
+**Given** I encounter validation errors  
+**When** I hover over or select the highlighted issues  
+**Then** error messages or tooltips explain the nature of each issue  
+
+**Given** I am editing my workflow  
+**When** I make changes to nodes or connections  
+**Then** validation occurs in real time as I edit  
 
 ---
 
@@ -74,9 +120,17 @@ As a user, I want all modifications in the visual designer to be accurately and 
 **Estimated Time: 12 hours**
 
 ### Acceptance Criteria
-1. All node and connection changes update the workflow data model in real time.
-2. The data model remains consistent with the visual state of the canvas.
-3. No changes are lost during editing sessions.
+**Given** I make changes to nodes or connections in the visual designer  
+**When** the changes are applied  
+**Then** the workflow data model is updated in real time  
+
+**Given** I have an active editing session  
+**When** I make multiple changes to the workflow  
+**Then** the data model remains consistent with the visual state of the canvas  
+
+**Given** I am working on my workflow  
+**When** I make any modifications  
+**Then** no changes are lost during the editing session  
 
 ---
 
@@ -88,9 +142,17 @@ As a user, I want the workflow designer interface to be responsive and accessibl
 **Estimated Time: 10 hours**
 
 ### Acceptance Criteria
-1. The interface adapts to different desktop screen sizes and resolutions.
-2. All controls and features are accessible via keyboard and screen readers.
-3. Visual indicators and controls are clear and usable for all users.
+**Given** I access the workflow designer on different desktop screen sizes  
+**When** I use the interface  
+**Then** it adapts to different resolutions and remains fully functional  
+
+**Given** I have accessibility needs  
+**When** I use keyboard navigation or screen readers  
+**Then** all controls and features are accessible and usable  
+
+**Given** I interact with the workflow designer  
+**When** I use any visual indicators or controls  
+**Then** they are clear and usable for all users regardless of accessibility needs  
 
 ---
 
@@ -102,9 +164,22 @@ As a user, I want a prominent 'Play' button in the workflow designer so that I c
 **Estimated Time: 10 hours**
 
 ### Acceptance Criteria
-1. A 'Play' button is visible in the workflow designer UI.
-2. The button is only enabled when the workflow passes validation (no critical errors).
-3. Clicking the button triggers execution of the current workflow.
-4. UI provides clear feedback when execution starts (e.g., loading indicator, status message).
-5. The 'Play' button is disabled if the workflow is invalid or incomplete.
-6. Triggered executions are reflected in the execution dashboard in real time. 
+**Given** I am in the workflow designer  
+**When** I view the interface  
+**Then** a prominent 'Play' button is visible and accessible  
+
+**Given** my workflow has critical errors or validation issues  
+**When** I view the 'Play' button  
+**Then** the button is disabled and I cannot trigger execution  
+
+**Given** my workflow passes validation with no critical errors  
+**When** I click the 'Play' button  
+**Then** the workflow execution is triggered successfully  
+
+**Given** I trigger a workflow execution  
+**When** the execution starts  
+**Then** I receive clear feedback through loading indicators or status messages  
+
+**Given** I trigger an execution from the designer  
+**When** the workflow starts running  
+**Then** the execution appears in the execution dashboard in real time 

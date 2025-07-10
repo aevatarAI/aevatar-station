@@ -27,11 +27,25 @@ As a user building workflows, I want to describe my desired automation in natura
   - Warning indicators for potentially impossible requirements.
 
 ### Acceptance Criteria
-1. Users can enter workflow descriptions in natural language using an intuitive interface.
-2. The system provides helpful templates and examples to guide prompt creation.
-3. Real-time validation helps users improve their prompts before generation.
-4. Prompts are automatically saved to prevent data loss.
-5. Users receive immediate feedback on prompt quality and feasibility.
+**Given** I want to create a workflow using natural language  
+**When** I access the prompt input interface  
+**Then** I can enter workflow descriptions in natural language using an intuitive interface  
+
+**Given** I am new to creating workflow prompts  
+**When** I access the prompt creation interface  
+**Then** the system provides helpful templates and examples to guide prompt creation  
+
+**Given** I am creating a workflow prompt  
+**When** I enter my description  
+**Then** real-time validation helps me improve my prompts before generation  
+
+**Given** I am working on a workflow prompt  
+**When** I make changes or pause my work  
+**Then** prompts are automatically saved to prevent data loss  
+
+**Given** I submit a workflow prompt  
+**When** the system evaluates my prompt  
+**Then** I receive immediate feedback on prompt quality and feasibility  
 
 ---
 
@@ -57,13 +71,33 @@ As a user, I want the system to automatically generate a visual workflow from my
   - Preservation of user-specified requirements and constraints.
 
 ### Acceptance Criteria
-1. The system accurately interprets workflow intent from natural language descriptions.
-2. Generated workflows include all necessary nodes (Agent, Event, Output, Connector) properly connected.
-3. Complex workflow patterns (parallel, conditional, loops) are correctly represented.
-4. Generated workflows comply with system rules (e.g., Tools only connect to Agent Nodes).
-5. All generated nodes have meaningful names, descriptions, and appropriate default configurations.
-6. Workflow generation completes within 10 seconds for typical prompts.
-7. Generated workflows are immediately executable without manual intervention.
+**Given** I provide a natural language workflow description  
+**When** the AI processes my prompt  
+**Then** the system accurately interprets workflow intent from my description  
+
+**Given** my workflow description is processed by the AI  
+**When** the workflow is generated  
+**Then** generated workflows include all necessary nodes (Agent, Event, Output, Connector) properly connected  
+
+**Given** I describe complex workflow patterns  
+**When** the AI generates the workflow  
+**Then** complex workflow patterns (parallel, conditional, loops) are correctly represented  
+
+**Given** the AI generates a workflow  
+**When** I examine the generated workflow  
+**Then** generated workflows comply with system rules (e.g., Tools only connect to Agent Nodes)  
+
+**Given** the AI creates workflow nodes  
+**When** I view the generated workflow  
+**Then** all generated nodes have meaningful names, descriptions, and appropriate default configurations  
+
+**Given** I submit a typical workflow prompt  
+**When** the generation process runs  
+**Then** workflow generation completes within 10 seconds for typical prompts  
+
+**Given** the AI generates a workflow  
+**When** I attempt to run it  
+**Then** generated workflows are immediately executable without manual intervention  
 
 ---
 
@@ -87,13 +121,33 @@ As a user, I want to seamlessly transition from AI-generated workflows to manual
   - Ability to save and reuse successful prompt patterns for future workflows.
 
 ### Acceptance Criteria
-1. Users can instantly switch from generated workflow to manual editing mode.
-2. All generated configurations and settings are preserved during transition.
-3. The full drag-and-drop editor functionality is available for workflow refinement.
-4. Users can regenerate specific portions of workflows using refined prompts.
-5. Undo/redo functionality includes both AI generation and manual editing steps.
-6. Clear visual indicators distinguish between AI-generated and manually edited components.
-7. Users can save and reuse successful prompt patterns for future use.
+**Given** I have an AI-generated workflow  
+**When** I choose to edit it manually  
+**Then** I can instantly switch from generated workflow to manual editing mode  
+
+**Given** I transition from generated workflow to manual editing  
+**When** the transition occurs  
+**Then** all generated configurations and settings are preserved during transition  
+
+**Given** I am in manual editing mode after generation  
+**When** I access editing features  
+**Then** the full drag-and-drop editor functionality is available for workflow refinement  
+
+**Given** I want to improve specific parts of my workflow  
+**When** I use refined prompts  
+**Then** I can regenerate specific portions of workflows using refined prompts  
+
+**Given** I am working with generated and manual edits  
+**When** I use undo/redo functionality  
+**Then** undo/redo functionality includes both AI generation and manual editing steps  
+
+**Given** I have mixed AI-generated and manually edited components  
+**When** I view my workflow  
+**Then** clear visual indicators distinguish between AI-generated and manually edited components  
+
+**Given** I create successful workflow prompts  
+**When** I want to reuse them  
+**Then** I can save and reuse successful prompt patterns for future use  
 
 ---
 
@@ -116,9 +170,26 @@ As a user, I want clear guidance when workflow generation fails so that I can un
   - Analytics on common failure patterns and user pain points.
 
 ### Acceptance Criteria
-1. Users receive clear, actionable error messages when generation fails.
-2. The system provides specific guidance on improving ambiguous prompts.
-3. Fallback options are available when automated generation is not possible.
-4. Users can complete partially generated workflows manually.
-5. The system learns from failures to improve future generation accuracy.
-6. Error handling maintains user confidence and workflow creation momentum.
+**Given** workflow generation fails due to prompt issues  
+**When** the failure occurs  
+**Then** I receive clear, actionable error messages when generation fails  
+
+**Given** my prompt is ambiguous or unclear  
+**When** the system identifies issues  
+**Then** the system provides specific guidance on improving ambiguous prompts  
+
+**Given** automated generation is not possible for my requirements  
+**When** generation fails  
+**Then** fallback options are available when automated generation is not possible  
+
+**Given** generation partially succeeds  
+**When** some parts cannot be generated  
+**Then** I can complete partially generated workflows manually  
+
+**Given** generation failures occur  
+**When** the system processes these failures  
+**Then** the system learns from failures to improve future generation accuracy  
+
+**Given** workflow generation encounters problems  
+**When** error handling is triggered  
+**Then** error handling maintains my confidence and workflow creation momentum  

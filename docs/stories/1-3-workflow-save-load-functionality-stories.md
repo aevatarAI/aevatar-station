@@ -15,10 +15,21 @@ As a workflow designer user, I want to save my current workflow with automatic v
 **Time Estimate: 12 hours**
 
 ### Acceptance Criteria
-1. Users can save the current workflow to the backend, and each save creates a new version.
-2. Users receive clear UI feedback (success or failure) when saving workflows.
-3. No data loss occurs during save operations, and all workflow data is preserved accurately.
-4. The save operation includes proper validation to ensure workflow integrity before persistence.
+**Given** I have created or modified a workflow  
+**When** I save the workflow to the backend  
+**Then** each save creates a new version and all workflow data is preserved accurately  
+
+**Given** I am saving a workflow  
+**When** the save operation completes  
+**Then** I receive clear UI feedback indicating success or failure  
+
+**Given** I am saving my workflow  
+**When** the save operation is processing  
+**Then** no data loss occurs during save operations  
+
+**Given** I attempt to save a workflow  
+**When** the system validates the workflow  
+**Then** proper validation ensures workflow integrity before persistence  
 
 ---
 
@@ -35,11 +46,25 @@ As a workflow designer user, I want to load existing workflows from the backend 
 **Time Estimate: 14 hours**
 
 ### Acceptance Criteria
-1. Users can load existing workflows from the backend, including selecting specific versions.
-2. Users receive clear UI feedback (success or failure) when loading workflows.
-3. Users can access and use workflow templates when creating or loading workflows.
-4. No data loss occurs during load operations, and workflows are restored exactly as saved.
-5. The load operation includes proper validation to ensure loaded workflow data integrity.
+**Given** I have existing workflows in the backend  
+**When** I load workflows from the backend  
+**Then** I can access existing workflows and select specific versions  
+
+**Given** I am loading a workflow  
+**When** the load operation completes  
+**Then** I receive clear UI feedback indicating success or failure  
+
+**Given** I want to create new workflows from templates  
+**When** I access the load functionality  
+**Then** I can access and use workflow templates when creating or loading workflows  
+
+**Given** I am loading a saved workflow  
+**When** the load operation completes  
+**Then** no data loss occurs and workflows are restored exactly as saved  
+
+**Given** I load a workflow from the backend  
+**When** the system processes the loaded data  
+**Then** proper validation ensures loaded workflow data integrity  
 
 ---
 
@@ -56,10 +81,30 @@ As a workflow designer user, I want to download my saved workflows as JSON files
 **Time Estimate: 10 hours**
 
 ### Acceptance Criteria
-1. Users can download any saved workflow as a JSON file to their local system.
-2. Users can import workflows from JSON files uploaded through the UI.
-3. The downloaded JSON files contain complete workflow data and are human-readable.
-4. The import functionality validates JSON file structure and provides clear error messages for invalid files.
-5. Users receive clear UI feedback (success or failure) during download and import operations.
-6. Imported workflows are accurately reflected in the UI with all nodes, connections, and configurations preserved.
-7. The system handles large workflow files efficiently without UI freezing or performance issues. 
+**Given** I have saved workflows in the system  
+**When** I choose to download any saved workflow  
+**Then** the workflow is downloaded as a JSON file to my local system  
+
+**Given** I have JSON workflow files  
+**When** I upload them through the UI  
+**Then** I can import workflows from JSON files  
+
+**Given** I download a workflow as JSON  
+**When** I examine the downloaded file  
+**Then** the JSON file contains complete workflow data and is human-readable  
+
+**Given** I import a JSON workflow file  
+**When** the system processes the file  
+**Then** the import functionality validates JSON file structure and provides clear error messages for invalid files  
+
+**Given** I am downloading or importing workflows  
+**When** the operations complete  
+**Then** I receive clear UI feedback indicating success or failure for both operations  
+
+**Given** I import a workflow from JSON  
+**When** the import is successful  
+**Then** the imported workflow is accurately reflected in the UI with all nodes, connections, and configurations preserved  
+
+**Given** I work with large workflow files  
+**When** I download or import them  
+**Then** the system handles large workflow files efficiently without UI freezing or performance issues. 

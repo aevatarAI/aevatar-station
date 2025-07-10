@@ -12,9 +12,17 @@ As a user, I want to view all saved workflows and click on a workflow to visit t
 **Estimated Time:** 8 hours
 
 ### Acceptance Criteria
-1. Users can see a list of all saved workflows with their names and basic metadata.
-2. Users can click on any workflow to navigate to the visual workflow designer.
-3. The visual workflow designer loads with the selected workflow's configuration.
+**Given** I have saved workflows in the system  
+**When** I navigate to the workflow list page  
+**Then** I can see a list of all saved workflows with their names and basic metadata  
+
+**Given** I am viewing the workflow list  
+**When** I click on any workflow in the list  
+**Then** I am navigated to the visual workflow designer  
+
+**Given** I have clicked on a specific workflow from the list  
+**When** the visual workflow designer loads  
+**Then** it displays the selected workflow's configuration  
 
 # 2. Workflow Execution Status Dashboard
 
@@ -26,9 +34,17 @@ As a user, I want to view all workflow executions (running, completed, failed) i
 **Estimated Time:** 8 hours
 
 ### Acceptance Criteria
-1. Users can see a list of all workflow executions with their current status (running, completed, failed).
-2. Status updates in real time as executions progress.
-3. Errors and progress are clearly displayed.
+**Given** I have workflow executions in the system  
+**When** I navigate to the execution dashboard  
+**Then** I can see a list of all workflow executions with their current status (running, completed, failed)  
+
+**Given** I am viewing the execution dashboard with running workflows  
+**When** executions progress or change status  
+**Then** the status updates in real time without requiring a page refresh  
+
+**Given** I am viewing workflow executions on the dashboard  
+**When** there are executions with errors or in progress  
+**Then** errors and progress information are clearly displayed with appropriate visual indicators  
 
 # 3. Filtering and Search Capabilities
 
@@ -40,9 +56,17 @@ As a user, I want to filter and search workflow executions so that I can quickly
 **Estimated Time:** 12 hours
 
 ### Acceptance Criteria
-1. Users can filter executions by status (running, completed, failed) and time range.
-2. Users can search executions by workflow name or ID.
-3. Filtered and searched results update the dashboard view accordingly.
+**Given** I have multiple workflow executions  
+**When** I apply filters by status (running, completed, failed) and time range  
+**Then** the dashboard shows only executions matching the selected criteria  
+
+**Given** I need to find specific executions  
+**When** I search by workflow name or ID  
+**Then** the search results display matching executions  
+
+**Given** I have applied filters or search criteria  
+**When** I view the dashboard  
+**Then** the filtered and searched results update the dashboard view accordingly  
 
 # 4. Integration with Designer Play Button
 
@@ -54,6 +78,14 @@ As a user, I want executions triggered from the workflow designer's Play button 
 **Estimated Time:** 10 hours
 
 ### Acceptance Criteria
-1. Executions started from the designer are instantly listed in the dashboard view.
-2. Status and progress of these executions update in real time.
-3. Any errors or completion states are clearly displayed for executions triggered from the designer. 
+**Given** I trigger a workflow execution from the designer's Play button  
+**When** the execution starts  
+**Then** the execution is instantly listed in the dashboard view  
+
+**Given** I have triggered an execution from the designer  
+**When** the execution progresses  
+**Then** status and progress update in real time on the dashboard  
+
+**Given** an execution I triggered from the designer encounters errors or completes  
+**When** I view the dashboard  
+**Then** any errors or completion states are clearly displayed for executions triggered from the designer 
