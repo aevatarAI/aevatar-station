@@ -65,23 +65,23 @@ Establishes the technical infrastructure for streaming real-time data from workf
 
 ### User Story
 
-As a workflow debugger, I want all agents in my workflow to stream their execution data (inputs, outputs, events, states) in real-time to the debug interface, so that I can observe what's happening during workflow execution as it occurs.
+As a workflow debugger, I want all agents in my workflow to stream their execution data (inputs, outputs, and states) in real-time to the debug interface, so that I can observe what's happening during workflow execution as it occurs.
 
 **Time Estimate: 20 hours**
 
 ### Key Features
 - **Agent Instrumentation:**
   - All workflow agents are instrumented with debugging hooks
-  - Capture and stream inputs, outputs, intermediate states, and events
+  - Capture and stream inputs, outputs, and states
   - Error and exception streaming with stack traces
 - **Connection Management:**
   - WebSocket or Server-Sent Events (SSE) connections for real-time data delivery
   - Connection resilience with automatic reconnection
   - Efficient data serialization and compression
 - **Data Streaming:**
-  - Real-time streaming of agent execution events
+  - Real-time streaming of agent execution data
   - Structured data format for consistent parsing
-  - Rate limiting and buffering for high-frequency events
+  - Rate limiting and buffering for high-frequency data
 
 ### Acceptance Criteria
 **Given** I have workflows running in debug mode  
@@ -90,7 +90,7 @@ As a workflow debugger, I want all agents in my workflow to stream their executi
 
 **Given** agents are executing in debug mode  
 **When** they process data  
-**Then** streaming includes inputs, outputs, intermediate states, events, and errors  
+**Then** streaming includes inputs, outputs, states, and errors  
 
 **Given** I enable debug mode  
 **When** the debug session starts  
@@ -104,9 +104,9 @@ As a workflow debugger, I want all agents in my workflow to stream their executi
 **When** I receive the data in the debug interface  
 **Then** the data is properly formatted and structured for UI consumption  
 
-**Given** agents generate high-frequency events  
+**Given** agents generate high-frequency data  
 **When** data is streamed  
-**Then** events are properly buffered and rate-limited to prevent overwhelming the interface  
+**Then** data is properly buffered and rate-limited to prevent overwhelming the interface  
 
 **Given** I am debugging my own workflow  
 **When** multiple users are debugging simultaneously  

@@ -94,9 +94,9 @@ Version 0.5 enhances the execution tracking capabilities introduced in v0.4 and 
 - **Real-Time Data Streaming Infrastructure** - [1-2-interactive-debugger-overlay-stories.md](../stories/1-2-interactive-debugger-overlay-stories.md#2-real-time-data-streaming-infrastructure)
   - Agent instrumentation for debugging
   - WebSocket/SSE connections for live data streaming
-  - Real-time capture of inputs, outputs, and events
+  - Real-time capture of inputs, outputs, and states
   - Connection resilience and automatic reconnection
-  - Rate limiting and buffering for high-frequency events
+  - Rate limiting and buffering for high-frequency data
 
 ## Technical Enhancements
 
