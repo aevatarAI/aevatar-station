@@ -1,4 +1,4 @@
-// ABOUTME: This file defines a test agent that implements both GAgentBase and IMetaDataStateEventRaiser
+// ABOUTME: This file defines a test agent that implements both GAgentBase and IMetaDataStateGAgent
 // ABOUTME: Used for integration testing to verify Orleans event sourcing works with metadata events
 
 using Aevatar.Core;
@@ -9,15 +9,15 @@ using Aevatar.MetaData.Events;
 namespace Aevatar.MetaData.Tests;
 
 /// <summary>
-/// Test agent that implements both GAgentBase and IMetaDataStateEventRaiser for integration testing.
-/// Demonstrates how to use the metadata event raiser interface with Orleans event sourcing.
+/// Test agent that implements both GAgentBase and IMetaDataStateGAgent for integration testing.
+/// Demonstrates how to use the metadata state interface with Orleans event sourcing.
 /// </summary>
-public class TestMetaDataAgent : IMetaDataStateEventRaiser<TestMetaDataAgentState>
+public class TestMetaDataAgent : IMetaDataStateGAgent<TestMetaDataAgentState>
 {
     public TestMetaDataAgentState State { get; } = new TestMetaDataAgentState();
     private readonly List<MetaDataStateLogEvent> _raisedEvents = new();
 
-    // Implementation of IMetaDataStateEventRaiser required methods
+    // Implementation of IMetaDataStateGAgent required methods
     public void RaiseEvent(MetaDataStateLogEvent @event)
     {
         // Store the event for testing verification
@@ -37,6 +37,8 @@ public class TestMetaDataAgent : IMetaDataStateEventRaiser<TestMetaDataAgentStat
     {
         return State;
     }
+    
+    IMetaDataState IMetaDataStateGAgent.GetState() => State;
 
     public GrainId GetGrainId()
     {

@@ -1,4 +1,4 @@
-// ABOUTME: This file contains simplified integration tests for IMetaDataStateEventRaiser with GAgentBase
+// ABOUTME: This file contains simplified integration tests for IMetaDataStateGAgent with GAgentBase
 // ABOUTME: Tests the interface working with a test agent implementation using in-memory testing
 
 using Aevatar.MetaData.Enums;
@@ -7,23 +7,23 @@ using Shouldly;
 namespace Aevatar.MetaData.Tests;
 
 /// <summary>
-/// Simplified integration tests for IMetaDataStateEventRaiser interface with GAgentBase.
+/// Simplified integration tests for IMetaDataStateGAgent interface with GAgentBase.
 /// Tests that the interface can be implemented by a test agent and works correctly.
 /// </summary>
-public class IMetaDataStateEventRaiserSimpleIntegrationTests
+public class IMetaDataStateGAgentSimpleIntegrationTests
 {
     private readonly Guid _testAgentId = Guid.NewGuid();
     private readonly Guid _testUserId = Guid.NewGuid();
 
     [Fact]
-    public void TestMetaDataAgent_Should_ImplementIMetaDataStateEventRaiser()
+    public void TestMetaDataAgent_Should_ImplementIMetaDataStateGAgent()
     {
-        // This test verifies that TestMetaDataAgent can implement IMetaDataStateEventRaiser
+        // This test verifies that TestMetaDataAgent can implement IMetaDataStateGAgent
         // and that the integration compiles correctly
         
         // Arrange & Act - Create an instance to verify interface implementation
         var agent = new TestMetaDataAgent();
-        var eventRaiser = agent as IMetaDataStateEventRaiser<TestMetaDataAgentState>;
+        var eventRaiser = agent as IMetaDataStateGAgent<TestMetaDataAgentState>;
         
         // Assert
         eventRaiser.ShouldNotBeNull();
@@ -34,7 +34,7 @@ public class IMetaDataStateEventRaiserSimpleIntegrationTests
     {
         // Arrange
         var agent = new TestMetaDataAgent();
-        var eventRaiser = (IMetaDataStateEventRaiser<TestMetaDataAgentState>)agent;
+        var eventRaiser = (IMetaDataStateGAgent<TestMetaDataAgentState>)agent;
         
         var name = "Test Agent";
         var agentType = "TestAgent";
@@ -53,7 +53,7 @@ public class IMetaDataStateEventRaiserSimpleIntegrationTests
     {
         // Arrange
         var agent = new TestMetaDataAgent();
-        var eventRaiser = (IMetaDataStateEventRaiser<TestMetaDataAgentState>)agent;
+        var eventRaiser = (IMetaDataStateGAgent<TestMetaDataAgentState>)agent;
         
         // Set up initial state
         agent.State.Id = _testAgentId;
@@ -75,7 +75,7 @@ public class IMetaDataStateEventRaiserSimpleIntegrationTests
     {
         // Arrange
         var agent = new TestMetaDataAgent();
-        var eventRaiser = (IMetaDataStateEventRaiser<TestMetaDataAgentState>)agent;
+        var eventRaiser = (IMetaDataStateGAgent<TestMetaDataAgentState>)agent;
         
         // Set up initial state
         agent.State.Id = _testAgentId;
@@ -95,7 +95,7 @@ public class IMetaDataStateEventRaiserSimpleIntegrationTests
     {
         // Arrange
         var agent = new TestMetaDataAgent();
-        var eventRaiser = (IMetaDataStateEventRaiser<TestMetaDataAgentState>)agent;
+        var eventRaiser = (IMetaDataStateGAgent<TestMetaDataAgentState>)agent;
         
         // Set up initial state
         agent.State.Id = _testAgentId;
@@ -115,7 +115,7 @@ public class IMetaDataStateEventRaiserSimpleIntegrationTests
     {
         // Arrange
         var agent = new TestMetaDataAgent();
-        var eventRaiser = (IMetaDataStateEventRaiser<TestMetaDataAgentState>)agent;
+        var eventRaiser = (IMetaDataStateGAgent<TestMetaDataAgentState>)agent;
         
         // Set up initial state
         agent.State.Id = _testAgentId;
@@ -138,7 +138,7 @@ public class IMetaDataStateEventRaiserSimpleIntegrationTests
     {
         // Arrange
         var agent = new TestMetaDataAgent();
-        var eventRaiser = (IMetaDataStateEventRaiser<TestMetaDataAgentState>)agent;
+        var eventRaiser = (IMetaDataStateGAgent<TestMetaDataAgentState>)agent;
 
         // Act
         var state = eventRaiser.GetState();
@@ -153,7 +153,7 @@ public class IMetaDataStateEventRaiserSimpleIntegrationTests
     {
         // Arrange
         var agent = new TestMetaDataAgent();
-        var eventRaiser = (IMetaDataStateEventRaiser<TestMetaDataAgentState>)agent;
+        var eventRaiser = (IMetaDataStateGAgent<TestMetaDataAgentState>)agent;
 
         // Act & Assert - This will test that GetGrainId method works
         var grainId = eventRaiser.GetGrainId();

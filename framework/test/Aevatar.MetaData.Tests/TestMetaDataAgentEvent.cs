@@ -6,7 +6,7 @@ using Aevatar.Core.Abstractions;
 namespace Aevatar.MetaData.Tests;
 
 /// <summary>
-/// Test state log event for Orleans integration testing with IMetaDataStateEventRaiser.
+/// Test state log event for Orleans integration testing with IMetaDataStateGAgent.
 /// Used to track state changes in the TestMetaDataAgent.
 /// </summary>
 [GenerateSerializer]

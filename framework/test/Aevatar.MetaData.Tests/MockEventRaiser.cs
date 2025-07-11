@@ -1,4 +1,4 @@
-// ABOUTME: This file provides a mock implementation of IMetaDataStateEventRaiser for testing
+// ABOUTME: This file provides a mock implementation of IMetaDataStateGAgent for testing
 // ABOUTME: Tracks raised events and state changes for verification in unit tests
 
 using Aevatar.MetaData;
@@ -7,9 +7,9 @@ using Aevatar.MetaData.Events;
 namespace Aevatar.MetaData.Tests;
 
 /// <summary>
-/// Mock implementation of IMetaDataStateEventRaiser for testing purposes.
+/// Mock implementation of IMetaDataStateGAgent for testing purposes.
 /// </summary>
-public class MockEventRaiser : IMetaDataStateEventRaiser<TestMetaDataState>
+public class MockEventRaiser : IMetaDataStateGAgent<TestMetaDataState>
 {
     private readonly TestMetaDataState _state;
     private readonly List<MetaDataStateLogEvent> _raisedEvents = new();
@@ -40,6 +40,8 @@ public class MockEventRaiser : IMetaDataStateEventRaiser<TestMetaDataState>
     {
         return _state;
     }
+    
+    IMetaDataState IMetaDataStateGAgent.GetState() => _state;
 
     public GrainId GetGrainId()
     {

@@ -533,6 +533,8 @@ public class IMetaDataStateGAgentTests
         
         public TestMetaDataState GetState() => TestState;
         
+        IMetaDataState IMetaDataStateGAgent.GetState() => TestState;
+        
         public GrainId GetGrainId() => TestGrainId;
     }
     

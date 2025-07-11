@@ -81,10 +81,10 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
             await businessAgent.ActivateAsync();
 
             // Cast to IMetaDataStateGAgent for metadata operations
-            // The business agent must implement IMetaDataStateGAgent<TState> where TState : IMetaDataState
-            if (businessAgent is not IMetaDataStateGAgent<IMetaDataState> metadataAgent)
+            // The business agent must implement IMetaDataStateGAgent interface
+            if (businessAgent is not IMetaDataStateGAgent metadataAgent)
             {
-                throw new InvalidOperationException($"Agent type {request.AgentType} does not implement IMetaDataStateGAgent<IMetaDataState>");
+                throw new InvalidOperationException($"Agent type {request.AgentType} does not implement IMetaDataStateGAgent");
             }
 
             // Convert properties to string dictionary for metadata
@@ -159,9 +159,9 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
             var businessAgent = await _gAgentFactory.GetGAgentAsync(businessAgentGrainId);
 
             // Cast to IMetaDataStateGAgent for metadata operations
-            if (businessAgent is not IMetaDataStateGAgent<IMetaDataState> metadataAgent)
+            if (businessAgent is not IMetaDataStateGAgent metadataAgent)
             {
-                throw new InvalidOperationException($"Agent {agentId} does not implement IMetaDataStateGAgent<IMetaDataState>");
+                throw new InvalidOperationException($"Agent {agentId} does not implement IMetaDataStateGAgent");
             }
 
             // Update properties if provided
@@ -246,9 +246,9 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
             var businessAgent = await _gAgentFactory.GetGAgentAsync(businessAgentGrainId);
 
             // Cast to IMetaDataStateGAgent for metadata operations
-            if (businessAgent is not IMetaDataStateGAgent<IMetaDataState> metadataAgent)
+            if (businessAgent is not IMetaDataStateGAgent metadataAgent)
             {
-                throw new InvalidOperationException($"Agent {agentId} does not implement IMetaDataStateGAgent<IMetaDataState>");
+                throw new InvalidOperationException($"Agent {agentId} does not implement IMetaDataStateGAgent");
             }
 
             // Update status to deleted through the metadata interface
@@ -279,9 +279,9 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
             var businessAgent = await _gAgentFactory.GetGAgentAsync(businessAgentGrainId);
 
             // Cast to IMetaDataStateGAgent for metadata operations
-            if (businessAgent is not IMetaDataStateGAgent<IMetaDataState> metadataAgent)
+            if (businessAgent is not IMetaDataStateGAgent metadataAgent)
             {
-                throw new InvalidOperationException($"Agent {agentId} does not implement IMetaDataStateGAgent<IMetaDataState>");
+                throw new InvalidOperationException($"Agent {agentId} does not implement IMetaDataStateGAgent");
             }
 
             // Get the metadata state
@@ -373,9 +373,9 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
             var businessAgent = await _gAgentFactory.GetGAgentAsync(businessAgentGrainId);
 
             // Cast to IMetaDataStateGAgent for metadata operations
-            if (businessAgent is not IMetaDataStateGAgent<IMetaDataState> metadataAgent)
+            if (businessAgent is not IMetaDataStateGAgent metadataAgent)
             {
-                throw new InvalidOperationException($"Agent {agentId} does not implement IMetaDataStateGAgent<IMetaDataState>");
+                throw new InvalidOperationException($"Agent {agentId} does not implement IMetaDataStateGAgent");
             }
 
             // Record activity for event publishing
@@ -415,14 +415,14 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
             var childBusinessAgent = await _gAgentFactory.GetGAgentAsync(childBusinessAgentGrainId);
 
             // Cast to IMetaDataStateGAgent for metadata operations
-            if (parentBusinessAgent is not IMetaDataStateGAgent<IMetaDataState> parentMetadataAgent)
+            if (parentBusinessAgent is not IMetaDataStateGAgent parentMetadataAgent)
             {
-                throw new InvalidOperationException($"Parent agent {parentId} does not implement IMetaDataStateGAgent<IMetaDataState>");
+                throw new InvalidOperationException($"Parent agent {parentId} does not implement IMetaDataStateGAgent");
             }
 
-            if (childBusinessAgent is not IMetaDataStateGAgent<IMetaDataState> childMetadataAgent)
+            if (childBusinessAgent is not IMetaDataStateGAgent childMetadataAgent)
             {
-                throw new InvalidOperationException($"Child agent {childId} does not implement IMetaDataStateGAgent<IMetaDataState>");
+                throw new InvalidOperationException($"Child agent {childId} does not implement IMetaDataStateGAgent");
             }
 
             // Get metadata states
@@ -506,14 +506,14 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
             var childBusinessAgent = await _gAgentFactory.GetGAgentAsync(childBusinessAgentGrainId);
 
             // Cast to IMetaDataStateGAgent for metadata operations
-            if (parentBusinessAgent is not IMetaDataStateGAgent<IMetaDataState> parentMetadataAgent)
+            if (parentBusinessAgent is not IMetaDataStateGAgent parentMetadataAgent)
             {
-                throw new InvalidOperationException($"Parent agent {parentId} does not implement IMetaDataStateGAgent<IMetaDataState>");
+                throw new InvalidOperationException($"Parent agent {parentId} does not implement IMetaDataStateGAgent");
             }
 
-            if (childBusinessAgent is not IMetaDataStateGAgent<IMetaDataState> childMetadataAgent)
+            if (childBusinessAgent is not IMetaDataStateGAgent childMetadataAgent)
             {
-                throw new InvalidOperationException($"Child agent {childId} does not implement IMetaDataStateGAgent<IMetaDataState>");
+                throw new InvalidOperationException($"Child agent {childId} does not implement IMetaDataStateGAgent");
             }
 
             // Get metadata states
@@ -592,9 +592,9 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
             var parentBusinessAgent = await _gAgentFactory.GetGAgentAsync(parentBusinessAgentGrainId);
 
             // Cast to IMetaDataStateGAgent for metadata operations
-            if (parentBusinessAgent is not IMetaDataStateGAgent<IMetaDataState> parentMetadataAgent)
+            if (parentBusinessAgent is not IMetaDataStateGAgent parentMetadataAgent)
             {
-                throw new InvalidOperationException($"Parent agent {parentId} does not implement IMetaDataStateGAgent<IMetaDataState>");
+                throw new InvalidOperationException($"Parent agent {parentId} does not implement IMetaDataStateGAgent");
             }
 
             // Get metadata state

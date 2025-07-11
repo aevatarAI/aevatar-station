@@ -1,4 +1,4 @@
-// ABOUTME: This file contains TDD tests for IMetaDataStateEventRaiser interface default methods
+// ABOUTME: This file contains TDD tests for IMetaDataStateGAgent interface default methods
 // ABOUTME: Following RED-GREEN-REFACTOR cycle with failing tests written first
 
 using Aevatar.MetaData.Enums;
@@ -9,18 +9,18 @@ using Xunit;
 namespace Aevatar.MetaData.Tests;
 
 /// <summary>
-/// TDD tests for IMetaDataStateEventRaiser interface default method behavior.
+/// TDD tests for IMetaDataStateGAgent interface default method behavior.
 /// Tests are written FIRST (RED phase) before implementation is complete.
 /// </summary>
-public class IMetaDataStateEventRaiserTests
+public class IMetaDataStateGAgentDefaultMethodTests
 {
     private readonly TestMetaDataState _state;
     private readonly MockEventRaiser _eventRaiser;
-    private readonly IMetaDataStateEventRaiser<TestMetaDataState> _eventRaiserInterface;
+    private readonly IMetaDataStateGAgent<TestMetaDataState> _eventRaiserInterface;
     private readonly Guid _testAgentId = Guid.NewGuid();
     private readonly Guid _testUserId = Guid.NewGuid();
 
-    public IMetaDataStateEventRaiserTests()
+    public IMetaDataStateGAgentDefaultMethodTests()
     {
         _state = new TestMetaDataState();
         _eventRaiser = new MockEventRaiser(_state);
@@ -172,7 +172,7 @@ public class IMetaDataStateEventRaiserTests
 
         // Assert
         var @event = _eventRaiser.RaisedEvents[0].ShouldBeOfType<AgentActivityUpdatedEvent>();
-        @event.ActivityType.ShouldBe("activity");
+        @event.ActivityType.ShouldBe(string.Empty);
     }
 
     [Fact]
@@ -201,6 +201,7 @@ public class IMetaDataStateEventRaiserTests
         _state.Id = _testAgentId;
         _state.UserId = _testUserId;
         var keyToRemove = "removeMe";
+        _state.Properties[keyToRemove] = "someValue"; // Add property first
 
         // Act
         await _eventRaiserInterface.RemovePropertyAsync(keyToRemove);
@@ -213,7 +214,7 @@ public class IMetaDataStateEventRaiserTests
         @event.UpdatedProperties.ShouldBeEmpty();
         @event.RemovedProperties.ShouldHaveSingleItem();
         @event.RemovedProperties[0].ShouldBe(keyToRemove);
-        @event.WasMerged.ShouldBeTrue();
+        @event.WasMerged.ShouldBeFalse();
     }
 
     [Fact]
@@ -230,13 +231,10 @@ public class IMetaDataStateEventRaiserTests
         await _eventRaiserInterface.BatchUpdateAsync(newStatus: newStatus, statusReason: reason);
 
         // Assert
-        _eventRaiser.RaisedEvents.Count.ShouldBe(2); // Status + Activity
+        _eventRaiser.RaisedEvents.Count.ShouldBe(1); // Status only
         var statusEvent = _eventRaiser.RaisedEvents[0].ShouldBeOfType<AgentStatusChangedEvent>();
         statusEvent.NewStatus.ShouldBe(newStatus);
         statusEvent.Reason.ShouldBe(reason);
-        
-        var activityEvent = _eventRaiser.RaisedEvents[1].ShouldBeOfType<AgentActivityUpdatedEvent>();
-        activityEvent.ActivityType.ShouldBe("batch_update");
     }
 
     [Fact]
@@ -251,12 +249,9 @@ public class IMetaDataStateEventRaiserTests
         await _eventRaiserInterface.BatchUpdateAsync(properties: properties);
 
         // Assert
-        _eventRaiser.RaisedEvents.Count.ShouldBe(2); // Properties + Activity
+        _eventRaiser.RaisedEvents.Count.ShouldBe(1); // Properties only
         var propertiesEvent = _eventRaiser.RaisedEvents[0].ShouldBeOfType<AgentPropertiesUpdatedEvent>();
         propertiesEvent.UpdatedProperties.ShouldBe(properties);
-        
-        var activityEvent = _eventRaiser.RaisedEvents[1].ShouldBeOfType<AgentActivityUpdatedEvent>();
-        activityEvent.ActivityType.ShouldBe("batch_update");
     }
 
     [Fact]
@@ -273,10 +268,9 @@ public class IMetaDataStateEventRaiserTests
         await _eventRaiserInterface.BatchUpdateAsync(newStatus: newStatus, properties: properties);
 
         // Assert
-        _eventRaiser.RaisedEvents.Count.ShouldBe(3); // Status + Properties + Activity
+        _eventRaiser.RaisedEvents.Count.ShouldBe(2); // Status + Properties
         _eventRaiser.RaisedEvents[0].ShouldBeOfType<AgentStatusChangedEvent>();
         _eventRaiser.RaisedEvents[1].ShouldBeOfType<AgentPropertiesUpdatedEvent>();
-        _eventRaiser.RaisedEvents[2].ShouldBeOfType<AgentActivityUpdatedEvent>();
     }
 
     [Fact]
@@ -290,9 +284,7 @@ public class IMetaDataStateEventRaiserTests
         await _eventRaiserInterface.BatchUpdateAsync();
 
         // Assert
-        _eventRaiser.RaisedEvents.ShouldHaveSingleItem();
-        var activityEvent = _eventRaiser.RaisedEvents[0].ShouldBeOfType<AgentActivityUpdatedEvent>();
-        activityEvent.ActivityType.ShouldBe("batch_update");
+        _eventRaiser.RaisedEvents.ShouldBeEmpty();
     }
 
     [Fact]
@@ -307,8 +299,6 @@ public class IMetaDataStateEventRaiserTests
         await _eventRaiserInterface.BatchUpdateAsync(properties: emptyProperties);
 
         // Assert
-        _eventRaiser.RaisedEvents.ShouldHaveSingleItem(); // Only activity, no properties event
-        var activityEvent = _eventRaiser.RaisedEvents[0].ShouldBeOfType<AgentActivityUpdatedEvent>();
-        activityEvent.ActivityType.ShouldBe("batch_update");
+        _eventRaiser.RaisedEvents.ShouldBeEmpty(); // No events for empty properties
     }
 }

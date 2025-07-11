@@ -8,12 +8,11 @@ using Aevatar.MetaData.Events;
 namespace Aevatar.MetaData;
 
 /// <summary>
-/// Provides default implementations for common event-raising operations on metadata state.
-/// This interface works alongside GAgentBase to reduce boilerplate code when raising common metadata events.
-/// This is a helper interface that agents can implement alongside their GAgentBase inheritance.
+/// Non-generic base interface for metadata state operations.
+/// This interface provides all common functionality that works with IMetaDataState,
+/// allowing service code to work with any agent that implements metadata functionality.
 /// </summary>
-/// <typeparam name="TState">The state type that implements IMetaDataState</typeparam>
-public interface IMetaDataStateGAgent<TState> where TState : IMetaDataState
+public interface IMetaDataStateGAgent
 {
     /// <summary>
     /// Raises an event to be applied to the state.
@@ -28,10 +27,10 @@ public interface IMetaDataStateGAgent<TState> where TState : IMetaDataState
     Task ConfirmEvents();
     
     /// <summary>
-    /// Gets the current state instance.
+    /// Gets the current state instance as IMetaDataState.
     /// </summary>
     /// <returns>The current state</returns>
-    TState GetState();
+    IMetaDataState GetState();
     
     /// <summary>
     /// Gets the grain ID of the current agent.
@@ -78,11 +77,12 @@ public interface IMetaDataStateGAgent<TState> where TState : IMetaDataState
     /// <returns>Task representing the asynchronous operation</returns>
     async Task UpdateStatusAsync(AgentStatus newStatus, string? reason = null)
     {
+        var state = GetState();
         var @event = new AgentStatusChangedEvent
         {
-            AgentId = GetState().Id,
-            UserId = GetState().UserId,
-            OldStatus = GetState().Status,
+            AgentId = state.Id,
+            UserId = state.UserId,
+            OldStatus = state.Status,
             NewStatus = newStatus,
             Reason = reason,
             StatusChangeTime = DateTime.UtcNow
@@ -102,12 +102,13 @@ public interface IMetaDataStateGAgent<TState> where TState : IMetaDataState
         Dictionary<string, string> properties, 
         bool merge = true)
     {
+        var state = GetState();
         var @event = new AgentPropertiesUpdatedEvent
         {
-            AgentId = GetState().Id,
-            UserId = GetState().UserId,
+            AgentId = state.Id,
+            UserId = state.UserId,
             UpdatedProperties = merge ? properties : properties,
-            RemovedProperties = merge ? new List<string>() : GetState().Properties.Keys.Except(properties.Keys).ToList(),
+            RemovedProperties = merge ? new List<string>() : state.Properties.Keys.Except(properties.Keys).ToList(),
             WasMerged = merge,
             UpdateTime = DateTime.UtcNow
         };
@@ -123,10 +124,11 @@ public interface IMetaDataStateGAgent<TState> where TState : IMetaDataState
     /// <returns>Task representing the asynchronous operation</returns>
     async Task RecordActivityAsync(string? activityType = null)
     {
+        var state = GetState();
         var @event = new AgentActivityUpdatedEvent
         {
-            AgentId = GetState().Id,
-            UserId = GetState().UserId,
+            AgentId = state.Id,
+            UserId = state.UserId,
             ActivityType = activityType ?? string.Empty,
             ActivityTime = DateTime.UtcNow
         };
@@ -155,7 +157,8 @@ public interface IMetaDataStateGAgent<TState> where TState : IMetaDataState
     /// <returns>Task representing the asynchronous operation</returns>
     async Task RemovePropertyAsync(string key)
     {
-        var currentProps = new Dictionary<string, string>(GetState().Properties);
+        var state = GetState();
+        var currentProps = new Dictionary<string, string>(state.Properties);
         currentProps.Remove(key);
         await UpdatePropertiesAsync(currentProps, merge: false);
     }
@@ -174,13 +177,15 @@ public interface IMetaDataStateGAgent<TState> where TState : IMetaDataState
         bool mergeProperties = true,
         string? statusReason = null)
     {
+        var state = GetState();
+        
         if (newStatus.HasValue)
         {
             var statusEvent = new AgentStatusChangedEvent
             {
-                AgentId = GetState().Id,
-                UserId = GetState().UserId,
-                OldStatus = GetState().Status,
+                AgentId = state.Id,
+                UserId = state.UserId,
+                OldStatus = state.Status,
                 NewStatus = newStatus.Value,
                 Reason = statusReason,
                 StatusChangeTime = DateTime.UtcNow
@@ -192,10 +197,10 @@ public interface IMetaDataStateGAgent<TState> where TState : IMetaDataState
         {
             var propsEvent = new AgentPropertiesUpdatedEvent
             {
-                AgentId = GetState().Id,
-                UserId = GetState().UserId,
+                AgentId = state.Id,
+                UserId = state.UserId,
                 UpdatedProperties = mergeProperties ? properties : properties,
-                RemovedProperties = mergeProperties ? new List<string>() : GetState().Properties.Keys.Except(properties.Keys).ToList(),
+                RemovedProperties = mergeProperties ? new List<string>() : state.Properties.Keys.Except(properties.Keys).ToList(),
                 WasMerged = mergeProperties,
                 UpdateTime = DateTime.UtcNow
             };
@@ -204,4 +209,21 @@ public interface IMetaDataStateGAgent<TState> where TState : IMetaDataState
         
         await ConfirmEvents();
     }
+}
+
+/// <summary>
+/// Generic interface for metadata state operations with strongly-typed state access.
+/// This interface provides default implementations for common event-raising operations on metadata state.
+/// This interface works alongside GAgentBase to reduce boilerplate code when raising common metadata events.
+/// This is a helper interface that agents can implement alongside their GAgentBase inheritance.
+/// </summary>
+/// <typeparam name="TState">The state type that implements IMetaDataState</typeparam>
+public interface IMetaDataStateGAgent<TState> : IMetaDataStateGAgent where TState : IMetaDataState
+{
+    /// <summary>
+    /// Gets the current state instance with strong typing.
+    /// </summary>
+    /// <returns>The current state as TState</returns>
+    new TState GetState();
+    
 }

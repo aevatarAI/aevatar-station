@@ -7,7 +7,7 @@ using Aevatar.MetaData;
 namespace Aevatar.MetaData.Tests;
 
 /// <summary>
-/// Test state class for Orleans integration testing with IMetaDataStateEventRaiser.
+/// Test state class for Orleans integration testing with IMetaDataStateGAgent.
 /// Extends MetaDataStateBase to provide full metadata state functionality.
 /// </summary>
 [GenerateSerializer]
