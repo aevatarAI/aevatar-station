@@ -307,3 +307,44 @@ Streamline the onboarding experience for new organizations by automatically crea
 - All standard workflow features are available within the default project immediately.
 
 ---
+
+## 10. Workflow Annotation & Note-Taking System
+**Version**
+v1.0
+
+**Objective:**  
+Enable users to create, manage, and organize contextual notes and annotations within the visual workflow designer to enhance workflow documentation and team collaboration.
+
+**Key Requirements:**
+- **Note Creation & Management:**
+  - Users can create sticky note-style annotations anywhere on the workflow canvas.
+  - Notes can be created independently or attached to specific nodes/connections.
+  - Support for rich text formatting (bold, italic, bullet points, links).
+  - Multiple note types: Text notes, reminders, warnings, and documentation snippets.
+  - Drag-and-drop repositioning of notes on the canvas.
+  - Resize functionality for adjusting note dimensions.
+
+- **Visual Design & UX:**
+  - Distinct visual styling that clearly differentiates notes from workflow nodes.
+  - Color-coding system for different note types (e.g., yellow for general notes, red for warnings).
+  - Semi-transparent design that doesn't obstruct workflow visibility.
+  - Collapsible/expandable notes to minimize canvas clutter.
+  - Layer management to control note visibility and z-order.
+
+- **Canvas Integration:**
+  - Seamless integration with existing zoom, pan, and canvas navigation.
+  - Notes remain positioned relative to their associated workflow elements.
+  - Automatic layout adjustment when workflow nodes are moved.
+  - Context menu integration for quick note creation.
+  - Keyboard shortcuts for common note operations.
+
+**Acceptance Criteria:**
+- Users can create and position notes anywhere on the workflow canvas.
+- Notes support rich text formatting and multiple visual styles.
+- Notes can be attached to specific nodes or exist independently on the canvas.
+- Notes are properly preserved during workflow save/load operations.
+- Note visibility can be toggled without affecting workflow functionality.
+- Notes integrate seamlessly with existing canvas navigation and zoom features.
+- Note creation and editing do not interfere with workflow design operations.
+
+---
