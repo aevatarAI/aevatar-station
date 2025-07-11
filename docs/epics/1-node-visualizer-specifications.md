@@ -33,7 +33,7 @@ Empower users to intuitively build, modify, and comprehend agent workflows throu
 
 ---
 
-## 2. Interactive Debugger Overlay (Real-Time Workflow Testing)
+## 2. Interactive Debugger (Real-Time Workflow Testing)
 **Version**
 v0.6
 

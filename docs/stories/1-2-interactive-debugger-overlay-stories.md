@@ -1,5 +1,5 @@
 ---
-Epic: 2. Interactive Debugger Overlay (Real-Time Workflow Testing)
+Epic: 2. Interactive Debugger (Real-Time Workflow Testing)
 ---
 
 # 1. Debug Pod Management
@@ -58,63 +58,7 @@ As an authenticated user, I want the system to automatically create and manage a
 
 ---
 
-# 2. Debug Mode Toggle & Basic UI
-
-## Overview
-Provides user interface controls for enabling/disabling debug mode with clear visual indicators and state management.
-
-### User Story
-
-As a workflow designer user, I want to easily toggle debug mode on and off from the workflow designer interface with clear visual feedback, so that I can switch between normal design mode and debugging mode as needed.
-
-**Time Estimate: 8 hours**
-
-### Key Features
-- **Debug Mode Controls:**
-  - Toggle switch or button to enable/disable debug mode
-  - Clear visual distinction when debug mode is active
-  - Loading states during debug mode activation
-- **Visual Indicators:**
-  - Debug mode badge or indicator in the workflow designer
-  - Status indicators for debug pod health and connectivity
-  - Clear feedback when debug mode transitions succeed or fail
-- **State Management:**
-  - Persistent debug mode state during user session
-  - Proper cleanup when debug mode is disabled
-  - Handling of concurrent debug sessions
-
-### Acceptance Criteria
-**Given** I am in the workflow designer interface  
-**When** I view the debug controls  
-**Then** I can easily see a clear UI control to toggle debug mode on/off  
-
-**Given** debug mode is active  
-**When** I view the workflow designer interface  
-**Then** debug mode state is visually indicated throughout the interface  
-
-**Given** I am toggling debug mode  
-**When** the system is activating or deactivating debug mode  
-**Then** loading indicators show the transition progress  
-
-**Given** debug mode activation fails  
-**When** I attempt to enable debug mode  
-**Then** clear error messages are displayed explaining the failure  
-
-**Given** I have debug mode enabled during my session  
-**When** I navigate within the application  
-**Then** debug mode state persists until I explicitly disable it  
-
-**Given** I am not authenticated  
-**When** I view the debug controls  
-**Then** debug UI elements are only visible to authenticated users  
-
-**Given** I lack debug permissions  
-**When** I attempt to toggle debug mode  
-**Then** the debug mode toggle is disabled with appropriate feedback  
-
----
-
-# 3. Real-Time Data Streaming Infrastructure
+# 2. Real-Time Data Streaming Infrastructure
 
 ## Overview
 Establishes the technical infrastructure for streaming real-time data from workflow agents to the debugging interface using WebSocket or Server-Sent Events connections.
@@ -174,7 +118,7 @@ As a workflow debugger, I want all agents in my workflow to stream their executi
 
 ---
 
-# 4. Interactive Workflow Execution
+# 3. Interactive Workflow Execution
 
 ## Overview
 Enables users to execute workflows directly from the debug interface with real-time progress tracking and execution control.
@@ -234,7 +178,7 @@ As a workflow debugger, I want to execute workflows directly from the debug inte
 
 ---
 
-# 5. Live Timeline & Execution Visualization
+# 4. Live Timeline & Execution Visualization
 
 ## Overview
 Provides visual representation of workflow execution with live updates, showing the flow of execution and current status of each agent in an intuitive timeline format.
@@ -290,7 +234,7 @@ As a workflow debugger, I want to see a live timeline visualization of my workfl
 
 ---
 
-# 6. Debug Data Inspection Interface
+# 5. Debug Data Inspection Interface
 
 ## Overview
 Provides detailed interface for inspecting agent inputs, outputs, intermediate states, and execution data during and after workflow runs.

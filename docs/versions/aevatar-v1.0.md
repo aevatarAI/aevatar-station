@@ -144,7 +144,7 @@ Version 1.0 represents the first major release of the Aevatar platform, introduc
 - ✅ Security and validation for all operations
 
 ## Dependencies
-- v0.6 Interactive Debugger Overlay
+- v0.6 Interactive Debugger
 - Plugin SDK and development framework
 - Template repository infrastructure
 - File storage and management system

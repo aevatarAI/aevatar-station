@@ -5,7 +5,7 @@ Version 0.6 introduces advanced interactive debugging capabilities, enabling use
 
 ## Features Included
 
-### 1. Interactive Debugger Overlay (Complete Implementation)
+### 1. Interactive Debugger (Complete Implementation)
 **Epic Reference:** [1-node-visualizer-specifications.md](../epics/1-node-visualizer-specifications.md#2-interactive-debugger-overlay-real-time-workflow-testing)
 
 **Stories:**
