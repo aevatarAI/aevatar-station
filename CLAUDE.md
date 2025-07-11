@@ -388,3 +388,5 @@ Always prioritize maintainability, STRICTLY follow TDD, and ask for clarificatio
 The sequence is ALWAYS: RED (failing test) → GREEN (minimal production-ready implementation) → REFACTOR (improve code).
 
 ALL IMPLEMENTATIONS MUST BE PRODUCTION-READY, ENTERPRISE-GRADE CODE - NO SHORTCUTS, PLACEHOLDERS, OR DEVELOPMENT-ONLY CODE.**
+
+ONLY lint for the file that is related to the request. DO NOT lint other files.
