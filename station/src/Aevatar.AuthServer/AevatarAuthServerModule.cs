@@ -1,4 +1,5 @@
 using Aevatar.AuthServer.Grants;
+using System.Text;
 using Aevatar.Localization;
 using Aevatar.MongoDB;
 using Aevatar.OpenIddict;
@@ -21,15 +22,16 @@ using Volo.Abp.Autofac;
 using Volo.Abp.BackgroundJobs;
 using Volo.Abp.Caching;
 using Volo.Abp.Identity;
-using Volo.Abp.Identity.EntityFrameworkCore;
+using Volo.Abp.Identity.MongoDB;
 using Volo.Abp.Localization;
 using Volo.Abp.Modularity;
 using Volo.Abp.OpenIddict;
-using Volo.Abp.OpenIddict.EntityFrameworkCore;
+using Volo.Abp.OpenIddict.MongoDB;
 using Volo.Abp.OpenIddict.ExtensionGrantTypes;
 using Volo.Abp.PermissionManagement;
-using Volo.Abp.PermissionManagement.EntityFrameworkCore;
+using Volo.Abp.PermissionManagement.MongoDB;
 using Volo.Abp.UI.Navigation.Urls;
+using StackExchange.Redis;
 
 namespace Aevatar.AuthServer;
 
@@ -42,9 +44,9 @@ namespace Aevatar.AuthServer;
     typeof(AbpAspNetCoreSerilogModule),
     typeof(AbpIdentityApplicationModule),
     typeof(AbpPermissionManagementApplicationModule),
-    typeof(AbpOpenIddictEntityFrameworkCoreModule),
-    typeof(AbpIdentityEntityFrameworkCoreModule),
-    typeof(AbpPermissionManagementEntityFrameworkCoreModule),
+    typeof(AbpOpenIddictMongoDbModule),
+    typeof(AbpIdentityMongoDbModule),
+    typeof(AbpPermissionManagementMongoDbModule),
     typeof(AbpAuthorizationModule),
     typeof(AbpOpenIddictDomainModule),
     typeof(AevatarMongoDbModule),
@@ -62,13 +64,40 @@ public class AevatarAuthServerModule : AbpModule
             {
                 options.UseAspNetCore().DisableTransportSecurityRequirement();
                 options.SetIssuer(new Uri(configuration["AuthServer:IssuerUri"]!));
+
+                var useProductionCert = configuration.GetValue<bool>("OpenIddict:Certificate:UseProductionCertificate");
+                var certPath = configuration["OpenIddict:Certificate:CertificatePath"] ?? "openiddict.pfx";
+                var certPassword = configuration["OpenIddict:Certificate:CertificatePassword"] ??
+                                   "00000000-0000-0000-0000-000000000000";
+
+
+                if (useProductionCert)
+                {
+                    PreConfigure<AbpOpenIddictAspNetCoreOptions>(options =>
+                    {
+                        options.AddDevelopmentEncryptionAndSigningCertificate = false;
+                    });
+                    if (File.Exists(certPath))
+                    {
+                        options.AddProductionEncryptionAndSigningCertificate(certPath, certPassword);
+                    }
+                    else
+                    {
+                        throw new FileNotFoundException($"OpenIddict certificate file not found: {certPath}");
+                    }
+                }
+
                 // options.IgnoreGrantTypePermissions();
+
+                options.DisableAccessTokenEncryption();
+
                 int.TryParse(configuration["ExpirationHour"], out int expirationHour);
                 if (expirationHour > 0)
                 {
                     options.SetAccessTokenLifetime(DateTime.Now.AddHours(expirationHour) - DateTime.Now);
                 }
             });
+
             builder.AddValidation(options =>
             {
                 options.AddAudiences("Aevatar");
@@ -76,7 +105,7 @@ public class AevatarAuthServerModule : AbpModule
                 options.UseAspNetCore();
             });
         });
-        
+
         //add signature grant type
         PreConfigure<OpenIddictServerBuilder>(builder =>
         {
@@ -132,18 +161,15 @@ public class AevatarAuthServerModule : AbpModule
         {
             options.StyleBundles.Configure(
                 LeptonXLiteThemeBundles.Styles.Global,
-                bundle =>
-                {
-                    bundle.AddFiles("/global-styles.css");
-                }
+                bundle => { bundle.AddFiles("/global-styles.css"); }
             );
         });
 
         Configure<AbpAuditingOptions>(options =>
         {
-                //options.IsEnabledForGetRequests = true;
-                options.ApplicationName = "AuthServer";
-                options.IsEnabled = false;//Disables the auditing system
+            //options.IsEnabledForGetRequests = true;
+            options.ApplicationName = "AuthServer";
+            options.IsEnabled = false; //Disables the auditing system
         });
 
         Configure<AppUrlOptions>(options =>
@@ -154,24 +180,18 @@ public class AevatarAuthServerModule : AbpModule
             options.Applications["Angular"].Urls[AccountUrlNames.PasswordReset] = "account/reset-password";
         });
 
-        Configure<AbpBackgroundJobOptions>(options =>
-        {
-            options.IsJobExecutionEnabled = false;
-        });
+        Configure<AbpBackgroundJobOptions>(options => { options.IsJobExecutionEnabled = false; });
 
-        Configure<AbpDistributedCacheOptions>(options =>
-        {
-            options.KeyPrefix = "Aevatar:";
-        });
-      
-        var dataProtectionBuilder = context.Services.AddDataProtection().SetApplicationName("AevatarAuthServer");
-        
+        Configure<AbpDistributedCacheOptions>(options => { options.KeyPrefix = "Aevatar:"; });
+        var redis = ConnectionMultiplexer.Connect(configuration["Redis:Configuration"]);
+        context.Services
+            .AddDataProtection()
+            .PersistKeysToStackExchangeRedis(redis, "Aevatar-DataProtection-Keys")
+            .SetApplicationName("AevatarAuthServer");
+
         context.Services.AddHealthChecks();
-        
-        Configure<MvcOptions>(options =>
-        {
-            options.Conventions.Add(new ApplicationDescription());
-        });
+
+        Configure<MvcOptions>(options => { options.Conventions.Add(new ApplicationDescription()); });
     }
 
     public override void OnApplicationInitialization(ApplicationInitializationContext context)
@@ -190,7 +210,7 @@ public class AevatarAuthServerModule : AbpModule
         {
             app.UseErrorPage();
         }
-        
+
         app.UseHealthChecks("/health");
 
         app.UseCorrelationId();
@@ -200,7 +220,7 @@ public class AevatarAuthServerModule : AbpModule
         app.UseAbpOpenIddictValidation();
 
         //app.UseMultiTenancy();
-        
+
         app.UseUnitOfWork();
         app.UseAuthorization();
         app.UseAuditing();
