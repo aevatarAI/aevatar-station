@@ -1,7 +1,10 @@
+using Aevatar.Core.Abstractions;
+using Aevatar.Core.Tests.TestGAgents;
+
 namespace Aevatar.Core.Tests.TestStateLogEvents;
 
 [GenerateSerializer]
-public class ReceiveMessageTestStateLogEvent : MessageStateLogEvent
+public class ReceiveMessageTestStateLogEvent : StateLogEventBase<EventHandlerTestStateLogEvent>
 {
     [Id(0)]  public string MessageId { get; set; }
     [Id(1)]  public string ChatId { get; set; }

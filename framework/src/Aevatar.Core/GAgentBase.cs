@@ -363,6 +363,12 @@ public abstract partial class
         }
     }
 
+    /// <summary>
+    /// Raises an event to be applied to the agent's state.
+    /// This is the protected override of the Orleans JournaledGrain method.
+    /// </summary>
+    /// <typeparam name="T">The type of event to raise</typeparam>
+    /// <param name="event">The event to raise and apply to state</param>
     protected sealed override async void RaiseEvent<T>(T @event)
     {
         Logger.LogDebug("Base event raised: {Event}", JsonConvert.SerializeObject(@event));
@@ -379,6 +385,26 @@ public abstract partial class
                 Logger.LogError(ex, "Event processing timeout occurred");
             }
         }, Logger);
+    }
+
+    /// <summary>
+    /// Raises an event to be applied to the agent's state.
+    /// This method is used by both internal agent logic and helper interfaces like IMetaDataStateGAgent.
+    /// </summary>
+    /// <param name="event">The event to raise and apply to state</param>
+    public void RaiseEvent(StateLogEventBase<TStateLogEvent> @event)
+    {
+        RaiseEvent<StateLogEventBase<TStateLogEvent>>(@event);
+    }
+
+    /// <summary>
+    /// Confirms and persists all raised events to the event store.
+    /// This method is used by both internal agent logic and helper interfaces like IMetaDataStateGAgent.
+    /// </summary>
+    /// <returns>Task representing the confirmation operation</returns>
+    public new Task ConfirmEvents()
+    {
+        return base.ConfirmEvents();
     }
 
     private async Task InternalRaiseEventAsync<T>(T raisedStateLogEvent) where T : StateLogEventBase<TStateLogEvent>
