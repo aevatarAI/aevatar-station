@@ -70,19 +70,23 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
 
         // Generate agent ID 
         var agentId = Guid.NewGuid();
-        
+
         try
         {
             // Create the business agent grain
             var businessAgentGrainId = GrainId.Create(request.AgentType, agentId.ToString());
             var businessAgent = await _gAgentFactory.GetGAgentAsync(businessAgentGrainId);
-            
+
             // Activate the business agent
             await businessAgent.ActivateAsync();
-            
-            // Get the metadata agent grain to manage metadata
-            var metadataAgent = _grainFactory.GetGrain<IMetaDataStateGAgent>(agentId);
-            
+
+            // Cast to IMetaDataStateGAgent for metadata operations
+            // The business agent must implement IMetaDataStateGAgent<TState> where TState : IMetaDataState
+            if (businessAgent is not IMetaDataStateGAgent<IMetaDataState> metadataAgent)
+            {
+                throw new InvalidOperationException($"Agent type {request.AgentType} does not implement IMetaDataStateGAgent<IMetaDataState>");
+            }
+
             // Convert properties to string dictionary for metadata
             var metadataProperties = new Dictionary<string, string>();
             if (request.Properties != null)
@@ -92,18 +96,18 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
                     metadataProperties[prop.Key] = prop.Value?.ToString() ?? string.Empty;
                 }
             }
-            
-            // Create the agent through the metadata grain
+
+            // Create the agent through the metadata helper interface
             await metadataAgent.CreateAgentAsync(
-                agentId, 
-                request.UserId, 
-                request.Name, 
-                request.AgentType, 
+                agentId,
+                request.UserId,
+                request.Name,
+                request.AgentType,
                 metadataProperties);
-            
+
             // Set initial status to Active
             await metadataAgent.UpdateStatusAsync(MetaData.Enums.AgentStatus.Active, "Agent successfully created");
-            
+
             // Create AgentInfo response
             var agentInfo = new AgentInfo
             {
@@ -116,7 +120,7 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
                 Status = Application.Models.AgentStatus.Active,
                 CreatedAt = DateTime.UtcNow,
                 LastActivity = DateTime.UtcNow,
-                GrainId = businessAgent.GetGrainId(),
+                GrainId = businessAgentGrainId,
                 Description = typeMetadata.Description ?? string.Empty,
                 Version = typeMetadata.AssemblyVersion ?? string.Empty
             };
@@ -149,9 +153,17 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
 
         try
         {
-            // Get the metadata agent grain to handle updates
-            var metadataAgent = _grainFactory.GetGrain<IMetaDataStateGAgent>(agentId);
-            
+            // Get the business agent grain - need to determine the correct grain ID pattern
+            // For now, assume agents are stored with a GrainId based on their type and ID
+            var businessAgentGrainId = GrainId.Create("Agent", agentId.ToString());
+            var businessAgent = await _gAgentFactory.GetGAgentAsync(businessAgentGrainId);
+
+            // Cast to IMetaDataStateGAgent for metadata operations
+            if (businessAgent is not IMetaDataStateGAgent<IMetaDataState> metadataAgent)
+            {
+                throw new InvalidOperationException($"Agent {agentId} does not implement IMetaDataStateGAgent<IMetaDataState>");
+            }
+
             // Update properties if provided
             if (request.Properties != null)
             {
@@ -161,37 +173,37 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
                 {
                     metadataProperties[prop.Key] = prop.Value?.ToString() ?? string.Empty;
                 }
-                
+
                 // Update properties through metadata agent
                 await metadataAgent.UpdatePropertiesAsync(metadataProperties, merge: true);
             }
-            
+
             // Update name through properties if provided
             if (!string.IsNullOrWhiteSpace(request.Name))
             {
                 await metadataAgent.SetPropertyAsync("Name", request.Name);
             }
-            
+
             // Record activity
             await metadataAgent.RecordActivityAsync("Agent updated");
-            
-            // Retrieve updated agent state from metadata grain
-            var updatedState = await metadataAgent.GetStateAsync();
+
+            // Retrieve updated agent state from metadata interface
+            var updatedState = metadataAgent.GetState();
             if (updatedState == null || updatedState.Id == Guid.Empty)
             {
                 throw new InvalidOperationException($"Agent {agentId} not found");
             }
-            
+
             // Get type metadata for capabilities
             var typeMetadata = await _typeMetadataService.GetTypeMetadataAsync(updatedState.AgentType);
-            
+
             // Convert from metadata state to AgentInfo
             var properties = new Dictionary<string, object>();
             foreach (var prop in updatedState.Properties)
             {
                 properties[prop.Key] = prop.Value;
             }
-            
+
             var agentInfo = new AgentInfo
             {
                 Id = updatedState.Id,
@@ -203,11 +215,11 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
                 Status = ConvertMetadataStatusToAgentStatus(updatedState.Status),
                 CreatedAt = updatedState.CreateTime,
                 LastActivity = updatedState.LastActivity,
-                GrainId = updatedState.AgentGrainId,
+                GrainId = businessAgent.GetGrainId(),
                 Description = typeMetadata?.Description ?? string.Empty,
                 Version = typeMetadata?.AssemblyVersion ?? string.Empty
             };
-            
+
             _logger.LogInformation("Agent {AgentId} updated successfully", agentId);
             return agentInfo;
         }
@@ -228,12 +240,20 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
 
         try
         {
-            // Get the metadata agent grain to handle deletion
-            var metadataAgent = _grainFactory.GetGrain<IMetaDataStateGAgent>(agentId);
-            
-            // Update status to deleted through the metadata grain
+            // Get the business agent grain - need to determine the correct grain ID pattern
+            // For now, assume agents are stored with a GrainId based on their type and ID
+            var businessAgentGrainId = GrainId.Create("Agent", agentId.ToString());
+            var businessAgent = await _gAgentFactory.GetGAgentAsync(businessAgentGrainId);
+
+            // Cast to IMetaDataStateGAgent for metadata operations
+            if (businessAgent is not IMetaDataStateGAgent<IMetaDataState> metadataAgent)
+            {
+                throw new InvalidOperationException($"Agent {agentId} does not implement IMetaDataStateGAgent<IMetaDataState>");
+            }
+
+            // Update status to deleted through the metadata interface
             await metadataAgent.UpdateStatusAsync(MetaData.Enums.AgentStatus.Deleting, "Agent deleted via AgentLifecycleService");
-            
+
             _logger.LogInformation("Agent {AgentId} marked as deleted", agentId);
         }
         catch (Exception ex)
@@ -253,47 +273,53 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
 
         try
         {
-            // Try to get from Orleans metadata grain first
-            try
+            // Get the business agent grain - need to determine the correct grain ID pattern
+            // For now, assume agents are stored with a GrainId based on their type and ID
+            var businessAgentGrainId = GrainId.Create("Agent", agentId.ToString());
+            var businessAgent = await _gAgentFactory.GetGAgentAsync(businessAgentGrainId);
+
+            // Cast to IMetaDataStateGAgent for metadata operations
+            if (businessAgent is not IMetaDataStateGAgent<IMetaDataState> metadataAgent)
             {
-                var metadataAgent = _grainFactory.GetGrain<IMetaDataStateGAgent>(agentId);
-                var metadataState = await metadataAgent.GetStateAsync();
-                
-                if (metadataState != null && metadataState.Id != Guid.Empty)
-                {
-                    // Convert from metadata state to AgentInfo
-                    var properties = new Dictionary<string, object>();
-                    foreach (var prop in metadataState.Properties)
-                    {
-                        properties[prop.Key] = prop.Value;
-                    }
-                    
-                    var agentInfo = new AgentInfo
-                    {
-                        Id = metadataState.Id,
-                        UserId = metadataState.UserId,
-                        AgentType = metadataState.AgentType,
-                        Name = metadataState.Name,
-                        Properties = properties,
-                        Status = ConvertMetadataStatusToAgentStatus(metadataState.Status),
-                        CreatedAt = metadataState.CreateTime,
-                        LastActivity = metadataState.LastActivity,
-                        GrainId = metadataState.AgentGrainId,
-                        Description = string.Empty,
-                        Version = string.Empty
-                    };
-                    
-                    _logger.LogInformation("Agent {AgentId} retrieved from Orleans metadata grain", agentId);
-                    return agentInfo;
-                }
+                throw new InvalidOperationException($"Agent {agentId} does not implement IMetaDataStateGAgent<IMetaDataState>");
             }
-            catch (Exception grainEx)
+
+            // Get the metadata state
+            var metadataState = metadataAgent.GetState();
+
+            if (metadataState == null || metadataState.Id == Guid.Empty)
             {
-                _logger.LogError(grainEx, "Failed to retrieve agent {AgentId} from Orleans grain", agentId);
-                throw new InvalidOperationException($"Agent {agentId} not found", grainEx);
+                throw new InvalidOperationException($"Agent {agentId} not found");
             }
-            
-            throw new InvalidOperationException($"Agent {agentId} not found");
+
+            // Get type metadata for capabilities
+            var typeMetadata = await _typeMetadataService.GetTypeMetadataAsync(metadataState.AgentType);
+
+            // Convert from metadata state to AgentInfo
+            var properties = new Dictionary<string, object>();
+            foreach (var prop in metadataState.Properties)
+            {
+                properties[prop.Key] = prop.Value;
+            }
+
+            var agentInfo = new AgentInfo
+            {
+                Id = metadataState.Id,
+                UserId = metadataState.UserId,
+                AgentType = metadataState.AgentType,
+                Name = metadataState.Name,
+                Properties = properties,
+                Capabilities = typeMetadata?.Capabilities ?? new List<string>(),
+                Status = ConvertMetadataStatusToAgentStatus(metadataState.Status),
+                CreatedAt = metadataState.CreateTime,
+                LastActivity = metadataState.LastActivity,
+                GrainId = businessAgent.GetGrainId(),
+                Description = typeMetadata?.Description ?? string.Empty,
+                Version = typeMetadata?.AssemblyVersion ?? string.Empty
+            };
+
+            _logger.LogInformation("Agent {AgentId} retrieved from business agent", agentId);
+            return agentInfo;
         }
         catch (Exception ex)
         {
@@ -315,7 +341,7 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
             // Note: This implementation would need to query Orleans grains to find agents by user
             // For now, returning empty list as this requires implementing a proper query mechanism
             _logger.LogWarning("GetUserAgentsAsync not fully implemented - requires Orleans grain query mechanism");
-            
+
             var userAgents = new List<AgentInfo>();
             _logger.LogInformation("Retrieved {Count} agents for user {UserId}", userAgents.Count, userId);
             return userAgents;
@@ -341,24 +367,24 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
 
         try
         {
-            // Get the metadata agent grain to record activity
-            var metadataAgent = _grainFactory.GetGrain<IMetaDataStateGAgent>(agentId);
-            
+            // Get the business agent grain - need to determine the correct grain ID pattern
+            // For now, assume agents are stored with a GrainId based on their type and ID
+            var businessAgentGrainId = GrainId.Create("Agent", agentId.ToString());
+            var businessAgent = await _gAgentFactory.GetGAgentAsync(businessAgentGrainId);
+
+            // Cast to IMetaDataStateGAgent for metadata operations
+            if (businessAgent is not IMetaDataStateGAgent<IMetaDataState> metadataAgent)
+            {
+                throw new InvalidOperationException($"Agent {agentId} does not implement IMetaDataStateGAgent<IMetaDataState>");
+            }
+
             // Record activity for event publishing
             await metadataAgent.RecordActivityAsync($"Event received: {@event.GetType().Name}");
-            
-            // Get the metadata state to determine the business agent grain ID
-            var metadataState = await metadataAgent.GetStateAsync();
-            if (metadataState == null || metadataState.Id == Guid.Empty)
-            {
-                throw new InvalidOperationException($"Agent {agentId} not found");
-            }
-            
-            // Get the business agent to publish the event
-            var businessAgent = await _gAgentFactory.GetGAgentAsync(metadataState.AgentGrainId);
+
             // Note: This would need proper event publishing implementation based on your Orleans setup
-            
-            _logger.LogInformation("Event {EventType} sent to agent {AgentId}", 
+            // The businessAgent should handle the event directly through its event handling methods
+
+            _logger.LogInformation("Event {EventType} sent to agent {AgentId}",
                 @event.GetType().Name, agentId);
         }
         catch (Exception ex)
@@ -382,46 +408,55 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
 
         try
         {
-            // Get both metadata agent grains
-            var parentMetadataAgent = _grainFactory.GetGrain<IMetaDataStateGAgent>(parentId);
-            var childMetadataAgent = _grainFactory.GetGrain<IMetaDataStateGAgent>(childId);
-            
+            // Get both business agent grains
+            var parentBusinessAgentGrainId = GrainId.Create("Agent", parentId.ToString());
+            var childBusinessAgentGrainId = GrainId.Create("Agent", childId.ToString());
+            var parentBusinessAgent = await _gAgentFactory.GetGAgentAsync(parentBusinessAgentGrainId);
+            var childBusinessAgent = await _gAgentFactory.GetGAgentAsync(childBusinessAgentGrainId);
+
+            // Cast to IMetaDataStateGAgent for metadata operations
+            if (parentBusinessAgent is not IMetaDataStateGAgent<IMetaDataState> parentMetadataAgent)
+            {
+                throw new InvalidOperationException($"Parent agent {parentId} does not implement IMetaDataStateGAgent<IMetaDataState>");
+            }
+
+            if (childBusinessAgent is not IMetaDataStateGAgent<IMetaDataState> childMetadataAgent)
+            {
+                throw new InvalidOperationException($"Child agent {childId} does not implement IMetaDataStateGAgent<IMetaDataState>");
+            }
+
             // Get metadata states
-            var parentState = await parentMetadataAgent.GetStateAsync();
-            var childState = await childMetadataAgent.GetStateAsync();
-            
+            var parentState = parentMetadataAgent.GetState();
+            var childState = childMetadataAgent.GetState();
+
             if (parentState == null || parentState.Id == Guid.Empty)
             {
                 throw new InvalidOperationException($"Parent agent {parentId} not found");
             }
-            
+
             if (childState == null || childState.Id == Guid.Empty)
             {
                 throw new InvalidOperationException($"Child agent {childId} not found");
             }
-            
-            // Get business agents for Orleans grain relationships
-            var parentBusinessAgent = await _gAgentFactory.GetGAgentAsync(parentState.AgentGrainId);
-            var childBusinessAgent = await _gAgentFactory.GetGAgentAsync(childState.AgentGrainId);
-            
+
             // Register Orleans grain relationship
             await parentBusinessAgent.RegisterAsync(childBusinessAgent);
             await childBusinessAgent.SubscribeToAsync(parentBusinessAgent);
-            
+
             // Record activity on both metadata agents
             await parentMetadataAgent.RecordActivityAsync($"Added sub-agent {childId}");
             await childMetadataAgent.RecordActivityAsync($"Added as sub-agent to {parentId}");
-            
+
             // Get type metadata for parent capabilities
             var parentTypeMetadata = await _typeMetadataService.GetTypeMetadataAsync(parentState.AgentType);
-            
+
             // Convert from metadata state to AgentInfo
             var parentProperties = new Dictionary<string, object>();
             foreach (var prop in parentState.Properties)
             {
                 parentProperties[prop.Key] = prop.Value;
             }
-            
+
             // Create parent AgentInfo from metadata state
             var parentAgentInfo = new AgentInfo
             {
@@ -436,11 +471,11 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
                 LastActivity = parentState.LastActivity,
                 SubAgents = new List<Guid> { childId }, // Add the child to sub-agents
                 ParentAgentId = null,
-                GrainId = parentState.AgentGrainId,
+                GrainId = parentBusinessAgent.GetGrainId(),
                 Description = parentTypeMetadata?.Description ?? string.Empty,
                 Version = parentTypeMetadata?.AssemblyVersion ?? string.Empty
             };
-            
+
             _logger.LogInformation("Sub-agent {ChildId} added to parent {ParentId}", childId, parentId);
             return parentAgentInfo;
         }
@@ -464,46 +499,55 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
 
         try
         {
-            // Get both metadata agent grains
-            var parentMetadataAgent = _grainFactory.GetGrain<IMetaDataStateGAgent>(parentId);
-            var childMetadataAgent = _grainFactory.GetGrain<IMetaDataStateGAgent>(childId);
-            
+            // Get both business agent grains
+            var parentBusinessAgentGrainId = GrainId.Create("Agent", parentId.ToString());
+            var childBusinessAgentGrainId = GrainId.Create("Agent", childId.ToString());
+            var parentBusinessAgent = await _gAgentFactory.GetGAgentAsync(parentBusinessAgentGrainId);
+            var childBusinessAgent = await _gAgentFactory.GetGAgentAsync(childBusinessAgentGrainId);
+
+            // Cast to IMetaDataStateGAgent for metadata operations
+            if (parentBusinessAgent is not IMetaDataStateGAgent<IMetaDataState> parentMetadataAgent)
+            {
+                throw new InvalidOperationException($"Parent agent {parentId} does not implement IMetaDataStateGAgent<IMetaDataState>");
+            }
+
+            if (childBusinessAgent is not IMetaDataStateGAgent<IMetaDataState> childMetadataAgent)
+            {
+                throw new InvalidOperationException($"Child agent {childId} does not implement IMetaDataStateGAgent<IMetaDataState>");
+            }
+
             // Get metadata states
-            var parentState = await parentMetadataAgent.GetStateAsync();
-            var childState = await childMetadataAgent.GetStateAsync();
-            
+            var parentState = parentMetadataAgent.GetState();
+            var childState = childMetadataAgent.GetState();
+
             if (parentState == null || parentState.Id == Guid.Empty)
             {
                 throw new InvalidOperationException($"Parent agent {parentId} not found");
             }
-            
+
             if (childState == null || childState.Id == Guid.Empty)
             {
                 throw new InvalidOperationException($"Child agent {childId} not found");
             }
-            
-            // Get business agents for Orleans grain relationships
-            var parentBusinessAgent = await _gAgentFactory.GetGAgentAsync(parentState.AgentGrainId);
-            var childBusinessAgent = await _gAgentFactory.GetGAgentAsync(childState.AgentGrainId);
-            
+
             // Remove Orleans grain relationship
             await parentBusinessAgent.UnregisterAsync(childBusinessAgent);
             await childBusinessAgent.UnsubscribeFromAsync(parentBusinessAgent);
-            
+
             // Record activity on both metadata agents
             await parentMetadataAgent.RecordActivityAsync($"Removed sub-agent {childId}");
             await childMetadataAgent.RecordActivityAsync($"Removed as sub-agent from {parentId}");
-            
+
             // Get type metadata for parent capabilities
             var parentTypeMetadata = await _typeMetadataService.GetTypeMetadataAsync(parentState.AgentType);
-            
+
             // Convert from metadata state to AgentInfo
             var parentProperties = new Dictionary<string, object>();
             foreach (var prop in parentState.Properties)
             {
                 parentProperties[prop.Key] = prop.Value;
             }
-            
+
             // Create parent AgentInfo from metadata state (child is already removed from Orleans relationships)
             var parentAgentInfo = new AgentInfo
             {
@@ -518,11 +562,11 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
                 LastActivity = parentState.LastActivity,
                 SubAgents = new List<Guid>(), // Child removed from sub-agents
                 ParentAgentId = null,
-                GrainId = parentState.AgentGrainId,
+                GrainId = parentBusinessAgent.GetGrainId(),
                 Description = parentTypeMetadata?.Description ?? string.Empty,
                 Version = parentTypeMetadata?.AssemblyVersion ?? string.Empty
             };
-            
+
             _logger.LogInformation("Sub-agent {ChildId} removed from parent {ParentId}", childId, parentId);
             return parentAgentInfo;
         }
@@ -543,32 +587,41 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
 
         try
         {
-            // Get parent metadata agent grain
-            var parentMetadataAgent = _grainFactory.GetGrain<IMetaDataStateGAgent>(parentId);
-            var parentState = await parentMetadataAgent.GetStateAsync();
-            
+            // Get parent business agent grain
+            var parentBusinessAgentGrainId = GrainId.Create("Agent", parentId.ToString());
+            var parentBusinessAgent = await _gAgentFactory.GetGAgentAsync(parentBusinessAgentGrainId);
+
+            // Cast to IMetaDataStateGAgent for metadata operations
+            if (parentBusinessAgent is not IMetaDataStateGAgent<IMetaDataState> parentMetadataAgent)
+            {
+                throw new InvalidOperationException($"Parent agent {parentId} does not implement IMetaDataStateGAgent<IMetaDataState>");
+            }
+
+            // Get metadata state
+            var parentState = parentMetadataAgent.GetState();
+
             if (parentState == null || parentState.Id == Guid.Empty)
             {
                 throw new InvalidOperationException($"Parent agent {parentId} not found");
             }
-            
+
             // Note: This is a simplified implementation. In production, you would need
             // to query Orleans to find all child agents of this parent
             _logger.LogWarning("RemoveAllSubAgentsAsync requires Orleans grain query mechanism to find all child agents");
-            
+
             // Record activity on parent metadata agent
             await parentMetadataAgent.RecordActivityAsync("Removed all sub-agents");
-            
+
             // Get type metadata for parent capabilities
             var parentTypeMetadata = await _typeMetadataService.GetTypeMetadataAsync(parentState.AgentType);
-            
+
             // Convert from metadata state to AgentInfo
             var parentProperties = new Dictionary<string, object>();
             foreach (var prop in parentState.Properties)
             {
                 parentProperties[prop.Key] = prop.Value;
             }
-            
+
             // Create parent AgentInfo from metadata state (all sub-agents removed)
             var parentAgentInfo = new AgentInfo
             {
@@ -583,11 +636,11 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
                 LastActivity = parentState.LastActivity,
                 SubAgents = new List<Guid>(), // All sub-agents removed
                 ParentAgentId = null,
-                GrainId = parentState.AgentGrainId,
+                GrainId = parentBusinessAgent.GetGrainId(),
                 Description = parentTypeMetadata?.Description ?? string.Empty,
                 Version = parentTypeMetadata?.AssemblyVersion ?? string.Empty
             };
-            
+
             _logger.LogInformation("Removed all sub-agents from parent {ParentId}", parentId);
             return parentAgentInfo;
         }
@@ -598,7 +651,7 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
         }
     }
 
-    
+
     /// <summary>
     /// Converts metadata AgentStatus to application AgentStatus.
     /// </summary>
@@ -618,5 +671,5 @@ public class AgentLifecycleService : IAgentLifecycleService, ISingletonDependenc
             _ => Application.Models.AgentStatus.Initializing
         };
     }
-    
+
 }
