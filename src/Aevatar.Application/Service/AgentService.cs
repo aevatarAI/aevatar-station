@@ -272,25 +272,48 @@ public class AgentService : ApplicationService, IAgentService
 
         return resp;
     }
-
-    public async Task<List<AgentInstanceDto>> GetAllAgentInstances(int pageIndex, int pageSize)
+    
+    public async Task<List<AgentInstanceDto>> GetAllAgentInstances(GetAllAgentInstancesQueryDto queryDto)
     {
-        _logger.LogInformation("Get All Agent Instances, PageIndex: {PageIndex}, PageSize: {PageSize}", pageIndex,
-            pageSize);
-
+        var result = new List<AgentInstanceDto>();
         var currentUserId = _userAppService.GetCurrentUserId();
-        var response = await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
+        
+        // Build query conditions
+        var queryString = "userId.keyword:" + currentUserId;
+        
+        // Add agentType fuzzy query condition
+        if (!string.IsNullOrWhiteSpace(queryDto.AgentType))
         {
-            QueryString = "userId.keyword:" + currentUserId,
-            StateName = nameof(CreatorGAgentState),
-            PageSize = pageSize,
-            PageIndex = pageIndex
-        });
+            // Use fuzzy query with ~ operator for better matching
+            queryString += " AND agentType:(" + queryDto.AgentType + "~ OR " + queryDto.AgentType + "*)";
+        }
+        
+        var response =
+            await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
+            {
+                QueryString = queryString,
+                StateName = nameof(CreatorGAgentState),
+                PageSize = queryDto.PageSize,
+                PageIndex = queryDto.PageIndex
+            });
+        if (response.TotalCount == 0)
+        {
+            return result;
+        }
 
-        _logger.LogInformation("Get All Agent Instances completed, Total: {TotalCount}, Returned: {ReturnedCount}",
-            response.TotalCount, response.Items.Count);
+        result.AddRange(response.Items.Select(state => new AgentInstanceDto()
+        {
+            Id = (string)state["id"],
+            Name = (string)state["name"],
+            Properties = state["properties"] == null
+                ? null
+                : JsonConvert.DeserializeObject<Dictionary<string, object>>((string)state["properties"]),
+            AgentType = (string)state["agentType"],
+            BusinessAgentGrainId =
+                state.TryGetValue("formattedBusinessAgentGrainId", out var value) ? (string)value : null
+        }));
 
-        return response.Items.Select(MapToAgentItem).ToList();
+        return result;
     }
 
     private AgentInstanceDto MapToAgentItem(Dictionary<string, object> state)
