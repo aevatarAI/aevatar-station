@@ -24,6 +24,8 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\..\framework\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.Core\Aevatar.Core.csproj" />
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.MetaData\Aevatar.MetaData.csproj" />
         <ProjectReference Include="..\..\..\signalR\src\Aevatar.SignalR\Aevatar.SignalR.csproj" />
         <ProjectReference Include="..\..\..\framework\src\Aevatar.PermissionManagement\Aevatar.PermissionManagement.csproj" />
         <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj"/>

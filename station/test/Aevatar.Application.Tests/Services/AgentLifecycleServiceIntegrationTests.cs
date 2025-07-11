@@ -20,6 +20,7 @@ namespace Aevatar.Application.Tests.Services
     {
         private readonly Mock<ITypeMetadataService> _mockTypeMetadataService;
         private readonly Mock<IGrainFactory> _mockGrainFactory;
+        private readonly Mock<IGAgentFactory> _mockGAgentFactory;
         private readonly Mock<ILogger<AgentLifecycleService>> _mockLogger;
         private readonly AgentLifecycleService _service;
 
@@ -27,8 +28,9 @@ namespace Aevatar.Application.Tests.Services
         {
             _mockTypeMetadataService = new Mock<ITypeMetadataService>();
             _mockGrainFactory = new Mock<IGrainFactory>();
+            _mockGAgentFactory = new Mock<IGAgentFactory>();
             _mockLogger = new Mock<ILogger<AgentLifecycleService>>();
-            _service = new AgentLifecycleService(_mockTypeMetadataService.Object, _mockGrainFactory.Object, _mockLogger.Object);
+            _service = new AgentLifecycleService(_mockTypeMetadataService.Object, _mockGrainFactory.Object, _mockGAgentFactory.Object, _mockLogger.Object);
         }
 
         #region Integration with TypeMetadataService
@@ -359,21 +361,28 @@ namespace Aevatar.Application.Tests.Services
         public void Should_ThrowArgumentNullException_When_TypeMetadataServiceIsNull()
         {
             // Act & Assert
-            Should.Throw<ArgumentNullException>(() => new AgentLifecycleService(null, _mockGrainFactory.Object, _mockLogger.Object));
+            Should.Throw<ArgumentNullException>(() => new AgentLifecycleService(null, _mockGrainFactory.Object, _mockGAgentFactory.Object, _mockLogger.Object));
         }
 
         [Fact]
         public void Should_ThrowArgumentNullException_When_GrainFactoryIsNull()
         {
             // Act & Assert
-            Should.Throw<ArgumentNullException>(() => new AgentLifecycleService(_mockTypeMetadataService.Object, null, _mockLogger.Object));
+            Should.Throw<ArgumentNullException>(() => new AgentLifecycleService(_mockTypeMetadataService.Object, null, _mockGAgentFactory.Object, _mockLogger.Object));
+        }
+
+        [Fact]
+        public void Should_ThrowArgumentNullException_When_GAgentFactoryIsNull()
+        {
+            // Act & Assert
+            Should.Throw<ArgumentNullException>(() => new AgentLifecycleService(_mockTypeMetadataService.Object, _mockGrainFactory.Object, null, _mockLogger.Object));
         }
 
         [Fact]
         public void Should_ThrowArgumentNullException_When_LoggerIsNull()
         {
             // Act & Assert
-            Should.Throw<ArgumentNullException>(() => new AgentLifecycleService(_mockTypeMetadataService.Object, _mockGrainFactory.Object, null));
+            Should.Throw<ArgumentNullException>(() => new AgentLifecycleService(_mockTypeMetadataService.Object, _mockGrainFactory.Object, _mockGAgentFactory.Object, null));
         }
 
         #endregion

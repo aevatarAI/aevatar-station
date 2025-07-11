@@ -19,6 +19,7 @@ namespace Aevatar.Application.Tests.Services
     {
         private readonly Mock<ITypeMetadataService> _mockTypeMetadataService;
         private readonly Mock<IGrainFactory> _mockGrainFactory;
+        private readonly Mock<IGAgentFactory> _mockGAgentFactory;
         private readonly Mock<ILogger<AgentLifecycleService>> _mockLogger;
         private readonly AgentLifecycleService _service;
 
@@ -26,10 +27,11 @@ namespace Aevatar.Application.Tests.Services
         {
             _mockTypeMetadataService = new Mock<ITypeMetadataService>();
             _mockGrainFactory = new Mock<IGrainFactory>();
+            _mockGAgentFactory = new Mock<IGAgentFactory>();
             _mockLogger = new Mock<ILogger<AgentLifecycleService>>();
             
-            // This will fail initially - we need to implement AgentLifecycleService
-            _service = new AgentLifecycleService(_mockTypeMetadataService.Object, _mockGrainFactory.Object, _mockLogger.Object);
+            // Updated to include IGAgentFactory for Orleans grain support
+            _service = new AgentLifecycleService(_mockTypeMetadataService.Object, _mockGrainFactory.Object, _mockGAgentFactory.Object, _mockLogger.Object);
         }
 
         #region Agent Creation Tests
