@@ -273,7 +273,7 @@ public class AgentService : ApplicationService, IAgentService
 
         return resp;
     }
-    
+
     public async Task<List<AgentInstanceDto>> GetAllAgentInstances(GetAllAgentInstancesQueryDto queryDto)
     {
         var result = new List<AgentInstanceDto>();
