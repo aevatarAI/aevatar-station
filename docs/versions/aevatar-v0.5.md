@@ -96,7 +96,6 @@ Version 0.5 enhances the execution tracking capabilities introduced in v0.4 and 
   - WebSocket/SSE connections for live data streaming
   - Real-time capture of inputs, outputs, and states
   - Connection resilience and automatic reconnection
-  - Rate limiting and buffering for high-frequency data
 
 ## Technical Enhancements
 

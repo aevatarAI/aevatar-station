@@ -81,7 +81,6 @@ As a workflow debugger, I want all agents in my workflow to stream their executi
 - **Data Streaming:**
   - Real-time streaming of agent execution data
   - Structured data format for consistent parsing
-  - Rate limiting and buffering for high-frequency data
 
 ### Acceptance Criteria
 **Given** I have workflows running in debug mode  
@@ -103,18 +102,6 @@ As a workflow debugger, I want all agents in my workflow to stream their executi
 **Given** agents are streaming execution data  
 **When** I receive the data in the debug interface  
 **Then** the data is properly formatted and structured for UI consumption  
-
-**Given** agents generate high-frequency data  
-**When** data is streamed  
-**Then** data is properly buffered and rate-limited to prevent overwhelming the interface  
-
-**Given** I am debugging my own workflow  
-**When** multiple users are debugging simultaneously  
-**Then** I only receive streaming data from my own debug session with no cross-user data leakage  
-
-**Given** I disable debug mode  
-**When** the debug session ends  
-**Then** streaming stops cleanly and connections are properly closed  
 
 ---
 
