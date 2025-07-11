@@ -3,7 +3,7 @@ name: Package Staging
 on:
   push:
     branches:
-      - "release/auth-server-pre"
+      - "test/auth-server-update-pre"
 
 run-name: Deploy Aevatar Station on ${{ github.ref }} to Staging from ${{ github.sha }}
 
