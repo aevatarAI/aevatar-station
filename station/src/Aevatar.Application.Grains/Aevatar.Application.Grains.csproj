@@ -20,6 +20,8 @@
         <PackageReference Include="Aevatar.GAgents.AI.Abstractions"/>
         <PackageReference Include="Aevatar.GAgents.Twitter"/>
         <PackageReference Include="Aevatar.GAgents.GroupChat"/>
+        <PackageReference Include="Aevatar.GAgents.PsiOmni"/>
+        <PackageReference Include="Aevatar.GAgents.PsiOmni.Plugins"/>
     </ItemGroup>
 
     <ItemGroup>
