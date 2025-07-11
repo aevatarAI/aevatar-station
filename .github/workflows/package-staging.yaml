@@ -3,7 +3,7 @@ name: Package Staging
 on:
   push:
     branches:
-      - "release/*"
+      - "test/auth-server-update-v1.0"
 
 run-name: Deploy Aevatar Station on ${{ github.ref }} to Staging from ${{ github.sha }}
 
@@ -21,10 +21,7 @@ jobs:
       matrix:
         servicename:
           [
-            Aevatar.HttpApi.Host,
-            Aevatar.Silo,
             Aevatar.AuthServer,
-            Aevatar.WebHook.Host,
             Aevatar.DbMigrator
           ]
     steps:
@@ -62,10 +59,7 @@ jobs:
       matrix:
         servicename:
           [
-            Aevatar.HttpApi.Host,
-            Aevatar.Silo,
             Aevatar.AuthServer,
-            Aevatar.WebHook.Host,
             Aevatar.DbMigrator
           ]
     permissions:
@@ -104,7 +98,8 @@ jobs:
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-        
+  #          cache-from: type=gha
+  #          cache-to: type=gha,mode=max
   dispatch:
     runs-on: aismart-runner
     needs: build-and-push-image
@@ -117,10 +112,10 @@ jobs:
             await github.rest.actions.createWorkflowDispatch({
               owner: 'AElfDevops',
               repo: 'devops',
-              workflow_id: 'aevatar-station-deploy.yaml',
+              workflow_id: 'aevatar-station-deploy-pre.yaml',
               ref: 'main',
               inputs: {
-                env: 'staging',
+                env: 'pre-staging',
                 commit_sha: 'sha-${{ needs.build-and-push-image.outputs.short_sha }}',
               }
             })
