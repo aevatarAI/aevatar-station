@@ -289,14 +289,28 @@ public class AgentService : ApplicationService, IAgentService
             queryString += " AND agentType:(" + queryDto.AgentType + "~ OR " + queryDto.AgentType + "*)";
         }
         
-        var response =
-            await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
+        PagedResultDto<Dictionary<string, object>> response;
+        try
+        {
+            response =
+                await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
+                {
+                    QueryString = queryString,
+                    StateName = nameof(CreatorGAgentState),
+                    PageSize = queryDto.PageSize,
+                    PageIndex = queryDto.PageIndex
+                });
+        }
+        catch (UserFriendlyException e)
+        {
+            if (e.Code == "index_not_found_exception")
             {
-                QueryString = queryString,
-                StateName = nameof(CreatorGAgentState),
-                PageSize = queryDto.PageSize,
-                PageIndex = queryDto.PageIndex
-            });
+                return result;
+            }
+
+            throw;
+        }
+
         if (response.TotalCount == 0)
         {
             return result;
