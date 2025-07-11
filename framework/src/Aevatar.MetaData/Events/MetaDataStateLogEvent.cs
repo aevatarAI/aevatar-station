@@ -17,13 +17,13 @@ public abstract class MetaDataStateLogEvent : StateLogEventBase<MetaDataStateLog
     /// </summary>
     [Id(10)]
     public Guid AgentId { get; set; }
-    
+
     /// <summary>
     /// The user ID associated with the agent.
     /// </summary>
     [Id(11)]
     public Guid UserId { get; set; }
-    
+
     /// <summary>
     /// Optional reason or description for the event.
     /// </summary>

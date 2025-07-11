@@ -133,7 +133,7 @@
 ###### Expected Result
 - GetState method returns current Orleans grain state
 - State reflects all applied metadata events
-- State is properly typed as MetaDataStateBase
+- State is properly typed as IMetaDataState implementation
 
 ##### TestMetaDataAgent correctly returns GrainId via GetGrainId
 ###### Expected Result

@@ -27,13 +27,25 @@ This interface provides pre-implemented methods for these common scenarios, allo
 
 ### Step 1: Define Your State Class
 
-Your state class should inherit from `MetaDataStateBase` or implement `IMetaDataState`:
+Your state class should inherit from `StateBase` and implement `IMetaDataState`:
 
 ```csharp
-public class MyAgentState : MetaDataStateBase
+[GenerateSerializer]
+public class MyAgentState : StateBase, IMetaDataState
 {
+    // IMetaDataState required properties with Orleans serialization
+    [Id(0)] public Guid Id { get; set; }
+    [Id(1)] public Guid UserId { get; set; }
+    [Id(2)] public string AgentType { get; set; } = string.Empty;
+    [Id(3)] public string Name { get; set; } = string.Empty;
+    [Id(4)] public Dictionary<string, string> Properties { get; set; } = new();
+    [Id(5)] public GrainId AgentGrainId { get; set; }
+    [Id(6)] public DateTime CreateTime { get; set; }
+    [Id(7)] public AgentStatus Status { get; set; }
+    [Id(8)] public DateTime LastActivity { get; set; }
+    
     // Add any additional properties specific to your agent
-    public string CustomProperty { get; set; }
+    [Id(100)] public string CustomProperty { get; set; } = string.Empty;
 }
 ```
 

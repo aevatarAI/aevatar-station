@@ -16,47 +16,47 @@ public interface IMetaDataState
     /// The unique identifier for the agent.
     /// </summary>
     Guid Id { get; set; }
-    
+
     /// <summary>
     /// The user ID that owns this agent.
     /// </summary>
     Guid UserId { get; set; }
-    
+
     /// <summary>
     /// The type of agent (e.g., "CreatorAgent", "ChatAgent").
     /// </summary>
     string AgentType { get; set; }
-    
+
     /// <summary>
     /// The display name of the agent.
     /// </summary>
     string Name { get; set; }
-    
+
     /// <summary>
     /// Key-value properties for the agent.
     /// </summary>
     Dictionary<string, string> Properties { get; set; }
-    
+
     /// <summary>
     /// The Orleans grain ID for the agent.
     /// </summary>
     GrainId AgentGrainId { get; set; }
-    
+
     /// <summary>
     /// The timestamp when the agent was created.
     /// </summary>
     DateTime CreateTime { get; set; }
-    
+
     /// <summary>
     /// The current status of the agent.
     /// </summary>
     AgentStatus Status { get; set; }
-    
+
     /// <summary>
     /// The timestamp of the last activity.
     /// </summary>
     DateTime LastActivity { get; set; }
-    
+
     /// <summary>
     /// Default Apply method implementation using .NET 8+ default interface methods.
     /// Applies metadata state events to update the state.
@@ -66,28 +66,28 @@ public interface IMetaDataState
     {
         // Update common properties
         LastActivity = DateTime.UtcNow;
-        
+
         // Apply specific event types
         switch (@event)
         {
             case AgentCreatedEvent createdEvent:
                 ApplyAgentCreatedEvent(createdEvent);
                 break;
-                
+
             case AgentStatusChangedEvent statusEvent:
                 ApplyAgentStatusChangedEvent(statusEvent);
                 break;
-                
+
             case AgentPropertiesUpdatedEvent propertiesEvent:
                 ApplyAgentPropertiesUpdatedEvent(propertiesEvent);
                 break;
-                
+
             case AgentActivityUpdatedEvent activityEvent:
                 ApplyAgentActivityUpdatedEvent(activityEvent);
                 break;
         }
     }
-    
+
     /// <summary>
     /// Applies an agent created event to the state.
     /// </summary>
@@ -104,7 +104,7 @@ public interface IMetaDataState
         CreateTime = createdEvent.Ctime;
         LastActivity = createdEvent.Ctime;
     }
-    
+
     /// <summary>
     /// Applies an agent status changed event to the state.
     /// </summary>
@@ -114,7 +114,7 @@ public interface IMetaDataState
         Status = statusEvent.NewStatus;
         LastActivity = statusEvent.StatusChangeTime;
     }
-    
+
     /// <summary>
     /// Applies an agent properties updated event to the state.
     /// </summary>
@@ -126,16 +126,16 @@ public interface IMetaDataState
         {
             Properties.Remove(removedProperty);
         }
-        
+
         // Add or update properties
         foreach (var (key, value) in propertiesEvent.UpdatedProperties)
         {
             Properties[key] = value;
         }
-        
+
         LastActivity = propertiesEvent.UpdateTime;
     }
-    
+
     /// <summary>
     /// Applies an agent activity updated event to the state.
     /// </summary>
