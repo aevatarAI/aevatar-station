@@ -273,20 +273,33 @@ public class AgentService : ApplicationService, IAgentService
 
         return resp;
     }
-    
+
     public async Task<List<AgentInstanceDto>> GetAllAgentInstances(GetAllAgentInstancesQueryDto input)
     {
         _logger.LogInformation("Get All Agent Instances, PageIndex: {PageIndex}, PageSize: {PageSize}", input.PageIndex,
             input.PageSize);
 
         var currentUserId = _userAppService.GetCurrentUserId();
-        var response = await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
+        PagedResultDto<Dictionary<string, object>> response;
+        try
         {
-            QueryString = "userId.keyword:" + currentUserId,
-            StateName = nameof(CreatorGAgentState),
-            PageSize = input.PageSize,
-            PageIndex = input.PageIndex
-        });
+            response = await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
+            {
+                QueryString = "userId.keyword:" + currentUserId,
+                StateName = nameof(CreatorGAgentState),
+                PageSize = input.PageSize,
+                PageIndex = input.PageIndex
+            });
+        }
+        catch (UserFriendlyException e)
+        {
+            if (e.Code == "index_not_found_exception")
+            {
+                return [];
+            }
+
+            throw;
+        }
 
         _logger.LogInformation("Get All Agent Instances completed, Total: {TotalCount}, Returned: {ReturnedCount}",
             response.TotalCount, response.Items.Count);
