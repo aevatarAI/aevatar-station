@@ -87,10 +87,21 @@ Version 0.5 enhances the execution tracking capabilities introduced in v0.4 and 
   - Partial workflow generation with manual completion
   - Learning system for continuous improvement
 
+### 4. Real-Time Data Streaming Infrastructure
+**Epic Reference:** [1-node-visualizer-specifications.md](../epics/1-node-visualizer-specifications.md#2-interactive-debugger-real-time-workflow-testing)
+
+**Stories:**
+- **Real-Time Data Streaming Infrastructure** - [1-2-interactive-debugger-overlay-stories.md](../stories/1-2-interactive-debugger-overlay-stories.md#2-real-time-data-streaming-infrastructure)
+  - Agent instrumentation for debugging
+  - WebSocket/SSE connections for live data streaming
+  - Real-time capture of inputs, outputs, and events
+  - Connection resilience and automatic reconnection
+  - Rate limiting and buffering for high-frequency events
+
 ## Technical Enhancements
 
 ### Real-Time Updates
-- WebSocket or Server-Sent Events for live status updates
+- Integration with Real-Time Data Streaming Infrastructure
 - Efficient polling mechanisms for execution state
 - Optimized database queries for large execution datasets
 
@@ -136,16 +147,19 @@ Version 0.5 enhances the execution tracking capabilities introduced in v0.4 and 
 - ✅ Comprehensive error handling and fallback mechanisms
 - ✅ Support for complex workflow patterns
 - ✅ Performance requirements met for all generation operations
+- ✅ Real-time data streaming infrastructure with WebSocket/SSE support
+- ✅ Agent instrumentation for debugging capabilities
+- ✅ Connection resilience and automatic reconnection
 
 ## Dependencies
 - v0.4 Visual Workflow Designer
 - Workflow execution engine with monitoring capabilities
-- Real-time communication infrastructure (WebSocket/SSE)
 - Database with execution logging capabilities
 - Enhanced configuration management backend
 - Natural Language Processing service
 - Machine learning model training infrastructure
 - Analytics and monitoring systems
+- WebSocket/SSE infrastructure for real-time communication
 
 ## Breaking Changes
 - None - fully backward compatible with v0.4
@@ -158,11 +172,12 @@ Version 0.5 enhances the execution tracking capabilities introduced in v0.4 and 
 - Client-side validation to reduce server load
 
 ## Known Limitations
-- No interactive debugging capabilities (planned for v0.6)
+- Interactive debugging interface not included (planned for v0.6)
 - No workflow template system (planned for v1.0)
 - No plugin management (planned for v1.0)
 - Limited execution analytics (future enhancement)
 - Configuration templates not included in v0.5 (planned for future versions)
 - AI generation requires internet connectivity for NLP processing
 - Non-English prompt support may have reduced accuracy
-- Performance may vary based on prompt complexity and server load 
+- Performance may vary based on prompt complexity and server load
+- Real-time data streaming requires WebSocket/SSE infrastructure deployment 

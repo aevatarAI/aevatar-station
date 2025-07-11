@@ -16,35 +16,23 @@ Version 0.6 introduces advanced interactive debugging capabilities, enabling use
   - Isolation from production workflows
   - Resource management and cleanup
 
-- **Debug Mode Toggle & Basic UI** - [1-2-interactive-debugger-overlay-stories.md](../stories/1-2-interactive-debugger-overlay-stories.md#2-debug-mode-toggle--basic-ui)
-  - Toggle switch for debug mode activation
-  - Clear visual indicators for debug state
-  - Loading states and error handling
-  - Persistent debug mode during sessions
-  - Authentication-based access control
 
-- **Real-Time Data Streaming Infrastructure** - [1-2-interactive-debugger-overlay-stories.md](../stories/1-2-interactive-debugger-overlay-stories.md#3-real-time-data-streaming-infrastructure)
-  - Agent instrumentation for debugging
-  - WebSocket/SSE connections for live data streaming
-  - Real-time capture of inputs, outputs, and events
-  - Connection resilience and automatic reconnection
-  - Rate limiting and buffering for high-frequency events
 
-- **Interactive Workflow Execution** - [1-2-interactive-debugger-overlay-stories.md](../stories/1-2-interactive-debugger-overlay-stories.md#4-interactive-workflow-execution)
+- **Interactive Workflow Execution** - [1-2-interactive-debugger-overlay-stories.md](../stories/1-2-interactive-debugger-overlay-stories.md#3-interactive-workflow-execution)
   - Workflow execution within debug pods
   - Live progress tracking and execution control
   - Stop/cancel execution capabilities
   - Integration with debug pod infrastructure
   - Real-time execution feedback
 
-- **Live Timeline & Execution Visualization** - [1-2-interactive-debugger-overlay-stories.md](../stories/1-2-interactive-debugger-overlay-stories.md#5-live-timeline--execution-visualization)
+- **Live Timeline & Execution Visualization** - [1-2-interactive-debugger-overlay-stories.md](../stories/1-2-interactive-debugger-overlay-stories.md#4-live-timeline--execution-visualization)
   - Visual timeline of workflow execution
   - Live updates during execution
   - Agent status indicators and timing
   - Parallel execution visualization
   - Error propagation highlighting
 
-- **Debug Data Inspection Interface** - [1-2-interactive-debugger-overlay-stories.md](../stories/1-2-interactive-debugger-overlay-stories.md#6-debug-data-inspection-interface)
+- **Debug Data Inspection Interface** - [1-2-interactive-debugger-overlay-stories.md](../stories/1-2-interactive-debugger-overlay-stories.md#5-debug-data-inspection-interface)
   - Detailed inspection of agent inputs/outputs
   - Intermediate state and data transformation viewing
   - Error details and stack traces
@@ -105,11 +93,9 @@ Version 0.6 introduces advanced interactive debugging capabilities, enabling use
 - ✅ Performance optimization for complex workflows
 
 ## Dependencies
-- v0.5 Enhanced Execution Progress Tracking
+- v0.5 Enhanced Execution Progress Tracking and Real-Time Data Streaming Infrastructure
 - Kubernetes cluster for pod management
-- WebSocket/SSE infrastructure
 - Agent instrumentation framework
-- Real-time communication layer
 
 ## Security Considerations
 - User isolation and authentication
