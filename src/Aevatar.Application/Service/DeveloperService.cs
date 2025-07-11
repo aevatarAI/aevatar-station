@@ -15,14 +15,14 @@ namespace Aevatar.Service;
 
 public interface IDeveloperService
 {
-    Task CreateHostAsync(string HostId, string version, string corsUrls);
-    Task DestroyHostAsync(string inputHostId, string inputVersion);
+    Task CreateServiceAsync(string HostId, string version, string corsUrls);
+    Task DestroyServiceAsync(string inputHostId, string inputVersion);
 
     Task UpdateDockerImageAsync(string appId, string version, string newImage);
 
-    Task RestartAsync(string clientId, Guid projectId);
-    Task CreateAsync(string clientId, Guid projectId);
-    Task DeleteAsync(string clientId);
+    Task RestartServiceAsync(DeveloperServiceOperationDto operationInput);
+    Task CreateServiceAsync(string clientId, Guid projectId);
+    Task DeleteServiceAsync(string clientId);
 }
 
 public class DeveloperService : ApplicationService, IDeveloperService
@@ -45,51 +45,39 @@ public class DeveloperService : ApplicationService, IDeveloperService
         _projectCorsOriginService = projectCorsOriginService;
     }
 
-    public async Task CreateHostAsync(string HostId, string version, string corsUrls)
-    {
-        await _hostDeployManager.CreateHostAsync(HostId, version, corsUrls, Guid.Empty);
-    }
+    public async Task CreateServiceAsync(string hostId, string version, string corsUrls)
+        => await _hostDeployManager.CreateApplicationAsync(hostId, version, corsUrls, Guid.Empty);
 
-    public async Task DestroyHostAsync(string inputHostId, string inputVersion)
-    {
-        await _hostDeployManager.DestroyHostAsync(inputHostId, inputVersion);
-    }
+    public async Task DestroyServiceAsync(string inputHostId, string inputVersion)
+        => await _hostDeployManager.DestroyApplicationAsync(inputHostId, inputVersion);
 
     public async Task UpdateDockerImageAsync(string appId, string version, string newImage)
+        => await _hostDeployManager.UpdateDeploymentImageAsync(appId, version, newImage);
+
+    public async Task RestartServiceAsync(DeveloperServiceOperationDto input)
     {
-        await _hostDeployManager.UpdateDockerImageAsync(appId, version, newImage);
-    }
+        _logger.LogInformation(
+            $"Starting business service restart for client: {input.DomainName} in project: {input.ProjectId}");
 
-    public async Task RestartAsync(string clientId, Guid projectId)
-    {
-        if (string.IsNullOrWhiteSpace(clientId))
-        {
-            throw new UserFriendlyException("ClientId cannot be null or empty");
-        }
-
-        _logger.LogInformation($"Starting business service restart for client: {clientId} in project: {projectId}");
-
-        var hostServiceExists = await DetermineIfHostServiceExistsAsync(clientId, DefaultVersion);
+        var hostServiceExists = await DetermineIfHostServiceExistsAsync(input.DomainName, DefaultVersion);
         if (!hostServiceExists)
         {
-            _logger.LogWarning($"No Host service found for client: {clientId}");
-            throw new UserFriendlyException($"No Host service found to restart for client: {clientId}");
+            _logger.LogWarning($"No Host service found for client: {input.DomainName}");
+            throw new UserFriendlyException($"No Host service found to restart for client: {input.DomainName}");
         }
 
-        var corsUrlsString = await GetCombinedCorsUrlsAsync(projectId);
+        var corsUrlsString = await GetCombinedCorsUrlsAsync(input.ProjectId);
         _logger.LogInformation(
-            $"[DeveloperService] Processing combined CORS URLs for client: {clientId}, projectId: {projectId}, corsUrlsString: {corsUrlsString}");
-        await _hostDeployManager.UpdateHostAsync(clientId, DefaultVersion, corsUrlsString, projectId);
+            $"[DeveloperService] Processing combined CORS URLs for client: {input.DomainName}, projectId: {input.ProjectId}, corsUrlsString: {corsUrlsString}");
+        await _hostDeployManager.UpgradeApplicationAsync(input.DomainName, DefaultVersion, corsUrlsString,
+            input.ProjectId);
 
-        _logger.LogInformation($"Business service restart completed successfully for client: {clientId}");
+        _logger.LogInformation($"Business service restart completed successfully for client: {input.DomainName}");
     }
 
-    public async Task CreateAsync(string clientId, Guid projectId)
+    public async Task CreateServiceAsync(string clientId, Guid projectId)
     {
-        if (string.IsNullOrWhiteSpace(clientId))
-        {
-            throw new UserFriendlyException("ClientId cannot be null or empty");
-        }
+        if (string.IsNullOrWhiteSpace(clientId)) throw new UserFriendlyException("DomainName cannot be null or empty");
 
         _logger.LogInformation($"Starting developer service creation for client: {clientId} in project: {projectId}");
 
@@ -104,17 +92,14 @@ public class DeveloperService : ApplicationService, IDeveloperService
         var corsUrlsString = await GetCombinedCorsUrlsAsync(projectId);
         _logger.LogInformation(
             $"[DeveloperService] Processing combined CORS URLs for client: {clientId}, projectId: {projectId}, corsUrlsString: {corsUrlsString}");
-        await _hostDeployManager.CreateHostAsync(clientId, DefaultVersion, corsUrlsString, projectId);
+        await _hostDeployManager.CreateApplicationAsync(clientId, DefaultVersion, corsUrlsString, projectId);
 
         _logger.LogInformation($"Developer service created successfully for client: {clientId}");
     }
 
-    public async Task DeleteAsync(string clientId)
+    public async Task DeleteServiceAsync(string clientId)
     {
-        if (string.IsNullOrWhiteSpace(clientId))
-        {
-            throw new UserFriendlyException("ClientId cannot be null or empty");
-        }
+        if (string.IsNullOrWhiteSpace(clientId)) throw new UserFriendlyException("DomainName cannot be null or empty");
 
         var hostServiceExists = await DetermineIfHostServiceExistsAsync(clientId, DefaultVersion);
         if (!hostServiceExists)
@@ -123,7 +108,7 @@ public class DeveloperService : ApplicationService, IDeveloperService
             throw new UserFriendlyException($"No Host service found to delete for client: {clientId}");
         }
 
-        await _hostDeployManager.DestroyHostAsync(clientId, DefaultVersion);
+        await _hostDeployManager.DestroyApplicationAsync(clientId, DefaultVersion);
 
         _logger.LogInformation($"Developer service deleted successfully for client: {clientId}");
     }
@@ -172,22 +157,22 @@ public class DeveloperService : ApplicationService, IDeveloperService
     private async Task<string> GetCombinedCorsUrlsAsync(Guid projectId)
     {
         _logger.LogInformation($"Getting combined CORS URLs for project: {projectId}");
-        
+
         // Get default platform CORS URLs from configuration
         var defaultCorsUrls = GetConfigValue("App:DefaultCorsOrigins", "App:CorsOrigins");
-        _logger.LogInformation(string.IsNullOrWhiteSpace(defaultCorsUrls) 
-            ? "No platform CORS origins configured" 
+        _logger.LogInformation(string.IsNullOrWhiteSpace(defaultCorsUrls)
+            ? "No platform CORS origins configured"
             : $"Using platform CORS URLs: {defaultCorsUrls}");
-        
+
         // Get business CORS URLs from project
         var businessCorsUrls = await _projectCorsOriginService.GetListAsync(projectId);
         var businessCorsUrlsString = string.Join(",", businessCorsUrls.Items.Select(x => x.Domain));
         _logger.LogInformation($"Business CORS URLs for project {projectId}: {businessCorsUrlsString}");
-        
+
         // Combine URLs
         var hasDefault = !string.IsNullOrWhiteSpace(defaultCorsUrls);
         var hasBusiness = !string.IsNullOrWhiteSpace(businessCorsUrlsString);
-        
+
         string combinedCorsUrls;
         if (hasDefault && hasBusiness)
         {
@@ -205,12 +190,12 @@ public class DeveloperService : ApplicationService, IDeveloperService
         {
             combinedCorsUrls = string.Empty;
         }
-        
+
         _logger.LogInformation($"Combined CORS URLs for project {projectId}: {combinedCorsUrls}");
         return combinedCorsUrls;
     }
 
-    private string GetConfigValue(params string[] keys) => 
+    private string GetConfigValue(params string[] keys) =>
         keys.Select(key => _configuration[key]?.Trim())
             .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
 }

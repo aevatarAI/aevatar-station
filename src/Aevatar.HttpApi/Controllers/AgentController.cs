@@ -45,11 +45,12 @@ public class AgentController : AevatarController
         return await _agentService.GetAllAgentInstances(queryDto);
     }
     
-    [HttpGet("agent-list-test")]
+    // Search and filter Agents (support Node Palette)
+    [HttpPost("search")]
     [Authorize]
-    public async Task<List<AgentInstanceDto>> OriginGetAllAgentInstance(int pageIndex, int pageSize)
+    public async Task<List<AgentInstanceDto>> SearchAgents([FromBody] AgentSearchRequest request)
     {
-        return await _agentService.OriginGetAllAgentInstances(pageIndex,pageSize);
+        return await _agentService.SearchAgentsWithLucene(request);
     }
 
     [HttpPost]

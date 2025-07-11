@@ -27,8 +27,8 @@ public static class OrleansHostExtensions
                 throw new ArgumentNullException(nameof(configSection), "The Orleans config node is missing");
                 
             // Configure Gateway connection
-            var gatewayPort = configSection.GetValue<int>("GatewayPort", 11111);
-            clientBuilder.UseStaticClustering(new IPEndPoint(IPAddress.Loopback, gatewayPort));
+            // var gatewayPort = configSection.GetValue<int>("GatewayPort", 11111);
+            // clientBuilder.UseStaticClustering(new IPEndPoint(IPAddress.Loopback, gatewayPort));
                 
             clientBuilder.UseMongoDBClient(configSection.GetValue<string>("MongoDBClient"))
                 .UseMongoDBClustering(options =>

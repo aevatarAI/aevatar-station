@@ -1,7 +1,6 @@
 using Aevatar.CQRS;
 using Aevatar.GAgents.Twitter;
 using Aevatar.Neo4JStore;
-using Org.BouncyCastle.Asn1.X509.Qualified;
 using Volo.Abp.AutoMapper;
 using Volo.Abp.EventBus;
 using Volo.Abp.Modularity;
@@ -17,7 +16,7 @@ namespace Aevatar.Application.Grains;
     typeof(AevatarGAgentsTwitterModule)
 )]
 public class AIApplicationGrainsModule : AbpModule
- 
+
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
