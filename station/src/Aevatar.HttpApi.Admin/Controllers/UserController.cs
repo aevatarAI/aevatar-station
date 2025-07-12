@@ -55,7 +55,7 @@ public class UserController : AevatarController
     }
 
     [HttpPost("destroyHost")]
-    [Authorize(Policy = AevatarPermissions.AdminPolicy)]
+   // [Authorize(Policy = AevatarPermissions.AdminPolicy)]
     public async Task DestroyHostAsync(string clientId)
     {
         await _developerService.DestroyHostAsync(clientId, "1");
@@ -88,5 +88,12 @@ public class UserController : AevatarController
     {
         await _developerService.UpdateDockerImageAsync(hostId + "-" + hostType, "1",
             imageName);
+    }
+
+    [HttpPost("CopyHost")]
+ //   [Authorize(Policy = AevatarPermissions.AdminPolicy)]
+    public async Task CopyHost(string sourceClientId, string newClientId)
+    {
+        await _developerService.CopyHostAsync(sourceClientId, newClientId, "1", null);
     }
 }

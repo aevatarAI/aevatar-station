@@ -12,6 +12,8 @@ public interface IDeveloperService
     Task DestroyHostAsync(string inputHostId, string inputVersion);
 
     Task UpdateDockerImageAsync(string appId, string version, string newImage);
+    
+    Task CopyHostAsync(string sourceClientId, string newClientId, string version, string corsUrls);
 }
 
 public class DeveloperService: ApplicationService, IDeveloperService
@@ -36,6 +38,11 @@ public class DeveloperService: ApplicationService, IDeveloperService
     public async Task UpdateDockerImageAsync(string appId, string version, string newImage)
     {
         await _hostDeployManager.UpdateDockerImageAsync(appId, version,newImage);
+    }
+
+    public async Task CopyHostAsync(string sourceClientId, string newClientId, string version, string corsUrls)
+    {
+        await _hostDeployManager.CopyHostAsync(sourceClientId, newClientId, version, corsUrls);
     }
 
 }
