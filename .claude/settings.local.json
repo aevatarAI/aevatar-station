@@ -15,7 +15,9 @@
       "mcp__sequentialthinking__sequentialthinking",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(gh pr create:*)"
+      "Bash(gh pr create:*)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(dotnet test:*)"
     ]
   },
   "enableAllProjectMcpServers": true
