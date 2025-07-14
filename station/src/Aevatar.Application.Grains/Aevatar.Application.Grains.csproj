@@ -22,6 +22,7 @@
         <PackageReference Include="Aevatar.GAgents.GroupChat"/>
         <PackageReference Include="Aevatar.GAgents.PsiOmni"/>
         <PackageReference Include="Aevatar.GAgents.PsiOmni.Plugins"/>
+        <PackageReference Include="Aevatar.GAgents.MCP"/>
     </ItemGroup>
 
     <ItemGroup>
