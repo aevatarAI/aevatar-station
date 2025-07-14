@@ -4,6 +4,7 @@
 using Aevatar.Core.Abstractions;
 using Aevatar.MetaData;
 using Aevatar.MetaData.Enums;
+using Aevatar.MetaData.Events;
 
 namespace Aevatar.MetaData.Tests;
 
@@ -79,4 +80,58 @@ public class TestMetaDataAgentState : StateBase, IMetaDataState
     /// </summary>
     [Id(101)]
     public List<string> TestMessages { get; set; } = new();
+
+    /// <summary>
+    /// Applies metadata events to this state instance.
+    /// </summary>
+    /// <param name="event">The metadata event to apply</param>
+    public void Apply(MetaDataStateLogEvent @event)
+    {
+        switch (@event)
+        {
+            case AgentCreatedEvent created:
+                Id = created.AgentId;
+                UserId = created.UserId;
+                Name = created.Name;
+                AgentType = created.AgentType;
+                Properties = new Dictionary<string, string>(created.Properties);
+                AgentGrainId = created.AgentGrainId;
+                Status = created.InitialStatus;
+                CreateTime = DateTime.UtcNow;
+                LastActivity = DateTime.UtcNow;
+                break;
+
+            case AgentStatusChangedEvent statusChanged:
+                Status = statusChanged.NewStatus;
+                LastActivity = statusChanged.StatusChangeTime;
+                break;
+
+            case AgentPropertiesUpdatedEvent propertiesUpdated:
+                if (propertiesUpdated.WasMerged)
+                {
+                    // Merge properties
+                    foreach (var kvp in propertiesUpdated.UpdatedProperties)
+                    {
+                        Properties[kvp.Key] = kvp.Value;
+                    }
+                }
+                else
+                {
+                    // Replace properties
+                    Properties = new Dictionary<string, string>(propertiesUpdated.UpdatedProperties);
+                }
+                
+                // Remove specified properties
+                foreach (var key in propertiesUpdated.RemovedProperties)
+                {
+                    Properties.Remove(key);
+                }
+                LastActivity = propertiesUpdated.UpdateTime;
+                break;
+
+            case AgentActivityUpdatedEvent activityUpdated:
+                LastActivity = activityUpdated.ActivityTime;
+                break;
+        }
+    }
 }

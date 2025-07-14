@@ -48,8 +48,8 @@ public class ClusterFixture : IDisposable, ISingletonDependency
         public void Configure(ISiloBuilder hostBuilder)
         {
             var configuration = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.json")
-                .AddJsonFile("appsettings.secrets.json", true)
+                .AddJsonFile("appsettings.json", optional: true)
+                .AddJsonFile("appsettings.secrets.json", optional: true)
                 .Build();
 
             hostBuilder
@@ -121,7 +121,8 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                 .AddMemoryStreams("AevatarSignalR")
                 .AddMemoryGrainStorage("PubSubStore")
                 .AddMemoryGrainStorageAsDefault()
-                .AddLogStorageBasedLogConsistencyProvider("LogStorage");
+                .AddLogStorageBasedLogConsistencyProvider("LogStorage")
+;
         }
     }
 

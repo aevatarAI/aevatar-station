@@ -15,12 +15,24 @@ public class TestMetaDataAgentEvent : StateLogEventBase<TestMetaDataAgentEvent>
     /// <summary>
     /// The action that occurred during this event.
     /// </summary>
-    [Id(0)]
-    public virtual string Action { get; set; } = string.Empty;
+    [Id(2)]
+    public string Action { get; set; } = string.Empty;
     
     /// <summary>
     /// Additional test message for verification.
     /// </summary>
+    [Id(3)]
+    public string TestMessage { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Override base class Id to avoid Orleans serialization conflicts
+    /// </summary>
+    [Id(0)]
+    public override Guid Id { get; set; } = Guid.NewGuid();
+    
+    /// <summary>
+    /// Override base class Ctime to avoid Orleans serialization conflicts
+    /// </summary>
     [Id(1)]
-    public virtual string TestMessage { get; set; } = string.Empty;
+    public new DateTime Ctime { get; set; } = DateTime.UtcNow;
 }

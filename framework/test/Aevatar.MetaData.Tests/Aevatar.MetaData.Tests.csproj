@@ -28,6 +28,7 @@
         <ProjectReference Include="..\..\src\Aevatar.Core\Aevatar.Core.csproj" />
         <ProjectReference Include="..\..\src\Aevatar.TestKit\Aevatar.TestKit.csproj" />
         <ProjectReference Include="..\..\src\Aevatar.PermissionManagement\Aevatar.PermissionManagement.csproj" />
+        <ProjectReference Include="..\Aevatar.TestBase\Aevatar.TestBase.csproj" />
     </ItemGroup>
 
     <ItemGroup>

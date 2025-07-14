@@ -4,7 +4,9 @@
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.MetaData;
+using Aevatar.MetaData.Enums;
 using Aevatar.MetaData.Events;
+using Orleans.EventSourcing;
 
 namespace Aevatar.MetaData.Tests;
 
@@ -12,48 +14,147 @@ namespace Aevatar.MetaData.Tests;
 /// Test agent that implements both GAgentBase and IMetaDataStateGAgent for integration testing.
 /// Demonstrates how to use the metadata state interface with Orleans event sourcing.
 /// </summary>
-public class TestMetaDataAgent : IMetaDataStateGAgent<TestMetaDataAgentState>
+[GAgent]
+public class TestMetaDataAgent : GAgentBase<TestMetaDataAgentState, TestMetaDataAgentEvent>, 
+    ITestMetaDataAgent
 {
-    public TestMetaDataAgentState State { get; } = new TestMetaDataAgentState();
-    private readonly List<MetaDataStateLogEvent> _raisedEvents = new();
+    private readonly TestMetaDataAgentHelper _metaDataHelper;
 
-    // Implementation of IMetaDataStateGAgent required methods
+    public TestMetaDataAgent()
+    {
+        _metaDataHelper = new TestMetaDataAgentHelper(this);
+    }
+
+    public override Task<string> GetDescriptionAsync()
+    {
+        return Task.FromResult("Test agent for metadata operations with Orleans integration testing");
+    }
+
+    /// <summary>
+    /// Gets the metadata helper for testing IMetaDataStateGAgent interface (internal use only)
+    /// </summary>
+    internal IMetaDataStateGAgent<TestMetaDataAgentState> GetMetaDataHelper()
+    {
+        return _metaDataHelper;
+    }
+
+    /// <summary>
+    /// Internal method to provide state access to the helper
+    /// </summary>
+    internal TestMetaDataAgentState GetInternalState()
+    {
+        return State;
+    }
+
+    /// <summary>
+    /// Internal method to provide event raising to the helper
+    /// </summary>
+    internal void RaiseInternalEvent(TestMetaDataAgentEvent @event)
+    {
+        RaiseEvent(@event);
+    }
+
+    // Orleans-compatible async method for interface
+    public new Task<TestMetaDataAgentState> GetStateAsync()
+    {
+        return Task.FromResult(State);
+    }
+
+    // Test-specific methods for Orleans integration testing
+    public async Task HandleTestEventAsync(TestMetaDataAgentEvent @event)
+    {
+        RaiseEvent(@event);
+        await ConfirmEvents();
+    }
+
+    public Task<int> GetTestEventCountAsync()
+    {
+        return Task.FromResult(State.TestEventCount);
+    }
+
+    public Task<List<string>> GetTestMessagesAsync()
+    {
+        return Task.FromResult(new List<string>(State.TestMessages));
+    }
+
+    public async Task ClearTestDataAsync()
+    {
+        var clearEvent = new TestMetaDataAgentEvent
+        {
+            Action = "ClearTestData",
+            TestMessage = "Test data cleared"
+        };
+        RaiseEvent(clearEvent);
+        State.TestEventCount = 0;
+        State.TestMessages.Clear();
+        await ConfirmEvents();
+    }
+
+    // Event handler for custom events
+    [EventHandler]
+    public async Task HandleTestEventInternalAsync(TestMetaDataAgentEvent @event)
+    {
+        State.TestEventCount++;
+        State.TestMessages.Add(@event.TestMessage);
+        await ConfirmEvents();
+    }
+
+    // Override state transition method to handle custom events
+    protected override void GAgentTransitionState(TestMetaDataAgentState state,
+        StateLogEventBase<TestMetaDataAgentEvent> @event)
+    {
+        // Handle custom event transitions
+        if (@event is TestMetaDataAgentEvent testEvent)
+        {
+            state.TestEventCount++;
+            if (!string.IsNullOrEmpty(testEvent.TestMessage))
+            {
+                state.TestMessages.Add(testEvent.TestMessage);
+            }
+        }
+    }
+}
+
+/// <summary>
+/// Helper class that implements IMetaDataStateGAgent for composition within TestMetaDataAgent.
+/// This allows the grain to be Orleans-compatible while still testing the IMetaDataStateGAgent interface.
+/// </summary>
+internal class TestMetaDataAgentHelper : IMetaDataStateGAgent<TestMetaDataAgentState>
+{
+    private readonly TestMetaDataAgent _agent;
+
+    public TestMetaDataAgentHelper(TestMetaDataAgent agent)
+    {
+        _agent = agent;
+    }
+
     public void RaiseEvent(MetaDataStateLogEvent @event)
     {
-        // Store the event for testing verification
-        _raisedEvents.Add(@event);
-        // Apply the event to state for testing
-        State.Apply(@event);
+        // For testing purposes, we'll just raise a test event to track that the metadata event happened
+        // We cannot directly apply metadata events to state as they need proper Orleans event sourcing
+        var testEvent = new TestMetaDataAgentEvent
+        {
+            Action = @event.GetType().Name,
+            TestMessage = $"Metadata event: {@event.GetType().Name}"
+        };
+        
+        _agent.RaiseInternalEvent(testEvent);
     }
 
     public Task ConfirmEvents()
     {
-        // In a real Orleans implementation, this would confirm events to storage
-        // For testing, we just return a completed task
-        return Task.CompletedTask;
+        return _agent.ConfirmEvents();
     }
 
     public TestMetaDataAgentState GetState()
     {
-        return State;
+        return _agent.GetInternalState();
     }
     
-    IMetaDataState IMetaDataStateGAgent.GetState() => State;
+    IMetaDataState IMetaDataStateGAgent.GetState() => _agent.GetInternalState();
 
     public GrainId GetGrainId()
     {
-        // Return a test grain ID
-        return GrainId.Create("test", "test-metadata-agent");
-    }
-
-    // Helper methods for testing
-    public List<MetaDataStateLogEvent> GetRaisedEvents()
-    {
-        return new List<MetaDataStateLogEvent>(_raisedEvents);
-    }
-
-    public void ClearRaisedEvents()
-    {
-        _raisedEvents.Clear();
+        return GrainId.Create(typeof(ITestMetaDataAgent).Name, _agent.GetPrimaryKey().ToString());
     }
 }
