@@ -415,7 +415,7 @@ public class GodGPTController : AevatarController
     public async Task<IActionResult> CreateGuestSessionAsync([FromBody] CreateGuestSessionRequestDto request)
     {
         var stopwatch = Stopwatch.StartNew();
-        var clientIp = HttpContext.GetClientIpAddress();
+        var clientIp = request.Ip.IsNullOrWhiteSpace() ? HttpContext.GetClientIpAddress() : request.Ip;
         var userHashId = CommonHelper.GetAnonymousUserGAgentId(clientIp).Replace("AnonymousUser_", "");
         
         try

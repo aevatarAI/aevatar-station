@@ -12,4 +12,6 @@ public class CreateGuestSessionRequestDto
     /// </summary>
     [MaxLength(50)]
     public string? Guider { get; set; }
+    
+    public string Ip { get; set; }
 } 
