@@ -3,14 +3,14 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVersion>9.0.1</OrleansVersion>
-    <AevatarVerion>1.4.13</AevatarVerion>
-    <AevatarGAgentVersion>1.5.0-chat-image-2</AevatarGAgentVersion>
-    <AevatarGAgentVerion>1.4.16</AevatarGAgentVerion>
+    <AevatarVerion>1.5.2</AevatarVerion>
+    <AevatarGAgentVersion>1.5.0-stream-1</AevatarGAgentVersion>
+    <AevatarGAgentVerion>1.5.0-stream-1</AevatarGAgentVerion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="GodGPT.GAgents" Version="1.20.2" />
+    <PackageVersion Include="GodGPT.GAgents" Version="1.22.0-alpha-aevatar-update-001" />
     <PackageVersion Include="Stripe.net" Version="48.1.0"/>
-    <PackageVersion Include="GodGPT.Webhook" Version="1.20.2" />
+    <PackageVersion Include="GodGPT.Webhook" Version="1.22.0-alpha-aevatar-update-001" />
     
     <!-- AElf packages -->
     <PackageVersion Include="AElf.Client" Version="1.1.0" />
