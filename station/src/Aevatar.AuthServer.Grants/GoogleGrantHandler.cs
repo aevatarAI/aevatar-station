@@ -64,6 +64,7 @@ public class GoogleGrantHandler : GrantHandlerBase
         _logger.LogDebug("GoogleGrantHandler.HandleAsync: email: {email}", email);
         var userManager = context.HttpContext.RequestServices.GetRequiredService<IdentityUserManager>();
 
+        var isNewUser = false;
         var user = await userManager.FindByLoginAsync(GrantTypeConstants.GOOGLE, payload.Subject);
         if (user == null)
         {
@@ -78,6 +79,7 @@ public class GoogleGrantHandler : GrantHandlerBase
 
             if (user == null)
             {
+                isNewUser = true;
                 name = Guid.NewGuid().ToString("N");
                 user = new IdentityUser(Guid.NewGuid(), name,
                     email: email.IsNullOrWhiteSpace() ? $"{name}@google.com" : email);
@@ -92,7 +94,7 @@ public class GoogleGrantHandler : GrantHandlerBase
                 GrantTypeConstants.GOOGLE));
         }
         
-        var claimsPrincipal = await CreateUserClaimsPrincipalWithFactoryAsync(context, user);
+        var claimsPrincipal = await CreateUserClaimsPrincipalWithFactoryAsync(context, user, isNewUser);
 
         return new SignInResult(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme, claimsPrincipal);
     }
