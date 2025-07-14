@@ -50,9 +50,9 @@ namespace Aevatar.Service
             // Profile info for private relay users
             try
             {
-                var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
-                var userProfile = await manager.GetUserProfileAsync();
-                fullName = !string.IsNullOrWhiteSpace(userProfile?.FullName) ? userProfile.FullName : null;
+                //var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
+                //var userProfile = await manager.GetUserProfileAsync();
+                //fullName = !string.IsNullOrWhiteSpace(userProfile?.FullName) ? userProfile.FullName : null;
             }
             catch (Exception ex)
             {

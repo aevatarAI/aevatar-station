@@ -49,7 +49,7 @@ public class GodGPTController : AevatarController
     private readonly IOptions<AevatarOptions> _aevatarOptions;
     private readonly ILogger<GodGPTController> _logger;
     private readonly IAccountService _accountService;
-    const string Version = "1.18.2";
+    const string Version = "1.20.0";
 
 
     public GodGPTController(IGodGPTService godGptService, IClusterClient clusterClient,
@@ -490,4 +490,18 @@ public class GodGPTController : AevatarController
         return userProfileDto;
     }
     #endregion
+    
+    [HttpGet("godgpt/share/keyword")]
+    public async Task<QuantumShareResponseDto> GetShareKeyWordWithAIAsync(
+        [FromQuery] Guid sessionId, 
+        [FromQuery] string? content, 
+        [FromQuery] string? region, 
+        [FromQuery] SessionType sessionType)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var response = await _godGptService.GetShareKeyWordWithAIAsync(sessionId, content, region, sessionType);
+        _logger.LogDebug(
+            $"[GodGPTController][GetShareKeyWordWithAIAsync] completed for sessionId={sessionId}, duration: {stopwatch.ElapsedMilliseconds}ms");
+        return response;
+    }
 }

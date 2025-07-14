@@ -20,6 +20,7 @@
 
     <ItemGroup>
         <PackageReference Include="Azure.AI.TextAnalytics" />
+        <PackageReference Include="GodGPT.GAgents" />
         <PackageReference Include="OpenAI.API" />
         <PackageReference Include="Volo.Abp.Account.Application" />
         <PackageReference Include="Volo.Abp.Identity.Application" />
