@@ -76,7 +76,6 @@
     <PackageVersion Include="Volo.Abp.Authorization.Abstractions" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.AutoMapper" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Autofac" Version="$(AbpVersion)" />
-    <PackageVersion Include="Volo.Abp.Auditing" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.BackgroundJobs.Abstractions" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.BackgroundJobs.Domain" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.BackgroundJobs.Domain.Shared" Version="$(AbpVersion)" />
@@ -233,18 +232,12 @@
     <PackageVersion Include="Microsoft.SemanticKernel.Connectors.AzureAIInference" Version="1.33.0-beta" />
     <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Google" Version="1.33.0-alpha" />
 
-    <!-- Testing packages -->
-    <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
-    <PackageVersion Include="xunit" Version="2.7.0" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="2.5.7" />
-    <PackageVersion Include="coverlet.collector" Version="6.0.0" />
+    <!-- Testing packages - removed duplicates, keeping newer versions from earlier in file -->
     <PackageVersion Include="Microsoft.Orleans.Serialization.TestKit" Version="9.0.1" />
 
     <!-- Other packages -->
-    <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="JsonSchema.Net.Generation" Version="3.3.2" />
-    <PackageVersion Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="9.0.0"/>
+    <!-- Removed duplicate Newtonsoft.Json and Microsoft.AspNetCore.DataProtection.StackExchangeRedis -->
     <PackageVersion Include="BenchmarkDotNet" Version="0.13.12" />
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0" />
