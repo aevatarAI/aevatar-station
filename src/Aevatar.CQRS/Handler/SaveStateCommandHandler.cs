@@ -2,19 +2,22 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Aevatar.CQRS.Dto;
+using Amazon.Runtime.Internal.Util;
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace Aevatar.CQRS.Handler;
 
 public class SaveStateBatchCommandHandler : IRequestHandler<SaveStateBatchCommand>
 {
     private readonly IIndexingService _indexingService;
+    private readonly ILogger<SaveStateBatchCommandHandler> _logger;
 
     public SaveStateBatchCommandHandler(
-        IIndexingService indexingService
-    )
+        IIndexingService indexingService, ILogger<SaveStateBatchCommandHandler> logger)
     {
         _indexingService = indexingService;
+        _logger = logger;
     }
 
     public async Task Handle(SaveStateBatchCommand request, CancellationToken cancellationToken)
@@ -31,6 +34,7 @@ public class SaveStateBatchCommandHandler : IRequestHandler<SaveStateBatchComman
 
     private async Task SaveIndicesAsync(IEnumerable<SaveStateCommand> commands)
     {
+        _logger.LogDebug("[SaveStateBatchCommandHandler][SaveIndicesAsync] start");
         await _indexingService.SaveOrUpdateStateIndexBatchAsync(commands);
     }
 }

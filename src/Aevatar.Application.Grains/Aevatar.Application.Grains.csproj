@@ -24,6 +24,7 @@
         <PackageReference Include="Aevatar.GAgents.AIGAgent" />
         <PackageReference Include="Aevatar.GAgents.SemanticKernel" />
         <PackageReference Include="Aevatar.GAgents.AI.Abstractions" />
+        <PackageReference Include="GodGPT.GAgents" />
     </ItemGroup>
 
     <ItemGroup>

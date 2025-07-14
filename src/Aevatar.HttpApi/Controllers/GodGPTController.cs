@@ -3,15 +3,23 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+using Aevatar.Account;
+using Aevatar.Anonymous;
 using Aevatar.Application.Grains.Agents.ChatManager;
 using Aevatar.Application.Grains.Agents.ChatManager.Chat;
+using Aevatar.Application.Grains.Agents.ChatManager.Common;
+using Aevatar.Application.Grains.Agents.ChatManager.Dtos;
+using Aevatar.Application.Grains.ChatManager.Dtos;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
+using Aevatar.Extensions;
 using Aevatar.GAgents.AI.Common;
+using Aevatar.GodGPT.Dtos;
 using Aevatar.Quantum;
 using Aevatar.Service;
 using Asp.Versioning;
 using HandlebarsDotNet;
+using Json.Schema;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -29,8 +37,8 @@ namespace Aevatar.Controllers;
 
 [RemoteService]
 [ControllerName("GodGPT")]
-[Route("api/gotgpt")]
-// [Authorize]
+[Route("api")]
+[Authorize]
 public class GodGPTController : AevatarController
 {
     private readonly IGodGPTService _godGptService;
@@ -39,32 +47,49 @@ public class GodGPTController : AevatarController
     private readonly string _defaultPrompt = "you are a robot";
     private readonly IOptions<AevatarOptions> _aevatarOptions;
     private readonly ILogger<GodGPTController> _logger;
-    const string Version = "1.0.0";
+    private readonly IAccountService _accountService;
+    const string Version = "1.20.0";
 
 
     public GodGPTController(IGodGPTService godGptService, IClusterClient clusterClient,
-        IOptions<AevatarOptions> aevatarOptions, ILogger<GodGPTController> logger)
+        IOptions<AevatarOptions> aevatarOptions, ILogger<GodGPTController> logger, IAccountService accountService)
     {
         _godGptService = godGptService;
         _clusterClient = clusterClient;
         _aevatarOptions = aevatarOptions;
         _logger = logger;
+        _accountService = accountService;
     }
 
-    [HttpGet("query-version")]
+    [AllowAnonymous]
+    [HttpGet("godgpt/query-version")]
     public Task<string> QueryVersion()
     {
         return Task.FromResult(Version);
     }
 
-    [HttpPost("create-session")]
+    [HttpPost("godgpt/create-session")]
+    public async Task<Guid> CreateSessionAsync(CreateSessionRequestDto request)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var sessionId = await _godGptService.CreateSessionAsync((Guid)CurrentUser.Id!, _defaultLLM, _defaultPrompt, request.Guider);
+        _logger.LogDebug("[GodGPTController][CreateSessionAsync] sessionId: {0}, duration: {1}ms",
+            sessionId.ToString(), stopwatch.ElapsedMilliseconds);
+        return sessionId;
+    }
+    
+    //Deprecated
+    [HttpPost("gotgpt/create-session")]
     public async Task<Guid> CreateSessionAsync()
     {
-        var mockUserId = Guid.NewGuid();
-        return await _godGptService.CreateSessionAsync(mockUserId, _defaultLLM, _defaultPrompt);
+        var stopwatch = Stopwatch.StartNew();
+        var sessionId = await _godGptService.CreateSessionAsync((Guid)CurrentUser.Id!, _defaultLLM, _defaultPrompt, "");
+        _logger.LogDebug("[GodGPTController][CreateSessionAsync] sessionId: {0}, duration: {1}ms",
+            sessionId.ToString(), stopwatch.ElapsedMilliseconds);
+        return sessionId;
     }
 
-    [HttpPost("chat_old")]
+    [HttpPost("gotgpt/chat_old")]
     public async Task<QuantumChatResponseDto> ChatWithSessionAsync(QuantumChatRequestDto request)
     {
         var stopwatch = Stopwatch.StartNew();
@@ -81,7 +106,7 @@ public class GodGPTController : AevatarController
 
         var chatId = Guid.NewGuid().ToString();
         await godChat.StreamChatWithSessionAsync(request.SessionId, string.Empty, request.Content,
-            chatId, null, true);
+            chatId, null, true, request.Region);
         _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] http request llm:{request.SessionId}");
         var exitSignal = new TaskCompletionSource();
         StreamSubscriptionHandle<ResponseStreamGodChat>? subscription = null;
@@ -158,27 +183,315 @@ public class GodGPTController : AevatarController
         };
     }
 
-    [HttpGet("session-list")]
+    [HttpGet("godgpt/session-list")]
     public async Task<List<SessionInfoDto>> GetSessionListAsync()
     {
-        return await _godGptService.GetSessionListAsync((Guid)CurrentUser.Id!);
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var sessionList = await _godGptService.GetSessionListAsync(currentUserId);
+        _logger.LogDebug("[GodGPTController][GetSessionListAsync] userId: {0}, duration: {1}ms",
+            currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
+        return sessionList;
     }
 
-    [HttpGet("{sessionId}/chat-history")]
+    [HttpGet("godgpt/sessions/search")]
+    public async Task<List<SessionInfoDto>> SearchSessionsAsync([FromQuery] string keyword)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        
+        if (string.IsNullOrWhiteSpace(keyword))
+        {
+            return new List<SessionInfoDto>();
+        }
+        
+        var searchResults = await _godGptService.SearchSessionsAsync(currentUserId, keyword);
+        _logger.LogDebug("[GodGPTController][SearchSessionsAsync] userId: {0}, keyword: {1}, results: {2}, duration: {3}ms",
+            currentUserId, keyword, searchResults.Count, stopwatch.ElapsedMilliseconds);
+        return searchResults;
+    }
+
+    [AllowAnonymous]
+    [HttpGet("godgpt/session-info/{sessionId}")]
+    public async Task<Aevatar.Quantum.SessionCreationInfoDto?> GetSessionCreationInfoAsync(Guid sessionId, [FromQuery] string? shareId = null)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        Guid currentUserId;
+        
+        // Check if shareId is provided
+        if (!string.IsNullOrWhiteSpace(shareId))
+        {
+            try
+            {
+                // Extract userId from shareId using GuidCompressor
+                (currentUserId, var extractedSessionId, var extractedShareId) = GuidCompressor.DecompressGuids(shareId);
+                
+                // Validate that the sessionId matches
+                if (extractedSessionId != sessionId)
+                {
+                    _logger.LogWarning("[GodGPTController][GetSessionCreationInfoAsync] SessionId mismatch. URL sessionId: {0}, extracted sessionId: {1}", 
+                        sessionId, extractedSessionId);
+                    return new Aevatar.Quantum.SessionCreationInfoDto();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[GodGPTController][GetSessionCreationInfoAsync] Failed to decompress shareId: {0}", shareId);
+                return new Aevatar.Quantum.SessionCreationInfoDto();
+            }
+        }
+        else
+        {
+            // Regular sessionId format - requires authentication
+            if (CurrentUser?.Id == null)
+            {
+                _logger.LogWarning("[GodGPTController][GetSessionCreationInfoAsync] Authentication required for regular sessionId access");
+                return new Aevatar.Quantum.SessionCreationInfoDto();
+            }
+            currentUserId = (Guid)CurrentUser.Id!;
+        }
+        
+        // Validate sessionId format (Guid validation is automatic by ASP.NET Core)
+        if (sessionId == Guid.Empty)
+        {
+            _logger.LogWarning("[GodGPTController][GetSessionCreationInfoAsync] Invalid sessionId: {0}", sessionId);
+            return new Aevatar.Quantum.SessionCreationInfoDto();
+        }
+
+        var sessionInfo = await _godGptService.GetSessionCreationInfoAsync(currentUserId, sessionId);
+        _logger.LogDebug("[GodGPTController][GetSessionCreationInfoAsync] sessionId: {0}, userId: {1}, found: {2}, duration: {3}ms",
+            sessionId, currentUserId, sessionInfo != null, stopwatch.ElapsedMilliseconds);
+        
+        return sessionInfo;
+    }
+
+    [HttpGet("godgpt/chat/{sessionId}")]
     public async Task<List<ChatMessage>> GetSessionMessageListAsync(Guid sessionId)
     {
-        return await _godGptService.GetSessionMessageListAsync((Guid)CurrentUser.Id!, sessionId);
+        var stopwatch = Stopwatch.StartNew();
+        var chatMessages = await _godGptService.GetSessionMessageListAsync((Guid)CurrentUser.Id!, sessionId);
+        _logger.LogDebug("[GodGPTController][GetSessionMessageListAsync] sessionId: {0}, duration: {1}ms",
+            sessionId, stopwatch.ElapsedMilliseconds);
+        return chatMessages;
     }
 
-    [HttpDelete("{sessionId}")]
-    public async Task DeleteSessionAsync(Guid sessionId)
+    [HttpPut("godgpt/chat/rename")]
+    public async Task<Guid> RenameSessionAsync(QuantumRenameDto request)
     {
-        await _godGptService.DeleteSessionAsync((Guid)CurrentUser.Id!, sessionId);
+        var stopwatch = Stopwatch.StartNew();
+        var sessionId =
+            await _godGptService.RenameSessionAsync((Guid)CurrentUser.Id!, request.SessionId, request.Title);
+        _logger.LogDebug("[GodGPTController][RenameSessionAsync] sessionId: {0}, duration: {1}ms",
+            sessionId, stopwatch.ElapsedMilliseconds);
+        return sessionId;
     }
 
-    [HttpPut("rename")]
-    public async Task RenameSessionAsync(QuantumRenameDto request)
+    [HttpDelete("godgpt/chat/{sessionId}")]
+    public async Task<Guid> DeleteSessionAsync(Guid sessionId)
     {
-        await _godGptService.RenameSessionAsync((Guid)CurrentUser.Id!, request.SessionId, request.Title);
+        var stopwatch = Stopwatch.StartNew();
+        var deleteSessionId = await _godGptService.DeleteSessionAsync((Guid)CurrentUser.Id!, sessionId);
+        _logger.LogDebug("[GodGPTController][DeleteSessionAsync] sessionId: {0}, duration: {1}ms",
+            deleteSessionId, stopwatch.ElapsedMilliseconds);
+        return deleteSessionId;
+    }
+
+    [HttpGet("godgpt/account")]
+    public async Task<UserProfileDto> GetUserProfileAsync()
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var userProfileDto = await _godGptService.GetUserProfileAsync(currentUserId);
+        _logger.LogDebug("[GodGPTController][GetUserProfileAsync] userId: {0}, duration: {1}ms",
+            currentUserId, stopwatch.ElapsedMilliseconds);
+        return userProfileDto;
+    }
+
+    [HttpPut("godgpt/account")]
+    public async Task<Guid> SetUserProfileAsync(SetUserProfileInput userProfile)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var updateUserId = await _godGptService.SetUserProfileAsync(currentUserId, userProfile);
+        _logger.LogDebug("[GodGPTController][SetUserProfileAsync] sessionId: {0}, duration: {1}ms",
+            updateUserId, stopwatch.ElapsedMilliseconds);
+        return updateUserId;
+    }
+
+    [HttpDelete("godgpt/account")]
+    public async Task<Guid> DeleteAccountAsync()
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var deleteUserId = await _godGptService.DeleteAccountAsync(currentUserId);
+        _logger.LogDebug("[GodGPTController][SetUserProfileAsync] sessionId: {0}, duration: {1}ms",
+            deleteUserId, stopwatch.ElapsedMilliseconds);
+        return deleteUserId;
+    }
+
+    [HttpPost("godgpt/account/show-toast")]
+    public async Task<Guid> UpdateShowToastAsync()
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        await _godGptService.UpdateShowToastAsync(currentUserId);
+        _logger.LogDebug("[GodGPTController][UpdateShowToastAsync] userId: {0}, duration: {1}ms",
+            currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
+        return currentUserId;
+    }
+    
+    [HttpPost("godgpt/account/credits")]
+    public async Task<GrainResultDto<int>> UpdateUserCreditsAsync(UpdateUserCreditsInput input)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var resultDto = await _godGptService.UpdateUserCreditsAsync(currentUserId, input);
+        _logger.LogDebug("[GodGPTController][UpdateUserCreditsAsync] userId: {0}, duration: {1}ms",
+            currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
+        return resultDto;
+    }
+
+    [HttpPost("godgpt/share")]
+    public async Task<CreateShareIdResponse> CreateShareStringAsync(CreateShareIdRequest request)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var response = await _godGptService.GenerateShareContentAsync(currentUserId, request);
+        _logger.LogDebug("[GodGPTController][CreateShareStringAsync] userId: {0} sessionId: {1}, ShareId={2}, duration: {3}ms",
+            currentUserId, request.SessionId, response.ShareId, stopwatch.ElapsedMilliseconds);
+        return response;
+    }
+
+    [AllowAnonymous]
+    [HttpGet("godgpt/share/{shareString}")]
+    public async Task<List<ChatMessage>> GetShareMessageListAsync(string shareString)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var response = await _godGptService.GetShareMessageListAsync(shareString);
+        _logger.LogDebug("[GodGPTController][GetShareMessageListAsync] shareString: {0} duration: {1}ms",
+            shareString, stopwatch.ElapsedMilliseconds);
+        return response;
+    }
+
+    /// <summary>
+    /// Check if the email is registered. Returns a strict structure for frontend compatibility.
+    /// </summary>
+    /// <param name="email">Email address to check</param>
+    /// <returns>Registration status in strict JSON structure</returns>
+    [AllowAnonymous]
+    [HttpGet("godgpt/check-email-registered")]
+    public async Task<IActionResult> CheckEmailRegisteredAsync([FromQuery] string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return BadRequest(new
+            {
+                error = new { code = 1, message = "Email is required" },
+                result = false
+            });
+        }
+        var result = await _accountService.VerifyEmailRegistrationWithTimeAsync(new CheckEmailRegisteredDto { EmailAddress = email });
+        if (result)
+        {
+            return Ok(new { result = true });
+        }
+        else
+        {
+            return Ok(new
+            {
+                error = new { code = 0, message = "User not registered" },
+                result = false
+            });
+        }
+    }
+
+    #region Guest Chat APIs for Anonymous Users
+
+    /// <summary>
+    /// Create guest session for anonymous users
+    /// </summary>
+    [AllowAnonymous]
+    [HttpPost("godgpt/guest/create-session")]
+    public async Task<IActionResult> CreateGuestSessionAsync([FromBody] CreateGuestSessionRequestDto request)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var clientIp = HttpContext.GetClientIpAddress();
+        var userHashId = CommonHelper.GetAnonymousUserGAgentId(clientIp).Replace("AnonymousUser_", "");
+        
+        try
+        {
+            // Always check limits first to provide graceful response
+            var limits = await _godGptService.GetGuestChatLimitsAsync(clientIp);
+            
+            // If no remaining chats, return limits info without creating session
+            if (limits.RemainingChats <= 0)
+            {
+                _logger.LogDebug("[GodGPTController][CreateGuestSessionAsync] User: {0} has no remaining chats, returning limits", userHashId);
+                return Ok(new CreateGuestSessionResponseDto
+                {
+                    RemainingChats = limits.RemainingChats,
+                    TotalAllowed = limits.TotalAllowed
+                });
+            }
+            
+            // User has remaining chats, proceed with session creation
+            var result = await _godGptService.CreateGuestSessionAsync(clientIp, request.Guider);
+            _logger.LogDebug("[GodGPTController][CreateGuestSessionAsync] User: {0}, guider: {1}, remaining: {2}, duration: {3}ms",
+                userHashId, request.Guider, result.RemainingChats, stopwatch.ElapsedMilliseconds);
+            
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[GodGPTController][CreateGuestSessionAsync] User: {0}, unexpected error", userHashId);
+            // Return default limits instead of error
+            return Ok(new CreateGuestSessionResponseDto
+            {
+                RemainingChats = 0,
+                TotalAllowed = 3
+            });
+        }
+    }
+
+    /// <summary>
+    /// Get chat limits for anonymous users
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("godgpt/guest/limits")]
+    public async Task<IActionResult> GetGuestChatLimitsAsync()
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var clientIp = HttpContext.GetClientIpAddress();
+        var userHashId = CommonHelper.GetAnonymousUserGAgentId(clientIp).Replace("AnonymousUser_", "");
+        
+        try
+        {
+            var result = await _godGptService.GetGuestChatLimitsAsync(clientIp);
+            _logger.LogDebug("[GodGPTController][GetGuestChatLimitsAsync] User: {0}, remaining: {1}, duration: {2}ms",
+                userHashId, result.RemainingChats, stopwatch.ElapsedMilliseconds);
+            
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[GodGPTController][GetGuestChatLimitsAsync] User: {0}, unexpected error", userHashId);
+            return StatusCode(500, new { error = "Internal server error" });
+        }
+    }
+
+    #endregion
+    
+    [HttpGet("godgpt/share/keyword")]
+    public async Task<QuantumShareResponseDto> GetShareKeyWordWithAIAsync(
+        [FromQuery] Guid sessionId, 
+        [FromQuery] string? content, 
+        [FromQuery] string? region, 
+        [FromQuery] SessionType sessionType)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var response = await _godGptService.GetShareKeyWordWithAIAsync(sessionId, content, region, sessionType);
+        _logger.LogDebug(
+            $"[GodGPTController][GetShareKeyWordWithAIAsync] completed for sessionId={sessionId}, duration: {stopwatch.ElapsedMilliseconds}ms");
+        return response;
     }
 }

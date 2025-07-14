@@ -1,4 +1,5 @@
 using System.Net;
+using Aevatar.Application.Grains;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
@@ -9,6 +10,7 @@ using Aevatar.GAgents.SemanticKernel.Extensions;
 using Aevatar.Extensions;
 using Aevatar.PermissionManagement.Extensions;
 using Aevatar.SignalR;
+using Aevatar.Silo.Startup;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,6 +20,7 @@ using MongoDB.Driver;
 using Newtonsoft.Json;
 using Orleans.Configuration;
 using Orleans.Providers.MongoDB.Configuration;
+using Orleans.Providers.MongoDB.StorageProviders.Serializers;
 using Orleans.Serialization;
 using Orleans.Streams.Kafka.Config;
 
@@ -59,6 +62,8 @@ public static class OrleansHostExtension
                             settings.NullValueHandling = NullValueHandling.Include;
                             settings.DefaultValueHandling = DefaultValueHandling.Populate;
                             settings.ObjectCreationHandling = ObjectCreationHandling.Replace;
+                            settings.TypeNameHandling = TypeNameHandling.Auto;
+                            settings.SerializationBinder = new GodGPTSerializationBinder();
                         })
                     .AddMongoDBGrainStorage("Default", (MongoDBGrainStorageOptions op) =>
                     {
@@ -84,6 +89,9 @@ public static class OrleansHostExtension
                         options.SupportedNamespacePrefixes.Add("Autofac.Core");
                     })
                     .AddActivityPropagation()
+                    // Register our StateProjectionInitializer as a startup task
+                    // This will run during silo startup at ServiceLifecycleStage.ApplicationServices (default)
+                    .AddStartupTask<StateProjectionInitializer>()
                     // .UsePluginGAgents()
                     .UseDashboard(options =>
                     {
@@ -163,6 +171,7 @@ public static class OrleansHostExtension
                 // .RegisterHub<AevatarSignalRHub>();
             }).ConfigureServices((context, services) =>
             {
+                services.AddSingleton<IGrainStateSerializer, HybridGrainStateSerializer>();
                 services.Configure<QdrantConfig>(context.Configuration.GetSection("VectorStores:Qdrant"));
                 services.Configure<SystemLLMConfigOptions>(context.Configuration);
                 services.Configure<AzureOpenAIEmbeddingsConfig>(

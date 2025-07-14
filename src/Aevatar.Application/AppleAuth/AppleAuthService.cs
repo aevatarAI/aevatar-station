@@ -32,7 +32,12 @@ public class AppleAuthService : ApplicationService, IAppleAuthService
         var idToken = callbackDto.Id_token;
         var code = callbackDto.Code;
 
-        return GetRedirectUrl(_appleAuthOptions.CurrentValue.RedirectUrl, idToken, code, platform);
+        if (!_appleAuthOptions.CurrentValue.RedirectUrls.TryGetValue(platform, out var redirectUrl))
+        {
+            redirectUrl = string.Empty;
+        }
+
+        return GetRedirectUrl(redirectUrl, idToken, code, platform);
     }
     
     private static string GetRedirectUrl(string redirectUrl, string token, string code, string platform)

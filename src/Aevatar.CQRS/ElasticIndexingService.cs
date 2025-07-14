@@ -157,6 +157,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
 
     public async Task SaveOrUpdateStateIndexBatchAsync(IEnumerable<SaveStateCommand> commands)
     {
+        _logger.LogDebug("[ElasticIndexingService][SaveOrUpdateStateIndexBatchAsync] start");
         var bulkOperations = new BulkOperationsCollection();
 
         foreach (var command in commands)
@@ -204,6 +205,8 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         var response = await _elasticClient.BulkAsync(bulkRequest);
 
         ProcessBulkResponse(response);
+        
+        _logger.LogDebug("[ElasticIndexingService][SaveOrUpdateStateIndexBatchAsync] end");
     }
 
     private void ProcessBulkResponse(BulkResponse response)
