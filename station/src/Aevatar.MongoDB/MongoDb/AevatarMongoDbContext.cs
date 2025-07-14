@@ -1,6 +1,8 @@
 ﻿using Aevatar.ApiKey;
+using Aevatar.ApiRequests;
 using Aevatar.Notification;
 using Aevatar.Permissions;
+using Aevatar.Plugins;
 using Aevatar.User;
 using MongoDB.Driver;
 using Volo.Abp.AuditLogging.MongoDB;
@@ -23,6 +25,8 @@ public class AevatarMongoDbContext : AbpMongoDbContext
      */
     public IMongoCollection<IdentityUserExtension> IdentityUserExtensionInfos { get; private set; }
     public IMongoCollection<StatePermission> StatePermissionInfos { get; private set; }
+    public IMongoCollection<ApiRequestSnapshot> ApiRequestSnapshots { get; private set; }
+    public IMongoCollection<Plugin> Plugins { get; private set; }
 
 
     protected override void CreateModel(IMongoModelBuilder modelBuilder)
@@ -44,5 +48,7 @@ public class AevatarMongoDbContext : AbpMongoDbContext
         modelBuilder.Entity<IdentityUserExtension>(b => { b.CollectionName = "IdentityUserExtensions"; });
         modelBuilder.Entity<ProjectAppIdInfo>(b => b.CollectionName = "ProjectAppInfoCollection");
         modelBuilder.Entity<NotificationInfo>(b => b.CollectionName = "NotificationInfoCollection");
+        modelBuilder.Entity<ApiRequestSnapshot>(b => b.CollectionName = "ApiRequestSnapshots");
+        modelBuilder.Entity<Plugin>(b => b.CollectionName = "Plugins");
     }
 }

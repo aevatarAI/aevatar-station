@@ -6,11 +6,13 @@ using Aevatar.Agents.Creator.GEvents;
 using Aevatar.Agents.Creator.Models;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
+using Aevatar.Station.Feature.CreatorGAgent;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace Aevatar.Application.Grains.Agents.Creator;
 
+[GAgent]
 public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>, ICreatorGAgent
 {
     private readonly ILogger<CreatorGAgent> _logger;
@@ -43,7 +45,8 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
             AgentType = agentData.AgentType,
             Properties = agentData.Properties,
             Name = agentData.Name,
-            BusinessAgentGrainId = agentData.BusinessAgentGrainId
+            BusinessAgentGrainId = agentData.BusinessAgentGrainId,
+            FormattedBusinessAgentGrainId = agentData.BusinessAgentGrainId.ToString()
         });
         await ConfirmEvents();
     }
@@ -119,6 +122,7 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
                 State.Name = createAgentGEvent.Name;
                 State.BusinessAgentGrainId = createAgentGEvent.BusinessAgentGrainId;
                 State.CreateTime = DateTime.Now;
+                State.FormattedBusinessAgentGrainId = createAgentGEvent.FormattedBusinessAgentGrainId;
                 break;
             case UpdateAgentGEvent updateAgentGEvent:
                 State.Properties = updateAgentGEvent.Properties;

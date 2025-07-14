@@ -5,7 +5,7 @@
     <DisableStaticWebAssets>true</DisableStaticWebAssets>
   </PropertyGroup>
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
     <Nullable>enable</Nullable>
     <RootNamespace>Aevatar</RootNamespace>
     <PreserveCompilationReferences>true</PreserveCompilationReferences>
@@ -35,9 +35,8 @@
     <PackageReference Include="MongoDB.Driver" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
     <PackageReference Include="Microsoft.CodeAnalysis.Common" />
-    <PackageReference Include="Aevatar.SignalR" />
     <PackageReference Include="Orleans.Streams.Kafka" />
-
+    <PackageReference Include="Volo.Abp.BlobStoring.Aws" />
   </ItemGroup>
 
   <ItemGroup>
@@ -45,6 +44,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\signalR\src\Aevatar.SignalR\Aevatar.SignalR.csproj" />
     <ProjectReference Include="..\Aevatar.Application\Aevatar.Application.csproj" />
     <ProjectReference Include="..\Aevatar.HttpApi.Admin\Aevatar.HttpApi.Admin.csproj" />
     <ProjectReference Include="..\Aevatar.MongoDB\Aevatar.MongoDB.csproj" />
@@ -55,5 +55,8 @@
     <Content Remove="Logs\**" />
     <EmbeddedResource Remove="Logs\**" />
     <None Remove="Logs\**" />
+    <Content Include="../../configurations/appsettings.Shared.json" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" Link="appsettings.Shared.json" />
+    <Content Include="../../configurations/appsettings.HttpApi.Host.Shared.json" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" Link="appsettings.HttpApi.Host.Shared.json" />
+    <Content Include="../../configurations/appsettings.Silo.Shared.json" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" Link="appsettings.Silo.Shared.json" />
   </ItemGroup>
 </Project>

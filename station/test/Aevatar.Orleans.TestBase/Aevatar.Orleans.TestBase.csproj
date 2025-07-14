@@ -1,12 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
+<<<<<<< HEAD
         <TargetFramework>net9.0</TargetFramework>
+=======
+        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+>>>>>>> origin/dev
         <Nullable>enable</Nullable>
         <RootNamespace>Aevatar</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
+<<<<<<< HEAD
         <PackageReference Include="coverlet.collector" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" />
         <PackageReference Include="Moq" />
@@ -25,6 +30,12 @@
         <PackageReference Include="Aevatar" />
         <PackageReference Include="Aevatar.Core" />
         <PackageReference Include="Aevatar.EventSourcing.Core" />
+=======
+        <PackageReference Include="Microsoft.Extensions.Logging" />
+        <PackageReference Include="Microsoft.Orleans.TestingHost" />
+        <PackageReference Include="Volo.Abp.ObjectMapping" />
+        <PackageReference Include="Volo.Abp.EventBus" />
+>>>>>>> origin/dev
     </ItemGroup>
 
     <ItemGroup>

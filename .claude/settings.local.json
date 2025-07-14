@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(chmod:*)",
+      "Bash(dotnet build)",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet run:*)",
+      "Bash(ls:*)",
+      "Bash(./cleanup-unused-files.sh:*)",
+      "mcp__ide__executeCode",
+      "mcp__sequentialthinking__sequentialthinking",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(gh pr create:*)",
+      "Bash(dotnet list:*)",
+      "Bash(dotnet restore:*)",
+      "Bash(dotnet nuget locals:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true
+}

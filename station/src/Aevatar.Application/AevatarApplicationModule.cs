@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Linq;
 using Aevatar.Account;
+using Aevatar.ApiRequests;
 using Aevatar.Application.Grains;
+using Aevatar.BlobStorings;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
@@ -9,6 +11,7 @@ using Aevatar.Kubernetes;
 using Aevatar.Kubernetes.Manager;
 using Aevatar.Notification;
 using Aevatar.Options;
+using Aevatar.Plugins;
 using Aevatar.Profiles;
 using Aevatar.Schema;
 using Aevatar.Service;
@@ -18,6 +21,7 @@ using Orleans;
 using Volo.Abp.Account;
 using Volo.Abp.AspNetCore.Mvc.Dapr;
 using Volo.Abp.AutoMapper;
+using Volo.Abp.BlobStoring;
 using Volo.Abp.Dapr;
 using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
@@ -40,7 +44,10 @@ namespace Aevatar;
     typeof(AevatarWebhookDeployModule),
     typeof(AevatarKubernetesModule),
     typeof(AbpAutoMapperModule),
-    typeof(AbpEventBusModule)
+    typeof(AbpEventBusModule),
+    typeof(AevatarPluginsModule),
+    typeof(AevatarModule),
+    typeof(AbpBlobStoringModule)
 )]
 public class AevatarApplicationModule : AbpModule
 {
@@ -58,8 +65,6 @@ public class AevatarApplicationModule : AbpModule
         
         var configuration = context.Services.GetConfiguration();
         Configure<NameContestOptions>(configuration.GetSection("NameContest"));
-        context.Services.AddSingleton<IGAgentFactory>(sp => new GAgentFactory(context.Services.GetRequiredService<IClusterClient>()));
-        context.Services.AddSingleton<IGAgentManager>(sp => new GAgentManager(context.Services.GetRequiredService<IClusterClient>()));
         context.Services.AddSingleton<ISchemaProvider, SchemaProvider>();
         Configure<WebhookDeployOptions>(configuration.GetSection("WebhookDeploy"));
         Configure<AgentOptions>(configuration.GetSection("Agent"));
@@ -70,6 +75,11 @@ public class AevatarApplicationModule : AbpModule
         context.Services.Configure<AppleAuthOption>(configuration.GetSection("AppleAuth"));
         
         Configure<AccountOptions>(configuration.GetSection("Account"));
+<<<<<<< HEAD
         context.Services.AddTransient<IProfileService, ProfileService>();
+=======
+        Configure<ApiRequestOptions>(configuration.GetSection("ApiRequest"));
+        Configure<BlobStoringOptions>(configuration.GetSection("BlobStoring"));
+>>>>>>> origin/dev
     }
 }

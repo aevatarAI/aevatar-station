@@ -2,27 +2,24 @@ using System;
 using System.IO;
 using System.Linq;
 using AElf.OpenTelemetry;
-using Aevatar.Handler;
 using Aevatar.MongoDB;
-using Aevatar.Options;
 using Aevatar.Permissions;
 using AutoResponseWrapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors;
-using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
-using StackExchange.Redis;
 using Volo.Abp;
 using Volo.Abp.Account.Web;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
+using Volo.Abp.BlobStoring;
+using Volo.Abp.BlobStoring.Aws;
 using Volo.Abp.Modularity;
 using Volo.Abp.Swashbuckle;
 using Volo.Abp.Threading;
@@ -39,7 +36,8 @@ namespace Aevatar.Developer.Host;
     typeof(AbpAccountWebOpenIddictModule),
     typeof(AbpAspNetCoreSerilogModule),
     typeof(AbpSwashbuckleModule),
-    typeof(OpenTelemetryModule)
+    typeof(OpenTelemetryModule),
+    typeof(AbpBlobStoringAwsModule)
 )]
 public class AevatarDeveloperHostModule : AbpModule
 {
@@ -48,28 +46,27 @@ public class AevatarDeveloperHostModule : AbpModule
         context.Services.AddHealthChecks();
         context.Services.AddAutoResponseWrapper();
         var configuration = context.Services.GetConfiguration();
-        var hostingEnvironment = context.Services.GetHostingEnvironment();
         ConfigureAuthentication(context, configuration);
         ConfigureVirtualFileSystem(context);
         ConfigureCors(context, configuration);
         ConfigureSwaggerServices(context, configuration);
-        Configure<GoogleLoginOptions>(configuration.GetSection("GoogleLogin"));
         context.Services.AddMvc(options => { options.Filters.Add(new IgnoreAntiforgeryTokenAttribute()); })
             .AddNewtonsoftJson();
-        ConfigureDataProtection(context, configuration, hostingEnvironment);
-    }
-    
-    private void ConfigureDataProtection(
-        ServiceConfigurationContext context,
-        IConfiguration configuration,
-        IWebHostEnvironment hostingEnvironment)
-    {
-        var dataProtectionBuilder = context.Services.AddDataProtection().SetApplicationName("AevatarAuthServer");
-        if (!hostingEnvironment.IsDevelopment())
+        
+        Configure<AbpBlobStoringOptions>(options =>
         {
-            var redis = ConnectionMultiplexer.Connect(configuration["Redis:Configuration"]);
-            dataProtectionBuilder.PersistKeysToStackExchangeRedis(redis, "Aevatar-DataProtection-Keys");
-        }
+            options.Containers.ConfigureDefault(container =>
+            {
+                var configSection = configuration.GetSection("AwsS3");
+                container.UseAws(o =>
+                {
+                    o.AccessKeyId = configSection.GetValue<string>("AccessKeyId");
+                    o.SecretAccessKey = configSection.GetValue<string>("SecretAccessKey");
+                    o.Region = configSection.GetValue<string>("Region");
+                    o.ContainerName = configSection.GetValue<string>("ContainerName");
+                }); 
+            });
+        });
     }
 
     private void ConfigureAuthentication(ServiceConfigurationContext context, IConfiguration configuration)
@@ -90,21 +87,21 @@ public class AevatarDeveloperHostModule : AbpModule
 
         if (hostingEnvironment.IsDevelopment())
         {
-            // Configure<AbpVirtualFileSystemOptions>(options =>
-            // {
-            //     options.FileSets.ReplaceEmbeddedByPhysical<AevatarDomainSharedModule>(
-            //         Path.Combine(hostingEnvironment.ContentRootPath,
-            //             $"..{Path.DirectorySeparatorChar}Aevatar.Domain.Shared"));
-            //     options.FileSets.ReplaceEmbeddedByPhysical<AevatarDomainModule>(
-            //         Path.Combine(hostingEnvironment.ContentRootPath,
-            //             $"..{Path.DirectorySeparatorChar}Aevatar.Domain"));
-            //     options.FileSets.ReplaceEmbeddedByPhysical<AevatarApplicationContractsModule>(
-            //         Path.Combine(hostingEnvironment.ContentRootPath,
-            //             $"..{Path.DirectorySeparatorChar}Aevatar.Application.Contracts"));
-            //     options.FileSets.ReplaceEmbeddedByPhysical<AevatarApplicationModule>(
-            //         Path.Combine(hostingEnvironment.ContentRootPath,
-            //             $"..{Path.DirectorySeparatorChar}Aevatar.Application"));
-            // });
+            Configure<AbpVirtualFileSystemOptions>(options =>
+            {
+                options.FileSets.ReplaceEmbeddedByPhysical<AevatarDomainSharedModule>(
+                    Path.Combine(hostingEnvironment.ContentRootPath,
+                        $"..{Path.DirectorySeparatorChar}Aevatar.Domain.Shared"));
+                options.FileSets.ReplaceEmbeddedByPhysical<AevatarDomainModule>(
+                    Path.Combine(hostingEnvironment.ContentRootPath,
+                        $"..{Path.DirectorySeparatorChar}Aevatar.Domain"));
+                options.FileSets.ReplaceEmbeddedByPhysical<AevatarApplicationContractsModule>(
+                    Path.Combine(hostingEnvironment.ContentRootPath,
+                        $"..{Path.DirectorySeparatorChar}Aevatar.Application.Contracts"));
+                options.FileSets.ReplaceEmbeddedByPhysical<AevatarApplicationModule>(
+                    Path.Combine(hostingEnvironment.ContentRootPath,
+                        $"..{Path.DirectorySeparatorChar}Aevatar.Application"));
+            });
         }
     }
 
@@ -183,13 +180,7 @@ public class AevatarDeveloperHostModule : AbpModule
 
         app.UseUnitOfWork();
         app.UseDynamicClaims();
-        app.Map("/api/gotgpt/chat", config => { config.UseMiddleware<ChatMiddleware>(); });
-        app.Map("/api/godgpt/guest/chat", config => { config.UseMiddleware<ChatMiddleware>(); });
-        app.UseEndpoints(endpoints =>
-        {
-            endpoints.MapHealthChecks("/health");
-            endpoints.MapControllers();
-        });
+        app.UseEndpoints(endpoints => { endpoints.MapHealthChecks("/health"); });
         app.UseSwagger();
         app.UseAbpSwaggerUI(c =>
         {

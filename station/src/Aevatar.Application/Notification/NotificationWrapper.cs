@@ -80,9 +80,9 @@ public class NotificationWrapper
             case NotificationStatusEnum.Refuse:
                 await ExecuteMethod("HandleRefuseAsync", parameters);
                 break;
-            case NotificationStatusEnum.Read:
-                await ExecuteMethod("HandleReadAsync", parameters);
-                break;
+            // case NotificationStatusEnum.Read:
+            //     await ExecuteMethod("HandleReadAsync", parameters);
+            //     break;
             case NotificationStatusEnum.Ignore:
                 await ExecuteMethod("HandleIgnoreAsync", parameters);
                 break;
@@ -104,7 +104,7 @@ public class NotificationWrapper
             return;
         }
 
-        var task = (Task)method.Invoke(_handlerInstance, parameter);
+        var task = (Task)method.Invoke(_handlerInstance, parameter)!;
         await task;
     }
 

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <RootNamespace>Aevatar.Cqrs.Tests</RootNamespace>
@@ -12,6 +12,8 @@
         <ProjectReference Include="..\Aevatar.Application.Tests\Aevatar.Application.Tests.csproj" />
         <ProjectReference Include="..\Aevatar.Domain.Tests\Aevatar.Domain.Tests.csproj" />
         <ProjectReference Include="..\Aevatar.Orleans.TestBase\Aevatar.Orleans.TestBase.csproj" />
+        <ProjectReference Include="..\..\src\Aevatar.CQRS\Aevatar.CQRS.csproj" />
+        <ProjectReference Include="..\..\src\Aevatar.Station.Feature\Aevatar.Station.Feature.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -20,6 +22,10 @@
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" />
         <PackageReference Include="Microsoft.Orleans.TestingHost" />
+        <PackageReference Include="coverlet.collector">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
     </ItemGroup>
 
     <ItemGroup>

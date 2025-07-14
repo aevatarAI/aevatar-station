@@ -1,4 +1,8 @@
 using System;
+<<<<<<< HEAD
+=======
+using System.Collections.Generic;
+>>>>>>> origin/dev
 using Aevatar.Code.GEvents;
 using Aevatar.Core.Abstractions;
 using Orleans;
@@ -9,6 +13,7 @@ namespace Aevatar.Code;
 public class CodeGAgentState : StateBase
 {
     [Id(0)] public Guid Id { get; set; }
+<<<<<<< HEAD
     
     [Id(1)] public string WebhookId { get; set; }
     [Id(2)] public string WebhookVersion { get; set; }
@@ -22,4 +27,26 @@ public class CodeGAgentState : StateBase
         WebhookVersion = addCodeAgentGEvent.WebhookVersion;
         Code = addCodeAgentGEvent.Code;
     }
+=======
+
+    [Id(1)] public string WebhookId { get; set; }
+    [Id(2)] public string WebhookVersion { get; set; }
+
+    [Id(3)] public Dictionary<string, byte[]> CodeFiles { get; set; } = new();
+
+    public void Apply(AddCodeAgentGEvent addCodeAgentGEvent)
+    {
+        WebhookId = addCodeAgentGEvent.WebhookId;
+        WebhookVersion = addCodeAgentGEvent.WebhookVersion;
+        CodeFiles = addCodeAgentGEvent.CodeFiles;
+    }
+}
+
+[GenerateSerializer]
+public class AddCodeAgentGEvent : CodeAgentGEvent
+{
+    [Id(0)] public string WebhookId { get; set; }
+    [Id(1)] public string WebhookVersion { get; set; }
+    [Id(3)] public Dictionary<string, byte[]> CodeFiles { get; set; }
+>>>>>>> origin/dev
 }

@@ -13,4 +13,8 @@ public class SendRegisterCodeDto
     
     [Required]
     public string AppName { get; set; }
+    
+    [Required]
+    [DynamicStringLength(typeof(IdentityUserConsts), nameof(IdentityUserConsts.MaxUserNameLength))]
+    public string UserName { get; set; }
 }

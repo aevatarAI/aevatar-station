@@ -1,4 +1,6 @@
 using Aevatar.CQRS;
+using Aevatar.GAgents.Twitter;
+using Aevatar.Neo4JStore;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.AutoMapper;
 using Volo.Abp.EventBus;
@@ -12,7 +14,9 @@ namespace Aevatar.Application.Grains;
     typeof(AbpEventBusModule),
     typeof(AevatarApplicationContractsModule),
     typeof(AevatarCQRSModule),
-    typeof(GodGPTGAgentModule)
+    typeof(GodGPTGAgentModule),
+    typeof(AevatarNeo4JStoreModule),
+    typeof(AevatarGAgentsTwitterModule)
 )]
 public class AIApplicationGrainsModule : AbpModule
  

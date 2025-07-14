@@ -42,6 +42,13 @@ public class AccountController : AevatarController
     }
 
     [HttpPost]
+    [Route("verify-register-code")]
+    public virtual Task<bool> VerifyRegisterCodeAsync(VerifyRegisterCodeDto input)
+    {
+        return _accountService.VerifyRegisterCodeAsync(input);
+    }
+
+    [HttpPost]
     [Route("send-password-reset-code")]
     public virtual Task SendPasswordResetCodeAsync(SendPasswordResetCodeDto input)
     {

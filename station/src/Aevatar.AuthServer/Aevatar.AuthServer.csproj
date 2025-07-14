@@ -1,15 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <RootNamespace>Aevatar</RootNamespace>
-
         <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
         <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
         <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
-            
     </PropertyGroup>
 
     <ItemGroup>
@@ -21,13 +19,12 @@
         </None>
     </ItemGroup>
 
-
-
     <ItemGroup>
         <PackageReference Include="AElf.Types" />
         <PackageReference Include="Google.Apis.Auth" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
         <PackageReference Include="Microsoft.Orleans.Core" />
+        <PackageReference Include="Octokit" />
         <PackageReference Include="Serilog" />
         <PackageReference Include="Serilog.Extensions.Hosting" />
         <PackageReference Include="Serilog.Formatting.Compact" />
@@ -48,21 +45,14 @@
         <PackageReference Include="Volo.Abp.OpenIddict.EntityFrameworkCore" />
         <PackageReference Include="Volo.Abp.PermissionManagement.EntityFrameworkCore" />
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
-      
         <PackageReference Include="GraphQL.Client" />
         <PackageReference Include="GraphQL.Client.Serializer.Newtonsoft" />
+        <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis"/>
     </ItemGroup>
-    
-<!--    <ItemGroup>-->
-<!--        <None Remove="appsettings.json" />-->
-<!--        <Content Include="appsettings.json">-->
-<!--            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>-->
-<!--            <CopyToOutputDirectory>Always</CopyToOutputDirectory>-->
-<!--        </Content>-->
-<!--    </ItemGroup>-->
     
     <ItemGroup>
       <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj" />
+      <ProjectReference Include="..\Aevatar.AuthServer.Grants\Aevatar.AuthServer.Grants.csproj" />
       <ProjectReference Include="..\Aevatar.Domain.Shared\Aevatar.Domain.Shared.csproj" />
       <ProjectReference Include="..\Aevatar.MongoDB\Aevatar.MongoDB.csproj" />
     </ItemGroup>

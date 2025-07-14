@@ -2,8 +2,9 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AbpVersion>9.0.3</AbpVersion>
-    <OrleansVerion>9.0.1</OrleansVerion>
+    <OrleansVersion>9.0.1</OrleansVersion>
     <AevatarVerion>1.4.13</AevatarVerion>
+    <AevatarGAgentVersion>1.5.0-chat-image-2</AevatarGAgentVersion>
     <AevatarGAgentVerion>1.4.16</AevatarGAgentVerion>
   </PropertyGroup>
   <ItemGroup>
@@ -17,6 +18,7 @@
     <PackageVersion Include="AElf.Sdk.CSharp" Version="1.5.0" />
     <PackageVersion Include="AElf.Types" Version="1.5.0" />
     <PackageVersion Include="AElf.OpenTelemetry" Version="8.2.0" />
+    <!-- Aevatar Core packages -->
     <PackageVersion Include="Aevatar" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.Core" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.Core.Abstractions" Version="$(AevatarVerion)" />
@@ -24,13 +26,16 @@
     <PackageVersion Include="Aevatar.Plugins" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.EventSourcing.MongoDB" Version="$(AevatarVerion)" />
     <PackageVersion Include="Aevatar.PermissionManagement" Version="$(AevatarVerion)" />
-    <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="$(AevatarGAgentVerion)" />
-    <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="$(AevatarGAgentVerion)" />
-    <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="$(AevatarGAgentVerion)" />
+    <!-- Aevatar GAgent packages - using both versions for compatibility -->
+    <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="$(AevatarGAgentVersion)" />
+    <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="$(AevatarGAgentVersion)" />
+    <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="$(AevatarGAgentVersion)" />
+    <PackageVersion Include="Aevatar.GAgents.SocialGAgent" Version="$(AevatarGAgentVersion)" />
+    <PackageVersion Include="Aevatar.GAgents.Twitter" Version="$(AevatarGAgentVersion)" />
+    <PackageVersion Include="Aevatar.GAgents.ChatAgent" Version="$(AevatarGAgentVersion)" />
+    <PackageVersion Include="Aevatar.GAgents.GroupChat" Version="$(AevatarGAgentVersion)" />
+    <!-- SignalR package -->
     <PackageVersion Include="Aevatar.SignalR" Version="1.5.5-parent.18" />
-    <PackageVersion Include="Aevatar.GAgents.SocialGAgent" Version="$(AevatarGAgentVerion)" />
-    <PackageVersion Include="Aevatar.GAgents.Twitter" Version="$(AevatarGAgentVerion)" />
-    <PackageVersion Include="Aevatar.GAgents.ChatAgent" Version="$(AevatarGAgentVerion)" />
     <!-- AI and Analysis packages -->
     <PackageVersion Include="AutoGen" Version="0.2.1" />
     <PackageVersion Include="AutoGen.Core" Version="0.2.1" />
@@ -38,15 +43,18 @@
     <PackageVersion Include="FluentValidation" Version="12.0.0-preview1" />
     <PackageVersion Include="Google.Apis.Auth" Version="1.69.0" />
     <PackageVersion Include="Google.Apis.Auth.AspNetCore3" Version="1.69.0" />
+    <PackageVersion Include="JetBrains.Annotations" Version="2024.2.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.Google" Version="9.0.3" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="9.0.2" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Options" Version="9.0.0" />
-    <PackageVersion Include="Microsoft.SemanticKernel" Version="1.32.0" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Core" Version="1.32.0" />
+    <PackageVersion Include="Microsoft.SemanticKernel" Version="1.33.0" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Core" Version="1.33.0" />
     <PackageVersion Include="NJsonSchema" Version="11.1.0" />
+    <PackageVersion Include="Octokit" Version="14.0.0" />
     <PackageVersion Include="OpenAI.API" Version="1.0.0" />
-    <PackageVersion Include="Orleans.SyncWork" Version="8.1.12" />
+    <PackageVersion Include="Orleans.SyncWork" Version="9.4.4" />
+    <PackageVersion Include="RulesEngine" Version="5.0.5" />
     <PackageVersion Include="Serilog.Formatting.Compact" Version="2.0.0" />
     <!-- ABP packages -->
     <PackageVersion Include="Volo.Abp.Account.Application" Version="$(AbpVersion)" />
@@ -60,10 +68,12 @@
     <PackageVersion Include="Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared" Version="9.0.3" />
     <PackageVersion Include="Volo.Abp.AspNetCore.Serilog" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.AspNetCore.SignalR" Version="$(AbpVersion)" />
+    <PackageVersion Include="Volo.Abp.Auditing" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.AuditLogging.Domain" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.AuditLogging.Domain.Shared" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.AuditLogging.MongoDB" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Authorization" Version="$(AbpVersion)" />
+    <PackageVersion Include="Volo.Abp.Authorization.Abstractions" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.AutoMapper" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Autofac" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Auditing" Version="$(AbpVersion)" />
@@ -71,9 +81,11 @@
     <PackageVersion Include="Volo.Abp.BackgroundJobs.Domain" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.BackgroundJobs.Domain.Shared" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.BackgroundJobs.MongoDB" Version="$(AbpVersion)" />
-    <PackageVersion Include="Volo.Abp.Caching.StackExchangeRedis" Version="$(AbpVersion)" />
+    <PackageVersion Include="Volo.Abp.Caching.StackExchangeRedis" Version="8.2.0" />
     <PackageVersion Include="Volo.Abp.Core" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Dapr" Version="$(AbpVersion)" />
+    <PackageVersion Include="Volo.Abp.Data" Version="$(AbpVersion)" />
+    <PackageVersion Include="Volo.Abp.Ddd.Application" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Ddd.Domain" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Emailing" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.EntityFrameworkCore" Version="$(AbpVersion)" />
@@ -100,6 +112,7 @@
     <PackageVersion Include="Volo.Abp.TenantManagement.MongoDB" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.PermissionManagement.Application" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.PermissionManagement.Application.Contracts" Version="$(AbpVersion)" />
+    <PackageVersion Include="Volo.Abp.PermissionManagement.Domain" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.PermissionManagement.Domain.Identity" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.PermissionManagement.Domain.OpenIddict" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.PermissionManagement.Domain.Shared" Version="$(AbpVersion)" />
@@ -112,6 +125,8 @@
     <PackageVersion Include="Volo.Abp.Swashbuckle" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.TestBase" Version="$(AbpVersion)" />
     <PackageVersion Include="Volo.Abp.Uow" Version="$(AbpVersion)" />
+    <PackageVersion Include="Volo.Abp.BlobStoring" Version="$(AbpVersion)" />
+    <PackageVersion Include="Volo.Abp.BlobStoring.Aws" Version="$(AbpVersion)" />
     <!-- Microsoft packages -->
     <PackageVersion Include="DotNetAnalyzers.DocumentationAnalyzers" Version="1.0.0-beta.59" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="4.11.0" />
@@ -119,6 +134,7 @@
     <PackageVersion Include="Microsoft.CodeCoverage" Version="17.9.0" />
     <PackageVersion Include="Microsoft.Extensions.AI" Version="9.0.1-preview.1.24570.5" />
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="9.0.1-preview.1.24570.5" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Http.Polly" Version="8.0.3" />
@@ -126,19 +142,29 @@
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
+<<<<<<< HEAD
     <PackageVersion Include="Microsoft.Orleans.Client" Version="$(OrleansVerion)" />
     <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="9.0.1" />
     <PackageVersion Include="Microsoft.Orleans.EventSourcing" Version="$(OrleansVerion)" />
     <PackageVersion Include="Microsoft.Orleans.Hosting" Version="$(OrleansVerion)" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(OrleansVerion)" />
+=======
+    <PackageVersion Include="Microsoft.Orleans.Client" Version="$(OrleansVersion)" />
+    <PackageVersion Include="Microsoft.Orleans.Core" Version="9.0.2" />
+    <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="$(OrleansVersion)" />
+    <PackageVersion Include="Microsoft.Orleans.EventSourcing" Version="$(OrleansVersion)" />
+    <PackageVersion Include="Microsoft.Orleans.Hosting" Version="$(OrleansVersion)" />
+    <PackageVersion Include="Microsoft.Orleans.Serialization" Version="$(OrleansVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(OrleansVersion)" />
+>>>>>>> origin/dev
     <PackageVersion Include="Orleans.Streams.Kafka" Version="8.0.2" />
-    <PackageVersion Include="Microsoft.Orleans.Reminders" Version="$(OrleansVerion)" />
-    <PackageVersion Include="Microsoft.Orleans.Runtime" Version="$(OrleansVerion)" />
-    <PackageVersion Include="Microsoft.Orleans.Sdk" Version="$(OrleansVerion)" />
-    <PackageVersion Include="Microsoft.Orleans.Server" Version="$(OrleansVerion)" />
-    <PackageVersion Include="Microsoft.Orleans.Streaming" Version="$(OrleansVerion)" />
-    <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="$(OrleansVerion)" />
-    <PackageVersion Include="Microsoft.Orleans.Core" Version="$(OrleansVerion)" />
+    <PackageVersion Include="Microsoft.Orleans.Reminders" Version="$(OrleansVersion)" />
+    <PackageVersion Include="Microsoft.Orleans.Runtime" Version="$(OrleansVersion)" />
+    <PackageVersion Include="Microsoft.Orleans.Sdk" Version="$(OrleansVersion)" />
+    <PackageVersion Include="Microsoft.Orleans.Server" Version="$(OrleansVersion)" />
+    <PackageVersion Include="Microsoft.Orleans.Streaming" Version="$(OrleansVersion)" />
+    <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="$(OrleansVersion)" />
+    <PackageVersion Include="Microsoft.Orleans.Clustering.ZooKeeper" Version="$(OrleansVersion)" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.6" />
     <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="9.0.0" />
@@ -146,8 +172,11 @@
     <!-- MongoDB packages -->
     <PackageVersion Include="EphemeralMongo.Core" Version="1.1.3" />
     <PackageVersion Include="EphemeralMongo6.runtime.osx-x64" Version="1.1.3" />
+    <PackageVersion Include="EphemeralMongo6.runtime.linux-x64" Version="1.1.3" />
+    <PackageVersion Include="EphemeralMongo6.runtime.win-x64" Version="1.1.3" />
     <PackageVersion Include="MongoDB.Driver.Core.Extensions.DiagnosticSources" Version="1.0.0" />
     <PackageVersion Include="MongoDB.Driver" Version="2.29.0" />
+    <PackageVersion Include="MongoDB.Bson" Version="2.29.0" />
     <PackageVersion Include="Orleans.Providers.MongoDB" Version="8.1.0" />
     <!-- Serilog packages -->
     <PackageVersion Include="Serilog" Version="4.0.2" />
@@ -160,7 +189,7 @@
     <PackageVersion Include="Serilog.Sinks.File" Version="5.0.0" />
     <PackageVersion Include="Serilog.Sinks.OpenTelemetry" Version="3.0.0" />
     <!-- Test packages -->
-    <PackageVersion Include="coverlet.collector" Version="6.0.2" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <PackageVersion Include="coverlet.msbuild" Version="6.0.2" />
     <PackageVersion Include="FakeItEasy" Version="8.1.0" />
     <PackageVersion Include="FluentAssertions" Version="6.12.0" />
@@ -194,11 +223,13 @@
     <PackageVersion Include="GraphQL.Client" Version="6.1.0" />
     <PackageVersion Include="GraphQL.Client.Serializer.Newtonsoft" Version="6.1.0" />
     <PackageVersion Include="KubernetesClient" Version="13.0.11" />
+    <PackageVersion Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="9.0.0"/>
     <PackageVersion Include="Mongo2Go" Version="3.1.3" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.2" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client.Core" Version="9.0.2" />
     <PackageVersion Include="MineAiFun.GAgents" Version="1.1.13" />
     <PackageVersion Include="Neo4j.Driver" Version="5.27.0" />
+<<<<<<< HEAD
     <PackageVersion Include="XWorkerAgent" Version="0.0.28" />
     <PackageVersion Include="TelegramWorkerAgent" Version="0.0.8" />
     <PackageVersion Include="Microsoft.Orleans.Core" Version="8.0.0" />
@@ -212,5 +243,28 @@
     <PackageVersion Include="coverlet.collector" Version="6.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Serialization.TestKit" Version="9.0.1" />
     <PackageVersion Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="9.0.0"/>
+=======
+    <PackageVersion Include="XWorkerAgent" Version="0.0.79" />
+    <PackageVersion Include="TelegramWorkerAgent" Version="0.0.98" />
+    <PackageVersion Include="RestSharp" Version="112.1.1-alpha.0.4" />
+
+    <!-- AI packages -->
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Qdrant" Version="1.33.0-preview" />
+    <PackageVersion Include="Microsoft.SemanticKernel.PromptTemplates.Handlebars" Version="1.32.0" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.AzureAIInference" Version="1.33.0-beta" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Google" Version="1.33.0-alpha" />
+
+    <PackageVersion Include="BenchmarkDotNet" Version="0.13.12" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0" />
+    <PackageVersion Include="System.Diagnostics.PerformanceCounter" Version="9.0.0" />
+
+    <PackageVersion Include="OpenTelemetry" Version="1.12.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.12.0-beta.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.10.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.10.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.10.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.10.0" />
+>>>>>>> origin/dev
   </ItemGroup>
 </Project>

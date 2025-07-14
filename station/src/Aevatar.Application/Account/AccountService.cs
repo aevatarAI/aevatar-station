@@ -93,9 +93,21 @@ public class AccountService : AccountAppService, IAccountService
             throw new UserFriendlyException($"The email: {input.Email} has been registered.");
         }
         
+        user = await UserManager.FindByNameAsync(input.UserName);
+        if (user != null)
+        {
+            throw new UserFriendlyException($"The user name: {input.UserName} has been registered.");
+        }
+        
         var code = GenerateVerificationCode();
         await _registerCode.SetAsync(GetRegisterCodeKey(input.Email), code, _defaultCacheOptions);
         await _aevatarAccountEmailer.SendRegisterCodeAsync(input.Email, code);
+    }
+
+    public async Task<bool> VerifyRegisterCodeAsync(VerifyRegisterCodeDto input)
+    {
+        var code = await _registerCode.GetAsync(GetRegisterCodeKey(input.Email));
+        return code == input.Code;
     }
 
     public override async Task SendPasswordResetCodeAsync(SendPasswordResetCodeDto input)
