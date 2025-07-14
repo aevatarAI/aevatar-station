@@ -142,13 +142,7 @@
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
-<<<<<<< HEAD
-    <PackageVersion Include="Microsoft.Orleans.Client" Version="$(OrleansVerion)" />
-    <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="9.0.1" />
-    <PackageVersion Include="Microsoft.Orleans.EventSourcing" Version="$(OrleansVerion)" />
-    <PackageVersion Include="Microsoft.Orleans.Hosting" Version="$(OrleansVerion)" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(OrleansVerion)" />
-=======
+    <!-- Orleans packages -->
     <PackageVersion Include="Microsoft.Orleans.Client" Version="$(OrleansVersion)" />
     <PackageVersion Include="Microsoft.Orleans.Core" Version="9.0.2" />
     <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="$(OrleansVersion)" />
@@ -156,7 +150,6 @@
     <PackageVersion Include="Microsoft.Orleans.Hosting" Version="$(OrleansVersion)" />
     <PackageVersion Include="Microsoft.Orleans.Serialization" Version="$(OrleansVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(OrleansVersion)" />
->>>>>>> origin/dev
     <PackageVersion Include="Orleans.Streams.Kafka" Version="8.0.2" />
     <PackageVersion Include="Microsoft.Orleans.Reminders" Version="$(OrleansVersion)" />
     <PackageVersion Include="Microsoft.Orleans.Runtime" Version="$(OrleansVersion)" />
@@ -229,21 +222,7 @@
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client.Core" Version="9.0.2" />
     <PackageVersion Include="MineAiFun.GAgents" Version="1.1.13" />
     <PackageVersion Include="Neo4j.Driver" Version="5.27.0" />
-<<<<<<< HEAD
-    <PackageVersion Include="XWorkerAgent" Version="0.0.28" />
-    <PackageVersion Include="TelegramWorkerAgent" Version="0.0.8" />
-    <PackageVersion Include="Microsoft.Orleans.Core" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.Orleans.EventSourcing" Version="8.0.0" />
-    <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageVersion Include="JsonSchema.Net.Generation" Version="3.3.2" />
-    <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
-    <PackageVersion Include="xunit" Version="2.7.0" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="2.5.7" />
-    <PackageVersion Include="coverlet.collector" Version="6.0.0" />
-    <PackageVersion Include="Microsoft.Orleans.Serialization.TestKit" Version="9.0.1" />
-    <PackageVersion Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="9.0.0"/>
-=======
+    <!-- Worker Agent packages -->
     <PackageVersion Include="XWorkerAgent" Version="0.0.79" />
     <PackageVersion Include="TelegramWorkerAgent" Version="0.0.98" />
     <PackageVersion Include="RestSharp" Version="112.1.1-alpha.0.4" />
@@ -254,17 +233,29 @@
     <PackageVersion Include="Microsoft.SemanticKernel.Connectors.AzureAIInference" Version="1.33.0-beta" />
     <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Google" Version="1.33.0-alpha" />
 
+    <!-- Testing packages -->
+    <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
+    <PackageVersion Include="xunit" Version="2.7.0" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.5.7" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.0" />
+    <PackageVersion Include="Microsoft.Orleans.Serialization.TestKit" Version="9.0.1" />
+
+    <!-- Other packages -->
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageVersion Include="JsonSchema.Net.Generation" Version="3.3.2" />
+    <PackageVersion Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="9.0.0"/>
     <PackageVersion Include="BenchmarkDotNet" Version="0.13.12" />
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0" />
     <PackageVersion Include="System.Diagnostics.PerformanceCounter" Version="9.0.0" />
 
+    <!-- OpenTelemetry packages -->
     <PackageVersion Include="OpenTelemetry" Version="1.12.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.12.0-beta.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.10.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.10.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.10.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.10.0" />
->>>>>>> origin/dev
   </ItemGroup>
 </Project>
