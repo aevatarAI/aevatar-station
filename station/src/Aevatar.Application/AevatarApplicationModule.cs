@@ -75,11 +75,5 @@ public class AevatarApplicationModule : AbpModule
         context.Services.Configure<AppleAuthOption>(configuration.GetSection("AppleAuth"));
         
         Configure<AccountOptions>(configuration.GetSection("Account"));
-<<<<<<< HEAD
-        context.Services.AddTransient<IProfileService, ProfileService>();
-=======
-        Configure<ApiRequestOptions>(configuration.GetSection("ApiRequest"));
-        Configure<BlobStoringOptions>(configuration.GetSection("BlobStoring"));
->>>>>>> origin/dev
     }
 }

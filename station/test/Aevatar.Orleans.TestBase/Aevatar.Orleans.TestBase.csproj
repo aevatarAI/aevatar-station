@@ -1,41 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-<<<<<<< HEAD
-        <TargetFramework>net9.0</TargetFramework>
-=======
-        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
->>>>>>> origin/dev
         <Nullable>enable</Nullable>
         <RootNamespace>Aevatar</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
-<<<<<<< HEAD
-        <PackageReference Include="coverlet.collector" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" />
-        <PackageReference Include="Moq" />
-        <PackageReference Include="Volo.Abp.Core" />
-        <PackageReference Include="xunit" />
-        <PackageReference Include="xunit.runner.visualstudio" />
-        <PackageReference Include="Microsoft.Extensions.Logging" />
-        <PackageReference Include="Microsoft.Orleans.TestingHost" />
-        <PackageReference Include="Shouldly" />
-        <PackageReference Include="Volo.Abp.ObjectMapping" />
-        <PackageReference Include="Volo.Abp.EventBus" />
-        <PackageReference Include="Volo.Abp.Autofac" />
-        <PackageReference Include="Volo.Abp.AutoMapper" />
-        <PackageReference Include="Volo.Abp.TestBase" />
-        <PackageReference Include="Volo.Abp.Authorization" />
-        <PackageReference Include="Aevatar" />
-        <PackageReference Include="Aevatar.Core" />
-        <PackageReference Include="Aevatar.EventSourcing.Core" />
-=======
-        <PackageReference Include="Microsoft.Extensions.Logging" />
-        <PackageReference Include="Microsoft.Orleans.TestingHost" />
-        <PackageReference Include="Volo.Abp.ObjectMapping" />
-        <PackageReference Include="Volo.Abp.EventBus" />
->>>>>>> origin/dev
     </ItemGroup>
 
     <ItemGroup>

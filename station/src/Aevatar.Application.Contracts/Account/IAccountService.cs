@@ -7,13 +7,4 @@ namespace Aevatar.Account;
 public interface IAccountService: IAccountAppService
 {
     Task SendRegisterCodeAsync(SendRegisterCodeDto input);
-<<<<<<< HEAD
-    Task<IdentityUserDto> RegisterAsync(RegisterDto input);
-    Task<bool> CheckEmailRegisteredAsync(CheckEmailRegisteredDto input);
-    Task<bool> VerifyEmailRegistrationWithTimeAsync(CheckEmailRegisteredDto input);
-    Task<IdentityUserDto> GodgptRegisterAsync(GodGptRegisterDto input);
-=======
-    Task<IdentityUserDto> RegisterAsync(AevatarRegisterDto input);
-    Task<bool> VerifyRegisterCodeAsync(VerifyRegisterCodeDto input);
->>>>>>> origin/dev
 }
