@@ -11,7 +11,7 @@ using Volo.Abp.DependencyInjection;
 
 namespace Aevatar.Kubernetes.Manager;
 
-public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
+public class KubernetesHostManager : IHostDeployManager, IHostCopyManager, ISingletonDependency
 {
     // private readonly k8s.Kubernetes _k8sClient;
     private readonly KubernetesOptions _kubernetesOptions;
@@ -520,19 +520,19 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
     {
         _logger.LogInformation($"[KubernetesHostManager] Starting copy operation from {sourceClientId} to {newClientId}");
 
-        // Validate source exists
-        await ValidateSourceHostExistsAsync(sourceClientId, version);
-        
-        // Validate target doesn't exist
-        await ValidateTargetHostNotExistsAsync(newClientId, version);
+        // Validate source exists and target doesn't exist concurrently
+        await Task.WhenAll(
+            ValidateSourceHostExistsAsync(sourceClientId, version),
+            ValidateTargetHostNotExistsAsync(newClientId, version)
+        );
 
         try
         {
-            // Copy Silo resources
-            await CopyHostSiloResourcesAsync(sourceClientId, newClientId, version);
-            
-            // Copy Client resources
-            await CopyHostClientResourcesAsync(sourceClientId, newClientId, version, corsUrls);
+            // Copy Silo and Client resources concurrently
+            await Task.WhenAll(
+                CopyHostSiloResourcesAsync(sourceClientId, newClientId, version),
+                CopyHostClientResourcesAsync(sourceClientId, newClientId, version, corsUrls)
+            );
 
             _logger.LogInformation($"[KubernetesHostManager] Successfully copied host from {sourceClientId} to {newClientId}");
         }
@@ -551,8 +551,14 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         var sourceSiloName = GetHostName(sourceClientId, KubernetesConstants.HostSilo);
         var sourceClientName = GetHostName(sourceClientId, KubernetesConstants.HostClient);
         
-        var siloDeploymentExists = await DeploymentExistsAsync(DeploymentHelper.GetAppDeploymentName(sourceSiloName, version));
-        var clientDeploymentExists = await DeploymentExistsAsync(DeploymentHelper.GetAppDeploymentName(sourceClientName, version));
+        // Check both deployments concurrently
+        var deploymentTasks = await Task.WhenAll(
+            DeploymentExistsAsync(DeploymentHelper.GetAppDeploymentName(sourceSiloName, version)),
+            DeploymentExistsAsync(DeploymentHelper.GetAppDeploymentName(sourceClientName, version))
+        );
+        
+        var siloDeploymentExists = deploymentTasks[0];
+        var clientDeploymentExists = deploymentTasks[1];
 
         if (!siloDeploymentExists || !clientDeploymentExists)
         {
@@ -565,8 +571,14 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         var targetSiloName = GetHostName(newClientId, KubernetesConstants.HostSilo);
         var targetClientName = GetHostName(newClientId, KubernetesConstants.HostClient);
         
-        var siloDeploymentExists = await DeploymentExistsAsync(DeploymentHelper.GetAppDeploymentName(targetSiloName, version));
-        var clientDeploymentExists = await DeploymentExistsAsync(DeploymentHelper.GetAppDeploymentName(targetClientName, version));
+        // Check both deployments concurrently
+        var deploymentTasks = await Task.WhenAll(
+            DeploymentExistsAsync(DeploymentHelper.GetAppDeploymentName(targetSiloName, version)),
+            DeploymentExistsAsync(DeploymentHelper.GetAppDeploymentName(targetClientName, version))
+        );
+        
+        var siloDeploymentExists = deploymentTasks[0];
+        var clientDeploymentExists = deploymentTasks[1];
 
         if (siloDeploymentExists || clientDeploymentExists)
         {
@@ -579,15 +591,17 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         var sourceAppId = GetHostName(sourceClientId, KubernetesConstants.HostSilo);
         var targetAppId = GetHostName(newClientId, KubernetesConstants.HostSilo);
 
-        // Copy ConfigMaps
-        await CopyConfigMapAsync(sourceAppId, targetAppId, version, ConfigMapHelper.GetAppSettingConfigMapName);
-        await CopyConfigMapAsync(sourceAppId, targetAppId, version, ConfigMapHelper.GetAppFileBeatConfigMapName);
+        // Copy ConfigMaps concurrently
+        await Task.WhenAll(
+            CopyConfigMapAsync(sourceAppId, targetAppId, version, ConfigMapHelper.GetAppSettingConfigMapName),
+            CopyConfigMapAsync(sourceAppId, targetAppId, version, ConfigMapHelper.GetAppFileBeatConfigMapName)
+        );
 
-        // Copy Deployment
-        await CopyDeploymentAsync(sourceAppId, targetAppId, version);
-
-        // Copy Service
-        await CopyServiceAsync(sourceAppId, targetAppId, version);
+        // Copy Deployment and Service concurrently (ConfigMaps must be ready first)
+        await Task.WhenAll(
+            CopyDeploymentAsync(sourceAppId, targetAppId, version),
+            CopyServiceAsync(sourceAppId, targetAppId, version)
+        );
     }
 
     private async Task CopyHostClientResourcesAsync(string sourceClientId, string newClientId, string version, string corsUrls)
@@ -595,18 +609,18 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         var sourceAppId = GetHostName(sourceClientId, KubernetesConstants.HostClient);
         var targetAppId = GetHostName(newClientId, KubernetesConstants.HostClient);
 
-        // Copy ConfigMaps with original configuration
-        await CopyConfigMapAsync(sourceAppId, targetAppId, version, ConfigMapHelper.GetAppSettingConfigMapName);
-        await CopyConfigMapAsync(sourceAppId, targetAppId, version, ConfigMapHelper.GetAppFileBeatConfigMapName);
+        // Copy ConfigMaps concurrently
+        await Task.WhenAll(
+            CopyConfigMapAsync(sourceAppId, targetAppId, version, ConfigMapHelper.GetAppSettingConfigMapName),
+            CopyConfigMapAsync(sourceAppId, targetAppId, version, ConfigMapHelper.GetAppFileBeatConfigMapName)
+        );
 
-        // Copy Deployment
-        await CopyDeploymentAsync(sourceAppId, targetAppId, version);
-
-        // Copy Service
-        await CopyServiceAsync(sourceAppId, targetAppId, version);
-
-        // Copy Ingress
-        await CopyIngressAsync(sourceAppId, targetAppId, version);
+        // Copy Deployment, Service and Ingress concurrently (ConfigMaps must be ready first)
+        await Task.WhenAll(
+            CopyDeploymentAsync(sourceAppId, targetAppId, version),
+            CopyServiceAsync(sourceAppId, targetAppId, version),
+            CopyIngressAsync(sourceAppId, targetAppId, version)
+        );
     }
 
     private async Task CopyConfigMapAsync(string sourceAppId, string targetAppId, string version, Func<string, string, string> getConfigMapNameFunc)

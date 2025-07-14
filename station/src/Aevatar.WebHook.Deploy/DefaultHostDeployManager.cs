@@ -36,9 +36,4 @@ public class DefaultHostDeployManager : IHostDeployManager
     {
         return;
     }
-
-    public async Task CopyHostAsync(string sourceClientId, string newClientId, string version, string corsUrls)
-    {
-        return;
-    }
 }

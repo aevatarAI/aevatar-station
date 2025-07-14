@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Aevatar.Service;
 using Aevatar.WebHook.Deploy;
+using Aevatar.Kubernetes.Manager;
 using Shouldly;
 using Xunit;
 
@@ -46,10 +47,10 @@ public class DeveloperServiceUnitTests
     }
 
     [Fact]
-    public void IHostDeployManager_Should_Have_CopyHostAsync_Method()
+    public void IHostCopyManager_Should_Have_CopyHostAsync_Method()
     {
         // Arrange & Act
-        var methodInfo = typeof(IHostDeployManager).GetMethod("CopyHostAsync");
+        var methodInfo = typeof(IHostCopyManager).GetMethod("CopyHostAsync");
 
         // Assert
         methodInfo.ShouldNotBeNull();
@@ -64,17 +65,15 @@ public class DeveloperServiceUnitTests
     }
 
     [Fact]
-    public void DefaultHostDeployManager_Should_Implement_CopyHostAsync()
+    public void KubernetesHostManager_Should_Implement_IHostCopyManager()
     {
         // Arrange
-        var serviceType = typeof(DefaultHostDeployManager);
-        var interfaceType = typeof(IHostDeployManager);
+        var interfaceType = typeof(IHostCopyManager);
 
         // Act & Assert
-        interfaceType.IsAssignableFrom(serviceType).ShouldBeTrue();
-        
-        var method = serviceType.GetMethod("CopyHostAsync");
+        var method = interfaceType.GetMethod("CopyHostAsync");
         method.ShouldNotBeNull();
+        method.ReturnType.ShouldBe(typeof(Task));
     }
 
     [Fact]
@@ -82,7 +81,8 @@ public class DeveloperServiceUnitTests
     {
         // Arrange
         var mockHostDeployManager = new StubHostDeployManager();
-        var service = new DeveloperService(mockHostDeployManager);
+        var mockHostCopyManager = new StubHostCopyManager();
+        var service = new DeveloperService(mockHostDeployManager, mockHostCopyManager);
 
         // Act & Assert
         await Should.NotThrowAsync(() => service.CopyHostAsync("source", "target", "1", "cors"));
@@ -124,7 +124,10 @@ public class DeveloperServiceUnitTests
         {
             return Task.CompletedTask;
         }
+    }
 
+    private class StubHostCopyManager : IHostCopyManager
+    {
         public Task CopyHostAsync(string sourceClientId, string newClientId, string version, string corsUrls)
         {
             return Task.CompletedTask;

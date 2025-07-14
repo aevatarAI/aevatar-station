@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.WebHook.Deploy;
+using Aevatar.Kubernetes.Manager;
 using Volo.Abp.Application.Services;
 
 namespace Aevatar.Service;
@@ -19,10 +20,14 @@ public interface IDeveloperService
 public class DeveloperService: ApplicationService, IDeveloperService
 {
     private readonly IHostDeployManager _hostDeployManager;
-    public DeveloperService(IHostDeployManager hostDeployManager
-       )
+    private readonly IHostCopyManager _hostCopyManager;
+    
+    public DeveloperService(
+        IHostDeployManager hostDeployManager,
+        IHostCopyManager hostCopyManager)
     {
         _hostDeployManager = hostDeployManager;
+        _hostCopyManager = hostCopyManager;
     }
 
     public async Task CreateHostAsync(string HostId, string version, string corsUrls)
@@ -42,7 +47,7 @@ public class DeveloperService: ApplicationService, IDeveloperService
 
     public async Task CopyHostAsync(string sourceClientId, string newClientId, string version, string corsUrls)
     {
-        await _hostDeployManager.CopyHostAsync(sourceClientId, newClientId, version, corsUrls);
+        await _hostCopyManager.CopyHostAsync(sourceClientId, newClientId, version, corsUrls);
     }
 
 }
