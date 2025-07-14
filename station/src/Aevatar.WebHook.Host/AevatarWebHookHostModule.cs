@@ -1,4 +1,5 @@
-using Aevatar.Application.Grains;
+using System;
+using System.Linq;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Webhook.Extensions;
@@ -16,8 +17,7 @@ namespace Aevatar.Webhook;
 
 [DependsOn(typeof(AbpAutofacModule),
     typeof(AbpAutoMapperModule),
-    typeof(AbpAspNetCoreSerilogModule),
-    typeof(GodGPTWebHookTemplateModule)
+    typeof(AbpAspNetCoreSerilogModule)
 )]
 public class AevatarListenerHostModule : AbpModule
 {
