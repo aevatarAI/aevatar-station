@@ -32,6 +32,8 @@
         <PackageReference Include="Microsoft.CodeAnalysis.Common" />
         <PackageReference Include="Orleans.Streams.Kafka" />
         <PackageReference Include="Volo.Abp.BlobStoring.Aws" />
+        <PackageReference Include="StackExchange.Redis" />
+        <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis"/>
     </ItemGroup>
 
     <ItemGroup>
