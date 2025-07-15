@@ -267,12 +267,14 @@ public class GodGPTController : AevatarController
     }
 
     [HttpGet("godgpt/chat/{sessionId}")]
-    public async Task<List<ChatMessage>> GetSessionMessageListAsync(Guid sessionId)
+    public async Task<List<ChatMessageWithMetaDto>> GetSessionMessageListAsync(Guid sessionId)
     {
         var stopwatch = Stopwatch.StartNew();
-        var chatMessages = await _godGptService.GetSessionMessageListAsync((Guid)CurrentUser.Id!, sessionId);
-        _logger.LogDebug("[GodGPTController][GetSessionMessageListAsync] sessionId: {0}, duration: {1}ms",
-            sessionId, stopwatch.ElapsedMilliseconds);
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
+        var chatMessages = await manager.GetSessionMessageListWithMetaAsync(sessionId);
+        _logger.LogDebug("[GodGPTController][GetSessionMessageListAsync] sessionId: {0}, messageCount: {1}, duration: {2}ms",
+            sessionId, chatMessages.Count, stopwatch.ElapsedMilliseconds);
         return chatMessages;
     }
 
