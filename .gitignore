@@ -267,3 +267,7 @@ paket-files/
 appsettings.secrets.json
 **/wwwroot/libs
 
+# Environment variable scripts (contain sensitive credentials)
+**/set-env.sh
+set-env.sh
+
