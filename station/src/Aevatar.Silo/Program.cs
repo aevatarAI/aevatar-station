@@ -1,3 +1,25 @@
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Aevatar.Silo.Extensions;
+using Aevatar.Silo.Observability;
+using Serilog;
+using Autofac;
+using Autofac.Extensions.DependencyInjection;
+using System.Linq;
+using Orleans.Runtime;
+
+namespace Aevatar.Silo;
+
+public class Program
+{
+    public async static Task<int> Main(string[] args)
+    {
+        // Register the label provider before building the silo host
+        HistogramAggregatorExtension.SetLabelProvider(new AevatarMetricLabelProvider());
+        var configuration = new ConfigurationBuilder()
+            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
+            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Silo.Shared.json"))
             .AddJsonFile("appsettings.json")
             .AddJsonFile("appsettings.secrets.json", optional: true)
             .Build();
@@ -9,6 +31,15 @@
         try
         {
             Log.Information("Starting Silo");
+            var builder = CreateHostBuilder(args);
+            builder.ConfigureHostConfiguration(config =>
+            {
+                config.AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
+                    .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Silo.Shared.json"))
+                    .AddJsonFile("appsettings.json");
+            });
+            var app = builder.Build();
+            await app.RunAsync();
             return 0;
         }
         catch (Exception ex)
@@ -24,4 +55,38 @@
 
     internal static IHostBuilder CreateHostBuilder(string[] args) =>
         Host.CreateDefaultBuilder(args)
+            .ConfigureServices((hostContext, services) =>
+            {
+                services.AddApplication<SiloModule>();
+            })
+            .UseOrleansConfiguration()
+            .UseServiceProviderFactory(new DiagnosticAutofacServiceProviderFactory())
+            .UseSerilog()
+            .ConfigureServices((context, services) =>
+            {
+                // Configure OpenTelemetry
+                services.AddAevatarOpenTelemetry(context.Configuration);
+                services.UseGrainStorageWithMetrics();
+            });
+
+    // Pluggable metric label provider for Orleans metrics
+    public class AevatarMetricLabelProvider : IMetricLabelProvider
+    {
+        public IEnumerable<KeyValuePair<string, object>> GetLabels(object context = null)
+        {
+            if (context != null)
+            {
+                var msgProp = context.GetType().GetProperty("Message");
+                var reqProp = context.GetType().GetProperty("Request");
+                var msg = msgProp?.GetValue(context, null);
+                var req = reqProp?.GetValue(context, null);
+                var grainClassTypeProp = msg?.GetType().GetProperty("GrainClassType");
+                var grainClassType = grainClassTypeProp?.GetValue(msg, null) as Type;
+                var grainType = grainClassType != null ? grainClassType.Name : msg?.GetType().GetProperty("InterfaceType")?.GetValue(msg, null)?.ToString() ?? "unknown";
+                var methodName = req?.GetType().GetMethod("GetMethodName")?.Invoke(req, null)?.ToString() ?? "unknown";
+                yield return new KeyValuePair<string, object>("grain_type", grainType);
+                yield return new KeyValuePair<string, object>("method_name", methodName);
+            }
+        }
+    }
 }

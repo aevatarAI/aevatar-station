@@ -5,6 +5,8 @@ using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AI.Options;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
+using Orleans.EventSourcing;
+using Orleans.Serialization;
 
 namespace Aevatar.Application.Grains.Agents.TestAgent;
 

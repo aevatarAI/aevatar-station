@@ -43,6 +43,16 @@ public class CodeGAgent : GAgentBase<CodeGAgentState, CodeAgentGEvent>, ICodeGAg
     {
         return State.CodeFiles;
     }
+
+    protected override void GAgentTransitionState(CodeGAgentState state, StateLogEventBase<CodeAgentGEvent> @event)
+    {
+        switch (@event)
+        {
+            case AddCodeAgentGEvent addCodeAgentGEvent:
+                state.Apply(addCodeAgentGEvent);
+                break;
+        }
+    }
 }
 
 public interface ICodeGAgent : IStateGAgent<CodeGAgentState>
