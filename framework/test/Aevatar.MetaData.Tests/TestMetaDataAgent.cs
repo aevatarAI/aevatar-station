@@ -31,18 +31,20 @@ public class TestMetaDataAgent : GAgentBase<TestMetaDataAgentState, TestMetaData
     // IMetaDataStateGAgent<TestMetaDataAgentState> implementation
     public TestMetaDataAgentState GetState() => State;
     
-    IMetaDataState IMetaDataStateGAgent.GetState() => State;
+    Task<IMetaDataState> IMetaDataStateGAgent.GetState() => Task.FromResult<IMetaDataState>(State);
     
-    public GrainId GetGrainId() => GrainId.Create(typeof(ITestMetaDataAgent).Name, this.GetPrimaryKey().ToString());
-    
+    public Task<GrainId> GetGrainIdAsync() => Task.FromResult(GrainId.Create(typeof(ITestMetaDataAgent).Name, this.GetPrimaryKey().ToString()));
+
     public void RaiseEvent(MetaDataStateLogEvent @event)
     {
-        // For testing purposes, we'll raise a test event to track that the metadata event happened
-        // We cannot directly apply metadata events to state as they need proper Orleans event sourcing
+        // Apply the metadata event directly to the state using the state's Apply method
+        State.Apply(@event);
+        
+        // Also raise a test event to track that the metadata event was processed for testing purposes
         var testEvent = new TestMetaDataAgentEvent
         {
             Action = @event.GetType().Name,
-            TestMessage = $"Metadata event: {@event.GetType().Name}"
+            TestMessage = $"Metadata event processed: {@event.GetType().Name}"
         };
         
         base.RaiseEvent(testEvent);

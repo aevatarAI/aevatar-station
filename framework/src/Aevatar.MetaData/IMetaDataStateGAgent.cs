@@ -12,7 +12,7 @@ namespace Aevatar.MetaData;
 /// This interface provides all common functionality that works with IMetaDataState,
 /// allowing service code to work with any agent that implements metadata functionality.
 /// </summary>
-public interface IMetaDataStateGAgent
+public interface IMetaDataStateGAgent : IGAgent
 {
     /// <summary>
     /// Raises an event to be applied to the state.
@@ -30,13 +30,14 @@ public interface IMetaDataStateGAgent
     /// Gets the current state instance as IMetaDataState.
     /// </summary>
     /// <returns>The current state</returns>
-    IMetaDataState GetState();
+    Task<IMetaDataState> GetState();
 
     /// <summary>
-    /// Gets the grain ID of the current agent.
+    /// Gets the Orleans GrainId for this agent instance.
+    /// This method must be implemented by the concrete agent class.
     /// </summary>
-    /// <returns>The grain ID</returns>
-    GrainId GetGrainId();
+    /// <returns>The GrainId for this agent</returns>
+    Task<GrainId> GetGrainIdAsync();
 
     /// <summary>
     /// Creates a new agent with the specified metadata.
@@ -61,7 +62,7 @@ public interface IMetaDataStateGAgent
             Name = name,
             AgentType = agentType,
             Properties = properties ?? new Dictionary<string, string>(),
-            AgentGrainId = GetGrainId(),
+            AgentGrainId = await GetGrainIdAsync(),
             InitialStatus = AgentStatus.Creating
         };
 
@@ -77,7 +78,7 @@ public interface IMetaDataStateGAgent
     /// <returns>Task representing the asynchronous operation</returns>
     async Task UpdateStatusAsync(AgentStatus newStatus, string? reason = null)
     {
-        var state = GetState();
+        var state = await GetState();
         var @event = new AgentStatusChangedEvent
         {
             AgentId = state.Id,
@@ -102,7 +103,7 @@ public interface IMetaDataStateGAgent
         Dictionary<string, string> properties,
         bool merge = true)
     {
-        var state = GetState();
+        var state = await GetState();
         var @event = new AgentPropertiesUpdatedEvent
         {
             AgentId = state.Id,
@@ -124,7 +125,7 @@ public interface IMetaDataStateGAgent
     /// <returns>Task representing the asynchronous operation</returns>
     async Task RecordActivityAsync(string? activityType = null)
     {
-        var state = GetState();
+        var state = await GetState();
         var @event = new AgentActivityUpdatedEvent
         {
             AgentId = state.Id,
@@ -157,7 +158,7 @@ public interface IMetaDataStateGAgent
     /// <returns>Task representing the asynchronous operation</returns>
     async Task RemovePropertyAsync(string key)
     {
-        var state = GetState();
+        var state = await GetState();
         var currentProps = new Dictionary<string, string>(state.Properties);
         currentProps.Remove(key);
         await UpdatePropertiesAsync(currentProps, merge: false);
@@ -177,7 +178,7 @@ public interface IMetaDataStateGAgent
         bool mergeProperties = true,
         string? statusReason = null)
     {
-        var state = GetState();
+        var state = await GetState();
 
         if (newStatus.HasValue)
         {
@@ -220,10 +221,4 @@ public interface IMetaDataStateGAgent
 /// <typeparam name="TState">The state type that implements IMetaDataState</typeparam>
 public interface IMetaDataStateGAgent<TState> : IMetaDataStateGAgent where TState : IMetaDataState
 {
-    /// <summary>
-    /// Gets the current state instance with strong typing.
-    /// </summary>
-    /// <returns>The current state as TState</returns>
-    new TState GetState();
-
 }

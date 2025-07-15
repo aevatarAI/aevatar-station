@@ -533,9 +533,22 @@ public class IMetaDataStateGAgentTests
         
         public TestMetaDataState GetState() => TestState;
         
-        IMetaDataState IMetaDataStateGAgent.GetState() => TestState;
+        Task<IMetaDataState> IMetaDataStateGAgent.GetState() => Task.FromResult<IMetaDataState>(TestState);
         
-        public GrainId GetGrainId() => TestGrainId;
+        public Task<GrainId> GetGrainIdAsync() => Task.FromResult(TestGrainId);
+
+        // IGAgent interface implementations (required by IMetaDataStateGAgent)
+        public Task ActivateAsync() => Task.CompletedTask;
+        public Task<string> GetDescriptionAsync() => Task.FromResult("Test metadata agent");
+        public Task RegisterAsync(IGAgent agent) => Task.CompletedTask;
+        public Task SubscribeToAsync(IGAgent agent) => Task.CompletedTask;
+        public Task UnsubscribeFromAsync(IGAgent agent) => Task.CompletedTask;
+        public Task UnregisterAsync(IGAgent agent) => Task.CompletedTask;
+        public Task<List<Type>?> GetAllSubscribedEventsAsync(bool includeBaseHandlers = false) => Task.FromResult<List<Type>?>(new List<Type>());
+        public Task<List<GrainId>> GetChildrenAsync() => Task.FromResult(new List<GrainId>());
+        public Task<GrainId> GetParentAsync() => Task.FromResult(default(GrainId));
+        public Task<Type?> GetConfigurationTypeAsync() => Task.FromResult<Type?>(null);
+        public Task ConfigAsync(ConfigurationBase configuration) => Task.CompletedTask;
     }
     
     private class TestMetaDataState : IMetaDataState

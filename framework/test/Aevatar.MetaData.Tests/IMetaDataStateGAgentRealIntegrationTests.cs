@@ -50,6 +50,224 @@ public class IMetaDataStateGAgentRealIntegrationTests : AevatarMetaDataTestBase
     }
 
     [Fact]
+    public async Task CreateAgentAsync_Should_ApplyAgentCreatedEvent_AndUpdateState()
+    {
+        // Arrange
+        var agentId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var agentName = "TestAgent";
+        var agentType = "TestType";
+        var properties = new Dictionary<string, string>
+        {
+            ["key1"] = "value1",
+            ["key2"] = "value2"
+        };
+        
+        var agent = await GetGrainAsync<ITestMetaDataAgent>(agentId);
+        var metadataAgent = agent as IMetaDataStateGAgent<TestMetaDataAgentState>;
+        metadataAgent.ShouldNotBeNull();
+        
+        // Act
+        await metadataAgent.CreateAgentAsync(agentId, userId, agentName, agentType, properties);
+        
+        // Assert
+        var state = await agent.GetStateAsync();
+        state.Id.ShouldBe(agentId);
+        state.UserId.ShouldBe(userId);
+        state.Name.ShouldBe(agentName);
+        state.AgentType.ShouldBe(agentType);
+        state.Properties.ShouldContainKeyAndValue("key1", "value1");
+        state.Properties.ShouldContainKeyAndValue("key2", "value2");
+        state.Status.ShouldBe(AgentStatus.Creating);
+        state.CreateTime.ShouldBeGreaterThan(DateTime.UtcNow.AddMinutes(-1));
+        state.LastActivity.ShouldBeGreaterThan(DateTime.UtcNow.AddMinutes(-1));
+        
+        // Verify test tracking
+        var testEventCount = await agent.GetTestEventCountAsync();
+        testEventCount.ShouldBeGreaterThan(0);
+        
+        var testMessages = await agent.GetTestMessagesAsync();
+        testMessages.ShouldContain(msg => msg.Contains("AgentCreatedEvent"));
+    }
+
+    [Fact]
+    public async Task UpdateStatusAsync_Should_ApplyAgentStatusChangedEvent_AndUpdateState()
+    {
+        // Arrange
+        var agentId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var agent = await GetGrainAsync<ITestMetaDataAgent>(agentId);
+        var metadataAgent = agent as IMetaDataStateGAgent<TestMetaDataAgentState>;
+        metadataAgent.ShouldNotBeNull();
+        
+        // First create an agent
+        await metadataAgent.CreateAgentAsync(agentId, userId, "TestAgent", "TestType");
+        
+        // Act
+        await metadataAgent.UpdateStatusAsync(AgentStatus.Active, "Started processing");
+        
+        // Assert
+        var state = await agent.GetStateAsync();
+        state.Status.ShouldBe(AgentStatus.Active);
+        state.LastActivity.ShouldBeGreaterThan(DateTime.UtcNow.AddMinutes(-1));
+        
+        // Verify test tracking
+        var testMessages = await agent.GetTestMessagesAsync();
+        testMessages.ShouldContain(msg => msg.Contains("AgentStatusChangedEvent"));
+    }
+
+    [Fact]
+    public async Task UpdatePropertiesAsync_Should_ApplyAgentPropertiesUpdatedEvent_AndMergeProperties()
+    {
+        // Arrange
+        var agentId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var agent = await GetGrainAsync<ITestMetaDataAgent>(agentId);
+        var metadataAgent = agent as IMetaDataStateGAgent<TestMetaDataAgentState>;
+        metadataAgent.ShouldNotBeNull();
+        
+        var initialProperties = new Dictionary<string, string>
+        {
+            ["initial1"] = "value1",
+            ["initial2"] = "value2"
+        };
+        
+        // First create an agent with initial properties
+        await metadataAgent.CreateAgentAsync(agentId, userId, "TestAgent", "TestType", initialProperties);
+        
+        var updatedProperties = new Dictionary<string, string>
+        {
+            ["initial1"] = "updatedValue1", // Update existing
+            ["new1"] = "newValue1" // Add new
+        };
+        
+        // Act - Merge properties (default behavior)
+        await metadataAgent.UpdatePropertiesAsync(updatedProperties, merge: true);
+        
+        // Assert
+        var state = await agent.GetStateAsync();
+        state.Properties.ShouldContainKeyAndValue("initial1", "updatedValue1"); // Updated
+        state.Properties.ShouldContainKeyAndValue("initial2", "value2"); // Preserved
+        state.Properties.ShouldContainKeyAndValue("new1", "newValue1"); // Added
+        state.LastActivity.ShouldBeGreaterThan(DateTime.UtcNow.AddMinutes(-1));
+        
+        // Verify test tracking
+        var testMessages = await agent.GetTestMessagesAsync();
+        testMessages.ShouldContain(msg => msg.Contains("AgentPropertiesUpdatedEvent"));
+    }
+
+    [Fact]
+    public async Task UpdatePropertiesAsync_Should_ApplyAgentPropertiesUpdatedEvent_AndReplaceProperties()
+    {
+        // Arrange
+        var agentId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var agent = await GetGrainAsync<ITestMetaDataAgent>(agentId);
+        var metadataAgent = agent as IMetaDataStateGAgent<TestMetaDataAgentState>;
+        metadataAgent.ShouldNotBeNull();
+        
+        var initialProperties = new Dictionary<string, string>
+        {
+            ["initial1"] = "value1",
+            ["initial2"] = "value2"
+        };
+        
+        // First create an agent with initial properties
+        await metadataAgent.CreateAgentAsync(agentId, userId, "TestAgent", "TestType", initialProperties);
+        
+        var replacementProperties = new Dictionary<string, string>
+        {
+            ["new1"] = "newValue1",
+            ["new2"] = "newValue2"
+        };
+        
+        // Act - Replace properties
+        await metadataAgent.UpdatePropertiesAsync(replacementProperties, merge: false);
+        
+        // Assert
+        var state = await agent.GetStateAsync();
+        state.Properties.ShouldNotContainKey("initial1"); // Removed
+        state.Properties.ShouldNotContainKey("initial2"); // Removed
+        state.Properties.ShouldContainKeyAndValue("new1", "newValue1"); // Added
+        state.Properties.ShouldContainKeyAndValue("new2", "newValue2"); // Added
+        state.LastActivity.ShouldBeGreaterThan(DateTime.UtcNow.AddMinutes(-1));
+    }
+
+    [Fact]
+    public async Task RecordActivityAsync_Should_ApplyAgentActivityUpdatedEvent_AndUpdateLastActivity()
+    {
+        // Arrange
+        var agentId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var agent = await GetGrainAsync<ITestMetaDataAgent>(agentId);
+        var metadataAgent = agent as IMetaDataStateGAgent<TestMetaDataAgentState>;
+        metadataAgent.ShouldNotBeNull();
+        
+        // First create an agent
+        await metadataAgent.CreateAgentAsync(agentId, userId, "TestAgent", "TestType");
+        var stateBeforeActivity = await agent.GetStateAsync();
+        
+        // Wait a moment to ensure timestamp difference
+        await Task.Delay(10);
+        
+        // Act
+        await metadataAgent.RecordActivityAsync("Processing task");
+        
+        // Assert
+        var state = await agent.GetStateAsync();
+        state.LastActivity.ShouldBeGreaterThan(stateBeforeActivity.LastActivity);
+        
+        // Verify test tracking
+        var testMessages = await agent.GetTestMessagesAsync();
+        testMessages.ShouldContain(msg => msg.Contains("AgentActivityUpdatedEvent"));
+    }
+
+    [Fact]
+    public async Task BatchUpdateAsync_Should_ApplyMultipleEvents_InSingleOperation()
+    {
+        // Arrange
+        var agentId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var agent = await GetGrainAsync<ITestMetaDataAgent>(agentId);
+        var metadataAgent = agent as IMetaDataStateGAgent<TestMetaDataAgentState>;
+        metadataAgent.ShouldNotBeNull();
+        
+        var initialProperties = new Dictionary<string, string>
+        {
+            ["initial1"] = "value1"
+        };
+        
+        // First create an agent
+        await metadataAgent.CreateAgentAsync(agentId, userId, "TestAgent", "TestType", initialProperties);
+        
+        var updatedProperties = new Dictionary<string, string>
+        {
+            ["batch1"] = "batchValue1",
+            ["batch2"] = "batchValue2"
+        };
+        
+        // Act - Batch update with both status and properties
+        await metadataAgent.BatchUpdateAsync(
+            newStatus: AgentStatus.Active,
+            properties: updatedProperties,
+            mergeProperties: true,
+            statusReason: "Batch update test");
+        
+        // Assert
+        var state = await agent.GetStateAsync();
+        state.Status.ShouldBe(AgentStatus.Active);
+        state.Properties.ShouldContainKeyAndValue("initial1", "value1"); // Preserved
+        state.Properties.ShouldContainKeyAndValue("batch1", "batchValue1"); // Added
+        state.Properties.ShouldContainKeyAndValue("batch2", "batchValue2"); // Added
+        state.LastActivity.ShouldBeGreaterThan(DateTime.UtcNow.AddMinutes(-1));
+        
+        // Verify test tracking - should have both status and properties events
+        var testMessages = await agent.GetTestMessagesAsync();
+        testMessages.ShouldContain(msg => msg.Contains("AgentStatusChangedEvent"));
+        testMessages.ShouldContain(msg => msg.Contains("AgentPropertiesUpdatedEvent"));
+    }
+
+    [Fact]
     public async Task TestMetaDataAgent_Should_SupportMetaDataOperations_ThroughInterface()
     {
         // Arrange - Get a real TestMetaDataAgent grain
@@ -147,7 +365,7 @@ public class IMetaDataStateGAgentRealIntegrationTests : AevatarMetaDataTestBase
         var metaDataAgent = agent as IMetaDataStateGAgent<TestMetaDataAgentState>;
         
         // Act - Get grain ID through the interface
-        var grainId = metaDataAgent!.GetGrainId();
+        var grainId = await metaDataAgent!.GetGrainIdAsync();
         
         // Assert - Verify grain ID is valid and contains the agent ID
         grainId.ShouldNotBe(default(GrainId));
@@ -175,7 +393,7 @@ public class IMetaDataStateGAgentRealIntegrationTests : AevatarMetaDataTestBase
         
         // Verify we can also get it as IMetaDataState
         var baseMetaDataAgent = metaDataAgent as IMetaDataStateGAgent;
-        var baseState = baseMetaDataAgent!.GetState();
+        var baseState = await baseMetaDataAgent!.GetState();
         baseState.ShouldNotBeNull();
         baseState.ShouldBeAssignableTo<IMetaDataState>();
         baseState.ShouldBeSameAs(state);

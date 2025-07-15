@@ -1,6 +1,7 @@
 // ABOUTME: This file provides a mock implementation of IMetaDataStateGAgent for testing
 // ABOUTME: Tracks raised events and state changes for verification in unit tests
 
+using Aevatar.Core.Abstractions;
 using Aevatar.MetaData;
 using Aevatar.MetaData.Events;
 
@@ -41,10 +42,23 @@ public class MockEventRaiser : IMetaDataStateGAgent<TestMetaDataState>
         return _state;
     }
     
-    IMetaDataState IMetaDataStateGAgent.GetState() => _state;
+    Task<IMetaDataState> IMetaDataStateGAgent.GetState() => Task.FromResult<IMetaDataState>(_state);
 
-    public GrainId GetGrainId()
+    public Task<GrainId> GetGrainIdAsync()
     {
-        return GrainId.Create("test", "test-grain-id");
+        return Task.FromResult(GrainId.Create("test", "test-grain-id"));
     }
+
+    // IGAgent interface implementations (required by IMetaDataStateGAgent)
+    public Task ActivateAsync() => Task.CompletedTask;
+    public Task<string> GetDescriptionAsync() => Task.FromResult("Mock test agent");
+    public Task RegisterAsync(IGAgent agent) => Task.CompletedTask;
+    public Task SubscribeToAsync(IGAgent agent) => Task.CompletedTask;
+    public Task UnsubscribeFromAsync(IGAgent agent) => Task.CompletedTask;
+    public Task UnregisterAsync(IGAgent agent) => Task.CompletedTask;
+    public Task<List<Type>?> GetAllSubscribedEventsAsync(bool includeBaseHandlers = false) => Task.FromResult<List<Type>?>(new List<Type>());
+    public Task<List<GrainId>> GetChildrenAsync() => Task.FromResult(new List<GrainId>());
+    public Task<GrainId> GetParentAsync() => Task.FromResult(default(GrainId));
+    public Task<Type?> GetConfigurationTypeAsync() => Task.FromResult<Type?>(null);
+    public Task ConfigAsync(ConfigurationBase configuration) => Task.CompletedTask;
 }

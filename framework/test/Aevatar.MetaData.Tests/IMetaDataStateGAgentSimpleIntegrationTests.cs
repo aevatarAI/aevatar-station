@@ -202,7 +202,7 @@ public class IMetaDataStateGAgentSimpleIntegrationTests
         var metaDataHelper = agent.GetMetaDataHelper();
 
         // Act - Get grain ID from helper
-        var grainId = metaDataHelper.GetGrainId();
+        var grainId = await metaDataHelper.GetGrainIdAsync();
         
         // Assert - Verify grain ID is valid
         grainId.ShouldNotBe(default(GrainId));

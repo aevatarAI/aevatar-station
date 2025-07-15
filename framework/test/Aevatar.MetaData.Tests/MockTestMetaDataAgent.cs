@@ -134,11 +134,24 @@ internal class MockMetaDataHelper : IMetaDataStateGAgent<TestMetaDataAgentState>
         return _agent.InternalState;
     }
     
-    IMetaDataState IMetaDataStateGAgent.GetState() => _agent.InternalState;
+    Task<IMetaDataState> IMetaDataStateGAgent.GetState() => Task.FromResult<IMetaDataState>(_agent.InternalState);
 
-    public GrainId GetGrainId()
+    public Task<GrainId> GetGrainIdAsync()
     {
         // Return a mock GrainId for testing
-        return GrainId.Create("MockTestAgent", Guid.NewGuid().ToString());
+        return Task.FromResult(GrainId.Create("MockTestAgent", Guid.NewGuid().ToString()));
     }
+
+    // IGAgent interface implementations (required by IMetaDataStateGAgent)
+    public Task ActivateAsync() => Task.CompletedTask;
+    public Task<string> GetDescriptionAsync() => Task.FromResult("Mock metadata helper");
+    public Task RegisterAsync(IGAgent agent) => Task.CompletedTask;
+    public Task SubscribeToAsync(IGAgent agent) => Task.CompletedTask;
+    public Task UnsubscribeFromAsync(IGAgent agent) => Task.CompletedTask;
+    public Task UnregisterAsync(IGAgent agent) => Task.CompletedTask;
+    public Task<List<Type>?> GetAllSubscribedEventsAsync(bool includeBaseHandlers = false) => Task.FromResult<List<Type>?>(new List<Type>());
+    public Task<List<GrainId>> GetChildrenAsync() => Task.FromResult(new List<GrainId>());
+    public Task<GrainId> GetParentAsync() => Task.FromResult(default(GrainId));
+    public Task<Type?> GetConfigurationTypeAsync() => Task.FromResult<Type?>(null);
+    public Task ConfigAsync(ConfigurationBase configuration) => Task.CompletedTask;
 }
