@@ -93,16 +93,32 @@ public class TestToolCallingController : AevatarController
         {
             _logger.LogInformation($"Testing MCPGAgent with server: {request.MCPServerName}");
 
-            var mcpGAgent = await _gAgentFactory.GetGAgentAsync<IMCPGAgent>();
+            var mcpGAgent = await _gAgentFactory.GetGAgentAsync<IMCPGAgent>(new MCPGAgentConfig
+            {
+                EnableToolDiscovery = true,
+                MemberName = request.MCPServerName,
+                Server = new MCPServerConfig
+                {
+                    ServerName = request.MCPServerName ?? "memory",
+                    Command = request.NpmCommand ?? "npx",
+                    Args = request.DockerImage != null
+                        ? ["-y", request.DockerImage]
+                        : ["-y", "@modelcontextprotocol/server-memory", "/tmp"],
+                    Env = request.Environment ?? new Dictionary<string, string>(),
+                }
+            });
 
             // Get agent description to verify it's working
             var description = await mcpGAgent.GetDescriptionAsync();
+            var tools = await mcpGAgent.GetAvailableToolsAsync();
 
             return Ok(new
             {
                 Success = true,
                 AgentId = mcpGAgent.GetGrainId().ToString(),
                 Description = description,
+                ToolsCount = tools.Count,
+                Tools = tools,
                 Message = "MCPGAgent created successfully"
             });
         }
@@ -196,13 +212,14 @@ public class ExecuteGAgentEventRequest
 public class TestMCPGAgentRequest
 {
     public Guid? AgentId { get; set; }
-    public string MCPServerName { get; set; } = string.Empty;
+    public string? MCPServerName { get; set; } = string.Empty;
     public string? DockerImage { get; set; }
     public string? NpmCommand { get; set; }
     public bool? AutoStartServer { get; set; }
     public Dictionary<string, string>? Environment { get; set; }
     public string? TestToolName { get; set; }
     public Dictionary<string, object>? TestToolParameters { get; set; }
+    public string SystemLLM { get; set; }
 }
 
 public class TestAIGAgentRequest
