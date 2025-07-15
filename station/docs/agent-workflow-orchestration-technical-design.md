@@ -6,10 +6,10 @@
 基于AgentIndexPool的AI工作流编排系统，让LLM智能理解所有Agent能力，根据用户目标自动设计复杂工作流编排（支持并行、串行、条件、循环），并输出前端可直接渲染的标准化JSON格式。
 
 ### 1.2 核心价值
-- **智能筛选**：双层筛选机制，预期Token使用效率提升85-92%
-- **自动编排**：根据用户目标自动生成复杂工作流
+- **一次性智能编排**：单次LLM调用完成Agent筛选+工作流编排，简化架构
+- **自动编排**：根据用户目标自动生成复杂工作流（并行、串行、条件、循环）
 - **标准输出**：前端友好的JSON格式，支持直接渲染
-- **高可扩展**：模块化设计，支持新Agent类型快速集成
+- **高效经济**：单次调用降低Token消耗和响应时间
 
 ## 二、系统架构设计
 
@@ -18,25 +18,24 @@
 ```mermaid
 graph TD
     A[HTTP API Gateway] --> B[WorkflowOrchestrationController]
-    B --> C[EnhancedAgentFilteringService<br/>L1-L2双层筛选]
-    C --> D[WorkflowPromptBuilder<br/>模块化提示词构建]
-    D --> E[LLM Service]
+    B --> C[AgentIndexPool<br/>获取所有Agent信息]
+    C --> D[WorkflowPromptBuilder<br/>一体化提示词构建]
+    D --> E[LLM Service<br/>单次调用: 筛选+编排]
     E --> F[WorkflowJsonValidator<br/>结构验证+自动修复]
-    F --> G[WorkflowOrchestrationService<br/>统一编排服务]
+    F --> G[WorkflowOrchestrationService<br/>统一响应处理]
     G --> H[标准化JSON响应]
     
-    I[AgentIndexPool<br/>Agent信息池] --> C
-    J[MemoryCache] --> I
-    K[AgentScannerService<br/>反射扫描] --> I
-    L[ProcessingStatistics<br/>监控统计] --> G
+    I[MemoryCache] --> C
+    J[AgentScannerService<br/>反射扫描] --> C
+    K[ProcessingStatistics<br/>监控统计] --> G
 ```
 
 ### 2.2 核心组件
 1. **AgentIndexPool** - Agent信息管理和缓存
-2. **EnhancedAgentFilteringService** - 双层智能筛选
-3. **WorkflowPromptBuilder** - 模块化提示词构建
+2. **WorkflowPromptBuilder** - 一体化提示词构建（Agent筛选+工作流编排）
+3. **LLMService** - 单次调用完成筛选和编排
 4. **WorkflowJsonValidator** - JSON验证和自动修复
-5. **WorkflowOrchestrationService** - 统一编排服务
+5. **WorkflowOrchestrationService** - 统一响应处理
 
 ## 三、核心解决方案
 
@@ -57,40 +56,58 @@ graph TD
 - **L1Description**：100-150字符简短描述，用于快速语义匹配
 - **L2Description**：300-500字符详细描述，用于精确能力分析
 
-### 3.2 双层筛选系统
+### 3.2 一次性智能编排系统
 
-#### 设计原理
-通过两层筛选机制大幅减少Token使用量，同时保持筛选精度：
+#### 设计理念
+通过单次LLM调用同时完成Agent筛选和工作流编排，避免多次调用的冗余和复杂性：
 
-1. **L1层：快速语义匹配**
-   - 从300+个Agent筛选到Top20
-   - 基于TF-IDF和余弦相似度算法
-   - 处理时间：<100ms
+**核心优势**：
+- **逻辑一致性**：LLM理解用户目标后同时完成筛选和编排
+- **成本效率**：单次调用显著降低Token消耗
+- **响应速度**：减少网络往返，提升用户体验
+- **实现简洁**：避免复杂的多阶段处理逻辑
 
-2. **L2层：详细能力匹配**
-   - 从Top20筛选到最终3-5个Agent
-   - 基于意图识别和能力分析
-   - 处理时间：<200ms
+#### 工作流程
+1. **信息收集**：获取所有可用Agent信息
+2. **一体化调用**：LLM同时执行筛选和编排
+3. **结果验证**：JSON格式验证和自动修复
+4. **响应输出**：标准化工作流定义
+
+#### 提示词设计策略
+- **综合性提示**：包含Agent筛选和工作流编排的完整指令
+- **结构化输出**：明确的JSON Schema定义
+- **示例驱动**：提供不同复杂度的参考示例
+- **约束明确**：Agent数量、节点类型等限制说明
 
 #### 优化效果
-- **Token节约率**：85-92%
-- **筛选精度**：保持高质量Agent选择
-- **处理效率**：总筛选时间<300ms
+- **调用次数**：从2次减少到1次
+- **Token使用**：相比双层筛选方案节约40-60%
+- **响应时间**：目标1-2秒完成整个流程
+- **维护成本**：大幅简化系统复杂度
 
-### 3.3 模块化提示词构建系统
+### 3.3 一体化提示词构建系统
 
-#### 6组件动态组装
-1. **角色定义组件**：定义LLM的工作角色
-2. **任务描述组件**：用户目标的结构化描述
-3. **Agent信息组件**：筛选后的Agent详细信息
-4. **语法说明组件**：工作流DSL语法（分级）
-5. **输出格式组件**：JSON格式规范
-6. **示例组件**：分复杂度的参考示例
+#### 核心组件设计
+一次性构建包含Agent筛选和工作流编排的完整提示词：
+
+1. **系统角色定义**：定义LLM作为工作流编排专家的角色
+2. **任务综合描述**：用户目标的结构化分析和要求说明
+3. **Agent信息展示**：所有可用Agent的完整能力描述
+4. **输出规范定义**：完整工作流JSON的Schema和格式要求
+5. **示例和约束**：不同复杂度的参考示例和编排约束
+
+#### 提示词模板结构
+```json
+{
+  "system": "你是专业的工作流编排专家，根据用户目标从Agent列表中选择合适的Agent并设计完整的执行流程",
+  "user": "用户目标：{userGoal}\n\n可用Agent列表：\n{allAgents}\n\n请直接输出完整的工作流JSON，包括：\n1. 选中的Agent及选择理由\n2. 详细的执行顺序和连接关系\n3. 数据传递和变量定义\n4. 条件分支和循环逻辑\n\n输出格式：{workflowJsonSchema}"
+}
+```
 
 #### 复杂度自适应
-- **Simple**：最小化提示词，单Agent串行流程
-- **Medium**：核心语法说明，2-3个Agent编排
-- **Complex**：完整语法支持，多Agent复杂编排
+- **Simple**：1-3个Agent，线性流程，基础JSON结构
+- **Medium**：4-8个Agent，包含分支或并行，中等复杂度结构
+- **Complex**：多Agent复杂编排，包含循环、条件、数据传递等高级特性
 
 ### 3.4 JSON验证修复系统
 
@@ -148,18 +165,17 @@ station/src/
 
 ### 5.3 关键接口设计
 - `IAgentIndexPool` - Agent信息池管理
-- `IEnhancedAgentFilteringService` - 智能筛选服务
-- `IWorkflowPromptBuilder` - 提示词构建服务
+- `IWorkflowPromptBuilder` - 一体化提示词构建服务
+- `ILLMService` - LLM调用服务（筛选+编排）
 - `IWorkflowJsonValidator` - JSON验证服务
 - `IWorkflowOrchestrationService` - 统一编排服务
 
 ## 六、API接口设计
 
 ### 6.1 核心接口
-- `POST /api/workflow/generate` - 生成工作流
-- `GET /api/workflow/agents` - 获取所有Agent
-- `POST /api/workflow/agents/filter` - 筛选Agent
-- `POST /api/workflow/validate` - 验证工作流JSON
+- `POST /api/workflow/generate` - 一次性生成完整工作流（包含Agent筛选+编排）
+- `GET /api/workflow/agents` - 获取所有可用Agent信息
+- `POST /api/workflow/validate` - 验证工作流JSON格式
 
 ### 6.2 数据格式
 - 请求格式：支持用户目标、复杂度限制、上下文信息
@@ -168,15 +184,15 @@ station/src/
 ## 七、性能与监控
 
 ### 7.1 性能指标
-- **响应时间**：目标<2秒完整工作流生成
-- **Token效率**：相比全量发送节约85-92%
-- **筛选精度**：保持高质量Agent选择
-- **并发能力**：支持多用户同时请求
+- **响应时间**：目标1-2秒完整工作流生成（单次LLM调用）
+- **调用效率**：相比双层方案减少50%的网络往返
+- **Token优化**：智能Agent选择，避免全量信息发送
+- **并发能力**：支持多用户同时请求，简化的架构提升吞吐量
 
 ### 7.2 监控统计
-- **处理统计**：Token使用量、处理时间、成功率
-- **筛选统计**：L1/L2筛选效率、Agent分布
-- **错误监控**：JSON验证失败、LLM调用异常
+- **处理统计**：Token使用量、响应时间、成功率
+- **编排质量**：生成的工作流复杂度分布、Agent选择合理性
+- **错误监控**：JSON验证失败、LLM调用异常、格式修复率
 
 ## 八、质量保证
 
@@ -204,5 +220,6 @@ station/src/
 
 ---
 
-**项目状态**：技术方案设计完成，准备开始实施开发
-**下一步**：创建项目结构，实现核心组件 
+**项目状态**：技术方案设计完成（已优化为单次LLM调用架构）
+**核心优势**：简化架构、降低成本、提升响应速度
+**下一步**：创建项目结构，实现一体化编排服务 
