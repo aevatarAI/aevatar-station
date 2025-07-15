@@ -6,6 +6,7 @@ namespace Aevatar.MetaData.Enums;
 /// <summary>
 /// Represents the current operational status of an agent in the system.
 /// </summary>
+[GenerateSerializer]
 public enum AgentStatus
 {
     /// <summary>
