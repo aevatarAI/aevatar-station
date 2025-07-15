@@ -16,13 +16,11 @@ namespace Aevatar.MetaData.Tests;
 /// </summary>
 [GAgent]
 public class TestMetaDataAgent : GAgentBase<TestMetaDataAgentState, TestMetaDataAgentEvent>, 
-    ITestMetaDataAgent
+    ITestMetaDataAgent, 
+    IMetaDataStateGAgent<TestMetaDataAgentState>
 {
-    private readonly TestMetaDataAgentHelper _metaDataHelper;
-
     public TestMetaDataAgent()
     {
-        _metaDataHelper = new TestMetaDataAgentHelper(this);
     }
 
     public override Task<string> GetDescriptionAsync()
@@ -30,28 +28,24 @@ public class TestMetaDataAgent : GAgentBase<TestMetaDataAgentState, TestMetaData
         return Task.FromResult("Test agent for metadata operations with Orleans integration testing");
     }
 
-    /// <summary>
-    /// Gets the metadata helper for testing IMetaDataStateGAgent interface (internal use only)
-    /// </summary>
-    internal IMetaDataStateGAgent<TestMetaDataAgentState> GetMetaDataHelper()
+    // IMetaDataStateGAgent<TestMetaDataAgentState> implementation
+    public TestMetaDataAgentState GetState() => State;
+    
+    IMetaDataState IMetaDataStateGAgent.GetState() => State;
+    
+    public GrainId GetGrainId() => GrainId.Create(typeof(ITestMetaDataAgent).Name, this.GetPrimaryKey().ToString());
+    
+    public void RaiseEvent(MetaDataStateLogEvent @event)
     {
-        return _metaDataHelper;
-    }
-
-    /// <summary>
-    /// Internal method to provide state access to the helper
-    /// </summary>
-    internal TestMetaDataAgentState GetInternalState()
-    {
-        return State;
-    }
-
-    /// <summary>
-    /// Internal method to provide event raising to the helper
-    /// </summary>
-    internal void RaiseInternalEvent(TestMetaDataAgentEvent @event)
-    {
-        RaiseEvent(@event);
+        // For testing purposes, we'll raise a test event to track that the metadata event happened
+        // We cannot directly apply metadata events to state as they need proper Orleans event sourcing
+        var testEvent = new TestMetaDataAgentEvent
+        {
+            Action = @event.GetType().Name,
+            TestMessage = $"Metadata event: {@event.GetType().Name}"
+        };
+        
+        base.RaiseEvent(testEvent);
     }
 
     // Orleans-compatible async method for interface
@@ -90,19 +84,14 @@ public class TestMetaDataAgent : GAgentBase<TestMetaDataAgentState, TestMetaData
         await ConfirmEvents();
     }
 
-    // Event handler for custom events
-    [EventHandler]
-    public async Task HandleTestEventInternalAsync(TestMetaDataAgentEvent @event)
-    {
-        State.TestEventCount++;
-        State.TestMessages.Add(@event.TestMessage);
-        await ConfirmEvents();
-    }
 
     // Override state transition method to handle custom events
     protected override void GAgentTransitionState(TestMetaDataAgentState state,
         StateLogEventBase<TestMetaDataAgentEvent> @event)
     {
+        // Call base implementation first
+        base.GAgentTransitionState(state, @event);
+        
         // Handle custom event transitions
         if (@event is TestMetaDataAgentEvent testEvent)
         {
@@ -111,50 +100,9 @@ public class TestMetaDataAgent : GAgentBase<TestMetaDataAgentState, TestMetaData
             {
                 state.TestMessages.Add(testEvent.TestMessage);
             }
+            
+            // Update last activity time for all events
+            state.LastActivity = DateTime.UtcNow;
         }
-    }
-}
-
-/// <summary>
-/// Helper class that implements IMetaDataStateGAgent for composition within TestMetaDataAgent.
-/// This allows the grain to be Orleans-compatible while still testing the IMetaDataStateGAgent interface.
-/// </summary>
-internal class TestMetaDataAgentHelper : IMetaDataStateGAgent<TestMetaDataAgentState>
-{
-    private readonly TestMetaDataAgent _agent;
-
-    public TestMetaDataAgentHelper(TestMetaDataAgent agent)
-    {
-        _agent = agent;
-    }
-
-    public void RaiseEvent(MetaDataStateLogEvent @event)
-    {
-        // For testing purposes, we'll just raise a test event to track that the metadata event happened
-        // We cannot directly apply metadata events to state as they need proper Orleans event sourcing
-        var testEvent = new TestMetaDataAgentEvent
-        {
-            Action = @event.GetType().Name,
-            TestMessage = $"Metadata event: {@event.GetType().Name}"
-        };
-        
-        _agent.RaiseInternalEvent(testEvent);
-    }
-
-    public Task ConfirmEvents()
-    {
-        return _agent.ConfirmEvents();
-    }
-
-    public TestMetaDataAgentState GetState()
-    {
-        return _agent.GetInternalState();
-    }
-    
-    IMetaDataState IMetaDataStateGAgent.GetState() => _agent.GetInternalState();
-
-    public GrainId GetGrainId()
-    {
-        return GrainId.Create(typeof(ITestMetaDataAgent).Name, _agent.GetPrimaryKey().ToString());
     }
 }
