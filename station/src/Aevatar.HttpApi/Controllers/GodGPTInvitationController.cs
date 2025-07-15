@@ -8,7 +8,6 @@ using Aevatar.Application.Grains.ChatManager.UserBilling;
 using Aevatar.Application.Grains.Common.Constants;
 using Aevatar.Application.Grains.Common.Options;
 using Aevatar.Application.Grains.Invitation;
-using Aevatar.Application.Grains.Payment;
 using Aevatar.Application.Grains.Twitter.Dtos;
 using Aevatar.GodGPT.Dtos;
 using Aevatar.Service;
@@ -23,7 +22,6 @@ using Orleans;
 using Stripe;
 using Volo.Abp;
 using Volo.Abp.Security.Claims;
-using PaymentStatus = Aevatar.Payment.PaymentStatus;
 
 namespace Aevatar.Controllers;
 

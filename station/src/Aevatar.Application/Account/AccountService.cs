@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Volo.Abp;
 using Volo.Abp.Account;
@@ -20,16 +21,19 @@ public class AccountService : AccountAppService, IAccountService
     private readonly AccountOptions _accountOptions;
     private readonly IDistributedCache<string,string> _registerCode;
     private readonly DistributedCacheEntryOptions _defaultCacheOptions;
-
+    private readonly ILogger<AccountService> _logger;
+    
     public AccountService(IdentityUserManager userManager, IIdentityRoleRepository roleRepository,
         IAccountEmailer accountEmailer, IdentitySecurityLogManager identitySecurityLogManager,
         IOptions<IdentityOptions> identityOptions, IAevatarAccountEmailer aevatarAccountEmailer,
-        IOptionsSnapshot<AccountOptions> accountOptions, IDistributedCache<string, string> registerCode)
+        IOptionsSnapshot<AccountOptions> accountOptions, IDistributedCache<string, string> registerCode,
+        ILogger<AccountService> logger)
         : base(userManager, roleRepository, accountEmailer, identitySecurityLogManager, identityOptions)
     {
         _aevatarAccountEmailer = aevatarAccountEmailer;
         _registerCode = registerCode;
         _accountOptions = accountOptions.Value;
+        _logger = logger;
 
         _defaultCacheOptions = new DistributedCacheEntryOptions
         {
@@ -89,6 +93,54 @@ public class AccountService : AccountAppService, IAccountService
         var user = await GetUserByEmailAsync(input.Email);
         var resetToken = await UserManager.GeneratePasswordResetTokenAsync(user);
         await _aevatarAccountEmailer.SendPasswordResetLinkAsync(user, resetToken);
+    }
+    
+    public async Task<bool> CheckEmailRegisteredAsync(CheckEmailRegisteredDto input)
+    {
+        var existingUser = await UserManager.FindByEmailAsync(input.EmailAddress);
+        return existingUser != null;
+    }
+    
+    public async Task<bool> VerifyEmailRegistrationWithTimeAsync(CheckEmailRegisteredDto input)
+    {
+        var existingUser = await UserManager.FindByEmailAsync(input.EmailAddress);
+        if (existingUser == null)
+        {
+            _logger.LogDebug("[AccountService][CheckEmailRegisteredAsync] Email not registered: {0}", input.EmailAddress);
+            return false;
+        }
+        
+        // Check if the user was registered within the last 24 hours
+        var twentyFourHoursAgo = DateTime.UtcNow.AddHours(-24);
+        _logger.LogDebug(
+            "[AccountService][CheckEmailRegisteredAsync] User found. Email: {0}, CreationTime: {1}, ThresholdTime: {2}", 
+            input.EmailAddress, 
+            existingUser.CreationTime, 
+            twentyFourHoursAgo
+        );
+        return existingUser.CreationTime >= twentyFourHoursAgo;
+    }
+    
+    public async Task<IdentityUserDto> GodgptRegisterAsync(GodGptRegisterDto input)
+    {
+        var code = await _registerCode.GetAsync(GetRegisterCodeKey(input.EmailAddress));
+        if (code != input.Code)
+        {
+            throw new UserFriendlyException("Invalid captcha code");
+        }
+
+        await IdentityOptions.SetAsync();
+        var userName = input.UserName.IsNullOrWhiteSpace() ? GuidGenerator.Create().ToString() : input.UserName;
+        var user = new IdentityUser(GuidGenerator.Create(), userName, input.EmailAddress);
+    
+        input.MapExtraPropertiesTo(user);
+
+        (await UserManager.CreateAsync(user, input.Password)).CheckErrors();
+
+        await UserManager.SetEmailAsync(user, input.EmailAddress);
+        await UserManager.AddDefaultRolesAsync(user);
+
+        return ObjectMapper.Map<IdentityUser, IdentityUserDto>(user);
     }
     
     private string GenerateVerificationCode()

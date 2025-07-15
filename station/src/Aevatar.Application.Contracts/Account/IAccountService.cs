@@ -9,4 +9,7 @@ public interface IAccountService: IAccountAppService
     Task SendRegisterCodeAsync(SendRegisterCodeDto input);
     Task<IdentityUserDto> RegisterAsync(AevatarRegisterDto input);
     Task<bool> VerifyRegisterCodeAsync(VerifyRegisterCodeDto input);
+    Task<bool> CheckEmailRegisteredAsync(CheckEmailRegisteredDto input);
+    Task<bool> VerifyEmailRegistrationWithTimeAsync(CheckEmailRegisteredDto input);
+    Task<IdentityUserDto> GodgptRegisterAsync(GodGptRegisterDto input);
 }
