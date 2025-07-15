@@ -51,7 +51,7 @@ public class TestMetaDataAgent : GAgentBase<TestMetaDataAgentState, TestMetaData
     }
 
     // Orleans-compatible async method for interface
-    public new Task<TestMetaDataAgentState> GetStateAsync()
+    public Task<TestMetaDataAgentState> GetStateAsync()
     {
         return Task.FromResult(State);
     }
@@ -94,7 +94,8 @@ public class TestMetaDataAgent : GAgentBase<TestMetaDataAgentState, TestMetaData
         // Call base implementation first
         base.GAgentTransitionState(state, @event);
         
-        // Handle custom event transitions
+        // Handle custom event transitions - the @event parameter is a StateLogEventBase<TestMetaDataAgentEvent>
+        // We need to check if it's directly a TestMetaDataAgentEvent
         if (@event is TestMetaDataAgentEvent testEvent)
         {
             state.TestEventCount++;
