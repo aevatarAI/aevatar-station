@@ -108,7 +108,7 @@ public interface IMetaDataStateGAgent
             AgentId = state.Id,
             UserId = state.UserId,
             UpdatedProperties = merge ? properties : properties,
-            RemovedProperties = merge ? new List<string>() : state.Properties.Keys.Except(properties.Keys).ToList(),
+            RemovedProperties = merge ? Array.Empty<string>() : state.Properties.Keys.Except(properties.Keys).ToArray(),
             WasMerged = merge,
             UpdateTime = DateTime.UtcNow
         };
@@ -200,7 +200,7 @@ public interface IMetaDataStateGAgent
                 AgentId = state.Id,
                 UserId = state.UserId,
                 UpdatedProperties = mergeProperties ? properties : properties,
-                RemovedProperties = mergeProperties ? new List<string>() : state.Properties.Keys.Except(properties.Keys).ToList(),
+                RemovedProperties = mergeProperties ? Array.Empty<string>() : state.Properties.Keys.Except(properties.Keys).ToArray(),
                 WasMerged = mergeProperties,
                 UpdateTime = DateTime.UtcNow
             };

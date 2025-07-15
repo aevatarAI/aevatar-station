@@ -201,7 +201,9 @@ public class IMetaDataStateGAgentDefaultMethodTests
         _state.Id = _testAgentId;
         _state.UserId = _testUserId;
         var keyToRemove = "removeMe";
+        var keyToKeep = "keepMe";
         _state.Properties[keyToRemove] = "someValue"; // Add property first
+        _state.Properties[keyToKeep] = "keepValue"; // Add another property to keep
 
         // Act
         await _eventRaiserInterface.RemovePropertyAsync(keyToRemove);
@@ -211,7 +213,8 @@ public class IMetaDataStateGAgentDefaultMethodTests
         var @event = _eventRaiser.RaisedEvents[0].ShouldBeOfType<AgentPropertiesUpdatedEvent>();
         @event.AgentId.ShouldBe(_testAgentId);
         @event.UserId.ShouldBe(_testUserId);
-        @event.UpdatedProperties.ShouldBeEmpty();
+        @event.UpdatedProperties.ShouldContainKeyAndValue(keyToKeep, "keepValue");
+        @event.UpdatedProperties.ShouldNotContainKey(keyToRemove);
         @event.RemovedProperties.ShouldHaveSingleItem();
         @event.RemovedProperties[0].ShouldBe(keyToRemove);
         @event.WasMerged.ShouldBeFalse();

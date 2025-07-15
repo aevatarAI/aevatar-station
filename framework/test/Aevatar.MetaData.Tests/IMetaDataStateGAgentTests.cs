@@ -234,7 +234,7 @@ public class IMetaDataStateGAgentTests
         @event.UpdatedProperties.ShouldBe(newProperties);
         @event.RemovedProperties.ShouldContain("toRemove1");
         @event.RemovedProperties.ShouldContain("toRemove2");
-        @event.RemovedProperties.Count.ShouldBe(2);
+        @event.RemovedProperties.Length.ShouldBe(2);
         @event.WasMerged.ShouldBeFalse();
     }
     

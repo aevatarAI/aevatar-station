@@ -19,7 +19,7 @@ public class AgentPropertiesUpdatedEvent : MetaDataStateLogEvent
     /// The properties that were removed (if any).
     /// </summary>
     [Id(41)]
-    public List<string> RemovedProperties { get; set; } = new();
+    public string[] RemovedProperties { get; set; } = Array.Empty<string>();
     
     /// <summary>
     /// Whether the properties were merged (true) or replaced (false).

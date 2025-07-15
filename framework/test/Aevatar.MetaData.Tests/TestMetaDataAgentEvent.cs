@@ -24,15 +24,9 @@ public class TestMetaDataAgentEvent : StateLogEventBase<TestMetaDataAgentEvent>
     [Id(3)]
     public string TestMessage { get; set; } = string.Empty;
     
-    /// <summary>
-    /// Override base class Id to avoid Orleans serialization conflicts
-    /// </summary>
-    [Id(0)]
-    public override Guid Id { get; set; } = Guid.NewGuid();
-    
-    /// <summary>
-    /// Override base class Ctime to avoid Orleans serialization conflicts
-    /// </summary>
-    [Id(1)]
-    public new DateTime Ctime { get; set; } = DateTime.UtcNow;
+    public TestMetaDataAgentEvent()
+    {
+        Id = Guid.NewGuid();
+        Ctime = DateTime.UtcNow;
+    }
 }
