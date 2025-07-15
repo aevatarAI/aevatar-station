@@ -100,7 +100,7 @@ public class AppleGrantHandler : GrantHandlerBase, ITransientDependency
             var user = await userManager.FindByLoginAsync(GrantTypeConstants.APPLE, appleUser.SubjectId);
             if (user == null)
             {
-                // Compatible with historical data login
+                // Compatible   with historical data login
                 var name = email + "@" + GrantTypeConstants.APPLE;
                 user = await userManager.FindByNameAsync(name);
                 
