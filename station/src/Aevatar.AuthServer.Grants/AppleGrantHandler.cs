@@ -96,6 +96,7 @@ public class AppleGrantHandler : GrantHandlerBase, ITransientDependency
             _logger.LogDebug("AppleGrantHandler.HandleAsync: email: {email}", email);
             var userManager = context.HttpContext.RequestServices.GetRequiredService<IdentityUserManager>();
 
+            var isNewUser = false;
             var user = await userManager.FindByLoginAsync(GrantTypeConstants.APPLE, appleUser.SubjectId);
             if (user == null)
             {
@@ -110,6 +111,7 @@ public class AppleGrantHandler : GrantHandlerBase, ITransientDependency
                 
                 if (user == null)
                 {
+                    isNewUser = true;
                     name = Guid.NewGuid().ToString("N");
                     user = new IdentityUser(Guid.NewGuid(), name, email: email.IsNullOrWhiteSpace() ? $"{name}@apple.com":email);
                     await userManager.CreateAsync(user);
@@ -123,7 +125,7 @@ public class AppleGrantHandler : GrantHandlerBase, ITransientDependency
                     GrantTypeConstants.APPLE));
             }
 
-            var claimsPrincipal = await CreateUserClaimsPrincipalWithFactoryAsync(context, user);
+            var claimsPrincipal = await CreateUserClaimsPrincipalWithFactoryAsync(context, user, isNewUser);
 
             return new SignInResult(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme, claimsPrincipal);
         }
