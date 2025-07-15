@@ -3,13 +3,13 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVerion>9.0.1</OrleansVerion>
-    <AevatarVerion>1.5.1-event.11</AevatarVerion>
+    <AevatarVerion>1.5.1-event.12</AevatarVerion>
     <AevatarGAgentVerion>1.4.16</AevatarGAgentVerion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="GodGPT.GAgents" Version="1.20.2-alpha-pressure-2" />
+    <PackageVersion Include="GodGPT.GAgents" Version="1.20.2-alpha-pressure-3" />
     <PackageVersion Include="Stripe.net" Version="48.1.0"/>
-    <PackageVersion Include="GodGPT.Webhook" Version="1.20.2-alpha-pressure-2" />
+    <PackageVersion Include="GodGPT.Webhook" Version="1.20.2-alpha-pressure-3" />
     
     <!-- AElf packages -->
     <PackageVersion Include="AElf.Client" Version="1.1.0" />
