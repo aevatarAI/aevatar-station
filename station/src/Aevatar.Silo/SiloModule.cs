@@ -3,6 +3,8 @@ using Aevatar.Domain.Grains;
 using Microsoft.Extensions.DependencyInjection;
 using Aevatar.Application.Grains;
 using Aevatar.GAgents.AI.Options;
+using Aevatar.GAgents.Executor;
+using Aevatar.GAgents.MCP;
 using Aevatar.Options;
 using Aevatar.Silo.Grains.Activation;
 using Aevatar.Silo.IdGeneration;
@@ -28,7 +30,8 @@ namespace Aevatar.Silo;
     typeof(AevatarModule),
     typeof(AevatarPluginsModule),
     typeof(AevatarPermissionManagementModule),
-    typeof(AbpBlobStoringAwsModule)
+    typeof(AbpBlobStoringAwsModule),
+    typeof(AevatarGAgentsMCPModule)
 )]
 public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
 {
@@ -68,5 +71,8 @@ public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
                 }); 
             });
         });
+
+        context.Services.AddTransient<IGAgentExecutor, GAgentExecutor>();
+        context.Services.AddTransient<IGAgentService, GAgentService>();
     }
 }
