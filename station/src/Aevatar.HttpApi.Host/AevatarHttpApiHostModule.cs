@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using AElf.OpenTelemetry;
 using AutoResponseWrapper;
 using Microsoft.AspNetCore.Builder;
@@ -14,6 +15,7 @@ using Aevatar.Domain.Grains;
 using Aevatar.Handler;
 using Aevatar.Permissions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -63,6 +65,7 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
 
         ConfigureAuthentication(context, configuration);
         ConfigureBundles();
+        ConfigureCors(context, configuration);
         // ConfigureUrls(configuration);
         ConfigureConventionalControllers();
         ConfigureVirtualFileSystem(context);
@@ -76,6 +79,26 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
             .AddNewtonsoftJson();
 
         context.Services.AddHealthChecks();
+    }
+
+    private void ConfigureCors(ServiceConfigurationContext context, IConfiguration configuration)
+    {
+        context.Services.AddCors(options =>
+        {
+            options.AddDefaultPolicy(builder =>
+            {
+                builder
+                    .WithOrigins(configuration["App:CorsOrigins"]?
+                        .Split(",", StringSplitOptions.RemoveEmptyEntries)
+                        .Select(o => o.RemovePostFix("/"))
+                        .ToArray() ?? Array.Empty<string>())
+                    .WithAbpExposedHeaders()
+                    .SetIsOriginAllowedToAllowWildcardSubdomains()
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
+            });
+        });
     }
 
     private void ConfigureDataProtection(
