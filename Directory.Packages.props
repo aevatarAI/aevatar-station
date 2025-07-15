@@ -222,6 +222,7 @@
     <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Google" Version="1.33.0-alpha" />
 
     <PackageVersion Include="BenchmarkDotNet" Version="0.13.12" />
+    <PackageVersion Include="CommandLineParser" Version="2.9.1" />
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0" />
     <PackageVersion Include="System.Diagnostics.PerformanceCounter" Version="9.0.0" />
