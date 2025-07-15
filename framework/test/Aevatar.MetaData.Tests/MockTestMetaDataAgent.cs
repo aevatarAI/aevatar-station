@@ -26,6 +26,30 @@ public class MockTestMetaDataAgent : ITestMetaDataAgent
         _metaDataHelper = new MockMetaDataHelper(this);
     }
 
+    public Task RaiseEvent(MetaDataStateLogEvent @event)
+    {   
+        // For testing purposes, we'll simulate the event processing
+        var testEvent = new TestMetaDataAgentEvent
+        {
+            Action = @event.GetType().Name,
+            TestMessage = $"Metadata event: {@event.GetType().Name}"
+        };
+        
+        _raisedEvents.Add(testEvent);
+        return Task.CompletedTask;
+    }
+
+    public Task ConfirmEvents()
+    {
+        _confirmEventsCalls++;
+        return Task.CompletedTask;
+    }
+
+    public Task<IMetaDataState> GetState()
+    {
+        return Task.FromResult<IMetaDataState>(_state);
+    }
+
     public Task<string> GetDescriptionAsync()
     {
         return Task.FromResult("Mock test agent for metadata operations without Orleans dependencies");
@@ -74,7 +98,7 @@ public class MockTestMetaDataAgent : ITestMetaDataAgent
     /// <summary>
     /// Gets the metadata helper for testing IMetaDataStateGAgent interface
     /// </summary>
-    public IMetaDataStateGAgent<TestMetaDataAgentState> GetMetaDataHelper()
+    public IMetaDataStateGAgent GetMetaDataHelper()
     {
         return _metaDataHelper;
     }
@@ -102,7 +126,7 @@ public class MockTestMetaDataAgent : ITestMetaDataAgent
 /// <summary>
 /// Mock helper class that implements IMetaDataStateGAgent for testing without Orleans.
 /// </summary>
-internal class MockMetaDataHelper : IMetaDataStateGAgent<TestMetaDataAgentState>
+internal class MockMetaDataHelper : IMetaDataStateGAgent
 {
     private readonly MockTestMetaDataAgent _agent;
 
@@ -111,7 +135,7 @@ internal class MockMetaDataHelper : IMetaDataStateGAgent<TestMetaDataAgentState>
         _agent = agent;
     }
 
-    public void RaiseEvent(MetaDataStateLogEvent @event)
+    public Task RaiseEvent(MetaDataStateLogEvent @event)
     {
         // For testing purposes, we'll simulate the event processing
         var testEvent = new TestMetaDataAgentEvent
@@ -121,6 +145,7 @@ internal class MockMetaDataHelper : IMetaDataStateGAgent<TestMetaDataAgentState>
         };
         
         _agent.RaisedEvents.Add(testEvent);
+        return Task.CompletedTask;
     }
 
     public Task ConfirmEvents()

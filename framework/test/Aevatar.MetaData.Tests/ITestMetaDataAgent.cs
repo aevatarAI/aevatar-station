@@ -11,7 +11,7 @@ namespace Aevatar.MetaData.Tests;
 /// Orleans grain interface for TestMetaDataAgent.
 /// Provides Orleans-compatible testing interface for metadata operations.
 /// </summary>
-public interface ITestMetaDataAgent : IGAgent
+public interface ITestMetaDataAgent : IGAgent, IMetaDataStateGAgent
 {
     /// <summary>
     /// Handles test events for Orleans integration testing.

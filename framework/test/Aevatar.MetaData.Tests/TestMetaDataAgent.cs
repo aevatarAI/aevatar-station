@@ -15,9 +15,8 @@ namespace Aevatar.MetaData.Tests;
 /// Demonstrates how to use the metadata state interface with Orleans event sourcing.
 /// </summary>
 [GAgent]
-public class TestMetaDataAgent : GAgentBase<TestMetaDataAgentState, TestMetaDataAgentEvent>, 
-    ITestMetaDataAgent, 
-    IMetaDataStateGAgent<TestMetaDataAgentState>
+public class TestMetaDataAgent : GAgentBase<TestMetaDataAgentState, MetaDataStateLogEvent>, 
+    ITestMetaDataAgent
 {
     public TestMetaDataAgent()
     {
@@ -27,39 +26,27 @@ public class TestMetaDataAgent : GAgentBase<TestMetaDataAgentState, TestMetaData
     {
         return Task.FromResult("Test agent for metadata operations with Orleans integration testing");
     }
-
-    // IMetaDataStateGAgent<TestMetaDataAgentState> implementation
-    public TestMetaDataAgentState GetState() => State;
     
     Task<IMetaDataState> IMetaDataStateGAgent.GetState() => Task.FromResult<IMetaDataState>(State);
     
     public Task<GrainId> GetGrainIdAsync() => Task.FromResult(GrainId.Create(typeof(ITestMetaDataAgent).Name, this.GetPrimaryKey().ToString()));
 
-    public void RaiseEvent(MetaDataStateLogEvent @event)
+    public Task RaiseEvent(MetaDataStateLogEvent @event)
     {
         // Apply the metadata event directly to the state using the state's Apply method
         State.Apply(@event);
         
-        // Also raise a test event to track that the metadata event was processed for testing purposes
-        var testEvent = new TestMetaDataAgentEvent
-        {
-            Action = @event.GetType().Name,
-            TestMessage = $"Metadata event processed: {@event.GetType().Name}"
-        };
-        
-        base.RaiseEvent(testEvent);
-    }
-
-    // Orleans-compatible async method for interface
-    public Task<TestMetaDataAgentState> GetStateAsync()
-    {
-        return Task.FromResult(State);
+        // For testing purposes, also raise the metadata event through the base class
+        // This will trigger the GAgentTransitionState method
+        base.RaiseEvent(@event);
+        return Task.CompletedTask;
     }
 
     // Test-specific methods for Orleans integration testing
     public async Task HandleTestEventAsync(TestMetaDataAgentEvent @event)
     {
-        RaiseEvent(@event);
+        // Raise the test event through the base class
+        base.RaiseEvent(@event);
         await ConfirmEvents();
     }
 
@@ -89,23 +76,26 @@ public class TestMetaDataAgent : GAgentBase<TestMetaDataAgentState, TestMetaData
 
     // Override state transition method to handle custom events
     protected override void GAgentTransitionState(TestMetaDataAgentState state,
-        StateLogEventBase<TestMetaDataAgentEvent> @event)
+        StateLogEventBase<MetaDataStateLogEvent> @event)
     {
         // Call base implementation first
         base.GAgentTransitionState(state, @event);
         
-        // Handle custom event transitions - the @event parameter is a StateLogEventBase<TestMetaDataAgentEvent>
-        // We need to check if it's directly a TestMetaDataAgentEvent
-        if (@event is TestMetaDataAgentEvent testEvent)
+        // Track all events for testing purposes
+        if (@event is MetaDataStateLogEvent metaEvent)
         {
+            // Update last activity time for all metadata events
+            state.LastActivity = DateTime.UtcNow;
+            
+            // Track the event for testing
             state.TestEventCount++;
-            if (!string.IsNullOrEmpty(testEvent.TestMessage))
+            state.TestMessages.Add($"Metadata event processed: {metaEvent.GetType().Name}");
+            
+            // If it's specifically a test tracking event, handle it specially
+            if (metaEvent is TestMetaDataAgentEvent testEvent && !string.IsNullOrEmpty(testEvent.TestMessage))
             {
                 state.TestMessages.Add(testEvent.TestMessage);
             }
-            
-            // Update last activity time for all events
-            state.LastActivity = DateTime.UtcNow;
         }
     }
 }

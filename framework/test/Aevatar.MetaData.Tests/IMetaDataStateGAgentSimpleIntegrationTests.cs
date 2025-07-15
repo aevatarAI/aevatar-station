@@ -49,7 +49,7 @@ public class IMetaDataStateGAgentSimpleIntegrationTests
         // Verify the agent implements IMetaDataStateGAgent directly
         var metaDataHelper = agent.GetMetaDataHelper();
         metaDataHelper.ShouldNotBeNull();
-        metaDataHelper.ShouldBeAssignableTo<IMetaDataStateGAgent<TestMetaDataAgentState>>();
+        metaDataHelper.ShouldBeAssignableTo<IMetaDataStateGAgent>();
     }
 
     [Fact]
@@ -188,24 +188,6 @@ public class IMetaDataStateGAgentSimpleIntegrationTests
         // Assert
         state.ShouldNotBeNull();
         state.ShouldBeOfType<TestMetaDataAgentState>();
-        
-        // Verify agent activation worked
-        var description = await agent.GetDescriptionAsync();
-        description.ShouldNotBeNullOrEmpty();
-    }
-
-    [Fact]
-    public async Task GetGrainId_Should_ReturnValidGrainId()
-    {
-        // Arrange
-        var agent = _testAgent;
-        var metaDataHelper = agent.GetMetaDataHelper();
-
-        // Act - Get grain ID from helper
-        var grainId = await metaDataHelper.GetGrainIdAsync();
-        
-        // Assert - Verify grain ID is valid
-        grainId.ShouldNotBe(default(GrainId));
         
         // Verify agent activation worked
         var description = await agent.GetDescriptionAsync();

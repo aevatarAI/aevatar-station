@@ -16,7 +16,7 @@ public class IMetaDataStateGAgentDefaultMethodTests
 {
     private readonly TestMetaDataState _state;
     private readonly MockEventRaiser _eventRaiser;
-    private readonly IMetaDataStateGAgent<TestMetaDataState> _eventRaiserInterface;
+    private readonly IMetaDataStateGAgent _eventRaiserInterface;
     private readonly Guid _testAgentId = Guid.NewGuid();
     private readonly Guid _testUserId = Guid.NewGuid();
 

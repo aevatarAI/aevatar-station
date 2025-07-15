@@ -2,6 +2,7 @@
 // ABOUTME: Used by TestMetaDataAgent to track state changes through Orleans event sourcing
 
 using Aevatar.Core.Abstractions;
+using Aevatar.MetaData.Events;
 
 namespace Aevatar.MetaData.Tests;
 
@@ -10,7 +11,7 @@ namespace Aevatar.MetaData.Tests;
 /// Used to track state changes in the TestMetaDataAgent.
 /// </summary>
 [GenerateSerializer]
-public class TestMetaDataAgentEvent : StateLogEventBase<TestMetaDataAgentEvent>
+public class TestMetaDataAgentEvent : MetaDataStateLogEvent
 {
     /// <summary>
     /// The action that occurred during this event.

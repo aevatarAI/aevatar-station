@@ -10,7 +10,7 @@ namespace Aevatar.MetaData.Tests;
 /// <summary>
 /// Mock implementation of IMetaDataStateGAgent for testing purposes.
 /// </summary>
-public class MockEventRaiser : IMetaDataStateGAgent<TestMetaDataState>
+public class MockEventRaiser : IMetaDataStateGAgent
 {
     private readonly TestMetaDataState _state;
     private readonly List<MetaDataStateLogEvent> _raisedEvents = new();
@@ -24,11 +24,12 @@ public class MockEventRaiser : IMetaDataStateGAgent<TestMetaDataState>
     public List<MetaDataStateLogEvent> RaisedEvents => _raisedEvents;
     public List<DateTime> ConfirmEventsTimes => _confirmEventsTimes;
 
-    public void RaiseEvent(MetaDataStateLogEvent @event)
+    public Task RaiseEvent(MetaDataStateLogEvent @event)
     {
         _raisedEvents.Add(@event);
         // Apply the event to state for testing
         _state.Apply(@event);
+        return Task.CompletedTask;
     }
 
     public Task ConfirmEvents()

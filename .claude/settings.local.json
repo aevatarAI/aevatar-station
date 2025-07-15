@@ -19,7 +19,15 @@
       "mcp__context7__resolve-library-id",
       "mcp__context7__get-library-docs",
       "WebFetch(domain:learn.microsoft.com)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(dotnet test:*)",
+      "Bash(rm:*)",
+      "Bash(timeout 30 dotnet build:*)",
+      "Bash(dotnet format:*)",
+      "Bash(cp:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr diff:*)"
     ]
   },
   "enableAllProjectMcpServers": true

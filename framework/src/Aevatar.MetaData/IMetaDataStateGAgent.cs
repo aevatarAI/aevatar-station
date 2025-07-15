@@ -18,7 +18,7 @@ public interface IMetaDataStateGAgent : IGAgent
     /// Raises an event to be applied to the state.
     /// </summary>
     /// <param name="event">The event to raise</param>
-    void RaiseEvent(MetaDataStateLogEvent @event);
+    Task RaiseEvent(MetaDataStateLogEvent @event);
 
     /// <summary>
     /// Confirms and persists all raised events.
@@ -31,13 +31,6 @@ public interface IMetaDataStateGAgent : IGAgent
     /// </summary>
     /// <returns>The current state</returns>
     Task<IMetaDataState> GetState();
-
-    /// <summary>
-    /// Gets the Orleans GrainId for this agent instance.
-    /// This method must be implemented by the concrete agent class.
-    /// </summary>
-    /// <returns>The GrainId for this agent</returns>
-    Task<GrainId> GetGrainIdAsync();
 
     /// <summary>
     /// Creates a new agent with the specified metadata.
@@ -62,11 +55,11 @@ public interface IMetaDataStateGAgent : IGAgent
             Name = name,
             AgentType = agentType,
             Properties = properties ?? new Dictionary<string, string>(),
-            AgentGrainId = await GetGrainIdAsync(),
+            AgentGrainId = this.GetGrainId(),
             InitialStatus = AgentStatus.Creating
         };
 
-        RaiseEvent(@event);
+        await RaiseEvent(@event);
         await ConfirmEvents();
     }
 
@@ -89,7 +82,7 @@ public interface IMetaDataStateGAgent : IGAgent
             StatusChangeTime = DateTime.UtcNow
         };
 
-        RaiseEvent(@event);
+        await RaiseEvent(@event);
         await ConfirmEvents();
     }
 
@@ -114,7 +107,7 @@ public interface IMetaDataStateGAgent : IGAgent
             UpdateTime = DateTime.UtcNow
         };
 
-        RaiseEvent(@event);
+        await RaiseEvent(@event);
         await ConfirmEvents();
     }
 
@@ -134,7 +127,7 @@ public interface IMetaDataStateGAgent : IGAgent
             ActivityTime = DateTime.UtcNow
         };
 
-        RaiseEvent(@event);
+        await RaiseEvent(@event);
         await ConfirmEvents();
     }
 
@@ -191,7 +184,7 @@ public interface IMetaDataStateGAgent : IGAgent
                 Reason = statusReason,
                 StatusChangeTime = DateTime.UtcNow
             };
-            RaiseEvent(statusEvent);
+            await RaiseEvent(statusEvent);
         }
 
         if (properties != null && properties.Any())
@@ -205,20 +198,9 @@ public interface IMetaDataStateGAgent : IGAgent
                 WasMerged = mergeProperties,
                 UpdateTime = DateTime.UtcNow
             };
-            RaiseEvent(propsEvent);
+            await RaiseEvent(propsEvent);
         }
 
         await ConfirmEvents();
     }
-}
-
-/// <summary>
-/// Generic interface for metadata state operations with strongly-typed state access.
-/// This interface provides default implementations for common event-raising operations on metadata state.
-/// This interface works alongside GAgentBase to reduce boilerplate code when raising common metadata events.
-/// This is a helper interface that agents can implement alongside their GAgentBase inheritance.
-/// </summary>
-/// <typeparam name="TState">The state type that implements IMetaDataState</typeparam>
-public interface IMetaDataStateGAgent<TState> : IMetaDataStateGAgent where TState : IMetaDataState
-{
 }

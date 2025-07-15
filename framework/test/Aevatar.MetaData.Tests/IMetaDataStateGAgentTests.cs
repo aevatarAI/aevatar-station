@@ -17,7 +17,7 @@ namespace Aevatar.MetaData.Tests;
 public class IMetaDataStateGAgentTests
 {
     private readonly TestMetaDataStateGAgent _testAgent;
-    private readonly IMetaDataStateGAgent<TestMetaDataState> _agent;
+    private readonly IMetaDataStateGAgent _agent;
     private readonly Guid _testAgentId = Guid.NewGuid();
     private readonly Guid _testUserId = Guid.NewGuid();
     
@@ -499,7 +499,7 @@ public class IMetaDataStateGAgentTests
     #endregion
     
     // Test implementation class
-    private class TestMetaDataStateGAgent : IMetaDataStateGAgent<TestMetaDataState>
+    private class TestMetaDataStateGAgent : IMetaDataStateGAgent
     {
         public List<MetaDataStateLogEvent> RaisedEvents { get; } = new();
         public int ConfirmEventsCalled { get; private set; }
@@ -520,9 +520,10 @@ public class IMetaDataStateGAgentTests
             TestGrainId = GrainId.Parse($"agent/{agentId}");
         }
         
-        public void RaiseEvent(MetaDataStateLogEvent @event)
+        public Task RaiseEvent(MetaDataStateLogEvent @event)
         {
             RaisedEvents.Add(@event);
+            return Task.CompletedTask;
         }
         
         public Task ConfirmEvents()

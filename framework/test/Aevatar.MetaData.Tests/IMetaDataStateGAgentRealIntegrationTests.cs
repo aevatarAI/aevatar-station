@@ -32,7 +32,7 @@ public class IMetaDataStateGAgentRealIntegrationTests : AevatarMetaDataTestBase
         var agent = await GetGrainAsync<ITestMetaDataAgent>(agentId);
         
         // Act - Test that the agent implements IMetaDataStateGAgent
-        // Since TestMetaDataAgent now inherits from IMetaDataStateGAgent<TestMetaDataAgentState>,
+        // Since TestMetaDataAgent now inherits from IMetaDataStateGAgent,
         // we can cast it and use the metadata operations
         
         // Assert - Verify the agent is accessible
@@ -64,7 +64,7 @@ public class IMetaDataStateGAgentRealIntegrationTests : AevatarMetaDataTestBase
         };
         
         var agent = await GetGrainAsync<ITestMetaDataAgent>(agentId);
-        var metadataAgent = agent as IMetaDataStateGAgent<TestMetaDataAgentState>;
+        var metadataAgent = agent as IMetaDataStateGAgent;
         metadataAgent.ShouldNotBeNull();
         
         // Act
@@ -97,7 +97,7 @@ public class IMetaDataStateGAgentRealIntegrationTests : AevatarMetaDataTestBase
         var agentId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         var agent = await GetGrainAsync<ITestMetaDataAgent>(agentId);
-        var metadataAgent = agent as IMetaDataStateGAgent<TestMetaDataAgentState>;
+        var metadataAgent = agent as IMetaDataStateGAgent;
         metadataAgent.ShouldNotBeNull();
         
         // First create an agent
@@ -123,7 +123,7 @@ public class IMetaDataStateGAgentRealIntegrationTests : AevatarMetaDataTestBase
         var agentId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         var agent = await GetGrainAsync<ITestMetaDataAgent>(agentId);
-        var metadataAgent = agent as IMetaDataStateGAgent<TestMetaDataAgentState>;
+        var metadataAgent = agent as IMetaDataStateGAgent;
         metadataAgent.ShouldNotBeNull();
         
         var initialProperties = new Dictionary<string, string>
@@ -163,7 +163,7 @@ public class IMetaDataStateGAgentRealIntegrationTests : AevatarMetaDataTestBase
         var agentId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         var agent = await GetGrainAsync<ITestMetaDataAgent>(agentId);
-        var metadataAgent = agent as IMetaDataStateGAgent<TestMetaDataAgentState>;
+        var metadataAgent = agent as IMetaDataStateGAgent;
         metadataAgent.ShouldNotBeNull();
         
         var initialProperties = new Dictionary<string, string>
@@ -200,7 +200,7 @@ public class IMetaDataStateGAgentRealIntegrationTests : AevatarMetaDataTestBase
         var agentId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         var agent = await GetGrainAsync<ITestMetaDataAgent>(agentId);
-        var metadataAgent = agent as IMetaDataStateGAgent<TestMetaDataAgentState>;
+        var metadataAgent = agent as IMetaDataStateGAgent;
         metadataAgent.ShouldNotBeNull();
         
         // First create an agent
@@ -229,7 +229,7 @@ public class IMetaDataStateGAgentRealIntegrationTests : AevatarMetaDataTestBase
         var agentId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         var agent = await GetGrainAsync<ITestMetaDataAgent>(agentId);
-        var metadataAgent = agent as IMetaDataStateGAgent<TestMetaDataAgentState>;
+        var metadataAgent = agent as IMetaDataStateGAgent;
         metadataAgent.ShouldNotBeNull();
         
         var initialProperties = new Dictionary<string, string>
@@ -275,9 +275,9 @@ public class IMetaDataStateGAgentRealIntegrationTests : AevatarMetaDataTestBase
         var userId = Guid.NewGuid();
         var agent = await GetGrainAsync<ITestMetaDataAgent>(agentId);
         
-        // Since TestMetaDataAgent implements IMetaDataStateGAgent<TestMetaDataAgentState>,
+        // Since TestMetaDataAgent implements IMetaDataStateGAgent,
         // we can use it through the interface for metadata operations
-        var metaDataAgent = agent as IMetaDataStateGAgent<TestMetaDataAgentState>;
+        var metaDataAgent = agent as IMetaDataStateGAgent;
         metaDataAgent.ShouldNotBeNull();
         
         // Act - Test metadata operations through the interface
@@ -323,7 +323,7 @@ public class IMetaDataStateGAgentRealIntegrationTests : AevatarMetaDataTestBase
         var agentId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         var agent = await GetGrainAsync<ITestMetaDataAgent>(agentId);
-        var metaDataAgent = agent as IMetaDataStateGAgent<TestMetaDataAgentState>;
+        var metaDataAgent = agent as IMetaDataStateGAgent;
         
         // Initialize the agent first
         await metaDataAgent!.CreateAgentAsync(agentId, userId, "Batch Test Agent", "TestAgent");
@@ -357,29 +357,13 @@ public class IMetaDataStateGAgentRealIntegrationTests : AevatarMetaDataTestBase
     }
 
     [Fact]
-    public async Task TestMetaDataAgent_Should_ProvideCorrectGrainId()
-    {
-        // Arrange
-        var agentId = Guid.NewGuid();
-        var agent = await GetGrainAsync<ITestMetaDataAgent>(agentId);
-        var metaDataAgent = agent as IMetaDataStateGAgent<TestMetaDataAgentState>;
-        
-        // Act - Get grain ID through the interface
-        var grainId = await metaDataAgent!.GetGrainIdAsync();
-        
-        // Assert - Verify grain ID is valid and contains the agent ID
-        grainId.ShouldNotBe(default(GrainId));
-        grainId.ToString().ShouldContain(agentId.ToString());
-    }
-
-    [Fact]
     public async Task TestMetaDataAgent_Should_ProvideStateAccess_ThroughInterface()
     {
         // Arrange
         var agentId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         var agent = await GetGrainAsync<ITestMetaDataAgent>(agentId);
-        var metaDataAgent = agent as IMetaDataStateGAgent<TestMetaDataAgentState>;
+        var metaDataAgent = agent as IMetaDataStateGAgent;
         
         // Initialize with some data
         await metaDataAgent!.CreateAgentAsync(agentId, userId, "State Test Agent", "TestAgent");
@@ -406,7 +390,7 @@ public class IMetaDataStateGAgentRealIntegrationTests : AevatarMetaDataTestBase
         var agentId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         var agent = await GetGrainAsync<ITestMetaDataAgent>(agentId);
-        var metaDataAgent = agent as IMetaDataStateGAgent<TestMetaDataAgentState>;
+        var metaDataAgent = agent as IMetaDataStateGAgent;
         
         // Initialize the agent
         await metaDataAgent!.CreateAgentAsync(agentId, userId, "Property Test Agent", "TestAgent");
