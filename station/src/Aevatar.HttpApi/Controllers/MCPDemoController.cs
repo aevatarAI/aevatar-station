@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
+using Aevatar.Domain.Shared.Util;
 using Aevatar.GAgents.Executor;
 using Aevatar.GAgents.MCP.Core;
 using Aevatar.GAgents.MCP.Core.GEvents;
@@ -140,7 +141,7 @@ public class MCPDemoController : ControllerBase
             {
                 ServerName = request.ServerName,
                 ToolName = request.ToolName,
-                Arguments = ConvertJsonElementToBasicTypes(request.Arguments ?? new Dictionary<string, object>())
+                Arguments = JsonConversionHelper.ConvertToBasicTypes(request.Arguments ?? new Dictionary<string, object>())
             };
 
             try
@@ -417,21 +418,6 @@ public class MCPDemoController : ControllerBase
     }
 
     /// <summary>
-    /// Convert JsonElement objects to basic .NET types that Orleans can serialize
-    /// </summary>
-    private Dictionary<string, object> ConvertJsonElementToBasicTypes(Dictionary<string, object> input)
-    {
-        var result = new Dictionary<string, object>();
-
-        foreach (var kvp in input)
-        {
-            result[kvp.Key] = ConvertValue(kvp.Value);
-        }
-
-        return result;
-    }
-
-    /// <summary>
     /// Convert environment dictionary ensuring all values are strings
     /// </summary>
     private Dictionary<string, string> ConvertEnvironmentDictionary(Dictionary<string, string>? input)
@@ -446,105 +432,6 @@ public class MCPDemoController : ControllerBase
         }
 
         return result;
-    }
-
-    private object? ConvertValue(object? value)
-    {
-        if (value == null) return null;
-
-        // Handle Newtonsoft.Json.Linq types
-        if (value is Newtonsoft.Json.Linq.JObject jObject)
-        {
-            var dict = new Dictionary<string, object>();
-            foreach (var prop in jObject.Properties())
-            {
-                dict[prop.Name] = ConvertValue(prop.Value);
-            }
-            return dict;
-        }
-
-        if (value is Newtonsoft.Json.Linq.JArray jArray)
-        {
-            var list = new List<object?>();
-            foreach (var item in jArray)
-            {
-                list.Add(ConvertValue(item));
-            }
-            return list;
-        }
-
-        if (value is Newtonsoft.Json.Linq.JValue jValue)
-        {
-            return jValue.Value;
-        }
-
-        if (value is Newtonsoft.Json.Linq.JToken jToken)
-        {
-            switch (jToken.Type)
-            {
-                case Newtonsoft.Json.Linq.JTokenType.Object:
-                    return ConvertValue(jToken as Newtonsoft.Json.Linq.JObject);
-                case Newtonsoft.Json.Linq.JTokenType.Array:
-                    return ConvertValue(jToken as Newtonsoft.Json.Linq.JArray);
-                case Newtonsoft.Json.Linq.JTokenType.Integer:
-                    return jToken.ToObject<long>();
-                case Newtonsoft.Json.Linq.JTokenType.Float:
-                    return jToken.ToObject<double>();
-                case Newtonsoft.Json.Linq.JTokenType.String:
-                    return jToken.ToObject<string>();
-                case Newtonsoft.Json.Linq.JTokenType.Boolean:
-                    return jToken.ToObject<bool>();
-                case Newtonsoft.Json.Linq.JTokenType.Null:
-                    return null;
-                default:
-                    return jToken.ToString();
-            }
-        }
-
-        // Handle System.Text.Json types
-        if (value is JsonElement element)
-        {
-            switch (element.ValueKind)
-            {
-                case JsonValueKind.String:
-                    return element.GetString();
-                case JsonValueKind.Number:
-                    if (element.TryGetInt32(out var intValue))
-                        return intValue;
-                    if (element.TryGetInt64(out var longValue))
-                        return longValue;
-                    if (element.TryGetDouble(out var doubleValue))
-                        return doubleValue;
-                    return element.GetDecimal();
-                case JsonValueKind.True:
-                    return true;
-                case JsonValueKind.False:
-                    return false;
-                case JsonValueKind.Null:
-                    return null;
-                case JsonValueKind.Array:
-                    var list = new List<object?>();
-                    foreach (var item in element.EnumerateArray())
-                    {
-                        list.Add(ConvertValue(item));
-                    }
-
-                    return list;
-                case JsonValueKind.Object:
-                    var dict = new Dictionary<string, object>();
-                    foreach (var prop in element.EnumerateObject())
-                    {
-                        dict[prop.Name] = ConvertValue(prop.Value);
-                    }
-
-                    return dict;
-                default:
-                    return element.ToString();
-            }
-        }
-
-        // If it's already a basic type, return as-is
-        return value;
     }
 
     /// <summary>
