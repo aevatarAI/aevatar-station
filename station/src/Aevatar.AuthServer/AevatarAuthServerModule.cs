@@ -5,6 +5,7 @@ using Aevatar.MongoDB;
 using Aevatar.OpenIddict;
 using Aevatar.Options;
 using Localization.Resources.AbpUi;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
@@ -192,6 +193,24 @@ public class AevatarAuthServerModule : AbpModule
         context.Services.AddHealthChecks();
 
         Configure<MvcOptions>(options => { options.Conventions.Add(new ApplicationDescription()); });
+        context.Services.AddCors(options =>
+        {
+            options.AddDefaultPolicy(builder =>
+            {
+                builder
+                    .WithOrigins(
+                        configuration["App:CorsOrigins"]?
+                            .Split(",", StringSplitOptions.RemoveEmptyEntries)
+                            .Select(o => o.RemovePostFix("/"))
+                            .ToArray() ?? Array.Empty<string>()
+                    )
+                    .WithAbpExposedHeaders()
+                    .SetIsOriginAllowedToAllowWildcardSubdomains()
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
+            });
+        });
     }
 
     public override void OnApplicationInitialization(ApplicationInitializationContext context)
@@ -216,6 +235,7 @@ public class AevatarAuthServerModule : AbpModule
         app.UseCorrelationId();
         app.UseStaticFiles();
         app.UseRouting();
+        app.UseCors();
         app.UseAuthentication();
         app.UseAbpOpenIddictValidation();
 
