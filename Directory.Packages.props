@@ -4,7 +4,7 @@
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVerion>9.0.1</OrleansVerion>
     <AevatarVerion>1.4.13</AevatarVerion>
-    <AevatarGAgentVerion>1.4.16</AevatarGAgentVerion>
+    <AevatarGAgentVerion>1.4.17</AevatarGAgentVerion>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="GodGPT.GAgents" Version="1.20.2" />
