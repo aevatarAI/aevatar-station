@@ -19,4 +19,5 @@ public class GuestChatRequestDto
     /// </summary>
     [MaxLength(10)]
     public string? Region { get; set; }
+    public string Ip { get; set; }
 } 
