@@ -89,4 +89,11 @@ public class UserController : AevatarController
         await _developerService.UpdateDockerImageAsync(hostId + "-" + hostType, "1",
             imageName);
     }
+
+    [HttpPost("CopyHost")]
+    [Authorize(Policy = AevatarPermissions.AdminPolicy)]
+    public async Task CopyHost(string sourceClientId, string newClientId)
+    {
+        await _developerService.CopyHostAsync(sourceClientId, newClientId, "1", null);
+    }
 }
