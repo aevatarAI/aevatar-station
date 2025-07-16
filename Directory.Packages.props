@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVersion>9.0.1</OrleansVersion>
-    <AevatarGAgentVersion>1.5.1-tool.6</AevatarGAgentVersion>
+    <AevatarGAgentVersion>1.5.1-toolworkflow.1</AevatarGAgentVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- AElf packages -->
@@ -26,6 +26,7 @@
     <PackageVersion Include="Aevatar.GAgents.MCP" Version="$(AevatarGAgentVersion)" />
     <PackageVersion Include="Aevatar.GAgents.MCP.Core" Version="$(AevatarGAgentVersion)" />
     <PackageVersion Include="Aevatar.GAgents.Executor" Version="$(AevatarGAgentVersion)" />
+    <PackageVersion Include="Aevatar.GAgents.InputGAgent" Version="1.5.0-input-1.0" />
 
     <!-- AI and Analysis packages -->
     <PackageVersion Include="AutoGen" Version="0.2.1" />
