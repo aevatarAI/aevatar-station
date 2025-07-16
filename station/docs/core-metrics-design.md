@@ -41,9 +41,9 @@ This document details the design and implementation plan for the core metrics sy
 | orleans-streams-queue-cache-length | Counter | ✅ | `orleans_streams_queue_cache_length_messages_total` | cluster_id, silo_id, queue_id | Custom implementation for Kafka stream provider |
 | orleans-streams-queue-cache-messages-added | Counter | ✅ | `orleans_streams_queue_cache_messages_added_total` | cluster_id, silo_id, queue_id | Custom implementation for Kafka stream provider |
 | orleans-streams-queue-cache-messages-purged | Counter | ✅ | `orleans_streams_queue_cache_messages_purged_total` | cluster_id, silo_id, queue_id | Custom implementation for Kafka stream provider |
-| aevatar_stream_event_publish_latency | Histogram | ✅ | `aevatar_stream_event_publish_latency_seconds_*` | event_type, grain_id, stream_id, cluster_id, silo_id | Custom implementation, exported |
-| aevatar_stream_event_publish_latency_count | Counter | ✅ | `aevatar_stream_event_publish_latency_seconds_count` | event_type, grain_id, stream_id, cluster_id, silo_id | Custom implementation, exported |
-| aevatar_stream_event_publish_latency_sum | Counter | ✅ | `aevatar_stream_event_publish_latency_seconds_sum` | event_type, grain_id, stream_id, cluster_id, silo_id | Custom implementation, exported |
+| aevatar_stream_event_publish_latency | Histogram | ✅ | `aevatar_stream_event_publish_latency_seconds_*` | event_type, grain_id, stream_id, cluster_id, silo_id | Custom implementation, tracks both stream events and state projections via event_type label |
+| aevatar_stream_event_publish_latency_count | Counter | ✅ | `aevatar_stream_event_publish_latency_seconds_count` | event_type, grain_id, stream_id, cluster_id, silo_id | Custom implementation, counts both stream events and state projections |
+| aevatar_stream_event_publish_latency_sum | Counter | ✅ | `aevatar_stream_event_publish_latency_seconds_sum` | event_type, grain_id, stream_id, cluster_id, silo_id | Custom implementation, sums latency for both stream events and state projections |
 
 ### Additional Orleans Streaming Metrics (Custom Implementation)
 
@@ -173,6 +173,9 @@ curl -s "http://localhost:9091/api/v1/query?query=orleans_storage_write_latency_
 
 # Validate custom Aevatar storage metrics
 curl -s "http://localhost:9091/api/v1/query?query=aevatar_grain_storage_write_count_operations_total" | jq '.data.result[0].metric'
+
+# Validate state projection latency metrics (via event_type label)
+curl -s "http://localhost:9091/api/v1/query?query=aevatar_stream_event_publish_latency_seconds_count{event_type=\"state_projection\"}" | jq '.data.result[0].metric'
 ```
 
 ### Current Status Summary
@@ -185,11 +188,13 @@ curl -s "http://localhost:9091/api/v1/query?query=aevatar_grain_storage_write_co
 - ✅ All HTTP API metrics with recording rules for derived metrics
 - ✅ All custom Aevatar storage and streaming metrics
 - ✅ Stream pressure metrics successfully implemented and visible
+- ✅ State projection latency tracking enhanced in existing stream event metrics
 
 **Production Readiness:**
 - All required metrics actively collecting data
 - Custom implementations optimized for Kafka streaming workloads
 - Error tracking validated across all storage providers
+- Comprehensive state projection and event stream performance monitoring
 - Comprehensive monitoring coverage for production operations
 
 ## References Checklist

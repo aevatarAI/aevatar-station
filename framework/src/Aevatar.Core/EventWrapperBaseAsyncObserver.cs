@@ -47,7 +47,8 @@ public class EventWrapperBaseAsyncObserver : IAsyncObserver<EventWrapperBase>
         var latency = (DateTime.UtcNow - item.PublishedTimestampUtc).TotalSeconds;
         _logger?.LogInformation("[OnNextAsync] Consuming event_type={EventType} PublishedTimestampUtc={PublishedTimestampUtc} latency={Latency}s",
             eventType, item.PublishedTimestampUtc, latency);
-        Observability.EventPublishLatencyMetrics.Record(latency, item, MethodName, ParameterTypeName, null);
+        
+        Observability.EventPublishLatencyMetrics.Record(latency, item, _logger);
 
         await _func(item);
     }

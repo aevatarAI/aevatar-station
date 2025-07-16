@@ -356,10 +356,14 @@ public abstract partial class
         if (StateDispatcher != null)
         {
             var snapshot = _copier!.Copy(State);
-            await StateDispatcher.PublishSingleAsync(this.GetGrainId(),
-                new StateWrapper<TState>(this.GetGrainId(), snapshot, Version));
-            await StateDispatcher.PublishAsync(this.GetGrainId(),
-                new StateWrapper<TState>(this.GetGrainId(), snapshot, Version));
+            
+            var singleStateWrapper = new StateWrapper<TState>(this.GetGrainId(), snapshot, Version);
+            singleStateWrapper.PublishedTimestampUtc = DateTime.UtcNow;
+            await StateDispatcher.PublishSingleAsync(this.GetGrainId(), singleStateWrapper);
+            
+            var batchStateWrapper = new StateWrapper<TState>(this.GetGrainId(), snapshot, Version);
+            batchStateWrapper.PublishedTimestampUtc = DateTime.UtcNow;
+            await StateDispatcher.PublishAsync(this.GetGrainId(), batchStateWrapper);
         }
     }
 
