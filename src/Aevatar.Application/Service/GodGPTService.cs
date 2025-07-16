@@ -36,6 +36,7 @@ using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Auditing;
 using Volo.Abp.DependencyInjection;
+using System.Diagnostics;
 
 namespace Aevatar.Service;
 
@@ -514,13 +515,22 @@ public class GodGPTService : ApplicationService, IGodGPTService
     /// </summary>
     public async Task<CreateGuestSessionResponseDto> CreateGuestSessionAsync(string clientIp, string? guider = null)
     {
+        var stopwatch = Stopwatch.StartNew();
         var grainId = CommonHelper.StringToGuid(CommonHelper.GetAnonymousUserGAgentId(clientIp));
         var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(grainId);
+        _logger.LogDebug("[GodGPTService][CreateGuestSessionAsync] Start processing for IP: {0}", clientIp);
         
         // Check if user can still chat
-        if (!await anonymousUserGrain.CanChatAsync())
+        var canChatStopwatch = Stopwatch.StartNew();
+        var canChat = await anonymousUserGrain.CanChatAsync();
+        _logger.LogDebug("[GodGPTService][CreateGuestSessionAsync] CanChatAsync duration: {0}ms", canChatStopwatch.ElapsedMilliseconds);
+        
+        if (!canChat)
         {
+            var remainingChatsStopwatch = Stopwatch.StartNew();
             var remainingChats = await anonymousUserGrain.GetRemainingChatsAsync();
+            _logger.LogDebug("[GodGPTService][CreateGuestSessionAsync] GetRemainingChatsAsync duration: {0}ms", remainingChatsStopwatch.ElapsedMilliseconds);
+            _logger.LogDebug("[GodGPTService][CreateGuestSessionAsync] Total duration: {0}ms", stopwatch.ElapsedMilliseconds);
             return new CreateGuestSessionResponseDto
             {
                 RemainingChats = remainingChats,
@@ -529,9 +539,15 @@ public class GodGPTService : ApplicationService, IGodGPTService
         }
 
         // Create new session (this will replace any existing session for the IP)
+        var createSessionStopwatch = Stopwatch.StartNew();
         await anonymousUserGrain.CreateGuestSessionAsync(guider);
+        _logger.LogDebug("[GodGPTService][CreateGuestSessionAsync] CreateGuestSessionAsync duration: {0}ms", createSessionStopwatch.ElapsedMilliseconds);
         
+        var remainingStopwatch = Stopwatch.StartNew();
         var remaining = await anonymousUserGrain.GetRemainingChatsAsync();
+        _logger.LogDebug("[GodGPTService][CreateGuestSessionAsync] GetRemainingChatsAsync duration: {0}ms", remainingStopwatch.ElapsedMilliseconds);
+        
+        _logger.LogDebug("[GodGPTService][CreateGuestSessionAsync] Total duration: {0}ms", stopwatch.ElapsedMilliseconds);
         return new CreateGuestSessionResponseDto
         {
             RemainingChats = remaining,
