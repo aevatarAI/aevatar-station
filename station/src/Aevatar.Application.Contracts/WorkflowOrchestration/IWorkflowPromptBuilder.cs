@@ -5,24 +5,21 @@ using Aevatar.Domain.WorkflowOrchestration;
 namespace Aevatar.Application.Contracts.WorkflowOrchestration
 {
     /// <summary>
-    /// 工作流提示词构建服务接口 - 一体化提示词构建
+    /// 工作流提示词构建服务接口 - 简化版本
     /// </summary>
     public interface IWorkflowPromptBuilder
     {
         /// <summary>
-        /// 构建一体化工作流编排提示词
+        /// 构建工作流生成提示词
         /// </summary>
-        /// <param name="request">提示词构建请求</param>
+        /// <param name="userGoal">用户目标</param>
+        /// <param name="availableAgents">可用Agent列表</param>
+        /// <param name="options">生成选项</param>
         /// <returns>构建的提示词</returns>
-        Task<PromptBuildResult> BuildWorkflowPromptAsync(PromptBuildRequest request);
-
-        /// <summary>
-        /// 根据复杂度生成提示词模板
-        /// </summary>
-        /// <param name="complexity">工作流复杂度</param>
-        /// <param name="options">模板选项</param>
-        /// <returns>提示词模板</returns>
-        Task<PromptTemplate> GetPromptTemplateAsync(WorkflowComplexity complexity, TemplateOptions options);
+        Task<string> BuildWorkflowGenerationPromptAsync(
+            string userGoal,
+            IEnumerable<AgentIndexInfo> availableAgents,
+            WorkflowGenerationOptions options);
 
         /// <summary>
         /// 验证提示词的有效性
@@ -32,12 +29,16 @@ namespace Aevatar.Application.Contracts.WorkflowOrchestration
         Task<PromptValidationResult> ValidatePromptAsync(string prompt);
 
         /// <summary>
-        /// 优化提示词以提升LLM响应质量
+        /// 构建Agent选择提示词
         /// </summary>
-        /// <param name="prompt">原始提示词</param>
-        /// <param name="optimizationOptions">优化选项</param>
-        /// <returns>优化后的提示词</returns>
-        Task<PromptOptimizationResult> OptimizePromptAsync(string prompt, PromptOptimizationOptions optimizationOptions);
+        /// <param name="userGoal">用户目标</param>
+        /// <param name="availableAgents">可用Agent列表</param>
+        /// <param name="options">生成选项</param>
+        /// <returns>Agent选择提示词</returns>
+        Task<string> BuildAgentSelectionPromptAsync(
+            string userGoal,
+            IEnumerable<AgentIndexInfo> availableAgents,
+            WorkflowGenerationOptions options);
     }
 
     /// <summary>
@@ -154,6 +155,24 @@ namespace Aevatar.Application.Contracts.WorkflowOrchestration
         AnnotatedJSON = 3
     }
 
-    // 由于文件长度限制，其他DTO类如PromptBuildResult等将在后续添加
-    // 主要包含：PromptBuildResult, PromptComponents, PromptBuildStatistics等
+    /// <summary>
+    /// 提示词验证结果
+    /// </summary>
+    public class PromptValidationResult
+    {
+        /// <summary>
+        /// 是否验证成功
+        /// </summary>
+        public bool IsValid { get; set; }
+
+        /// <summary>
+        /// 错误列表
+        /// </summary>
+        public List<ValidationError> Errors { get; set; } = new();
+
+        /// <summary>
+        /// 警告列表
+        /// </summary>
+        public List<ValidationWarning> Warnings { get; set; } = new();
+    }
 } 

@@ -24,6 +24,13 @@ namespace Aevatar.Application.Contracts.WorkflowOrchestration
         Task<AgentIndexInfo?> GetAgentByIdAsync(string agentId);
 
         /// <summary>
+        /// 根据ID查找特定Agent信息（别名方法）
+        /// </summary>
+        /// <param name="agentId">Agent唯一标识</param>
+        /// <returns>Agent索引信息，如果不存在则返回null</returns>
+        Task<AgentIndexInfo?> FindByIdAsync(string agentId);
+
+        /// <summary>
         /// 搜索Agent（支持关键词、分类过滤）
         /// </summary>
         /// <param name="query">搜索关键词（可选）</param>

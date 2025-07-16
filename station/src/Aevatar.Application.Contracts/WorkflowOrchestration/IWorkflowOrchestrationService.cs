@@ -13,9 +13,12 @@ namespace Aevatar.Application.Contracts.WorkflowOrchestration
         /// <summary>
         /// 根据用户目标生成完整工作流
         /// </summary>
-        /// <param name="request">工作流生成请求</param>
+        /// <param name="userGoal">用户目标</param>
+        /// <param name="options">生成选项</param>
         /// <returns>生成的工作流定义</returns>
-        Task<WorkflowGenerationResult> GenerateWorkflowAsync(WorkflowGenerationRequest request);
+        Task<WorkflowGenerationResult> GenerateWorkflowAsync(
+            string userGoal, 
+            WorkflowGenerationOptions? options = null);
 
         /// <summary>
         /// 验证工作流定义的有效性
@@ -25,25 +28,11 @@ namespace Aevatar.Application.Contracts.WorkflowOrchestration
         Task<WorkflowValidationResult> ValidateWorkflowAsync(WorkflowDefinition workflow);
 
         /// <summary>
-        /// 优化工作流性能
-        /// </summary>
-        /// <param name="workflow">待优化的工作流定义</param>
-        /// <returns>优化后的工作流</returns>
-        Task<WorkflowOptimizationResult> OptimizeWorkflowAsync(WorkflowDefinition workflow);
-
-        /// <summary>
         /// 分析工作流复杂度
         /// </summary>
         /// <param name="workflow">工作流定义</param>
         /// <returns>复杂度分析结果</returns>
         Task<WorkflowComplexityAnalysis> AnalyzeComplexityAsync(WorkflowDefinition workflow);
-
-        /// <summary>
-        /// 预估工作流执行时间
-        /// </summary>
-        /// <param name="workflow">工作流定义</param>
-        /// <returns>执行时间预估结果</returns>
-        Task<WorkflowExecutionEstimate> EstimateExecutionTimeAsync(WorkflowDefinition workflow);
     }
 
     /// <summary>
@@ -107,6 +96,41 @@ namespace Aevatar.Application.Contracts.WorkflowOrchestration
     /// </summary>
     public class WorkflowGenerationOptions
     {
+        /// <summary>
+        /// 目标复杂度
+        /// </summary>
+        public string TargetComplexity { get; set; } = "Medium";
+
+        /// <summary>
+        /// 偏好的Agent类别
+        /// </summary>
+        public List<string> PreferredCategories { get; set; } = new();
+
+        /// <summary>
+        /// 排除的Agent列表
+        /// </summary>
+        public List<string> ExcludedAgents { get; set; } = new();
+
+        /// <summary>
+        /// 最大节点数
+        /// </summary>
+        public int MaxNodes { get; set; } = 10;
+
+        /// <summary>
+        /// 最大执行时间（分钟）
+        /// </summary>
+        public int MaxExecutionTime { get; set; } = 30;
+
+        /// <summary>
+        /// 是否允许并行执行
+        /// </summary>
+        public bool AllowParallelExecution { get; set; } = true;
+
+        /// <summary>
+        /// 是否允许循环
+        /// </summary>
+        public bool AllowLoops { get; set; } = false;
+
         /// <summary>
         /// 是否包含详细的Agent选择理由
         /// </summary>
@@ -185,6 +209,11 @@ namespace Aevatar.Application.Contracts.WorkflowOrchestration
         public List<string> Errors { get; set; } = new();
 
         /// <summary>
+        /// 元数据信息
+        /// </summary>
+        public Dictionary<string, object> Metadata { get; set; } = new();
+
+        /// <summary>
         /// 警告信息
         /// </summary>
         public List<string> Warnings { get; set; } = new();
@@ -244,6 +273,26 @@ namespace Aevatar.Application.Contracts.WorkflowOrchestration
         /// 生成的连接数量
         /// </summary>
         public int GeneratedConnections { get; set; }
+
+        /// <summary>
+        /// 处理时间（毫秒）
+        /// </summary>
+        public long ProcessingTimeMs { get; set; }
+
+        /// <summary>
+        /// Agent数量
+        /// </summary>
+        public int AgentCount { get; set; }
+
+        /// <summary>
+        /// 生成的节点数量
+        /// </summary>
+        public int GeneratedNodeCount { get; set; }
+
+        /// <summary>
+        /// 验证分数
+        /// </summary>
+        public double ValidationScore { get; set; }
     }
 
     /// <summary>
@@ -417,6 +466,24 @@ namespace Aevatar.Application.Contracts.WorkflowOrchestration
         /// 分析详情
         /// </summary>
         public ComplexityDetails Details { get; set; } = new();
+
+        /// <summary>
+        /// 复杂度分数（兼容别名）
+        /// </summary>
+        public int Score 
+        { 
+            get => ComplexityScore; 
+            set => ComplexityScore = value; 
+        }
+
+        /// <summary>
+        /// 复杂度等级字符串（兼容别名）
+        /// </summary>
+        public string Level 
+        { 
+            get => ComplexityLevel.ToString(); 
+            set => ComplexityLevel = Enum.Parse<WorkflowComplexity>(value); 
+        }
     }
 
     /// <summary>
