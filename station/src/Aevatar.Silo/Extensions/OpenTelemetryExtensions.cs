@@ -49,6 +49,10 @@ public static class OpenTelemetryExtensions
                     .AddSource("LatencyBenchmark.Root")
                     .AddSource("LatencyPublisherAgent")
                     .AddSource("LatencyBenchmark.Handler")
+                    .AddSource("Aevatar.Core.GAgent")
+                    .AddSource("Aevatar.Core.Observer")
+                    .AddSource("Orleans.Streaming.PullingAgent")
+                    .AddSource("Orleans.Streaming.Kafka")
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation();
             })

@@ -9,6 +9,7 @@ using Orleans.EventSourcing;
 using Orleans.Providers;
 using Orleans.Serialization;
 using Orleans.Streams;
+using System.Diagnostics;
 
 namespace Aevatar.Core;
 
@@ -42,6 +43,9 @@ public abstract partial class
     where TEvent : EventBase
     where TConfiguration : ConfigurationBase
 {
+    // ActivitySource for distributed tracing
+    private static readonly ActivitySource ActivitySource = new("Aevatar.Core.GAgent");
+    
     private Lazy<IStreamProvider> LazyStreamProvider => new(()
         => this.GetStreamProvider(AevatarCoreConstants.StreamProvider));
 
@@ -398,8 +402,18 @@ public abstract partial class
 
     protected virtual IAsyncStream<EventWrapperBase> GetEventBaseStream(GrainId grainId)
     {
+        // Create activity with proper correlation for tracing
+        using var activity = ActivitySource.StartActivity("GetEventBaseStream");
+        activity?.SetTag("grain.id", grainId.ToString());
+        activity?.SetTag("stream.namespace", AevatarOptions!.StreamNamespace);
+        activity?.SetTag("component", "GAgentBase");
+        
         var grainIdString = grainId.ToString();
         var streamId = StreamId.Create(AevatarOptions!.StreamNamespace, grainIdString);
+        
+        activity?.SetTag("stream.id", streamId.ToString());
+        activity?.SetTag("operation", "GetEventBaseStream");
+        
         return StreamProvider.GetStream<EventWrapperBase>(streamId);
     }
 }
