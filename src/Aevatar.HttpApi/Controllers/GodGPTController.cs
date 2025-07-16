@@ -10,6 +10,7 @@ using Aevatar.Application.Grains.Agents.ChatManager.Chat;
 using Aevatar.Application.Grains.Agents.ChatManager.Common;
 using Aevatar.Application.Grains.Agents.ChatManager.Dtos;
 using Aevatar.Application.Grains.ChatManager.Dtos;
+using Aevatar.BlobStorings;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Extensions;
@@ -32,6 +33,7 @@ using Orleans;
 using Orleans.Runtime;
 using Orleans.Streams;
 using Volo.Abp;
+using Volo.Abp.BlobStoring;
 
 namespace Aevatar.Controllers;
 
@@ -48,17 +50,22 @@ public class GodGPTController : AevatarController
     private readonly IOptions<AevatarOptions> _aevatarOptions;
     private readonly ILogger<GodGPTController> _logger;
     private readonly IAccountService _accountService;
+    private readonly IBlobContainer _blobContainer;
+    private readonly BlobStoringOptions _blobStoringOptions;
     const string Version = "1.20.0";
 
 
     public GodGPTController(IGodGPTService godGptService, IClusterClient clusterClient,
-        IOptions<AevatarOptions> aevatarOptions, ILogger<GodGPTController> logger, IAccountService accountService)
+        IOptions<AevatarOptions> aevatarOptions, ILogger<GodGPTController> logger, IAccountService accountService,
+        IBlobContainer blobContainer, IOptionsSnapshot<BlobStoringOptions> blobStoringOptions)
     {
         _godGptService = godGptService;
         _clusterClient = clusterClient;
         _aevatarOptions = aevatarOptions;
         _logger = logger;
         _accountService = accountService;
+        _blobContainer = blobContainer;
+        _blobStoringOptions = blobStoringOptions.Value;
     }
 
     [AllowAnonymous]
@@ -493,5 +500,24 @@ public class GodGPTController : AevatarController
         _logger.LogDebug(
             $"[GodGPTController][GetShareKeyWordWithAIAsync] completed for sessionId={sessionId}, duration: {stopwatch.ElapsedMilliseconds}ms");
         return response;
+    }
+    
+    [HttpPost("godgpt/blob")]
+    public async Task<string> SaveAsync([FromForm] SaveBlobInput input)
+    {
+        var file = input.File.OpenReadStream();
+        if (file.Length > _blobStoringOptions.MaxSizeBytes)
+        {
+            throw new UserFriendlyException(
+                $"The file is too large, with a maximum of {_blobStoringOptions.MaxSizeBytes} bytes.");
+        }
+
+        var originalFileName = input.File.FileName;
+        var fileExtension = Path.GetExtension(originalFileName);
+        var fileName = Guid.NewGuid().ToString() + fileExtension;
+
+        await _blobContainer.SaveAsync(fileName, input.File.OpenReadStream(), true);
+
+        return fileName;
     }
 }

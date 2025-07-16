@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -29,6 +30,8 @@ public class ChatMiddleware
     private readonly IClusterClient _clusterClient;
     private readonly ILogger<ChatMiddleware> _logger;
     private readonly IOptions<AevatarOptions> _aevatarOptions;
+
+    private const int MaxImageCount = 10;
 
     public ChatMiddleware(RequestDelegate next, ILogger<ChatMiddleware> logger, IClusterClient clusterClient,
         IOptions<AevatarOptions> aevatarOptions)
@@ -89,6 +92,15 @@ public class ChatMiddleware
 
         var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
         var request = JsonConvert.DeserializeObject<QuantumChatRequestDto>(body);
+        if (!request.Images.IsNullOrEmpty() && request.Images.Count > MaxImageCount)
+        {
+            _logger.LogDebug("[GodGPTController][ChatWithSessionAsync] {0} Too many files. {1}", userId, request.Images.Count);
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await context.Response.WriteAsync($"Too many files. Maximum {MaxImageCount} images per upload.");
+            await context.Response.Body.FlushAsync();
+            return;
+        }
+        
         try
         {
             var stopwatch = Stopwatch.StartNew();
@@ -118,7 +130,7 @@ public class ChatMiddleware
 
             var chatId = Guid.NewGuid().ToString();
             await godChat.StreamChatWithSessionAsync(request.SessionId, string.Empty, request.Content,
-                chatId, null, true, request.Region);
+                chatId, null, true, request.Region, request.Images);
             _logger.LogDebug($"[GodGPTController][ChatWithSessionAsync] http request llm:{request.SessionId}");
             var exitSignal = new TaskCompletionSource();
             StreamSubscriptionHandle<ResponseStreamGodChat>? subscription = null;
