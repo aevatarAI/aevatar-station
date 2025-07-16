@@ -338,6 +338,7 @@ public static class OrleansHostExtension
                     .RegisterHub<AevatarSignalRHub>();
             }).ConfigureServices((context, services) =>
             {
+                services.AddSingleton<IGrainStateSerializer, HybridGrainStateSerializer>();
                 // services.AddSingleton<ICancellationTokenProvider, NullCancellationTokenProvider>();
                 services.AddSingleton<IGrainStateSerializer, BinaryGrainStateSerializer>();
                 // services.Configure<AzureOpenAIConfig>(context.Configuration.GetSection("AIServices:AzureOpenAI"));
