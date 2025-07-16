@@ -149,10 +149,10 @@ public class MCPDemoController : ControllerBase
             try
             {
                 // Execute the event through GAgentExecutor
-                var resultJson = await _gAgentExecutor.ExecuteGAgentEventHandler(agentInfo.grainId, toolCallEvent);
+                var resultJson = await _gAgentExecutor.ExecuteGAgentEventHandler(agentInfo.grainId, toolCallEvent, typeof(MCPToolResponseEvent));
 
                 // Try to parse the result as MCPToolResponseEvent
-                MCPToolResponseEvent? response = null;
+                MCPToolResponseEvent? response;
                 try
                 {
                     _logger.LogInformation("Raw result JSON: {Json}", resultJson);

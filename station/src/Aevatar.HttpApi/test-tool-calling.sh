@@ -1,5 +1,5 @@
 #!/bin/bash
-# test-mcp-memory-server.sh - Test MCPDemoController API with memory-server
+# test-mcp-memory-server.sh - Test MCPDemoController API with memory-server knowledge graph
 
 # Color definitions
 GREEN='\033[0;32m'
@@ -197,49 +197,120 @@ call_tool() {
 
 # Function to test memory server workflow
 test_memory_workflow() {
-    echo -e "\n${CYAN}=== Testing Memory Server Workflow ===${NC}"
+    echo -e "\n${CYAN}=== Testing Memory Server Knowledge Graph Workflow ===${NC}"
     
-    # Step 1: Store a memory with proper JSON escaping
-    echo -e "\n${BLUE}Step 1: Storing a memory${NC}"
+    # Step 1: Create entities
+    echo -e "\n${BLUE}Step 1: Creating entities${NC}"
     local current_date=$(date)
-    call_tool "store" "{
-        \"key\": \"test-memory-1\",
-        \"value\": \"This is a test memory stored at $current_date\"
-    }" "Store Memory"
+    call_tool "create_entities" '{
+        "entities": [
+            {
+                "name": "John Doe",
+                "entityType": "person",
+                "observations": [
+                    "Software engineer at Aevatar",
+                    "Expert in Orleans framework",
+                    "Created test at '"$current_date"'"
+                ]
+            },
+            {
+                "name": "Aevatar Station",
+                "entityType": "project",
+                "observations": [
+                    "Orleans-based distributed system",
+                    "Uses MCP for AI agent integration",
+                    "Has memory server capability"
+                ]
+            }
+        ]
+    }' "Create Entities"
     
     # Wait a bit
     sleep 1
     
-    # Step 2: Retrieve the memory
-    echo -e "\n${BLUE}Step 2: Retrieving the memory${NC}"
-    call_tool "retrieve" '{
-        "key": "test-memory-1"
-    }' "Retrieve Memory"
+    # Step 2: Create relations
+    echo -e "\n${BLUE}Step 2: Creating relations${NC}"
+    call_tool "create_relations" '{
+        "relations": [
+            {
+                "from": "John Doe",
+                "to": "Aevatar Station",
+                "relationType": "works on"
+            },
+            {
+                "from": "Aevatar Station",
+                "to": "John Doe",
+                "relationType": "is developed by"
+            }
+        ]
+    }' "Create Relations"
     
-    # Step 3: Store another memory
-    echo -e "\n${BLUE}Step 3: Storing another memory${NC}"
-    call_tool "store" '{
-        "key": "user-preferences",
-        "value": {
-            "theme": "dark",
-            "language": "en",
-            "notifications": true
-        }
-    }' "Store User Preferences"
+    # Step 3: Add observations to existing entity
+    echo -e "\n${BLUE}Step 3: Adding observations${NC}"
+    call_tool "add_observations" '{
+        "observations": [
+            {
+                "entityName": "John Doe",
+                "contents": [
+                    "Specializes in distributed systems",
+                    "Contributes to MCP integration"
+                ]
+            }
+        ]
+    }' "Add Observations"
     
-    # Step 4: List all memories
-    echo -e "\n${BLUE}Step 4: Listing all memories${NC}"
-    call_tool "list" '{}' "List All Memories"
+    # Step 4: Read the entire graph
+    echo -e "\n${BLUE}Step 4: Reading entire knowledge graph${NC}"
+    call_tool "read_graph" '{}' "Read Graph"
     
-    # Step 5: Delete a memory
-    echo -e "\n${BLUE}Step 5: Deleting a memory${NC}"
-    call_tool "delete" '{
-        "key": "test-memory-1"
-    }' "Delete Memory"
+    # Step 5: Search for nodes
+    echo -e "\n${BLUE}Step 5: Searching for nodes${NC}"
+    call_tool "search_nodes" '{
+        "query": "Orleans"
+    }' "Search Nodes"
     
-    # Step 6: Verify deletion
-    echo -e "\n${BLUE}Step 6: Verifying deletion${NC}"
-    call_tool "list" '{}' "List Memories After Deletion"
+    # Step 6: Open specific nodes
+    echo -e "\n${BLUE}Step 6: Opening specific nodes${NC}"
+    call_tool "open_nodes" '{
+        "names": ["John Doe", "Aevatar Station"]
+    }' "Open Nodes"
+    
+    # Step 7: Delete an observation
+    echo -e "\n${BLUE}Step 7: Deleting observations${NC}"
+    call_tool "delete_observations" '{
+        "deletions": [
+            {
+                "entityName": "John Doe",
+                "observations": ["Expert in Orleans framework"]
+            }
+        ]
+    }' "Delete Observations"
+    
+    # Step 8: Delete a relation
+    echo -e "\n${BLUE}Step 8: Deleting relations${NC}"
+    call_tool "delete_relations" '{
+        "relations": [
+            {
+                "from": "Aevatar Station",
+                "to": "John Doe",
+                "relationType": "is developed by"
+            }
+        ]
+    }' "Delete Relations"
+    
+    # Step 9: Verify changes by reading graph again
+    echo -e "\n${BLUE}Step 9: Verifying changes${NC}"
+    call_tool "read_graph" '{}' "Read Graph After Deletions"
+    
+    # Step 10: Delete entities
+    echo -e "\n${BLUE}Step 10: Deleting entities${NC}"
+    call_tool "delete_entities" '{
+        "names": ["John Doe", "Aevatar Station"]
+    }' "Delete Entities"
+    
+    # Step 11: Final verification
+    echo -e "\n${BLUE}Step 11: Final verification${NC}"
+    call_tool "read_graph" '{}' "Read Empty Graph"
 }
 
 # Function to check server states
@@ -308,4 +379,4 @@ else
     echo -e "\n${RED}=== Failed to initialize MCP agent ===${NC}"
 fi
 
-echo -e "\n${YELLOW}Note: The memory server stores data in memory only and will be reset when the agent is restarted.${NC}"
+echo -e "\n${YELLOW}Note: The memory server maintains a knowledge graph in memory only and will be reset when the agent is restarted.${NC}"
