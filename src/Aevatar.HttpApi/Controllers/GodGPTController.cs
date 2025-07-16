@@ -520,4 +520,15 @@ public class GodGPTController : AevatarController
 
         return fileName;
     }
+    
+    [HttpDelete("godgpt/blob")]
+    public async Task DeleteAsync(DeleteBlobInput input)
+    {
+        if (input.Name.IsNullOrWhiteSpace())
+        {
+            return;
+        }
+
+        await _blobContainer.DeleteAsync(input.Name);
+    }
 }
