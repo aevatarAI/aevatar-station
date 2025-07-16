@@ -452,6 +452,56 @@ public class MCPDemoController : ControllerBase
     {
         if (value == null) return null;
 
+        // Handle Newtonsoft.Json.Linq types
+        if (value is Newtonsoft.Json.Linq.JObject jObject)
+        {
+            var dict = new Dictionary<string, object>();
+            foreach (var prop in jObject.Properties())
+            {
+                dict[prop.Name] = ConvertValue(prop.Value);
+            }
+            return dict;
+        }
+
+        if (value is Newtonsoft.Json.Linq.JArray jArray)
+        {
+            var list = new List<object?>();
+            foreach (var item in jArray)
+            {
+                list.Add(ConvertValue(item));
+            }
+            return list;
+        }
+
+        if (value is Newtonsoft.Json.Linq.JValue jValue)
+        {
+            return jValue.Value;
+        }
+
+        if (value is Newtonsoft.Json.Linq.JToken jToken)
+        {
+            switch (jToken.Type)
+            {
+                case Newtonsoft.Json.Linq.JTokenType.Object:
+                    return ConvertValue(jToken as Newtonsoft.Json.Linq.JObject);
+                case Newtonsoft.Json.Linq.JTokenType.Array:
+                    return ConvertValue(jToken as Newtonsoft.Json.Linq.JArray);
+                case Newtonsoft.Json.Linq.JTokenType.Integer:
+                    return jToken.ToObject<long>();
+                case Newtonsoft.Json.Linq.JTokenType.Float:
+                    return jToken.ToObject<double>();
+                case Newtonsoft.Json.Linq.JTokenType.String:
+                    return jToken.ToObject<string>();
+                case Newtonsoft.Json.Linq.JTokenType.Boolean:
+                    return jToken.ToObject<bool>();
+                case Newtonsoft.Json.Linq.JTokenType.Null:
+                    return null;
+                default:
+                    return jToken.ToString();
+            }
+        }
+
+        // Handle System.Text.Json types
         if (value is JsonElement element)
         {
             switch (element.ValueKind)
