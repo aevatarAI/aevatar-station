@@ -141,7 +141,9 @@ public class MCPDemoController : ControllerBase
             {
                 ServerName = request.ServerName,
                 ToolName = request.ToolName,
-                Arguments = JsonConversionHelper.ConvertToBasicTypes(request.Arguments ?? new Dictionary<string, object>())
+                Arguments = JsonConversionHelper.ConvertToBasicTypes(
+                    request.Arguments ??
+                    new Dictionary<string, object>())
             };
 
             try
@@ -216,20 +218,18 @@ public class MCPDemoController : ControllerBase
                         }
                     });
                 }
-                else
+
+                return Ok(new
                 {
-                    return Ok(new
+                    success = false,
+                    errorMessage = response?.ErrorMessage ?? "Unknown error",
+                    toolInfo = formattedResponse.toolInfo,
+                    resultDisplay = new
                     {
-                        success = false,
-                        errorMessage = response?.ErrorMessage ?? "Unknown error",
-                        toolInfo = formattedResponse.toolInfo,
-                        resultDisplay = new
-                        {
-                            hasResult = false,
-                            errorDetails = response?.ErrorMessage
-                        }
-                    });
-                }
+                        hasResult = false,
+                        errorDetails = response?.ErrorMessage
+                    }
+                });
             }
             catch (TimeoutException tex)
             {
