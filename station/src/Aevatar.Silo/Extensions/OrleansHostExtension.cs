@@ -1,5 +1,6 @@
 using System.Net;
 using System.Linq;
+using Aevatar.Application.Grains;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Core.Placement;
@@ -206,6 +207,8 @@ public static class OrleansHostExtension
                             settings.NullValueHandling = NullValueHandling.Include;
                             settings.DefaultValueHandling = DefaultValueHandling.Populate;
                             settings.ObjectCreationHandling = ObjectCreationHandling.Replace;
+                            settings.TypeNameHandling = TypeNameHandling.Auto;
+                            settings.SerializationBinder = new GodGPTSerializationBinder();
                         })
                     .Configure<GrainCollectionOptions>(options =>
                     {
