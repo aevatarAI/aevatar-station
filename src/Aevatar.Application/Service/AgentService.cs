@@ -372,17 +372,18 @@ public class AgentService : ApplicationService, IAgentService
                     ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                     ContractResolver = new CamelCasePropertyNamesContractResolver()
                 });
-                await creatorAgent.UpdateAgentAsync(new UpdateAgentInput
-                {
-                    Name = dto.Name,
-                    Properties = properties
-                });
             }
             else
             {
                 _logger.LogError("no properties to be updated, id: {id}", guid);
             }
         }
+        
+        await creatorAgent.UpdateAgentAsync(new UpdateAgentInput
+        {
+            Name = dto.Name,
+            Properties = properties
+        });
 
         var resp = new AgentDto
         {
