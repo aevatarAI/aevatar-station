@@ -12,6 +12,7 @@ using Aevatar.Application.Grains.ChatManager.UserQuota;
 using Aevatar.Core.Abstractions;
 using Aevatar.Extensions;
 using Aevatar.Quantum;
+using GodGPT.GAgents.SpeechChat;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -441,6 +442,13 @@ public class ChatMiddleware
             _logger.LogWarning("[VoiceChatMiddleware] Invalid request body for user: {0}", userId);
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             await context.Response.WriteAsync("Invalid request body");
+            return;
+        }
+        if (request.VoiceLanguage == VoiceLanguageEnum.Unset)
+        {
+            _logger.LogWarning("[VoiceChatMiddleware] unset language userId: {0} language:{1}", userId,request.VoiceLanguage);
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await context.Response.WriteAsync("Unset language request body");
             return;
         }
 
