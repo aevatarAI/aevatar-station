@@ -138,6 +138,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "resource", "resource", "{22
 	ProjectSection(SolutionItems) = preProject
 		source\Directory.Build.props = ..\Directory.Build.props
 		source\Directory.Packages.props = ..\Directory.Packages.props
+		source\Dockerfile = ..\Dockerfile
 	EndProjectSection
 EndProject
 Global
