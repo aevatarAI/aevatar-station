@@ -75,29 +75,9 @@ namespace Aevatar.Domain.WorkflowOrchestration
         public string[] Categories { get; set; } = Array.Empty<string>();
 
         /// <summary>
-        /// 执行复杂度评级（1-10）
-        /// </summary>
-        public int ComplexityLevel { get; set; } = 1;
-
-        /// <summary>
         /// 预估执行时间（毫秒）
         /// </summary>
         public int EstimatedExecutionTime { get; set; } = 1000;
-
-        /// <summary>
-        /// 是否支持并行执行
-        /// </summary>
-        public bool SupportParallelExecution { get; set; } = true;
-
-        /// <summary>
-        /// Agent版本
-        /// </summary>
-        public string Version { get; set; } = "1.0.0";
-
-        /// <summary>
-        /// Agent依赖的服务或资源
-        /// </summary>
-        public string[] Dependencies { get; set; } = Array.Empty<string>();
 
         /// <summary>
         /// Agent标签（用于搜索和分类）
@@ -162,18 +142,6 @@ namespace Aevatar.Domain.WorkflowOrchestration
             if (L2Description?.Length < 200 || L2Description?.Length > 500)
                 errors.Add("L2Description must be between 200-500 characters");
 
-            // 验证复杂度级别
-            if (ComplexityLevel < 1 || ComplexityLevel > 10)
-                errors.Add("ComplexityLevel must be between 1-10");
-
-            // 验证执行时间
-            if (EstimatedExecutionTime < 0)
-                errors.Add("EstimatedExecutionTime cannot be negative");
-
-            // 验证版本格式
-            if (!string.IsNullOrWhiteSpace(Version) && !IsValidVersionFormat(Version))
-                errors.Add("Version format is invalid (expected: x.y.z)");
-
             // 验证弃用状态
             if (IsDeprecated && string.IsNullOrWhiteSpace(ReplacementAgent))
                 errors.Add("ReplacementAgent should be specified when Agent is deprecated");
@@ -215,11 +183,7 @@ namespace Aevatar.Domain.WorkflowOrchestration
                 ["L1Description"] = L1Description,
                 ["L2Description"] = L2Description,
                 ["Categories"] = Categories,
-                ["ComplexityLevel"] = ComplexityLevel,
                 ["EstimatedExecutionTime"] = EstimatedExecutionTime,
-                ["SupportParallelExecution"] = SupportParallelExecution,
-                ["Version"] = Version,
-                ["Dependencies"] = Dependencies,
                 ["Tags"] = Tags,
                 ["IsExperimental"] = IsExperimental,
                 ["IsDeprecated"] = IsDeprecated,

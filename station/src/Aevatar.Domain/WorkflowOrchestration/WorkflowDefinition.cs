@@ -102,9 +102,9 @@ namespace Aevatar.Domain.WorkflowOrchestration
         public string Description { get; set; } = string.Empty;
 
         /// <summary>
-        /// Agent ID（仅当Type为Agent时有效）
+        /// Agent类型名称（仅当Type为Agent时有效）
         /// </summary>
-        public string? AgentId { get; set; }
+        public string? TypeName { get; set; }
 
         /// <summary>
         /// 节点配置参数
@@ -215,10 +215,10 @@ namespace Aevatar.Domain.WorkflowOrchestration
     public class SelectedAgent
     {
         /// <summary>
-        /// Agent ID
+        /// Agent类型名称
         /// </summary>
         [Required]
-        public string AgentId { get; set; } = string.Empty;
+        public string TypeName { get; set; } = string.Empty;
 
         /// <summary>
         /// 选择理由

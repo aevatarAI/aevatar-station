@@ -10,19 +10,13 @@ namespace Aevatar.Domain.WorkflowOrchestration
     public class AgentIndexInfo
     {
         /// <summary>
-        /// Agent唯一标识符
-        /// </summary>
-        [Required]
-        public string AgentId { get; set; } = string.Empty;
-
-        /// <summary>
         /// Agent名称
         /// </summary>
         [Required]
         public string Name { get; set; } = string.Empty;
 
         /// <summary>
-        /// Agent类型全名（用于反射实例化）
+        /// Agent类型全名（用于反射实例化和唯一标识）
         /// </summary>
         [Required]
         public string TypeName { get; set; } = string.Empty;
@@ -57,30 +51,9 @@ namespace Aevatar.Domain.WorkflowOrchestration
         public Dictionary<string, AgentParameterInfo> OutputParameters { get; set; } = new();
 
         /// <summary>
-        /// Agent依赖的其他服务或资源
-        /// </summary>
-        public List<string> Dependencies { get; set; } = new();
-
-        /// <summary>
-        /// 执行复杂度评级（1-10）
-        /// </summary>
-        [Range(1, 10)]
-        public int ComplexityLevel { get; set; } = 1;
-
-        /// <summary>
         /// 预估执行时间（毫秒）
         /// </summary>
         public int EstimatedExecutionTime { get; set; } = 1000;
-
-        /// <summary>
-        /// 是否支持并行执行
-        /// </summary>
-        public bool SupportParallelExecution { get; set; } = true;
-
-        /// <summary>
-        /// Agent版本
-        /// </summary>
-        public string Version { get; set; } = "1.0.0";
 
         /// <summary>
         /// 创建时间
