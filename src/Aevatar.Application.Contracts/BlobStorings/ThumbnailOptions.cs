@@ -24,7 +24,7 @@ public class ThumbnailSize
 
 public enum ResizeMode
 {
-    Max,     // 保持比例，最大边不超过指定尺寸
-    Crop,    // 裁剪到指定尺寸
-    Stretch  // 拉伸到指定尺寸
+    Max,     // Generate Proportionally Scaled Thumbnails with Maximum Edge Constraint
+    Crop,    // Crop to Specified Dimensions
+    Stretch  // Stretch to Specified Dimensions
 } 

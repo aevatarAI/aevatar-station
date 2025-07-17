@@ -158,7 +158,7 @@ public class ThumbnailService : IThumbnailService, ITransientDependency
         catch (Exception ex)
         {
             // Log error but continue with other thumbnails
-            _logger.LogError(ex, "Error creating thumbnail {name}: {message}", size.Name, ex.Message);
+            _logger.LogError(ex, "Error creating thumbnail {name}: {message}", size.GetSizeName(), ex.Message);
             return null;
         }
     }
