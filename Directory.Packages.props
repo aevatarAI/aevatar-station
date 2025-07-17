@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVersion>9.0.1</OrleansVersion>
-    <AevatarGAgentVersion>1.5.1-toolworkflow.3</AevatarGAgentVersion>
+    <AevatarGAgentVersion>1.5.1-toolworkflow.4</AevatarGAgentVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- AElf packages -->
@@ -20,13 +20,14 @@
     <PackageVersion Include="Aevatar.GAgents.Twitter" Version="$(AevatarGAgentVersion)" />
     <PackageVersion Include="Aevatar.GAgents.ChatAgent" Version="$(AevatarGAgentVersion)" />
     <PackageVersion Include="Aevatar.GAgents.GroupChat" Version="$(AevatarGAgentVersion)" />
+    <PackageVersion Include="Aevatar.GAgents.GroupChat.GroupMember" Version="$(AevatarGAgentVersion)" />
     <PackageVersion Include="Aevatar.GAgents.GroupChat.Core" Version="$(AevatarGAgentVersion)" />
     <PackageVersion Include="Aevatar.GAgents.PsiOmni" Version="$(AevatarGAgentVersion)" />
     <PackageVersion Include="Aevatar.GAgents.PsiOmni.Plugins" Version="$(AevatarGAgentVersion)" />
     <PackageVersion Include="Aevatar.GAgents.MCP" Version="$(AevatarGAgentVersion)" />
     <PackageVersion Include="Aevatar.GAgents.MCP.Core" Version="$(AevatarGAgentVersion)" />
     <PackageVersion Include="Aevatar.GAgents.Executor" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.InputGAgent" Version="1.5.0-input-1.0" />
+    <PackageVersion Include="Aevatar.GAgents.InputGAgent" Version="$(AevatarGAgentVersion)" />
 
     <!-- AI and Analysis packages -->
     <PackageVersion Include="AutoGen" Version="0.2.1" />

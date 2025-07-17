@@ -77,8 +77,6 @@ Before using any tool:
 
 Always explain what tools you're using and why.
 When using tools, be clear about the results and how they help answer the user's question.",
-                    EnableMCPTools = true,
-                    EnableGAgentTools = true
                 };
 
                 // Use base class InitializeAsync which handles everything
