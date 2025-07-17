@@ -27,54 +27,53 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     }
 
     /// <summary>
-    /// 根据用户目标生成完整工作流
+    /// 根据用户目标生成工作流视图配置，直接返回前端可渲染的格式
     /// </summary>
     /// <param name="userGoal">用户目标描述</param>
-    /// <returns>生成的工作流定义</returns>
-    public async Task<WorkflowDefinition> GenerateWorkflowAsync(string userGoal)
+    /// <returns>前端可渲染的工作流视图配置</returns>
+    public async Task<WorkflowViewConfigDto?> GenerateWorkflowAsync(string userGoal)
     {
         if (string.IsNullOrWhiteSpace(userGoal))
         {
-            throw new ArgumentException("用户目标不能为空", nameof(userGoal));
+            _logger.LogWarning("Empty user goal provided for workflow generation");
+            return null;
         }
 
-        _logger.LogInformation("开始生成工作流，用户目标：{UserGoal}", userGoal);
+        _logger.LogInformation("Starting workflow generation for user goal: {UserGoal}", userGoal);
 
         try
         {
-            // 1. 获取所有可用的Agent信息
+            // 1. Get available agents
             var allAgents = await _agentIndexService.GetAllAgentsAsync();
-            _logger.LogDebug("获取到 {Count} 个可用Agent", allAgents.Count());
+            _logger.LogDebug("Retrieved {Count} available agents", allAgents.Count());
 
-            // 2. 构建一体化提示词
+            // 2. Build prompt for LLM (already updated to frontend format)
             var prompt = await BuildGenerationPromptAsync(userGoal, allAgents);
-            _logger.LogDebug("构建提示词完成，长度：{Length}", prompt.Length);
+            _logger.LogDebug("Generated prompt for LLM with length: {Length}", prompt.Length);
 
-            // 3. 调用LLM进行一次性工作流生成（包含Agent筛选和编排）
+            // 3. Call LLM to generate workflow JSON in frontend format
             var workflowJson = await CallLLMForWorkflowGenerationAsync(prompt);
-            _logger.LogDebug("LLM生成完成，响应长度：{Length}", workflowJson.Length);
+            _logger.LogDebug("Received LLM response with length: {Length}", workflowJson.Length);
 
-            // 4. 验证和修复JSON格式
-            var validationResult = await ValidateWorkflowJsonAsync(workflowJson);
-            if (!validationResult.IsValid)
+            // 4. Parse directly to frontend format
+            var workflowConfig = await ParseWorkflowJsonToViewConfigAsync(workflowJson);
+
+            if (workflowConfig == null)
             {
-                _logger.LogWarning("工作流JSON验证失败，尝试自动修复");
-                workflowJson = await TryFixWorkflowJsonAsync(workflowJson);
+                _logger.LogError("Failed to parse LLM response to workflow view configuration");
+                return null;
             }
 
-            // 5. 解析为WorkflowDefinition
-            var workflow = await ParseWorkflowJsonAsync(workflowJson);
-            
-            _logger.LogInformation("工作流生成成功，包含 {NodeCount} 个节点，{ConnectionCount} 个连接", 
-                workflow.Nodes?.Count ?? 0, 
-                workflow.Connections?.Count ?? 0);
+            _logger.LogInformation("Successfully generated workflow view configuration with {NodeCount} nodes and {ConnectionCount} connections", 
+                workflowConfig.WorkflowNodeList?.Count ?? 0, 
+                workflowConfig.WorkflowNodeUnitList?.Count ?? 0);
 
-            return workflow;
+            return workflowConfig;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "生成工作流失败：{UserGoal}", userGoal);
-            throw;
+            _logger.LogError(ex, "Error occurred while generating workflow for user goal: {UserGoal}", userGoal);
+            return null;
         }
     }
 
@@ -88,83 +87,82 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         await Task.CompletedTask;
 
         var agentList = availableAgents?.ToList() ?? new List<AgentIndexInfo>();
-        _logger.LogDebug("构建工作流生成提示词，用户目标：{UserGoal}，可用Agent数量：{AgentCount}", userGoal, agentList.Count);
-
+        
         var prompt = new StringBuilder();
 
-        // 系统角色定义
-        prompt.AppendLine("# 工作流编排专家");
-        prompt.AppendLine("你是一位专业的AI工作流编排专家。根据用户目标，从提供的Agent列表中选择合适的Agent，并设计完整的工作流执行方案。");
+        // System role definition
+        prompt.AppendLine("# Workflow Orchestration Expert");
+        prompt.AppendLine("You are a professional AI workflow orchestration expert. Based on user goals, select appropriate Agents from the provided list and design a complete workflow execution plan.");
         prompt.AppendLine();
 
-        // 用户目标
-        prompt.AppendLine("## 用户目标");
+        // User goal
+        prompt.AppendLine("## User Goal");
         prompt.AppendLine($"{userGoal}");
         prompt.AppendLine();
 
-        // 可用Agent列表
-        prompt.AppendLine("## 可用Agent列表");
+        // Available Agent list
+        prompt.AppendLine("## Available Agent List");
         if (agentList.Any())
         {
             foreach (var agent in agentList)
             {
                 prompt.AppendLine($"### {agent.Name} (TypeName: {agent.TypeName})");
-                prompt.AppendLine($"**简介**: {agent.L1Description}");
-                prompt.AppendLine($"**详细**: {agent.L2Description}");
-                prompt.AppendLine($"**类别**: {string.Join(", ", agent.Categories)}");
-                prompt.AppendLine($"**执行时间**: {agent.EstimatedExecutionTime}ms");
-                prompt.AppendLine();
+                prompt.AppendLine($"**Brief**: {agent.L1Description}");
+                prompt.AppendLine($"**Detailed**: {agent.L2Description}");
+                prompt.AppendLine($"**Categories**: {string.Join(", ", agent.Categories)}");
+                                 prompt.AppendLine($"**Execution Time**: {agent.EstimatedExecutionTime}ms");
+                 prompt.AppendLine();
             }
         }
         else
         {
-            prompt.AppendLine("暂无可用Agent");
+            prompt.AppendLine("No available Agents");
             prompt.AppendLine();
         }
 
-        // 输出要求
-        prompt.AppendLine("## 输出要求");
-        prompt.AppendLine("请输出完整的工作流JSON，包括：1) 从上述列表中选择合适的Agent，2) 设计节点（开始/Agent/结束节点），3) 定义连接关系和执行顺序，4) 配置节点间的数据流。");
+        // Output requirements
+        prompt.AppendLine("## Output Requirements");
+        prompt.AppendLine("Please output complete workflow JSON including: 1) Select appropriate Agents from the above list, 2) Design nodes, 3) Define connection relationships and execution order, 4) Configure data flow between nodes.");
         prompt.AppendLine();
 
-        // JSON格式规范
-        prompt.AppendLine("## JSON格式规范");
-        prompt.AppendLine("请严格按照以下JSON格式输出，这是前端期望的数据结构：");
+        // JSON format specification
+        prompt.AppendLine("## JSON Format Specification");
+        prompt.AppendLine("Please strictly follow the following JSON format output, this is the data structure expected by the frontend:");
         prompt.AppendLine("```json");
         prompt.AppendLine("{");
         prompt.AppendLine("  \"workflowNodeList\": [");
         prompt.AppendLine("    {");
-        prompt.AppendLine("      \"agentType\": \"Agent类型名称（如DataProcessorAgent）\",");
-        prompt.AppendLine("      \"name\": \"节点显示名称\",");
+        prompt.AppendLine("      \"agentType\": \"Agent type name (e.g., DataProcessorAgent)\",");
+        prompt.AppendLine("      \"name\": \"Node display name\",");
         prompt.AppendLine("      \"extendedData\": {");
-        prompt.AppendLine("        \"position_x\": \"节点X坐标（字符串格式，如'100'）\",");
-        prompt.AppendLine("        \"position_y\": \"节点Y坐标（字符串格式，如'100'）\",");
-        prompt.AppendLine("        \"width\": \"节点宽度（字符串格式，如'200'）\",");
-        prompt.AppendLine("        \"height\": \"节点高度（字符串格式，如'80'）\"");
+        prompt.AppendLine("        \"position_x\": \"Node X coordinate (string format, e.g., '100')\",");
+        prompt.AppendLine("        \"position_y\": \"Node Y coordinate (string format, e.g., '100')\",");
+        prompt.AppendLine("        \"width\": \"Node width (string format, e.g., '200')\",");
+        prompt.AppendLine("        \"height\": \"Node height (string format, e.g., '80')\"");
         prompt.AppendLine("      },");
         prompt.AppendLine("      \"properties\": {");
-        prompt.AppendLine("        \"inputParam1\": \"输入参数值\",");
-        prompt.AppendLine("        \"inputParam2\": \"输入参数值\"");
+        prompt.AppendLine("        \"inputParam1\": \"Input parameter value\",");
+        prompt.AppendLine("        \"inputParam2\": \"Input parameter value\"");
         prompt.AppendLine("      },");
-        prompt.AppendLine("      \"nodeId\": \"唯一节点ID（UUID格式）\"");
+        prompt.AppendLine("      \"nodeId\": \"Unique node ID (UUID format)\"");
         prompt.AppendLine("    }");
         prompt.AppendLine("  ],");
         prompt.AppendLine("  \"workflowNodeUnitList\": [");
         prompt.AppendLine("    {");
-        prompt.AppendLine("      \"nodeId\": \"当前节点ID\",");
-        prompt.AppendLine("      \"nextnodeId\": \"下一个节点ID\"");
+        prompt.AppendLine("      \"nodeId\": \"Current node ID\",");
+        prompt.AppendLine("      \"nextnodeId\": \"Next node ID\"");
         prompt.AppendLine("    }");
         prompt.AppendLine("  ],");
-        prompt.AppendLine("  \"Name\": \"工作流名称\"");
+        prompt.AppendLine("  \"Name\": \"Workflow name\"");
         prompt.AppendLine("}");
         prompt.AppendLine("```");
         prompt.AppendLine();
-        prompt.AppendLine("## 重要说明");
-        prompt.AppendLine("1. agentType必须使用Agent的TypeName，从上述可用Agent列表中选择");
-        prompt.AppendLine("2. extendedData中的所有值都必须是字符串格式");
-        prompt.AppendLine("3. 节点位置请按照从左到右、从上到下的顺序安排，每个节点间隔150-200像素");
-        prompt.AppendLine("4. workflowNodeUnitList定义执行顺序，每个条目表示当前节点完成后执行下一个节点");
-        prompt.AppendLine("5. properties包含该Agent节点的输入参数配置");
+        prompt.AppendLine("## Important Notes");
+        prompt.AppendLine("1. agentType must use the TypeName of the Agent, selected from the available Agent list above");
+        prompt.AppendLine("2. All values in extendedData must be in string format");
+        prompt.AppendLine("3. Please arrange node positions from left to right, top to bottom, with 150-200 pixel spacing between nodes");
+        prompt.AppendLine("4. workflowNodeUnitList defines execution order, each entry indicates the next node to execute after the current node completes");
+        prompt.AppendLine("5. properties contains input parameter configuration for the Agent node");
 
         return prompt.ToString();
     }
@@ -471,7 +469,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             ""workflowNodeList"": [
                 {
                     ""agentType"": ""DataProcessorAgent"",
-                    ""name"": ""数据处理节点"",
+                    ""name"": ""Data Processing Node"",
                     ""extendedData"": {
                         ""position_x"": ""100"",
                         ""position_y"": ""100"",
@@ -479,10 +477,24 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                         ""height"": ""80""
                     },
                     ""properties"": {
-                        ""inputData"": ""用户输入的数据"",
+                        ""inputData"": ""User input data"",
                         ""processingMode"": ""batch""
                     },
                     ""nodeId"": ""node-1""
+                },
+                {
+                    ""agentType"": ""OutputAgent"",
+                    ""name"": ""Output Node"",
+                    ""extendedData"": {
+                        ""position_x"": ""350"",
+                        ""position_y"": ""100"",
+                        ""width"": ""200"",
+                        ""height"": ""80""
+                    },
+                    ""properties"": {
+                        ""outputFormat"": ""json""
+                    },
+                    ""nodeId"": ""node-2""
                 }
             ],
             ""workflowNodeUnitList"": [
@@ -491,7 +503,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                     ""nextnodeId"": ""node-2""
                 }
             ],
-            ""Name"": ""AI生成的工作流""
+            ""Name"": ""AI Generated Workflow""
         }";
     }
 

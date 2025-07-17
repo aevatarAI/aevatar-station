@@ -9,16 +9,9 @@ namespace Aevatar.Application.Contracts.WorkflowOrchestration;
 public interface IWorkflowOrchestrationService
 {
     /// <summary>
-    /// 根据用户目标生成完整工作流
+    /// 根据用户目标生成工作流视图配置，直接返回前端可渲染的格式
     /// </summary>
     /// <param name="userGoal">用户目标描述</param>
-    /// <returns>生成的工作流定义</returns>
-    Task<WorkflowDefinition> GenerateWorkflowAsync(string userGoal);
-
-    /// <summary>
-    /// Parse workflow JSON to frontend format DTO
-    /// </summary>
-    /// <param name="jsonContent">JSON content from LLM</param>
-    /// <returns>Parsed WorkflowViewConfigDto</returns>
-    Task<WorkflowViewConfigDto?> ParseWorkflowJsonToViewConfigAsync(string jsonContent);
+    /// <returns>前端可渲染的工作流视图配置</returns>
+    Task<WorkflowViewConfigDto?> GenerateWorkflowAsync(string userGoal);
 } 
