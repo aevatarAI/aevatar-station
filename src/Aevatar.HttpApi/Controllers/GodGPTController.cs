@@ -506,7 +506,7 @@ public class GodGPTController : AevatarController
     }
     
     [HttpPost("godgpt/blob")]
-    public async Task<SaveBlobResponse> SaveAsync([FromForm] SaveBlobInput input)
+    public async Task<string> SaveAsync([FromForm] SaveBlobInput input)
     {
         if (input.File.Length > _blobStoringOptions.MaxSizeBytes)
         {
@@ -522,13 +522,14 @@ public class GodGPTController : AevatarController
         
         var _ = _thumbnailService.SaveWithThumbnailsAsync(input.File, fileName);
 
-        var response = new SaveBlobResponse
-        {
-            OriginalFileName = fileName,
-            OriginalSize = input.File.Length
-        };
-        
-        return response;
+        // var response = new SaveBlobResponse
+        // {
+        //     OriginalFileName = fileName,
+        //     OriginalSize = input.File.Length
+        // };
+        //
+        // return response;
+        return fileName;
     }
     
     [HttpDelete("godgpt/blob/{name}")]
