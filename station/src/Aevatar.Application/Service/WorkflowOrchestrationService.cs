@@ -139,7 +139,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         prompt.AppendLine("      \"nodeId\": \"节点ID\",");
         prompt.AppendLine("      \"type\": \"Start|Agent|End|Condition|Loop|Parallel|Merge\",");
         prompt.AppendLine("      \"name\": \"节点名称\",");
-        prompt.AppendLine("      \"agentId\": \"Agent节点必需\",");
+        prompt.AppendLine("      \"typeName\": \"Agent类型名称（Agent节点必需）\",");
         prompt.AppendLine("      \"position\": { \"x\": 100, \"y\": 100 }");
         prompt.AppendLine("    }");
         prompt.AppendLine("  ],");

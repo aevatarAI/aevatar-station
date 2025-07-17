@@ -9,7 +9,6 @@ using Volo.Abp;
 namespace Aevatar.Controllers;
 
 [RemoteService]
-[ControllerName("Workflow")]
 [Route("api/workflow")]
 [Authorize]
 public class WorkflowController : AevatarController

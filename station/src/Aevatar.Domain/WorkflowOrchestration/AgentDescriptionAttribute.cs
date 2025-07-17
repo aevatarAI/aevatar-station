@@ -14,19 +14,14 @@ namespace Aevatar.Domain.WorkflowOrchestration
         /// <summary>
         /// 构造函数
         /// </summary>
-        /// <param name="agentId">Agent唯一标识</param>
         /// <param name="name">Agent名称</param>
         /// <param name="l1Description">L1简短描述（100-150字符）</param>
         /// <param name="l2Description">L2详细描述（300-500字符）</param>
         public AgentDescriptionAttribute(
-            string agentId,
             string name, 
             string l1Description, 
             string l2Description)
         {
-            if (string.IsNullOrWhiteSpace(agentId))
-                throw new ArgumentException("Agent ID cannot be null or empty", nameof(agentId));
-            
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Agent name cannot be null or empty", nameof(name));
             
@@ -43,16 +38,12 @@ namespace Aevatar.Domain.WorkflowOrchestration
             if (l2Description.Length < 200 || l2Description.Length > 500)
                 throw new ArgumentException("L2 description must be between 200-500 characters", nameof(l2Description));
 
-            AgentId = agentId;
             Name = name;
             L1Description = l1Description;
             L2Description = l2Description;
         }
 
-        /// <summary>
-        /// Agent唯一标识符
-        /// </summary>
-        public string AgentId { get; }
+
 
         /// <summary>
         /// Agent名称
@@ -123,9 +114,6 @@ namespace Aevatar.Domain.WorkflowOrchestration
             var errors = new List<string>();
 
             // 验证必需字段
-            if (string.IsNullOrWhiteSpace(AgentId))
-                errors.Add("AgentId is required");
-
             if (string.IsNullOrWhiteSpace(Name))
                 errors.Add("Name is required");
 
@@ -178,7 +166,6 @@ namespace Aevatar.Domain.WorkflowOrchestration
         {
             return new Dictionary<string, object>
             {
-                ["AgentId"] = AgentId,
                 ["Name"] = Name,
                 ["L1Description"] = L1Description,
                 ["L2Description"] = L2Description,
