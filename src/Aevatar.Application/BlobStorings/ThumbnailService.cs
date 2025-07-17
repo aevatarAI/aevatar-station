@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SixLabors.ImageSharp;
@@ -28,7 +29,7 @@ public class ThumbnailService : IThumbnailService, ITransientDependency
     private readonly IBlobContainer _blobContainer;
     private readonly ThumbnailOptions _options;
     private readonly BlobStoringOptions _blobStoringOptions;
-
+    private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ILogger<ThumbnailService> _logger;
 
     private static readonly string[] ImageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff" };
@@ -37,9 +38,11 @@ public class ThumbnailService : IThumbnailService, ITransientDependency
         IBlobContainer blobContainer,
         IOptionsSnapshot<ThumbnailOptions> options,
         IOptionsSnapshot<BlobStoringOptions> blobStoringOptions,
+        IServiceScopeFactory serviceScopeFactory,
         ILogger<ThumbnailService> logger)
     {
         _blobContainer = blobContainer;
+        _serviceScopeFactory = serviceScopeFactory;
         _logger = logger;
         _options = options.Value;
         _blobStoringOptions = blobStoringOptions.Value;
@@ -153,9 +156,11 @@ public class ThumbnailService : IThumbnailService, ITransientDependency
                     // Save file size before stream is disposed
                     fileSize = thumbnailStream.Length;
                     
-                    // Save to blob storage
+                    // Save to blob storage using a new scope to avoid lifetime issues
                     thumbnailStream.Seek(0, SeekOrigin.Begin);
-                    await _blobContainer.SaveAsync(fileName, thumbnailStream, true);
+                    using var scope = _serviceScopeFactory.CreateScope();
+                    var blobContainer = scope.ServiceProvider.GetRequiredService<IBlobContainer>();
+                    await blobContainer.SaveAsync(fileName, thumbnailStream, true);
                 }
             }
 
