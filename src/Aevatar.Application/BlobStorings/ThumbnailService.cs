@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
@@ -16,50 +17,47 @@ using Volo.Abp.DependencyInjection;
 
 namespace Aevatar.BlobStorings;
 
+public interface IThumbnailService
+{
+    Task<List<ThumbnailInfo>> SaveWithThumbnailsAsync(IFormFile file, string fileName);
+    Task<List<ThumbnailInfo>> GenerateThumbnailsAsync(Stream imageStream, string baseFileName);
+} 
+
 public class ThumbnailService : IThumbnailService, ITransientDependency
 {
     private readonly IBlobContainer _blobContainer;
     private readonly ThumbnailOptions _options;
     private readonly BlobStoringOptions _blobStoringOptions;
-    
+
+    private readonly ILogger<ThumbnailService> _logger;
+
     private static readonly string[] ImageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff" };
 
     public ThumbnailService(
         IBlobContainer blobContainer,
         IOptionsSnapshot<ThumbnailOptions> options,
-        IOptionsSnapshot<BlobStoringOptions> blobStoringOptions)
+        IOptionsSnapshot<BlobStoringOptions> blobStoringOptions,
+        ILogger<ThumbnailService> logger)
     {
         _blobContainer = blobContainer;
+        _logger = logger;
         _options = options.Value;
         _blobStoringOptions = blobStoringOptions.Value;
     }
 
-    public async Task<SaveBlobResponse> SaveWithThumbnailsAsync(IFormFile file, string fileName)
+    public async Task<List<ThumbnailInfo>> SaveWithThumbnailsAsync(IFormFile file, string fileName)
     {
-        var response = new SaveBlobResponse
-        {
-            OriginalFileName = fileName,
-            OriginalSize = file.Length
-        };
-
-        // Save original file
-        using var originalStream = file.OpenReadStream();
-        await _blobContainer.SaveAsync(fileName, originalStream, true);
-
         // Generate thumbnails if it's an image and thumbnails are enabled
-        if (_options.EnableThumbnail && IsImageFile(file.FileName))
+        if (!_options.EnableThumbnail || !IsImageFile(file.FileName))
         {
-            var baseFileName = Path.GetFileNameWithoutExtension(fileName);
-            var fileExtension = Path.GetExtension(fileName);
-            
-            using var imageStream = file.OpenReadStream();
-            response.Thumbnails = await GenerateThumbnailsAsync(imageStream, baseFileName, fileExtension);
+            return new List<ThumbnailInfo>();
         }
 
-        return response;
+        using var imageStream = file.OpenReadStream();
+        return await GenerateThumbnailsAsync(imageStream, fileName);
     }
 
-    public async Task<List<ThumbnailInfo>> GenerateThumbnailsAsync(Stream imageStream, string baseFileName, string fileExtension)
+    public async Task<List<ThumbnailInfo>> GenerateThumbnailsAsync(Stream imageStream, string baseFileName)
     {
         var thumbnails = new List<ThumbnailInfo>();
         
@@ -77,7 +75,7 @@ public class ThumbnailService : IThumbnailService, ITransientDependency
             // Process thumbnails in parallel for better performance
             var tasks = _options.Sizes.Select(async size =>
             {
-                var thumbnailInfo = await CreateThumbnailAsync(image, size, baseFileName, fileExtension, originalWidth, originalHeight);
+                var thumbnailInfo = await CreateThumbnailAsync(image, size, baseFileName, originalWidth, originalHeight);
                 return thumbnailInfo;
             });
 
@@ -87,8 +85,7 @@ public class ThumbnailService : IThumbnailService, ITransientDependency
         catch (Exception ex)
         {
             // Log error but don't throw to avoid breaking the main upload
-            // TODO: Add proper logging
-            Console.WriteLine($"Error generating thumbnails: {ex.Message}");
+            _logger.LogError(ex, "Error generating thumbnails: {0}", ex.Message);
         }
 
         return thumbnails;
@@ -98,13 +95,12 @@ public class ThumbnailService : IThumbnailService, ITransientDependency
         Image originalImage, 
         ThumbnailSize size, 
         string baseFileName, 
-        string fileExtension,
         int originalWidth,
         int originalHeight)
     {
         try
         {
-            var thumbnailFileName = $"{baseFileName}_{size.Name}{GetThumbnailExtension()}";
+            var fileName = $"{baseFileName}@{size.GetSizeName()}";
             
             // Calculate dimensions based on resize mode
             var (width, height) = CalculateDimensions(originalWidth, originalHeight, size);
@@ -148,12 +144,12 @@ public class ThumbnailService : IThumbnailService, ITransientDependency
             
             // Save to blob storage
             thumbnailStream.Seek(0, SeekOrigin.Begin);
-            await _blobContainer.SaveAsync(thumbnailFileName, thumbnailStream, true);
+            await _blobContainer.SaveAsync(fileName, thumbnailStream, true);
 
             return new ThumbnailInfo
             {
-                FileName = thumbnailFileName,
-                SizeName = size.Name,
+                FileName = fileName,
+                SizeName = size.GetSizeName(),
                 Width = thumbnail.Width,
                 Height = thumbnail.Height,
                 FileSize = thumbnailStream.Length
@@ -162,7 +158,7 @@ public class ThumbnailService : IThumbnailService, ITransientDependency
         catch (Exception ex)
         {
             // Log error but continue with other thumbnails
-            Console.WriteLine($"Error creating thumbnail {size.Name}: {ex.Message}");
+            _logger.LogError(ex, "Error creating thumbnail {name}: {message}", size.Name, ex.Message);
             return null;
         }
     }
@@ -202,17 +198,6 @@ public class ThumbnailService : IThumbnailService, ITransientDependency
             "png" => new PngEncoder(),
             "jpg" or "jpeg" => new JpegEncoder { Quality = _options.Quality },
             _ => new WebpEncoder { Quality = _options.Quality }
-        };
-    }
-
-    private string GetThumbnailExtension()
-    {
-        return _options.Format.ToLower() switch
-        {
-            "webp" => ".webp",
-            "png" => ".png", 
-            "jpg" or "jpeg" => ".jpg",
-            _ => ".webp"
         };
     }
 

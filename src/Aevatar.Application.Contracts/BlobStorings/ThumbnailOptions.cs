@@ -12,10 +12,14 @@ public class ThumbnailOptions
 
 public class ThumbnailSize
 {
-    public string Name { get; set; } = string.Empty;
     public int Width { get; set; }
     public int Height { get; set; }
     public ResizeMode ResizeMode { get; set; } = ResizeMode.Max;
+
+    public string GetSizeName()
+    {
+        return $"{Width}-{Height}px";
+    }
 }
 
 public enum ResizeMode
