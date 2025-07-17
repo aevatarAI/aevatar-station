@@ -14,7 +14,7 @@ using Aevatar.Domain.WorkflowOrchestration;
 namespace Aevatar.Application.Service
 {
     /// <summary>
-    /// Agent索引服务 - 统一的Agent发现、索引和检索服务
+    /// Agent index service - unified service for Agent discovery, indexing, and retrieval
     /// </summary>
     public class AgentIndexService : BackgroundService, IAgentIndexService, IDisposable
     {
@@ -34,10 +34,10 @@ namespace Aevatar.Application.Service
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            // 启动时初始化索引
+            // Initialize index on startup
             await RefreshIndexAsync();
 
-            // 定期刷新索引（每10分钟）
+            // Refresh index periodically (every 10 minutes)
             using var timer = new PeriodicTimer(TimeSpan.FromMinutes(10));
             while (!stoppingToken.IsCancellationRequested && await timer.WaitForNextTickAsync(stoppingToken))
             {
@@ -47,7 +47,7 @@ namespace Aevatar.Application.Service
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "定期刷新Agent索引时发生错误");
+                    _logger.LogError(ex, "Error occurred during periodic Agent index refresh");
                 }
             }
         }
@@ -70,7 +70,7 @@ namespace Aevatar.Application.Service
             
             var results = _agentIndex.Values.AsQueryable();
 
-            // 关键字过滤
+            // Keyword filtering
             if (!string.IsNullOrWhiteSpace(query))
             {
                 var queryLower = query.ToLowerInvariant();
@@ -81,7 +81,7 @@ namespace Aevatar.Application.Service
                     a.Categories.Any(c => c.ToLowerInvariant().Contains(queryLower)));
             }
 
-            // 分类过滤
+            // Category filtering
             if (categories != null && categories.Length > 0)
             {
                 var categorySet = new HashSet<string>(categories, StringComparer.OrdinalIgnoreCase);
@@ -97,7 +97,7 @@ namespace Aevatar.Application.Service
             
             var results = _agentIndex.Values.AsQueryable();
 
-            // 搜索词过滤
+            // Search term filtering
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
                 var termLower = searchTerm.ToLowerInvariant();
@@ -107,7 +107,7 @@ namespace Aevatar.Application.Service
                     a.L2Description.ToLowerInvariant().Contains(termLower));
             }
 
-            // 分类过滤
+            // Category filtering
             if (!string.IsNullOrWhiteSpace(category))
             {
                 results = results.Where(a => a.Categories.Contains(category, StringComparer.OrdinalIgnoreCase));
@@ -121,7 +121,7 @@ namespace Aevatar.Application.Service
             await _refreshSemaphore.WaitAsync();
             try
             {
-                _logger.LogInformation("开始刷新Agent索引...");
+                _logger.LogInformation("Starting Agent index refresh...");
                 var startTime = DateTime.UtcNow;
                 var discoveredAgents = new List<AgentIndexInfo>();
                 var errors = new List<string>();
@@ -130,7 +130,7 @@ namespace Aevatar.Application.Service
 
                 try
                 {
-                    // 扫描所有程序集中的Agent类
+                    // Scan all assemblies for Agent classes
                     var assemblies = AppDomain.CurrentDomain.GetAssemblies()
                         .Where(a => !a.IsDynamic && !string.IsNullOrEmpty(a.Location))
                         .ToList();
@@ -164,7 +164,7 @@ namespace Aevatar.Application.Service
                                 }
                                 catch (Exception ex)
                                 {
-                                    var error = $"处理Agent类型 {agentType.FullName} 时发生错误: {ex.Message}";
+                                    var error = $"Error occurred while processing Agent type {agentType.FullName}: {ex.Message}";
                                     errors.Add(error);
                                     _logger.LogError(ex, error);
                                 }
@@ -172,7 +172,7 @@ namespace Aevatar.Application.Service
                         }
                         catch (Exception ex)
                         {
-                            var error = $"扫描程序集 {assembly.FullName} 时发生错误: {ex.Message}";
+                            var error = $"Error occurred while scanning assembly {assembly.FullName}: {ex.Message}";
                             errors.Add(error);
                             _logger.LogError(ex, error);
                         }
@@ -181,7 +181,7 @@ namespace Aevatar.Application.Service
                     _lastFullScan = DateTime.UtcNow;
                     var duration = DateTime.UtcNow - startTime;
 
-                    _logger.LogInformation($"Agent索引刷新完成。发现 {discoveredAgents.Count} 个Agent，耗时 {duration.TotalMilliseconds:F2}ms");
+                    _logger.LogInformation($"Agent index refresh completed. Found {discoveredAgents.Count} Agents, took {duration.TotalMilliseconds:F2}ms");
 
                     return new AgentIndexRefreshResult
                     {
@@ -195,7 +195,7 @@ namespace Aevatar.Application.Service
                 }
                 catch (Exception ex)
                 {
-                    var error = $"Agent索引刷新失败: {ex.Message}";
+                    var error = $"Agent index refresh failed: {ex.Message}";
                     errors.Add(error);
                     _logger.LogError(ex, error);
 
@@ -225,9 +225,9 @@ namespace Aevatar.Application.Service
             {
                 LastScanTime = _lastFullScan,
                 AssembliesScanned = AppDomain.CurrentDomain.GetAssemblies().Length,
-                TypesScanned = 0, // 这里可以在扫描时计算
+                TypesScanned = 0, // This can be calculated during scanning
                 TotalAgentsFound = agents.Count,
-                ScanDuration = TimeSpan.Zero, // 这里可以存储上次扫描的持续时间
+                ScanDuration = TimeSpan.Zero, // This can store the last scan duration
                 AgentsByCategory = agents
                     .SelectMany(a => a.Categories)
                     .GroupBy(c => c)
@@ -261,7 +261,7 @@ namespace Aevatar.Application.Service
                 LastScannedAt = DateTime.UtcNow
             };
 
-            // 分析输入输出参数
+            // Analyze input and output parameters
             AnalyzeAgentParameters(agentType, agentInfo);
 
             return agentInfo;
@@ -269,8 +269,8 @@ namespace Aevatar.Application.Service
 
         private void AnalyzeAgentParameters(Type agentType, AgentIndexInfo agentInfo)
         {
-            // 这里可以通过反射分析Agent的方法参数
-            // 暂时使用简单的实现
+            // Agent method parameters can be analyzed through reflection here
+            // Using simple implementation for now
             var methods = agentType.GetMethods(BindingFlags.Public | BindingFlags.Instance)
                 .Where(m => m.Name.Contains("Execute") || m.Name.Contains("Process"))
                 .ToList();
@@ -286,20 +286,20 @@ namespace Aevatar.Application.Service
                         {
                             Name = param.Name ?? "unknown",
                             Type = param.ParameterType.Name,
-                            Description = $"参数 {param.Name}",
+                            Description = $"Parameter {param.Name}",
                             IsRequired = !param.HasDefaultValue
                         };
                     }
                 }
 
-                // 分析返回类型
+                // Analyze return type
                 if (method.ReturnType != typeof(void) && !agentInfo.OutputParameters.ContainsKey("result"))
                 {
                     agentInfo.OutputParameters["result"] = new AgentParameterInfo
                     {
                         Name = "result",
                         Type = method.ReturnType.Name,
-                        Description = "执行结果",
+                        Description = "Execution result",
                         IsRequired = true
                     };
                 }
