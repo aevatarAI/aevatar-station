@@ -31,6 +31,24 @@ public class WorkflowController : AevatarController
         var workflow = await _workflowOrchestrationService.GenerateWorkflowAsync(request.UserGoal);
         return workflow;
     }
+
+    /// <summary>
+    /// 根据用户目标生成前端格式的工作流配置
+    /// </summary>
+    /// <param name="request">工作流生成请求</param>
+    /// <returns>前端格式的工作流配置</returns>
+    [HttpPost("generate-view-config")]
+    public async Task<WorkflowViewConfigDto?> GenerateViewConfigAsync([FromBody] GenerateWorkflowRequest request)
+    {
+        // Generate workflow using LLM with updated prompt format
+        var workflow = await _workflowOrchestrationService.GenerateWorkflowAsync(request.UserGoal);
+        
+        // Convert to JSON string (simulate LLM output in new format)
+        var jsonContent = System.Text.Json.JsonSerializer.Serialize(workflow);
+        
+        // Parse to frontend format
+        return await _workflowOrchestrationService.ParseWorkflowJsonToViewConfigAsync(jsonContent);
+    }
 }
 
 /// <summary>

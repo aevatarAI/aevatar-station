@@ -14,4 +14,11 @@ public interface IWorkflowOrchestrationService
     /// <param name="userGoal">用户目标描述</param>
     /// <returns>生成的工作流定义</returns>
     Task<WorkflowDefinition> GenerateWorkflowAsync(string userGoal);
+
+    /// <summary>
+    /// Parse workflow JSON to frontend format DTO
+    /// </summary>
+    /// <param name="jsonContent">JSON content from LLM</param>
+    /// <returns>Parsed WorkflowViewConfigDto</returns>
+    Task<WorkflowViewConfigDto?> ParseWorkflowJsonToViewConfigAsync(string jsonContent);
 } 

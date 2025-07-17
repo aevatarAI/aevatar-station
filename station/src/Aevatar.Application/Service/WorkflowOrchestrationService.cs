@@ -129,34 +129,42 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
 
         // JSON格式规范
         prompt.AppendLine("## JSON格式规范");
+        prompt.AppendLine("请严格按照以下JSON格式输出，这是前端期望的数据结构：");
         prompt.AppendLine("```json");
         prompt.AppendLine("{");
-        prompt.AppendLine("  \"workflowId\": \"workflow-{guid}\",");
-        prompt.AppendLine("  \"name\": \"工作流名称\",");
-        prompt.AppendLine("  \"description\": \"工作流描述\",");
-        prompt.AppendLine("  \"nodes\": [");
+        prompt.AppendLine("  \"workflowNodeList\": [");
         prompt.AppendLine("    {");
-        prompt.AppendLine("      \"nodeId\": \"节点ID\",");
-        prompt.AppendLine("      \"type\": \"Start|Agent|End|Condition|Loop|Parallel|Merge\",");
-        prompt.AppendLine("      \"name\": \"节点名称\",");
-        prompt.AppendLine("      \"typeName\": \"Agent类型名称（Agent节点必需）\",");
-        prompt.AppendLine("      \"position\": { \"x\": 100, \"y\": 100 }");
+        prompt.AppendLine("      \"agentType\": \"Agent类型名称（如DataProcessorAgent）\",");
+        prompt.AppendLine("      \"name\": \"节点显示名称\",");
+        prompt.AppendLine("      \"extendedData\": {");
+        prompt.AppendLine("        \"position_x\": \"节点X坐标（字符串格式，如'100'）\",");
+        prompt.AppendLine("        \"position_y\": \"节点Y坐标（字符串格式，如'100'）\",");
+        prompt.AppendLine("        \"width\": \"节点宽度（字符串格式，如'200'）\",");
+        prompt.AppendLine("        \"height\": \"节点高度（字符串格式，如'80'）\"");
+        prompt.AppendLine("      },");
+        prompt.AppendLine("      \"properties\": {");
+        prompt.AppendLine("        \"inputParam1\": \"输入参数值\",");
+        prompt.AppendLine("        \"inputParam2\": \"输入参数值\"");
+        prompt.AppendLine("      },");
+        prompt.AppendLine("      \"nodeId\": \"唯一节点ID（UUID格式）\"");
         prompt.AppendLine("    }");
         prompt.AppendLine("  ],");
-        prompt.AppendLine("  \"connections\": [");
+        prompt.AppendLine("  \"workflowNodeUnitList\": [");
         prompt.AppendLine("    {");
-        prompt.AppendLine("      \"connectionId\": \"连接ID\",");
-        prompt.AppendLine("      \"sourceNodeId\": \"源节点ID\",");
-        prompt.AppendLine("      \"targetNodeId\": \"目标节点ID\"");
+        prompt.AppendLine("      \"nodeId\": \"当前节点ID\",");
+        prompt.AppendLine("      \"nextnodeId\": \"下一个节点ID\"");
         prompt.AppendLine("    }");
         prompt.AppendLine("  ],");
-        prompt.AppendLine("  \"globalVariables\": {},");
-        prompt.AppendLine("  \"metadata\": {");
-        prompt.AppendLine("    \"createdAt\": \"ISO时间戳\",");
-        prompt.AppendLine("    \"userGoal\": \"用户目标\"");
-        prompt.AppendLine("  }");
+        prompt.AppendLine("  \"Name\": \"工作流名称\"");
         prompt.AppendLine("}");
         prompt.AppendLine("```");
+        prompt.AppendLine();
+        prompt.AppendLine("## 重要说明");
+        prompt.AppendLine("1. agentType必须使用Agent的TypeName，从上述可用Agent列表中选择");
+        prompt.AppendLine("2. extendedData中的所有值都必须是字符串格式");
+        prompt.AppendLine("3. 节点位置请按照从左到右、从上到下的顺序安排，每个节点间隔150-200像素");
+        prompt.AppendLine("4. workflowNodeUnitList定义执行顺序，每个条目表示当前节点完成后执行下一个节点");
+        prompt.AppendLine("5. properties包含该Agent节点的输入参数配置");
 
         return prompt.ToString();
     }
@@ -458,45 +466,102 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         
         await Task.CompletedTask;
         
-        // 临时返回示例JSON，实际实现时应该调用LLM服务
+        // 临时返回符合前端格式的示例JSON
         return @"{
-            ""workflowId"": ""workflow-generated"",
-            ""name"": ""AI生成的工作流"",
-            ""description"": ""根据用户目标AI生成的工作流"",
-            ""userGoal"": ""示例目标"",
-            ""nodes"": [
+            ""workflowNodeList"": [
                 {
-                    ""nodeId"": ""start-1"",
-                    ""name"": ""开始"",
-                    ""type"": 1,
-                    ""description"": ""开始节点"",
-                    ""configuration"": {},
-                    ""position"": { ""x"": 100, ""y"": 100 }
-                },
-                {
-                    ""nodeId"": ""end-1"",
-                    ""name"": ""结束"",
-                    ""type"": 2,
-                    ""description"": ""结束节点"",
-                    ""configuration"": {},
-                    ""position"": { ""x"": 300, ""y"": 100 }
+                    ""agentType"": ""DataProcessorAgent"",
+                    ""name"": ""数据处理节点"",
+                    ""extendedData"": {
+                        ""position_x"": ""100"",
+                        ""position_y"": ""100"",
+                        ""width"": ""200"",
+                        ""height"": ""80""
+                    },
+                    ""properties"": {
+                        ""inputData"": ""用户输入的数据"",
+                        ""processingMode"": ""batch""
+                    },
+                    ""nodeId"": ""node-1""
                 }
             ],
-            ""connections"": [
+            ""workflowNodeUnitList"": [
                 {
-                    ""connectionId"": ""conn-1"",
-                    ""sourceNodeId"": ""start-1"",
-                    ""targetNodeId"": ""end-1"",
-                    ""type"": 1,
-                    ""label"": ""下一步""
+                    ""nodeId"": ""node-1"",
+                    ""nextnodeId"": ""node-2""
                 }
             ],
-            ""globalVariables"": {},
-            ""selectedAgents"": [],
-            ""complexity"": 1,
-            ""estimatedExecutionTime"": 1000,
-            ""version"": ""1.0.0""
+            ""Name"": ""AI生成的工作流""
         }";
+    }
+
+    /// <summary>
+    /// Parse workflow JSON to frontend format DTO
+    /// </summary>
+    /// <param name="jsonContent">JSON content from LLM</param>
+    /// <returns>Parsed WorkflowViewConfigDto</returns>
+    public async Task<WorkflowViewConfigDto?> ParseWorkflowJsonToViewConfigAsync(string jsonContent)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(jsonContent))
+            {
+                _logger.LogWarning("Empty JSON content provided for parsing");
+                return null;
+            }
+
+            // Clean and validate JSON
+            var cleanJson = CleanJsonContent(jsonContent);
+            
+            // Parse to DTO
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+
+            var workflowConfig = JsonSerializer.Deserialize<WorkflowViewConfigDto>(cleanJson, options);
+            
+            if (workflowConfig == null)
+            {
+                _logger.LogError("Failed to deserialize workflow JSON to WorkflowViewConfigDto");
+                return null;
+            }
+
+            // Validate required fields
+            if (string.IsNullOrWhiteSpace(workflowConfig.Name))
+            {
+                _logger.LogWarning("Workflow name is missing or empty");
+                workflowConfig.Name = "Unnamed Workflow";
+            }
+
+            if (workflowConfig.WorkflowNodeList == null || !workflowConfig.WorkflowNodeList.Any())
+            {
+                _logger.LogWarning("No workflow nodes found in the configuration");
+                workflowConfig.WorkflowNodeList = new List<WorkflowNodeDto>();
+            }
+
+            if (workflowConfig.WorkflowNodeUnitList == null)
+            {
+                _logger.LogWarning("No workflow node units found, initializing empty list");
+                workflowConfig.WorkflowNodeUnitList = new List<WorkflowNodeUnitDto>();
+            }
+
+            _logger.LogInformation("Successfully parsed workflow JSON to view config with {NodeCount} nodes and {ConnectionCount} connections", 
+                workflowConfig.WorkflowNodeList.Count, workflowConfig.WorkflowNodeUnitList.Count);
+
+            return workflowConfig;
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "JSON parsing error when converting to WorkflowViewConfigDto");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error when parsing workflow JSON to view config");
+            return null;
+        }
     }
 
     #endregion
