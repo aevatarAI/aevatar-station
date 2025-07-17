@@ -74,10 +74,18 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
 
             await documents.ForEachAsync(document =>
             {
-                // Use our grain state serializer to deserialize
-                var logEntry = _grainStateSerializer.Deserialize<TLogEntry>(document[_fieldData]);
-                
-                results.Add(logEntry);
+                try
+                {
+                    // Deserialize using framework format (Orleans data should already be converted)
+                    var logEntry = _grainStateSerializer.Deserialize<TLogEntry>(document[_fieldData]);
+                    results.Add(logEntry);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "🚨 Failed to deserialize log entry for {GrainType} grain {GrainId} - Document: {Document}", 
+                        grainTypeName, grainId, document.ToJson());
+                    throw;
+                }
             }).ConfigureAwait(false);
 
             return results;
@@ -198,6 +206,48 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
         }
     }
 
+    public async Task SetInitialVersionAsync(string grainTypeName, GrainId grainId, int initialVersion)
+    {
+        var grainIdString = grainId.ToString();
+        var collectionName = GetStreamName(grainId);
+        
+        try
+        {
+            var database = GetDatabase();
+            var collection = database.GetCollection<BsonDocument>(collectionName);
+            
+            // Check if any data already exists
+            var existingVersion = await GetLastVersionAsync(grainTypeName, grainId);
+            if (existingVersion >= 0)
+            {
+                _logger.LogInformation("Grain {GrainId} already has version {ExistingVersion}, skipping initial version setup", 
+                    grainId, existingVersion);
+                return;
+            }
+            
+            // Create a placeholder document with the initial version
+            var placeholderDocument = new BsonDocument
+            {
+                ["GrainId"] = grainIdString,
+                ["Version"] = initialVersion,
+                [_fieldData] = BsonDocument.Parse("{\"_t\":\"MigrationPlaceholder\",\"Message\":\"Version placeholder for Orleans migration\"}")
+            };
+            
+            await collection.InsertOneAsync(placeholderDocument).ConfigureAwait(false);
+            
+            _logger.LogDebug("Set initial version {InitialVersion} for grain {GrainId}", 
+                initialVersion, grainId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, 
+                "Failed to set initial version {InitialVersion} for {GrainType} grain with ID {GrainId} and collection {CollectionName}",
+                initialVersion, grainTypeName, grainId, collectionName);
+            throw new MongoDbStorageException(FormattableString.Invariant(
+                $"Failed to set initial version {initialVersion} for {grainTypeName} with ID {grainId} and collection {collectionName}. {ex.GetType()}: {ex.Message}"));
+        }
+    }
+
     public void Participate(ISiloLifecycle observer)
     {
         var name = OptionFormattingUtilities.Name<MongoDbLogConsistentStorage>(_name);
@@ -257,4 +307,5 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
     {
         return $"{_serviceId}/{_name}/log/{grainId.Type}";
     }
+
 }
