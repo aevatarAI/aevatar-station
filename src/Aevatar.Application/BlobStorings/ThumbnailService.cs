@@ -111,48 +111,61 @@ public class ThumbnailService : IThumbnailService, ITransientDependency
                 return null;
             }
 
-            using var thumbnail = originalImage.Clone(ctx => {});
+            int thumbnailWidth, thumbnailHeight;
+            long fileSize;
             
-            // Apply resizing
-            switch (size.ResizeMode)
+            using (var thumbnail = originalImage.Clone(ctx => {}))
             {
-                case ResizeMode.Max:
-                    thumbnail.Mutate(x => x.Resize(new ResizeOptions
-                    {
-                        Size = new Size(width, height),
-                        Mode = SixLabors.ImageSharp.Processing.ResizeMode.Max
-                    }));
-                    break;
-                    
-                case ResizeMode.Crop:
-                    thumbnail.Mutate(x => x.Resize(new ResizeOptions
-                    {
-                        Size = new Size(size.Width, size.Height),
-                        Mode = SixLabors.ImageSharp.Processing.ResizeMode.Crop
-                    }));
-                    break;
-                    
-                case ResizeMode.Stretch:
-                    thumbnail.Mutate(x => x.Resize(size.Width, size.Height));
-                    break;
-            }
+                // Apply resizing
+                switch (size.ResizeMode)
+                {
+                    case ResizeMode.Max:
+                        thumbnail.Mutate(x => x.Resize(new ResizeOptions
+                        {
+                            Size = new Size(width, height),
+                            Mode = SixLabors.ImageSharp.Processing.ResizeMode.Max
+                        }));
+                        break;
+                        
+                    case ResizeMode.Crop:
+                        thumbnail.Mutate(x => x.Resize(new ResizeOptions
+                        {
+                            Size = new Size(size.Width, size.Height),
+                            Mode = SixLabors.ImageSharp.Processing.ResizeMode.Crop
+                        }));
+                        break;
+                        
+                    case ResizeMode.Stretch:
+                        thumbnail.Mutate(x => x.Resize(size.Width, size.Height));
+                        break;
+                }
 
-            // Save thumbnail to memory stream first to get file size
-            using var thumbnailStream = new MemoryStream();
-            var encoder = GetEncoder();
-            await thumbnail.SaveAsync(thumbnailStream, encoder);
-            
-            // Save to blob storage
-            thumbnailStream.Seek(0, SeekOrigin.Begin);
-            await _blobContainer.SaveAsync(fileName, thumbnailStream, true);
+                // Save dimensions before thumbnail is disposed
+                thumbnailWidth = thumbnail.Width;
+                thumbnailHeight = thumbnail.Height;
+
+                // Save thumbnail to memory stream first to get file size
+                using (var thumbnailStream = new MemoryStream())
+                {
+                    var encoder = GetEncoder();
+                    await thumbnail.SaveAsync(thumbnailStream, encoder);
+                    
+                    // Save file size before stream is disposed
+                    fileSize = thumbnailStream.Length;
+                    
+                    // Save to blob storage
+                    thumbnailStream.Seek(0, SeekOrigin.Begin);
+                    await _blobContainer.SaveAsync(fileName, thumbnailStream, true);
+                }
+            }
 
             return new ThumbnailInfo
             {
                 FileName = fileName,
                 SizeName = size.GetSizeName(),
-                Width = thumbnail.Width,
-                Height = thumbnail.Height,
-                FileSize = thumbnailStream.Length
+                Width = thumbnailWidth,
+                Height = thumbnailHeight,
+                FileSize = fileSize
             };
         }
         catch (Exception ex)
