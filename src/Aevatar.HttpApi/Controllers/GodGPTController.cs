@@ -518,16 +518,16 @@ public class GodGPTController : AevatarController
         var fileExtension = Path.GetExtension(originalFileName);
         var fileName = Guid.NewGuid().ToString() + fileExtension;
 
+        await _blobContainer.SaveAsync(fileName, input.File.OpenReadStream(), true);
+        
+        var _ = _thumbnailService.SaveWithThumbnailsAsync(input.File, fileName);
+
         var response = new SaveBlobResponse
         {
             OriginalFileName = fileName,
             OriginalSize = input.File.Length
         };
         
-        await _blobContainer.SaveAsync(fileName, input.File.OpenReadStream(), true);
-        
-        response.Thumbnails = await _thumbnailService.SaveWithThumbnailsAsync(input.File, fileName);
-
         return response;
     }
     
