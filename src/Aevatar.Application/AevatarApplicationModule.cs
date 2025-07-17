@@ -75,5 +75,6 @@ public class AevatarApplicationModule : AbpModule
         Configure<AccountOptions>(configuration.GetSection("Account"));
         context.Services.AddTransient<IProfileService, ProfileService>();
         Configure<BlobStoringOptions>(configuration.GetSection("BlobStoring"));
+        Configure<ThumbnailOptions>(configuration.GetSection("Thumbnail"));
     }
 }

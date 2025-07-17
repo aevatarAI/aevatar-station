@@ -52,12 +52,14 @@ public class GodGPTController : AevatarController
     private readonly IAccountService _accountService;
     private readonly IBlobContainer _blobContainer;
     private readonly BlobStoringOptions _blobStoringOptions;
+    private readonly IThumbnailService _thumbnailService;
     const string Version = "1.20.0";
 
 
     public GodGPTController(IGodGPTService godGptService, IClusterClient clusterClient,
         IOptions<AevatarOptions> aevatarOptions, ILogger<GodGPTController> logger, IAccountService accountService,
-        IBlobContainer blobContainer, IOptionsSnapshot<BlobStoringOptions> blobStoringOptions)
+        IBlobContainer blobContainer, IOptionsSnapshot<BlobStoringOptions> blobStoringOptions,
+        IThumbnailService thumbnailService)
     {
         _godGptService = godGptService;
         _clusterClient = clusterClient;
@@ -66,6 +68,7 @@ public class GodGPTController : AevatarController
         _accountService = accountService;
         _blobContainer = blobContainer;
         _blobStoringOptions = blobStoringOptions.Value;
+        _thumbnailService = thumbnailService;
     }
 
     [AllowAnonymous]
@@ -503,10 +506,9 @@ public class GodGPTController : AevatarController
     }
     
     [HttpPost("godgpt/blob")]
-    public async Task<string> SaveAsync([FromForm] SaveBlobInput input)
+    public async Task<SaveBlobResponse> SaveAsync([FromForm] SaveBlobInput input)
     {
-        var file = input.File.OpenReadStream();
-        if (file.Length > _blobStoringOptions.MaxSizeBytes)
+        if (input.File.Length > _blobStoringOptions.MaxSizeBytes)
         {
             throw new UserFriendlyException(
                 $"The file is too large, with a maximum of {_blobStoringOptions.MaxSizeBytes} bytes.");
@@ -516,9 +518,9 @@ public class GodGPTController : AevatarController
         var fileExtension = Path.GetExtension(originalFileName);
         var fileName = Guid.NewGuid().ToString() + fileExtension;
 
-        await _blobContainer.SaveAsync(fileName, input.File.OpenReadStream(), true);
+        var response = await _thumbnailService.SaveWithThumbnailsAsync(input.File, fileName);
 
-        return fileName;
+        return response;
     }
     
     [HttpDelete("godgpt/blob/{name}")]

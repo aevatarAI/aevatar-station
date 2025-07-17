@@ -29,6 +29,7 @@
         <PackageReference Include="FluentValidation" />
         <PackageReference Include="Aevatar" />
         <PackageReference Include="Volo.Abp.BlobStoring" />
+        <PackageReference Include="SixLabors.ImageSharp" />
     </ItemGroup>
 
     <ItemGroup>
