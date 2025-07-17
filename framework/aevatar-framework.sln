@@ -56,7 +56,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.EventSourcing.Mongo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PubSubDemoWithoutGroup", "samples\PubSubDemoWithoutGroup\PubSubDemoWithoutGroup.csproj", "{6B34A025-802E-4F26-89F1-831BDBEB76D0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BroadCastGAgentDemo", "samples\BroadCastGAgentDemo\BroadCastGAgentDemo.csproj", "{B99810FF-125F-44E2-BACC-36828ED42A05}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BroadcastGAgentDemo", "samples\BroadcastGAgentDemo\BroadcastGAgentDemo.csproj", "{B99810FF-125F-44E2-BACC-36828ED42A05}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.TestKit", "src\Aevatar.TestKit\Aevatar.TestKit.csproj", "{40AB1CB2-5567-4B4E-A13E-797422FC5869}"
 EndProject
