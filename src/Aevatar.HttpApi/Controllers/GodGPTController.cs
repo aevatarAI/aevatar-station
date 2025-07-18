@@ -16,6 +16,7 @@ using Aevatar.Core.Abstractions;
 using Aevatar.Extensions;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GodGPT.Dtos;
+using Aevatar.Options;
 using Aevatar.Quantum;
 using Aevatar.Service;
 using Asp.Versioning;
@@ -53,13 +54,13 @@ public class GodGPTController : AevatarController
     private readonly IBlobContainer _blobContainer;
     private readonly BlobStoringOptions _blobStoringOptions;
     private readonly IThumbnailService _thumbnailService;
-    const string Version = "1.20.0";
+    private readonly IOptions<GodGPTOptions> _godGptOptions;
 
 
     public GodGPTController(IGodGPTService godGptService, IClusterClient clusterClient,
         IOptions<AevatarOptions> aevatarOptions, ILogger<GodGPTController> logger, IAccountService accountService,
         IBlobContainer blobContainer, IOptionsSnapshot<BlobStoringOptions> blobStoringOptions,
-        IThumbnailService thumbnailService)
+        IThumbnailService thumbnailService, IOptions<GodGPTOptions> godGptOptions)
     {
         _godGptService = godGptService;
         _clusterClient = clusterClient;
@@ -69,13 +70,14 @@ public class GodGPTController : AevatarController
         _blobContainer = blobContainer;
         _blobStoringOptions = blobStoringOptions.Value;
         _thumbnailService = thumbnailService;
+        _godGptOptions = godGptOptions;
     }
 
     [AllowAnonymous]
     [HttpGet("godgpt/query-version")]
     public Task<string> QueryVersion()
     {
-        return Task.FromResult(Version);
+        return Task.FromResult(_godGptOptions.Value.Version);
     }
 
     [HttpPost("godgpt/create-session")]

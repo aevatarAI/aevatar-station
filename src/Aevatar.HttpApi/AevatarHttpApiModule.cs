@@ -35,6 +35,7 @@ public class AevatarHttpApiModule : AbpModule
         Configure<AevatarOptions>(configuration.GetSection("Aevatar"));
         Configure<StripeOptions>(configuration.GetSection("Stripe"));
         Configure<ManagerOptions>(configuration.GetSection("ManagerOptions"));
+        Configure<GodGPTOptions>(configuration.GetSection("GodGPT"));
     }
 
     private void ConfigureLocalization()
