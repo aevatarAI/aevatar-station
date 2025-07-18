@@ -488,8 +488,8 @@ public class ChatMiddleware
             var chatId = Guid.NewGuid().ToString();
             await godChat.StreamVoiceChatWithSessionAsync(request.SessionId, string.Empty, request.Content, "",
                 chatId, null, true, request.Region, request.VoiceLanguage, request.VoiceDurationSeconds);
-            _logger.LogDebug("[VoiceChatMiddleware] Voice chat initiated - SessionId: {0}, ChatId: {1}",
-                request.SessionId, chatId);
+            _logger.LogDebug("[VoiceChatMiddleware] Voice chat initiated - SessionId: {0}, ChatId: {1} Duration: {2}ms",
+                request.SessionId, chatId, stopwatch.ElapsedMilliseconds);
 
             // Handle streaming response
             var exitSignal = new TaskCompletionSource();
