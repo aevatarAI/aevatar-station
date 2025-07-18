@@ -340,6 +340,13 @@ public partial class LogViewAdaptor<TLogView, TLogEntry>
                 {
                     // Record state changes before and after
                     var stateBefore = JsonSerializer.Serialize(currentView);
+                    
+                    // Debug: Check host and event types
+                    Services.Log(LogLevel.Debug, "Host type: {0}, Event type: {1}, State type: {2}", 
+                        _host?.GetType().Name ?? "null", 
+                        logEntry?.GetType().Name ?? "null",
+                        currentView?.GetType().Name ?? "null");
+                    
                     _host.UpdateView(currentView, logEntry);
                     var stateAfter = JsonSerializer.Serialize(currentView);
                     
