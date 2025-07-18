@@ -439,14 +439,14 @@ public class ChatMiddleware
         
         if (request == null || string.IsNullOrWhiteSpace(request.Content))
         {
-            _logger.LogWarning("[VoiceChatMiddleware] Invalid request body for user: {0}", userId);
+            _logger.LogWarning($"[VoiceChatMiddleware] Invalid request body for user: {userId}");
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             await context.Response.WriteAsync("Invalid request body");
             return;
         }
         if (request.VoiceLanguage == VoiceLanguageEnum.Unset)
         {
-            _logger.LogWarning("[VoiceChatMiddleware] unset language userId: {0} language:{1}", userId,request.VoiceLanguage);
+            _logger.LogWarning($"[VoiceChatMiddleware] unset language userId: {userId} language:{request.VoiceLanguage}");
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             await context.Response.WriteAsync("Unset language request body");
             return;
@@ -455,15 +455,13 @@ public class ChatMiddleware
         try
         {
             var stopwatch = Stopwatch.StartNew();
-            _logger.LogDebug("[VoiceChatMiddleware] HTTP start - SessionId: {0}, UserId: {1}, MessageType: {2}, VoiceLanguage: {3}",
-                request.SessionId, userId, request.MessageType, request.VoiceLanguage);
+            _logger.LogDebug($"[VoiceChatMiddleware] HTTP start - SessionId: {request.SessionId}, UserId: {userId}, MessageType: {request.MessageType}, VoiceLanguage: {request.VoiceLanguage}");
 
             // Validate session access
             var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
             if (!await manager.IsUserSessionAsync(request.SessionId))
             {
-                _logger.LogError("[VoiceChatMiddleware] Session not found or access denied - SessionId: {0}, UserId: {1}",
-                    request.SessionId, userId);
+                _logger.LogError($"[VoiceChatMiddleware] Session not found or access denied - SessionId: {request.SessionId}, UserId: {userId}");
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
                 await context.Response.WriteAsync($"Unable to load conversation {request.SessionId}");
                 await context.Response.Body.FlushAsync();
@@ -473,8 +471,7 @@ public class ChatMiddleware
             // Set up streaming infrastructure
             var streamProvider = _clusterClient.GetStreamProvider("Aevatar");
             var streamId = StreamId.Create(_aevatarOptions.Value.StreamNamespace, request.SessionId);
-            _logger.LogDebug("[VoiceChatMiddleware] SessionId: {0}, Namespace: {1}, StreamId: {2}",
-                request.SessionId, _aevatarOptions.Value.StreamNamespace, streamId.ToString());
+            _logger.LogDebug($"[VoiceChatMiddleware] SessionId: {request.SessionId}, Namespace: {_aevatarOptions.Value.StreamNamespace}, StreamId: {streamId.ToString()}");
 
             // Set SSE response headers
             context.Response.ContentType = "text/event-stream";
@@ -488,8 +485,7 @@ public class ChatMiddleware
             var chatId = Guid.NewGuid().ToString();
             await godChat.StreamVoiceChatWithSessionAsync(request.SessionId, string.Empty, request.Content, "",
                 chatId, null, true, request.Region, request.VoiceLanguage, request.VoiceDurationSeconds);
-            _logger.LogDebug("[VoiceChatMiddleware] Voice chat initiated - SessionId: {0}, ChatId: {1} Duration: {2}ms",
-                request.SessionId, chatId, stopwatch.ElapsedMilliseconds);
+            _logger.LogDebug($"[VoiceChatMiddleware] Voice chat initiated - SessionId: {request.SessionId}, ChatId: {chatId} Duration: {stopwatch.ElapsedMilliseconds}ms");
 
             // Handle streaming response
             var exitSignal = new TaskCompletionSource();
@@ -508,8 +504,7 @@ public class ChatMiddleware
                 {
                     await context.Response.StartAsync();
                     firstFlag = true;
-                    _logger.LogDebug("[VoiceChatMiddleware] First message received - SessionId: {0}, Duration: {1}ms",
-                        request.SessionId, stopwatch.ElapsedMilliseconds);
+                    _logger.LogDebug($"[VoiceChatMiddleware] First message received - SessionId: {request.SessionId}, Duration: {stopwatch.ElapsedMilliseconds}ms");
                 }
 
                 var responseData = $"data: {JsonConvert.SerializeObject(chatResponse.ConvertToHttpResponse())}\n\n";
@@ -529,13 +524,12 @@ public class ChatMiddleware
                 }
             }, ex =>
             {
-                _logger.LogError("[VoiceChatMiddleware] Stream error - SessionId: {0}, ChatId: {1}, Error: {2}",
-                    request.SessionId, chatId, ex.Message);
+                _logger.LogError($"[VoiceChatMiddleware] Stream error - SessionId: {request.SessionId}, ChatId: {chatId}, Error: {ex.Message}");
                 exitSignal.TrySetException(ex);
                 return Task.CompletedTask;
             }, () =>
             {
-                _logger.LogDebug("[VoiceChatMiddleware] Stream completed - SessionId: {0}", request.SessionId);
+                _logger.LogDebug($"[VoiceChatMiddleware] Stream completed - SessionId: {request.SessionId}");
                 exitSignal.TrySetResult();
                 return Task.CompletedTask;
             });
@@ -546,8 +540,7 @@ public class ChatMiddleware
             }
             catch (Exception ex)
             {
-                _logger.LogError("[VoiceChatMiddleware] Error waiting for stream completion - SessionId: {0}, Error: {1}",
-                    request.SessionId, ex.Message);
+                _logger.LogError($"[VoiceChatMiddleware] Error waiting for stream completion - SessionId: {request.SessionId}, Error: {ex.Message}");
             }
             finally
             {
@@ -559,12 +552,10 @@ public class ChatMiddleware
 
             if (!ifLastChunk)
             {
-                _logger.LogDebug("[VoiceChatMiddleware] No LastChunk received - SessionId: {0}, ChatId: {1}",
-                    request.SessionId, chatId);
+                _logger.LogDebug($"[VoiceChatMiddleware] No LastChunk received - SessionId: {request.SessionId}, ChatId: {chatId}");
             }
 
-            _logger.LogDebug("[VoiceChatMiddleware] Voice chat completed - SessionId: {0}, Duration: {1}ms",
-                request.SessionId, stopwatch.ElapsedMilliseconds);
+            _logger.LogDebug($"[VoiceChatMiddleware] Voice chat completed - SessionId: {request.SessionId}, Duration: {stopwatch.ElapsedMilliseconds}ms");
         }
         catch (InvalidOperationException ex)
         {
@@ -584,7 +575,7 @@ public class ChatMiddleware
                 else if (code >= 10000) // Business error codes are typically large numbers
                 {
                     statusCode = StatusCodes.Status400BadRequest;
-                    _logger.LogWarning("[VoiceChatMiddleware] Business error code {0} converted to 400 for SessionId: {1}", code, request.SessionId);
+                    _logger.LogWarning($"[VoiceChatMiddleware] Business error code {code} converted to 400 for SessionId: {request.SessionId}");
                 }
             }
             
