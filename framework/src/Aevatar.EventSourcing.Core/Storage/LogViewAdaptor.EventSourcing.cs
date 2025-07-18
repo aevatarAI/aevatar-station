@@ -320,25 +320,44 @@ public partial class LogViewAdaptor<TLogView, TLogEntry>
     {
         var frameworkSnapshot = new ViewStateSnapshot<TLogView>();
         
+        // Add detailed diagnostic logging
+        Services.Log(LogLevel.Information, "Orleans migration debug: RecordExists={0}, LogCount={1}, StateType={2}", 
+            orleansLogState.RecordExists, 
+            orleansLogState.State?.Log?.Count ?? -1,
+            orleansLogState.State?.GetType().Name ?? "null");
+        
         // Replay Orleans events to build current state
         var currentView = new TLogView();
         var version = 0;
         
         if (orleansLogState.State?.Log != null)
         {
+            Services.Log(LogLevel.Information, "Starting event replay for {0} events", orleansLogState.State.Log.Count);
+            
             foreach (var logEntry in orleansLogState.State.Log)
             {
                 try
                 {
+                    // Record state changes before and after
+                    var stateBefore = JsonSerializer.Serialize(currentView);
                     _host.UpdateView(currentView, logEntry);
+                    var stateAfter = JsonSerializer.Serialize(currentView);
+                    
+                    Services.Log(LogLevel.Debug, "Event {0}: {1} -> State changed: {2}", 
+                        version + 1, 
+                        logEntry?.GetType().Name ?? "null",
+                        !stateBefore.Equals(stateAfter));
+                        
                     version++;
                 }
                 catch (Exception ex)
                 {
                     Services.CaughtUserCodeException("UpdateView", nameof(ConvertOrleansToFrameworkSnapshot), ex);
-                    Services.Log(LogLevel.Warning, "Failed to apply Orleans event {0}", version + 1);
+                    Services.Log(LogLevel.Error, "Event replay failed at version {0}: {1}", version + 1, ex.Message);
                 }
             }
+            
+            Services.Log(LogLevel.Information, "Event replay completed: final state = {0}", JsonSerializer.Serialize(currentView));
             
             // OPTIMIZED: Set initial version to preserve version continuity without heavy write operations
             if (orleansLogState.State.Log.Count > 0)
@@ -446,6 +465,12 @@ public partial class LogViewAdaptor<TLogView, TLogEntry>
             var orleansLogState = new Orleans.EventSourcing.LogStorage.LogStateWithMetaDataAndETag<TLogEntry>();
             await _grainStorage.ReadStateAsync(_grainTypeName, grainId, orleansLogState);
             
+            // Add detailed Orleans data inspection
+            Services.Log(LogLevel.Information, "Orleans read result: RecordExists={0}, State={1}, Log={2}", 
+                orleansLogState.RecordExists,
+                orleansLogState.State != null ? "NotNull" : "Null",
+                orleansLogState.State?.Log != null ? orleansLogState.State.Log.Count.ToString() : "Null");
+            
             if (orleansLogState.RecordExists && orleansLogState.State?.Log != null)
             {
                 Services.Log(LogLevel.Information, "Converting {0} Orleans events to Framework format", orleansLogState.State.Log.Count);
@@ -459,7 +484,10 @@ public partial class LogViewAdaptor<TLogView, TLogEntry>
             }
             else
             {
-                Services.Log(LogLevel.Information, "No Orleans data found, initializing empty state");
+                Services.Log(LogLevel.Warning, "No Orleans data found or Log is null - RecordExists: {0}, State: {1}, Log: {2}", 
+                    orleansLogState.RecordExists,
+                    orleansLogState.State != null,
+                    orleansLogState.State?.Log != null);
                 InitializeEmptyState();
             }
         }
