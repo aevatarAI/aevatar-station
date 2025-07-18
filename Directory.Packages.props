@@ -7,9 +7,9 @@
     <AevatarGAgentVersion>1.5.1-stream-2</AevatarGAgentVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="GodGPT.GAgents" Version="1.22.3-alpha-aevatar-update-005" />
+    <PackageVersion Include="GodGPT.GAgents" Version="1.22.3-alpha-aevatar-update-006" />
     <PackageVersion Include="Stripe.net" Version="48.1.0"/>
-    <PackageVersion Include="GodGPT.Webhook" Version="1.22.3-alpha-aevatar-update-005" />
+    <PackageVersion Include="GodGPT.Webhook" Version="1.22.3-alpha-aevatar-update-006" />
     <!-- AElf packages -->
     <PackageVersion Include="AElf.Client" Version="1.1.0" />
     <PackageVersion Include="AElf.ExceptionHandler.ABP" Version="8.2.8" />
@@ -128,7 +128,7 @@
     <PackageVersion Include="Microsoft.Extensions.Http.Polly" Version="8.0.3" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.5" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Client" Version="$(OrleansVersion)" />
     <PackageVersion Include="Microsoft.Orleans.Core" Version="9.0.2" />
