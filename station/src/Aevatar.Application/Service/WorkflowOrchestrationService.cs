@@ -5,25 +5,31 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Aevatar.Application.Contracts.WorkflowOrchestration;
+using Aevatar.Application.Grains.Agents.AI;
 using Aevatar.Domain.WorkflowOrchestration;
 using Microsoft.Extensions.Logging;
+using Orleans;
+using Volo.Abp.Users;
 
 namespace Aevatar.Application.Service;
 
 /// <summary>
-/// 统一的工作流编排服务实现（集成JSON验证和提示词构建功能）
+/// 统一的工作流编排服务实现（简化版：仅负责调用AI Agent和解析结果）
 /// </summary>
 public class WorkflowOrchestrationService : IWorkflowOrchestrationService
 {
-    private readonly IAgentIndexService _agentIndexService;
     private readonly ILogger<WorkflowOrchestrationService> _logger;
+    private readonly IClusterClient _clusterClient;
+    private readonly ICurrentUser _currentUser;
 
     public WorkflowOrchestrationService(
-        IAgentIndexService agentIndexService,
-        ILogger<WorkflowOrchestrationService> logger)
+        ILogger<WorkflowOrchestrationService> logger,
+        IClusterClient clusterClient,
+        ICurrentUser currentUser)
     {
-        _agentIndexService = agentIndexService;
         _logger = logger;
+        _clusterClient = clusterClient;
+        _currentUser = currentUser;
     }
 
     /// <summary>
@@ -39,32 +45,26 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             return null;
         }
 
-        _logger.LogInformation("Starting workflow generation for user goal: {UserGoal}", userGoal);
+        var currentUserId = _currentUser.Id ?? Guid.NewGuid();
+        _logger.LogInformation("Starting workflow generation for user {UserId} with goal: {UserGoal}", currentUserId, userGoal);
 
         try
         {
-            // 1. Get available agents
-            var allAgents = await _agentIndexService.GetAllAgentsAsync();
-            _logger.LogDebug("Retrieved {Count} available agents", allAgents.Count());
+            // 调用用户专属的WorkflowComposerGAgent处理所有AI相关逻辑
+            var workflowJson = await CallWorkflowComposerGAgentAsync(userGoal, currentUserId);
+            _logger.LogDebug("Received workflow JSON with length: {Length}", workflowJson.Length);
 
-            // 2. Build prompt for LLM (already updated to frontend format)
-            var prompt = await BuildGenerationPromptAsync(userGoal, allAgents);
-            _logger.LogDebug("Generated prompt for LLM with length: {Length}", prompt.Length);
-
-            // 3. Call LLM to generate workflow JSON in frontend format
-            var workflowJson = await CallLLMForWorkflowGenerationAsync(prompt);
-            _logger.LogDebug("Received LLM response with length: {Length}", workflowJson.Length);
-
-            // 4. Parse directly to frontend format
+            // 解析为前端格式
             var workflowConfig = await ParseWorkflowJsonToViewConfigAsync(workflowJson);
 
             if (workflowConfig == null)
             {
-                _logger.LogError("Failed to parse LLM response to workflow view configuration");
+                _logger.LogError("Failed to parse workflow JSON to view configuration for user {UserId}", currentUserId);
                 return null;
             }
 
-            _logger.LogInformation("Successfully generated workflow view configuration with {NodeCount} nodes and {ConnectionCount} connections", 
+            _logger.LogInformation("Successfully generated workflow view configuration for user {UserId} with {NodeCount} nodes and {ConnectionCount} connections", 
+                currentUserId,
                 workflowConfig.WorkflowNodeList?.Count ?? 0, 
                 workflowConfig.WorkflowNodeUnitList?.Count ?? 0);
 
@@ -72,445 +72,45 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error occurred while generating workflow for user goal: {UserGoal}", userGoal);
+            _logger.LogError(ex, "Error occurred while generating workflow for user {UserId} with goal: {UserGoal}", currentUserId, userGoal);
             return null;
         }
     }
 
-    #region Private Methods - Prompt Building
+    #region Private Methods - AI Agent Integration
 
     /// <summary>
-    /// 构建工作流生成提示词
+    /// 调用用户专属的WorkflowComposerGAgent生成工作流JSON（用户隔离）
     /// </summary>
-    private async Task<string> BuildGenerationPromptAsync(string userGoal, IEnumerable<AgentIndexInfo> availableAgents)
+    private async Task<string> CallWorkflowComposerGAgentAsync(string userGoal, Guid userId)
     {
-        await Task.CompletedTask;
-
-        var agentList = availableAgents?.ToList() ?? new List<AgentIndexInfo>();
-        
-        var prompt = new StringBuilder();
-
-        // System role definition
-        prompt.AppendLine("# Workflow Orchestration Expert");
-        prompt.AppendLine("You are a professional AI workflow orchestration expert. Based on user goals, select appropriate Agents from the provided list and design a complete workflow execution plan.");
-        prompt.AppendLine();
-
-        // User goal
-        prompt.AppendLine("## User Goal");
-        prompt.AppendLine($"{userGoal}");
-        prompt.AppendLine();
-
-        // Available Agent list
-        prompt.AppendLine("## Available Agent List");
-        if (agentList.Any())
-        {
-            foreach (var agent in agentList)
-            {
-                prompt.AppendLine($"### {agent.Name} (TypeName: {agent.TypeName})");
-                prompt.AppendLine($"**Brief**: {agent.L1Description}");
-                prompt.AppendLine($"**Detailed**: {agent.L2Description}");
-                prompt.AppendLine($"**Categories**: {string.Join(", ", agent.Categories)}");
-                                 prompt.AppendLine($"**Execution Time**: {agent.EstimatedExecutionTime}ms");
-                 prompt.AppendLine();
-            }
-        }
-        else
-        {
-            prompt.AppendLine("No available Agents");
-            prompt.AppendLine();
-        }
-
-        // Output requirements
-        prompt.AppendLine("## Output Requirements");
-        prompt.AppendLine("Please output complete workflow JSON including: 1) Select appropriate Agents from the above list, 2) Design nodes, 3) Define connection relationships and execution order, 4) Configure data flow between nodes.");
-        prompt.AppendLine();
-
-        // JSON format specification
-        prompt.AppendLine("## JSON Format Specification");
-        prompt.AppendLine("Please strictly follow the following JSON format output, this is the data structure expected by the frontend:");
-        prompt.AppendLine("```json");
-        prompt.AppendLine("{");
-        prompt.AppendLine("  \"workflowNodeList\": [");
-        prompt.AppendLine("    {");
-        prompt.AppendLine("      \"agentType\": \"Agent type name (e.g., DataProcessorAgent)\",");
-        prompt.AppendLine("      \"name\": \"Node display name\",");
-        prompt.AppendLine("      \"extendedData\": {");
-        prompt.AppendLine("        \"position_x\": \"Node X coordinate (string format, e.g., '100')\",");
-        prompt.AppendLine("        \"position_y\": \"Node Y coordinate (string format, e.g., '100')\",");
-        prompt.AppendLine("        \"width\": \"Node width (string format, e.g., '200')\",");
-        prompt.AppendLine("        \"height\": \"Node height (string format, e.g., '80')\"");
-        prompt.AppendLine("      },");
-        prompt.AppendLine("      \"properties\": {");
-        prompt.AppendLine("        \"inputParam1\": \"Input parameter value\",");
-        prompt.AppendLine("        \"inputParam2\": \"Input parameter value\"");
-        prompt.AppendLine("      },");
-        prompt.AppendLine("      \"nodeId\": \"Unique node ID (UUID format)\"");
-        prompt.AppendLine("    }");
-        prompt.AppendLine("  ],");
-        prompt.AppendLine("  \"workflowNodeUnitList\": [");
-        prompt.AppendLine("    {");
-        prompt.AppendLine("      \"nodeId\": \"Current node ID\",");
-        prompt.AppendLine("      \"nextnodeId\": \"Next node ID\"");
-        prompt.AppendLine("    }");
-        prompt.AppendLine("  ],");
-        prompt.AppendLine("  \"Name\": \"Workflow name\"");
-        prompt.AppendLine("}");
-        prompt.AppendLine("```");
-        prompt.AppendLine();
-        prompt.AppendLine("## Important Notes");
-        prompt.AppendLine("1. agentType must use the TypeName of the Agent, selected from the available Agent list above");
-        prompt.AppendLine("2. All values in extendedData must be in string format");
-        prompt.AppendLine("3. Please arrange node positions from left to right, top to bottom, with 150-200 pixel spacing between nodes");
-        prompt.AppendLine("4. workflowNodeUnitList defines execution order, each entry indicates the next node to execute after the current node completes");
-        prompt.AppendLine("5. properties contains input parameter configuration for the Agent node");
-
-        return prompt.ToString();
-    }
-
-    #endregion
-
-    #region Private Methods - JSON Validation
-
-    /// <summary>
-    /// 验证和解析工作流JSON
-    /// </summary>
-    private async Task<WorkflowJsonValidationResult> ValidateWorkflowJsonAsync(string jsonContent)
-    {
-        await Task.CompletedTask;
-
-        var result = new WorkflowJsonValidationResult();
-
-        if (string.IsNullOrWhiteSpace(jsonContent))
-        {
-            result.IsValid = false;
-            result.Errors.Add(new ValidationError 
-            { 
-                Code = "EMPTY_JSON", 
-                Message = "JSON内容不能为空" 
-            });
-            return result;
-        }
-
         try
         {
-            // 清理JSON内容
-            var cleanJson = CleanJsonContent(jsonContent);
-
-            // 尝试解析JSON
-            using var document = JsonDocument.Parse(cleanJson);
-            var workflow = JsonSerializer.Deserialize<WorkflowDefinition>(cleanJson, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-
-            if (workflow == null)
-            {
-                result.IsValid = false;
-                result.Errors.Add(new ValidationError
-                {
-                    Code = "PARSE_ERROR",
-                    Message = "无法解析工作流JSON"
-                });
-                return result;
-            }
-
-            // 验证工作流结构
-            ValidateWorkflowStructure(workflow, result);
-
-            result.IsValid = result.Errors.Count == 0;
-            return result;
-        }
-        catch (JsonException ex)
-        {
-            result.IsValid = false;
-            result.Errors.Add(new ValidationError
-            {
-                Code = "JSON_PARSE_ERROR",
-                Message = $"JSON解析错误：{ex.Message}"
-            });
-            return result;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "JSON验证过程中发生意外错误");
-            result.IsValid = false;
-            result.Errors.Add(new ValidationError
-            {
-                Code = "INTERNAL_ERROR",
-                Message = "内部验证错误"
-            });
-            return result;
-        }
-    }
-
-    /// <summary>
-    /// 清理JSON内容（移除markdown标记等）
-    /// </summary>
-    private string CleanJsonContent(string jsonContent)
-    {
-        if (string.IsNullOrWhiteSpace(jsonContent))
-            return string.Empty;
-
-        var cleaned = jsonContent.Trim();
-
-        // 移除markdown代码块标记
-        if (cleaned.StartsWith("```json"))
-        {
-            cleaned = cleaned.Substring(7);
-        }
-        else if (cleaned.StartsWith("```"))
-        {
-            cleaned = cleaned.Substring(3);
-        }
-
-        if (cleaned.EndsWith("```"))
-        {
-            cleaned = cleaned.Substring(0, cleaned.Length - 3);
-        }
-
-        return cleaned.Trim();
-    }
-
-    /// <summary>
-    /// 尝试修复工作流JSON格式
-    /// </summary>
-    private async Task<string> TryFixWorkflowJsonAsync(string workflowJson)
-    {
-        await Task.CompletedTask;
-
-        if (string.IsNullOrWhiteSpace(workflowJson))
-        {
-            return string.Empty;
-        }
-
-        try
-        {
-            // 清理JSON内容
-            var cleanJson = CleanJsonContent(workflowJson);
-
-            // 验证JSON格式是否正确
-            using var document = JsonDocument.Parse(cleanJson);
-
-            // 如果解析成功，返回格式化后的JSON
-            return JsonSerializer.Serialize(document.RootElement, new JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogWarning("修复工作流JSON失败：{Error}", ex.Message);
+            _logger.LogInformation("Calling user-specific WorkflowComposerGAgent for user {UserId}", userId);
             
-            // 尝试基本修复策略
-            return AttemptBasicJsonFix(workflowJson);
+            // 使用用户专属的grainId确保用户隔离
+            var userSpecificGrainId = $"workflow-composer-{userId}";
+            var workflowComposerGAgent = _clusterClient.GetGrain<IWorkflowComposerGAgent>(userSpecificGrainId);
+            var result = await workflowComposerGAgent.GenerateWorkflowJsonAsync(userGoal);
+            
+            _logger.LogInformation("User-specific WorkflowComposerGAgent completed successfully for user {UserId}", userId);
+            return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "修复工作流JSON时发生意外错误");
-            return workflowJson; // 返回原始内容
-        }
-    }
-
-    /// <summary>
-    /// 解析工作流JSON为WorkflowDefinition对象
-    /// </summary>
-    private async Task<WorkflowDefinition> ParseWorkflowJsonAsync(string workflowJson)
-    {
-        await Task.CompletedTask;
-
-        if (string.IsNullOrWhiteSpace(workflowJson))
-        {
-            throw new ArgumentException("工作流JSON不能为空", nameof(workflowJson));
-        }
-
-        try
-        {
-            // 清理JSON内容
-            var cleanJson = CleanJsonContent(workflowJson);
-
-            // 尝试修复JSON（如果需要）
-            var fixedJson = await TryFixWorkflowJsonAsync(cleanJson);
-
-            // 解析为WorkflowDefinition对象
-            var workflow = JsonSerializer.Deserialize<WorkflowDefinition>(fixedJson, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-
-            if (workflow == null)
-            {
-                throw new InvalidOperationException("无法反序列化工作流JSON");
-            }
-
-            return workflow;
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogError(ex, "解析工作流JSON失败");
-            throw new ArgumentException($"无效的工作流JSON格式：{ex.Message}", nameof(workflowJson));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "解析工作流JSON时发生意外错误");
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// 验证工作流结构
-    /// </summary>
-    private void ValidateWorkflowStructure(WorkflowDefinition workflow, WorkflowJsonValidationResult result)
-    {
-        try
-        {
-            // 验证必需字段
-            if (string.IsNullOrWhiteSpace(workflow.WorkflowId))
-            {
-                result.Errors.Add(new ValidationError { Code = "MISSING_WORKFLOW_ID", Message = "工作流ID是必需的" });
-            }
-
-            if (string.IsNullOrWhiteSpace(workflow.Name))
-            {
-                result.Errors.Add(new ValidationError { Code = "MISSING_WORKFLOW_NAME", Message = "工作流名称是必需的" });
-            }
-
-            // 验证节点结构  
-            if (workflow.Nodes == null || workflow.Nodes.Count == 0)
-            {
-                result.Errors.Add(new ValidationError { Code = "NO_NODES", Message = "工作流必须包含至少一个节点" });
-                return;
-            }
-
-            // 检查是否存在开始和结束节点
-            var hasStartNode = workflow.Nodes.Any(n => n.Type == WorkflowNodeType.Start);
-            var hasEndNode = workflow.Nodes.Any(n => n.Type == WorkflowNodeType.End);
-
-            // 验证每个节点
-            for (int i = 0; i < workflow.Nodes.Count; i++)
-            {
-                var node = workflow.Nodes[i];
-                if (string.IsNullOrWhiteSpace(node.NodeId))
-                {
-                    result.Errors.Add(new ValidationError
-                    {
-                        Code = "MISSING_NODE_ID",
-                        Message = $"节点{i + 1}缺少NodeId"
-                    });
-                }
-
-                if (string.IsNullOrWhiteSpace(node.Name))
-                {
-                    result.Warnings.Add(new ValidationWarning
-                    {
-                        Code = "MISSING_NODE_NAME",
-                        Message = $"节点{i + 1}没有名称"
-                    });
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "工作流结构验证过程中发生意外错误");
-            result.IsValid = false;
-            result.Errors.Add(new ValidationError
-            {
-                Code = "INTERNAL_ERROR",
-                Message = "内部验证错误"
-            });
-        }
-    }
-
-    /// <summary>
-    /// 尝试基本JSON修复
-    /// </summary>
-    private string AttemptBasicJsonFix(string json)
-    {
-        try
-        {
-            // 简单修复策略：
-            // 1. 移除可能的BOM
-            if (json.StartsWith("\uFEFF"))
-            {
-                json = json.Substring(1);
-            }
-
-            // 2. 修复常见的引号问题
-            json = json.Replace("'", "\"");
-
-            // 3. 移除尾随逗号
-            json = System.Text.RegularExpressions.Regex.Replace(json, @",\s*}", "}");
-            json = System.Text.RegularExpressions.Regex.Replace(json, @",\s*\]", "]");
-
-            return json;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning("基本JSON修复尝试失败：{Error}", ex.Message);
-            return json; // 返回原始内容
+            _logger.LogError(ex, "Error during user-specific WorkflowComposerGAgent call for user {UserId}", userId);
+            throw; // 让上层处理异常
         }
     }
 
     #endregion
 
-    #region Private Methods - LLM Integration
-
-    /// <summary>
-    /// 调用LLM生成工作流JSON
-    /// </summary>
-    private async Task<string> CallLLMForWorkflowGenerationAsync(string prompt)
-    {
-        // TODO: 实现LLM调用逻辑
-        // 这里应该调用实际的LLM服务（如OpenAI、Azure OpenAI等）
-        
-        await Task.CompletedTask;
-        
-        // 临时返回符合前端格式的示例JSON
-        return @"{
-            ""workflowNodeList"": [
-                {
-                    ""agentType"": ""DataProcessorAgent"",
-                    ""name"": ""Data Processing Node"",
-                    ""extendedData"": {
-                        ""position_x"": ""100"",
-                        ""position_y"": ""100"",
-                        ""width"": ""200"",
-                        ""height"": ""80""
-                    },
-                    ""properties"": {
-                        ""inputData"": ""User input data"",
-                        ""processingMode"": ""batch""
-                    },
-                    ""nodeId"": ""node-1""
-                },
-                {
-                    ""agentType"": ""OutputAgent"",
-                    ""name"": ""Output Node"",
-                    ""extendedData"": {
-                        ""position_x"": ""350"",
-                        ""position_y"": ""100"",
-                        ""width"": ""200"",
-                        ""height"": ""80""
-                    },
-                    ""properties"": {
-                        ""outputFormat"": ""json""
-                    },
-                    ""nodeId"": ""node-2""
-                }
-            ],
-            ""workflowNodeUnitList"": [
-                {
-                    ""nodeId"": ""node-1"",
-                    ""nextnodeId"": ""node-2""
-                }
-            ],
-            ""Name"": ""AI Generated Workflow""
-        }";
-    }
+    #region Private Methods - JSON Parsing
 
     /// <summary>
     /// Parse workflow JSON to frontend format DTO
     /// </summary>
-    /// <param name="jsonContent">JSON content from LLM</param>
+    /// <param name="jsonContent">JSON content from WorkflowComposerGAgent</param>
     /// <returns>Parsed WorkflowViewConfigDto</returns>
     public async Task<WorkflowViewConfigDto?> ParseWorkflowJsonToViewConfigAsync(string jsonContent)
     {
@@ -574,6 +174,34 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             _logger.LogError(ex, "Unexpected error when parsing workflow JSON to view config");
             return null;
         }
+    }
+
+    /// <summary>
+    /// 清理JSON内容（移除markdown标记等）
+    /// </summary>
+    private string CleanJsonContent(string jsonContent)
+    {
+        if (string.IsNullOrWhiteSpace(jsonContent))
+            return string.Empty;
+
+        var cleaned = jsonContent.Trim();
+
+        // 移除markdown代码块标记
+        if (cleaned.StartsWith("```json"))
+        {
+            cleaned = cleaned.Substring(7);
+        }
+        else if (cleaned.StartsWith("```"))
+        {
+            cleaned = cleaned.Substring(3);
+        }
+
+        if (cleaned.EndsWith("```"))
+        {
+            cleaned = cleaned.Substring(0, cleaned.Length - 3);
+        }
+
+        return cleaned.Trim();
     }
 
     #endregion
