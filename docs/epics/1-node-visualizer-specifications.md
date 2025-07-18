@@ -406,3 +406,70 @@ Enhance the workflow designer's node configuration interface to display availabl
 - Fallback behavior works correctly when option data is unavailable or loading fails.
 
 ---
+
+## 12. Workflow Publishing & Production Deployment
+**Version**
+v0.6
+
+**Objective:**  
+Enable users to publish stable workflow versions to dedicated production environments and access their deployed workflows through secure production URLs.
+
+**Key Requirements:**
+- **Publishing Interface:**
+  - Prominent "Publish" button in the workflow designer interface alongside the existing "Play" button.
+  - Publish button is only enabled when the workflow passes comprehensive validation and testing.
+  - Version selection interface allowing users to create named releases (e.g., "v1.0.0", "Production-Release-Jan2024").
+  - Publishing confirmation dialog with release notes and deployment target information.
+  - Clear visual distinction between draft/development workflows and published production versions.
+
+- **Production Pod Infrastructure:**
+  - Automatic creation of user-specific production pods upon first workflow publication.
+  - Production pods are isolated from debug environments and other users' production deployments.
+  - Dedicated resource allocation ensuring consistent performance for production workloads.
+  - Production pods support multiple workflow versions and automatic traffic routing.
+  - Scalable infrastructure that can handle production-level traffic and concurrent executions.
+
+- **Version Management:**
+  - Support for multiple published versions of the same workflow running simultaneously.
+  - Ability to promote/demote versions and manage traffic routing between versions.
+  - Version rollback capabilities for quick recovery from problematic releases.
+  - Clear versioning history and change tracking for all published releases.
+  - Immutable published versions - changes require new version publication.
+
+- **Production Access & URLs:**
+  - Each user receives a unique, secure production URL for their published workflows.
+  - URL format provides clear identification of user, project, and workflow version.
+  - Support for custom domain configuration for enterprise users.
+  - HTTPS encryption and security measures for all production endpoints.
+  - API endpoint documentation and integration guides for production workflow access.
+
+- **Production Monitoring:**
+  - Basic monitoring dashboard showing production workflow health and performance.
+  - Error tracking and logging specific to production environment.
+  - Usage analytics and execution metrics for published workflows.
+  - Alert system for production workflow failures or performance degradation.
+
+**Security & Access Control:**
+- Published workflows inherit project-level permissions and access controls.
+- Production URLs require appropriate authentication and authorization.
+- Audit logging for all production workflow publishing and access activities.
+- Support for API keys and token-based authentication for programmatic access.
+
+**Technical Constraints:**
+- Production deployments must maintain 99.9% uptime SLA.
+- Deployment process should complete within 5 minutes for standard workflows.
+- Production pods must support auto-scaling based on traffic demands.
+- All production workflows must pass security and performance validation before deployment.
+
+**Acceptance Criteria:**
+- Users can publish validated workflows to production with a single "Publish" button click.
+- Each user receives a unique, secure production URL that remains stable across workflow updates.
+- Multiple versions of the same workflow can run simultaneously in production.
+- Production environment is completely isolated from development and debug environments.
+- Users can access deployment status, logs, and basic monitoring for their production workflows.
+- Rollback to previous versions is available and completes within 2 minutes.
+- Production URLs support both manual trigger and programmatic API access.
+- All production deployments pass automated security and performance validation.
+- Users receive clear feedback about deployment status, errors, and success confirmations.
+
+---

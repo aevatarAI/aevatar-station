@@ -1,7 +1,7 @@
 # Aevatar Platform Version 0.6
 
 ## Overview
-Version 0.6 introduces advanced interactive debugging capabilities and enhanced node configuration with intelligent option selection, enabling users to test and debug workflows in real-time through an isolated debugging environment with live data streaming, while providing intuitive parameter configuration with predefined option lists.
+Version 0.6 introduces advanced interactive debugging capabilities, enhanced node configuration with intelligent option selection, and comprehensive workflow publishing & production deployment features. Users can test and debug workflows in real-time through isolated debugging environments with live data streaming, configure parameters using intuitive predefined option lists, and seamlessly publish validated workflows to dedicated production environments with secure URLs, version management, and monitoring capabilities.
 
 ## Features Included
 
@@ -71,6 +71,82 @@ Version 0.6 introduces advanced interactive debugging capabilities and enhanced 
   - Contextual help for informed decision-making
   - Rich metadata support for complex configurations
 
+### 3. Workflow Publishing & Production Deployment (Complete Implementation)
+**Epic Reference:** [1-node-visualizer-specifications.md](../epics/1-node-visualizer-specifications.md#12-workflow-publishing--production-deployment)
+
+**Stories:**
+- **Basic Workflow Publishing** - [1-12-workflow-publishing-production-deployment-stories.md](../stories/1-12-workflow-publishing-production-deployment-stories.md#1-basic-workflow-publishing)
+  - Prominent "Publish" button in workflow designer
+  - Single-action deployment to production
+  - Publishing process initiation and confirmation feedback
+  - Success notification upon deployment completion
+
+- **Workflow Validation for Publishing** - [1-12-workflow-publishing-production-deployment-stories.md](../stories/1-12-workflow-publishing-production-deployment-stories.md#2-workflow-validation-for-publishing)
+  - Comprehensive validation before publishing
+  - Disabled publish button for invalid workflows
+  - Connectivity, configuration, and security validation
+  - Clear feedback on validation failures
+
+- **Version Selection and Release Management** - [1-12-workflow-publishing-production-deployment-stories.md](../stories/1-12-workflow-publishing-production-deployment-stories.md#3-version-selection-and-release-management)
+  - Named release creation with version identifiers
+  - Release notes and deployment target information
+  - Visual distinction between draft and production versions
+  - Confirmation dialog with deployment details
+
+- **User-Specific Production Pod Creation** - [1-12-workflow-publishing-production-deployment-stories.md](../stories/1-12-workflow-publishing-production-deployment-stories.md#4-user-specific-production-pod-creation)
+  - Automatic isolated production pod creation
+  - Dedicated resource allocation per user
+  - Complete isolation from debug environments
+  - Production-level traffic and concurrent execution support
+
+- **Production URL Generation and Access** - [1-12-workflow-publishing-production-deployment-stories.md](../stories/1-12-workflow-publishing-production-deployment-stories.md#5-production-url-generation-and-access)
+  - Unique, secure production URLs per workflow
+  - HTTPS encryption and security measures
+  - Clear identification of user, project, and version
+  - API endpoint documentation and integration guides
+
+- **Multiple Version Support** - [1-12-workflow-publishing-production-deployment-stories.md](../stories/1-12-workflow-publishing-production-deployment-stories.md#6-multiple-version-support)
+  - Simultaneous execution of multiple workflow versions
+  - Blue-green deployments and gradual rollouts
+  - Version promotion/demotion and traffic routing
+  - A/B testing capabilities
+
+- **Version Rollback Capability** - [1-12-workflow-publishing-production-deployment-stories.md](../stories/1-12-workflow-publishing-production-deployment-stories.md#7-version-rollback-capability)
+  - Quick rollback to previous versions within 2 minutes
+  - Automatic traffic redirection with minimal downtime
+  - Complete versioning history and change tracking
+  - Rollback success confirmation
+
+- **Production Monitoring Dashboard** - [1-12-workflow-publishing-production-deployment-stories.md](../stories/1-12-workflow-publishing-production-deployment-stories.md#8-production-monitoring-dashboard)
+  - Real-time health status and performance metrics
+  - Execution statistics for published workflows
+  - Alerts for failures and performance degradation
+  - Usage analytics and historical performance data
+
+- **Production Error Tracking and Logging** - [1-12-workflow-publishing-production-deployment-stories.md](../stories/1-12-workflow-publishing-production-deployment-stories.md#9-production-error-tracking-and-logging)
+  - Detailed error capture with timestamp and context
+  - Search and filter capabilities for error logs
+  - Error pattern analysis and recurring issue identification
+  - Stack trace and debugging information
+
+- **Production Workflow Authentication** - [1-12-workflow-publishing-production-deployment-stories.md](../stories/1-12-workflow-publishing-production-deployment-stories.md#10-production-workflow-authentication)
+  - Secure authentication for production URLs
+  - API key and token-based authentication
+  - Project-level permission enforcement
+  - Audit logging for access activities
+
+- **Deployment Status and Feedback** - [1-12-workflow-publishing-production-deployment-stories.md](../stories/1-12-workflow-publishing-production-deployment-stories.md#11-deployment-status-and-feedback)
+  - Real-time deployment status with progress indicators
+  - Success confirmation with production URL details
+  - Detailed error information for failed deployments
+  - 5-minute deployment completion guarantee
+
+- **API Documentation and Integration Guide** - [1-12-workflow-publishing-production-deployment-stories.md](../stories/1-12-workflow-publishing-production-deployment-stories.md#12-api-documentation-and-integration-guide)
+  - Automatically generated API specifications
+  - Code examples and integration guides
+  - Authentication setup guidance
+  - Manual trigger and programmatic access instructions
+
 ## Technical Architecture
 
 ### Debug Pod Infrastructure
@@ -101,6 +177,22 @@ Version 0.6 introduces advanced interactive debugging capabilities and enhanced 
 - Metadata management and versioning
 - Performance optimization for large datasets
 
+### Production Deployment Infrastructure
+- User-specific production pod orchestration
+- Kubernetes-based production environment isolation
+- Automated deployment pipeline with validation
+- Version management and traffic routing
+- Production URL generation and SSL/TLS termination
+- High availability and auto-scaling capabilities
+
+### Production Monitoring & Observability
+- Real-time monitoring dashboard infrastructure
+- Centralized logging and error tracking
+- Performance metrics collection and aggregation
+- Alert system for production failures
+- Audit logging for security and compliance
+- API documentation generation and management
+
 ## Performance Requirements
 
 ### Responsiveness
@@ -119,6 +211,14 @@ Version 0.6 introduces advanced interactive debugging capabilities and enhanced 
 - Support option lists with 1000+ items
 - Handle 100+ concurrent option validation requests
 
+### Production Deployment
+- Deployment completion: < 5 minutes
+- Production pod startup: < 30 seconds
+- URL generation and routing: < 10 seconds
+- Version rollback: < 2 minutes
+- Production monitoring updates: < 1 second
+- API documentation generation: < 30 seconds
+
 ### Resource Management
 - Automatic pod cleanup after 4 hours of inactivity
 - Memory limits: 2GB per debug pod
@@ -126,6 +226,11 @@ Version 0.6 introduces advanced interactive debugging capabilities and enhanced 
 - Storage limits: 10GB per debug session
 - Option cache memory: 512MB per user session
 - Validation processing: < 50ms per request
+- Production pod memory: 4GB per user
+- Production pod CPU: 4 cores per user
+- Production storage: 50GB per user
+- Monitoring data retention: 30 days
+- API documentation cache: 1GB shared
 
 ## Acceptance Criteria Summary
 - ✅ User-specific debug pod infrastructure
@@ -141,6 +246,18 @@ Version 0.6 introduces advanced interactive debugging capabilities and enhanced 
 - ✅ Search and filtering for large option sets
 - ✅ Real-time validation and compatibility checking
 - ✅ Rich metadata and description support for options
+- ✅ One-click workflow publishing to production
+- ✅ Comprehensive workflow validation before deployment
+- ✅ Version management with named releases
+- ✅ User-specific isolated production environments
+- ✅ Secure production URLs with HTTPS encryption
+- ✅ Multiple workflow version support and traffic routing
+- ✅ Quick version rollback capabilities (< 2 minutes)
+- ✅ Production monitoring dashboard with real-time metrics
+- ✅ Error tracking and logging for production workflows
+- ✅ Secure authentication and API key management
+- ✅ Real-time deployment status and feedback
+- ✅ Automatically generated API documentation
 
 ## Dependencies
 - v0.5 Enhanced Execution Progress Tracking and Real-Time Data Streaming Infrastructure
@@ -148,6 +265,11 @@ Version 0.6 introduces advanced interactive debugging capabilities and enhanced 
 - Agent instrumentation framework
 - Option metadata management system
 - Backend API for dynamic option retrieval
+- Production Kubernetes cluster infrastructure
+- SSL/TLS certificate management system
+- Production monitoring and logging infrastructure
+- API gateway for production URL routing
+- Version control system for deployment tracking
 
 ## Security Considerations
 - User isolation and authentication
@@ -157,6 +279,11 @@ Version 0.6 introduces advanced interactive debugging capabilities and enhanced 
 - Resource quota enforcement
 - Secure option data transmission
 - Validation of option compatibility and permissions
+- Production environment isolation and secure deployment
+- HTTPS encryption for all production workflow URLs
+- API key and token-based authentication systems
+- Comprehensive audit logging for production activities
+- Secure version management and rollback procedures
 
 ## Breaking Changes
 - None - fully backward compatible with v0.5
@@ -168,4 +295,11 @@ Version 0.6 introduces advanced interactive debugging capabilities and enhanced 
 - Limited to workflow-level debugging (no system-level debugging)
 - Option lists cached for 1 hour (requires refresh for latest options)
 - Maximum 1000 options per parameter dropdown
-- Search limited to text-based matching (no semantic search) 
+- Search limited to text-based matching (no semantic search)
+- Production deployments limited to 10 active versions per user
+- Maximum 5 concurrent production pods per user
+- Production monitoring data retained for 30 days only
+- API documentation refresh required for major version changes
+- No custom domain support for production URLs (enterprise feature)
+- Version rollback limited to last 10 published versions
+- Production environment auto-scaling limited to 10x base capacity 
