@@ -4,12 +4,12 @@
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVersion>9.0.1</OrleansVersion>
     <AevatarVerion>1.5.2</AevatarVerion>
-    <AevatarGAgentVersion>1.5.1-stream-1</AevatarGAgentVersion>
+    <AevatarGAgentVersion>1.5.1-stream-2</AevatarGAgentVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="GodGPT.GAgents" Version="1.22.3-alpha-aevatar-update-004" />
+    <PackageVersion Include="GodGPT.GAgents" Version="1.22.3-alpha-aevatar-update-005" />
     <PackageVersion Include="Stripe.net" Version="48.1.0"/>
-    <PackageVersion Include="GodGPT.Webhook" Version="1.22.3-alpha-aevatar-update-004" />
+    <PackageVersion Include="GodGPT.Webhook" Version="1.22.3-alpha-aevatar-update-005" />
     <!-- AElf packages -->
     <PackageVersion Include="AElf.Client" Version="1.1.0" />
     <PackageVersion Include="AElf.ExceptionHandler.ABP" Version="8.2.8" />
