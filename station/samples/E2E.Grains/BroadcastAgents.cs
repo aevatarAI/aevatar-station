@@ -64,13 +64,13 @@ public interface IBroadcastUserAgent : IGAgent
 
 // State classes for agents - Schedule agent needs to use BroadCastGState for broadcast functionality
 [GenerateSerializer]
-public class BroadcastScheduleState : BroadCastGState
+public class BroadcastScheduleState : BroadcastGState
 {
     [Id(0)] public long EventsSent { get; set; } = 0;
 }
 
 [GenerateSerializer]
-public class BroadcastUserState : BroadCastGState
+public class BroadcastUserState : BroadcastGState
 {
     [Id(0)] public int Count { get; set; } = 0;
     [Id(1)] public long TotalEventsProcessed { get; set; } = 0;
@@ -97,7 +97,7 @@ public class BroadcastUserStateLogEvent : StateLogEventBase<BroadcastUserStateLo
 [SiloNamePatternPlacement("Scheduler")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
-public class BroadcastScheduleAgent : BroadCastGAgentBase<BroadcastScheduleState, BroadcastScheduleStateLogEvent>, IBroadcastScheduleAgent
+public class BroadcastScheduleAgent : BroadcastGAgentBase<BroadcastScheduleState, BroadcastScheduleStateLogEvent>, IBroadcastScheduleAgent
 {
     private static readonly ActivitySource ActivitySource = new("BroadcastScheduleAgent", "1.0.0");
 
@@ -134,7 +134,7 @@ public class BroadcastScheduleAgent : BroadCastGAgentBase<BroadcastScheduleState
             activity.SetTag("broadcast.number", @event.Number);
         }
 
-        await this.BroadCastEventAsync("BroadcastScheduleAgent", @event);
+        await this.BroadcastEventAsync("BroadcastScheduleAgent", @event);
         
         // Update metrics
         RaiseEvent(new BroadcastScheduleStateLogEvent { EventsSent = State.EventsSent + 1 });
@@ -166,7 +166,7 @@ public class BroadcastScheduleAgent : BroadCastGAgentBase<BroadcastScheduleState
 [SiloNamePatternPlacement("User")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
-public class BroadcastUserAgent : BroadCastGAgentBase<BroadcastUserState, BroadcastUserStateLogEvent>, IBroadcastUserAgent
+public class BroadcastUserAgent : BroadcastGAgentBase<BroadcastUserState, BroadcastUserStateLogEvent>, IBroadcastUserAgent
 {
     private static readonly ActivitySource ActivitySource = new("BroadcastUserAgent", "1.0.0");
     private readonly ConcurrentDictionary<string, BroadcastLatencyMeasurement> _latencyMeasurements = new();
@@ -180,7 +180,7 @@ public class BroadcastUserAgent : BroadCastGAgentBase<BroadcastUserState, Broadc
     {
         await base.OnGAgentActivateAsync(cancellationToken);
 
-        await SubscribeBroadCastEventAsync<BroadcastTestEvent>("BroadcastScheduleAgent", OnBroadcastTestEvent);
+        await SubscribeBroadcastEventAsync<BroadcastTestEvent>("BroadcastScheduleAgent", OnBroadcastTestEvent);
     }
 
     protected override void GAgentTransitionState(BroadcastUserState state, StateLogEventBase<BroadcastUserStateLogEvent> @event)
