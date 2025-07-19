@@ -70,6 +70,9 @@ public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
             });
         });
         
+        // Configure health check options
+        context.Services.Configure<HealthCheckOptions>(configuration.GetSection("HealthCheck"));
+        
         // Add Orleans health checks
         context.Services.AddOrleansHealthChecks();
     }

@@ -6,7 +6,9 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
 using Orleans.Runtime;
+using Aevatar.Options;
 
 namespace Aevatar.Silo.Extensions;
 
@@ -32,25 +34,34 @@ public static class OrleansHealthCheckExtensions
     /// Map health check endpoints for Kubernetes probes
     /// </summary>
     /// <param name="app">Application builder</param>
+    /// <param name="healthCheckOptions">Health check configuration options</param>
     /// <returns>Application builder for chaining</returns>
-    public static IApplicationBuilder MapOrleansHealthChecks(this IApplicationBuilder app)
+    public static IApplicationBuilder MapOrleansHealthChecks(this IApplicationBuilder app, Aevatar.Options.HealthCheckOptions? healthCheckOptions = null)
     {
+        // Get options from DI if not provided
+        healthCheckOptions ??= app.ApplicationServices.GetService<IOptions<Aevatar.Options.HealthCheckOptions>>()?.Value ?? new Aevatar.Options.HealthCheckOptions();
+        
+        if (!healthCheckOptions.Enabled)
+        {
+            return app;
+        }
+        
         // Liveness probe - basic orleans health
-        app.UseHealthChecks("/health/live", new HealthCheckOptions
+        app.UseHealthChecks(healthCheckOptions.LivenessPath, new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
         {
             Predicate = check => check.Tags.Contains("live"),
             ResponseWriter = WriteMinimalPlaintext
         });
         
         // Readiness probe - orleans ready to accept traffic
-        app.UseHealthChecks("/health/ready", new HealthCheckOptions
+        app.UseHealthChecks(healthCheckOptions.ReadinessPath, new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
         {
             Predicate = check => check.Tags.Contains("ready"),
             ResponseWriter = WriteMinimalPlaintext
         });
         
         // General health endpoint
-        app.UseHealthChecks("/health", new HealthCheckOptions
+        app.UseHealthChecks(healthCheckOptions.HealthPath, new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
         {
             ResponseWriter = WriteMinimalPlaintext
         });

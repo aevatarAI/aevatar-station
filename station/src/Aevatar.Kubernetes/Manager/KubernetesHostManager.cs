@@ -274,7 +274,7 @@ public class KubernetesHostManager : IHostDeployManager, IHostCopyManager, ISing
 
     private string GetHealthPath()
     {
-        return "";
+        return "/health/ready";
     }
 
 
@@ -430,7 +430,7 @@ public class KubernetesHostManager : IHostDeployManager, IHostCopyManager, ISing
             KubernetesConstants.SiloContainerTargetPort,
             KubernetesConstants.QueryPodMaxSurge,
             KubernetesConstants.QueryPodMaxUnavailable,
-            "", true);
+            GetHealthPath(), true);
 
         // Ensure Service is created
         string serviceName = ServiceHelper.GetAppServiceName(appId, version);
