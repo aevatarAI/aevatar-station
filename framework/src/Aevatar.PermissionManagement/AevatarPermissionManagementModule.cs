@@ -1,4 +1,3 @@
-using Aevatar.PermissionManagement.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Volo.Abp.Modularity;
@@ -27,8 +26,6 @@ public class AevatarPermissionManagementModule : AbpModule
         {
             options.IsDynamicPermissionStoreEnabled = true;
         });
-        // replace the StaticPermissionSaver with OrleansStaticPermissionSaver
-        // context.Services.Replace(ServiceDescriptor.Transient<IStaticPermissionSaver, OrleansStaticPermissionSaver>());
     }
     public override void PostConfigureServices(ServiceConfigurationContext context)
     {
