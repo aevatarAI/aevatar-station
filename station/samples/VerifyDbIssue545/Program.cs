@@ -103,7 +103,7 @@ IHostBuilder builder = Host.CreateDefaultBuilder(args)
 
                 var partitions = 8; // Multiple partitions for load distribution
                 var replicationFactor = (short)1;  // ReplicationFactor should be short
-                var topics = "Aevatar,AevatarStateProjection,AevatarBroadCast";
+                var topics = "Aevatar,AevatarStateProjection,AevatarBroadcast";
                 foreach (var topic in topics.Split(','))
                 {
                     options.AddTopic(topic.Trim(), new TopicCreationConfig
@@ -286,7 +286,7 @@ var TestDbEvent = new TestDbEvent
 };
 
 Console.WriteLine($"Broadcasting event with Number = {eventNumber}");
-await pubAgent.BroadCastEventAsync("TestDbScheduleGAgent", TestDbEvent);
+await pubAgent.BroadcastEventAsync("TestDbScheduleGAgent", TestDbEvent);
 
 // Wait for the event to be processed
 await Task.Delay(5000);
