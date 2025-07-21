@@ -61,4 +61,11 @@ public class AccountController : AevatarController
     {
         return _accountService.ResetPasswordAsync(input);
     }
+    
+    [HttpPost]
+    [Route("check-email-registered")]
+    public virtual Task<bool> CheckEmailRegisteredAsync(CheckEmailRegisteredDto input)
+    {
+        return _accountService.CheckEmailRegisteredAsync(input);
+    }
 }

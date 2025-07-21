@@ -50,6 +50,13 @@ public class QueryController : AevatarController
         return resp;
     }
     
+    [HttpGet("user-id")]
+    [Authorize]
+    public Task<Guid> GetUserId()
+    {
+        return Task.FromResult((Guid)CurrentUser.Id!);
+    }
+    
     private string GetQueryWithPermissionFilter(LuceneQueryDto queryDto)
     {
         var userId = CurrentUser.Id.HasValue ? CurrentUser.Id.ToString() : "null";
