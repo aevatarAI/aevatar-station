@@ -9,6 +9,7 @@ using Aevatar.Silo.IdGeneration;
 using Aevatar.Silo.TypeDiscovery;
 using Aevatar.PermissionManagement;
 using Aevatar.Plugins;
+using Aevatar.Silo.Extensions;
 using Microsoft.Extensions.Configuration;
 using Serilog;
 using Volo.Abp.AspNetCore.Serilog;
@@ -68,5 +69,11 @@ public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
                 }); 
             });
         });
+        
+        // Configure health check options
+        context.Services.Configure<HealthCheckOptions>(configuration.GetSection("HealthCheck"));
+        
+        // Add Orleans health checks
+        context.Services.AddOrleansHealthChecks();
     }
 }

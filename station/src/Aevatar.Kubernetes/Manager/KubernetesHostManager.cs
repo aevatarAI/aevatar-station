@@ -97,7 +97,7 @@ public class KubernetesHostManager : IHostDeployManager, IHostCopyManager, ISing
             KubernetesConstants.WebhookContainerTargetPort,
             KubernetesConstants.QueryPodMaxSurge,
             KubernetesConstants.QueryPodMaxUnavailable,
-            GetHealthPath());
+            "/health");
 
         // Ensure Service is created
         string serviceName = ServiceHelper.GetAppServiceName(appId, version);
@@ -272,12 +272,6 @@ public class KubernetesHostManager : IHostDeployManager, IHostCopyManager, ISing
         }
     }
 
-    private string GetHealthPath()
-    {
-        return "";
-    }
-
-
     private async Task DestroyPodsAsync(string appId, string version)
     {
         // Delete Deployment
@@ -430,7 +424,7 @@ public class KubernetesHostManager : IHostDeployManager, IHostCopyManager, ISing
             KubernetesConstants.SiloContainerTargetPort,
             KubernetesConstants.QueryPodMaxSurge,
             KubernetesConstants.QueryPodMaxUnavailable,
-            "", true);
+            "/health/ready", true);
 
         // Ensure Service is created
         string serviceName = ServiceHelper.GetAppServiceName(appId, version);

@@ -42,7 +42,8 @@ public class KubernetesConstants
     public static readonly List<string> WebhookCommand = new() { "dotnet", "Aevatar.WebHook.Host.dll" };
 
     public const int WebhookContainerTargetPort = 8308;
-    public const int SiloContainerTargetPort = 8080;
+    public const int SiloContainerTargetPort = 8080;  // Orleans Dashboard port
+    public const int SiloHealthCheckPort = 8081;      // Orleans Health Check port
     public const string QueryPodMaxSurge = "50%";
     public const string QueryPodMaxUnavailable = "0";
 
