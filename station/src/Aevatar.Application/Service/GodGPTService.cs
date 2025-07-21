@@ -26,6 +26,7 @@ using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
 using Aevatar.GodGPT.Dtos;
 using Aevatar.Quantum;
+using GodGPT.GAgents.SpeechChat;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -112,6 +113,8 @@ public interface IGodGPTService
     Task<List<ManagerRewardCalculationHistoryDto>> GetCalculationHistoryListAsync();
 
     Task<bool> CheckIsManager(string userId);
+    Task<UserProfileDto> SetVoiceLanguageAsync(Guid currentUserId, VoiceLanguageEnum voiceLanguage);
+
 }
 
 [RemoteService(IsEnabled = false)]
@@ -573,6 +576,13 @@ public class GodGPTService : ApplicationService, IGodGPTService
         var grainId = CommonHelper.StringToGuid(CommonHelper.GetAnonymousUserGAgentId(clientIp));
         var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(grainId);
         return await anonymousUserGrain.CanChatAsync();
+    }
+
+    public async Task<UserProfileDto> SetVoiceLanguageAsync(Guid currentUserId, VoiceLanguageEnum voiceLanguage)
+    {
+        var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
+        await manager.SetVoiceLanguageAsync(voiceLanguage);
+        return await manager.GetUserProfileAsync();
     }
 
     #endregion

@@ -10,14 +10,17 @@ using Aevatar.Application.Grains.Agents.ChatManager.Chat;
 using Aevatar.Application.Grains.Agents.ChatManager.Common;
 using Aevatar.Application.Grains.Agents.ChatManager.Dtos;
 using Aevatar.Application.Grains.ChatManager.Dtos;
+using Aevatar.BlobStorings;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Extensions;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GodGPT.Dtos;
+using Aevatar.Options;
 using Aevatar.Quantum;
 using Aevatar.Service;
 using Asp.Versioning;
+using GodGPT.GAgents.SpeechChat;
 using HandlebarsDotNet;
 using Json.Schema;
 using Microsoft.AspNetCore.Authorization;
@@ -32,6 +35,7 @@ using Orleans;
 using Orleans.Runtime;
 using Orleans.Streams;
 using Volo.Abp;
+using Volo.Abp.BlobStoring;
 
 namespace Aevatar.Controllers;
 
@@ -48,24 +52,33 @@ public class GodGPTController : AevatarController
     private readonly IOptions<AevatarOptions> _aevatarOptions;
     private readonly ILogger<GodGPTController> _logger;
     private readonly IAccountService _accountService;
-    const string Version = "1.20.0";
+    private readonly IBlobContainer _blobContainer;
+    private readonly BlobStoringOptions _blobStoringOptions;
+    private readonly IThumbnailService _thumbnailService;
+    private readonly IOptions<GodGPTOptions> _godGptOptions;
 
 
     public GodGPTController(IGodGPTService godGptService, IClusterClient clusterClient,
-        IOptions<AevatarOptions> aevatarOptions, ILogger<GodGPTController> logger, IAccountService accountService)
+        IOptions<AevatarOptions> aevatarOptions, ILogger<GodGPTController> logger, IAccountService accountService,
+        IBlobContainer blobContainer, IOptionsSnapshot<BlobStoringOptions> blobStoringOptions,
+        IThumbnailService thumbnailService, IOptions<GodGPTOptions> godGptOptions)
     {
         _godGptService = godGptService;
         _clusterClient = clusterClient;
         _aevatarOptions = aevatarOptions;
         _logger = logger;
         _accountService = accountService;
+        _blobContainer = blobContainer;
+        _blobStoringOptions = blobStoringOptions.Value;
+        _thumbnailService = thumbnailService;
+        _godGptOptions = godGptOptions;
     }
 
     [AllowAnonymous]
     [HttpGet("godgpt/query-version")]
     public Task<string> QueryVersion()
     {
-        return Task.FromResult(Version);
+        return Task.FromResult(_godGptOptions.Value.Version);
     }
 
     [HttpPost("godgpt/create-session")]
@@ -266,12 +279,14 @@ public class GodGPTController : AevatarController
     }
 
     [HttpGet("godgpt/chat/{sessionId}")]
-    public async Task<List<ChatMessage>> GetSessionMessageListAsync(Guid sessionId)
+    public async Task<List<ChatMessageWithMetaDto>> GetSessionMessageListAsync(Guid sessionId)
     {
         var stopwatch = Stopwatch.StartNew();
-        var chatMessages = await _godGptService.GetSessionMessageListAsync((Guid)CurrentUser.Id!, sessionId);
-        _logger.LogDebug("[GodGPTController][GetSessionMessageListAsync] sessionId: {0}, duration: {1}ms",
-            sessionId, stopwatch.ElapsedMilliseconds);
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
+        var chatMessages = await manager.GetSessionMessageListWithMetaAsync(sessionId);
+        _logger.LogDebug("[GodGPTController][GetSessionMessageListAsync] sessionId: {0}, messageCount: {1}, duration: {2}ms",
+            sessionId, chatMessages.Count, stopwatch.ElapsedMilliseconds);
         return chatMessages;
     }
 
@@ -478,7 +493,16 @@ public class GodGPTController : AevatarController
             return StatusCode(500, new { error = "Internal server error" });
         }
     }
-
+    [HttpPost("godgpt/voice/set")]
+    public async Task<UserProfileDto> SetVoiceLanguageAsync([FromBody] SetVoiceLanguageRequestDto request)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var userProfileDto = await _godGptService.SetVoiceLanguageAsync(currentUserId, request.VoiceLanguage);
+        _logger.LogDebug("[GodGPTController][SetVoiceLanguageAsync] userId: {0},voiceLanguage:{1} duration: {2}ms",
+            currentUserId, request.VoiceLanguage, stopwatch.ElapsedMilliseconds);
+        return userProfileDto;
+    }
     #endregion
     
     [HttpGet("godgpt/share/keyword")]
@@ -493,5 +517,43 @@ public class GodGPTController : AevatarController
         _logger.LogDebug(
             $"[GodGPTController][GetShareKeyWordWithAIAsync] completed for sessionId={sessionId}, duration: {stopwatch.ElapsedMilliseconds}ms");
         return response;
+    }
+    
+    [HttpPost("godgpt/blob")]
+    public async Task<string> SaveAsync([FromForm] SaveBlobInput input)
+    {
+        if (input.File.Length > _blobStoringOptions.MaxSizeBytes)
+        {
+            throw new UserFriendlyException(
+                $"The file is too large, with a maximum of {_blobStoringOptions.MaxSizeBytes} bytes.");
+        }
+
+        var originalFileName = input.File.FileName;
+        var fileExtension = Path.GetExtension(originalFileName);
+        var fileName = Guid.NewGuid().ToString() + fileExtension;
+
+        await _blobContainer.SaveAsync(fileName, input.File.OpenReadStream(), true);
+        
+        var _ = _thumbnailService.SaveWithThumbnailsAsync(input.File, fileName);
+
+        // var response = new SaveBlobResponse
+        // {
+        //     OriginalFileName = fileName,
+        //     OriginalSize = input.File.Length
+        // };
+        //
+        // return response;
+        return fileName;
+    }
+    
+    [HttpDelete("godgpt/blob/{name}")]
+    public async Task DeleteAsync(string name)
+    {
+        if (name.IsNullOrWhiteSpace())
+        {
+            return;
+        }
+
+        await _blobContainer.DeleteAsync(name);
     }
 }

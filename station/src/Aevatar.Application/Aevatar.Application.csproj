@@ -30,6 +30,7 @@
         <PackageReference Include="AElf.OpenTelemetry" />
         <PackageReference Include="FluentValidation" />
         <PackageReference Include="Volo.Abp.BlobStoring" />
+        <PackageReference Include="SixLabors.ImageSharp" />
     </ItemGroup>
 
     <ItemGroup>

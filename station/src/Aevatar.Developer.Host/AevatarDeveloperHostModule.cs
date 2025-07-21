@@ -23,6 +23,8 @@ using Volo.Abp.Account.Web;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
+using Volo.Abp.BlobStoring;
+using Volo.Abp.BlobStoring.Aws;
 using Volo.Abp.Modularity;
 using Volo.Abp.Swashbuckle;
 using Volo.Abp.Threading;
@@ -39,7 +41,8 @@ namespace Aevatar.Developer.Host;
     typeof(AbpAccountWebOpenIddictModule),
     typeof(AbpAspNetCoreSerilogModule),
     typeof(AbpSwashbuckleModule),
-    typeof(OpenTelemetryModule)
+    typeof(OpenTelemetryModule),
+    typeof(AbpBlobStoringAwsModule)
 )]
 public class AevatarDeveloperHostModule : AbpModule
 {
@@ -57,6 +60,21 @@ public class AevatarDeveloperHostModule : AbpModule
         context.Services.AddMvc(options => { options.Filters.Add(new IgnoreAntiforgeryTokenAttribute()); })
             .AddNewtonsoftJson();
         ConfigureDataProtection(context, configuration, hostingEnvironment);
+        
+        Configure<AbpBlobStoringOptions>(options =>
+        {
+            options.Containers.ConfigureDefault(container =>
+            {
+                var configSection = configuration.GetSection("AwsS3");
+                container.UseAws(o =>
+                {
+                    o.AccessKeyId = configSection.GetValue<string>("AccessKeyId", "None");
+                    o.SecretAccessKey = configSection.GetValue<string>("SecretAccessKey", "None");
+                    o.Region = configSection.GetValue<string>("Region", "None");
+                    o.ContainerName = configSection.GetValue<string>("ContainerName", "None");
+                }); 
+            });
+        });
     }
     
     private void ConfigureDataProtection(
@@ -180,11 +198,24 @@ public class AevatarDeveloperHostModule : AbpModule
         app.UseCors();
         app.UseAuthentication();
         app.UseAuthorization();
+        
+        // Redirect root path to swagger
+        app.Use(async (context, next) =>
+        {
+            if (context.Request.Path == "/" && context.Request.Method == "GET")
+            {
+                context.Response.Redirect("/swagger");
+                return;
+            }
+            await next();
+        });
 
         app.UseUnitOfWork();
         app.UseDynamicClaims();
         app.Map("/api/gotgpt/chat", config => { config.UseMiddleware<ChatMiddleware>(); });
         app.Map("/api/godgpt/guest/chat", config => { config.UseMiddleware<ChatMiddleware>(); });
+        app.Map("/api/godgpt/voice/chat", config => { config.UseMiddleware<ChatMiddleware>(); });
+
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapHealthChecks("/health");

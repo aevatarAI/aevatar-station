@@ -1,4 +1,7 @@
-﻿using Aevatar.Developer.Logger;
+﻿using Aevatar.Application.Grains.Common.Options;
+using Aevatar.Common.Options;
+using Aevatar.Core.Abstractions;
+using Aevatar.Developer.Logger;
 using Localization.Resources.AbpUi;
 using Aevatar.Localization;
 using Aevatar.Options;
@@ -19,13 +22,20 @@ namespace Aevatar;
     typeof(AbpIdentityHttpApiModule),
     typeof(AbpPermissionManagementHttpApiModule),
     typeof(AevatarDeveloperLoggerModule),
-    typeof(AbpAspNetCoreSignalRModule)
+    typeof(AbpAspNetCoreSignalRModule),
+    typeof(AevatarGodGPTModule)
     )]
 public class AevatarHttpApiModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
         ConfigureLocalization();
+
+        var configuration = context.Services.GetConfiguration();
+        Configure<AevatarOptions>(configuration.GetSection("Aevatar"));
+        Configure<StripeOptions>(configuration.GetSection("Stripe"));
+        Configure<ManagerOptions>(configuration.GetSection("ManagerOptions"));
+        Configure<GodGPTOptions>(configuration.GetSection("GodGPT"));
     }
 
     private void ConfigureLocalization()

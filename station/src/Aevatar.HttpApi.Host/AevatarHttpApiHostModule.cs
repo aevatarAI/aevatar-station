@@ -29,6 +29,8 @@ using Volo.Abp.AspNetCore.Mvc.UI.Bundling;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
+using Volo.Abp.BlobStoring;
+using Volo.Abp.BlobStoring.Aws;
 using Volo.Abp.Caching;
 using Volo.Abp.Caching.StackExchangeRedis;
 using Volo.Abp.Modularity;
@@ -48,7 +50,8 @@ namespace Aevatar;
     typeof(AbpAccountWebOpenIddictModule),
     typeof(AbpAspNetCoreSerilogModule),
     typeof(AbpSwashbuckleModule),
-    typeof(OpenTelemetryModule)
+    typeof(OpenTelemetryModule),
+    typeof(AbpBlobStoringAwsModule)
 )]
 public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrainsModule
 {
@@ -79,8 +82,24 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
             .AddNewtonsoftJson();
 
         context.Services.AddHealthChecks();
+        
+        Configure<AbpBlobStoringOptions>(options =>
+        {
+            options.Containers.ConfigureDefault(container =>
+            {
+                var configSection = configuration.GetSection("AwsS3");
+                container.UseAws(o =>
+                {
+                    o.AccessKeyId = configSection.GetValue<string>("AccessKeyId", "None");
+                    o.SecretAccessKey = configSection.GetValue<string>("SecretAccessKey", "None");
+                    o.Region = configSection.GetValue<string>("Region", "None");
+                    o.ContainerName = configSection.GetValue<string>("ContainerName", "None");
+                }); 
+            });
+        });
     }
-
+    
+    
     private void ConfigureCors(ServiceConfigurationContext context, IConfiguration configuration)
     {
         context.Services.AddCors(options =>
@@ -100,7 +119,7 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
             });
         });
     }
-
+    
     private void ConfigureDataProtection(
         ServiceConfigurationContext context,
         IConfiguration configuration,
@@ -239,6 +258,10 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
             config.UseMiddleware<ChatMiddleware>();
         });
         app.Map("/api/godgpt/guest/chat", config =>
+        {
+            config.UseMiddleware<ChatMiddleware>();
+        });
+        app.Map("/api/godgpt/voice/chat", config =>
         {
             config.UseMiddleware<ChatMiddleware>();
         });

@@ -12,7 +12,9 @@ using Aevatar.Kubernetes.Manager;
 using Aevatar.Notification;
 using Aevatar.Options;
 using Aevatar.Plugins;
+using Aevatar.Profiles;
 using Aevatar.Schema;
+using Aevatar.Service;
 using Aevatar.WebHook.Deploy;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans;
@@ -70,9 +72,12 @@ public class AevatarApplicationModule : AbpModule
         context.Services.AddSingleton<INotificationHandlerFactory, NotificationProcessorFactory>();
         Configure<HostDeployOptions>(configuration.GetSection("HostDeploy"));
         context.Services.Configure<HostOptions>(configuration.GetSection("Host"));
+        context.Services.Configure<AppleAuthOption>(configuration.GetSection("AppleAuth"));
+		context.Services.AddTransient<IProfileService, ProfileService>();
         
         Configure<AccountOptions>(configuration.GetSection("Account"));
         Configure<ApiRequestOptions>(configuration.GetSection("ApiRequest"));
         Configure<BlobStoringOptions>(configuration.GetSection("BlobStoring"));
+        Configure<ThumbnailOptions>(configuration.GetSection("Thumbnail"));
     }
 }
