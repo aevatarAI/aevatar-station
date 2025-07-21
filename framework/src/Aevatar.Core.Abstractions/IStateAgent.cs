@@ -87,3 +87,8 @@ public interface IStateGAgent<TState> : IGAgent
     [ReadOnly]
     Task<TState> GetStateAsync();
 }
+
+public interface IExecutionContext
+{
+    
+}
