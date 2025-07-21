@@ -18,6 +18,7 @@ using Aevatar.GodGPT.Dtos;
 using Aevatar.Quantum;
 using Aevatar.Service;
 using Asp.Versioning;
+using GodGPT.GAgents.SpeechChat;
 using HandlebarsDotNet;
 using Json.Schema;
 using Microsoft.AspNetCore.Authorization;
@@ -266,12 +267,14 @@ public class GodGPTController : AevatarController
     }
 
     [HttpGet("godgpt/chat/{sessionId}")]
-    public async Task<List<ChatMessage>> GetSessionMessageListAsync(Guid sessionId)
+    public async Task<List<ChatMessageWithMetaDto>> GetSessionMessageListAsync(Guid sessionId)
     {
         var stopwatch = Stopwatch.StartNew();
-        var chatMessages = await _godGptService.GetSessionMessageListAsync((Guid)CurrentUser.Id!, sessionId);
-        _logger.LogDebug("[GodGPTController][GetSessionMessageListAsync] sessionId: {0}, duration: {1}ms",
-            sessionId, stopwatch.ElapsedMilliseconds);
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
+        var chatMessages = await manager.GetSessionMessageListWithMetaAsync(sessionId);
+        _logger.LogDebug("[GodGPTController][GetSessionMessageListAsync] sessionId: {0}, messageCount: {1}, duration: {2}ms",
+            sessionId, chatMessages.Count, stopwatch.ElapsedMilliseconds);
         return chatMessages;
     }
 
@@ -478,7 +481,16 @@ public class GodGPTController : AevatarController
             return StatusCode(500, new { error = "Internal server error" });
         }
     }
-
+    [HttpPost("godgpt/voice/set")]
+    public async Task<UserProfileDto> SetVoiceLanguageAsync([FromBody] SetVoiceLanguageRequestDto request)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var userProfileDto = await _godGptService.SetVoiceLanguageAsync(currentUserId, request.VoiceLanguage);
+        _logger.LogDebug("[GodGPTController][SetVoiceLanguageAsync] userId: {0},voiceLanguage:{1} duration: {2}ms",
+            currentUserId, request.VoiceLanguage, stopwatch.ElapsedMilliseconds);
+        return userProfileDto;
+    }
     #endregion
     
     [HttpGet("godgpt/share/keyword")]
