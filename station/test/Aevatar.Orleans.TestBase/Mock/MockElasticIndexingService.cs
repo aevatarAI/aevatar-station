@@ -167,4 +167,33 @@ public class MockElasticIndexingService : IIndexingService, ISingletonDependency
 
         return new PagedResultDto<Dictionary<string, object>>(total, documents);
     }
+
+    public async Task<long> CountWithLuceneAsync(LuceneQueryDto queryDto)
+    {
+        var indexName = queryDto.StateName;
+
+        if (!_indexStorage.ContainsKey(indexName))
+        {
+            _logger.LogWarning("[Lucene Count] Index not found: {Index}", indexName);
+            return 0;
+        }
+
+        var documents = _indexStorage[indexName];
+        
+        if (string.IsNullOrEmpty(queryDto.QueryString))
+        {
+            // Return total count if no query string
+            return documents.Count;
+        }
+
+        // Simple mock implementation - filter by query string
+        var filteredCount = documents
+            .Where(doc => doc.Values.Any(value => value?.ToString()?.Contains(queryDto.QueryString) ?? false))
+            .Count();
+
+        _logger.LogInformation("[Lucene Count] Index: {Index}, Total Count: {Count}", indexName, filteredCount);
+        
+        await Task.CompletedTask;
+        return filteredCount;
+    }
 }
