@@ -2,6 +2,7 @@ using Aevatar.EventSourcing.Core.LogConsistency;
 using Aevatar.EventSourcing.Core.Storage;
 using Aevatar.EventSourcing.MongoDB.Options;
 using Aevatar.EventSourcing.MongoDB.Configuration;
+using Aevatar.EventSourcing.MongoDB.Collections;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -10,6 +11,7 @@ using Orleans.Configuration;
 using Orleans.EventSourcing;
 using Orleans.Providers;
 using Orleans.Storage;
+using MongoDB.Driver;
 
 namespace Aevatar.EventSourcing.MongoDB.Hosting;
 
@@ -47,6 +49,10 @@ public static class MongoDbStorageServiceCollectionExtensions
             .AddTransient<IPostConfigureOptions<MongoDbStorageOptions>,
                 MongoDBGrainStorageConfigurator>();
         services.ConfigureNamedOptionForLogging<MongoDbStorageOptions>(name);
+        
+        // Register the EventSourcingCollectionFactory
+        services.TryAddSingleton<IEventSourcingCollectionFactory, EventSourcingCollectionFactory>();
+        
         if (string.Equals(name, ProviderConstants.DEFAULT_STORAGE_PROVIDER_NAME, StringComparison.Ordinal))
         {
             services.TryAddSingleton(sp =>
