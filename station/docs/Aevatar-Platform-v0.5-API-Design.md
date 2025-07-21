@@ -68,9 +68,8 @@ v0.5 版本聚焦于 **AI 工作流编排能力** 的核心实现，旨在提供
 
 ```json
 {
-  "success": true,
-  "data": {
-    "name": "string",
+  "name": "string",
+  "properties": {
     "workflowNodeList": [
       {
         "nodeId": "string",
@@ -80,22 +79,19 @@ v0.5 版本聚焦于 **AI 工作流编排能力** 的核心实现，旨在提供
           "key": "value"
         },
         "extendedData": {
-          "positionX": "string",
-          "positionY": "string",
-          "width": "string",
-          "height": "string"
+          "xPosition": "string",
+          "yPosition": "string"
         }
       }
     ],
     "workflowNodeUnitList": [
       {
         "nodeId": "string",
-        "nextnodeId": "string"
+        "nextNodeId": "string"
       }
-    ]
-  },
-  "message": "Workflow generated successfully",
-  "timestamp": "2025-01-29T10:30:00Z"
+    ],
+    "name": "string"
+  }
 }
 ```
 
@@ -103,20 +99,25 @@ v0.5 版本聚焦于 **AI 工作流编排能力** 的核心实现，旨在提供
 
 | 字段名称 | 类型 | 描述 |
 |---------|------|------|
-| `success` | boolean | 请求是否成功 |
-| `data` | object | 工作流配置数据 |
-| `data.name` | string | 工作流名称 |
-| `data.workflowNodeList` | array | 工作流节点列表 |
-| `data.workflowNodeUnitList` | array | 节点连接关系列表 |
-| `message` | string | 响应消息 |
-| `timestamp` | string | 响应时间戳 (ISO 8601) |
+| `name` | string | 工作流名称（顶层） |
+| `properties` | object | 工作流配置属性 |
+| `properties.workflowNodeList` | array | 工作流节点列表 |
+| `properties.workflowNodeUnitList` | array | 节点连接关系列表 |
+| `properties.name` | string | 工作流名称（属性内） |
 
 ##### WorkflowNode 字段详情
 
 | 字段名称 | 类型 | 描述 | 示例 |
 |---------|------|------|------|
-| `nodeId` | string | 节点唯一标识符 | `"node_001"` |
-| `agentType` | string | Agent 类型名称 | `"DataProcessorAgent"` |
-| `name` | string | 节点显示名称 | `"数据处理器"` |
-| `properties` | object | Agent 配置参数 | `{"inputFormat": "csv"}` |
-| `extendedData` | object | 前端渲染所需的扩展信息 | 位置、尺寸等 | 
+| `nodeId` | string | 节点唯一标识符 | `"a6d54665-8d47-46c0-8fd3-f83f4e1af36d"` |
+| `agentType` | string | Agent 类型全名 | `"Aevatar.GAgents.Twitter.GAgents.ChatAIAgent.ChatAIGAgent"` |
+| `name` | string | 节点显示名称 | `"name1"` |
+| `properties` | object | Agent 配置参数 | `{"instructions": "1", "systemLLM": "OpenAI"}` |
+| `extendedData` | object | 前端渲染所需的位置信息 | `{"xPosition": "321", "yPosition": "173"}` |
+
+##### WorkflowNodeUnit 字段详情
+
+| 字段名称 | 类型 | 描述 | 示例 |
+|---------|------|------|------|
+| `nodeId` | string | 当前节点ID | `"a6d54665-8d47-46c0-8fd3-f83f4e1af36d"` |
+| `nextNodeId` | string | 下一个节点ID | `"a3d32a6b-63a2-4bf1-800c-ab1ad48fa57a"` | 

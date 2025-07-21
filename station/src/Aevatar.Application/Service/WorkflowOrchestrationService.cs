@@ -65,8 +65,8 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
 
             _logger.LogInformation("Successfully generated workflow view configuration for user {UserId} with {NodeCount} nodes and {ConnectionCount} connections", 
                 currentUserId,
-                workflowConfig.WorkflowNodeList?.Count ?? 0, 
-                workflowConfig.WorkflowNodeUnitList?.Count ?? 0);
+                workflowConfig.Properties?.WorkflowNodeList?.Count ?? 0, 
+                workflowConfig.Properties?.WorkflowNodeUnitList?.Count ?? 0);
 
             return workflowConfig;
         }
@@ -125,13 +125,14 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             // Clean and validate JSON
             var cleanJson = CleanJsonContent(jsonContent);
             
-            // Parse to DTO
+            // Parse to DTO using case-insensitive options
             var options = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };
 
+            // Try to deserialize as the new format first
             var workflowConfig = JsonSerializer.Deserialize<WorkflowViewConfigDto>(cleanJson, options);
             
             if (workflowConfig == null)
@@ -140,27 +141,62 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                 return null;
             }
 
-            // Validate required fields
+            // Validate and fix required fields
             if (string.IsNullOrWhiteSpace(workflowConfig.Name))
             {
-                _logger.LogWarning("Workflow name is missing or empty");
+                _logger.LogWarning("Top-level workflow name is missing or empty");
                 workflowConfig.Name = "Unnamed Workflow";
             }
 
-            if (workflowConfig.WorkflowNodeList == null || !workflowConfig.WorkflowNodeList.Any())
+            if (workflowConfig.Properties == null)
             {
-                _logger.LogWarning("No workflow nodes found in the configuration");
-                workflowConfig.WorkflowNodeList = new List<WorkflowNodeDto>();
+                _logger.LogWarning("Properties object is missing, creating default");
+                workflowConfig.Properties = new WorkflowPropertiesDto
+                {
+                    Name = workflowConfig.Name,
+                    WorkflowNodeList = new List<WorkflowNodeDto>(),
+                    WorkflowNodeUnitList = new List<WorkflowNodeUnitDto>()
+                };
             }
 
-            if (workflowConfig.WorkflowNodeUnitList == null)
+            // Ensure properties name matches top-level name
+            if (string.IsNullOrWhiteSpace(workflowConfig.Properties.Name))
+            {
+                workflowConfig.Properties.Name = workflowConfig.Name;
+            }
+
+            if (workflowConfig.Properties.WorkflowNodeList == null || !workflowConfig.Properties.WorkflowNodeList.Any())
+            {
+                _logger.LogWarning("No workflow nodes found in the configuration");
+                workflowConfig.Properties.WorkflowNodeList = new List<WorkflowNodeDto>();
+            }
+
+            if (workflowConfig.Properties.WorkflowNodeUnitList == null)
             {
                 _logger.LogWarning("No workflow node units found, initializing empty list");
-                workflowConfig.WorkflowNodeUnitList = new List<WorkflowNodeUnitDto>();
+                workflowConfig.Properties.WorkflowNodeUnitList = new List<WorkflowNodeUnitDto>();
+            }
+
+            // Validate node structure
+            foreach (var node in workflowConfig.Properties.WorkflowNodeList)
+            {
+                if (node.ExtendedData == null)
+                {
+                    node.ExtendedData = new WorkflowNodeExtendedDataDto
+                    {
+                        XPosition = "100",
+                        YPosition = "100"
+                    };
+                }
+
+                if (node.Properties == null)
+                {
+                    node.Properties = new Dictionary<string, object>();
+                }
             }
 
             _logger.LogInformation("Successfully parsed workflow JSON to view config with {NodeCount} nodes and {ConnectionCount} connections", 
-                workflowConfig.WorkflowNodeList.Count, workflowConfig.WorkflowNodeUnitList.Count);
+                workflowConfig.Properties.WorkflowNodeList.Count, workflowConfig.Properties.WorkflowNodeUnitList.Count);
 
             return workflowConfig;
         }

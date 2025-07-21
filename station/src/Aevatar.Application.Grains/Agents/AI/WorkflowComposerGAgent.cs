@@ -1,16 +1,10 @@
-using Aevatar.Application.Contracts.WorkflowOrchestration;
-using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Domain.WorkflowOrchestration;
 using Aevatar.GAgents.AIGAgent.Agent;
 using Aevatar.GAgents.AIGAgent.State;
-using Aevatar.GAgents.AI.Common;
 using Microsoft.Extensions.Logging;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
-using Orleans;
 using System.Text;
-using System.Text.Json;
+using System.Reflection;
 
 namespace Aevatar.Application.Grains.Agents.AI;
 
@@ -69,7 +63,7 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
             Logger.LogInformation("Starting comprehensive AI workflow generation for user goal: {UserGoal}", userGoal);
 
             // 1. 发现可用的agents
-            var availableAgents = await DiscoverAvailableAgentsAsync();
+            var availableAgents = DiscoverAvailableAgents();
             Logger.LogDebug("Discovered {Count} available agents", availableAgents.Count());
 
             // 2. 构建完整的AI提示词
@@ -103,28 +97,198 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
     }
 
     /// <summary>
-    /// 发现可用的agents
+    /// 发现可用的agents - 直接使用内置扫描器（完全自包含）
     /// </summary>
-    private async Task<IEnumerable<AgentIndexInfo>> DiscoverAvailableAgentsAsync()
+    private IEnumerable<AgentIndexInfo> DiscoverAvailableAgents()
     {
         try
         {
-            // 通过ServiceProvider获取IAgentIndexService
-            var agentIndexService = ServiceProvider.GetService(typeof(IAgentIndexService)) as IAgentIndexService;
-            if (agentIndexService == null)
-            {
-                Logger.LogWarning("IAgentIndexService not available from ServiceProvider");
-                return new List<AgentIndexInfo>();
-            }
-
-            var agents = await agentIndexService.GetAllAgentsAsync();
-            Logger.LogDebug("Agent discovery completed, found {Count} agents", agents.Count());
-            return agents;
+            Logger.LogInformation("Starting agent discovery using built-in scanner");
+            
+            // 直接使用内置Agent扫描器（完全自包含）
+            var scannedAgents = ScanAgentsInLoadedAssemblies();
+            Logger.LogDebug("Agent discovery completed, found {Count} agents", scannedAgents.Count);
+            
+            return scannedAgents;
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "Failed to discover agents, using empty list");
+            Logger.LogError(ex, "Error occurred during agent discovery, returning empty list");
             return new List<AgentIndexInfo>();
+        }
+    }
+
+    /// <summary>
+    /// 内置Agent扫描器 - 扫描所有已加载程序集中的GAgent类型
+    /// </summary>
+    private List<AgentIndexInfo> ScanAgentsInLoadedAssemblies()
+    {
+        var discoveredAgents = new List<AgentIndexInfo>();
+        var startTime = DateTime.UtcNow;
+
+        try
+        {
+            // 首先强制加载GAgent相关的NuGet包程序集
+            LoadGAgentAssemblies();
+            
+            var gAgentType = typeof(IGAgent);
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies()
+                .Where(a => !a.IsDynamic && !string.IsNullOrEmpty(a.Location))
+                .ToList();
+
+            Logger.LogDebug("Scanning {Count} assemblies for GAgent types", assemblies.Count);
+
+            foreach (var assembly in assemblies)
+            {
+                try
+                {
+                    // 正确的GAgent类型过滤：必须实现IGAgent接口且为具体类
+                    var gAgentTypes = assembly.GetTypes()
+                        .Where(t => gAgentType.IsAssignableFrom(t) && t.IsClass && !t.IsAbstract && t.IsPublic)
+                        .ToList();
+
+                    foreach (var type in gAgentTypes)
+                    {
+                        try
+                        {
+                            var agentInfo = CreateAgentIndexInfo(type);
+                            if (agentInfo != null)
+                            {
+                                discoveredAgents.Add(agentInfo);
+                                Logger.LogDebug("Discovered GAgent: {TypeName} from assembly {AssemblyName}", 
+                                    type.Name, assembly.GetName().Name);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogWarning(ex, "Failed to create AgentIndexInfo for type: {TypeName}", type.FullName);
+                        }
+                    }
+                }
+                catch (ReflectionTypeLoadException ex)
+                {
+                    Logger.LogWarning(ex, "Could not load types from assembly: {AssemblyName}", assembly.GetName().Name);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Error scanning assembly: {AssemblyName}", assembly.GetName().Name);
+                }
+            }
+
+            var duration = DateTime.UtcNow - startTime;
+            Logger.LogInformation("Agent discovery completed in {Duration}ms, found {Count} agents", 
+                duration.TotalMilliseconds, discoveredAgents.Count);
+
+            return discoveredAgents;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during agent discovery");
+            return new List<AgentIndexInfo>();
+        }
+    }
+
+    /// <summary>
+    /// 强制加载GAgent相关的NuGet包程序集
+    /// </summary>
+    private void LoadGAgentAssemblies()
+    {
+        var gAgentPackages = new[]
+        {
+            "Aevatar.GAgents.AIGAgent",
+            "Aevatar.GAgents.SemanticKernel", 
+            "Aevatar.GAgents.AI.Abstractions",
+            "Aevatar.GAgents.Twitter",
+            "Aevatar.GAgents.GroupChat"
+        };
+        
+        foreach (var packageName in gAgentPackages)
+        {
+            try
+            {
+                var loadedAssembly = Assembly.Load(packageName);
+                Logger.LogDebug("Successfully loaded GAgent assembly: {AssemblyName}", loadedAssembly.FullName);
+            }
+            catch (FileNotFoundException)
+            {
+                Logger.LogDebug("GAgent assembly not found (optional): {PackageName}", packageName);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to load GAgent assembly: {PackageName}", packageName);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 从Type创建AgentIndexInfo（支持有无AgentDescriptionAttribute的情况）
+    /// </summary>
+    private AgentIndexInfo? CreateAgentIndexInfo(Type agentType)
+    {
+        try
+        {
+            var attribute = agentType.GetCustomAttribute<AgentDescriptionAttribute>();
+            
+            if (attribute != null)
+            {
+                // 有AgentDescriptionAttribute的情况
+                return CreateAgentIndexInfoFromAttribute(agentType, attribute);
+            }
+            else
+            {
+                // 没有AgentDescriptionAttribute的情况，创建默认信息
+                var assemblyName = agentType.Assembly.GetName().Name ?? "Unknown";
+                var defaultName = agentType.Name.EndsWith("GAgent") 
+                    ? agentType.Name.Substring(0, agentType.Name.Length - 6) 
+                    : agentType.Name;
+                
+                return new AgentIndexInfo
+                {
+                    Name = defaultName,
+                    TypeName = agentType.FullName ?? agentType.Name,
+                    L1Description = $"GAgent implementation: {defaultName} from {assemblyName}",
+                    L2Description = $"A GAgent of type {agentType.Name} from assembly {assemblyName}. This agent provides automated functionality but no detailed description is available. You may need to check the agent's implementation or documentation for specific capabilities and usage instructions.",
+                    Categories = new List<string> { "General", assemblyName.Replace("Aevatar.GAgents.", "").Replace("Aevatar.", "") },
+                    EstimatedExecutionTime = 1000,
+                    InputParameters = new Dictionary<string, AgentParameterInfo>(), // 暂无参数信息
+                    OutputParameters = new Dictionary<string, AgentParameterInfo>(), // 暂无参数信息
+                    CreatedAt = DateTime.UtcNow,
+                    LastScannedAt = DateTime.UtcNow
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Error creating AgentIndexInfo for type: {TypeName}", agentType.FullName);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 从AgentDescriptionAttribute创建AgentIndexInfo
+    /// </summary>
+    private AgentIndexInfo CreateAgentIndexInfoFromAttribute(Type agentType, AgentDescriptionAttribute attribute)
+    {
+        try
+        {
+            return new AgentIndexInfo
+            {
+                Name = attribute.Name,
+                TypeName = agentType.FullName ?? agentType.Name,
+                L1Description = attribute.L1Description,
+                L2Description = attribute.L2Description,
+                Categories = attribute.Categories?.ToList() ?? new List<string>(),
+                EstimatedExecutionTime = attribute.EstimatedExecutionTime,
+                CreatedAt = DateTime.UtcNow,
+                LastScannedAt = DateTime.UtcNow,
+                InputParameters = new Dictionary<string, AgentParameterInfo>(),
+                OutputParameters = new Dictionary<string, AgentParameterInfo>()
+            };
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Error creating AgentIndexInfo for type {TypeName}", agentType.FullName);
+            return null;
         }
     }
 
@@ -176,30 +340,31 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
         prompt.AppendLine("Please strictly follow the following JSON format output:");
         prompt.AppendLine("```json");
         prompt.AppendLine("{");
-        prompt.AppendLine("  \"workflowNodeList\": [");
-        prompt.AppendLine("    {");
-        prompt.AppendLine("      \"agentType\": \"Agent type name (e.g., DataProcessorAgent)\",");
-        prompt.AppendLine("      \"name\": \"Node display name\",");
-        prompt.AppendLine("      \"extendedData\": {");
-        prompt.AppendLine("        \"position_x\": \"Node X coordinate (string format, e.g., '100')\",");
-        prompt.AppendLine("        \"position_y\": \"Node Y coordinate (string format, e.g., '100')\",");
-        prompt.AppendLine("        \"width\": \"Node width (string format, e.g., '200')\",");
-        prompt.AppendLine("        \"height\": \"Node height (string format, e.g., '80')\"");
-        prompt.AppendLine("      },");
-        prompt.AppendLine("      \"properties\": {");
-        prompt.AppendLine("        \"inputParam1\": \"Input parameter value\",");
-        prompt.AppendLine("        \"inputParam2\": \"Input parameter value\"");
-        prompt.AppendLine("      },");
-        prompt.AppendLine("      \"nodeId\": \"Unique node ID (UUID format)\"");
-        prompt.AppendLine("    }");
-        prompt.AppendLine("  ],");
-        prompt.AppendLine("  \"workflowNodeUnitList\": [");
-        prompt.AppendLine("    {");
-        prompt.AppendLine("      \"nodeId\": \"Current node ID\",");
-        prompt.AppendLine("      \"nextnodeId\": \"Next node ID\"");
-        prompt.AppendLine("    }");
-        prompt.AppendLine("  ],");
-        prompt.AppendLine("  \"Name\": \"Workflow name\"");
+        prompt.AppendLine("  \"name\": \"Workflow name\",");
+        prompt.AppendLine("  \"properties\": {");
+        prompt.AppendLine("    \"workflowNodeList\": [");
+        prompt.AppendLine("      {");
+        prompt.AppendLine("        \"nodeId\": \"Unique node ID (UUID format)\",");
+        prompt.AppendLine("        \"agentType\": \"Agent type name (e.g., DataProcessorAgent)\",");
+        prompt.AppendLine("        \"name\": \"Node display name\",");
+        prompt.AppendLine("        \"extendedData\": {");
+        prompt.AppendLine("          \"xPosition\": \"Node X coordinate (string format, e.g., '100')\",");
+        prompt.AppendLine("          \"yPosition\": \"Node Y coordinate (string format, e.g., '100')\"");
+        prompt.AppendLine("        },");
+        prompt.AppendLine("        \"properties\": {");
+        prompt.AppendLine("          \"inputParam1\": \"Input parameter value\",");
+        prompt.AppendLine("          \"inputParam2\": \"Input parameter value\"");
+        prompt.AppendLine("        }");
+        prompt.AppendLine("      }");
+        prompt.AppendLine("    ],");
+        prompt.AppendLine("    \"workflowNodeUnitList\": [");
+        prompt.AppendLine("      {");
+        prompt.AppendLine("        \"nodeId\": \"Current node ID\",");
+        prompt.AppendLine("        \"nextNodeId\": \"Next node ID\"");
+        prompt.AppendLine("      }");
+        prompt.AppendLine("    ],");
+        prompt.AppendLine("    \"name\": \"Workflow name\"");
+        prompt.AppendLine("  }");
         prompt.AppendLine("}");
         prompt.AppendLine("```");
         prompt.AppendLine();
@@ -209,6 +374,8 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
         prompt.AppendLine("3. Please arrange node positions from left to right, top to bottom, with 150-200 pixel spacing between nodes");
         prompt.AppendLine("4. workflowNodeUnitList defines execution order, each entry indicates the next node to execute after the current node completes");
         prompt.AppendLine("5. properties contains input parameter configuration for the Agent node");
+        prompt.AppendLine("6. Use xPosition and yPosition for coordinates (not position_x/position_y)");
+        prompt.AppendLine("7. Use nextNodeId (not nextnodeId) for node connections");
 
         return prompt.ToString();
     }
@@ -220,44 +387,43 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
     {
         Logger.LogInformation("Using fallback workflow JSON");
         return @"{
-            ""workflowNodeList"": [
-                {
-                    ""agentType"": ""DataProcessorAgent"",
-                    ""name"": ""Data Processing Node"",
-                    ""extendedData"": {
-                        ""position_x"": ""100"",
-                        ""position_y"": ""100"",
-                        ""width"": ""200"",
-                        ""height"": ""80""
+            ""name"": ""AI Generated Workflow"",
+            ""properties"": {
+                ""workflowNodeList"": [
+                    {
+                        ""nodeId"": ""node-1"",
+                        ""agentType"": ""DataProcessorAgent"",
+                        ""name"": ""Data Processing Node"",
+                        ""extendedData"": {
+                            ""xPosition"": ""100"",
+                            ""yPosition"": ""100""
+                        },
+                        ""properties"": {
+                            ""inputData"": ""User input data"",
+                            ""processingMode"": ""batch""
+                        }
                     },
-                    ""properties"": {
-                        ""inputData"": ""User input data"",
-                        ""processingMode"": ""batch""
-                    },
-                    ""nodeId"": ""node-1""
-                },
-                {
-                    ""agentType"": ""OutputAgent"",
-                    ""name"": ""Output Node"",
-                    ""extendedData"": {
-                        ""position_x"": ""350"",
-                        ""position_y"": ""100"",
-                        ""width"": ""200"",
-                        ""height"": ""80""
-                    },
-                    ""properties"": {
-                        ""outputFormat"": ""json""
-                    },
-                    ""nodeId"": ""node-2""
-                }
-            ],
-            ""workflowNodeUnitList"": [
-                {
-                    ""nodeId"": ""node-1"",
-                    ""nextnodeId"": ""node-2""
-                }
-            ],
-            ""Name"": ""AI Generated Workflow""
+                    {
+                        ""nodeId"": ""node-2"",
+                        ""agentType"": ""OutputAgent"",
+                        ""name"": ""Output Node"",
+                        ""extendedData"": {
+                            ""xPosition"": ""350"",
+                            ""yPosition"": ""100""
+                        },
+                        ""properties"": {
+                            ""outputFormat"": ""json""
+                        }
+                    }
+                ],
+                ""workflowNodeUnitList"": [
+                    {
+                        ""nodeId"": ""node-1"",
+                        ""nextNodeId"": ""node-2""
+                    }
+                ],
+                ""name"": ""AI Generated Workflow""
+            }
         }";
     }
 } 

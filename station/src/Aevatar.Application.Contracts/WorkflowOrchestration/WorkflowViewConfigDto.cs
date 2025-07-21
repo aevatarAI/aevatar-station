@@ -9,6 +9,24 @@ namespace Aevatar.Application.Contracts.WorkflowOrchestration
     public class WorkflowViewConfigDto
     {
         /// <summary>
+        /// Workflow name (top level)
+        /// </summary>
+        [Required]
+        public string Name { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Properties containing workflow configuration
+        /// </summary>
+        [Required]
+        public WorkflowPropertiesDto Properties { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Workflow properties DTO
+    /// </summary>
+    public class WorkflowPropertiesDto
+    {
+        /// <summary>
         /// List of workflow nodes
         /// </summary>
         [Required]
@@ -21,7 +39,7 @@ namespace Aevatar.Application.Contracts.WorkflowOrchestration
         public List<WorkflowNodeUnitDto> WorkflowNodeUnitList { get; set; } = new();
 
         /// <summary>
-        /// Workflow name
+        /// Workflow name (in properties)
         /// </summary>
         [Required]
         public string Name { get; set; } = string.Empty;
@@ -32,6 +50,12 @@ namespace Aevatar.Application.Contracts.WorkflowOrchestration
     /// </summary>
     public class WorkflowNodeDto
     {
+        /// <summary>
+        /// Unique node identifier
+        /// </summary>
+        [Required]
+        public string NodeId { get; set; } = string.Empty;
+
         /// <summary>
         /// Agent type name (e.g., DataProcessorAgent)
         /// </summary>
@@ -48,18 +72,30 @@ namespace Aevatar.Application.Contracts.WorkflowOrchestration
         /// Extended data including position and size information
         /// </summary>
         [Required]
-        public Dictionary<string, string> ExtendedData { get; set; } = new();
+        public WorkflowNodeExtendedDataDto ExtendedData { get; set; } = new();
 
         /// <summary>
         /// Properties containing input parameters for the agent
         /// </summary>
         public Dictionary<string, object> Properties { get; set; } = new();
+    }
 
+    /// <summary>
+    /// Workflow node extended data DTO
+    /// </summary>
+    public class WorkflowNodeExtendedDataDto
+    {
         /// <summary>
-        /// Unique node identifier
+        /// X position coordinate
         /// </summary>
         [Required]
-        public string NodeId { get; set; } = string.Empty;
+        public string XPosition { get; set; } = "0";
+
+        /// <summary>
+        /// Y position coordinate
+        /// </summary>
+        [Required]
+        public string YPosition { get; set; } = "0";
     }
 
     /// <summary>
@@ -77,6 +113,6 @@ namespace Aevatar.Application.Contracts.WorkflowOrchestration
         /// Next node ID to execute
         /// </summary>
         [Required]
-        public string NextnodeId { get; set; } = string.Empty;
+        public string NextNodeId { get; set; } = string.Empty;
     }
 } 
