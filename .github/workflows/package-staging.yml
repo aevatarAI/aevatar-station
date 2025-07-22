@@ -112,7 +112,7 @@ jobs:
             await github.rest.actions.createWorkflowDispatch({
               owner: 'AElfDevops',
               repo: 'devops',
-              workflow_id: 'aevatar-station-deploy-pre.yaml',
+              workflow_id: 'aevatar-station-authserver-pre-new-deploy.yaml',
               ref: 'main',
               inputs: {
                 env: 'pre-staging',
