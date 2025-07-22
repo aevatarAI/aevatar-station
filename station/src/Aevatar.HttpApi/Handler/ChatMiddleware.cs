@@ -237,15 +237,15 @@ public class ChatMiddleware
 
     private async Task HandleGuestChatAsync(HttpContext context)
     {
-        var clientIp = context.GetClientIpAddress();
-        var userHashId = CommonHelper.GetAnonymousUserGAgentId(clientIp).Replace("AnonymousUser_", "");
-        _logger.LogDebug("[GuestChatMiddleware] Processing request for user: {0}", userHashId);
-        
+        var userHashId = "";
         try
         {
             var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
             var request = JsonConvert.DeserializeObject<GuestChatRequestDto>(body);
-            
+            var clientIp = request.Ip.IsNullOrWhiteSpace() ? context.GetClientIpAddress() : request.Ip;
+
+            userHashId = CommonHelper.GetAnonymousUserGAgentId(clientIp).Replace("AnonymousUser_", "");
+            _logger.LogDebug("[GuestChatMiddleware] Processing request for user: {0} ip:{1}", userHashId,clientIp);
             if (request == null || string.IsNullOrWhiteSpace(request.Content))
             {
                 _logger.LogWarning("[GuestChatMiddleware] Invalid request body for user: {0}", userHashId);
