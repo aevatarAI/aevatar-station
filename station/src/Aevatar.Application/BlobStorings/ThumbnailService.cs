@@ -108,7 +108,9 @@ public class ThumbnailService : IThumbnailService, ITransientDependency
     {
         try
         {
-            var fileName = $"{baseFileName}@{size.GetSizeName()}";
+            var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(baseFileName);
+            var extension = Path.GetExtension(baseFileName);
+            var fileName = $"{fileNameWithoutExtension}@{size.GetSizeName()}{extension}";
             
             // Calculate dimensions based on resize mode
             var (width, height) = CalculateDimensions(originalWidth, originalHeight, size);
