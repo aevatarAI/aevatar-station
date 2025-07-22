@@ -348,8 +348,8 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
         prompt.AppendLine("        \"agentType\": \"Agent type name (e.g., DataProcessorAgent)\",");
         prompt.AppendLine("        \"name\": \"Node display name\",");
         prompt.AppendLine("        \"extendedData\": {");
-        prompt.AppendLine("          \"xPosition\": \"Node X coordinate (string format, e.g., '100')\",");
-        prompt.AppendLine("          \"yPosition\": \"Node Y coordinate (string format, e.g., '100')\"");
+        prompt.AppendLine("          \"xPosition\": \"Node X coordinate with high precision (e.g., '-120.45763892134567' or '235.78901234567890')\",");
+        prompt.AppendLine("          \"yPosition\": \"Node Y coordinate with high precision (e.g., '349.26758722574635' or '-156.89012345678901')\"");
         prompt.AppendLine("        },");
         prompt.AppendLine("        \"properties\": {");
         prompt.AppendLine("          \"inputParam1\": \"Input parameter value\",");
@@ -368,14 +368,40 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
         prompt.AppendLine("}");
         prompt.AppendLine("```");
         prompt.AppendLine();
+
+        // Coordinate Generation Rules
+        prompt.AppendLine("## Coordinate Generation Rules");
+        prompt.AppendLine("When generating node coordinates (xPosition and yPosition), please follow these guidelines for proper four-quadrant distribution:");
+        prompt.AppendLine();
+        prompt.AppendLine("### Quadrant Distribution:");
+        prompt.AppendLine("- **First Quadrant**: x > 0, y > 0 (positive x, positive y)");
+        prompt.AppendLine("- **Second Quadrant**: x < 0, y > 0 (negative x, positive y)");
+        prompt.AppendLine("- **Third Quadrant**: x < 0, y < 0 (negative x, negative y)");
+        prompt.AppendLine("- **Fourth Quadrant**: x > 0, y < 0 (positive x, negative y)");
+        prompt.AppendLine();
+        prompt.AppendLine("### Coordinate Format Requirements:");
+        prompt.AppendLine("1. **High Precision**: Use decimal coordinates with high precision (e.g., \"-35.03630493437581\", \"349.26758722574635\")");
+        prompt.AppendLine("2. **String Format**: All coordinate values must be strings, not numbers");
+        prompt.AppendLine("3. **Range**: Suggested coordinate range is -500 to +500 for both x and y axes");
+        prompt.AppendLine("4. **Distribution**: Try to distribute nodes evenly across all four quadrants when possible");
+        prompt.AppendLine("5. **Spacing**: Maintain adequate spacing between nodes (minimum 150-200 units apart)");
+        prompt.AppendLine();
+        prompt.AppendLine("### Example Coordinate Values:");
+        prompt.AppendLine("- First Quadrant: xPosition: \"235.78901234567890\", yPosition: \"289.12345678901234\"");
+        prompt.AppendLine("- Second Quadrant: xPosition: \"-156.89012345678901\", yPosition: \"367.45678901234567\"");
+        prompt.AppendLine("- Third Quadrant: xPosition: \"-278.34567890123456\", yPosition: \"-189.67890123456789\"");
+        prompt.AppendLine("- Fourth Quadrant: xPosition: \"312.56789012345678\", yPosition: \"-245.90123456789012\"");
+        prompt.AppendLine();
+
         prompt.AppendLine("## Important Notes");
         prompt.AppendLine("1. agentType must use the TypeName of the Agent, selected from the available Agent list above");
         prompt.AppendLine("2. All values in extendedData must be in string format");
-        prompt.AppendLine("3. Please arrange node positions from left to right, top to bottom, with 150-200 pixel spacing between nodes");
+        prompt.AppendLine("3. Coordinates should be distributed across four quadrants with high-precision decimal values");
         prompt.AppendLine("4. workflowNodeUnitList defines execution order, each entry indicates the next node to execute after the current node completes");
         prompt.AppendLine("5. properties contains input parameter configuration for the Agent node");
         prompt.AppendLine("6. Use xPosition and yPosition for coordinates (not position_x/position_y)");
         prompt.AppendLine("7. Use nextNodeId (not nextnodeId) for node connections");
+        prompt.AppendLine("8. Ensure coordinate values are realistic and maintain proper spacing between nodes");
 
         return prompt.ToString();
     }
@@ -395,8 +421,8 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
                         ""agentType"": ""DataProcessorAgent"",
                         ""name"": ""Data Processing Node"",
                         ""extendedData"": {
-                            ""xPosition"": ""100"",
-                            ""yPosition"": ""100""
+                            ""xPosition"": ""156.78901234567890"",
+                            ""yPosition"": ""234.56789012345678""
                         },
                         ""properties"": {
                             ""inputData"": ""User input data"",
@@ -408,8 +434,8 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
                         ""agentType"": ""OutputAgent"",
                         ""name"": ""Output Node"",
                         ""extendedData"": {
-                            ""xPosition"": ""350"",
-                            ""yPosition"": ""100""
+                            ""xPosition"": ""-203.45678901234567"",
+                            ""yPosition"": ""-178.90123456789012""
                         },
                         ""properties"": {
                             ""outputFormat"": ""json""

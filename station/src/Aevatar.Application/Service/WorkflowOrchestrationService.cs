@@ -1,15 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Aevatar.Application.Contracts.WorkflowOrchestration;
 using Aevatar.Application.Grains.Agents.AI;
-using Aevatar.Domain.WorkflowOrchestration;
+using Aevatar.Service;
 using Microsoft.Extensions.Logging;
 using Orleans;
-using Volo.Abp.Users;
 
 namespace Aevatar.Application.Service;
 
@@ -20,16 +18,16 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
 {
     private readonly ILogger<WorkflowOrchestrationService> _logger;
     private readonly IClusterClient _clusterClient;
-    private readonly ICurrentUser _currentUser;
+    private readonly IUserAppService _userAppService;
 
     public WorkflowOrchestrationService(
         ILogger<WorkflowOrchestrationService> logger,
         IClusterClient clusterClient,
-        ICurrentUser currentUser)
+        IUserAppService userAppService)
     {
         _logger = logger;
         _clusterClient = clusterClient;
-        _currentUser = currentUser;
+        _userAppService = userAppService;
     }
 
     /// <summary>
@@ -45,7 +43,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             return null;
         }
 
-        var currentUserId = _currentUser.Id ?? Guid.NewGuid();
+        var currentUserId = _userAppService.GetCurrentUserId();
         _logger.LogInformation("Starting workflow generation for user {UserId} with goal: {UserGoal}", currentUserId, userGoal);
 
         try
@@ -80,25 +78,24 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     #region Private Methods - AI Agent Integration
 
     /// <summary>
-    /// 调用用户专属的WorkflowComposerGAgent生成工作流JSON（用户隔离）
+    /// 调用WorkflowComposerGAgent生成工作流JSON（每次调用创建新实例）
     /// </summary>
     private async Task<string> CallWorkflowComposerGAgentAsync(string userGoal, Guid userId)
     {
         try
         {
-            _logger.LogInformation("Calling user-specific WorkflowComposerGAgent for user {UserId}", userId);
+            _logger.LogInformation("Creating new WorkflowComposerGAgent instance for user {UserId}", userId);
             
-            // 使用用户专属的grainId确保用户隔离
-            var userSpecificGrainId = $"workflow-composer-{userId}";
-            var workflowComposerGAgent = _clusterClient.GetGrain<IWorkflowComposerGAgent>(userSpecificGrainId);
+            var instanceId = $"workflow-composer-{userId}-{DateTimeOffset.UtcNow.Ticks}";
+            var workflowComposerGAgent = _clusterClient.GetGrain<IWorkflowComposerGAgent>(instanceId);
             var result = await workflowComposerGAgent.GenerateWorkflowJsonAsync(userGoal);
             
-            _logger.LogInformation("User-specific WorkflowComposerGAgent completed successfully for user {UserId}", userId);
+            _logger.LogInformation("WorkflowComposerGAgent instance {InstanceId} completed successfully for user {UserId}", instanceId, userId);
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during user-specific WorkflowComposerGAgent call for user {UserId}", userId);
+            _logger.LogError(ex, "Error during WorkflowComposerGAgent call for user {UserId}", userId);
             throw; // 让上层处理异常
         }
     }
@@ -177,16 +174,13 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                 workflowConfig.Properties.WorkflowNodeUnitList = new List<WorkflowNodeUnitDto>();
             }
 
-            // Validate node structure
+            // Validate node structure - remove hardcoded positioning
             foreach (var node in workflowConfig.Properties.WorkflowNodeList)
             {
                 if (node.ExtendedData == null)
                 {
-                    node.ExtendedData = new WorkflowNodeExtendedDataDto
-                    {
-                        XPosition = "100",
-                        YPosition = "100"
-                    };
+                    node.ExtendedData = new WorkflowNodeExtendedDataDto();
+                    _logger.LogDebug("Node {NodeId} will use frontend auto-layout based on connections", node.NodeId);
                 }
 
                 if (node.Properties == null)
