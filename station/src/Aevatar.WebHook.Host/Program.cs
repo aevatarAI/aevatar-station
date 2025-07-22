@@ -15,7 +15,7 @@ public class Program
     public async static Task<int> Main(string[] args)
     {
         var configuration = new ConfigurationBuilder()
-            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
+            //.AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
             .AddJsonFile("appsettings.json")
             .Build();
 
@@ -38,7 +38,7 @@ public class Program
             var builder = CreateHostBuilder(args);
             builder.ConfigureHostConfiguration(config =>
             {
-                config.AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
+                config/*.AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))*/
                     .AddJsonFile("appsettings.json");
             });
             await builder.Build().RunAsync();
