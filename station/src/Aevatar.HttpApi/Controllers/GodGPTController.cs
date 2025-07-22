@@ -519,6 +519,26 @@ public class GodGPTController : AevatarController
         return response;
     }
     
+    [HttpGet("godgpt/can-upload-image")]
+    public async Task<CanUploadImageResponseDto> CanUploadImageAsync()
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+
+        var response = await _godGptService.CanUploadImageAsync(currentUserId);
+        
+        var result = new CanUploadImageResponseDto
+        {
+            CanUpload = response.Success,
+            Reason = response.Message
+        };
+        
+        _logger.LogDebug("[GodGPTController][CanUploadImageAsync] userId: {0}, canUpload: {1}, duration: {2}ms",
+            currentUserId, result.CanUpload, stopwatch.ElapsedMilliseconds);
+            
+        return result;
+    }
+
     [HttpPost("godgpt/blob")]
     public async Task<string> SaveAsync([FromForm] SaveBlobInput input)
     {
@@ -527,6 +547,9 @@ public class GodGPTController : AevatarController
             throw new UserFriendlyException(
                 $"The file is too large, with a maximum of {_blobStoringOptions.MaxSizeBytes} bytes.");
         }
+        
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
 
         var originalFileName = input.File.FileName;
         var fileExtension = Path.GetExtension(originalFileName);
@@ -536,6 +559,8 @@ public class GodGPTController : AevatarController
         
         var _ = _thumbnailService.SaveWithThumbnailsAsync(input.File, fileName);
 
+        _logger.LogDebug("[GodGPTController][BlobSaveAsync] userId: {0}, duration: {2}ms",
+            currentUserId, stopwatch.ElapsedMilliseconds);
         // var response = new SaveBlobResponse
         // {
         //     OriginalFileName = fileName,

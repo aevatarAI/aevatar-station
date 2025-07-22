@@ -115,6 +115,7 @@ public interface IGodGPTService
     Task<bool> CheckIsManager(string userId);
     Task<UserProfileDto> SetVoiceLanguageAsync(Guid currentUserId, VoiceLanguageEnum voiceLanguage);
 
+    Task<ExecuteActionResultDto> CanUploadImageAsync(Guid currentUserId);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -583,6 +584,12 @@ public class GodGPTService : ApplicationService, IGodGPTService
         var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
         await manager.SetVoiceLanguageAsync(voiceLanguage);
         return await manager.GetUserProfileAsync();
+    }
+
+    public async Task<ExecuteActionResultDto> CanUploadImageAsync(Guid currentUserId)
+    {
+        var userQuotaGAgent = _clusterClient.GetGrain<IUserQuotaGAgent>(currentUserId);
+        return await userQuotaGAgent.CanUploadImageAsync();
     }
 
     #endregion
