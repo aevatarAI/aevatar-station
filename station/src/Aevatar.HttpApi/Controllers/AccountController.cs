@@ -28,6 +28,13 @@ public class AccountController : AevatarController
     }
     
     [HttpPost]
+    [Route("godgpt-register")]
+    public virtual Task<IdentityUserDto> GodgptRegisterAsync(GodGptRegisterDto input)
+    {
+        return _accountService.GodgptRegisterAsync(input);
+    }
+    
+    [HttpPost]
     [Route("send-register-code")]
     public virtual Task SendRegisterCodeAsync(SendRegisterCodeDto input)
     {
