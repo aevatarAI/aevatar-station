@@ -550,14 +550,38 @@ public class GodGPTController : AevatarController
         
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
-
+        
         var originalFileName = input.File.FileName;
         var fileExtension = Path.GetExtension(originalFileName);
         var fileName = Guid.NewGuid().ToString() + fileExtension;
-
-        await _blobContainer.SaveAsync(fileName, input.File.OpenReadStream(), true);
         
-        var _ = _thumbnailService.SaveWithThumbnailsAsync(input.File, fileName);
+        // Read file content to memory to avoid stream reuse issues
+        var readStopwatch = Stopwatch.StartNew();
+        byte[] fileContent;
+        using (var fileStream = input.File.OpenReadStream())
+        {
+            fileContent = new byte[input.File.Length];
+            await fileStream.ReadAsync(fileContent, 0, fileContent.Length);
+        }
+        readStopwatch.Stop();
+        _logger.LogDebug("[GodGPTController][BlobSaveAsync] File reading completed: Duration={ReadTime}ms, Size={FileSize} bytes",
+            readStopwatch.ElapsedMilliseconds, input.File.Length);
+
+        // Save original file using memory stream
+        var saveStopwatch = Stopwatch.StartNew();
+        using (var originalStream = new MemoryStream(fileContent))
+        {
+            await _blobContainer.SaveAsync(fileName, input.File.OpenReadStream(), true);
+        }
+        saveStopwatch.Stop();
+        _logger.LogInformation("[GodGPTController][BlobSaveAsync] Original file save completed: FileName={FileName}, Duration={SaveTime}ms",
+            fileName, saveStopwatch.ElapsedMilliseconds);
+
+        // Generate thumbnails using separate memory stream
+        using (var thumbnailStream = new MemoryStream(fileContent))
+        {
+            var _ = _thumbnailService.GenerateThumbnailsAsync(thumbnailStream, fileName);
+        }
 
         _logger.LogDebug("[GodGPTController][BlobSaveAsync] userId: {0}, duration: {2}ms",
             currentUserId, stopwatch.ElapsedMilliseconds);

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -71,6 +72,7 @@ public class ThumbnailService : IThumbnailService, ITransientDependency
 
         try
         {
+            var thumbnailStopwatch = Stopwatch.StartNew();
             using var image = await Image.LoadAsync(imageStream);
             var originalWidth = image.Width;
             var originalHeight = image.Height;
@@ -84,6 +86,9 @@ public class ThumbnailService : IThumbnailService, ITransientDependency
 
             var results = await Task.WhenAll(tasks);
             thumbnails.AddRange(results.Where(t => t != null)!);
+            thumbnailStopwatch.Stop();
+            _logger.LogDebug("[ThumbnailService][GenerateThumbnailsAsync] Thumbnail generation completed: Duration={ThumbnailTime}ms",
+                thumbnailStopwatch.ElapsedMilliseconds);
         }
         catch (Exception ex)
         {
