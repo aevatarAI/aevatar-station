@@ -5,6 +5,14 @@ using Aevatar.GAgents.AIGAgent.State;
 using Microsoft.Extensions.Logging;
 using System.Text;
 using System.Reflection;
+using Aevatar.Options;
+using Microsoft.Extensions.Options;
+using Aevatar.Schema;
+using Orleans.Runtime;
+using Orleans.Metadata;
+using Newtonsoft.Json;
+using Aevatar.Agent;
+using System.Security.Cryptography;
 
 namespace Aevatar.Application.Grains.Agents.AI;
 
@@ -32,13 +40,13 @@ public class WorkflowComposerEvent : StateLogEventBase<WorkflowComposerEvent>
 public interface IWorkflowComposerGAgent : IAIGAgent, IGAgent, IGrainWithStringKey
 {
     /// <summary>
-    /// 根据用户目标生成完整的工作流JSON（包含agent发现、prompt构建等所有逻辑）
+    /// 根据用户目标生成完整的工作流JSON（接受外部传入的agent信息）
     /// </summary>
-    Task<string> GenerateWorkflowJsonAsync(string userGoal);
+    Task<string> GenerateWorkflowJsonAsync(string userGoal, List<AgentTypeDto> availableAgents);
 }
 
 /// <summary>
-/// 工作流组合器GAgent - 完全自包含的AI工作流生成器
+/// 工作流组合器GAgent - 精简的AI工作流生成器（agent信息由外部传入）
 /// </summary>
 [GAgent("WorkflowComposer")]
 public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, WorkflowComposerEvent>, 
@@ -50,24 +58,118 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
 
     public override Task<string> GetDescriptionAsync()
     {
-        return Task.FromResult("完全自包含的AI工作流生成器，负责agent发现、prompt构建和AI调用");
+        return Task.FromResult("精简的AI工作流生成器，接受外部agent信息并负责prompt构建和AI调用");
+    }
+
+
+
+
+
+    /// <summary>
+    /// 将AgentTypeDto列表转换为AgentIndexInfo列表（用于内部处理）
+    /// </summary>
+    private IEnumerable<AgentIndexInfo> ConvertAgentTypeDtoToAgentIndexInfo(List<AgentTypeDto> agentTypeDtos)
+    {
+        var agentIndexInfos = new List<AgentIndexInfo>();
+        
+        foreach (var agentDto in agentTypeDtos)
+        {
+            try
+            {
+                var agentInfo = new AgentIndexInfo
+                {
+                    Name = agentDto.AgentType,
+                    TypeName = agentDto.AgentType,
+                    L1Description = $"Agent: {agentDto.AgentType}",
+                    L2Description = !string.IsNullOrWhiteSpace(agentDto.PropertyJsonSchema) 
+                        ? $"Agent {agentDto.AgentType} with configuration schema. Parameters: {string.Join(", ", agentDto.AgentParams?.Select(p => $"{p.Name}({p.Type})") ?? new string[0])}"
+                        : $"Agent {agentDto.AgentType} without configuration schema.",
+                    Categories = InferAgentCategories(agentDto.AgentType, agentDto.FullName),
+                    EstimatedExecutionTime = 1000, // 默认估计时间
+                    InputParameters = ConvertParamDtosToParameterInfo(agentDto.AgentParams),
+                    OutputParameters = new Dictionary<string, AgentParameterInfo>(),
+                    CreatedAt = DateTime.UtcNow,
+                    LastScannedAt = DateTime.UtcNow
+                };
+                
+                agentIndexInfos.Add(agentInfo);
+                Logger.LogDebug("Converted AgentTypeDto {AgentType} to AgentIndexInfo", agentDto.AgentType);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to convert AgentTypeDto {AgentType} to AgentIndexInfo", agentDto.AgentType);
+            }
+        }
+        
+        return agentIndexInfos;
+    }
+
+    /// <summary>
+    /// 将ParamDto列表转换为AgentParameterInfo字典
+    /// </summary>
+    private Dictionary<string, AgentParameterInfo> ConvertParamDtosToParameterInfo(List<ParamDto>? paramDtos)
+    {
+        var parameterInfos = new Dictionary<string, AgentParameterInfo>();
+        
+        if (paramDtos != null)
+        {
+            foreach (var param in paramDtos)
+            {
+                parameterInfos[param.Name] = new AgentParameterInfo
+                {
+                    Type = param.Type,
+                    Description = $"Parameter {param.Name} of type {param.Type}",
+                    DefaultValue = null
+                };
+            }
+        }
+        
+        return parameterInfos;
+    }
+
+    /// <summary>
+    /// 推断Agent类别（基于名称和类型）
+    /// </summary>
+    private List<string> InferAgentCategories(string agentType, string? fullName)
+    {
+        var categories = new List<string>();
+        var lowerAgentType = agentType.ToLower();
+        var lowerFullName = fullName?.ToLower() ?? "";
+        
+        if (lowerAgentType.Contains("ai") || lowerAgentType.Contains("chat") || lowerAgentType.Contains("llm"))
+            categories.Add("AI");
+        if (lowerAgentType.Contains("data") || lowerAgentType.Contains("db") || lowerAgentType.Contains("storage"))
+            categories.Add("Data");
+        if (lowerAgentType.Contains("workflow") || lowerAgentType.Contains("orchestration"))
+            categories.Add("Workflow");
+        if (lowerAgentType.Contains("messaging") || lowerAgentType.Contains("notification"))
+            categories.Add("Communication");
+        if (lowerAgentType.Contains("plugin") || lowerAgentType.Contains("extension"))
+            categories.Add("Plugin");
+        if (lowerAgentType.Contains("test") || lowerAgentType.Contains("demo"))
+            categories.Add("Testing");
+            
+        if (categories.Count == 0)
+            categories.Add("General");
+            
+        return categories;
     }
 
     /// <summary>
     /// 根据用户目标生成完整的工作流JSON（包含所有AI相关逻辑）
     /// </summary>
-    public async Task<string> GenerateWorkflowJsonAsync(string userGoal)
+    public async Task<string> GenerateWorkflowJsonAsync(string userGoal, List<AgentTypeDto> availableAgents)
     {
         try
         {
-            Logger.LogInformation("Starting comprehensive AI workflow generation for user goal: {UserGoal}", userGoal);
+            Logger.LogInformation("Starting comprehensive AI workflow generation for user goal: {UserGoal} with {AgentCount} available agents", userGoal, availableAgents.Count);
 
-            // 1. 发现可用的agents
-            var availableAgents = DiscoverAvailableAgents();
-            Logger.LogDebug("Discovered {Count} available agents", availableAgents.Count());
+            // 1. 将AgentTypeDto转换为内部使用的格式
+            var agentIndexInfos = ConvertAgentTypeDtoToAgentIndexInfo(availableAgents);
+            Logger.LogDebug("Converted {Count} agents to internal format", agentIndexInfos.Count());
 
             // 2. 构建完整的AI提示词
-            var prompt = BuildWorkflowGenerationPrompt(userGoal, availableAgents);
+            var prompt = BuildWorkflowGenerationPrompt(userGoal, agentIndexInfos);
             Logger.LogDebug("Built prompt with length: {Length}", prompt.Length);
 
             // 3. 调用AI生成工作流
@@ -96,201 +198,7 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
         }
     }
 
-    /// <summary>
-    /// 发现可用的agents - 直接使用内置扫描器（完全自包含）
-    /// </summary>
-    private IEnumerable<AgentIndexInfo> DiscoverAvailableAgents()
-    {
-        try
-        {
-            Logger.LogInformation("Starting agent discovery using built-in scanner");
-            
-            // 直接使用内置Agent扫描器（完全自包含）
-            var scannedAgents = ScanAgentsInLoadedAssemblies();
-            Logger.LogDebug("Agent discovery completed, found {Count} agents", scannedAgents.Count);
-            
-            return scannedAgents;
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error occurred during agent discovery, returning empty list");
-            return new List<AgentIndexInfo>();
-        }
-    }
 
-    /// <summary>
-    /// 内置Agent扫描器 - 扫描所有已加载程序集中的GAgent类型
-    /// </summary>
-    private List<AgentIndexInfo> ScanAgentsInLoadedAssemblies()
-    {
-        var discoveredAgents = new List<AgentIndexInfo>();
-        var startTime = DateTime.UtcNow;
-
-        try
-        {
-            // 首先强制加载GAgent相关的NuGet包程序集
-            LoadGAgentAssemblies();
-            
-            var gAgentType = typeof(IGAgent);
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies()
-                .Where(a => !a.IsDynamic && !string.IsNullOrEmpty(a.Location))
-                .ToList();
-
-            Logger.LogDebug("Scanning {Count} assemblies for GAgent types", assemblies.Count);
-
-            foreach (var assembly in assemblies)
-            {
-                try
-                {
-                    // 正确的GAgent类型过滤：必须实现IGAgent接口且为具体类
-                    var gAgentTypes = assembly.GetTypes()
-                        .Where(t => gAgentType.IsAssignableFrom(t) && t.IsClass && !t.IsAbstract && t.IsPublic)
-                        .ToList();
-
-                    foreach (var type in gAgentTypes)
-                    {
-                        try
-                        {
-                            var agentInfo = CreateAgentIndexInfo(type);
-                            if (agentInfo != null)
-                            {
-                                discoveredAgents.Add(agentInfo);
-                                Logger.LogDebug("Discovered GAgent: {TypeName} from assembly {AssemblyName}", 
-                                    type.Name, assembly.GetName().Name);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.LogWarning(ex, "Failed to create AgentIndexInfo for type: {TypeName}", type.FullName);
-                        }
-                    }
-                }
-                catch (ReflectionTypeLoadException ex)
-                {
-                    Logger.LogWarning(ex, "Could not load types from assembly: {AssemblyName}", assembly.GetName().Name);
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogWarning(ex, "Error scanning assembly: {AssemblyName}", assembly.GetName().Name);
-                }
-            }
-
-            var duration = DateTime.UtcNow - startTime;
-            Logger.LogInformation("Agent discovery completed in {Duration}ms, found {Count} agents", 
-                duration.TotalMilliseconds, discoveredAgents.Count);
-
-            return discoveredAgents;
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error during agent discovery");
-            return new List<AgentIndexInfo>();
-        }
-    }
-
-    /// <summary>
-    /// 强制加载GAgent相关的NuGet包程序集
-    /// </summary>
-    private void LoadGAgentAssemblies()
-    {
-        var gAgentPackages = new[]
-        {
-            "Aevatar.GAgents.AIGAgent",
-            "Aevatar.GAgents.SemanticKernel", 
-            "Aevatar.GAgents.AI.Abstractions",
-            "Aevatar.GAgents.Twitter",
-            "Aevatar.GAgents.GroupChat"
-        };
-        
-        foreach (var packageName in gAgentPackages)
-        {
-            try
-            {
-                var loadedAssembly = Assembly.Load(packageName);
-                Logger.LogDebug("Successfully loaded GAgent assembly: {AssemblyName}", loadedAssembly.FullName);
-            }
-            catch (FileNotFoundException)
-            {
-                Logger.LogDebug("GAgent assembly not found (optional): {PackageName}", packageName);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogWarning(ex, "Failed to load GAgent assembly: {PackageName}", packageName);
-            }
-        }
-    }
-
-    /// <summary>
-    /// 从Type创建AgentIndexInfo（支持有无AgentDescriptionAttribute的情况）
-    /// </summary>
-    private AgentIndexInfo? CreateAgentIndexInfo(Type agentType)
-    {
-        try
-        {
-            var attribute = agentType.GetCustomAttribute<AgentDescriptionAttribute>();
-            
-            if (attribute != null)
-            {
-                // 有AgentDescriptionAttribute的情况
-                return CreateAgentIndexInfoFromAttribute(agentType, attribute);
-            }
-            else
-            {
-                // 没有AgentDescriptionAttribute的情况，创建默认信息
-                var assemblyName = agentType.Assembly.GetName().Name ?? "Unknown";
-                var defaultName = agentType.Name.EndsWith("GAgent") 
-                    ? agentType.Name.Substring(0, agentType.Name.Length - 6) 
-                    : agentType.Name;
-                
-                return new AgentIndexInfo
-                {
-                    Name = defaultName,
-                    TypeName = agentType.FullName ?? agentType.Name,
-                    L1Description = $"GAgent implementation: {defaultName} from {assemblyName}",
-                    L2Description = $"A GAgent of type {agentType.Name} from assembly {assemblyName}. This agent provides automated functionality but no detailed description is available. You may need to check the agent's implementation or documentation for specific capabilities and usage instructions.",
-                    Categories = new List<string> { "General", assemblyName.Replace("Aevatar.GAgents.", "").Replace("Aevatar.", "") },
-                    EstimatedExecutionTime = 1000,
-                    InputParameters = new Dictionary<string, AgentParameterInfo>(), // 暂无参数信息
-                    OutputParameters = new Dictionary<string, AgentParameterInfo>(), // 暂无参数信息
-                    CreatedAt = DateTime.UtcNow,
-                    LastScannedAt = DateTime.UtcNow
-                };
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogWarning(ex, "Error creating AgentIndexInfo for type: {TypeName}", agentType.FullName);
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// 从AgentDescriptionAttribute创建AgentIndexInfo
-    /// </summary>
-    private AgentIndexInfo CreateAgentIndexInfoFromAttribute(Type agentType, AgentDescriptionAttribute attribute)
-    {
-        try
-        {
-            return new AgentIndexInfo
-            {
-                Name = attribute.Name,
-                TypeName = agentType.FullName ?? agentType.Name,
-                L1Description = attribute.L1Description,
-                L2Description = attribute.L2Description,
-                Categories = attribute.Categories?.ToList() ?? new List<string>(),
-                EstimatedExecutionTime = attribute.EstimatedExecutionTime,
-                CreatedAt = DateTime.UtcNow,
-                LastScannedAt = DateTime.UtcNow,
-                InputParameters = new Dictionary<string, AgentParameterInfo>(),
-                OutputParameters = new Dictionary<string, AgentParameterInfo>()
-            };
-        }
-        catch (Exception ex)
-        {
-            Logger.LogWarning(ex, "Error creating AgentIndexInfo for type {TypeName}", agentType.FullName);
-            return null;
-        }
-    }
 
     /// <summary>
     /// 构建工作流生成提示词（完整版本）
