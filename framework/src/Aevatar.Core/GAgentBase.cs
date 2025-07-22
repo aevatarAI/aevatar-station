@@ -55,6 +55,7 @@ public abstract partial class
     protected AevatarOptions? AevatarOptions;
 
     private DeepCopier? _copier;
+
     public async Task ActivateAsync()
     {
         await Task.Yield();
@@ -92,6 +93,7 @@ public abstract partial class
         {
             tasks.Add(gAgent.SubscribeToAsync(this));
         }
+
         tasks.Add(AddChildManyAsync(grainIds));
         tasks.Add(OnRegisterAgentManyAsync(grainIds));
         await Task.WhenAll(tasks);
@@ -154,6 +156,24 @@ public abstract partial class
 
     protected virtual Task PerformConfigAsync(TConfiguration configuration)
     {
+        return Task.CompletedTask;
+    }
+
+    public virtual async Task PrepareResourceContextAsync(ResourceContext context)
+    {
+        Logger.LogDebug("Preparing resource context for GAgent {GrainId} with {ResourceCount} resources",
+            this.GetGrainId(), context.AvailableResources.Count);
+
+        await OnPrepareResourceContextAsync(context);
+    }
+
+    /// <summary>
+    /// Override this method in derived classes to handle resource context preparation
+    /// </summary>
+    /// <param name="context">The resource context containing available resources</param>
+    protected virtual Task OnPrepareResourceContextAsync(ResourceContext context)
+    {
+        // Default implementation does nothing - derived classes can override this
         return Task.CompletedTask;
     }
 
@@ -246,8 +266,8 @@ public abstract partial class
     }
 
     public sealed override async Task OnActivateAsync(CancellationToken cancellationToken)
-    {   
-         _copier = ServiceProvider.GetRequiredService<DeepCopier>();
+    {
+        _copier = ServiceProvider.GetRequiredService<DeepCopier>();
         StateDispatcher = ServiceProvider.GetService<IStateDispatcher>();
         AevatarOptions = ServiceProvider.GetRequiredService<IOptions<AevatarOptions>>().Value;
         try

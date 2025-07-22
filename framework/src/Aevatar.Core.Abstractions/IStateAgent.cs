@@ -80,15 +80,18 @@ public interface IGAgent : IGrainWithGuidKey
     /// <param name="configuration"></param>
     /// <returns></returns>
     Task ConfigAsync(ConfigurationBase configuration);
+    
+    /// <summary>
+    /// Prepare the agent with available resource context.
+    /// This allows agents to discover and utilize external resources without explicit configuration.
+    /// </summary>
+    /// <param name="context">The resource context containing available resources and metadata</param>
+    /// <returns>Task representing the asynchronous operation</returns>
+    Task PrepareResourceContextAsync(ResourceContext context);
 }
 
 public interface IStateGAgent<TState> : IGAgent
 {
     [ReadOnly]
     Task<TState> GetStateAsync();
-}
-
-public interface IExecutionContext
-{
-    
 }
