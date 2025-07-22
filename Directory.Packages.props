@@ -4,7 +4,7 @@
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVerion>9.0.1</OrleansVerion>
     <AevatarVerion>1.5.2</AevatarVerion>
-    <AevatarGAgentVerion>1.5.1-workflow.0</AevatarGAgentVerion>
+    <AevatarGAgentVerion>1.5.1-workflow.1</AevatarGAgentVerion>
   </PropertyGroup>
   <ItemGroup>
     <!-- AElf packages -->
