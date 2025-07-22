@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Aevatar.Agent;
 using Aevatar.Application.Grains.Agents.AI;
 using Orleans;
 using Shouldly;
@@ -20,15 +22,48 @@ public class WorkflowComposerGAgentTests : AevatarApplicationGrainsTestBase
         _output = output;
     }
 
+    /// <summary>
+    /// 创建模拟的 AgentTypeDto 列表用于测试
+    /// </summary>
+    private List<AgentTypeDto> CreateMockAgentList()
+    {
+        return new List<AgentTypeDto>
+        {
+            new AgentTypeDto
+            {
+                AgentType = "DataProcessorGAgent",
+                FullName = "Aevatar.Application.Grains.Agents.DataProcessorGAgent",
+                AgentParams = new List<ParamDto>
+                {
+                    new ParamDto { Name = "inputData", Type = "System.String" },
+                    new ParamDto { Name = "processType", Type = "System.String" }
+                },
+                PropertyJsonSchema = "{\"type\":\"object\",\"properties\":{\"inputData\":{\"type\":\"string\"},\"processType\":{\"type\":\"string\"}}}"
+            },
+            new AgentTypeDto
+            {
+                AgentType = "AnalysisGAgent",
+                FullName = "Aevatar.Application.Grains.Agents.AnalysisGAgent",
+                AgentParams = new List<ParamDto>
+                {
+                    new ParamDto { Name = "data", Type = "System.String" },
+                    new ParamDto { Name = "analysisType", Type = "System.String" }
+                },
+                PropertyJsonSchema = "{\"type\":\"object\",\"properties\":{\"data\":{\"type\":\"string\"},\"analysisType\":{\"type\":\"string\"}}}"
+            }
+        };
+    }
+
     [Fact]
     public async Task GenerateWorkflowJsonAsync_ShouldReturnValidWorkflow()
     {
         // Arrange
         var workflowComposer = _clusterClient.GetGrain<IWorkflowComposerGAgent>("test-workflow-composer");
         var userGoal = "创建一个简单的数据处理工作流";
+        var availableAgents = CreateMockAgentList();
 
         // Act
-        var workflowJson = await workflowComposer.GenerateWorkflowJsonAsync(userGoal);
+        var workflowJson = await workflowComposer.GenerateWorkflowJsonAsync(userGoal, availableAgents);
 
         // Assert
         workflowJson.ShouldNotBeNullOrEmpty();
@@ -60,9 +95,10 @@ public class WorkflowComposerGAgentTests : AevatarApplicationGrainsTestBase
     {
         // Arrange
         var workflowComposer = _clusterClient.GetGrain<IWorkflowComposerGAgent>("test-agent-discovery");
+        var availableAgents = CreateMockAgentList();
         
         // Act
-        var workflowJson = await workflowComposer.GenerateWorkflowJsonAsync("测试agent发现功能");
+        var workflowJson = await workflowComposer.GenerateWorkflowJsonAsync("测试agent发现功能", availableAgents);
 
         // Assert
         workflowJson.ShouldNotBeNullOrEmpty();
