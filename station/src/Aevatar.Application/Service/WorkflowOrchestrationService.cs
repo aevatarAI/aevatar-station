@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Aevatar.Application.Contracts.WorkflowOrchestration;
 using Aevatar.Application.Grains.Agents.AI;
 using Aevatar.Service;
+using Aevatar.Agent;
 using Microsoft.Extensions.Logging;
 using Orleans;
 
@@ -19,15 +20,18 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     private readonly ILogger<WorkflowOrchestrationService> _logger;
     private readonly IClusterClient _clusterClient;
     private readonly IUserAppService _userAppService;
+    private readonly IAgentService _agentService;
 
     public WorkflowOrchestrationService(
         ILogger<WorkflowOrchestrationService> logger,
         IClusterClient clusterClient,
-        IUserAppService userAppService)
+        IUserAppService userAppService,
+        IAgentService agentService)
     {
         _logger = logger;
         _clusterClient = clusterClient;
         _userAppService = userAppService;
+        _agentService = agentService;
     }
 
     /// <summary>
@@ -78,7 +82,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     #region Private Methods - AI Agent Integration
 
     /// <summary>
-    /// 调用WorkflowComposerGAgent生成工作流JSON（每次调用创建新实例）
+    /// 调用WorkflowComposerGAgent生成工作流JSON（每次调用创建新实例，传递完整的agent信息）
     /// </summary>
     private async Task<string> CallWorkflowComposerGAgentAsync(string userGoal, Guid userId)
     {
@@ -86,9 +90,15 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         {
             _logger.LogInformation("Creating new WorkflowComposerGAgent instance for user {UserId}", userId);
             
+            // 1. 首先获取所有可用的Agent信息（包括PropertyJsonSchema）
+            _logger.LogDebug("Fetching available agents information using AgentService");
+            var availableAgents = await _agentService.GetAllAgents();
+            _logger.LogInformation("Retrieved {AgentCount} available agents for workflow generation", availableAgents.Count);
+            
+            // 2. 创建WorkflowComposerGAgent实例并传递完整信息
             var instanceId = $"workflow-composer-{userId}-{DateTimeOffset.UtcNow.Ticks}";
             var workflowComposerGAgent = _clusterClient.GetGrain<IWorkflowComposerGAgent>(instanceId);
-            var result = await workflowComposerGAgent.GenerateWorkflowJsonAsync(userGoal);
+            var result = await workflowComposerGAgent.GenerateWorkflowJsonAsync(userGoal, availableAgents);
             
             _logger.LogInformation("WorkflowComposerGAgent instance {InstanceId} completed successfully for user {UserId}", instanceId, userId);
             return result;
