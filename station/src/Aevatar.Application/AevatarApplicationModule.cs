@@ -2,7 +2,9 @@
 using System.Linq;
 using Aevatar.Account;
 using Aevatar.ApiRequests;
+using Aevatar.Application.Contracts.WorkflowOrchestration;
 using Aevatar.Application.Grains;
+using Aevatar.Application.Service;
 using Aevatar.BlobStorings;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
@@ -75,5 +77,22 @@ public class AevatarApplicationModule : AbpModule
         Configure<AccountOptions>(configuration.GetSection("Account"));
         Configure<ApiRequestOptions>(configuration.GetSection("ApiRequest"));
         Configure<BlobStoringOptions>(configuration.GetSection("BlobStoring"));
+        
+        // 配置工作流编排服务
+        ConfigureWorkflowOrchestrationServices(context);
+    }
+    
+    /// <summary>
+    /// Configure workflow orchestration related services
+    /// </summary>
+    private void ConfigureWorkflowOrchestrationServices(ServiceConfigurationContext context)
+    {
+        // Unified Agent index service - includes scanning, indexing, caching, and warmup functionality
+        context.Services.AddSingleton<IAgentIndexService, AgentIndexService>();
+        context.Services.AddHostedService<AgentIndexService>(serviceProvider => 
+            serviceProvider.GetRequiredService<IAgentIndexService>() as AgentIndexService);
+        
+        // Unified workflow orchestration service - includes prompt building and JSON validation functionality
+        context.Services.AddTransient<IWorkflowOrchestrationService, WorkflowOrchestrationService>();
     }
 }
