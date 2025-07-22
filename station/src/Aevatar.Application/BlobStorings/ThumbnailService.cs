@@ -87,7 +87,7 @@ public class ThumbnailService : IThumbnailService, ITransientDependency
             var results = await Task.WhenAll(tasks);
             thumbnails.AddRange(results.Where(t => t != null)!);
             thumbnailStopwatch.Stop();
-            _logger.LogDebug("[ThumbnailService][GenerateThumbnailsAsync] Thumbnail generation completed: Duration={ThumbnailTime}ms",
+            _logger.LogDebug("[GodGPTController][BlobSaveAsync] Thumbnail generation completed: Duration={ThumbnailTime}ms",
                 thumbnailStopwatch.ElapsedMilliseconds);
         }
         catch (Exception ex)

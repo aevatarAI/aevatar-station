@@ -574,7 +574,7 @@ public class GodGPTController : AevatarController
             await _blobContainer.SaveAsync(fileName, input.File.OpenReadStream(), true);
         }
         saveStopwatch.Stop();
-        _logger.LogInformation("[GodGPTController][BlobSaveAsync] Original file save completed: FileName={FileName}, Duration={SaveTime}ms",
+        _logger.LogDebug("[GodGPTController][BlobSaveAsync] Original file save completed: FileName={FileName}, Duration={SaveTime}ms",
             fileName, saveStopwatch.ElapsedMilliseconds);
 
         // Generate thumbnails using separate memory stream
