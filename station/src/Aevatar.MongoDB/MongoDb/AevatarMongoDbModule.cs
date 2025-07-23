@@ -12,6 +12,7 @@ using Volo.Abp.OpenIddict.MongoDB;
 using Volo.Abp.PermissionManagement.MongoDB;
 using Volo.Abp.SettingManagement.MongoDB;
 using Volo.Abp.Uow;
+using Volo.Abp.Threading;
 
 namespace Aevatar.MongoDB;
 
@@ -29,6 +30,9 @@ public class AevatarMongoDbModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
+        // Register ICancellationTokenProvider to ensure MongoDB repositories work correctly
+        context.Services.AddSingleton<ICancellationTokenProvider, NullCancellationTokenProvider>();
+        
         //Example only, remove if not needed
         context.Services.AddMongoDbContext<AevatarMongoDbContext>(options => { options.AddDefaultRepositories(); });
 

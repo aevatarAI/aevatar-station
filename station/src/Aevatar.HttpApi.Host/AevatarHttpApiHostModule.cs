@@ -70,6 +70,9 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         var configuration = context.Services.GetConfiguration();
         var hostingEnvironment = context.Services.GetHostingEnvironment();
 
+        // Register ICancellationTokenProvider to fix PermissionManagement module startup issue
+        context.Services.AddSingleton<ICancellationTokenProvider, NullCancellationTokenProvider>();
+
         ConfigureAuthentication(context, configuration);
         ConfigureBundles();
         // ConfigureUrls(configuration);
