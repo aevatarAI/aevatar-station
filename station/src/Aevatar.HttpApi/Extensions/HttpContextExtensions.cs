@@ -11,17 +11,17 @@ public enum GodgptLanguage
     /// <summary>
     /// English language
     /// </summary>
-    En = 0,
+    English = 0,
     
     /// <summary>
     /// Traditional Chinese language
     /// </summary>
-    ZhTw = 1,
+    TraditionalChinese = 1,
     
     /// <summary>
     /// Spanish language
     /// </summary>
-    Es = 2
+    Spanish = 2
 }
 
 /// <summary>
@@ -34,21 +34,21 @@ public static class HttpContextExtensions
     /// </summary>
     /// <param name="context">The HttpContext instance</param>
     /// <returns>GodgptLanguage enum value, defaults to En if not found or invalid</returns>
-    public static GodgptLanguage GetGodgptLanguage(this HttpContext context)
+    public static GodgptLanguage GetGodGPTLanguage(this HttpContext context)
     {
         var languageHeader = context.Request.Headers["GodgptLanguage"].FirstOrDefault();
         
         if (string.IsNullOrWhiteSpace(languageHeader))
         {
-            return GodgptLanguage.En; // Default to English
+            return GodgptLanguage.English; // Default to English
         }
         
         return languageHeader.ToLowerInvariant() switch
         {
-            "en" => GodgptLanguage.En,
-            "zh-tw" => GodgptLanguage.ZhTw,
-            "es" => GodgptLanguage.Es,
-            _ => GodgptLanguage.En // Default to English for unknown values
+            "en" => GodgptLanguage.English,
+            "zh-tw" => GodgptLanguage.TraditionalChinese,
+            "es" => GodgptLanguage.Spanish,
+            _ => GodgptLanguage.English // Default to English for unknown values
         };
     }
 

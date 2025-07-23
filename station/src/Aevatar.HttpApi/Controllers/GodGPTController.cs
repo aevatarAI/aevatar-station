@@ -515,7 +515,7 @@ public class GodGPTController : AevatarController
         var stopwatch = Stopwatch.StartNew();
         
         // Get language from request headers
-        var language = HttpContext.GetGodgptLanguage();
+        var language = HttpContext.GetGodGPTLanguage();
         
         var response = await _godGptService.GetShareKeyWordWithAIAsync(sessionId, content, region, sessionType);
         _logger.LogDebug(
