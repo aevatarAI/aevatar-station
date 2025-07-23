@@ -551,6 +551,13 @@ public class GodGPTController : AevatarController
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
         
+        var response = await _godGptService.CanUploadImageAsync(currentUserId);
+        if (!response.Success)
+        {
+            _logger.LogDebug("[GodGPTController][BlobSaveAsync] Daily upload limit reached");
+            throw new UserFriendlyException("Daily upload limit reached. Upgrade to premium to continue.");
+        }
+        
         var originalFileName = input.File.FileName;
         var fileExtension = Path.GetExtension(originalFileName);
         var fileName = Guid.NewGuid().ToString() + fileExtension;
