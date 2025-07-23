@@ -298,6 +298,35 @@ def test_event_operations(api_headers, test_agent):
     assert_status_code(response)
     assert response.json()["data"]["totalCount"] > 0
 
+    # test es count endpoint
+    response = requests.get(
+        f"{API_HOST}/api/query/es/count",
+        params={
+            "stateName": STATE_NAME,
+            "queryString": f"name: {name}",
+        },
+        headers=api_headers,
+        verify=False
+    )
+    
+    assert_status_code(response)
+    assert response.json()["data"]["count"] > 0
+    
+    # verify count matches the query totalCount
+    query_response = requests.get(
+        f"{API_HOST}/api/query/es",
+        params={
+            "stateName": STATE_NAME,
+            "queryString": f"name: {name}",
+            "pageSize": 1
+        },
+        headers=api_headers,
+        verify=False
+    )
+    assert_status_code(query_response)
+    expected_count = query_response.json()["data"]["totalCount"]
+    assert response.json()["data"]["count"] == expected_count
+
 
 def test_query_agent_list(api_headers, test_agent):
     """test query agent list"""
@@ -422,3 +451,31 @@ def test_permission(api_headers, api_admin_headers):
     assert_status_code(response)
     logger.debug(response.json()["data"])
     assert response.json()["data"]["totalCount"] > 0
+    
+    # test es count with permissions - non-admin user should get 0
+    response = requests.get(
+        f"{API_HOST}/api/query/es/count",
+        params={
+            "stateName": PERMISSION_STATE_NAME,
+            "queryString": f"_id:{agent_id}",
+        },
+        headers=api_headers,
+        verify=False
+    )
+    
+    assert_status_code(response)
+    assert response.json()["data"]["count"] == 0
+    
+    # test es count with permissions - admin user should get count > 0
+    response = requests.get(
+        f"{API_HOST}/api/query/es/count",
+        params={
+            "stateName": PERMISSION_STATE_NAME,
+            "queryString": f"_id:{agent_id}",
+        },
+        headers=api_admin_headers,
+        verify=False
+    )
+    
+    assert_status_code(response)
+    assert response.json()["data"]["count"] > 0
