@@ -28,7 +28,6 @@ using Volo.Abp.Modularity;
 using Volo.Abp.PermissionManagement;
 using Volo.Abp.EventBus;
 using Volo.Abp.VirtualFileSystem;
-using Volo.Abp.Threading;
 
 namespace Aevatar;
 
@@ -63,9 +62,6 @@ public class AevatarApplicationModule : AbpModule
         {
             options.FileSets.AddEmbedded<AevatarApplicationModule>();
         });
-        
-        // Register ICancellationTokenProvider to fix PermissionManagement module issue
-        context.Services.AddSingleton<ICancellationTokenProvider, NullCancellationTokenProvider>();
         
         var configuration = context.Services.GetConfiguration();
         Configure<NameContestOptions>(configuration.GetSection("NameContest"));
