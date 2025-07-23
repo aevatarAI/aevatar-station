@@ -533,9 +533,8 @@ public class GodGPTController : AevatarController
             Reason = response.Message
         };
         
-        _logger.LogDebug("[GodGPTController][CanUploadImageAsync] userId: {0}, canUpload: {1}, duration: {2}ms",
-            currentUserId, result.CanUpload, stopwatch.ElapsedMilliseconds);
-            
+        _logger.LogDebug($"[GodGPTController][CanUploadImageAsync] userId: {currentUserId}, canUpload: {result.CanUpload}, duration: {stopwatch.ElapsedMilliseconds}ms");
+        
         return result;
     }
 
