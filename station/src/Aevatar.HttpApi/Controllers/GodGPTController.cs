@@ -517,9 +517,13 @@ public class GodGPTController : AevatarController
         // Get language from request headers
         var language = HttpContext.GetGodGPTLanguage();
         
-        var response = await _godGptService.GetShareKeyWordWithAIAsync(sessionId, content, region, sessionType);
+        // Append language-specific prompt requirement if content is provided
+        var processedContent = SessionTypeExtensions.SharePrompt;
+        processedContent = processedContent.AppendLanguagePrompt(language);
+        
+        var response = await _godGptService.GetShareKeyWordWithAIAsync(sessionId, processedContent, region, sessionType);
         _logger.LogDebug(
-            $"[GodGPTController][GetShareKeyWordWithAIAsync] completed for sessionId={sessionId}, language={language}, duration: {stopwatch.ElapsedMilliseconds}ms");
+            $"[GodGPTController][GetShareKeyWordWithAIAsync] completed for sessionId={sessionId}, language={language},processedContent={processedContent}, duration: {stopwatch.ElapsedMilliseconds}ms");
         return response;
     }
     

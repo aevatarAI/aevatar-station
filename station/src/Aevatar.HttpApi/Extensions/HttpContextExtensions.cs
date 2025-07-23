@@ -6,7 +6,7 @@ namespace Aevatar.Extensions;
 /// <summary>
 /// GodgptLanguage enumeration for supported languages
 /// </summary>
-public enum GodgptLanguage
+public enum GodGPTLanguage
 {
     /// <summary>
     /// English language
@@ -33,23 +33,44 @@ public static class HttpContextExtensions
     /// Get GodgptLanguage from request headers
     /// </summary>
     /// <param name="context">The HttpContext instance</param>
-    /// <returns>GodgptLanguage enum value, defaults to En if not found or invalid</returns>
-    public static GodgptLanguage GetGodGPTLanguage(this HttpContext context)
+    /// <returns>GodgptLanguage enum value, defaults to English if not found or invalid</returns>
+    public static GodGPTLanguage GetGodGPTLanguage(this HttpContext context)
     {
         var languageHeader = context.Request.Headers["GodgptLanguage"].FirstOrDefault();
         
         if (string.IsNullOrWhiteSpace(languageHeader))
         {
-            return GodgptLanguage.English; // Default to English
+            return GodGPTLanguage.English; // Default to English
         }
         
         return languageHeader.ToLowerInvariant() switch
         {
-            "en" => GodgptLanguage.English,
-            "zh-tw" => GodgptLanguage.TraditionalChinese,
-            "es" => GodgptLanguage.Spanish,
-            _ => GodgptLanguage.English // Default to English for unknown values
+            "en" => GodGPTLanguage.English,
+            "zh-tw" => GodGPTLanguage.TraditionalChinese,
+            "es" => GodGPTLanguage.Spanish,
+            _ => GodGPTLanguage.English // Default to English for unknown values
         };
+    }
+
+    /// <summary>
+    /// Append language-specific prompt requirement to the message
+    /// </summary>
+    /// <param name="message">Original message</param>
+    /// <param name="language">Target language for response</param>
+    /// <returns>Message with language requirement appended</returns>
+    public static string AppendLanguagePrompt(this string message, GodGPTLanguage language)
+    {
+        var promptMsg = message;
+
+        promptMsg += language switch
+        {
+            GodGPTLanguage.English => ".Requirement: Please reply in English.",
+            GodGPTLanguage.TraditionalChinese => ".Requirement: Please reply in Chinese.",
+            GodGPTLanguage.Spanish => ".Requirement: Please reply in Spanish.",
+            _ => ".Requirement: Please reply in English."
+        };
+
+        return promptMsg;
     }
 
     /// <summary>

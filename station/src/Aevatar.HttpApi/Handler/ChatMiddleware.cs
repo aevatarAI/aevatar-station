@@ -111,8 +111,17 @@ public class ChatMiddleware
         try
         {
             var stopwatch = Stopwatch.StartNew();
+            var language = context.GetGodGPTLanguage();
+            var content = request.Content;
+            // Append language-specific prompt requirement if content is provided
+            if (!string.IsNullOrWhiteSpace(content))
+            {
+                content = content.AppendLanguagePrompt(language);
+                request.Content = content;
+            }
+            
             _logger.LogDebug(
-                $"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}, userId {userId}");
+                $"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}, userId {userId}, language:{language}");
 
             var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
             if (!await manager.IsUserSessionAsync(request.SessionId))
@@ -253,9 +262,17 @@ public class ChatMiddleware
                 await context.Response.WriteAsync("Invalid request body");
                 return;
             }
+            var language = context.GetGodGPTLanguage();
+            var content = request.Content;
+            // Append language-specific prompt requirement if content is provided
+            if (!string.IsNullOrWhiteSpace(content))
+            {
+                content = content.AppendLanguagePrompt(language);
+                request.Content = content;
+            }
 
             var stopwatch = Stopwatch.StartNew();
-            _logger.LogDebug("[GuestChatMiddleware] Start processing guest chat for user: {0}", userHashId);
+            _logger.LogDebug("[GuestChatMiddleware] Start processing guest chat for user: {0}, language{1}", userHashId,language);
 
             // Get or create anonymous user grain for this IP
             var grainId = CommonHelper.StringToGuid(CommonHelper.GetAnonymousUserGAgentId(clientIp));
