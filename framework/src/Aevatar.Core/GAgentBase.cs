@@ -9,6 +9,7 @@ using Orleans.EventSourcing;
 using Orleans.Providers;
 using Orleans.Serialization;
 using Orleans.Streams;
+using System.Diagnostics;
 
 namespace Aevatar.Core;
 
@@ -42,6 +43,9 @@ public abstract partial class
     where TEvent : EventBase
     where TConfiguration : ConfigurationBase
 {
+    // ActivitySource for distributed tracing
+    private static readonly ActivitySource ActivitySource = new("Aevatar.Core.GAgent");
+    
     private Lazy<IStreamProvider> LazyStreamProvider => new(()
         => this.GetStreamProvider(AevatarCoreConstants.StreamProvider));
 
@@ -376,10 +380,14 @@ public abstract partial class
         if (StateDispatcher != null)
         {
             var snapshot = _copier!.Copy(State);
-            await StateDispatcher.PublishSingleAsync(this.GetGrainId(),
-                new StateWrapper<TState>(this.GetGrainId(), snapshot, Version));
-            await StateDispatcher.PublishAsync(this.GetGrainId(),
-                new StateWrapper<TState>(this.GetGrainId(), snapshot, Version));
+            
+            var singleStateWrapper = new StateWrapper<TState>(this.GetGrainId(), snapshot, Version);
+            singleStateWrapper.PublishedTimestampUtc = DateTime.UtcNow;
+            await StateDispatcher.PublishSingleAsync(this.GetGrainId(), singleStateWrapper);
+            
+            var batchStateWrapper = new StateWrapper<TState>(this.GetGrainId(), snapshot, Version);
+            batchStateWrapper.PublishedTimestampUtc = DateTime.UtcNow;
+            await StateDispatcher.PublishAsync(this.GetGrainId(), batchStateWrapper);
         }
     }
 
@@ -414,8 +422,18 @@ public abstract partial class
 
     protected virtual IAsyncStream<EventWrapperBase> GetEventBaseStream(GrainId grainId)
     {
+        // Create activity with proper correlation for tracing
+        using var activity = ActivitySource.StartActivity("GetEventBaseStream");
+        activity?.SetTag("grain.id", grainId.ToString());
+        activity?.SetTag("stream.namespace", AevatarOptions!.StreamNamespace);
+        activity?.SetTag("component", "GAgentBase");
+        
         var grainIdString = grainId.ToString();
         var streamId = StreamId.Create(AevatarOptions!.StreamNamespace, grainIdString);
+        
+        activity?.SetTag("stream.id", streamId.ToString());
+        activity?.SetTag("operation", "GetEventBaseStream");
+        
         return StreamProvider.GetStream<EventWrapperBase>(streamId);
     }
 }

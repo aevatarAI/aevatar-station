@@ -17,6 +17,12 @@ public interface IIndexingService
     public Task<string> GetStateIndexDocumentsAsync(string stateName,
         Action<QueryDescriptor<dynamic>> query, int skip = 0, int limit = 1000);
 
-
     Task<PagedResultDto<Dictionary<string, object>>> QueryWithLuceneAsync(LuceneQueryDto queryDto);
+    
+    /// <summary>
+    /// Gets the exact count of documents matching the query without the 10,000 limit
+    /// </summary>
+    /// <param name="queryDto">Query parameters (only StateName and QueryString are used)</param>
+    /// <returns>The exact count of matching documents</returns>
+    Task<long> CountWithLuceneAsync(LuceneQueryDto queryDto);
 }
