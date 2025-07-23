@@ -621,7 +621,7 @@ public class GodGPTService : ApplicationService, IGodGPTService
         {
             var godChat = _clusterClient.GetGrain<IGodChat>(sessionId);
             var chatId = Guid.NewGuid().ToString();
-            var response = await godChat.ChatWithHistory(sessionId, string.Empty, SessionTypeExtensions.SharePrompt,
+            var response = await godChat.ChatWithHistory(sessionId, string.Empty, content,
                 chatId, null, true, region);
             responseContent = response.IsNullOrEmpty() ? sessionType.GetDefaultContent() : response.FirstOrDefault().Content;
             _logger.LogDebug(
