@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Aevatar.Agent;
+using Aevatar.GAgents.AI.Common;
 using Aevatar.Application.Grains.Agents.AI;
 using Orleans;
 using Shouldly;
@@ -23,33 +23,31 @@ public class WorkflowComposerGAgentTests : AevatarApplicationGrainsTestBase
     }
 
     /// <summary>
-    /// 创建模拟的 AgentTypeDto 列表用于测试
+    /// 创建模拟的 AgentDescriptionInfo 列表用于测试
     /// </summary>
-    private List<AgentTypeDto> CreateMockAgentList()
+    private List<AgentDescriptionInfo> CreateMockAgentList()
     {
-        return new List<AgentTypeDto>
+        return new List<AgentDescriptionInfo>
         {
-            new AgentTypeDto
+            new AgentDescriptionInfo
             {
-                AgentType = "DataProcessorGAgent",
-                FullName = "Aevatar.Application.Grains.Agents.DataProcessorGAgent",
-                AgentParams = new List<ParamDto>
-                {
-                    new ParamDto { Name = "inputData", Type = "System.String" },
-                    new ParamDto { Name = "processType", Type = "System.String" }
-                },
-                PropertyJsonSchema = "{\"type\":\"object\",\"properties\":{\"inputData\":{\"type\":\"string\"},\"processType\":{\"type\":\"string\"}}}"
+                Id = "Aevatar.Application.Grains.Agents.DataProcessorGAgent",
+                Name = "DataProcessorGAgent",
+                Category = "Data",
+                L1Description = "Handles data processing operations including transformation, validation, and formatting",
+                L2Description = "Advanced data processing agent that can handle multiple input formats, apply various transformation rules, validate data integrity, and output formatted results. Supports streaming data processing and batch operations with configurable processing parameters.",
+                Capabilities = new List<string> { "data-transformation", "validation", "formatting", "batch-processing" },
+                Tags = new List<string> { "data", "processing", "transformation", "validation" }
             },
-            new AgentTypeDto
+            new AgentDescriptionInfo
             {
-                AgentType = "AnalysisGAgent",
-                FullName = "Aevatar.Application.Grains.Agents.AnalysisGAgent",
-                AgentParams = new List<ParamDto>
-                {
-                    new ParamDto { Name = "data", Type = "System.String" },
-                    new ParamDto { Name = "analysisType", Type = "System.String" }
-                },
-                PropertyJsonSchema = "{\"type\":\"object\",\"properties\":{\"data\":{\"type\":\"string\"},\"analysisType\":{\"type\":\"string\"}}}"
+                Id = "Aevatar.Application.Grains.Agents.AnalysisGAgent",
+                Name = "AnalysisGAgent",
+                Category = "Analysis",
+                L1Description = "Performs comprehensive data analysis including statistical analysis, trend detection, and report generation",
+                L2Description = "Sophisticated analysis agent capable of performing statistical analysis, trend detection, anomaly detection, predictive modeling, and comprehensive reporting. Features real-time analysis capabilities and customizable analysis parameters.",
+                Capabilities = new List<string> { "statistical-analysis", "trend-detection", "anomaly-detection", "predictive-modeling", "reporting" },
+                Tags = new List<string> { "analysis", "statistics", "reporting", "trends" }
             }
         };
     }
