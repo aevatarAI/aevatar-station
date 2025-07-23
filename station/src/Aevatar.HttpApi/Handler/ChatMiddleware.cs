@@ -115,15 +115,6 @@ public class ChatMiddleware
             
             // Set language context for Orleans grains
             RequestContext.Set("GodGPTLanguage", language);
-            
-            /*var content = request.Content;
-            // Append language-specific prompt requirement if content is provided
-            if (!string.IsNullOrWhiteSpace(content))
-            {
-                content = content.AppendLanguagePrompt(language);
-                request.Content = content;
-            }*/
-            
             _logger.LogDebug(
                 $"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}, userId {userId}, language:{language}");
 
@@ -270,15 +261,6 @@ public class ChatMiddleware
             
             // Set language context for Orleans grains
             RequestContext.Set("GodGPTLanguage", language);
-            
-            /*var content = request.Content;
-            // Append language-specific prompt requirement if content is provided
-            if (!string.IsNullOrWhiteSpace(content))
-            {
-                content = content.AppendLanguagePrompt(language);
-                request.Content = content;
-            }*/
-
             var stopwatch = Stopwatch.StartNew();
             _logger.LogDebug("[GuestChatMiddleware] Start processing guest chat for user: {0}, language{1}", userHashId,language);
 
