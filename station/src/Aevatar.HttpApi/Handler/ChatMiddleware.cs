@@ -111,13 +111,8 @@ public class ChatMiddleware
         try
         {
             var stopwatch = Stopwatch.StartNew();
-            var language = context.GetGodGPTLanguage();
-            
-            // Set language context for Orleans grains
-            RequestContext.Set("GodGPTLanguage", language);
             _logger.LogDebug(
-                $"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}, userId {userId}, language:{language}");
-
+                $"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}, userId {userId}");
             var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
             if (!await manager.IsUserSessionAsync(request.SessionId))
             {
@@ -138,6 +133,12 @@ public class ChatMiddleware
             context.Response.Headers.CacheControl = "no-cache";
             var responseStream = streamProvider.GetStream<ResponseStreamGodChat>(streamId);
             var godChat = _clusterClient.GetGrain<IGodChat>(request.SessionId);
+            var language = context.GetGodGPTLanguage();
+            
+            // Set language context for Orleans grains
+            RequestContext.Set("GodGPTLanguage", language);
+            _logger.LogDebug(
+                $"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}, userId {userId}, language:{language}");
 
             var chatId = Guid.NewGuid().ToString();
             await godChat.StreamChatWithSessionAsync(request.SessionId, string.Empty, request.Content,
@@ -257,16 +258,16 @@ public class ChatMiddleware
                 await context.Response.WriteAsync("Invalid request body");
                 return;
             }
-            var language = context.GetGodGPTLanguage();
-            
-            // Set language context for Orleans grains
-            RequestContext.Set("GodGPTLanguage", language);
             var stopwatch = Stopwatch.StartNew();
-            _logger.LogDebug("[GuestChatMiddleware] Start processing guest chat for user: {0}, language{1}", userHashId,language);
+            _logger.LogDebug("[GuestChatMiddleware] Start processing guest chat for user: {0}", userHashId);
 
             // Get or create anonymous user grain for this IP
             var grainId = CommonHelper.StringToGuid(CommonHelper.GetAnonymousUserGAgentId(clientIp));
             var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(grainId);
+            var language = context.GetGodGPTLanguage();
+            // Set language context for Orleans grains
+            RequestContext.Set("GodGPTLanguage", language);
+            _logger.LogDebug("[GuestChatMiddleware] Start processing guest chat for user: {0}, language{1}", userHashId,language);
             
             // Check if user can still chat
             if (!await anonymousUserGrain.CanChatAsync())
