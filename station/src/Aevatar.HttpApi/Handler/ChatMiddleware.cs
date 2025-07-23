@@ -112,14 +112,9 @@ public class ChatMiddleware
         {
             var stopwatch = Stopwatch.StartNew();
             var language = context.GetGodGPTLanguage();
-            var content = request.Content;
-            // Append language-specific prompt requirement if content is provided
-            if (!string.IsNullOrWhiteSpace(content))
-            {
-                content = content.AppendLanguagePrompt(language);
-                request.Content = content;
-            }
             
+            // Set language context for Orleans grains
+            RequestContext.Set("GodGPTLanguage", language);
             _logger.LogDebug(
                 $"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}, userId {userId}, language:{language}");
 
@@ -263,14 +258,9 @@ public class ChatMiddleware
                 return;
             }
             var language = context.GetGodGPTLanguage();
-            var content = request.Content;
-            // Append language-specific prompt requirement if content is provided
-            if (!string.IsNullOrWhiteSpace(content))
-            {
-                content = content.AppendLanguagePrompt(language);
-                request.Content = content;
-            }
-
+            
+            // Set language context for Orleans grains
+            RequestContext.Set("GodGPTLanguage", language);
             var stopwatch = Stopwatch.StartNew();
             _logger.LogDebug("[GuestChatMiddleware] Start processing guest chat for user: {0}, language{1}", userHashId,language);
 
@@ -484,7 +474,12 @@ public class ChatMiddleware
         try
         {
             var stopwatch = Stopwatch.StartNew();
-            _logger.LogDebug($"[VoiceChatMiddleware] HTTP start - SessionId: {request.SessionId}, UserId: {userId}, MessageType: {request.MessageType}, VoiceLanguage: {request.VoiceLanguage}");
+            
+            // Get language from request headers and set context for Orleans grains
+            var language = context.GetGodGPTLanguage();
+            RequestContext.Set("GodGPTLanguage", language);
+            
+            _logger.LogDebug($"[VoiceChatMiddleware] HTTP start - SessionId: {request.SessionId}, UserId: {userId}, MessageType: {request.MessageType}, VoiceLanguage: {request.VoiceLanguage}, Language: {language}");
 
             // Validate session access
             var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);

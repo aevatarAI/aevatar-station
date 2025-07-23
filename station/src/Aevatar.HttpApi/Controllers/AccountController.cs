@@ -5,7 +5,7 @@ using Volo.Abp;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp.Account;
 using Volo.Abp.Identity;
-
+using Aevatar.Extensions;
 namespace Aevatar.Controllers;
 
 [RemoteService]
@@ -24,14 +24,16 @@ public class AccountController : AevatarController
     [Route("register")]
     public virtual Task<IdentityUserDto> RegisterAsync(AevatarRegisterDto input)
     {
-        return _accountService.RegisterAsync(input);
+        var language = HttpContext.GetGodGPTLanguage();
+        return _accountService.RegisterAsync(input, language);
     }
     
     [HttpPost]
     [Route("godgpt-register")]
     public virtual Task<IdentityUserDto> GodgptRegisterAsync(GodGptRegisterDto input)
     {
-        return _accountService.GodgptRegisterAsync(input);
+        var language = HttpContext.GetGodGPTLanguage();
+        return _accountService.GodgptRegisterAsync(input, language);
     }
     
     [HttpPost]
