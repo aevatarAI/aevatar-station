@@ -11,6 +11,9 @@ using Volo.Abp.Caching;
 using Volo.Abp.Identity;
 using Volo.Abp.ObjectExtending;
 using IdentityUser = Volo.Abp.Identity.IdentityUser;
+using Aevatar.Application.Constants;
+using Aevatar.Application.Contracts.Services;
+using Aevatar.Domain.Shared;
 
 namespace Aevatar.Account;
 
@@ -22,18 +25,20 @@ public class AccountService : AccountAppService, IAccountService
     private readonly IDistributedCache<string,string> _registerCode;
     private readonly DistributedCacheEntryOptions _defaultCacheOptions;
     private readonly ILogger<AccountService> _logger;
+    private readonly ILocalizationService _localizationService;
     
     public AccountService(IdentityUserManager userManager, IIdentityRoleRepository roleRepository,
         IAccountEmailer accountEmailer, IdentitySecurityLogManager identitySecurityLogManager,
         IOptions<IdentityOptions> identityOptions, IAevatarAccountEmailer aevatarAccountEmailer,
         IOptionsSnapshot<AccountOptions> accountOptions, IDistributedCache<string, string> registerCode,
-        ILogger<AccountService> logger)
+        ILogger<AccountService> logger, ILocalizationService localizationService)
         : base(userManager, roleRepository, accountEmailer, identitySecurityLogManager, identityOptions)
     {
         _aevatarAccountEmailer = aevatarAccountEmailer;
         _registerCode = registerCode;
         _accountOptions = accountOptions.Value;
         _logger = logger;
+        _localizationService = localizationService;
 
         _defaultCacheOptions = new DistributedCacheEntryOptions
         {
@@ -41,12 +46,13 @@ public class AccountService : AccountAppService, IAccountService
         };
     }
 
-    public async Task<IdentityUserDto> RegisterAsync(AevatarRegisterDto input)
+    public async Task<IdentityUserDto> RegisterAsync(AevatarRegisterDto input, GodGPTLanguage language = GodGPTLanguage.English)
     {
         var code = await _registerCode.GetAsync(GetRegisterCodeKey(input.EmailAddress));
         if (code != input.Code)
         {
-            throw new UserFriendlyException("Invalid captcha code");
+            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.InvalidCaptchaCode, language);
+            throw new UserFriendlyException(localizedMessage);
         }
 
         await IdentityOptions.SetAsync();
@@ -115,12 +121,13 @@ public class AccountService : AccountAppService, IAccountService
         return existingUser.CreationTime >= twentyFourHoursAgo;
     }
     
-    public async Task<IdentityUserDto> GodgptRegisterAsync(GodGptRegisterDto input)
+    public async Task<IdentityUserDto> GodgptRegisterAsync(GodGptRegisterDto input, GodGPTLanguage language = GodGPTLanguage.English)
     {
         var code = await _registerCode.GetAsync(GetRegisterCodeKey(input.EmailAddress));
         if (code != input.Code)
         {
-            throw new UserFriendlyException("Invalid captcha code");
+            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.InvalidCaptchaCode, language);
+            throw new UserFriendlyException(localizedMessage);
         }
 
         await IdentityOptions.SetAsync();

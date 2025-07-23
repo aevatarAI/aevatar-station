@@ -1,15 +1,16 @@
 using System.Threading.Tasks;
 using Volo.Abp.Account;
 using Volo.Abp.Identity;
+using Aevatar.Domain.Shared;
 
 namespace Aevatar.Account;
 
 public interface IAccountService: IAccountAppService
 {
     Task SendRegisterCodeAsync(SendRegisterCodeDto input);
-    Task<IdentityUserDto> RegisterAsync(AevatarRegisterDto input);
+    Task<IdentityUserDto> RegisterAsync(AevatarRegisterDto input, GodGPTLanguage language = GodGPTLanguage.English);
     Task<bool> VerifyRegisterCodeAsync(VerifyRegisterCodeDto input);
     Task<bool> CheckEmailRegisteredAsync(CheckEmailRegisteredDto input);
     Task<bool> VerifyEmailRegistrationWithTimeAsync(CheckEmailRegisteredDto input);
-    Task<IdentityUserDto> GodgptRegisterAsync(GodGptRegisterDto input);
+    Task<IdentityUserDto> GodgptRegisterAsync(GodGptRegisterDto input, GodGPTLanguage language = GodGPTLanguage.English);
 }
