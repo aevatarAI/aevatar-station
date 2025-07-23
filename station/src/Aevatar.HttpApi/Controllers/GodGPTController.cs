@@ -10,6 +10,7 @@ using Aevatar.Application.Grains.Agents.ChatManager.Chat;
 using Aevatar.Application.Grains.Agents.ChatManager.Common;
 using Aevatar.Application.Grains.Agents.ChatManager.Dtos;
 using Aevatar.Application.Grains.ChatManager.Dtos;
+using Aevatar.Application.Grains.ChatManager.UserQuota;
 using Aevatar.BlobStorings;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
@@ -362,6 +363,17 @@ public class GodGPTController : AevatarController
         var currentUserId = (Guid)CurrentUser.Id!;
         var resultDto = await _godGptService.UpdateUserCreditsAsync(currentUserId, input);
         _logger.LogDebug("[GodGPTController][UpdateUserCreditsAsync] userId: {0}, duration: {1}ms",
+            currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
+        return resultDto;
+    }
+    
+    [HttpPost("godgpt/account/subscription")]
+    public async Task<GrainResultDto<List<SubscriptionInfoDto>>> UpdateUserSubscriptionAsync(UpdateUserSubscriptionsInput input)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var resultDto = await _godGptService.UpdateUserSubscriptionAsync(currentUserId, input);
+        _logger.LogDebug("[GodGPTController][UpdateUserSubscriptionAsync] userId: {0}, duration: {1}ms",
             currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
         return resultDto;
     }
