@@ -136,7 +136,7 @@ public class ChatMiddleware
             var language = context.GetGodGPTLanguage();
             
             // Set language context for Orleans grains
-            RequestContext.Set("GodGPTLanguage", language);
+            RequestContext.Set("GodGPTLanguage", language.ToString());
             _logger.LogDebug(
                 $"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}, userId {userId}, language:{language}");
 
@@ -266,7 +266,7 @@ public class ChatMiddleware
             var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(grainId);
             var language = context.GetGodGPTLanguage();
             // Set language context for Orleans grains
-            RequestContext.Set("GodGPTLanguage", language);
+            RequestContext.Set("GodGPTLanguage", language.ToString());
             _logger.LogDebug("[GuestChatMiddleware] Start processing guest chat for user: {0}, language{1}", userHashId,language);
             
             // Check if user can still chat
