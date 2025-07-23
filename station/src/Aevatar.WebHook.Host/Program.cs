@@ -41,6 +41,10 @@ public class Program
                 config/*.AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))*/
                     .AddJsonFile("appsettings.json");
             });
+            builder.ConfigureServices((context, services) =>
+            {
+                services.AddApplication<AevatarListenerHostModule>();
+            });
             await builder.Build().RunAsync();
             return 0;
         }
