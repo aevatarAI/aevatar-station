@@ -185,6 +185,9 @@ public class AgentService : ApplicationService, IAgentService
 
                     paramDto.PropertyJsonSchema =
                         _schemaProvider.GetTypeSchema(kvp.Value.InitializationData.DtoType).ToJson();
+                    
+                    // 获取默认值
+                    paramDto.DefaultValues = await GetConfigurationDefaultValuesAsync(kvp.Value.InitializationData.DtoType);
                 }
             }
 
@@ -192,6 +195,45 @@ public class AgentService : ApplicationService, IAgentService
         }
 
         return resp;
+    }
+
+    /// <summary>
+    /// 获取配置类的默认值
+    /// </summary>
+    private async Task<Dictionary<string, object?>> GetConfigurationDefaultValuesAsync(Type configurationType)
+    {
+        var defaultValues = new Dictionary<string, object?>();
+        
+        try
+        {
+            // 创建配置实例获取默认值
+            var instance = Activator.CreateInstance(configurationType);
+            if (instance != null)
+            {
+                var properties = configurationType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+                
+                foreach (var property in properties)
+                {
+                    try
+                    {
+                        var value = property.GetValue(instance);
+                        defaultValues[property.Name] = value;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to get default value for property {PropertyName} in {ConfigType}", 
+                            property.Name, configurationType.Name);
+                        defaultValues[property.Name] = null;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to create instance of configuration type {ConfigType}", configurationType.Name);
+        }
+        
+        return defaultValues;
     }
 
     private ConfigurationBase SetupConfigurationData(Configuration configuration,
@@ -578,6 +620,31 @@ public class AgentService : ApplicationService, IAgentService
             new RemoveSubAgentDto { RemovedSubAgents = subAgentGrainIds.Select(x => x.GetGuidKey()).ToList() });
     }
 
+    public async Task DeleteAgentAsync(Guid guid)
+    {
+        var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
+        var agentState = await creatorAgent.GetAgentAsync();
+
+        EnsureUserAuthorized(agentState.UserId);
+
+        var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
+        var subAgentGrainIds = await GetSubAgentGrainIds(agent);
+        if (subAgentGrainIds.Any())
+        {
+            _logger.LogInformation("Agent {agentId} has subagents, please remove them first.", guid);
+            throw new UserFriendlyException("Agent has subagents, please remove them first.");
+        }
+
+        var parentGrainId = await agent.GetParentAsync();
+        if (!parentGrainId.IsDefault)
+        {
+            _logger.LogInformation("Agent {agentId} has parent, please remove from it first.", guid);
+            throw new UserFriendlyException("Agent has parent, please remove from it first.");
+        }
+
+        await creatorAgent.DeleteAgentAsync();
+    }
+
     private async Task<List<GrainId>> GetSubAgentGrainIds(IGAgent agent)
     {
         var children = await agent.GetChildrenAsync();
@@ -596,38 +663,5 @@ public class AgentService : ApplicationService, IAgentService
         }
 
         return subAgentGrainIds;
-    }
-
-    public async Task DeleteAgentAsync(Guid guid)
-    {
-        var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
-        var agentState = await creatorAgent.GetAgentAsync();
-
-        EnsureUserAuthorized(agentState.UserId);
-
-        var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
-        var subAgentGrainIds = await agent.GetChildrenAsync();
-        if (!subAgentGrainIds.IsNullOrEmpty() &&
-            (subAgentGrainIds.Count > 1 || subAgentGrainIds[0] != creatorAgent.GetGrainId()))
-        {
-            _logger.LogInformation("Agent {agentId} has subagents, please remove them first.", guid);
-            throw new UserFriendlyException("Agent has subagents, please remove them first.");
-        }
-
-        var parentGrainId = await agent.GetParentAsync();
-        if (parentGrainId.IsDefault)
-        {
-            if (subAgentGrainIds.Any())
-            {
-                await agent.UnregisterAsync(creatorAgent);
-            }
-
-            await creatorAgent.DeleteAgentAsync();
-        }
-        else
-        {
-            _logger.LogInformation("Agent {agentId} has parent, please remove from it first.", guid);
-            throw new UserFriendlyException("Agent has parent, please remove from it first.");
-        }
     }
 }

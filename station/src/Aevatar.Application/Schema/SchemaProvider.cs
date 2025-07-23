@@ -26,7 +26,10 @@ public class SchemaProvider : ISchemaProvider, ISingletonDependency
             {
                 FlattenInheritanceHierarchy = true,
                 GenerateEnumMappingDescription = true,
-                SchemaProcessors ={ new IgnoreSpecificBaseProcessor() }
+                SchemaProcessors = { 
+                    new IgnoreSpecificBaseProcessor(),
+                    new DefaultValueProcessor()
+                }
             };
             settings.SerializerOptions = new JsonSerializerOptions
             {
