@@ -217,12 +217,13 @@ public class AgentService : ApplicationService, IAgentService
 
                 foreach (var property in properties)
                 {
+
+                    var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
                     try
                     {
                         var value = property.GetValue(instance);
 
                         // 将所有默认值都转换为列表格式
-                        var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
                         
                         if (value == null)
                         {
@@ -241,7 +242,6 @@ public class AgentService : ApplicationService, IAgentService
                             "Failed to get default value for property {PropertyName} in {ConfigType}",
                             property.Name, configurationType.Name);
                         // 异常情况也返回空列表
-                        var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
                         defaultValues[propertyName] = new List<object>();
                     }
                 }
