@@ -25,6 +25,7 @@
     <PackageVersion Include="Aevatar.GAgents.AElf" Version="$(AevatarGAgentVersion)" />
     <PackageVersion Include="Aevatar.GAgents.Pumpfun" Version="$(AevatarGAgentVersion)" />
     <PackageVersion Include="Aevatar.GAgents.PsiOmni" Version="$(AevatarGAgentVersion)" />
+    <PackageVersion Include="Aevatar.GAgents.TypeTestAgent" Version="$(AevatarGAgentVersion)" />
     <!-- AI and Analysis packages -->
     <PackageVersion Include="AutoGen" Version="0.2.1" />
     <PackageVersion Include="AutoGen.Core" Version="0.2.1" />
