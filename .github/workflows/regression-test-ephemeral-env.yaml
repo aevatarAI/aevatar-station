@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       environment_ttl:
-        description: "The TTL of the environment in minutes"
+        description: "Duration to keep environment (in minutes)"
         required: true
         default: "60"
 
