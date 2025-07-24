@@ -26,8 +26,11 @@ public static class ExceptionMessageKeys
     public const string InvalidRequestBody = "InvalidRequestBody";
     public const string InvalidCaptchaCode = "InvalidCaptchaCode";
     public const string EmailIsRequired = "EmailIsRequired";
+    public const string UserUnRegister = "UserUnRegister";
     public const string TooManyFiles = "TooManyFiles";
-    
+    public const string HASREGISTERED = "HasBeenRegistered";
+    public const string WebhookValidatingError = "WebhookValidatingError";
+
     // File Operations
     public const string FileTooLarge = "FileTooLarge";
     public const string MaximumFileSizeExceeded = "MaximumFileSizeExceeded";
@@ -44,4 +47,5 @@ public static class ExceptionMessageKeys
     // Voice Chat
     public const string UnsetLanguage = "UnsetLanguage";
     public const string VoiceLanguageNotSet = "VoiceLanguageNotSet";
+    
 } 

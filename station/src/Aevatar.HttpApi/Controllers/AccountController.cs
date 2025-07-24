@@ -40,7 +40,8 @@ public class AccountController : AevatarController
     [Route("send-register-code")]
     public virtual Task SendRegisterCodeAsync(SendRegisterCodeDto input)
     {
-        return _accountService.SendRegisterCodeAsync(input);
+        var language = HttpContext.GetGodGPTLanguage();
+        return _accountService.SendRegisterCodeAsync(input, language);
     }
 
     [HttpPost]

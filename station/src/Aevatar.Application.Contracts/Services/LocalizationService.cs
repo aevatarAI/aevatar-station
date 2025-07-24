@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Extensions.Logging;
 using Aevatar.Domain.Shared;
 namespace Aevatar.Application.Contracts.Services;
@@ -37,6 +38,43 @@ public class LocalizationService : ILocalizationService
     public string GetLocalizedValidationMessage(string validationKey, GodGPTLanguage language)
     {
         return GetTranslation(validationKey, language, "validation");
+    }
+    
+    /// <summary>
+    /// Get localized exception message with parameter replacement
+    /// </summary>
+    public string GetLocalizedException(string exceptionKey, GodGPTLanguage language, Dictionary<string, string> parameters)
+    {
+        var message = GetTranslation(exceptionKey, language, "exceptions");
+        return ReplaceParameters(message, parameters);
+    }
+    
+    /// <summary>
+    /// Get localized message with parameter replacement
+    /// </summary>
+    public string GetLocalizedMessage(string key, GodGPTLanguage language, Dictionary<string, string> parameters)
+    {
+        var message = GetTranslation(key, language, "messages");
+        return ReplaceParameters(message, parameters);
+    }
+    
+    /// <summary>
+    /// Replace parameters in message template using {parameterName} format
+    /// </summary>
+    /// <param name="message">Message template</param>
+    /// <param name="parameters">Parameters to replace</param>
+    /// <returns>Message with parameters replaced</returns>
+    private string ReplaceParameters(string message, Dictionary<string, string> parameters)
+    {
+        if (parameters == null || !parameters.Any())
+            return message;
+            
+        var result = message;
+        foreach (var parameter in parameters)
+        {
+            result = result.Replace($"{{{parameter.Key}}}", parameter.Value);
+        }
+        return result;
     }
 
     /// <summary>
@@ -104,7 +142,7 @@ public class LocalizationService : ILocalizationService
                 ["en.UnableToRetrieveUserId"] = "Unauthorized: Unable to retrieve UserId.",
                 ["en.SessionNotFound"] = "Session not found or access denied.",
                 ["en.SessionInfoIsNull"] = "Session information is null.",
-                ["en.UnableToLoadConversation"] = "Unable to load conversation {0}",
+                ["en.UnableToLoadConversation"] = "Unable to load conversation {sessionId}",
                 ["en.NoActiveGuestSession"] = "No active guest session. Please create a session first.",
                 ["en.InsufficientCredits"] = "Insufficient credits.",
                 ["en.RateLimitExceeded"] = "Rate limit exceeded.",
@@ -113,8 +151,9 @@ public class LocalizationService : ILocalizationService
                 ["en.InvalidRequestBody"] = "Invalid request body.",
                 ["en.InvalidCaptchaCode"] = "Invalid captcha code.",
                 ["en.EmailIsRequired"] = "Email is required.",
-                ["en.TooManyFiles"] = "Too many files. Maximum {0} images per upload.",
-                ["en.FileTooLarge"] = "The file is too large.",
+                ["en.UserUnRegister"] = "User not registered.",
+                ["en.TooManyFiles"] = "Too many files. Maximum {TooManyFiles} images per upload.",
+                ["en.FileTooLarge"] = "The file is too large,with a maximum of {MaxSizeBytes} bytes.",
                 ["en.MaximumFileSizeExceeded"] = "Maximum file size exceeded.",
                 ["en.InternalServerError"] = "Internal server error.",
                 ["en.ServiceUnavailable"] = "Service temporarily unavailable.",
@@ -123,58 +162,67 @@ public class LocalizationService : ILocalizationService
                 ["en.GuestChatLimitExceeded"] = "Guest chat limit exceeded.",
                 ["en.UnsetLanguage"] = "Unset language request body.",
                 ["en.VoiceLanguageNotSet"] = "Voice language not set.",
+                ["en.HasBeenRegistered"] = "The email: {input.Email} has been registered.",
+                ["en.WebhookValidatingError"] = "Error validating webhook",
 
                 // Traditional Chinese translations
-                ["zh-tw.Unauthorized"] = "未授权：用户未通过身份验证。",
+                ["zh-tw.Unauthorized"] = "未授權：使用者未通過身份驗證。 ",
                 ["zh-tw.UserNotAuthenticated"] = "未授权：用户未通过身份验证。",
-                ["zh-tw.UnableToRetrieveUserId"] = "未授权：无法获取用户ID。",
+                ["zh-tw.UnableToRetrieveUserId"] = "未授權：無法檢索 UserId。  ",
                 ["zh-tw.SessionNotFound"] = "会话未找到或访问被拒绝。",
                 ["zh-tw.SessionInfoIsNull"] = "会话信息为空。",
-                ["zh-tw.UnableToLoadConversation"] = "无法加载对话 {0}",
-                ["zh-tw.NoActiveGuestSession"] = "没有活跃的访客会话。请先创建会话。",
+                ["zh-tw.UnableToLoadConversation"] = "無法載入對話  {sessionId}",
+                ["zh-tw.NoActiveGuestSession"] = "無活躍的訪客會話。請先創建一個會話。 ",
                 ["zh-tw.InsufficientCredits"] = "积分不足。",
                 ["zh-tw.RateLimitExceeded"] = "超出速率限制。",
-                ["zh-tw.DailyChatLimitExceeded"] = "超出每日聊天限制。",
+                ["zh-tw.DailyChatLimitExceeded"] = "每日聊天次數限制已超出。",
                 ["zh-tw.InvalidRequest"] = "无效请求。",
-                ["zh-tw.InvalidRequestBody"] = "无效的请求体。",
-                ["zh-tw.InvalidCaptchaCode"] = "验证码无效。",
-                ["zh-tw.EmailIsRequired"] = "邮箱是必需的。",
-                ["zh-tw.TooManyFiles"] = "文件过多。最多 {0} 张图片。",
-                ["zh-tw.FileTooLarge"] = "文件过大。",
+                ["zh-tw.InvalidRequestBody"] = "無效的請求主體。",
+                ["zh-tw.InvalidCaptchaCode"] = "無效的驗證碼",
+                ["zh-tw.EmailIsRequired"] = "需要提供電子郵件。",
+                ["zh-tw.UserUnRegister"] = "使用者未註冊.",
+                ["zh-tw.TooManyFiles"] = "檔案過多。每次上傳最多{TooManyFiles}張圖片。",
+                ["zh-tw.FileTooLarge"] = "檔案過大，最大限制為 {MaxSizeBytes} 位字节。",
                 ["zh-tw.MaximumFileSizeExceeded"] = "超出最大文件大小。",
-                ["zh-tw.InternalServerError"] = "内部服务器错误。",
+                ["zh-tw.InternalServerError"] = "內部伺服器錯誤",
                 ["zh-tw.ServiceUnavailable"] = "服务暂时不可用。",
                 ["zh-tw.OperationFailed"] = "操作失败。",
                 ["zh-tw.ChatLimitExceeded"] = "超出聊天限制。",
                 ["zh-tw.GuestChatLimitExceeded"] = "超出访客聊天限制。",
-                ["zh-tw.UnsetLanguage"] = "未设置语言请求体。",
+                ["zh-tw.UnsetLanguage"] = "未設置語言的請求主體。 ",
                 ["zh-tw.VoiceLanguageNotSet"] = "语音语言未设置。",
+                ["zh-tw.HasBeenRegistered"] = "電子郵件：｛input.email｝已注册。",
+                ["zh-tw.WebhookValidatingError"] = " 驗證 webhook 失敗 ",
 
                 // Spanish translations
-                ["es.Unauthorized"] = "No autorizado: El usuario no está autenticado.",
+                ["es.Unauthorized"] = "No autorizado: El usuario no está autenticado. ",
                 ["es.UserNotAuthenticated"] = "No autorizado: El usuario no está autenticado.",
-                ["es.UnableToRetrieveUserId"] = "No autorizado: No se puede recuperar el ID del usuario.",
+                ["es.UnableToRetrieveUserId"] = "No autorizado: No se pudo recuperar el UserId. ",
                 ["es.SessionNotFound"] = "Sesión no encontrada o acceso denegado.",
                 ["es.SessionInfoIsNull"] = "La información de la sesión es nula.",
-                ["es.UnableToLoadConversation"] = "No se puede cargar la conversación {0}",
-                ["es.NoActiveGuestSession"] = "No hay sesión de invitado activa. Por favor, cree una sesión primero.",
+                ["es.UnableToLoadConversation"] = "No se pudo cargar la conversación  {sessionId}",
+                ["es.NoActiveGuestSession"] = "No hay sesión de invitado activa. Por favor, crea una sesión primero. ",
                 ["es.InsufficientCredits"] = "Créditos insuficientes.",
                 ["es.RateLimitExceeded"] = "Límite de velocidad excedido.",
-                ["es.DailyChatLimitExceeded"] = "Límite diario de chat excedido.",
+                ["es.DailyChatLimitExceeded"] = "Límite diario de chats excedido. ",
                 ["es.InvalidRequest"] = "Solicitud inválida.",
-                ["es.InvalidRequestBody"] = "Cuerpo de solicitud inválido.",
-                ["es.InvalidCaptchaCode"] = "Código de captcha inválido.",
-                ["es.EmailIsRequired"] = "El correo electrónico es requerido.",
-                ["es.TooManyFiles"] = "Demasiados archivos. Máximo {0} imágenes por carga.",
-                ["es.FileTooLarge"] = "El archivo es demasiado grande.",
+                ["es.InvalidRequestBody"] = "Cuerpo de la solicitud inválido. ",
+                ["es.InvalidCaptchaCode"] = "Código de captcha inválido ",
+                ["es.EmailIsRequired"] = "Se requiere un correo electrónico.",
+                ["es.UserUnRegister"] = "Usuario no registrado.",
+                ["es.TooManyFiles"] = "Demasiados archivos. Máximo {TooManyFiles} imágenes por carga.",
+                ["es.FileTooLarge"] = "El archivo es demasiado grande, con un máximo de {MaxSizeBytes} bytes.",
                 ["es.MaximumFileSizeExceeded"] = "Tamaño máximo de archivo excedido.",
-                ["es.InternalServerError"] = "Error interno del servidor.",
+                ["es.InternalServerError"] = "Error interno del servidor",
                 ["es.ServiceUnavailable"] = "Servicio temporalmente no disponible.",
                 ["es.OperationFailed"] = "Operación fallida.",
                 ["es.ChatLimitExceeded"] = "Límite de chat excedido.",
                 ["es.GuestChatLimitExceeded"] = "Límite de chat de invitado excedido.",
-                ["es.UnsetLanguage"] = "Cuerpo de solicitud de idioma no establecido.",
-                ["es.VoiceLanguageNotSet"] = "Idioma de voz no establecido."
+                ["es.UnsetLanguage"] = "Cuerpo de la solicitud sin idioma establecido. ",
+                ["es.VoiceLanguageNotSet"] = "Idioma de voz no establecido.",
+                ["es.HasBeenRegistered"] = "El correo electrónico: {input.Email} ha sido registrado.",
+                ["es.WebhookValidatingError"] = "Error al validar el webhook "
+
             },
             
             ["validation"] = new Dictionary<string, string>

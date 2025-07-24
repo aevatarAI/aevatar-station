@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
@@ -69,12 +70,17 @@ public class AccountService : AccountAppService, IAccountService
         return ObjectMapper.Map<IdentityUser, IdentityUserDto>(user);
     }
 
-    public async Task SendRegisterCodeAsync(SendRegisterCodeDto input)
+    public async Task SendRegisterCodeAsync(SendRegisterCodeDto input, GodGPTLanguage language = GodGPTLanguage.English)
     {
         var user = await UserManager.FindByEmailAsync(input.Email);
         if (user != null)
         {
-            throw new UserFriendlyException($"The email: {input.Email} has been registered.");
+            var parameters = new Dictionary<string, string>
+            {
+                ["input.Email"] = input.Email
+            };
+            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.HASREGISTERED, language, parameters);
+            throw new UserFriendlyException(localizedMessage);
         }
 
         var code = GenerateVerificationCode();

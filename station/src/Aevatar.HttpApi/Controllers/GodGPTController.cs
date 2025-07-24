@@ -5,6 +5,8 @@ using System.IO;
 using System.Threading.Tasks;
 using Aevatar.Account;
 using Aevatar.Anonymous;
+using Aevatar.Application.Constants;
+using Aevatar.Application.Contracts.Services;
 using Aevatar.Application.Grains.Agents.ChatManager;
 using Aevatar.Application.Grains.Agents.ChatManager.Chat;
 using Aevatar.Application.Grains.Agents.ChatManager.Common;
@@ -56,12 +58,13 @@ public class GodGPTController : AevatarController
     private readonly BlobStoringOptions _blobStoringOptions;
     private readonly IThumbnailService _thumbnailService;
     private readonly IOptions<GodGPTOptions> _godGptOptions;
+    private readonly ILocalizationService _localizationService;
 
 
     public GodGPTController(IGodGPTService godGptService, IClusterClient clusterClient,
         IOptions<AevatarOptions> aevatarOptions, ILogger<GodGPTController> logger, IAccountService accountService,
         IBlobContainer blobContainer, IOptionsSnapshot<BlobStoringOptions> blobStoringOptions,
-        IThumbnailService thumbnailService, IOptions<GodGPTOptions> godGptOptions)
+        IThumbnailService thumbnailService, IOptions<GodGPTOptions> godGptOptions, ILocalizationService localizationService)
     {
         _godGptService = godGptService;
         _clusterClient = clusterClient;
@@ -72,6 +75,7 @@ public class GodGPTController : AevatarController
         _blobStoringOptions = blobStoringOptions.Value;
         _thumbnailService = thumbnailService;
         _godGptOptions = godGptOptions;
+        _localizationService = localizationService;
     }
 
     [AllowAnonymous]
@@ -397,11 +401,13 @@ public class GodGPTController : AevatarController
     [HttpGet("godgpt/check-email-registered")]
     public async Task<IActionResult> CheckEmailRegisteredAsync([FromQuery] string email)
     {
+        var language = HttpContext.GetGodGPTLanguage();
         if (string.IsNullOrWhiteSpace(email))
         {
+            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.EmailIsRequired, language);
             return BadRequest(new
             {
-                error = new { code = 1, message = "Email is required" },
+                error = new { code = 1, message = localizedMessage },
                 result = false
             });
         }
@@ -412,9 +418,10 @@ public class GodGPTController : AevatarController
         }
         else
         {
+            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.UserUnRegister, language);
             return Ok(new
             {
-                error = new { code = 0, message = "User not registered" },
+                error = new { code = 0, message = localizedMessage },
                 result = false
             });
         }
@@ -478,7 +485,7 @@ public class GodGPTController : AevatarController
         var stopwatch = Stopwatch.StartNew();
         var clientIp = HttpContext.GetClientIpAddress();
         var userHashId = CommonHelper.GetAnonymousUserGAgentId(clientIp).Replace("AnonymousUser_", "");
-        
+        var language = HttpContext.GetGodGPTLanguage();
         try
         {
             var result = await _godGptService.GetGuestChatLimitsAsync(clientIp);
@@ -489,8 +496,9 @@ public class GodGPTController : AevatarController
         }
         catch (Exception ex)
         {
+            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.InternalServerError, language);
             _logger.LogError(ex, "[GodGPTController][GetGuestChatLimitsAsync] User: {0}, unexpected error", userHashId);
-            return StatusCode(500, new { error = "Internal server error" });
+            return StatusCode(500, new { error = localizedMessage });
         }
     }
     [HttpPost("godgpt/voice/set")]
@@ -521,7 +529,7 @@ public class GodGPTController : AevatarController
         var processedContent = SessionTypeExtensions.SharePrompt;
         processedContent = processedContent.AppendLanguagePrompt(language);
         
-        var response = await _godGptService.GetShareKeyWordWithAIAsync(sessionId, processedContent, region, sessionType);
+        var response = await _godGptService.GetShareKeyWordWithAIAsync(sessionId, processedContent, region, sessionType, language);
         _logger.LogDebug(
             $"[GodGPTController][GetShareKeyWordWithAIAsync] completed for sessionId={sessionId}, language={language},processedContent={processedContent}, duration: {stopwatch.ElapsedMilliseconds}ms");
         return response;
@@ -550,10 +558,15 @@ public class GodGPTController : AevatarController
     [HttpPost("godgpt/blob")]
     public async Task<string> SaveAsync([FromForm] SaveBlobInput input)
     {
+        var language = HttpContext.GetGodGPTLanguage();
         if (input.File.Length > _blobStoringOptions.MaxSizeBytes)
         {
-            throw new UserFriendlyException(
-                $"The file is too large, with a maximum of {_blobStoringOptions.MaxSizeBytes} bytes.");
+            var parameters = new Dictionary<string, string>
+            {
+                ["MaxSizeBytes"] = _blobStoringOptions.MaxSizeBytes.ToString()
+            };
+            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.FileTooLarge, language,parameters);
+            throw new UserFriendlyException(localizedMessage);
         }
         
         var stopwatch = Stopwatch.StartNew();
