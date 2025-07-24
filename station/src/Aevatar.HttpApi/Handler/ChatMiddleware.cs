@@ -262,8 +262,8 @@ public class ChatMiddleware
     {
         var clientIp = context.GetClientIpAddress();
         var userHashId = CommonHelper.GetAnonymousUserGAgentId(clientIp).Replace("AnonymousUser_", "");
-        _logger.LogDebug("[GuestChatMiddleware] Processing request for user: {0}", userHashId);
-        
+        var language = context.GetGodGPTLanguage();
+        _logger.LogDebug($"[GuestChatMiddleware] Processing request for user: {userHashId} language:{language}");
         try
         {
             var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
@@ -273,7 +273,8 @@ public class ChatMiddleware
             {
                 _logger.LogWarning("[GuestChatMiddleware] Invalid request body for user: {0}", userHashId);
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                await context.Response.WriteAsync("Invalid request body");
+                var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.InvalidRequestBody, language);
+                await context.Response.WriteAsync(localizedMessage);
                 return;
             }
             var stopwatch = Stopwatch.StartNew();
@@ -282,7 +283,6 @@ public class ChatMiddleware
             // Get or create anonymous user grain for this IP
             var grainId = CommonHelper.StringToGuid(CommonHelper.GetAnonymousUserGAgentId(clientIp));
             var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(grainId);
-            var language = context.GetGodGPTLanguage();
             // Set language context for Orleans grains
             RequestContext.Set("GodGPTLanguage", language.ToString());
             _logger.LogDebug("[GuestChatMiddleware] Start processing guest chat for user: {0}, language{1}", userHashId,language);
@@ -292,7 +292,8 @@ public class ChatMiddleware
             {
                 _logger.LogWarning("[GuestChatMiddleware] Chat limit exceeded for user: {0}", userHashId);
                 context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
-                await context.Response.WriteAsync("Daily chat limit exceeded");
+                var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.DailyChatLimitExceeded, language);
+                await context.Response.WriteAsync(localizedMessage);
                 return;
             }
 
@@ -302,7 +303,8 @@ public class ChatMiddleware
             {
                 _logger.LogWarning("[GuestChatMiddleware] No active session for user: {0}", userHashId);
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                await context.Response.WriteAsync("No active guest session. Please create a session first.");
+                var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.NoActiveGuestSession, language);
+                await context.Response.WriteAsync(localizedMessage);
                 return;
             }
 
@@ -440,7 +442,8 @@ public class ChatMiddleware
         {
             _logger.LogError(ex, "[GuestChatMiddleware] Unexpected error for user: {0}", userHashId);
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            await context.Response.WriteAsync("Internal server error");
+            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.InternalServerError, language);
+            await context.Response.WriteAsync(localizedMessage);
         }
     }
 
@@ -450,12 +453,14 @@ public class ChatMiddleware
     /// <param name="context">HTTP context</param>
     private async Task HandleVoiceChatAsync(HttpContext context)
     {
+        var language = context.GetGodGPTLanguage();
         // Check user authentication
         if (context.User?.Identity == null || !context.User.Identity.IsAuthenticated)
         {
             _logger.LogDebug("[VoiceChatMiddleware] Unauthorized: User is not authenticated");
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await context.Response.WriteAsync("Unauthorized: User is not authenticated.");
+            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.Unauthorized, language);
+            await context.Response.WriteAsync(localizedMessage);
             await context.Response.Body.FlushAsync();
             return;
         }
@@ -466,7 +471,8 @@ public class ChatMiddleware
         {
             _logger.LogDebug("[VoiceChatMiddleware] Unauthorized: Unable to retrieve UserId.");
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await context.Response.WriteAsync("Unauthorized: Unable to retrieve UserId.");
+            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.UnableToRetrieveUserId, language);
+            await context.Response.WriteAsync(localizedMessage);
             await context.Response.Body.FlushAsync();
             return;
         }
@@ -479,14 +485,16 @@ public class ChatMiddleware
         {
             _logger.LogWarning($"[VoiceChatMiddleware] Invalid request body for user: {userId}");
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await context.Response.WriteAsync("Invalid request body");
+            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.InvalidRequestBody, language);
+            await context.Response.WriteAsync(localizedMessage);
             return;
         }
         if (request.VoiceLanguage == VoiceLanguageEnum.Unset)
         {
             _logger.LogWarning($"[VoiceChatMiddleware] unset language userId: {userId} language:{request.VoiceLanguage}");
+            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.UnsetLanguage, language);
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await context.Response.WriteAsync("Unset language request body");
+            await context.Response.WriteAsync(localizedMessage);
             return;
         }
 
@@ -495,7 +503,6 @@ public class ChatMiddleware
             var stopwatch = Stopwatch.StartNew();
             
             // Get language from request headers and set context for Orleans grains
-            var language = context.GetGodGPTLanguage();
             RequestContext.Set("GodGPTLanguage", language);
             
             _logger.LogDebug($"[VoiceChatMiddleware] HTTP start - SessionId: {request.SessionId}, UserId: {userId}, MessageType: {request.MessageType}, VoiceLanguage: {request.VoiceLanguage}, Language: {language}");
@@ -506,7 +513,12 @@ public class ChatMiddleware
             {
                 _logger.LogError($"[VoiceChatMiddleware] Session not found or access denied - SessionId: {request.SessionId}, UserId: {userId}");
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                await context.Response.WriteAsync($"Unable to load conversation {request.SessionId}");
+                var parameters = new Dictionary<string, string>
+                {
+                    ["sessionId"] = request.SessionId.ToString()
+                };
+                var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.UnableToLoadConversation, language, parameters);
+                await context.Response.WriteAsync(localizedMessage);
                 await context.Response.Body.FlushAsync();
                 return;
             }
@@ -630,7 +642,9 @@ public class ChatMiddleware
         {
             _logger.LogError(ex, "[VoiceChatMiddleware] Unexpected error - SessionId: {0}", request.SessionId);
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            await context.Response.WriteAsync("Internal server error");
+            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.InternalServerError, language);
+
+            await context.Response.WriteAsync(localizedMessage);
         }
     }
 }
