@@ -111,7 +111,7 @@ jobs:
           echo "Unsupported application: ${{ github.event.inputs.servicename }}. Skipping workflow."
           exit 0
       
-     - name: Request token from auth-station
+      - name: Request token from auth-station
        id: auth_token_request
        run: |
          response=$(curl -X POST "https://auth-station-staging.aevatar.ai/connect/token" \
@@ -125,7 +125,7 @@ jobs:
          token=$(echo $response | jq -r '.access_token')
          echo "access_token=$token" >> $GITHUB_ENV
 
-     - name: Conditionally Call UpdateDockerImage endpoint
+      - name: Conditionally Call UpdateDockerImage endpoint
        run: |
          echo "Calling UpdateDockerImage for hostType=${{ env.hostType }} with imageName=${{ steps.meta.outputs.tags }}"
 
