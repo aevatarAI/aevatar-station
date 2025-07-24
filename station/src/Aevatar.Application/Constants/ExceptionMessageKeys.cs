@@ -27,7 +27,8 @@ public static class ExceptionMessageKeys
     public const string InvalidCaptchaCode = "InvalidCaptchaCode";
     public const string EmailIsRequired = "EmailIsRequired";
     public const string TooManyFiles = "TooManyFiles";
-    
+    public const string HASREGISTERED = "HasBeenRegistered";
+
     // File Operations
     public const string FileTooLarge = "FileTooLarge";
     public const string MaximumFileSizeExceeded = "MaximumFileSizeExceeded";

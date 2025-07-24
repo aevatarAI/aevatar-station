@@ -7,7 +7,7 @@ namespace Aevatar.Account;
 
 public interface IAccountService: IAccountAppService
 {
-    Task SendRegisterCodeAsync(SendRegisterCodeDto input);
+    Task SendRegisterCodeAsync(SendRegisterCodeDto input,GodGPTLanguage language = GodGPTLanguage.English);
     Task<IdentityUserDto> RegisterAsync(AevatarRegisterDto input, GodGPTLanguage language = GodGPTLanguage.English);
     Task<bool> VerifyRegisterCodeAsync(VerifyRegisterCodeDto input);
     Task<bool> CheckEmailRegisteredAsync(CheckEmailRegisteredDto input);

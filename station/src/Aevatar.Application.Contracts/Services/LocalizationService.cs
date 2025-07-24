@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Extensions.Logging;
 using Aevatar.Domain.Shared;
 namespace Aevatar.Application.Contracts.Services;
@@ -37,6 +38,43 @@ public class LocalizationService : ILocalizationService
     public string GetLocalizedValidationMessage(string validationKey, GodGPTLanguage language)
     {
         return GetTranslation(validationKey, language, "validation");
+    }
+    
+    /// <summary>
+    /// Get localized exception message with parameter replacement
+    /// </summary>
+    public string GetLocalizedException(string exceptionKey, GodGPTLanguage language, Dictionary<string, string> parameters)
+    {
+        var message = GetTranslation(exceptionKey, language, "exceptions");
+        return ReplaceParameters(message, parameters);
+    }
+    
+    /// <summary>
+    /// Get localized message with parameter replacement
+    /// </summary>
+    public string GetLocalizedMessage(string key, GodGPTLanguage language, Dictionary<string, string> parameters)
+    {
+        var message = GetTranslation(key, language, "messages");
+        return ReplaceParameters(message, parameters);
+    }
+    
+    /// <summary>
+    /// Replace parameters in message template using {parameterName} format
+    /// </summary>
+    /// <param name="message">Message template</param>
+    /// <param name="parameters">Parameters to replace</param>
+    /// <returns>Message with parameters replaced</returns>
+    private string ReplaceParameters(string message, Dictionary<string, string> parameters)
+    {
+        if (parameters == null || !parameters.Any())
+            return message;
+            
+        var result = message;
+        foreach (var parameter in parameters)
+        {
+            result = result.Replace($"{{{parameter.Key}}}", parameter.Value);
+        }
+        return result;
     }
 
     /// <summary>
@@ -123,6 +161,7 @@ public class LocalizationService : ILocalizationService
                 ["en.GuestChatLimitExceeded"] = "Guest chat limit exceeded.",
                 ["en.UnsetLanguage"] = "Unset language request body.",
                 ["en.VoiceLanguageNotSet"] = "Voice language not set.",
+                ["en.HasBeenRegistered"] = "The email: {input.Email} has been registered.",
 
                 // Traditional Chinese translations
                 ["zh-tw.Unauthorized"] = "未授权：用户未通过身份验证。",
@@ -137,7 +176,7 @@ public class LocalizationService : ILocalizationService
                 ["zh-tw.DailyChatLimitExceeded"] = "超出每日聊天限制。",
                 ["zh-tw.InvalidRequest"] = "无效请求。",
                 ["zh-tw.InvalidRequestBody"] = "无效的请求体。",
-                ["zh-tw.InvalidCaptchaCode"] = "验证码无效。",
+                ["zh-tw.InvalidCaptchaCode"] = "無效的驗證碼",
                 ["zh-tw.EmailIsRequired"] = "邮箱是必需的。",
                 ["zh-tw.TooManyFiles"] = "文件过多。最多 {0} 张图片。",
                 ["zh-tw.FileTooLarge"] = "文件过大。",
@@ -149,6 +188,7 @@ public class LocalizationService : ILocalizationService
                 ["zh-tw.GuestChatLimitExceeded"] = "超出访客聊天限制。",
                 ["zh-tw.UnsetLanguage"] = "未设置语言请求体。",
                 ["zh-tw.VoiceLanguageNotSet"] = "语音语言未设置。",
+                ["zh-tw.HasBeenRegistered"] = "電子郵件：｛input.email｝已注册。",
 
                 // Spanish translations
                 ["es.Unauthorized"] = "No autorizado: El usuario no está autenticado.",
@@ -163,7 +203,7 @@ public class LocalizationService : ILocalizationService
                 ["es.DailyChatLimitExceeded"] = "Límite diario de chat excedido.",
                 ["es.InvalidRequest"] = "Solicitud inválida.",
                 ["es.InvalidRequestBody"] = "Cuerpo de solicitud inválido.",
-                ["es.InvalidCaptchaCode"] = "Código de captcha inválido.",
+                ["es.InvalidCaptchaCode"] = "Código de captcha inválido ",
                 ["es.EmailIsRequired"] = "El correo electrónico es requerido.",
                 ["es.TooManyFiles"] = "Demasiados archivos. Máximo {0} imágenes por carga.",
                 ["es.FileTooLarge"] = "El archivo es demasiado grande.",
@@ -174,7 +214,9 @@ public class LocalizationService : ILocalizationService
                 ["es.ChatLimitExceeded"] = "Límite de chat excedido.",
                 ["es.GuestChatLimitExceeded"] = "Límite de chat de invitado excedido.",
                 ["es.UnsetLanguage"] = "Cuerpo de solicitud de idioma no establecido.",
-                ["es.VoiceLanguageNotSet"] = "Idioma de voz no establecido."
+                ["es.VoiceLanguageNotSet"] = "Idioma de voz no establecido.",
+                ["es.HasBeenRegistered"] = "El correo electrónico: {input.Email} ha sido registrado."
+
             },
             
             ["validation"] = new Dictionary<string, string>
