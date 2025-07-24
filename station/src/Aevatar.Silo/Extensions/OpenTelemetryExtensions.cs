@@ -46,6 +46,13 @@ public static class OpenTelemetryExtensions
                     .AddSource("Orleans.Messaging")
                     .AddSource("Microsoft.Orleans")
                     .AddSource("Aevatar.CQRS")
+                    .AddSource("LatencyBenchmark.Root")
+                    .AddSource("LatencyPublisherAgent")
+                    .AddSource("LatencyBenchmark.Handler")
+                    .AddSource("Aevatar.Core.GAgent")
+                    .AddSource("Aevatar.Core.Observer")
+                    .AddSource("Orleans.Streaming.PullingAgent")
+                    .AddSource("Orleans.Streaming.Kafka")
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation();
             })
@@ -62,7 +69,7 @@ public static class OpenTelemetryExtensions
                 .AddMeter(OpenTelemetryConstants.AevatarStreamsMeterName)
                 .AddView(OpenTelemetryConstants.EventPublishLatencyHistogram, new ExplicitBucketHistogramConfiguration 
                 { 
-                    Boundaries = new double[] { 0.1, 0.2, 0.5, 0.75, 1.0, 1.5, 2.0, 5.0 }  // Boundaries in seconds
+                    Boundaries = new double[] { 0.1, 0.2, 0.5, 0.75, 1.0, 1.5, 2.0, 5.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0 }  // Boundaries in seconds
                 })
                 .AddOtlpExporter(options =>
                 {

@@ -1,0 +1,378 @@
+{
+  "dashboard": {
+    "uid": "aevatar-stream-latency-percentiles",
+    "title": "Aevatar Stream Event Publish Latency Percentiles",
+    "tags": ["aevatar", "stream", "latency", "percentiles"],
+    "timezone": "browser",
+    "schemaVersion": 37,
+    "version": 4,
+    "refresh": "10s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "templating": {
+      "list": [
+        {
+          "name": "cluster_id",
+          "type": "query",
+          "datasource": "Prometheus",
+          "refresh": 1,
+          "query": "label_values(aevatar_stream_event_publish_latency_seconds_bucket, cluster_id)",
+          "includeAll": true,
+          "multi": true,
+          "sort": 1,
+          "current": {"selected": false, "text": "All", "value": "$__all"},
+          "label": "Cluster ID"
+        },
+        {
+          "name": "silo_id",
+          "type": "query",
+          "datasource": "Prometheus",
+          "refresh": 1,
+          "query": "label_values(aevatar_stream_event_publish_latency_seconds_bucket, silo_id)",
+          "includeAll": true,
+          "multi": true,
+          "sort": 1,
+          "current": {"selected": false, "text": "All", "value": "$__all"},
+          "label": "Silo ID"
+        },
+        {
+          "name": "agent_type",
+          "type": "query",
+          "datasource": "Prometheus",
+          "refresh": 1,
+          "query": "label_values(aevatar_stream_event_publish_latency_seconds_bucket, agent_type)",
+          "includeAll": true,
+          "multi": true,
+          "sort": 1,
+          "current": {"selected": false, "text": "All", "value": "$__all"},
+          "label": "Agent Type"
+        },
+        {
+          "name": "method_name",
+          "type": "query",
+          "datasource": "Prometheus",
+          "refresh": 1,
+          "query": "label_values(aevatar_stream_event_publish_latency_seconds_bucket, method_name)",
+          "includeAll": true,
+          "multi": true,
+          "sort": 1,
+          "current": {"selected": false, "text": "All", "value": "$__all"},
+          "label": "Method Name"
+        },
+        {
+          "name": "parameter_type",
+          "type": "query",
+          "datasource": "Prometheus",
+          "refresh": 1,
+          "query": "label_values(aevatar_stream_event_publish_latency_seconds_bucket, parameter_type)",
+          "includeAll": true,
+          "multi": true,
+          "sort": 1,
+          "current": {"selected": false, "text": "All", "value": "$__all"},
+          "label": "Parameter Type"
+        },
+        {
+          "name": "event_category",
+          "type": "query",
+          "datasource": "Prometheus",
+          "refresh": 1,
+          "query": "label_values(aevatar_stream_event_publish_latency_seconds_bucket, event_category)",
+          "includeAll": true,
+          "multi": true,
+          "sort": 1,
+          "current": {"selected": false, "text": "All", "value": "$__all"},
+          "label": "Event Category"
+        }
+      ]
+    },
+    "panels": [
+      {
+        "type": "timeseries",
+        "title": "Stream Event Publish Latency Percentiles (from Histogram)",
+        "description": "P50, P90, P95, P99 percentiles calculated directly from histogram buckets",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", agent_type=~\"$agent_type\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\", event_category=~\"$event_category\"}) by (le, cluster_id, silo_id, agent_type, method_name, parameter_type, event_category))",
+            "legendFormat": "P50 - {{cluster_id}}/{{silo_id}}/{{agent_type}}/{{method_name}}/{{parameter_type}}",
+            "refId": "P50"
+          },
+          {
+            "expr": "histogram_quantile(0.90, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", agent_type=~\"$agent_type\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\", event_category=~\"$event_category\"}) by (le, cluster_id, silo_id, agent_type, method_name, parameter_type, event_category))",
+            "legendFormat": "P90 - {{cluster_id}}/{{silo_id}}/{{agent_type}}/{{method_name}}/{{parameter_type}}",
+            "refId": "P90"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", agent_type=~\"$agent_type\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\", event_category=~\"$event_category\"}) by (le, cluster_id, silo_id, agent_type, method_name, parameter_type, event_category))",
+            "legendFormat": "P95 - {{cluster_id}}/{{silo_id}}/{{agent_type}}/{{method_name}}/{{parameter_type}}",
+            "refId": "P95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", agent_type=~\"$agent_type\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\", event_category=~\"$event_category\"}) by (le, cluster_id, silo_id, agent_type, method_name, parameter_type, event_category))",
+            "legendFormat": "P99 - {{cluster_id}}/{{silo_id}}/{{agent_type}}/{{method_name}}/{{parameter_type}}",
+            "refId": "P99"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "min": 0,
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "linear",
+              "lineWidth": 2,
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "spanNulls": false,
+              "insertNulls": false,
+              "showPoints": "auto",
+              "pointSize": 5,
+              "stacking": {
+                "mode": "none",
+                "group": "A"
+              },
+              "axisPlacement": "auto",
+              "axisLabel": "",
+              "axisColorMode": "text",
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "color": {
+              "mode": "palette-classic"
+            },
+            "mappings": []
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "P50.*"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed",
+                    "fixedColor": "green"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "P90.*"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed",
+                    "fixedColor": "yellow"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "P95.*"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed",
+                    "fixedColor": "orange"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "P99.*"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed",
+                    "fixedColor": "red"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          },
+          "legend": {
+            "showLegend": true,
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["lastNotNull", "max", "mean"]
+          }
+        },
+        "gridPos": {"h": 12, "w": 24, "x": 0, "y": 0}
+      },
+      {
+        "type": "stat",
+        "title": "Current Latency Statistics",
+        "description": "Current percentile values calculated from histogram buckets",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", agent_type=~\"$agent_type\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\", event_category=~\"$event_category\"}) by (le))",
+            "legendFormat": "P50",
+            "refId": "P50"
+          },
+          {
+            "expr": "histogram_quantile(0.90, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", agent_type=~\"$agent_type\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\", event_category=~\"$event_category\"}) by (le))",
+            "legendFormat": "P90",
+            "refId": "P90"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", agent_type=~\"$agent_type\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\", event_category=~\"$event_category\"}) by (le))",
+            "legendFormat": "P95",
+            "refId": "P95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", agent_type=~\"$agent_type\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\", event_category=~\"$event_category\"}) by (le))",
+            "legendFormat": "P99",
+            "refId": "P99"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "min": 0,
+            "custom": {
+              "displayMode": "basic",
+              "orientation": "auto"
+            },
+            "mappings": []
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "auto"
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12}
+      },
+      {
+        "type": "stat",
+        "title": "Total Events & Average Latency",
+        "description": "Total events processed and average latency",
+        "targets": [
+          {
+            "expr": "sum(aevatar_stream_event_publish_latency_seconds_count{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", agent_type=~\"$agent_type\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\", event_category=~\"$event_category\"})",
+            "legendFormat": "Total Events",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(aevatar_stream_event_publish_latency_seconds_sum{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", agent_type=~\"$agent_type\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\", event_category=~\"$event_category\"}) / sum(aevatar_stream_event_publish_latency_seconds_count{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", agent_type=~\"$agent_type\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\", event_category=~\"$event_category\"})",
+            "legendFormat": "Avg Latency",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "min": 0,
+            "custom": {
+              "displayMode": "basic",
+              "orientation": "auto"
+            },
+            "mappings": []
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Avg Latency"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "s"
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "background",
+          "graphMode": "area",
+          "justifyMode": "auto"
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12}
+      },
+      {
+        "type": "bargauge",
+        "title": "Latency Distribution by Buckets",
+        "description": "Distribution of events across latency buckets (cumulative)",
+        "targets": [
+          {
+            "expr": "sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", agent_type=~\"$agent_type\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\", event_category=~\"$event_category\"}) by (le)",
+            "legendFormat": "≤ {{le}}s",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "min": 0,
+            "custom": {
+              "displayMode": "gradient",
+              "orientation": "horizontal"
+            },
+            "mappings": []
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "horizontal",
+          "displayMode": "gradient",
+          "showUnfilled": true
+        },
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 20}
+      }
+    ],
+    "overwrite": true,
+    "folderId": 0
+  }
+} 

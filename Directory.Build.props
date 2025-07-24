@@ -2,7 +2,7 @@
     <PropertyGroup>
         <CompatibilityTargetFrameworks>netstandard2.0</CompatibilityTargetFrameworks>
         <DefaultTargetFramework>net9.0</DefaultTargetFramework>
-        <AevatarSourceCodeVersion>1.5.0</AevatarSourceCodeVersion>
+        <AevatarSourceCodeVersion>1.5.2</AevatarSourceCodeVersion>
         <AevatarSignalRSourceCodeVersion>1.5.1</AevatarSignalRSourceCodeVersion>
     </PropertyGroup>
 </Project>

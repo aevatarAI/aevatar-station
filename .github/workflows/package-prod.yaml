@@ -1,0 +1,116 @@
+name: Package Production
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+run-name: Deploy Aevatar Station on ${{ github.ref }} to Production from ${{ github.sha }}
+
+env:
+  DOTNET_INSTALL_DIR: "./.dotnet"
+
+concurrency:
+  group: workflow-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: aismart-runner
+    strategy:
+      matrix:
+        servicename:
+          [
+            Aevatar.HttpApi.Host,
+            Aevatar.Silo,
+            Aevatar.AuthServer,
+            Aevatar.WebHook.Host,
+            Aevatar.DbMigrator
+          ]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Cache NuGet Packages
+        id: nuget-packages
+        uses: actions/cache@v4
+        env:
+          cache-name: nuget-package-cache
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ matrix.servicename }}
+
+      - name: List NuGet Packages
+        if: ${{ steps.nuget-packages.outputs.cache-hit == 'true' }}
+        continue-on-error: true
+        run: ls -lh ~/.nuget/packages
+
+      - name: Publish .NET service
+        run: dotnet publish station/src/${{ matrix.servicename }}/${{ matrix.servicename }}.csproj -o out/${{ matrix.servicename }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.servicename }}
+          path: out/${{ matrix.servicename }}
+          retention-days: 1
+
+  build-and-push-image:
+    needs: publish
+    runs-on: aismart-runner
+    strategy:
+      matrix:
+        servicename:
+          [
+            Aevatar.HttpApi.Host,
+            Aevatar.Silo,
+            Aevatar.AuthServer,
+            Aevatar.WebHook.Host,
+            Aevatar.DbMigrator
+          ]
+    permissions:
+      contents: read
+    outputs:
+      short_sha: ${{ steps.vars.outputs.short_sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set short git commit SHA
+        id: vars
+        run: |
+          calculatedSha=$(git rev-parse --short ${{ github.sha }})
+          echo "short_sha=$calculatedSha" >> "$GITHUB_OUTPUT"
+
+      - name: Download a single artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.servicename }}
+          path: out/${{ matrix.servicename }}
+
+      - name: Create image tag
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.REPOSITORY_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/${{ matrix.servicename }}
+          tags: |
+            type=ref,event=tag
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          build-args: |
+            servicename=${{ matrix.servicename }}
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

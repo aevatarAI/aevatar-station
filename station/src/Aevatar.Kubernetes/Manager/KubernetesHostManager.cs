@@ -11,7 +11,7 @@ using Volo.Abp.DependencyInjection;
 
 namespace Aevatar.Kubernetes.Manager;
 
-public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
+public class KubernetesHostManager : IHostDeployManager, IHostCopyManager, ISingletonDependency
 {
     // private readonly k8s.Kubernetes _k8sClient;
     private readonly KubernetesOptions _kubernetesOptions;
@@ -97,7 +97,7 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
             KubernetesConstants.WebhookContainerTargetPort,
             KubernetesConstants.QueryPodMaxSurge,
             KubernetesConstants.QueryPodMaxUnavailable,
-            GetHealthPath());
+            "/health");
 
         // Ensure Service is created
         string serviceName = ServiceHelper.GetAppServiceName(appId, version);
@@ -272,12 +272,6 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
         }
     }
 
-    private string GetHealthPath()
-    {
-        return "";
-    }
-
-
     private async Task DestroyPodsAsync(string appId, string version)
     {
         // Delete Deployment
@@ -430,7 +424,7 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
             KubernetesConstants.SiloContainerTargetPort,
             KubernetesConstants.QueryPodMaxSurge,
             KubernetesConstants.QueryPodMaxUnavailable,
-            "", true);
+            "/health/ready", true);
 
         // Ensure Service is created
         string serviceName = ServiceHelper.GetAppServiceName(appId, version);
@@ -514,5 +508,391 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
             KubernetesConstants.AppNameSpace);
         _logger.LogInformation(
             $"[KubernetesAppManager] Deployment {deploymentName} restarted at {annotations["kubectl.kubernetes.io/restartedAt"]}");
+    }
+
+    public async Task CopyHostAsync(string sourceClientId, string newClientId, string version, string corsUrls)
+    {
+        _logger.LogInformation($"[KubernetesHostManager] Starting copy operation from {sourceClientId} to {newClientId}");
+
+        // Validate source exists and target doesn't exist concurrently
+        await Task.WhenAll(
+            ValidateSourceHostExistsAsync(sourceClientId, version),
+            ValidateTargetHostNotExistsAsync(newClientId, version)
+        );
+
+        try
+        {
+            // Copy Silo and Client resources concurrently
+            await Task.WhenAll(
+                CopyHostSiloResourcesAsync(sourceClientId, newClientId, version),
+                CopyHostClientResourcesAsync(sourceClientId, newClientId, version, corsUrls)
+            );
+
+            _logger.LogInformation($"[KubernetesHostManager] Successfully copied host from {sourceClientId} to {newClientId}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"[KubernetesHostManager] Failed to copy host from {sourceClientId} to {newClientId}");
+            
+            // Attempt cleanup of partially created resources
+            await CleanupPartialCopyAsync(newClientId, version);
+            throw;
+        }
+    }
+
+    private async Task ValidateSourceHostExistsAsync(string sourceClientId, string version)
+    {
+        var sourceSiloName = GetHostName(sourceClientId, KubernetesConstants.HostSilo);
+        var sourceClientName = GetHostName(sourceClientId, KubernetesConstants.HostClient);
+        
+        // Check both deployments concurrently
+        var deploymentTasks = await Task.WhenAll(
+            DeploymentExistsAsync(DeploymentHelper.GetAppDeploymentName(sourceSiloName, version)),
+            DeploymentExistsAsync(DeploymentHelper.GetAppDeploymentName(sourceClientName, version))
+        );
+        
+        var siloDeploymentExists = deploymentTasks[0];
+        var clientDeploymentExists = deploymentTasks[1];
+
+        if (!siloDeploymentExists || !clientDeploymentExists)
+        {
+            throw new InvalidOperationException($"Source host {sourceClientId} does not exist or is incomplete");
+        }
+    }
+
+    private async Task ValidateTargetHostNotExistsAsync(string newClientId, string version)
+    {
+        var targetSiloName = GetHostName(newClientId, KubernetesConstants.HostSilo);
+        var targetClientName = GetHostName(newClientId, KubernetesConstants.HostClient);
+        
+        // Check both deployments concurrently
+        var deploymentTasks = await Task.WhenAll(
+            DeploymentExistsAsync(DeploymentHelper.GetAppDeploymentName(targetSiloName, version)),
+            DeploymentExistsAsync(DeploymentHelper.GetAppDeploymentName(targetClientName, version))
+        );
+        
+        var siloDeploymentExists = deploymentTasks[0];
+        var clientDeploymentExists = deploymentTasks[1];
+
+        if (siloDeploymentExists || clientDeploymentExists)
+        {
+            throw new InvalidOperationException($"Target host {newClientId} already exists");
+        }
+    }
+
+    private async Task CopyHostSiloResourcesAsync(string sourceClientId, string newClientId, string version)
+    {
+        var sourceAppId = GetHostName(sourceClientId, KubernetesConstants.HostSilo);
+        var targetAppId = GetHostName(newClientId, KubernetesConstants.HostSilo);
+
+        // Copy ConfigMaps concurrently
+        await Task.WhenAll(
+            CopyConfigMapAsync(sourceAppId, targetAppId, version, ConfigMapHelper.GetAppSettingConfigMapName),
+            CopyConfigMapAsync(sourceAppId, targetAppId, version, ConfigMapHelper.GetAppFileBeatConfigMapName)
+        );
+
+        // Copy Deployment and Service concurrently (ConfigMaps must be ready first)
+        await Task.WhenAll(
+            CopyDeploymentAsync(sourceAppId, targetAppId, version),
+            CopyServiceAsync(sourceAppId, targetAppId, version)
+        );
+    }
+
+    private async Task CopyHostClientResourcesAsync(string sourceClientId, string newClientId, string version, string corsUrls)
+    {
+        var sourceAppId = GetHostName(sourceClientId, KubernetesConstants.HostClient);
+        var targetAppId = GetHostName(newClientId, KubernetesConstants.HostClient);
+
+        // Copy ConfigMaps concurrently
+        await Task.WhenAll(
+            CopyConfigMapAsync(sourceAppId, targetAppId, version, ConfigMapHelper.GetAppSettingConfigMapName),
+            CopyConfigMapAsync(sourceAppId, targetAppId, version, ConfigMapHelper.GetAppFileBeatConfigMapName)
+        );
+
+        // Copy Deployment, Service and Ingress concurrently (ConfigMaps must be ready first)
+        await Task.WhenAll(
+            CopyDeploymentAsync(sourceAppId, targetAppId, version),
+            CopyServiceAsync(sourceAppId, targetAppId, version),
+            CopyIngressAsync(sourceAppId, targetAppId, version)
+        );
+    }
+
+    private async Task CopyConfigMapAsync(string sourceAppId, string targetAppId, string version, Func<string, string, string> getConfigMapNameFunc)
+    {
+        var sourceConfigMapName = getConfigMapNameFunc(sourceAppId, version);
+        var targetConfigMapName = getConfigMapNameFunc(targetAppId, version);
+
+        var sourceConfigMap = await _kubernetesClientAdapter.ReadNamespacedConfigMapAsync(sourceConfigMapName, KubernetesConstants.AppNameSpace);
+        
+        var targetConfigMap = new V1ConfigMap
+        {
+            Metadata = new V1ObjectMeta
+            {
+                Name = targetConfigMapName,
+                NamespaceProperty = KubernetesConstants.AppNameSpace,
+                Labels = sourceConfigMap.Metadata.Labels
+            },
+            Data = ReplaceClientIdInConfigData(sourceConfigMap.Data, sourceAppId, targetAppId)
+        };
+
+        await _kubernetesClientAdapter.CreateConfigMapAsync(targetConfigMap, KubernetesConstants.AppNameSpace);
+        _logger.LogInformation($"[KubernetesHostManager] ConfigMap {targetConfigMapName} copied successfully");
+    }
+
+
+    private Dictionary<string, string> ReplaceClientIdInConfigData(IDictionary<string, string> sourceData, string sourceAppId, string targetAppId)
+    {
+        if (sourceData == null) return null;
+
+        var targetData = new Dictionary<string, string>();
+        foreach (var kvp in sourceData)
+        {
+            var content = kvp.Value;
+            if (!string.IsNullOrEmpty(content))
+            {
+                // Extract and replace the base clientId (remove -silo or -client suffix)
+                var sourceClientId = sourceAppId.Replace($"-{KubernetesConstants.HostSilo}", "").Replace($"-{KubernetesConstants.HostClient}", "");
+                var targetClientId = targetAppId.Replace($"-{KubernetesConstants.HostSilo}", "").Replace($"-{KubernetesConstants.HostClient}", "");
+                content = content.Replace(sourceClientId, targetClientId);
+            }
+            targetData[kvp.Key] = content;
+        }
+        return targetData;
+    }
+
+    private async Task CopyDeploymentAsync(string sourceAppId, string targetAppId, string version)
+    {
+        var sourceDeploymentName = DeploymentHelper.GetAppDeploymentName(sourceAppId, version);
+        var targetDeploymentName = DeploymentHelper.GetAppDeploymentName(targetAppId, version);
+
+        var sourceDeployment = await _kubernetesClientAdapter.ReadNamespacedDeploymentAsync(sourceDeploymentName, KubernetesConstants.AppNameSpace);
+        
+        var targetDeployment = new V1Deployment
+        {
+            Metadata = new V1ObjectMeta
+            {
+                Name = targetDeploymentName,
+                NamespaceProperty = KubernetesConstants.AppNameSpace,
+                Labels = ReplaceClientIdInLabels(sourceDeployment.Metadata.Labels, sourceAppId, targetAppId)
+            },
+            Spec = new V1DeploymentSpec
+            {
+                Replicas = sourceDeployment.Spec.Replicas,
+                Selector = new V1LabelSelector
+                {
+                    MatchLabels = ReplaceClientIdInLabels(sourceDeployment.Spec.Selector.MatchLabels, sourceAppId, targetAppId)
+                },
+                Template = new V1PodTemplateSpec
+                {
+                    Metadata = new V1ObjectMeta
+                    {
+                        Labels = ReplaceClientIdInLabels(sourceDeployment.Spec.Template.Metadata.Labels, sourceAppId, targetAppId)
+                    },
+                    Spec = CopyPodSpecWithUpdatedConfigMaps(sourceDeployment.Spec.Template.Spec, sourceAppId, targetAppId, version)
+                },
+                Strategy = sourceDeployment.Spec.Strategy
+            }
+        };
+
+        await _kubernetesClientAdapter.CreateDeploymentAsync(targetDeployment, KubernetesConstants.AppNameSpace);
+        _logger.LogInformation($"[KubernetesHostManager] Deployment {targetDeploymentName} copied successfully");
+    }
+
+    private V1PodSpec CopyPodSpecWithUpdatedConfigMaps(V1PodSpec sourcePodSpec, string sourceAppId, string targetAppId, string version)
+    {
+        var targetPodSpec = new V1PodSpec
+        {
+            Containers = sourcePodSpec.Containers.Select(container => new V1Container
+            {
+                Name = container.Name.Replace(sourceAppId, targetAppId),
+                Image = container.Image,
+                Ports = container.Ports,
+                Env = ReplaceClientIdInEnvVars(container.Env, sourceAppId, targetAppId),
+                Resources = container.Resources,
+                VolumeMounts = container.VolumeMounts?.Select(vm => new V1VolumeMount
+                {
+                    Name = vm.Name.Replace(sourceAppId, targetAppId),
+                    MountPath = vm.MountPath,
+                    ReadOnlyProperty = vm.ReadOnlyProperty,
+                    SubPath = vm.SubPath
+                }).ToList(),
+                LivenessProbe = container.LivenessProbe,
+                ReadinessProbe = container.ReadinessProbe,
+                Command = container.Command,
+                Args = container.Args
+            }).ToList(),
+            Volumes = sourcePodSpec.Volumes?.Select(volume => new V1Volume
+            {
+                Name = volume.Name.Replace(sourceAppId, targetAppId),
+                ConfigMap = volume.ConfigMap != null ? new V1ConfigMapVolumeSource
+                {
+                    Name = volume.ConfigMap.Name.Replace(sourceAppId, targetAppId),
+                    Items = volume.ConfigMap.Items
+                } : null,
+                EmptyDir = volume.EmptyDir
+            }).ToList(),
+            RestartPolicy = sourcePodSpec.RestartPolicy,
+            NodeSelector = sourcePodSpec.NodeSelector,
+            Affinity = sourcePodSpec.Affinity,
+            Tolerations = sourcePodSpec.Tolerations
+        };
+
+        return targetPodSpec;
+    }
+
+    private Dictionary<string, string> ReplaceClientIdInLabels(IDictionary<string, string> sourceLabels, string sourceAppId, string targetAppId)
+    {
+        if (sourceLabels == null) return null;
+
+        var targetLabels = new Dictionary<string, string>();
+        foreach (var kvp in sourceLabels)
+        {
+            var value = kvp.Value;
+            if (!string.IsNullOrEmpty(value))
+            {
+                value = value.Replace(sourceAppId, targetAppId);
+            }
+            targetLabels[kvp.Key] = value;
+        }
+        return targetLabels;
+    }
+
+    private IList<V1EnvVar> ReplaceClientIdInEnvVars(IList<V1EnvVar> sourceEnvVars, string sourceAppId, string targetAppId)
+    {
+        if (sourceEnvVars == null) return null;
+
+        var targetEnvVars = new List<V1EnvVar>();
+        foreach (var envVar in sourceEnvVars)
+        {
+            var newEnvVar = new V1EnvVar
+            {
+                Name = envVar.Name,
+                Value = envVar.Value,
+                ValueFrom = envVar.ValueFrom
+            };
+
+            // Replace clientId in environment variable values
+            if (!string.IsNullOrEmpty(newEnvVar.Value))
+            {
+                // Extract and replace the base clientId (remove -silo or -client suffix)
+                var sourceClientId = sourceAppId.Replace($"-{KubernetesConstants.HostSilo}", "").Replace($"-{KubernetesConstants.HostClient}", "");
+                var targetClientId = targetAppId.Replace($"-{KubernetesConstants.HostSilo}", "").Replace($"-{KubernetesConstants.HostClient}", "");
+                newEnvVar.Value = newEnvVar.Value.Replace(sourceClientId, targetClientId);
+            }
+
+            targetEnvVars.Add(newEnvVar);
+        }
+        return targetEnvVars;
+    }
+
+    private async Task CopyServiceAsync(string sourceAppId, string targetAppId, string version)
+    {
+        var sourceServiceName = ServiceHelper.GetAppServiceName(sourceAppId, version);
+        var targetServiceName = ServiceHelper.GetAppServiceName(targetAppId, version);
+
+        var services = await _kubernetesClientAdapter.ListServiceAsync(KubernetesConstants.AppNameSpace);
+        var sourceService = services.Items.FirstOrDefault(s => s.Metadata.Name == sourceServiceName);
+        
+        if (sourceService == null)
+        {
+            _logger.LogWarning($"[KubernetesHostManager] Source service {sourceServiceName} not found, skipping service copy");
+            return;
+        }
+
+        var targetService = new V1Service
+        {
+            Metadata = new V1ObjectMeta
+            {
+                Name = targetServiceName,
+                NamespaceProperty = KubernetesConstants.AppNameSpace,
+                Labels = ReplaceClientIdInLabels(sourceService.Metadata.Labels, sourceAppId, targetAppId)
+            },
+            Spec = new V1ServiceSpec
+            {
+                Selector = ReplaceClientIdInLabels(sourceService.Spec.Selector, sourceAppId, targetAppId),
+                Ports = sourceService.Spec.Ports,
+                Type = sourceService.Spec.Type
+            }
+        };
+
+        await _kubernetesClientAdapter.CreateServiceAsync(targetService, KubernetesConstants.AppNameSpace);
+        _logger.LogInformation($"[KubernetesHostManager] Service {targetServiceName} copied successfully");
+    }
+
+    private async Task CopyIngressAsync(string sourceAppId, string targetAppId, string version)
+    {
+        var sourceIngressName = IngressHelper.GetAppIngressName(sourceAppId, version);
+        var targetIngressName = IngressHelper.GetAppIngressName(targetAppId, version);
+
+        var ingresses = await _kubernetesClientAdapter.ListIngressAsync(KubernetesConstants.AppNameSpace);
+        var sourceIngress = ingresses.Items.FirstOrDefault(i => i.Metadata.Name == sourceIngressName);
+        
+        if (sourceIngress == null)
+        {
+            _logger.LogWarning($"[KubernetesHostManager] Source ingress {sourceIngressName} not found, skipping ingress copy");
+            return;
+        }
+
+        var targetIngress = new V1Ingress
+        {
+            Metadata = new V1ObjectMeta
+            {
+                Name = targetIngressName,
+                NamespaceProperty = KubernetesConstants.AppNameSpace,
+                Labels = ReplaceClientIdInLabels(sourceIngress.Metadata.Labels, sourceAppId, targetAppId),
+                Annotations = sourceIngress.Metadata.Annotations
+            },
+            Spec = new V1IngressSpec
+            {
+                IngressClassName = sourceIngress.Spec.IngressClassName,
+                Rules = sourceIngress.Spec.Rules?.Select(rule => new V1IngressRule
+                {
+                    Host = rule.Host,
+                    Http = new V1HTTPIngressRuleValue
+                    {
+                        Paths = rule.Http.Paths?.Select(path => new V1HTTPIngressPath
+                        {
+                            Path = path.Path.Replace(sourceAppId.Replace($"-{KubernetesConstants.HostClient}", ""), targetAppId.Replace($"-{KubernetesConstants.HostClient}", "")),
+                            PathType = path.PathType,
+                            Backend = new V1IngressBackend
+                            {
+                                Service = new V1IngressServiceBackend
+                                {
+                                    Name = path.Backend.Service.Name.Replace(sourceAppId, targetAppId),
+                                    Port = path.Backend.Service.Port
+                                }
+                            }
+                        }).ToList()
+                    }
+                }).ToList()
+            }
+        };
+
+        await _kubernetesClientAdapter.CreateIngressAsync(targetIngress, KubernetesConstants.AppNameSpace);
+        _logger.LogInformation($"[KubernetesHostManager] Ingress {targetIngressName} copied successfully");
+    }
+
+    private async Task CleanupPartialCopyAsync(string newClientId, string version)
+    {
+        try
+        {
+            _logger.LogInformation($"[KubernetesHostManager] Cleaning up partial copy for {newClientId}");
+            
+            // Attempt to destroy what was created
+            var targetSiloName = GetHostName(newClientId, KubernetesConstants.HostSilo);
+            var targetClientName = GetHostName(newClientId, KubernetesConstants.HostClient);
+            
+            // Try to clean up silo resources
+            try { await DestroyHostSiloAsync(targetSiloName, version); } catch { }
+            
+            // Try to clean up client resources  
+            try { await DestroyPodsAsync(targetClientName, version); } catch { }
+            
+            _logger.LogInformation($"[KubernetesHostManager] Cleanup completed for {newClientId}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"[KubernetesHostManager] Failed to cleanup partial copy for {newClientId}");
+        }
     }
 }
