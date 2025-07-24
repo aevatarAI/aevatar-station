@@ -432,20 +432,20 @@ public class GodGPTController : AevatarController
         var stopwatch = Stopwatch.StartNew();
         var clientIp = request.Ip.IsNullOrWhiteSpace() ? HttpContext.GetClientIpAddress() : request.Ip;
         var userHashId = CommonHelper.GetAnonymousUserGAgentId(clientIp).Replace("AnonymousUser_", "");
-        _logger.LogDebug("[GodGPTController][CreateGuestSessionAsync] Start processing for User: {0}", userHashId);
-        
+        _logger.LogDebug($"[GodGPTController][CreateGuestSessionAsync] Start processing for User: {userHashId} ip:{clientIp}");
+
         try
         {
             // Always check limits first to provide graceful response
             var limitsStopwatch = Stopwatch.StartNew();
             var limits = await _godGptService.GetGuestChatLimitsAsync(clientIp);
-            _logger.LogDebug("[GodGPTController][CreateGuestSessionAsync] GetGuestChatLimitsAsync duration: {0}ms", limitsStopwatch.ElapsedMilliseconds);
+            _logger.LogDebug($"[GodGPTController][CreateGuestSessionAsync] GetGuestChatLimitsAsync duration: {0}ms", limitsStopwatch.ElapsedMilliseconds);
             
             // If no remaining chats, return limits info without creating session
             if (limits.RemainingChats <= 0)
             {
-                _logger.LogDebug("[GodGPTController][CreateGuestSessionAsync] User: {0} has no remaining chats, returning limits", userHashId);
-                _logger.LogDebug("[GodGPTController][CreateGuestSessionAsync] Total duration: {0}ms", stopwatch.ElapsedMilliseconds);
+                _logger.LogDebug($"[GodGPTController][CreateGuestSessionAsync] User: {userHashId} has no remaining chats, returning limits");
+                _logger.LogDebug($"[GodGPTController][CreateGuestSessionAsync] Total duration: {stopwatch.ElapsedMilliseconds}ms");
                 
                 return Ok(new CreateGuestSessionResponseDto
                 {
@@ -457,17 +457,16 @@ public class GodGPTController : AevatarController
             // User has remaining chats, proceed with session creation
             var sessionCreationStopwatch = Stopwatch.StartNew();
             var result = await _godGptService.CreateGuestSessionAsync(clientIp, request.Guider);
-            _logger.LogDebug("[GodGPTController][CreateGuestSessionAsync] CreateGuestSessionAsync duration: {0}ms", sessionCreationStopwatch.ElapsedMilliseconds);
-            _logger.LogDebug("[GodGPTController][CreateGuestSessionAsync] User: {0}, guider: {1}, remaining: {2}, duration: {3}ms",
-                userHashId, request.Guider, result.RemainingChats, stopwatch.ElapsedMilliseconds);
+            _logger.LogDebug($"[GodGPTController][CreateGuestSessionAsync] CreateGuestSessionAsync duration: {sessionCreationStopwatch.ElapsedMilliseconds}ms");
+            _logger.LogDebug($"[GodGPTController][CreateGuestSessionAsync] User: {userHashId}, guider: {request.Guider}, remaining: {result.RemainingChats}, ip:{clientIp}, duration: {stopwatch.ElapsedMilliseconds}ms");
             
             return Ok(result);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[GodGPTController][CreateGuestSessionAsync] User: {0}, unexpected error", userHashId);
+            _logger.LogError($"[GodGPTController][CreateGuestSessionAsync] User: {userHashId}, unexpected error:{ex.Message}");
             // Return default limits instead of error
-            _logger.LogDebug("[GodGPTController][CreateGuestSessionAsync] Total duration with error: {0}ms", stopwatch.ElapsedMilliseconds);
+            _logger.LogDebug($"[GodGPTController][CreateGuestSessionAsync] Total duration with error: {stopwatch.ElapsedMilliseconds}ms");
             return Ok(new CreateGuestSessionResponseDto
             {
                 RemainingChats = 0,

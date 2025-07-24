@@ -245,17 +245,17 @@ public class ChatMiddleware
             var clientIp = request.Ip.IsNullOrWhiteSpace() ? context.GetClientIpAddress() : request.Ip;
 
             userHashId = CommonHelper.GetAnonymousUserGAgentId(clientIp).Replace("AnonymousUser_", "");
-            _logger.LogDebug("[GuestChatMiddleware] Processing request for user: {0} ip:{1}", userHashId,clientIp);
+            _logger.LogDebug($"[GuestChatMiddleware] Processing request for user: {userHashId} ip:{clientIp}");
             if (request == null || string.IsNullOrWhiteSpace(request.Content))
             {
-                _logger.LogWarning("[GuestChatMiddleware] Invalid request body for user: {0}", userHashId);
+                _logger.LogWarning($"[GuestChatMiddleware] Invalid request body for user: {userHashId}");
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
                 await context.Response.WriteAsync("Invalid request body");
                 return;
             }
 
             var stopwatch = Stopwatch.StartNew();
-            _logger.LogDebug("[GuestChatMiddleware] Start processing guest chat for user: {0}", userHashId);
+            _logger.LogDebug($"[GuestChatMiddleware] Start processing guest chat for user: {userHashId}");
 
             // Get or create anonymous user grain for this IP
             var grainId = CommonHelper.StringToGuid(CommonHelper.GetAnonymousUserGAgentId(clientIp));
@@ -264,7 +264,7 @@ public class ChatMiddleware
             // Check if user can still chat
             if (!await anonymousUserGrain.CanChatAsync())
             {
-                _logger.LogWarning("[GuestChatMiddleware] Chat limit exceeded for user: {0}", userHashId);
+                _logger.LogWarning($"[GuestChatMiddleware] Chat limit exceeded for user: {userHashId}");
                 context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
                 await context.Response.WriteAsync("Daily chat limit exceeded");
                 return;
@@ -274,7 +274,7 @@ public class ChatMiddleware
             var sessionInfo = await anonymousUserGrain.GetCurrentSessionAsync();
             if (sessionInfo == null)
             {
-                _logger.LogWarning("[GuestChatMiddleware] No active session for user: {0}", userHashId);
+                _logger.LogWarning($"[GuestChatMiddleware] No active session for user: {userHashId}");
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
                 await context.Response.WriteAsync("No active guest session. Please create a session first.");
                 return;
@@ -283,13 +283,12 @@ public class ChatMiddleware
             var chatId = Guid.NewGuid().ToString();
             var sessionId = sessionInfo.SessionId;
 
-            _logger.LogDebug("[GuestChatMiddleware] Found session {0} for user: {1}", sessionId, userHashId);
+            _logger.LogDebug($"[GuestChatMiddleware] Found session {sessionId} for user: {userHashId}");
 
             // Set up SSE response headers
             var streamProvider = _clusterClient.GetStreamProvider("Aevatar");
             var streamId = StreamId.Create(_aevatarOptions.Value.StreamNamespace, sessionId);
-            _logger.LogDebug("[GuestChatMiddleware] sessionId {0}, namespace {1}, streamId {2}", 
-                sessionId, _aevatarOptions.Value.StreamNamespace, streamId.ToString());
+            _logger.LogDebug($"[GuestChatMiddleware] sessionId {sessionId}, namespace {_aevatarOptions.Value.StreamNamespace}, streamId {streamId.ToString()}");
             
             context.Response.ContentType = "text/event-stream";
             context.Response.Headers.Connection = "keep-alive";
@@ -299,7 +298,7 @@ public class ChatMiddleware
 
             // Execute chat through grain (this will trigger the stream)
             await anonymousUserGrain.GuestChatAsync(request.Content, chatId);
-            _logger.LogDebug("[GuestChatMiddleware] Guest chat executed for user: {0}, ChatId: {1}", userHashId, chatId);
+            _logger.LogDebug($"[GuestChatMiddleware] Guest chat executed for user: {userHashId}, ChatId: {chatId}");
 
             // Handle streaming response
             var exitSignal = new TaskCompletionSource();
@@ -318,8 +317,7 @@ public class ChatMiddleware
                 {
                     await context.Response.StartAsync();
                     firstFlag = true;
-                    _logger.LogDebug("[GuestChatMiddleware] First message received for user: {0}, duration: {1}ms", 
-                        userHashId, stopwatch.ElapsedMilliseconds);
+                    _logger.LogDebug($"[GuestChatMiddleware] First message received for user: {userHashId}, duration: { stopwatch.ElapsedMilliseconds}ms");
                 }
 
                 var responseData = $"data: {JsonConvert.SerializeObject(chatResponse.ConvertToHttpResponse())}\n\n";
@@ -339,13 +337,12 @@ public class ChatMiddleware
                 }
             }, ex =>
             {
-                _logger.LogError("[GuestChatMiddleware] Stream error for user: {0}, ChatId: {1}, Error: {2}", 
-                    userHashId, chatId, ex.Message);
+                _logger.LogError($"[GuestChatMiddleware] Stream error for user: {userHashId}, ChatId: {chatId}, Error: {ex.Message}");
                 exitSignal.TrySetException(ex);
                 return Task.CompletedTask;
             }, () =>
             {
-                _logger.LogDebug("[GuestChatMiddleware] Stream completed for user: {0}", userHashId);
+                _logger.LogDebug($"[GuestChatMiddleware] Stream completed for user: {userHashId}");
                 exitSignal.TrySetResult();
                 return Task.CompletedTask;
             });
@@ -356,7 +353,7 @@ public class ChatMiddleware
             }
             catch (Exception ex)
             {
-                _logger.LogError("[GuestChatMiddleware] Error waiting for stream completion: {0}", ex.Message);
+                _logger.LogError($"[GuestChatMiddleware] Error waiting for stream completion: {ex.Message}");
             }
             finally
             {
@@ -368,11 +365,10 @@ public class ChatMiddleware
 
             if (!ifLastChunk)
             {
-                _logger.LogDebug("[GuestChatMiddleware] No LastChunk received for user: {0}, ChatId: {1}", userHashId, chatId);
+                _logger.LogDebug($"[GuestChatMiddleware] No LastChunk received for user: {userHashId}, ChatId: {chatId}");
             }
 
-            _logger.LogDebug("[GuestChatMiddleware] Completed guest chat for user: {0}, duration: {1}ms", 
-                userHashId, stopwatch.ElapsedMilliseconds);
+            _logger.LogDebug($"[GuestChatMiddleware] Completed guest chat for user: {userHashId}, duration: {stopwatch.ElapsedMilliseconds}ms");
         }
         catch (InvalidOperationException ex)
         {
@@ -402,17 +398,17 @@ public class ChatMiddleware
                 else if (code >= 10000) // Business error codes are typically large numbers
                 {
                     statusCode = StatusCodes.Status400BadRequest;
-                    _logger.LogWarning("[GuestChatMiddleware] Business error code {0} converted to 400 for user: {1}", code, userHashId);
+                    _logger.LogWarning($"[GuestChatMiddleware] Business error code {code} converted to 400 for user: {userHashId}");
                 }
             }
             
             context.Response.StatusCode = statusCode;
             await context.Response.WriteAsync(ex.Message);
-            _logger.LogWarning(ex, "[GuestChatMiddleware] Operation error for user: {0}, status: {1}", userHashId, statusCode);
+            _logger.LogWarning($"[GuestChatMiddleware] Operation error for user: {userHashId}, status: {statusCode} error:{ex.Message}");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[GuestChatMiddleware] Unexpected error for user: {0}", userHashId);
+            _logger.LogError($"[GuestChatMiddleware] Unexpected error for user: {userHashId} ex:{ex.Message}");
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
             await context.Response.WriteAsync("Internal server error");
         }
