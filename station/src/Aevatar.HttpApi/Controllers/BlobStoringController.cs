@@ -1,5 +1,9 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using Aevatar.Application.Constants;
+using Aevatar.Application.Contracts.Services;
 using Aevatar.BlobStorings;
+using Aevatar.Extensions;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,11 +21,14 @@ public class BlobStoringController : AevatarController
 {
     private readonly IBlobContainer _blobContainer;
     private readonly BlobStoringOptions _blobStoringOptions;
+    private readonly ILocalizationService _localizationService;
 
-    public BlobStoringController(IBlobContainer blobContainer, IOptionsSnapshot<BlobStoringOptions> blobStoringOptions)
+
+    public BlobStoringController(IBlobContainer blobContainer, IOptionsSnapshot<BlobStoringOptions> blobStoringOptions, ILocalizationService localizationService)
     {
         _blobContainer = blobContainer;
         _blobStoringOptions = blobStoringOptions.Value;
+        _localizationService = localizationService;
     }
 
     [HttpPost]
@@ -30,8 +37,14 @@ public class BlobStoringController : AevatarController
         var file = input.File.OpenReadStream();
         if (file.Length > _blobStoringOptions.MaxSizeBytes)
         {
-            throw new UserFriendlyException(
-                $"The file is too large, with a maximum of {_blobStoringOptions.MaxSizeBytes} bytes.");
+            var language = HttpContext.GetGodGPTLanguage();
+            var parameters = new Dictionary<string, string>
+            {
+                ["MaxSizeBytes"] = _blobStoringOptions.MaxSizeBytes.ToString()
+            };
+            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.FileTooLarge, language, parameters);
+
+            throw new UserFriendlyException(localizedMessage);
         }
 
         await _blobContainer.SaveAsync(input.File.FileName, input.File.OpenReadStream(), true);
