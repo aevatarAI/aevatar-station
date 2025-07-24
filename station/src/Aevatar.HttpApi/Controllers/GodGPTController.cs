@@ -529,7 +529,7 @@ public class GodGPTController : AevatarController
         var processedContent = SessionTypeExtensions.SharePrompt;
         processedContent = processedContent.AppendLanguagePrompt(language);
         
-        var response = await _godGptService.GetShareKeyWordWithAIAsync(sessionId, processedContent, region, sessionType);
+        var response = await _godGptService.GetShareKeyWordWithAIAsync(sessionId, processedContent, region, sessionType, language);
         _logger.LogDebug(
             $"[GodGPTController][GetShareKeyWordWithAIAsync] completed for sessionId={sessionId}, language={language},processedContent={processedContent}, duration: {stopwatch.ElapsedMilliseconds}ms");
         return response;

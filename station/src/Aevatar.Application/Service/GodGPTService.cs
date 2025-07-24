@@ -22,12 +22,12 @@ using Aevatar.Application.Grains.TwitterInteraction.Dtos;
 using Aevatar.Application.Grains.UserBilling;
 using Aevatar.Application.Grains.UserQuota;
 using Aevatar.Common.Options;
+using Aevatar.Domain.Shared;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
 using Aevatar.GodGPT.Dtos;
 using Aevatar.Quantum;
 using GodGPT.GAgents.SpeechChat;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
@@ -36,7 +36,6 @@ using Stripe;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Auditing;
-using Volo.Abp.DependencyInjection;
 
 namespace Aevatar.Service;
 
@@ -82,7 +81,7 @@ public interface IGodGPTService
     Task GuestChatAsync(string clientIp, string content, string chatId);
     Task<GuestChatLimitsResponseDto> GetGuestChatLimitsAsync(string clientIp);
     Task<bool> CanGuestChatAsync(string clientIp);
-    Task<QuantumShareResponseDto> GetShareKeyWordWithAIAsync(Guid sessionId, string? content, string? region, SessionType sessionType);
+    Task<QuantumShareResponseDto> GetShareKeyWordWithAIAsync(Guid sessionId, string? content, string? region, SessionType sessionType, GodGPTLanguage language = GodGPTLanguage.English);
 
     Task<TwitterAuthResultDto> TwitterAuthVerifyAsync(Guid currentUserId, TwitterAuthVerifyInput input);
     Task<PagedResultDto<RewardHistoryDto>> GetCreditsHistoryAsync(Guid currentUserId,
@@ -613,7 +612,7 @@ public class GodGPTService : ApplicationService, IGodGPTService
         }
     }
 
-    public async Task<QuantumShareResponseDto> GetShareKeyWordWithAIAsync(Guid sessionId, string? content, string? region, SessionType sessionType)
+    public async Task<QuantumShareResponseDto> GetShareKeyWordWithAIAsync(Guid sessionId, string? content, string? region, SessionType sessionType, GodGPTLanguage language = GodGPTLanguage.English)
     {
         _logger.LogDebug($"[GodGPTService][GetShareKeyWordWithAIAsync] http start: sessionId={sessionId}, sessionType={sessionType}");
         var responseContent = "";
@@ -623,13 +622,13 @@ public class GodGPTService : ApplicationService, IGodGPTService
             var chatId = Guid.NewGuid().ToString();
             var response = await godChat.ChatWithHistory(sessionId, string.Empty, content,
                 chatId, null, true, region);
-            responseContent = response.IsNullOrEmpty() ? sessionType.GetDefaultContent() : response.FirstOrDefault().Content;
+            responseContent = response.IsNullOrEmpty() ? sessionType.GetDefaultContent(language) : response.FirstOrDefault().Content;
             _logger.LogDebug(
                 $"[GodGPTService][GetShareKeyWordWithAIAsync] completed for sessionId={sessionId}, responseContent:{responseContent}");
         }
         catch (Exception ex)
         {
-            responseContent = sessionType.GetDefaultContent();
+            responseContent = sessionType.GetDefaultContent(language);
             _logger.LogError(ex, $"[GodGPTService][GetShareKeyWordWithAIAsync] error for sessionId={sessionId}, sessionType={sessionType}");
         }
 
