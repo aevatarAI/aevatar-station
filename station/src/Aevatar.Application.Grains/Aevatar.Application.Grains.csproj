@@ -20,6 +20,7 @@
         <PackageReference Include="Aevatar.GAgents.AI.Abstractions"/>
         <PackageReference Include="Aevatar.GAgents.Twitter"/>
         <PackageReference Include="Aevatar.GAgents.GroupChat"/>
+        <PackageReference Include="Aevatar.GAgents.TypeTestAgent"/>
     </ItemGroup>
 
     <ItemGroup>
