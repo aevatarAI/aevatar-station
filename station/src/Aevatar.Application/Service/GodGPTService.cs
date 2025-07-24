@@ -81,7 +81,7 @@ public interface IGodGPTService
     Task GuestChatAsync(string clientIp, string content, string chatId);
     Task<GuestChatLimitsResponseDto> GetGuestChatLimitsAsync(string clientIp);
     Task<bool> CanGuestChatAsync(string clientIp);
-    Task<QuantumShareResponseDto> GetShareKeyWordWithAIAsync(Guid sessionId, string? content, string? region, SessionType sessionType, GodGPTLanguage language = GodGPTLanguage.English);
+    Task<QuantumShareResponseDto> GetShareKeyWordWithAIAsync(Guid sessionId, string? content, string? region, SessionType sessionType, GodGPTChatLanguage language = GodGPTChatLanguage.English);
 
     Task<TwitterAuthResultDto> TwitterAuthVerifyAsync(Guid currentUserId, TwitterAuthVerifyInput input);
     Task<PagedResultDto<RewardHistoryDto>> GetCreditsHistoryAsync(Guid currentUserId,
@@ -612,7 +612,7 @@ public class GodGPTService : ApplicationService, IGodGPTService
         }
     }
 
-    public async Task<QuantumShareResponseDto> GetShareKeyWordWithAIAsync(Guid sessionId, string? content, string? region, SessionType sessionType, GodGPTLanguage language = GodGPTLanguage.English)
+    public async Task<QuantumShareResponseDto> GetShareKeyWordWithAIAsync(Guid sessionId, string? content, string? region, SessionType sessionType, GodGPTChatLanguage language = GodGPTChatLanguage.English)
     {
         _logger.LogDebug($"[GodGPTService][GetShareKeyWordWithAIAsync] http start: sessionId={sessionId}, sessionType={sessionType}");
         var responseContent = "";

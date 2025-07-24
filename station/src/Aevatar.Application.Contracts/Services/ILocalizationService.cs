@@ -14,7 +14,7 @@ public interface ILocalizationService
     /// <param name="key">Message key</param>
     /// <param name="language">Target language</param>
     /// <returns>Localized message</returns>
-    string GetLocalizedMessage(string key, GodGPTLanguage language);
+    string GetLocalizedMessage(string key, GodGPTChatLanguage language);
     
     /// <summary>
     /// Get localized exception message by exception key and language
@@ -22,7 +22,7 @@ public interface ILocalizationService
     /// <param name="exceptionKey">Exception message key</param>
     /// <param name="language">Target language</param>
     /// <returns>Localized exception message</returns>
-    string GetLocalizedException(string exceptionKey, GodGPTLanguage language);
+    string GetLocalizedException(string exceptionKey, GodGPTChatLanguage language);
     
     /// <summary>
     /// Get localized validation message by validation key and language
@@ -30,7 +30,7 @@ public interface ILocalizationService
     /// <param name="validationKey">Validation message key</param>
     /// <param name="language">Target language</param>
     /// <returns>Localized validation message</returns>
-    string GetLocalizedValidationMessage(string validationKey, GodGPTLanguage language);
+    string GetLocalizedValidationMessage(string validationKey, GodGPTChatLanguage language);
     
     /// <summary>
     /// Get localized exception message with parameter replacement
@@ -39,7 +39,7 @@ public interface ILocalizationService
     /// <param name="language">Target language</param>
     /// <param name="parameters">Parameters to replace in the message template</param>
     /// <returns>Localized exception message with parameters replaced</returns>
-    string GetLocalizedException(string exceptionKey, GodGPTLanguage language, Dictionary<string, string> parameters);
+    string GetLocalizedException(string exceptionKey, GodGPTChatLanguage language, Dictionary<string, string> parameters);
     
     /// <summary>
     /// Get localized message with parameter replacement
@@ -48,5 +48,5 @@ public interface ILocalizationService
     /// <param name="language">Target language</param>
     /// <param name="parameters">Parameters to replace in the message template</param>
     /// <returns>Localized message with parameters replaced</returns>
-    string GetLocalizedMessage(string key, GodGPTLanguage language, Dictionary<string, string> parameters);
+    string GetLocalizedMessage(string key, GodGPTChatLanguage language, Dictionary<string, string> parameters);
 } 

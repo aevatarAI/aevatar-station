@@ -14,21 +14,21 @@ public static class HttpContextExtensions
     /// </summary>
     /// <param name="context">The HttpContext instance</param>
     /// <returns>GodgptLanguage enum value, defaults to English if not found or invalid</returns>
-    public static GodGPTLanguage GetGodGPTLanguage(this HttpContext context)
+    public static GodGPTChatLanguage GetGodGPTLanguage(this HttpContext context)
     {
         var languageHeader = context.Request.Headers["GodgptLanguage"].FirstOrDefault();
         
         if (string.IsNullOrWhiteSpace(languageHeader))
         {
-            return GodGPTLanguage.English; // Default to English
+            return GodGPTChatLanguage.English; // Default to English
         }
         
         return languageHeader.ToLowerInvariant() switch
         {
-            "en" => GodGPTLanguage.English,
-            "zh-tw" => GodGPTLanguage.TraditionalChinese,
-            "es" => GodGPTLanguage.Spanish,
-            _ => GodGPTLanguage.English // Default to English for unknown values
+            "en" => GodGPTChatLanguage.English,
+            "zh-tw" => GodGPTChatLanguage.TraditionalChinese,
+            "es" => GodGPTChatLanguage.Spanish,
+            _ => GodGPTChatLanguage.English // Default to English for unknown values
         };
     }
 
@@ -38,7 +38,7 @@ public static class HttpContextExtensions
     /// <param name="message">Original message</param>
     /// <param name="language">Target language for response</param>
     /// <returns>Message with language requirement appended</returns>
-    public static string AppendLanguagePrompt(this string message, GodGPTLanguage language)
+    public static string AppendLanguagePrompt(this string message, GodGPTChatLanguage language)
     {
         var promptMsg = message;
 
