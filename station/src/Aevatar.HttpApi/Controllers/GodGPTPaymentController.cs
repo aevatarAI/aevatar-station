@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+using Aevatar.Application.Constants;
+using Aevatar.Application.Contracts.Services;
 using Aevatar.Application.Grains.ChatManager.Dtos;
 using Aevatar.Application.Grains.ChatManager.UserBilling;
 using Aevatar.Application.Grains.Common.Constants;
 using Aevatar.Application.Grains.Common.Options;
+using Aevatar.Extensions;
 using Aevatar.GodGPT.Dtos;
 using Aevatar.Service;
 using Asp.Versioning;
@@ -14,12 +17,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
-using OpenIddict.Abstractions;
 using Orleans;
 using Stripe;
 using Volo.Abp;
-using Volo.Abp.Security.Claims;
 
 namespace Aevatar.Controllers;
 
@@ -33,14 +33,16 @@ public class GodGPTPaymentController : AevatarController
     private readonly IOptionsMonitor<StripeOptions> _stripeOptions;
     private readonly IClusterClient _clusterClient;
     private readonly IGodGPTService _godGptService;
+    private readonly ILocalizationService _localizationService;
 
     public GodGPTPaymentController(IClusterClient clusterClient, ILogger<GodGPTPaymentController> logger,
-        IGodGPTService godGptService, IOptionsMonitor<StripeOptions> stripeOptions)
+        IGodGPTService godGptService, IOptionsMonitor<StripeOptions> stripeOptions, ILocalizationService localizationService)
     {
         _clusterClient = clusterClient;
         _logger = logger;
         _godGptService = godGptService;
         _stripeOptions = stripeOptions;
+        _localizationService = localizationService;
     }
 
     [HttpGet("keys")]
@@ -178,6 +180,7 @@ public class GodGPTPaymentController : AevatarController
     [HttpPost("webhook")]
     public async Task<IActionResult> Webhook()
     {
+        var language = HttpContext.GetGodGPTLanguage();
         var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
         _logger.LogInformation("[GodGPTPaymentController][webhook] josn: {0}", json);
         
@@ -188,8 +191,9 @@ public class GodGPTPaymentController : AevatarController
         }
         catch (Exception e)
         {
+            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.WebhookValidatingError, language);
             _logger.LogError(e, "[GodGPTPaymentController][Webhook] Error validating webhook: {Message}", e.Message);
-            return BadRequest("Error validating webhook");
+            return BadRequest(localizedMessage);
         }
 
         if (!internalUserId.IsNullOrWhiteSpace() && Guid.TryParse(internalUserId, out var userId))

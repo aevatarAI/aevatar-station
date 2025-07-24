@@ -29,6 +29,7 @@ public static class ExceptionMessageKeys
     public const string UserUnRegister = "UserUnRegister";
     public const string TooManyFiles = "TooManyFiles";
     public const string HASREGISTERED = "HasBeenRegistered";
+    public const string WebhookValidatingError = "WebhookValidatingError";
 
     // File Operations
     public const string FileTooLarge = "FileTooLarge";
@@ -46,4 +47,5 @@ public static class ExceptionMessageKeys
     // Voice Chat
     public const string UnsetLanguage = "UnsetLanguage";
     public const string VoiceLanguageNotSet = "VoiceLanguageNotSet";
+    
 } 

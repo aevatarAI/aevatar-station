@@ -558,10 +558,15 @@ public class GodGPTController : AevatarController
     [HttpPost("godgpt/blob")]
     public async Task<string> SaveAsync([FromForm] SaveBlobInput input)
     {
+        var language = HttpContext.GetGodGPTLanguage();
         if (input.File.Length > _blobStoringOptions.MaxSizeBytes)
         {
-            throw new UserFriendlyException(
-                $"The file is too large, with a maximum of {_blobStoringOptions.MaxSizeBytes} bytes.");
+            var parameters = new Dictionary<string, string>
+            {
+                ["MaxSizeBytes"] = _blobStoringOptions.MaxSizeBytes.ToString()
+            };
+            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.FileTooLarge, language,parameters);
+            throw new UserFriendlyException(localizedMessage);
         }
         
         var stopwatch = Stopwatch.StartNew();

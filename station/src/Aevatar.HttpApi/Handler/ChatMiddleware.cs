@@ -2,9 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Anonymous;
+using Aevatar.Application.Constants;
+using Aevatar.Application.Contracts.Services;
 using Aevatar.Application.Grains.Agents.Anonymous;
 using Aevatar.Application.Grains.Agents.ChatManager;
 using Aevatar.Application.Grains.Agents.ChatManager.Chat;
@@ -31,16 +32,19 @@ public class ChatMiddleware
     private readonly IClusterClient _clusterClient;
     private readonly ILogger<ChatMiddleware> _logger;
     private readonly IOptions<AevatarOptions> _aevatarOptions;
+    private readonly ILocalizationService _localizationService;
 
     private const int MaxImageCount = 10;
 
     public ChatMiddleware(RequestDelegate next, ILogger<ChatMiddleware> logger, IClusterClient clusterClient,
-        IOptions<AevatarOptions> aevatarOptions)
+        IOptions<AevatarOptions> aevatarOptions, ILocalizationService localizationService)
     {
         _next = next;
         _logger = logger;
         _clusterClient = clusterClient;
         _aevatarOptions = aevatarOptions;
+        _localizationService = localizationService;
+
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -78,11 +82,14 @@ public class ChatMiddleware
 
     private async Task HandleAuthenticatedChatAsync(HttpContext context)
     {
+        var language = context.GetGodGPTLanguage();
+
         if (context.User?.Identity == null || !context.User.Identity.IsAuthenticated)
         {
+            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.Unauthorized, language);
             _logger.LogDebug("[GodGPTController][ChatWithSessionAsync] Unauthorized: User is not authenticated");
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await context.Response.WriteAsync("Unauthorized: User is not authenticated.");
+            await context.Response.WriteAsync(localizedMessage);
             await context.Response.Body.FlushAsync();
             return;
         }
@@ -91,8 +98,9 @@ public class ChatMiddleware
         if (userIdStr.IsNullOrWhiteSpace() || !Guid.TryParse(userIdStr, out var userId))
         {
             _logger.LogDebug("[GodGPTController][ChatWithSessionAsync] Unauthorized: Unable to retrieve UserId.");
+            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.UnableToRetrieveUserId, language);
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await context.Response.WriteAsync("Unauthorized: Unable to retrieve UserId.");
+            await context.Response.WriteAsync(localizedMessage);
             await context.Response.Body.FlushAsync();
             return;
         }
@@ -103,7 +111,12 @@ public class ChatMiddleware
         {
             _logger.LogDebug("[GodGPTController][ChatWithSessionAsync] {0} Too many files. {1}", userId, request.Images.Count);
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await context.Response.WriteAsync($"Too many files. Maximum {MaxImageCount} images per upload.");
+            var parameters = new Dictionary<string, string>
+            {
+                ["TooManyFiles"] = MaxImageCount.ToString()
+            };
+            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.TooManyFiles, language, parameters);
+            await context.Response.WriteAsync(localizedMessage);
             await context.Response.Body.FlushAsync();
             return;
         }
@@ -119,7 +132,13 @@ public class ChatMiddleware
                 _logger.LogError("[GodGPTController][ChatWithSessionAsync] sessionInfoIsNull sessionId={A}",
                     request.SessionId);
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                await context.Response.WriteAsync($"Unable to load conversation {request.SessionId}");
+                var parameters = new Dictionary<string, string>
+                {
+                    ["sessionId"] = request.SessionId.ToString()
+                };
+                var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.UnableToLoadConversation, language, parameters);
+
+                await context.Response.WriteAsync(localizedMessage);
                 await context.Response.Body.FlushAsync();
                 return;
             }
@@ -133,7 +152,6 @@ public class ChatMiddleware
             context.Response.Headers.CacheControl = "no-cache";
             var responseStream = streamProvider.GetStream<ResponseStreamGodChat>(streamId);
             var godChat = _clusterClient.GetGrain<IGodChat>(request.SessionId);
-            var language = context.GetGodGPTLanguage();
             
             // Set language context for Orleans grains
             RequestContext.Set("GodGPTLanguage", language.ToString());
