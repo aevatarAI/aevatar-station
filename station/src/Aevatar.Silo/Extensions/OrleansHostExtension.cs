@@ -361,9 +361,9 @@ public static class OrleansHostExtension
                 }
 
                 siloBuilder.UseAevatar()
-                    .UseAevatarPermissionManagement();
-                //.UseSignalR()
-                //.RegisterHub<AevatarSignalRHub>();
+                    .UseAevatarPermissionManagement()
+                    .UseSignalR()
+                    .RegisterHub<AevatarSignalRHub>();
             }).ConfigureServices((context, services) =>
             {
                 // services.AddSingleton<ICancellationTokenProvider, NullCancellationTokenProvider>();
