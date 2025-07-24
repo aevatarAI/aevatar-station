@@ -185,9 +185,10 @@ public class AgentService : ApplicationService, IAgentService
 
                     paramDto.PropertyJsonSchema =
                         _schemaProvider.GetTypeSchema(kvp.Value.InitializationData.DtoType).ToJson();
-                    
+
                     // 获取默认值
-                    paramDto.DefaultValues = await GetConfigurationDefaultValuesAsync(kvp.Value.InitializationData.DtoType);
+                    paramDto.DefaultValues =
+                        await GetConfigurationDefaultValuesAsync(kvp.Value.InitializationData.DtoType);
                 }
             }
 
@@ -203,48 +204,55 @@ public class AgentService : ApplicationService, IAgentService
     private async Task<Dictionary<string, object?>> GetConfigurationDefaultValuesAsync(Type configurationType)
     {
         var defaultValues = new Dictionary<string, object?>();
-        
+
         try
         {
             // 创建配置实例获取默认值
             var instance = Activator.CreateInstance(configurationType);
             if (instance != null)
             {
-                var properties = configurationType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-                
+                var properties =
+                    configurationType.GetProperties(BindingFlags.Public | BindingFlags.Instance |
+                                                    BindingFlags.DeclaredOnly);
+
                 foreach (var property in properties)
                 {
+
+                    var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
                     try
                     {
                         var value = property.GetValue(instance);
-                        
+
                         // 将所有默认值都转换为列表格式
+                        
                         if (value == null)
                         {
                             // null值转换为空列表
-                            defaultValues[property.Name] = new List<object>();
+                            defaultValues[propertyName] = new List<object>();
                         }
                         else
                         {
                             // 非null值转换为包含单个元素的列表
-                            defaultValues[property.Name] = new List<object> { value };
+                            defaultValues[propertyName] = new List<object> { value };
                         }
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "Failed to get default value for property {PropertyName} in {ConfigType}", 
+                        _logger.LogWarning(ex,
+                            "Failed to get default value for property {PropertyName} in {ConfigType}",
                             property.Name, configurationType.Name);
                         // 异常情况也返回空列表
-                        defaultValues[property.Name] = new List<object>();
+                        defaultValues[propertyName] = new List<object>();
                     }
                 }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to create instance of configuration type {ConfigType}", configurationType.Name);
+            _logger.LogWarning(ex, "Failed to create instance of configuration type {ConfigType}",
+                configurationType.Name);
         }
-        
+
         return defaultValues;
     }
 
@@ -313,7 +321,7 @@ public class AgentService : ApplicationService, IAgentService
             AgentGuid = businessAgent.GetPrimaryKey(),
             BusinessAgentGrainId = businessAgent.GetGrainId().ToString()
         };
-        
+
         var configuration = await GetAgentConfigurationAsync(businessAgent);
         if (configuration != null)
         {
@@ -381,7 +389,7 @@ public class AgentService : ApplicationService, IAgentService
         {
             var config = SetupConfigurationData(initializationData, agentProperties);
             await businessAgent.ConfigAsync(config);
-            
+
             return new Tuple<IGAgent, ConfigurationBase>(businessAgent, config);
         }
 
@@ -514,9 +522,9 @@ public class AgentService : ApplicationService, IAgentService
             businessAgents.Add(businessAgent);
             subAgentGuids.Add(grainId.GetGuidKey());
         }
-        
+
         await agent.RegisterManyAsync(businessAgents);
-        
+
         foreach (var businessAgent in businessAgents)
         {
             var eventsHandledByAgent = await businessAgent.GetAllSubscribedEventsAsync();
