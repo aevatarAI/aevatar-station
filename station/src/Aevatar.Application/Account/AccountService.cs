@@ -47,7 +47,7 @@ public class AccountService : AccountAppService, IAccountService
         };
     }
 
-    public async Task<IdentityUserDto> RegisterAsync(AevatarRegisterDto input, GodGPTLanguage language = GodGPTLanguage.English)
+    public async Task<IdentityUserDto> RegisterAsync(AevatarRegisterDto input, GodGPTChatLanguage language = GodGPTChatLanguage.English)
     {
         var code = await _registerCode.GetAsync(GetRegisterCodeKey(input.EmailAddress));
         if (code != input.Code)
@@ -70,7 +70,7 @@ public class AccountService : AccountAppService, IAccountService
         return ObjectMapper.Map<IdentityUser, IdentityUserDto>(user);
     }
 
-    public async Task SendRegisterCodeAsync(SendRegisterCodeDto input, GodGPTLanguage language = GodGPTLanguage.English)
+    public async Task SendRegisterCodeAsync(SendRegisterCodeDto input, GodGPTChatLanguage language = GodGPTChatLanguage.English)
     {
         var user = await UserManager.FindByEmailAsync(input.Email);
         if (user != null)
@@ -127,7 +127,7 @@ public class AccountService : AccountAppService, IAccountService
         return existingUser.CreationTime >= twentyFourHoursAgo;
     }
     
-    public async Task<IdentityUserDto> GodgptRegisterAsync(GodGptRegisterDto input, GodGPTLanguage language = GodGPTLanguage.English)
+    public async Task<IdentityUserDto> GodgptRegisterAsync(GodGptRegisterDto input, GodGPTChatLanguage language = GodGPTChatLanguage.English)
     {
         var code = await _registerCode.GetAsync(GetRegisterCodeKey(input.EmailAddress));
         if (code != input.Code)

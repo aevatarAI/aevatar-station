@@ -3,7 +3,7 @@ namespace Aevatar.Domain.Shared;
 /// <summary>
 /// GodgptLanguage enumeration for supported languages
 /// </summary>
-public enum GodGPTLanguage
+public enum GodGPTChatLanguage
 {
     /// <summary>
     /// English language

@@ -19,7 +19,7 @@ public class LocalizationService : ILocalizationService
     /// <summary>
     /// Get localized message by key and language
     /// </summary>
-    public string GetLocalizedMessage(string key, GodGPTLanguage language)
+    public string GetLocalizedMessage(string key, GodGPTChatLanguage language)
     {
         return GetTranslation(key, language, "messages");
     }
@@ -27,7 +27,7 @@ public class LocalizationService : ILocalizationService
     /// <summary>
     /// Get localized exception message by exception key and language
     /// </summary>
-    public string GetLocalizedException(string exceptionKey, GodGPTLanguage language)
+    public string GetLocalizedException(string exceptionKey, GodGPTChatLanguage language)
     {
         return GetTranslation(exceptionKey, language, "exceptions");
     }
@@ -35,7 +35,7 @@ public class LocalizationService : ILocalizationService
     /// <summary>
     /// Get localized validation message by validation key and language
     /// </summary>
-    public string GetLocalizedValidationMessage(string validationKey, GodGPTLanguage language)
+    public string GetLocalizedValidationMessage(string validationKey, GodGPTChatLanguage language)
     {
         return GetTranslation(validationKey, language, "validation");
     }
@@ -43,7 +43,7 @@ public class LocalizationService : ILocalizationService
     /// <summary>
     /// Get localized exception message with parameter replacement
     /// </summary>
-    public string GetLocalizedException(string exceptionKey, GodGPTLanguage language, Dictionary<string, string> parameters)
+    public string GetLocalizedException(string exceptionKey, GodGPTChatLanguage language, Dictionary<string, string> parameters)
     {
         var message = GetTranslation(exceptionKey, language, "exceptions");
         return ReplaceParameters(message, parameters);
@@ -52,7 +52,7 @@ public class LocalizationService : ILocalizationService
     /// <summary>
     /// Get localized message with parameter replacement
     /// </summary>
-    public string GetLocalizedMessage(string key, GodGPTLanguage language, Dictionary<string, string> parameters)
+    public string GetLocalizedMessage(string key, GodGPTChatLanguage language, Dictionary<string, string> parameters)
     {
         var message = GetTranslation(key, language, "messages");
         return ReplaceParameters(message, parameters);
@@ -80,7 +80,7 @@ public class LocalizationService : ILocalizationService
     /// <summary>
     /// Get translation for specific key, language and category
     /// </summary>
-    private string GetTranslation(string key, GodGPTLanguage language, string category)
+    private string GetTranslation(string key, GodGPTChatLanguage language, string category)
     {
         try
         {
@@ -93,11 +93,11 @@ public class LocalizationService : ILocalizationService
             }
 
             // Fallback to English if translation not found
-            if (language != GodGPTLanguage.English)
+            if (language != GodGPTChatLanguage.English)
             {
                 _logger.LogWarning("Translation not found for key: {Key}, language: {Language}, category: {Category}. Falling back to English.", 
                     key, language, category);
-                return GetTranslation(key, GodGPTLanguage.English, category);
+                return GetTranslation(key, GodGPTChatLanguage.English, category);
             }
 
             // Final fallback to key itself
@@ -116,13 +116,13 @@ public class LocalizationService : ILocalizationService
     /// <summary>
     /// Get language code for the enum
     /// </summary>
-    private string GetLanguageCode(GodGPTLanguage language)
+    private string GetLanguageCode(GodGPTChatLanguage language)
     {
         return language switch
         {
-            GodGPTLanguage.English => "en",
-            GodGPTLanguage.TraditionalChinese => "zh-tw",
-            GodGPTLanguage.Spanish => "es",
+            GodGPTChatLanguage.English => "en",
+            GodGPTChatLanguage.TraditionalChinese => "zh-tw",
+            GodGPTChatLanguage.Spanish => "es",
             _ => "en"
         };
     }

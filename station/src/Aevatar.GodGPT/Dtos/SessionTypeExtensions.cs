@@ -14,11 +14,11 @@ public static class SessionTypeExtensions
     /// </summary>
     /// <param name="sessionType">Session type</param>
     /// <returns>Default content string</returns>
-    public static string GetDefaultContent(this SessionType sessionType, GodGPTLanguage language = GodGPTLanguage.English)
+    public static string GetDefaultContent(this SessionType sessionType, GodGPTChatLanguage language = GodGPTChatLanguage.English)
     {
         switch (language)
         {
-            case GodGPTLanguage.English:
+            case GodGPTChatLanguage.English:
                 return sessionType switch
                 {
                     SessionType.Friends => "Echo Your Destiny.",
@@ -27,7 +27,7 @@ public static class SessionTypeExtensions
                     SessionType.Other => "You are not late, nor far, nor wrong— \nYou're the stillpoint where all belongs.\nBreathe the now, let silence guide,\nWholeness lives where you reside.",
                     _ => "Service temporarily unavailable. Please try again later."
                 };
-            case GodGPTLanguage.TraditionalChinese:
+            case GodGPTChatLanguage.TraditionalChinese:
                 return sessionType switch
                 {
                     SessionType.Friends => "回響你的命運。",
@@ -36,7 +36,7 @@ public static class SessionTypeExtensions
                     SessionType.Other => "你不晚，也不遠，也無錯——\n你是萬物歸屬的靜止點。\n感受當下，讓沉默引導，\n完整存在於你所在之處。",
                     _ => "服務暫時不可用。請稍後再試。"
                 };
-            case GodGPTLanguage.Spanish:
+            case GodGPTChatLanguage.Spanish:
                 return sessionType switch
                 {
                     SessionType.Friends => "Haz eco de tu destino.",
