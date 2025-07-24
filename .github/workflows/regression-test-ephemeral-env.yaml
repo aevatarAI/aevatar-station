@@ -2,70 +2,19 @@ name: Run Aevatar Station Regression Test on Ephemeral Test Environment
 
 on:
   workflow_dispatch:
-  pull_request_review:
-    types: [submitted]
+    inputs:
+      environment_ttl:
+        description: "The TTL of the environment in minutes"
+        required: true
+        default: "60"
 
-run-name: Run Aevatar Station Regression Test on Ephemeral Test Environment on ${{ github.ref_name }} from ${{ github.sha }}
-
-# concurrency:
-#   group: workflow-${{ github.ref }}
-#   cancel-in-progress: true
+run-name: Run Aevatar Station Ephemeral Test Environment on ${{ github.ref_name }} from ${{ github.sha }}
 
 env:
-  PYTHON_VERSION: 3.11
-  # Setting PYTHONUNBUFFERED to 1 to ensure that Python output is sent straight to the terminal without being buffered
-  PYTHONUNBUFFERED: 1
   DOTNET_INSTALL_DIR: "./.dotnet"
 
 jobs:
-  approval-count:
-    if: github.event.review.state == 'approved' || github.event_name == 'workflow_dispatch'
-    runs-on: ephemeral-env-runner
-    outputs:
-      approved_enough: ${{ steps.check.outputs.approved_enough }}
-    steps:
-      - name: Install GitHub CLI
-        run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "Skip Install GitHub CLI"
-            exit 0
-          fi
-          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-          sudo apt update
-          sudo apt install gh -y
-      - name: Check Approve Count
-        id: check
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "Skip approval count check"
-            exit 0
-          fi
-          PR_NUMBER=${{ github.event.pull_request.number }}
-          REPO=${{ github.repository }}
-          OWNER=$(echo "$REPO" | cut -d'/' -f1)
-          REPO_NAME=$(echo "$REPO" | cut -d'/' -f2)
-          gh pr view $PR_NUMBER -R $REPO --json reviews > reviews.json
-          jq '[.reviews | group_by(.author.login) | map(.[-1]) | map(select(.state=="APPROVED")) | .[].author.login] | unique' reviews.json > approved_users.json
-          APPROVED_COUNT=0
-          for user in $(jq -r '.[]' approved_users.json); do
-            PERM=$(gh api repos/$OWNER/$REPO_NAME/collaborators/$user/permission --jq '.permission')
-            if [[ "$PERM" == "admin" || "$PERM" == "write" ]]; then
-              APPROVED_COUNT=$((APPROVED_COUNT+1))
-            fi
-          done
-          echo "Approve count: $APPROVED_COUNT"
-          if [ "$APPROVED_COUNT" -eq 1 ]; then
-            echo "approved_enough=true" >> $GITHUB_OUTPUT
-          else
-            echo "approved_enough=false" >> $GITHUB_OUTPUT
-          fi
-
   publish:
-    if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
-    needs: approval-count
     runs-on: ephemeral-env-runner
     strategy:
       matrix:
@@ -105,7 +54,6 @@ jobs:
           retention-days: 1
 
   build-and-push-image:
-    if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
     needs: publish
     runs-on: ephemeral-env-runner
     strategy:
@@ -156,7 +104,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
   setup-ephermeral-test-env:
-    if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ephemeral-env-runner
     needs: build-and-push-image
     outputs:
@@ -194,7 +141,7 @@ jobs:
               ref: 'main',
               inputs: {
                 project_name: "${{ steps.generate-uuid.outputs.project_name }}",
-                environment_ttl: "5",
+                environment_ttl: "${{ inputs.environment_ttl }}",
                 client_id: "${{ steps.generate-uuid.outputs.client_id }}",
                 client_secret: "${{ steps.generate-uuid.outputs.client_secret }}",
                 host_silo_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
@@ -267,58 +214,30 @@ jobs:
         id: extract
         run: |
           content=$(cat ./downloaded/setup-aevatar-app-env-output.json)
+          echo "namespace=$(echo $content | jq -r '.namespace')" >> $GITHUB_OUTPUT
+          echo "authserver_deployment_name=$(echo $content | jq -r '.authserver_deployment_name')" >> $GITHUB_OUTPUT
+          echo "httpapi_deployment_name=$(echo $content | jq -r '.httpapi_deployment_name')" >> $GITHUB_OUTPUT
+          echo "silo_deployment_name=$(echo $content | jq -r '.silo_deployment_name')" >> $GITHUB_OUTPUT
+          echo "dbmigrator_deployment_name=$(echo $content | jq -r '.dbmigrator_deployment_name')" >> $GITHUB_OUTPUT
           echo "auth_server_url=$(echo $content | jq -r '.auth_server_url')" >> $GITHUB_OUTPUT
           echo "api_server_url=$(echo $content | jq -r '.api_server_url')" >> $GITHUB_OUTPUT
           echo "app_url=$(echo $content | jq -r '.app_url')" >> $GITHUB_OUTPUT
 
       - name: Set job summary
         run: |
-          echo "## Aevatar App Created Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "## Aevatar Station App Created Successfully in namespace: \`${{ steps.extract.outputs.namespace }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "## Deployment Names" >> $GITHUB_STEP_SUMMARY
+          echo "- **Auth Server**: \`${{ steps.extract.outputs.authserver_deployment_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Http API Host**: \`${{ steps.extract.outputs.httpapi_deployment_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Silo**: \`${{ steps.extract.outputs.silo_deployment_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **DB Migrator**: \`${{ steps.extract.outputs.dbmigrator_deployment_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "## Client ID" >> $GITHUB_STEP_SUMMARY
+          echo "- **Client ID**: \`${{ steps.generate-uuid.outputs.client_id }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "## URLs" >> $GITHUB_STEP_SUMMARY
           echo "- **Client ID**: \`${{ steps.generate-uuid.outputs.client_id }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Auth Server URL**: \`${{ steps.extract.outputs.auth_server_url }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **API Server URL**: \`${{ steps.extract.outputs.api_server_url }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **APP URL**: \`${{ steps.extract.outputs.app_url }}\`" >> $GITHUB_STEP_SUMMARY
-
-  run-regression-test:
-    if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
-    needs: setup-ephermeral-test-env 
-    runs-on: ephemeral-env-runner
-    env:
-      AUTH_HOST: ${{ needs.setup-ephermeral-test-env.outputs.auth_server_url }}
-      API_HOST: ${{ needs.setup-ephermeral-test-env.outputs.app_url }}
-      CLIENT_ID: ${{ needs.setup-ephermeral-test-env.outputs.client_id }}
-      CLIENT_SECRET: ${{ needs.setup-ephermeral-test-env.outputs.client_secret }}
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 1
-
-      - name: Cache Python dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.arch }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.arch }}-pip-
-
-      - name: Set up Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install dependencies
-        run: |
-          python -m venv venv
-          source venv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Run Python Script
-        run: |
-          source venv/bin/activate
-          pytest -s -v station/scripts/regression_test.py
           
       - name: Lark Notification on Success
         if: success()
