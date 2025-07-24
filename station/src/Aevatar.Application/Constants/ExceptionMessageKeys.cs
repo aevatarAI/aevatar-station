@@ -26,6 +26,7 @@ public static class ExceptionMessageKeys
     public const string InvalidRequestBody = "InvalidRequestBody";
     public const string InvalidCaptchaCode = "InvalidCaptchaCode";
     public const string EmailIsRequired = "EmailIsRequired";
+    public const string UserUnRegister = "UserUnRegister";
     public const string TooManyFiles = "TooManyFiles";
     public const string HASREGISTERED = "HasBeenRegistered";
 

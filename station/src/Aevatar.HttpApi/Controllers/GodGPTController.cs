@@ -5,6 +5,8 @@ using System.IO;
 using System.Threading.Tasks;
 using Aevatar.Account;
 using Aevatar.Anonymous;
+using Aevatar.Application.Constants;
+using Aevatar.Application.Contracts.Services;
 using Aevatar.Application.Grains.Agents.ChatManager;
 using Aevatar.Application.Grains.Agents.ChatManager.Chat;
 using Aevatar.Application.Grains.Agents.ChatManager.Common;
@@ -56,12 +58,13 @@ public class GodGPTController : AevatarController
     private readonly BlobStoringOptions _blobStoringOptions;
     private readonly IThumbnailService _thumbnailService;
     private readonly IOptions<GodGPTOptions> _godGptOptions;
+    private readonly ILocalizationService _localizationService;
 
 
     public GodGPTController(IGodGPTService godGptService, IClusterClient clusterClient,
         IOptions<AevatarOptions> aevatarOptions, ILogger<GodGPTController> logger, IAccountService accountService,
         IBlobContainer blobContainer, IOptionsSnapshot<BlobStoringOptions> blobStoringOptions,
-        IThumbnailService thumbnailService, IOptions<GodGPTOptions> godGptOptions)
+        IThumbnailService thumbnailService, IOptions<GodGPTOptions> godGptOptions, ILocalizationService localizationService)
     {
         _godGptService = godGptService;
         _clusterClient = clusterClient;
@@ -72,6 +75,7 @@ public class GodGPTController : AevatarController
         _blobStoringOptions = blobStoringOptions.Value;
         _thumbnailService = thumbnailService;
         _godGptOptions = godGptOptions;
+        _localizationService = localizationService;
     }
 
     [AllowAnonymous]
@@ -397,11 +401,13 @@ public class GodGPTController : AevatarController
     [HttpGet("godgpt/check-email-registered")]
     public async Task<IActionResult> CheckEmailRegisteredAsync([FromQuery] string email)
     {
+        var language = HttpContext.GetGodGPTLanguage();
         if (string.IsNullOrWhiteSpace(email))
         {
+            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.EmailIsRequired, language);
             return BadRequest(new
             {
-                error = new { code = 1, message = "Email is required" },
+                error = new { code = 1, message = localizedMessage },
                 result = false
             });
         }
@@ -412,9 +418,10 @@ public class GodGPTController : AevatarController
         }
         else
         {
+            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.UserUnRegister, language);
             return Ok(new
             {
-                error = new { code = 0, message = "User not registered" },
+                error = new { code = 0, message = localizedMessage },
                 result = false
             });
         }
