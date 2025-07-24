@@ -485,7 +485,7 @@ public class GodGPTController : AevatarController
         var stopwatch = Stopwatch.StartNew();
         var clientIp = HttpContext.GetClientIpAddress();
         var userHashId = CommonHelper.GetAnonymousUserGAgentId(clientIp).Replace("AnonymousUser_", "");
-        
+        var language = HttpContext.GetGodGPTLanguage();
         try
         {
             var result = await _godGptService.GetGuestChatLimitsAsync(clientIp);
@@ -496,8 +496,9 @@ public class GodGPTController : AevatarController
         }
         catch (Exception ex)
         {
+            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.InternalServerError, language);
             _logger.LogError(ex, "[GodGPTController][GetGuestChatLimitsAsync] User: {0}, unexpected error", userHashId);
-            return StatusCode(500, new { error = "Internal server error" });
+            return StatusCode(500, new { error = localizedMessage });
         }
     }
     [HttpPost("godgpt/voice/set")]
