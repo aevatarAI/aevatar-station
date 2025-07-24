@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       environment_ttl:
-        description: "The TTL of the environment in minutes"
+        description: "Duration to keep environment (in minutes)"
         required: true
         default: "60"
 
@@ -219,31 +219,20 @@ jobs:
           echo "httpapi_deployment_name=$(echo $content | jq -r '.httpapi_deployment_name')" >> $GITHUB_OUTPUT
           echo "silo_deployment_name=$(echo $content | jq -r '.silo_deployment_name')" >> $GITHUB_OUTPUT
           echo "dbmigrator_deployment_name=$(echo $content | jq -r '.dbmigrator_deployment_name')" >> $GITHUB_OUTPUT
-
           echo "auth_server_url=$(echo $content | jq -r '.auth_server_url')" >> $GITHUB_OUTPUT
           echo "api_server_url=$(echo $content | jq -r '.api_server_url')" >> $GITHUB_OUTPUT
           echo "app_url=$(echo $content | jq -r '.app_url')" >> $GITHUB_OUTPUT
-          echo "namespace=$(echo $content | jq -r '.namespace')" >> $GITHUB_OUTPUT
 
       - name: Set job summary
         run: |
-          echo "## Aevatar App Created Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "## Aevatar Station and App Created Successfully in namespace: \`${{ steps.extract.outputs.namespace }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "## Deployment Names" >> $GITHUB_STEP_SUMMARY
+          echo "- **Auth Server**: \`${{ steps.extract.outputs.authserver_deployment_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Http API Host**: \`${{ steps.extract.outputs.httpapi_deployment_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Silo**: \`${{ steps.extract.outputs.silo_deployment_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **DB Migrator**: \`${{ steps.extract.outputs.dbmigrator_deployment_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "## Station and App URLs" >> $GITHUB_STEP_SUMMARY
           echo "- **Client ID**: \`${{ steps.generate-uuid.outputs.client_id }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Auth Server URL**: \`${{ steps.extract.outputs.auth_server_url }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **API Server URL**: \`${{ steps.extract.outputs.api_server_url }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **APP URL**: \`${{ steps.extract.outputs.app_url }}\`" >> $GITHUB_STEP_SUMMARY
-          
-      - name: Lark Notification on Success
-        if: success()
-        uses: drayeasy/action-lark-notify@main
-        env:
-          LARK_WEBHOOK: ${{ secrets.LARK_WEBHOOK }}
-          LARK_MESSAGE_TITLE: "Regression Testing Successful"
-
-      - name: Lark Notification on Failure
-        if: failure()
-        uses: drayeasy/action-lark-notify@main
-        env:
-          LARK_WEBHOOK: ${{ secrets.LARK_WEBHOOK }}
-          LARK_MESSAGE_TITLE: "Regression Test Failed"
-          LARK_MESSAGE_TEMPLATE: "red"
+          echo "- **App URL**: \`${{ steps.extract.outputs.app_url }}\`" >> $GITHUB_STEP_SUMMARY
