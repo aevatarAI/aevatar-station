@@ -198,7 +198,7 @@ public class AgentService : ApplicationService, IAgentService
     }
 
     /// <summary>
-    /// 获取配置类的默认值
+    /// 获取配置类的默认值（返回列表格式，为支持默认值列表功能做准备）
     /// </summary>
     private async Task<Dictionary<string, object?>> GetConfigurationDefaultValuesAsync(Type configurationType)
     {
@@ -217,13 +217,25 @@ public class AgentService : ApplicationService, IAgentService
                     try
                     {
                         var value = property.GetValue(instance);
-                        defaultValues[property.Name] = value;
+                        
+                        // 将所有默认值都转换为列表格式
+                        if (value == null)
+                        {
+                            // null值转换为空列表
+                            defaultValues[property.Name] = new List<object>();
+                        }
+                        else
+                        {
+                            // 非null值转换为包含单个元素的列表
+                            defaultValues[property.Name] = new List<object> { value };
+                        }
                     }
                     catch (Exception ex)
                     {
                         _logger.LogWarning(ex, "Failed to get default value for property {PropertyName} in {ConfigType}", 
                             property.Name, configurationType.Name);
-                        defaultValues[property.Name] = null;
+                        // 异常情况也返回空列表
+                        defaultValues[property.Name] = new List<object>();
                     }
                 }
             }
