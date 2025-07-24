@@ -528,7 +528,7 @@ public class GodGPTService : ApplicationService, IGodGPTService
         var canChatStopwatch = Stopwatch.StartNew();
         var canChat = await anonymousUserGrain.CanChatAsync();
         _logger.LogDebug($"[GodGPTService][CreateGuestSessionAsync] CanChatAsync duration: {canChatStopwatch.ElapsedMilliseconds}ms");
-        if (canChat)
+        if (!canChat)
         {
             var remainingChatsStopwatch = Stopwatch.StartNew();
             var remainingChats = await anonymousUserGrain.GetRemainingChatsAsync();
