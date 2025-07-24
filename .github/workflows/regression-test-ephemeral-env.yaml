@@ -244,12 +244,12 @@ jobs:
         uses: drayeasy/action-lark-notify@main
         env:
           LARK_WEBHOOK: ${{ secrets.LARK_WEBHOOK }}
-          LARK_MESSAGE_TITLE: "Regression Testing Successful"
+          LARK_MESSAGE_TITLE: "Feature Ephemeral Test Environment ${{ steps.extract.outputs.namespace }} Setup Successfully for ${{ inputs.environment_ttl }} minutes"
 
       - name: Lark Notification on Failure
         if: failure()
         uses: drayeasy/action-lark-notify@main
         env:
           LARK_WEBHOOK: ${{ secrets.LARK_WEBHOOK }}
-          LARK_MESSAGE_TITLE: "Regression Test Failed"
+          LARK_MESSAGE_TITLE: "Feature Ephemeral Test Environment ${{ steps.extract.outputs.namespace }} Setup Failed"
           LARK_MESSAGE_TEMPLATE: "red"
