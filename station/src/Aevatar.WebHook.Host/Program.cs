@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Events;
+using Aevatar.Domain.Shared.Configuration;
 
 namespace Aevatar.Webhook;
 
@@ -15,8 +16,9 @@ public class Program
     public async static Task<int> Main(string[] args)
     {
         var configuration = new ConfigurationBuilder()
-            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
-            .AddJsonFile("appsettings.json")
+            .AddAevatarSecureConfiguration(
+                systemConfigPath: Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
+            .AddEnvironmentVariables("BUSINESS_")
             .Build();
 
         var webhookId = configuration["Webhook:WebhookId"];
@@ -38,8 +40,9 @@ public class Program
             var builder = CreateHostBuilder(args);
             builder.ConfigureHostConfiguration(config =>
             {
-                config.AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
-                    .AddJsonFile("appsettings.json");
+                config.AddAevatarSecureConfiguration(
+                    systemConfigPath: Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
+                    .AddEnvironmentVariables("BUSINESS_");
             });
             await builder.Build().RunAsync();
             return 0;

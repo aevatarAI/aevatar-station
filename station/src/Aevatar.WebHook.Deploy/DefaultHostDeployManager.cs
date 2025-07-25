@@ -36,4 +36,10 @@ public class DefaultHostDeployManager : IHostDeployManager
     {
         return;
     }
+
+    public async Task UpdateBusinessConfigurationAsync(string hostId, string version)
+    {
+        // Default implementation does nothing - override in concrete implementations like KubernetesHostManager
+        return;
+    }
 }

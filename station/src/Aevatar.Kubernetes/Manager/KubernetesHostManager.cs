@@ -8,6 +8,8 @@ using k8s.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Volo.Abp.DependencyInjection;
+using Aevatar.Enum;
+using Aevatar.Application.Grains.Agents.Configuration;
 
 namespace Aevatar.Kubernetes.Manager;
 
@@ -18,16 +20,19 @@ public class KubernetesHostManager : IHostDeployManager, IHostCopyManager, ISing
     private readonly ILogger<KubernetesHostManager> _logger;
     private readonly IKubernetesClientAdapter _kubernetesClientAdapter;
     private readonly HostDeployOptions _HostDeployOptions;
+    private readonly IGrainFactory _grainFactory;
 
     public KubernetesHostManager(ILogger<KubernetesHostManager> logger,
         IKubernetesClientAdapter kubernetesClientAdapter,
         IOptionsSnapshot<KubernetesOptions> kubernetesOptions,
-        IOptionsSnapshot<HostDeployOptions> HostDeployOptions)
+        IOptionsSnapshot<HostDeployOptions> HostDeployOptions,
+        IGrainFactory grainFactory)
     {
         _logger = logger;
         _kubernetesClientAdapter = kubernetesClientAdapter;
         _kubernetesOptions = kubernetesOptions.Value;
         _HostDeployOptions = HostDeployOptions.Value;
+        _grainFactory = grainFactory;
     }
 
     public async Task<string> CreateNewWebHookAsync(string appId, string version, string imageName)
@@ -63,6 +68,9 @@ public class KubernetesHostManager : IHostDeployManager, IHostCopyManager, ISing
                 GetHostClientConfigContent(appId, version, KubernetesConstants.AppSettingSiloSharedFileName, null)
             }
         };
+
+        // Add business configuration file if available
+        await AddBusinessConfigToConfigFilesAsync(appId, configFiles, HostTypeEnum.WebHook);
         await EnsureConfigMapAsync(
             appId,
             version,
@@ -162,7 +170,7 @@ public class KubernetesHostManager : IHostDeployManager, IHostCopyManager, ISing
                 container.Image = newImage;
                 await _kubernetesClientAdapter.ReplaceNamespacedDeploymentAsync(deployment, deploymentName,
                     KubernetesConstants.AppNameSpace);
-                _logger.LogInformation($"Updated deployment {deploymentName} to use image {newImage}");
+                _logger.LogInformation($"Updated deployment {deploymentName} to use image {newImage} with latest business configuration");
             }
             else
             {
@@ -185,29 +193,38 @@ public class KubernetesHostManager : IHostDeployManager, IHostCopyManager, ISing
             .Replace(KubernetesConstants.PlaceHolderNameSpace, KubernetesConstants.AppNameSpace.ToLower());
     }
 
+    private async Task<string> GetHostSiloConfigContentAsync(string appId, string version, string templateFilePath)
+    {
+        return GetBaseConfigContent(appId, version, templateFilePath);
+    }
+
     private static string GetHostSiloConfigContent(string appId, string version, string templateFilePath)
     {
-        var configContent = File.ReadAllText(templateFilePath);
-        var unescapedContent = Regex.Unescape(configContent);
-        return unescapedContent.Replace(KubernetesConstants.HostPlaceHolderAppId, appId.ToLower())
-            .Replace(KubernetesConstants.HostPlaceHolderVersion, version.ToLower())
-            .Replace(KubernetesConstants.HostPlaceHolderNameSpace, KubernetesConstants.AppNameSpace.ToLower());
+        return GetBaseConfigContent(appId, version, templateFilePath);
+    }
+
+    private async Task<string> GetHostClientConfigContentAsync(string appId, string version, string templateFilePath,
+        [CanBeNull] string corsUrls)
+    {
+        var baseConfig = GetBaseConfigContent(appId, version, templateFilePath);
+        if (corsUrls != null)
+        {
+            baseConfig = baseConfig.Replace(KubernetesConstants.HostClientCors, corsUrls);
+        }
+
+        return baseConfig;
     }
 
     private static string GetHostClientConfigContent(string appId, string version, string templateFilePath,
         [CanBeNull] string corsUrls)
     {
-        var configContent = File.ReadAllText(templateFilePath);
-        var unescapedContent = Regex.Unescape(configContent);
-        unescapedContent = unescapedContent.Replace(KubernetesConstants.HostPlaceHolderAppId, appId.ToLower())
-            .Replace(KubernetesConstants.HostPlaceHolderVersion, version.ToLower())
-            .Replace(KubernetesConstants.HostPlaceHolderNameSpace, KubernetesConstants.AppNameSpace.ToLower());
+        var baseConfig = GetBaseConfigContent(appId, version, templateFilePath);
         if (corsUrls != null)
         {
-            unescapedContent = unescapedContent.Replace(KubernetesConstants.HostClientCors, corsUrls);
+            baseConfig = baseConfig.Replace(KubernetesConstants.HostClientCors, corsUrls);
         }
 
-        return unescapedContent;
+        return baseConfig;
     }
 
     private async Task EnsureDeploymentAsync(
@@ -357,14 +374,20 @@ public class KubernetesHostManager : IHostDeployManager, IHostCopyManager, ISing
 
     public async Task<string> CreateHostAsync(string appId, string version, string corsUrls)
     {
+        // Create Silo with business configuration integration
         await CreateHostSiloAsync(GetHostName(appId, KubernetesConstants.HostSilo), version,
             _HostDeployOptions.HostSiloImageName,
-            GetHostSiloConfigContent(appId, version, KubernetesConstants.HostSiloSettingTemplateFilePath));
+            await GetHostSiloConfigContentAsync(appId, version, KubernetesConstants.HostSiloSettingTemplateFilePath));
+        
         // await EnsurePhaAsync(appId, version);
+        
+        // Create Client with business configuration integration
         await CreatePodAsync(GetHostName(appId, KubernetesConstants.HostClient), version,
             _HostDeployOptions.HostClientImageName,
-            GetHostClientConfigContent(appId, version, KubernetesConstants.HostClientSettingTemplateFilePath, corsUrls),
+            await GetHostClientConfigContentAsync(appId, version, KubernetesConstants.HostClientSettingTemplateFilePath, corsUrls),
             KubernetesConstants.HostClientCommand, _kubernetesOptions.DeveloperHostName);
+        
+        _logger.LogInformation("Host created successfully with business configuration for {AppId} version {Version}", appId, version);
         return "";
     }
 
@@ -381,17 +404,20 @@ public class KubernetesHostManager : IHostDeployManager, IHostCopyManager, ISing
             { KubernetesConstants.AppSettingFileName, appSettingsContent },
             {
                 KubernetesConstants.AppSettingSharedFileName,
-                GetHostSiloConfigContent(appId, version, KubernetesConstants.AppSettingSharedFileName)
+                await GetHostSiloConfigContentAsync(appId, version, KubernetesConstants.AppSettingSharedFileName)
             },
             {
                 KubernetesConstants.AppSettingHttpApiHostSharedFileName,
-                GetHostSiloConfigContent(appId, version, KubernetesConstants.AppSettingHttpApiHostSharedFileName)
+                await GetHostSiloConfigContentAsync(appId, version, KubernetesConstants.AppSettingHttpApiHostSharedFileName)
             },
             {
                 KubernetesConstants.AppSettingSiloSharedFileName,
-                GetHostSiloConfigContent(appId, version, KubernetesConstants.AppSettingSiloSharedFileName)
+                await GetHostSiloConfigContentAsync(appId, version, KubernetesConstants.AppSettingSiloSharedFileName)
             }
         };
+
+        // Add business configuration file if available
+        await AddBusinessConfigToConfigFilesAsync(appId, configFiles, HostTypeEnum.Silo);
         await EnsureConfigMapAsync(
             appId,
             version,
@@ -895,4 +921,119 @@ public class KubernetesHostManager : IHostDeployManager, IHostCopyManager, ISing
             _logger.LogError(ex, $"[KubernetesHostManager] Failed to cleanup partial copy for {newClientId}");
         }
     }
+
+    /// <summary>
+    /// Gets base configuration content with placeholder replacements
+    /// </summary>
+    private static string GetBaseConfigContent(string appId, string version, string templateFilePath)
+    {
+        var configContent = File.ReadAllText(templateFilePath);
+        var unescapedContent = Regex.Unescape(configContent);
+        return unescapedContent.Replace(KubernetesConstants.HostPlaceHolderAppId, appId.ToLower())
+            .Replace(KubernetesConstants.HostPlaceHolderVersion, version.ToLower())
+            .Replace(KubernetesConstants.HostPlaceHolderNameSpace, KubernetesConstants.AppNameSpace.ToLower());
+    }
+
+    /// <summary>
+    /// Adds business configuration as a separate file to the ConfigMap
+    /// </summary>
+    private async Task AddBusinessConfigToConfigFilesAsync(string hostId, Dictionary<string, string> configFiles, HostTypeEnum hostType)
+    {
+        try
+        {
+            // Get business configuration from HostConfigurationGAgent
+            var grainKey = $"{hostId}:{hostType}";
+            var configAgent = _grainFactory.GetGrain<IHostConfigurationGAgent>(grainKey);
+            var businessConfigJson = await configAgent.GetBusinessConfigurationJsonAsync();
+
+            if (string.IsNullOrWhiteSpace(businessConfigJson) || businessConfigJson == "{}")
+            {
+                _logger.LogDebug("No business configuration found for {HostId}:{HostType}", hostId, hostType);
+                // Add empty business config file
+                configFiles["business-config.json"] = "{}";
+                return;
+            }
+
+            // Add business configuration as a separate file in ConfigMap
+            configFiles["business-config.json"] = businessConfigJson;
+            
+            _logger.LogInformation("Business configuration added to ConfigMap for {HostId}:{HostType}", hostId, hostType);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load business configuration for {HostId}:{HostType}, adding empty config", hostId, hostType);
+            // Add empty business config file as fallback
+            configFiles["business-config.json"] = "{}";
+        }
+    }
+
+    /// <summary>
+    /// Updates existing K8s ConfigMaps with the latest business configuration for all host types
+    /// </summary>
+    public async Task UpdateBusinessConfigurationAsync(string hostId, string version)
+    {
+        _logger.LogInformation("Updating business configuration for hostId: {HostId}, version: {Version}", hostId, version);
+
+        var updateTasks = new List<Task>();
+
+        // Update WebHook ConfigMap if it exists
+        var webhookAppId = hostId; // WebHook uses hostId directly
+        updateTasks.Add(UpdateConfigMapWithBusinessConfigAsync(webhookAppId, version, HostTypeEnum.WebHook));
+
+        // Update Silo ConfigMap if it exists  
+        var siloAppId = GetHostName(hostId, KubernetesConstants.HostSilo);
+        updateTasks.Add(UpdateConfigMapWithBusinessConfigAsync(siloAppId, version, HostTypeEnum.Silo));
+
+        // Update Client ConfigMap if it exists
+        var clientAppId = GetHostName(hostId, KubernetesConstants.HostClient);
+        updateTasks.Add(UpdateConfigMapWithBusinessConfigAsync(clientAppId, version, HostTypeEnum.Client));
+
+        // Execute all updates concurrently
+        await Task.WhenAll(updateTasks);
+
+        _logger.LogInformation("Business configuration update completed for hostId: {HostId}", hostId);
+    }
+
+    /// <summary>
+    /// Updates a specific ConfigMap with business configuration for a given host type
+    /// </summary>
+    private async Task UpdateConfigMapWithBusinessConfigAsync(string appId, string version, HostTypeEnum hostType)
+    {
+        try
+        {
+            var configMapName = ConfigMapHelper.GetAppSettingConfigMapName(appId, version);
+            
+            // Check if ConfigMap exists
+            var configMaps = await _kubernetesClientAdapter.ListConfigMapAsync(KubernetesConstants.AppNameSpace);
+            var existingConfigMap = configMaps.Items.FirstOrDefault(cm => cm.Metadata.Name == configMapName);
+            
+            if (existingConfigMap == null)
+            {
+                _logger.LogDebug("ConfigMap {ConfigMapName} not found, skipping business config update", configMapName);
+                return;
+            }
+
+            // Get current ConfigMap data
+            var updatedConfigData = new Dictionary<string, string>(existingConfigMap.Data ?? new Dictionary<string, string>());
+
+            // Extract hostId from appId for grain key (remove suffixes like -silo, -client)
+            var hostId = appId.Replace($"-{KubernetesConstants.HostSilo}", "").Replace($"-{KubernetesConstants.HostClient}", "");
+
+            // Add/update business configuration
+            await AddBusinessConfigToConfigFilesAsync(hostId, updatedConfigData, hostType);
+
+            // Create updated ConfigMap
+            var updatedConfigMap = ConfigMapHelper.CreateAppSettingConfigMapDefinition(configMapName, updatedConfigData);
+
+            // Update the ConfigMap
+            await _kubernetesClientAdapter.ReplaceNamespacedConfigMapAsync(updatedConfigMap, configMapName, KubernetesConstants.AppNameSpace);
+            
+            _logger.LogInformation("ConfigMap {ConfigMapName} updated with latest business configuration for {HostType}", configMapName, hostType);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update ConfigMap for appId: {AppId}, hostType: {HostType}", appId, hostType);
+        }
+    }
+
 }

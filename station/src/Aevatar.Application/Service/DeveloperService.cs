@@ -15,6 +15,11 @@ public interface IDeveloperService
     Task UpdateDockerImageAsync(string appId, string version, string newImage);
     
     Task CopyHostAsync(string sourceClientId, string newClientId, string version, string corsUrls);
+    
+    /// <summary>
+    /// Updates business configuration in existing K8s ConfigMaps for all host types
+    /// </summary>
+    Task UpdateBusinessConfigurationAsync(string hostId, string version);
 }
 
 public class DeveloperService: ApplicationService, IDeveloperService
@@ -50,6 +55,10 @@ public class DeveloperService: ApplicationService, IDeveloperService
         await _hostCopyManager.CopyHostAsync(sourceClientId, newClientId, version, corsUrls);
     }
 
+    public async Task UpdateBusinessConfigurationAsync(string hostId, string version)
+    {
+        await _hostDeployManager.UpdateBusinessConfigurationAsync(hostId, version);
+    }
 }
 
 

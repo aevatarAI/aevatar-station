@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Controllers;
-using Aevatar.Kubernetes.Enum;
+using Aevatar.Enum;
 using Aevatar.Permissions;
 using Aevatar.Service;
 using Asp.Versioning;
@@ -17,7 +17,6 @@ namespace Aevatar.Admin.Controllers;
 [ControllerName("Users")]
 [Route("api/users")]
 public class UserController : AevatarController
-
 {
     private readonly IUserAppService _userAppService;
     private readonly IDeveloperService _developerService;
@@ -78,16 +77,14 @@ public class UserController : AevatarController
             appId = appId + "-" + hostType;
         }
 
-        await _developerService.UpdateDockerImageAsync(appId, "1",
-            imageName);
+        await _developerService.UpdateDockerImageAsync(appId, "1", imageName);
     }
 
     [Authorize(Policy = "OnlyAdminAccess")]
     [HttpPost("updateDockerImageByAdmin")]
     public async Task UpdateDockerImageByAdminAsync(string hostId, HostTypeEnum hostType, string imageName)
     {
-        await _developerService.UpdateDockerImageAsync(hostId + "-" + hostType, "1",
-            imageName);
+        await _developerService.UpdateDockerImageAsync(hostId + "-" + hostType, "1", imageName);
     }
 
     [HttpPost("CopyHost")]

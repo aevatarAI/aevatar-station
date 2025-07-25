@@ -12,4 +12,10 @@ public interface IHostDeployManager
 
     public Task UpdateDockerImageAsync(string appId, string version, string newImage);
 
+    /// <summary>
+    /// Updates existing K8s ConfigMaps with the latest business configuration for all host types
+    /// </summary>
+    /// <param name="hostId">Host identifier</param>
+    /// <param name="version">Host version</param>
+    Task UpdateBusinessConfigurationAsync(string hostId, string version);
 }

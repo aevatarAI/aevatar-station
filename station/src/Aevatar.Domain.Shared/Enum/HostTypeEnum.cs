@@ -1,4 +1,4 @@
-namespace Aevatar.Kubernetes.Enum;
+namespace Aevatar.Enum;
 
 public enum HostTypeEnum
 {
