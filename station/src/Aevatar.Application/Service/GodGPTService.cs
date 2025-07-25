@@ -263,12 +263,23 @@ public class GodGPTService : ApplicationService, IGodGPTService
 
     public async Task<CreateShareIdResponse> GenerateShareContentAsync(Guid currentUserId, CreateShareIdRequest request)
     {
-        var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
-        var shareId = await manager.GenerateChatShareContentAsync(request.SessionId);
-        return new CreateShareIdResponse
+        try
         {
-            ShareId = GuidCompressor.CompressGuids(currentUserId, request.SessionId, shareId)
-        };
+            var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
+            var shareId = await manager.GenerateChatShareContentAsync(request.SessionId);
+            return new CreateShareIdResponse
+            {
+                ShareId = GuidCompressor.CompressGuids(currentUserId, request.SessionId, shareId)
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"GenerateShareContentAsync userId:{currentUserId}, sessionId:{request.SessionId}, error: {ex.Message} ");
+            return new CreateShareIdResponse
+            {
+                ShareId = ""
+            };
+        }
     }
 
     public async Task<List<ChatMessage>> GetShareMessageListAsync(string shareString)
