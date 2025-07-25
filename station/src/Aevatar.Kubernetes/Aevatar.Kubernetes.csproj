@@ -2,7 +2,7 @@
     
     <Import Project="..\..\common.props" />
     <PropertyGroup>
-        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+        <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <PackageId>Aevatar.Kubernetes</PackageId>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
