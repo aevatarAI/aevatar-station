@@ -92,6 +92,9 @@ public class AgentService : ApplicationService, IAgentService
                     GuidUtil.GuidToGrainKey(
                         GuidUtil.StringToGuid("AgentDefaultId"))); // make sure only one agent instance for each type
                 var agent = await _gAgentFactory.GetGAgentAsync(grainId);
+                var description = await agent.GetDescriptionAsync();
+                agentTypeData.Description = description;
+                
                 var initializeDtoType = await agent.GetConfigurationTypeAsync();
                 if (initializeDtoType == null || initializeDtoType.IsAbstract)
                 {
@@ -170,6 +173,7 @@ public class AgentService : ApplicationService, IAgentService
             {
                 AgentType = kvp.Key,
                 FullName = kvp.Value?.FullName ?? kvp.Key,
+                Description = kvp.Value?.Description
             };
 
             if (kvp.Value != null)
@@ -259,7 +263,7 @@ public class AgentService : ApplicationService, IAgentService
             AgentGuid = businessAgent.GetPrimaryKey(),
             BusinessAgentGrainId = businessAgent.GetGrainId().ToString()
         };
-        
+
         var configuration = await GetAgentConfigurationAsync(businessAgent);
         if (configuration != null)
         {
@@ -268,18 +272,29 @@ public class AgentService : ApplicationService, IAgentService
 
         return resp;
     }
-
-    public async Task<List<AgentInstanceDto>> GetAllAgentInstances(int pageIndex, int pageSize)
+    
+    public async Task<List<AgentInstanceDto>> GetAllAgentInstances(GetAllAgentInstancesQueryDto queryDto)
     {
         var result = new List<AgentInstanceDto>();
         var currentUserId = _userAppService.GetCurrentUserId();
+        
+        // Build query conditions
+        var queryString = "userId.keyword:" + currentUserId;
+        
+        // Add agentType fuzzy query condition
+        if (!string.IsNullOrWhiteSpace(queryDto.AgentType))
+        {
+            // Use fuzzy query with ~ operator for better matching
+            queryString += " AND agentType:(" + queryDto.AgentType + "~ OR " + queryDto.AgentType + "*)";
+        }
+        
         var response =
             await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
             {
-                QueryString = "userId.keyword:" + currentUserId,
+                QueryString = queryString,
                 StateName = nameof(CreatorGAgentState),
-                PageSize = pageSize,
-                PageIndex = pageIndex
+                PageSize = queryDto.PageSize,
+                PageIndex = queryDto.PageIndex
             });
         if (response.TotalCount == 0)
         {
@@ -299,6 +314,25 @@ public class AgentService : ApplicationService, IAgentService
         }));
 
         return result;
+    }
+
+    private AgentInstanceDto MapToAgentItem(Dictionary<string, object> state)
+    {
+        // Align with existing data conversion logic
+        var properties = state["properties"] == null
+            ? null
+            : JsonConvert.DeserializeObject<Dictionary<string, object>>((string)state["properties"]);
+
+        return new AgentInstanceDto
+        {
+            Id = (string)state["id"],
+            Name = (string)state["name"],
+            AgentType = (string)state["agentType"],
+            Properties = properties,
+            BusinessAgentGrainId = state.TryGetValue("formattedBusinessAgentGrainId", out var value)
+                ? (string)value
+                : null
+        };
     }
 
     private void CheckCreateParam(CreateAgentInputDto createDto)
@@ -327,7 +361,7 @@ public class AgentService : ApplicationService, IAgentService
         {
             var config = SetupConfigurationData(initializationData, agentProperties);
             await businessAgent.ConfigAsync(config);
-            
+
             return new Tuple<IGAgent, ConfigurationBase>(businessAgent, config);
         }
 
@@ -460,9 +494,9 @@ public class AgentService : ApplicationService, IAgentService
             businessAgents.Add(businessAgent);
             subAgentGuids.Add(grainId.GetGuidKey());
         }
-        
+
         await agent.RegisterManyAsync(businessAgents);
-        
+
         foreach (var businessAgent in businessAgents)
         {
             var eventsHandledByAgent = await businessAgent.GetAllSubscribedEventsAsync();
@@ -573,7 +607,7 @@ public class AgentService : ApplicationService, IAgentService
         var agentState = await creatorAgent.GetAgentAsync();
 
         var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
-        var subAgentGrainIds = await GetSubAgentGrainIds(agent);
+        var subAgentGrainIds = await agent.GetChildrenAsync();
         await RemoveSubAgentAsync(guid,
             new RemoveSubAgentDto { RemovedSubAgents = subAgentGrainIds.Select(x => x.GetGuidKey()).ToList() });
     }
