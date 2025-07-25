@@ -1,4 +1,4 @@
-﻿using Aevatar.Options;
+﻿using Aevatar.Kubernetes.Options;
 using k8s;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

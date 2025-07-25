@@ -10,6 +10,10 @@
 
     <ItemGroup>
       <PackageReference Include="KubernetesClient" />
+      <PackageReference Include="Volo.Abp.Core" />
+      <PackageReference Include="Microsoft.Extensions.Configuration" />
+      <PackageReference Include="Microsoft.Extensions.Options" />
+      <PackageReference Include="JetBrains.Annotations" />
     </ItemGroup>
 
     <ItemGroup>
@@ -17,9 +21,10 @@
       <None Remove="AppConfigTemplate\filebeat-template.yml" />
     </ItemGroup>
 
-    <ItemGroup>
+    <!-- Removed problematic project references temporarily -->
+    <!-- <ItemGroup>
       <ProjectReference Include="..\Aevatar.WebHook.Deploy\Aevatar.WebHook.Deploy.csproj" />
       <ProjectReference Include="..\Aevatar.Domain.Shared\Aevatar.Domain.Shared.csproj" />
-    </ItemGroup>
+    </ItemGroup> -->
 
 </Project>

@@ -1,8 +1,8 @@
 using System.Text.RegularExpressions;
 using Aevatar.Kubernetes.Adapter;
 using Aevatar.Kubernetes.ResourceDefinition;
-using Aevatar.Options;
-using Aevatar.WebHook.Deploy;
+using Aevatar.Kubernetes.Options;
+using Aevatar.Kubernetes.Interfaces;
 using JetBrains.Annotations;
 using k8s.Models;
 using Microsoft.Extensions.Logging;
