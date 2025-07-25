@@ -391,7 +391,8 @@ public class GodGPTController : AevatarController
     public async Task<List<ChatMessage>> GetShareMessageListAsync(string shareString)
     {
         var stopwatch = Stopwatch.StartNew();
-        var response = await _godGptService.GetShareMessageListAsync(shareString);
+        var language = HttpContext.GetGodGPTLanguage();
+        var response = await _godGptService.GetShareMessageListAsync(shareString,language);
         _logger.LogDebug("[GodGPTController][GetShareMessageListAsync] shareString: {0} duration: {1}ms",
             shareString, stopwatch.ElapsedMilliseconds);
         return response;
