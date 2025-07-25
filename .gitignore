@@ -263,3 +263,4 @@ appsettings.secrets.json
 # test agent ids file
 **/agent_ids.json
 
+.cursor/rules/commit.mdc

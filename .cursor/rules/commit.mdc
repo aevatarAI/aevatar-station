@@ -1,6 +1,0 @@
----
-description: git commit
-globs: 
-alwaysApply: false
----
-提交commit不要用中文,翻译成英文再提交
