@@ -34,6 +34,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Orleans;
+using Orleans.Runtime;
 using Stripe;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
@@ -61,7 +62,7 @@ public interface IGodGPTService
     Task<UserProfileDto> GetUserProfileAsync(Guid currentUserId);
     Task<Guid> SetUserProfileAsync(Guid currentUserId, SetUserProfileInput userProfileDto);
     Task<Guid> DeleteAccountAsync(Guid currentUserId);
-    Task<CreateShareIdResponse> GenerateShareContentAsync(Guid currentUserId, CreateShareIdRequest request);
+    Task<CreateShareIdResponse> GenerateShareContentAsync(Guid currentUserId, CreateShareIdRequest request, GodGPTChatLanguage language = GodGPTChatLanguage.English);
     Task<List<ChatMessage>> GetShareMessageListAsync(string shareString, GodGPTChatLanguage language = GodGPTChatLanguage.English);
     Task UpdateShowToastAsync(Guid currentUserId);
     Task<List<StripeProductDto>> GetStripeProductsAsync(Guid currentUserId);
@@ -265,11 +266,12 @@ public class GodGPTService : ApplicationService, IGodGPTService
         return await manager.ClearAllAsync();
     }
 
-    public async Task<CreateShareIdResponse> GenerateShareContentAsync(Guid currentUserId, CreateShareIdRequest request)
+    public async Task<CreateShareIdResponse> GenerateShareContentAsync(Guid currentUserId, CreateShareIdRequest request, GodGPTChatLanguage language = GodGPTChatLanguage.English)
     {
         try
         {
             var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
+            RequestContext.Set("GodGPTLanguage", language);
             var shareId = await manager.GenerateChatShareContentAsync(request.SessionId);
             return new CreateShareIdResponse
             {
@@ -279,10 +281,7 @@ public class GodGPTService : ApplicationService, IGodGPTService
         catch (Exception ex)
         {
             _logger.LogError($"GenerateShareContentAsync userId:{currentUserId}, sessionId:{request.SessionId}, error: {ex.Message} ");
-            return new CreateShareIdResponse
-            {
-                ShareId = ""
-            };
+            throw ex;
         }
     }
 
@@ -310,14 +309,14 @@ public class GodGPTService : ApplicationService, IGodGPTService
         try
         {
             var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
+            RequestContext.Set("GodGPTLanguage", language);
             var shareLinkDto = await manager.GetChatShareContentAsync(sessionId, shareId);
             return shareLinkDto.Messages;
         }
         catch (Exception ex)
         {
             _logger.LogError($"GetShareMessageListAsync exception userId:{userId},shareId:{shareId}, error:{ex.Message}");
-            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.InternalServerError, language);
-            throw new UserFriendlyException(localizedMessage);
+            throw ex;
         }
     }
 

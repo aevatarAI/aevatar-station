@@ -380,7 +380,8 @@ public class GodGPTController : AevatarController
     {
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
-        var response = await _godGptService.GenerateShareContentAsync(currentUserId, request);
+        var language = HttpContext.GetGodGPTLanguage();
+        var response = await _godGptService.GenerateShareContentAsync(currentUserId, request, language);
         _logger.LogDebug("[GodGPTController][CreateShareStringAsync] userId: {0} sessionId: {1}, ShareId={2}, duration: {3}ms",
             currentUserId, request.SessionId, response.ShareId, stopwatch.ElapsedMilliseconds);
         return response;
