@@ -125,13 +125,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{BB1E
 	ProjectSection(SolutionItems) = preProject
 		scripts\regression_test.py = scripts\regression_test.py
 		scripts\regression_test_signalr.py = scripts\regression_test_signalr.py
-		scripts\ENV-SETUP.md = scripts\ENV-SETUP.md
-		scripts\get-auth-token.sh = scripts\get-auth-token.sh
-		scripts\list-mcp-tests.sh = scripts\list-mcp-tests.sh
-		scripts\set-env.template.sh = scripts\set-env.template.sh
-		scripts\test-context7-mcp.sh = scripts\test-context7-mcp.sh
-		scripts\test-memory-server-mcp.sh = scripts\test-memory-server-mcp.sh
-		scripts\test-tool-calling.sh = scripts\test-tool-calling.sh
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "resource", "resource", "{22441F23-5B7E-467A-A55B-FA1AC5C914B2}"
