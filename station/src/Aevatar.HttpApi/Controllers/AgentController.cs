@@ -45,6 +45,14 @@ public class AgentController : AevatarController
         return await _agentService.GetAllAgentInstances(input);
     }
 
+    [HttpPost("search")]
+    [Authorize]
+    public async Task<AgentSearchResponse> SearchAgents([FromBody] AgentSearchRequest request)
+    {
+        _logger.LogInformation("Search Agents: {request}", JsonConvert.SerializeObject(request));
+        return await _agentService.SearchAgents(request);
+    }
+
     [HttpPost]
     // [Authorize(Policy = AevatarPermissions.Agent.Create)]
     [Authorize]

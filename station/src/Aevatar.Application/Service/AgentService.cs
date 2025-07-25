@@ -316,6 +316,80 @@ public class AgentService : ApplicationService, IAgentService
         return result;
     }
 
+    public async Task<AgentSearchResponse> SearchAgents(AgentSearchRequest request)
+    {
+        var currentUserId = _userAppService.GetCurrentUserId();
+        
+        // Build Lucene query
+        var queryParts = new List<string>
+        {
+            $"userId.keyword:{currentUserId}"
+        };
+        
+        // Add search term filter (matches name, agentType)
+        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+        {
+            var searchTerm = request.SearchTerm.Trim();
+            queryParts.Add($"(name:*{searchTerm}* OR agentType:*{searchTerm}*)");
+        }
+        
+        // Add type filter (multi-type support)
+        if (request.Types?.Any() == true)
+        {
+            var typeQueries = request.Types.Select(type => $"agentType.keyword:\"{type}\"");
+            queryParts.Add($"({string.Join(" OR ", typeQueries)})");
+        }
+        
+        var queryString = string.Join(" AND ", queryParts);
+        
+        // Build sort fields
+        var sortFields = new List<string>();
+        if (!string.IsNullOrWhiteSpace(request.SortBy))
+        {
+            var sortOrder = request.SortOrder?.ToLower() == "asc" ? "asc" : "desc";
+            var sortField = request.SortBy.ToLower() switch
+            {
+                "name" => "name.keyword",
+                "createtime" => "createTime",
+                "updatetime" => "createTime", // Use createTime as updateTime proxy
+                _ => "createTime"
+            };
+            sortFields.Add($"{sortField}:{sortOrder}");
+        }
+        
+        var luceneQuery = new LuceneQueryDto
+        {
+            QueryString = queryString,
+            StateName = nameof(CreatorGAgentState),
+            PageSize = request.PageSize,
+            PageIndex = request.PageIndex,
+            SortFields = sortFields
+        };
+        
+        var response = await _indexingService.QueryWithLuceneAsync(luceneQuery);
+        
+        var agents = response.Items.Select(state => new AgentInstanceDto
+        {
+            Id = (string)state["id"],
+            Name = (string)state["name"],
+            Properties = state["properties"] == null
+                ? null
+                : JsonConvert.DeserializeObject<Dictionary<string, object>>((string)state["properties"]),
+            AgentType = (string)state["agentType"],
+            BusinessAgentGrainId =
+                state.TryGetValue("formattedBusinessAgentGrainId", out var value) ? (string)value : null
+        }).ToList();
+        
+        return new AgentSearchResponse
+        {
+            Agents = agents,
+            Total = (int)response.TotalCount,
+            PageIndex = request.PageIndex,
+            PageSize = request.PageSize,
+            HasMore = (request.PageIndex + 1) * request.PageSize < response.TotalCount
+        };
+    }
+
     private AgentInstanceDto MapToAgentItem(Dictionary<string, object> state)
     {
         // Align with existing data conversion logic

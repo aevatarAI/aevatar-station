@@ -149,6 +149,85 @@ def test_agent_operations(api_headers, test_agent):
     assert test_agent in agent_ids
 
 
+def test_agent_search(api_headers, test_agent):
+    """Test agent search functionality"""
+    # Test basic search without filters
+    search_data = {
+        "searchTerm": "",
+        "types": [],
+        "sortBy": "CreateTime",
+        "sortOrder": "Desc",
+        "pageIndex": 0,
+        "pageSize": 20
+    }
+    response = requests.post(
+        f"{API_HOST}/api/agent/search",
+        json=search_data,
+        headers=api_headers,
+        verify=False
+    )
+    assert_status_code(response)
+    search_result = response.json()["data"]
+    assert "agents" in search_result
+    assert "total" in search_result
+    assert "pageIndex" in search_result
+    assert "pageSize" in search_result
+    assert "hasMore" in search_result
+    
+    # Test search by name
+    search_data["searchTerm"] = AGENT_NAME_MODIFIED  # Use the modified name from previous test
+    response = requests.post(
+        f"{API_HOST}/api/agent/search",
+        json=search_data,
+        headers=api_headers,
+        verify=False
+    )
+    assert_status_code(response)
+    search_result = response.json()["data"]
+    agent_ids = [agent["id"] for agent in search_result["agents"]]
+    assert test_agent in agent_ids
+    
+    # Test search by agent type
+    search_data = {
+        "searchTerm": "",
+        "types": [TEST_AGENT],
+        "sortBy": "CreateTime",
+        "sortOrder": "Desc", 
+        "pageIndex": 0,
+        "pageSize": 20
+    }
+    response = requests.post(
+        f"{API_HOST}/api/agent/search",
+        json=search_data,
+        headers=api_headers,
+        verify=False
+    )
+    assert_status_code(response)
+    search_result = response.json()["data"]
+    agent_ids = [agent["id"] for agent in search_result["agents"]]
+    assert test_agent in agent_ids
+    
+    # Test combined search (name + type)
+    search_data = {
+        "searchTerm": AGENT_NAME_MODIFIED,
+        "types": [TEST_AGENT],
+        "sortBy": "Name",
+        "sortOrder": "Asc",
+        "pageIndex": 0,
+        "pageSize": 20
+    }
+    response = requests.post(
+        f"{API_HOST}/api/agent/search",
+        json=search_data,
+        headers=api_headers,
+        verify=False
+    )
+    assert_status_code(response)
+    search_result = response.json()["data"]
+    agent_ids = [agent["id"] for agent in search_result["agents"]]
+    assert test_agent in agent_ids
+
+
 def test_agent_relationships(api_headers, test_agent):
     """test agent relationships"""
     # create sub agent
