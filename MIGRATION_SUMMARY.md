@@ -1,6 +1,6 @@
 # K8s and Agent Migration Summary
 
-This branch `feature/k8s-agent-migration-20250725-174610` contains the migrated Kubernetes and Agent-related functionality from the `feature/developer-v0.4-dev` branch.
+This branch `feature/k8s-agent-migration` contains the migrated Kubernetes and Agent-related functionality from the `feature/developer-v0.4-dev` branch.
 
 ## ✅ Successfully Migrated Components
 
