@@ -43,7 +43,7 @@ jobs:
         if: ${{ steps.nuget-packages.outputs.cache-hit == 'true' }}
         continue-on-error: true
         run: ls -lh ~/.nuget/packages
-      - run: dotnet publish src/${{ github.event.inputs.servicename}}/${{ github.event.inputs.servicename }}.csproj -o out/${{ github.event.inputs.servicename }}
+      - run: cd station && dotnet publish src/${{ github.event.inputs.servicename}}/${{ github.event.inputs.servicename }}.csproj -o out/${{ github.event.inputs.servicename }}
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -114,7 +114,7 @@ jobs:
       - name: Request token from auth-station
         id: auth_token_request
         run: |
-          response=$(curl -X POST "https://auth-station-dev-staging.aevatar.ai/connect/token" \
+          response=$(curl -X POST "https://auth-station-staging.aevatar.ai/connect/token" \
           -H "Content-Type: application/x-www-form-urlencoded" \
           -H "Accept: application/json" \
           --data-urlencode "grant_type=client_credentials" \
@@ -129,7 +129,7 @@ jobs:
         run: |
           echo "Calling UpdateDockerImage for hostType=${{ env.hostType }} with imageName=${{ steps.meta.outputs.tags }}"
 
-          curl -X 'POST' "https://station-dev-staging.aevatar.ai/api/users/updateDockerImage?hostType=${{ env.hostType }}&imageName=$(echo '${{ steps.meta.outputs.tags }}' | sed 's/:/%3A/g')" \
+          curl -X 'POST' "https://station-staging.aevatar.ai/api/users/updateDockerImage?hostType=${{ env.hostType }}&imageName=$(echo '${{ steps.meta.outputs.tags }}' | sed 's/:/%3A/g')" \
             -H "accept: */*" \
             -H "Authorization: Bearer ${{ env.access_token }}" \
             -H "X-Requested-With: XMLHttpRequest" \
