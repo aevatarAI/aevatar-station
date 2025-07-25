@@ -96,7 +96,9 @@ public class WorkflowViewService : ApplicationService, IWorkflowViewService
         
         var workflowConfigJson = JsonConvert.SerializeObject(workflowConfig);
         var workflowConfigProperties = JsonConvert.DeserializeObject<Dictionary<string, object>>(workflowConfigJson);
-        
+        workflowConfigProperties.Remove("PublisherGrainId");
+        workflowConfigProperties.Remove("CorrelationId");
+
         var workflowCoordinatorGAgentId = viewConfigDto.WorkflowCoordinatorGAgentId;
         if (workflowCoordinatorGAgentId == Guid.Empty)
         {
@@ -121,6 +123,8 @@ public class WorkflowViewService : ApplicationService, IWorkflowViewService
         // update workflowViewAgent
         configJson = JsonConvert.SerializeObject(viewConfigDto);
         var viewConfigProperties = JsonConvert.DeserializeObject<Dictionary<string, object>>(configJson);
+        viewConfigProperties.Remove("PublisherGrainId");
+        viewConfigProperties.Remove("CorrelationId");
         agentDto = await _agentService.UpdateAgentAsync(viewAgentId, new UpdateAgentInputDto()
         {
             Properties = viewConfigProperties,
