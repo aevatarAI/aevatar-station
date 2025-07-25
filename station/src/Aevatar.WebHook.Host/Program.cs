@@ -18,7 +18,7 @@ public class Program
         var configuration = new ConfigurationBuilder()
             .AddAevatarSecureConfiguration(
                 systemConfigPath: Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
-            .AddEnvironmentVariables("BUSINESS_")
+            .AddEnvironmentVariables()
             .Build();
 
         var webhookId = configuration["Webhook:WebhookId"];
@@ -42,7 +42,7 @@ public class Program
             {
                 config.AddAevatarSecureConfiguration(
                     systemConfigPath: Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
-                    .AddEnvironmentVariables("BUSINESS_");
+                    .AddEnvironmentVariables();
             });
             await builder.Build().RunAsync();
             return 0;

@@ -23,7 +23,7 @@ public class Program
                 systemConfigPath: Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
             .AddAevatarSecureConfiguration(
                 systemConfigPath: Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json"))
-            .AddEnvironmentVariables("BUSINESS_")
+            .AddEnvironmentVariables()
             .Build();
         
         var hostId = configuration["Host:HostId"];
@@ -50,7 +50,7 @@ public class Program
                     systemConfigPath: Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
                 .AddAevatarSecureConfiguration(
                     systemConfigPath: Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json"))
-                .AddEnvironmentVariables("BUSINESS_");
+                .AddEnvironmentVariables();
             builder.Host
                 .UseOrleansClientConfigration()
                 .ConfigureDefaults(args)

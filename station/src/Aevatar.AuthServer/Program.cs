@@ -14,7 +14,7 @@ public class Program
         var configuration = new ConfigurationBuilder()
             .AddAevatarSecureConfiguration(
                 systemConfigPath: Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
-            .AddEnvironmentVariables("BUSINESS_")
+            .AddEnvironmentVariables()
             .Build();
         Log.Logger = new LoggerConfiguration()
 #if DEBUG

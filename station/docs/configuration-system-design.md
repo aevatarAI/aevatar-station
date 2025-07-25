@@ -17,11 +17,13 @@
 
 ### 配置层次结构 (优先级从高到低)
 ```
-1. 环境变量 (BUSINESS_前缀)
-2. 业务配置 (HostConfigurationGAgent)
-3. 共享配置文件 (appsettings.*.Shared.json)
+1. 环境变量 (标准.NET环境变量)
+2. 共享配置文件 (appsettings.*.Shared.json) - 系统配置
+3. 业务配置 (HostConfigurationGAgent) - 增量配置，不能覆盖系统配置
 4. 默认配置
 ```
+
+**重要说明**：业务配置只能做增量添加，不能覆盖系统配置中的现有键值，确保系统核心配置的安全性。
 
 ### 核心组件
 
@@ -35,13 +37,14 @@ Grain Key = "{hostId}:{hostType}"
 ```
 
 **核心功能**：
-- `SetBusinessConfigurationJsonAsync()` - 存储JSON配置
+- `SetBusinessConfigurationJsonAsync()` - 存储JSON配置（增量模式）
 - `GetBusinessConfigurationJsonAsync()` - 获取JSON配置  
 - `ClearBusinessConfigurationAsync()` - 清除配置
 
 **特点**：
 - 基于Orleans事件源模式
 - 每个Host-Type组合独立存储
+- **增量配置模式**：只能添加新配置项，不能覆盖系统配置
 - 支持配置版本控制和审计
 
 #### 2. 安全配置系统
@@ -49,12 +52,12 @@ Grain Key = "{hostId}:{hostType}"
 
 **核心方法**：
 ```
-AddAevatarSecureConfiguration(systemConfigPath, userConfigPath?, environmentPrefix?)
+AddAevatarSecureConfiguration(systemConfigPath, userConfigPath?)
 ```
 
 **特性**：
 - 自动fallback到标准JSON文件
-- 环境变量覆盖支持（双下划线表示嵌套）
+- 标准环境变量覆盖支持（双下划线表示嵌套）
 - 线程安全的配置加载
 - 优雅的错误处理
 
@@ -62,10 +65,11 @@ AddAevatarSecureConfiguration(systemConfigPath, userConfigPath?, environmentPref
 **用途**：容器化部署的配置管理
 
 **机制**：
-- ConfigMap存储共享配置文件
+- ConfigMap存储共享配置文件（系统配置）
 - Secret存储敏感配置
 - 环境变量注入业务配置
 - 模板系统支持配置生成
+- **配置合并**：业务配置以增量方式与系统配置合并
 
 ## 配置流程
 
@@ -73,7 +77,7 @@ AddAevatarSecureConfiguration(systemConfigPath, userConfigPath?, environmentPref
 ```
 Program.cs启动 
 → AddAevatarSecureConfiguration()加载共享配置
-→ AddEnvironmentVariables("BUSINESS_")加载环境变量
+→ AddEnvironmentVariables()加载标准环境变量
 → 配置验证和处理
 ```
 
@@ -89,9 +93,9 @@ Program.cs启动
 ### 3. 部署时配置集成
 ```
 KubernetesHostManager创建Host
-→ 从模板生成基础配置
+→ 从模板生成基础配置（系统配置）
 → 从HostConfigurationGAgent获取业务配置
-→ 合并生成最终ConfigMap
+→ 增量合并生成最终ConfigMap（业务配置不覆盖系统配置）
 → 创建Pod with配置挂载
 ```
 
@@ -102,26 +106,42 @@ KubernetesHostManager创建Host
 - `appsettings.{ServiceName}.Host.Shared.json` - 服务特定配置
 - `business-config.json` - 业务配置（由Agent动态生成）
 
-### 环境变量映射
+### 环境变量映射（可覆盖所有配置）
 ```
 配置路径：MongoDB:ConnectionString
-环境变量：BUSINESS_MongoDB__ConnectionString
+环境变量：MongoDB__ConnectionString
 
 配置路径：Features:Cache:Enabled  
-环境变量：BUSINESS_Features__Cache__Enabled
+环境变量：Features__Cache__Enabled
 ```
+
+### 业务配置示例（增量配置）
+```json
+{
+  "MyApp": {
+    "ApiUrl": "https://api.example.com",
+    "Timeout": 30
+  },
+  "Features": {
+    "EnableNewFeature": true
+  }
+}
+```
+**注意**：业务配置不能包含系统保护键，如连接字符串、日志配置等。
 
 ## 安全机制
 
 ### 1. 保护键机制
 - 复用现有`ProtectedKeyConfigurationProvider.GetProtectedKeys()`
-- 禁止用户覆盖系统敏感配置
-- 在业务配置设置时验证键名
+- **严格禁止**用户通过业务配置覆盖系统敏感配置
+- 在业务配置设置时验证键名，拒绝保护键
+- 系统配置优先级高于业务配置
 
-### 2. 配置分离
-- 系统配置通过模板和共享文件管理
-- 业务配置通过Agent独立存储
-- 敏感配置通过环境变量注入
+### 2. 配置分离与合并策略
+- **系统配置**：通过模板和共享文件管理，具有最高优先级
+- **业务配置**：通过Agent独立存储，只能增量添加
+- **敏感配置**：通过环境变量注入，可覆盖所有配置
+- **合并规则**：系统配置 + 增量业务配置 + 环境变量覆盖
 
 ### 3. 访问控制
 - 业务配置API需要认证授权
@@ -135,7 +155,7 @@ KubernetesHostManager创建Host
 builder.Configuration
     .AddAevatarSecureConfiguration(systemConfigPath)
     .AddAevatarSecureConfiguration(serviceSpecificConfigPath) 
-    .AddEnvironmentVariables("BUSINESS_");
+    .AddEnvironmentVariables();
 ```
 
 ### 适用服务
@@ -155,7 +175,7 @@ builder.Configuration
 
 ### 2. 容器部署
 - 配置文件作为Volume挂载
-- 敏感数据通过环境变量
+- 敏感数据通过标准环境变量
 - 多环境配置支持
 
 ### 3. Kubernetes部署  
@@ -178,6 +198,7 @@ builder.Configuration
 ### 安全优势
 - **权限控制**：分层的配置访问控制
 - **数据分离**：敏感配置与业务配置分离  
+- **增量安全**：业务配置只能增加，不能覆盖系统配置
 - **审计支持**：完整的配置变更审计链
 
 ## 实现状态

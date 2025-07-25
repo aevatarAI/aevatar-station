@@ -21,7 +21,7 @@ public class Program
             .AddAevatarSecureConfiguration(
                 systemConfigPath: Path.Combine(AppContext.BaseDirectory, "appsettings.Silo.Shared.json"))
             .AddJsonFile("appsettings.secrets.json", optional: true)
-            .AddEnvironmentVariables("BUSINESS_")
+            .AddEnvironmentVariables()
             .Build();
         Log.Logger = new LoggerConfiguration()
             .Enrich.FromLogContext()
@@ -38,7 +38,7 @@ public class Program
                         systemConfigPath: Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
                     .AddAevatarSecureConfiguration(
                         systemConfigPath: Path.Combine(AppContext.BaseDirectory, "appsettings.Silo.Shared.json"))
-                    .AddEnvironmentVariables("BUSINESS_");
+                    .AddEnvironmentVariables();
             });
             var app = builder.Build();
             await app.RunAsync();

@@ -56,7 +56,7 @@ namespace Aevatar.Worker
             var configuration = new ConfigurationBuilder()
                 .AddAevatarSecureConfiguration(
                     systemConfigPath: Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
-                .AddEnvironmentVariables("BUSINESS_")
+                .AddEnvironmentVariables()
                 .Build();
             Log.Logger = (loggerConfiguration ?? new LoggerConfiguration())
                 .ReadFrom.Configuration(configuration)
