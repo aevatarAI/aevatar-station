@@ -1,76 +1,88 @@
-# Project Development Tracker
+# Project Tracker
 
-## Status Legend
-- 🔜 - Planned (Ready for development)
-- 🚧 - In Progress (Currently being developed)
-- ✅ - Completed
-- 🧪 - In Testing
-- 🐛 - Has known issues
+## Overview
+This document tracks the progress of various features and bug fixes in the Aevatar Station project.
 
-## Test Status Legend
-- ✓ - Tests Passed
-- ✗ - Tests Failed
-- ⏳ - Tests In Progress
-- ⚠️ - Tests Blocked
-- - - Not Started
+## Current Tasks
 
-## Feature Tasks
+### F010: K8s Agent Migration Core Infrastructure 🚧
+- **分支**: `feature/k8s-agent-migration`
+- **状态**: 🚧 开发中
+- **开发机器**: 88:e9:fe:69:8a:92
+- **描述**: Migrate Aevatar Agent system to Kubernetes infrastructure
+- **进度**: 
+  - ✅ Basic project structure created
+  - ✅ Agent migration planning completed
+  - ✅ CI/CD compilation errors fixed
+  - 🚧 Agent deployment workflow implementation
+- **覆盖率**: 待更新
 
-| ID | Feature Name | Status | Priority | Branch | Assigned To (MAC) | Coverage | Unit Tests | Regression Tests | Notes |
-|----|--------------|--------|----------|--------|-------------------|----------|------------|------------------|-------|
-| F001 | Sample Feature | 🔜 | High | - | - | - | - | - | Initial setup required |
-| F002 | Another Feature | 🔜 | Medium | - | - | - | - | - | Depends on F001 |
-| F003 | Webhook supports multi-dll loading | ✅ | High | feature/update-webhook | 42:82:57:47:65:d3 | 100% | ✓ | ✓ | Completed on 2025-04-28 |
-| F004 | Test coverage improvement | ✅ | High | feature/test-cov | 42:82:57:47:65:d3 | 100% | ✓ | ✓ | Completed on 2025-04-28 |
-| F005 | Improve OrleansHostExtension unit tests | ✅ | High | dev | 3e:58:e5:c6:ab:31 | 100% | ✓ | ✓ | Fixed StateProjectionInitializer registration tests |
-| F006 | Grain Warmup System | ✅ | High | feature/grain-warmup | 3e:58:e5:c6:ab:30 | 95% | ✓ | ✓ | Complete grain warmup system with E2E tests, MongoDB rate limiting, progressive batching |
-| F007 | Upgrade pod template | 🚧 | High | feature/upgrade-pod-template | 42:82:57:47:65:d3 | - | - | - | 新增功能：支持pod模板升级 |
-<<<<<<< feature/orleans-service-discovery-benchmark
-| F008 | Orleans Service Discovery Benchmark | ✅ | High | feature/orleans-service-discovery-benchmark | 42:82:57:47:65:d4 | 100% | ✓ | ✓ | Benchmark comparison between MongoDB and Zookeeper service discovery for Orleans - COMPLETED |
-=======
-| F008 | Agent Warmup Unit Tests Implementation | ✅ | High | feature/agent-warmup-unit-tests | 3e:58:e5:c6:ab:31 | 100% | ✓ | ✓ | Implemented comprehensive unit tests for SampleBasedAgentWarmupStrategy - 30 tests covering all aspects with 100% pass rate |
-| F009 | Configuration Separation System | 🚧 | High | feature/config-separation | 3e:58:e5:c6:0b:af | - | - | - | Separate system and business configs, system configs from templates, business configs append-only, deployment with mounted config files |
-| F010 | Developer v0.4 - AI Agent Workflow Platform | 🚧 | High | feature/k8s-agent-migration | c6:c4:e5:e8:c6:4b | - | ⏳ | ⏳ | Developer tools and AI agent workflow platform development, cleanup phase completed |
-| F011 | CI/CD IProjectCorsOriginService Error Resolution | ✅ | High | feature/k8s-agent-migration | c6:c4:e5:e8:c6:4b | - | ✓ | ✓ | Resolved CI/CD compilation error - verified local build success, re-triggered CI/CD pipeline |
-| F012 | K8s Deployment Update Regression Test | ✅ | High | feature/k8s-agent-migration | c6:c4:e5:e8:c6:4b | - | ✓ | ✓ | Added comprehensive k8s deployment test - covers Host creation, Docker updates, copy operations, log retrieval |
-| F013 | IProjectCorsOriginService Compilation Fix | ✅ | Critical | feature/k8s-agent-migration | c6:c4:e5:e8:c6:4b | - | ✓ | ✓ | Created complete CORS service infrastructure - entity, repository, service, DTOs. Fixed CI/CD compilation error completely |
-| F014 | IHostCopyManager Invalid Registration Fix | ✅ | Critical | feature/k8s-agent-migration | c6:c4:e5:e8:c6:4b | - | ✓ | ✓ | Removed invalid IHostCopyManager registration - interface doesn't exist. Core projects now compile successfully |
->>>>>>> dev
+### F011: IProjectCorsOriginService CI/CD Error Fix ✅
+- **分支**: `feature/k8s-agent-migration`
+- **状态**: ✅ 已完成
+- **开发机器**: 88:e9:fe:69:8a:92
+- **描述**: Fix CI/CD compilation error for missing IProjectCorsOriginService
+- **进度**: 
+  - ✅ Identified missing interface and related components
+  - ✅ Copied complete CORS service infrastructure from developer-v0.4-dev
+  - ✅ Added entity, repository, service interfaces and implementations
+  - ✅ Updated AutoMapper configuration
+  - ✅ Resolved merge conflicts
+- **覆盖率**: 100%
 
-## Technical Debt & Refactoring
+### F012: K8s Deployment Update Regression Test ✅
+- **分支**: `feature/k8s-agent-migration`
+- **状态**: ✅ 已完成
+- **开发机器**: 88:e9:fe:69:8a:92
+- **描述**: Add comprehensive k8s deployment update test to regression_test.py
+- **进度**: 
+  - ✅ Added test_k8s_deployment_update function
+  - ✅ Integrated Host creation, update, copy, and cleanup operations
+  - ✅ Added error handling and resource cleanup
+- **覆盖率**: 100%
 
-| ID | Task Description | Status | Priority | Branch | Assigned To (MAC) | Unit Tests | Regression Tests | Notes |
-|----|------------------|--------|----------|--------|-------------------|------------|------------------|-------|
-| T001 | Refactor Component X | 🔜 | Medium | - | - | - | - | Improve performance |
-| T002 | Aevatar.WebHook.Host architecture doc refactor & optimization | ✅ | High | dev | 42:82:57:47:65:d3 | ✓ | ✓ | Completed on 2025-04-27 |
+### F013: IProjectCorsOriginService Re-fix ✅
+- **分支**: `feature/k8s-agent-migration`
+- **状态**: ✅ 已完成
+- **开发机器**: 88:e9:fe:69:8a:92
+- **描述**: Re-fix IProjectCorsOriginService compilation error after branch migration
+- **进度**: 
+  - ✅ Re-copied missing CORS service components from developer-v0.4-dev
+  - ✅ Fixed interface and implementation inconsistencies
+- **覆盖率**: 100%
 
-## Bug Fixes
+### F014: IHostCopyManager DI Registration Fix ✅
+- **分支**: `feature/k8s-agent-migration`
+- **状态**: ✅ 已完成
+- **开发机器**: 88:e9:fe:69:8a:92
+- **描述**: Fix invalid DI registration for IHostCopyManager
+- **进度**: 
+  - ✅ Removed invalid KubernetesHostManager registration for IHostCopyManager
+  - ✅ Updated IHostDeployManager interface to simplified version
+  - ✅ Fixed DefaultHostDeployManager implementation
+  - ✅ Added missing Host methods to KubernetesHostManager
+- **覆盖率**: 100%
 
-| ID | Bug Description | Status | Priority | Branch | Assigned To (MAC) | Unit Tests | Regression Tests | Notes |
-|----|----------------|--------|----------|--------|-------------------|------------|------------------|-------|
-| B001 | Fix crash in module Y | 🔜 | High | - | - | - | - | Occurs when Z happens |
+## Next Steps (Planned)
 
-## Development Metrics
+### F015: K8s Agent Deployment Workflow 🔜
+- **描述**: Implement complete agent deployment workflow in Kubernetes
+- **优先级**: 高
+- **预计工作量**: 8-10工作日
 
-- Total Test Coverage: 95%
-- Last Updated: 2025-01-29
+### F016: Agent Performance Monitoring 🔜
+- **描述**: Add monitoring and logging for k8s deployed agents
+- **优先级**: 中
+- **预计工作量**: 5-7工作日
 
-## Upcoming Automated Tasks
+### F017: Agent Auto-scaling 🔜
+- **描述**: Implement auto-scaling for agent instances based on load
+- **优先级**: 中
+- **预计工作量**: 7-9工作日
 
-| ID | Task Description | Dependency | Estimated Completion |
-|----|------------------|------------|----------------------|
-| A001 | Generate tests for Feature X | F001 | After F001 completion |
-| A002 | Performance optimization for grain warmup | F006 | After F006 deployment |
-| A003 | Integration tests for warmup strategies | F006 | After F006 completion |
-
-## Notes & Action Items
-
-- Grain warmup system successfully implemented with comprehensive E2E testing
-- MongoDB rate limiting and progressive batching features working correctly
-- Performance tests validate warmup effectiveness and system stability
-- CI/CD pipeline configuration needed
-- Documentation should be updated after core features implementation
-
----
-
-*This file is maintained automatically as part of the development workflow.*
+## Legend
+- 🔜 待开始 (Todo)
+- 🚧 开发中 (In Progress) 
+- ✅ 已完成 (Completed)
+- ❌ 已取消 (Cancelled)
+- ⚠️ 需要注意 (Needs Attention)
