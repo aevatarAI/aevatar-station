@@ -87,34 +87,19 @@ public class ProtectedKeyConfigurationProvider
     /// Gets the default set of protected configuration key prefixes that business configurations cannot override
     /// </summary>
     /// <returns>Array of protected key prefixes</returns>
+    [Obsolete("Use ValidateBusinessConfiguration with dynamic system config checking instead. This method maintains a hardcoded list which is difficult to maintain.")]
     public static string[] GetProtectedKeys()
     {
+        // Simplified list - most protection now comes from dynamic system config checking
         return new[]
         {
             "Orleans",
-            "AevatarOrleans", 
             "Serilog",
             "Logging",
             "OpenTelemetry",
             "ConnectionStrings",
-            "Redis",
-            "MongoDB",
-            "Elasticsearch",
-            "Qdrant",
-            "Kafka",
-            "AuthServer",
-            "Kestrel",
-            "Hosting",
             "ASPNETCORE_",
-            "DOTNET_",
-            "FileUpload",
-            "Storage",
-            "Security",
-            "Authentication",
-            "Authorization",
-            "Cors",
-            "Https",
-            "Certificates"
+            "DOTNET_"
         };
     }
 
@@ -124,6 +109,7 @@ public class ProtectedKeyConfigurationProvider
     /// <param name="businessConfiguration">Business configuration dictionary to validate</param>
     /// <param name="protectedKeys">Array of protected key prefixes (optional, uses default if null)</param>
     /// <returns>List of conflicting keys found</returns>
+    [Obsolete("Use ValidateBusinessConfiguration with IConfiguration objects for dynamic validation instead.")]
     public static List<string> ValidateBusinessConfigurationKeys(Dictionary<string, object> businessConfiguration, string[]? protectedKeys = null)
     {
         if (businessConfiguration == null)

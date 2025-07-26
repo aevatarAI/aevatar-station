@@ -50,7 +50,7 @@ public class SecureConfigurationExtensionsTests : IDisposable
 
         // Act
         var configuration = new ConfigurationBuilder()
-            .AddAevatarSecureConfiguration(systemConfig)
+            .AddAevatarSecureConfiguration(systemConfigPaths: new[] { systemConfig })
             .Build();
 
         // Assert
@@ -74,7 +74,7 @@ public class SecureConfigurationExtensionsTests : IDisposable
 
         // Act
         var configuration = new ConfigurationBuilder()
-            .AddAevatarSecureConfiguration(systemConfig, businessConfig)
+            .AddAevatarSecureConfiguration(systemConfigPaths: new[] { systemConfig }, businessConfigPath: businessConfig)
             .Build();
 
         // Assert
@@ -103,7 +103,7 @@ public class SecureConfigurationExtensionsTests : IDisposable
         {
             // Act
             var configuration = new ConfigurationBuilder()
-                .AddAevatarSecureConfiguration(systemConfig, ephemeralConfigPath: ephemeralConfig)
+                .AddAevatarSecureConfiguration(systemConfigPaths: new[] { systemConfig }, ephemeralConfigPath: ephemeralConfig)
                 .Build();
 
             // Assert
@@ -136,7 +136,7 @@ public class SecureConfigurationExtensionsTests : IDisposable
         {
             // Act
             var configuration = new ConfigurationBuilder()
-                .AddAevatarSecureConfiguration(systemConfig, ephemeralConfigPath: ephemeralConfig)
+                .AddAevatarSecureConfiguration(systemConfigPaths: new[] { systemConfig }, ephemeralConfigPath: ephemeralConfig)
                 .Build();
 
             // Assert
@@ -166,7 +166,7 @@ public class SecureConfigurationExtensionsTests : IDisposable
         Should.Throw<InvalidOperationException>(() =>
         {
             new ConfigurationBuilder()
-                .AddAevatarSecureConfiguration(systemConfig, businessConfig)
+                .AddAevatarSecureConfiguration(systemConfigPaths: new[] { systemConfig }, businessConfigPath: businessConfig)
                 .Build();
         });
     }
@@ -202,7 +202,7 @@ public class SecureConfigurationExtensionsTests : IDisposable
         {
             // Act
             var configuration = new ConfigurationBuilder()
-                .AddAevatarSecureConfiguration(systemConfig, businessConfig, ephemeralConfig)
+                .AddAevatarSecureConfiguration(systemConfigPaths: new[] { systemConfig }, businessConfigPath: businessConfig, ephemeralConfigPath: ephemeralConfig)
                 .AddEnvironmentVariables()
                 .Build();
 

@@ -122,9 +122,10 @@ public static class SecureConfigurationExtensions
             .AddJsonFile(businessConfigPath, optional: false)
             .Build();
         
-        // Validate business configuration against protected keys (lazy loading)
-        var protectedKeys = ProtectedKeyConfigurationProvider.GetProtectedKeys();
-        var validator = new ProtectedKeyConfigurationProvider(protectedKeys);
+        // Validate business configuration against system configuration (dynamic validation)
+        // Only preserve critical environment variable prefixes as explicit protected keys
+        var explicitProtectedKeys = new[] { "ASPNETCORE_", "DOTNET_" };
+        var validator = new ProtectedKeyConfigurationProvider(explicitProtectedKeys);
         validator.ValidateBusinessConfiguration(systemConfig, businessConfig);
     }
 
