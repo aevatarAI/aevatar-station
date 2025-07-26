@@ -34,6 +34,7 @@
 | F011 | CI/CD IProjectCorsOriginService Error Resolution | ✅ | High | feature/k8s-agent-migration | c6:c4:e5:e8:c6:4b | - | ✓ | ✓ | Resolved CI/CD compilation error - verified local build success, re-triggered CI/CD pipeline |
 | F012 | K8s Deployment Update Regression Test | ✅ | High | feature/k8s-agent-migration | c6:c4:e5:e8:c6:4b | - | ✓ | ✓ | Added comprehensive k8s deployment test - covers Host creation, Docker updates, copy operations, log retrieval |
 | F013 | IProjectCorsOriginService Compilation Fix | ✅ | Critical | feature/k8s-agent-migration | c6:c4:e5:e8:c6:4b | - | ✓ | ✓ | Created complete CORS service infrastructure - entity, repository, service, DTOs. Fixed CI/CD compilation error completely |
+| F014 | IHostCopyManager Invalid Registration Fix | ✅ | Critical | feature/k8s-agent-migration | c6:c4:e5:e8:c6:4b | - | ✓ | ✓ | Removed invalid IHostCopyManager registration - interface doesn't exist. Core projects now compile successfully |
 >>>>>>> dev
 
 ## Technical Debt & Refactoring
