@@ -27,6 +27,7 @@ using Orleans;
 using Orleans.Metadata;
 using Orleans.Runtime;
 using Volo.Abp;
+using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using ICreatorGAgent = Aevatar.Application.Grains.Agents.Creator.ICreatorGAgent;
 
@@ -273,14 +274,27 @@ public class AgentService : ApplicationService, IAgentService
     {
         var result = new List<AgentInstanceDto>();
         var currentUserId = _userAppService.GetCurrentUserId();
-        var response =
-            await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
+        PagedResultDto<Dictionary<string, object>> response;
+        try
+        {
+            response =
+                await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
+                {
+                    QueryString = "userId.keyword:" + currentUserId,
+                    StateName = nameof(CreatorGAgentState),
+                    PageSize = pageSize,
+                    PageIndex = pageIndex
+                });
+        }
+        catch (UserFriendlyException e)
+        {
+            if (e.Code == "index_not_found_exception")
             {
-                QueryString = "userId.keyword:" + currentUserId,
-                StateName = nameof(CreatorGAgentState),
-                PageSize = pageSize,
-                PageIndex = pageIndex
-            });
+                return result;
+            }
+
+            throw;
+        }
         if (response.TotalCount == 0)
         {
             return result;
@@ -357,17 +371,18 @@ public class AgentService : ApplicationService, IAgentService
                     ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                     ContractResolver = new CamelCasePropertyNamesContractResolver()
                 });
-                await creatorAgent.UpdateAgentAsync(new UpdateAgentInput
-                {
-                    Name = dto.Name,
-                    Properties = properties
-                });
             }
             else
             {
                 _logger.LogError("no properties to be updated, id: {id}", guid);
             }
         }
+        
+        await creatorAgent.UpdateAgentAsync(new UpdateAgentInput
+        {
+            Name = dto.Name,
+            Properties = properties
+        });
 
         var resp = new AgentDto
         {
