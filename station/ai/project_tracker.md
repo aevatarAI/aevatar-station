@@ -32,6 +32,7 @@
 | F009 | Configuration Separation System | 🚧 | High | feature/config-separation | 3e:58:e5:c6:0b:af | - | - | - | Separate system and business configs, system configs from templates, business configs append-only, deployment with mounted config files |
 | F010 | Developer v0.4 - AI Agent Workflow Platform | 🚧 | High | feature/developer-v0.4-dev-merged | c6:c4:e5:e8:c6:4b | - | ⏳ | ⏳ | Developer tools and AI agent workflow platform development, cleanup phase completed |
 | F011 | CI/CD IProjectCorsOriginService Error Resolution | ✅ | High | feature/developer-v0.4-dev-merged | c6:c4:e5:e8:c6:4b | - | ✓ | ✓ | Resolved CI/CD compilation error - verified local build success, re-triggered CI/CD pipeline |
+| F012 | K8s Deployment Update Regression Test | ✅ | High | feature/developer-v0.4-dev-merged | c6:c4:e5:e8:c6:4b | - | ✓ | ✓ | Added comprehensive k8s deployment test - covers Host creation, Docker updates, copy operations, log retrieval |
 >>>>>>> dev
 
 ## Technical Debt & Refactoring
