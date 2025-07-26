@@ -15,6 +15,8 @@ public interface IDeveloperService
     Task UpdateDockerImageAsync(string appId, string version, string newImage);
     
     Task CopyHostAsync(string sourceClientId, string newClientId, string version, string corsUrls);
+    
+    Task RestartServiceAsync(DeveloperServiceOperationDto input);
 }
 
 public class DeveloperService: ApplicationService, IDeveloperService
@@ -48,6 +50,12 @@ public class DeveloperService: ApplicationService, IDeveloperService
     public async Task CopyHostAsync(string sourceClientId, string newClientId, string version, string corsUrls)
     {
         await _hostCopyManager.CopyHostAsync(sourceClientId, newClientId, version, corsUrls);
+    }
+
+    public async Task RestartServiceAsync(DeveloperServiceOperationDto input)
+    {
+        // 使用DomainName作为appId，默认版本为"1"
+        await _hostDeployManager.RestartHostAsync(input.DomainName, "1");
     }
 
 }
