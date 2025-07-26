@@ -479,3 +479,135 @@ def test_permission(api_headers, api_admin_headers):
     
     assert_status_code(response)
     assert response.json()["data"]["count"] > 0
+
+
+def test_k8s_deployment_update(api_admin_headers):
+    """test kubernetes deployment update functionality - comprehensive test for k8s operations"""
+    # Test data
+    test_client_id = f"test-k8s-{int(time.time())}"
+    test_cors_urls = "http://localhost:3000,https://example.com"
+    copy_client_id = f"copy-k8s-{int(time.time())}"
+    
+    try:
+        # 1. Create Host
+        logger.info(f"Creating k8s host for client: {test_client_id}")
+        response = requests.post(
+            f"{API_HOST}/api/users/CreateHost",
+            params={"clientId": test_client_id, "corsUrls": test_cors_urls},
+            headers=api_admin_headers,
+            verify=False
+        )
+        assert_status_code(response)
+        logger.info("K8s host created successfully")
+        
+        # Wait for deployment to be ready
+        time.sleep(30)
+        
+        # 2. Test Docker Image Updates for all host types
+        host_types = [
+            ("Silo", "test-silo-image:v1.0"),
+            ("Client", "test-client-image:v1.0"), 
+            ("WebHook", "test-webhook-image:v1.0")
+        ]
+        
+        for host_type, image_name in host_types:
+            logger.info(f"Updating docker image for {host_type} host type")
+            response = requests.post(
+                f"{API_HOST}/api/users/updateDockerImageByAdmin",
+                params={
+                    "hostId": test_client_id,
+                    "hostType": host_type,
+                    "imageName": image_name
+                },
+                headers=api_admin_headers,
+                verify=False
+            )
+            assert_status_code(response)
+            logger.info(f"Docker image updated successfully for {host_type}")
+            time.sleep(15)  # Wait for update to complete
+        
+        # 3. Copy Host Operation
+        logger.info(f"Testing host copy from {test_client_id} to {copy_client_id}")
+        response = requests.post(
+            f"{API_HOST}/api/users/CopyHost",
+            params={"sourceClientId": test_client_id, "newClientId": copy_client_id},
+            headers=api_admin_headers,
+            verify=False
+        )
+        assert_status_code(response)
+        logger.info("Host copy operation completed successfully")
+        
+        # Wait for copy operation to complete
+        time.sleep(30)
+        
+        # 4. Test Host Logs Retrieval
+        for host_type, _ in host_types:
+            logger.info(f"Testing log retrieval for {host_type}")
+            response = requests.get(
+                f"{API_HOST}/api/host/log",
+                params={
+                    "appId": test_client_id,
+                    "hostType": host_type,
+                    "offset": 0
+                },
+                headers=api_admin_headers,
+                verify=False
+            )
+            assert_status_code(response)
+            logs = response.json().get("data", [])
+            logger.info(f"Retrieved {len(logs)} log entries for {host_type}")
+            
+            # Verify log structure if logs exist
+            if logs and isinstance(logs, list) and len(logs) > 0:
+                first_log = logs[0]
+                assert isinstance(first_log, dict), f"Log entry should be a dictionary for {host_type}"
+                logger.info(f"Log structure validated for {host_type}")
+        
+        # 5. Test batch image updates on copied host
+        logger.info("Testing batch image updates on copied host")
+        for host_type, _ in host_types[:2]:  # Test Silo and Client only for copied host
+            updated_image = f"updated-{host_type.lower()}-image:v2.0"
+            response = requests.post(
+                f"{API_HOST}/api/users/updateDockerImageByAdmin",
+                params={
+                    "hostId": copy_client_id,
+                    "hostType": host_type,
+                    "imageName": updated_image
+                },
+                headers=api_admin_headers,
+                verify=False
+            )
+            assert_status_code(response)
+            logger.info(f"Batch update successful for {host_type} on copied host")
+            time.sleep(10)
+        
+        logger.info("All K8s deployment update tests completed successfully")
+        
+    finally:
+        # Cleanup: Destroy both hosts
+        cleanup_hosts = [test_client_id, copy_client_id]
+        
+        for host_id in cleanup_hosts:
+            try:
+                logger.info(f"Destroying k8s host: {host_id}")
+                response = requests.post(
+                    f"{API_HOST}/api/users/destroyHost",
+                    params={"clientId": host_id},
+                    headers=api_admin_headers,
+                    verify=False
+                )
+                if response.status_code == 200:
+                    logger.info(f"K8s host {host_id} destroyed successfully")
+                else:
+                    logger.warning(f"Failed to destroy k8s host {host_id}: {response.text}")
+                time.sleep(5)  # Delay between destroys
+            except Exception as e:
+                logger.warning(f"Error destroying k8s host {host_id}: {e}")
+
+
+if __name__ == "__main__":
+    # Run k8s deployment update test specifically
+    pytest.main([
+        __file__ + "::test_k8s_deployment_update",
+        "-v", "-s"
+    ])
