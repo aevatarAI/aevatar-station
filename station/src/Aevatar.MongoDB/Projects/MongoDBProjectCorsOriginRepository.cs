@@ -14,4 +14,4 @@ public class MongoDBProjectCorsOriginRepository : MongoDbRepository<AevatarMongo
         dbContextProvider)
     {
     }
-} 
+}

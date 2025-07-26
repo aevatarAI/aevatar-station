@@ -59,4 +59,4 @@ public class ProjectCorsOriginService : AevatarAppService, IProjectCorsOriginSer
     {
         await _projectCorsOriginRepository.DeleteAsync(o => o.Id == id && o.ProjectId == projectId);
     }
-} 
+}

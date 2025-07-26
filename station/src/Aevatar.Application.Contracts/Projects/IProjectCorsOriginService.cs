@@ -11,4 +11,4 @@ public interface IProjectCorsOriginService
     Task<ProjectCorsOriginDto> CreateAsync(Guid projectId, CreateProjectCorsOriginDto input);
 
     Task DeleteAsync(Guid projectId, Guid id);
-} 
+}

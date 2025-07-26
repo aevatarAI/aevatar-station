@@ -10,4 +10,4 @@ public class ProjectCorsOriginDto : EntityDto<Guid>
     public long CreationTime { get; set; }
     public Guid CreatorId { get; set; }
     public string CreatorName { get; set; }
-} 
+}

@@ -3,7 +3,7 @@ using Volo.Abp.Domain.Repositories;
 
 namespace Aevatar.Projects;
 
-public interface IProjectCorsOriginRepository : IRepository<ProjectCorsOrigin, Guid>
+public interface IProjectDomainRepository : IRepository<ProjectDomain, Guid>
 {
     
 }
