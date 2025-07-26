@@ -2,6 +2,8 @@
 // ABOUTME: Simplifies the process of setting up protected configuration with business config validation
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Extensions.Configuration;
 
 namespace Aevatar.Domain.Shared.Configuration;
@@ -11,64 +13,6 @@ namespace Aevatar.Domain.Shared.Configuration;
 /// </summary>
 public static class SecureConfigurationExtensions
 {
-    /// <summary>
-    /// Adds secure configuration with separate system and business configuration files
-    /// </summary>
-    /// <param name="builder">Configuration builder</param>
-    /// <param name="systemConfigPath">Path to system configuration file</param>
-    /// <param name="businessConfigPath">Path to business configuration file</param>
-    /// <param name="protectedKeyPrefixes">Key prefixes that cannot be overridden by business config</param>
-    /// <returns>Configuration builder for chaining</returns>
-    public static IConfigurationBuilder AddSecureConfiguration(
-        this IConfigurationBuilder builder,
-        string systemConfigPath,
-        string businessConfigPath,
-        params string[] protectedKeyPrefixes)
-    {
-        return builder.AddSecureConfiguration(systemConfigPath, businessConfigPath, optional: true, protectedKeyPrefixes);
-    }
-
-    /// <summary>
-    /// Adds secure configuration with separate system and business configuration files
-    /// </summary>
-    /// <param name="builder">Configuration builder</param>
-    /// <param name="systemConfigPath">Path to system configuration file</param>
-    /// <param name="businessConfigPath">Path to business configuration file</param>
-    /// <param name="optional">Whether business configuration file is optional</param>
-    /// <param name="protectedKeyPrefixes">Key prefixes that cannot be overridden by business config</param>
-    /// <returns>Configuration builder for chaining</returns>
-    public static IConfigurationBuilder AddSecureConfiguration(
-        this IConfigurationBuilder builder,
-        string systemConfigPath,
-        string businessConfigPath,
-        bool optional,
-        params string[] protectedKeyPrefixes)
-    {
-        // Add system configuration first (lowest priority)
-        builder.AddJsonFile(systemConfigPath, optional: false);
-        
-        // Build system configuration for validation
-        var systemConfig = new ConfigurationBuilder()
-            .AddJsonFile(systemConfigPath, optional: false)
-            .Build();
-        
-        // Add business configuration with validation
-        builder.AddJsonFile(businessConfigPath, optional: optional);
-        
-        // If business config file exists, validate it
-        if (System.IO.File.Exists(businessConfigPath))
-        {
-            var businessConfig = new ConfigurationBuilder()
-                .AddJsonFile(businessConfigPath, optional: false)
-                .Build();
-            
-            var validator = new ProtectedKeyConfigurationProvider(protectedKeyPrefixes);
-            validator.ValidateBusinessConfiguration(systemConfig, businessConfig);
-        }
-        
-        return builder;
-    }
-
     /// <summary>
     /// Adds secure configuration for Aevatar platform with multiple system configuration files
     /// </summary>
@@ -123,10 +67,73 @@ public static class SecureConfigurationExtensions
             .Build();
         
         // Validate business configuration against system configuration (dynamic validation)
-        // Only preserve critical environment variable prefixes as explicit protected keys
-        var explicitProtectedKeys = new[] { "ASPNETCORE_", "DOTNET_" };
-        var validator = new ProtectedKeyConfigurationProvider(explicitProtectedKeys);
-        validator.ValidateBusinessConfiguration(systemConfig, businessConfig);
+        ValidateBusinessConfiguration(systemConfig, businessConfig);
+    }
+
+    /// <summary>
+    /// Validates that business configuration keys do not conflict with protected system keys
+    /// </summary>
+    /// <param name="systemConfig">System configuration with protected keys</param>
+    /// <param name="businessConfig">Business configuration to validate</param>
+    /// <exception cref="InvalidOperationException">Thrown when protected keys are found in business configuration</exception>
+    private static void ValidateBusinessConfiguration(IConfiguration systemConfig, IConfiguration businessConfig)
+    {
+        // Critical environment variable prefixes that are always protected
+        var explicitProtectedKeys = new[] { "DOTNET_" };
+        
+        // Get dynamic protected keys from system configuration + explicit protected keys
+        var protectedKeys = GetDynamicProtectedKeys(systemConfig, explicitProtectedKeys);
+        var conflictingKeys = new List<string>();
+
+        foreach (var kvp in businessConfig.AsEnumerable())
+        {
+            if (IsProtectedKey(kvp.Key, protectedKeys))
+            {
+                conflictingKeys.Add(kvp.Key);
+            }
+        }
+
+        if (conflictingKeys.Any())
+        {
+            throw new InvalidOperationException(
+                $"Business configuration cannot override protected keys: {string.Join(", ", conflictingKeys)}. " +
+                $"Protected keys (from system + explicit): {string.Join(", ", protectedKeys)}");
+        }
+    }
+
+    /// <summary>
+    /// Gets dynamic protected keys by combining system configuration keys with explicit protected keys
+    /// </summary>
+    /// <param name="systemConfig">System configuration</param>
+    /// <param name="explicitProtectedKeys">Explicit protected key prefixes</param>
+    /// <returns>Set of protected key prefixes</returns>
+    private static HashSet<string> GetDynamicProtectedKeys(IConfiguration systemConfig, string[] explicitProtectedKeys)
+    {
+        var protectedKeys = new HashSet<string>(explicitProtectedKeys, StringComparer.OrdinalIgnoreCase);
+        
+        // Add all top-level keys from system configuration as protected
+        foreach (var section in systemConfig.GetChildren())
+        {
+            protectedKeys.Add(section.Key);
+        }
+        
+        return protectedKeys;
+    }
+
+    /// <summary>
+    /// Checks if a key is protected by any of the protected prefixes
+    /// </summary>
+    /// <param name="key">Key to check</param>
+    /// <param name="protectedKeys">Set of protected key prefixes</param>
+    /// <returns>True if the key is protected</returns>
+    private static bool IsProtectedKey(string key, HashSet<string> protectedKeys)
+    {
+        if (string.IsNullOrEmpty(key))
+            return false;
+
+        return protectedKeys.Any(prefix => 
+            key.StartsWith(prefix + ":", StringComparison.OrdinalIgnoreCase) ||
+            key.Equals(prefix, StringComparison.OrdinalIgnoreCase));
     }
 
     private static IConfiguration BuildConfigurationFromPaths(string[] configPaths, bool includeDefaultAppSettings = false)

@@ -124,6 +124,11 @@ public class DeveloperServiceUnitTests
         {
             return Task.CompletedTask;
         }
+
+        public Task UpdateBusinessConfigurationAsync(string hostId, string version)
+        {
+            return Task.CompletedTask;
+        }
     }
 
     private class StubHostCopyManager : IHostCopyManager
