@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Agent;
 using Aevatar.Controllers;
@@ -53,6 +54,17 @@ public class AgentController : AevatarController
         _logger.LogInformation("Create Agent: {agent}", JsonConvert.SerializeObject(createAgentInputDto));
         var agentDto = await _agentService.CreateAgentAsync(createAgentInputDto);
         return agentDto;
+    }
+    
+    [HttpPost("createMulti")]
+    // [Authorize(Policy = AevatarPermissions.Agent.Create)]
+    [Authorize]
+    public async Task<List<AgentDto>> CreateMultiAgent([FromBody] CreateMultiAgentInputDto createMultiAgentInputDto)
+    {
+        _logger.LogInformation("Create MultiAgent: {agent}", JsonConvert.SerializeObject(createMultiAgentInputDto));
+        var agentDtoList = createMultiAgentInputDto.Agents.Select(t => _agentService.CreateAgentAsync(t));
+        var result = await Task.WhenAll(agentDtoList);
+        return result.ToList();
     }
 
     [HttpGet("{guid}")]
@@ -112,6 +124,21 @@ public class AgentController : AevatarController
         _logger.LogInformation("Update Agent--1: {agent}", JsonConvert.SerializeObject(updateAgentInputDto));
         var agentDto = await _agentService.UpdateAgentAsync(guid, updateAgentInputDto);
         return agentDto;
+    }
+    
+    [HttpPut("updateMulti")]
+    // [Authorize(Policy = AevatarPermissions.Agent.Update)]
+    [Authorize]
+    public async Task<List<AgentDto>> UpdateMultiAgent([FromBody] UpdateMultiAgentInputDtos updateAgentInputDto)
+    {
+        _logger.LogInformation("Update MultiAgent: {agent}", JsonConvert.SerializeObject(updateAgentInputDto));
+        var agentDtoList = updateAgentInputDto.Agents.Select(t => _agentService.UpdateAgentAsync(t.Id, new UpdateAgentInputDto()
+        {
+            Name = t.Name,
+            Properties = t.Properties
+        }));
+        var result = await Task.WhenAll(agentDtoList);
+        return result.ToList();
     }
 
     [HttpDelete("{guid}")]
