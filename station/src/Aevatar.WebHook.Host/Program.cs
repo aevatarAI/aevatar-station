@@ -17,7 +17,10 @@ public class Program
     {
         var configuration = new ConfigurationBuilder()
             .AddAevatarSecureConfiguration(
-                systemConfigPath: Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
+                systemConfigPaths: new[]
+                {
+                    Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json")
+                })
             .AddEnvironmentVariables()
             .Build();
 
@@ -41,7 +44,10 @@ public class Program
             builder.ConfigureHostConfiguration(config =>
             {
                 config.AddAevatarSecureConfiguration(
-                    systemConfigPath: Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
+                    systemConfigPaths: new[]
+                    {
+                        Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json")
+                    })
                     .AddEnvironmentVariables();
             });
             await builder.Build().RunAsync();

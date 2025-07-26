@@ -30,9 +30,11 @@ public class Program
             var builder = WebApplication.CreateBuilder(args);
             builder.Configuration
                 .AddAevatarSecureConfiguration(
-                    systemConfigPath: Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
-                .AddAevatarSecureConfiguration(
-                    systemConfigPath: Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json"))
+                    systemConfigPaths: new[]
+                    {
+                        Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"),
+                        Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json")
+                    })
                 .AddEnvironmentVariables();
             builder.Host
                 .UseOrleansClientConfiguration()
@@ -71,9 +73,11 @@ public class Program
     {
         var configuration = new ConfigurationBuilder()
             .AddAevatarSecureConfiguration(
-                systemConfigPath: Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
-            .AddAevatarSecureConfiguration(
-                systemConfigPath: Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json"))
+                systemConfigPaths: new[]
+                {
+                    Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"),
+                    Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json")
+                })
             .AddEnvironmentVariables()
             .Build();
         Log.Logger = (loggerConfiguration ?? new LoggerConfiguration())
