@@ -183,6 +183,99 @@ builder.Configuration
 - Secret管理敏感配置
 - 支持配置热更新
 
+## 工作流程条件化配置打包
+
+### 设计需求
+不同CI/CD工作流程对业务配置的包含需求不同：
+- **回归测试环境**：需要包含业务配置进行完整功能测试
+- **生产部署环境**：应排除预置业务配置，避免与运行时配置冲突
+
+### 解决方案：环境变量条件化控制
+
+#### 1. 代码层面控制
+通过修改 `AddAevatarSecureConfiguration` 扩展方法，实现环境变量控制：
+
+```csharp
+public static IConfigurationBuilder AddAevatarSecureConfiguration(
+    this IConfigurationBuilder builder,
+    string systemConfigPath,
+    string businessConfigPath = "appsettings.business.json",
+    bool optional = true)
+{
+    // 业务配置默认支持，使用动态保护键机制防止覆盖系统配置
+    // 1. 加载默认 appsettings.json（必需）
+    // 2. 加载系统配置（可选）
+    // 3. 加载业务配置（可选）
+    // 4. 加载临时配置（仅在环境变量 ENABLE_EPHEMERAL_CONFIG=true 时）
+    return builder.AddAevatarSecureConfiguration(systemConfigPath, businessConfigPath, optional: optional);
+}
+```
+
+#### 2. 工作流程差异化配置
+
+**回归测试工作流程** (regression-test-ephemeral-env.yaml)：
+```yaml
+- name: Build and push
+  uses: docker/build-push-action@v5
+  with:
+    context: .
+    push: true
+    build-args: |
+      servicename=${{ matrix.servicename }}
+    platforms: linux/amd64
+    tags: ${{ steps.meta.outputs.tags }}
+    labels: ${{ steps.meta.outputs.labels }}
+  env:
+    ENABLE_EPHEMERAL_CONFIG: "true"  # 启用临时配置覆盖
+```
+
+**生产部署工作流程** (package-staging.yml)：
+```yaml
+- name: Build and push
+  uses: docker/build-push-action@v5
+  with:
+    context: .
+    push: true
+    build-args: |
+      servicename=${{ matrix.servicename }}
+    platforms: linux/amd64
+    tags: ${{ steps.meta.outputs.tags }}
+    labels: ${{ steps.meta.outputs.labels }}
+  # 不设置 ENABLE_EPHEMERAL_CONFIG，业务配置启用但无法覆盖系统配置
+```
+
+#### 3. 配置分离策略
+- **默认业务配置支持**：业务配置默认启用，使用动态保护键机制确保安全
+- **临时配置控制**：通过 `ENABLE_EPHEMERAL_CONFIG` 环境变量控制是否允许临时配置覆盖
+- **统一镜像**：同一镜像可用于测试和生产，通过环境变量区分行为
+- **向后兼容**：保持原有配置文件约定和加载顺序
+
+#### 4. 最佳实践
+- **环境变量控制**：
+  - EPHEMERAL测试环境：设置 `ENABLE_EPHEMERAL_CONFIG=true` 启用临时配置覆盖
+  - 生产环境：不设置该变量，业务配置默认启用但不允许覆盖系统配置
+- **配置文件约定**：
+  - 系统配置：`appsettings.{host}.json`（如 `appsettings.Station.json`）
+  - 业务配置：`appsettings.business.json`（默认支持）
+  - 临时配置：`appsettings.ephemeral.json`（仅测试环境启用）
+- **系统配置优先**：业务配置永远不能覆盖系统保护键
+- **运行时动态**：生产环境通过HostConfigurationGAgent动态管理业务配置
+
+#### 5. 服务覆盖范围
+所有Host服务均自动支持该机制：
+- Aevatar.HttpApi.Host
+- Aevatar.Silo  
+- Aevatar.Developer.Host
+- Aevatar.WebHook.Host
+- Aevatar.Worker
+- Aevatar.AuthServer
+
+### 集成优势
+- **零维护成本**：无需修改Dockerfile或各服务代码
+- **统一控制**：单一环境变量控制所有服务行为
+- **生产安全**：生产环境默认禁用静态业务配置
+- **测试便利**：测试环境可轻松启用预置配置
+
 ## 优势总结
 
 ### 技术优势

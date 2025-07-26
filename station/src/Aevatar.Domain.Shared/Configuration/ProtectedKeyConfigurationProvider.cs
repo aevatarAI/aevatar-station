@@ -1,64 +1,23 @@
-// ABOUTME: This file implements a configuration provider that prevents override of protected keys
+// ABOUTME: This file implements a configuration validator that prevents override of protected keys
 // ABOUTME: Validates configuration to ensure business configs cannot tamper with system settings
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Primitives;
 
 namespace Aevatar.Domain.Shared.Configuration;
 
 /// <summary>
-/// Configuration provider that prevents business configurations from overriding protected system keys
+/// Configuration validator that prevents business configurations from overriding protected system keys
 /// </summary>
-public class ProtectedKeyConfigurationProvider : IConfigurationProvider
+public class ProtectedKeyConfigurationProvider
 {
     private readonly string[] _protectedKeyPrefixes;
-    private readonly Dictionary<string, string> _data = new();
 
     public ProtectedKeyConfigurationProvider(params string[] protectedKeyPrefixes)
     {
         _protectedKeyPrefixes = protectedKeyPrefixes ?? Array.Empty<string>();
-    }
-
-    public bool TryGet(string key, out string? value)
-    {
-        return _data.TryGetValue(key, out value);
-    }
-
-    public void Set(string key, string? value)
-    {
-        _data[key] = value ?? string.Empty;
-    }
-
-    public IChangeToken GetReloadToken()
-    {
-        return new CancellationChangeToken(CancellationToken.None);
-    }
-
-    public void Load()
-    {
-        // This provider validates configuration after all other providers are loaded
-        // It doesn't load any data itself, but validates against protected keys
-    }
-
-    public IEnumerable<string> GetChildKeys(IEnumerable<string> earlierKeys, string? parentPath)
-    {
-        var prefix = parentPath == null ? string.Empty : parentPath + ConfigurationPath.KeyDelimiter;
-
-        return _data
-            .Where(kv => kv.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            .Select(kv => Segment(kv.Key, prefix.Length))
-            .Concat(earlierKeys)
-            .OrderBy(k => k, ConfigurationKeyComparer.Instance);
-    }
-
-    private static string Segment(string key, int prefixLength)
-    {
-        var indexOf = key.IndexOf(ConfigurationPath.KeyDelimiter, prefixLength, StringComparison.OrdinalIgnoreCase);
-        return indexOf < 0 ? key.Substring(prefixLength) : key.Substring(prefixLength, indexOf - prefixLength);
     }
 
     /// <summary>
@@ -69,11 +28,13 @@ public class ProtectedKeyConfigurationProvider : IConfigurationProvider
     /// <exception cref="InvalidOperationException">Thrown when protected keys are found in business configuration</exception>
     public void ValidateBusinessConfiguration(IConfiguration systemConfig, IConfiguration businessConfig)
     {
+        // Get dynamic protected keys from system configuration + explicit protected keys
+        var dynamicProtectedKeys = GetDynamicProtectedKeys(systemConfig);
         var conflictingKeys = new List<string>();
 
         foreach (var kvp in businessConfig.AsEnumerable())
         {
-            if (IsProtectedKey(kvp.Key))
+            if (IsProtectedKeyDynamic(kvp.Key, dynamicProtectedKeys))
             {
                 conflictingKeys.Add(kvp.Key);
             }
@@ -83,19 +44,44 @@ public class ProtectedKeyConfigurationProvider : IConfigurationProvider
         {
             throw new InvalidOperationException(
                 $"Business configuration cannot override protected keys: {string.Join(", ", conflictingKeys)}. " +
-                $"Protected key prefixes: {string.Join(", ", _protectedKeyPrefixes)}");
+                $"Protected keys (from system + explicit): {string.Join(", ", dynamicProtectedKeys)}");
         }
     }
 
-    private bool IsProtectedKey(string key)
+    /// <summary>
+    /// Gets dynamic protected keys by combining system configuration keys with explicit protected keys
+    /// </summary>
+    /// <param name="systemConfig">System configuration</param>
+    /// <returns>Set of protected key prefixes</returns>
+    private HashSet<string> GetDynamicProtectedKeys(IConfiguration systemConfig)
+    {
+        var protectedKeys = new HashSet<string>(_protectedKeyPrefixes, StringComparer.OrdinalIgnoreCase);
+        
+        // Add all top-level keys from system configuration as protected
+        foreach (var section in systemConfig.GetChildren())
+        {
+            protectedKeys.Add(section.Key);
+        }
+        
+        return protectedKeys;
+    }
+
+    /// <summary>
+    /// Checks if a key is protected by any of the dynamic protected prefixes
+    /// </summary>
+    /// <param name="key">Key to check</param>
+    /// <param name="protectedKeys">Set of protected key prefixes</param>
+    /// <returns>True if the key is protected</returns>
+    private static bool IsProtectedKeyDynamic(string key, HashSet<string> protectedKeys)
     {
         if (string.IsNullOrEmpty(key))
             return false;
 
-        return _protectedKeyPrefixes.Any(prefix => 
+        return protectedKeys.Any(prefix => 
             key.StartsWith(prefix + ":", StringComparison.OrdinalIgnoreCase) ||
             key.Equals(prefix, StringComparison.OrdinalIgnoreCase));
     }
+
 
     /// <summary>
     /// Gets the default set of protected configuration key prefixes that business configurations cannot override
@@ -138,7 +124,7 @@ public class ProtectedKeyConfigurationProvider : IConfigurationProvider
     /// <param name="businessConfiguration">Business configuration dictionary to validate</param>
     /// <param name="protectedKeys">Array of protected key prefixes (optional, uses default if null)</param>
     /// <returns>List of conflicting keys found</returns>
-    public static List<string> ValidateBusinessConfigurationKeys(Dictionary<string, object> businessConfiguration, string[] protectedKeys = null)
+    public static List<string> ValidateBusinessConfigurationKeys(Dictionary<string, object> businessConfiguration, string[]? protectedKeys = null)
     {
         if (businessConfiguration == null)
             return new List<string>();
@@ -157,18 +143,5 @@ public class ProtectedKeyConfigurationProvider : IConfigurationProvider
         }
 
         return conflictingKeys;
-    }
-}
-
-/// <summary>
-/// Configuration source for ProtectedKeyConfigurationProvider
-/// </summary>
-public class ProtectedKeyConfigurationSource : IConfigurationSource
-{
-    public string[] ProtectedKeyPrefixes { get; set; } = Array.Empty<string>();
-
-    public IConfigurationProvider Build(IConfigurationBuilder builder)
-    {
-        return new ProtectedKeyConfigurationProvider(ProtectedKeyPrefixes);
     }
 }
