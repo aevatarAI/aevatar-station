@@ -14,6 +14,7 @@ This document tracks the progress of various features and bug fixes in the Aevat
   - ✅ Basic project structure created
   - ✅ Agent migration planning completed
   - ✅ 所有CI/CD编译错误已修复
+  - ✅ CI/CD测试管道修复完成
   - 🚧 Agent deployment workflow implementation
 - **覆盖率**: 待更新
 
@@ -91,6 +92,20 @@ This document tracks the progress of various features and bug fixes in the Aevat
   - ✅ 编译成功：0个错误，56个警告（正常）
 - **覆盖率**: 接口统一化，提高代码一致性
 
+### F017: CI/CD Codecov Upload Failure Fix ✅
+- **分支**: `feature/k8s-agent-migration`
+- **状态**: ✅ 已完成
+- **开发机器**: c6:c4:e5:e8:c6:4b
+- **描述**: Fix CI/CD pipeline failure caused by Codecov upload error
+- **问题**: Tests passed (81/81) but VSTest target failed due to `fail_ci_if_error: true` in Codecov upload
+- **进度**: 
+  - ✅ Identified root cause: Codecov upload failure causing CI failure
+  - ✅ Modified test-with-code-coverage.yml workflow
+  - ✅ Changed `fail_ci_if_error` from `true` to `false` for all three jobs
+  - ✅ Ensured tests can pass even if code coverage upload fails
+  - ✅ Maintained coverage collection functionality
+- **覆盖率**: CI/CD管道稳定性提升
+
 ## Completed Tasks Summary
 
 ✅ **所有CI/CD编译错误已完全修复**：
@@ -99,6 +114,11 @@ This document tracks the progress of various features and bug fixes in the Aevat
 - IHostDeployManager接口不匹配错误 → 接口统一化
 - 单元测试编译错误 → 所有测试类更新完成
 - DI注册错误 → 依赖注入配置修复
+
+✅ **CI/CD管道完全修复**：
+- 编译错误修复 → 构建成功
+- 测试错误修复 → 81/81测试通过
+- Codecov上传失败修复 → CI不再因覆盖率上传失败而失败
 
 ✅ **回归测试完善**：
 - K8s部署更新测试用例完整
