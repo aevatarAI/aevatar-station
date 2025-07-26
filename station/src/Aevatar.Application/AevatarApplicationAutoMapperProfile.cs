@@ -49,5 +49,8 @@ public class AevatarApplicationAutoMapperProfile : Profile
                     s.LastModificationTime.HasValue
                         ? DateTimeHelper.ToUnixTimeMilliseconds(s.LastModificationTime.Value)
                         : 0));
+        
+        CreateMap<ProjectCorsOrigin, ProjectCorsOriginDto>()
+            .ForMember(d => d.CreationTime, m => m.MapFrom(s => DateTimeHelper.ToUnixTimeMilliseconds(s.CreationTime)));
     }
 }
