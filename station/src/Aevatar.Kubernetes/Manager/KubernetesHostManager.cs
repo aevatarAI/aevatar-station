@@ -611,20 +611,4 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
     }
 
     #endregion
-
-    public async Task<string> CreateHostAsync(string appId, string version, string corsUrls)
-    {
-        await CreateApplicationAsync(appId, version, corsUrls, Guid.Empty);
-        return string.Empty;
-    }
-
-    public async Task DestroyHostAsync(string appId, string version)
-    {
-        await DestroyApplicationAsync(appId, version);
-    }
-
-    public async Task UpdateDockerImageAsync(string appId, string version, string newImage)
-    {
-        await UpdateDeploymentImageAsync(appId, version, newImage);
-    }
 }
