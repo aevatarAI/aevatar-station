@@ -291,7 +291,7 @@ public class GodGPTController : AevatarController
         catch (Exception ex)
         {
             _logger.LogError($"[GodGPTController][GetSessionMessageListAsync] exception sessionId: {sessionId}, , duration: {stopwatch.ElapsedMilliseconds}ms, error:{ex.Message}");
-            chatMessages = new List<ChatMessageWithMetaDto>();
+            throw ex;
         }
 
         _logger.LogDebug("[GodGPTController][GetSessionMessageListAsync] sessionId: {0}, messageCount: {1}, duration: {2}ms",
