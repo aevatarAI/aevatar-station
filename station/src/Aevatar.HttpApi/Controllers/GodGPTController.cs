@@ -287,7 +287,9 @@ public class GodGPTController : AevatarController
         {
             var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
             var language = HttpContext.GetGodGPTLanguage();
-            RequestContext.Set("GodGPTLanguage", language);
+            _logger.LogDebug(
+                $"[GodGPTController][GetSessionMessageListAsync] sessionId: {sessionId}, language:{language}");
+            RequestContext.Set("GodGPTLanguage", language.ToString());
             chatMessages = await manager.GetSessionMessageListWithMetaAsync(sessionId);
         }
         catch (Exception ex)
@@ -296,8 +298,8 @@ public class GodGPTController : AevatarController
             throw ex;
         }
 
-        _logger.LogDebug("[GodGPTController][GetSessionMessageListAsync] sessionId: {0}, messageCount: {1}, duration: {2}ms",
-            sessionId, chatMessages.Count, stopwatch.ElapsedMilliseconds);
+        _logger.LogDebug(
+            $"[GodGPTController][GetSessionMessageListAsync] sessionId: {sessionId}, messageCount: {chatMessages.Count}, duration: {stopwatch.ElapsedMilliseconds}ms ");
         return chatMessages;
     }
 
