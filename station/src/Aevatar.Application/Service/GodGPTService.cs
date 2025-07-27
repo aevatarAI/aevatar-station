@@ -302,7 +302,7 @@ public class GodGPTService : ApplicationService, IGodGPTService
         catch (Exception e)
         {
             _logger.LogError(e, "Invalid Share string. {0}", shareString);
-            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.InvalidShare, language);
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InvalidShare, language);
             throw new UserFriendlyException(localizedMessage);
         }
 

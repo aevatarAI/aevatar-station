@@ -411,7 +411,7 @@ public class GodGPTController : AevatarController
         var language = HttpContext.GetGodGPTLanguage();
         if (string.IsNullOrWhiteSpace(email))
         {
-            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.EmailIsRequired, language);
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.EmailIsRequired, language);
             return BadRequest(new
             {
                 error = new { code = 1, message = localizedMessage },
@@ -425,7 +425,7 @@ public class GodGPTController : AevatarController
         }
         else
         {
-            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.UserUnRegister, language);
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.UserUnRegister, language);
             return Ok(new
             {
                 error = new { code = 0, message = localizedMessage },
@@ -503,7 +503,7 @@ public class GodGPTController : AevatarController
         }
         catch (Exception ex)
         {
-            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.InternalServerError, language);
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InternalServerError, language);
             _logger.LogError(ex, "[GodGPTController][GetGuestChatLimitsAsync] User: {0}, unexpected error", userHashId);
             return StatusCode(500, new { error = localizedMessage });
         }
@@ -582,7 +582,7 @@ public class GodGPTController : AevatarController
             {
                 ["MaxSizeBytes"] = _blobStoringOptions.MaxSizeBytes.ToString()
             };
-            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.FileTooLarge, language,parameters);
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.FileTooLarge, language,parameters);
             throw new UserFriendlyException(localizedMessage);
         }
         

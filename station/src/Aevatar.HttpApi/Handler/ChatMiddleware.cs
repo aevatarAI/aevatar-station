@@ -86,7 +86,7 @@ public class ChatMiddleware
 
         if (context.User?.Identity == null || !context.User.Identity.IsAuthenticated)
         {
-            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.Unauthorized, language);
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.Unauthorized, language);
             _logger.LogDebug("[GodGPTController][ChatWithSessionAsync] Unauthorized: User is not authenticated");
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             await context.Response.WriteAsync(localizedMessage);
@@ -98,7 +98,7 @@ public class ChatMiddleware
         if (userIdStr.IsNullOrWhiteSpace() || !Guid.TryParse(userIdStr, out var userId))
         {
             _logger.LogDebug("[GodGPTController][ChatWithSessionAsync] Unauthorized: Unable to retrieve UserId.");
-            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.UnableToRetrieveUserId, language);
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.UnableToRetrieveUserId, language);
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             await context.Response.WriteAsync(localizedMessage);
             await context.Response.Body.FlushAsync();
@@ -115,7 +115,7 @@ public class ChatMiddleware
             {
                 ["TooManyFiles"] = MaxImageCount.ToString()
             };
-            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.TooManyFiles, language, parameters);
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.TooManyFiles, language, parameters);
             await context.Response.WriteAsync(localizedMessage);
             await context.Response.Body.FlushAsync();
             return;
@@ -136,7 +136,7 @@ public class ChatMiddleware
                 {
                     ["sessionId"] = request.SessionId.ToString()
                 };
-                var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.UnableToLoadConversation, language, parameters);
+                var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.UnableToLoadConversation, language, parameters);
 
                 await context.Response.WriteAsync(localizedMessage);
                 await context.Response.Body.FlushAsync();
@@ -273,7 +273,7 @@ public class ChatMiddleware
             {
                 _logger.LogWarning("[GuestChatMiddleware] Invalid request body for user: {0}", userHashId);
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.InvalidRequestBody, language);
+                var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InvalidRequestBody, language);
                 await context.Response.WriteAsync(localizedMessage);
                 return;
             }
@@ -292,7 +292,7 @@ public class ChatMiddleware
             {
                 _logger.LogWarning("[GuestChatMiddleware] Chat limit exceeded for user: {0}", userHashId);
                 context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
-                var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.DailyChatLimitExceeded, language);
+                var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.DailyChatLimitExceeded, language);
                 await context.Response.WriteAsync(localizedMessage);
                 return;
             }
@@ -303,7 +303,7 @@ public class ChatMiddleware
             {
                 _logger.LogWarning("[GuestChatMiddleware] No active session for user: {0}", userHashId);
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.NoActiveGuestSession, language);
+                var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.NoActiveGuestSession, language);
                 await context.Response.WriteAsync(localizedMessage);
                 return;
             }
@@ -442,7 +442,7 @@ public class ChatMiddleware
         {
             _logger.LogError(ex, "[GuestChatMiddleware] Unexpected error for user: {0}", userHashId);
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.InternalServerError, language);
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InternalServerError, language);
             await context.Response.WriteAsync(localizedMessage);
         }
     }
@@ -459,7 +459,7 @@ public class ChatMiddleware
         {
             _logger.LogDebug("[VoiceChatMiddleware] Unauthorized: User is not authenticated");
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.Unauthorized, language);
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.Unauthorized, language);
             await context.Response.WriteAsync(localizedMessage);
             await context.Response.Body.FlushAsync();
             return;
@@ -471,7 +471,7 @@ public class ChatMiddleware
         {
             _logger.LogDebug("[VoiceChatMiddleware] Unauthorized: Unable to retrieve UserId.");
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.UnableToRetrieveUserId, language);
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.UnableToRetrieveUserId, language);
             await context.Response.WriteAsync(localizedMessage);
             await context.Response.Body.FlushAsync();
             return;
@@ -485,14 +485,14 @@ public class ChatMiddleware
         {
             _logger.LogWarning($"[VoiceChatMiddleware] Invalid request body for user: {userId}");
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
-            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.InvalidRequestBody, language);
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InvalidRequestBody, language);
             await context.Response.WriteAsync(localizedMessage);
             return;
         }
         if (request.VoiceLanguage == VoiceLanguageEnum.Unset)
         {
             _logger.LogWarning($"[VoiceChatMiddleware] unset language userId: {userId} language:{request.VoiceLanguage}");
-            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.UnsetLanguage, language);
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.UnsetLanguage, language);
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             await context.Response.WriteAsync(localizedMessage);
             return;
@@ -517,7 +517,7 @@ public class ChatMiddleware
                 {
                     ["sessionId"] = request.SessionId.ToString()
                 };
-                var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.UnableToLoadConversation, language, parameters);
+                var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.UnableToLoadConversation, language, parameters);
                 await context.Response.WriteAsync(localizedMessage);
                 await context.Response.Body.FlushAsync();
                 return;
@@ -642,7 +642,7 @@ public class ChatMiddleware
         {
             _logger.LogError(ex, "[VoiceChatMiddleware] Unexpected error - SessionId: {0}", request.SessionId);
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.InternalServerError, language);
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InternalServerError, language);
 
             await context.Response.WriteAsync(localizedMessage);
         }
