@@ -286,6 +286,8 @@ public class GodGPTController : AevatarController
         try
         {
             var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
+            var language = HttpContext.GetGodGPTLanguage();
+            RequestContext.Set("GodGPTLanguage", language);
             chatMessages = await manager.GetSessionMessageListWithMetaAsync(sessionId);
         }
         catch (Exception ex)
