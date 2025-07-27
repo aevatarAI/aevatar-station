@@ -164,6 +164,7 @@ public class LocalizationService : ILocalizationService
                 ["en.VoiceLanguageNotSet"] = "Voice language not set.",
                 ["en.HasBeenRegistered"] = "The email: {input.Email} has been registered.",
                 ["en.WebhookValidatingError"] = "Error validating webhook",
+                ["en.InvalidShare"] = "Invalid Share string",
 
                 // Traditional Chinese translations
                 ["zh-tw.Unauthorized"] = "未授權：使用者未通過身份驗證。 ",
@@ -193,6 +194,7 @@ public class LocalizationService : ILocalizationService
                 ["zh-tw.VoiceLanguageNotSet"] = "语音语言未设置。",
                 ["zh-tw.HasBeenRegistered"] = "電子郵件：｛input.email｝已注册。",
                 ["zh-tw.WebhookValidatingError"] = " 驗證 webhook 失敗 ",
+                ["zh-tw.InvalidShare"] = "共亯字串無效",
 
                 // Spanish translations
                 ["es.Unauthorized"] = "No autorizado: El usuario no está autenticado. ",
@@ -221,7 +223,8 @@ public class LocalizationService : ILocalizationService
                 ["es.UnsetLanguage"] = "Cuerpo de la solicitud sin idioma establecido. ",
                 ["es.VoiceLanguageNotSet"] = "Idioma de voz no establecido.",
                 ["es.HasBeenRegistered"] = "El correo electrónico: {input.Email} ha sido registrado.",
-                ["es.WebhookValidatingError"] = "Error al validar el webhook "
+                ["es.WebhookValidatingError"] = "Error al validar el webhook ",
+                ["es.InvalidShare"] = "Cadena de compartir inválida"
 
             },
             

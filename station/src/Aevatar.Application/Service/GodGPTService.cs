@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Anonymous;
+using Aevatar.Application.Constants;
+using Aevatar.Application.Contracts.Services;
 using Aevatar.Application.Grains.Agents.Anonymous;
 using Aevatar.Application.Grains.Agents.ChatManager;
 using Aevatar.Application.Grains.Agents.ChatManager.Chat;
@@ -32,6 +34,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Orleans;
+using Orleans.Runtime;
 using Stripe;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
@@ -59,8 +62,8 @@ public interface IGodGPTService
     Task<UserProfileDto> GetUserProfileAsync(Guid currentUserId);
     Task<Guid> SetUserProfileAsync(Guid currentUserId, SetUserProfileInput userProfileDto);
     Task<Guid> DeleteAccountAsync(Guid currentUserId);
-    Task<CreateShareIdResponse> GenerateShareContentAsync(Guid currentUserId, CreateShareIdRequest request);
-    Task<List<ChatMessage>> GetShareMessageListAsync(string shareString);
+    Task<CreateShareIdResponse> GenerateShareContentAsync(Guid currentUserId, CreateShareIdRequest request, GodGPTChatLanguage language = GodGPTChatLanguage.English);
+    Task<List<ChatMessage>> GetShareMessageListAsync(string shareString, GodGPTChatLanguage language = GodGPTChatLanguage.English);
     Task UpdateShowToastAsync(Guid currentUserId);
     Task<List<StripeProductDto>> GetStripeProductsAsync(Guid currentUserId);
     Task<string> CreateCheckoutSessionAsync(Guid currentUserId, CreateCheckoutSessionInput createCheckoutSessionInput);
@@ -125,13 +128,14 @@ public class GodGPTService : ApplicationService, IGodGPTService
     private readonly ILogger<GodGPTService> _logger;
     private readonly IOptionsMonitor<StripeOptions> _stripeOptions;
     private readonly IOptionsMonitor<ManagerOptions> _managerOptions;
+    private readonly ILocalizationService _localizationService;
 
     private readonly StripeClient _stripeClient;
     private const string PullTaskTargetId = "aevatar-twitter-monitor-PullTaskTargetId";
     private const string RewardTaskTargetId = "aevatar-twitter-reward-RewardTaskTargetId";
 
     public GodGPTService(IClusterClient clusterClient, ILogger<GodGPTService> logger, IOptionsMonitor<StripeOptions> stripeOptions,
-        IOptionsMonitor<ManagerOptions> managerOptions)
+        IOptionsMonitor<ManagerOptions> managerOptions, ILocalizationService localizationService)
     {
         _clusterClient = clusterClient;
         _logger = logger;
@@ -139,6 +143,7 @@ public class GodGPTService : ApplicationService, IGodGPTService
         _managerOptions = managerOptions;
 
         _stripeClient = new StripeClient(_stripeOptions.CurrentValue.SecretKey);
+        _localizationService = localizationService;
     }
     
     
@@ -261,17 +266,26 @@ public class GodGPTService : ApplicationService, IGodGPTService
         return await manager.ClearAllAsync();
     }
 
-    public async Task<CreateShareIdResponse> GenerateShareContentAsync(Guid currentUserId, CreateShareIdRequest request)
+    public async Task<CreateShareIdResponse> GenerateShareContentAsync(Guid currentUserId, CreateShareIdRequest request, GodGPTChatLanguage language = GodGPTChatLanguage.English)
     {
-        var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
-        var shareId = await manager.GenerateChatShareContentAsync(request.SessionId);
-        return new CreateShareIdResponse
+        try
         {
-            ShareId = GuidCompressor.CompressGuids(currentUserId, request.SessionId, shareId)
-        };
+            var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
+            RequestContext.Set("GodGPTLanguage", language);
+            var shareId = await manager.GenerateChatShareContentAsync(request.SessionId);
+            return new CreateShareIdResponse
+            {
+                ShareId = GuidCompressor.CompressGuids(currentUserId, request.SessionId, shareId)
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"GenerateShareContentAsync userId:{currentUserId}, sessionId:{request.SessionId}, error: {ex.Message} ");
+            throw ex;
+        }
     }
 
-    public async Task<List<ChatMessage>> GetShareMessageListAsync(string shareString)
+    public async Task<List<ChatMessage>> GetShareMessageListAsync(string shareString, GodGPTChatLanguage language = GodGPTChatLanguage.English)
     {
         if (shareString.IsNullOrWhiteSpace())
         {
@@ -288,12 +302,22 @@ public class GodGPTService : ApplicationService, IGodGPTService
         catch (Exception e)
         {
             _logger.LogError(e, "Invalid Share string. {0}", shareString);
-            throw new UserFriendlyException("Invalid Share string");
+            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.InvalidShare, language);
+            throw new UserFriendlyException(localizedMessage);
         }
 
-        var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
-        var shareLinkDto = await manager.GetChatShareContentAsync(sessionId, shareId);
-        return shareLinkDto.Messages;
+        try
+        {
+            var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
+            RequestContext.Set("GodGPTLanguage", language);
+            var shareLinkDto = await manager.GetChatShareContentAsync(sessionId, shareId);
+            return shareLinkDto.Messages;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"GetShareMessageListAsync exception userId:{userId},shareId:{shareId}, error:{ex.Message}");
+            throw ex;
+        }
     }
 
     public async Task UpdateShowToastAsync(Guid currentUserId)

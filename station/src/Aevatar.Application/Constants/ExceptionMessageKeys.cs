@@ -30,6 +30,7 @@ public static class ExceptionMessageKeys
     public const string TooManyFiles = "TooManyFiles";
     public const string HASREGISTERED = "HasBeenRegistered";
     public const string WebhookValidatingError = "WebhookValidatingError";
+    public const string InvalidShare = "InvalidShare";
 
     // File Operations
     public const string FileTooLarge = "FileTooLarge";

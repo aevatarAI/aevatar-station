@@ -13,7 +13,6 @@ using Aevatar.Application.Grains.Agents.ChatManager.Common;
 using Aevatar.Application.Grains.Agents.ChatManager.Dtos;
 using Aevatar.Application.Grains.ChatManager.Dtos;
 using Aevatar.BlobStorings;
-using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Extensions;
 using Aevatar.GAgents.AI.Common;
@@ -23,13 +22,9 @@ using Aevatar.Quantum;
 using Aevatar.Service;
 using Asp.Versioning;
 using GodGPT.GAgents.SpeechChat;
-using HandlebarsDotNet;
-using Json.Schema;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -287,8 +282,18 @@ public class GodGPTController : AevatarController
     {
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
-        var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
-        var chatMessages = await manager.GetSessionMessageListWithMetaAsync(sessionId);
+        var chatMessages = new List<ChatMessageWithMetaDto>();
+        try
+        {
+            var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
+            chatMessages = await manager.GetSessionMessageListWithMetaAsync(sessionId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"[GodGPTController][GetSessionMessageListAsync] exception sessionId: {sessionId}, , duration: {stopwatch.ElapsedMilliseconds}ms, error:{ex.Message}");
+            chatMessages = new List<ChatMessageWithMetaDto>();
+        }
+
         _logger.LogDebug("[GodGPTController][GetSessionMessageListAsync] sessionId: {0}, messageCount: {1}, duration: {2}ms",
             sessionId, chatMessages.Count, stopwatch.ElapsedMilliseconds);
         return chatMessages;
@@ -375,7 +380,8 @@ public class GodGPTController : AevatarController
     {
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
-        var response = await _godGptService.GenerateShareContentAsync(currentUserId, request);
+        var language = HttpContext.GetGodGPTLanguage();
+        var response = await _godGptService.GenerateShareContentAsync(currentUserId, request, language);
         _logger.LogDebug("[GodGPTController][CreateShareStringAsync] userId: {0} sessionId: {1}, ShareId={2}, duration: {3}ms",
             currentUserId, request.SessionId, response.ShareId, stopwatch.ElapsedMilliseconds);
         return response;
@@ -386,7 +392,8 @@ public class GodGPTController : AevatarController
     public async Task<List<ChatMessage>> GetShareMessageListAsync(string shareString)
     {
         var stopwatch = Stopwatch.StartNew();
-        var response = await _godGptService.GetShareMessageListAsync(shareString);
+        var language = HttpContext.GetGodGPTLanguage();
+        var response = await _godGptService.GetShareMessageListAsync(shareString,language);
         _logger.LogDebug("[GodGPTController][GetShareMessageListAsync] shareString: {0} duration: {1}ms",
             shareString, stopwatch.ElapsedMilliseconds);
         return response;
@@ -506,9 +513,19 @@ public class GodGPTController : AevatarController
     {
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
-        var userProfileDto = await _godGptService.SetVoiceLanguageAsync(currentUserId, request.VoiceLanguage);
-        _logger.LogDebug("[GodGPTController][SetVoiceLanguageAsync] userId: {0},voiceLanguage:{1} duration: {2}ms",
-            currentUserId, request.VoiceLanguage, stopwatch.ElapsedMilliseconds);
+        var userProfileDto = new UserProfileDto();
+        try
+        {
+            userProfileDto = await _godGptService.SetVoiceLanguageAsync(currentUserId, request.VoiceLanguage);
+        }
+        catch (Exception ex)
+        {
+            userProfileDto = new UserProfileDto();
+            userProfileDto.VoiceLanguage = VoiceLanguageEnum.Unset;
+            _logger.LogError($"[GodGPTController][SetVoiceLanguageAsync] exception userId: {currentUserId},voiceLanguage:{request.VoiceLanguage} duration: {stopwatch.ElapsedMilliseconds}ms error:{ex.Message}");
+            return userProfileDto;
+        }
+        _logger.LogDebug($"[GodGPTController][SetVoiceLanguageAsync] userId: {currentUserId},voiceLanguage:{request.VoiceLanguage} duration: {stopwatch.ElapsedMilliseconds}ms");
         return userProfileDto;
     }
     #endregion
