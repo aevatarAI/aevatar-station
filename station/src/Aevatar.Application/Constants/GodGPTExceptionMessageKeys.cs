@@ -3,7 +3,7 @@ namespace Aevatar.Application.Constants;
 /// <summary>
 /// Exception message keys for internationalization
 /// </summary>
-public static class ExceptionMessageKeys
+public static class GodGPTExceptionMessageKeys
 {
     // Authentication and Authorization
     public const string Unauthorized = "Unauthorized";

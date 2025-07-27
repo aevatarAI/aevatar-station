@@ -191,7 +191,7 @@ public class GodGPTPaymentController : AevatarController
         }
         catch (Exception e)
         {
-            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.WebhookValidatingError, language);
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.WebhookValidatingError, language);
             _logger.LogError(e, "[GodGPTPaymentController][Webhook] Error validating webhook: {Message}", e.Message);
             return BadRequest(localizedMessage);
         }

@@ -52,7 +52,7 @@ public class AccountService : AccountAppService, IAccountService
         var code = await _registerCode.GetAsync(GetRegisterCodeKey(input.EmailAddress));
         if (code != input.Code)
         {
-            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.InvalidCaptchaCode, language);
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InvalidCaptchaCode, language);
             throw new UserFriendlyException(localizedMessage);
         }
 
@@ -79,7 +79,7 @@ public class AccountService : AccountAppService, IAccountService
             {
                 ["input.Email"] = input.Email
             };
-            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.HASREGISTERED, language, parameters);
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.HASREGISTERED, language, parameters);
             throw new UserFriendlyException(localizedMessage);
         }
 
@@ -132,7 +132,7 @@ public class AccountService : AccountAppService, IAccountService
         var code = await _registerCode.GetAsync(GetRegisterCodeKey(input.EmailAddress));
         if (code != input.Code)
         {
-            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.InvalidCaptchaCode, language);
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InvalidCaptchaCode, language);
             throw new UserFriendlyException(localizedMessage);
         }
 

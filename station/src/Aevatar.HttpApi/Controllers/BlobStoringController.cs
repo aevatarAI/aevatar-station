@@ -42,7 +42,7 @@ public class BlobStoringController : AevatarController
             {
                 ["MaxSizeBytes"] = _blobStoringOptions.MaxSizeBytes.ToString()
             };
-            var localizedMessage = _localizationService.GetLocalizedException(ExceptionMessageKeys.FileTooLarge, language, parameters);
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.FileTooLarge, language, parameters);
 
             throw new UserFriendlyException(localizedMessage);
         }
