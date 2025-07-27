@@ -503,7 +503,7 @@ public class ChatMiddleware
             var stopwatch = Stopwatch.StartNew();
             
             // Get language from request headers and set context for Orleans grains
-            RequestContext.Set("GodGPTLanguage", language);
+            RequestContext.Set("GodGPTLanguage", language.ToString());
             
             _logger.LogDebug($"[VoiceChatMiddleware] HTTP start - SessionId: {request.SessionId}, UserId: {userId}, MessageType: {request.MessageType}, VoiceLanguage: {request.VoiceLanguage}, Language: {language}");
 

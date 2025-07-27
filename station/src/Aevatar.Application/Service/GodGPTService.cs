@@ -271,7 +271,7 @@ public class GodGPTService : ApplicationService, IGodGPTService
         try
         {
             var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
-            RequestContext.Set("GodGPTLanguage", language);
+            RequestContext.Set("GodGPTLanguage", language.ToString());
             var shareId = await manager.GenerateChatShareContentAsync(request.SessionId);
             return new CreateShareIdResponse
             {
@@ -309,7 +309,7 @@ public class GodGPTService : ApplicationService, IGodGPTService
         try
         {
             var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
-            RequestContext.Set("GodGPTLanguage", language);
+            RequestContext.Set("GodGPTLanguage", language.ToString());
             var shareLinkDto = await manager.GetChatShareContentAsync(sessionId, shareId);
             return shareLinkDto.Messages;
         }
