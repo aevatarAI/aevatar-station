@@ -561,8 +561,8 @@ public class GodGPTController : AevatarController
     {
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
-
-        var response = await _godGptService.CanUploadImageAsync(currentUserId);
+        var language = HttpContext.GetGodGPTLanguage();
+        var response = await _godGptService.CanUploadImageAsync(currentUserId, language);
         
         var result = new CanUploadImageResponseDto
         {
