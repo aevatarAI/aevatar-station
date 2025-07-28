@@ -14,21 +14,29 @@ namespace Aevatar.Domain.Shared.Configuration;
 public static class SecureConfigurationExtensions
 {
     /// <summary>
+    /// Default business configuration file path
+    /// </summary>
+    public static string DefaultBusinessConfigPath { get; private set; } = "appsettings.business.json";
+
+ 
+    /// <summary>
     /// Adds secure configuration for Aevatar platform with multiple system configuration files
     /// </summary>
     /// <param name="builder">Configuration builder</param>
     /// <param name="systemConfigPaths">Paths to system configuration files (in priority order)</param>
-    /// <param name="businessConfigPath">Path to business configuration file (optional)</param>
+    /// <param name="businessConfigPath">Path to business configuration file (optional, defaults to DefaultBusinessConfigPath)</param>
     /// <param name="ephemeralConfigPath">Path to ephemeral environment configuration file (optional)</param>
     /// <param name="optional">Whether business configuration file is optional</param>
     /// <returns>Configuration builder for chaining</returns>
     public static IConfigurationBuilder AddAevatarSecureConfiguration(
         this IConfigurationBuilder builder,
         string[] systemConfigPaths,
-        string businessConfigPath = "appsettings.business.json",
+        string? businessConfigPath = null,
         string ephemeralConfigPath = "appsettings.ephemeral.json",
         bool optional = true)
     {
+        // Get business config path from static configuration if not specified
+        businessConfigPath ??= DefaultBusinessConfigPath;
        
         
         // 1. Add all system configurations (always required)

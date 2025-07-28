@@ -1,4 +1,6 @@
-﻿namespace Aevatar.WebHook.Deploy;
+﻿using Aevatar.Enum;
+
+namespace Aevatar.WebHook.Deploy;
 
 public class DefaultHostDeployManager : IHostDeployManager
 {
@@ -37,7 +39,7 @@ public class DefaultHostDeployManager : IHostDeployManager
         return;
     }
 
-    public async Task UpdateBusinessConfigurationAsync(string hostId, string version)
+    public async Task UpdateBusinessConfigurationAsync(string hostId, string version, HostTypeEnum hostType)
     {
         // Default implementation does nothing - override in concrete implementations like KubernetesHostManager
         return;

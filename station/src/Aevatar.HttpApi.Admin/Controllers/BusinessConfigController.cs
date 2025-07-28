@@ -1,20 +1,19 @@
-// ABOUTME: This file provides business configuration upload API with persistent storage
-// ABOUTME: Uses HostConfigurationGAgent for persistent storage and retrieval of business configurations
-
 using System;
-using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Volo.Abp;
 using Aevatar.Application.Grains.Agents.Configuration;
+using Aevatar.Controllers;
 using Aevatar.Enum;
 using Aevatar.Service;
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Orleans;
 
 namespace Aevatar.Admin.Controllers;
@@ -23,28 +22,35 @@ namespace Aevatar.Admin.Controllers;
 [ControllerName("BusinessConfig")]
 [Route("api/business-config")]
 [Authorize]
-public class BusinessConfigController : ControllerBase
+public class BusinessConfigController : AevatarController
 {
     private readonly ILogger<BusinessConfigController> _logger;
     private readonly IGrainFactory _grainFactory;
     private readonly IDeveloperService _developerService;
+    private readonly IHostApplicationLifetime _hostApplicationLifetime;
 
-    public BusinessConfigController(ILogger<BusinessConfigController> logger, IGrainFactory grainFactory, IDeveloperService developerService)
+    public BusinessConfigController(
+        ILogger<BusinessConfigController> logger, 
+        IGrainFactory grainFactory, 
+        IDeveloperService developerService,
+        IHostApplicationLifetime hostApplicationLifetime)
     {
         _logger = logger;
         _grainFactory = grainFactory;
         _developerService = developerService;
+        _hostApplicationLifetime = hostApplicationLifetime;
     }
 
     /// <summary>
-    /// Upload business configuration JSON file for a specific host
+    /// Upload business configuration JSON file for a specific host and host type
     /// </summary>
-    /// <param name="hostId">Host identifier</param>
+    /// <param name="hostType">Host type enum</param>
     /// <param name="file">JSON configuration file</param>
     /// <returns>Upload result</returns>
-    [HttpPost("{hostId}/upload")]
-    public async Task<IActionResult> UploadBusinessConfiguration(string hostId, IFormFile file)
+    [HttpPost("upload")]
+    public async Task<IActionResult> UploadBusinessConfiguration( [FromForm] HostTypeEnum hostType, IFormFile file)
     {
+        var hostId = GetHostId();
         try
         {
             if (file == null || file.Length == 0)
@@ -75,158 +81,123 @@ public class BusinessConfigController : ControllerBase
                 return BadRequest($"Invalid JSON format: {ex.Message}");
             }
 
-            // Store configuration for each host type using HostConfigurationGAgent
+            // Store configuration for the specified host type using HostConfigurationGAgent
             var updatedBy = User?.Identity?.Name ?? "System";
-            var storedHostTypes = new List<string>();
-
-            foreach (HostTypeEnum hostType in System.Enum.GetValues<HostTypeEnum>())
-            {
-                var grainKey = $"{hostId}:{hostType}";
-                var configAgent = _grainFactory.GetGrain<IHostConfigurationGAgent>(grainKey);
-                
-                await configAgent.SetBusinessConfigurationJsonAsync(jsonContent, updatedBy);
-                storedHostTypes.Add(hostType.ToString());
-                
-                _logger.LogDebug("Business configuration stored for {HostId}:{HostType}", hostId, hostType);
-            }
-
-            _logger.LogInformation("Business configuration uploaded for host {HostId}, stored for host types: {HostTypes}", 
-                hostId, string.Join(", ", storedHostTypes));
+            var grainKey = $"{hostId}:{hostType}";
+            var configAgent = _grainFactory.GetGrain<IHostConfigurationGAgent>(grainKey);
+            
+            await configAgent.SetBusinessConfigurationJsonAsync(jsonContent, updatedBy);
+            
+            _logger.LogInformation("Business configuration uploaded for {HostId}:{HostType}", hostId, hostType);
 
             // Update existing K8s ConfigMaps with the new business configuration
-            try
-            {
-                await _developerService.UpdateBusinessConfigurationAsync(hostId, "1"); // Using default version "1"
-                _logger.LogInformation("K8s ConfigMaps updated successfully for host {HostId}", hostId);
-            }
-            catch (Exception configUpdateEx)
-            {
-                _logger.LogWarning(configUpdateEx, "Failed to update K8s ConfigMaps for host {HostId}, but configuration was stored successfully", hostId);
-            }
-
+            await _developerService.UpdateBusinessConfigurationAsync(hostId, "1", hostType); // Using default version "1"
+            _logger.LogInformation("K8s ConfigMaps updated successfully for host {HostId}:{HostType}", hostId, hostType);
             return Ok(new
             {
                 Success = true,
                 Message = "Business configuration uploaded and K8s ConfigMaps updated successfully",
                 HostId = hostId,
-                StoredForHostTypes = storedHostTypes,
+                HostType = hostType.ToString(),
                 UpdatedBy = updatedBy,
                 Timestamp = DateTime.UtcNow
             });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to upload business configuration for host {HostId}", hostId);
+            _logger.LogError(ex, "Failed to upload business configuration for host {HostId}:{HostType}", hostId, hostType);
             return StatusCode(500, $"Failed to upload configuration: {ex.Message}");
         }
     }
 
-    /// <summary>
-    /// Get current business configuration for a host
-    /// </summary>
-    /// <param name="hostId">Host identifier</param>
-    /// <returns>Current configuration JSON</returns>
-    [HttpGet("{hostId}")]
-    public async Task<IActionResult> GetBusinessConfiguration(string hostId)
+    private string GetHostId()
     {
+        var clientId = CurrentUser.GetAllClaims().First(o => o.Type == "client_id").Value;
+        if (!clientId.IsNullOrEmpty() && clientId.Contains("Aevatar"))
+        {
+            _logger.LogWarning($" unSupport client {clientId} ");
+            throw new UserFriendlyException("unSupport client");
+        }
+      return clientId;
+    }
+
+    /// <summary>
+    /// Get current business configuration for a host and host type
+    /// </summary>
+    /// <param name="hostType">Host type enum</param>
+    /// <returns>Current configuration JSON</returns>
+    [HttpGet("get")]
+    public async Task<IActionResult> GetBusinessConfiguration([FromQuery] HostTypeEnum hostType)
+    {
+        var hostId = GetHostId();
         try
         {
-            // Get configuration from first available host type
-            string configurationJson = null;
-            HostTypeEnum? foundHostType = null;
-            DateTime? lastUpdated = null;
-
-            foreach (HostTypeEnum hostType in System.Enum.GetValues<HostTypeEnum>())
+            // Get configuration from the specified host type
+            var grainKey = $"{hostId}:{hostType}";
+            var configAgent = _grainFactory.GetGrain<IHostConfigurationGAgent>(grainKey);
+            
+            var configurationJson = await configAgent.GetBusinessConfigurationJsonAsync();
+            
+            if (string.IsNullOrWhiteSpace(configurationJson) || configurationJson == "{}")
             {
-                var grainKey = $"{hostId}:{hostType}";
-                var configAgent = _grainFactory.GetGrain<IHostConfigurationGAgent>(grainKey);
-                
-                var hostConfigJson = await configAgent.GetBusinessConfigurationJsonAsync();
-                
-                if (!string.IsNullOrWhiteSpace(hostConfigJson) && hostConfigJson != "{}")
-                {
-                    configurationJson = hostConfigJson;
-                    foundHostType = hostType;
-                    // Note: In a full implementation, you might want to add a GetLastUpdatedAsync method
-                    lastUpdated = DateTime.UtcNow; // Placeholder
-                    break;
-                }
-            }
-
-            if (string.IsNullOrWhiteSpace(configurationJson))
-            {
-                return NotFound($"No business configuration found for host {hostId}");
+                return NotFound($"No business configuration found for host {hostId} with type {hostType}");
             }
 
             return Ok(new
             {
                 HostId = hostId,
+                HostType = hostType.ToString(),
                 Configuration = JsonConvert.DeserializeObject(configurationJson),
-                FoundInHostType = foundHostType?.ToString(),
-                LastModified = lastUpdated,
-                ConfigurationJson = configurationJson
+                LastModified = DateTime.UtcNow, // Placeholder - in full implementation, add GetLastUpdatedAsync method
             });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get business configuration for host {HostId}", hostId);
+            _logger.LogError(ex, "Failed to get business configuration for host {HostId}:{HostType}", hostId, hostType);
             return StatusCode(500, $"Failed to get configuration: {ex.Message}");
         }
     }
 
     /// <summary>
-    /// Delete business configuration for a host
+    /// Delete business configuration for a host and host type
     /// </summary>
-    /// <param name="hostId">Host identifier</param>
+    /// <param name="hostType">Host type enum</param>
     /// <returns>Deletion result</returns>
-    [HttpDelete("{hostId}")]
-    public async Task<IActionResult> DeleteBusinessConfiguration(string hostId)
+    [HttpPost("delete")]
+    public async Task<IActionResult> DeleteBusinessConfiguration([FromQuery] HostTypeEnum hostType)
     {
+        var hostId = GetHostId();
         try
         {
             var updatedBy = User?.Identity?.Name ?? "System";
-            var clearedHostTypes = new List<string>();
-            bool foundAnyConfig = false;
-
-            // Clear configuration for all host types
-            foreach (HostTypeEnum hostType in System.Enum.GetValues<HostTypeEnum>())
+            var grainKey = $"{hostId}:{hostType}";
+            var configAgent = _grainFactory.GetGrain<IHostConfigurationGAgent>(grainKey);
+            
+            // Check if there's existing configuration
+            var existingConfig = await configAgent.GetBusinessConfigurationJsonAsync();
+            if (string.IsNullOrWhiteSpace(existingConfig) || existingConfig == "{}")
             {
-                var grainKey = $"{hostId}:{hostType}";
-                var configAgent = _grainFactory.GetGrain<IHostConfigurationGAgent>(grainKey);
-                
-                // Check if there's existing configuration
-                var existingConfig = await configAgent.GetBusinessConfigurationJsonAsync();
-                if (!string.IsNullOrWhiteSpace(existingConfig) && existingConfig != "{}")
-                {
-                    foundAnyConfig = true;
-                }
-                
-                await configAgent.ClearBusinessConfigurationAsync(updatedBy);
-                clearedHostTypes.Add(hostType.ToString());
-                
-                _logger.LogDebug("Business configuration cleared for {HostId}:{HostType}", hostId, hostType);
+                return NotFound($"No business configuration found for host {hostId} with type {hostType}");
             }
-
-            if (!foundAnyConfig)
-            {
-                return NotFound($"No business configuration found for host {hostId}");
-            }
-
-            _logger.LogInformation("Business configuration deleted for host {HostId}", hostId);
-
+            
+            await configAgent.ClearBusinessConfigurationAsync(updatedBy);
+            
+            _logger.LogInformation("Business configuration deleted for {HostId}:{HostType}", hostId, hostType);
+            await _developerService.UpdateBusinessConfigurationAsync(hostId, "1", hostType); // Using default version "1"
+            _logger.LogInformation("K8s ConfigMaps delete successfully for host {HostId}:{HostType}", hostId, hostType);
             return Ok(new
             {
                 Success = true,
                 Message = "Business configuration deleted successfully",
                 HostId = hostId,
-                ClearedHostTypes = clearedHostTypes,
+                HostType = hostType.ToString(),
                 UpdatedBy = updatedBy,
                 Timestamp = DateTime.UtcNow
             });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to delete business configuration for host {HostId}", hostId);
+            _logger.LogError(ex, "Failed to delete business configuration for host {HostId}:{HostType}", hostId, hostType);
             return StatusCode(500, $"Failed to delete configuration: {ex.Message}");
         }
     }

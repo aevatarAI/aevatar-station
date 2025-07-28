@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.WebHook.Deploy;
 using Aevatar.Kubernetes.Manager;
+using Aevatar.Enum;
 using Volo.Abp.Application.Services;
 
 namespace Aevatar.Service;
@@ -17,9 +18,9 @@ public interface IDeveloperService
     Task CopyHostAsync(string sourceClientId, string newClientId, string version, string corsUrls);
     
     /// <summary>
-    /// Updates business configuration in existing K8s ConfigMaps for all host types
+    /// Updates business configuration in existing K8s ConfigMaps for specific host type
     /// </summary>
-    Task UpdateBusinessConfigurationAsync(string hostId, string version);
+    Task UpdateBusinessConfigurationAsync(string hostId, string version, HostTypeEnum hostType);
 }
 
 public class DeveloperService: ApplicationService, IDeveloperService
@@ -55,9 +56,9 @@ public class DeveloperService: ApplicationService, IDeveloperService
         await _hostCopyManager.CopyHostAsync(sourceClientId, newClientId, version, corsUrls);
     }
 
-    public async Task UpdateBusinessConfigurationAsync(string hostId, string version)
+    public async Task UpdateBusinessConfigurationAsync(string hostId, string version, HostTypeEnum hostType)
     {
-        await _hostDeployManager.UpdateBusinessConfigurationAsync(hostId, version);
+        await _hostDeployManager.UpdateBusinessConfigurationAsync(hostId, version, hostType);
     }
 }
 

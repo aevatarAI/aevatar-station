@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 using Volo.Abp.DependencyInjection;
 using Aevatar.Enum;
 using Aevatar.Application.Grains.Agents.Configuration;
+using Aevatar.Domain.Shared.Configuration;
 
 namespace Aevatar.Kubernetes.Manager;
 
@@ -950,12 +951,12 @@ public class KubernetesHostManager : IHostDeployManager, IHostCopyManager, ISing
             {
                 _logger.LogDebug("No business configuration found for {HostId}:{HostType}", hostId, hostType);
                 // Add empty business config file
-                configFiles["business-config.json"] = "{}";
+                configFiles[SecureConfigurationExtensions.DefaultBusinessConfigPath] = "{}";
                 return;
             }
 
             // Add business configuration as a separate file in ConfigMap
-            configFiles["business-config.json"] = businessConfigJson;
+            configFiles[SecureConfigurationExtensions.DefaultBusinessConfigPath] = businessConfigJson;
             
             _logger.LogInformation("Business configuration added to ConfigMap for {HostId}:{HostType}", hostId, hostType);
         }
@@ -963,35 +964,39 @@ public class KubernetesHostManager : IHostDeployManager, IHostCopyManager, ISing
         {
             _logger.LogError(ex, "Failed to load business configuration for {HostId}:{HostType}, adding empty config", hostId, hostType);
             // Add empty business config file as fallback
-            configFiles["business-config.json"] = "{}";
+            configFiles[SecureConfigurationExtensions.DefaultBusinessConfigPath] = "{}";
         }
     }
 
     /// <summary>
-    /// Updates existing K8s ConfigMaps with the latest business configuration for all host types
+    /// Updates existing K8s ConfigMaps with the latest business configuration for specific host type
     /// </summary>
-    public async Task UpdateBusinessConfigurationAsync(string hostId, string version)
+    public async Task UpdateBusinessConfigurationAsync(string hostId, string version, HostTypeEnum hostType)
     {
-        _logger.LogInformation("Updating business configuration for hostId: {HostId}, version: {Version}", hostId, version);
+        _logger.LogInformation("Updating business configuration for hostId: {HostId}, version: {Version}, hostType: {HostType}", 
+            hostId, version, hostType);
 
-        var updateTasks = new List<Task>();
+        string appId;
+        switch (hostType)
+        {
+            case HostTypeEnum.WebHook:
+                appId = hostId; // WebHook uses hostId directly
+                break;
+            case HostTypeEnum.Silo:
+                appId = GetHostName(hostId, KubernetesConstants.HostSilo);
+                break;
+            case HostTypeEnum.Client:
+                appId = GetHostName(hostId, KubernetesConstants.HostClient);
+                break;
+            default:
+                throw new ArgumentException($"Unknown host type: {hostType}");
+        }
 
-        // Update WebHook ConfigMap if it exists
-        var webhookAppId = hostId; // WebHook uses hostId directly
-        updateTasks.Add(UpdateConfigMapWithBusinessConfigAsync(webhookAppId, version, HostTypeEnum.WebHook));
-
-        // Update Silo ConfigMap if it exists  
-        var siloAppId = GetHostName(hostId, KubernetesConstants.HostSilo);
-        updateTasks.Add(UpdateConfigMapWithBusinessConfigAsync(siloAppId, version, HostTypeEnum.Silo));
-
-        // Update Client ConfigMap if it exists
-        var clientAppId = GetHostName(hostId, KubernetesConstants.HostClient);
-        updateTasks.Add(UpdateConfigMapWithBusinessConfigAsync(clientAppId, version, HostTypeEnum.Client));
-
-        // Execute all updates concurrently
-        await Task.WhenAll(updateTasks);
-
-        _logger.LogInformation("Business configuration update completed for hostId: {HostId}", hostId);
+        await UpdateConfigMapWithBusinessConfigAsync(appId, version, hostType);
+        var deploymentName = DeploymentHelper.GetAppDeploymentName(appId, version);
+        await RestartDeploymentAsync(deploymentName);
+        _logger.LogInformation("Business configuration update completed for hostId: {HostId}, hostType: {HostType}", 
+            hostId, hostType);
     }
 
     /// <summary>

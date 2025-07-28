@@ -1,3 +1,4 @@
+using Aevatar.Domain.Shared.Configuration;
 using k8s.Models;
 
 namespace Aevatar.Kubernetes.ResourceDefinition;
@@ -409,8 +410,8 @@ public class DeploymentHelper
                         },
                         new V1KeyToPath
                         {
-                            Key = KubernetesConstants.AppSettingSiloSharedFileName,
-                            Path = KubernetesConstants.AppSettingSiloSharedFileName
+                            Key = SecureConfigurationExtensions.DefaultBusinessConfigPath,
+                            Path = KubernetesConstants.AppSettingBusinessFileMountPath
                         }
                     }
                 }

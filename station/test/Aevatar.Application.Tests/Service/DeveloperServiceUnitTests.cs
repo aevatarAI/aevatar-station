@@ -4,6 +4,7 @@
 using System;
 using System.Reflection;
 using System.Threading.Tasks;
+using Aevatar.Enum;
 using Aevatar.Service;
 using Aevatar.WebHook.Deploy;
 using Aevatar.Kubernetes.Manager;
@@ -125,7 +126,7 @@ public class DeveloperServiceUnitTests
             return Task.CompletedTask;
         }
 
-        public Task UpdateBusinessConfigurationAsync(string hostId, string version)
+        public Task UpdateBusinessConfigurationAsync(string hostId, string version, HostTypeEnum hostType)
         {
             return Task.CompletedTask;
         }
