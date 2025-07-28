@@ -1,0 +1,60 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <RootNamespace>Aevatar</RootNamespace>
+        <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+        <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+        <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Update="Pages\**\*.js">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="Pages\**\*.css">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="AElf.Types" />
+        <PackageReference Include="Google.Apis.Auth" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+        <PackageReference Include="Microsoft.Orleans.Core" />
+        <PackageReference Include="Octokit" />
+        <PackageReference Include="Serilog" />
+        <PackageReference Include="Serilog.Extensions.Hosting" />
+        <PackageReference Include="Serilog.Formatting.Compact" />
+        <PackageReference Include="Serilog.Settings.Configuration" />
+        <PackageReference Include="Serilog.Sinks.Async" />
+        <PackageReference Include="Serilog.Sinks.Console" />
+        <PackageReference Include="StackExchange.Redis" />
+        <PackageReference Include="Volo.Abp.Account.Application" />
+        <PackageReference Include="Volo.Abp.Account.HttpApi" />
+        <PackageReference Include="Volo.Abp.Account.Web.OpenIddict" />
+        <PackageReference Include="Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite" />
+        <PackageReference Include="Volo.Abp.AspNetCore.Serilog" />
+        <PackageReference Include="Volo.Abp.Authorization" />
+        <PackageReference Include="Volo.Abp.Autofac" />
+        <PackageReference Include="Volo.Abp.Identity.EntityFrameworkCore" />
+        <PackageReference Include="Volo.Abp.OpenIddict.AspNetCore" />
+        <PackageReference Include="Volo.Abp.OpenIddict.Domain" />
+        <PackageReference Include="Volo.Abp.OpenIddict.EntityFrameworkCore" />
+        <PackageReference Include="Volo.Abp.PermissionManagement.EntityFrameworkCore" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+        <PackageReference Include="GraphQL.Client" />
+        <PackageReference Include="GraphQL.Client.Serializer.Newtonsoft" />
+        <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis"/>
+    </ItemGroup>
+    
+    <ItemGroup>
+      <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj" />
+      <ProjectReference Include="..\Aevatar.AuthServer.Grants\Aevatar.AuthServer.Grants.csproj" />
+      <ProjectReference Include="..\Aevatar.Domain.Shared\Aevatar.Domain.Shared.csproj" />
+      <ProjectReference Include="..\Aevatar.MongoDB\Aevatar.MongoDB.csproj" />
+    </ItemGroup>
+
+</Project>

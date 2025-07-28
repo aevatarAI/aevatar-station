@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="..\..\common.props" />
+    <PropertyGroup>
+        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <RootNamespace>Aevatar.Webhook.SDK</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Serilog.AspNetCore" />
+        <PackageReference Include="Serilog.Sinks.Async" />
+        <PackageReference Include="Volo.Abp.AspNetCore.Serilog"  />
+        <PackageReference Include="Volo.Abp.Autofac" />
+        <PackageReference Include="Volo.Abp.AspNetCore.Mvc"/>
+        <PackageReference Include="Volo.Abp.AutoMapper" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.Core\Aevatar.Core.csproj" />
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
+    </ItemGroup>
+
+</Project>
