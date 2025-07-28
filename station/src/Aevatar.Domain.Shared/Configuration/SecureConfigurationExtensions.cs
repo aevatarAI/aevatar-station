@@ -29,15 +29,15 @@ public static class SecureConfigurationExtensions
         string ephemeralConfigPath = "appsettings.ephemeral.json",
         bool optional = true)
     {
-        // 1. Add default appsettings.json (optional)
-        builder.AddJsonFile("appsettings.json", optional: true);
+       
         
-        // 2. Add all system configurations (always required)
+        // 1. Add all system configurations (always required)
         foreach (var systemConfigPath in systemConfigPaths)
         {
             builder.AddJsonFile(systemConfigPath, optional: false);
         }
-        
+        // 2. Add default appsettings.json (optional)
+        builder.AddJsonFile("appsettings.json", optional: true);
         // 3. Add business configuration with validation if it exists
         builder.AddJsonFile(businessConfigPath, optional: optional);
         
