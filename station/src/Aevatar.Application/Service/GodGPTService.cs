@@ -118,7 +118,7 @@ public interface IGodGPTService
     Task<bool> CheckIsManager(string userId);
     Task<UserProfileDto> SetVoiceLanguageAsync(Guid currentUserId, VoiceLanguageEnum voiceLanguage);
 
-    Task<ExecuteActionResultDto> CanUploadImageAsync(Guid currentUserId);
+    Task<ExecuteActionResultDto> CanUploadImageAsync(Guid currentUserId,GodGPTChatLanguage language = GodGPTChatLanguage.English);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -617,9 +617,10 @@ public class GodGPTService : ApplicationService, IGodGPTService
         return await manager.GetUserProfileAsync();
     }
 
-    public async Task<ExecuteActionResultDto> CanUploadImageAsync(Guid currentUserId)
+    public async Task<ExecuteActionResultDto> CanUploadImageAsync(Guid currentUserId,GodGPTChatLanguage language = GodGPTChatLanguage.English)
     {
         var userQuotaGAgent = _clusterClient.GetGrain<IUserQuotaGAgent>(currentUserId);
+        RequestContext.Set("GodGPTLanguage", language.ToString());
         return await userQuotaGAgent.CanUploadImageAsync();
     }
 
