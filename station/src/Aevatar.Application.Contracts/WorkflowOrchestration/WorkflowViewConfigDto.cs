@@ -19,6 +19,94 @@ namespace Aevatar.Application.Contracts.WorkflowOrchestration
         /// </summary>
         [Required]
         public WorkflowPropertiesDto Properties { get; set; } = new();
+
+        /// <summary>
+        /// Generation status (success/partial/template_recommendation/manual_guidance/system_fallback)
+        /// </summary>
+        public string? GenerationStatus { get; set; }
+
+        /// <summary>
+        /// Clarity score of user goal (1-5, where 5 is very clear)
+        /// </summary>
+        public int? ClarityScore { get; set; }
+
+        /// <summary>
+        /// Error information if generation failed or needs user attention
+        /// </summary>
+        public WorkflowErrorInfoDto? ErrorInfo { get; set; }
+
+        /// <summary>
+        /// Completion percentage for partial generation (0-100)
+        /// </summary>
+        public int? CompletionPercentage { get; set; }
+
+        /// <summary>
+        /// Guidance for completing partial workflows
+        /// </summary>
+        public WorkflowCompletionGuidanceDto? CompletionGuidance { get; set; }
+
+        /// <summary>
+        /// System information for fallback scenarios
+        /// </summary>
+        public WorkflowSystemInfoDto? SystemInfo { get; set; }
+    }
+
+    /// <summary>
+    /// Workflow error information DTO
+    /// </summary>
+    public class WorkflowErrorInfoDto
+    {
+        /// <summary>
+        /// Type of error (prompt_ambiguity/insufficient_information/technical_limitation/system_error/unsupported_requirement)
+        /// </summary>
+        public string? ErrorType { get; set; }
+
+        /// <summary>
+        /// Human-readable error message
+        /// </summary>
+        public string? ErrorMessage { get; set; }
+
+        /// <summary>
+        /// List of actionable steps user can take to resolve the issue
+        /// </summary>
+        public List<string> ActionableSteps { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Workflow completion guidance DTO for partial generation
+    /// </summary>
+    public class WorkflowCompletionGuidanceDto
+    {
+        /// <summary>
+        /// Suggested nodes to complete the workflow
+        /// </summary>
+        public List<string> SuggestedNodes { get; set; } = new();
+
+        /// <summary>
+        /// Specific steps to complete the workflow
+        /// </summary>
+        public List<string> NextSteps { get; set; } = new();
+    }
+
+    /// <summary>
+    /// System information DTO for fallback scenarios
+    /// </summary>
+    public class WorkflowSystemInfoDto
+    {
+        /// <summary>
+        /// Whether fallback was triggered
+        /// </summary>
+        public bool FallbackTriggered { get; set; }
+
+        /// <summary>
+        /// Timestamp when the issue occurred
+        /// </summary>
+        public string? Timestamp { get; set; }
+
+        /// <summary>
+        /// Suggested time to retry the operation
+        /// </summary>
+        public string? SuggestedRetryTime { get; set; }
     }
 
     /// <summary>

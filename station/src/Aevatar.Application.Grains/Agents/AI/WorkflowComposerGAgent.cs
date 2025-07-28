@@ -13,6 +13,7 @@ using Orleans.Runtime;
 using Orleans.Metadata;
 using Newtonsoft.Json;
 using System.Security.Cryptography;
+using Newtonsoft.Json.Linq;
 
 namespace Aevatar.Application.Grains.Agents.AI;
 
@@ -49,7 +50,7 @@ public interface IWorkflowComposerGAgent : IAIGAgent, IGAgent, IGrainWithStringK
 /// 工作流组合器GAgent - 精简的AI工作流生成器（接受AgentDescriptionInfo信息）
 /// </summary>
 [GAgent("WorkflowComposer")]
-public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, WorkflowComposerEvent>, 
+public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, WorkflowComposerEvent>,
     IWorkflowComposerGAgent, IGrainWithStringKey
 {
     public WorkflowComposerGAgent()
@@ -63,12 +64,15 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
             Id = "Aevatar.Application.Grains.Agents.AI.WorkflowComposerGAgent",
             Name = "WorkflowComposer",
             Category = "AI",
-            L1Description = "AI workflow generation agent that creates complete workflow JSON from user goals and available agent descriptions.",
-            L2Description = "Advanced AI agent specialized in workflow orchestration. Analyzes user goals and available agent capabilities to generate optimized workflow configurations with proper node connections and data flow management.",
-            Capabilities = new List<string> { "workflow-generation", "agent-orchestration", "json-creation", "ai-analysis" },
+            L1Description =
+                "AI workflow generation agent that creates complete workflow JSON from user goals and available agent descriptions.",
+            L2Description =
+                "Advanced AI agent specialized in workflow orchestration. Analyzes user goals and available agent capabilities to generate optimized workflow configurations with proper node connections and data flow management.",
+            Capabilities = new List<string>
+                { "workflow-generation", "agent-orchestration", "json-creation", "ai-analysis" },
             Tags = new List<string> { "workflow", "orchestration", "ai-generation", "json" }
         };
-        
+
         return Task.FromResult(JsonConvert.SerializeObject(descriptionInfo));
     }
 
@@ -77,7 +81,7 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
     /// </summary>
     public async Task<string> GenerateWorkflowJsonAsync(string userGoal, List<AgentDescriptionInfo> availableAgents)
     {
-        Logger.LogInformation("Starting workflow generation for goal: {UserGoal} with {AgentCount} available agents", 
+        Logger.LogInformation("Starting workflow generation for goal: {UserGoal} with {AgentCount} available agents",
             userGoal, availableAgents.Count);
 
         try
@@ -98,7 +102,7 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
             throw;
         }
     }
-    
+
     /// <summary>
     /// 基于AgentDescriptionInfo构建AI提示词
     /// </summary>
@@ -108,7 +112,8 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
 
         // System role definition
         prompt.AppendLine("# Advanced Workflow Orchestration Expert");
-        prompt.AppendLine("You are an advanced AI workflow orchestration expert. Based on user goals, analyze available Agent capabilities and design a complete workflow execution plan with proper node connections and data flow.");
+        prompt.AppendLine(
+            "You are an advanced AI workflow orchestration expert. Based on user goals, analyze available Agent capabilities and design a complete workflow execution plan with proper node connections and data flow.");
         prompt.AppendLine();
 
         // User goal
@@ -127,15 +132,15 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
                 prompt.AppendLine($"**Quick Description**: {agent.L1Description}");
                 prompt.AppendLine($"**Detailed Capabilities**: {agent.L2Description}");
                 prompt.AppendLine($"**Category**: {agent.Category}");
-                
+
                 if (agent.Tags?.Any() == true)
                     prompt.AppendLine($"**Tags**: {string.Join(", ", agent.Tags)}");
-                
+
                 if (agent.Capabilities?.Any() == true)
                 {
                     prompt.AppendLine($"**Capabilities**: {string.Join(", ", agent.Capabilities)}");
                 }
-                
+
                 prompt.AppendLine();
             }
         }
@@ -148,11 +153,54 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
         // Enhanced output requirements
         prompt.AppendLine("## Advanced Output Requirements");
         prompt.AppendLine("Please analyze the user goal and available agents to create an optimized workflow:");
-        prompt.AppendLine("1) **Agent Selection**: Choose the most suitable agents based on capabilities and categories");
+        prompt.AppendLine(
+            "1) **Agent Selection**: Choose the most suitable agents based on capabilities and categories");
         prompt.AppendLine("2) **Node Design**: Create workflow nodes with proper configuration");
         prompt.AppendLine("3) **Connection Logic**: Define execution order and data flow between nodes");
         prompt.AppendLine("4) **Error Handling**: Consider failure scenarios and alternative paths");
         prompt.AppendLine("5) **Performance**: Optimize for execution time and resource usage");
+        prompt.AppendLine();
+
+        // Error Handling & Fallback Guidance
+        prompt.AppendLine("## Error Handling & Fallback Guidance");
+        prompt.AppendLine(
+            "When analyzing the user goal and available agents, apply the following error handling strategies:");
+        prompt.AppendLine();
+
+        prompt.AppendLine("### Ambiguous Prompt Detection");
+        prompt.AppendLine("If the user goal is unclear or ambiguous:");
+        prompt.AppendLine("- Include a 'clarificationNeeded' node that identifies specific unclear aspects");
+        prompt.AppendLine("- Suggest concrete questions to help clarify the user's intent");
+        prompt.AppendLine("- Provide examples of how the goal could be interpreted");
+        prompt.AppendLine();
+
+        prompt.AppendLine("### Impossible Requirements Handling");
+        prompt.AppendLine("If the user goal cannot be achieved with available agents:");
+        prompt.AppendLine("- Create a 'requirementsAnalysis' node explaining what's missing");
+        prompt.AppendLine("- Suggest alternative approaches using available agents");
+        prompt.AppendLine("- Recommend breaking down complex goals into achievable sub-goals");
+        prompt.AppendLine();
+
+        prompt.AppendLine("### Partial Generation Strategy");
+        prompt.AppendLine("When full automation isn't possible:");
+        prompt.AppendLine("- Generate a partial workflow with completed sections");
+        prompt.AppendLine("- Include 'manualCompletion' nodes for sections requiring human input");
+        prompt.AppendLine("- Provide specific guidance on what manual steps are needed");
+        prompt.AppendLine();
+
+        prompt.AppendLine("### Fallback Templates");
+        prompt.AppendLine("For complex or unclear goals, suggest template patterns:");
+        prompt.AppendLine("- Include a 'templateSuggestion' node with similar workflow patterns");
+        prompt.AppendLine("- Reference common workflow templates that might fit the user's needs");
+        prompt.AppendLine("- Provide step-by-step guidance for manual workflow creation");
+        prompt.AppendLine();
+
+        prompt.AppendLine("### Error Recovery Instructions");
+        prompt.AppendLine("Always include error recovery in your workflow design:");
+        prompt.AppendLine("- Add retry mechanisms for critical workflow steps");
+        prompt.AppendLine("- Include validation nodes to check intermediate results");
+        prompt.AppendLine("- Design alternative execution paths for common failure scenarios");
+        prompt.AppendLine("- Provide clear error messages that guide users toward solutions");
         prompt.AppendLine();
 
         // JSON format specification
@@ -160,6 +208,8 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
         prompt.AppendLine("Please strictly follow the following JSON format output:");
         prompt.AppendLine("```json");
         prompt.AppendLine("{");
+        prompt.AppendLine("  \"generationStatus\": \"success|partial|template_recommendation|manual_guidance\",");
+        prompt.AppendLine("  \"clarityScore\": 1-5,");
         prompt.AppendLine("  \"name\": \"User Goal Workflow\",");
         prompt.AppendLine("  \"properties\": {");
         prompt.AppendLine("    \"name\": \"User Goal Workflow\",");
@@ -183,9 +233,29 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
         prompt.AppendLine("        \"connectionType\": \"data_flow_or_sequence\"");
         prompt.AppendLine("      }");
         prompt.AppendLine("    ]");
+        prompt.AppendLine("  },");
+        prompt.AppendLine("  \"errorInfo\": {");
+        prompt.AppendLine("    \"errorType\": \"prompt_ambiguity|insufficient_information|technical_limitation|null\",");
+        prompt.AppendLine("    \"errorMessage\": \"Clear description of any issues\",");
+        prompt.AppendLine("    \"actionableSteps\": [\"Step 1\", \"Step 2\", \"Step N\"]");
+        prompt.AppendLine("  },");
+        prompt.AppendLine("  \"completionPercentage\": 0-100,");
+        prompt.AppendLine("  \"completionGuidance\": {");
+        prompt.AppendLine("    \"suggestedNodes\": [\"node suggestions for completion\"],");
+        prompt.AppendLine("    \"nextSteps\": [\"specific steps to complete workflow\"]");
         prompt.AppendLine("  }");
         prompt.AppendLine("}");
         prompt.AppendLine("```");
+        prompt.AppendLine();
+        prompt.AppendLine("**Required Fields for All Responses:**");
+        prompt.AppendLine("- `generationStatus`: Always include (success/partial/template_recommendation/manual_guidance)");
+        prompt.AppendLine("- `clarityScore`: Rate user goal clarity from 1 (very unclear) to 5 (very clear)");
+        prompt.AppendLine("- `errorInfo`: null if successful, otherwise provide detailed error information");
+        prompt.AppendLine();
+        prompt.AppendLine("**Conditional Fields:**");
+        prompt.AppendLine("- `completionPercentage` and `completionGuidance`: Include only for partial generation status");
+        prompt.AppendLine("- For template_recommendation status: Include template suggestions in errorInfo.actionableSteps");
+        prompt.AppendLine("- For manual_guidance status: Include step-by-step manual creation guide in errorInfo.actionableSteps");
         prompt.AppendLine();
         prompt.AppendLine("**IMPORTANT**: Only output the JSON, no additional text or explanations.");
 
@@ -204,14 +274,23 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
             if (chatResult == null || chatResult.Count == 0)
             {
                 Logger.LogWarning("AI returned empty response for workflow generation");
-                return GetFallbackWorkflowJson();
+                return GetFallbackWorkflowJson("system_error", "AI service returned empty response", 
+                    new[] { "Retry the workflow generation", "Check AI service availability", "Use manual workflow creation" });
             }
 
             var response = chatResult[0].Content;
             if (string.IsNullOrWhiteSpace(response))
             {
                 Logger.LogWarning("AI returned empty content for workflow generation");
-                return GetFallbackWorkflowJson();
+                return GetFallbackWorkflowJson("system_error", "AI service returned empty content",
+                    new[] { "Retry with a more specific goal", "Verify AI service is functioning", "Create workflow manually" });
+            }
+
+            // Validate that the response contains required error handling fields
+            if (!IsValidErrorHandlingResponse(response))
+            {
+                Logger.LogWarning("AI response missing required error handling fields, wrapping response");
+                return WrapLegacyResponse(response);
             }
 
             Logger.LogDebug("AI successfully generated workflow with response length: {Length}", response.Length);
@@ -220,34 +299,113 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error calling AI for workflow generation");
-            return GetFallbackWorkflowJson();
+            return GetFallbackWorkflowJson("system_error", $"AI service error: {ex.Message}",
+                new[] { "Check system logs for details", "Retry after a few minutes", "Contact system administrator if problem persists" });
+        }
+    }
+
+    /// <summary>
+    /// 验证AI响应是否包含必需的错误处理字段
+    /// </summary>
+    private bool IsValidErrorHandlingResponse(string response)
+    {
+        try
+        {
+            var json = JObject.Parse(response);
+            return json.ContainsKey("generationStatus") && 
+                   json.ContainsKey("clarityScore") && 
+                   json.ContainsKey("errorInfo");
+        }
+        catch (JsonReaderException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 包装旧版本AI响应，添加错误处理字段
+    /// </summary>
+    private string WrapLegacyResponse(string legacyResponse)
+    {
+        try
+        {
+            var legacyJson = JObject.Parse(legacyResponse);
+            
+            // Create enhanced response with error handling fields
+            var enhancedResponse = new JObject
+            {
+                ["generationStatus"] = "success",
+                ["clarityScore"] = 4, // Assume good clarity if AI generated a response
+                ["name"] = legacyJson["name"] ?? "Generated Workflow",
+                ["properties"] = legacyJson["properties"] ?? new JObject(),
+                ["errorInfo"] = null, // No errors for successful legacy response
+                ["completionPercentage"] = 100,
+                ["completionGuidance"] = null
+            };
+
+            return enhancedResponse.ToString();
+        }
+        catch (JsonReaderException)
+        {
+            // If legacy response is not valid JSON, treat as system error
+            return GetFallbackWorkflowJson("system_error", "AI returned invalid JSON format",
+                new[] { "Retry workflow generation", "Simplify your goal description", "Use manual workflow creation" });
         }
     }
 
     /// <summary>
     /// 获取回退工作流JSON（当AI生成失败时使用）
     /// </summary>
-    private string GetFallbackWorkflowJson()
+    private string GetFallbackWorkflowJson(string errorType = "system_error", string errorMessage = "AI service unavailable", string[] actionableSteps = null)
     {
-        return @"{
-  ""name"": ""Fallback Workflow"",
-  ""properties"": {
-    ""name"": ""Fallback Workflow"",
-    ""workflowNodeList"": [
-      {
-        ""nodeId"": ""fallback-node-1"",
-        ""nodeName"": ""Default Processing Node"",
-        ""nodeType"": ""DefaultAgent"",
-        ""extendedData"": {
-          ""description"": ""Default processing node when workflow generation fails""
-        },
-        ""properties"": {
-          ""message"": ""This is a fallback workflow generated when AI service is unavailable""
-        }
-      }
-    ],
-    ""workflowNodeUnitList"": []
-  }
-}";
+        var fallbackJson = new JObject
+        {
+            ["generationStatus"] = "system_fallback",
+            ["clarityScore"] = 0, // Cannot assess clarity in fallback mode
+            ["name"] = "Fallback Workflow",
+            ["properties"] = new JObject
+            {
+                ["name"] = "Fallback Workflow",
+                ["workflowNodeList"] = new JArray
+                {
+                    new JObject
+                    {
+                        ["nodeId"] = "fallback-node-1",
+                        ["nodeName"] = "Manual Creation Node",
+                        ["nodeType"] = "ManualCreationAgent",
+                        ["extendedData"] = new JObject
+                        {
+                            ["description"] = "This node represents the need for manual workflow creation when automatic generation fails"
+                        },
+                        ["properties"] = new JObject
+                        {
+                            ["message"] = errorMessage,
+                            ["guidance"] = "Please create your workflow manually using the workflow designer"
+                        }
+                    }
+                },
+                ["workflowNodeUnitList"] = new JArray()
+            },
+            ["errorInfo"] = new JObject
+            {
+                ["errorType"] = errorType,
+                ["errorMessage"] = errorMessage,
+                ["actionableSteps"] = actionableSteps != null ? new JArray(actionableSteps) : new JArray
+                {
+                    "Use the manual workflow designer",
+                    "Start with a workflow template",
+                    "Break down your goal into smaller steps",
+                    "Contact support if you need assistance"
+                }
+            },
+            ["systemInfo"] = new JObject
+            {
+                ["fallbackTriggered"] = true,
+                ["timestamp"] = DateTime.UtcNow.ToString("O"),
+                ["suggestedRetryTime"] = DateTime.UtcNow.AddMinutes(5).ToString("O")
+            }
+        };
+
+        return fallbackJson.ToString();
     }
-} 
+}
