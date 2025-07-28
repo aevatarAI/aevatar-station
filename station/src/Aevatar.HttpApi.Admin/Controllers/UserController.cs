@@ -47,19 +47,19 @@ public class UserController : AevatarController
         await _userAppService.GrantClientPermissionsAsync(clientId);
     }
 
-    [HttpPost]
+    [HttpPost("CreateHost")]
     public async Task CreateHostAsync(string clientId, string corsUrls)
     {
         await _developerService.CreateServiceAsync(clientId, "1", corsUrls);
     }
 
-    [HttpPost]
+    [HttpPost("CreateHost")]
     public async Task CreateHostAsync(string clientId, Guid projectId)
     {
         await _developerService.CreateServiceAsync(clientId, projectId);
     }
 
-    [HttpPost]
+    [HttpPost("destroyHost")]
     public async Task DestroyHostAsync(string clientId)
     {
         await _developerService.DeleteServiceAsync(clientId);
