@@ -50,6 +50,22 @@ public class QueryController : AevatarController
         return resp;
     }
     
+    
+    [HttpGet("es/count")]
+    public async Task<CountResultDto> CountEs([FromQuery] LuceneQueryDto request)
+    {
+        var validator = new LuceneQueryValidator();
+        var result = validator.Validate(request);
+        if (!result.IsValid)
+        {
+            throw new UserFriendlyException(result.Errors[0].ErrorMessage);
+        }
+
+		request.QueryString = GetQueryWithPermissionFilter(request);
+        var count = await _indexingService.CountWithLuceneAsync(request);
+        return new CountResultDto { Count = count };
+    }
+
     [HttpGet("user-id")]
     [Authorize]
     public Task<Guid> GetUserId()

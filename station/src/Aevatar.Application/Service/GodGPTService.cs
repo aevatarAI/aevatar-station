@@ -76,6 +76,7 @@ public interface IGodGPTService
     Task<List<AppleProductDto>> GetAppleProductsAsync(Guid currentUserId);
     Task<AppStoreSubscriptionResponseDto> VerifyAppStoreReceiptAsync(Guid currentUserId, VerifyAppStoreReceiptInput input);
     Task<GrainResultDto<int>> UpdateUserCreditsAsync(Guid currentUserId, UpdateUserCreditsInput input);
+    Task<GrainResultDto<List<SubscriptionInfoDto>>> UpdateUserSubscriptionAsync(Guid currentUserId, UpdateUserSubscriptionsInput input);
     Task<bool> HasActiveAppleSubscriptionAsync(Guid currentUserId);
     Task<GetInvitationInfoResponse> GetInvitationInfoAsync(Guid currentUserId);
     Task<RedeemInviteCodeResponse> RedeemInviteCodeAsync(Guid currentUserId,
@@ -117,6 +118,7 @@ public interface IGodGPTService
     Task<bool> CheckIsManager(string userId);
     Task<UserProfileDto> SetVoiceLanguageAsync(Guid currentUserId, VoiceLanguageEnum voiceLanguage);
 
+    Task<ExecuteActionResultDto> CanUploadImageAsync(Guid currentUserId);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -476,6 +478,13 @@ public class GodGPTService : ApplicationService, IGodGPTService
         return await userQuotaGAgent.UpdateCreditsAsync(currentUserId.ToString(), input.Credits);
     }
 
+    public async Task<GrainResultDto<List<SubscriptionInfoDto>>> UpdateUserSubscriptionAsync(Guid currentUserId, UpdateUserSubscriptionsInput input)
+    {
+        var userQuotaGAgent =
+            _clusterClient.GetGrain<IUserQuotaGAgent>(input.UserId);
+        return await userQuotaGAgent.UpdateSubscriptionAsync(currentUserId.ToString(), input.PlanType, input.IsUltimate);
+    }
+
     public async Task<bool> HasActiveAppleSubscriptionAsync(Guid currentUserId)
     {
         var userBillingGAgent =
@@ -598,6 +607,12 @@ public class GodGPTService : ApplicationService, IGodGPTService
         var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
         await manager.SetVoiceLanguageAsync(voiceLanguage);
         return await manager.GetUserProfileAsync();
+    }
+
+    public async Task<ExecuteActionResultDto> CanUploadImageAsync(Guid currentUserId)
+    {
+        var userQuotaGAgent = _clusterClient.GetGrain<IUserQuotaGAgent>(currentUserId);
+        return await userQuotaGAgent.CanUploadImageAsync();
     }
 
     #endregion

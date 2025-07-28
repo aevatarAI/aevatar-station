@@ -36,7 +36,7 @@ public abstract class AccountServiceTests<TStartupModule> : AevatarApplicationTe
         {
             Email = email,
             AppName = "Aevatar",
-            UserName = "Tester"
+            //UserName = "Tester"
         });
 
         var code = await _registerCode.GetAsync($"RegisterCode_{email.ToLower()}");
@@ -80,7 +80,7 @@ public abstract class AccountServiceTests<TStartupModule> : AevatarApplicationTe
         {
             Email = email,
             AppName = "Aevatar",
-            UserName = "Tester"
+            //UserName = "Tester"
         }));
     }
 

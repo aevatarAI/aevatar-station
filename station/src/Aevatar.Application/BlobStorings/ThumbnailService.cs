@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -71,6 +72,7 @@ public class ThumbnailService : IThumbnailService, ITransientDependency
 
         try
         {
+            var thumbnailStopwatch = Stopwatch.StartNew();
             using var image = await Image.LoadAsync(imageStream);
             var originalWidth = image.Width;
             var originalHeight = image.Height;
@@ -84,6 +86,9 @@ public class ThumbnailService : IThumbnailService, ITransientDependency
 
             var results = await Task.WhenAll(tasks);
             thumbnails.AddRange(results.Where(t => t != null)!);
+            thumbnailStopwatch.Stop();
+            _logger.LogDebug("[GodGPTController][BlobSaveAsync] Thumbnail generation completed: Duration={ThumbnailTime}ms",
+                thumbnailStopwatch.ElapsedMilliseconds);
         }
         catch (Exception ex)
         {
@@ -103,15 +108,37 @@ public class ThumbnailService : IThumbnailService, ITransientDependency
     {
         try
         {
-            var fileName = $"{baseFileName}@{size.GetSizeName()}";
+            var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(baseFileName);
+            var extension = Path.GetExtension(baseFileName);
+            var fileName = $"{fileNameWithoutExtension}@{size.GetSizeName()}{extension}";
             
             // Calculate dimensions based on resize mode
             var (width, height) = CalculateDimensions(originalWidth, originalHeight, size);
             
-            // Skip if thumbnail would be larger than original
+            // If thumbnail would be larger than original, save original image directly
             if (width >= originalWidth && height >= originalHeight)
             {
-                return null;
+                long originalSize;
+                
+                using (var originalStream = new MemoryStream())
+                {
+                    var encoder = GetEncoder();
+                    await originalImage.SaveAsync(originalStream, encoder);
+                    
+                    originalSize = originalStream.Length;
+                    
+                    originalStream.Seek(0, SeekOrigin.Begin);
+                    await _blobContainer.SaveAsync(fileName, originalStream, true);
+                }
+                
+                return new ThumbnailInfo
+                {
+                    FileName = fileName,
+                    SizeName = size.GetSizeName(),
+                    Width = originalWidth,
+                    Height = originalHeight,
+                    FileSize = originalSize
+                };
             }
 
             int thumbnailWidth, thumbnailHeight;
