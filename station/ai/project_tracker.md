@@ -25,12 +25,10 @@
 | F005 | Improve OrleansHostExtension unit tests | ✅ | High | dev | 3e:58:e5:c6:ab:31 | 100% | ✓ | ✓ | Fixed StateProjectionInitializer registration tests |
 | F006 | Grain Warmup System | ✅ | High | feature/grain-warmup | 3e:58:e5:c6:ab:30 | 95% | ✓ | ✓ | Complete grain warmup system with E2E tests, MongoDB rate limiting, progressive batching |
 | F007 | Upgrade pod template | 🚧 | High | feature/upgrade-pod-template | 42:82:57:47:65:d3 | - | - | - | 新增功能：支持pod模板升级 |
-<<<<<<< feature/orleans-service-discovery-benchmark
-| F008 | Orleans Service Discovery Benchmark | ✅ | High | feature/orleans-service-discovery-benchmark | 42:82:57:47:65:d4 | 100% | ✓ | ✓ | Benchmark comparison between MongoDB and Zookeeper service discovery for Orleans - COMPLETED |
-=======
-| F008 | Agent Warmup Unit Tests Implementation | ✅ | High | feature/agent-warmup-unit-tests | 3e:58:e5:c6:ab:31 | 100% | ✓ | ✓ | Implemented comprehensive unit tests for SampleBasedAgentWarmupStrategy - 30 tests covering all aspects with 100% pass rate |
-| F009 | Configuration Separation System | 🚧 | High | feature/config-separation | 3e:58:e5:c6:0b:af | - | - | - | Separate system and business configs, system configs from templates, business configs append-only, deployment with mounted config files |
->>>>>>> dev
+| F008 | API接口设计文档生成 | ✅ | High | feature/api-docs-generation | c6:c4:e5:e8:c6:4a | 100% | ✓ | ✓ | 基于代码分析生成完整API接口文档 |
+| F009 | Orleans Service Discovery Benchmark | ✅ | High | feature/orleans-service-discovery-benchmark | 42:82:57:47:65:d4 | 100% | ✓ | ✓ | Benchmark comparison between MongoDB and Zookeeper service discovery for Orleans - COMPLETED |
+| F010 | Agent Warmup Unit Tests Implementation | ✅ | High | feature/agent-warmup-unit-tests | 3e:58:e5:c6:ab:31 | 100% | ✓ | ✓ | Implemented comprehensive unit tests for SampleBasedAgentWarmupStrategy - 30 tests covering all aspects with 100% pass rate |
+| F011 | Configuration Separation System | 🚧 | High | feature/config-separation | 3e:58:e5:c6:0b:af | - | - | - | Separate system and business configs, system configs from templates, business configs append-only, deployment with mounted config files |
 
 ## Technical Debt & Refactoring
 
