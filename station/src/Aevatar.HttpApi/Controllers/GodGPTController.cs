@@ -5,6 +5,8 @@ using System.IO;
 using System.Threading.Tasks;
 using Aevatar.Account;
 using Aevatar.Anonymous;
+using Aevatar.Application.Constants;
+using Aevatar.Application.Contracts.Services;
 using Aevatar.Application.Grains.Agents.ChatManager;
 using Aevatar.Application.Grains.Agents.ChatManager.Chat;
 using Aevatar.Application.Grains.Agents.ChatManager.Common;
@@ -12,7 +14,6 @@ using Aevatar.Application.Grains.Agents.ChatManager.Dtos;
 using Aevatar.Application.Grains.ChatManager.Dtos;
 using Aevatar.Application.Grains.ChatManager.UserQuota;
 using Aevatar.BlobStorings;
-using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Extensions;
 using Aevatar.GAgents.AI.Common;
@@ -22,13 +23,9 @@ using Aevatar.Quantum;
 using Aevatar.Service;
 using Asp.Versioning;
 using GodGPT.GAgents.SpeechChat;
-using HandlebarsDotNet;
-using Json.Schema;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -57,12 +54,13 @@ public class GodGPTController : AevatarController
     private readonly BlobStoringOptions _blobStoringOptions;
     private readonly IThumbnailService _thumbnailService;
     private readonly IOptions<GodGPTOptions> _godGptOptions;
+    private readonly ILocalizationService _localizationService;
 
 
     public GodGPTController(IGodGPTService godGptService, IClusterClient clusterClient,
         IOptions<AevatarOptions> aevatarOptions, ILogger<GodGPTController> logger, IAccountService accountService,
         IBlobContainer blobContainer, IOptionsSnapshot<BlobStoringOptions> blobStoringOptions,
-        IThumbnailService thumbnailService, IOptions<GodGPTOptions> godGptOptions)
+        IThumbnailService thumbnailService, IOptions<GodGPTOptions> godGptOptions, ILocalizationService localizationService)
     {
         _godGptService = godGptService;
         _clusterClient = clusterClient;
@@ -73,6 +71,7 @@ public class GodGPTController : AevatarController
         _blobStoringOptions = blobStoringOptions.Value;
         _thumbnailService = thumbnailService;
         _godGptOptions = godGptOptions;
+        _localizationService = localizationService;
     }
 
     [AllowAnonymous]
@@ -284,10 +283,24 @@ public class GodGPTController : AevatarController
     {
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
-        var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
-        var chatMessages = await manager.GetSessionMessageListWithMetaAsync(sessionId);
-        _logger.LogDebug("[GodGPTController][GetSessionMessageListAsync] sessionId: {0}, messageCount: {1}, duration: {2}ms",
-            sessionId, chatMessages.Count, stopwatch.ElapsedMilliseconds);
+        var chatMessages = new List<ChatMessageWithMetaDto>();
+        try
+        {
+            var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
+            var language = HttpContext.GetGodGPTLanguage();
+            _logger.LogDebug(
+                $"[GodGPTController][GetSessionMessageListAsync] sessionId: {sessionId}, language:{language}");
+            RequestContext.Set("GodGPTLanguage", language.ToString());
+            chatMessages = await manager.GetSessionMessageListWithMetaAsync(sessionId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"[GodGPTController][GetSessionMessageListAsync] exception sessionId: {sessionId}, , duration: {stopwatch.ElapsedMilliseconds}ms, error:{ex.Message}");
+            throw ex;
+        }
+
+        _logger.LogDebug(
+            $"[GodGPTController][GetSessionMessageListAsync] sessionId: {sessionId}, messageCount: {chatMessages.Count}, duration: {stopwatch.ElapsedMilliseconds}ms ");
         return chatMessages;
     }
 
@@ -383,7 +396,8 @@ public class GodGPTController : AevatarController
     {
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
-        var response = await _godGptService.GenerateShareContentAsync(currentUserId, request);
+        var language = HttpContext.GetGodGPTLanguage();
+        var response = await _godGptService.GenerateShareContentAsync(currentUserId, request, language);
         _logger.LogDebug("[GodGPTController][CreateShareStringAsync] userId: {0} sessionId: {1}, ShareId={2}, duration: {3}ms",
             currentUserId, request.SessionId, response.ShareId, stopwatch.ElapsedMilliseconds);
         return response;
@@ -394,7 +408,8 @@ public class GodGPTController : AevatarController
     public async Task<List<ChatMessage>> GetShareMessageListAsync(string shareString)
     {
         var stopwatch = Stopwatch.StartNew();
-        var response = await _godGptService.GetShareMessageListAsync(shareString);
+        var language = HttpContext.GetGodGPTLanguage();
+        var response = await _godGptService.GetShareMessageListAsync(shareString,language);
         _logger.LogDebug("[GodGPTController][GetShareMessageListAsync] shareString: {0} duration: {1}ms",
             shareString, stopwatch.ElapsedMilliseconds);
         return response;
@@ -409,11 +424,13 @@ public class GodGPTController : AevatarController
     [HttpGet("godgpt/check-email-registered")]
     public async Task<IActionResult> CheckEmailRegisteredAsync([FromQuery] string email)
     {
+        var language = HttpContext.GetGodGPTLanguage();
         if (string.IsNullOrWhiteSpace(email))
         {
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.EmailIsRequired, language);
             return BadRequest(new
             {
-                error = new { code = 1, message = "Email is required" },
+                error = new { code = 1, message = localizedMessage },
                 result = false
             });
         }
@@ -424,9 +441,10 @@ public class GodGPTController : AevatarController
         }
         else
         {
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.UserUnRegister, language);
             return Ok(new
             {
-                error = new { code = 0, message = "User not registered" },
+                error = new { code = 0, message = localizedMessage },
                 result = false
             });
         }
@@ -490,7 +508,7 @@ public class GodGPTController : AevatarController
         var stopwatch = Stopwatch.StartNew();
         var clientIp = HttpContext.GetClientIpAddress();
         var userHashId = CommonHelper.GetAnonymousUserGAgentId(clientIp).Replace("AnonymousUser_", "");
-        
+        var language = HttpContext.GetGodGPTLanguage();
         try
         {
             var result = await _godGptService.GetGuestChatLimitsAsync(clientIp);
@@ -501,8 +519,9 @@ public class GodGPTController : AevatarController
         }
         catch (Exception ex)
         {
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InternalServerError, language);
             _logger.LogError(ex, "[GodGPTController][GetGuestChatLimitsAsync] User: {0}, unexpected error", userHashId);
-            return StatusCode(500, new { error = "Internal server error" });
+            return StatusCode(500, new { error = localizedMessage });
         }
     }
     [HttpPost("godgpt/voice/set")]
@@ -510,9 +529,19 @@ public class GodGPTController : AevatarController
     {
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
-        var userProfileDto = await _godGptService.SetVoiceLanguageAsync(currentUserId, request.VoiceLanguage);
-        _logger.LogDebug("[GodGPTController][SetVoiceLanguageAsync] userId: {0},voiceLanguage:{1} duration: {2}ms",
-            currentUserId, request.VoiceLanguage, stopwatch.ElapsedMilliseconds);
+        var userProfileDto = new UserProfileDto();
+        try
+        {
+            userProfileDto = await _godGptService.SetVoiceLanguageAsync(currentUserId, request.VoiceLanguage);
+        }
+        catch (Exception ex)
+        {
+            userProfileDto = new UserProfileDto();
+            userProfileDto.VoiceLanguage = VoiceLanguageEnum.Unset;
+            _logger.LogError($"[GodGPTController][SetVoiceLanguageAsync] exception userId: {currentUserId},voiceLanguage:{request.VoiceLanguage} duration: {stopwatch.ElapsedMilliseconds}ms error:{ex.Message}");
+            return userProfileDto;
+        }
+        _logger.LogDebug($"[GodGPTController][SetVoiceLanguageAsync] userId: {currentUserId},voiceLanguage:{request.VoiceLanguage} duration: {stopwatch.ElapsedMilliseconds}ms");
         return userProfileDto;
     }
     #endregion
@@ -525,9 +554,17 @@ public class GodGPTController : AevatarController
         [FromQuery] SessionType sessionType)
     {
         var stopwatch = Stopwatch.StartNew();
-        var response = await _godGptService.GetShareKeyWordWithAIAsync(sessionId, content, region, sessionType);
+        
+        // Get language from request headers
+        var language = HttpContext.GetGodGPTLanguage();
+        
+        // Append language-specific prompt requirement if content is provided
+        var processedContent = SessionTypeExtensions.SharePrompt;
+        processedContent = processedContent.AppendLanguagePrompt(language);
+        
+        var response = await _godGptService.GetShareKeyWordWithAIAsync(sessionId, processedContent, region, sessionType, language);
         _logger.LogDebug(
-            $"[GodGPTController][GetShareKeyWordWithAIAsync] completed for sessionId={sessionId}, duration: {stopwatch.ElapsedMilliseconds}ms");
+            $"[GodGPTController][GetShareKeyWordWithAIAsync] completed for sessionId={sessionId}, language={language},processedContent={processedContent}, duration: {stopwatch.ElapsedMilliseconds}ms");
         return response;
     }
     
@@ -553,10 +590,15 @@ public class GodGPTController : AevatarController
     [HttpPost("godgpt/blob")]
     public async Task<string> SaveAsync([FromForm] SaveBlobInput input)
     {
+        var language = HttpContext.GetGodGPTLanguage();
         if (input.File.Length > _blobStoringOptions.MaxSizeBytes)
         {
-            throw new UserFriendlyException(
-                $"The file is too large, with a maximum of {_blobStoringOptions.MaxSizeBytes} bytes.");
+            var parameters = new Dictionary<string, string>
+            {
+                ["MaxSizeBytes"] = _blobStoringOptions.MaxSizeBytes.ToString()
+            };
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.FileTooLarge, language,parameters);
+            throw new UserFriendlyException(localizedMessage);
         }
         
         var stopwatch = Stopwatch.StartNew();
