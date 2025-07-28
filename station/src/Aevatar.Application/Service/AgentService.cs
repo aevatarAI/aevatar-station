@@ -93,9 +93,6 @@ public class AgentService : ApplicationService, IAgentService
                     GuidUtil.GuidToGrainKey(
                         GuidUtil.StringToGuid("AgentDefaultId"))); // make sure only one agent instance for each type
                 var agent = await _gAgentFactory.GetGAgentAsync(grainId);
-                var description = await agent.GetDescriptionAsync();
-                agentTypeData.Description = description;
-                
                 var initializeDtoType = await agent.GetConfigurationTypeAsync();
                 if (initializeDtoType == null || initializeDtoType.IsAbstract)
                 {
@@ -174,7 +171,6 @@ public class AgentService : ApplicationService, IAgentService
             {
                 AgentType = kvp.Key,
                 FullName = kvp.Value?.FullName ?? kvp.Key,
-                Description = kvp.Value?.Description
             };
 
             if (kvp.Value != null)
@@ -264,7 +260,7 @@ public class AgentService : ApplicationService, IAgentService
             AgentGuid = businessAgent.GetPrimaryKey(),
             BusinessAgentGrainId = businessAgent.GetGrainId().ToString()
         };
-
+        
         var configuration = await GetAgentConfigurationAsync(businessAgent);
         if (configuration != null)
         {
@@ -273,7 +269,7 @@ public class AgentService : ApplicationService, IAgentService
 
         return resp;
     }
-    
+
     public async Task<List<AgentInstanceDto>> GetAllAgentInstances(GetAllAgentInstancesQueryDto queryDto)
     {
         var result = new List<AgentInstanceDto>();
@@ -310,7 +306,6 @@ public class AgentService : ApplicationService, IAgentService
 
             throw;
         }
-        
         if (response.TotalCount == 0)
         {
             return result;
@@ -329,99 +324,6 @@ public class AgentService : ApplicationService, IAgentService
         }));
 
         return result;
-    }
-
-    public async Task<AgentSearchResponse> SearchAgents(AgentSearchRequest request)
-    {
-        var currentUserId = _userAppService.GetCurrentUserId();
-        
-        // Build Lucene query
-        var queryParts = new List<string>
-        {
-            $"userId.keyword:{currentUserId}"
-        };
-        
-        // Add search term filter (matches name, agentType)
-        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
-        {
-            var searchTerm = request.SearchTerm.Trim();
-            queryParts.Add($"(name:*{searchTerm}* OR agentType:*{searchTerm}*)");
-        }
-        
-        // Add type filter (multi-type support)
-        if (request.Types?.Any() == true)
-        {
-            var typeQueries = request.Types.Select(type => $"agentType.keyword:\"{type}\"");
-            queryParts.Add($"({string.Join(" OR ", typeQueries)})");
-        }
-        
-        var queryString = string.Join(" AND ", queryParts);
-        
-        // Build sort fields
-        var sortFields = new List<string>();
-        if (!string.IsNullOrWhiteSpace(request.SortBy))
-        {
-            var sortOrder = request.SortOrder?.ToLower() == "asc" ? "asc" : "desc";
-            var sortField = request.SortBy.ToLower() switch
-            {
-                "name" => "name.keyword",
-                "createtime" => "createTime",
-                "updatetime" => "createTime", // Use createTime as updateTime proxy
-                _ => "createTime"
-            };
-            sortFields.Add($"{sortField}:{sortOrder}");
-        }
-        
-        var luceneQuery = new LuceneQueryDto
-        {
-            QueryString = queryString,
-            StateName = nameof(CreatorGAgentState),
-            PageSize = request.PageSize,
-            PageIndex = request.PageIndex,
-            SortFields = sortFields
-        };
-        
-        var response = await _indexingService.QueryWithLuceneAsync(luceneQuery);
-        
-        var agents = response.Items.Select(state => new AgentInstanceDto
-        {
-            Id = (string)state["id"],
-            Name = (string)state["name"],
-            Properties = state["properties"] == null
-                ? null
-                : JsonConvert.DeserializeObject<Dictionary<string, object>>((string)state["properties"]),
-            AgentType = (string)state["agentType"],
-            BusinessAgentGrainId =
-                state.TryGetValue("formattedBusinessAgentGrainId", out var value) ? (string)value : null
-        }).ToList();
-        
-        return new AgentSearchResponse
-        {
-            Agents = agents,
-            Total = (int)response.TotalCount,
-            PageIndex = request.PageIndex,
-            PageSize = request.PageSize,
-            HasMore = (request.PageIndex + 1) * request.PageSize < response.TotalCount
-        };
-    }
-
-    private AgentInstanceDto MapToAgentItem(Dictionary<string, object> state)
-    {
-        // Align with existing data conversion logic
-        var properties = state["properties"] == null
-            ? null
-            : JsonConvert.DeserializeObject<Dictionary<string, object>>((string)state["properties"]);
-
-        return new AgentInstanceDto
-        {
-            Id = (string)state["id"],
-            Name = (string)state["name"],
-            AgentType = (string)state["agentType"],
-            Properties = properties,
-            BusinessAgentGrainId = state.TryGetValue("formattedBusinessAgentGrainId", out var value)
-                ? (string)value
-                : null
-        };
     }
 
     private void CheckCreateParam(CreateAgentInputDto createDto)
@@ -450,7 +352,7 @@ public class AgentService : ApplicationService, IAgentService
         {
             var config = SetupConfigurationData(initializationData, agentProperties);
             await businessAgent.ConfigAsync(config);
-
+            
             return new Tuple<IGAgent, ConfigurationBase>(businessAgent, config);
         }
 
@@ -584,9 +486,9 @@ public class AgentService : ApplicationService, IAgentService
             businessAgents.Add(businessAgent);
             subAgentGuids.Add(grainId.GetGuidKey());
         }
-
+        
         await agent.RegisterManyAsync(businessAgents);
-
+        
         foreach (var businessAgent in businessAgents)
         {
             var eventsHandledByAgent = await businessAgent.GetAllSubscribedEventsAsync();
@@ -697,7 +599,7 @@ public class AgentService : ApplicationService, IAgentService
         var agentState = await creatorAgent.GetAgentAsync();
 
         var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
-        var subAgentGrainIds = await agent.GetChildrenAsync();
+        var subAgentGrainIds = await GetSubAgentGrainIds(agent);
         await RemoveSubAgentAsync(guid,
             new RemoveSubAgentDto { RemovedSubAgents = subAgentGrainIds.Select(x => x.GetGuidKey()).ToList() });
     }

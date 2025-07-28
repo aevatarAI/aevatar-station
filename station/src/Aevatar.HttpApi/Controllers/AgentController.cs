@@ -1,4 +1,3 @@
-// CI rebuild trigger to resolve environment cache issues
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -41,17 +40,9 @@ public class AgentController : AevatarController
 
     [HttpGet("agent-list")]
     [Authorize]
-    public async Task<List<AgentInstanceDto>> GetAllAgentInstance(GetAllAgentInstancesQueryDto input)
+    public async Task<List<AgentInstanceDto>> GetAllAgentInstance([FromQuery] GetAllAgentInstancesQueryDto queryDto)
     {
-        return await _agentService.GetAllAgentInstances(input);
-    }
-
-    [HttpPost("search")]
-    [Authorize]
-    public async Task<AgentSearchResponse> SearchAgents([FromBody] AgentSearchRequest request)
-    {
-        _logger.LogInformation("Search Agents: {request}", JsonConvert.SerializeObject(request));
-        return await _agentService.SearchAgents(request);
+        return await _agentService.GetAllAgentInstances(queryDto);
     }
 
     [HttpPost]
