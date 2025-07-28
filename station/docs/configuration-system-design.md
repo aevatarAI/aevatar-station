@@ -153,8 +153,12 @@ KubernetesHostManager创建Host
 ### 所有Host服务统一使用模式
 ```csharp
 builder.Configuration
-    .AddAevatarSecureConfiguration(systemConfigPath)
-    .AddAevatarSecureConfiguration(serviceSpecificConfigPath) 
+
+    .AddAevatarSecureConfiguration(
+      new[]
+                {
+                   systemConfigPath,serviceSpecificConfigPath
+                })
     .AddEnvironmentVariables();
 ```
 
