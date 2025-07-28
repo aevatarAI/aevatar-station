@@ -1,9 +1,10 @@
 ﻿using System;
-using System.IO;
 using System.Threading.Tasks;
 using Aevatar.Webhook.Extensions;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Events;
@@ -15,7 +16,6 @@ public class Program
     public async static Task<int> Main(string[] args)
     {
         var configuration = new ConfigurationBuilder()
-            //.AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
             .AddJsonFile("appsettings.json")
             .Build();
 
@@ -35,13 +35,16 @@ public class Program
         try
         {
             Log.Information("Starting Aevatar.Developer.Host.");
-            var builder = CreateHostBuilder(args);
-            builder.ConfigureHostConfiguration(config =>
-            {
-                config/*.AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))*/
-                    .AddJsonFile("appsettings.json");
-            });
-            await builder.Build().RunAsync();
+            var builder = WebApplication.CreateBuilder(args);
+            builder.Host
+                .UseOrleansClientConfigration()
+                .ConfigureDefaults(args)
+                .UseAutofac()
+                .UseSerilog();
+            await builder.AddApplicationAsync<AevatarListenerHostModule>();
+            var app = builder.Build();
+            await app.InitializeApplicationAsync();
+            await app.RunAsync();
             return 0;
         }
         catch (Exception ex)
@@ -53,13 +56,5 @@ public class Program
         {
             Log.CloseAndFlush();
         }
-    }
-
-    private static IHostBuilder CreateHostBuilder(string[] args)
-    {
-        return Host.CreateDefaultBuilder(args).UseOrleansClientConfigration()
-            .UseAutofac()
-            .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); })
-            .UseSerilog();
     }
 }
