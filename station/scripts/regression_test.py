@@ -536,3 +536,4 @@ def test_permission(api_headers, api_admin_headers):
     
     assert_status_code(response)
     assert response.json()["data"]["count"] > 0
+

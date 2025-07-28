@@ -5,11 +5,11 @@ public interface IHostDeployManager
     Task<string> CreateNewWebHookAsync(string appId, string version, string imageName);
     Task DestroyWebHookAsync(string appId, string version);
     Task RestartWebHookAsync(string appId,string version);
-    
-    Task<string> CreateHostAsync(string appId, string version, string corsUrls);
-    Task DestroyHostAsync(string appId, string version);
-    Task RestartHostAsync(string appId,string version);
 
-    public Task UpdateDockerImageAsync(string appId, string version, string newImage);
-
+    // Methods that KubernetesHostManager actually implements
+    Task CreateApplicationAsync(string appId, string version, string corsUrls, Guid tenantId);
+    Task DestroyApplicationAsync(string appId, string version);
+    Task UpgradeApplicationAsync(string appId, string version, string corsUrls, Guid tenantId);
+    Task UpdateDeploymentImageAsync(string appId, string version, string newImage);
+    Task RestartHostAsync(string appId, string version);
 }
