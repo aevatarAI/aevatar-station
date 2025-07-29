@@ -83,6 +83,32 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
         Logger.LogInformation("Starting workflow generation for goal: {UserGoal} with {AgentCount} available agents", 
             userGoal, availableAgents.Count);
 
+        // 添加详细的调试日志记录输入参数
+        Logger.LogInformation("=== Workflow Generation Input Debug Info ===");
+        Logger.LogInformation("User Goal: {UserGoal}", userGoal);
+        Logger.LogInformation("Available Agents Count: {AgentCount}", availableAgents.Count);
+        
+        if (availableAgents.Any())
+        {
+            Logger.LogInformation("Agent Details:");
+            foreach (var agent in availableAgents)
+            {
+                Logger.LogInformation("  - Agent: {AgentName} (ID: {AgentId})", agent.Name, agent.Id);
+                Logger.LogInformation("    L1Description: {L1Description}", agent.L1Description);
+                Logger.LogInformation("    L2Description: {L2Description}", agent.L2Description);
+                Logger.LogInformation("    Category: {Category}", agent.Category);
+                if (agent.Capabilities?.Any() == true)
+                    Logger.LogInformation("    Capabilities: {Capabilities}", string.Join(", ", agent.Capabilities));
+                if (agent.Tags?.Any() == true)
+                    Logger.LogInformation("    Tags: {Tags}", string.Join(", ", agent.Tags));
+            }
+        }
+        else
+        {
+            Logger.LogWarning("No available agents provided for workflow generation!");
+        }
+        Logger.LogInformation("============================================");
+
         try
         {
             // 直接使用AgentDescriptionInfo生成Prompt
@@ -202,14 +228,34 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
     {
         try
         {
+            // 修复ChatWithHistory调用，提供必要的参数
+            // 使用正确的类型来避免编译错误
+            var history = new List<ChatMessage>(); // 空聊天历史记录
+            ExecutionPromptSettings? promptSettings = null; // 使用默认设置
+            var cancellationToken = CancellationToken.None; // 默认取消令牌
+            AIChatContextDto? context = null; // 默认上下文
+            var imageKeys = new List<string>(); // 空图片列表
             
-            var chatResult = await ChatWithHistory(prompt);
+            // 添加详细的调试日志 - 记录传递给AI的完整prompt
+            Logger.LogInformation("=== AI Workflow Generation Debug Info ===");
+            Logger.LogInformation("Full prompt being sent to AI:");
+            Logger.LogInformation("Prompt content: {PromptContent}", prompt);
+            Logger.LogInformation("Prompt length: {PromptLength} characters", prompt.Length);
+            Logger.LogInformation("==========================================");
+            
+            var chatResult = await ChatWithHistory(
+                prompt, 
+                history, 
+                promptSettings, 
+                cancellationToken, 
+                context, 
+                imageKeys);
 
-            if (chatResult == null || chatResult.Count == 0)
+            if (chatResult == null || !chatResult.Any())
             {
-                Logger.LogWarning("AI returned empty response for workflow generation");
-                return GetFallbackWorkflowJson("system_error", "AI service returned empty response", 
-                    new[] { "Retry the workflow generation", "Check AI service availability", "Use manual workflow creation" });
+                Logger.LogWarning("AI service returned null or empty result for workflow generation");
+                return GetFallbackWorkflowJson("ai_no_response", "AI service returned empty result",
+                    new[] { "Check AI service connectivity", "Verify API credentials", "Retry with simpler goal" });
             }
 
             var response = chatResult[0].Content;
@@ -221,25 +267,30 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
             }
 
             // 添加详细的调试日志记录AI返回的原始内容
-            Logger.LogDebug("AI raw response content: {RawResponse}", response);
-            Logger.LogDebug("AI response length: {Length} chars", response.Length);
+            Logger.LogInformation("=== AI Response Debug Info ===");
+            Logger.LogInformation("AI raw response content: {RawResponse}", response);
+            Logger.LogInformation("AI response length: {Length} chars", response.Length);
+            Logger.LogInformation("===============================");
 
             // Validate that the response contains required error handling fields
             if (!IsValidErrorHandlingResponse(response))
             {
-                Logger.LogWarning("AI response missing required error handling fields, wrapping response. Raw content preview: {Preview}", 
-                    response.Length > 200 ? response.Substring(0, 200) + "..." : response);
+                Logger.LogWarning("AI response missing required error handling fields, wrapping response. Raw content preview: \"{RawPreview}\"", 
+                    response.Length > 100 ? response.Substring(0, 100) + "..." : response);
                 return WrapLegacyResponse(response);
             }
 
-            Logger.LogDebug("AI successfully generated workflow with response length: {Length}", response.Length);
-            return response;
+            // Clean the response before returning
+            var cleanedResponse = CleanJsonContent(response);
+            Logger.LogDebug("Cleaned AI response length: {CleanedLength} chars", cleanedResponse.Length);
+            
+            return cleanedResponse;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error calling AI for workflow generation");
-            return GetFallbackWorkflowJson("system_error", $"AI service error: {ex.Message}",
-                new[] { "Check system logs for details", "Retry after a few minutes", "Contact system administrator if problem persists" });
+            Logger.LogError(ex, "Error occurred during AI workflow generation call");
+            return GetFallbackWorkflowJson("system_error", $"AI generation failed: {ex.Message}",
+                new[] { "Check system logs for details", "Retry the request", "Contact system administrator" });
         }
     }
 
