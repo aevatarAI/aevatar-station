@@ -489,13 +489,13 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             _logger.LogDebug("Applying intelligent layout to {NodeCount} nodes with {ConnectionCount} connections",
                 properties.WorkflowNodeList.Count, properties.WorkflowNodeUnitList?.Count ?? 0);
 
-            // 布局配置
-            const int nodeWidth = 150;
-            const int nodeHeight = 80;
-            const int horizontalSpacing = 200;
-            const int verticalSpacing = 120;
-            const int startX = 100;
-            const int startY = 100;
+            // 布局配置 - 使用高精度浮点数
+            const double nodeWidth = 150.0;
+            const double nodeHeight = 80.0;
+            const double horizontalSpacing = 200.0;
+            const double verticalSpacing = 120.0;
+            const double startX = 100.0;
+            const double startY = 100.0;
 
             // 构建节点连接关系图
             var nodeConnections = BuildNodeConnectionGraph(properties);
@@ -503,9 +503,9 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             // 计算节点层级
             var nodeLayers = CalculateNodeLayers(properties.WorkflowNodeList, nodeConnections);
 
-            // 应用层次布局
-            ApplyLayerLayout(properties.WorkflowNodeList, nodeLayers, 
-                startX, startY, horizontalSpacing, verticalSpacing);
+            // 应用高精度层次布局
+            ApplyHighPrecisionLayerLayout(properties.WorkflowNodeList, nodeLayers, 
+                startX, startY, horizontalSpacing, verticalSpacing, nodeWidth, nodeHeight);
 
             _logger.LogInformation("Successfully applied intelligent layout. Nodes arranged in {LayerCount} layers",
                 nodeLayers.Count);
@@ -513,7 +513,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error applying intelligent layout, falling back to simple grid layout");
-            ApplySimpleGridLayout(properties.WorkflowNodeList);
+            ApplyHighPrecisionGridLayout(properties.WorkflowNodeList);
         }
     }
 
@@ -611,78 +611,116 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     }
 
     /// <summary>
-    /// 应用层次布局
+    /// 应用高精度层次布局
     /// </summary>
-    private void ApplyLayerLayout(List<WorkflowNodeDto> nodes, List<List<string>> layers,
-        int startX, int startY, int horizontalSpacing, int verticalSpacing)
+    private void ApplyHighPrecisionLayerLayout(List<WorkflowNodeDto> nodes, List<List<string>> layers,
+        double startX, double startY, double horizontalSpacing, double verticalSpacing, double nodeWidth, double nodeHeight)
     {
-        var nodePositions = new Dictionary<string, (int x, int y)>();
+        var nodePositions = new Dictionary<string, (double x, double y)>();
+        var random = new Random((int)DateTime.UtcNow.Ticks); // 基于时间的随机数种子
 
         for (int layerIndex = 0; layerIndex < layers.Count; layerIndex++)
         {
             var layer = layers[layerIndex];
-            var layerY = startY + layerIndex * verticalSpacing;
+            
+            // 计算基础Y坐标，加入高精度变化
+            var baseLayerY = startY + layerIndex * verticalSpacing;
+            var layerYVariation = random.NextDouble() * 15.0 - 7.5; // ±7.5像素的随机变化
+            var layerY = baseLayerY + layerYVariation;
 
-            // 计算这一层的起始X坐标（居中对齐）
+            // 计算这一层的起始X坐标（居中对齐）- 高精度计算
             var layerStartX = startX;
             if (layer.Count > 1)
             {
                 var totalLayerWidth = (layer.Count - 1) * horizontalSpacing;
-                layerStartX = startX - totalLayerWidth / 2;
+                layerStartX = startX - totalLayerWidth / 2.0;
             }
 
             for (int nodeIndex = 0; nodeIndex < layer.Count; nodeIndex++)
             {
                 var nodeId = layer[nodeIndex];
-                var nodeX = layerStartX + nodeIndex * horizontalSpacing;
                 
-                nodePositions[nodeId] = (nodeX, layerY);
+                // 计算基础X坐标
+                var baseNodeX = layerStartX + nodeIndex * horizontalSpacing;
+                
+                // 添加高精度偏移和微调
+                var nodeXVariation = random.NextDouble() * 20.0 - 10.0; // ±10像素的随机变化
+                var nodeYVariation = random.NextDouble() * 10.0 - 5.0;  // ±5像素的随机变化
+                
+                var finalNodeX = baseNodeX + nodeXVariation;
+                var finalNodeY = layerY + nodeYVariation;
+                
+                // 确保节点不会重叠，添加索引相关的微调
+                var indexAdjustment = nodeIndex * 0.618033988749; // 使用黄金比例产生更自然的分布
+                finalNodeX += indexAdjustment;
+                finalNodeY += Math.Sin(nodeIndex * 0.5) * 2.0; // 添加正弦波形式的微调
+                
+                nodePositions[nodeId] = (finalNodeX, finalNodeY);
                 
                 _logger.LogDebug("Layer {LayerIndex}, Node {NodeId}: ({X}, {Y})", 
-                    layerIndex, nodeId, nodeX, layerY);
+                    layerIndex, nodeId, finalNodeX, finalNodeY);
             }
         }
 
-        // 应用坐标到节点
+        // 应用高精度坐标到节点
         foreach (var node in nodes)
         {
             if (nodePositions.ContainsKey(node.NodeId))
             {
                 var (x, y) = nodePositions[node.NodeId];
-                node.ExtendedData.XPosition = x.ToString();
-                node.ExtendedData.YPosition = y.ToString();
                 
-                _logger.LogDebug("Applied position to node {NodeId} ({Name}): ({X}, {Y})", 
-                    node.NodeId, node.Name, x, y);
+                // 转换为高精度字符串格式
+                node.ExtendedData.XPosition = x.ToString("F14"); // 14位小数精度
+                node.ExtendedData.YPosition = y.ToString("F14"); // 14位小数精度
+                
+                _logger.LogDebug("Applied high-precision position to node {NodeId} ({Name}): ({X}, {Y})", 
+                    node.NodeId, node.Name, node.ExtendedData.XPosition, node.ExtendedData.YPosition);
             }
         }
     }
 
     /// <summary>
-    /// 简单网格布局（备用方案）
+    /// 应用高精度网格布局（备用方案）
     /// </summary>
-    private void ApplySimpleGridLayout(List<WorkflowNodeDto> nodes)
+    private void ApplyHighPrecisionGridLayout(List<WorkflowNodeDto> nodes)
     {
-        _logger.LogInformation("Applying simple grid layout to {NodeCount} nodes", nodes.Count);
+        _logger.LogInformation("Applying high precision grid layout to {NodeCount} nodes", nodes.Count);
 
-        const int horizontalSpacing = 200;
-        const int verticalSpacing = 120;
-        const int startX = 100;
-        const int startY = 100;
+        const double horizontalSpacing = 200.0;
+        const double verticalSpacing = 120.0;
+        const double startX = 100.0;
+        const double startY = 100.0;
         const int nodesPerRow = 3;
+
+        var random = new Random((int)DateTime.UtcNow.Ticks + nodes.Count); // 不同的随机种子
 
         for (int i = 0; i < nodes.Count; i++)
         {
             var row = i / nodesPerRow;
             var col = i % nodesPerRow;
             
-            var x = startX + col * horizontalSpacing;
-            var y = startY + row * verticalSpacing;
+            // 基础坐标计算
+            var baseX = startX + col * horizontalSpacing;
+            var baseY = startY + row * verticalSpacing;
             
-            nodes[i].ExtendedData.XPosition = x.ToString();
-            nodes[i].ExtendedData.YPosition = y.ToString();
+            // 添加高精度随机偏移
+            var xVariation = random.NextDouble() * 25.0 - 12.5; // ±12.5像素变化
+            var yVariation = random.NextDouble() * 15.0 - 7.5;  // ±7.5像素变化
             
-            _logger.LogDebug("Grid position for node {NodeId}: ({X}, {Y})", nodes[i].NodeId, x, y);
+            // 添加基于索引的微调（使用数学常数创建自然分布）
+            var goldenRatio = 1.618033988749;
+            var indexOffsetX = (i * goldenRatio % 1.0) * 10.0 - 5.0; // 基于黄金比例的偏移
+            var indexOffsetY = Math.Sin(i * 0.7) * 3.0; // 正弦波偏移
+            
+            var finalX = baseX + xVariation + indexOffsetX;
+            var finalY = baseY + yVariation + indexOffsetY;
+            
+            // 转换为高精度字符串
+            nodes[i].ExtendedData.XPosition = finalX.ToString("F14");
+            nodes[i].ExtendedData.YPosition = finalY.ToString("F14");
+            
+            _logger.LogDebug("High precision grid position for node {NodeId}: ({X}, {Y})", 
+                nodes[i].NodeId, nodes[i].ExtendedData.XPosition, nodes[i].ExtendedData.YPosition);
         }
     }
 
