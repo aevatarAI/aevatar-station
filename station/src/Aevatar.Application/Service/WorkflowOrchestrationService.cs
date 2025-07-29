@@ -10,6 +10,7 @@ using Aevatar.Common;
 using Aevatar.Core.Abstractions;
 using Aevatar.Core.Abstractions.Extensions;
 using Aevatar.GAgents.AI.Common;
+using Aevatar.GAgents.AIGAgent.Dtos;
 using Microsoft.Extensions.Logging;
 using Orleans;
 using Orleans.Runtime;
@@ -228,6 +229,13 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             // 2. 创建WorkflowComposerGAgent实例并传递丰富的描述信息
             var instanceId = $"workflow-composer-{userId}-{DateTimeOffset.UtcNow.Ticks}";
             var workflowComposerGAgent = _clusterClient.GetGrain<IWorkflowComposerGAgent>(instanceId);
+            // 关键修复：AIGAgent需要先调用InitializeAsync()进行初始化
+            await workflowComposerGAgent.InitializeAsync(new InitializeDto()
+            {
+                Instructions = "You are an expert workflow designer that creates sophisticated agent-based workflows. Generate well-structured JSON configurations for complex multi-agent workflows.",
+                LLMConfig = new LLMConfigDto() { SystemLLM = "OpenAI" }
+            });
+            
             var result = await workflowComposerGAgent.GenerateWorkflowJsonAsync(userGoal, availableAgents);
             
             _logger.LogInformation("WorkflowComposerGAgent instance {InstanceId} completed successfully for user {UserId}", instanceId, userId);
@@ -249,7 +257,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     /// </summary>
     /// <param name="jsonContent">JSON content from WorkflowComposerGAgent</param>
     /// <returns>Parsed WorkflowViewConfigDto</returns>
-    public async Task<WorkflowViewConfigDto?> ParseWorkflowJsonToViewConfigAsync(string jsonContent)
+    private async Task<WorkflowViewConfigDto?> ParseWorkflowJsonToViewConfigAsync(string jsonContent)
     {
         try
         {
