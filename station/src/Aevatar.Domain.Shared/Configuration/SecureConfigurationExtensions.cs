@@ -30,11 +30,14 @@ public static class SecureConfigurationExtensions
     /// <returns>Configuration builder for chaining</returns>
     public static IConfigurationBuilder AddAevatarSecureConfiguration(
         this IConfigurationBuilder builder,
-        string[] systemConfigPaths,
+        string[]? systemConfigPaths = null,
         string? businessConfigPath = null,
         string ephemeralConfigPath = "appsettings.ephemeral.json",
         bool optional = true)
     {
+        // Set default empty array for system config paths if not specified
+        systemConfigPaths ??= new string[0];
+        
         // Get business config path from static configuration if not specified
         businessConfigPath ??= DefaultBusinessConfigPath;
        
@@ -42,7 +45,7 @@ public static class SecureConfigurationExtensions
         // 1. Add all system configurations (always required)
         foreach (var systemConfigPath in systemConfigPaths)
         {
-            builder.AddJsonFile(systemConfigPath, optional: false);
+            builder.AddJsonFile(systemConfigPath, optional: true);
         }
         // 2. Add default appsettings.json (optional)
         builder.AddJsonFile("appsettings.json", optional: true);
@@ -165,5 +168,10 @@ public static class SecureConfigurationExtensions
     {
         var enableEphemeralConfig = Environment.GetEnvironmentVariable("ENABLE_EPHEMERAL_CONFIG");
         return string.Equals(enableEphemeralConfig, "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static object AddAevatarSecureConfiguration(this IConfigurationBuilder builder)
+    {
+        throw new NotImplementedException();
     }
 }

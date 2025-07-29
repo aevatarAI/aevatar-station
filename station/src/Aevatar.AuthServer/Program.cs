@@ -12,11 +12,7 @@ public class Program
     public async static Task<int> Main(string[] args)
     {
         var configuration = new ConfigurationBuilder()
-            .AddAevatarSecureConfiguration(
-                systemConfigPaths: new[]
-                {
-                    Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json")
-                })
+            .AddAevatarSecureConfiguration()
             .AddEnvironmentVariables()
             .Build();
         Log.Logger = new LoggerConfiguration()
