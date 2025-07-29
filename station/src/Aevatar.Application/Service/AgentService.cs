@@ -27,6 +27,7 @@ using Orleans;
 using Orleans.Metadata;
 using Orleans.Runtime;
 using Volo.Abp;
+using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using ICreatorGAgent = Aevatar.Application.Grains.Agents.Creator.ICreatorGAgent;
 
@@ -185,10 +186,6 @@ public class AgentService : ApplicationService, IAgentService
 
                     paramDto.PropertyJsonSchema =
                         _schemaProvider.GetTypeSchema(kvp.Value.InitializationData.DtoType).ToJson();
-
-                    // 获取默认值
-                    paramDto.DefaultValues =
-                        await GetConfigurationDefaultValuesAsync(kvp.Value.InitializationData.DtoType);
                 }
             }
 
@@ -196,64 +193,6 @@ public class AgentService : ApplicationService, IAgentService
         }
 
         return resp;
-    }
-
-    /// <summary>
-    /// 获取配置类的默认值（返回列表格式，为支持默认值列表功能做准备）
-    /// </summary>
-    private async Task<Dictionary<string, object?>> GetConfigurationDefaultValuesAsync(Type configurationType)
-    {
-        var defaultValues = new Dictionary<string, object?>();
-
-        try
-        {
-            // 创建配置实例获取默认值
-            var instance = Activator.CreateInstance(configurationType);
-            if (instance != null)
-            {
-                var properties =
-                    configurationType.GetProperties(BindingFlags.Public | BindingFlags.Instance |
-                                                    BindingFlags.DeclaredOnly);
-
-                foreach (var property in properties)
-                {
-
-                    var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
-                    try
-                    {
-                        var value = property.GetValue(instance);
-
-                        // 将所有默认值都转换为列表格式
-                        
-                        if (value == null)
-                        {
-                            // null值转换为空列表
-                            defaultValues[propertyName] = new List<object>();
-                        }
-                        else
-                        {
-                            // 非null值转换为包含单个元素的列表
-                            defaultValues[propertyName] = new List<object> { value };
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex,
-                            "Failed to get default value for property {PropertyName} in {ConfigType}",
-                            property.Name, configurationType.Name);
-                        // 异常情况也返回空列表
-                        defaultValues[propertyName] = new List<object>();
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to create instance of configuration type {ConfigType}",
-                configurationType.Name);
-        }
-
-        return defaultValues;
     }
 
     private ConfigurationBase SetupConfigurationData(Configuration configuration,
@@ -321,7 +260,7 @@ public class AgentService : ApplicationService, IAgentService
             AgentGuid = businessAgent.GetPrimaryKey(),
             BusinessAgentGrainId = businessAgent.GetGrainId().ToString()
         };
-
+        
         var configuration = await GetAgentConfigurationAsync(businessAgent);
         if (configuration != null)
         {
@@ -331,18 +270,42 @@ public class AgentService : ApplicationService, IAgentService
         return resp;
     }
 
-    public async Task<List<AgentInstanceDto>> GetAllAgentInstances(int pageIndex, int pageSize)
+    public async Task<List<AgentInstanceDto>> GetAllAgentInstances(GetAllAgentInstancesQueryDto queryDto)
     {
         var result = new List<AgentInstanceDto>();
         var currentUserId = _userAppService.GetCurrentUserId();
-        var response =
-            await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
+        
+        // Build query conditions
+        var queryString = "userId.keyword:" + currentUserId;
+        
+        // Add agentType fuzzy query condition
+        if (!string.IsNullOrWhiteSpace(queryDto.AgentType))
+        {
+            // Use fuzzy query with ~ operator for better matching
+            queryString += " AND agentType:(" + queryDto.AgentType + "~ OR " + queryDto.AgentType + "*)";
+        }
+        
+        PagedResultDto<Dictionary<string, object>> response;
+        try
+        {
+            response =
+                await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
+                {
+                    QueryString = queryString,
+                    StateName = nameof(CreatorGAgentState),
+                    PageSize = queryDto.PageSize,
+                    PageIndex = queryDto.PageIndex
+                });
+        }
+        catch (UserFriendlyException e)
+        {
+            if (e.Code == "index_not_found_exception")
             {
-                QueryString = "userId.keyword:" + currentUserId,
-                StateName = nameof(CreatorGAgentState),
-                PageSize = pageSize,
-                PageIndex = pageIndex
-            });
+                return result;
+            }
+
+            throw;
+        }
         if (response.TotalCount == 0)
         {
             return result;
@@ -389,7 +352,7 @@ public class AgentService : ApplicationService, IAgentService
         {
             var config = SetupConfigurationData(initializationData, agentProperties);
             await businessAgent.ConfigAsync(config);
-
+            
             return new Tuple<IGAgent, ConfigurationBase>(businessAgent, config);
         }
 
@@ -419,17 +382,18 @@ public class AgentService : ApplicationService, IAgentService
                     ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                     ContractResolver = new CamelCasePropertyNamesContractResolver()
                 });
-                await creatorAgent.UpdateAgentAsync(new UpdateAgentInput
-                {
-                    Name = dto.Name,
-                    Properties = properties
-                });
             }
             else
             {
                 _logger.LogError("no properties to be updated, id: {id}", guid);
             }
         }
+        
+        await creatorAgent.UpdateAgentAsync(new UpdateAgentInput
+        {
+            Name = dto.Name,
+            Properties = properties
+        });
 
         var resp = new AgentDto
         {
@@ -522,9 +486,9 @@ public class AgentService : ApplicationService, IAgentService
             businessAgents.Add(businessAgent);
             subAgentGuids.Add(grainId.GetGuidKey());
         }
-
+        
         await agent.RegisterManyAsync(businessAgents);
-
+        
         foreach (var businessAgent in businessAgents)
         {
             var eventsHandledByAgent = await businessAgent.GetAllSubscribedEventsAsync();
@@ -640,31 +604,6 @@ public class AgentService : ApplicationService, IAgentService
             new RemoveSubAgentDto { RemovedSubAgents = subAgentGrainIds.Select(x => x.GetGuidKey()).ToList() });
     }
 
-    public async Task DeleteAgentAsync(Guid guid)
-    {
-        var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
-        var agentState = await creatorAgent.GetAgentAsync();
-
-        EnsureUserAuthorized(agentState.UserId);
-
-        var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
-        var subAgentGrainIds = await GetSubAgentGrainIds(agent);
-        if (subAgentGrainIds.Any())
-        {
-            _logger.LogInformation("Agent {agentId} has subagents, please remove them first.", guid);
-            throw new UserFriendlyException("Agent has subagents, please remove them first.");
-        }
-
-        var parentGrainId = await agent.GetParentAsync();
-        if (!parentGrainId.IsDefault)
-        {
-            _logger.LogInformation("Agent {agentId} has parent, please remove from it first.", guid);
-            throw new UserFriendlyException("Agent has parent, please remove from it first.");
-        }
-
-        await creatorAgent.DeleteAgentAsync();
-    }
-
     private async Task<List<GrainId>> GetSubAgentGrainIds(IGAgent agent)
     {
         var children = await agent.GetChildrenAsync();
@@ -683,5 +622,38 @@ public class AgentService : ApplicationService, IAgentService
         }
 
         return subAgentGrainIds;
+    }
+
+    public async Task DeleteAgentAsync(Guid guid)
+    {
+        var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
+        var agentState = await creatorAgent.GetAgentAsync();
+
+        EnsureUserAuthorized(agentState.UserId);
+
+        var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
+        var subAgentGrainIds = await agent.GetChildrenAsync();
+        if (!subAgentGrainIds.IsNullOrEmpty() &&
+            (subAgentGrainIds.Count > 1 || subAgentGrainIds[0] != creatorAgent.GetGrainId()))
+        {
+            _logger.LogInformation("Agent {agentId} has subagents, please remove them first.", guid);
+            throw new UserFriendlyException("Agent has subagents, please remove them first.");
+        }
+
+        var parentGrainId = await agent.GetParentAsync();
+        if (parentGrainId.IsDefault)
+        {
+            if (subAgentGrainIds.Any())
+            {
+                await agent.UnregisterAsync(creatorAgent);
+            }
+
+            await creatorAgent.DeleteAgentAsync();
+        }
+        else
+        {
+            _logger.LogInformation("Agent {agentId} has parent, please remove from it first.", guid);
+            throw new UserFriendlyException("Agent has parent, please remove from it first.");
+        }
     }
 }
