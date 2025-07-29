@@ -79,9 +79,45 @@ public abstract class AccountServiceTests<TStartupModule> : AevatarApplicationTe
         await Should.ThrowAsync<UserFriendlyException>(async ()=> await _accountService.SendRegisterCodeAsync(new SendRegisterCodeDto
         {
             Email = email,
-            AppName = "Aevatar",
-            //UserName = "Tester"
+            AppName = "Aevatar"
         }));
+    }
+
+    [Fact]
+    public async Task SendRegisterCode_WithLocalizedException_Test()
+    {
+        var email = "test@email.io";
+
+        // First register a user
+        await _accountService.SendRegisterCodeAsync(new SendRegisterCodeDto
+        {
+            Email = email,
+            AppName = "Aevatar"
+        });
+
+        var code = await _registerCode.GetAsync($"RegisterCode_{email.ToLower()}");
+        
+        var registerInput = new AevatarRegisterDto
+        {
+            AppName = "Aevatar",
+            Code = code,
+            Password = "Abc@123456",
+            EmailAddress = email,
+            UserName = "Tester"
+        };
+        
+        await _accountService.RegisterAsync(registerInput);
+        
+        // Now try to send register code again - should throw localized exception
+        var exception = await Should.ThrowAsync<UserFriendlyException>(async () => 
+            await _accountService.SendRegisterCodeAsync(new SendRegisterCodeDto
+            {
+                Email = email,
+                AppName = "Aevatar"
+            }));
+        
+        // Verify the exception message contains the email
+        exception.Message.ShouldContain(email);t
     }
 
     [Fact]
