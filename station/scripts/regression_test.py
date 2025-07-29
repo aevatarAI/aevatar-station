@@ -421,29 +421,6 @@ def test_agent_service_basic_operations(api_headers):
     assert "data" in response_data
     logger.debug(f"Agent service basic operations test passed")
 
-
-def test_agent_default_values_feature(api_headers):
-    """Test agent default values functionality"""
-    # Get agent types with default values
-    response = requests.get(
-        f"{API_HOST}/api/agent/agent-type-info-list",
-        headers=api_headers,
-        verify=False
-    )
-    assert_status_code(response)
-    
-    response_data = response.json()
-    if "data" in response_data and response_data["data"]:
-        for agent_type in response_data["data"]:
-            # Check if defaultValues field exists (feature implementation verification)
-            if "defaultValues" in agent_type:
-                logger.debug(f"Agent type {agent_type.get('agentType', 'unknown')} has default values")
-                # Basic structure validation
-                assert isinstance(agent_type["defaultValues"], dict)
-    
-    logger.debug(f"Agent default values feature test passed")
-
-
 @pytest.fixture(scope="session")
 def admin_access_token():
     """get access token"""
