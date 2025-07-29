@@ -40,7 +40,7 @@ public class WorkflowComposerEvent : StateLogEventBase<WorkflowComposerEvent>
 /// <summary>
 /// 工作流组合器GAgent接口
 /// </summary>
-public interface IWorkflowComposerGAgent : IAIGAgent, IGAgent, IGrainWithStringKey
+public interface IWorkflowComposerGAgent : IAIGAgent, IStateGAgent<WorkflowComposerState>
 {
     /// <summary>
     /// 根据用户目标生成完整的工作流JSON（接受新的AgentDescriptionInfo信息）
@@ -53,7 +53,7 @@ public interface IWorkflowComposerGAgent : IAIGAgent, IGAgent, IGrainWithStringK
 /// </summary>
 [GAgent("WorkflowComposer")]
 public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, WorkflowComposerEvent>,
-    IWorkflowComposerGAgent, IGrainWithStringKey
+    IWorkflowComposerGAgent
 {
     public WorkflowComposerGAgent()
     {

@@ -226,9 +226,9 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                 }
             }
             
-            // 2. 创建WorkflowComposerGAgent实例并传递丰富的描述信息
-            var instanceId = $"workflow-composer-{userId}-{DateTimeOffset.UtcNow.Ticks}";
-            var workflowComposerGAgent = _clusterClient.GetGrain<IWorkflowComposerGAgent>(instanceId);
+            // 2. 创建WorkflowComposerGAgent实例并传递丰富的描述信息，使用GUID主键
+            var instanceGuid = Guid.NewGuid(); // 使用GUID而不是字符串
+            var workflowComposerGAgent = _clusterClient.GetGrain<IWorkflowComposerGAgent>(instanceGuid);
             // 关键修复：AIGAgent需要先调用InitializeAsync()进行初始化
             await workflowComposerGAgent.InitializeAsync(new InitializeDto()
             {
@@ -238,7 +238,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             
             var result = await workflowComposerGAgent.GenerateWorkflowJsonAsync(userGoal, availableAgents);
             
-            _logger.LogInformation("WorkflowComposerGAgent instance {InstanceId} completed successfully for user {UserId}", instanceId, userId);
+            _logger.LogInformation("WorkflowComposerGAgent instance {InstanceGuid} completed successfully for user {UserId}", instanceGuid, userId);
             return result;
         }
         catch (Exception ex)
