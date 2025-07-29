@@ -17,6 +17,7 @@ using Orleans.Runtime;
 using JsonException = Newtonsoft.Json.JsonException;
 using JsonConvert = Newtonsoft.Json.JsonConvert;
 using Newtonsoft.Json.Linq;
+using Aevatar.Application.Grains.Agents.AI.AgentDescription;
 
 namespace Aevatar.Application.Service;
 
