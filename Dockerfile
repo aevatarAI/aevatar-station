@@ -1,4 +1,6 @@
 FROM mcr.microsoft.com/dotnet/sdk:9.0
 ARG servicename
+ARG ENABLE_EPHEMERAL_CONFIG
 WORKDIR /app
 COPY out/$servicename .
+ENV ENABLE_EPHEMERAL_CONFIG=${ENABLE_EPHEMERAL_CONFIG}
