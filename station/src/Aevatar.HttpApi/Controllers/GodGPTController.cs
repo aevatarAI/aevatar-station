@@ -12,6 +12,7 @@ using Aevatar.Application.Grains.Agents.ChatManager.Chat;
 using Aevatar.Application.Grains.Agents.ChatManager.Common;
 using Aevatar.Application.Grains.Agents.ChatManager.Dtos;
 using Aevatar.Application.Grains.ChatManager.Dtos;
+using Aevatar.Application.Grains.ChatManager.UserQuota;
 using Aevatar.BlobStorings;
 using Aevatar.Core.Abstractions;
 using Aevatar.Extensions;
@@ -378,6 +379,17 @@ public class GodGPTController : AevatarController
             currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
         return resultDto;
     }
+    
+    [HttpPost("godgpt/account/subscription")]
+    public async Task<GrainResultDto<List<SubscriptionInfoDto>>> UpdateUserSubscriptionAsync(UpdateUserSubscriptionsInput input)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var resultDto = await _godGptService.UpdateUserSubscriptionAsync(currentUserId, input);
+        _logger.LogDebug("[GodGPTController][UpdateUserSubscriptionAsync] userId: {0}, duration: {1}ms",
+            currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
+        return resultDto;
+    }
 
     [HttpPost("godgpt/share")]
     public async Task<CreateShareIdResponse> CreateShareStringAsync(CreateShareIdRequest request)
@@ -570,9 +582,8 @@ public class GodGPTController : AevatarController
             Reason = response.Message
         };
         
-        _logger.LogDebug("[GodGPTController][CanUploadImageAsync] userId: {0}, canUpload: {1}, duration: {2}ms",
-            currentUserId, result.CanUpload, stopwatch.ElapsedMilliseconds);
-            
+        _logger.LogDebug($"[GodGPTController][CanUploadImageAsync] userId: {currentUserId}, canUpload: {result.CanUpload}, duration: {stopwatch.ElapsedMilliseconds}ms");
+        
         return result;
     }
 
@@ -592,6 +603,13 @@ public class GodGPTController : AevatarController
         
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
+        
+        var response = await _godGptService.CanUploadImageAsync(currentUserId);
+        if (!response.Success)
+        {
+            _logger.LogDebug("[GodGPTController][BlobSaveAsync] Daily upload limit reached");
+            throw new UserFriendlyException("Daily upload limit reached. Upgrade to premium to continue.");
+        }
         
         var originalFileName = input.File.FileName;
         var fileExtension = Path.GetExtension(originalFileName);
@@ -613,17 +631,18 @@ public class GodGPTController : AevatarController
         var saveStopwatch = Stopwatch.StartNew();
         using (var originalStream = new MemoryStream(fileContent))
         {
-            await _blobContainer.SaveAsync(fileName, input.File.OpenReadStream(), true);
+            await _blobContainer.SaveAsync(fileName, originalStream, true);
         }
         saveStopwatch.Stop();
         _logger.LogDebug("[GodGPTController][BlobSaveAsync] Original file save completed: FileName={FileName}, Duration={SaveTime}ms",
             fileName, saveStopwatch.ElapsedMilliseconds);
 
         // Generate thumbnails using separate memory stream
-        using (var thumbnailStream = new MemoryStream(fileContent))
+        _ = Task.Run(async () =>
         {
-            var _ = _thumbnailService.GenerateThumbnailsAsync(thumbnailStream, fileName);
-        }
+            using var thumbnailStream = new MemoryStream(fileContent);
+            await _thumbnailService.GenerateThumbnailsAsync(thumbnailStream, fileName);
+        });
 
         _logger.LogDebug("[GodGPTController][BlobSaveAsync] userId: {0}, duration: {2}ms",
             currentUserId, stopwatch.ElapsedMilliseconds);

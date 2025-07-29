@@ -115,10 +115,30 @@ public class ThumbnailService : IThumbnailService, ITransientDependency
             // Calculate dimensions based on resize mode
             var (width, height) = CalculateDimensions(originalWidth, originalHeight, size);
             
-            // Skip if thumbnail would be larger than original
+            // If thumbnail would be larger than original, save original image directly
             if (width >= originalWidth && height >= originalHeight)
             {
-                return null;
+                long originalSize;
+                
+                using (var originalStream = new MemoryStream())
+                {
+                    var encoder = GetEncoder();
+                    await originalImage.SaveAsync(originalStream, encoder);
+                    
+                    originalSize = originalStream.Length;
+                    
+                    originalStream.Seek(0, SeekOrigin.Begin);
+                    await _blobContainer.SaveAsync(fileName, originalStream, true);
+                }
+                
+                return new ThumbnailInfo
+                {
+                    FileName = fileName,
+                    SizeName = size.GetSizeName(),
+                    Width = originalWidth,
+                    Height = originalHeight,
+                    FileSize = originalSize
+                };
             }
 
             int thumbnailWidth, thumbnailHeight;

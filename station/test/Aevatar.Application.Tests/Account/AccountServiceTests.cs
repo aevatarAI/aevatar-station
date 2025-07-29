@@ -35,7 +35,8 @@ public abstract class AccountServiceTests<TStartupModule> : AevatarApplicationTe
         await _accountService.SendRegisterCodeAsync(new SendRegisterCodeDto
         {
             Email = email,
-            AppName = "Aevatar"
+            AppName = "Aevatar",
+            //UserName = "Tester"
         });
 
         var code = await _registerCode.GetAsync($"RegisterCode_{email.ToLower()}");
@@ -116,7 +117,7 @@ public abstract class AccountServiceTests<TStartupModule> : AevatarApplicationTe
             }));
         
         // Verify the exception message contains the email
-        exception.Message.ShouldContain(email);
+        exception.Message.ShouldContain(email);t
     }
 
     [Fact]
