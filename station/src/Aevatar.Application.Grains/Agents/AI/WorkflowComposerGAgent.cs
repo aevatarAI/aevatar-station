@@ -3,6 +3,8 @@ using Aevatar.Domain.WorkflowOrchestration;
 using Aevatar.GAgents.AIGAgent.Agent;
 using Aevatar.GAgents.AIGAgent.State;
 using Aevatar.GAgents.AI.Common;
+using Aevatar.GAgents.AIGAgent.Dtos;
+using Aevatar.GAgents.AI.Options;
 using Microsoft.Extensions.Logging;
 using System.Text;
 using System.Reflection;
@@ -199,7 +201,21 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
     {
         try
         {
-            var chatResult = await ChatWithHistory(prompt);
+            // 修复ChatWithHistory调用，提供必要的参数
+            // 使用正确的类型来避免编译错误
+            var history = new List<ChatMessage>(); // 空聊天历史记录
+            ExecutionPromptSettings? promptSettings = null; // 使用默认设置
+            var cancellationToken = CancellationToken.None; // 默认取消令牌
+            AIChatContextDto? context = null; // 默认上下文
+            var imageKeys = new List<string>(); // 空图片列表
+            
+            var chatResult = await ChatWithHistory(
+                prompt, 
+                history, 
+                promptSettings, 
+                cancellationToken, 
+                context, 
+                imageKeys);
 
             if (chatResult == null || chatResult.Count == 0)
             {
