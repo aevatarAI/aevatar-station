@@ -302,10 +302,15 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
                     new[] { "Retry with a more specific goal", "Verify AI service is functioning", "Create workflow manually" });
             }
 
+            // 添加详细的调试日志记录AI返回的原始内容
+            Logger.LogDebug("AI raw response content: {RawResponse}", response);
+            Logger.LogDebug("AI response length: {Length} chars", response.Length);
+
             // Validate that the response contains required error handling fields
             if (!IsValidErrorHandlingResponse(response))
             {
-                Logger.LogWarning("AI response missing required error handling fields, wrapping response");
+                Logger.LogWarning("AI response missing required error handling fields, wrapping response. Raw content preview: {Preview}", 
+                    response.Length > 200 ? response.Substring(0, 200) + "..." : response);
                 return WrapLegacyResponse(response);
             }
 
@@ -328,12 +333,24 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
         try
         {
             var json = JObject.Parse(response);
-            return json.ContainsKey("generationStatus") && 
-                   json.ContainsKey("clarityScore") && 
-                   json.ContainsKey("errorInfo");
+            var hasGenerationStatus = json.ContainsKey("generationStatus");
+            var hasClarityScore = json.ContainsKey("clarityScore");
+            var hasErrorInfo = json.ContainsKey("errorInfo");
+            
+            Logger.LogDebug("AI response validation - generationStatus: {HasGenerationStatus}, clarityScore: {HasClarityScore}, errorInfo: {HasErrorInfo}", 
+                hasGenerationStatus, hasClarityScore, hasErrorInfo);
+            
+            if (!hasGenerationStatus || !hasClarityScore || !hasErrorInfo)
+            {
+                Logger.LogDebug("Missing required fields. Response top-level keys: {Keys}", 
+                    string.Join(", ", json.Properties().Select(p => p.Name)));
+            }
+            
+            return hasGenerationStatus && hasClarityScore && hasErrorInfo;
         }
-        catch (JsonReaderException)
+        catch (JsonReaderException ex)
         {
+            Logger.LogWarning(ex, "Failed to parse AI response for validation: {JsonError}", ex.Message);
             return false;
         }
     }
@@ -361,8 +378,14 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
 
             return enhancedResponse.ToString();
         }
-        catch (JsonReaderException)
+        catch (JsonReaderException ex)
         {
+            // 详细记录JSON解析失败的信息
+            Logger.LogError(ex, "Failed to parse AI response as JSON. Error: {JsonError}", ex.Message);
+            Logger.LogError("Invalid JSON content (first 500 chars): {InvalidContent}", 
+                legacyResponse.Length > 500 ? legacyResponse.Substring(0, 500) + "..." : legacyResponse);
+            Logger.LogError("Full invalid JSON response length: {Length}", legacyResponse.Length);
+            
             // If legacy response is not valid JSON, treat as system error
             return GetFallbackWorkflowJson("system_error", "AI returned invalid JSON format",
                 new[] { "Retry workflow generation", "Simplify your goal description", "Use manual workflow creation" });
