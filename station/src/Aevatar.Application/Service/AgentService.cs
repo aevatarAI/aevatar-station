@@ -187,7 +187,7 @@ public class AgentService : ApplicationService, IAgentService
                     paramDto.PropertyJsonSchema =
                         _schemaProvider.GetTypeSchema(kvp.Value.InitializationData.DtoType).ToJson();
 
-                    // 获取默认值
+                    // Get default values
                     paramDto.DefaultValues =
                         await GetConfigurationDefaultValuesAsync(kvp.Value.InitializationData.DtoType);
                 }
@@ -200,7 +200,7 @@ public class AgentService : ApplicationService, IAgentService
     }
 
     /// <summary>
-    /// 获取配置类的默认值（返回列表格式，为支持默认值列表功能做准备）
+    /// Gets default values of configuration class properties (returns in list format to prepare for default value list functionality)
     /// </summary>
     private async Task<Dictionary<string, object?>> GetConfigurationDefaultValuesAsync(Type configurationType)
     {
@@ -208,7 +208,7 @@ public class AgentService : ApplicationService, IAgentService
 
         try
         {
-            // 创建配置实例获取默认值
+            // Create configuration instance to get default values
             var instance = Activator.CreateInstance(configurationType);
             if (instance != null)
             {
@@ -224,16 +224,16 @@ public class AgentService : ApplicationService, IAgentService
                     {
                         var value = property.GetValue(instance);
 
-                        // 将所有默认值都转换为列表格式
+                        // Convert all default values to list format
                         
                         if (value == null)
                         {
-                            // null值转换为空列表
+                            // Convert null values to empty list
                             defaultValues[propertyName] = new List<object>();
                         }
                         else
                         {
-                            // 非null值转换为包含单个元素的列表
+                            // Convert non-null values to single-item list
                             defaultValues[propertyName] = new List<object> { value };
                         }
                     }
@@ -242,7 +242,7 @@ public class AgentService : ApplicationService, IAgentService
                         _logger.LogWarning(ex,
                             "Failed to get default value for property {PropertyName} in {ConfigType}",
                             property.Name, configurationType.Name);
-                        // 异常情况也返回空列表
+                        // Return empty list for exception cases
                         defaultValues[propertyName] = new List<object>();
                     }
                 }
