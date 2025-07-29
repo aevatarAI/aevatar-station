@@ -169,9 +169,5 @@ public static class SecureConfigurationExtensions
         var enableEphemeralConfig = Environment.GetEnvironmentVariable("ENABLE_EPHEMERAL_CONFIG");
         return string.Equals(enableEphemeralConfig, "true", StringComparison.OrdinalIgnoreCase);
     }
-
-    public static object AddAevatarSecureConfiguration(this IConfigurationBuilder builder)
-    {
-        throw new NotImplementedException();
-    }
+    
 }
