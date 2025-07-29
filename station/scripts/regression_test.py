@@ -145,7 +145,22 @@ def test_agent_operations(api_headers, test_agent):
         verify=False
     )
     assert_status_code(response)
-    agent_ids = [agent["id"] for agent in response.json()["data"]]
+    
+    # Add defensive programming to handle potential None response
+    response_data = response.json()
+    logger.debug(f"Agent list response: {response_data}")
+    
+    if "data" not in response_data:
+        pytest.fail(f"Response does not contain 'data' field: {response_data}")
+    
+    data = response_data["data"]
+    if data is None:
+        pytest.fail(f"Response data field is None: {response_data}")
+    
+    if not isinstance(data, (list, tuple)):
+        pytest.fail(f"Response data is not iterable, got type {type(data)}: {data}")
+    
+    agent_ids = [agent["id"] for agent in data]
     assert test_agent in agent_ids
 
 
@@ -241,9 +256,36 @@ def test_event_operations(api_headers, test_agent):
         verify=False
     )
     assert_status_code(response)
-    assert any(et["eventType"] == EVENT_TYPE for et in response.json()["data"])
-    event = [et for et in response.json()["data"] if et["eventType"] == EVENT_TYPE][0]
-    assert any(property["name"] == EVENT_PARAM for property in event["eventProperties"])
+    
+    # Add defensive programming to handle potential None response
+    response_data = response.json()
+    logger.debug(f"Available events response: {response_data}")
+    
+    if "data" not in response_data:
+        pytest.fail(f"Response does not contain 'data' field: {response_data}")
+    
+    data = response_data["data"]
+    if data is None:
+        pytest.fail(f"Response data field is None: {response_data}")
+    
+    if not isinstance(data, (list, tuple)):
+        pytest.fail(f"Response data is not iterable, got type {type(data)}: {data}")
+    
+    assert any(et["eventType"] == EVENT_TYPE for et in data)
+    event = [et for et in data if et["eventType"] == EVENT_TYPE][0]
+    
+    # Check event properties exist and are iterable
+    if "eventProperties" not in event:
+        pytest.fail(f"Event does not contain 'eventProperties' field: {event}")
+    
+    event_properties = event["eventProperties"]
+    if event_properties is None:
+        pytest.fail(f"Event properties field is None: {event}")
+    
+    if not isinstance(event_properties, (list, tuple)):
+        pytest.fail(f"Event properties is not iterable, got type {type(event_properties)}: {event_properties}")
+    
+    assert any(property["name"] == EVENT_PARAM for property in event_properties)
 
     name = "test name"
     # publish event
@@ -337,7 +379,22 @@ def test_query_agent_list(api_headers, test_agent):
         verify=False
     )
     assert_status_code(response)
-    assert any(at["agentType"] == TEST_AGENT for at in response.json()["data"])
+    
+    # Add defensive programming to handle potential None response
+    response_data = response.json()
+    logger.debug(f"Agent type list response: {response_data}")
+    
+    if "data" not in response_data:
+        pytest.fail(f"Response does not contain 'data' field: {response_data}")
+    
+    data = response_data["data"]
+    if data is None:
+        pytest.fail(f"Response data field is None: {response_data}")
+    
+    if not isinstance(data, (list, tuple)):
+        pytest.fail(f"Response data is not iterable, got type {type(data)}: {data}")
+    
+    assert any(at["agentType"] == TEST_AGENT for at in data)
 
 
 @pytest.fixture(scope="session")
@@ -479,3 +536,4 @@ def test_permission(api_headers, api_admin_headers):
     
     assert_status_code(response)
     assert response.json()["data"]["count"] > 0
+

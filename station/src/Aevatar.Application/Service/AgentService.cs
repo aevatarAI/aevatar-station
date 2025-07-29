@@ -270,20 +270,31 @@ public class AgentService : ApplicationService, IAgentService
         return resp;
     }
 
-    public async Task<List<AgentInstanceDto>> GetAllAgentInstances(int pageIndex, int pageSize)
+    public async Task<List<AgentInstanceDto>> GetAllAgentInstances(GetAllAgentInstancesQueryDto queryDto)
     {
         var result = new List<AgentInstanceDto>();
         var currentUserId = _userAppService.GetCurrentUserId();
+        
+        // Build query conditions
+        var queryString = "userId.keyword:" + currentUserId;
+        
+        // Add agentType fuzzy query condition
+        if (!string.IsNullOrWhiteSpace(queryDto.AgentType))
+        {
+            // Use fuzzy query with ~ operator for better matching
+            queryString += " AND agentType:(" + queryDto.AgentType + "~ OR " + queryDto.AgentType + "*)";
+        }
+        
         PagedResultDto<Dictionary<string, object>> response;
         try
         {
             response =
                 await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
                 {
-                    QueryString = "userId.keyword:" + currentUserId,
+                    QueryString = queryString,
                     StateName = nameof(CreatorGAgentState),
-                    PageSize = pageSize,
-                    PageIndex = pageIndex
+                    PageSize = queryDto.PageSize,
+                    PageIndex = queryDto.PageIndex
                 });
         }
         catch (UserFriendlyException e)
