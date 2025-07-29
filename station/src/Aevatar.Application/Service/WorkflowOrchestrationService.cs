@@ -104,6 +104,16 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             
             _logger.LogInformation("Found {TypeCount} valid agent types to process", validAgentTypes.Count);
             
+            // 添加详细的调试日志
+            _logger.LogInformation("=== Agent Collection Debug Info ===");
+            _logger.LogInformation("Total available types: {TotalCount}", availableTypes.Count());
+            _logger.LogInformation("Valid agent types after filtering:");
+            foreach (var type in validAgentTypes)
+            {
+                _logger.LogInformation("  - {TypeName} (Namespace: {Namespace})", type.FullName, type.Namespace);
+            }
+            _logger.LogInformation("===================================");
+            
             var agentDescriptions = new List<AgentDescriptionInfo>();
             
             foreach (var agentType in validAgentTypes)
@@ -122,16 +132,21 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                     // 调用新的JSON格式GetDescriptionAsync
                     var jsonDescription = await agent.GetDescriptionAsync();
                     
+                    _logger.LogDebug("Agent {AgentType} returned description: {Description}", 
+                        agentType.Name, jsonDescription);
+                    
                     // 尝试反序列化为AgentDescriptionInfo
                     AgentDescriptionInfo? agentInfo = null;
                     try
                     {
                         agentInfo = JsonConvert.DeserializeObject<AgentDescriptionInfo>(jsonDescription);
+                        _logger.LogDebug("Successfully deserialized agent {AgentType} description", agentType.Name);
                     }
-                    catch (JsonException)
+                    catch (JsonException ex)
                     {
                         // 向后兼容：如果JSON反序列化失败，创建基本的AgentDescriptionInfo
-                        _logger.LogDebug("Agent {AgentType} returned legacy text description, creating basic AgentDescriptionInfo", agentType.Name);
+                        _logger.LogDebug("Agent {AgentType} returned legacy text description, creating basic AgentDescriptionInfo. JSON error: {Error}", 
+                            agentType.Name, ex.Message);
                         agentInfo = new AgentDescriptionInfo
                         {
                             Id = agentType.FullName ?? agentType.Name,
@@ -164,6 +179,23 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             }
             
             _logger.LogInformation("Successfully retrieved {AgentCount} agent descriptions using new JSON method", agentDescriptions.Count);
+            
+            // 添加最终结果的详细日志
+            _logger.LogInformation("=== Final Agent Collection Results ===");
+            if (agentDescriptions.Any())
+            {
+                foreach (var agent in agentDescriptions)
+                {
+                    _logger.LogInformation("  Final Agent: {AgentName} (ID: {AgentId}, Category: {Category})", 
+                        agent.Name, agent.Id, agent.Category);
+                }
+            }
+            else
+            {
+                _logger.LogWarning("No agent descriptions were successfully collected!");
+            }
+            _logger.LogInformation("======================================");
+            
             return agentDescriptions;
         }
         catch (Exception ex)
