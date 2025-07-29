@@ -426,6 +426,9 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             _logger.LogInformation("Successfully parsed and mapped workflow JSON to view config with {NodeCount} nodes and {ConnectionCount} connections", 
                 workflowConfig.Properties.WorkflowNodeList.Count, workflowConfig.Properties.WorkflowNodeUnitList.Count);
 
+            // Apply intelligent layout algorithm after parsing
+            ApplyIntelligentLayout(workflowConfig.Properties);
+
             return workflowConfig;
         }
         catch (JsonException ex)
@@ -468,6 +471,219 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         }
 
         return cleaned.Trim();
+    }
+
+    /// <summary>
+    /// 应用智能布局算法，根据节点连接关系自动计算坐标
+    /// </summary>
+    private void ApplyIntelligentLayout(WorkflowPropertiesDto properties)
+    {
+        try
+        {
+            if (properties.WorkflowNodeList == null || properties.WorkflowNodeList.Count == 0)
+            {
+                _logger.LogWarning("No nodes to layout");
+                return;
+            }
+
+            _logger.LogDebug("Applying intelligent layout to {NodeCount} nodes with {ConnectionCount} connections",
+                properties.WorkflowNodeList.Count, properties.WorkflowNodeUnitList?.Count ?? 0);
+
+            // 布局配置
+            const int nodeWidth = 150;
+            const int nodeHeight = 80;
+            const int horizontalSpacing = 200;
+            const int verticalSpacing = 120;
+            const int startX = 100;
+            const int startY = 100;
+
+            // 构建节点连接关系图
+            var nodeConnections = BuildNodeConnectionGraph(properties);
+
+            // 计算节点层级
+            var nodeLayers = CalculateNodeLayers(properties.WorkflowNodeList, nodeConnections);
+
+            // 应用层次布局
+            ApplyLayerLayout(properties.WorkflowNodeList, nodeLayers, 
+                startX, startY, horizontalSpacing, verticalSpacing);
+
+            _logger.LogInformation("Successfully applied intelligent layout. Nodes arranged in {LayerCount} layers",
+                nodeLayers.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error applying intelligent layout, falling back to simple grid layout");
+            ApplySimpleGridLayout(properties.WorkflowNodeList);
+        }
+    }
+
+    /// <summary>
+    /// 构建节点连接关系图
+    /// </summary>
+    private Dictionary<string, List<string>> BuildNodeConnectionGraph(WorkflowPropertiesDto properties)
+    {
+        var connections = new Dictionary<string, List<string>>();
+        
+        // 初始化所有节点
+        foreach (var node in properties.WorkflowNodeList)
+        {
+            connections[node.NodeId] = new List<string>();
+        }
+
+        // 添加连接关系
+        foreach (var connection in properties.WorkflowNodeUnitList ?? new List<WorkflowNodeUnitDto>())
+        {
+            if (!string.IsNullOrEmpty(connection.NodeId) && !string.IsNullOrEmpty(connection.NextNodeId))
+            {
+                if (connections.ContainsKey(connection.NodeId))
+                {
+                    connections[connection.NodeId].Add(connection.NextNodeId);
+                }
+            }
+        }
+
+        _logger.LogDebug("Built connection graph with {NodeCount} nodes", connections.Count);
+        return connections;
+    }
+
+    /// <summary>
+    /// 计算节点层级（拓扑排序）
+    /// </summary>
+    private List<List<string>> CalculateNodeLayers(List<WorkflowNodeDto> nodes, 
+        Dictionary<string, List<string>> connections)
+    {
+        var layers = new List<List<string>>();
+        var remainingNodes = new HashSet<string>(nodes.Select(n => n.NodeId));
+        var inDegree = new Dictionary<string, int>();
+
+        // 计算每个节点的入度
+        foreach (var nodeId in remainingNodes)
+        {
+            inDegree[nodeId] = 0;
+        }
+
+        foreach (var connection in connections)
+        {
+            foreach (var targetNodeId in connection.Value)
+            {
+                if (inDegree.ContainsKey(targetNodeId))
+                {
+                    inDegree[targetNodeId]++;
+                }
+            }
+        }
+
+        // 分层处理
+        while (remainingNodes.Count > 0)
+        {
+            // 找到当前层的节点（入度为0的节点）
+            var currentLayer = remainingNodes.Where(nodeId => inDegree[nodeId] == 0).ToList();
+            
+            if (currentLayer.Count == 0)
+            {
+                // 如果没有入度为0的节点，说明有循环依赖，将剩余节点放到一层
+                _logger.LogWarning("Detected circular dependencies in workflow, placing remaining nodes in single layer");
+                currentLayer = remainingNodes.ToList();
+            }
+
+            layers.Add(currentLayer);
+
+            // 从剩余节点中移除当前层节点
+            foreach (var nodeId in currentLayer)
+            {
+                remainingNodes.Remove(nodeId);
+                
+                // 更新连接到的节点的入度
+                foreach (var targetNodeId in connections[nodeId])
+                {
+                    if (inDegree.ContainsKey(targetNodeId))
+                    {
+                        inDegree[targetNodeId]--;
+                    }
+                }
+            }
+        }
+
+        _logger.LogDebug("Calculated {LayerCount} layers: {LayerSizes}", 
+            layers.Count, string.Join(", ", layers.Select(l => l.Count)));
+
+        return layers;
+    }
+
+    /// <summary>
+    /// 应用层次布局
+    /// </summary>
+    private void ApplyLayerLayout(List<WorkflowNodeDto> nodes, List<List<string>> layers,
+        int startX, int startY, int horizontalSpacing, int verticalSpacing)
+    {
+        var nodePositions = new Dictionary<string, (int x, int y)>();
+
+        for (int layerIndex = 0; layerIndex < layers.Count; layerIndex++)
+        {
+            var layer = layers[layerIndex];
+            var layerY = startY + layerIndex * verticalSpacing;
+
+            // 计算这一层的起始X坐标（居中对齐）
+            var layerStartX = startX;
+            if (layer.Count > 1)
+            {
+                var totalLayerWidth = (layer.Count - 1) * horizontalSpacing;
+                layerStartX = startX - totalLayerWidth / 2;
+            }
+
+            for (int nodeIndex = 0; nodeIndex < layer.Count; nodeIndex++)
+            {
+                var nodeId = layer[nodeIndex];
+                var nodeX = layerStartX + nodeIndex * horizontalSpacing;
+                
+                nodePositions[nodeId] = (nodeX, layerY);
+                
+                _logger.LogDebug("Layer {LayerIndex}, Node {NodeId}: ({X}, {Y})", 
+                    layerIndex, nodeId, nodeX, layerY);
+            }
+        }
+
+        // 应用坐标到节点
+        foreach (var node in nodes)
+        {
+            if (nodePositions.ContainsKey(node.NodeId))
+            {
+                var (x, y) = nodePositions[node.NodeId];
+                node.ExtendedData.XPosition = x.ToString();
+                node.ExtendedData.YPosition = y.ToString();
+                
+                _logger.LogDebug("Applied position to node {NodeId} ({Name}): ({X}, {Y})", 
+                    node.NodeId, node.Name, x, y);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 简单网格布局（备用方案）
+    /// </summary>
+    private void ApplySimpleGridLayout(List<WorkflowNodeDto> nodes)
+    {
+        _logger.LogInformation("Applying simple grid layout to {NodeCount} nodes", nodes.Count);
+
+        const int horizontalSpacing = 200;
+        const int verticalSpacing = 120;
+        const int startX = 100;
+        const int startY = 100;
+        const int nodesPerRow = 3;
+
+        for (int i = 0; i < nodes.Count; i++)
+        {
+            var row = i / nodesPerRow;
+            var col = i % nodesPerRow;
+            
+            var x = startX + col * horizontalSpacing;
+            var y = startY + row * verticalSpacing;
+            
+            nodes[i].ExtendedData.XPosition = x.ToString();
+            nodes[i].ExtendedData.YPosition = y.ToString();
+            
+            _logger.LogDebug("Grid position for node {NodeId}: ({X}, {Y})", nodes[i].NodeId, x, y);
+        }
     }
 
     #endregion
