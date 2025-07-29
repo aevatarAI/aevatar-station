@@ -202,21 +202,8 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
     {
         try
         {
-            // 修复ChatWithHistory调用，提供必要的参数
-            // 使用正确的类型来避免编译错误
-            var history = new List<ChatMessage>(); // 空聊天历史记录
-            ExecutionPromptSettings? promptSettings = null; // 使用默认设置
-            var cancellationToken = CancellationToken.None; // 默认取消令牌
-            AIChatContextDto? context = null; // 默认上下文
-            var imageKeys = new List<string>(); // 空图片列表
             
-            var chatResult = await ChatWithHistory(
-                prompt, 
-                history, 
-                promptSettings, 
-                cancellationToken, 
-                context, 
-                imageKeys);
+            var chatResult = await ChatWithHistory(prompt);
 
             if (chatResult == null || chatResult.Count == 0)
             {
@@ -263,7 +250,9 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
     {
         try
         {
-            var json = JObject.Parse(response);
+            // 先清理JSON内容，移除markdown代码块标记
+            var cleanedResponse = CleanJsonContent(response);
+            var json = JObject.Parse(cleanedResponse);
             var hasGenerationStatus = json.ContainsKey("generationStatus");
             var hasClarityScore = json.ContainsKey("clarityScore");
             var hasErrorInfo = json.ContainsKey("errorInfo");
@@ -293,7 +282,9 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
     {
         try
         {
-            var legacyJson = JObject.Parse(legacyResponse);
+            // 先清理JSON内容，移除markdown代码块标记
+            var cleanedResponse = CleanJsonContent(legacyResponse);
+            var legacyJson = JObject.Parse(cleanedResponse);
             
             // Create enhanced response with error handling fields
             var enhancedResponse = new JObject
@@ -374,5 +365,33 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
         };
 
         return fallbackJson.ToString();
+    }
+
+    /// <summary>
+    /// 清理JSON内容（移除markdown标记等）
+    /// </summary>
+    private string CleanJsonContent(string jsonContent)
+    {
+        if (string.IsNullOrWhiteSpace(jsonContent))
+            return string.Empty;
+
+        var cleaned = jsonContent.Trim();
+
+        // 移除markdown代码块标记
+        if (cleaned.StartsWith("```json"))
+        {
+            cleaned = cleaned.Substring(7);
+        }
+        else if (cleaned.StartsWith("```"))
+        {
+            cleaned = cleaned.Substring(3);
+        }
+
+        if (cleaned.EndsWith("```"))
+        {
+            cleaned = cleaned.Substring(0, cleaned.Length - 3);
+        }
+
+        return cleaned.Trim();
     }
 } 
