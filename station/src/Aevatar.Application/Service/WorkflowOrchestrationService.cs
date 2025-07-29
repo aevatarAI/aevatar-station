@@ -249,7 +249,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     /// </summary>
     /// <param name="jsonContent">JSON content from WorkflowComposerGAgent</param>
     /// <returns>Parsed WorkflowViewConfigDto</returns>
-    public async Task<WorkflowViewConfigDto?> ParseWorkflowJsonToViewConfigAsync(string jsonContent)
+    private async Task<WorkflowViewConfigDto?> ParseWorkflowJsonToViewConfigAsync(string jsonContent)
     {
         try
         {
