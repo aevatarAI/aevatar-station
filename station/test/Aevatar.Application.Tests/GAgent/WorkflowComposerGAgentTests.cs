@@ -56,7 +56,7 @@ public class WorkflowComposerGAgentTests : AevatarApplicationGrainsTestBase
     public async Task GenerateWorkflowJsonAsync_ShouldReturnValidWorkflow()
     {
         // Arrange
-        var workflowComposer = _clusterClient.GetGrain<IWorkflowComposerGAgent>("test-workflow-composer");
+        var workflowComposer = _clusterClient.GetGrain<IWorkflowComposerGAgent>(Guid.NewGuid());
         var userGoal = "创建一个简单的数据处理工作流";
         var availableAgents = CreateMockAgentList();
 
@@ -77,7 +77,7 @@ public class WorkflowComposerGAgentTests : AevatarApplicationGrainsTestBase
     public async Task GetDescriptionAsync_ShouldReturnDescription()
     {
         // Arrange
-        var workflowComposer = _clusterClient.GetGrain<IWorkflowComposerGAgent>("test-workflow-composer-desc");
+        var workflowComposer = _clusterClient.GetGrain<IWorkflowComposerGAgent>(Guid.NewGuid());
 
         // Act
         var description = await workflowComposer.GetDescriptionAsync();
@@ -92,7 +92,7 @@ public class WorkflowComposerGAgentTests : AevatarApplicationGrainsTestBase
     public async Task AgentDiscovery_ShouldFindGAgentTypes()
     {
         // Arrange
-        var workflowComposer = _clusterClient.GetGrain<IWorkflowComposerGAgent>("test-agent-discovery");
+        var workflowComposer = _clusterClient.GetGrain<IWorkflowComposerGAgent>(Guid.NewGuid());
         var availableAgents = CreateMockAgentList();
         
         // Act

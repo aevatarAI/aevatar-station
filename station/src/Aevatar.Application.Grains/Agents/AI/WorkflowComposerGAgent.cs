@@ -15,6 +15,7 @@ using Orleans.Runtime;
 using Orleans.Metadata;
 using Newtonsoft.Json;
 using System.Security.Cryptography;
+using Newtonsoft.Json.Linq;
 
 namespace Aevatar.Application.Grains.Agents.AI;
 
@@ -39,7 +40,7 @@ public class WorkflowComposerEvent : StateLogEventBase<WorkflowComposerEvent>
 /// <summary>
 /// 工作流组合器GAgent接口
 /// </summary>
-public interface IWorkflowComposerGAgent : IAIGAgent, IGAgent, IGrainWithStringKey
+public interface IWorkflowComposerGAgent : IAIGAgent, IStateGAgent<WorkflowComposerState>
 {
     /// <summary>
     /// 根据用户目标生成完整的工作流JSON（接受新的AgentDescriptionInfo信息）
@@ -51,8 +52,8 @@ public interface IWorkflowComposerGAgent : IAIGAgent, IGAgent, IGrainWithStringK
 /// 工作流组合器GAgent - 精简的AI工作流生成器（接受AgentDescriptionInfo信息）
 /// </summary>
 [GAgent("WorkflowComposer")]
-public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, WorkflowComposerEvent>, 
-    IWorkflowComposerGAgent, IGrainWithStringKey
+public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, WorkflowComposerEvent>,
+    IWorkflowComposerGAgent
 {
     public WorkflowComposerGAgent()
     {
@@ -220,14 +221,28 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
             if (chatResult == null || chatResult.Count == 0)
             {
                 Logger.LogWarning("AI returned empty response for workflow generation");
-                return GetFallbackWorkflowJson();
+                return GetFallbackWorkflowJson("system_error", "AI service returned empty response", 
+                    new[] { "Retry the workflow generation", "Check AI service availability", "Use manual workflow creation" });
             }
 
             var response = chatResult[0].Content;
             if (string.IsNullOrWhiteSpace(response))
             {
                 Logger.LogWarning("AI returned empty content for workflow generation");
-                return GetFallbackWorkflowJson();
+                return GetFallbackWorkflowJson("system_error", "AI service returned empty content",
+                    new[] { "Retry with a more specific goal", "Verify AI service is functioning", "Create workflow manually" });
+            }
+
+            // 添加详细的调试日志记录AI返回的原始内容
+            Logger.LogDebug("AI raw response content: {RawResponse}", response);
+            Logger.LogDebug("AI response length: {Length} chars", response.Length);
+
+            // Validate that the response contains required error handling fields
+            if (!IsValidErrorHandlingResponse(response))
+            {
+                Logger.LogWarning("AI response missing required error handling fields, wrapping response. Raw content preview: {Preview}", 
+                    response.Length > 200 ? response.Substring(0, 200) + "..." : response);
+                return WrapLegacyResponse(response);
             }
 
             Logger.LogDebug("AI successfully generated workflow with response length: {Length}", response.Length);
@@ -236,34 +251,128 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error calling AI for workflow generation");
-            return GetFallbackWorkflowJson();
+            return GetFallbackWorkflowJson("system_error", $"AI service error: {ex.Message}",
+                new[] { "Check system logs for details", "Retry after a few minutes", "Contact system administrator if problem persists" });
+        }
+    }
+
+    /// <summary>
+    /// 验证AI响应是否包含必需的错误处理字段
+    /// </summary>
+    private bool IsValidErrorHandlingResponse(string response)
+    {
+        try
+        {
+            var json = JObject.Parse(response);
+            var hasGenerationStatus = json.ContainsKey("generationStatus");
+            var hasClarityScore = json.ContainsKey("clarityScore");
+            var hasErrorInfo = json.ContainsKey("errorInfo");
+            
+            Logger.LogDebug("AI response validation - generationStatus: {HasGenerationStatus}, clarityScore: {HasClarityScore}, errorInfo: {HasErrorInfo}", 
+                hasGenerationStatus, hasClarityScore, hasErrorInfo);
+            
+            if (!hasGenerationStatus || !hasClarityScore || !hasErrorInfo)
+            {
+                Logger.LogDebug("Missing required fields. Response top-level keys: {Keys}", 
+                    string.Join(", ", json.Properties().Select(p => p.Name)));
+            }
+            
+            return hasGenerationStatus && hasClarityScore && hasErrorInfo;
+        }
+        catch (JsonReaderException ex)
+        {
+            Logger.LogWarning(ex, "Failed to parse AI response for validation: {JsonError}", ex.Message);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 包装旧版本AI响应，添加错误处理字段
+    /// </summary>
+    private string WrapLegacyResponse(string legacyResponse)
+    {
+        try
+        {
+            var legacyJson = JObject.Parse(legacyResponse);
+            
+            // Create enhanced response with error handling fields
+            var enhancedResponse = new JObject
+            {
+                ["generationStatus"] = "success",
+                ["clarityScore"] = 4, // Assume good clarity if AI generated a response
+                ["name"] = legacyJson["name"] ?? "Generated Workflow",
+                ["properties"] = legacyJson["properties"] ?? new JObject(),
+                ["errorInfo"] = null, // No errors for successful legacy response
+                ["completionPercentage"] = 100,
+                ["completionGuidance"] = null
+            };
+
+            return enhancedResponse.ToString();
+        }
+        catch (JsonReaderException ex)
+        {
+            // 详细记录JSON解析失败的信息
+            Logger.LogError(ex, "Failed to parse AI response as JSON. Error: {JsonError}", ex.Message);
+            Logger.LogError("Invalid JSON content (first 500 chars): {InvalidContent}", 
+                legacyResponse.Length > 500 ? legacyResponse.Substring(0, 500) + "..." : legacyResponse);
+            Logger.LogError("Full invalid JSON response length: {Length}", legacyResponse.Length);
+            
+            // If legacy response is not valid JSON, treat as system error
+            return GetFallbackWorkflowJson("system_error", "AI returned invalid JSON format",
+                new[] { "Retry workflow generation", "Simplify your goal description", "Use manual workflow creation" });
         }
     }
 
     /// <summary>
     /// 获取回退工作流JSON（当AI生成失败时使用）
     /// </summary>
-    private string GetFallbackWorkflowJson()
+    private string GetFallbackWorkflowJson(string errorType = "system_error", string errorMessage = "AI service unavailable", string[] actionableSteps = null)
     {
-        return @"{
-  ""name"": ""Fallback Workflow"",
-  ""properties"": {
-    ""name"": ""Fallback Workflow"",
-    ""workflowNodeList"": [
-      {
-        ""nodeId"": ""fallback-node-1"",
-        ""nodeName"": ""Default Processing Node"",
-        ""nodeType"": ""DefaultAgent"",
-        ""extendedData"": {
-          ""description"": ""Default processing node when workflow generation fails""
-        },
-        ""properties"": {
-          ""message"": ""This is a fallback workflow generated when AI service is unavailable""
-        }
-      }
-    ],
-    ""workflowNodeUnitList"": []
-  }
-}";
+        var fallbackJson = new JObject
+        {
+            ["generationStatus"] = "system_fallback",
+            ["clarityScore"] = 0, // Cannot assess clarity in fallback mode
+            ["name"] = "Fallback Workflow",
+            ["properties"] = new JObject
+            {
+                ["name"] = "Fallback Workflow",
+                ["workflowNodeList"] = new JArray
+                {
+                    new JObject
+                    {
+                        ["nodeId"] = "fallback-node-1",
+                        ["nodeName"] = "Manual Creation Node",
+                        ["nodeType"] = "ManualAgent",
+                        ["extendedData"] = new JObject
+                        {
+                            ["description"] = "Manual processing node - workflow generation failed"
+                        },
+                        ["properties"] = new JObject
+                        {
+                            ["message"] = errorMessage,
+                            ["errorType"] = errorType,
+                            ["actionRequired"] = true
+                        }
+                    }
+                },
+                ["workflowNodeUnitList"] = new JArray()
+            },
+            ["errorInfo"] = new JObject
+            {
+                ["errorType"] = errorType,
+                ["errorMessage"] = errorMessage,
+                ["timestamp"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                ["actionableSteps"] = actionableSteps != null ? new JArray(actionableSteps) : new JArray(
+                    "Review the user goal for clarity",
+                    "Check AI service availability", 
+                    "Try again with a simpler request",
+                    "Contact support if the issue persists"
+                )
+            },
+            ["completionPercentage"] = 0,
+            ["completionGuidance"] = "Please review the error information and take the suggested actions to resolve the issue."
+        };
+
+        return fallbackJson.ToString();
     }
 } 
