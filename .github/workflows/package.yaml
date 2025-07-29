@@ -136,3 +136,13 @@ jobs:
             -d ''
 
           echo "Docker image updated successfully."
+
+          echo "Calling UpdateDockerImage with version=user for hostType=${{ env.hostType }} with imageName=${{ steps.meta.outputs.tags }}"
+
+          curl -X 'POST' "https://station-dev-staging.aevatar.ai/api/users/updateDockerImage?hostType=${{ env.hostType }}&imageName=$(echo '${{ steps.meta.outputs.tags }}' | sed 's/:/%3A/g')&version=user" \
+            -H "accept: */*" \
+            -H "Authorization: Bearer ${{ env.access_token }}" \
+            -H "X-Requested-With: XMLHttpRequest" \
+            -d ''
+
+          echo "Docker image updated successfully with version=user."
