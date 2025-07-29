@@ -9,6 +9,7 @@ using Aevatar.Silo.IdGeneration;
 using Aevatar.Silo.TypeDiscovery;
 using Aevatar.PermissionManagement;
 using Aevatar.Plugins;
+using Aevatar.Silo.Extensions;
 using Microsoft.Extensions.Configuration;
 using Serilog;
 using Volo.Abp.AspNetCore.Serilog;
@@ -61,12 +62,18 @@ public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
                 var configSection = configuration.GetSection("AwsS3");
                 container.UseAws(o =>
                 {
-                    o.AccessKeyId = configSection.GetValue<string>("AccessKeyId");
-                    o.SecretAccessKey = configSection.GetValue<string>("SecretAccessKey");
-                    o.Region = configSection.GetValue<string>("Region");
-                    o.ContainerName = configSection.GetValue<string>("ContainerName");
+                    o.AccessKeyId = configSection.GetValue<string>("AccessKeyId", "None");
+                    o.SecretAccessKey = configSection.GetValue<string>("SecretAccessKey", "None");
+                    o.Region = configSection.GetValue<string>("Region", "None");
+                    o.ContainerName = configSection.GetValue<string>("ContainerName", "None");
                 }); 
             });
         });
+        
+        // Configure health check options
+        context.Services.Configure<HealthCheckOptions>(configuration.GetSection("HealthCheck"));
+        
+        // Add Orleans health checks
+        context.Services.AddOrleansHealthChecks();
     }
 }
