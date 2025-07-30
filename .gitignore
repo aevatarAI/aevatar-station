@@ -266,7 +266,6 @@ paket-files/
 
 appsettings.secrets.json
 **/wwwroot/libs
-
 # Python
 __pycache__/
 *.py[cod]
