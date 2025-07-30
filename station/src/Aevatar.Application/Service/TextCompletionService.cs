@@ -15,20 +15,18 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
 {
     private readonly IClusterClient _clusterClient;
     private readonly ILogger<TextCompletionService> _logger;
+    private readonly IUserAppService _userAppService;
 
     public TextCompletionService(
         IClusterClient clusterClient,
-        ILogger<TextCompletionService> logger)
+        ILogger<TextCompletionService> logger,
+        IUserAppService userAppService)
     {
         _clusterClient = clusterClient;
         _logger = logger;
+        _userAppService = userAppService;
     }
 
-    /// <summary>
-    /// 生成文本补全
-    /// </summary>
-    /// <param name="request">补全请求</param>
-    /// <returns>补全结果</returns>
     public async Task<TextCompletionResponseDto> GenerateCompletionsAsync(TextCompletionRequestDto request)
     {
         try
@@ -48,9 +46,12 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
                 };
             }
 
-            // 获取TextCompletionGAgent实例
-            var agentId = new Guid("12345678-1234-1234-1234-123456789abc");
-            var textCompletionAgent = _clusterClient.GetGrain<ITextCompletionGAgent>(agentId);
+            // 根据当前用户生成agentId
+            var currentUserId = _userAppService.GetCurrentUserId();
+            var textCompletionAgent = _clusterClient.GetGrain<ITextCompletionGAgent>(currentUserId);
+
+            // AIGAgent需要先初始化才能使用
+            await textCompletionAgent.ActivateAsync();
 
             // 调用agent生成补全
             var completions = await textCompletionAgent.GenerateCompletionsAsync(request.UserGoal);
