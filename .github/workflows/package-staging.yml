@@ -144,6 +144,7 @@ jobs:
       - name: Cosign sign image
         env:
           COSIGN_EXPERIMENTAL: "1"
+          COSIGN_YES: "true"
         run: |
           cosign sign "${{ steps.meta.outputs.tags }}@${{ steps.digest.outputs.digest }}"
 
@@ -152,7 +153,7 @@ jobs:
         env:
           COSIGN_EXPERIMENTAL: "1"
         run: |
-          cosign verify --keyless \
+          cosign verify \
             --certificate-oidc-issuer https://accounts.google.com \
             "${{ steps.meta.outputs.tags }}@${{ steps.digest.outputs.digest }}"
 
