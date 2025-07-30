@@ -16,7 +16,7 @@ namespace Aevatar.Application.Grains.Agents.AI;
 /// <summary>
 /// 文本补全器GAgent接口
 /// </summary>
-public interface ITextCompletionGAgent : IGAgent
+public interface ITextCompletionGAgent : IStateGAgent<TextCompletionState>
 {
     /// <summary>
     /// 根据输入文本生成5个不同的补全结果
