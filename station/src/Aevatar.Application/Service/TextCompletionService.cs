@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Aevatar.Application.Grains.Agents.AI;
 using Microsoft.Extensions.Logging;
 using Orleans;
+using Volo.Abp;
 using Volo.Abp.Application.Services;
 
 namespace Aevatar.Service;
@@ -37,13 +38,7 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
             if (string.IsNullOrWhiteSpace(request.UserGoal) || request.UserGoal.Trim().Length < 15)
             {
                 _logger.LogWarning("User goal validation failed: length {Length} is less than required 15 characters", request.UserGoal?.Length ?? 0);
-                return new TextCompletionResponseDto
-                {
-                    UserGoal = request.UserGoal ?? string.Empty,
-                    Completions = new List<string>(),
-                    Success = false,
-                    ErrorMessage = "请输入至少15个字符的目标描述，以便为您生成更准确的补全建议。"
-                };
+                throw new UserFriendlyException("请输入至少15个字符的目标描述，以便为您生成更准确的补全建议。");
             }
 
             // 根据当前用户生成agentId
@@ -66,18 +61,6 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
 
             _logger.LogInformation("Text completion generated successfully, returned {Count} options", completions.Count);
             return response;
-        }
-        catch (ArgumentException ex)
-        {
-            // 输入验证错误
-            _logger.LogWarning("User goal validation failed: {Message}", ex.Message);
-            return new TextCompletionResponseDto
-            {
-                UserGoal = request.UserGoal,
-                Completions = new List<string>(),
-                Success = false,
-                ErrorMessage = ex.Message
-            };
         }
         catch (Exception ex)
         {

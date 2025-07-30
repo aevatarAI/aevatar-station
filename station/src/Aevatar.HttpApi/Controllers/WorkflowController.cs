@@ -4,6 +4,7 @@ using Aevatar.Service;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Volo.Abp;
 using Volo.Abp.AspNetCore.Mvc;
 
 namespace Aevatar.HttpApi.Controllers
@@ -39,11 +40,7 @@ namespace Aevatar.HttpApi.Controllers
             
             if (request == null)
             {
-                return new TextCompletionResponseDto
-                {
-                    Success = false,
-                    ErrorMessage = "Request cannot be null"
-                };
+                throw new UserFriendlyException("Request cannot be null");
             }
 
             return await _textCompletionService.GenerateCompletionsAsync(request);
