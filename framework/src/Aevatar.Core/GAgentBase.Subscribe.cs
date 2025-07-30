@@ -5,7 +5,7 @@ namespace Aevatar.Core;
 
 public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfiguration>
 {
-    protected sealed override void TransitionState(TState state, StateLogEventBase<TStateLogEvent> @event)
+    protected override void GAgentTransitionState(TState state, StateLogEventBase<TStateLogEvent> @event)
     {
         switch (@event)
         {
@@ -32,19 +32,9 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
                 break;
         }
         
-        GAgentTransitionState(state, @event);
+        // Call base implementation for any additional logic in derived classes
+        base.GAgentTransitionState(state, @event);
         
-        Logger.LogInformation("GrainId {GrainId}: State before transition: {@State}", this.GetGrainId().ToString(), State);
-        
-        base.TransitionState(state, @event);
-        
-        // print out the state after transition
-        Logger.LogDebug("GrainId {GrainId}: State after transition: {@State}", this.GetGrainId().ToString(), State);
-    }
-
-    protected virtual void GAgentTransitionState(TState state, StateLogEventBase<TStateLogEvent> @event)
-    {
-        // Derived classes can override this method.
     }
 
     private async Task AddChildAsync(GrainId grainId)

@@ -43,6 +43,7 @@ public class GroupGAgent : GAgentBase<GroupGAgentState, GroupStateLogEvent>
         {
             State.RegisteredGAgents--;
         }
+        base.GAgentTransitionState(state, @event);
     }
 
     protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)
