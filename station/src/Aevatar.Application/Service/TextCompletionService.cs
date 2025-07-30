@@ -38,7 +38,7 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
             if (string.IsNullOrWhiteSpace(request.UserGoal) || request.UserGoal.Trim().Length < 15)
             {
                 _logger.LogWarning("User goal validation failed: length {Length} is less than required 15 characters", request.UserGoal?.Length ?? 0);
-                throw new UserFriendlyException("请输入至少15个字符的目标描述，以便为您生成更准确的补全建议。");
+                throw new UserFriendlyException("Please enter at least 15 characters for the user goal to generate more accurate completion suggestions.");
             }
 
             // 根据当前用户生成agentId
