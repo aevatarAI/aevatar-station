@@ -64,6 +64,11 @@ public class TextCompletionGAgent : AIGAgentBase<TextCompletionState, TextComple
             throw new ArgumentException("Input text cannot be empty", nameof(inputText));
         }
 
+        if (inputText.Trim().Length < 15)
+        {
+            throw new ArgumentException("Input text must be at least 15 characters long", nameof(inputText));
+        }
+
         Logger.LogInformation("Starting text completion generation, input text length: {Length} characters", inputText.Length);
 
         try
