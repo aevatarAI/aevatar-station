@@ -117,7 +117,7 @@ public abstract class AccountServiceTests<TStartupModule> : AevatarApplicationTe
             }));
         
         // Verify the exception message contains the email
-        exception.Message.ShouldContain(email);t
+        exception.Message.ShouldContain(email);
     }
 
     [Fact]
