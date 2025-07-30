@@ -110,6 +110,8 @@ public class WorkflowViewService : ApplicationService, IWorkflowViewService
                 Properties = workflowConfigProperties
             });
             viewConfigDto.WorkflowCoordinatorGAgentId = workflowCoordinatorGAgentDto.AgentGuid;
+
+            await _agentService.AddSubAgentAsync(workflowCoordinatorGAgentDto.AgentGuid, new AddSubAgentDto());
         }
         else
         {
