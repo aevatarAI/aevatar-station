@@ -22,21 +22,6 @@ public interface ITextCompletionGAgent : IGAgent
     /// 根据输入文本生成5个不同的补全结果
     /// </summary>
     Task<List<string>> GenerateCompletionsAsync(string inputText);
-    
-    /// <summary>
-    /// 获取最近的补全历史记录
-    /// </summary>
-    Task<List<string>> GetRecentCompletionsAsync();
-    
-    /// <summary>
-    /// 清空补全历史记录
-    /// </summary>
-    Task<bool> ClearHistoryAsync();
-    
-    /// <summary>
-    /// 获取状态
-    /// </summary>
-    Task<TextCompletionState> GetStateAsync();
 }
 
 /// <summary>
@@ -83,11 +68,8 @@ public class TextCompletionGAgent : AIGAgentBase<TextCompletionState, TextComple
             // 解析AI返回的结果
             var completions = ParseCompletionResult(aiResult);
             
-            // 更新状态
-            await UpdateStateAfterCompletion(completions);
-
-            // 记录事件
-            await LogCompletionEvent(inputText, completions.Count);
+            // 记录日志即可，不需要保存状态
+            Logger.LogDebug("Text completion completed successfully, generated {Count} options", completions.Count);
 
             Logger.LogInformation("Text completion generation completed, generated {Count} options", completions.Count);
             return completions;
@@ -108,45 +90,7 @@ public class TextCompletionGAgent : AIGAgentBase<TextCompletionState, TextComple
         }
     }
 
-    /// <summary>
-    /// 获取最近的补全历史记录
-    /// </summary>
-    public async Task<List<string>> GetRecentCompletionsAsync()
-    {
-        var state = await GetStateAsync();
-        return state.RecentCompletions.ToList();
-    }
 
-    /// <summary>
-    /// 清空补全历史记录
-    /// </summary>
-    public async Task<bool> ClearHistoryAsync()
-    {
-        try
-        {
-            State.RecentCompletions.Clear();
-            State.TotalCompletions = 0;
-            
-            // 使用事件确认状态变更
-            var clearEvent = new TextCompletionEvent
-            {
-                EventType = "HistoryCleared",
-                InputText = "",
-                CompletionCount = 0
-            };
-            
-            RaiseEvent(clearEvent);
-            await ConfirmEvents();
-
-            Logger.LogInformation("Completion history cleared successfully");
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error occurred while clearing completion history");
-            return false;
-        }
-    }
 
     /// <summary>
     /// 构建文本补全的AI提示词
@@ -283,41 +227,7 @@ Return only JSON, no other explanations.
         return fallbackJson.ToString();
     }
 
-    /// <summary>
-    /// 补全完成后更新状态
-    /// </summary>
-    private async Task UpdateStateAfterCompletion(List<string> completions)
-    {
-        State.TotalCompletions++;
-        // 保留最近的10条补全记录
-        if (State.RecentCompletions.Count >= 10)
-        {
-            State.RecentCompletions.RemoveAt(0);
-        }
-        State.RecentCompletions.Add($"[{DateTime.UtcNow:HH:mm:ss}] Generated {completions.Count} completions");
-        
-        // 使用事件确认状态变更
-        var completionEvent = new TextCompletionEvent
-        {
-            EventType = "TextCompletion",
-            InputText = "User input",
-            CompletionCount = completions.Count
-        };
-        
-        RaiseEvent(completionEvent);
-        await ConfirmEvents();
-    }
 
-    /// <summary>
-    /// 记录补全事件
-    /// </summary>
-    private async Task LogCompletionEvent(string inputText, int completionCount)
-    {
-        // 简化版本 - 只记录日志，不使用事件
-        Logger.LogDebug("Text completion event logged: input length {InputLength}, completion count {Count}", 
-            inputText.Length, completionCount);
-        await Task.CompletedTask;
-    }
 
     /// <summary>
     /// 清理JSON内容（移除markdown标记等）
