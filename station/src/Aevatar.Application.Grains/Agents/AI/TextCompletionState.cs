@@ -1,13 +1,13 @@
 using System.Collections.Generic;
-using Aevatar.Core.Abstractions;
+using Aevatar.GAgents.AIGAgent.State;
 
 namespace Aevatar.Application.Grains.Agents.AI;
 
 /// <summary>
-/// 文本补全器State - 简化版
+/// 文本补全器State - 继承AI状态基类
 /// </summary>
 [GenerateSerializer]
-public class TextCompletionState : StateBase
+public class TextCompletionState : AIGAgentStateBase
 {
     /// <summary>
     /// 总补全次数

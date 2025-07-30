@@ -2,8 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Aevatar.Core;
 using Aevatar.Core.Abstractions;
+using Aevatar.GAgents.AIGAgent.Agent;
+using Aevatar.GAgents.AIGAgent.Dtos;
+using Aevatar.GAgents.AI.Common;
+using Aevatar.GAgents.AI.Options;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
@@ -11,10 +14,36 @@ using Newtonsoft.Json;
 namespace Aevatar.Application.Grains.Agents.AI;
 
 /// <summary>
+/// 文本补全器GAgent接口
+/// </summary>
+public interface ITextCompletionGAgent : IGAgent
+{
+    /// <summary>
+    /// 根据输入文本生成5个不同的补全结果
+    /// </summary>
+    Task<List<string>> GenerateCompletionsAsync(string inputText);
+    
+    /// <summary>
+    /// 获取最近的补全历史记录
+    /// </summary>
+    Task<List<string>> GetRecentCompletionsAsync();
+    
+    /// <summary>
+    /// 清空补全历史记录
+    /// </summary>
+    Task<bool> ClearHistoryAsync();
+    
+    /// <summary>
+    /// 获取状态
+    /// </summary>
+    Task<TextCompletionState> GetStateAsync();
+}
+
+/// <summary>
 /// 文本补全器GAgent - 简化版，返回5个补全字符串
 /// </summary>
 [GAgent("TextCompletion")]
-public class TextCompletionGAgent : GAgentBase<TextCompletionState, TextCompletionEvent>
+public class TextCompletionGAgent : AIGAgentBase<TextCompletionState, TextCompletionEvent>, ITextCompletionGAgent
 {
     public TextCompletionGAgent()
     {
@@ -32,7 +61,7 @@ public class TextCompletionGAgent : GAgentBase<TextCompletionState, TextCompleti
     {
         if (string.IsNullOrWhiteSpace(inputText))
         {
-            throw new ArgumentException("输入文本不能为空", nameof(inputText));
+            throw new ArgumentException("Input text cannot be empty", nameof(inputText));
         }
 
         Logger.LogInformation("Starting text completion generation, input text length: {Length} characters", inputText.Length);
@@ -90,6 +119,10 @@ public class TextCompletionGAgent : GAgentBase<TextCompletionState, TextCompleti
     {
         try
         {
+            State.RecentCompletions.Clear();
+            State.TotalCompletions = 0;
+            
+            // 使用事件确认状态变更
             var clearEvent = new TextCompletionEvent
             {
                 EventType = "HistoryCleared",
@@ -133,21 +166,32 @@ Return only JSON, no other explanations.
     }
 
     /// <summary>
-    /// 调用AI服务进行补全生成（模拟实现）
+    /// 调用AI服务进行补全生成
     /// </summary>
     private async Task<string> CallAIForCompletionAsync(string prompt)
     {
         try
         {
-            Logger.LogDebug("Calling AI service for text completion...");
-            
-            // TODO: Should call actual AI service here
-            // Currently returning mock data
-            await Task.Delay(100); // Simulate AI call delay
-            
-            var fallbackJson = GetFallbackCompletionJson("Mock AI response");
-            Logger.LogDebug("AI completion response length: {Length} characters", fallbackJson.Length);
-            return fallbackJson;
+            Logger.LogDebug("Sending prompt to AI service, length: {Length} characters", prompt.Length);
+
+            // 调用真正的AI服务
+            var chatResult = await ChatWithHistory(prompt);
+
+            if (chatResult == null || !chatResult.Any())
+            {
+                Logger.LogWarning("AI service returned null or empty result for text completion");
+                return GetFallbackCompletionJson("AI service returned empty result");
+            }
+
+            var response = chatResult[0].Content;
+            if (string.IsNullOrWhiteSpace(response))
+            {
+                Logger.LogWarning("AI returned empty content for text completion");
+                return GetFallbackCompletionJson("AI service returned empty content");
+            }
+
+            Logger.LogDebug("AI completion response received, length: {Length} characters", response.Length);
+            return CleanJsonContent(response);
         }
         catch (Exception ex)
         {
@@ -239,6 +283,15 @@ Return only JSON, no other explanations.
     /// </summary>
     private async Task UpdateStateAfterCompletion(List<string> completions)
     {
+        State.TotalCompletions++;
+        // 保留最近的10条补全记录
+        if (State.RecentCompletions.Count >= 10)
+        {
+            State.RecentCompletions.RemoveAt(0);
+        }
+        State.RecentCompletions.Add($"[{DateTime.UtcNow:HH:mm:ss}] Generated {completions.Count} completions");
+        
+        // 使用事件确认状态变更
         var completionEvent = new TextCompletionEvent
         {
             EventType = "TextCompletion",
@@ -255,15 +308,10 @@ Return only JSON, no other explanations.
     /// </summary>
     private async Task LogCompletionEvent(string inputText, int completionCount)
     {
-        var completionEvent = new TextCompletionEvent
-        {
-            EventType = "TextCompletion",
-            InputText = inputText,
-            CompletionCount = completionCount
-        };
-        
-        RaiseEvent(completionEvent);
-        await ConfirmEvents();
+        // 简化版本 - 只记录日志，不使用事件
+        Logger.LogDebug("Text completion event logged: input length {InputLength}, completion count {Count}", 
+            inputText.Length, completionCount);
+        await Task.CompletedTask;
     }
 
     /// <summary>
@@ -294,30 +342,5 @@ Return only JSON, no other explanations.
         return cleaned.Trim();
     }
 
-    /// <summary>
-    /// 状态转换方法 - 处理事件对状态的影响
-    /// </summary>
-    protected override void GAgentTransitionState(TextCompletionState state, StateLogEventBase<TextCompletionEvent> @event)
-    {
-        if (@event is TextCompletionEvent completionEvent)
-        {
-            switch (completionEvent.EventType)
-            {
-                case "TextCompletion":
-                    state.TotalCompletions++;
-                    // 保留最近的补全记录
-                    if (state.RecentCompletions.Count >= 10)
-                    {
-                        state.RecentCompletions.RemoveAt(0);
-                    }
-                    state.RecentCompletions.Add($"[{DateTime.UtcNow:HH:mm:ss}] {completionEvent.InputText}");
-                    break;
-                    
-                case "HistoryCleared":
-                    state.RecentCompletions.Clear();
-                    state.TotalCompletions = 0;
-                    break;
-            }
-        }
-    }
+
 } 
