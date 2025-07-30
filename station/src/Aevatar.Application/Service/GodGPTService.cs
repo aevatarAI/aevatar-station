@@ -29,6 +29,8 @@ using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
 using Aevatar.GodGPT.Dtos;
 using Aevatar.Quantum;
+using GodGPT.GAgents;
+using GodGPT.GAgents.Awakening;
 using GodGPT.GAgents.SpeechChat;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -118,6 +120,15 @@ public interface IGodGPTService
 
     Task<bool> CheckIsManager(string userId);
     Task<UserProfileDto> SetVoiceLanguageAsync(Guid currentUserId, VoiceLanguageEnum voiceLanguage);
+
+    /// <summary>
+    /// Get today's awakening content for the user
+    /// </summary>
+    /// <param name="currentUserId">Current user ID</param>
+    /// <param name="language">Voice language preference</param>
+    /// <param name="region">Optional region parameter</param>
+    /// <returns>Awakening content DTO</returns>
+    Task<AwakeningContentDto?> GetTodayAwakeningAsync(Guid currentUserId, VoiceLanguageEnum language, string? region);
 
     Task<ExecuteActionResultDto> CanUploadImageAsync(Guid currentUserId,GodGPTChatLanguage language = GodGPTChatLanguage.English);
 }
@@ -630,6 +641,43 @@ public class GodGPTService : ApplicationService, IGodGPTService
         var userQuotaGAgent = _clusterClient.GetGrain<IUserQuotaGAgent>(currentUserId);
         RequestContext.Set("GodGPTLanguage", language.ToString());
         return await userQuotaGAgent.CanUploadImageAsync();
+    }
+
+
+        public async Task<AwakeningContentDto?> GetTodayAwakeningAsync(Guid currentUserId, VoiceLanguageEnum language, string? region)
+    {
+        _logger.LogInformation("[GodGPTService][GetTodayAwakeningAsync] Starting for userId: {UserId}, language: {Language}, region: {Region}",
+            currentUserId, language, region);
+        
+        try
+        {
+            var awakeningAgent = _clusterClient.GetGrain<IAwakeningGAgent>(currentUserId);
+            var result = await awakeningAgent.GetTodayAwakeningAsync(language, region);
+            
+            _logger.LogInformation("[GodGPTService][GetTodayAwakeningAsync] Completed for userId: {UserId}, result: {HasResult}",
+                currentUserId, result != null);
+            if (result == null)
+            {
+                return new AwakeningContentDto()
+                {
+                    AwakeningMessage = "",
+                    AwakeningLevel = 0,
+                    Status = (int)result.Status
+                };
+            }
+            return new AwakeningContentDto()
+            {
+                AwakeningMessage = result.AwakeningMessage,
+                AwakeningLevel = result.AwakeningLevel,
+                Status = (int)result.Status
+            };;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[GodGPTService][GetTodayAwakeningAsync] Error for userId: {UserId}, language: {Language}, region: {Region}",
+                currentUserId, language, region);
+            throw;
+        }
     }
 
     #endregion
