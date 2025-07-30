@@ -1,10 +1,9 @@
 name: Package Staging
 
 on:
-  workflow_dispatch:
   push:
     branches:
-      - "release/*"
+      - "feature/workflow-cosign"
 
 run-name: Deploy Aevatar Station on ${{ github.ref }} to Staging from ${{ github.sha }}
 
