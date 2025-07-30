@@ -19,22 +19,27 @@ public class DefaultHostDeployManager : IHostDeployManager
         return;
     }
 
-    public async Task<string> CreateHostAsync(string appId, string version, string corsUrls)
+    public async Task CreateApplicationAsync(string appId, string version, string corsUrls, Guid tenantId)
     {
-        return string.Empty;
+        return;
     }
 
-    public async Task DestroyHostAsync(string appId, string version)
+    public async Task DestroyApplicationAsync(string appId, string version)
+    {
+        return;
+    }
+
+    public async Task UpgradeApplicationAsync(string appId, string version, string corsUrls, Guid tenantId)
+    {
+        return;
+    }
+
+    public async Task UpdateDeploymentImageAsync(string appId, string version, string newImage)
     {
         return;
     }
 
     public async Task RestartHostAsync(string appId, string version)
-    {
-        return;
-    }
-
-    public async Task UpdateDockerImageAsync(string appId, string version, string newImage)
     {
         return;
     }

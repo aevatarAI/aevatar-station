@@ -89,5 +89,6 @@ public interface IKubernetesClientAdapter
     public Task<V2HorizontalPodAutoscaler> CreateNamespacedHorizontalPodAutoscalerAsync(V2HorizontalPodAutoscaler body,
         string namespaceParameter, CancellationToken cancellationToken = default(CancellationToken));
 
+    Task<bool> NamespaceExistsAsync(string namespaceName, CancellationToken cancellationToken = default(CancellationToken));
 
 }

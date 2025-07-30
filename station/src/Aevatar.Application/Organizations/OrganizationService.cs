@@ -187,7 +187,14 @@ public class OrganizationService : AevatarAppService, IOrganizationService
             AevatarPermissions.Roles.Delete,
             AevatarPermissions.Dashboard,
             AevatarPermissions.LLMSModels.Default,
-            AevatarPermissions.ApiRequests.Default
+            AevatarPermissions.ApiRequests.Default,
+            AevatarPermissions.ProjectCorsOrigins.Default,
+            AevatarPermissions.ProjectCorsOrigins.Create,
+            AevatarPermissions.ProjectCorsOrigins.Delete,
+            AevatarPermissions.Plugins.Default,
+            AevatarPermissions.Plugins.Create,
+            AevatarPermissions.Plugins.Edit,
+            AevatarPermissions.Plugins.Delete
         ];
     }
 
