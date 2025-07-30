@@ -39,11 +39,7 @@ public class TextCompletionGAgent : AIGAgentBase<TextCompletionState, TextComple
     {
         return Task.FromResult("AI text completion agent that generates 5 different completion results based on user input.");
     }
-
-
-
-
-
+    
     /// <summary>
     /// 根据输入文本生成5个不同的补全结果
     /// </summary>
@@ -97,14 +93,7 @@ Return only JSON, no other explanations.";
             Logger.LogError(ex, "Error occurred during text completion generation, input text: {InputText}", inputText);
             
             // 返回空字符串作为回退补全结果
-            return new List<string>
-            {
-                "",
-                "",
-                "",
-                "",
-                ""
-            };
+            return new ();
         }
     }
 

@@ -22,22 +22,7 @@ public class TextCompletionRequestDto
 public class TextCompletionResponseDto
 {
     /// <summary>
-    /// 用户目标描述
-    /// </summary>
-    public string UserGoal { get; set; } = string.Empty;
-
-    /// <summary>
     /// 5个补全选项
     /// </summary>
     public List<string> Completions { get; set; } = new();
-
-    /// <summary>
-    /// 是否成功
-    /// </summary>
-    public bool Success { get; set; }
-
-    /// <summary>
-    /// 错误信息（如果有）
-    /// </summary>
-    public string? ErrorMessage { get; set; }
 } 
