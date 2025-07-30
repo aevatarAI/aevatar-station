@@ -17,7 +17,7 @@ namespace Aevatar.Application.Grains.Agents.AI;
 /// <summary>
 /// 文本补全器GAgent接口
 /// </summary>
-public interface ITextCompletionGAgent : IStateGAgent<TextCompletionState>
+public interface ITextCompletionGAgent : IAIGAgent, IStateGAgent<TextCompletionState>
 {
     /// <summary>
     /// 初始化Agent，设置系统提示词和LLM配置
@@ -151,14 +151,14 @@ Do not include any explanations, markdown formatting, or additional text outside
         {
             Logger.LogError(ex, "Error occurred during text completion generation, input text: {InputText}", inputText);
             
-            // 返回回退补全结果
+            // 返回空字符串作为回退补全结果
             return new List<string>
             {
-                inputText + "...",
-                inputText + "（请稍后重试）",
-                inputText + "（AI服务暂时不可用）",
-                inputText + "（正在处理中）",
-                inputText + "（系统繁忙）"
+                "",
+                "",
+                "",
+                "",
+                ""
             };
         }
     }
@@ -265,11 +265,11 @@ Apply the completion strategies outlined in the system prompt and return the res
     {
         return new List<string>
         {
-            "Completion option 1: Continue writing...",
-            "Completion option 2: To summarize the above content.",
-            "Completion option 3: From another perspective,",
-            "Completion option 4: This means that",
-            "Completion option 5: In conclusion,"
+            "",
+            "",
+            "",
+            "",
+            ""
         };
     }
 
@@ -282,11 +282,11 @@ Apply the completion strategies outlined in the system prompt and return the res
         {
             ["completions"] = new JArray
             {
-                "Continue writing...",
-                "To summarize the above content.",
-                "From another perspective,",
-                "This means that",
-                "In conclusion,"
+                "",
+                "",
+                "",
+                "",
+                ""
             }
         };
 
