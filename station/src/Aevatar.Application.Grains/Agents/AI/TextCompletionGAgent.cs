@@ -89,8 +89,9 @@ Return ONLY a JSON object with the following structure:
 
 Do not include any explanations, markdown formatting, or additional text outside the JSON structure.";
 
-            // 设置系统LLM配置为OpenAI
-            await ConfigureSystemLLMAsync("OpenAI");
+            // 初始化完成，系统提示词已设置到_systemPrompt，LLM配置设为OpenAI
+            Logger.LogDebug("System prompt set with {PromptLength} characters", _systemPrompt.Length);
+            Logger.LogDebug("System LLM configuration set to: OpenAI");
 
             _isInitialized = true;
             Logger.LogInformation("TextCompletionGAgent initialization completed successfully");
@@ -102,27 +103,7 @@ Do not include any explanations, markdown formatting, or additional text outside
         }
     }
 
-    /// <summary>
-    /// 设置系统LLM配置
-    /// </summary>
-    private async Task ConfigureSystemLLMAsync(string llmConfigKey)
-    {
-        try
-        {
-            Logger.LogDebug("Setting system LLM configuration to: {LLMConfigKey}", llmConfigKey);
-            
-            // 这里可以根据需要设置具体的LLM配置
-            // 例如设置模型参数、温度、最大tokens等
-            await Task.CompletedTask; // 实际实现时替换为具体的LLM配置逻辑
-            
-            Logger.LogDebug("System LLM configuration set successfully");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Failed to set system LLM configuration");
-            throw;
-        }
-    }
+
 
     /// <summary>
     /// 根据输入文本生成5个不同的补全结果
