@@ -36,6 +36,11 @@ public class Program
                         Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json")
                     })
                 .AddEnvironmentVariables();
+            
+            // Output the actual ConnectionString value during startup
+            var connectionString = builder.Configuration.GetConnectionString("Default");
+            Log.Information("Database ConnectionString: {ConnectionString}", connectionString ?? "Not configured");
+            
             builder.Host
                 .UseOrleansClientConfiguration()
                 .ConfigureDefaults(args)
