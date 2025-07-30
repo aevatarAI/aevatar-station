@@ -164,6 +164,7 @@ public class GodGPTPaymentController : AevatarController
         return response;
     }
 
+    [Obsolete("Use has-active-subscription instead")]
     [HttpGet("has-apple-subscription")]
     public async Task<bool> HasActiveAppleSubscriptionAsync()
     {
@@ -171,6 +172,16 @@ public class GodGPTPaymentController : AevatarController
         var currentUserId = (Guid)CurrentUser.Id!;
         var result = await _godGptService.HasActiveAppleSubscriptionAsync(currentUserId);
         _logger.LogDebug($"[GodGPTPaymentController][HasActiveAppleSubscriptionAsync] userId: {currentUserId.ToString()}, result: {result}, duration: {stopwatch.ElapsedMilliseconds}ms");
+        return result;
+    }
+    
+    [HttpGet("has-active-subscription")]
+    public async Task<ActiveSubscriptionStatusDto> HasActiveSubscriptionAsync()
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var result = await _godGptService.HasActiveSubscriptionAsync(currentUserId);
+        _logger.LogDebug($"[GodGPTPaymentController][HasActiveSubscriptionAsync] userId: {currentUserId.ToString()}, duration: {stopwatch.ElapsedMilliseconds}ms");
         return result;
     }
 
