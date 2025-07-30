@@ -65,7 +65,8 @@ public class DeploymentHelper
             Metadata = new V1ObjectMeta
             {
                 Name = deploymentName,
-                NamespaceProperty = KubernetesConstants.AppNameSpace
+                NamespaceProperty = KubernetesConstants.AppNameSpace,
+                Labels = labels
             },
             Spec = new V1DeploymentSpec
             {
@@ -357,6 +358,13 @@ public class DeploymentHelper
             },
             new V1VolumeMount
             {
+                Name = "config-volume",
+                MountPath = KubernetesConstants
+                    .AppSettingBusinessFileMountPath,
+                SubPath = SecureConfigurationExtensions.DefaultBusinessConfigPath
+            },
+            new V1VolumeMount
+            {
                 Name = "log-volume",
                 MountPath = KubernetesConstants.AppLogFileMountPath
             }
@@ -411,7 +419,7 @@ public class DeploymentHelper
                         new V1KeyToPath
                         {
                             Key = SecureConfigurationExtensions.DefaultBusinessConfigPath,
-                            Path = KubernetesConstants.AppSettingBusinessFileMountPath
+                            Path = SecureConfigurationExtensions.DefaultBusinessConfigPath
                         }
                     }
                 }

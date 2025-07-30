@@ -512,6 +512,29 @@ public class KubernetesHostManager : IHostDeployManager, IHostCopyManager, ISing
         await ApplyRollingRestartAsync(deploymentName);
     }
 
+    private async Task RestartAllRelatedDeploymentsAsync(string appId)
+    {
+        // Use label selector to find all deployments with the same appId
+        var labelSelector = $"{KubernetesConstants.AppIdLabelKey}={appId}";
+        var deployments = await _kubernetesClientAdapter.ListDeploymentAsync(KubernetesConstants.AppNameSpace, labelSelector);
+        
+        if (!deployments.Items.Any())
+        {
+            _logger.LogWarning($"No deployments found for appId: {appId}");
+            return;
+        }
+
+        _logger.LogInformation($"Found {deployments.Items.Count} deployments for appId: {appId}");
+        
+        // Restart all related deployments
+        foreach (var deployment in deployments.Items)
+        {
+            var deploymentName = deployment.Metadata.Name;
+            _logger.LogInformation($"Restarting deployment: {deploymentName}");
+            await ApplyRollingRestartAsync(deploymentName);
+        }
+    }
+
     private async Task<bool> DeploymentExistsAsync(string deploymentName)
     {
         var deployments = await _kubernetesClientAdapter.ListDeploymentAsync(KubernetesConstants.AppNameSpace);
@@ -993,8 +1016,7 @@ public class KubernetesHostManager : IHostDeployManager, IHostCopyManager, ISing
         }
 
         await UpdateConfigMapWithBusinessConfigAsync(appId, version, hostType);
-        var deploymentName = DeploymentHelper.GetAppDeploymentName(appId, version);
-        await RestartDeploymentAsync(deploymentName);
+        await RestartAllRelatedDeploymentsAsync(appId);
         _logger.LogInformation("Business configuration update completed for hostId: {HostId}, hostType: {HostType}", 
             hostId, hostType);
     }
