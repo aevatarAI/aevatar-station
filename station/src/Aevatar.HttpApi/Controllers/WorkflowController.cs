@@ -1,10 +1,10 @@
 using System.Threading.Tasks;
 using Aevatar.Application.Contracts.WorkflowOrchestration;
-using Aevatar.Controllers;
-using Aevatar.Domain.WorkflowOrchestration;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
+using Aevatar.Service;
+using Microsoft.Extensions.Logging;
 
 namespace Aevatar.Controllers;
 
@@ -14,6 +14,8 @@ namespace Aevatar.Controllers;
 public class WorkflowController : AevatarController
 {
     private readonly IWorkflowOrchestrationService _workflowOrchestrationService;
+    private readonly ITextCompletionService _textCompletionService;
+    private readonly ILogger<WorkflowController> _logger;
 
     public WorkflowController(IWorkflowOrchestrationService workflowOrchestrationService)
     {
@@ -29,6 +31,25 @@ public class WorkflowController : AevatarController
     public async Task<WorkflowViewConfigDto?> GenerateAsync([FromBody] GenerateWorkflowRequest request)
     {
         return await _workflowOrchestrationService.GenerateWorkflowAsync(request.UserGoal);
+    }
+    
+    /// <summary>
+    /// 生成文本补全
+    /// </summary>
+    /// <param name="request">补全请求</param>
+    /// <returns>补全结果</returns>
+    [HttpPost("text-completion/generate")]
+    [Authorize]
+    public async Task<TextCompletionResponseDto> GenerateTextCompletionAsync([FromBody] TextCompletionRequestDto request)
+    {
+        _logger.LogDebug("Received text completion request");
+            
+        if (request == null)
+        {
+            throw new UserFriendlyException("Request cannot be null");
+        }
+
+        return await _textCompletionService.GenerateCompletionsAsync(request);
     }
 }
 
