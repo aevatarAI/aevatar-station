@@ -8,6 +8,7 @@ using Aevatar.GAgents.AIGAgent.Dtos;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 
@@ -18,6 +19,11 @@ namespace Aevatar.Application.Grains.Agents.AI;
 /// </summary>
 public interface ITextCompletionGAgent : IStateGAgent<TextCompletionState>
 {
+    /// <summary>
+    /// 初始化Agent，设置系统提示词和LLM配置
+    /// </summary>
+    Task InitializeAsync();
+    
     /// <summary>
     /// 根据输入文本生成5个不同的补全结果
     /// </summary>
@@ -30,6 +36,9 @@ public interface ITextCompletionGAgent : IStateGAgent<TextCompletionState>
 [GAgent("TextCompletion")]
 public class TextCompletionGAgent : AIGAgentBase<TextCompletionState, TextCompletionEvent>, ITextCompletionGAgent
 {
+    private string _systemPrompt = string.Empty;
+    private bool _isInitialized = false;
+
     public TextCompletionGAgent()
     {
     }
@@ -37,6 +46,82 @@ public class TextCompletionGAgent : AIGAgentBase<TextCompletionState, TextComple
     public override Task<string> GetDescriptionAsync()
     {
         return Task.FromResult("AI text completion agent that generates 5 different completion results based on user input.");
+    }
+
+    /// <summary>
+    /// 初始化Agent，设置系统提示词和LLM配置
+    /// </summary>
+    public async Task InitializeAsync()
+    {
+        if (_isInitialized)
+        {
+            Logger.LogDebug("TextCompletionGAgent already initialized");
+            return;
+        }
+
+        Logger.LogInformation("Initializing TextCompletionGAgent with system prompt and LLM configuration");
+
+        try
+        {
+            // 设置系统提示词
+            _systemPrompt = @"You are an AI text completion assistant designed to generate creative and diverse text completions.
+
+**Core Task:**
+Generate exactly 5 different completion options for user input text.
+
+**Completion Strategies:**
+1. **Direct Continuation**: Natural extension of the input text
+2. **Creative Expansion**: Add imaginative details and descriptions  
+3. **Summary/Conclusion**: Provide a summarizing statement
+4. **Alternative Perspective**: Offer a different viewpoint or approach
+5. **Question/Dialogue**: Transform into a question or conversational format
+
+**Output Requirements:**
+- Generate exactly 5 unique completions
+- Each completion should be meaningful and coherent
+- Vary the style and approach across the 5 options
+- Keep completions relevant to the original input
+- Ensure diversity in length and tone
+
+**Response Format:**
+Return ONLY a JSON object with the following structure:
+{""completions"": [""completion1"", ""completion2"", ""completion3"", ""completion4"", ""completion5""]}
+
+Do not include any explanations, markdown formatting, or additional text outside the JSON structure.";
+
+            // 设置系统LLM配置为OpenAI
+            await ConfigureSystemLLMAsync("OpenAI");
+
+            _isInitialized = true;
+            Logger.LogInformation("TextCompletionGAgent initialization completed successfully");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to initialize TextCompletionGAgent");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// 设置系统LLM配置
+    /// </summary>
+    private async Task ConfigureSystemLLMAsync(string llmConfigKey)
+    {
+        try
+        {
+            Logger.LogDebug("Setting system LLM configuration to: {LLMConfigKey}", llmConfigKey);
+            
+            // 这里可以根据需要设置具体的LLM配置
+            // 例如设置模型参数、温度、最大tokens等
+            await Task.CompletedTask; // 实际实现时替换为具体的LLM配置逻辑
+            
+            Logger.LogDebug("System LLM configuration set successfully");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to set system LLM configuration");
+            throw;
+        }
     }
 
     /// <summary>
@@ -52,6 +137,13 @@ public class TextCompletionGAgent : AIGAgentBase<TextCompletionState, TextComple
         if (inputText.Trim().Length < 15)
         {
             throw new ArgumentException("User goal must be at least 15 characters long", nameof(inputText));
+        }
+
+        // 确保Agent已经初始化
+        if (!_isInitialized)
+        {
+            Logger.LogWarning("TextCompletionGAgent not initialized, initializing now...");
+            await InitializeAsync();
         }
 
         Logger.LogInformation("Starting text completion generation, input text length: {Length} characters", inputText.Length);
@@ -97,21 +189,14 @@ public class TextCompletionGAgent : AIGAgentBase<TextCompletionState, TextComple
     /// </summary>
     private string BuildCompletionPrompt(string inputText)
     {
-        return $@"
-Generate 5 different text completions for the following input:
+        var userPrompt = $@"Please generate 5 different text completions for the following input:
 
-Input text: {inputText}
+**User Input:** {inputText}
 
-Requirements:
-1. Generate 5 completions with different styles
-2. Each completion should be natural and coherent
-3. Include various completion strategies: continuation, expansion, summary, rewriting, creative extension
+Apply the completion strategies outlined in the system prompt and return the result in the specified JSON format.";
 
-Return in JSON format with only the completion texts array:
-{{""completions"": [""completion1"", ""completion2"", ""completion3"", ""completion4"", ""completion5""]}}
-
-Return only JSON, no other explanations.
-";
+        // 将系统提示词和用户提示词组合
+        return $"{_systemPrompt}\n\n{userPrompt}";
     }
 
     /// <summary>
