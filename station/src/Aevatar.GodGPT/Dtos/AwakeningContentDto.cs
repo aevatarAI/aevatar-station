@@ -23,5 +23,5 @@ public class AwakeningContentDto
     /// Current status of awakening generation
     /// </summary>
     [Id(2)]
-    public AwakeningStatus Status { get; set; } = AwakeningStatus.NotStarted;
+    public int Status { get; set; } = (int)AwakeningStatus.NotStarted;
 } 

@@ -624,8 +624,21 @@ public class GodGPTService : ApplicationService, IGodGPTService
             
             _logger.LogInformation("[GodGPTService][GetTodayAwakeningAsync] Completed for userId: {UserId}, result: {HasResult}",
                 currentUserId, result != null);
-            
-            return result;
+            if (result == null)
+            {
+                return new AwakeningContentDto()
+                {
+                    AwakeningMessage = "",
+                    AwakeningLevel = 0,
+                    Status = (int)result.Status
+                };
+            }
+            return new AwakeningContentDto()
+            {
+                AwakeningMessage = result.AwakeningMessage,
+                AwakeningLevel = result.AwakeningLevel,
+                Status = (int)result.Status
+            };;
         }
         catch (Exception ex)
         {
