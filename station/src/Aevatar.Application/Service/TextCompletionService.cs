@@ -35,6 +35,19 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
         {
             _logger.LogInformation("Starting text completion generation for user goal length: {Length}", request.UserGoal.Length);
 
+            // Service层验证：用户目标至少需要15个字符
+            if (string.IsNullOrWhiteSpace(request.UserGoal) || request.UserGoal.Trim().Length < 15)
+            {
+                _logger.LogWarning("User goal validation failed: length {Length} is less than required 15 characters", request.UserGoal?.Length ?? 0);
+                return new TextCompletionResponseDto
+                {
+                    UserGoal = request.UserGoal ?? string.Empty,
+                    Completions = new List<string>(),
+                    Success = false,
+                    ErrorMessage = "请输入至少15个字符的目标描述，以便为您生成更准确的补全建议。"
+                };
+            }
+
             // 获取TextCompletionGAgent实例
             var agentId = new Guid("12345678-1234-1234-1234-123456789abc");
             var textCompletionAgent = _clusterClient.GetGrain<ITextCompletionGAgent>(agentId);
