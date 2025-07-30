@@ -221,7 +221,7 @@ Apply the completion strategies outlined in the system prompt and return the res
             if (completionsArray == null || !completionsArray.Any())
             {
                 Logger.LogWarning("Missing completions array in AI response");
-                return GetFallbackCompletions();
+                return new List<string> { "", "", "", "", "" };
             }
 
             var completions = new List<string>();
@@ -238,7 +238,7 @@ Apply the completion strategies outlined in the system prompt and return the res
             // 确保至少有5个补全选项
             while (completions.Count < 5)
             {
-                completions.Add($"Completion option {completions.Count + 1}...");
+                completions.Add("");
             }
 
             return completions.Take(5).ToList();
@@ -246,24 +246,11 @@ Apply the completion strategies outlined in the system prompt and return the res
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error occurred while parsing AI completion result: {Error}", ex.Message);
-            return GetFallbackCompletions();
+            return new List<string> { "", "", "", "", "" };
         }
     }
 
-    /// <summary>
-    /// 获取回退补全结果
-    /// </summary>
-    private List<string> GetFallbackCompletions()
-    {
-        return new List<string>
-        {
-            "",
-            "",
-            "",
-            "",
-            ""
-        };
-    }
+
 
     /// <summary>
     /// 获取回退的补全JSON
