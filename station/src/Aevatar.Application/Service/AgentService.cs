@@ -290,9 +290,9 @@ public class AgentService : ApplicationService, IAgentService
         {
             Id = (string)state["id"],
             Name = (string)state["name"],
-            Properties = state["properties"] == null
-                ? null
-                : JsonConvert.DeserializeObject<Dictionary<string, object>>((string)state["properties"]),
+            Properties = state.TryGetValue("properties", out var properties)
+                ? JsonConvert.DeserializeObject<Dictionary<string, object>>((string)properties)
+                : null,
             AgentType = (string)state["agentType"],
             BusinessAgentGrainId =
                 state.TryGetValue("formattedBusinessAgentGrainId", out var value) ? (string)value : null
