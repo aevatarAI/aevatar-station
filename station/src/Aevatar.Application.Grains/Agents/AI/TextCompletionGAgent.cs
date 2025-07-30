@@ -35,13 +35,13 @@ public class TextCompletionGAgent : GAgentBase<TextCompletionState, TextCompleti
             throw new ArgumentException("输入文本不能为空", nameof(inputText));
         }
 
-        Logger.LogInformation("开始生成文本补全，输入文本长度: {Length}字符", inputText.Length);
+        Logger.LogInformation("Starting text completion generation, input text length: {Length} characters", inputText.Length);
 
         try
         {
             // 构建AI提示词，要求生成5个不同风格的补全
             var prompt = BuildCompletionPrompt(inputText);
-            Logger.LogDebug("生成的提示词长度: {PromptLength}字符", prompt.Length);
+            Logger.LogDebug("Generated prompt length: {PromptLength} characters", prompt.Length);
 
             // 调用AI服务生成补全结果
             var aiResult = await CallAIForCompletionAsync(prompt);
@@ -55,12 +55,12 @@ public class TextCompletionGAgent : GAgentBase<TextCompletionState, TextCompleti
             // 记录事件
             await LogCompletionEvent(inputText, completions.Count);
 
-            Logger.LogInformation("文本补全生成完成，生成了 {Count} 个选项", completions.Count);
+            Logger.LogInformation("Text completion generation completed, generated {Count} options", completions.Count);
             return completions;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "生成文本补全时发生错误，输入文本: {InputText}", inputText);
+            Logger.LogError(ex, "Error occurred during text completion generation, input text: {InputText}", inputText);
             
             // 返回回退补全结果
             return new List<string>
@@ -100,12 +100,12 @@ public class TextCompletionGAgent : GAgentBase<TextCompletionState, TextCompleti
             RaiseEvent(clearEvent);
             await ConfirmEvents();
 
-            Logger.LogInformation("补全历史记录已清空");
+            Logger.LogInformation("Completion history cleared successfully");
             return true;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "清空补全历史记录时发生错误");
+            Logger.LogError(ex, "Error occurred while clearing completion history");
             return false;
         }
     }
@@ -139,20 +139,20 @@ Return only JSON, no other explanations.
     {
         try
         {
-            Logger.LogDebug("正在调用AI服务进行文本补全...");
+            Logger.LogDebug("Calling AI service for text completion...");
             
-            // TODO: 这里应该调用实际的AI服务
-            // 目前返回模拟数据
-            await Task.Delay(100); // 模拟AI调用延迟
+            // TODO: Should call actual AI service here
+            // Currently returning mock data
+            await Task.Delay(100); // Simulate AI call delay
             
-            var fallbackJson = GetFallbackCompletionJson("模拟AI响应");
-            Logger.LogDebug("AI补全响应长度: {Length}字符", fallbackJson.Length);
+            var fallbackJson = GetFallbackCompletionJson("Mock AI response");
+            Logger.LogDebug("AI completion response length: {Length} characters", fallbackJson.Length);
             return fallbackJson;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "调用AI服务时发生错误");
-            return GetFallbackCompletionJson($"AI服务错误: {ex.Message}");
+            Logger.LogError(ex, "Error occurred while calling AI service");
+            return GetFallbackCompletionJson($"AI service error: {ex.Message}");
         }
     }
 
@@ -169,7 +169,7 @@ Return only JSON, no other explanations.
             
             if (completionsArray == null || !completionsArray.Any())
             {
-                Logger.LogWarning("AI响应中缺少completions数组");
+                Logger.LogWarning("Missing completions array in AI response");
                 return GetFallbackCompletions();
             }
 
@@ -187,14 +187,14 @@ Return only JSON, no other explanations.
             // 确保至少有5个补全选项
             while (completions.Count < 5)
             {
-                completions.Add($"补全选项 {completions.Count + 1}...");
+                completions.Add($"Completion option {completions.Count + 1}...");
             }
 
             return completions.Take(5).ToList();
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "解析AI补全结果时发生错误: {Error}", ex.Message);
+            Logger.LogError(ex, "Error occurred while parsing AI completion result: {Error}", ex.Message);
             return GetFallbackCompletions();
         }
     }
@@ -206,11 +206,11 @@ Return only JSON, no other explanations.
     {
         return new List<string>
         {
-            "补全选项1：继续写作...",
-            "补全选项2：总结以上内容。",
-            "补全选项3：换个角度来看，",
-            "补全选项4：这意味着",
-            "补全选项5：总的来说，"
+            "Completion option 1: Continue writing...",
+            "Completion option 2: To summarize the above content.",
+            "Completion option 3: From another perspective,",
+            "Completion option 4: This means that",
+            "Completion option 5: In conclusion,"
         };
     }
 
@@ -223,11 +223,11 @@ Return only JSON, no other explanations.
         {
             ["completions"] = new JArray
             {
-                "继续写作...",
-                "总结以上内容。",
-                "换个角度来看，",
-                "这意味着",
-                "总的来说，"
+                "Continue writing...",
+                "To summarize the above content.",
+                "From another perspective,",
+                "This means that",
+                "In conclusion,"
             }
         };
 
@@ -242,7 +242,7 @@ Return only JSON, no other explanations.
         var completionEvent = new TextCompletionEvent
         {
             EventType = "TextCompletion",
-            InputText = "用户输入",
+            InputText = "User input",
             CompletionCount = completions.Count
         };
         
