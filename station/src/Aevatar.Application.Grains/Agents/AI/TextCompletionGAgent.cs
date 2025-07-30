@@ -132,7 +132,12 @@ Do not include any explanations, markdown formatting, or additional text outside
         try
         {
             // 构建AI提示词，要求生成5个不同风格的补全
-            var prompt = BuildCompletionPrompt(inputText);
+            var userPrompt = $@"Please generate 5 different text completions for the following input:
+
+**User Input:** {inputText}
+
+Apply the completion strategies outlined in the system prompt and return the result in the specified JSON format.";
+            var prompt = $"{_systemPrompt}\n\n{userPrompt}";
             Logger.LogDebug("Generated prompt length: {PromptLength} characters", prompt.Length);
 
             // 调用AI服务生成补全结果
@@ -165,20 +170,7 @@ Do not include any explanations, markdown formatting, or additional text outside
 
 
 
-    /// <summary>
-    /// 构建文本补全的AI提示词
-    /// </summary>
-    private string BuildCompletionPrompt(string inputText)
-    {
-        var userPrompt = $@"Please generate 5 different text completions for the following input:
 
-**User Input:** {inputText}
-
-Apply the completion strategies outlined in the system prompt and return the result in the specified JSON format.";
-
-        // 将系统提示词和用户提示词组合
-        return $"{_systemPrompt}\n\n{userPrompt}";
-    }
 
     /// <summary>
     /// 调用AI服务进行补全生成
