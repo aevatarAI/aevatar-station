@@ -398,7 +398,9 @@ public class AgentService : ApplicationService, IAgentService
             AgentType = agentState.AgentType,
             Name = agentState.Name,
             GrainId = agentState.BusinessAgentGrainId,
-            Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentState.Properties),
+            Properties = string.IsNullOrWhiteSpace(agentState.Properties)
+                ? null
+                : JsonConvert.DeserializeObject<Dictionary<string, object>>(agentState.Properties),
             AgentGuid = agentState.BusinessAgentGrainId.GetGuidKey(),
             BusinessAgentGrainId = agentState.BusinessAgentGrainId.ToString()
         };
