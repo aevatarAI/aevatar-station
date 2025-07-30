@@ -33,18 +33,19 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
     {
         try
         {
-            _logger.LogInformation("Starting text completion generation for input length: {Length}", request.InputText.Length);
+            _logger.LogInformation("Starting text completion generation for user goal length: {Length}", request.UserGoal.Length);
 
             // 获取TextCompletionGAgent实例
             var agentId = new Guid("12345678-1234-1234-1234-123456789abc");
             var textCompletionAgent = _clusterClient.GetGrain<ITextCompletionGAgent>(agentId);
 
             // 调用agent生成补全
-            var completions = await textCompletionAgent.GenerateCompletionsAsync(request.InputText);
+            var completions = await textCompletionAgent.GenerateCompletionsAsync(request.UserGoal);
 
             // 构建成功响应
             var response = new TextCompletionResponseDto
             {
+                UserGoal = request.UserGoal,
                 Completions = completions,
                 Success = true
             };
@@ -55,9 +56,10 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
         catch (ArgumentException ex)
         {
             // 输入验证错误
-            _logger.LogWarning("Input validation failed: {Message}", ex.Message);
+            _logger.LogWarning("User goal validation failed: {Message}", ex.Message);
             return new TextCompletionResponseDto
             {
+                UserGoal = request.UserGoal,
                 Completions = new List<string>(),
                 Success = false,
                 ErrorMessage = ex.Message
@@ -69,6 +71,7 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
             _logger.LogError(ex, "Failed to generate text completion");
             return new TextCompletionResponseDto
             {
+                UserGoal = request.UserGoal,
                 Completions = new List<string>(),
                 Success = false,
                 ErrorMessage = $"Failed to generate completion: {ex.Message}"

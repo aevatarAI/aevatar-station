@@ -9,11 +9,11 @@ namespace Aevatar.Service;
 public class TextCompletionRequestDto
 {
     /// <summary>
-    /// 需要补全的输入文本（最少15个字符）
+    /// 用户目标描述（最少15个字符）
     /// </summary>
-    [Required(ErrorMessage = "Input text is required")]
-    [MinLength(15, ErrorMessage = "Input text must be at least 15 characters long")]
-    public string InputText { get; set; } = string.Empty;
+    [Required(ErrorMessage = "User goal is required")]
+    [MinLength(15, ErrorMessage = "User goal must be at least 15 characters long")]
+    public string UserGoal { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -21,6 +21,11 @@ public class TextCompletionRequestDto
 /// </summary>
 public class TextCompletionResponseDto
 {
+    /// <summary>
+    /// 用户目标描述
+    /// </summary>
+    public string UserGoal { get; set; } = string.Empty;
+
     /// <summary>
     /// 5个补全选项
     /// </summary>
