@@ -45,9 +45,6 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
             var currentUserId = _userAppService.GetCurrentUserId();
             var textCompletionAgent = _clusterClient.GetGrain<ITextCompletionGAgent>(currentUserId);
 
-            // AIGAgent需要先初始化才能使用（设置系统提示词和LLM配置）
-            await textCompletionAgent.InitializeAsync();
-
             // 调用agent生成补全
             var completions = await textCompletionAgent.GenerateCompletionsAsync(request.UserGoal);
 

@@ -20,11 +20,6 @@ namespace Aevatar.Application.Grains.Agents.AI;
 public interface ITextCompletionGAgent : IAIGAgent, IStateGAgent<TextCompletionState>
 {
     /// <summary>
-    /// 初始化Agent，设置系统提示词和LLM配置
-    /// </summary>
-    Task InitializeAsync();
-    
-    /// <summary>
     /// 根据输入文本生成5个不同的补全结果
     /// </summary>
     Task<List<string>> GenerateCompletionsAsync(string inputText);
@@ -36,9 +31,6 @@ public interface ITextCompletionGAgent : IAIGAgent, IStateGAgent<TextCompletionS
 [GAgent("TextCompletion")]
 public class TextCompletionGAgent : AIGAgentBase<TextCompletionState, TextCompletionEvent>, ITextCompletionGAgent
 {
-    private string _systemPrompt = string.Empty;
-    private bool _isInitialized = false;
-
     public TextCompletionGAgent()
     {
     }
@@ -48,60 +40,7 @@ public class TextCompletionGAgent : AIGAgentBase<TextCompletionState, TextComple
         return Task.FromResult("AI text completion agent that generates 5 different completion results based on user input.");
     }
 
-    /// <summary>
-    /// 初始化Agent，设置系统提示词和LLM配置
-    /// </summary>
-    public async Task InitializeAsync()
-    {
-        if (_isInitialized)
-        {
-            Logger.LogDebug("TextCompletionGAgent already initialized");
-            return;
-        }
 
-        Logger.LogInformation("Initializing TextCompletionGAgent with system prompt and LLM configuration");
-
-        try
-        {
-            // 设置系统提示词
-            _systemPrompt = @"You are an AI text completion assistant designed to generate creative and diverse text completions.
-
-**Core Task:**
-Generate exactly 5 different completion options for user input text.
-
-**Completion Strategies:**
-1. **Direct Continuation**: Natural extension of the input text
-2. **Creative Expansion**: Add imaginative details and descriptions  
-3. **Summary/Conclusion**: Provide a summarizing statement
-4. **Alternative Perspective**: Offer a different viewpoint or approach
-5. **Question/Dialogue**: Transform into a question or conversational format
-
-**Output Requirements:**
-- Generate exactly 5 unique completions
-- Each completion should be meaningful and coherent
-- Vary the style and approach across the 5 options
-- Keep completions relevant to the original input
-- Ensure diversity in length and tone
-
-**Response Format:**
-Return ONLY a JSON object with the following structure:
-{""completions"": [""completion1"", ""completion2"", ""completion3"", ""completion4"", ""completion5""]}
-
-Do not include any explanations, markdown formatting, or additional text outside the JSON structure.";
-
-            // 初始化完成，系统提示词已设置到_systemPrompt，LLM配置设为OpenAI
-            Logger.LogDebug("System prompt set with {PromptLength} characters", _systemPrompt.Length);
-            Logger.LogDebug("System LLM configuration set to: OpenAI");
-
-            _isInitialized = true;
-            Logger.LogInformation("TextCompletionGAgent initialization completed successfully");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Failed to initialize TextCompletionGAgent");
-            throw;
-        }
-    }
 
 
 
@@ -120,24 +59,25 @@ Do not include any explanations, markdown formatting, or additional text outside
             throw new ArgumentException("User goal must be at least 15 characters long", nameof(inputText));
         }
 
-        // 确保Agent已经初始化
-        if (!_isInitialized)
-        {
-            Logger.LogWarning("TextCompletionGAgent not initialized, initializing now...");
-            await InitializeAsync();
-        }
-
         Logger.LogInformation("Starting text completion generation, input text length: {Length} characters", inputText.Length);
 
         try
         {
             // 构建AI提示词，要求生成5个不同风格的补全
-            var userPrompt = $@"Please generate 5 different text completions for the following input:
+            var prompt = $@"Please generate 5 different text completions for the following input:
 
 **User Input:** {inputText}
 
-Apply the completion strategies outlined in the system prompt and return the result in the specified JSON format.";
-            var prompt = $"{_systemPrompt}\n\n{userPrompt}";
+**Requirements:**
+1. Generate exactly 5 completions with different styles
+2. Each completion should be natural and coherent
+3. Include various completion strategies: continuation, expansion, summary, rewriting, creative extension
+4. Return in JSON format with only the completion texts array
+
+**Response Format:**
+Return ONLY a JSON object: {{""completions"": [""completion1"", ""completion2"", ""completion3"", ""completion4"", ""completion5""]}}
+
+Return only JSON, no other explanations.";
             Logger.LogDebug("Generated prompt length: {PromptLength} characters", prompt.Length);
 
             // 调用AI服务生成补全结果
