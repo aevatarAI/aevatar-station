@@ -129,7 +129,8 @@ jobs:
 
       # Install Crane to get image digest
       - name: Install Crane (for digest lookup)
-        uses: imjasonh/setup-crane@v0.1.0
+        run: |
+          curl -sSfL https://github.com/google/go-containerregistry/releases/latest/download/go-containerregistry_Linux_x86_64.tar.gz | tar -xz -C /usr/local/bin crane
     
       # Extract image digest from registry
       - name: Extract image digest
