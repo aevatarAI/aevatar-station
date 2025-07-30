@@ -7,13 +7,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 
-public interface IBroadcastGAgent : IGAgent
+public interface IBroadcastGAgent : ICoreGAgent
 {
     Task BroadcastEventAsync<T>(string streamIdString, T @event) where T : EventBase;
 }
 
 public abstract class BroadcastGAgentBase<TBroadcastState, TBroadcastStateLogEvent>
-    : GAgentBase<TBroadcastState, TBroadcastStateLogEvent>, IBroadcastGAgent
+    : CoreGAgentBase<TBroadcastState, TBroadcastStateLogEvent>, IBroadcastGAgent
         where TBroadcastState : BroadcastGState, new()
         where TBroadcastStateLogEvent : StateLogEventBase<TBroadcastStateLogEvent>
 {

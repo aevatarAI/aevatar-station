@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Aevatar.Core.Abstractions;
+using Aevatar.Core.Abstractions.Communication;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -37,32 +38,15 @@ public abstract class
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 public abstract partial class
     GAgentBase<TState, TStateLogEvent, TEvent, TConfiguration>
-    : JournaledGrain<TState, StateLogEventBase<TStateLogEvent>>, IStateGAgent<TState>, IExtGAgent
+    : CoreGAgentBase<TState, TStateLogEvent, TEvent, TConfiguration>, IStateGAgent<TState>, IExtGAgent
     where TState : StateBase, new()
     where TStateLogEvent : StateLogEventBase<TStateLogEvent>
     where TEvent : EventBase
     where TConfiguration : ConfigurationBase
 {
-    // ActivitySource for distributed tracing
-    private static readonly ActivitySource ActivitySource = new("Aevatar.Core.GAgent");
-    
-    private Lazy<IStreamProvider> LazyStreamProvider => new(()
-        => this.GetStreamProvider(AevatarCoreConstants.StreamProvider));
+    // Note: StateDispatcher is no longer needed since state publishing is handled by CoreGAgentBase with StatePublisher
 
-    protected IStreamProvider StreamProvider => LazyStreamProvider.Value;
-
-    public ILogger Logger { get; set; } = NullLogger.Instance;
-
-    private readonly List<EventWrapperBaseAsyncObserver> _observers = [];
-
-    private IStateDispatcher? StateDispatcher { get; set; }
-    protected AevatarOptions? AevatarOptions;
-
-    private DeepCopier? _copier;
-    public async Task ActivateAsync()
-    {
-        await Task.Yield();
-    }
+    #region IGAgent Implementation (Layered Communication)
 
     public async Task RegisterAsync(IGAgent gAgent)
     {
@@ -118,21 +102,6 @@ public abstract partial class
         await OnUnregisterAgentAsync(gAgent.GetGrainId());
     }
 
-    public virtual Task<List<Type>?> GetAllSubscribedEventsAsync(bool includeBaseHandlers = false)
-    {
-        var eventHandlerMethods = GetEventHandlerMethods(GetType());
-        eventHandlerMethods = eventHandlerMethods.Where(m =>
-            m.Name != nameof(ForwardEventAsync) && m.Name != nameof(PerformConfigAsync));
-        var handlingTypes = eventHandlerMethods
-            .Select(m => m.GetParameters().First().ParameterType);
-        if (!includeBaseHandlers)
-        {
-            handlingTypes = handlingTypes.Where(t => t != typeof(RequestAllSubscriptionsEvent));
-        }
-
-        return Task.FromResult(handlingTypes.ToList())!;
-    }
-
     public Task<List<GrainId>> GetChildrenAsync()
     {
         return Task.FromResult(State.Children);
@@ -143,23 +112,9 @@ public abstract partial class
         return Task.FromResult(State.Parent ?? default);
     }
 
-    public virtual Task<Type?> GetConfigurationTypeAsync()
-    {
-        return Task.FromResult(typeof(TConfiguration))!;
-    }
+    #endregion
 
-    public async Task ConfigAsync(ConfigurationBase configuration)
-    {
-        if (configuration is TConfiguration config)
-        {
-            await PerformConfigAsync(config);
-        }
-    }
-
-    protected virtual Task PerformConfigAsync(TConfiguration configuration)
-    {
-        return Task.CompletedTask;
-    }
+    #region Layered Communication Event Handling
 
     [EventHandler]
     // ReSharper disable once UnusedMember.Global
@@ -227,6 +182,62 @@ public abstract partial class
         }
     }
 
+    #endregion
+
+    #region Layered Communication Exception Handling
+
+    /// <summary>
+    /// Sends exception events using broadcast communication in layered communication.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="evevnt"></param>
+    /// <param name="targetGrainId"></param>
+    /// <returns></returns>
+    public override async Task SendExceptionAsync<T>(T @event, GrainId targetGrainId)
+    {
+        await PublishAsync(@event);
+    }
+     
+    #endregion
+
+    #region Layered Communication Response Handling
+
+    /// <summary>
+    /// Sends response events using broadcast communication.
+    /// GAgentBase uses PublishAsync for broadcast responses in layered communication.
+    /// </summary>
+    /// <param name="responseEvent">The response event to send</param>
+    /// <param name="targetGrainId">The grain ID to send the response to (ignored in broadcast)</param>
+    /// <returns>Task representing the async operation</returns>
+    public override async Task SendResponseAsync<T>(EventWrapper<T> responseEvent, GrainId targetGrainId)
+    {
+        await PublishAsync(responseEvent);
+    }
+
+    #endregion
+
+    #region Orleans Grain Lifecycle Overrides
+
+    protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)
+    {
+        // Note: No GAgentBase-specific dependencies to initialize
+        // State management is handled by CoreGAgentBase with StatePublisher
+        
+        // Call base method for any derived class customization
+        await base.OnGAgentActivateAsync(cancellationToken);
+    }
+
+    #endregion
+
+    #region State Management Overrides
+
+    // Note: State change handling is now handled by CoreGAgentBase with StatePublisher
+    // GAgentBase no longer needs to override state management methods since CoreGAgentBase handles it
+
+    #endregion
+
+    #region Layered Communication Helper Methods
+
     protected virtual Task OnRegisterAgentAsync(GrainId agentGuid)
     {
         return Task.CompletedTask;
@@ -242,178 +253,12 @@ public abstract partial class
         return Task.CompletedTask;
     }
 
-    public abstract Task<string> GetDescriptionAsync();
+    #endregion
 
-    public Task<TState> GetStateAsync()
-    {
-        return Task.FromResult(State);
-    }
-
-    public sealed override async Task OnActivateAsync(CancellationToken cancellationToken)
-    {   
-         _copier = ServiceProvider.GetRequiredService<DeepCopier>();
-        StateDispatcher = ServiceProvider.GetService<IStateDispatcher>();
-        AevatarOptions = ServiceProvider.GetRequiredService<IOptions<AevatarOptions>>().Value;
-        try
-        {
-            await base.OnActivateAsync(cancellationToken);
-        }
-        catch (Exception e)
-        {
-            Logger.LogError("Error in OnActivateAsync.base.OnActivateAsync: {ExceptionMessage}", e.Message);
-            throw;
-        }
-
-        try
-        {
-            await BaseOnActivateAsync(cancellationToken);
-        }
-        catch (Exception e)
-        {
-            Logger.LogError("Error in OnActivateAsync.BaseOnActivateAsync: {ExceptionMessage}", e.Message);
-            throw;
-        }
-
-        try
-        {
-            await OnGAgentActivateAsync(cancellationToken);
-        }
-        catch (Exception e)
-        {
-            Logger.LogError("Error in OnActivateAsync.OnGAgentActivateAsync: {ExceptionMessage}", e.Message);
-            throw;
-        }
-    }
-
-    protected virtual Task OnGAgentActivateAsync(CancellationToken cancellationToken)
-    {
-        // Derived classes can override this method.
-        return Task.CompletedTask;
-    }
-
-    private async Task BaseOnActivateAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            // This must be called first to initialize Observers field.
-            await UpdateObserverListAsync(GetType());
-            await InitializeOrResumeEventBaseStreamAsync();
-        }
-        catch (Exception e)
-        {
-            Logger.LogError(e, "Error in BaseOnActivateAsync: {ExceptionMessage}", e.Message);
-            throw;
-        }
-    }
-
-    private async Task InitializeOrResumeEventBaseStreamAsync()
-    {
-        try
-        {
-            var streamOfThisGAgent = GetEventBaseStream(this.GetGrainId());
-            var handles = await streamOfThisGAgent.GetAllSubscriptionHandles();
-            var asyncObserver = new GAgentAsyncObserver(_observers, this.GetGrainId().ToString());
-            if (handles.Count > 0)
-            {
-                foreach (var handle in handles)
-                {
-                    await handle.ResumeAsync(asyncObserver);
-                }
-            }
-            else
-            {
-                await streamOfThisGAgent.SubscribeAsync(asyncObserver);
-            }
-        }
-        catch (Exception e)
-        {
-            Logger.LogError($"Error in InitializeOrResumeEventBaseStreamAsync: {e}");
-            throw;
-        }
-    }
-
-    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
-    {
-        await base.OnDeactivateAsync(reason, cancellationToken);
-    }
-
-    protected virtual Task HandleStateChangedAsync()
-    {
-        // Derived classes can override this method.
-        return Task.CompletedTask;
-    }
-
-    protected sealed override void OnStateChanged()
-    {
-        InternalOnStateChangedAsync().ContinueWith(task =>
-        {
-            if (task.Exception != null)
-            {
-                Logger.LogError(task.Exception, "InternalOnStateChangedAsync operation failed");
-            }
-        }, TaskContinuationOptions.OnlyOnFaulted);
-    }
-
-    private async Task InternalOnStateChangedAsync()
-    {
-        await HandleStateChangedAsync();
-        if (StateDispatcher != null)
-        {
-            var snapshot = _copier!.Copy(State);
-            
-            var singleStateWrapper = new StateWrapper<TState>(this.GetGrainId(), snapshot, Version);
-            singleStateWrapper.PublishedTimestampUtc = DateTime.UtcNow;
-            await StateDispatcher.PublishSingleAsync(this.GetGrainId(), singleStateWrapper);
-            
-            var batchStateWrapper = new StateWrapper<TState>(this.GetGrainId(), snapshot, Version);
-            batchStateWrapper.PublishedTimestampUtc = DateTime.UtcNow;
-            await StateDispatcher.PublishAsync(this.GetGrainId(), batchStateWrapper);
-        }
-    }
-
-    protected sealed override async void RaiseEvent<T>(T @event)
-    {
-        Logger.LogDebug("Base event raised: {Event}", JsonConvert.SerializeObject(@event));
-        base.RaiseEvent(@event);
-
-        AsyncTaskRunner.RunSafely(async () =>
-        {
-            try
-            {
-                await InternalRaiseEventAsync(@event);
-            }
-            catch (TimeoutException ex)
-            {
-                Logger.LogError(ex, "Event processing timeout occurred");
-            }
-        }, Logger);
-    }
-
-    private async Task InternalRaiseEventAsync<T>(T raisedStateLogEvent) where T : StateLogEventBase<TStateLogEvent>
-    {
-        await HandleRaiseEventAsync();
-    }
-
-    protected virtual Task HandleRaiseEventAsync()
-    {
-        // Derived classes can override this method.
-        return Task.CompletedTask;
-    }
-
-    protected virtual IAsyncStream<EventWrapperBase> GetEventBaseStream(GrainId grainId)
-    {
-        // Create activity with proper correlation for tracing
-        using var activity = ActivitySource.StartActivity("GetEventBaseStream");
-        activity?.SetTag("grain.id", grainId.ToString());
-        activity?.SetTag("stream.namespace", AevatarOptions!.StreamNamespace);
-        activity?.SetTag("component", "GAgentBase");
-        
-        var grainIdString = grainId.ToString();
-        var streamId = StreamId.Create(AevatarOptions!.StreamNamespace, grainIdString);
-        
-        activity?.SetTag("stream.id", streamId.ToString());
-        activity?.SetTag("operation", "GetEventBaseStream");
-        
-        return StreamProvider.GetStream<EventWrapperBase>(streamId);
-    }
+    // Note: The following methods will be implemented when layered communication managers are integrated:
+    // - AddChildAsync, AddChildManyAsync, RemoveChildAsync
+    // - SetParentAsync, ClearParentAsync  
+    // - SendEventDownwardsAsync
+    // - PublishAsync
+    // These are currently in partial class files that will be refactored in later tasks
 }

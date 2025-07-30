@@ -12,9 +12,6 @@ public class GAgentAsyncObserver : IAsyncObserver<EventWrapperBase>
     private readonly List<EventWrapperBaseAsyncObserver> _observers;
     private readonly string _grainId;
     private readonly ILogger<GAgentAsyncObserver> _logger;
-    private static readonly Meter Meter = new(OpenTelemetryConstants.AevatarStreamsMeterName);
-    private static readonly Histogram<double> PublishLatencyHistogram = Meter.CreateHistogram<double>(
-        OpenTelemetryConstants.EventPublishLatencyHistogram, "s", "Event publish-to-consume latency");
 
     public GAgentAsyncObserver(List<EventWrapperBaseAsyncObserver> observers, string grainId, ILogger<GAgentAsyncObserver> logger)
     {

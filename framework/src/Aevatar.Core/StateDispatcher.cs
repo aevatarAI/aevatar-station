@@ -19,7 +19,7 @@ public class StateDispatcher : IStateDispatcher
         _aevatarOptions = clusterClient.ServiceProvider.GetRequiredService<IOptions<AevatarOptions>>().Value;
     }
 
-    public async Task PublishAsync<TState>(GrainId grainId, StateWrapper<TState> stateWrapper) where TState : StateBase
+    public async Task PublishAsync<TState>(GrainId grainId, StateWrapper<TState> stateWrapper) where TState : CoreStateBase
     {
         try
         {
@@ -36,7 +36,7 @@ public class StateDispatcher : IStateDispatcher
         }
     }
 
-    public async Task PublishSingleAsync<TState>(GrainId grainId, StateWrapper<TState> stateWrapper) where TState : StateBase
+    public async Task PublishSingleAsync<TState>(GrainId grainId, StateWrapper<TState> stateWrapper) where TState : CoreStateBase
     {
         try
         {
