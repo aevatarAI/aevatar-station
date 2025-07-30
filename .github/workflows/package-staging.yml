@@ -155,6 +155,7 @@ jobs:
         run: |
           cosign verify \
             --certificate-oidc-issuer https://accounts.google.com \
+            --certificate-identity "kubernetes-devops-us-central1@aelf-devops.iam.gserviceaccount.com" \
             "${{ steps.meta.outputs.tags }}@${{ steps.digest.outputs.digest }}"
 
   # dispatch:
