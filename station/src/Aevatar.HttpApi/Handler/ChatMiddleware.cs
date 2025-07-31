@@ -535,6 +535,7 @@ public class ChatMiddleware
             
             var responseStream = streamProvider.GetStream<ResponseStreamGodChat>(streamId);
             var godChat = _clusterClient.GetGrain<IGodChat>(request.SessionId);
+            RequestContext.Set("GodGPTLanguage", language.ToString());
 
             // Generate unique chat ID and initiate voice chat
             var chatId = Guid.NewGuid().ToString();
