@@ -16,9 +16,7 @@ namespace Aevatar.Service;
 public interface IDeveloperService
 {
     Task CreateServiceAsync(string HostId, string version, string corsUrls);
-
     Task UpdateDockerImageAsync(string appId, string version, string newImage);
-
     Task RestartServiceAsync(DeveloperServiceOperationDto operationInput);
     Task CreateServiceAsync(string clientId, Guid projectId);
     Task DeleteServiceAsync(string clientId);
