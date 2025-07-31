@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AIGAgent.Agent;
 using Aevatar.GAgents.AIGAgent.Dtos;
+using Aevatar.GAgents.AIGAgent.State;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
 using Microsoft.Extensions.Logging;
@@ -13,6 +14,24 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 
 namespace Aevatar.Application.Grains.Agents.AI;
+
+/// <summary>
+/// 文本补全器State - 继承AI状态基类，极简版本
+/// </summary>
+[GenerateSerializer]
+public class TextCompletionState : AIGAgentStateBase
+{
+    // 不需要保存任何状态，只继承基类即可
+}
+
+/// <summary>
+/// 文本补全器事件 - 空事件类（无状态服务不需要事件持久化）
+/// </summary>
+[GenerateSerializer]
+public class TextCompletionEvent : StateLogEventBase<TextCompletionEvent>
+{
+    // 无状态服务，不需要任何事件属性
+}
 
 /// <summary>
 /// 文本补全器GAgent接口
