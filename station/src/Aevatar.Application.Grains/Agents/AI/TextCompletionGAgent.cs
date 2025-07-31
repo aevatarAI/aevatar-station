@@ -66,28 +66,37 @@ public class TextCompletionGAgent : AIGAgentBase<TextCompletionState, TextComple
     {
         if (string.IsNullOrWhiteSpace(inputText))
         {
-            throw new ArgumentException("User goal cannot be empty", nameof(inputText));
+            throw new ArgumentException("Input text cannot be empty", nameof(inputText));
         }
 
-        if (inputText.Trim().Length < 15)
+        if (inputText.Trim().Length < 2)
         {
-            throw new ArgumentException("User goal must be at least 15 characters long", nameof(inputText));
+            throw new ArgumentException("Input text must be at least 2 characters long for completion", nameof(inputText));
         }
 
         Logger.LogInformation("Starting text completion generation, input text length: {Length} characters", inputText.Length);
 
         try
         {
-            // 构建AI提示词，要求生成5个不同风格的补全
-            var prompt = $@"Please generate 5 different text completions for the following input:
+            // 构建AI提示词，明确要求对文本进行续写补全
+            var prompt = $@"You are a text completion assistant. Your task is to continue/complete the given text, NOT to answer it as a question.
 
-**User Input:** {inputText}
+**User's Incomplete Text:** {inputText}
 
-**Requirements:**
-1. Generate exactly 5 completions with different styles
-2. Each completion should be natural and coherent
-3. Include various completion strategies: continuation, expansion, summary, rewriting, creative extension
-4. Return in JSON format with only the completion texts array
+**Your Task:** 
+Continue writing after the given text to complete it naturally. Generate 5 different ways to continue/complete this text.
+
+**Important Rules:**
+1. This is TEXT CONTINUATION, not question answering
+2. Continue from where the user's text ends
+3. Each completion should naturally flow from the input text
+4. Generate exactly 5 different continuation options
+5. Each continuation should be brief (1-3 sentences)
+6. Use different styles: formal, casual, creative, practical, descriptive
+
+**Examples:**
+- Input: ""今天天气很"" → Completions: [""好，适合出门散步"", ""糟糕，下着大雨"", ""晴朗，阳光明媚"", ""凉爽，微风习习"", ""炎热，让人想待在空调房里""]
+- Input: ""我正在考虑"" → Completions: [""换一份新工作"", ""买一辆车"", ""学习新的技能"", ""旅行的计划"", ""搬到新的城市""]
 
 **Response Format:**
 Return ONLY a JSON object: {{""completions"": [""completion1"", ""completion2"", ""completion3"", ""completion4"", ""completion5""]}}
