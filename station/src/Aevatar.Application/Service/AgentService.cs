@@ -186,6 +186,10 @@ public class AgentService : ApplicationService, IAgentService
 
                     paramDto.PropertyJsonSchema =
                         _schemaProvider.GetTypeSchema(kvp.Value.InitializationData.DtoType).ToJson();
+
+                    // Get default values
+                    paramDto.DefaultValues =
+                        await GetConfigurationDefaultValuesAsync(kvp.Value.InitializationData.DtoType);
                 }
             }
 
@@ -193,6 +197,64 @@ public class AgentService : ApplicationService, IAgentService
         }
 
         return resp;
+    }
+
+    /// <summary>
+    /// Gets default values of configuration class properties (returns in list format to prepare for default value list functionality)
+    /// </summary>
+    private async Task<Dictionary<string, object?>> GetConfigurationDefaultValuesAsync(Type configurationType)
+    {
+        var defaultValues = new Dictionary<string, object?>();
+
+        try
+        {
+            // Create configuration instance to get default values
+            var instance = Activator.CreateInstance(configurationType);
+            if (instance != null)
+            {
+                var properties =
+                    configurationType.GetProperties(BindingFlags.Public | BindingFlags.Instance |
+                                                    BindingFlags.DeclaredOnly);
+
+                foreach (var property in properties)
+                {
+
+                    var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
+                    try
+                    {
+                        var value = property.GetValue(instance);
+
+                        // Convert all default values to list format
+                        
+                        if (value == null)
+                        {
+                            // Convert null values to empty list
+                            defaultValues[propertyName] = new List<object>();
+                        }
+                        else
+                        {
+                            // Convert non-null values to single-item list
+                            defaultValues[propertyName] = new List<object> { value };
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex,
+                            "Failed to get default value for property {PropertyName} in {ConfigType}",
+                            property.Name, configurationType.Name);
+                        // Return empty list for exception cases
+                        defaultValues[propertyName] = new List<object>();
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to create instance of configuration type {ConfigType}",
+                configurationType.Name);
+        }
+
+        return defaultValues;
     }
 
     private ConfigurationBase SetupConfigurationData(Configuration configuration,
