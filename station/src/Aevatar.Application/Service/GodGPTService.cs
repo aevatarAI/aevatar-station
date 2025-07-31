@@ -282,6 +282,14 @@ public class GodGPTService : ApplicationService, IGodGPTService
 
     public async Task<Guid> DeleteAccountAsync(Guid currentUserId)
     {
+        try
+        {
+            var awakeningAgent = _clusterClient.GetGrain<IAwakeningGAgent>(currentUserId);
+            await awakeningAgent.ResetTodayContentAsync();
+        }catch(Exception e)
+        {
+            _logger.LogError(e,"IAwakeningGAgent ResetTodayContentAsync error currentUserId:"+currentUserId);
+        }
         var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
         return await manager.ClearAllAsync();
     }
