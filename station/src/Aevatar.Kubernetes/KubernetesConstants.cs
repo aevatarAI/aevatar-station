@@ -47,6 +47,7 @@ public class KubernetesConstants
 
     public const int WebhookContainerTargetPort = 8308;
     public const int SiloContainerTargetPort = 8080;
+    public const int SiloHealthCheckPort = 8081;
     public const string QueryPodMaxSurge = "50%";
     public const string QueryPodMaxUnavailable = "0";
 

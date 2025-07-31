@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using Volo.Abp;
 using Aevatar.Enum;
+using Aevatar.Kubernetes.Manager;
 using Volo.Abp.Application.Services;
 
 namespace Aevatar.Service;
@@ -29,6 +30,8 @@ public interface IDeveloperService
     /// Updates business configuration in existing K8s ConfigMaps for specific host type
     /// </summary>
     Task UpdateBusinessConfigurationAsync(string hostId, string version, HostTypeEnum hostType);
+
+    Task CopyHostAsync(string sourceClientId, string newClientId, string version);
 }
 
 public class DeveloperService : ApplicationService, IDeveloperService
@@ -39,16 +42,19 @@ public class DeveloperService : ApplicationService, IDeveloperService
     private readonly IHostDeployManager _hostDeployManager;
     private readonly IKubernetesClientAdapter _kubernetesClientAdapter;
     private readonly IProjectCorsOriginService _projectCorsOriginService;
+    private readonly IHostCopyManager _hostCopyManager;
+
 
     public DeveloperService(IHostDeployManager hostDeployManager, IKubernetesClientAdapter kubernetesClientAdapter,
         ILogger<DeveloperService> logger, IProjectCorsOriginService projectCorsOriginService,
-        IConfiguration configuration)
+        IConfiguration configuration,IHostCopyManager hostCopyManager)
     {
         _logger = logger;
         _configuration = configuration;
         _hostDeployManager = hostDeployManager;
         _kubernetesClientAdapter = kubernetesClientAdapter;
         _projectCorsOriginService = projectCorsOriginService;
+        _hostCopyManager = hostCopyManager;
     }
 
     public async Task CreateServiceAsync(string hostId, string version, string corsUrls)
@@ -106,6 +112,11 @@ public class DeveloperService : ApplicationService, IDeveloperService
     public async Task UpdateBusinessConfigurationAsync(string hostId, string version, HostTypeEnum hostType)
     {
         await _hostDeployManager.UpdateBusinessConfigurationAsync(hostId, version, hostType);
+    }
+
+    public async Task CopyHostAsync(string sourceClientId, string newClientId, string version)
+    {
+        await _hostCopyManager.CopyHostAsync(sourceClientId, newClientId, version);
     }
 
 
