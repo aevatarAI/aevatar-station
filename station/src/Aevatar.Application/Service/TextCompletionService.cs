@@ -44,14 +44,12 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
                     "Please enter at least 15 characters for the user goal to generate more accurate completion suggestions.");
             }
 
-            // 根据当前用户生成agentId
-            var currentUserId = _userAppService.GetCurrentUserId();
-            var textCompletionAgent = _clusterClient.GetGrain<ITextCompletionGAgent>(currentUserId);
-            await textCompletionAgent.InitializeAsync(new()
-            {
-                Instructions = "You are an AI text completion assistant that generates 5 diverse and creative completion options for user input. Focus on providing meaningful, coherent, and varied completions using different strategies like continuation, expansion, summary, rewriting, and creative extension.",
-                LLMConfig = new () { SystemLLM = "OpenAI" },
-            });
+            // 为每次请求创建新的agent实例，避免并发冲突
+            var agentId = Guid.NewGuid();
+            var textCompletionAgent = _clusterClient.GetGrain<ITextCompletionGAgent>(agentId);
+            
+            // 只激活agent，不使用可能有问题的InitializeAsync
+            await textCompletionAgent.ActivateAsync();
             // 调用agent生成补全
             var completions = await textCompletionAgent.GenerateCompletionsAsync(request.UserGoal);
 
