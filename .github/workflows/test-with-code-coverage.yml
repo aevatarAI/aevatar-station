@@ -38,7 +38,7 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: true
-          files: coverage-framework/*/coverage.cobertura.xml
+          files: framework/coverage-framework/*/coverage.cobertura.xml
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
   test-signalr:
@@ -64,7 +64,7 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: true
-          files: coverage-signalr/*/coverage.cobertura.xml
+          files: signalR/coverage-signalr/*/coverage.cobertura.xml
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
   test-station:
@@ -90,6 +90,6 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: true
-          files: coverage-station/*/coverage.cobertura.xml
+          files: station/coverage-station/*/coverage.cobertura.xml
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }} 
