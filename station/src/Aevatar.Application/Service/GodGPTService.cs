@@ -131,6 +131,13 @@ public interface IGodGPTService
     Task<AwakeningContentDto?> GetTodayAwakeningAsync(Guid currentUserId, VoiceLanguageEnum language, string? region);
 
     Task<ExecuteActionResultDto> CanUploadImageAsync(Guid currentUserId,GodGPTChatLanguage language = GodGPTChatLanguage.English);
+    
+    /// <summary>
+    /// Reset awakening state for testing purposes (Admin only)
+    /// </summary>
+    /// <param name="userId">User ID to reset awakening state for</param>
+    /// <returns>True if reset was successful</returns>
+    Task<bool> ResetAwakeningStateForTestingAsync(Guid userId);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -1170,5 +1177,26 @@ public static class GuidCompressor
         Buffer.BlockCopy(bytes1, 0, combined, 0, bytes1.Length);
         Buffer.BlockCopy(bytes2, 0, combined, bytes1.Length, bytes2.Length);
         return combined;
+    }
+
+    public async Task<bool> ResetAwakeningStateForTestingAsync(Guid userId)
+    {
+        _logger.LogInformation("[GodGPTService][ResetAwakeningStateForTestingAsync] Starting for userId: {UserId}", userId);
+        
+        try
+        {
+            var awakeningAgent = _clusterClient.GetGrain<IAwakeningGAgent>(userId);
+            bool resetSuccess = await awakeningAgent.ResetAwakeningStateForTestingAsync();
+            
+            _logger.LogInformation("[GodGPTService][ResetAwakeningStateForTestingAsync] Completed for userId: {UserId}, success: {Success}",
+                userId, resetSuccess);
+            
+            return resetSuccess;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[GodGPTService][ResetAwakeningStateForTestingAsync] Error resetting awakening state for userId: {UserId}", userId);
+            return false;
+        }
     }
 }
