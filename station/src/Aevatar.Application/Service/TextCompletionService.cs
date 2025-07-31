@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Application.Grains.Agents.AI;
-using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.Logging;
 using Orleans;
 using Volo.Abp;
@@ -49,33 +48,12 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
             var agentId = Guid.NewGuid();
             var textCompletionAgent = _clusterClient.GetGrain<ITextCompletionGAgent>(agentId);
             
-            // 尝试获取并配置Agent（如果支持配置的话）
-            try
+            // AIGAgent需要先初始化才能使用（设置系统提示词和LLM配置）
+            await textCompletionAgent.InitializeAsync(new()
             {
-                var configType = await textCompletionAgent.GetConfigurationTypeAsync();
-                if (configType != null)
-                {
-                    // 创建配置实例 - 暂时为空配置，让Agent使用默认设置
-                    var config = Activator.CreateInstance(configType);
-                    if (config is ConfigurationBase configBase)
-                    {
-                        await textCompletionAgent.ConfigAsync(configBase);
-                        _logger.LogDebug("Agent configured successfully with type: {ConfigType}", configType.Name);
-                    }
-                    else
-                    {
-                        _logger.LogWarning("Configuration instance is not of type ConfigurationBase: {ConfigType}", configType.Name);
-                    }
-                }
-                else
-                {
-                    _logger.LogDebug("Agent does not require configuration");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to configure agent, will proceed without configuration");
-            }
+                Instructions = "You are an AI text completion assistant that generates 5 diverse and creative completion options for user input. Focus on providing meaningful, coherent, and varied completions using different strategies like continuation, expansion, summary, rewriting, and creative extension.",
+                LLMConfig = new () { SystemLLM = "OpenAI" },
+            });
             // 调用agent生成补全
             var completions = await textCompletionAgent.GenerateCompletionsAsync(request.UserGoal);
 
