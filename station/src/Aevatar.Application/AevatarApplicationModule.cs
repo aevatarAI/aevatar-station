@@ -5,6 +5,7 @@ using Aevatar.ApiRequests;
 using Aevatar.Application.Contracts.WorkflowOrchestration;
 using Aevatar.Application.Grains;
 using Aevatar.Application.Service;
+using Aevatar.Service;
 using Aevatar.BlobStorings;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
@@ -68,6 +69,8 @@ public class AevatarApplicationModule : AbpModule
         context.Services.AddSingleton<ISchemaProvider, SchemaProvider>();
         Configure<WebhookDeployOptions>(configuration.GetSection("WebhookDeploy"));
         Configure<AgentOptions>(configuration.GetSection("Agent"));
+        // Agent默认值配置
+        Configure<SystemLLMConfigOptions>(configuration.GetSection("AgentDefaults"));
         context.Services.AddTransient<IHostDeployManager, KubernetesHostManager>();
         context.Services.AddSingleton<INotificationHandlerFactory, NotificationProcessorFactory>();
         Configure<HostDeployOptions>(configuration.GetSection("HostDeploy"));
@@ -93,5 +96,8 @@ public class AevatarApplicationModule : AbpModule
         
         // Unified workflow orchestration service - includes prompt building and JSON validation functionality
         context.Services.AddTransient<IWorkflowOrchestrationService, WorkflowOrchestrationService>();
+        
+        // Text completion service  
+        context.Services.AddTransient<ITextCompletionService, TextCompletionService>();
     }
 }

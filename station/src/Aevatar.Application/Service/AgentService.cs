@@ -43,6 +43,7 @@ public class AgentService : ApplicationService, IAgentService
     private readonly IGAgentManager _gAgentManager;
     private readonly IUserAppService _userAppService;
     private readonly IOptionsMonitor<AgentOptions> _agentOptions;
+    private readonly IOptionsMonitor<SystemLLMConfigOptions> _systemLLMConfigOptions;
     private readonly GrainTypeResolver _grainTypeResolver;
     private readonly ISchemaProvider _schemaProvider;
     private readonly IIndexingService _indexingService;
@@ -55,6 +56,7 @@ public class AgentService : ApplicationService, IAgentService
         IGAgentManager gAgentManager,
         IUserAppService userAppService,
         IOptionsMonitor<AgentOptions> agentOptions,
+        IOptionsMonitor<SystemLLMConfigOptions> systemLLMConfigOptions,
         GrainTypeResolver grainTypeResolver,
         ISchemaProvider schemaProvider,
         IIndexingService indexingService)
@@ -66,6 +68,7 @@ public class AgentService : ApplicationService, IAgentService
         _gAgentManager = gAgentManager;
         _userAppService = userAppService;
         _agentOptions = agentOptions;
+        _systemLLMConfigOptions = systemLLMConfigOptions;
         _grainTypeResolver = grainTypeResolver;
         _schemaProvider = schemaProvider;
         _indexingService = indexingService;
@@ -189,7 +192,7 @@ public class AgentService : ApplicationService, IAgentService
 
                     // Get default values
                     paramDto.DefaultValues =
-                        await GetConfigurationDefaultValuesAsync(kvp.Value.InitializationData.DtoType);
+                        await GetConfigurationDefaultValuesAsync(kvp.Value.InitializationData.DtoType, kvp.Key, kvp.Value.FullName);
                 }
             }
 
@@ -202,7 +205,7 @@ public class AgentService : ApplicationService, IAgentService
     /// <summary>
     /// Gets default values of configuration class properties (returns in list format to prepare for default value list functionality)
     /// </summary>
-    private async Task<Dictionary<string, object?>> GetConfigurationDefaultValuesAsync(Type configurationType)
+    private async Task<Dictionary<string, object?>> GetConfigurationDefaultValuesAsync(Type configurationType, string? agentType = null, string? fullName = null)
     {
         var defaultValues = new Dictionary<string, object?>();
 
@@ -224,17 +227,28 @@ public class AgentService : ApplicationService, IAgentService
                     {
                         var value = property.GetValue(instance);
 
-                        // Convert all default values to list format
-                        
-                        if (value == null)
+                        // Special handling for AIGAgent systemLLM property
+                        if (IsAIGAgent(agentType, fullName) && 
+                            string.Equals(property.Name, "systemLLM", StringComparison.OrdinalIgnoreCase))
                         {
-                            // Convert null values to empty list
-                            defaultValues[propertyName] = new List<object>();
+                            var systemLLMList = _systemLLMConfigOptions.CurrentValue.SystemLLMConfigs;
+                            defaultValues[propertyName] = systemLLMList;
+                            _logger.LogInformation("AIGAgent detected, setting systemLLM default values: {SystemLLMList}", 
+                                string.Join(", ", systemLLMList));
                         }
                         else
                         {
-                            // Convert non-null values to single-item list
-                            defaultValues[propertyName] = new List<object> { value };
+                            // Convert all default values to list format
+                            if (value == null)
+                            {
+                                // Convert null values to empty list
+                                defaultValues[propertyName] = new List<object>();
+                            }
+                            else
+                            {
+                                // Convert non-null values to single-item list
+                                defaultValues[propertyName] = new List<object> { value };
+                            }
                         }
                     }
                     catch (Exception ex)
@@ -255,6 +269,19 @@ public class AgentService : ApplicationService, IAgentService
         }
 
         return defaultValues;
+    }
+
+    /// <summary>
+    /// Checks if the agent type is an AI GAgent
+    /// </summary>
+    private bool IsAIGAgent(string? agentType, string? fullName)
+    {
+        if (string.IsNullOrEmpty(agentType) && string.IsNullOrEmpty(fullName))
+            return false;
+
+        var typeToCheck = !string.IsNullOrEmpty(fullName) ? fullName : agentType;
+        return typeToCheck?.Contains("aigagent", StringComparison.OrdinalIgnoreCase) == true ||
+               typeToCheck?.Contains("AIGAgent", StringComparison.Ordinal) == true;
     }
 
     private ConfigurationBase SetupConfigurationData(Configuration configuration,

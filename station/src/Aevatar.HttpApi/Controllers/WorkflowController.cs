@@ -1,5 +1,8 @@
 using System.Threading.Tasks;
 using Aevatar.Application.Contracts.WorkflowOrchestration;
+using Aevatar.Controllers;
+using Aevatar.Domain.WorkflowOrchestration;
+using Aevatar.Service;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
@@ -15,11 +18,13 @@ public class WorkflowController : AevatarController
 {
     private readonly IWorkflowOrchestrationService _workflowOrchestrationService;
     private readonly ITextCompletionService _textCompletionService;
-    private readonly ILogger<WorkflowController> _logger;
 
-    public WorkflowController(IWorkflowOrchestrationService workflowOrchestrationService)
+    public WorkflowController(
+        IWorkflowOrchestrationService workflowOrchestrationService,
+        ITextCompletionService textCompletionService)
     {
         _workflowOrchestrationService = workflowOrchestrationService;
+        _textCompletionService = textCompletionService;
     }
 
     /// <summary>
@@ -42,8 +47,6 @@ public class WorkflowController : AevatarController
     [Authorize]
     public async Task<TextCompletionResponseDto> GenerateTextCompletionAsync([FromBody] TextCompletionRequestDto request)
     {
-        _logger.LogDebug("Received text completion request");
-            
         if (request == null)
         {
             throw new UserFriendlyException("Request cannot be null");

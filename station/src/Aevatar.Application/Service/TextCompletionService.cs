@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Application.Grains.Agents.AI;
+using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.Logging;
 using Orleans;
 using Volo.Abp;
@@ -17,15 +18,18 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
     private readonly IClusterClient _clusterClient;
     private readonly ILogger<TextCompletionService> _logger;
     private readonly IUserAppService _userAppService;
+    private readonly IGAgentFactory _gAgentFactory;
 
     public TextCompletionService(
         IClusterClient clusterClient,
         ILogger<TextCompletionService> logger,
-        IUserAppService userAppService)
+        IUserAppService userAppService,
+        IGAgentFactory gAgentFactory)
     {
         _clusterClient = clusterClient;
         _logger = logger;
         _userAppService = userAppService;
+        _gAgentFactory = gAgentFactory;
     }
 
     public async Task<TextCompletionResponseDto> GenerateCompletionsAsync(TextCompletionRequestDto request)
@@ -35,18 +39,11 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
             _logger.LogInformation("Starting text completion generation for user goal length: {Length}",
                 request.UserGoal.Length);
 
-            // Service层验证：用户目标至少需要15个字符
-            if (string.IsNullOrWhiteSpace(request.UserGoal) || request.UserGoal.Trim().Length < 15)
-            {
-                _logger.LogWarning("User goal validation failed: length {Length} is less than required 15 characters",
-                    request.UserGoal?.Length ?? 0);
-                throw new UserFriendlyException(
-                    "Please enter at least 15 characters for the user goal to generate more accurate completion suggestions.");
-            }
-
-            // 根据当前用户生成agentId
-            var currentUserId = _userAppService.GetCurrentUserId();
-            var textCompletionAgent = _clusterClient.GetGrain<ITextCompletionGAgent>(currentUserId);
+            // 为每次请求创建新的agent实例，避免并发冲突  
+            var agentId = Guid.NewGuid();
+            var textCompletionAgent = await _gAgentFactory.GetGAgentAsync<ITextCompletionGAgent>(agentId);
+            
+            // AIGAgent需要先初始化才能使用（设置系统提示词和LLM配置）
             await textCompletionAgent.InitializeAsync(new()
             {
                 Instructions = "You are an AI text completion assistant that generates 5 diverse and creative completion options for user input. Focus on providing meaningful, coherent, and varied completions using different strategies like continuation, expansion, summary, rewriting, and creative extension.",

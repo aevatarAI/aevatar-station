@@ -102,13 +102,13 @@ jobs:
             hostType="1"
           fi
           echo "hostType=$hostType" >> $GITHUB_ENV
-          
+
       - name: Exit early for unsupported applications
         if: env.hostType == '-1'
         run: |
           echo "Unsupported application: ${{ github.event.inputs.servicename }}. Skipping workflow."
           exit 0
-      
+
       - name: Request token from auth-station
         id: auth_token_request
         run: |
