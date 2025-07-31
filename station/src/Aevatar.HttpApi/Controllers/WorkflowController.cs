@@ -17,10 +17,13 @@ namespace Aevatar.HttpApi.Controllers
     public class WorkflowController : AbpControllerBase
     {
         private readonly ITextCompletionService _textCompletionService;
+        private readonly ILogger<WorkflowController> _logger;
 
-        public WorkflowController(ITextCompletionService textCompletionService)
+        public WorkflowController(ITextCompletionService textCompletionService,
+            ILogger<WorkflowController> logger)
         {
             _textCompletionService = textCompletionService;
+            _logger = logger;
         }
 
         /// <summary>
@@ -32,6 +35,8 @@ namespace Aevatar.HttpApi.Controllers
         [Authorize]
         public async Task<TextCompletionResponseDto> GenerateTextCompletionAsync([FromBody] TextCompletionRequestDto request)
         {
+            _logger.LogDebug("Received text completion request");
+            
             if (request == null)
             {
                 throw new UserFriendlyException("Request cannot be null");
