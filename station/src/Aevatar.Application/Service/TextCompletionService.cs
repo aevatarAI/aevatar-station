@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Application.Grains.Agents.AI;
+using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.Logging;
 using Orleans;
 using Volo.Abp;
@@ -44,12 +45,37 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
                     "Please enter at least 15 characters for the user goal to generate more accurate completion suggestions.");
             }
 
-            // 为每次请求创建新的agent实例，避免并发冲突
+            // 为每次请求创建新的agent实例，避免并发冲突  
             var agentId = Guid.NewGuid();
             var textCompletionAgent = _clusterClient.GetGrain<ITextCompletionGAgent>(agentId);
             
-            // 只激活agent，不使用可能有问题的InitializeAsync
-            await textCompletionAgent.ActivateAsync();
+            // 尝试获取并配置Agent（如果支持配置的话）
+            try
+            {
+                var configType = await textCompletionAgent.GetConfigurationTypeAsync();
+                if (configType != null)
+                {
+                    // 创建配置实例 - 暂时为空配置，让Agent使用默认设置
+                    var config = Activator.CreateInstance(configType);
+                    if (config is ConfigurationBase configBase)
+                    {
+                        await textCompletionAgent.ConfigAsync(configBase);
+                        _logger.LogDebug("Agent configured successfully with type: {ConfigType}", configType.Name);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Configuration instance is not of type ConfigurationBase: {ConfigType}", configType.Name);
+                    }
+                }
+                else
+                {
+                    _logger.LogDebug("Agent does not require configuration");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to configure agent, will proceed without configuration");
+            }
             // 调用agent生成补全
             var completions = await textCompletionAgent.GenerateCompletionsAsync(request.UserGoal);
 
