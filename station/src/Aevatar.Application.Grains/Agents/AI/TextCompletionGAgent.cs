@@ -78,45 +78,54 @@ public class TextCompletionGAgent : AIGAgentBase<TextCompletionState, TextComple
 
         try
         {
-            // 构建AI提示词，明确要求对文本进行续写补全，保留原文并自然续写
-            var prompt = $@"You are a text completion assistant. Your task is to continue/complete the given text naturally.
+            // 构建AI提示词，明确要求直接续写补全用户的文本
+            var prompt = $@"You are a text completion assistant. Your task is to continue the given incomplete text by adding words that naturally complete it into a full sentence.
 
-**User's Input Text:** {inputText}
+**User's Incomplete Text:** {inputText}
 
 **Your Task:** 
-Generate 5 different ways to complete this text. Each completion should include the original text PLUS natural continuation.
+Complete this text by adding words directly after it to form complete, natural sentences. Generate 5 different completions.
 
 **Important Rules:**
-1. ALWAYS include the complete original text at the beginning
-2. Then add natural continuation that flows from the original text
-3. Each completion should be a complete, meaningful sentence or thought
-4. Generate exactly 5 different continuation options
-5. Make continuations brief but natural (1-2 additional sentences)
-6. Use different styles and approaches
+1. Continue the text DIRECTLY from where it ends - do not add punctuation between original and completion
+2. Make the result a complete, grammatically correct sentence 
+3. The completion should feel like a natural continuation of the original text
+4. Generate exactly 5 different completion options
+5. Each completion should result in a meaningful, complete sentence
+6. Use different completion approaches and styles
 
 **Examples:**
-- Input: ""今天天气很"" 
+- Input: ""今天天气很""
   → Completions: [
-    ""今天天气很好，适合出门散步和运动。"",
-    ""今天天气很糟糕，下着大雨让人不想出门。"",
-    ""今天天气很晴朗，阳光明媚温度适宜。"",
-    ""今天天气很凉爽，微风习习让人心情愉悦。"",
-    ""今天天气很炎热，让人想待在空调房里。""
+    ""今天天气很好适合出门运动"",
+    ""今天天气很糟糕一直在下雨"", 
+    ""今天天气很晴朗阳光充足"",
+    ""今天天气很凉爽有微风"",
+    ""今天天气很热需要开空调""
   ]
 
 - Input: ""我正在考虑""
   → Completions: [
-    ""我正在考虑换一份新工作，寻找更好的发展机会。"",
-    ""我正在考虑买一辆车，方便日常出行。"",
-    ""我正在考虑学习新的技能，提升自己的竞争力。"",
-    ""我正在考虑制定旅行计划，放松一下心情。"",
-    ""我正在考虑搬到新的城市，开始新的生活。""
+    ""我正在考虑换一个工作环境"",
+    ""我正在考虑这个问题的解决方案"",
+    ""我正在考虑是否要买车"",
+    ""我正在考虑去哪里旅游"",
+    ""我正在考虑学习新的技能""
+  ]
+
+- Input: ""请帮我获取""
+  → Completions: [
+    ""请帮我获取这个文件的最新版本"",
+    ""请帮我获取明天的天气预报信息"",
+    ""请帮我获取会议的详细安排"",
+    ""请帮我获取项目的进度报告"",
+    ""请帮我获取用户的反馈数据""
   ]
 
 **Response Format:**
 Return ONLY a JSON object: {{""completions"": [""completion1"", ""completion2"", ""completion3"", ""completion4"", ""completion5""]}}
 
-Each completion MUST start with the original input text, then continue naturally.
+Each completion should be the original text + direct continuation (no punctuation in between).
 Return only JSON, no other explanations.";
             Logger.LogDebug("Generated prompt length: {PromptLength} characters", prompt.Length);
 
