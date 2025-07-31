@@ -68,6 +68,7 @@ public class AevatarApplicationModule : AbpModule
         context.Services.AddSingleton<ISchemaProvider, SchemaProvider>();
         Configure<WebhookDeployOptions>(configuration.GetSection("WebhookDeploy"));
         Configure<AgentOptions>(configuration.GetSection("Agent"));
+        Configure<SystemLLMConfigOptions>(configuration.GetSection("SystemLLMConfigs"));
         context.Services.AddTransient<IHostDeployManager, KubernetesHostManager>();
         context.Services.AddSingleton<INotificationHandlerFactory, NotificationProcessorFactory>();
         Configure<HostDeployOptions>(configuration.GetSection("HostDeploy"));
