@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Application.Grains.Agents.AI;
+using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.Logging;
 using Orleans;
 using Volo.Abp;
@@ -17,15 +18,18 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
     private readonly IClusterClient _clusterClient;
     private readonly ILogger<TextCompletionService> _logger;
     private readonly IUserAppService _userAppService;
+    private readonly IGAgentFactory _gAgentFactory;
 
     public TextCompletionService(
         IClusterClient clusterClient,
         ILogger<TextCompletionService> logger,
-        IUserAppService userAppService)
+        IUserAppService userAppService,
+        IGAgentFactory gAgentFactory)
     {
         _clusterClient = clusterClient;
         _logger = logger;
         _userAppService = userAppService;
+        _gAgentFactory = gAgentFactory;
     }
 
     public async Task<TextCompletionResponseDto> GenerateCompletionsAsync(TextCompletionRequestDto request)
@@ -46,7 +50,7 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
 
             // 为每次请求创建新的agent实例，避免并发冲突  
             var agentId = Guid.NewGuid();
-            var textCompletionAgent = _clusterClient.GetGrain<ITextCompletionGAgent>(agentId);
+            var textCompletionAgent = await _gAgentFactory.GetGAgentAsync<ITextCompletionGAgent>(agentId);
             
             // AIGAgent需要先初始化才能使用（设置系统提示词和LLM配置）
             await textCompletionAgent.InitializeAsync(new()
