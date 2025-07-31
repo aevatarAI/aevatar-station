@@ -662,7 +662,7 @@ public class GodGPTService : ApplicationService, IGodGPTService
                 {
                     AwakeningMessage = "",
                     AwakeningLevel = 0,
-                    Status = (int)result.Status
+                    Status = (int)AwakeningStatus.NotStarted
                 };
             }
             return new AwakeningContentDto()
