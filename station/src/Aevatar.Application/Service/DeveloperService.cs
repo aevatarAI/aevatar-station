@@ -16,7 +16,6 @@ namespace Aevatar.Service;
 public interface IDeveloperService
 {
     Task CreateServiceAsync(string HostId, string version, string corsUrls);
-    Task DestroyServiceAsync(string inputHostId, string inputVersion);
 
     Task UpdateDockerImageAsync(string appId, string version, string newImage);
 
@@ -47,9 +46,6 @@ public class DeveloperService : ApplicationService, IDeveloperService
 
     public async Task CreateServiceAsync(string hostId, string version, string corsUrls)
         => await _hostDeployManager.CreateApplicationAsync(hostId, version, corsUrls, Guid.Empty);
-
-    public async Task DestroyServiceAsync(string inputHostId, string inputVersion)
-        => await _hostDeployManager.DestroyApplicationAsync(inputHostId, inputVersion);
 
     public async Task UpdateDockerImageAsync(string appId, string version, string newImage)
         => await _hostDeployManager.UpdateDeploymentImageAsync(appId, version, newImage);
