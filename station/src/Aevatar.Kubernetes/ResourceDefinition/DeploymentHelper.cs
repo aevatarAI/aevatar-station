@@ -427,6 +427,11 @@ public class DeploymentHelper
                         },
                         new V1KeyToPath
                         {
+                            Key = KubernetesConstants.AppSettingSiloSharedFileName,
+                            Path = KubernetesConstants.AppSettingSiloSharedFileName
+                        },
+                        new V1KeyToPath
+                        {
                             Key = SecureConfigurationExtensions.DefaultBusinessConfigPath,
                             Path = SecureConfigurationExtensions.DefaultBusinessConfigPath
                         }
