@@ -36,7 +36,7 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
     {
         try
         {
-            _logger.LogInformation("Starting text completion generation for user goal length: {Length}",
+            _logger.LogInformation("Starting text completion generation for input text length: {Length}",
                 request.UserGoal.Length);
 
             // 为每次请求创建新的agent实例，避免并发冲突  
@@ -46,7 +46,7 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
             // AIGAgent需要先初始化才能使用（设置系统提示词和LLM配置）
             await textCompletionAgent.InitializeAsync(new()
             {
-                Instructions = "You are an AI text completion assistant that generates 5 diverse and creative completion options for user input. Focus on providing meaningful, coherent, and varied completions using different strategies like continuation, expansion, summary, rewriting, and creative extension.",
+                Instructions = "You are a text completion assistant specializing in continuing and completing incomplete text. Your role is to provide natural text continuations, not to answer questions. Focus on understanding the context and flow of the given text, then generate coherent continuations that feel like a natural extension of the original content.",
                 LLMConfig = new () { SystemLLM = "OpenAI" },
             });
             // 调用agent生成补全
