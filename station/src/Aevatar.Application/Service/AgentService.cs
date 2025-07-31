@@ -43,7 +43,7 @@ public class AgentService : ApplicationService, IAgentService
     private readonly IGAgentManager _gAgentManager;
     private readonly IUserAppService _userAppService;
     private readonly IOptionsMonitor<AgentOptions> _agentOptions;
-    private readonly IOptionsMonitor<SystemLLMConfigOptions> _systemLLMConfigOptions;
+    private readonly IOptionsMonitor<AgentDefaultValuesOptions> _systemLLMConfigOptions;
     private readonly GrainTypeResolver _grainTypeResolver;
     private readonly ISchemaProvider _schemaProvider;
     private readonly IIndexingService _indexingService;
@@ -56,7 +56,7 @@ public class AgentService : ApplicationService, IAgentService
         IGAgentManager gAgentManager,
         IUserAppService userAppService,
         IOptionsMonitor<AgentOptions> agentOptions,
-        IOptionsMonitor<SystemLLMConfigOptions> systemLLMConfigOptions,
+        IOptionsMonitor<AgentDefaultValuesOptions> systemLLMConfigOptions,
         GrainTypeResolver grainTypeResolver,
         ISchemaProvider schemaProvider,
         IIndexingService indexingService)

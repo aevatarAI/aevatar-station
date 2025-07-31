@@ -70,7 +70,7 @@ public class AevatarApplicationModule : AbpModule
         Configure<WebhookDeployOptions>(configuration.GetSection("WebhookDeploy"));
         Configure<AgentOptions>(configuration.GetSection("Agent"));
         // Agent默认值配置
-        Configure<SystemLLMConfigOptions>(configuration.GetSection("AgentDefaults"));
+        Configure<AgentDefaultValuesOptions>(configuration.GetSection("AgentDefaults"));
         context.Services.AddTransient<IHostDeployManager, KubernetesHostManager>();
         context.Services.AddSingleton<INotificationHandlerFactory, NotificationProcessorFactory>();
         Configure<HostDeployOptions>(configuration.GetSection("HostDeploy"));

@@ -301,9 +301,9 @@ public class AgentServiceTests
         // Set up a mock logger to avoid null reference exceptions
         var mockLogger = new Mock<ILogger<AgentService>>();
         
-        // Set up mock SystemLLMConfigOptions
-        var mockSystemLLMOptions = new Mock<IOptionsMonitor<SystemLLMConfigOptions>>();
-        var systemLLMConfig = new SystemLLMConfigOptions
+        // Set up mock AgentDefaultValuesOptions
+        var mockSystemLLMOptions = new Mock<IOptionsMonitor<AgentDefaultValuesOptions>>();
+        var systemLLMConfig = new AgentDefaultValuesOptions
         {
             SystemLLMConfigs = new List<string> { "gpt-4", "deepseek" }
         };

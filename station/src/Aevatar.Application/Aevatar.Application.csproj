@@ -13,6 +13,7 @@
         <ProjectReference Include="..\..\..\framework\src\Aevatar\Aevatar.csproj" />
         <ProjectReference Include="..\Aevatar.CQRS\Aevatar.CQRS.csproj"/>
         <ProjectReference Include="..\Aevatar.Domain\Aevatar.Domain.csproj"/>
+        <ProjectReference Include="..\Aevatar.Domain.Shared\Aevatar.Domain.Shared.csproj"/>
         <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj"/>
         <ProjectReference Include="..\Aevatar.Application.Grains\Aevatar.Application.Grains.csproj"/>
         <ProjectReference Include="..\Aevatar.Kubernetes\Aevatar.Kubernetes.csproj"/>

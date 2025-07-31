@@ -57,7 +57,7 @@ public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
         context.Services.AddTransient<IProjectionGrainActivator, ProjectionGrainActivator>();
 
         context.Services.Configure<HostOptions>(context.Services.GetConfiguration().GetSection("Host"));
-        context.Services.Configure<Aevatar.Options.SystemLLMConfigOptions>(configuration);
+        context.Services.Configure<SystemLLMConfigOptions>(configuration);
 
         Configure<AbpBlobStoringOptions>(options =>
         {

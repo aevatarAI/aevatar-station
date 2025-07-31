@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Aevatar.Options;
 
-public class SystemLLMConfigOptions
+public class AgentDefaultValuesOptions
 {
     public List<string> SystemLLMConfigs { get; set; } = new () { "OpenAI", "DeepSeek" };
 }
