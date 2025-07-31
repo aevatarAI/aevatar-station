@@ -24,7 +24,6 @@
         <PackageReference Include="Aevatar.GAgents.PsiOmni.Plugins" />
         <PackageReference Include="Aevatar.GAgents.MCP" />
         <PackageReference Include="Aevatar.GAgents.InputGAgent" />
-        <PackageReference Include="Aevatar.GAgents.TypeTestAgent" />
     </ItemGroup>
 
     <ItemGroup>

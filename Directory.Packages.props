@@ -33,7 +33,6 @@
     <PackageVersion Include="Aevatar.GAgents.MCP.Core" Version="$(AevatarGAgentVersion)" />
     <PackageVersion Include="Aevatar.GAgents.Executor" Version="$(AevatarGAgentVersion)" />
     <PackageVersion Include="Aevatar.GAgents.InputGAgent" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.TypeTestAgent" Version="$(AevatarGAgentVersion)" />
     <!-- AI and Analysis packages -->
     <PackageVersion Include="AutoGen" Version="0.2.1" />
     <PackageVersion Include="AutoGen.Core" Version="0.2.1" />
