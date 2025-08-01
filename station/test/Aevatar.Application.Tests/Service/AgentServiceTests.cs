@@ -29,7 +29,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
         
         // Assert
         result.ShouldNotBeNull();
@@ -66,7 +66,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
         
         // Assert
         result.ShouldNotBeNull();
@@ -90,7 +90,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
         
         // Assert
         result.ShouldNotBeNull();
@@ -135,7 +135,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
         
         // Assert
         result.ShouldNotBeNull();
@@ -166,7 +166,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
         
         // Assert
         result.ShouldNotBeNull();
@@ -185,7 +185,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
         
         // Assert
         result.ShouldNotBeNull();
@@ -204,7 +204,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
         
         // Assert
         result.ShouldNotBeNull();
@@ -228,7 +228,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
         
         // Assert
         result.ShouldNotBeNull();
@@ -301,20 +301,20 @@ public class AgentServiceTests
         // Set up a mock logger to avoid null reference exceptions
         var mockLogger = new Mock<ILogger<AgentService>>();
         
-        // Set up mock SystemLLMConfigOptions
-        var mockSystemLLMOptions = new Mock<IOptionsMonitor<SystemLLMConfigOptions>>();
-        var systemLLMConfig = new SystemLLMConfigOptions
+        // Set up mock AgentDefaultValuesOptions (not SystemLLMConfigOptions)
+        var mockAgentDefaultValuesOptions = new Mock<IOptionsMonitor<AgentDefaultValuesOptions>>();
+        var agentDefaultValuesConfig = new AgentDefaultValuesOptions
         {
             SystemLLMConfigs = new List<string> { "gpt-4", "deepseek" }
         };
-        mockSystemLLMOptions.Setup(x => x.CurrentValue).Returns(systemLLMConfig);
+        mockAgentDefaultValuesOptions.Setup(x => x.CurrentValue).Returns(agentDefaultValuesConfig);
         
         // Use reflection to set the private fields
         var loggerField = typeof(AgentService).GetField("_logger", BindingFlags.NonPublic | BindingFlags.Instance);
         loggerField?.SetValue(agentService, mockLogger.Object);
         
-        var systemLLMOptionsField = typeof(AgentService).GetField("_systemLLMConfigOptions", BindingFlags.NonPublic | BindingFlags.Instance);
-        systemLLMOptionsField?.SetValue(agentService, mockSystemLLMOptions.Object);
+        var agentDefaultValuesOptionsField = typeof(AgentService).GetField("_agentDefaultValuesOptions", BindingFlags.NonPublic | BindingFlags.Instance);
+        agentDefaultValuesOptionsField?.SetValue(agentService, mockAgentDefaultValuesOptions.Object);
         
         return agentService;
     }
