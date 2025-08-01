@@ -107,6 +107,8 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: true
-          files: ./coverage-framework/*/coverage.cobertura.xml,./coverage-signalr/*/coverage.cobertura.xml,./coverage-station/*/coverage.cobertura.xml
+          directory: ./
+          flags: unittests
+          name: codecov-umbrella
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }} 
