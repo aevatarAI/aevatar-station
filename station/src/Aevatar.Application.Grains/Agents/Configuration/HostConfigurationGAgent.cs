@@ -55,9 +55,13 @@ public class HostConfigurationGAgent : GAgentBase<HostConfigurationGAgentState, 
             State.HostId, State.HostType, updatedBy);
     }
 
-    public async Task<string> GetBusinessConfigurationJsonAsync()
+    public async Task<BusinessConfigurationResult> GetBusinessConfigurationJsonAsync()
     {
-        return State.BusinessConfigurationJson ?? "{}";
+        return new BusinessConfigurationResult
+        {
+            ConfigurationJson = State.BusinessConfigurationJson ?? "{}",
+            UpdatedAt = State.UpdatedAt
+        };
     }
 
     public async Task ClearBusinessConfigurationAsync(string updatedBy = "System")
@@ -110,8 +114,8 @@ public interface IHostConfigurationGAgent : IStateGAgent<HostConfigurationGAgent
     /// <summary>
     /// Retrieve business configuration JSON for this host-type combination
     /// </summary>
-    /// <returns>Business configuration as JSON string</returns>
-    Task<string> GetBusinessConfigurationJsonAsync();
+    /// <returns>Business configuration with last modified time</returns>
+    Task<BusinessConfigurationResult> GetBusinessConfigurationJsonAsync();
 
     /// <summary>
     /// Clear business configuration for this host-type combination

@@ -9,6 +9,13 @@ using Orleans;
 namespace Aevatar.Domain.Shared.Configuration;
 
 [GenerateSerializer]
+public class BusinessConfigurationResult
+{
+    [Id(0)] public string ConfigurationJson { get; set; } = "{}";
+    [Id(1)] public DateTime UpdatedAt { get; set; }
+}
+
+[GenerateSerializer]
 public class HostConfigurationGAgentState : StateBase
 {
     [Id(0)] public string HostId { get; set; }

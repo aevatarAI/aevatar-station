@@ -97,7 +97,8 @@ public class BusinessConfigController : AevatarController
             return Ok(new
             {
                 HostId = hostId,
-                HostType = hostType.ToString()
+                HostType = hostType.ToString(),
+                UpdatedAt = DateTime.UtcNow
             });
         }
         catch (Exception ex)
@@ -133,9 +134,9 @@ public class BusinessConfigController : AevatarController
             var grainKey = $"{hostId}:{hostType}";
             var configAgent = _grainFactory.GetGrain<IHostConfigurationGAgent>(GuidUtil.StringToGuid(grainKey));
             
-            var configurationJson = await configAgent.GetBusinessConfigurationJsonAsync();
+            var configResult = await configAgent.GetBusinessConfigurationJsonAsync();
             
-            if (string.IsNullOrWhiteSpace(configurationJson) || configurationJson == "{}")
+            if (string.IsNullOrWhiteSpace(configResult.ConfigurationJson) || configResult.ConfigurationJson == "{}")
             {
                 return NotFound($"No business configuration found for host {hostId} with type {hostType}");
             }
@@ -144,8 +145,8 @@ public class BusinessConfigController : AevatarController
             {
                 HostId = hostId,
                 HostType = hostType.ToString(),
-                Configuration = JsonConvert.DeserializeObject(configurationJson),
-                LastModified = DateTime.UtcNow, // Placeholder - in full implementation, add GetLastUpdatedAsync method
+                Configuration = JsonConvert.DeserializeObject(configResult.ConfigurationJson),
+                UpdatedAt = configResult.UpdatedAt
             });
         }
         catch (Exception ex)
@@ -171,8 +172,8 @@ public class BusinessConfigController : AevatarController
             var configAgent = _grainFactory.GetGrain<IHostConfigurationGAgent>(GuidUtil.StringToGuid(grainKey));
             
             // Check if there's existing configuration
-            var existingConfig = await configAgent.GetBusinessConfigurationJsonAsync();
-            if (string.IsNullOrWhiteSpace(existingConfig) || existingConfig == "{}")
+            var existingConfigResult = await configAgent.GetBusinessConfigurationJsonAsync();
+            if (string.IsNullOrWhiteSpace(existingConfigResult.ConfigurationJson) || existingConfigResult.ConfigurationJson == "{}")
             {
                 return NotFound($"No business configuration found for host {hostId} with type {hostType}");
             }
@@ -185,7 +186,8 @@ public class BusinessConfigController : AevatarController
             return Ok(new
             {
                 HostId = hostId,
-                HostType = hostType.ToString()
+                HostType = hostType.ToString(),
+                UpdatedAt = DateTime.UtcNow
             });
         }
         catch (Exception ex)

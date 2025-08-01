@@ -1060,9 +1060,9 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
             // Get business configuration from HostConfigurationGAgent
             var grainKey = $"{hostId}:{hostType}";
             var configAgent = _grainFactory.GetGrain<IHostConfigurationGAgent>(GuidUtil.StringToGuid(grainKey));
-            var businessConfigJson = await configAgent.GetBusinessConfigurationJsonAsync();
+            var businessConfigResult = await configAgent.GetBusinessConfigurationJsonAsync();
 
-            if (string.IsNullOrWhiteSpace(businessConfigJson) || businessConfigJson == "{}")
+            if (string.IsNullOrWhiteSpace(businessConfigResult.ConfigurationJson) || businessConfigResult.ConfigurationJson == "{}")
             {
                 _logger.LogDebug("No business configuration found for {HostId}:{HostType}", hostId, hostType);
                 // Add empty business config file
@@ -1071,7 +1071,7 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
             }
 
             // Add business configuration as a separate file in ConfigMap
-            configFiles[SecureConfigurationExtensions.DefaultBusinessConfigPath] = businessConfigJson;
+            configFiles[SecureConfigurationExtensions.DefaultBusinessConfigPath] = businessConfigResult.ConfigurationJson;
             
             _logger.LogInformation("Business configuration added to ConfigMap for {HostId}:{HostType}", hostId, hostType);
         }
