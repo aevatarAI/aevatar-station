@@ -59,7 +59,9 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         }
 
         var currentUserId = _userAppService.GetCurrentUserId();
-        _logger.LogInformation("Starting workflow generation for user {UserId} with goal: {UserGoal}", currentUserId, userGoal);
+        
+        using var scope = _logger.BeginScope("UserId: {UserId}, UserGoal: {UserGoal}", currentUserId, userGoal);
+        _logger.LogInformation("Starting workflow generation with user goal: {UserGoal}", userGoal);
 
         try
         {
@@ -72,20 +74,22 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
 
             if (workflowConfig == null)
             {
-                _logger.LogError("Failed to parse workflow JSON to view configuration for user {UserId}", currentUserId);
+                _logger.LogError("Failed to parse workflow JSON to view configuration");
                 return null;
             }
 
-            _logger.LogInformation("Successfully generated workflow view configuration for user {UserId} with {NodeCount} nodes and {ConnectionCount} connections", 
-                currentUserId,
-                workflowConfig.Properties?.WorkflowNodeList?.Count ?? 0, 
-                workflowConfig.Properties?.WorkflowNodeUnitList?.Count ?? 0);
+            _logger.LogInformation("Successfully generated workflow view configuration: {@WorkflowSummary}", 
+                new { 
+                    Name = workflowConfig.Name,
+                    NodeCount = workflowConfig.Properties?.WorkflowNodeList?.Count ?? 0, 
+                    ConnectionCount = workflowConfig.Properties?.WorkflowNodeUnitList?.Count ?? 0 
+                });
 
             return workflowConfig;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error occurred while generating workflow for user {UserId} with goal: {UserGoal}", currentUserId, userGoal);
+            _logger.LogError(ex, "Error occurred while generating workflow");
             return null;
         }
     }
@@ -97,6 +101,8 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     /// </summary>
     private async Task<List<AgentDescriptionInfo>> GetAgentDescriptionsAsync()
     {
+        using var scope = _logger.BeginScope("Operation: GetAgentDescriptions");
+        
         try
         {
             _logger.LogDebug("Getting available agent types from GAgentManager");
@@ -105,15 +111,13 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             
             _logger.LogInformation("Found {TypeCount} valid agent types to process", validAgentTypes.Count);
             
-            // 添加详细的调试日志
-            _logger.LogInformation("=== Agent Collection Debug Info ===");
-            _logger.LogInformation("Total available types: {TotalCount}", availableTypes.Count());
-            _logger.LogInformation("Valid agent types after filtering:");
-            foreach (var type in validAgentTypes)
-            {
-                _logger.LogInformation("  - {TypeName} (Namespace: {Namespace})", type.FullName, type.Namespace);
-            }
-            _logger.LogInformation("===================================");
+            // 记录Agent类型的详细信息
+            _logger.LogDebug("Available agent types summary: {@AgentTypesSummary}", 
+                new { 
+                    TotalCount = availableTypes.Count(),
+                    ValidCount = validAgentTypes.Count,
+                    ValidTypes = validAgentTypes.Select(t => new { t.Name, t.Namespace }).ToList()
+                });
             
             var agentDescriptions = new List<AgentDescriptionInfo>();
             
@@ -121,7 +125,8 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             {
                 try
                 {
-                    _logger.LogDebug("Processing agent type: {AgentType}", agentType.FullName);
+                    using var agentScope = _logger.BeginScope("AgentType: {AgentType}", agentType.FullName);
+                    _logger.LogDebug("Processing agent type");
                     
                     // 为每个类型创建默认grain实例（遵循AgentService的模式）
                     var grainTypeName = agentType.FullName ?? agentType.Name;
@@ -133,21 +138,19 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                     // 调用新的JSON格式GetDescriptionAsync
                     var jsonDescription = await agent.GetDescriptionAsync();
                     
-                    _logger.LogDebug("Agent {AgentType} returned description: {Description}", 
-                        agentType.Name, jsonDescription);
+                    _logger.LogDebug("Agent returned description: {Description}", jsonDescription);
                     
                     // 尝试反序列化为AgentDescriptionInfo
                     AgentDescriptionInfo? agentInfo = null;
                     try
                     {
                         agentInfo = JsonConvert.DeserializeObject<AgentDescriptionInfo>(jsonDescription);
-                        _logger.LogDebug("Successfully deserialized agent {AgentType} description", agentType.Name);
+                        _logger.LogDebug("Successfully deserialized agent description: {@AgentInfo}", agentInfo);
                     }
                     catch (JsonException ex)
                     {
                         // 向后兼容：如果JSON反序列化失败，创建基本的AgentDescriptionInfo
-                        _logger.LogDebug("Agent {AgentType} returned legacy text description, creating basic AgentDescriptionInfo. JSON error: {Error}", 
-                            agentType.Name, ex.Message);
+                        _logger.LogDebug("Agent returned legacy text description, creating basic AgentDescriptionInfo. JSON error: {Error}", ex.Message);
                         agentInfo = new AgentDescriptionInfo
                         {
                             Id = agentType.FullName ?? agentType.Name,
@@ -158,6 +161,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                             Capabilities = new List<string> { "General processing" },
                             Tags = new List<string> { "agent", "processing" }
                         };
+                        _logger.LogDebug("Created legacy compatibility agent info: {@LegacyAgentInfo}", agentInfo);
                     }
                     
                     if (agentInfo != null)
@@ -169,33 +173,25 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                             agentInfo.Id = agentType.FullName ?? agentType.Name;
                         
                         agentDescriptions.Add(agentInfo);
-                        _logger.LogDebug("Successfully processed agent {AgentType} with description: {L1Description}", 
-                            agentType.Name, agentInfo.L1Description);
+                        _logger.LogDebug("Successfully processed agent with final info: {@FinalAgentInfo}", 
+                            new { agentInfo.Name, agentInfo.Id, agentInfo.Category, agentInfo.L1Description });
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to get description for agent type {AgentType}", agentType.FullName);
+                    _logger.LogWarning(ex, "Failed to get description for agent type");
                 }
             }
             
             _logger.LogInformation("Successfully retrieved {AgentCount} agent descriptions using new JSON method", agentDescriptions.Count);
             
-            // 添加最终结果的详细日志
-            _logger.LogInformation("=== Final Agent Collection Results ===");
-            if (agentDescriptions.Any())
-            {
-                foreach (var agent in agentDescriptions)
-                {
-                    _logger.LogInformation("  Final Agent: {AgentName} (ID: {AgentId}, Category: {Category})", 
-                        agent.Name, agent.Id, agent.Category);
-                }
-            }
-            else
-            {
-                _logger.LogWarning("No agent descriptions were successfully collected!");
-            }
-            _logger.LogInformation("======================================");
+            // 记录最终结果的详细信息
+            _logger.LogDebug("Final agent collection results: {@AgentCollectionResults}", 
+                new { 
+                    TotalAgents = agentDescriptions.Count,
+                    AgentsByCategory = agentDescriptions.GroupBy(a => a.Category).ToDictionary(g => g.Key, g => g.Count()),
+                    AgentNames = agentDescriptions.Select(a => a.Name).ToList()
+                });
             
             return agentDescriptions;
         }
@@ -233,50 +229,59 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     /// </summary>
     private async Task<string> CallWorkflowComposerGAgentAsync(string userGoal, Guid userId)
     {
+        using var scope = _logger.BeginScope("Operation: CallWorkflowComposerGAgent, UserId: {UserId}", userId);
+        
         try
         {
-            _logger.LogInformation("Creating new WorkflowComposerGAgent instance for user {UserId}", userId);
+            _logger.LogInformation("Creating new WorkflowComposerGAgent instance");
             
             // 1. 使用新方案获取所有可用的Agent描述信息（从grain的JSON格式描述）
             _logger.LogDebug("Fetching available agents information using new grain-based method");
             var availableAgents = await GetAgentDescriptionsAsync();
             _logger.LogInformation("Retrieved {AgentCount} available agents with rich descriptions for workflow generation", availableAgents.Count);
             
-            // 记录Agent信息用于调试
-            foreach (var agent in availableAgents)
+            // 记录Agent信息的汇总统计
+            var agentSummary = new {
+                TotalAgents = availableAgents.Count,
+                AgentsByCategory = availableAgents.GroupBy(a => a.Category).ToDictionary(g => g.Key, g => g.Count()),
+                AgentsWithCapabilities = availableAgents.Where(a => a.Capabilities?.Any() == true).Count()
+            };
+            _logger.LogDebug("Available agents summary for workflow generation: {@AgentSummary}", agentSummary);
+            
+            // 记录具体的Agent能力信息
+            foreach (var agent in availableAgents.Where(a => a.Capabilities?.Any() == true))
             {
-                if (agent.Capabilities?.Any() == true)
-                {
-                    _logger.LogDebug("Agent {AgentName} has {CapabilityCount} capabilities: {Capabilities}", 
-                        agent.Name, agent.Capabilities.Count, 
-                        string.Join(", ", agent.Capabilities));
-                }
-                
-                if (!string.IsNullOrEmpty(agent.Category))
-                {
-                    _logger.LogDebug("Agent {AgentName} category: {Category}", 
-                        agent.Name, agent.Category);
-                }
+                _logger.LogDebug("Agent capabilities: {@AgentCapabilities}", 
+                    new { agent.Name, agent.Category, agent.Capabilities });
             }
             
             // 2. 创建WorkflowComposerGAgent实例并传递丰富的描述信息，使用GUID主键
             var instanceGuid = Guid.NewGuid(); // 使用GUID而不是字符串
+            
+            using var agentScope = _logger.BeginScope("WorkflowComposerGAgent: {InstanceGuid}", instanceGuid);
+            _logger.LogDebug("Creating WorkflowComposerGAgent instance");
+            
             var workflowComposerGAgent = _clusterClient.GetGrain<IWorkflowComposerGAgent>(instanceGuid);
+            
             // 关键修复：AIGAgent需要先调用InitializeAsync()进行初始化
-            await workflowComposerGAgent.InitializeAsync(new InitializeDto()
+            var initializeDto = new InitializeDto()
             {
                 Instructions = "You are an expert workflow designer that creates sophisticated agent-based workflows. Generate well-structured JSON configurations for complex multi-agent workflows.",
                 LLMConfig = new LLMConfigDto() { SystemLLM = "OpenAI" }
-            });
+            };
+            _logger.LogDebug("Initializing WorkflowComposerGAgent with config: {@InitializeConfig}", initializeDto);
             
+            await workflowComposerGAgent.InitializeAsync(initializeDto);
+            
+            _logger.LogInformation("Generating workflow JSON with user goal: {UserGoal}", userGoal);
             var result = await workflowComposerGAgent.GenerateWorkflowJsonAsync(userGoal, availableAgents);
             
-            _logger.LogInformation("WorkflowComposerGAgent instance {InstanceGuid} completed successfully for user {UserId}", instanceGuid, userId);
+            _logger.LogInformation("WorkflowComposerGAgent completed successfully, result length: {ResultLength}", result.Length);
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during WorkflowComposerGAgent call for user {UserId}", userId);
+            _logger.LogError(ex, "Error during WorkflowComposerGAgent call");
             throw; // 让上层处理异常
         }
     }
