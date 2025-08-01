@@ -35,7 +35,7 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
     {
         await CreateHostSiloAsync(appId, version, _hostDeployOptions.HostSiloImageName, tenantId);
         await CreateHttpClientAsync(appId, version, _hostDeployOptions.HostClientImageName,
-            GetHostClientConfigContent(appId, version, KubernetesConstants.HostClientSettingTemplateFilePath, corsUrls),
+            GetHostClientConfigContent(appId, version, KubernetesConstants.HostClientSettingTemplateFilePath, corsUrls, tenantId),
             KubernetesConstants.HostClientCommand, _kubernetesOptions.DeveloperHostName);
     }
 
@@ -203,7 +203,7 @@ public class KubernetesHostManager : IHostDeployManager, ISingletonDependency
 
         var hostClientId = GetHostName(appId, KubernetesConstants.HostClient);
         var config = GetHostClientConfigContent(appId, version, KubernetesConstants.HostClientSettingTemplateFilePath,
-            corsUrls);
+            corsUrls, projectId);
         var hostClientConfigContent = new Dictionary<string, string>
         {
             { KubernetesConstants.AppSettingFileName, config },
