@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Aevatar.Domain.WorkflowOrchestration;
 
-namespace Aevatar.Application.Contracts.WorkflowOrchestration
+namespace Aevatar.Service
 {
     /// <summary>
     /// Workflow view configuration DTO matching frontend expected format

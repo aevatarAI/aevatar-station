@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
-namespace Aevatar.Application.Contracts.WorkflowOrchestration;
+namespace Aevatar.Service;
 
 /// <summary>
 /// 工作流生成请求DTO
