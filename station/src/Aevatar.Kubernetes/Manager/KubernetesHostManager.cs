@@ -321,11 +321,7 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
         // Delete Service
         var serviceName = ServiceHelper.GetAppServiceName(appId, version);
         await EnsureServiceDeletedAsync(serviceName);
-
-        // Delete Ingress
-        var ingressName = IngressHelper.GetAppIngressName(appId, version);
-        await EnsureIngressDeletedAsync(ingressName);
-
+        
         _logger.LogInformation(
             $"[KubernetesHostManager] Successfully destroyed Host Silo resources for hostName: {appId}, version: {version}");
     }
