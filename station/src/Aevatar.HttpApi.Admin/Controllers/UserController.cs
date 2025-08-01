@@ -37,7 +37,7 @@ public class UserController : AevatarController
     public async Task RegisterClientAuthentication(string clientId, string clientSecret, string corsUrls)
     {
         await _userAppService.RegisterClientAuthentication(clientId, clientSecret);
-        await _developerService.CreateHostAsync(clientId, "1", corsUrls);
+        await _developerService.CreateServiceAsync(clientId, "1", corsUrls);
     }
 
     [HttpPost("grantClientPermissions")]
@@ -49,37 +49,24 @@ public class UserController : AevatarController
 
     [HttpPost("CreateHost")]
     [Authorize(Policy = AevatarPermissions.AdminPolicy)]
-    public async Task CreateHost(string clientId, string corsUrls)
+    public async Task CreateHostAsync(string clientId, string corsUrls)
     {
-        await _developerService.CreateHostAsync(clientId, "1", corsUrls);
+        await _developerService.CreateServiceAsync(clientId, "1", corsUrls);
     }
 
     [HttpPost("destroyHost")]
-    [Authorize(Policy = AevatarPermissions.AdminPolicy)]
     public async Task DestroyHostAsync(string clientId)
     {
-        await _developerService.DestroyHostAsync(clientId, "1");
+        await _developerService.DeleteServiceAsync(clientId);
     }
 
-    [Authorize]
-    [HttpPost("updateDockerImage")]
+    // CopyHostAsync method has been removed from the interface
+    // 原有的CopyHostAsync方法已从接口中移除，不再支持
+    
+    [HttpPost]
     public async Task UpdateDockerImageAsync(HostTypeEnum hostType, string imageName)
     {
-        var clientId = CurrentUser.GetAllClaims().First(o => o.Type == "client_id").Value;
-        if (!clientId.IsNullOrEmpty() && clientId.Contains("Aevatar"))
-        {
-            _logger.LogWarning($"UpdateDockerImageAsync unSupport client {clientId} ");
-            throw new UserFriendlyException("unSupport client");
-        }
-
-        string appId = clientId;
-        if (hostType != HostTypeEnum.WebHook)
-        {
-            appId = appId + "-" + hostType;
-        }
-
-        await _developerService.UpdateDockerImageAsync(appId, "1",
-            imageName);
+        await _developerService.UpdateDockerImageAsync(hostType.ToString(), "1", imageName);
     }
 
     [Authorize(Policy = "OnlyAdminAccess")]
@@ -88,12 +75,5 @@ public class UserController : AevatarController
     {
         await _developerService.UpdateDockerImageAsync(hostId + "-" + hostType, "1",
             imageName);
-    }
-
-    [HttpPost("CopyHost")]
-    [Authorize(Policy = AevatarPermissions.AdminPolicy)]
-    public async Task CopyHost(string sourceClientId, string newClientId)
-    {
-        await _developerService.CopyHostAsync(sourceClientId, newClientId, "1", null);
     }
 }

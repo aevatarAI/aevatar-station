@@ -220,7 +220,19 @@ public class KubernetesClientAdapter : IKubernetesClientAdapter, ISingletonDepen
     
     public async Task<V2HorizontalPodAutoscaler> CreateNamespacedHorizontalPodAutoscalerAsync( V2HorizontalPodAutoscaler body,string namespaceParameter, CancellationToken cancellationToken = default(CancellationToken))
     {
-            return await _k8sClient.AutoscalingV2.CreateNamespacedHorizontalPodAutoscalerAsync(body, namespaceParameter,
-                cancellationToken: cancellationToken);
+        return await _k8sClient.CreateNamespacedHorizontalPodAutoscalerAsync(body, namespaceParameter, cancellationToken: cancellationToken);
+    }
+
+    public async Task<bool> NamespaceExistsAsync(string namespaceName, CancellationToken cancellationToken = default(CancellationToken))
+    {
+        try
+        {
+            await _k8sClient.ReadNamespaceAsync(namespaceName, cancellationToken: cancellationToken);
+            return true;
+        }
+        catch (HttpOperationException ex) when (ex.Response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return false;
+        }
     }
 }

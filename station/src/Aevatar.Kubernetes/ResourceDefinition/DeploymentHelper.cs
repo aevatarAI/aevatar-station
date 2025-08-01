@@ -79,7 +79,7 @@ public class DeploymentHelper
                         Affinity = CreateNodeAffinity(),
                         Tolerations = CreateNodeTolerations(),
                         Containers = CreateContainers(imageName, containerName, command, containerPort,
-                            requestCpu, requestMemory, readinessProbeHealthPath, isSilo ? MainEnv : otherEnv, otherEnv, isSilo),
+                            requestCpu, requestMemory, readinessProbeHealthPath, isSilo ? MainEnv : otherEnv, otherEnv),
                         Volumes = CreatePodTemplateVolumes(configMapName, sideCarConfigMapName)
                     }
                 }
@@ -174,33 +174,22 @@ public class DeploymentHelper
 
     private static List<V1Container> CreateContainers(string imageName, string containerName, List<string> command,
         int containerPort,
-        string requestCpu, string requestMemory, string readinessProbeHealthPath, V1EnvVar[] env, V1EnvVar[] sidecarEnv,
-        bool isSilo = false)
+        string requestCpu, string requestMemory, string readinessProbeHealthPath, V1EnvVar[] env, V1EnvVar[] sidecarEnv)
     {
         // Main container
-        var ports = new List<V1ContainerPort> { new V1ContainerPort(containerPort) };
-        
-        // For Silo containers, add health check port
-        if (isSilo)
-        {
-            ports.Add(new V1ContainerPort(KubernetesConstants.SiloHealthCheckPort));
-        }
-        
         var mainContainer = new V1Container
         {
             Name = containerName,
             Image = imageName,
             Command = command,
-            Ports = ports,
+            Ports = new List<V1ContainerPort> { new V1ContainerPort(containerPort) },
             VolumeMounts = CreateMainContainerVolumeMounts(),
             Resources = CreateResources(requestCpu, requestMemory),
             Env = env
         };
         if (!string.IsNullOrEmpty(readinessProbeHealthPath))
         {
-            // Use health check port for Silo readiness probe, otherwise use main container port
-            var probePort = isSilo ? KubernetesConstants.SiloHealthCheckPort : containerPort;
-            mainContainer.ReadinessProbe = CreateQueryPodReadinessProbe(readinessProbeHealthPath, probePort);
+            mainContainer.ReadinessProbe = CreateQueryPodReadinessProbe(readinessProbeHealthPath, containerPort);
         }
 
         // Filebeat side car container
