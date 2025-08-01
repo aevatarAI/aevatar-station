@@ -37,6 +37,8 @@
     <PackageReference Include="Microsoft.CodeAnalysis.Common" />
     <PackageReference Include="Orleans.Streams.Kafka" />
     <PackageReference Include="Volo.Abp.BlobStoring.Aws" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+
   </ItemGroup>
 
   <ItemGroup>
