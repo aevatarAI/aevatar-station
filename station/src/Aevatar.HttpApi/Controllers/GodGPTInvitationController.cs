@@ -93,8 +93,9 @@ public class GodGPTInvitationController : AevatarController
     public async Task<TwitterAuthResultDto> TwitterAuthVerifyAsync(TwitterAuthVerifyInput input)
     {
         var stopwatch = Stopwatch.StartNew();
+        var language = HttpContext.GetGodGPTLanguage();
         var currentUserId = (Guid)CurrentUser.Id!;
-        var response = await _godGptService.TwitterAuthVerifyAsync(currentUserId, input);
+        var response = await _godGptService.TwitterAuthVerifyAsync(currentUserId, input, language);
         _logger.LogDebug("[GodGPTInvitationController][TwitterAuthVerifyAsync] userId: {0}, duration: {1}ms",
             currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
         return response;

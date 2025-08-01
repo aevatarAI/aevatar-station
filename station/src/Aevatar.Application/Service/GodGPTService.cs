@@ -90,7 +90,7 @@ public interface IGodGPTService
     Task<bool> CanGuestChatAsync(string clientIp);
     Task<QuantumShareResponseDto> GetShareKeyWordWithAIAsync(Guid sessionId, string? content, string? region, SessionType sessionType, GodGPTChatLanguage language = GodGPTChatLanguage.English);
 
-    Task<TwitterAuthResultDto> TwitterAuthVerifyAsync(Guid currentUserId, TwitterAuthVerifyInput input);
+    Task<TwitterAuthResultDto> TwitterAuthVerifyAsync(Guid currentUserId, TwitterAuthVerifyInput input,GodGPTChatLanguage language = GodGPTChatLanguage.English);
     Task<PagedResultDto<RewardHistoryDto>> GetCreditsHistoryAsync(Guid currentUserId,
         GetCreditsHistoryInput getCreditsHistoryInput);
     Task<TwitterAuthParamsDto> GetTwitterAuthParamsAsync(Guid currentUserId);
@@ -743,9 +743,10 @@ public class GodGPTService : ApplicationService, IGodGPTService
         };
     }
 
-    public async Task<TwitterAuthResultDto> TwitterAuthVerifyAsync(Guid currentUserId, TwitterAuthVerifyInput input)
+    public async Task<TwitterAuthResultDto> TwitterAuthVerifyAsync(Guid currentUserId, TwitterAuthVerifyInput input,GodGPTChatLanguage language = GodGPTChatLanguage.English)
     {
         var twitterAuthGAgent = _clusterClient.GetGrain<ITwitterAuthGAgent>(currentUserId);
+        RequestContext.Set("GodGPTLanguage", language.ToString());
         return await twitterAuthGAgent.VerifyAuthCodeAsync(input.Platform, input.Code, input.RedirectUri);
     }
 
