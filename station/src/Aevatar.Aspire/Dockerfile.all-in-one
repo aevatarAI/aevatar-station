@@ -94,36 +94,14 @@ RUN rm /tmp/blackbox.tar.gz
 # Create user for services
 RUN useradd -r -s /bin/false aevatar
 
-# Copy configuration files
-COPY otel-collector-config.yaml /etc/otel-collector-config.yaml
-COPY prometheus.yml /etc/prometheus/prometheus.yml
-COPY prometheus-rules.yml /etc/prometheus/prometheus-rules.yml
-COPY blackbox.yml /etc/blackbox/blackbox.yml
-COPY grafana-provisioning/ /etc/grafana/provisioning/
-
-# Create MongoDB configuration files
-RUN echo "storage:\n  dbPath: /data/mongodb\nnet:\n  port: 27017\n  bindIp: 0.0.0.0" > /etc/mongod.conf
-RUN echo "storage:\n  dbPath: /data/mongodb-es\nnet:\n  port: 27018\n  bindIp: 0.0.0.0" > /etc/mongod-es.conf
-
-# Create Redis configuration
-RUN echo "bind 0.0.0.0\nport 6379\ndir /data/redis" > /etc/redis/redis.conf
-
-# Create Elasticsearch configuration
-RUN echo "cluster.name: aevatar-es\nnode.name: aevatar-node\npath.data: /data/elasticsearch\nnetwork.host: 0.0.0.0\nhttp.port: 9200\ndiscovery.type: single-node\nxpack.security.enabled: false" > /etc/elasticsearch/elasticsearch.yml
-
-# Create Kafka configuration
-RUN echo "broker.id=1\nlisteners=PLAINTEXT://0.0.0.0:9092\nlog.dirs=/data/kafka\nzookeeper.connect=localhost:2181" > /opt/kafka/config/server.properties
-
-# Create Zookeeper configuration
-RUN echo "dataDir=/data/zookeeper\nclientPort=2181\nmaxClientCnxns=0\nadmin.enableServer=false" > /opt/kafka/config/zookeeper.properties
+# Create configuration directories that will be populated by startup script
+RUN mkdir -p /etc/supervisor/conf.d
+RUN mkdir -p /etc/prometheus /etc/blackbox /etc/grafana/provisioning
 
 # Set proper ownership for data and service directories
 RUN chown -R aevatar:aevatar /data /opt/kafka /opt/zookeeper /opt/qdrant /opt/jaeger /opt/otel /opt/prometheus /opt/grafana /opt/blackbox
 
-# Copy supervisor configuration
-COPY supervisor/ /etc/supervisor/conf.d/
-
-# Copy startup script
+# Copy startup script (this is the only file we copy, all configs will be created by script)
 COPY start-services.sh /usr/local/bin/start-services.sh
 RUN chmod +x /usr/local/bin/start-services.sh
 
