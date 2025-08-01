@@ -242,7 +242,8 @@ public class AgentService : ApplicationService, IAgentService
         agentData.Properties = JsonConvert.SerializeObject(initialization.Item2, new JsonSerializerSettings
         {
             ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-            ContractResolver = new CamelCasePropertyNamesContractResolver()
+            ContractResolver = new CamelCasePropertyNamesContractResolver(),
+            NullValueHandling = NullValueHandling.Ignore
         });
 
         await creatorAgent.CreateAgentAsync(agentData);
@@ -355,7 +356,8 @@ public class AgentService : ApplicationService, IAgentService
                 properties = JsonConvert.SerializeObject(config, new JsonSerializerSettings
                 {
                     ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                    ContractResolver = new CamelCasePropertyNamesContractResolver()
+                    ContractResolver = new CamelCasePropertyNamesContractResolver(),
+                    NullValueHandling = NullValueHandling.Ignore
                 });
                 await creatorAgent.UpdateAgentAsync(new UpdateAgentInput
                 {
