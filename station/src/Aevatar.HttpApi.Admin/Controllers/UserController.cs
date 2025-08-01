@@ -62,11 +62,26 @@ public class UserController : AevatarController
 
     // CopyHostAsync method has been removed from the interface
     // 原有的CopyHostAsync方法已从接口中移除，不再支持
-    
-    [HttpPost]
-    public async Task UpdateDockerImageAsync(HostTypeEnum hostType, string imageName)
+
+    [Authorize]
+    [HttpPost("updateDockerImage")]
+    public async Task UpdateDockerImageAsync(HostTypeEnum hostType, string imageName, string version = "1")
     {
-        await _developerService.UpdateDockerImageAsync(hostType.ToString(), "1", imageName);
+        var clientId = CurrentUser.GetAllClaims().First(o => o.Type == "client_id").Value;
+        if (!clientId.IsNullOrEmpty() && clientId.Contains("Aevatar"))
+        {
+            _logger.LogWarning($"UpdateDockerImageAsync unSupport client {clientId} ");
+            throw new UserFriendlyException("unSupport client");
+        }
+
+        string appId = clientId;
+        if (hostType != HostTypeEnum.WebHook)
+        {
+            appId = appId + "-" + hostType;
+        }
+
+        await _developerService.UpdateDockerImageAsync(appId, version,
+            imageName);
     }
 
     [Authorize(Policy = "OnlyAdminAccess")]
