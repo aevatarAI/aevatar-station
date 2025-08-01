@@ -45,13 +45,14 @@ public class WorkflowViewService : ApplicationService, IWorkflowViewService
         // create or update subAgent
         foreach (var workflowNode in viewConfigDto.WorkflowNodeList)
         {
+            var nodeAgentProperties = JsonConvert.DeserializeObject<Dictionary<string, object>>(workflowNode.JsonProperties);
             if (workflowNode.AgentId == Guid.Empty || (await _agentService.GetAgentAsync(workflowNode.AgentId)).AgentType.IsNullOrEmpty())
             {
                 var subAgentDto = await _agentService.CreateAgentAsync(new CreateAgentInputDto()
                 {
                     AgentId = workflowNode.AgentId == Guid.Empty ? null : workflowNode.AgentId,
                     Name = workflowNode.Name,
-                    Properties = workflowNode.Properties,
+                    Properties = nodeAgentProperties,
                     AgentType = workflowNode.AgentType
                 });
                 workflowNode.AgentId = subAgentDto.AgentGuid;
@@ -61,7 +62,7 @@ public class WorkflowViewService : ApplicationService, IWorkflowViewService
                 await _agentService.UpdateAgentAsync(workflowNode.AgentId, new UpdateAgentInputDto()
                 {
                     Name = workflowNode.Name,
-                    Properties = workflowNode.Properties
+                    Properties = nodeAgentProperties
                 });
             }
         }
