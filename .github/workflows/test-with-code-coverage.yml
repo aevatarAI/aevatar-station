@@ -110,9 +110,5 @@ jobs:
           directory: ./
           flags: unittests
           name: codecov-umbrella
-          override_build: ${{ github.run_id }}
-          override_commit: ${{ github.sha }}
-          override_branch: ${{ github.ref_name }}
-          disable_search: false
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }} 
