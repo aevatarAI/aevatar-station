@@ -1,7 +1,6 @@
 using System.Threading.Tasks;
 using Aevatar.Application.Contracts.WorkflowOrchestration;
 using Aevatar.Controllers;
-using Aevatar.Domain.WorkflowOrchestration;
 using Aevatar.Service;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -31,7 +30,7 @@ public class WorkflowController : AevatarController
     /// <param name="request">工作流生成请求</param>
     /// <returns>前端可渲染的工作流视图配置</returns>
     [HttpPost("generate")]
-    public async Task<WorkflowViewConfigDto?> GenerateAsync([FromBody] GenerateWorkflowRequest request)
+    public async Task<WorkflowViewConfigDto?> GenerateAsync([FromBody] GenerateWorkflowRequestDto request)
     {
         return await _workflowOrchestrationService.GenerateWorkflowAsync(request.UserGoal);
     }
@@ -46,15 +45,4 @@ public class WorkflowController : AevatarController
     {
         return await _textCompletionService.GenerateCompletionsAsync(request);
     }
-}
-
-/// <summary>
-/// 工作流生成请求
-/// </summary>
-public class GenerateWorkflowRequest
-{
-    /// <summary>
-    /// 用户目标描述
-    /// </summary>
-    public string UserGoal { get; set; } = string.Empty;
 } 
