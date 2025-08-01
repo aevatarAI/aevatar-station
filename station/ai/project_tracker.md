@@ -164,9 +164,16 @@ This document tracks the progress of various features and bug fixes in the Aevat
 | F008 | API接口设计文档生成 | ✅ | High | feature/api-docs-generation | c6:c4:e5:e8:c6:4a | 100% | ✓ | ✓ | 基于代码分析生成完整API接口文档 |
 | F009 | Orleans Service Discovery Benchmark | ✅ | High | feature/orleans-service-discovery-benchmark | 42:82:57:47:65:d4 | 100% | ✓ | ✓ | Benchmark comparison between MongoDB and Zookeeper service discovery for Orleans - COMPLETED |
 | F010 | Agent Warmup Unit Tests Implementation | ✅ | High | feature/agent-warmup-unit-tests | 3e:58:e5:c6:ab:31 | 100% | ✓ | ✓ | Implemented comprehensive unit tests for SampleBasedAgentWarmupStrategy - 30 tests covering all aspects with 100% pass rate |
-| F011 | Agent Workflow Orchestration System | ✅ | High | feature/agent-workflow-orchestration | c6:c4:e5:e8:c6:4b | 96% | ✓ | ✅ | Core framework completed with bug fixes: AgentScannerService, AgentIndexPoolService, WorkflowPromptBuilderService, WorkflowOrchestrationService, WorkflowJsonValidatorService. Fixed ChatWithHistory NullReferenceException through proper AIGAgent initialization |
-| F012 | Agent Default Values Support | ✅ | High | feature/agent-default-values | c6:c4:e5:e8:c6:4b | 100% | ✓ | ✓ | Add support for Agent configuration default values in list format - COMPLETED |
-| F013 | Configuration Separation System | 🚧 | High | feature/config-separation | 3e:58:e5:c6:0b:af | - | - | - | Separate system and business configs, system configs from templates, business configs append-only, deployment with mounted config files |
+| F011 | Agent Workflow Orchestration System | ✅ | High | feature/agent-workflow-orchestration | c6:c4:e5:e8:c6:4b | 96% | ✓ | ✅ | Core framework completed with bug fixes: AgentScannerService, AgentIndexPoolService, WorkflowPromptBuilderService, WorkflowOrchestrationService, WorkflowJsonValidatorService. Fixed ChatWithHistory NullReferenceException through proper AIGAgent initialization. **新增：优化日志记录系统，应用Scoped Logging和Complex Object Logging最佳实践**
+- **进度**: 
+  - ✅ AgentScannerService - Agent发现和扫描服务
+  - ✅ AgentIndexPoolService - Agent索引池管理服务
+  - ✅ WorkflowPromptBuilderService - 工作流提示构建服务
+  - ✅ WorkflowOrchestrationService - 工作流编排核心服务
+  - ✅ WorkflowJsonValidatorService - 工作流JSON验证服务
+  - ✅ ChatWithHistory NullReferenceException修复
+  - ✅ 日志系统优化 - 应用Scoped Logging和Complex Object Logging最佳实践
+- **覆盖率**: 96%
 
 ## Technical Debt & Refactoring
 
