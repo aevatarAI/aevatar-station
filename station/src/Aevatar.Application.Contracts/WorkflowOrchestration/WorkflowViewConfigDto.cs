@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using Aevatar.Domain.WorkflowOrchestration;
 
 namespace Aevatar.Application.Contracts.WorkflowOrchestration
 {
@@ -114,5 +115,10 @@ namespace Aevatar.Application.Contracts.WorkflowOrchestration
         /// </summary>
         [Required]
         public string NextNodeId { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Connection type - defaults to Sequential
+        /// </summary>
+        public ConnectionType ConnectionType { get; set; } = ConnectionType.Sequential;
     }
 } 
