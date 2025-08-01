@@ -32,6 +32,11 @@ PERMISSION_AGENT = "agentpermissiontest"
 PERMISSION_STATE_NAME = "PermissionAgentState"
 PERMISSION_EVENT_TYPE = "Aevatar.Application.Grains.Agents.TestAgent.SetAuthorizedUserEvent"
 
+# Workflow testing constants
+WORKFLOW_TEST_USER_GOAL = "Create a data processing pipeline that analyzes user behavior and generates reports"
+WORKFLOW_SHORT_GOAL = "test"  # Too short for validation
+TEXT_COMPLETION_USER_GOAL = "Analyze customer feedback data from multiple sources and"
+
 @pytest.fixture(scope="session")
 def access_token():
     """get access token"""
@@ -74,6 +79,248 @@ def assert_status_code(response):
         =====================
         """
         pytest.fail(error_info)
+
+
+def assert_workflow_response_structure(response_data):
+    """Validate workflow response structure"""
+    assert "name" in response_data, "Response should contain 'name' field"
+    assert "properties" in response_data, "Response should contain 'properties' field"
+    
+    properties = response_data["properties"]
+    assert "workflowNodeList" in properties, "Properties should contain 'workflowNodeList'"
+    assert "workflowNodeUnitList" in properties, "Properties should contain 'workflowNodeUnitList'"
+    assert "name" in properties, "Properties should contain 'name' field"
+    
+    # Validate workflow nodes structure if present
+    if properties["workflowNodeList"]:
+        for node in properties["workflowNodeList"]:
+            assert "nodeId" in node, "Node should have 'nodeId'"
+            assert "agentType" in node, "Node should have 'agentType'"
+            assert "name" in node, "Node should have 'name'"
+            assert "extendedData" in node, "Node should have 'extendedData'"
+            
+            extended_data = node["extendedData"]
+            assert "xPosition" in extended_data, "ExtendedData should have 'xPosition'"
+            assert "yPosition" in extended_data, "ExtendedData should have 'yPosition'"
+    
+    # Validate workflow node units structure if present
+    if properties["workflowNodeUnitList"]:
+        for unit in properties["workflowNodeUnitList"]:
+            assert "nodeId" in unit, "Unit should have 'nodeId'"
+            assert "nextNodeId" in unit, "Unit should have 'nextNodeId'"
+            assert "connectionType" in unit, "Unit should have 'connectionType'"
+
+
+def test_workflow_generate_valid_request(api_headers):
+    """Test successful workflow generation with valid user goal"""
+    workflow_data = {
+        "userGoal": WORKFLOW_TEST_USER_GOAL
+    }
+    
+    response = requests.post(
+        f"{API_HOST}/api/workflow/generate",
+        json=workflow_data,
+        headers=api_headers,
+        verify=False
+    )
+    assert_status_code(response)
+    
+    # Add defensive programming to handle potential None response
+    response_data = response.json()
+    logger.debug(f"Workflow generate response: {response_data}")
+    
+    if "data" not in response_data:
+        pytest.fail(f"Response does not contain 'data' field: {response_data}")
+    
+    data = response_data["data"]
+    if data is not None:  # Allow null response as valid for some cases
+        assert_workflow_response_structure(data)
+        logger.info(f"Workflow generation test passed with {len(data.get('properties', {}).get('workflowNodeList', []))} nodes")
+
+
+def test_workflow_generate_invalid_short_goal(api_headers):
+    """Test workflow generation with too short user goal (should fail validation)"""
+    workflow_data = {
+        "userGoal": WORKFLOW_SHORT_GOAL
+    }
+    
+    response = requests.post(
+        f"{API_HOST}/api/workflow/generate",
+        json=workflow_data,
+        headers=api_headers,
+        verify=False
+    )
+    
+    # Should return 400 Bad Request due to validation error
+    assert response.status_code == 400, f"Expected 400 for short user goal, got {response.status_code}"
+    logger.debug(f"Validation error response: {response.text}")
+
+
+def test_workflow_generate_missing_user_goal(api_headers):
+    """Test workflow generation with missing user goal field"""
+    workflow_data = {}
+    
+    response = requests.post(
+        f"{API_HOST}/api/workflow/generate",
+        json=workflow_data,
+        headers=api_headers,
+        verify=False
+    )
+    
+    # Should return 400 Bad Request due to missing required field
+    assert response.status_code == 400, f"Expected 400 for missing user goal, got {response.status_code}"
+    logger.debug(f"Missing field error response: {response.text}")
+
+
+def test_workflow_generate_unauthorized_access():
+    """Test workflow generation without authentication token"""
+    workflow_data = {
+        "userGoal": WORKFLOW_TEST_USER_GOAL
+    }
+    
+    headers = {"Content-Type": "application/json"}
+    
+    response = requests.post(
+        f"{API_HOST}/api/workflow/generate",
+        json=workflow_data,
+        headers=headers,
+        verify=False
+    )
+    
+    # Should return 401 Unauthorized
+    assert response.status_code == 401, f"Expected 401 for unauthorized access, got {response.status_code}"
+    logger.debug(f"Unauthorized access response: {response.text}")
+
+
+def test_text_completion_valid_request(api_headers):
+    """Test successful text completion with valid user goal"""
+    completion_data = {
+        "userGoal": TEXT_COMPLETION_USER_GOAL
+    }
+    
+    response = requests.post(
+        f"{API_HOST}/api/workflow/text-completion",
+        json=completion_data,
+        headers=api_headers,
+        verify=False
+    )
+    assert_status_code(response)
+    
+    # Add defensive programming to handle potential None response
+    response_data = response.json()
+    logger.debug(f"Text completion response: {response_data}")
+    
+    if "data" not in response_data:
+        pytest.fail(f"Response does not contain 'data' field: {response_data}")
+    
+    data = response_data["data"]
+    if data is not None:
+        assert "completions" in data, "Response should contain 'completions' field"
+        completions = data["completions"]
+        
+        if completions is not None:
+            assert isinstance(completions, list), "Completions should be a list"
+            assert len(completions) <= 5, "Should not exceed 5 completions"
+            
+            # Validate that all completions are strings
+            for completion in completions:
+                assert isinstance(completion, str), "Each completion should be a string"
+                assert len(completion) > 0, "Completions should not be empty strings"
+            
+            logger.info(f"Text completion test passed with {len(completions)} completions")
+
+
+def test_text_completion_invalid_short_goal(api_headers):
+    """Test text completion with too short user goal (should fail validation)"""
+    completion_data = {
+        "userGoal": WORKFLOW_SHORT_GOAL
+    }
+    
+    response = requests.post(
+        f"{API_HOST}/api/workflow/text-completion",
+        json=completion_data,
+        headers=api_headers,
+        verify=False
+    )
+    
+    # Should return 400 Bad Request due to validation error
+    assert response.status_code == 400, f"Expected 400 for short user goal, got {response.status_code}"
+    logger.debug(f"Text completion validation error response: {response.text}")
+
+
+def test_text_completion_missing_user_goal(api_headers):
+    """Test text completion with missing user goal field"""
+    completion_data = {}
+    
+    response = requests.post(
+        f"{API_HOST}/api/workflow/text-completion",
+        json=completion_data,
+        headers=api_headers,
+        verify=False
+    )
+    
+    # Should return 400 Bad Request due to missing required field
+    assert response.status_code == 400, f"Expected 400 for missing user goal, got {response.status_code}"
+    logger.debug(f"Text completion missing field error response: {response.text}")
+
+
+def test_text_completion_unauthorized_access():
+    """Test text completion without authentication token"""
+    completion_data = {
+        "userGoal": TEXT_COMPLETION_USER_GOAL
+    }
+    
+    headers = {"Content-Type": "application/json"}
+    
+    response = requests.post(
+        f"{API_HOST}/api/workflow/text-completion",
+        json=completion_data,
+        headers=headers,
+        verify=False
+    )
+    
+    # Should return 401 Unauthorized
+    assert response.status_code == 401, f"Expected 401 for unauthorized access, got {response.status_code}"
+    logger.debug(f"Text completion unauthorized access response: {response.text}")
+
+
+def test_workflow_endpoints_comprehensive_scenarios(api_headers):
+    """Comprehensive test covering various workflow scenarios"""
+    # Test various user goal scenarios
+    test_scenarios = [
+        "Build an automated customer support system with AI chatbot integration",
+        "Create a real-time data analytics dashboard for monitoring business metrics",
+        "Implement a multi-stage approval workflow for document management system",
+        "Design a machine learning pipeline for predictive maintenance analysis"
+    ]
+    
+    for i, user_goal in enumerate(test_scenarios):
+        logger.info(f"Testing scenario {i+1}: {user_goal[:50]}...")
+        
+        # Test workflow generation
+        workflow_data = {"userGoal": user_goal}
+        response = requests.post(
+            f"{API_HOST}/api/workflow/generate",
+            json=workflow_data,
+            headers=api_headers,
+            verify=False
+        )
+        assert_status_code(response)
+        
+        # Test text completion
+        completion_data = {"userGoal": user_goal}
+        response = requests.post(
+            f"{API_HOST}/api/workflow/text-completion",
+            json=completion_data,
+            headers=api_headers,
+            verify=False
+        )
+        assert_status_code(response)
+        
+        # Add small delay between requests to avoid overwhelming the service
+        time.sleep(1)
+    
+    logger.info("All workflow comprehensive scenarios passed")
 
 
 @pytest.fixture
@@ -561,3 +808,246 @@ def test_permission(api_headers, api_admin_headers):
     assert_status_code(response)
     assert response.json()["data"]["count"] > 0
 
+
+
+
+def assert_workflow_response_structure(response_data):
+    """Validate workflow response structure"""
+    assert "name" in response_data, "Response should contain 'name' field"
+    assert "properties" in response_data, "Response should contain 'properties' field"
+    
+    properties = response_data["properties"]
+    assert "workflowNodeList" in properties, "Properties should contain 'workflowNodeList'"
+    assert "workflowNodeUnitList" in properties, "Properties should contain 'workflowNodeUnitList'"
+    assert "name" in properties, "Properties should contain 'name' field"
+    
+    # Validate workflow nodes structure if present
+    if properties["workflowNodeList"]:
+        for node in properties["workflowNodeList"]:
+            assert "nodeId" in node, "Node should have 'nodeId'"
+            assert "agentType" in node, "Node should have 'agentType'"
+            assert "name" in node, "Node should have 'name'"
+            assert "extendedData" in node, "Node should have 'extendedData'"
+            
+            extended_data = node["extendedData"]
+            assert "xPosition" in extended_data, "ExtendedData should have 'xPosition'"
+            assert "yPosition" in extended_data, "ExtendedData should have 'yPosition'"
+    
+    # Validate workflow node units structure if present
+    if properties["workflowNodeUnitList"]:
+        for unit in properties["workflowNodeUnitList"]:
+            assert "nodeId" in unit, "Unit should have 'nodeId'"
+            assert "nextNodeId" in unit, "Unit should have 'nextNodeId'"
+            assert "connectionType" in unit, "Unit should have 'connectionType'"
+
+
+def test_workflow_generate_valid_request(api_headers):
+    """Test successful workflow generation with valid user goal"""
+    workflow_data = {
+        "userGoal": WORKFLOW_TEST_USER_GOAL
+    }
+    
+    response = requests.post(
+        f"{API_HOST}/api/workflow/generate",
+        json=workflow_data,
+        headers=api_headers,
+        verify=False
+    )
+    assert_status_code(response)
+    
+    # Add defensive programming to handle potential None response
+    response_data = response.json()
+    logger.debug(f"Workflow generate response: {response_data}")
+    
+    if "data" not in response_data:
+        pytest.fail(f"Response does not contain 'data' field: {response_data}")
+    
+    data = response_data["data"]
+    if data is not None:  # Allow null response as valid for some cases
+        assert_workflow_response_structure(data)
+        logger.info(f"Workflow generation test passed with {len(data.get('properties', {}).get('workflowNodeList', []))} nodes")
+
+
+def test_workflow_generate_invalid_short_goal(api_headers):
+    """Test workflow generation with too short user goal (should fail validation)"""
+    workflow_data = {
+        "userGoal": WORKFLOW_SHORT_GOAL
+    }
+    
+    response = requests.post(
+        f"{API_HOST}/api/workflow/generate",
+        json=workflow_data,
+        headers=api_headers,
+        verify=False
+    )
+    
+    # Should return 400 Bad Request due to validation error
+    assert response.status_code == 400, f"Expected 400 for short user goal, got {response.status_code}"
+    logger.debug(f"Validation error response: {response.text}")
+
+
+def test_workflow_generate_missing_user_goal(api_headers):
+    """Test workflow generation with missing user goal field"""
+    workflow_data = {}
+    
+    response = requests.post(
+        f"{API_HOST}/api/workflow/generate",
+        json=workflow_data,
+        headers=api_headers,
+        verify=False
+    )
+    
+    # Should return 400 Bad Request due to missing required field
+    assert response.status_code == 400, f"Expected 400 for missing user goal, got {response.status_code}"
+    logger.debug(f"Missing field error response: {response.text}")
+
+
+def test_workflow_generate_unauthorized_access():
+    """Test workflow generation without authentication token"""
+    workflow_data = {
+        "userGoal": WORKFLOW_TEST_USER_GOAL
+    }
+    
+    headers = {"Content-Type": "application/json"}
+    
+    response = requests.post(
+        f"{API_HOST}/api/workflow/generate",
+        json=workflow_data,
+        headers=headers,
+        verify=False
+    )
+    
+    # Should return 401 Unauthorized
+    assert response.status_code == 401, f"Expected 401 for unauthorized access, got {response.status_code}"
+    logger.debug(f"Unauthorized access response: {response.text}")
+
+
+def test_text_completion_valid_request(api_headers):
+    """Test successful text completion with valid user goal"""
+    completion_data = {
+        "userGoal": TEXT_COMPLETION_USER_GOAL
+    }
+    
+    response = requests.post(
+        f"{API_HOST}/api/workflow/text-completion",
+        json=completion_data,
+        headers=api_headers,
+        verify=False
+    )
+    assert_status_code(response)
+    
+    # Add defensive programming to handle potential None response
+    response_data = response.json()
+    logger.debug(f"Text completion response: {response_data}")
+    
+    if "data" not in response_data:
+        pytest.fail(f"Response does not contain 'data' field: {response_data}")
+    
+    data = response_data["data"]
+    if data is not None:
+        assert "completions" in data, "Response should contain 'completions' field"
+        completions = data["completions"]
+        
+        if completions is not None:
+            assert isinstance(completions, list), "Completions should be a list"
+            assert len(completions) <= 5, "Should not exceed 5 completions"
+            
+            # Validate that all completions are strings
+            for completion in completions:
+                assert isinstance(completion, str), "Each completion should be a string"
+                assert len(completion) > 0, "Completions should not be empty strings"
+            
+            logger.info(f"Text completion test passed with {len(completions)} completions")
+
+
+def test_text_completion_invalid_short_goal(api_headers):
+    """Test text completion with too short user goal (should fail validation)"""
+    completion_data = {
+        "userGoal": WORKFLOW_SHORT_GOAL
+    }
+    
+    response = requests.post(
+        f"{API_HOST}/api/workflow/text-completion",
+        json=completion_data,
+        headers=api_headers,
+        verify=False
+    )
+    
+    # Should return 400 Bad Request due to validation error
+    assert response.status_code == 400, f"Expected 400 for short user goal, got {response.status_code}"
+    logger.debug(f"Text completion validation error response: {response.text}")
+
+
+def test_text_completion_missing_user_goal(api_headers):
+    """Test text completion with missing user goal field"""
+    completion_data = {}
+    
+    response = requests.post(
+        f"{API_HOST}/api/workflow/text-completion",
+        json=completion_data,
+        headers=api_headers,
+        verify=False
+    )
+    
+    # Should return 400 Bad Request due to missing required field
+    assert response.status_code == 400, f"Expected 400 for missing user goal, got {response.status_code}"
+    logger.debug(f"Text completion missing field error response: {response.text}")
+
+
+def test_text_completion_unauthorized_access():
+    """Test text completion without authentication token"""
+    completion_data = {
+        "userGoal": TEXT_COMPLETION_USER_GOAL
+    }
+    
+    headers = {"Content-Type": "application/json"}
+    
+    response = requests.post(
+        f"{API_HOST}/api/workflow/text-completion",
+        json=completion_data,
+        headers=headers,
+        verify=False
+    )
+    
+    # Should return 401 Unauthorized
+    assert response.status_code == 401, f"Expected 401 for unauthorized access, got {response.status_code}"
+    logger.debug(f"Text completion unauthorized access response: {response.text}")
+
+
+def test_workflow_endpoints_comprehensive_scenarios(api_headers):
+    """Comprehensive test covering various workflow scenarios"""
+    # Test various user goal scenarios
+    test_scenarios = [
+        "Build an automated customer support system with AI chatbot integration",
+        "Create a real-time data analytics dashboard for monitoring business metrics",
+        "Implement a multi-stage approval workflow for document management system",
+        "Design a machine learning pipeline for predictive maintenance analysis"
+    ]
+    
+    for i, user_goal in enumerate(test_scenarios):
+        logger.info(f"Testing scenario {i+1}: {user_goal[:50]}...")
+        
+        # Test workflow generation
+        workflow_data = {"userGoal": user_goal}
+        response = requests.post(
+            f"{API_HOST}/api/workflow/generate",
+            json=workflow_data,
+            headers=api_headers,
+            verify=False
+        )
+        assert_status_code(response)
+        
+        # Test text completion
+        completion_data = {"userGoal": user_goal}
+        response = requests.post(
+            f"{API_HOST}/api/workflow/text-completion",
+            json=completion_data,
+            headers=api_headers,
+            verify=False
+        )
+        assert_status_code(response)
+        
+        # Add small delay between requests to avoid overwhelming the service
+        time.sleep(1)
+    
+    logger.info("All workflow comprehensive scenarios passed")
