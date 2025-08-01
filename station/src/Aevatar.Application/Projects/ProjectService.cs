@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Aevatar.Notification;
 using Aevatar.Organizations;
 using Aevatar.Permissions;
+using Aevatar.Service;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Authorization.Permissions;
@@ -22,16 +23,19 @@ namespace Aevatar.Projects;
 public class ProjectService : OrganizationService, IProjectService
 {
     private readonly IProjectDomainRepository _domainRepository;
-    
+    private readonly IDeveloperService _developerService;
+
     public ProjectService(OrganizationUnitManager organizationUnitManager, IdentityUserManager identityUserManager,
         IRepository<OrganizationUnit, Guid> organizationUnitRepository, IdentityRoleManager roleManager,
         IPermissionManager permissionManager, IOrganizationPermissionChecker permissionChecker,
         IPermissionDefinitionManager permissionDefinitionManager, IRepository<IdentityUser, Guid> userRepository,
-        INotificationService notificationService, IProjectDomainRepository domainRepository) :
+        INotificationService notificationService, IProjectDomainRepository domainRepository,
+        IDeveloperService developerService) :
         base(organizationUnitManager, identityUserManager, organizationUnitRepository, roleManager, permissionManager,
             permissionChecker, permissionDefinitionManager, userRepository, notificationService)
     {
         _domainRepository = domainRepository;
+        _developerService = developerService;
     }
 
     public async Task<ProjectDto> CreateAsync(CreateProjectDto input)
@@ -75,6 +79,8 @@ public class ProjectService : OrganizationService, IProjectService
         {
             throw new UserFriendlyException("The same project name already exists");
         }
+
+        await _developerService.CreateServiceAsync(input.DomainName, project.Id);
 
         var dto = ObjectMapper.Map<OrganizationUnit, ProjectDto>(project);
         dto.DomainName = input.DomainName;
@@ -211,5 +217,16 @@ public class ProjectService : OrganizationService, IProjectService
 
         var organization = await OrganizationUnitRepository.GetAsync(organizationId);
         await RemoveMemberAsync(organization, user.Id);
+    }
+
+    public override async Task DeleteAsync(Guid id)
+    {
+        var domain = await _domainRepository.FirstOrDefaultAsync(o => o.ProjectId == id);
+        await base.DeleteAsync(id);
+
+        if (domain != null)
+        {
+            await _developerService.DeleteServiceAsync(domain.DomainName);
+        }
     }
 }
