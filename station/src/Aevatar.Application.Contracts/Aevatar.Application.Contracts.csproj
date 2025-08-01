@@ -10,7 +10,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\..\framework\src\Aevatar.PermissionManagement\Aevatar.PermissionManagement.csproj" />
-        <ProjectReference Include="..\Aevatar.Domain\Aevatar.Domain.csproj" />
         <ProjectReference Include="..\Aevatar.Domain.Grains\Aevatar.Domain.Grains.csproj" />
         <ProjectReference Include="..\Aevatar.Domain.Shared\Aevatar.Domain.Shared.csproj" />
     </ItemGroup>
