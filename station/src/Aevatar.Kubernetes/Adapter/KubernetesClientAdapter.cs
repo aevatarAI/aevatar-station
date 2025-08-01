@@ -66,6 +66,15 @@ public class KubernetesClientAdapter : IKubernetesClientAdapter, ISingletonDepen
         return deployments;
     }
 
+    public async Task<V1DeploymentList> ListDeploymentAsync(string namespaceParameter, string labelSelector,
+        CancellationToken cancellationToken = default(CancellationToken))
+    {
+        // Call the extension method of the k8s.Kubernetes with labelSelector
+        var deployments =
+            await _k8sClient.ListNamespacedDeploymentAsync(namespaceParameter, labelSelector: labelSelector, cancellationToken: cancellationToken);
+        return deployments;
+    }
+
     public async Task<V1ServiceList> ListServiceAsync(string namespaceParameter,
         CancellationToken cancellationToken = default(CancellationToken))
     {

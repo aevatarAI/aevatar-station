@@ -70,6 +70,7 @@ public class AevatarApplicationModule : AbpModule
         Configure<AgentOptions>(configuration.GetSection("Agent"));
         Configure<AgentDefaultValuesOptions>(configuration.GetSection("AgentDefaults"));
         context.Services.AddTransient<IHostDeployManager, KubernetesHostManager>();
+        context.Services.AddTransient<IHostCopyManager, KubernetesHostManager>();
         context.Services.AddSingleton<INotificationHandlerFactory, NotificationProcessorFactory>();
         Configure<HostDeployOptions>(configuration.GetSection("HostDeploy"));
         context.Services.Configure<HostOptions>(configuration.GetSection("Host"));
