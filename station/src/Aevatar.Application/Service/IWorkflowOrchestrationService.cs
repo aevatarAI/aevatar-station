@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
-using Aevatar.Domain.WorkflowOrchestration;
+using Aevatar.Application.Contracts.WorkflowOrchestration;
 
-namespace Aevatar.Application.Contracts.WorkflowOrchestration;
+namespace Aevatar.Service;
 
 /// <summary>
 /// 工作流编排服务接口
