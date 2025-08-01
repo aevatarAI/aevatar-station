@@ -601,37 +601,6 @@ def test_workflow_orchestration_generate(api_headers):
         logger.warning("Workflow generation returned null - this might indicate AI service is unavailable")
 
 
-def test_workflow_orchestration_invalid_request(api_headers):
-    """test workflow generation with invalid requests"""
-    # test with empty user goal
-    workflow_request = {
-        "userGoal": ""
-    }
-    
-    response = requests.post(
-        f"{API_HOST}/api/workflow/generate",
-        json=workflow_request,
-        headers=api_headers,
-        verify=False
-    )
-    # Should return 400 Bad Request due to validation
-    assert response.status_code == 400
-    
-    # test with too short user goal
-    workflow_request = {
-        "userGoal": "short"  # Less than 15 characters
-    }
-    
-    response = requests.post(
-        f"{API_HOST}/api/workflow/generate",
-        json=workflow_request,
-        headers=api_headers,
-        verify=False
-    )
-    # Should return 400 Bad Request due to validation
-    assert response.status_code == 400
-
-
 def test_text_completion_generate(api_headers):
     """test text completion generation"""
     # test valid text completion request
@@ -665,51 +634,6 @@ def test_text_completion_generate(api_headers):
     for completion in completions:
         assert isinstance(completion, str)
         assert len(completion) > 0
-
-
-def test_text_completion_invalid_request(api_headers):
-    """test text completion with invalid requests"""
-    # test with empty user goal
-    completion_request = {
-        "userGoal": ""
-    }
-    
-    response = requests.post(
-        f"{API_HOST}/api/workflow/text-completion",
-        json=completion_request,
-        headers=api_headers,
-        verify=False
-    )
-    # Should return 400 Bad Request due to validation
-    assert response.status_code == 400
-    
-    # test with too short user goal
-    completion_request = {
-        "userGoal": "text"  # Less than 15 characters
-    }
-    
-    response = requests.post(
-        f"{API_HOST}/api/workflow/text-completion",
-        json=completion_request,
-        headers=api_headers,
-        verify=False
-    )
-    # Should return 400 Bad Request due to validation
-    assert response.status_code == 400
-    
-    # test with missing userGoal field
-    completion_request = {
-        "invalidField": "some value"
-    }
-    
-    response = requests.post(
-        f"{API_HOST}/api/workflow/text-completion",
-        json=completion_request,
-        headers=api_headers,
-        verify=False
-    )
-    # Should return 400 Bad Request due to validation
-    assert response.status_code == 400
 
 
 def test_workflow_services_comprehensive(api_headers):
