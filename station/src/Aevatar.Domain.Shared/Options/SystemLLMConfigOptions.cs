@@ -4,5 +4,5 @@ namespace Aevatar.Options;
 
 public class SystemLLMConfigOptions
 {
-    public List<string> SystemLLMConfigs { get; set; } = new () { "OpenAI", "DeepSeek","AzureOpenAI","AzureOpenAIEmbeddings","OpenAIEmbeddings" };
+    public List<string> SystemLLMConfigs { get; set; } = new() { "OpenAI", "DeepSeek", "AzureOpenAI", "AzureOpenAIEmbeddings", "OpenAIEmbeddings" };
 } 
