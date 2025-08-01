@@ -88,11 +88,6 @@ public class AevatarApplicationModule : AbpModule
     /// </summary>
     private void ConfigureWorkflowOrchestrationServices(ServiceConfigurationContext context)
     {
-        // Unified Agent index service - includes scanning, indexing, caching, and warmup functionality
-        context.Services.AddSingleton<IAgentIndexService, AgentIndexService>();
-        context.Services.AddHostedService<AgentIndexService>(serviceProvider => 
-            serviceProvider.GetRequiredService<IAgentIndexService>() as AgentIndexService);
-        
         // Unified workflow orchestration service - includes prompt building and JSON validation functionality
         context.Services.AddTransient<IWorkflowOrchestrationService, WorkflowOrchestrationService>();
         
