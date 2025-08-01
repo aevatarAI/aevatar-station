@@ -192,7 +192,7 @@ public class WorkflowViewServiceTests
                         {"AgentId", Guid.Empty},
                         {"Name", "Test Node"},
                         {"AgentType", "TestAgent"},
-                        {"Properties", new Dictionary<string, object>()},
+                        {"JsonProperties", "{}"},
                         {"ExtendedData", new Dictionary<string, object>
                             {
                                 {"XPosition", "10"},
