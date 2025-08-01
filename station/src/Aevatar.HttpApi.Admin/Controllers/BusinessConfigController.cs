@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Volo.Abp;
 using Aevatar.Application.Grains.Agents.Configuration;
+using Aevatar.Common;
 using Aevatar.Controllers;
 using Aevatar.Enum;
 using Aevatar.Service;
@@ -84,7 +85,7 @@ public class BusinessConfigController : AevatarController
             // Store configuration for the specified host type using HostConfigurationGAgent
             var updatedBy = User?.Identity?.Name ?? "System";
             var grainKey = $"{hostId}:{hostType}";
-            var configAgent = _grainFactory.GetGrain<IHostConfigurationGAgent>(grainKey);
+            var configAgent = _grainFactory.GetGrain<IHostConfigurationGAgent>(GuidUtil.StringToGuid(grainKey));
             
             await configAgent.SetBusinessConfigurationJsonAsync(jsonContent, updatedBy);
             
@@ -95,12 +96,8 @@ public class BusinessConfigController : AevatarController
             _logger.LogInformation("K8s ConfigMaps updated successfully for host {HostId}:{HostType}", hostId, hostType);
             return Ok(new
             {
-                Success = true,
-                Message = "Business configuration uploaded and K8s ConfigMaps updated successfully",
                 HostId = hostId,
-                HostType = hostType.ToString(),
-                UpdatedBy = updatedBy,
-                Timestamp = DateTime.UtcNow
+                HostType = hostType.ToString()
             });
         }
         catch (Exception ex)
@@ -134,7 +131,7 @@ public class BusinessConfigController : AevatarController
         {
             // Get configuration from the specified host type
             var grainKey = $"{hostId}:{hostType}";
-            var configAgent = _grainFactory.GetGrain<IHostConfigurationGAgent>(grainKey);
+            var configAgent = _grainFactory.GetGrain<IHostConfigurationGAgent>(GuidUtil.StringToGuid(grainKey));
             
             var configurationJson = await configAgent.GetBusinessConfigurationJsonAsync();
             
@@ -171,7 +168,7 @@ public class BusinessConfigController : AevatarController
         {
             var updatedBy = User?.Identity?.Name ?? "System";
             var grainKey = $"{hostId}:{hostType}";
-            var configAgent = _grainFactory.GetGrain<IHostConfigurationGAgent>(grainKey);
+            var configAgent = _grainFactory.GetGrain<IHostConfigurationGAgent>(GuidUtil.StringToGuid(grainKey));
             
             // Check if there's existing configuration
             var existingConfig = await configAgent.GetBusinessConfigurationJsonAsync();
@@ -187,12 +184,8 @@ public class BusinessConfigController : AevatarController
             _logger.LogInformation("K8s ConfigMaps delete successfully for host {HostId}:{HostType}", hostId, hostType);
             return Ok(new
             {
-                Success = true,
-                Message = "Business configuration deleted successfully",
                 HostId = hostId,
-                HostType = hostType.ToString(),
-                UpdatedBy = updatedBy,
-                Timestamp = DateTime.UtcNow
+                HostType = hostType.ToString()
             });
         }
         catch (Exception ex)

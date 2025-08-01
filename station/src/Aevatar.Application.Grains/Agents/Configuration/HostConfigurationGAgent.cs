@@ -38,17 +38,6 @@ public class HostConfigurationGAgent : GAgentBase<HostConfigurationGAgentState, 
             configurationJson = "{}";
         }
 
-        // Basic JSON validation
-        try
-        {
-            Newtonsoft.Json.JsonConvert.DeserializeObject(configurationJson);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Invalid JSON provided for business configuration: {ConfigJson}", configurationJson);
-            throw new ArgumentException("Invalid JSON format in business configuration", nameof(configurationJson));
-        }
-
         var updateEvent = new UpdateBusinessConfigurationGEvent
         {
             Ctime = DateTime.UtcNow,
@@ -109,7 +98,7 @@ public class HostConfigurationGAgent : GAgentBase<HostConfigurationGAgentState, 
     }
 }
 
-public interface IHostConfigurationGAgent : IStateGAgent<HostConfigurationGAgentState>, Orleans.IGrainWithStringKey
+public interface IHostConfigurationGAgent : IStateGAgent<HostConfigurationGAgentState>
 {
     /// <summary>
     /// Store business configuration JSON for this host-type combination

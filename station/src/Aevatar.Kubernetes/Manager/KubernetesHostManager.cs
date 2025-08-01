@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 using Volo.Abp.DependencyInjection;
 using Aevatar.Enum;
 using Aevatar.Application.Grains.Agents.Configuration;
+using Aevatar.Common;
 using Aevatar.Domain.Shared.Configuration;
 
 namespace Aevatar.Kubernetes.Manager;
@@ -1058,7 +1059,7 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
         {
             // Get business configuration from HostConfigurationGAgent
             var grainKey = $"{hostId}:{hostType}";
-            var configAgent = _grainFactory.GetGrain<IHostConfigurationGAgent>(grainKey);
+            var configAgent = _grainFactory.GetGrain<IHostConfigurationGAgent>(GuidUtil.StringToGuid(grainKey));
             var businessConfigJson = await configAgent.GetBusinessConfigurationJsonAsync();
 
             if (string.IsNullOrWhiteSpace(businessConfigJson) || businessConfigJson == "{}")
