@@ -106,9 +106,13 @@ jobs:
       - name: Upload unified coverage reports to Codecov
         uses: codecov/codecov-action@v4
         with:
-          fail_ci_if_error: true
+          fail_ci_if_error: false
           directory: ./
           flags: unittests
           name: codecov-umbrella
+          override_build: ${{ github.run_id }}
+          override_commit: ${{ github.sha }}
+          override_branch: ${{ github.ref_name }}
+          disable_search: false
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }} 
