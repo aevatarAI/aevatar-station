@@ -27,6 +27,7 @@ using Orleans;
 using Orleans.Metadata;
 using Orleans.Runtime;
 using Volo.Abp;
+using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using ICreatorGAgent = Aevatar.Application.Grains.Agents.Creator.ICreatorGAgent;
 
@@ -185,6 +186,10 @@ public class AgentService : ApplicationService, IAgentService
 
                     paramDto.PropertyJsonSchema =
                         _schemaProvider.GetTypeSchema(kvp.Value.InitializationData.DtoType).ToJson();
+
+                    // Get default values
+                    paramDto.DefaultValues =
+                        await GetConfigurationDefaultValuesAsync(kvp.Value.InitializationData.DtoType);
                 }
             }
 
@@ -192,6 +197,64 @@ public class AgentService : ApplicationService, IAgentService
         }
 
         return resp;
+    }
+
+    /// <summary>
+    /// Gets default values of configuration class properties (returns in list format to prepare for default value list functionality)
+    /// </summary>
+    private async Task<Dictionary<string, object?>> GetConfigurationDefaultValuesAsync(Type configurationType)
+    {
+        var defaultValues = new Dictionary<string, object?>();
+
+        try
+        {
+            // Create configuration instance to get default values
+            var instance = Activator.CreateInstance(configurationType);
+            if (instance != null)
+            {
+                var properties =
+                    configurationType.GetProperties(BindingFlags.Public | BindingFlags.Instance |
+                                                    BindingFlags.DeclaredOnly);
+
+                foreach (var property in properties)
+                {
+
+                    var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
+                    try
+                    {
+                        var value = property.GetValue(instance);
+
+                        // Convert all default values to list format
+                        
+                        if (value == null)
+                        {
+                            // Convert null values to empty list
+                            defaultValues[propertyName] = new List<object>();
+                        }
+                        else
+                        {
+                            // Convert non-null values to single-item list
+                            defaultValues[propertyName] = new List<object> { value };
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex,
+                            "Failed to get default value for property {PropertyName} in {ConfigType}",
+                            property.Name, configurationType.Name);
+                        // Return empty list for exception cases
+                        defaultValues[propertyName] = new List<object>();
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to create instance of configuration type {ConfigType}",
+                configurationType.Name);
+        }
+
+        return defaultValues;
     }
 
     private ConfigurationBase SetupConfigurationData(Configuration configuration,
@@ -270,18 +333,42 @@ public class AgentService : ApplicationService, IAgentService
         return resp;
     }
 
-    public async Task<List<AgentInstanceDto>> GetAllAgentInstances(int pageIndex, int pageSize)
+    public async Task<List<AgentInstanceDto>> GetAllAgentInstances(GetAllAgentInstancesQueryDto queryDto)
     {
         var result = new List<AgentInstanceDto>();
         var currentUserId = _userAppService.GetCurrentUserId();
-        var response =
-            await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
+        
+        // Build query conditions
+        var queryString = "userId.keyword:" + currentUserId;
+        
+        // Add agentType fuzzy query condition
+        if (!string.IsNullOrWhiteSpace(queryDto.AgentType))
+        {
+            // Use fuzzy query with ~ operator for better matching
+            queryString += " AND agentType:(" + queryDto.AgentType + "~ OR " + queryDto.AgentType + "*)";
+        }
+        
+        PagedResultDto<Dictionary<string, object>> response;
+        try
+        {
+            response =
+                await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
+                {
+                    QueryString = queryString,
+                    StateName = nameof(CreatorGAgentState),
+                    PageSize = queryDto.PageSize,
+                    PageIndex = queryDto.PageIndex
+                });
+        }
+        catch (UserFriendlyException e)
+        {
+            if (e.Code == "index_not_found_exception")
             {
-                QueryString = "userId.keyword:" + currentUserId,
-                StateName = nameof(CreatorGAgentState),
-                PageSize = pageSize,
-                PageIndex = pageIndex
-            });
+                return result;
+            }
+
+            throw;
+        }
         if (response.TotalCount == 0)
         {
             return result;
@@ -359,17 +446,18 @@ public class AgentService : ApplicationService, IAgentService
                     ContractResolver = new CamelCasePropertyNamesContractResolver(),
                     NullValueHandling = NullValueHandling.Ignore
                 });
-                await creatorAgent.UpdateAgentAsync(new UpdateAgentInput
-                {
-                    Name = dto.Name,
-                    Properties = properties
-                });
             }
             else
             {
                 _logger.LogError("no properties to be updated, id: {id}", guid);
             }
         }
+        
+        await creatorAgent.UpdateAgentAsync(new UpdateAgentInput
+        {
+            Name = dto.Name,
+            Properties = properties
+        });
 
         var resp = new AgentDto
         {
