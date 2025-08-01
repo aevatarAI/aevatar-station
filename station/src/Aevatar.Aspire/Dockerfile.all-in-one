@@ -1,0 +1,138 @@
+# Multi-service container for Aevatar.Aspire
+# This Dockerfile combines all services from docker-compose.yml into a single container
+FROM mcr.microsoft.com/dotnet/sdk:9.0
+
+# Set environment variables to avoid interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=UTC
+ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
+ENV DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+
+# Update package lists
+RUN apt-get update
+
+# Install basic build tools and utilities
+RUN apt-get -qqy install make
+RUN apt-get -qqy install net-tools
+RUN apt-get -qqy install procps
+RUN apt-get -qqy install git
+RUN apt-get -qqy install python3
+RUN apt-get -qqy install python3-pip
+RUN apt-get -qqy install libssl-dev
+RUN apt-get -qqy install build-essential
+RUN apt-get -qqy install libtool
+RUN apt-get -qqy install cmake
+RUN apt-get -qqy install curl
+RUN apt-get -qqy install wget
+RUN apt-get -qqy install gnupg
+RUN apt-get -qqy install lsb-release
+RUN apt-get -qqy install ca-certificates
+RUN apt-get -qqy install software-properties-common
+RUN apt-get -qqy install supervisor
+RUN apt-get -qqy install openjdk-17-jre-headless
+RUN apt-get -qqy install netcat-openbsd
+
+# Install Redis server and tools
+RUN apt-get -qqy install redis-server
+RUN apt-get -qqy install redis-tools
+
+# Install MongoDB
+RUN wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc | apt-key add -
+RUN echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+RUN apt-get update
+RUN apt-get -qqy install mongodb-org
+
+# Install Elasticsearch
+RUN wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | apt-key add -
+RUN echo "deb https://artifacts.elastic.co/packages/8.x/apt stable main" | tee /etc/apt/sources.list.d/elastic-8.x.list
+RUN apt-get update
+RUN apt-get -qqy install elasticsearch
+
+# Create data and service directories
+RUN mkdir -p /data/mongodb /data/mongodb-es /data/redis /data/kafka /data/zookeeper
+RUN mkdir -p /data/elasticsearch /data/qdrant /data/prometheus /data/grafana
+RUN mkdir -p /opt/kafka /opt/zookeeper /opt/qdrant /opt/jaeger /opt/otel /opt/prometheus /opt/grafana
+
+# Install Kafka and Zookeeper from source
+RUN wget https://downloads.apache.org/kafka/2.13-3.6.1/kafka_2.13-3.6.1.tgz -O /tmp/kafka.tgz
+RUN tar -xzf /tmp/kafka.tgz -C /opt
+RUN mv /opt/kafka_2.13-3.6.1 /opt/kafka
+RUN rm /tmp/kafka.tgz
+
+# Install Qdrant from binary release
+RUN wget https://github.com/qdrant/qdrant/releases/download/v1.7.4/qdrant-x86_64-unknown-linux-gnu.tar.gz -O /tmp/qdrant.tar.gz
+RUN tar -xzf /tmp/qdrant.tar.gz -C /opt/qdrant --strip-components=1
+RUN rm /tmp/qdrant.tar.gz
+RUN chmod +x /opt/qdrant/qdrant
+
+# Install Jaeger from binary release
+RUN wget https://github.com/jaegertracing/jaeger/releases/download/v1.54.0/jaeger-1.54.0-linux-amd64.tar.gz -O /tmp/jaeger.tar.gz
+RUN tar -xzf /tmp/jaeger.tar.gz -C /opt/jaeger --strip-components=1
+RUN rm /tmp/jaeger.tar.gz
+
+# Install OpenTelemetry Collector from binary release
+RUN wget https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.95.0/otelcol-contrib_0.95.0_linux_amd64.tar.gz -O /tmp/otel.tar.gz
+RUN tar -xzf /tmp/otel.tar.gz -C /opt/otel
+RUN rm /tmp/otel.tar.gz
+
+# Install Prometheus from binary release
+RUN wget https://github.com/prometheus/prometheus/releases/download/v2.49.1/prometheus-2.49.1.linux-amd64.tar.gz -O /tmp/prometheus.tar.gz
+RUN tar -xzf /tmp/prometheus.tar.gz -C /opt/prometheus --strip-components=1
+RUN rm /tmp/prometheus.tar.gz
+
+# Install Grafana from binary release
+RUN wget https://dl.grafana.com/oss/release/grafana-10.3.3.linux-amd64.tar.gz -O /tmp/grafana.tar.gz
+RUN tar -xzf /tmp/grafana.tar.gz -C /opt/grafana --strip-components=1
+RUN rm /tmp/grafana.tar.gz
+
+# Install Blackbox Exporter from binary release
+RUN wget https://github.com/prometheus/blackbox_exporter/releases/download/v0.25.0/blackbox_exporter-0.25.0.linux-amd64.tar.gz -O /tmp/blackbox.tar.gz
+RUN tar -xzf /tmp/blackbox.tar.gz -C /opt
+RUN mv /opt/blackbox_exporter-0.25.0.linux-amd64 /opt/blackbox
+RUN rm /tmp/blackbox.tar.gz
+
+# Create user for services
+RUN useradd -r -s /bin/false aevatar
+
+# Copy configuration files
+COPY otel-collector-config.yaml /etc/otel-collector-config.yaml
+COPY prometheus.yml /etc/prometheus/prometheus.yml
+COPY prometheus-rules.yml /etc/prometheus/prometheus-rules.yml
+COPY blackbox.yml /etc/blackbox/blackbox.yml
+COPY grafana-provisioning/ /etc/grafana/provisioning/
+
+# Create MongoDB configuration files
+RUN echo "storage:\n  dbPath: /data/mongodb\nnet:\n  port: 27017\n  bindIp: 0.0.0.0" > /etc/mongod.conf
+RUN echo "storage:\n  dbPath: /data/mongodb-es\nnet:\n  port: 27018\n  bindIp: 0.0.0.0" > /etc/mongod-es.conf
+
+# Create Redis configuration
+RUN echo "bind 0.0.0.0\nport 6379\ndir /data/redis" > /etc/redis/redis.conf
+
+# Create Elasticsearch configuration
+RUN echo "cluster.name: aevatar-es\nnode.name: aevatar-node\npath.data: /data/elasticsearch\nnetwork.host: 0.0.0.0\nhttp.port: 9200\ndiscovery.type: single-node\nxpack.security.enabled: false" > /etc/elasticsearch/elasticsearch.yml
+
+# Create Kafka configuration
+RUN echo "broker.id=1\nlisteners=PLAINTEXT://0.0.0.0:9092\nlog.dirs=/data/kafka\nzookeeper.connect=localhost:2181" > /opt/kafka/config/server.properties
+
+# Create Zookeeper configuration
+RUN echo "dataDir=/data/zookeeper\nclientPort=2181\nmaxClientCnxns=0\nadmin.enableServer=false" > /opt/kafka/config/zookeeper.properties
+
+# Set proper ownership for data and service directories
+RUN chown -R aevatar:aevatar /data /opt/kafka /opt/zookeeper /opt/qdrant /opt/jaeger /opt/otel /opt/prometheus /opt/grafana /opt/blackbox
+
+# Copy supervisor configuration
+COPY supervisor/ /etc/supervisor/conf.d/
+
+# Copy startup script
+COPY start-services.sh /usr/local/bin/start-services.sh
+RUN chmod +x /usr/local/bin/start-services.sh
+
+# Expose all required ports
+EXPOSE 27017 27018 6379 9092 2181 9200 6333 6334 16686 14250 4317 4318 4315 9090 9091 3000 9115
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:3000/api/health || exit 1
+
+# Start services using startup script
+CMD ["/usr/local/bin/start-services.sh"] 
