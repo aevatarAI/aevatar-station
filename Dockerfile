@@ -12,5 +12,7 @@ RUN apt-get update && \
 RUN node --version && npm --version && npx --version
 
 ARG servicename
+ARG ENABLE_EPHEMERAL_CONFIG
 WORKDIR /app
 COPY out/$servicename .
+ENV ENABLE_EPHEMERAL_CONFIG=${ENABLE_EPHEMERAL_CONFIG}
