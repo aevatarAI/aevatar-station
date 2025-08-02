@@ -36,7 +36,17 @@ public class WorkflowViewService : ApplicationService, IWorkflowViewService
     {
         var agentDto = await _agentService.GetAgentAsync(viewAgentId);
         var configJson = JsonConvert.SerializeObject(agentDto.Properties);
-        var viewConfigDto = JsonConvert.DeserializeObject<WorkflowViewConfigDto>(configJson);
+        WorkflowViewConfigDto? viewConfigDto;
+        try
+        {
+            viewConfigDto = JsonConvert.DeserializeObject<WorkflowViewConfigDto>(configJson);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Invalid WorkflowView Properties: {configJson}", configJson);
+            throw new UserFriendlyException("Invalid WorkflowView Properties");
+        }
+            
         if (viewConfigDto == null)
         {
             return new AgentDto();
@@ -48,22 +58,46 @@ public class WorkflowViewService : ApplicationService, IWorkflowViewService
             var nodeAgentProperties = JsonConvert.DeserializeObject<Dictionary<string, object>>(workflowNode.JsonProperties);
             if (workflowNode.AgentId == Guid.Empty || (await _agentService.GetAgentAsync(workflowNode.AgentId)).AgentType.IsNullOrEmpty())
             {
-                var subAgentDto = await _agentService.CreateAgentAsync(new CreateAgentInputDto()
+                _logger.LogInformation("workflowViewGAgent {viewAgentId} create {agentType} begin.", viewAgentId, workflowNode.AgentType);
+                try
                 {
-                    AgentId = workflowNode.AgentId == Guid.Empty ? null : workflowNode.AgentId,
-                    Name = workflowNode.Name,
-                    Properties = nodeAgentProperties,
-                    AgentType = workflowNode.AgentType
-                });
-                workflowNode.AgentId = subAgentDto.AgentGuid;
+                    var subAgentDto = await _agentService.CreateAgentAsync(new CreateAgentInputDto()
+                    {
+                        AgentId = workflowNode.AgentId == Guid.Empty ? null : workflowNode.AgentId,
+                        Name = workflowNode.Name,
+                        Properties = nodeAgentProperties,
+                        AgentType = workflowNode.AgentType
+                    });
+                    workflowNode.AgentId = subAgentDto.AgentGuid;
+                }
+                catch (Exception e)
+                {
+                   _logger.LogError(e, "workflowViewGAgent {viewAgentId} create {agentType} fail: {message}", viewAgentId, workflowNode.AgentType, e.Message);
+                   throw new UserFriendlyException($"Create {workflowNode.AgentType} fail: {e.Message}");
+                }
+                
+                _logger.LogInformation("workflowViewGAgent {viewAgentId} create {agentType} agentId {agentId} success.", 
+                    viewAgentId, workflowNode.AgentType, workflowNode.AgentId);
             }
             else
             {
-                await _agentService.UpdateAgentAsync(workflowNode.AgentId, new UpdateAgentInputDto()
+                _logger.LogInformation("workflowViewGAgent {viewAgentId} update {agentType} {agentId} begin.", 
+                    viewAgentId, workflowNode.AgentType, workflowNode.AgentId);
+                try
                 {
-                    Name = workflowNode.Name,
-                    Properties = nodeAgentProperties
-                });
+                    await _agentService.UpdateAgentAsync(workflowNode.AgentId, new UpdateAgentInputDto()
+                    {
+                        Name = workflowNode.Name,
+                        Properties = nodeAgentProperties
+                    });
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "workflowViewGAgent {viewAgentId} update {agentType} {agentId} fail: {message}", viewAgentId, workflowNode.AgentType, workflowNode.AgentId,  e.Message);
+                    throw new UserFriendlyException($"Update {workflowNode.AgentType} {workflowNode.AgentId} fail: {e.Message}");
+                }
+                _logger.LogInformation("workflowViewGAgent {viewAgentId} update {agentType} {agentId} success.", 
+                    viewAgentId, workflowNode.AgentType, workflowNode.AgentId);
             }
         }
         
@@ -100,27 +134,55 @@ public class WorkflowViewService : ApplicationService, IWorkflowViewService
         workflowConfigProperties.Remove("PublisherGrainId");
         workflowConfigProperties.Remove("CorrelationId");
 
+        _logger.LogInformation("workflowViewGAgent {viewAgentId}  workflowCoordinatorGAgent properties {workflowConfigJson}.", 
+            viewAgentId, workflowConfigJson);
+        
         var workflowCoordinatorGAgentId = viewConfigDto.WorkflowCoordinatorGAgentId;
         if (workflowCoordinatorGAgentId == Guid.Empty)
         {
+            _logger.LogInformation("workflowViewGAgent {viewAgentId} create workflowCoordinatorGAgent begin.", 
+                viewAgentId);
             var emptyWorkflowCoordinatorGAgent = await _gAgentFactory.GetGAgentAsync<IWorkflowCoordinatorGAgent>(Guid.Empty);
-            var workflowCoordinatorGAgentDto = await _agentService.CreateAgentAsync(new CreateAgentInputDto()
+            AgentDto workflowCoordinatorGAgentDto;
+            try
             {
-                Name = agentDto.Name,
-                AgentType = emptyWorkflowCoordinatorGAgent.GetGrainId().Type.ToString(),
-                Properties = workflowConfigProperties
-            });
-            viewConfigDto.WorkflowCoordinatorGAgentId = workflowCoordinatorGAgentDto.AgentGuid;
+                workflowCoordinatorGAgentDto = await _agentService.CreateAgentAsync(new CreateAgentInputDto()
+                {
+                    Name = agentDto.Name,
+                    AgentType = emptyWorkflowCoordinatorGAgent.GetGrainId().Type.ToString(),
+                    Properties = workflowConfigProperties
+                });
+                viewConfigDto.WorkflowCoordinatorGAgentId = workflowCoordinatorGAgentDto.AgentGuid;
+                _logger.LogInformation("workflowViewGAgent {viewAgentId} create workflowCoordinatorGAgent {AgentId} success.", 
+                    viewAgentId, viewConfigDto.WorkflowCoordinatorGAgentId);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "workflowViewGAgent {viewAgentId} create workflowCoordinatorGAgent fail: {message}", viewAgentId, e.Message);
+                throw new UserFriendlyException($"create workflowCoordinatorGAgent fail: {e.Message}");
+            }
 
             await _agentService.AddSubAgentAsync(workflowCoordinatorGAgentDto.AgentGuid, new AddSubAgentDto());
         }
         else
         {
-            await _agentService.UpdateAgentAsync(workflowCoordinatorGAgentId, new UpdateAgentInputDto()
+            _logger.LogInformation("workflowViewGAgent {viewAgentId} update workflowCoordinatorGAgent {AgentId} success.", 
+                viewAgentId, viewConfigDto.WorkflowCoordinatorGAgentId);
+            try
             {
-                Name = agentDto.Name,
-                Properties = workflowConfigProperties
-            });
+                await _agentService.UpdateAgentAsync(workflowCoordinatorGAgentId, new UpdateAgentInputDto()
+                {
+                    Name = agentDto.Name,
+                    Properties = workflowConfigProperties
+                });
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "workflowViewGAgent {viewAgentId} update workflowCoordinatorGAgent {agentId} fail: {message}", viewAgentId, workflowCoordinatorGAgentId, e.Message);
+                throw new UserFriendlyException($"update workflowCoordinatorGAgent {viewConfigDto.WorkflowCoordinatorGAgentId} fail: {e.Message}");
+            }
+            _logger.LogInformation("workflowViewGAgent {viewAgentId} update workflowCoordinatorGAgent {AgentId} success.", 
+                viewAgentId, viewConfigDto.WorkflowCoordinatorGAgentId);
         }
 
         // update workflowViewAgent
