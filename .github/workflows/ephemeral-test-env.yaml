@@ -246,13 +246,21 @@ jobs:
             local deployment="$1"
             if kubectl get deployment "$deployment" -n "$NS" > /dev/null 2>&1; then
               echo "Updating $deployment"
-              kubectl patch deployment "$deployment" -n "$NS" --type=json -p="[{
+              if ! kubectl patch deployment "$deployment" -n "$NS" --type=json -p="[{
                 \"op\": \"replace\",
                 \"path\": \"/spec/template/spec/containers/0/image\",
                 \"value\": \"$IMAGE\"
-              }]"
-              kubectl rollout status deployment "$deployment" -n "$NS" --timeout=300s
-              echo "$deployment updated successfully"
+              }]"; then
+                echo "Failed to patch deployment $deployment"
+                exit 1
+              fi
+
+              if ! kubectl rollout status deployment "$deployment" -n "$NS" --timeout=300s; then
+                echo "Rollout failed for deployment $deployment"
+                exit 1
+              fi
+
+              echo "Update succeeded for $deployment"
             else
               echo "Deployment $deployment not found, skipping"
             fi
