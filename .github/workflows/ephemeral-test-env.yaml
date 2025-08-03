@@ -239,7 +239,8 @@ jobs:
           NS="${{ needs.set-matrix-and-namespace.outputs.namespace }}"
           IMAGE="sha-${{ needs.build-and-push-image.outputs.short_sha }}"
           SERVICE="${{ github.event.inputs.service }}"
-          PROJECT="${{ github.event.inputs.project_name }}"
+          PROJECT_RAW="${{ github.event.inputs.project_name }}"
+          PROJECT="${PROJECT_RAW// /}"  # strip spaces
 
           update_deployment_if_exists() {
             local deployment="$1"
