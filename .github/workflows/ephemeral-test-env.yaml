@@ -3,36 +3,90 @@ name: Run Aevatar Station Ephemeral Test Environment
 on:
   workflow_dispatch:
     inputs:
-      environment_ttl:
-        description: "Duration to keep environment (in minutes)"
+      project_name:
+        description: "Project name"
         required: true
-        default: "60"
+      namespace:
+        description: "Namespace"
+        required: true
+        default: "${{ github.event.inputs.project_name }}-ephemeral-test-1"
+      service:
+        description: "Service name"
+        required: true
+        type: choice
+        options:
+          - All 
+          - Aevatar.Silo
+          - Aevatar.HttpApi.Host
+          - Aevatar.AuthServer
+          - Aevatar.DbMigrator
 
-run-name: Run Aevatar Station Ephemeral Test Environment on ${{ github.ref_name }} from ${{ github.sha }}
+run-name: Update Aevatar Station Ephemeral Test Environment Image on ${{ github.ref_name }} from ${{ github.sha }}
 
 env:
   DOTNET_INSTALL_DIR: "./.dotnet"
 
 jobs:
+  set-matrix:
+    runs-on: ephemeral-env-runner
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Set matrix
+        id: set-matrix
+        run: |
+          # Set matrix based on service input
+          service="${{ github.event.inputs.service }}"
+          if [[ "$service" == "All" ]]; then
+            matrix='[
+              "Aevatar.Silo",
+              "Aevatar.Developer.Host",
+              "Aevatar.HttpApi.Host",
+              "Aevatar.AuthServer",
+              "Aevatar.DbMigrator",
+            ]'
+          elif [[ "$service" == "Aevatar.Silo" ]]; then
+            matrix='[
+              "Aevatar.Silo"
+            ]'
+          elif [[ "$service" == "Aevatar.Developer.Host" ]]; then
+            matrix='[
+              "Aevatar.Developer.Host"
+            ]'
+          elif [[ "$service" == "Aevatar.HttpApi.Host" ]]; then
+            matrix='[
+              "Aevatar.HttpApi.Host"
+            ]'
+          elif [[ "$service" == "Aevatar.AuthServer" ]]; then
+            matrix='[
+              "Aevatar.AuthServer"
+            ]'
+          elif [[ "$service" == "Aevatar.DbMigrator" ]]; then
+            matrix='[
+              "Aevatar.DbMigrator"
+          else
+            echo "Invalid service input"
+            exit 1
+          fi
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
   publish:
     runs-on: ephemeral-env-runner
     strategy:
       matrix:
-        servicename:
-          [
-            Aevatar.Silo,
-            Aevatar.Developer.Host,
-            Aevatar.HttpApi.Host,
-            Aevatar.AuthServer,
-            Aevatar.DbMigrator,
-          ]
+        servicename: ${{ fromJson(needs.set-matrix.outputs.matrix) }}
     steps:
+      # Checkout source code
       - name: Checkout code
         uses: actions/checkout@v3
+
+      # Set up .NET 9 SDK
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: '9.0.x'
+          
+      # Cache NuGet packages to speed up builds
       - name: Cache NuGet Packages
         id: nuget-packages
         uses: actions/cache@v4
@@ -41,11 +95,12 @@ jobs:
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-${{ env.cache-name }}-${{ matrix.servicename }}
-      - name: List NuGet Packages
-        if: ${{ steps.nuget-packages.outputs.cache-hit == 'true' }}
-        continue-on-error: true
-        run: ls -lh ~/.nuget/packages
-      - run: dotnet publish station/src/${{ matrix.servicename }}/${{ matrix.servicename }}.csproj -o out/${{ matrix.servicename }}
+
+      # Publish .NET project
+      - name: Publish .NET project      
+        run: dotnet publish station/src/${{ matrix.servicename }}/${{ matrix.servicename }}.csproj -o out/${{ matrix.servicename }}
+      
+      # Upload build artifacts for the next job
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -58,31 +113,31 @@ jobs:
     runs-on: ephemeral-env-runner
     strategy:
       matrix:
-        servicename:
-          [
-            Aevatar.Silo,
-            Aevatar.Developer.Host,
-            Aevatar.HttpApi.Host,
-            Aevatar.AuthServer,
-            Aevatar.DbMigrator,
-          ]
+        servicename: ${{ fromJson(needs.set-matrix.outputs.matrix) }}
     permissions:
       contents: read
     outputs:
       short_sha: ${{ steps.vars.outputs.short_sha }}
     steps:
+      # Checkout code (used for Docker build context)
       - name: Checkout
         uses: actions/checkout@v4
+
+      # Extract short SHA for versioning
       - name: Set short git commit SHA
         id: vars
         run: |
           calculatedSha=$(git rev-parse --short ${{ github.sha }})
           echo "short_sha=$calculatedSha" >> "$GITHUB_OUTPUT"
+
+      # Download published build artifact
       - name: Download a single artifact
         uses: actions/download-artifact@v4
         with:
           name: ${{ matrix.servicename }}
           path: out/${{ matrix.servicename }}
+
+      # Generate image tag metadata
       - name: Create image tag
         id: meta
         uses: docker/metadata-action@v5
@@ -90,151 +145,133 @@ jobs:
           images: ${{ secrets.REPOSITORY_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/${{ matrix.servicename }}
           tags: |
             type=sha
+
+      # Setup Docker Buildx (multi-platform builds & cache support)
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          version: latest
+
+      # Build and push Docker image
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           build-args: |
             servicename=${{ matrix.servicename }}
-            ENABLE_EPHEMERAL_CONFIG=true
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-  setup-ephermeral-test-env:
+      # Install Cosign CLI for signing
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.5.0
+
+      # Install Crane to get image digest
+      - name: Install Crane (for digest lookup)
+        run: |
+          curl -sSL https://github.com/google/go-containerregistry/releases/latest/download/go-containerregistry_Linux_x86_64.tar.gz -o crane.tar.gz
+          sudo tar -xzvf crane.tar.gz -C /usr/local/bin crane
+    
+      # Extract image digest from registry
+      - name: Extract image digest
+        id: digest
+        run: |
+          DIGEST=$(crane digest "${{ steps.meta.outputs.tags }}")
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+
+      # Sign image digest using Cosign
+      - name: Cosign sign image
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+          COSIGN_YES: "true"
+        run: |
+          cosign sign "${{ steps.meta.outputs.tags }}@${{ steps.digest.outputs.digest }}"
+
+  update-ephemeral-test-env:
     runs-on: ephemeral-env-runner
     needs: build-and-push-image
-    outputs:
-      auth_server_url: ${{ steps.extract.outputs.auth_server_url }}
-      api_server_url: ${{ steps.extract.outputs.api_server_url }} 
-      app_url: ${{ steps.extract.outputs.app_url }}
-      client_id: ${{ steps.generate-uuid.outputs.client_id }}
-      client_secret: ${{ steps.generate-uuid.outputs.client_secret }}
     steps:
-      - name: Generate UUID for project and client
-        id: generate-uuid
-        run: |
-          UUID=$(python3 -c 'import uuid; print(str(uuid.uuid4())[:8])')
-          echo "project_name=env-${UUID}" >> "$GITHUB_OUTPUT"
-          echo "client_id=${UUID}" >> "$GITHUB_OUTPUT"
-          echo "client_secret=${UUID}" >> "$GITHUB_OUTPUT"
-      
-      - name: Install GitHub CLI
-        run: |
-          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-          sudo apt update
-          sudo apt install gh -y
-      
-      - name: Setup Ephermeral Env
-        id: setup_env
-        uses: actions/github-script@v6
+      # Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up kubectl
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+
+      # Configure Kubernetes credentials
+      - name: Configure Kubernetes credentials
+        uses: azure/k8s-set-context@v3
         with:
-          github-token: ${{ secrets.TOK }}
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: 'AElfDevops',
-              repo: 'ephemeral-test-env',
-              workflow_id: 'ephemeral-env-main.yaml',
-              ref: 'main',
-              inputs: {
-                project_name: "${{ steps.generate-uuid.outputs.project_name }}",
-                environment_ttl: "${{ inputs.environment_ttl }}",
-                client_id: "${{ steps.generate-uuid.outputs.client_id }}",
-                client_secret: "${{ steps.generate-uuid.outputs.client_secret }}",
-                host_silo_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
-                host_client_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
-                station_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}"
-              }
-            });
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+
+      # Save admin kubeconfig
+      - name: Save admin kubeconfig
+        id: admin-kubeconfig
+        run: |
+          # Save the admin kubeconfig to a file
+          ADMIN_KUBECONFIG=$(mktemp)
+          echo "${{ secrets.KUBE_CONFIG }}" > $ADMIN_KUBECONFIG
+          chmod 600 $ADMIN_KUBECONFIG
+          echo "ADMIN_KUBECONFIG=$ADMIN_KUBECONFIG" >> $GITHUB_OUTPUT
+
+      # Validate namespace
+      - name: Validate namespace
+        run: |
+          # Check if namespace exists
+          echo "Checking if we can list namespaces..."
+          kubectl get namespace ${{ github.event.inputs.namespace }} > /dev/null || { echo "Error: Cannot list ${{ github.event.inputs.namespace }}. Please ensure the the namespace exists"; exit 1; }
+          echo "Namespace ${{ github.event.inputs.namespace }} exists"
+
+      - name: Update ephemeral-test-env image
+        run: |
+          # Update the ephemeral-test-env image
+          if [[ "$service" == "All" ]]; then
+            # Update authserver
+            echo "Updating all services"
+            kubectl patch deployment ${{ github.event.inputs.namespace }}-authserver -n ${{ github.event.inputs.namespace }} --type=json -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/image", "value": "sha-${{ needs.build-and-push-image.outputs.short_sha }}"}]'
+            echo "Waiting for authserver to be updated..."
+            kubectl rollout status deployment ${{ github.event.inputs.namespace }}-authserver -n ${{ github.event.inputs.namespace }} --timeout=300s
+            echo "Authserver updated successfully"
+
+            echo "Updating silo"
+            kubectl patch deployment ${{ github.event.inputs.namespace }}-silo -n ${{ github.event.inputs.namespace }} --type=json -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/image", "value": "sha-${{ needs.build-and-push-image.outputs.short_sha }}"}]'
+            echo "Waiting for silo to be updated..."
+            kubectl rollout status deployment ${{ github.event.inputs.namespace }}-silo -n ${{ github.event.inputs.namespace }} --timeout=300s
+            echo "Silo updated successfully"
+
+            echo "Updating httpapi"
+            kubectl patch deployment ${{ github.event.inputs.namespace }}-httpapi -n ${{ github.event.inputs.namespace }} --type=json -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/image", "value": "sha-${{ needs.build-and-push-image.outputs.short_sha }}"}]'
+            echo "Waiting for httpapi to be updated..."
+            kubectl rollout status deployment ${{ github.event.inputs.namespace }}-httpapi -n ${{ github.event.inputs.namespace }} --timeout=300s
+            echo "Httpapi updated successfully"
+
+          elif [[ "$service" == "Aevatar.DbMigrator" ]]; then
+            echo "Updating dbmigrator job"
+            kubectl delete job ${{ github.event.inputs.namespace }}-dbmigrator -n ${{ github.event.inputs.namespace }} --ignore-not-found
+            kubectl create job ${{ github.event.inputs.namespace }}-dbmigrator \
+              --image=sha-${{ needs.build-and-push-image.outputs.short_sha }} \
+              -n ${{ github.event.inputs.namespace }} \
+              -- /bin/bash -c "dotnet Aevatar.DbMigrator.dll"
+
+          elif [[ "$service" == "Aevatar.AuthServer" ]]; then
+            echo "Updating authserver"
+            kubectl patch deployment ${{ github.event.inputs.namespace }}-authserver -n ${{ github.event.inputs.namespace }} --type=json -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/image", "value": "sha-${{ needs.build-and-push-image.outputs.short_sha }}"}]'
+            echo "Waiting for authserver to be updated..."
+            kubectl rollout status deployment ${{ github.event.inputs.namespace }}-authserver -n ${{ github.event.inputs.namespace }} --timeout=300s
+            echo "Authserver updated successfully"
+
+          elif [[ "$service" == "Aevatar.HttpApi.Host" ]]; then
+            echo "Updating httpapi"
+            kubectl patch deployment ${{ github.event.inputs.namespace }}-httpapi -n ${{ github.event.inputs.namespace }} --type=json -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/image", "value": "sha-${{ needs.build-and-push-image.outputs.short_sha }}"}]'
+            echo "Waiting for httpapi to be updated..."
+            kubectl rollout status deployment ${{ github.event.inputs.namespace }}-httpapi -n ${{ github.event.inputs.namespace }} --timeout=300s
+            echo "Httpapi updated successfully"
             
-      - name: Wait for workflow run to complete
-        id: setup_wait
-        env:
-          GH_TOKEN: ${{ secrets.TOK }}
-        run: |
-          owner="AElfDevops"
-          repo="ephemeral-test-env"
-          workflow_id="ephemeral-env-main.yaml"
-
-          echo "Waiting for workflow $workflow_id to start..."
-          run_id=""
-
-          # Wait for 30 seconds before attempting to get the workflow run
-          echo "Sleeping for 30 seconds before checking workflow run..."
-          sleep 30
-
-          # Get the workflow run ID based on the latest triggered run
-          run_id=$(gh api repos/$owner/$repo/actions/workflows/$workflow_id/runs \
-            --jq '.workflow_runs | sort_by(.created_at) | reverse | .[0].id')
-
-          # Wait until the workflow run appears
-          for i in {1..30}; do
-            run_id=$(gh api repos/$owner/$repo/actions/workflows/$workflow_id/runs \
-              --jq '.workflow_runs[0].id')
-            if [ -n "$run_id" ]; then
-              echo "Run ID: $run_id"
-              break
-            fi
-            echo "Workflow not yet started, retrying in 10s..."
-            sleep 10
-          done
-
-          # Poll the run status
-          echo "Waiting for workflow run to complete..."
-          for i in {1..360}; do
-            status=$(gh api repos/$owner/$repo/actions/runs/$run_id --jq '.status')
-            conclusion=$(gh api repos/$owner/$repo/actions/runs/$run_id --jq '.conclusion')
-
-            echo "Status: $status | Conclusion: $conclusion"
-            if [ "$status" == "completed" ]; then
-              if [ "$conclusion" != "success" ]; then
-                echo "Workflow failed or was cancelled"
-                exit 1
-              fi
-              break
-            fi
-            sleep 10
-          done
-
-          echo "Workflow completed successfully"
-
-      - name: Download artifact from Devops repo
-        uses: dawidd6/action-download-artifact@v2
-        with:
-          workflow: ephemeral-env-main.yaml
-          repo: AElfDevops/ephemeral-test-env
-          name: setup-aevatar-app-env-output  
-          github_token: ${{ secrets.TOK }}
-          path: ./downloaded
-
-      - name: Extract env data from JSON
-        id: extract
-        run: |
-          content=$(cat ./downloaded/setup-aevatar-app-env-output.json)
-          echo "namespace=$(echo $content | jq -r '.namespace')" >> $GITHUB_OUTPUT
-          echo "authserver_deployment_name=$(echo $content | jq -r '.authserver_deployment_name')" >> $GITHUB_OUTPUT
-          echo "httpapi_deployment_name=$(echo $content | jq -r '.httpapi_deployment_name')" >> $GITHUB_OUTPUT
-          echo "silo_deployment_name=$(echo $content | jq -r '.silo_deployment_name')" >> $GITHUB_OUTPUT
-          echo "dbmigrator_deployment_name=$(echo $content | jq -r '.dbmigrator_deployment_name')" >> $GITHUB_OUTPUT
-          echo "auth_server_url=$(echo $content | jq -r '.auth_server_url')" >> $GITHUB_OUTPUT
-          echo "api_server_url=$(echo $content | jq -r '.api_server_url')" >> $GITHUB_OUTPUT
-          echo "app_url=$(echo $content | jq -r '.app_url')" >> $GITHUB_OUTPUT
-
-      - name: Set job summary
-        run: |
-          echo "## Aevatar Station and App Created Successfully in namespace: \`${{ steps.extract.outputs.namespace }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "## Deployment Names" >> $GITHUB_STEP_SUMMARY
-          echo "- **Auth Server**: \`${{ steps.extract.outputs.authserver_deployment_name }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Http API Host**: \`${{ steps.extract.outputs.httpapi_deployment_name }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Silo**: \`${{ steps.extract.outputs.silo_deployment_name }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **DB Migrator**: \`${{ steps.extract.outputs.dbmigrator_deployment_name }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "## Station and App URLs" >> $GITHUB_STEP_SUMMARY
-          echo "- **Client ID**: \`${{ steps.generate-uuid.outputs.client_id }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Auth Server URL**: \`${{ steps.extract.outputs.auth_server_url }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **API Server URL**: \`${{ steps.extract.outputs.api_server_url }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **App URL**: \`${{ steps.extract.outputs.app_url }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Configuration Mode**: Ephemeral (ENABLE_EPHEMERAL_CONFIG=true)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Invalid service input"
