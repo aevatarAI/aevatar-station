@@ -23,7 +23,7 @@ env:
   DOTNET_INSTALL_DIR: "./.dotnet"
 
 jobs:
-  set-matrix:
+  set-matrix-and-namespace:
     runs-on: ephemeral-env-runner
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -76,6 +76,7 @@ jobs:
 
   publish:
     runs-on: ephemeral-env-runner
+    needs: set-matrix-and-namespace
     strategy:
       matrix:
         servicename: ${{ fromJson(needs.set-matrix.outputs.matrix) }}
