@@ -263,6 +263,7 @@ jobs:
               echo "Update succeeded for $deployment"
             else
               echo "Deployment $deployment not found, skipping"
+              exit 1
             fi
           }
           if [[ "$SERVICE" == "All" ]]; then
