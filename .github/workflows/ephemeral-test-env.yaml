@@ -198,7 +198,7 @@ jobs:
 
   update-ephemeral-test-env:
     runs-on: ephemeral-env-runner
-    needs: [set-matrix-and-namespace-and-namespace, build-and-push-image]
+    needs: [set-matrix-and-namespace, build-and-push-image]
     steps:
       # Checkout code
       - name: Checkout code
