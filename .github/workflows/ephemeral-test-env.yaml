@@ -114,7 +114,7 @@ jobs:
           retention-days: 1
 
   build-and-push-image:
-    needs: publish
+    needs: set-matrix-and-namespace, publish
     runs-on: ephemeral-env-runner
     strategy:
       matrix:
