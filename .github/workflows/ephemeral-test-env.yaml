@@ -61,6 +61,7 @@ jobs:
           elif [[ "$service" == "Aevatar.DbMigrator" ]]; then
             matrix='[
               "Aevatar.DbMigrator"
+            ]'
           else
             echo "Invalid service input"
             exit 1
@@ -72,7 +73,10 @@ jobs:
         run: |
           NAMESPACE="${{ github.event.inputs.namespace }}"
           if [[ -z "$NAMESPACE" ]]; then
-            NAMESPACE="${{ github.event.inputs.project_name }}-ephemeral-test-1"
+            PROJECT_NAME="${{ github.event.inputs.project_name }}"
+            # Strip all spaces from project_name
+            PROJECT_NAME_NO_SPACES="${PROJECT_NAME// /}"
+            NAMESPACE="${PROJECT_NAME_NO_SPACES}-ephemeral-test-1"
           fi
           echo "namespace=$NAMESPACE" >> "$GITHUB_OUTPUT"
 
