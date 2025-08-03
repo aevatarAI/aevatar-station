@@ -142,7 +142,7 @@ jobs:
               ref: 'main',
               inputs: {
                 project_name: "${{ steps.generate-uuid.outputs.project_name }}",
-                environment_ttl: "${{ inputs.environment_ttl }}",
+                environment_ttl: "${{ github.event.inputs.environment_ttl }}",
                 client_id: "${{ steps.generate-uuid.outputs.client_id }}",
                 client_secret: "${{ steps.generate-uuid.outputs.client_secret }}",
                 host_silo_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
