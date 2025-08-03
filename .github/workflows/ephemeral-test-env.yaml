@@ -79,7 +79,7 @@ jobs:
     needs: set-matrix-and-namespace
     strategy:
       matrix:
-        servicename: ${{ fromJson(needs.set-matrix.outputs.matrix) }}
+        servicename: ${{ fromJson(needs.set-matrix-and-namespace.outputs.matrix) }}
     steps:
       # Checkout source code
       - name: Checkout code
@@ -118,7 +118,7 @@ jobs:
     runs-on: ephemeral-env-runner
     strategy:
       matrix:
-        servicename: ${{ fromJson(needs.set-matrix.outputs.matrix) }}
+        servicename: ${{ fromJson(needs.set-matrix-and-namespace.outputs.matrix) }}
     permissions:
       contents: read
     outputs:
