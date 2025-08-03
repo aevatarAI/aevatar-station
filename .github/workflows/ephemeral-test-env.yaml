@@ -29,43 +29,37 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       namespace: ${{ steps.namespace.outputs.namespace }}
     steps:
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Set matrix
         id: set-matrix
         run: |
           # Set matrix based on service input
           service="${{ github.event.inputs.service }}"
           if [[ "$service" == "All" ]]; then
-            matrix='[
+            matrix=$(jq -c -n '[
               "Aevatar.Silo",
               "Aevatar.Developer.Host",
               "Aevatar.HttpApi.Host",
               "Aevatar.AuthServer",
-              "Aevatar.DbMigrator",
-            ]'
-          elif [[ "$service" == "Aevatar.Silo" ]]; then
-            matrix='[
-              "Aevatar.Silo"
-            ]'
-          elif [[ "$service" == "Aevatar.Developer.Host" ]]; then
-            matrix='[
-              "Aevatar.Developer.Host"
-            ]'
-          elif [[ "$service" == "Aevatar.HttpApi.Host" ]]; then
-            matrix='[
-              "Aevatar.HttpApi.Host"
-            ]'
-          elif [[ "$service" == "Aevatar.AuthServer" ]]; then
-            matrix='[
-              "Aevatar.AuthServer"
-            ]'
-          elif [[ "$service" == "Aevatar.DbMigrator" ]]; then
-            matrix='[
               "Aevatar.DbMigrator"
-            ]'
+            ]')
+          elif [[ "$service" == "Aevatar.Silo" ]]; then
+            matrix=$(jq -c -n '["Aevatar.Silo"]')
+          elif [[ "$service" == "Aevatar.Developer.Host" ]]; then
+            matrix=$(jq -c -n '["Aevatar.Developer.Host"]')
+          elif [[ "$service" == "Aevatar.HttpApi.Host" ]]; then
+            matrix=$(jq -c -n '["Aevatar.HttpApi.Host"]')
+          elif [[ "$service" == "Aevatar.AuthServer" ]]; then
+            matrix=$(jq -c -n '["Aevatar.AuthServer"]')
+          elif [[ "$service" == "Aevatar.DbMigrator" ]]; then
+            matrix=$(jq -c -n '["Aevatar.DbMigrator"]')
           else
             echo "Invalid service input"
             exit 1
           fi
+
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
       - name: Set Namespace
