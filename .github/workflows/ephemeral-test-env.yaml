@@ -23,7 +23,7 @@ env:
   DOTNET_INSTALL_DIR: "./.dotnet"
 
 jobs:
-  set-matrix-and-namespace-and-namespace:
+  set-matrix-and-namespace:
     runs-on: ephemeral-env-runner
     outputs:
       matrix: ${{ steps.set-matrix-and-namespace.outputs.matrix }}
@@ -76,10 +76,10 @@ jobs:
 
   publish:
     runs-on: ephemeral-env-runner
-    needs: set-matrix-and-namespace-and-namespace
+    needs: set-matrix-and-namespace
     strategy:
       matrix:
-        servicename: ${{ fromJson(needs.set-matrix-and-namespace-and-namespace.outputs.matrix) }}
+        servicename: ${{ fromJson(needs.set-matrix-and-namespace.outputs.matrix) }}
     steps:
       # Checkout source code
       - name: Checkout code
@@ -114,11 +114,11 @@ jobs:
           retention-days: 1
 
   build-and-push-image:
-    needs: [set-matrix-and-namespace-and-namespace, publish]
+    needs: [set-matrix-and-namespace, publish]
     runs-on: ephemeral-env-runner
     strategy:
       matrix:
-        servicename: ${{ fromJson(needs.set-matrix-and-namespace-and-namespace.outputs.matrix) }}
+        servicename: ${{ fromJson(needs.set-matrix-and-namespace.outputs.matrix) }}
     permissions:
       contents: read
     outputs:
