@@ -236,45 +236,44 @@ jobs:
       - name: Update ephemeral-test-env image
         run: |
           # Update the ephemeral-test-env image
-          if [[ "$service" == "All" ]]; then
-            # Update authserver
-            echo "Updating all services"
-            kubectl patch deployment ${{ github.event.inputs.project_name }}-authserver -n ${{ needs.set-matrix-and-namespace.outputs.namespace }} --type=json -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/image", "value": "sha-${{ needs.build-and-push-image.outputs.short_sha }}"}]'
-            echo "Waiting for authserver to be updated..."
-            kubectl rollout status deployment ${{ needs.set-matrix-and-namespace.outputs.namespace }}-authserver -n ${{ needs.set-matrix-and-namespace.outputs.namespace }} --timeout=300s
-            echo "Authserver updated successfully"
+          NS="${{ needs.set-matrix-and-namespace.outputs.namespace }}"
+          IMAGE="sha-${{ needs.build-and-push-image.outputs.short_sha }}"
+          SERVICE="${{ github.event.inputs.service }}"
+          PROJECT="${{ github.event.inputs.project_name }}"
 
-            echo "Updating silo"
-            kubectl patch deployment ${{ github.event.inputs.project_name }}-silo -n ${{ needs.set-matrix-and-namespace.outputs.namespace }} --type=json -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/image", "value": "sha-${{ needs.build-and-push-image.outputs.short_sha }}"}]'
-            echo "Waiting for silo to be updated..."
-            kubectl rollout status deployment ${{ needs.set-matrix-and-namespace.outputs.namespace }}-silo -n ${{ needs.set-matrix-and-namespace.outputs.namespace }} --timeout=300s
-            echo "Silo updated successfully"
-
-            echo "Updating httpapi"
-            kubectl patch deployment ${{ github.event.inputs.project_name }}-httpapi -n ${{ needs.set-matrix-and-namespace.outputs.namespace }} --type=json -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/image", "value": "sha-${{ needs.build-and-push-image.outputs.short_sha }}"}]'
-            echo "Waiting for httpapi to be updated..."
-            kubectl rollout status deployment ${{ needs.set-matrix-and-namespace.outputs.namespace }}-httpapi -n ${{ needs.set-matrix-and-namespace.outputs.namespace }} --timeout=300s
-            echo "Httpapi updated successfully"
-          elif [[ "$service" == "Aevatar.DbMigrator" ]]; then
-            echo "Updating dbmigrator job"
-            kubectl delete job ${{ github.event.inputs.project_name }}-dbmigrator -n ${{ needs.set-matrix-and-namespace.outputs.namespace }} --ignore-not-found
-            kubectl create job ${{ github.event.inputs.project_name }}-dbmigrator \
-              --image=sha-${{ needs.build-and-push-image.outputs.short_sha }} \
-              -n ${{ needs.set-matrix-and-namespace.outputs.namespace }} \
+          update_deployment_if_exists() {
+            local deployment="$1"
+            if kubectl get deployment "$deployment" -n "$NS" > /dev/null 2>&1; then
+              echo "Updating $deployment"
+              kubectl patch deployment "$deployment" -n "$NS" --type=json -p="[{
+                \"op\": \"replace\",
+                \"path\": \"/spec/template/spec/containers/0/image\",
+                \"value\": \"$IMAGE\"
+              }]"
+              kubectl rollout status deployment "$deployment" -n "$NS" --timeout=300s
+              echo "$deployment updated successfully"
+            else
+              echo "Deployment $deployment not found, skipping"
+            fi
+          }
+          if [[ "$SERVICE" == "All" ]]; then
+            update_deployment_if_exists "${PROJECT}-authserver"
+            update_deployment_if_exists "${PROJECT}-silo"
+            update_deployment_if_exists "${PROJECT}-httpapi"
+          elif [[ "$SERVICE" == "Aevatar.AuthServer" ]]; then
+            update_deployment_if_exists "${PROJECT}-authserver"
+          elif [[ "$SERVICE" == "Aevatar.HttpApi.Host" ]]; then
+            update_deployment_if_exists "${PROJECT}-httpapi"
+          elif [[ "$SERVICE" == "Aevatar.Silo" ]]; then
+            update_deployment_if_exists "${PROJECT}-silo"
+          elif [[ "$SERVICE" == "Aevatar.DbMigrator" ]]; then
+            echo "Handling DbMigrator"
+            kubectl delete job "${PROJECT}-dbmigrator" -n "$NS" --ignore-not-found
+            kubectl create job "${PROJECT}-dbmigrator" \
+              --image="$IMAGE" \
+              -n "$NS" \
               -- /bin/bash -c "dotnet Aevatar.DbMigrator.dll"
-          elif [[ "$service" == "Aevatar.AuthServer" ]]; then
-            echo "Updating authserver"
-            kubectl patch deployment ${{ github.event.inputs.project_name }}-authserver -n ${{ needs.set-matrix-and-namespace.outputs.namespace }} --type=json -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/image", "value": "sha-${{ needs.build-and-push-image.outputs.short_sha }}"}]'
-            echo "Waiting for authserver to be updated..."
-            kubectl rollout status deployment ${{ needs.set-matrix-and-namespace.outputs.namespace }}-authserver -n ${{ needs.set-matrix-and-namespace.outputs.namespace }} --timeout=300s
-            echo "Authserver updated successfully"
-          elif [[ "$service" == "Aevatar.HttpApi.Host" ]]; then
-            echo "Updating httpapi"
-            kubectl patch deployment ${{ github.event.inputs.project_name }}-httpapi -n ${{ needs.set-matrix-and-namespace.outputs.namespace }} --type=json -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/image", "value": "sha-${{ needs.build-and-push-image.outputs.short_sha }}"}]'
-            echo "Waiting for httpapi to be updated..."
-            kubectl rollout status deployment ${{ needs.set-matrix-and-namespace.outputs.namespace }}-httpapi -n ${{ needs.set-matrix-and-namespace.outputs.namespace }} --timeout=300s
-            echo "Httpapi updated successfully"
           else
-            echo "Invalid service input"
+            echo "Invalid service input: $SERVICE"
             exit 1
           fi
