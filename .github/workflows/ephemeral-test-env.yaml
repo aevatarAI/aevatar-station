@@ -237,63 +237,86 @@ jobs:
         run: |
           # Update the ephemeral-test-env image
           NS="${{ needs.set-matrix-and-namespace.outputs.namespace }}"
-          IMAGE="sha-${{ needs.build-and-push-image.outputs.short_sha }}"
+          IMAGE_TAG="${{ needs.build-and-push-image.outputs.short_sha }}"
           SERVICE="${{ github.event.inputs.service }}"
           PROJECT_RAW="${{ github.event.inputs.project_name }}"
-          PROJECT="${PROJECT_RAW// /}"  # strip spaces
+          PROJECT="${PROJECT_RAW// /}"
+          SUMMARY_FILE="$GITHUB_STEP_SUMMARY"
 
           update_deployment_if_exists() {
             local deployment="$1"
             if kubectl get deployment "$deployment" -n "$NS" > /dev/null 2>&1; then
-              echo "Updating $deployment"
-
-              # Get current image
+              echo "🔄 Updating deployment $deployment"
               current_image=$(kubectl get deployment "$deployment" -n "$NS" -o jsonpath="{.spec.template.spec.containers[0].image}")
-              base_image="${current_image%@*}"  # Remove existing @sha or :tag if present
-
+              base_image="${current_image%@*}"
               new_image="${base_image}:${IMAGE_TAG}"
 
-              echo "Patching image to $new_image"
-
               if ! kubectl patch deployment "$deployment" -n "$NS" --type=json -p="[
-                {
-                  \"op\": \"replace\",
-                  \"path\": \"/spec/template/spec/containers/0/image\",
-                  \"value\": \"$new_image\"
-                }
+                { \"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/image\", \"value\": \"$new_image\" }
               ]"; then
-                echo "❌ Failed to patch deployment $deployment"
+                echo "::error ::❌ Failed to patch deployment $deployment"
+                echo "- ❌ \`$deployment\`: Failed to patch image" >> "$SUMMARY_FILE"
                 exit 1
               fi
 
               if ! kubectl rollout status deployment "$deployment" -n "$NS" --timeout=300s; then
-                echo "❌ Rollout failed for deployment $deployment"
+                echo "::error ::❌ Rollout failed for deployment $deployment"
+                echo "- ❌ \`$deployment\`: Rollout failed" >> "$SUMMARY_FILE"
                 exit 1
               fi
 
-              echo "✅ $deployment updated successfully"
+              echo "::notice ::✅ Deployment $deployment updated to $new_image"
+              echo "- ✅ \`$deployment\`: Updated to \`$new_image\`" >> "$SUMMARY_FILE"
             else
-              echo "⚠️ Deployment $deployment not found, skipping"
+              echo "::warning ::⚠️ Deployment $deployment not found"
+              echo "- ⚠️ \`$deployment\`: Not found" >> "$SUMMARY_FILE"
             fi
           }
+
+          update_job_if_exists() {
+            local job_name="$1"
+            local run_command="$2"
+            if kubectl get job "$job_name" -n "$NS" > /dev/null 2>&1; then
+              current_image=$(kubectl get job "$job_name" -n "$NS" -o jsonpath="{.spec.template.spec.containers[0].image}")
+              base_image="${current_image%@*}"
+              new_image="${base_image}:${IMAGE_TAG}"
+            else
+              base_image="docker-image-path/Aevatar.DbMigrator"
+              new_image="${base_image}:${IMAGE_TAG}"
+            fi
+
+            echo "🔄 Updating job $job_name to $new_image"
+            kubectl delete job "$job_name" -n "$NS" --ignore-not-found
+
+            if ! kubectl create job "$job_name" --image="$new_image" -n "$NS" -- /bin/bash -c "$run_command"; then
+              echo "::error ::❌ Failed to create job $job_name"
+              echo "- ❌ \`$job_name\`: Failed to create" >> "$SUMMARY_FILE"
+              exit 1
+            fi
+
+            echo "::notice ::✅ Job $job_name created with image $new_image"
+            echo "- ✅ \`$job_name\`: Created with \`$new_image\`" >> "$SUMMARY_FILE"
+          }
+
+          echo "## ✅ Aevatar Ephemeral Test Deployment Summary" >> "$SUMMARY_FILE"
+          echo "- Namespace: \`$NS\`" >> "$SUMMARY_FILE"
+          echo "- Image Tag: \`$IMAGE_TAG\`" >> "$SUMMARY_FILE"
+          echo "" >> "$SUMMARY_FILE"
+
           if [[ "$SERVICE" == "All" ]]; then
             update_deployment_if_exists "${PROJECT}-authserver"
             update_deployment_if_exists "${PROJECT}-silo"
-            update_deployment_if_exists "${PROJECT}-httpapi"
+            update_deployment_if_exists "${PROJECT}-httpapi-host"
           elif [[ "$SERVICE" == "Aevatar.AuthServer" ]]; then
             update_deployment_if_exists "${PROJECT}-authserver"
           elif [[ "$SERVICE" == "Aevatar.HttpApi.Host" ]]; then
-            update_deployment_if_exists "${PROJECT}-httpapi"
+            update_deployment_if_exists "${PROJECT}-httpapi-host"
           elif [[ "$SERVICE" == "Aevatar.Silo" ]]; then
             update_deployment_if_exists "${PROJECT}-silo"
           elif [[ "$SERVICE" == "Aevatar.DbMigrator" ]]; then
-            echo "Handling DbMigrator"
-            kubectl delete job "${PROJECT}-dbmigrator" -n "$NS" --ignore-not-found
-            kubectl create job "${PROJECT}-dbmigrator" \
-              --image="$IMAGE" \
-              -n "$NS" \
-              -- /bin/bash -c "dotnet Aevatar.DbMigrator.dll"
+            update_job_if_exists "${PROJECT}-dbmigrator" "dotnet Aevatar.DbMigrator.dll"
           else
-            echo "Invalid service input: $SERVICE"
+            echo "::error ::❌ Invalid service input: $SERVICE"
+            echo "- ❌ Invalid service: \`$SERVICE\`" >> "$SUMMARY_FILE"
             exit 1
           fi
