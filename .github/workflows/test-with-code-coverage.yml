@@ -103,6 +103,16 @@ jobs:
         with:
           name: coverage-station
           path: coverage-station/
+      - name: List downloaded coverage files for debugging
+        run: |
+          echo "=== Coverage directories structure ==="
+          find . -name "coverage.cobertura.xml" -type f | head -20
+          echo "=== Framework coverage ==="
+          ls -la coverage-framework/ || echo "No coverage-framework directory"
+          echo "=== SignalR coverage ==="
+          ls -la coverage-signalr/ || echo "No coverage-signalr directory"
+          echo "=== Station coverage ==="
+          ls -la coverage-station/ || echo "No coverage-station directory"
       - name: Upload unified coverage reports to Codecov
         uses: codecov/codecov-action@v4
         with:
@@ -110,7 +120,6 @@ jobs:
           directory: ./
           flags: unittests
           name: codecov-umbrella-${{ github.sha }}
-          files: coverage-framework/*/coverage.cobertura.xml,coverage-signalr/*/coverage.cobertura.xml,coverage-station/*/coverage.cobertura.xml
           override_branch: ${{ github.head_ref || github.ref_name }}
           override_commit: ${{ github.sha }}
           override_build: ${{ github.run_id }}
