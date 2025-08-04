@@ -328,9 +328,14 @@ public class GodGPTController : AevatarController
     {
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
+        if (userProfile != null && userProfile.UserId != null && userProfile.UserId != Guid.Empty)
+        {
+            currentUserId = userProfile.UserId;
+        }
+
         var updateUserId = await _godGptService.SetUserProfileAsync(currentUserId, userProfile);
-        _logger.LogDebug("[GodGPTController][SetUserProfileAsync] sessionId: {0}, duration: {1}ms",
-            updateUserId, stopwatch.ElapsedMilliseconds);
+        _logger.LogDebug("[GodGPTController][SetUserProfileAsync] sessionId: {0}, currentUserId:{1} duration: {2}ms",
+            updateUserId, currentUserId, stopwatch.ElapsedMilliseconds);
         return updateUserId;
     }
 
@@ -346,10 +351,14 @@ public class GodGPTController : AevatarController
     }
 
     [HttpPost("godgpt/account/show-toast")]
-    public async Task<Guid> UpdateShowToastAsync()
+    public async Task<Guid> UpdateShowToastAsync(SetUserProfileInput userProfile)
     {
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
+        if (userProfile != null && userProfile.UserId != null && userProfile.UserId != Guid.Empty)
+        {
+            currentUserId = userProfile.UserId;
+        }
         await _godGptService.UpdateShowToastAsync(currentUserId);
         _logger.LogDebug("[GodGPTController][UpdateShowToastAsync] userId: {0}, duration: {1}ms",
             currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
