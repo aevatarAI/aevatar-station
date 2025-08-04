@@ -17,6 +17,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans;
 using Orleans.Runtime;
+using Newtonsoft.Json;
 using JsonException = Newtonsoft.Json.JsonException;
 using JsonConvert = Newtonsoft.Json.JsonConvert;
 using Newtonsoft.Json.Linq;
@@ -167,17 +168,66 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
 
     #endregion
 
-    #region Private Methods - Prompt Building
+    #region Private Methods - AI Agent Integration
 
     /// <summary>
-    /// 构建配置化的系统提示词，用于WorkflowComposerGAgent初始化
+    /// 调用WorkflowComposerGAgent生成工作流JSON（重构：分离用户目标和系统指令）
     /// </summary>
-    private string BuildSystemInstructionsPrompt(string userGoal, List<AiWorkflowAgentInfoDto> availableAgents)
+    private async Task<string> CallWorkflowComposerGAgentAsync(string userGoal, Guid userId)
+    {
+        using var scope = _logger.BeginScope("Operation: CallWorkflowComposerGAgent, UserId: {UserId}", userId);
+
+        try
+        {
+            _logger.LogInformation("Starting WorkflowComposerGAgent call for user goal: {UserGoal}", userGoal);
+            
+            // 1. 获取可用的Agent信息
+            var availableAgents = await GetAgentDescriptionsAsync();
+            _logger.LogInformation("Retrieved {AgentCount} available agents for workflow composition", availableAgents.Count);
+            
+            if (!availableAgents.Any())
+            {
+                _logger.LogWarning("No available agents found for workflow composition");
+                return CreateEmptyWorkflowJson("无可用Agent");
+            }
+
+            // 2. 获取WorkflowComposerGAgent实例
+            var workflowComposerGAgent = _clusterClient.GetGrain<IWorkflowComposerGAgent>(Guid.NewGuid());
+            
+            // 3. 重构：只在InitializeAsync中提供基础系统指令和Agent信息，不包含用户目标
+            var baseSystemInstructions = BuildBaseSystemInstructions(availableAgents);
+            var initializeDto = new InitializeDto()
+            {
+                Instructions = baseSystemInstructions,
+                LLMConfig = new LLMConfigDto() { SystemLLM = "OpenAI" }
+            };
+            
+            _logger.LogInformation("Initializing WorkflowComposerGAgent with base instructions. Agent count: {AgentCount}", availableAgents.Count);
+            
+            await workflowComposerGAgent.InitializeAsync(initializeDto);
+            
+            // 4. 传递用户目标给GAgent，让其内部处理prompt构造
+            _logger.LogInformation("Generating workflow JSON with user goal: {UserGoal}", userGoal);
+            var result = await workflowComposerGAgent.GenerateWorkflowJsonAsync(userGoal);
+            
+            _logger.LogInformation("WorkflowComposerGAgent completed successfully, result length: {ResultLength}", result.Length);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during WorkflowComposerGAgent call");
+            throw; // 让上层处理异常
+        }
+    }
+
+    /// <summary>
+    /// 构建基础系统指令（不包含用户目标，只包含agent信息和角色定义）
+    /// </summary>
+    private string BuildBaseSystemInstructions(List<AiWorkflowAgentInfoDto> availableAgents)
     {
         try
         {
-            _logger.LogDebug("Building system instructions prompt with {AgentCount} agents for goal: {UserGoal}", 
-                availableAgents.Count, userGoal);
+            _logger.LogDebug("Building base system instructions with {AgentCount} agents", availableAgents.Count);
 
             var promptBuilder = new StringBuilder();
 
@@ -185,32 +235,27 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             promptBuilder.AppendLine(_promptOptions.CurrentValue.SystemRoleTemplate);
             promptBuilder.AppendLine();
 
-            // 2. 用户目标部分
-            var userGoalSection = _promptOptions.CurrentValue.UserGoalSectionTemplate.Replace("{USER_GOAL}", userGoal);
-            promptBuilder.AppendLine(userGoalSection);
-            promptBuilder.AppendLine();
-
-            // 3. 构建Agent目录内容
+            // 2. 构建Agent目录内容（不包含具体用户目标）
             var agentCatalogContent = BuildAgentCatalogContent(availableAgents);
             var agentCatalogSection = _promptOptions.CurrentValue.AgentCatalogSectionTemplate.Replace("{AGENT_CATALOG_CONTENT}", agentCatalogContent);
             promptBuilder.AppendLine(agentCatalogSection);
             promptBuilder.AppendLine();
 
-            // 4. 输出要求
+            // 3. 输出要求
             promptBuilder.AppendLine(_promptOptions.CurrentValue.OutputRequirementsTemplate);
             promptBuilder.AppendLine();
 
-            // 5. JSON格式规范
+            // 4. JSON格式规范
             promptBuilder.AppendLine(_promptOptions.CurrentValue.JsonFormatSpecificationTemplate);
 
-            var finalPrompt = promptBuilder.ToString();
-            _logger.LogDebug("Built system instructions prompt with length: {PromptLength}", finalPrompt.Length);
+            var baseInstructions = promptBuilder.ToString();
+            _logger.LogDebug("Built base system instructions with length: {PromptLength}", baseInstructions.Length);
 
-            return finalPrompt;
+            return baseInstructions;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error building system instructions prompt");
+            _logger.LogError(ex, "Error building base system instructions");
             // 返回基础的提示词作为后备
             return _promptOptions.CurrentValue.SystemRoleTemplate + "\n\n" + _promptOptions.CurrentValue.JsonFormatSpecificationTemplate;
         }
@@ -240,79 +285,6 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         }
 
         return catalogBuilder.ToString().TrimEnd();
-    }
-
-    #endregion
-
-    #region Private Methods - AI Agent Integration
-
-    /// <summary>
-    /// 调用WorkflowComposerGAgent生成工作流JSON（使用新的Agent描述信息）
-    /// </summary>
-    private async Task<string> CallWorkflowComposerGAgentAsync(string userGoal, Guid userId)
-    {
-        using var scope = _logger.BeginScope("Operation: CallWorkflowComposerGAgent, UserId: {UserId}", userId);
-        
-        try
-        {
-            _logger.LogInformation("Creating new WorkflowComposerGAgent instance");
-            
-            // 1. 使用新方案获取所有可用的Agent描述信息（从grain的JSON格式描述）
-            _logger.LogDebug("Fetching available agents information using new grain-based method");
-            var availableAgents = await GetAgentDescriptionsAsync();
-            _logger.LogInformation("Retrieved {AgentCount} available agents with rich descriptions for workflow generation", availableAgents.Count);
-            
-            // 记录Agent信息的汇总统计
-            var agentSummary = new {
-                TotalAgents = availableAgents.Count,
-                AgentsWithDescription = availableAgents.Where(a => !string.IsNullOrEmpty(a.Description)).Count(),
-                AgentNames = availableAgents.Select(a => a.Name).ToList()
-            };
-            _logger.LogDebug("Available agents summary for workflow generation: {@AgentSummary}", agentSummary);
-            
-            // 记录具体的Agent能力信息
-            foreach (var agent in availableAgents.Where(a => !string.IsNullOrEmpty(a.Description)))
-            {
-                _logger.LogDebug("Agent info: {@AgentInfo}", 
-                    new { agent.Name, agent.Type, agent.Description });
-            }
-            
-            // 2. 创建WorkflowComposerGAgent实例并传递丰富的描述信息，使用GUID主键
-            var instanceGuid = Guid.NewGuid(); // 使用GUID而不是字符串
-            
-            using var agentScope = _logger.BeginScope("WorkflowComposerGAgent: {InstanceGuid}", instanceGuid);
-            _logger.LogDebug("Creating WorkflowComposerGAgent instance");
-            
-            var workflowComposerGAgent = _clusterClient.GetGrain<IWorkflowComposerGAgent>(instanceGuid);
-            
-            // 关键修复：AIGAgent需要先调用InitializeAsync()进行初始化
-            // 使用配置化的系统提示词，包含用户目标和Agent信息
-            var systemInstructions = BuildSystemInstructionsPrompt(userGoal, availableAgents);
-            var initializeDto = new InitializeDto()
-            {
-                Instructions = systemInstructions,
-                LLMConfig = new LLMConfigDto() { SystemLLM = "OpenAI" }
-            };
-            _logger.LogDebug("Initializing WorkflowComposerGAgent with config: {@InitializeConfig}", 
-                new { 
-                    InstructionsLength = initializeDto.Instructions.Length,
-                    SystemLLM = initializeDto.LLMConfig.SystemLLM,
-                    AgentCount = availableAgents.Count
-                });
-            
-            await workflowComposerGAgent.InitializeAsync(initializeDto);
-            
-            _logger.LogInformation("Generating workflow JSON with user goal: {UserGoal}", userGoal);
-            var result = await workflowComposerGAgent.GenerateWorkflowJsonAsync(userGoal, availableAgents);
-            
-            _logger.LogInformation("WorkflowComposerGAgent completed successfully, result length: {ResultLength}", result.Length);
-            return result;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error during WorkflowComposerGAgent call");
-            throw; // 让上层处理异常
-        }
     }
 
     #endregion
@@ -757,6 +729,48 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             
             _logger.LogDebug("High precision grid position for node {NodeId}: ({X}, {Y})", 
                 nodes[i].NodeId, nodes[i].ExtendedData.XPosition, nodes[i].ExtendedData.YPosition);
+        }
+    }
+
+    /// <summary>
+    /// 创建空的工作流JSON（当没有可用Agent或出现错误时的后备方案）
+    /// </summary>
+    private string CreateEmptyWorkflowJson(string reason)
+    {
+        try
+        {
+            _logger.LogInformation("Creating empty workflow JSON due to: {Reason}", reason);
+            
+            var emptyWorkflow = new
+            {
+                generationStatus = "failed",
+                clarityScore = 0,
+                name = "Empty Workflow",
+                properties = new
+                {
+                    name = "Empty Workflow",
+                    workflowNodeList = new object[0],
+                    workflowNodeUnitList = new object[0]
+                },
+                errorInfo = new
+                {
+                    code = "NO_AGENTS_AVAILABLE",
+                    message = reason,
+                    timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+                },
+                completionPercentage = 0,
+                completionGuidance = $"无法生成工作流：{reason}"
+            };
+
+            var result = JsonConvert.SerializeObject(emptyWorkflow, Formatting.Indented);
+            _logger.LogDebug("Created empty workflow JSON with length: {JsonLength}", result.Length);
+            
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating empty workflow JSON");
+            return "{}";
         }
     }
 
