@@ -304,9 +304,15 @@ jobs:
           echo "" >> "$SUMMARY_FILE"
 
           if [[ "$SERVICE" == "All" ]]; then
-            update_deployment_if_exists "${PROJECT}-authserver"
-            update_deployment_if_exists "${PROJECT}-silo"
-            update_deployment_if_exists "${PROJECT}-httpapi-host"
+            deployments=(
+              "${PROJECT}-authserver"
+              "${PROJECT}-silo"
+              "${PROJECT}-httpapi-host"
+            )
+
+            for deployment in "${deployments[@]}"; do
+              update_deployment_if_exists "$deployment"
+            done
           elif [[ "$SERVICE" == "Aevatar.AuthServer" ]]; then
             update_deployment_if_exists "${PROJECT}-authserver"
           elif [[ "$SERVICE" == "Aevatar.HttpApi.Host" ]]; then
