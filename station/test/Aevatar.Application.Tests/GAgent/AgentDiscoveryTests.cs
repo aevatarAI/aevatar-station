@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
 using System.Reflection;
+using System.ComponentModel;
 using Aevatar.Core.Abstractions;
-using Aevatar.Domain.WorkflowOrchestration;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -68,7 +68,7 @@ public class AgentDiscoveryTests
             .ToList();
 
         var allGAgents = new List<(Type type, Assembly assembly)>();
-        var gAgentsWithAttributes = new List<(Type type, AgentDescriptionAttribute attr)>();
+        var gAgentsWithAttributes = new List<(Type type, DescriptionAttribute attr)>();
 
         _output.WriteLine($"\n=== 扫描结果 ===");
         _output.WriteLine($"有效程序集数: {validAssemblies.Count}");
@@ -89,15 +89,15 @@ public class AgentDiscoveryTests
                         allGAgents.Add((type, assembly));
                         _output.WriteLine($"  - {type.Name} ({type.FullName})");
                         
-                        var attr = type.GetCustomAttribute<AgentDescriptionAttribute>();
+                        var attr = type.GetCustomAttribute<DescriptionAttribute>();
                         if (attr != null)
                         {
                             gAgentsWithAttributes.Add((type, attr));
-                            _output.WriteLine($"    ✓ 有AgentDescription: {attr.Name}");
+                            _output.WriteLine($"    ✓ 有DescriptionAttribute: {attr.Description}");
                         }
                         else
                         {
-                            _output.WriteLine($"    ⚠ 缺少AgentDescription属性");
+                            _output.WriteLine($"    ⚠ 缺少DescriptionAttribute属性");
                         }
                     }
                 }
@@ -115,7 +115,7 @@ public class AgentDiscoveryTests
         // Assert
         _output.WriteLine($"\n=== 最终统计 ===");
         _output.WriteLine($"发现的GAgent总数: {allGAgents.Count}");
-        _output.WriteLine($"带AgentDescription的GAgent数: {gAgentsWithAttributes.Count}");
+        _output.WriteLine($"带DescriptionAttribute的GAgent数: {gAgentsWithAttributes.Count}");
         
         // 验证是否发现了NuGet包中的GAgent
         var nugetGAgents = allGAgents
