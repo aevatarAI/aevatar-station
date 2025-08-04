@@ -486,7 +486,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     {
         try
         {
-            if (properties?.WorkflowNodeList == null || !properties.WorkflowNodeList.Any())
+            if (properties.WorkflowNodeList == null || properties.WorkflowNodeList.Count == 0)
             {
                 _logger.LogWarning("No nodes to layout");
                 return;
