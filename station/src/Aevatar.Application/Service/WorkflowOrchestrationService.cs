@@ -14,6 +14,7 @@ using Aevatar.Core.Abstractions.Extensions;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AIGAgent.Dtos;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Orleans;
 using Orleans.Runtime;
 using JsonException = Newtonsoft.Json.JsonException;
@@ -34,21 +35,22 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     private readonly IUserAppService _userAppService;
     private readonly IGAgentManager _gAgentManager;
     private readonly IGAgentFactory _gAgentFactory;
-    private readonly WorkflowOrchestrationPromptOptions _promptOptions;
+    private readonly IOptionsMonitor<WorkflowOrchestrationPromptOptions> _promptOptions;
 
     public WorkflowOrchestrationService(
         ILogger<WorkflowOrchestrationService> logger,
         IClusterClient clusterClient,
         IUserAppService userAppService,
         IGAgentManager gAgentManager,
-        IGAgentFactory gAgentFactory)
+        IGAgentFactory gAgentFactory,
+        IOptionsMonitor<WorkflowOrchestrationPromptOptions> promptOptions)
     {
         _logger = logger;
         _clusterClient = clusterClient;
         _userAppService = userAppService;
         _gAgentManager = gAgentManager;
         _gAgentFactory = gAgentFactory;
-        _promptOptions = new WorkflowOrchestrationPromptOptions(); // 使用默认配置
+        _promptOptions = promptOptions;
     }
 
     /// <summary>
@@ -180,26 +182,26 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             var promptBuilder = new StringBuilder();
 
             // 1. 系统角色定义
-            promptBuilder.AppendLine(_promptOptions.SystemRoleTemplate);
+            promptBuilder.AppendLine(_promptOptions.CurrentValue.SystemRoleTemplate);
             promptBuilder.AppendLine();
 
             // 2. 用户目标部分
-            var userGoalSection = _promptOptions.UserGoalSectionTemplate.Replace("{USER_GOAL}", userGoal);
+            var userGoalSection = _promptOptions.CurrentValue.UserGoalSectionTemplate.Replace("{USER_GOAL}", userGoal);
             promptBuilder.AppendLine(userGoalSection);
             promptBuilder.AppendLine();
 
             // 3. 构建Agent目录内容
             var agentCatalogContent = BuildAgentCatalogContent(availableAgents);
-            var agentCatalogSection = _promptOptions.AgentCatalogSectionTemplate.Replace("{AGENT_CATALOG_CONTENT}", agentCatalogContent);
+            var agentCatalogSection = _promptOptions.CurrentValue.AgentCatalogSectionTemplate.Replace("{AGENT_CATALOG_CONTENT}", agentCatalogContent);
             promptBuilder.AppendLine(agentCatalogSection);
             promptBuilder.AppendLine();
 
             // 4. 输出要求
-            promptBuilder.AppendLine(_promptOptions.OutputRequirementsTemplate);
+            promptBuilder.AppendLine(_promptOptions.CurrentValue.OutputRequirementsTemplate);
             promptBuilder.AppendLine();
 
             // 5. JSON格式规范
-            promptBuilder.AppendLine(_promptOptions.JsonFormatSpecificationTemplate);
+            promptBuilder.AppendLine(_promptOptions.CurrentValue.JsonFormatSpecificationTemplate);
 
             var finalPrompt = promptBuilder.ToString();
             _logger.LogDebug("Built system instructions prompt with length: {PromptLength}", finalPrompt.Length);
@@ -210,7 +212,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         {
             _logger.LogError(ex, "Error building system instructions prompt");
             // 返回基础的提示词作为后备
-            return _promptOptions.SystemRoleTemplate + "\n\n" + _promptOptions.JsonFormatSpecificationTemplate;
+            return _promptOptions.CurrentValue.SystemRoleTemplate + "\n\n" + _promptOptions.CurrentValue.JsonFormatSpecificationTemplate;
         }
     }
 
@@ -221,14 +223,14 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     {
         if (!availableAgents.Any())
         {
-            return _promptOptions.NoAgentsAvailableMessage;
+            return _promptOptions.CurrentValue.NoAgentsAvailableMessage;
         }
 
         var catalogBuilder = new StringBuilder();
 
         foreach (var agent in availableAgents)
         {
-            var agentSection = _promptOptions.SingleAgentTemplate
+            var agentSection = _promptOptions.CurrentValue.SingleAgentTemplate
                 .Replace("{AGENT_NAME}", agent.Name)
                 .Replace("{AGENT_TYPE}", agent.Type)
                 .Replace("{AGENT_DESCRIPTION}", agent.Description);

@@ -18,7 +18,6 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using Aevatar.Service;
 using Aevatar.Application.Contracts.WorkflowOrchestration;
-using Aevatar.Application.Service;
 
 namespace Aevatar.Application.Grains.Agents.AI;
 
@@ -66,13 +65,9 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
     {
         var descriptionInfo = new AiWorkflowAgentInfoDto
         {
-            Id = "Aevatar.Application.Grains.Agents.AI.WorkflowComposerGAgent",
             Name = "WorkflowComposer",
-            Category = "AI",
-            L1Description = "AI workflow generation agent that creates complete workflow JSON from user goals and available agent descriptions.",
-            L2Description = "Advanced AI agent specialized in workflow orchestration. Analyzes user goals and available agent capabilities to generate optimized workflow configurations with proper node connections and data flow management.",
-            Capabilities = new List<string> { "workflow-generation", "agent-orchestration", "json-creation", "ai-analysis" },
-            Tags = new List<string> { "workflow", "orchestration", "ai-generation", "json" }
+            Type = "Aevatar.Application.Grains.Agents.AI.WorkflowComposerGAgent",
+            Description = "AI workflow generation agent that creates complete workflow JSON from user goals and available agent descriptions. Analyzes user goals and available agent capabilities to generate optimized workflow configurations with proper node connections and data flow management."
         };
         
         return Task.FromResult(JsonConvert.SerializeObject(descriptionInfo));
@@ -96,14 +91,8 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
             Logger.LogInformation("Agent Details:");
             foreach (var agent in availableAgents)
             {
-                Logger.LogInformation("  - Agent: {AgentName} (ID: {AgentId})", agent.Name, agent.Id);
-                Logger.LogInformation("    L1Description: {L1Description}", agent.L1Description);
-                Logger.LogInformation("    L2Description: {L2Description}", agent.L2Description);
-                Logger.LogInformation("    Category: {Category}", agent.Category);
-                if (agent.Capabilities?.Any() == true)
-                    Logger.LogInformation("    Capabilities: {Capabilities}", string.Join(", ", agent.Capabilities));
-                if (agent.Tags?.Any() == true)
-                    Logger.LogInformation("    Tags: {Tags}", string.Join(", ", agent.Tags));
+                Logger.LogInformation("  - Agent: {AgentName} (Type: {AgentType})", agent.Name, agent.Type);
+                Logger.LogInformation("    Description: {Description}", agent.Description);
             }
         }
         else
@@ -155,19 +144,8 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
             foreach (var agent in agentList)
             {
                 prompt.AppendLine($"### {agent.Name}");
-                prompt.AppendLine($"**Type**: {agent.Id}");
-                prompt.AppendLine($"**Quick Description**: {agent.L1Description}");
-                prompt.AppendLine($"**Detailed Capabilities**: {agent.L2Description}");
-                prompt.AppendLine($"**Category**: {agent.Category}");
-                
-                if (agent.Tags?.Any() == true)
-                    prompt.AppendLine($"**Tags**: {string.Join(", ", agent.Tags)}");
-                
-                if (agent.Capabilities?.Any() == true)
-                {
-                    prompt.AppendLine($"**Capabilities**: {string.Join(", ", agent.Capabilities)}");
-                }
-                
+                prompt.AppendLine($"**Type**: {agent.Type}");
+                prompt.AppendLine($"**Quick Description**: {agent.Description}");
                 prompt.AppendLine();
             }
         }
@@ -212,7 +190,7 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
         prompt.AppendLine("      {");
         prompt.AppendLine("        \"fromNodeId\": \"source_node_id\",");
         prompt.AppendLine("        \"toNodeId\": \"target_node_id\",");
-        prompt.AppendLine($"        \"connectionType\": \"{ConnectionType.Sequential}\"");
+        prompt.AppendLine("        \"connectionType\": \"Sequential\"");
         prompt.AppendLine("      }");
         prompt.AppendLine("    ]");
         prompt.AppendLine("  }");
