@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 TEST_AGENT = "agenttest"
+WORKFLOW_VIEW_AGENT = "Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView.WorkflowViewGAgent"
 STATE_NAME = "FrontAgentState"
 AGENT_NAME = "TestAgent"
 AGENT_NAME_MODIFIED = "TestAgentNameModified"
@@ -561,3 +562,51 @@ def test_permission(api_headers, api_admin_headers):
     assert_status_code(response)
     assert response.json()["data"]["count"] > 0
 
+def test_publish_workflow_view(api_headers, api_admin_headers):
+    """test publish workflow view"""
+    # create workflowView agent
+    agent_data = {
+        "agentType": WORKFLOW_VIEW_AGENT,
+        "name": "workflowViewAgent",
+        "properties": {
+            "workflowNodeList": [
+                {
+                    "agentType": "agenttest",
+                    "name": "agenttest",
+                    "extendedData": {
+                        "xPosition": "1",
+                        "yPosition": "1"
+                    },
+                    "nodeId": "9516a447-ca28-457a-a328-f2019863ebaa",
+                    "jsonProperties": "{}"
+                }
+            ],
+            "workflowNodeUnitList": [],
+            "name": "workflowViewAgent"
+        }
+    }
+    response = requests.post(
+        f"{API_HOST}/api/agent",
+        json=agent_data,
+        headers=api_headers,
+        verify=False
+    )
+    assert_status_code(response)
+    view_agent_id = response.json()["data"]["id"]
+
+    # publish workflow
+    response = requests.post(
+        f"{API_HOST}/api/workflow-view/{view_agent_id}/publish-workflow",
+        json={},
+        headers=api_headers,
+        verify=False
+    )
+    assert_status_code(response)
+    test_agent_id = response.json()["data"]["properties"]["workflowNodeList"][0]["agentId"]
+    workflow_agent_id = response.json()["data"]["properties"]["workflowCoordinatorGAgentId"]
+    logger.debug(f"test_agent_id: {test_agent_id}")
+    logger.debug(f"workflow_agent_id: {workflow_agent_id}")
+    
+    assert test_agent_id != "00000000-0000-0000-0000-000000000000"
+    assert workflow_agent_id != "00000000-0000-0000-0000-000000000000"
+    
