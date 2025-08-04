@@ -110,5 +110,8 @@ jobs:
           directory: ./
           flags: unittests
           name: codecov-umbrella
+          files: coverage-framework/*/coverage.cobertura.xml,coverage-signalr/*/coverage.cobertura.xml,coverage-station/*/coverage.cobertura.xml
+          override_branch: ${{ github.head_ref || github.ref_name }}
+          override_commit: ${{ github.sha }}
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }} 
