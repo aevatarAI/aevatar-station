@@ -1,9 +1,18 @@
 codecov:
-  notify:
-    after_n_builds: 1
+  max_report_age: off  # Disable the 12h age check for reports
+
 coverage:
   status:
     project:
       default:
         target: auto
-        threshold: 5
+        threshold: 1%
+    patch:
+      default:
+        target: auto
+        threshold: 1%
+
+comment:
+  layout: "reach,diff,flags,tree"
+  behavior: default
+  require_changes: false

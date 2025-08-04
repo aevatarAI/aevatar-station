@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Controllers;
-using Aevatar.Kubernetes.Enum;
+using Aevatar.Enum;
 using Aevatar.Permissions;
 using Aevatar.Service;
 using Asp.Versioning;
@@ -17,7 +17,6 @@ namespace Aevatar.Admin.Controllers;
 [ControllerName("Users")]
 [Route("api/users")]
 public class UserController : AevatarController
-
 {
     private readonly IUserAppService _userAppService;
     private readonly IDeveloperService _developerService;
@@ -55,13 +54,11 @@ public class UserController : AevatarController
     }
 
     [HttpPost("destroyHost")]
+    [Authorize(Policy = AevatarPermissions.AdminPolicy)]
     public async Task DestroyHostAsync(string clientId)
     {
         await _developerService.DeleteServiceAsync(clientId);
     }
-
-    // CopyHostAsync method has been removed from the interface
-    // 原有的CopyHostAsync方法已从接口中移除，不再支持
 
     [Authorize]
     [HttpPost("updateDockerImage")]
@@ -84,11 +81,19 @@ public class UserController : AevatarController
             imageName);
     }
 
-    [Authorize(Policy = "OnlyAdminAccess")]
+    [Authorize(Policy = AevatarPermissions.AdminPolicy)]
     [HttpPost("updateDockerImageByAdmin")]
-    public async Task UpdateDockerImageByAdminAsync(string hostId, HostTypeEnum hostType, string imageName)
+    public async Task UpdateDockerImageByAdminAsync(string hostId, HostTypeEnum hostType, string imageName,
+        string version = "1")
     {
-        await _developerService.UpdateDockerImageAsync(hostId + "-" + hostType, "1",
-            imageName);
+        await _developerService.UpdateDockerImageAsync(hostId + "-" + hostType, version, imageName);
+    }
+    
+    
+    [HttpPost("CopyHost")]
+    [Authorize(Policy = AevatarPermissions.AdminPolicy)]
+    public async Task CopyHost(string sourceClientId, string newClientId)
+    {
+        await _developerService.CopyHostAsync(sourceClientId, newClientId, "1");
     }
 }
