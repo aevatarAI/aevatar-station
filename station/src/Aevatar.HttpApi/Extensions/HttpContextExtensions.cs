@@ -1,5 +1,6 @@
 using System.Linq;
 using Microsoft.AspNetCore.Http;
+using Aevatar.Domain.Shared;
 
 namespace Aevatar.Extensions;
 
@@ -8,6 +9,50 @@ namespace Aevatar.Extensions;
 /// </summary>
 public static class HttpContextExtensions
 {
+    /// <summary>
+    /// Get GodgptLanguage from request headers
+    /// </summary>
+    /// <param name="context">The HttpContext instance</param>
+    /// <returns>GodgptLanguage enum value, defaults to English if not found or invalid</returns>
+    public static GodGPTChatLanguage GetGodGPTLanguage(this HttpContext context)
+    {
+        var languageHeader = context.Request.Headers["GodgptLanguage"].FirstOrDefault();
+        
+        if (string.IsNullOrWhiteSpace(languageHeader))
+        {
+            return GodGPTChatLanguage.English; // Default to English
+        }
+        
+        return languageHeader.ToLowerInvariant() switch
+        {
+            "en" => GodGPTChatLanguage.English,
+            "zh-tw" => GodGPTChatLanguage.TraditionalChinese,
+            "es" => GodGPTChatLanguage.Spanish,
+            _ => GodGPTChatLanguage.English // Default to English for unknown values
+        };
+    }
+
+    /// <summary>
+    /// Append language-specific prompt requirement to the message
+    /// </summary>
+    /// <param name="message">Original message</param>
+    /// <param name="language">Target language for response</param>
+    /// <returns>Message with language requirement appended</returns>
+    public static string AppendLanguagePrompt(this string message, GodGPTChatLanguage language)
+    {
+        var promptMsg = message;
+
+        /*promptMsg += language switch
+        {
+            GodGPTLanguage.English => ".Requirement: Please reply in English.",
+            GodGPTLanguage.TraditionalChinese => ".Requirement: Please reply in Chinese.",
+            GodGPTLanguage.Spanish => ".Requirement: Please reply in Spanish.",
+            _ => ".Requirement: Please reply in English."
+        };*/
+
+        return promptMsg;
+    }
+
     /// <summary>
     /// Get client IP address from request headers with proxy support
     /// </summary>
