@@ -59,7 +59,7 @@ namespace Aevatar.Controllers
         /// </summary>
         /// <param name="request">文本补全请求</param>
         /// <returns>包含5个补全选项的响应</returns>
-        [HttpPost("text-completion")]
+        [HttpPost("text-completion/generate")]
         public async Task<TextCompletionResponseDto> GenerateTextCompletionAsync(
             [FromBody] TextCompletionRequestDto request)
         {
