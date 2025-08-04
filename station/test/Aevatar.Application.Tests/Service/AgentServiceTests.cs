@@ -4,9 +4,11 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Aevatar.Agent;
 using Aevatar.Service;
+using Aevatar.Options;
 using Shouldly;
 using Xunit;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 
 namespace Aevatar.Application.Tests.Service;
@@ -27,7 +29,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
         
         // Assert
         result.ShouldNotBeNull();
@@ -64,7 +66,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
         
         // Assert
         result.ShouldNotBeNull();
@@ -88,7 +90,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
         
         // Assert
         result.ShouldNotBeNull();
@@ -133,7 +135,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
         
         // Assert
         result.ShouldNotBeNull();
@@ -164,7 +166,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
         
         // Assert
         result.ShouldNotBeNull();
@@ -183,7 +185,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
         
         // Assert
         result.ShouldNotBeNull();
@@ -202,7 +204,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
         
         // Assert
         result.ShouldNotBeNull();
@@ -226,7 +228,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
         
         // Assert
         result.ShouldNotBeNull();
@@ -237,6 +239,39 @@ public class AgentServiceTests
         derivedValue.ShouldNotBeNull();
         derivedValue.Count.ShouldBe(1);
         derivedValue[0].ShouldBe("Derived");
+    }
+
+    [Fact]
+    public async Task GetConfigurationDefaultValuesAsync_WithAIGAgentSystemLLM_ShouldReturnSystemLLMListFromOptions()
+    {
+        // Arrange
+        var agentServiceType = typeof(AgentService);
+        var method = agentServiceType.GetMethod("GetConfigurationDefaultValuesAsync", 
+            BindingFlags.NonPublic | BindingFlags.Instance);
+        
+        var testConfigType = typeof(AIGAgentConfiguration);
+        var agentService = CreateAgentServiceForTestingWithSystemLLMOptions();
+        
+        // Act
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, 
+            new object[] { testConfigType, "Aevatar.Application.Grains.Agents.AI.TestAIGAgent", "TestAIGAgent" });
+        
+        // Assert
+        result.ShouldNotBeNull();
+        result.ShouldContainKey("systemLLM");
+        
+        var systemLLMValue = result["systemLLM"] as List<string>;
+        systemLLMValue.ShouldNotBeNull();
+        systemLLMValue.Count.ShouldBe(2);
+        systemLLMValue.ShouldContain("gpt-4");
+        systemLLMValue.ShouldContain("deepseek");
+        
+        // Verify other properties still work normally
+        result.ShouldContainKey("instructions");
+        var instructionsValue = result["instructions"] as List<object>;
+        instructionsValue.ShouldNotBeNull();
+        instructionsValue.Count.ShouldBe(1);
+        instructionsValue[0].ShouldBe("Default AI instructions");
     }
 
     private AgentService CreateAgentServiceForTesting()
@@ -252,6 +287,34 @@ public class AgentServiceTests
         // Use reflection to set the private _logger field
         var loggerField = typeof(AgentService).GetField("_logger", BindingFlags.NonPublic | BindingFlags.Instance);
         loggerField?.SetValue(agentService, mockLogger.Object);
+        
+        return agentService;
+    }
+
+    private AgentService CreateAgentServiceForTestingWithSystemLLMOptions()
+    {
+        // For testing private methods, we can use FormatterServices.GetUninitializedObject
+        // to create an instance without calling the constructor
+        var agentService = (AgentService)System.Runtime.Serialization.FormatterServices
+            .GetUninitializedObject(typeof(AgentService));
+        
+        // Set up a mock logger to avoid null reference exceptions
+        var mockLogger = new Mock<ILogger<AgentService>>();
+        
+        // Set up mock AgentDefaultValuesOptions (not AgentDefaultValuesOptions)
+        var mockAgentDefaultValuesOptions = new Mock<IOptionsMonitor<AgentDefaultValuesOptions>>();
+        var agentDefaultValuesConfig = new AgentDefaultValuesOptions
+        {
+            SystemLLMConfigs = new List<string> { "gpt-4", "deepseek" }
+        };
+        mockAgentDefaultValuesOptions.Setup(x => x.CurrentValue).Returns(agentDefaultValuesConfig);
+        
+        // Use reflection to set the private fields
+        var loggerField = typeof(AgentService).GetField("_logger", BindingFlags.NonPublic | BindingFlags.Instance);
+        loggerField?.SetValue(agentService, mockLogger.Object);
+        
+        var agentDefaultValuesOptionsField = typeof(AgentService).GetField("_agentDefaultValuesOptions", BindingFlags.NonPublic | BindingFlags.Instance);
+        agentDefaultValuesOptionsField?.SetValue(agentService, mockAgentDefaultValuesOptions.Object);
         
         return agentService;
     }
@@ -315,6 +378,13 @@ public class AgentServiceTests
     public class DerivedConfiguration : BaseConfiguration
     {
         public string DerivedProperty { get; set; } = "Derived";
+    }
+
+    public class AIGAgentConfiguration
+    {
+        public string Instructions { get; set; } = "Default AI instructions";
+        public string SystemLLM { get; set; } = "default-llm";
+        public int MaxTokens { get; set; } = 1000;
     }
 
     public enum TestEnum
