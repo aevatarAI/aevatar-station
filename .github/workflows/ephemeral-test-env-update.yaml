@@ -73,7 +73,7 @@ jobs:
             PROJECT_NAME="${{ github.event.inputs.project_name }}"
             # Strip all spaces from project_name
             PROJECT_NAME_NO_SPACES="${PROJECT_NAME// /}"
-            NAMESPACE="env-${PROJECT_NAME_NO_SPACES}-ephemeral-test-1"
+            NAMESPACE="${PROJECT_NAME_NO_SPACES}-ephemeral-test-1"
           fi
           echo "namespace=$NAMESPACE" >> "$GITHUB_OUTPUT"
 
