@@ -106,12 +106,14 @@ jobs:
       - name: Upload unified coverage reports to Codecov
         uses: codecov/codecov-action@v4
         with:
-          fail_ci_if_error: false
+          fail_ci_if_error: true
           directory: ./
           flags: unittests
-          name: codecov-umbrella
+          name: codecov-umbrella-${{ github.sha }}
           files: coverage-framework/*/coverage.cobertura.xml,coverage-signalr/*/coverage.cobertura.xml,coverage-station/*/coverage.cobertura.xml
           override_branch: ${{ github.head_ref || github.ref_name }}
           override_commit: ${{ github.sha }}
+          override_build: ${{ github.run_id }}
+          verbose: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }} 
