@@ -118,6 +118,12 @@ public class AevatarPermissionDefinitionProvider : PermissionDefinitionProvider
         pluginsPermission.AddChild(AevatarPermissions.Plugins.Create, L("Permission:Plugins.Create")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
         pluginsPermission.AddChild(AevatarPermissions.Plugins.Edit, L("Permission:Plugins.Edit")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
         pluginsPermission.AddChild(AevatarPermissions.Plugins.Delete, L("Permission:Plugins.Delete")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
+        
+        var mcpServersPermission = developerPlatformGroup.AddPermission(AevatarPermissions.McpServers.Default, L("Permission:McpServers"));
+        mcpServersPermission.Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
+        mcpServersPermission.AddChild(AevatarPermissions.McpServers.Create, L("Permission:McpServers.Create")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
+        mcpServersPermission.AddChild(AevatarPermissions.McpServers.Edit, L("Permission:McpServers.Edit")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
+        mcpServersPermission.AddChild(AevatarPermissions.McpServers.Delete, L("Permission:McpServers.Delete")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
     }
 
     private static LocalizableString L(string name)
