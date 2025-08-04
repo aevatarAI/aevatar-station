@@ -247,12 +247,12 @@ jobs:
             local deployment="$1"
             if kubectl get deployment "$deployment" -n "$NS" > /dev/null 2>&1; then
               echo "🔄 Updating deployment $deployment"
-              current_image=$(kubectl get deployment "$deployment" -n "$NS" -o jsonpath="{.spec.template.spec.containers[0].image}")
-              base_image="${current_image%@*}"
-              new_image="${base_image}:${IMAGE_TAG}"
+              CURRENT_IMAGE=$(kubectl get deployment "$deployment" -n "$NS" -o jsonpath="{.spec.template.spec.containers[0].image}")
+              BASE_IMAGE="${CURRENT_IMAGE%%[@:]*}"
+              NEW_IMAGE="${BASE_IMAGE}:${IMAGE_TAG}"
 
               if ! kubectl patch deployment "$deployment" -n "$NS" --type=json -p="[
-                { \"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/image\", \"value\": \"$new_image\" }
+                { \"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/image\", \"value\": \"$NEW_IMAGE\" }
               ]"; then
                 echo "::error ::❌ Failed to patch deployment $deployment"
                 echo "- ❌ \`$deployment\`: Failed to patch image" >> "$SUMMARY_FILE"
@@ -265,8 +265,8 @@ jobs:
                 exit 1
               fi
 
-              echo "::notice ::✅ Deployment $deployment updated to $new_image"
-              echo "- ✅ \`$deployment\`: Updated to \`$new_image\`" >> "$SUMMARY_FILE"
+              echo "::notice ::✅ Deployment $deployment updated to $NEW_IMAGE"
+              echo "- ✅ \`$deployment\`: Updated to \`$NEW_IMAGE\`" >> "$SUMMARY_FILE"
             else
               echo "::warning ::⚠️ Deployment $deployment not found"
               echo "- ⚠️ \`$deployment\`: Not found" >> "$SUMMARY_FILE"
@@ -277,25 +277,25 @@ jobs:
             local job_name="$1"
             local run_command="$2"
             if kubectl get job "$job_name" -n "$NS" > /dev/null 2>&1; then
-              current_image=$(kubectl get job "$job_name" -n "$NS" -o jsonpath="{.spec.template.spec.containers[0].image}")
-              base_image="${current_image%@*}"
-              new_image="${base_image}:${IMAGE_TAG}"
+              CURRENT_IMAGE=$(kubectl get job "$job_name" -n "$NS" -o jsonpath="{.spec.template.spec.containers[0].image}")
+              BASE_IMAGE="${CURRENT_IMAGE%%[@:]*}"
+              NEW_IMAGE="${BASE_IMAGE}:${IMAGE_TAG}"
             else
-              base_image="docker-image-path/Aevatar.DbMigrator"
-              new_image="${base_image}:${IMAGE_TAG}"
+              BASE_IMAGE="docker-image-path/Aevatar.DbMigrator"
+              NEW_IMAGE="${BASE_IMAGE}:${IMAGE_TAG}"
             fi
 
-            echo "🔄 Updating job $job_name to $new_image"
+            echo "🔄 Updating job $job_name to $NEW_IMAGE"
             kubectl delete job "$job_name" -n "$NS" --ignore-not-found
 
-            if ! kubectl create job "$job_name" --image="$new_image" -n "$NS" -- /bin/bash -c "$run_command"; then
+            if ! kubectl create job "$job_name" --image="$NEW_IMAGE" -n "$NS" -- /bin/bash -c "$run_command"; then
               echo "::error ::❌ Failed to create job $job_name"
               echo "- ❌ \`$job_name\`: Failed to create" >> "$SUMMARY_FILE"
               exit 1
             fi
 
-            echo "::notice ::✅ Job $job_name created with image $new_image"
-            echo "- ✅ \`$job_name\`: Created with \`$new_image\`" >> "$SUMMARY_FILE"
+            echo "::notice ::✅ Job $job_name created with image $NEW_IMAGE"
+            echo "- ✅ \`$job_name\`: Created with \`$NEW_IMAGE\`" >> "$SUMMARY_FILE"
           }
 
           echo "## ✅ Aevatar Ephemeral Test Deployment Summary" >> "$SUMMARY_FILE"
