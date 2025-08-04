@@ -199,7 +199,7 @@ jobs:
         run: |
           cosign sign "${{ steps.meta.outputs.tags }}@${{ steps.digest.outputs.digest }}"
 
-  update-ephemeral-test-env:
+  update-ephemeral-test-env-image:
     runs-on: ephemeral-env-runner
     needs: [set-matrix-and-namespace, build-and-push-image]
     steps:
@@ -229,13 +229,14 @@ jobs:
           echo "ADMIN_KUBECONFIG=$ADMIN_KUBECONFIG" >> $GITHUB_OUTPUT
 
       # Validate namespace
-      - name: Validate namespace
+      - name: Validate namespace 
         run: |
           # Check if namespace exists
           echo "Checking if we can list namespaces..."
           kubectl get namespace ${{ needs.set-matrix-and-namespace.outputs.namespace }} > /dev/null || { echo "Error: Cannot list ${{ needs.set-matrix-and-namespace.outputs.namespace }}. Please ensure the the namespace exists"; exit 1; }
           echo "Namespace ${{ needs.set-matrix-and-namespace.outputs.namespace }} exists"
-
+     
+      # Update ephemeral-test-env image
       - name: Update ephemeral-test-env image
         run: |
           # Update the ephemeral-test-env image
