@@ -215,7 +215,8 @@ jobs:
         id: extract
         run: |
           content=$(cat ./downloaded/setup-aevatar-app-env-output.json)
-          echo "project_name=$(echo $content | jq -r '.project_name')" >> $GITHUB_OUTPUT          echo "namespace=$(echo $content | jq -r '.namespace')" >> $GITHUB_OUTPUT
+          echo "project_name=$(echo $content | jq -r '.project_name')" >> $GITHUB_OUTPUT          
+          echo "namespace=$(echo $content | jq -r '.namespace')" >> $GITHUB_OUTPUT
           echo "authserver_deployment_name=$(echo $content | jq -r '.authserver_deployment_name')" >> $GITHUB_OUTPUT
           echo "httpapi_deployment_name=$(echo $content | jq -r '.httpapi_deployment_name')" >> $GITHUB_OUTPUT
           echo "silo_deployment_name=$(echo $content | jq -r '.silo_deployment_name')" >> $GITHUB_OUTPUT
