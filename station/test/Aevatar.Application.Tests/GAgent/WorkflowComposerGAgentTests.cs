@@ -2,52 +2,62 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Aevatar.GAgents.AI.Common;
 using Aevatar.Application.Grains.Agents.AI;
+using Aevatar.Core.Abstractions;
+using Aevatar.GAgents.AI.Common;
+using Aevatar.GAgents.AIGAgent.Dtos;
+using Aevatar.Service;
+using Microsoft.Extensions.Logging;
+using Moq;
 using Orleans;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
+using Newtonsoft.Json;
+using Aevatar.Application.Contracts.WorkflowOrchestration;
 
-namespace Aevatar.GAgent;
+namespace Aevatar.Application.Tests.GAgent;
 
+[Collection(AevatarTestConsts.CollectionDefinitionName)]
 public class WorkflowComposerGAgentTests : AevatarApplicationGrainsTestBase
 {
-    private readonly IClusterClient _clusterClient;
+    private readonly Mock<ILogger<WorkflowComposerGAgent>> _loggerMock;
+    private readonly Mock<IClusterClient> _clusterClientMock;
+    private readonly Mock<IUserAppService> _userAppServiceMock;
     private readonly ITestOutputHelper _output;
 
     public WorkflowComposerGAgentTests(ITestOutputHelper output)
     {
-        _clusterClient = GetRequiredService<IClusterClient>();
         _output = output;
+        _clusterClientMock = new Mock<IClusterClient>();
+        _userAppServiceMock = new Mock<IUserAppService>();
+        _loggerMock = new Mock<ILogger<WorkflowComposerGAgent>>();
     }
 
     /// <summary>
-    /// 创建模拟的 AgentDescriptionInfo 列表用于测试
+    /// 创建模拟的 AiWorkflowAgentInfoDto 列表用于测试
     /// </summary>
-    private List<AgentDescriptionInfo> CreateMockAgentList()
+    private List<AiWorkflowAgentInfoDto> CreateMockAgentList()
     {
-        return new List<AgentDescriptionInfo>
+        return new List<AiWorkflowAgentInfoDto>
         {
-            new AgentDescriptionInfo
+            new AiWorkflowAgentInfoDto
             {
-                Id = "Aevatar.Application.Grains.Agents.DataProcessorGAgent",
                 Name = "DataProcessorGAgent",
-                Category = "Data",
-                L1Description = "Handles data processing operations including transformation, validation, and formatting",
-                L2Description = "Advanced data processing agent that can handle multiple input formats, apply various transformation rules, validate data integrity, and output formatted results. Supports streaming data processing and batch operations with configurable processing parameters.",
-                Capabilities = new List<string> { "data-transformation", "validation", "formatting", "batch-processing" },
-                Tags = new List<string> { "data", "processing", "transformation", "validation" }
+                Type = "Aevatar.Application.Grains.Agents.DataProcessorGAgent",
+                Description = "专门用于数据处理和分析的Agent，支持多种数据格式的处理和转换操作"
             },
-            new AgentDescriptionInfo
+            new AiWorkflowAgentInfoDto
             {
-                Id = "Aevatar.Application.Grains.Agents.AnalysisGAgent",
-                Name = "AnalysisGAgent",
-                Category = "Analysis",
-                L1Description = "Performs comprehensive data analysis including statistical analysis, trend detection, and report generation",
-                L2Description = "Sophisticated analysis agent capable of performing statistical analysis, trend detection, anomaly detection, predictive modeling, and comprehensive reporting. Features real-time analysis capabilities and customizable analysis parameters.",
-                Capabilities = new List<string> { "statistical-analysis", "trend-detection", "anomaly-detection", "predictive-modeling", "reporting" },
-                Tags = new List<string> { "analysis", "statistics", "reporting", "trends" }
+                Name = "NotificationGAgent", 
+                Type = "Aevatar.Application.Grains.Agents.NotificationGAgent",
+                Description = "负责发送各种类型通知的Agent，支持邮件、短信、推送等多种通知方式"
+            },
+            new AiWorkflowAgentInfoDto
+            {
+                Name = "AIAssistantGAgent",
+                Type = "Aevatar.Application.Grains.Agents.AI.AIAssistantGAgent", 
+                Description = "AI助手Agent，能够理解自然语言并提供智能回复和建议"
             }
         };
     }
@@ -56,7 +66,7 @@ public class WorkflowComposerGAgentTests : AevatarApplicationGrainsTestBase
     public async Task GenerateWorkflowJsonAsync_ShouldReturnValidWorkflow()
     {
         // Arrange
-        var workflowComposer = _clusterClient.GetGrain<IWorkflowComposerGAgent>(Guid.NewGuid());
+        var workflowComposer = _clusterClientMock.Object.GetGrain<IWorkflowComposerGAgent>(Guid.NewGuid());
         var userGoal = "创建一个简单的数据处理工作流";
         var availableAgents = CreateMockAgentList();
 
@@ -77,7 +87,7 @@ public class WorkflowComposerGAgentTests : AevatarApplicationGrainsTestBase
     public async Task GetDescriptionAsync_ShouldReturnDescription()
     {
         // Arrange
-        var workflowComposer = _clusterClient.GetGrain<IWorkflowComposerGAgent>(Guid.NewGuid());
+        var workflowComposer = _clusterClientMock.Object.GetGrain<IWorkflowComposerGAgent>(Guid.NewGuid());
 
         // Act
         var description = await workflowComposer.GetDescriptionAsync();
@@ -93,7 +103,7 @@ public class WorkflowComposerGAgentTests : AevatarApplicationGrainsTestBase
     public async Task AgentDiscovery_ShouldFindGAgentTypes()
     {
         // Arrange
-        var workflowComposer = _clusterClient.GetGrain<IWorkflowComposerGAgent>(Guid.NewGuid());
+        var workflowComposer = _clusterClientMock.Object.GetGrain<IWorkflowComposerGAgent>(Guid.NewGuid());
         var availableAgents = CreateMockAgentList();
         
         // Act

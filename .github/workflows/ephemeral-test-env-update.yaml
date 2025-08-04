@@ -1,0 +1,332 @@
+name: Update Aevatar Station Ephemeral Test Environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_name:
+        description: "Project name"
+        required: true
+      service:
+        description: "Service name"
+        required: true
+        type: choice
+        options:
+          - All 
+          - Aevatar.Silo
+          - Aevatar.HttpApi.Host
+          - Aevatar.AuthServer
+          - Aevatar.DbMigrator
+          - Aevatar.Developer.Host
+
+run-name: Update Aevatar Station Ephemeral Test Environment Image on ${{ github.ref_name }} from ${{ github.sha }}
+
+env:
+  DOTNET_INSTALL_DIR: "./.dotnet"
+
+jobs:
+  set-matrix-and-namespace:
+    runs-on: ephemeral-env-runner
+    outputs:
+      matrix: ${{ steps.set-matrix-and-namespace.outputs.matrix }}
+      namespace: ${{ steps.namespace.outputs.namespace }}
+    steps:
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Set matrix
+        id: set-matrix-and-namespace
+        run: |
+          # Set matrix based on service input
+          service="${{ github.event.inputs.service }}"
+          if [[ "$service" == "All" ]]; then
+            matrix=$(jq -c -n '[
+              "Aevatar.Silo",
+              "Aevatar.Developer.Host",
+              "Aevatar.HttpApi.Host",
+              "Aevatar.AuthServer",
+              "Aevatar.DbMigrator"
+            ]')
+          elif [[ "$service" == "Aevatar.Silo" ]]; then
+            matrix=$(jq -c -n '["Aevatar.Silo"]')
+          elif [[ "$service" == "Aevatar.Developer.Host" ]]; then
+            matrix=$(jq -c -n '["Aevatar.Developer.Host"]')
+          elif [[ "$service" == "Aevatar.HttpApi.Host" ]]; then
+            matrix=$(jq -c -n '["Aevatar.HttpApi.Host"]')
+          elif [[ "$service" == "Aevatar.AuthServer" ]]; then
+            matrix=$(jq -c -n '["Aevatar.AuthServer"]')
+          elif [[ "$service" == "Aevatar.DbMigrator" ]]; then
+            matrix=$(jq -c -n '["Aevatar.DbMigrator"]')
+          elif [[ "$service" == "Aevatar.Developer.Host" ]]; then
+            matrix=$(jq -c -n '["Aevatar.Developer.Host"]')
+          else
+            echo "Invalid service input"
+            exit 1
+          fi
+
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+      - name: Set Namespace
+        id: namespace
+        run: |
+          NAMESPACE="${{ github.event.inputs.namespace }}"
+          if [[ -z "$NAMESPACE" ]]; then
+            PROJECT_NAME="${{ github.event.inputs.project_name }}"
+            # Strip all spaces from project_name
+            PROJECT_NAME_NO_SPACES="${PROJECT_NAME// /}"
+            NAMESPACE="${PROJECT_NAME_NO_SPACES}-ephemeral-test-1"
+          fi
+          echo "namespace=$NAMESPACE" >> "$GITHUB_OUTPUT"
+
+  publish:
+    runs-on: ephemeral-env-runner
+    needs: set-matrix-and-namespace
+    strategy:
+      matrix:
+        servicename: ${{ fromJson(needs.set-matrix-and-namespace.outputs.matrix) }}
+    steps:
+      # Checkout source code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up .NET 9 SDK
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.0.x'
+          
+      # Cache NuGet packages to speed up builds
+      - name: Cache NuGet Packages
+        id: nuget-packages
+        uses: actions/cache@v4
+        env:
+          cache-name: nuget-package-cache
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ matrix.servicename }}
+
+      # Publish .NET project
+      - name: Publish .NET project      
+        run: dotnet publish station/src/${{ matrix.servicename }}/${{ matrix.servicename }}.csproj -o out/${{ matrix.servicename }}
+      
+      # Upload build artifacts for the next job
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.servicename }}
+          path: out/${{ matrix.servicename }}
+          retention-days: 1
+
+  build-and-push-image:
+    needs: [set-matrix-and-namespace, publish]
+    runs-on: ephemeral-env-runner
+    strategy:
+      matrix:
+        servicename: ${{ fromJson(needs.set-matrix-and-namespace.outputs.matrix) }}
+    permissions:
+      contents: read
+    outputs:
+      short_sha: ${{ steps.vars.outputs.short_sha }}
+    steps:
+      # Checkout code (used for Docker build context)
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Extract short SHA for versioning
+      - name: Set short git commit SHA
+        id: vars
+        run: |
+          calculatedSha=$(git rev-parse --short ${{ github.sha }})
+          echo "short_sha=$calculatedSha" >> "$GITHUB_OUTPUT"
+
+      # Download published build artifact
+      - name: Download a single artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.servicename }}
+          path: out/${{ matrix.servicename }}
+
+      # Generate image tag metadata
+      - name: Create image tag
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.REPOSITORY_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/${{ matrix.servicename }}
+          tags: |
+            type=sha
+
+      # Setup Docker Buildx (multi-platform builds & cache support)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          version: latest
+
+      # Build and push Docker image
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          build-args: |
+            servicename=${{ matrix.servicename }}
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Install Cosign CLI for signing
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.5.0
+
+      # Install Crane to get image digest
+      - name: Install Crane (for digest lookup)
+        run: |
+          curl -sSL https://github.com/google/go-containerregistry/releases/latest/download/go-containerregistry_Linux_x86_64.tar.gz -o crane.tar.gz
+          sudo tar -xzvf crane.tar.gz -C /usr/local/bin crane
+    
+      # Extract image digest from registry
+      - name: Extract image digest
+        id: digest
+        run: |
+          DIGEST=$(crane digest "${{ steps.meta.outputs.tags }}")
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+
+      # Sign image digest using Cosign
+      - name: Cosign sign image
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+          COSIGN_YES: "true"
+        run: |
+          cosign sign "${{ steps.meta.outputs.tags }}@${{ steps.digest.outputs.digest }}"
+
+  update-ephemeral-test-env-image:
+    runs-on: ephemeral-env-runner
+    needs: [set-matrix-and-namespace, build-and-push-image]
+    steps:
+      # Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up kubectl
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+
+      # Configure Kubernetes credentials
+      - name: Configure Kubernetes credentials
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+
+      # Save admin kubeconfig
+      - name: Save admin kubeconfig
+        id: admin-kubeconfig
+        run: |
+          # Save the admin kubeconfig to a file
+          ADMIN_KUBECONFIG=$(mktemp)
+          echo "${{ secrets.KUBE_CONFIG }}" > $ADMIN_KUBECONFIG
+          chmod 600 $ADMIN_KUBECONFIG
+          echo "ADMIN_KUBECONFIG=$ADMIN_KUBECONFIG" >> $GITHUB_OUTPUT
+
+      # Validate namespace
+      - name: Validate namespace 
+        run: |
+          # Check if namespace exists
+          echo "Checking if we can list namespaces..."
+          kubectl get namespace ${{ needs.set-matrix-and-namespace.outputs.namespace }} > /dev/null || { echo "Error: Cannot list ${{ needs.set-matrix-and-namespace.outputs.namespace }}. Please ensure the the namespace exists"; exit 1; }
+          echo "Namespace ${{ needs.set-matrix-and-namespace.outputs.namespace }} exists"
+     
+      # Update ephemeral-test-env image
+      - name: Update ephemeral-test-env image
+        run: |
+          # Update the ephemeral-test-env image
+          NS="${{ needs.set-matrix-and-namespace.outputs.namespace }}"
+          IMAGE_TAG="sha-${{ needs.build-and-push-image.outputs.short_sha }}"
+          SERVICE="${{ github.event.inputs.service }}"
+          PROJECT_RAW="${{ github.event.inputs.project_name }}"
+          PROJECT="${PROJECT_RAW// /}"
+          SUMMARY_FILE="$GITHUB_STEP_SUMMARY"
+
+          update_deployment_if_exists() {
+            local deployment="$1"
+            if kubectl get deployment "$deployment" -n "$NS" > /dev/null 2>&1; then
+              echo "🔄 Updating deployment $deployment"
+              CURRENT_IMAGE=$(kubectl get deployment "$deployment" -n "$NS" -o jsonpath="{.spec.template.spec.containers[0].image}")
+              BASE_IMAGE="${CURRENT_IMAGE%%[@:]*}"
+              NEW_IMAGE="${BASE_IMAGE}:${IMAGE_TAG}"
+
+              if ! kubectl patch deployment "$deployment" -n "$NS" --type=json -p="[
+                { \"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/image\", \"value\": \"$NEW_IMAGE\" }
+              ]"; then
+                echo "::error ::❌ Failed to patch deployment $deployment"
+                echo "- ❌ \`$deployment\`: Failed to patch image" >> "$SUMMARY_FILE"
+                exit 1
+              fi
+
+              if ! kubectl rollout status deployment "$deployment" -n "$NS" --timeout=300s; then
+                echo "::error ::❌ Rollout failed for deployment $deployment"
+                echo "- ❌ \`$deployment\`: Rollout failed" >> "$SUMMARY_FILE"
+                exit 1
+              fi
+
+              echo "::notice ::✅ Deployment $deployment updated to $NEW_IMAGE"
+              echo "- ✅ \`$deployment\`: Updated to \`$NEW_IMAGE\`" >> "$SUMMARY_FILE"
+            else
+              echo "::warning ::⚠️ Deployment $deployment not found"
+              echo "- ⚠️ \`$deployment\`: Not found" >> "$SUMMARY_FILE"
+            fi
+          }
+
+          update_job_if_exists() {
+            local job_name="$1"
+            local run_command="$2"
+            if kubectl get job "$job_name" -n "$NS" > /dev/null 2>&1; then
+              CURRENT_IMAGE=$(kubectl get job "$job_name" -n "$NS" -o jsonpath="{.spec.template.spec.containers[0].image}")
+              BASE_IMAGE="${CURRENT_IMAGE%%[@:]*}"
+              NEW_IMAGE="${BASE_IMAGE}:${IMAGE_TAG}"
+            fi
+
+            echo "🔄 Updating job $job_name to $NEW_IMAGE"
+            kubectl delete job "$job_name" -n "$NS" --ignore-not-found
+
+            if ! kubectl create job "$job_name" --image="$NEW_IMAGE" -n "$NS" -- /bin/bash -c "$run_command"; then
+              echo "::error ::❌ Failed to create job $job_name"
+              echo "- ❌ \`$job_name\`: Failed to create" >> "$SUMMARY_FILE"
+              exit 1
+            fi
+
+            echo "::notice ::✅ Job $job_name created with image $NEW_IMAGE"
+            echo "- ✅ \`$job_name\`: Created with \`$NEW_IMAGE\`" >> "$SUMMARY_FILE"
+          }
+
+          echo "## ✅ Aevatar Ephemeral Test Deployment Summary" >> "$SUMMARY_FILE"
+          echo "- Namespace: \`$NS\`" >> "$SUMMARY_FILE"
+          echo "- Image Tag: \`$IMAGE_TAG\`" >> "$SUMMARY_FILE"
+          echo "" >> "$SUMMARY_FILE"
+
+          if [[ "$SERVICE" == "All" ]]; then
+            deployments=(
+              "${PROJECT}-authserver"
+              "${PROJECT}-silo"
+              "${PROJECT}-httpapi-host"
+            )
+
+            for deployment in "${deployments[@]}"; do
+              update_deployment_if_exists "$deployment"
+            done
+          elif [[ "$SERVICE" == "Aevatar.AuthServer" ]]; then
+            update_deployment_if_exists "${PROJECT}-authserver"
+          elif [[ "$SERVICE" == "Aevatar.HttpApi.Host" ]]; then
+            update_deployment_if_exists "${PROJECT}-httpapi-host"
+          elif [[ "$SERVICE" == "Aevatar.Silo" ]]; then
+            update_deployment_if_exists "${PROJECT}-silo"
+          elif [[ "$SERVICE" == "Aevatar.DbMigrator" ]]; then
+            update_job_if_exists "${PROJECT}-dbmigrator-init-job" "dotnet Aevatar.DbMigrator.dll"
+          elif [[ "$SERVICE" == "Aevatar.Developer.Host" ]]; then
+              echo "ℹ️ Skipping image update for Aevatar.Developer.Host"
+              exit 0
+          else
+            echo "::error ::❌ Invalid service input: $SERVICE"
+            echo "- ❌ Invalid service: \`$SERVICE\`" >> "$SUMMARY_FILE"
+            exit 1
+          fi

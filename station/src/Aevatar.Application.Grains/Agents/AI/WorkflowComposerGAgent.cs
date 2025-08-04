@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,7 +16,8 @@ using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
-using Aevatar.Domain.WorkflowOrchestration;
+using Aevatar.Service;
+using Aevatar.Application.Contracts.WorkflowOrchestration;
 
 namespace Aevatar.Application.Grains.Agents.AI;
 
@@ -43,13 +45,13 @@ public class WorkflowComposerEvent : StateLogEventBase<WorkflowComposerEvent>
 public interface IWorkflowComposerGAgent : IAIGAgent, IStateGAgent<WorkflowComposerState>
 {
     /// <summary>
-    /// 根据用户目标生成完整的工作流JSON（接受新的AgentDescriptionInfo信息）
+    /// 根据用户目标生成完整的工作流JSON（接受新的AiWorkflowAgentInfoDto信息）
     /// </summary>
-    Task<string> GenerateWorkflowJsonAsync(string userGoal, List<AgentDescriptionInfo> availableAgents);
+    Task<string> GenerateWorkflowJsonAsync(string userGoal, List<AiWorkflowAgentInfoDto> availableAgents);
 }
 
 /// <summary>
-/// 工作流组合器GAgent - 精简的AI工作流生成器（接受AgentDescriptionInfo信息）
+/// 工作流组合器GAgent - 精简的AI工作流生成器（接受AiWorkflowAgentInfoDto信息）
 /// </summary>
 [GAgent("WorkflowComposer")]
 public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, WorkflowComposerEvent>,
@@ -61,15 +63,11 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
 
     public override Task<string> GetDescriptionAsync()
     {
-        var descriptionInfo = new AgentDescriptionInfo
+        var descriptionInfo = new AiWorkflowAgentInfoDto
         {
-            Id = "Aevatar.Application.Grains.Agents.AI.WorkflowComposerGAgent",
             Name = "WorkflowComposer",
-            Category = "AI",
-            L1Description = "AI workflow generation agent that creates complete workflow JSON from user goals and available agent descriptions.",
-            L2Description = "Advanced AI agent specialized in workflow orchestration. Analyzes user goals and available agent capabilities to generate optimized workflow configurations with proper node connections and data flow management.",
-            Capabilities = new List<string> { "workflow-generation", "agent-orchestration", "json-creation", "ai-analysis" },
-            Tags = new List<string> { "workflow", "orchestration", "ai-generation", "json" }
+            Type = "Aevatar.Application.Grains.Agents.AI.WorkflowComposerGAgent",
+            Description = "AI workflow generation agent that creates complete workflow JSON from user goals and available agent descriptions. Analyzes user goals and available agent capabilities to generate optimized workflow configurations with proper node connections and data flow management."
         };
         
         return Task.FromResult(JsonConvert.SerializeObject(descriptionInfo));
@@ -78,7 +76,7 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
     /// <summary>
     /// 根据用户目标和Agent描述信息生成工作流JSON
     /// </summary>
-    public async Task<string> GenerateWorkflowJsonAsync(string userGoal, List<AgentDescriptionInfo> availableAgents)
+    public async Task<string> GenerateWorkflowJsonAsync(string userGoal, List<AiWorkflowAgentInfoDto> availableAgents)
     {
         Logger.LogInformation("Starting workflow generation for goal: {UserGoal} with {AgentCount} available agents", 
             userGoal, availableAgents.Count);
@@ -93,14 +91,8 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
             Logger.LogInformation("Agent Details:");
             foreach (var agent in availableAgents)
             {
-                Logger.LogInformation("  - Agent: {AgentName} (ID: {AgentId})", agent.Name, agent.Id);
-                Logger.LogInformation("    L1Description: {L1Description}", agent.L1Description);
-                Logger.LogInformation("    L2Description: {L2Description}", agent.L2Description);
-                Logger.LogInformation("    Category: {Category}", agent.Category);
-                if (agent.Capabilities?.Any() == true)
-                    Logger.LogInformation("    Capabilities: {Capabilities}", string.Join(", ", agent.Capabilities));
-                if (agent.Tags?.Any() == true)
-                    Logger.LogInformation("    Tags: {Tags}", string.Join(", ", agent.Tags));
+                Logger.LogInformation("  - Agent: {AgentName} (Type: {AgentType})", agent.Name, agent.Type);
+                Logger.LogInformation("    Description: {Description}", agent.Description);
             }
         }
         else
@@ -111,8 +103,8 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
 
         try
         {
-            // 直接使用AgentDescriptionInfo生成Prompt
-            var prompt = BuildPromptFromAgentDescriptionInfo(userGoal, availableAgents);
+            // 直接使用AiWorkflowAgentInfoDto生成Prompt
+            var prompt = BuildPromptFromAiWorkflowAgentInfoDto(userGoal, availableAgents);
             Logger.LogDebug("Generated prompt with length: {PromptLength}", prompt.Length);
 
             // 调用AI生成工作流
@@ -129,9 +121,9 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
     }
     
     /// <summary>
-    /// 基于AgentDescriptionInfo构建AI提示词
+    /// 基于AiWorkflowAgentInfoDto构建AI提示词
     /// </summary>
-    private string BuildPromptFromAgentDescriptionInfo(string userGoal, List<AgentDescriptionInfo> agentList)
+    private string BuildPromptFromAiWorkflowAgentInfoDto(string userGoal, List<AiWorkflowAgentInfoDto> agentList)
     {
         var prompt = new StringBuilder();
 
@@ -152,19 +144,8 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
             foreach (var agent in agentList)
             {
                 prompt.AppendLine($"### {agent.Name}");
-                prompt.AppendLine($"**Type**: {agent.Id}");
-                prompt.AppendLine($"**Quick Description**: {agent.L1Description}");
-                prompt.AppendLine($"**Detailed Capabilities**: {agent.L2Description}");
-                prompt.AppendLine($"**Category**: {agent.Category}");
-                
-                if (agent.Tags?.Any() == true)
-                    prompt.AppendLine($"**Tags**: {string.Join(", ", agent.Tags)}");
-                
-                if (agent.Capabilities?.Any() == true)
-                {
-                    prompt.AppendLine($"**Capabilities**: {string.Join(", ", agent.Capabilities)}");
-                }
-                
+                prompt.AppendLine($"**Type**: {agent.Type}");
+                prompt.AppendLine($"**Quick Description**: {agent.Description}");
                 prompt.AppendLine();
             }
         }
@@ -209,7 +190,7 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
         prompt.AppendLine("      {");
         prompt.AppendLine("        \"fromNodeId\": \"source_node_id\",");
         prompt.AppendLine("        \"toNodeId\": \"target_node_id\",");
-        prompt.AppendLine($"        \"connectionType\": \"{ConnectionType.Sequential}\"");
+        prompt.AppendLine("        \"connectionType\": \"Sequential\"");
         prompt.AppendLine("      }");
         prompt.AppendLine("    ]");
         prompt.AppendLine("  }");
@@ -368,7 +349,7 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
     /// <summary>
     /// 获取回退工作流JSON（当AI生成失败时使用）
     /// </summary>
-    private string GetFallbackWorkflowJson(string errorType = "system_error", string errorMessage = "AI service unavailable", string[] actionableSteps = null)
+    private string GetFallbackWorkflowJson(string errorType = "system_error", string errorMessage = "AI service unavailable", string[]? actionableSteps = null)
     {
         var fallbackJson = new JObject
         {

@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.ComponentModel;
+using System.Reflection;
 using Aevatar.Application.Grains.Agents.AI;
 using Aevatar.Service;
 using Aevatar.Common;
@@ -11,11 +14,14 @@ using Aevatar.Core.Abstractions.Extensions;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AIGAgent.Dtos;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Orleans;
 using Orleans.Runtime;
 using JsonException = Newtonsoft.Json.JsonException;
 using JsonConvert = Newtonsoft.Json.JsonConvert;
 using Newtonsoft.Json.Linq;
+using Aevatar.Application.Contracts.WorkflowOrchestration;
+using Aevatar.Options;
 
 namespace Aevatar.Application.Service;
 
@@ -29,19 +35,22 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     private readonly IUserAppService _userAppService;
     private readonly IGAgentManager _gAgentManager;
     private readonly IGAgentFactory _gAgentFactory;
+    private readonly IOptionsMonitor<WorkflowOrchestrationPromptOptions> _promptOptions;
 
     public WorkflowOrchestrationService(
         ILogger<WorkflowOrchestrationService> logger,
         IClusterClient clusterClient,
         IUserAppService userAppService,
         IGAgentManager gAgentManager,
-        IGAgentFactory gAgentFactory)
+        IGAgentFactory gAgentFactory,
+        IOptionsMonitor<WorkflowOrchestrationPromptOptions> promptOptions)
     {
         _logger = logger;
         _clusterClient = clusterClient;
         _userAppService = userAppService;
         _gAgentManager = gAgentManager;
         _gAgentFactory = gAgentFactory;
+        _promptOptions = promptOptions;
     }
 
     /// <summary>
@@ -96,127 +105,141 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     #region Private Methods - Agent Description Acquisition
 
     /// <summary>
-    /// 使用新方案获取所有可用Agent的丰富描述信息（从grain的GetDescriptionAsync获取JSON）
+    /// 使用反射+DescriptionAttribute方式获取所有可用Agent的描述信息
+    /// 简化版本：只获取className和attribute中的description
     /// </summary>
-    private async Task<List<AgentDescriptionInfo>> GetAgentDescriptionsAsync()
+    private async Task<List<AiWorkflowAgentInfoDto>> GetAgentDescriptionsAsync()
     {
         using var scope = _logger.BeginScope("Operation: GetAgentDescriptions");
         
         try
         {
-            _logger.LogDebug("Getting available agent types from GAgentManager");
+            _logger.LogDebug("Getting available agent types from GAgentManager using reflection approach");
             var availableTypes = _gAgentManager.GetAvailableGAgentTypes();
             var validAgentTypes = availableTypes.Where(t => !t.Namespace?.StartsWith("OrleansCodeGen") == true).ToList();
             
             _logger.LogInformation("Found {TypeCount} valid agent types to process", validAgentTypes.Count);
             
-            // 记录Agent类型的详细信息
-            _logger.LogDebug("Available agent types summary: {@AgentTypesSummary}", 
-                new { 
-                    TotalCount = availableTypes.Count(),
-                    ValidCount = validAgentTypes.Count,
-                    ValidTypes = validAgentTypes.Select(t => new { t.Name, t.Namespace }).ToList()
-                });
-            
-            var agentDescriptions = new List<AgentDescriptionInfo>();
+            var agentDescriptions = new List<AiWorkflowAgentInfoDto>();
             
             foreach (var agentType in validAgentTypes)
             {
                 try
                 {
-                    using var agentScope = _logger.BeginScope("AgentType: {AgentType}", agentType.FullName);
-                    _logger.LogDebug("Processing agent type");
+                    var agentInfo = CreateAgentInfo(agentType);
+                    agentDescriptions.Add(agentInfo);
                     
-                    // 为每个类型创建默认grain实例（遵循AgentService的模式）
-                    var grainTypeName = agentType.FullName ?? agentType.Name;
-                    var grainId = GrainId.Create(grainTypeName, 
-                        GuidUtil.GuidToGrainKey(GuidUtil.StringToGuid("AgentDefaultId")));
-                    
-                    var agent = await _gAgentFactory.GetGAgentAsync(grainId);
-                    
-                    // 调用新的JSON格式GetDescriptionAsync
-                    var jsonDescription = await agent.GetDescriptionAsync();
-                    
-                    _logger.LogDebug("Agent returned description: {Description}", jsonDescription);
-                    
-                    // 尝试反序列化为AgentDescriptionInfo
-                    AgentDescriptionInfo? agentInfo = null;
-                    try
-                    {
-                        agentInfo = JsonConvert.DeserializeObject<AgentDescriptionInfo>(jsonDescription);
-                        _logger.LogDebug("Successfully deserialized agent description: {@AgentInfo}", agentInfo);
-                    }
-                    catch (JsonException ex)
-                    {
-                        // 向后兼容：如果JSON反序列化失败，创建基本的AgentDescriptionInfo
-                        _logger.LogDebug("Agent returned legacy text description, creating basic AgentDescriptionInfo. JSON error: {Error}", ex.Message);
-                        agentInfo = new AgentDescriptionInfo
-                        {
-                            Id = agentType.FullName ?? agentType.Name,
-                            Name = agentType.Name,
-                            L1Description = jsonDescription.Length > 150 ? jsonDescription.Substring(0, 147) + "..." : jsonDescription,
-                            L2Description = jsonDescription,
-                            Category = InferAgentCategory(agentType.Name),
-                            Capabilities = new List<string> { "General processing" },
-                            Tags = new List<string> { "agent", "processing" }
-                        };
-                        _logger.LogDebug("Created legacy compatibility agent info: {@LegacyAgentInfo}", agentInfo);
-                    }
-                    
-                    if (agentInfo != null)
-                    {
-                        // 确保基本字段有值
-                        if (string.IsNullOrEmpty(agentInfo.Name))
-                            agentInfo.Name = agentType.Name;
-                        if (string.IsNullOrEmpty(agentInfo.Id))
-                            agentInfo.Id = agentType.FullName ?? agentType.Name;
-                        
-                        agentDescriptions.Add(agentInfo);
-                        _logger.LogDebug("Successfully processed agent with final info: {@FinalAgentInfo}", 
-                            new { agentInfo.Name, agentInfo.Id, agentInfo.Category, agentInfo.L1Description });
-                    }
+                    _logger.LogDebug("Created agent info: {@AgentInfo}", 
+                        new { agentInfo.Name, agentInfo.Type, agentInfo.Description });
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to get description for agent type");
+                    _logger.LogWarning(ex, "Failed to process agent type {AgentType}", agentType.Name);
                 }
             }
             
-            _logger.LogInformation("Successfully retrieved {AgentCount} agent descriptions using new JSON method", agentDescriptions.Count);
-            
-            // 记录最终结果的详细信息
-            _logger.LogDebug("Final agent collection results: {@AgentCollectionResults}", 
-                new { 
-                    TotalAgents = agentDescriptions.Count,
-                    AgentsByCategory = agentDescriptions.GroupBy(a => a.Category).ToDictionary(g => g.Key, g => g.Count()),
-                    AgentNames = agentDescriptions.Select(a => a.Name).ToList()
-                });
+            _logger.LogInformation("Successfully retrieved {AgentCount} agent descriptions using reflection approach", agentDescriptions.Count);
             
             return agentDescriptions;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error occurred while getting agent descriptions");
-            return new List<AgentDescriptionInfo>();
+            return new List<AiWorkflowAgentInfoDto>();
         }
     }
 
     /// <summary>
-    /// 推断Agent类别（基于名称）
+    /// 根据Agent类型创建Agent信息DTO
     /// </summary>
-    private string InferAgentCategory(string agentName)
+    private AiWorkflowAgentInfoDto CreateAgentInfo(Type agentType)
     {
-        var name = agentName.ToLower();
-        if (name.Contains("twitter") || name.Contains("telegram") || name.Contains("social"))
-            return "Social";
-        else if (name.Contains("ai") || name.Contains("chat") || name.Contains("llm"))
-            return "AI";
-        else if (name.Contains("blockchain") || name.Contains("aelf") || name.Contains("pump"))
-            return "Blockchain";
-        else if (name.Contains("workflow") || name.Contains("orchestr") || name.Contains("router"))
-            return "Workflow";
-        else
-            return "General";
+        var descriptionAttr = agentType.GetCustomAttribute<DescriptionAttribute>();
+        var description = descriptionAttr?.Description ?? $"{agentType.Name} - Agent for specialized processing";
+        
+        return new AiWorkflowAgentInfoDto
+        {
+            Name = agentType.Name,
+            Type = agentType.FullName ?? agentType.Name,
+            Description = description
+        };
+    }
+
+    #endregion
+
+    #region Private Methods - Prompt Building
+
+    /// <summary>
+    /// 构建配置化的系统提示词，用于WorkflowComposerGAgent初始化
+    /// </summary>
+    private string BuildSystemInstructionsPrompt(string userGoal, List<AiWorkflowAgentInfoDto> availableAgents)
+    {
+        try
+        {
+            _logger.LogDebug("Building system instructions prompt with {AgentCount} agents for goal: {UserGoal}", 
+                availableAgents.Count, userGoal);
+
+            var promptBuilder = new StringBuilder();
+
+            // 1. 系统角色定义
+            promptBuilder.AppendLine(_promptOptions.CurrentValue.SystemRoleTemplate);
+            promptBuilder.AppendLine();
+
+            // 2. 用户目标部分
+            var userGoalSection = _promptOptions.CurrentValue.UserGoalSectionTemplate.Replace("{USER_GOAL}", userGoal);
+            promptBuilder.AppendLine(userGoalSection);
+            promptBuilder.AppendLine();
+
+            // 3. 构建Agent目录内容
+            var agentCatalogContent = BuildAgentCatalogContent(availableAgents);
+            var agentCatalogSection = _promptOptions.CurrentValue.AgentCatalogSectionTemplate.Replace("{AGENT_CATALOG_CONTENT}", agentCatalogContent);
+            promptBuilder.AppendLine(agentCatalogSection);
+            promptBuilder.AppendLine();
+
+            // 4. 输出要求
+            promptBuilder.AppendLine(_promptOptions.CurrentValue.OutputRequirementsTemplate);
+            promptBuilder.AppendLine();
+
+            // 5. JSON格式规范
+            promptBuilder.AppendLine(_promptOptions.CurrentValue.JsonFormatSpecificationTemplate);
+
+            var finalPrompt = promptBuilder.ToString();
+            _logger.LogDebug("Built system instructions prompt with length: {PromptLength}", finalPrompt.Length);
+
+            return finalPrompt;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error building system instructions prompt");
+            // 返回基础的提示词作为后备
+            return _promptOptions.CurrentValue.SystemRoleTemplate + "\n\n" + _promptOptions.CurrentValue.JsonFormatSpecificationTemplate;
+        }
+    }
+
+    /// <summary>
+    /// 构建Agent目录内容
+    /// </summary>
+    private string BuildAgentCatalogContent(List<AiWorkflowAgentInfoDto> availableAgents)
+    {
+        if (!availableAgents.Any())
+        {
+            return _promptOptions.CurrentValue.NoAgentsAvailableMessage;
+        }
+
+        var catalogBuilder = new StringBuilder();
+
+        foreach (var agent in availableAgents)
+        {
+            var agentSection = _promptOptions.CurrentValue.SingleAgentTemplate
+                .Replace("{AGENT_NAME}", agent.Name)
+                .Replace("{AGENT_TYPE}", agent.Type)
+                .Replace("{AGENT_DESCRIPTION}", agent.Description);
+
+            catalogBuilder.AppendLine(agentSection);
+            catalogBuilder.AppendLine();
+        }
+
+        return catalogBuilder.ToString().TrimEnd();
     }
 
     #endregion
@@ -242,16 +265,16 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             // 记录Agent信息的汇总统计
             var agentSummary = new {
                 TotalAgents = availableAgents.Count,
-                AgentsByCategory = availableAgents.GroupBy(a => a.Category).ToDictionary(g => g.Key, g => g.Count()),
-                AgentsWithCapabilities = availableAgents.Where(a => a.Capabilities?.Any() == true).Count()
+                AgentsWithDescription = availableAgents.Where(a => !string.IsNullOrEmpty(a.Description)).Count(),
+                AgentNames = availableAgents.Select(a => a.Name).ToList()
             };
             _logger.LogDebug("Available agents summary for workflow generation: {@AgentSummary}", agentSummary);
             
             // 记录具体的Agent能力信息
-            foreach (var agent in availableAgents.Where(a => a.Capabilities?.Any() == true))
+            foreach (var agent in availableAgents.Where(a => !string.IsNullOrEmpty(a.Description)))
             {
-                _logger.LogDebug("Agent capabilities: {@AgentCapabilities}", 
-                    new { agent.Name, agent.Category, agent.Capabilities });
+                _logger.LogDebug("Agent info: {@AgentInfo}", 
+                    new { agent.Name, agent.Type, agent.Description });
             }
             
             // 2. 创建WorkflowComposerGAgent实例并传递丰富的描述信息，使用GUID主键
@@ -263,12 +286,19 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             var workflowComposerGAgent = _clusterClient.GetGrain<IWorkflowComposerGAgent>(instanceGuid);
             
             // 关键修复：AIGAgent需要先调用InitializeAsync()进行初始化
+            // 使用配置化的系统提示词，包含用户目标和Agent信息
+            var systemInstructions = BuildSystemInstructionsPrompt(userGoal, availableAgents);
             var initializeDto = new InitializeDto()
             {
-                Instructions = "You are an expert workflow designer that creates sophisticated agent-based workflows. Generate well-structured JSON configurations for complex multi-agent workflows.",
+                Instructions = systemInstructions,
                 LLMConfig = new LLMConfigDto() { SystemLLM = "OpenAI" }
             };
-            _logger.LogDebug("Initializing WorkflowComposerGAgent with config: {@InitializeConfig}", initializeDto);
+            _logger.LogDebug("Initializing WorkflowComposerGAgent with config: {@InitializeConfig}", 
+                new { 
+                    InstructionsLength = initializeDto.Instructions.Length,
+                    SystemLLM = initializeDto.LLMConfig.SystemLLM,
+                    AgentCount = availableAgents.Count
+                });
             
             await workflowComposerGAgent.InitializeAsync(initializeDto);
             
