@@ -16,6 +16,7 @@ on:
           - Aevatar.HttpApi.Host
           - Aevatar.AuthServer
           - Aevatar.DbMigrator
+          - Aevatar.Developer.Host
 
 run-name: Update Aevatar Station Ephemeral Test Environment Image on ${{ github.ref_name }} from ${{ github.sha }}
 
@@ -55,6 +56,8 @@ jobs:
             matrix=$(jq -c -n '["Aevatar.AuthServer"]')
           elif [[ "$service" == "Aevatar.DbMigrator" ]]; then
             matrix=$(jq -c -n '["Aevatar.DbMigrator"]')
+          elif [[ "$service" == "Aevatar.Developer.Host" ]]; then
+            matrix=$(jq -c -n '["Aevatar.Developer.Host"]')
           else
             echo "Invalid service input"
             exit 1
@@ -237,7 +240,7 @@ jobs:
         run: |
           # Update the ephemeral-test-env image
           NS="${{ needs.set-matrix-and-namespace.outputs.namespace }}"
-          IMAGE_TAG="${{ needs.build-and-push-image.outputs.short_sha }}"
+          IMAGE_TAG="sha-${{ needs.build-and-push-image.outputs.short_sha }}"
           SERVICE="${{ github.event.inputs.service }}"
           PROJECT_RAW="${{ github.event.inputs.project_name }}"
           PROJECT="${PROJECT_RAW// /}"
@@ -321,6 +324,9 @@ jobs:
             update_deployment_if_exists "${PROJECT}-silo"
           elif [[ "$SERVICE" == "Aevatar.DbMigrator" ]]; then
             update_job_if_exists "${PROJECT}-dbmigrator" "dotnet Aevatar.DbMigrator.dll"
+          elif [[ "$SERVICE" == "Aevatar.Developer.Host" ]]; then
+              echo "ℹ️ Skipping image update for Aevatar.Developer.Host"
+              exit 0
           else
             echo "::error ::❌ Invalid service input: $SERVICE"
             echo "- ❌ Invalid service: \`$SERVICE\`" >> "$SUMMARY_FILE"
