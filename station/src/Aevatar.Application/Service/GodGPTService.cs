@@ -78,6 +78,7 @@ public interface IGodGPTService
     Task<GrainResultDto<int>> UpdateUserCreditsAsync(Guid currentUserId, UpdateUserCreditsInput input);
     Task<GrainResultDto<List<SubscriptionInfoDto>>> UpdateUserSubscriptionAsync(Guid currentUserId, UpdateUserSubscriptionsInput input);
     Task<bool> HasActiveAppleSubscriptionAsync(Guid currentUserId);
+    Task<ActiveSubscriptionStatusDto> HasActiveSubscriptionAsync(Guid currentUserId);
     Task<GetInvitationInfoResponse> GetInvitationInfoAsync(Guid currentUserId);
     Task<RedeemInviteCodeResponse> RedeemInviteCodeAsync(Guid currentUserId,
         RedeemInviteCodeRequest redeemInviteCodeRequest);
@@ -511,6 +512,13 @@ public class GodGPTService : ApplicationService, IGodGPTService
         var userBillingGAgent =
             _clusterClient.GetGrain<IUserBillingGAgent>(currentUserId);
         return await userBillingGAgent.HasActiveAppleSubscriptionAsync();
+    }
+
+    public async Task<ActiveSubscriptionStatusDto> HasActiveSubscriptionAsync(Guid currentUserId)
+    {
+        var userBillingGAgent =
+            _clusterClient.GetGrain<IUserBillingGAgent>(currentUserId);
+        return await userBillingGAgent.GetActiveSubscriptionStatusAsync();
     }
 
     public async Task<GetInvitationInfoResponse> GetInvitationInfoAsync(Guid currentUserId)
