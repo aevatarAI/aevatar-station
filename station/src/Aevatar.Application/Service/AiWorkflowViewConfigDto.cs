@@ -5,9 +5,9 @@ using Aevatar.Domain.WorkflowOrchestration;
 namespace Aevatar.Service
 {
     /// <summary>
-    /// Workflow view configuration DTO matching frontend expected format
+    /// AI workflow view configuration DTO matching frontend expected format
     /// </summary>
-    public class WorkflowViewConfigDto
+    public class AiWorkflowViewConfigDto
     {
         /// <summary>
         /// Workflow name (top level)
@@ -19,25 +19,25 @@ namespace Aevatar.Service
         /// Properties containing workflow configuration
         /// </summary>
         [Required]
-        public WorkflowPropertiesDto Properties { get; set; } = new();
+        public AiWorkflowPropertiesDto Properties { get; set; } = new();
     }
 
     /// <summary>
-    /// Workflow properties DTO
+    /// AI workflow properties DTO
     /// </summary>
-    public class WorkflowPropertiesDto
+    public class AiWorkflowPropertiesDto
     {
         /// <summary>
         /// List of workflow nodes
         /// </summary>
         [Required]
-        public List<WorkflowNodeDto> WorkflowNodeList { get; set; } = new();
+        public List<AiWorkflowNodeDto> WorkflowNodeList { get; set; } = new();
 
         /// <summary>
         /// List of node connections/units
         /// </summary>
         [Required]
-        public List<WorkflowNodeUnitDto> WorkflowNodeUnitList { get; set; } = new();
+        public List<AiWorkflowNodeUnitDto> WorkflowNodeUnitList { get; set; } = new();
 
         /// <summary>
         /// Workflow name (in properties)
@@ -47,9 +47,9 @@ namespace Aevatar.Service
     }
 
     /// <summary>
-    /// Workflow node DTO
+    /// AI workflow node DTO
     /// </summary>
-    public class WorkflowNodeDto
+    public class AiWorkflowNodeDto
     {
         /// <summary>
         /// Unique node identifier
@@ -73,7 +73,7 @@ namespace Aevatar.Service
         /// Extended data including position and size information
         /// </summary>
         [Required]
-        public WorkflowNodeExtendedDataDto ExtendedData { get; set; } = new();
+        public AiWorkflowNodeExtendedDataDto ExtendedData { get; set; } = new();
 
         /// <summary>
         /// Properties containing input parameters for the agent
@@ -82,9 +82,9 @@ namespace Aevatar.Service
     }
 
     /// <summary>
-    /// Workflow node extended data DTO
+    /// AI workflow node extended data DTO
     /// </summary>
-    public class WorkflowNodeExtendedDataDto
+    public class AiWorkflowNodeExtendedDataDto
     {
         /// <summary>
         /// X position coordinate
@@ -100,9 +100,9 @@ namespace Aevatar.Service
     }
 
     /// <summary>
-    /// Workflow node connection/unit DTO
+    /// AI workflow node connection/unit DTO
     /// </summary>
-    public class WorkflowNodeUnitDto
+    public class AiWorkflowNodeUnitDto
     {
         /// <summary>
         /// Current node ID

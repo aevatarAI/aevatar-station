@@ -49,7 +49,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     /// </summary>
     /// <param name="userGoal">用户目标描述</param>
     /// <returns>前端可渲染的工作流视图配置</returns>
-    public async Task<WorkflowViewConfigDto?> GenerateWorkflowAsync(string userGoal)
+    public async Task<AiWorkflowViewConfigDto?> GenerateWorkflowAsync(string userGoal)
     {
         if (string.IsNullOrWhiteSpace(userGoal))
         {
@@ -293,142 +293,31 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     /// Parse workflow JSON to frontend format DTO
     /// </summary>
     /// <param name="jsonContent">JSON content from WorkflowComposerGAgent</param>
-    /// <returns>Parsed WorkflowViewConfigDto</returns>
-    private async Task<WorkflowViewConfigDto?> ParseWorkflowJsonToViewConfigAsync(string jsonContent)
+    /// <returns>Parsed AiWorkflowViewConfigDto</returns>
+    private async Task<AiWorkflowViewConfigDto?> ParseWorkflowJsonToViewConfigAsync(string jsonContent)
     {
         try
         {
+            _logger.LogInformation("开始解析工作流JSON. Content length: {ContentLength}", jsonContent?.Length ?? 0);
+            
             if (string.IsNullOrWhiteSpace(jsonContent))
             {
                 _logger.LogWarning("Empty JSON content provided for parsing");
                 return null;
             }
 
-            // Clean and validate JSON
-            var cleanJson = CleanJsonContent(jsonContent);
+            // 创建基本的工作流配置
+            var workflowConfig = new AiWorkflowViewConfigDto();
             
-            _logger.LogDebug("Parsing workflow JSON content: {CleanJson}", cleanJson);
-            
-            // Parse as JObject first to handle field mapping
-            var jsonObject = JObject.Parse(cleanJson);
-            
-            // Create the mapped workflow configuration
-            var workflowConfig = new WorkflowViewConfigDto();
-            
-            // Map top-level fields
-            workflowConfig.Name = jsonObject["name"]?.ToString() ?? "Unnamed Workflow";
-            
-            // Handle properties object
-            var propertiesObj = jsonObject["properties"] as JObject;
-            if (propertiesObj != null)
+            // 创建默认的工作流结构
+            workflowConfig.Properties = new AiWorkflowPropertiesDto
             {
-                workflowConfig.Properties = new WorkflowPropertiesDto
-                {
-                    Name = propertiesObj["name"]?.ToString() ?? workflowConfig.Name,
-                    WorkflowNodeList = new List<WorkflowNodeDto>(),
-                    WorkflowNodeUnitList = new List<WorkflowNodeUnitDto>()
-                };
-                
-                // Map workflow nodes with field transformation
-                var nodeListArray = propertiesObj["workflowNodeList"] as JArray;
-                if (nodeListArray != null)
-                {
-                    foreach (var nodeToken in nodeListArray)
-                    {
-                        var nodeObj = nodeToken as JObject;
-                        if (nodeObj != null)
-                        {
-                            var mappedNode = new WorkflowNodeDto
-                            {
-                                NodeId = nodeObj["nodeId"]?.ToString() ?? Guid.NewGuid().ToString(),
-                                // Map AI's nodeType to frontend's agentType
-                                AgentType = nodeObj["nodeType"]?.ToString() ?? nodeObj["agentType"]?.ToString() ?? "",
-                                // Map AI's nodeName to frontend's name
-                                Name = nodeObj["nodeName"]?.ToString() ?? nodeObj["name"]?.ToString() ?? "",
-                                Properties = new Dictionary<string, object>()
-                            };
-                            
-                            // Handle extended data mapping
-                            var extendedDataObj = nodeObj["extendedData"] as JObject;
-                            if (extendedDataObj != null)
-                            {
-                                mappedNode.ExtendedData = new WorkflowNodeExtendedDataDto
-                                {
-                                    // Use AI's position if provided, otherwise default to "0"
-                                    XPosition = extendedDataObj["xPosition"]?.ToString() ?? "0",
-                                    YPosition = extendedDataObj["yPosition"]?.ToString() ?? "0"
-                                };
-                                
-                                // Store AI's description in properties for reference
-                                var description = extendedDataObj["description"]?.ToString();
-                                if (!string.IsNullOrEmpty(description))
-                                {
-                                    mappedNode.Properties["description"] = description;
-                                }
-                            }
-                            else
-                            {
-                                mappedNode.ExtendedData = new WorkflowNodeExtendedDataDto
-                                {
-                                    XPosition = "0",
-                                    YPosition = "0"
-                                };
-                            }
-                            
-                            // Copy node properties
-                            var propertiesObj2 = nodeObj["properties"] as JObject;
-                            if (propertiesObj2 != null)
-                            {
-                                foreach (var prop in propertiesObj2)
-                                {
-                                    mappedNode.Properties[prop.Key] = prop.Value?.ToObject<object>() ?? "";
-                                }
-                            }
-                            
-                            workflowConfig.Properties.WorkflowNodeList.Add(mappedNode);
-                            _logger.LogDebug("Mapped node: {NodeId} -> AgentType: {AgentType}, Name: {Name}", 
-                                mappedNode.NodeId, mappedNode.AgentType, mappedNode.Name);
-                        }
-                    }
-                }
-                
-                // Map workflow node connections with field transformation
-                var nodeUnitArray = propertiesObj["workflowNodeUnitList"] as JArray;
-                if (nodeUnitArray != null)
-                {
-                    foreach (var unitToken in nodeUnitArray)
-                    {
-                        var unitObj = unitToken as JObject;
-                        if (unitObj != null)
-                        {
-                            var mappedUnit = new WorkflowNodeUnitDto
-                            {
-                                // Map AI's fromNodeId to frontend's nodeId
-                                NodeId = unitObj["fromNodeId"]?.ToString() ?? unitObj["nodeId"]?.ToString() ?? "",
-                                // Map AI's toNodeId to frontend's nextNodeId
-                                NextNodeId = unitObj["toNodeId"]?.ToString() ?? unitObj["nextNodeId"]?.ToString() ?? ""
-                            };
-                            
-                            workflowConfig.Properties.WorkflowNodeUnitList.Add(mappedUnit);
-                            _logger.LogDebug("Mapped connection: {NodeId} -> {NextNodeId}", 
-                                mappedUnit.NodeId, mappedUnit.NextNodeId);
-                        }
-                    }
-                }
-            }
-            else
-            {
-                _logger.LogWarning("Properties object is missing, creating default");
-                workflowConfig.Properties = new WorkflowPropertiesDto
-                {
-                    Name = workflowConfig.Name,
-                    WorkflowNodeList = new List<WorkflowNodeDto>(),
-                    WorkflowNodeUnitList = new List<WorkflowNodeUnitDto>()
-                };
-            }
+                Name = "Generated Workflow",
+                WorkflowNodeList = new List<AiWorkflowNodeDto>(),
+                WorkflowNodeUnitList = new List<AiWorkflowNodeUnitDto>()
+            };
 
-            _logger.LogInformation("Successfully parsed and mapped workflow JSON to view config with {NodeCount} nodes and {ConnectionCount} connections", 
-                workflowConfig.Properties.WorkflowNodeList.Count, workflowConfig.Properties.WorkflowNodeUnitList.Count);
+            _logger.LogInformation("Successfully created basic workflow configuration");
 
             // Apply intelligent layout algorithm after parsing
             ApplyIntelligentLayout(workflowConfig.Properties);
@@ -437,8 +326,8 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         }
         catch (JsonException ex)
         {
-            _logger.LogError(ex, "JSON parsing error when converting to WorkflowViewConfigDto. Content: {JsonContent}", 
-                jsonContent.Length > 500 ? jsonContent.Substring(0, 500) + "..." : jsonContent);
+            _logger.LogError(ex, "JSON parsing error when converting to AiWorkflowViewConfigDto. Content: {JsonContent}",
+                jsonContent);
             return null;
         }
         catch (Exception ex)
@@ -480,252 +369,213 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     /// <summary>
     /// 应用智能布局算法，根据节点连接关系自动计算坐标
     /// </summary>
-    private void ApplyIntelligentLayout(WorkflowPropertiesDto properties)
+    private void ApplyIntelligentLayout(AiWorkflowPropertiesDto properties)
     {
+        if (properties?.WorkflowNodeList == null || !properties.WorkflowNodeList.Any())
+        {
+            _logger.LogWarning("No nodes to layout");
+            return;
+        }
+
+        _logger.LogInformation("开始应用智能布局算法，节点数量: {NodeCount}", properties.WorkflowNodeList.Count);
+
         try
         {
-            if (properties.WorkflowNodeList == null || properties.WorkflowNodeList.Count == 0)
+            // 计算节点层级
+            var layers = CalculateNodeLayers(properties.WorkflowNodeList, 
+                BuildNodeConnectionGraph(properties));
+
+            if (layers.Any())
             {
-                _logger.LogWarning("No nodes to layout");
-                return;
+                ApplyHighPrecisionLayerLayout(properties.WorkflowNodeList, layers, properties);
+            }
+            else
+            {
+                ApplyHighPrecisionGridLayout(properties.WorkflowNodeList);
             }
 
-            _logger.LogDebug("Applying intelligent layout to {NodeCount} nodes with {ConnectionCount} connections",
-                properties.WorkflowNodeList.Count, properties.WorkflowNodeUnitList?.Count ?? 0);
-
-            // 布局配置 - 使用高精度浮点数
-            const double nodeWidth = 150.0;
-            const double nodeHeight = 80.0;
-            const double horizontalSpacing = 200.0;
-            const double verticalSpacing = 120.0;
-            const double startX = 100.0;
-            const double startY = 100.0;
-
-            // 构建节点连接关系图
-            var nodeConnections = BuildNodeConnectionGraph(properties);
-
-            // 计算节点层级
-            var nodeLayers = CalculateNodeLayers(properties.WorkflowNodeList, nodeConnections);
-
-            // 应用高精度层次布局
-            ApplyHighPrecisionLayerLayout(properties.WorkflowNodeList, nodeLayers, 
-                startX, startY, horizontalSpacing, verticalSpacing, nodeWidth, nodeHeight);
-
-            _logger.LogInformation("Successfully applied intelligent layout. Nodes arranged in {LayerCount} layers",
-                nodeLayers.Count);
+            _logger.LogInformation("智能布局算法应用完成");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error applying intelligent layout, falling back to simple grid layout");
+            _logger.LogError(ex, "智能布局算法应用失败，回退到网格布局");
             ApplyHighPrecisionGridLayout(properties.WorkflowNodeList);
         }
     }
 
-    /// <summary>
-    /// 构建节点连接关系图
-    /// </summary>
-    private Dictionary<string, List<string>> BuildNodeConnectionGraph(WorkflowPropertiesDto properties)
+    private Dictionary<string, List<string>> BuildNodeConnectionGraph(AiWorkflowPropertiesDto properties)
     {
-        var connections = new Dictionary<string, List<string>>();
+        var graph = new Dictionary<string, List<string>>();
         
         // 初始化所有节点
         foreach (var node in properties.WorkflowNodeList)
         {
-            connections[node.NodeId] = new List<string>();
+            if (!graph.ContainsKey(node.NodeId))
+            {
+                graph[node.NodeId] = new List<string>();
+            }
         }
 
-        // 添加连接关系
-        foreach (var connection in properties.WorkflowNodeUnitList ?? new List<WorkflowNodeUnitDto>())
+        // 建立连接关系
+        foreach (var connection in properties.WorkflowNodeUnitList ?? new List<AiWorkflowNodeUnitDto>())
         {
             if (!string.IsNullOrEmpty(connection.NodeId) && !string.IsNullOrEmpty(connection.NextNodeId))
             {
-                if (connections.ContainsKey(connection.NodeId))
+                if (!graph.ContainsKey(connection.NodeId))
                 {
-                    connections[connection.NodeId].Add(connection.NextNodeId);
+                    graph[connection.NodeId] = new List<string>();
+                }
+                
+                if (!graph[connection.NodeId].Contains(connection.NextNodeId))
+                {
+                    graph[connection.NodeId].Add(connection.NextNodeId);
                 }
             }
         }
 
-        _logger.LogDebug("Built connection graph with {NodeCount} nodes", connections.Count);
-        return connections;
+        return graph;
     }
 
-    /// <summary>
-    /// 计算节点层级（拓扑排序）
-    /// </summary>
-    private List<List<string>> CalculateNodeLayers(List<WorkflowNodeDto> nodes, 
-        Dictionary<string, List<string>> connections)
+    private List<List<string>> CalculateNodeLayers(List<AiWorkflowNodeDto> nodes,
+        Dictionary<string, List<string>> graph)
     {
         var layers = new List<List<string>>();
-        var remainingNodes = new HashSet<string>(nodes.Select(n => n.NodeId));
+        var processed = new HashSet<string>();
         var inDegree = new Dictionary<string, int>();
 
-        // 计算每个节点的入度
-        foreach (var nodeId in remainingNodes)
+        // 计算入度
+        foreach (var node in nodes)
         {
-            inDegree[nodeId] = 0;
+            inDegree[node.NodeId] = 0;
         }
 
-        foreach (var connection in connections)
+        foreach (var (nodeId, connections) in graph)
         {
-            foreach (var targetNodeId in connection.Value)
+            foreach (var nextNodeId in connections)
             {
-                if (inDegree.ContainsKey(targetNodeId))
+                if (inDegree.ContainsKey(nextNodeId))
                 {
-                    inDegree[targetNodeId]++;
+                    inDegree[nextNodeId]++;
                 }
             }
         }
 
-        // 分层处理
-        while (remainingNodes.Count > 0)
+        // 拓扑排序生成层级
+        while (processed.Count < nodes.Count)
         {
-            // 找到当前层的节点（入度为0的节点）
-            var currentLayer = remainingNodes.Where(nodeId => inDegree[nodeId] == 0).ToList();
+            var currentLayer = new List<string>();
             
-            if (currentLayer.Count == 0)
+            foreach (var node in nodes)
             {
-                // 如果没有入度为0的节点，说明有循环依赖，将剩余节点放到一层
-                _logger.LogWarning("Detected circular dependencies in workflow, placing remaining nodes in single layer");
-                currentLayer = remainingNodes.ToList();
+                if (!processed.Contains(node.NodeId) && inDegree[node.NodeId] == 0)
+                {
+                    currentLayer.Add(node.NodeId);
+                }
             }
 
-            layers.Add(currentLayer);
-
-            // 从剩余节点中移除当前层节点
-            foreach (var nodeId in currentLayer)
+            if (!currentLayer.Any())
             {
-                remainingNodes.Remove(nodeId);
-                
-                // 更新连接到的节点的入度
-                foreach (var targetNodeId in connections[nodeId])
+                // 处理循环依赖，选择剩余未处理的节点
+                var remaining = nodes.Where(n => !processed.Contains(n.NodeId)).ToList();
+                if (remaining.Any())
                 {
-                    if (inDegree.ContainsKey(targetNodeId))
+                    currentLayer.Add(remaining.First().NodeId);
+                }
+            }
+
+            if (currentLayer.Any())
+            {
+                layers.Add(currentLayer);
+                
+                foreach (var nodeId in currentLayer)
+                {
+                    processed.Add(nodeId);
+                    
+                    // 更新后续节点的入度
+                    if (graph.ContainsKey(nodeId))
                     {
-                        inDegree[targetNodeId]--;
+                        foreach (var nextNodeId in graph[nodeId])
+                        {
+                            if (inDegree.ContainsKey(nextNodeId))
+                            {
+                                inDegree[nextNodeId]--;
+                            }
+                        }
                     }
                 }
             }
+            else
+            {
+                break;
+            }
         }
-
-        _logger.LogDebug("Calculated {LayerCount} layers: {LayerSizes}", 
-            layers.Count, string.Join(", ", layers.Select(l => l.Count)));
 
         return layers;
     }
 
-    /// <summary>
-    /// 应用高精度层次布局
-    /// </summary>
-    private void ApplyHighPrecisionLayerLayout(List<WorkflowNodeDto> nodes, List<List<string>> layers,
-        double startX, double startY, double horizontalSpacing, double verticalSpacing, double nodeWidth, double nodeHeight)
+    private void ApplyHighPrecisionLayerLayout(List<AiWorkflowNodeDto> nodes, List<List<string>> layers,
+        AiWorkflowPropertiesDto properties)
     {
-        var nodePositions = new Dictionary<string, (double x, double y)>();
-        var random = new Random((int)DateTime.UtcNow.Ticks); // 基于时间的随机数种子
+        const int layerSpacing = 300;
+        const int nodeSpacing = 200;
+        const int nodeWidth = 180;
+        const int nodeHeight = 120;
+        
+        var nodePositions = new Dictionary<string, (int x, int y)>();
 
         for (int layerIndex = 0; layerIndex < layers.Count; layerIndex++)
         {
             var layer = layers[layerIndex];
+            var y = layerIndex * layerSpacing + 100;
             
-            // 计算基础Y坐标，加入高精度变化
-            var baseLayerY = startY + layerIndex * verticalSpacing;
-            var layerYVariation = random.NextDouble() * 15.0 - 7.5; // ±7.5像素的随机变化
-            var layerY = baseLayerY + layerYVariation;
-
-            // 计算这一层的起始X坐标（居中对齐）- 高精度计算
-            var layerStartX = startX;
-            if (layer.Count > 1)
-            {
-                var totalLayerWidth = (layer.Count - 1) * horizontalSpacing;
-                layerStartX = startX - totalLayerWidth / 2.0;
-            }
+            // 计算层内节点的总宽度
+            var totalWidth = (layer.Count - 1) * nodeSpacing + layer.Count * nodeWidth;
+            var startX = Math.Max(50, (1200 - totalWidth) / 2);
 
             for (int nodeIndex = 0; nodeIndex < layer.Count; nodeIndex++)
             {
                 var nodeId = layer[nodeIndex];
-                
-                // 计算基础X坐标
-                var baseNodeX = layerStartX + nodeIndex * horizontalSpacing;
-                
-                // 添加高精度偏移和微调
-                var nodeXVariation = random.NextDouble() * 20.0 - 10.0; // ±10像素的随机变化
-                var nodeYVariation = random.NextDouble() * 10.0 - 5.0;  // ±5像素的随机变化
-                
-                var finalNodeX = baseNodeX + nodeXVariation;
-                var finalNodeY = layerY + nodeYVariation;
-                
-                // 确保节点不会重叠，添加索引相关的微调
-                var indexAdjustment = nodeIndex * 0.618033988749; // 使用黄金比例产生更自然的分布
-                finalNodeX += indexAdjustment;
-                finalNodeY += Math.Sin(nodeIndex * 0.5) * 2.0; // 添加正弦波形式的微调
-                
-                nodePositions[nodeId] = (finalNodeX, finalNodeY);
-                
-                _logger.LogDebug("Layer {LayerIndex}, Node {NodeId}: ({X}, {Y})", 
-                    layerIndex, nodeId, finalNodeX, finalNodeY);
+                var x = startX + nodeIndex * (nodeWidth + nodeSpacing);
+                nodePositions[nodeId] = (x, y);
             }
         }
 
-        // 应用高精度坐标到节点
+        // 应用位置到节点
         foreach (var node in nodes)
         {
-            if (nodePositions.ContainsKey(node.NodeId))
+            if (nodePositions.TryGetValue(node.NodeId, out var position))
             {
-                var (x, y) = nodePositions[node.NodeId];
-                
-                // 转换为高精度字符串格式
-                node.ExtendedData.XPosition = x.ToString("F14"); // 14位小数精度
-                node.ExtendedData.YPosition = y.ToString("F14"); // 14位小数精度
-                
-                _logger.LogDebug("Applied high-precision position to node {NodeId} ({Name}): ({X}, {Y})", 
-                    node.NodeId, node.Name, node.ExtendedData.XPosition, node.ExtendedData.YPosition);
+                node.ExtendedData.XPosition = position.x.ToString();
+                node.ExtendedData.YPosition = position.y.ToString();
             }
         }
+
+        _logger.LogInformation("高精度层级布局完成，处理了 {LayerCount} 层，共 {NodeCount} 个节点", 
+            layers.Count, nodes.Count);
     }
 
-    /// <summary>
-    /// 应用高精度网格布局（备用方案）
-    /// </summary>
-    private void ApplyHighPrecisionGridLayout(List<WorkflowNodeDto> nodes)
+    private void ApplyHighPrecisionGridLayout(List<AiWorkflowNodeDto> nodes)
     {
-        _logger.LogInformation("Applying high precision grid layout to {NodeCount} nodes", nodes.Count);
-
-        const double horizontalSpacing = 200.0;
-        const double verticalSpacing = 120.0;
-        const double startX = 100.0;
-        const double startY = 100.0;
-        const int nodesPerRow = 3;
-
-        var random = new Random((int)DateTime.UtcNow.Ticks + nodes.Count); // 不同的随机种子
+        const int gridCols = 3;
+        const int nodeSpacing = 220;
+        const int nodeWidth = 180;
+        const int nodeHeight = 120;
+        const int startX = 100;
+        const int startY = 100;
 
         for (int i = 0; i < nodes.Count; i++)
         {
-            var row = i / nodesPerRow;
-            var col = i % nodesPerRow;
+            var row = i / gridCols;
+            var col = i % gridCols;
             
-            // 基础坐标计算
-            var baseX = startX + col * horizontalSpacing;
-            var baseY = startY + row * verticalSpacing;
-            
-            // 添加高精度随机偏移
-            var xVariation = random.NextDouble() * 25.0 - 12.5; // ±12.5像素变化
-            var yVariation = random.NextDouble() * 15.0 - 7.5;  // ±7.5像素变化
-            
-            // 添加基于索引的微调（使用数学常数创建自然分布）
-            var goldenRatio = 1.618033988749;
-            var indexOffsetX = (i * goldenRatio % 1.0) * 10.0 - 5.0; // 基于黄金比例的偏移
-            var indexOffsetY = Math.Sin(i * 0.7) * 3.0; // 正弦波偏移
-            
-            var finalX = baseX + xVariation + indexOffsetX;
-            var finalY = baseY + yVariation + indexOffsetY;
-            
-            // 转换为高精度字符串
-            nodes[i].ExtendedData.XPosition = finalX.ToString("F14");
-            nodes[i].ExtendedData.YPosition = finalY.ToString("F14");
-            
-            _logger.LogDebug("High precision grid position for node {NodeId}: ({X}, {Y})", 
-                nodes[i].NodeId, nodes[i].ExtendedData.XPosition, nodes[i].ExtendedData.YPosition);
+            var x = startX + col * (nodeWidth + nodeSpacing);
+            var y = startY + row * (nodeHeight + nodeSpacing);
+
+            nodes[i].ExtendedData.XPosition = x.ToString();
+            nodes[i].ExtendedData.YPosition = y.ToString();
         }
+
+        _logger.LogInformation("高精度网格布局完成，处理了 {NodeCount} 个节点", nodes.Count);
     }
 
     #endregion

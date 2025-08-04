@@ -1,47 +1,63 @@
 using System.Threading.Tasks;
-using Aevatar.Controllers;
 using Aevatar.Service;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Volo.Abp;
+using Microsoft.Extensions.Logging;
+using Volo.Abp.AspNetCore.Mvc;
 
-namespace Aevatar.Controllers;
-
-[RemoteService]
-[Route("api/workflow")]
-[Authorize]
-public class WorkflowController : AevatarController
+namespace Aevatar.Controllers
 {
-    private readonly IWorkflowOrchestrationService _workflowOrchestrationService;
-    private readonly ITextCompletionService _textCompletionService;
-
-    public WorkflowController(
-        IWorkflowOrchestrationService workflowOrchestrationService,
-        ITextCompletionService textCompletionService)
+    /// <summary>
+    /// 工作流控制器
+    /// </summary>
+    [ApiController]
+    [Route("api/[controller]")]
+    public class WorkflowController : AbpControllerBase
     {
-        _workflowOrchestrationService = workflowOrchestrationService;
-        _textCompletionService = textCompletionService;
+        private readonly IWorkflowOrchestrationService _workflowOrchestrationService;
+        private readonly ILogger<WorkflowController> _logger;
+
+        public WorkflowController(
+            IWorkflowOrchestrationService workflowOrchestrationService,
+            ILogger<WorkflowController> logger)
+        {
+            _workflowOrchestrationService = workflowOrchestrationService;
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// 生成工作流
+        /// </summary>
+        /// <param name="request">生成请求</param>
+        /// <returns>工作流配置</returns>
+        [HttpPost("generate")]
+        public async Task<AiWorkflowViewConfigDto?> GenerateAsync([FromBody] GenerateWorkflowRequestDto request)
+        {
+            _logger.LogInformation("收到工作流生成请求，用户目标：{UserGoal}", request.UserGoal);
+            
+            var result = await _workflowOrchestrationService.GenerateWorkflowAsync(request.UserGoal);
+            
+            if (result != null)
+            {
+                _logger.LogInformation("工作流生成成功，包含 {NodeCount} 个节点", 
+                    result.Properties?.WorkflowNodeList?.Count ?? 0);
+            }
+            else
+            {
+                _logger.LogWarning("工作流生成失败");
+            }
+            
+            return result;
+        }
     }
 
     /// <summary>
-    /// 根据用户目标生成工作流视图配置，直接返回前端可渲染的格式
+    /// 生成工作流请求DTO
     /// </summary>
-    /// <param name="request">工作流生成请求</param>
-    /// <returns>前端可渲染的工作流视图配置</returns>
-    [HttpPost("generate")]
-    public async Task<WorkflowViewConfigDto?> GenerateAsync([FromBody] GenerateWorkflowRequestDto request)
+    public class GenerateWorkflowRequestDto
     {
-        return await _workflowOrchestrationService.GenerateWorkflowAsync(request.UserGoal);
-    }
-
-    /// <summary>
-    /// 根据用户输入生成5个不同的文本补全选项
-    /// </summary>
-    /// <param name="request">文本补全请求</param>
-    /// <returns>包含5个补全选项的响应</returns>
-    [HttpPost("text-completion")]
-    public async Task<TextCompletionResponseDto> GenerateTextCompletionAsync([FromBody] TextCompletionRequestDto request)
-    {
-        return await _textCompletionService.GenerateCompletionsAsync(request);
+        /// <summary>
+        /// 用户目标描述
+        /// </summary>
+        public string UserGoal { get; set; } = string.Empty;
     }
 } 
