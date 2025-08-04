@@ -202,62 +202,17 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             
             _logger.LogInformation("Found {TypeCount} valid agent types to process", validAgentTypes.Count);
             
-            // 记录Agent类型的详细信息
-            _logger.LogDebug("Available agent types summary: {@AgentTypesSummary}", 
-                new { 
-                    TotalCount = availableTypes.Count(),
-                    ValidCount = validAgentTypes.Count,
-                    ValidTypes = validAgentTypes.Select(t => new { t.Name, t.Namespace }).ToList()
-                });
-            
             var agentDescriptions = new List<AiWorkflowAgentInfoDto>();
             
             foreach (var agentType in validAgentTypes)
             {
                 try
                 {
-                    using var agentScope = _logger.BeginScope("AgentType: {AgentType}", agentType.FullName);
-                    _logger.LogDebug("Processing agent type using reflection");
-                    
-                    // 使用反射获取DescriptionAttribute
-                    var descriptionAttr = agentType.GetCustomAttribute<DescriptionAttribute>();
-                    
-                    AiWorkflowAgentInfoDto agentInfo;
-                    
-                    if (descriptionAttr != null)
-                    {
-                        // 有DescriptionAttribute，使用其描述信息
-                        _logger.LogDebug("Found DescriptionAttribute for {AgentName}: {Description}", 
-                            agentType.Name, descriptionAttr.Description);
-                        
-                        var description = descriptionAttr.Description;
-                        agentInfo = new AiWorkflowAgentInfoDto
-                        {
-                            Name = agentType.Name,
-                            Type = agentType.FullName ?? agentType.Name,
-                            Description = description
-                        };
-                        
-                        _logger.LogDebug("Successfully created agent info from DescriptionAttribute: {@AgentInfo}", 
-                            new { agentInfo.Name, agentInfo.Type, agentInfo.Description });
-                    }
-                    else
-                    {
-                        // 没有DescriptionAttribute，创建基本信息
-                        _logger.LogDebug("No DescriptionAttribute found for {AgentName}, creating basic info", agentType.Name);
-                        
-                        agentInfo = new AiWorkflowAgentInfoDto
-                        {
-                            Name = agentType.Name,
-                            Type = agentType.FullName ?? agentType.Name,
-                            Description = $"{agentType.Name} - Agent for specialized processing"
-                        };
-                        
-                        _logger.LogDebug("Created basic agent info: {@AgentInfo}", 
-                            new { agentInfo.Name, agentInfo.Type, agentInfo.Description });
-                    }
-                    
+                    var agentInfo = CreateAgentInfo(agentType);
                     agentDescriptions.Add(agentInfo);
+                    
+                    _logger.LogDebug("Created agent info: {@AgentInfo}", 
+                        new { agentInfo.Name, agentInfo.Type, agentInfo.Description });
                 }
                 catch (Exception ex)
                 {
@@ -267,14 +222,6 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             
             _logger.LogInformation("Successfully retrieved {AgentCount} agent descriptions using reflection approach", agentDescriptions.Count);
             
-            // 记录最终结果的详细信息
-            _logger.LogDebug("Final agent collection results: {@AgentCollectionResults}", 
-                new { 
-                    TotalAgents = agentDescriptions.Count,
-                    AgentsByType = agentDescriptions.GroupBy(a => a.Type).ToDictionary(g => g.Key, g => g.Count()),
-                    AgentNames = agentDescriptions.Select(a => a.Name).ToList()
-                });
-            
             return agentDescriptions;
         }
         catch (Exception ex)
@@ -282,6 +229,22 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             _logger.LogError(ex, "Error occurred while getting agent descriptions");
             return new List<AiWorkflowAgentInfoDto>();
         }
+    }
+
+    /// <summary>
+    /// 根据Agent类型创建Agent信息DTO
+    /// </summary>
+    private AiWorkflowAgentInfoDto CreateAgentInfo(Type agentType)
+    {
+        var descriptionAttr = agentType.GetCustomAttribute<DescriptionAttribute>();
+        var description = descriptionAttr?.Description ?? $"{agentType.Name} - Agent for specialized processing";
+        
+        return new AiWorkflowAgentInfoDto
+        {
+            Name = agentType.Name,
+            Type = agentType.FullName ?? agentType.Name,
+            Description = description
+        };
     }
 
     #endregion
