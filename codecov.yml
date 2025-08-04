@@ -1,5 +1,7 @@
 codecov:
   max_report_age: off  # Disable the 12h age check for reports
+  notify:
+    after_n_builds: 1  # Wait for 1 build to complete before processing
 
 coverage:
   status:
