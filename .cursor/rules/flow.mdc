@@ -49,8 +49,8 @@ project_tracker.md = [project_tracker.md](mdc:ai/project_tracker.md)
       如无匹配:
         → 从@🔜任务中选择未分配开发机器且未有分支的高优先级任务[功能名]
         → 更新project_tracker.md: [🔜]→[🚧]，添加分支名，填入MAC地址为开发机器
-        → 仅提交tracker文件: `git add ai/project_tracker.md && git commit -m "标记[新任务]为开发中并分配到[MAC地址]" && git push origin dev`
         → 创建功能分支: `git checkout -b feature/功能名`
+        → 仅提交tracker文件: `git add ai/project_tracker.md && git commit -m "标记[新任务]为开发中并分配到[MAC地址]"
 
 2. 【执行开发】
    a. 编写接口定义

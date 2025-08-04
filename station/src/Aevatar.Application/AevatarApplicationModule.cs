@@ -2,7 +2,6 @@
 using System.Linq;
 using Aevatar.Account;
 using Aevatar.ApiRequests;
-using Aevatar.Application.Contracts.WorkflowOrchestration;
 using Aevatar.Application.Grains;
 using Aevatar.Application.Service;
 using Aevatar.Service;
@@ -69,9 +68,9 @@ public class AevatarApplicationModule : AbpModule
         context.Services.AddSingleton<ISchemaProvider, SchemaProvider>();
         Configure<WebhookDeployOptions>(configuration.GetSection("WebhookDeploy"));
         Configure<AgentOptions>(configuration.GetSection("Agent"));
-        // Agent默认值配置
         Configure<AgentDefaultValuesOptions>(configuration.GetSection("AgentDefaults"));
         context.Services.AddTransient<IHostDeployManager, KubernetesHostManager>();
+        context.Services.AddTransient<IHostCopyManager, KubernetesHostManager>();
         context.Services.AddSingleton<INotificationHandlerFactory, NotificationProcessorFactory>();
         Configure<HostDeployOptions>(configuration.GetSection("HostDeploy"));
         context.Services.Configure<HostOptions>(configuration.GetSection("Host"));
@@ -89,11 +88,6 @@ public class AevatarApplicationModule : AbpModule
     /// </summary>
     private void ConfigureWorkflowOrchestrationServices(ServiceConfigurationContext context)
     {
-        // Unified Agent index service - includes scanning, indexing, caching, and warmup functionality
-        context.Services.AddSingleton<IAgentIndexService, AgentIndexService>();
-        context.Services.AddHostedService<AgentIndexService>(serviceProvider => 
-            serviceProvider.GetRequiredService<IAgentIndexService>() as AgentIndexService);
-        
         // Unified workflow orchestration service - includes prompt building and JSON validation functionality
         context.Services.AddTransient<IWorkflowOrchestrationService, WorkflowOrchestrationService>();
         

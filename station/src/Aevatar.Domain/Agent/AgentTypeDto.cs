@@ -9,11 +9,7 @@ public class AgentTypeDto
     public string FullName { get; set; }
     public List<ParamDto> AgentParams { get; set; }
     public string PropertyJsonSchema { get; set; }
-    
-    /// <summary>
-    /// 配置属性的默认值字典
-    /// </summary>
-    public Dictionary<string, object?> DefaultValues { get; set; } = new Dictionary<string, object?>();
+    public Dictionary<string, object?>? DefaultValues { get; set; }
 }
 
 public class ParamDto

@@ -43,7 +43,7 @@ public class AgentService : ApplicationService, IAgentService
     private readonly IGAgentManager _gAgentManager;
     private readonly IUserAppService _userAppService;
     private readonly IOptionsMonitor<AgentOptions> _agentOptions;
-    private readonly IOptionsMonitor<AgentDefaultValuesOptions> _systemLLMConfigOptions;
+    private readonly IOptionsMonitor<AgentDefaultValuesOptions> _agentDefaultValuesOptions;
     private readonly GrainTypeResolver _grainTypeResolver;
     private readonly ISchemaProvider _schemaProvider;
     private readonly IIndexingService _indexingService;
@@ -56,7 +56,7 @@ public class AgentService : ApplicationService, IAgentService
         IGAgentManager gAgentManager,
         IUserAppService userAppService,
         IOptionsMonitor<AgentOptions> agentOptions,
-        IOptionsMonitor<AgentDefaultValuesOptions> systemLLMConfigOptions,
+        IOptionsMonitor<AgentDefaultValuesOptions> agentDefaultValuesOptions,
         GrainTypeResolver grainTypeResolver,
         ISchemaProvider schemaProvider,
         IIndexingService indexingService)
@@ -68,7 +68,7 @@ public class AgentService : ApplicationService, IAgentService
         _gAgentManager = gAgentManager;
         _userAppService = userAppService;
         _agentOptions = agentOptions;
-        _systemLLMConfigOptions = systemLLMConfigOptions;
+        _agentDefaultValuesOptions = agentDefaultValuesOptions;
         _grainTypeResolver = grainTypeResolver;
         _schemaProvider = schemaProvider;
         _indexingService = indexingService;
@@ -231,7 +231,7 @@ public class AgentService : ApplicationService, IAgentService
                         if (IsAIGAgent(agentType, fullName) && 
                             string.Equals(property.Name, "systemLLM", StringComparison.OrdinalIgnoreCase))
                         {
-                            var systemLLMList = _systemLLMConfigOptions.CurrentValue.SystemLLMConfigs;
+                            var systemLLMList = _agentDefaultValuesOptions.CurrentValue.SystemLLMConfigs;
                             defaultValues[propertyName] = systemLLMList;
                             _logger.LogInformation("AIGAgent detected, setting systemLLM default values: {SystemLLMList}", 
                                 string.Join(", ", systemLLMList));

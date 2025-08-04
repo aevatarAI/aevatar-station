@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
+using Aevatar.Domain.WorkflowOrchestration;
 
 namespace Aevatar.Application.Grains.Agents.AI;
 
@@ -208,7 +209,7 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
         prompt.AppendLine("      {");
         prompt.AppendLine("        \"fromNodeId\": \"source_node_id\",");
         prompt.AppendLine("        \"toNodeId\": \"target_node_id\",");
-        prompt.AppendLine("        \"connectionType\": \"data_flow_or_sequence\"");
+        prompt.AppendLine($"        \"connectionType\": \"{ConnectionType.Sequential}\"");
         prompt.AppendLine("      }");
         prompt.AppendLine("    ]");
         prompt.AppendLine("  }");

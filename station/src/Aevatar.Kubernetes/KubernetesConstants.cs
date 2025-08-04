@@ -28,6 +28,7 @@ public class KubernetesConstants
     public const string AppSettingSharedFileMountPath = "/app/appsettings.Shared.json";
     public const string AppSettingHttpApiHostSharedFileMountPath = "/app/appsettings.HttpApi.Host.Shared.json";
     public const string AppSettingSiloSharedFileMountPath = "/app/appsettings.Silo.Shared.json";
+    public const string AppSettingBusinessFileMountPath = "/app/appsettings.business.json";
 
     //FileBeat
     public const string FileBeatImage = "docker.elastic.co/beats/filebeat:7.16.2";
@@ -46,6 +47,7 @@ public class KubernetesConstants
 
     public const int WebhookContainerTargetPort = 8308;
     public const int SiloContainerTargetPort = 8080;
+    public const int SiloHealthCheckPort = 8081;
     public const string QueryPodMaxSurge = "50%";
     public const string QueryPodMaxUnavailable = "0";
 

@@ -6,6 +6,8 @@ using Aevatar.Worker.Extensions;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.OpenTelemetry;
+using System.IO;
+using Aevatar.Domain.Shared.Configuration;
 
 namespace Aevatar.Worker
 {
@@ -52,7 +54,12 @@ namespace Aevatar.Worker
         private static void ConfigureLogger(LoggerConfiguration? loggerConfiguration = null)
         {
             var configuration = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.json")
+                .AddAevatarSecureConfiguration(
+                    systemConfigPaths: new[]
+                    {
+                        Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json")
+                    })
+                .AddEnvironmentVariables()
                 .Build();
             Log.Logger = (loggerConfiguration ?? new LoggerConfiguration())
                 .ReadFrom.Configuration(configuration)

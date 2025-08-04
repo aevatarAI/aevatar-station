@@ -84,7 +84,8 @@ public class WorkflowComposerGAgentTests : AevatarApplicationGrainsTestBase
 
         // Assert
         description.ShouldNotBeNullOrEmpty();
-        description.ShouldContain("AI工作流生成器");
+        description.ShouldContain("WorkflowComposer");
+        description.ShouldContain("workflow generation");
         _output.WriteLine($"WorkflowComposer Description: {description}");
     }
 
