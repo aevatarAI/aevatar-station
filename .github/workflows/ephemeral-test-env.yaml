@@ -284,9 +284,6 @@ jobs:
               CURRENT_IMAGE=$(kubectl get job "$job_name" -n "$NS" -o jsonpath="{.spec.template.spec.containers[0].image}")
               BASE_IMAGE="${CURRENT_IMAGE%%[@:]*}"
               NEW_IMAGE="${BASE_IMAGE}:${IMAGE_TAG}"
-            else
-              BASE_IMAGE="docker-image-path/Aevatar.DbMigrator"
-              NEW_IMAGE="${BASE_IMAGE}:${IMAGE_TAG}"
             fi
 
             echo "🔄 Updating job $job_name to $NEW_IMAGE"
@@ -324,7 +321,7 @@ jobs:
           elif [[ "$SERVICE" == "Aevatar.Silo" ]]; then
             update_deployment_if_exists "${PROJECT}-silo"
           elif [[ "$SERVICE" == "Aevatar.DbMigrator" ]]; then
-            update_job_if_exists "${PROJECT}-dbmigrator" "dotnet Aevatar.DbMigrator.dll"
+            update_job_if_exists "${PROJECT}-dbmigrator-init-job" "dotnet Aevatar.DbMigrator.dll"
           elif [[ "$SERVICE" == "Aevatar.Developer.Host" ]]; then
               echo "ℹ️ Skipping image update for Aevatar.Developer.Host"
               exit 0
