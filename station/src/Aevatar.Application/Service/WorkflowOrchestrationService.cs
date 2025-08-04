@@ -484,211 +484,250 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     /// </summary>
     private void ApplyIntelligentLayout(AiWorkflowPropertiesDto properties)
     {
-        if (properties?.WorkflowNodeList == null || !properties.WorkflowNodeList.Any())
-        {
-            _logger.LogWarning("No nodes to layout");
-            return;
-        }
-
-        _logger.LogInformation("开始应用智能布局算法，节点数量: {NodeCount}", properties.WorkflowNodeList.Count);
-
         try
         {
+            if (properties?.WorkflowNodeList == null || !properties.WorkflowNodeList.Any())
+            {
+                _logger.LogWarning("No nodes to layout");
+                return;
+            }
+
+            _logger.LogDebug("Applying intelligent layout to {NodeCount} nodes with {ConnectionCount} connections",
+                properties.WorkflowNodeList.Count, properties.WorkflowNodeUnitList?.Count ?? 0);
+
+            // 布局配置 - 使用高精度浮点数
+            const double nodeWidth = 150.0;
+            const double nodeHeight = 80.0;
+            const double horizontalSpacing = 200.0;
+            const double verticalSpacing = 120.0;
+            const double startX = 100.0;
+            const double startY = 100.0;
+
+            // 构建节点连接关系图
+            var nodeConnections = BuildNodeConnectionGraph(properties);
+
             // 计算节点层级
-            var layers = CalculateNodeLayers(properties.WorkflowNodeList, 
-                BuildNodeConnectionGraph(properties));
+            var nodeLayers = CalculateNodeLayers(properties.WorkflowNodeList, nodeConnections);
 
-            if (layers.Any())
-            {
-                ApplyHighPrecisionLayerLayout(properties.WorkflowNodeList, layers, properties);
-            }
-            else
-            {
-                ApplyHighPrecisionGridLayout(properties.WorkflowNodeList);
-            }
+            // 应用高精度层次布局
+            ApplyHighPrecisionLayerLayout(properties.WorkflowNodeList, nodeLayers, 
+                startX, startY, horizontalSpacing, verticalSpacing, nodeWidth, nodeHeight);
 
-            _logger.LogInformation("智能布局算法应用完成");
+            _logger.LogInformation("Successfully applied intelligent layout. Nodes arranged in {LayerCount} layers",
+                nodeLayers.Count);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "智能布局算法应用失败，回退到网格布局");
+            _logger.LogError(ex, "Error applying intelligent layout, falling back to simple grid layout");
             ApplyHighPrecisionGridLayout(properties.WorkflowNodeList);
         }
     }
 
+    /// <summary>
+    /// 构建节点连接关系图
+    /// </summary>
     private Dictionary<string, List<string>> BuildNodeConnectionGraph(AiWorkflowPropertiesDto properties)
     {
-        var graph = new Dictionary<string, List<string>>();
+        var connections = new Dictionary<string, List<string>>();
         
         // 初始化所有节点
         foreach (var node in properties.WorkflowNodeList)
         {
-            if (!graph.ContainsKey(node.NodeId))
-            {
-                graph[node.NodeId] = new List<string>();
-            }
+            connections[node.NodeId] = new List<string>();
         }
 
-        // 建立连接关系
+        // 添加连接关系
         foreach (var connection in properties.WorkflowNodeUnitList ?? new List<AiWorkflowNodeUnitDto>())
         {
             if (!string.IsNullOrEmpty(connection.NodeId) && !string.IsNullOrEmpty(connection.NextNodeId))
             {
-                if (!graph.ContainsKey(connection.NodeId))
+                if (connections.ContainsKey(connection.NodeId))
                 {
-                    graph[connection.NodeId] = new List<string>();
-                }
-                
-                if (!graph[connection.NodeId].Contains(connection.NextNodeId))
-                {
-                    graph[connection.NodeId].Add(connection.NextNodeId);
+                    connections[connection.NodeId].Add(connection.NextNodeId);
                 }
             }
         }
 
-        return graph;
+        _logger.LogDebug("Built connection graph with {NodeCount} nodes", connections.Count);
+        return connections;
     }
 
-    private List<List<string>> CalculateNodeLayers(List<AiWorkflowNodeDto> nodes,
-        Dictionary<string, List<string>> graph)
+    /// <summary>
+    /// 计算节点层级（拓扑排序）
+    /// </summary>
+    private List<List<string>> CalculateNodeLayers(List<AiWorkflowNodeDto> nodes, 
+        Dictionary<string, List<string>> connections)
     {
         var layers = new List<List<string>>();
-        var processed = new HashSet<string>();
+        var remainingNodes = new HashSet<string>(nodes.Select(n => n.NodeId));
         var inDegree = new Dictionary<string, int>();
 
-        // 计算入度
-        foreach (var node in nodes)
+        // 计算每个节点的入度
+        foreach (var nodeId in remainingNodes)
         {
-            inDegree[node.NodeId] = 0;
+            inDegree[nodeId] = 0;
         }
 
-        foreach (var (nodeId, connections) in graph)
+        foreach (var connection in connections)
         {
-            foreach (var nextNodeId in connections)
+            foreach (var targetNodeId in connection.Value)
             {
-                if (inDegree.ContainsKey(nextNodeId))
+                if (inDegree.ContainsKey(targetNodeId))
                 {
-                    inDegree[nextNodeId]++;
+                    inDegree[targetNodeId]++;
                 }
             }
         }
 
-        // 拓扑排序生成层级
-        while (processed.Count < nodes.Count)
+        // 分层处理
+        while (remainingNodes.Count > 0)
         {
-            var currentLayer = new List<string>();
+            // 找到当前层的节点（入度为0的节点）
+            var currentLayer = remainingNodes.Where(nodeId => inDegree[nodeId] == 0).ToList();
             
-            foreach (var node in nodes)
+            if (currentLayer.Count == 0)
             {
-                if (!processed.Contains(node.NodeId) && inDegree[node.NodeId] == 0)
-                {
-                    currentLayer.Add(node.NodeId);
-                }
+                // 如果没有入度为0的节点，说明有循环依赖，将剩余节点放到一层
+                _logger.LogWarning("Detected circular dependencies in workflow, placing remaining nodes in single layer");
+                currentLayer = remainingNodes.ToList();
             }
 
-            if (!currentLayer.Any())
-            {
-                // 处理循环依赖，选择剩余未处理的节点
-                var remaining = nodes.Where(n => !processed.Contains(n.NodeId)).ToList();
-                if (remaining.Any())
-                {
-                    currentLayer.Add(remaining.First().NodeId);
-                }
-            }
+            layers.Add(currentLayer);
 
-            if (currentLayer.Any())
+            // 从剩余节点中移除当前层节点
+            foreach (var nodeId in currentLayer)
             {
-                layers.Add(currentLayer);
+                remainingNodes.Remove(nodeId);
                 
-                foreach (var nodeId in currentLayer)
+                // 更新连接到的节点的入度
+                foreach (var targetNodeId in connections[nodeId])
                 {
-                    processed.Add(nodeId);
-                    
-                    // 更新后续节点的入度
-                    if (graph.ContainsKey(nodeId))
+                    if (inDegree.ContainsKey(targetNodeId))
                     {
-                        foreach (var nextNodeId in graph[nodeId])
-                        {
-                            if (inDegree.ContainsKey(nextNodeId))
-                            {
-                                inDegree[nextNodeId]--;
-                            }
-                        }
+                        inDegree[targetNodeId]--;
                     }
                 }
             }
-            else
-            {
-                break;
-            }
         }
+
+        _logger.LogDebug("Calculated {LayerCount} layers: {LayerSizes}", 
+            layers.Count, string.Join(", ", layers.Select(l => l.Count)));
 
         return layers;
     }
 
+    /// <summary>
+    /// 应用高精度层次布局
+    /// </summary>
     private void ApplyHighPrecisionLayerLayout(List<AiWorkflowNodeDto> nodes, List<List<string>> layers,
-        AiWorkflowPropertiesDto properties)
+        double startX, double startY, double horizontalSpacing, double verticalSpacing, double nodeWidth, double nodeHeight)
     {
-        const int layerSpacing = 300;
-        const int nodeSpacing = 200;
-        const int nodeWidth = 180;
-        const int nodeHeight = 120;
-        
-        var nodePositions = new Dictionary<string, (int x, int y)>();
+        var nodePositions = new Dictionary<string, (double x, double y)>();
+        var random = new Random((int)DateTime.UtcNow.Ticks); // 基于时间的随机数种子
 
         for (int layerIndex = 0; layerIndex < layers.Count; layerIndex++)
         {
             var layer = layers[layerIndex];
-            var y = layerIndex * layerSpacing + 100;
             
-            // 计算层内节点的总宽度
-            var totalWidth = (layer.Count - 1) * nodeSpacing + layer.Count * nodeWidth;
-            var startX = Math.Max(50, (1200 - totalWidth) / 2);
+            // 计算基础Y坐标，加入高精度变化
+            var baseLayerY = startY + layerIndex * verticalSpacing;
+            var layerYVariation = random.NextDouble() * 15.0 - 7.5; // ±7.5像素的随机变化
+            var layerY = baseLayerY + layerYVariation;
+
+            // 计算这一层的起始X坐标（居中对齐）- 高精度计算
+            var layerStartX = startX;
+            if (layer.Count > 1)
+            {
+                var totalLayerWidth = (layer.Count - 1) * horizontalSpacing;
+                layerStartX = startX - totalLayerWidth / 2.0;
+            }
 
             for (int nodeIndex = 0; nodeIndex < layer.Count; nodeIndex++)
             {
                 var nodeId = layer[nodeIndex];
-                var x = startX + nodeIndex * (nodeWidth + nodeSpacing);
-                nodePositions[nodeId] = (x, y);
+                
+                // 计算基础X坐标
+                var baseNodeX = layerStartX + nodeIndex * horizontalSpacing;
+                
+                // 添加高精度偏移和微调
+                var nodeXVariation = random.NextDouble() * 20.0 - 10.0; // ±10像素的随机变化
+                var nodeYVariation = random.NextDouble() * 10.0 - 5.0;  // ±5像素的随机变化
+                
+                var finalNodeX = baseNodeX + nodeXVariation;
+                var finalNodeY = layerY + nodeYVariation;
+                
+                // 确保节点不会重叠，添加索引相关的微调
+                var indexAdjustment = nodeIndex * 0.618033988749; // 使用黄金比例产生更自然的分布
+                finalNodeX += indexAdjustment;
+                finalNodeY += Math.Sin(nodeIndex * 0.5) * 2.0; // 添加正弦波形式的微调
+                
+                nodePositions[nodeId] = (finalNodeX, finalNodeY);
+                
+                _logger.LogDebug("Layer {LayerIndex}, Node {NodeId}: ({X}, {Y})", 
+                    layerIndex, nodeId, finalNodeX, finalNodeY);
             }
         }
 
-        // 应用位置到节点
+        // 应用高精度坐标到节点
         foreach (var node in nodes)
         {
-            if (nodePositions.TryGetValue(node.NodeId, out var position))
+            if (nodePositions.ContainsKey(node.NodeId))
             {
-                node.ExtendedData.XPosition = position.x.ToString();
-                node.ExtendedData.YPosition = position.y.ToString();
+                var (x, y) = nodePositions[node.NodeId];
+                
+                // 转换为高精度字符串格式
+                node.ExtendedData.XPosition = x.ToString("F14"); // 14位小数精度
+                node.ExtendedData.YPosition = y.ToString("F14"); // 14位小数精度
+                
+                _logger.LogDebug("Applied high-precision position to node {NodeId} ({Name}): ({X}, {Y})",
+                    node.NodeId, node.Name, node.ExtendedData.XPosition, node.ExtendedData.YPosition);
             }
         }
-
-        _logger.LogInformation("高精度层级布局完成，处理了 {LayerCount} 层，共 {NodeCount} 个节点", 
-            layers.Count, nodes.Count);
     }
 
+    /// <summary>
+    /// 应用高精度网格布局（备用方案）
+    /// </summary>
     private void ApplyHighPrecisionGridLayout(List<AiWorkflowNodeDto> nodes)
     {
-        const int gridCols = 3;
-        const int nodeSpacing = 220;
-        const int nodeWidth = 180;
-        const int nodeHeight = 120;
-        const int startX = 100;
-        const int startY = 100;
+        _logger.LogInformation("Applying high precision grid layout to {NodeCount} nodes", nodes.Count);
+
+        const double horizontalSpacing = 200.0;
+        const double verticalSpacing = 120.0;
+        const double startX = 100.0;
+        const double startY = 100.0;
+        const int nodesPerRow = 3;
+
+        var random = new Random((int)DateTime.UtcNow.Ticks + nodes.Count); // 不同的随机种子
 
         for (int i = 0; i < nodes.Count; i++)
         {
-            var row = i / gridCols;
-            var col = i % gridCols;
+            var row = i / nodesPerRow;
+            var col = i % nodesPerRow;
             
-            var x = startX + col * (nodeWidth + nodeSpacing);
-            var y = startY + row * (nodeHeight + nodeSpacing);
-
-            nodes[i].ExtendedData.XPosition = x.ToString();
-            nodes[i].ExtendedData.YPosition = y.ToString();
+            // 基础坐标计算
+            var baseX = startX + col * horizontalSpacing;
+            var baseY = startY + row * verticalSpacing;
+            
+            // 添加高精度随机偏移
+            var xVariation = random.NextDouble() * 25.0 - 12.5; // ±12.5像素变化
+            var yVariation = random.NextDouble() * 15.0 - 7.5;  // ±7.5像素变化
+            
+            // 添加基于索引的微调（使用数学常数创建自然分布）
+            var goldenRatio = 1.618033988749;
+            var indexOffsetX = (i * goldenRatio % 1.0) * 10.0 - 5.0; // 基于黄金比例的偏移
+            var indexOffsetY = Math.Sin(i * 0.7) * 3.0; // 正弦波偏移
+            
+            var finalX = baseX + xVariation + indexOffsetX;
+            var finalY = baseY + yVariation + indexOffsetY;
+            
+            // 转换为高精度字符串
+            nodes[i].ExtendedData.XPosition = finalX.ToString("F14");
+            nodes[i].ExtendedData.YPosition = finalY.ToString("F14");
+            
+            _logger.LogDebug("High precision grid position for node {NodeId}: ({X}, {Y})", 
+                nodes[i].NodeId, nodes[i].ExtendedData.XPosition, nodes[i].ExtendedData.YPosition);
         }
-
-        _logger.LogInformation("高精度网格布局完成，处理了 {NodeCount} 个节点", nodes.Count);
     }
 
     #endregion
