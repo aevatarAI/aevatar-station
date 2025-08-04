@@ -347,8 +347,8 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             // 记录Agent信息的汇总统计
             var agentSummary = new {
                 TotalAgents = availableAgents.Count,
-                AgentsByType = availableAgents.GroupBy(a => a.Type).ToDictionary(g => g.Key, g => g.Count()),
-                AgentsWithDescription = availableAgents.Where(a => !string.IsNullOrEmpty(a.Description)).Count()
+                AgentsWithDescription = availableAgents.Where(a => !string.IsNullOrEmpty(a.Description)).Count(),
+                AgentNames = availableAgents.Select(a => a.Name).ToList()
             };
             _logger.LogDebug("Available agents summary for workflow generation: {@AgentSummary}", agentSummary);
             
