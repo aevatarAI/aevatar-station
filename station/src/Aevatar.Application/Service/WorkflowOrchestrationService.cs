@@ -306,18 +306,131 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                 return null;
             }
 
-            // 创建基本的工作流配置
+            // Clean and validate JSON
+            var cleanJson = CleanJsonContent(jsonContent);
+            
+            _logger.LogDebug("Parsing workflow JSON content: {CleanJson}", cleanJson);
+            
+            // Parse as JObject first to handle field mapping
+            var jsonObject = JObject.Parse(cleanJson);
+            
+            // Create the mapped workflow configuration
             var workflowConfig = new AiWorkflowViewConfigDto();
             
-            // 创建默认的工作流结构
-            workflowConfig.Properties = new AiWorkflowPropertiesDto
+            // Map top-level fields
+            workflowConfig.Name = jsonObject["name"]?.ToString() ?? "Unnamed Workflow";
+            
+            // Handle properties object
+            var propertiesObj = jsonObject["properties"] as JObject;
+            if (propertiesObj != null)
             {
-                Name = "Generated Workflow",
-                WorkflowNodeList = new List<AiWorkflowNodeDto>(),
-                WorkflowNodeUnitList = new List<AiWorkflowNodeUnitDto>()
-            };
+                workflowConfig.Properties = new AiWorkflowPropertiesDto
+                {
+                    Name = propertiesObj["name"]?.ToString() ?? workflowConfig.Name,
+                    WorkflowNodeList = new List<AiWorkflowNodeDto>(),
+                    WorkflowNodeUnitList = new List<AiWorkflowNodeUnitDto>()
+                };
+                
+                // Map workflow nodes with field transformation
+                var nodeListArray = propertiesObj["workflowNodeList"] as JArray;
+                if (nodeListArray != null)
+                {
+                    foreach (var nodeToken in nodeListArray)
+                    {
+                        var nodeObj = nodeToken as JObject;
+                        if (nodeObj != null)
+                        {
+                            var mappedNode = new AiWorkflowNodeDto
+                            {
+                                NodeId = nodeObj["nodeId"]?.ToString() ?? Guid.NewGuid().ToString(),
+                                // Map AI's nodeType to frontend's agentType
+                                AgentType = nodeObj["nodeType"]?.ToString() ?? nodeObj["agentType"]?.ToString() ?? "",
+                                // Map AI's nodeName to frontend's name
+                                Name = nodeObj["nodeName"]?.ToString() ?? nodeObj["name"]?.ToString() ?? "",
+                                Properties = new Dictionary<string, object>()
+                            };
+                            
+                            // Handle extended data mapping
+                            var extendedDataObj = nodeObj["extendedData"] as JObject;
+                            if (extendedDataObj != null)
+                            {
+                                mappedNode.ExtendedData = new AiWorkflowNodeExtendedDataDto
+                                {
+                                    // Use AI's position if provided, otherwise default to "0"
+                                    XPosition = extendedDataObj["xPosition"]?.ToString() ?? "0",
+                                    YPosition = extendedDataObj["yPosition"]?.ToString() ?? "0"
+                                };
+                                
+                                // Store AI's description in properties for reference
+                                var description = extendedDataObj["description"]?.ToString();
+                                if (!string.IsNullOrEmpty(description))
+                                {
+                                    mappedNode.Properties["description"] = description;
+                                }
+                            }
+                            else
+                            {
+                                mappedNode.ExtendedData = new AiWorkflowNodeExtendedDataDto
+                                {
+                                    XPosition = "0",
+                                    YPosition = "0"
+                                };
+                            }
+                            
+                            // Copy node properties
+                            var propertiesObj2 = nodeObj["properties"] as JObject;
+                            if (propertiesObj2 != null)
+                            {
+                                foreach (var prop in propertiesObj2)
+                                {
+                                    mappedNode.Properties[prop.Key] = prop.Value?.ToObject<object>() ?? "";
+                                }
+                            }
+                            
+                            workflowConfig.Properties.WorkflowNodeList.Add(mappedNode);
+                            _logger.LogDebug("Mapped node: {NodeId} -> AgentType: {AgentType}, Name: {Name}",
+                                mappedNode.NodeId, mappedNode.AgentType, mappedNode.Name);
+                        }
+                    }
+                }
+                
+                // Map workflow node connections with field transformation
+                var nodeUnitArray = propertiesObj["workflowNodeUnitList"] as JArray;
+                if (nodeUnitArray != null)
+                {
+                    foreach (var unitToken in nodeUnitArray)
+                    {
+                        var unitObj = unitToken as JObject;
+                        if (unitObj != null)
+                        {
+                            var mappedUnit = new AiWorkflowNodeUnitDto
+                            {
+                                // Map AI's fromNodeId to frontend's nodeId
+                                NodeId = unitObj["fromNodeId"]?.ToString() ?? unitObj["nodeId"]?.ToString() ?? "",
+                                // Map AI's toNodeId to frontend's nextNodeId
+                                NextNodeId = unitObj["toNodeId"]?.ToString() ?? unitObj["nextNodeId"]?.ToString() ?? ""
+                            };
+                            
+                            workflowConfig.Properties.WorkflowNodeUnitList.Add(mappedUnit);
+                            _logger.LogDebug("Mapped connection: {NodeId} -> {NextNodeId}", 
+                                mappedUnit.NodeId, mappedUnit.NextNodeId);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                _logger.LogWarning("Properties object is missing, creating default");
+                workflowConfig.Properties = new AiWorkflowPropertiesDto
+                {
+                    Name = workflowConfig.Name,
+                    WorkflowNodeList = new List<AiWorkflowNodeDto>(),
+                    WorkflowNodeUnitList = new List<AiWorkflowNodeUnitDto>()
+                };
+            }
 
-            _logger.LogInformation("Successfully created basic workflow configuration");
+            _logger.LogInformation("Successfully parsed and mapped workflow JSON to view config with {NodeCount} nodes and {ConnectionCount} connections",
+                workflowConfig.Properties.WorkflowNodeList.Count, workflowConfig.Properties.WorkflowNodeUnitList.Count);
 
             // Apply intelligent layout algorithm after parsing
             ApplyIntelligentLayout(workflowConfig.Properties);
@@ -327,12 +440,12 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         catch (JsonException ex)
         {
             _logger.LogError(ex, "JSON parsing error when converting to AiWorkflowViewConfigDto. Content: {JsonContent}",
-                jsonContent);
+                jsonContent.Length > 500 ? jsonContent.Substring(0, 500) + "..." : jsonContent);
             return null;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error when parsing workflow JSON to view config. Content: {JsonContent}", 
+            _logger.LogError(ex, "Unexpected error when parsing workflow JSON to view config. Content: {JsonContent}",
                 jsonContent.Length > 500 ? jsonContent.Substring(0, 500) + "..." : jsonContent);
             return null;
         }
