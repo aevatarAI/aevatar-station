@@ -21,7 +21,26 @@
       "Bash(dotnet list:*)",
       "Bash(dotnet restore:*)",
       "Bash(dotnet nuget locals:*)",
-      "Bash(dotnet publish:*)"
+      "Bash(dotnet publish:*)",
+      "Bash(./run-regression-tests.sh:*)",
+      "Bash(docker-compose:*)",
+      "Bash(kubectl --kubeconfig=/Users/zhifenglee/Desktop/agent-smith/aevatar-station/aevatar-station/station/scripts/kubeconfig get nodes)",
+      "Bash(kubectl --kubeconfig=/Users/zhifenglee/Desktop/agent-smith/aevatar-station/aevatar-station/station/scripts/kubeconfig create namespace aevatar-apps)",
+      "Bash(kubectl:*)",
+      "Bash(docker build:*)",
+      "Bash(docker system prune:*)",
+      "Bash(KUBECONFIG=/Users/zhifenglee/Desktop/agent-smith/aevatar-station/aevatar-station/station/scripts/kubeconfig python3 test_kubernetes.py)",
+      "Bash(docker logs:*)",
+      "Bash(docker exec:*)",
+      "Bash(cp:*)",
+      "Bash(sed:*)",
+      "Bash(KUBECONFIG=/Users/zhifenglee/Desktop/agent-smith/aevatar-station/aevatar-station/station/scripts/shared/kubeconfig python3 test_kubernetes.py)",
+      "Bash(python:*)",
+      "Bash(./station/scripts/run-regression-tests.sh:*)",
+      "Bash(docker volume prune:*)",
+      "Bash(docker network inspect:*)",
+      "Bash(docker inspect:*)",
+      "Bash(curl:*)"
     ]
   },
   "enableAllProjectMcpServers": true
