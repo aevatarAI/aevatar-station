@@ -53,5 +53,8 @@
     "ReplicationFactor": 3,
     "MessageMaxBytes": 104857600,
     "Topics": "[HostId]Silo"
+  },
+  "DebugMode": {
+    "ExecuteRecordMode": true
   }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using Aevatar.Account;
 using Aevatar.ApiRequests;
@@ -78,6 +78,7 @@ public class AevatarApplicationModule : AbpModule
         Configure<AccountOptions>(configuration.GetSection("Account"));
         Configure<ApiRequestOptions>(configuration.GetSection("ApiRequest"));
         Configure<BlobStoringOptions>(configuration.GetSection("BlobStoring"));
+        Configure<DebugModeOptions>(configuration.GetSection("DebugMode"));
         
         // 配置 AI 服务提示词选项
         Configure<AIServicePromptOptions>(configuration.GetSection("AIServicePrompt"));
