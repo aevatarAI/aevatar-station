@@ -279,9 +279,12 @@ public class AgentService : ApplicationService, IAgentService
         if (type == null)
             return false;
 
-        // 1. 优先使用类型检查 - 检查是否实现了IAIGAgent接口
+        // 1. 检查是否实现了IAIGAgent接口
         var interfaces = type.GetInterfaces();
-        var implementsAIGAgentInterface = interfaces.Any(i => i.Name == "IAIGAgent");
+        if (interfaces.Any(i => i.Name == "IAIGAgent"))
+        {
+            return true;
+        }
         
         // 2. 检查是否继承自AIGAgentBase泛型基类
         var currentType = type;
@@ -302,16 +305,7 @@ public class AgentService : ApplicationService, IAgentService
             currentType = currentType.BaseType;
         }
         
-        // 3. 如果通过类型检查找到了，直接返回
-        if (implementsAIGAgentInterface)
-        {
-            return true;
-        }
-        
-        // 4. 作为回退机制，对配置类进行最小化字符串检查
-        // 这主要用于测试和配置类，不是实际的GAgent实现
-        var typeName = type.FullName ?? type.Name;
-        return typeName.Contains("AIGAgent", StringComparison.OrdinalIgnoreCase);
+        return false;
     }
 
     private ConfigurationBase SetupConfigurationData(Configuration configuration,

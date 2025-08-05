@@ -242,7 +242,7 @@ public class AgentServiceTests
     }
 
     [Fact]
-    public async Task GetConfigurationDefaultValuesAsync_WithAIGAgentSystemLLM_ShouldReturnSystemLLMListFromOptions()
+    public async Task GetConfigurationDefaultValuesAsync_WithRegularConfiguration_ShouldReturnNormalValues()
     {
         // Arrange
         var agentServiceType = typeof(AgentService);
@@ -260,11 +260,12 @@ public class AgentServiceTests
         result.ShouldNotBeNull();
         result.ShouldContainKey("systemLLM");
         
-        var systemLLMValue = result["systemLLM"] as List<string>;
+        // Since AIGAgentConfiguration is not a real AIGAgent type (no longer detected by string matching),
+        // it should be treated as a regular configuration and return normal list format
+        var systemLLMValue = result["systemLLM"] as List<object>;
         systemLLMValue.ShouldNotBeNull();
-        systemLLMValue.Count.ShouldBe(2);
-        systemLLMValue.ShouldContain("gpt-4");
-        systemLLMValue.ShouldContain("deepseek");
+        systemLLMValue.Count.ShouldBe(1);
+        systemLLMValue[0].ShouldBe("default-llm");
         
         // Verify other properties still work normally
         result.ShouldContainKey("instructions");
