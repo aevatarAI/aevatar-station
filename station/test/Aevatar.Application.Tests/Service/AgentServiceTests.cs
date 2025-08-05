@@ -7,11 +7,14 @@ using Aevatar.Service;
 using Aevatar.Options;
 using Aevatar.Application.Grains.Agents.AI;
 using Aevatar.GAgents.AIGAgent.Agent;
+using Aevatar.Core.Abstractions;
 using Shouldly;
 using Xunit;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
+using System.Linq;
+using System.Diagnostics;
 
 namespace Aevatar.Application.Tests.Service;
 
@@ -277,33 +280,88 @@ public class AgentServiceTests
         instructionsValue[0].ShouldBe("Default AI instructions");
     }
 
+    /// <summary>
+    /// 全面测试新的内联AI Agent检测逻辑是否兼容各种AI Agent类型
+    /// </summary>
     [Fact]
-    public async Task InlinedAIGAgentDetection_WithMultiLevelInterfaceInheritance_ShouldWork()
+    public async Task NewInlinedAIGAgentDetection_ShouldCorrectlyIdentifyAllAIAgentTypes()
     {
-        // Arrange - Test the inlined logic that replaced IsAIGAgent method
-        // The logic is now: configurationType != null && typeof(IAIGAgent).IsAssignableFrom(configurationType)
+        // Arrange - 模拟新的内联逻辑：configurationType != null && typeof(IAIGAgent).IsAssignableFrom(configurationType)
         
-        // Test direct interface implementation
-        var directInterfaceType = typeof(ITextCompletionGAgent); // This directly inherits IAIGAgent
-        var isDirectAI = directInterfaceType != null && typeof(IAIGAgent).IsAssignableFrom(directInterfaceType);
+        // 1. 测试具体的AI Agent接口类型
+        var textCompletionInterfaceType = typeof(ITextCompletionGAgent);
+        var workflowComposerInterfaceType = typeof(IWorkflowComposerGAgent);
         
-        // Test concrete class that implements interface which inherits IAIGAgent
-        var concreteClassType = typeof(TextCompletionGAgent); // This implements ITextCompletionGAgent which inherits IAIGAgent
-        var isConcreteAI = concreteClassType != null && typeof(IAIGAgent).IsAssignableFrom(concreteClassType);
+        // 2. 测试具体的AI Agent实现类型  
+        var textCompletionClassType = typeof(TextCompletionGAgent);
+        var workflowComposerClassType = typeof(WorkflowComposerGAgent);
         
-        // Test null case
-        Type? nullType = null;
-        var isNullAI = nullType != null && typeof(IAIGAgent).IsAssignableFrom(nullType);
+        // 3. 测试基础接口类型（应该被检测为非AI Agent）
+        var baseGAgentType = typeof(IGAgent);
+        var nullType = (Type?)null;
         
-        // Test non-AI agent
-        var nonAIType = typeof(string);
-        var isNonAI = nonAIType != null && typeof(IAIGAgent).IsAssignableFrom(nonAIType);
+        // 4. 测试普通非AI类型（应该被检测为非AI Agent）
+        var stringType = typeof(string);
+        var intType = typeof(int);
         
-        // Assert
-        isDirectAI.ShouldBeTrue("Direct interface inheritance should be detected");
-        isConcreteAI.ShouldBeTrue("Multi-level inheritance through interface should be detected");
-        isNullAI.ShouldBeFalse("Null type should return false");
-        isNonAI.ShouldBeFalse("Non-AI type should return false");
+        // Act - 使用新的内联判断逻辑
+        var isTextCompletionInterface = textCompletionInterfaceType != null && typeof(IAIGAgent).IsAssignableFrom(textCompletionInterfaceType);
+        var isWorkflowComposerInterface = workflowComposerInterfaceType != null && typeof(IAIGAgent).IsAssignableFrom(workflowComposerInterfaceType);
+        
+        var isTextCompletionClass = textCompletionClassType != null && typeof(IAIGAgent).IsAssignableFrom(textCompletionClassType);
+        var isWorkflowComposerClass = workflowComposerClassType != null && typeof(IAIGAgent).IsAssignableFrom(workflowComposerClassType);
+        
+        var isBaseGAgent = baseGAgentType != null && typeof(IAIGAgent).IsAssignableFrom(baseGAgentType);
+        var isNullType = nullType != null && typeof(IAIGAgent).IsAssignableFrom(nullType);
+        
+        var isStringType = stringType != null && typeof(IAIGAgent).IsAssignableFrom(stringType);
+        var isIntType = intType != null && typeof(IAIGAgent).IsAssignableFrom(intType);
+        
+        // Assert - 验证结果
+        // ✅ 应该被识别为AI Agent的类型
+        isTextCompletionInterface.ShouldBeTrue("ITextCompletionGAgent接口应该被识别为AI Agent");
+        isWorkflowComposerInterface.ShouldBeTrue("IWorkflowComposerGAgent接口应该被识别为AI Agent");
+        isTextCompletionClass.ShouldBeTrue("TextCompletionGAgent实现类应该被识别为AI Agent");
+        isWorkflowComposerClass.ShouldBeTrue("WorkflowComposerGAgent实现类应该被识别为AI Agent");
+        
+        // ❌ 不应该被识别为AI Agent的类型
+        isBaseGAgent.ShouldBeFalse("基础IGAgent接口不应该被识别为AI Agent");
+        isNullType.ShouldBeFalse("null类型不应该被识别为AI Agent");
+        isStringType.ShouldBeFalse("string类型不应该被识别为AI Agent");
+        isIntType.ShouldBeFalse("int类型不应该被识别为AI Agent");
+        
+        // 额外验证：模拟ChatAIGAgent的多层接口继承情况
+        // 假设 IChatAIGAgent : IAIGAgent, 然后 ChatAIGAgent : IChatAIGAgent
+        // 这种情况下我们的逻辑也应该正确工作
+        
+        // 从现有的接口验证多层继承检测
+        // ITextCompletionGAgent : IAIGAgent, IStateGAgent<TextCompletionState>
+        // 这已经是多层继承的例子
+        var multiLevelInheritance = typeof(IAIGAgent).IsAssignableFrom(typeof(ITextCompletionGAgent));
+        multiLevelInheritance.ShouldBeTrue("多层接口继承应该被正确检测");
+        
+        // 打印详细的继承信息用于调试
+        LogTypeInheritanceInfo(typeof(ITextCompletionGAgent), "ITextCompletionGAgent");
+        LogTypeInheritanceInfo(typeof(TextCompletionGAgent), "TextCompletionGAgent");
+        LogTypeInheritanceInfo(typeof(IWorkflowComposerGAgent), "IWorkflowComposerGAgent");
+        LogTypeInheritanceInfo(typeof(WorkflowComposerGAgent), "WorkflowComposerGAgent");
+    }
+    
+    /// <summary>
+    /// 记录类型继承信息用于调试
+    /// </summary>
+    private void LogTypeInheritanceInfo(Type type, string typeName)
+    {
+        var interfaces = type.GetInterfaces();
+        var baseType = type.BaseType;
+        
+        var inheritanceInfo = $"{typeName} 继承信息:\n";
+        inheritanceInfo += $"  - 基类: {baseType?.Name ?? "无"}\n";
+        inheritanceInfo += $"  - 实现接口: {string.Join(", ", interfaces.Select(i => i.Name))}\n";
+        inheritanceInfo += $"  - 是否为IAIGAgent: {typeof(IAIGAgent).IsAssignableFrom(type)}\n";
+        
+        // 在测试输出中显示这些信息
+        System.Diagnostics.Debug.WriteLine(inheritanceInfo);
     }
 
     private AgentService CreateAgentServiceForTesting()
