@@ -79,6 +79,9 @@ public class AevatarApplicationModule : AbpModule
         Configure<ApiRequestOptions>(configuration.GetSection("ApiRequest"));
         Configure<BlobStoringOptions>(configuration.GetSection("BlobStoring"));
         
+        // 配置 AI 服务提示词选项
+        Configure<AIServicePromptOptions>(configuration.GetSection("AIServicePrompt"));
+        
         // 配置工作流编排服务
         ConfigureWorkflowOrchestrationServices(context);
     }
