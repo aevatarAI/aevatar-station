@@ -371,23 +371,42 @@ jobs:
             # Get authentication token
             AUTH_TOKEN=$(get_auth_token)
             
-            # Test token validity by making a simple API call first
-            echo "ℹ️ Testing token validity..."
-            TEST_RESPONSE=$(curl -s -w "%{http_code}" -k --location "${API_SERVER_URL}/api/app/application-configuration" \
+            # Test multiple API endpoints to find working ones
+            echo "ℹ️ Testing available API endpoints..."
+            
+            # Test basic agent list endpoint (known to work from regression_test.py)
+            TEST_RESPONSE=$(curl -s -w "%{http_code}" --location "${API_SERVER_URL}/api/agent/agent-list?pageIndex=0&pageSize=1" \
               -H 'accept: */*' \
               -H "Authorization: Bearer ${AUTH_TOKEN}")
             
             TEST_HTTP_CODE="${TEST_RESPONSE: -3}"
             TEST_RESPONSE_BODY="${TEST_RESPONSE%???}"
-            echo "ℹ️ Token test response code: $TEST_HTTP_CODE"
-            echo "ℹ️ Token test response body: $TEST_RESPONSE_BODY"
+            echo "ℹ️ Agent list API test - Response code: $TEST_HTTP_CODE"
             
-            if [[ "$TEST_HTTP_CODE" -eq 401 ]]; then
-              echo "::error ::❌ Authentication token is invalid or expired"
-              echo "- ❌ Authentication: Token validation failed" >> "$SUMMARY_FILE"
+            if [[ "$TEST_HTTP_CODE" -eq 200 ]]; then
+              echo "✅ API server is accessible and token is valid"
+            else
+              echo "ℹ️ Agent list API response body: $TEST_RESPONSE_BODY"
+            fi
+            
+            # Test if updateDockerImage endpoint exists by checking available routes
+            echo "ℹ️ Testing updateDockerImage endpoint existence..."
+            DOCKER_TEST_RESPONSE=$(curl -s -w "%{http_code}" --location "${API_SERVER_URL}/api/users/updateDockerImage?hostType=0&imageName=test&version=1" \
+              -X 'GET' \
+              -H 'accept: */*' \
+              -H "Authorization: Bearer ${AUTH_TOKEN}")
+            
+            DOCKER_TEST_HTTP_CODE="${DOCKER_TEST_RESPONSE: -3}"
+            DOCKER_TEST_RESPONSE_BODY="${DOCKER_TEST_RESPONSE%???}"
+            echo "ℹ️ UpdateDockerImage GET test - Response code: $DOCKER_TEST_HTTP_CODE"
+            echo "ℹ️ UpdateDockerImage GET response body: $DOCKER_TEST_RESPONSE_BODY"
+            
+            if [[ "$DOCKER_TEST_HTTP_CODE" -eq 404 ]]; then
+              echo "::error ::❌ updateDockerImage API endpoint does not exist in this environment"
+              echo "- ❌ API Endpoint: /api/users/updateDockerImage not found (HTTP 404)" >> "$SUMMARY_FILE"
               exit 1
-            elif [[ "$TEST_HTTP_CODE" -ge 400 ]]; then
-              echo "::warning ::⚠️ Token test returned HTTP $TEST_HTTP_CODE, but continuing with main API call"
+            elif [[ "$DOCKER_TEST_HTTP_CODE" -eq 405 ]]; then
+              echo "✅ updateDockerImage endpoint exists but GET method not allowed (expected for POST endpoint)"
             fi
             
             # URL encode the image name - use same method as package.yaml (only encode colons)
