@@ -266,6 +266,10 @@ jobs:
             echo "  - Client ID: $CLIENT_ID"
             echo "  - Auth Server: $AUTH_SERVER_URL"
             echo "  - API Server: $API_SERVER_URL"
+            
+            echo "================================================"
+            echo "🔐 STEP 1: AUTHENTICATION"
+            echo "================================================"
           else
             echo "::error ::❌ Project name must start with 'env-'"
             echo "- ❌ Invalid project name: \`$PROJECT\` (must start with 'env-')" >> "$SUMMARY_FILE"
@@ -342,7 +346,10 @@ jobs:
               exit 1
             fi
             
-            echo "ℹ️ Auth server response: $TOKEN_RESPONSE"
+            echo "ℹ️ Auth server response received"
+            # Only show first part of token response for security
+            TOKEN_STATUS=$(echo "$TOKEN_RESPONSE" | jq -r '.token_type // "ERROR"' 2>/dev/null || echo "ERROR")
+            echo "ℹ️ Token type: $TOKEN_STATUS"
             
             TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.access_token')
             
@@ -371,10 +378,12 @@ jobs:
             # Get authentication token
             AUTH_TOKEN=$(get_auth_token)
             
-            # Test multiple API endpoints to find working ones
-            echo "ℹ️ Testing available API endpoints..."
+            echo "================================================"
+            echo "🧪 STEP 2: API ENDPOINT TESTING"
+            echo "================================================"
             
             # Test basic agent list endpoint (known to work from regression_test.py)
+            echo "ℹ️ Testing agent-list endpoint to verify API connectivity..."
             TEST_RESPONSE=$(curl -s -w "%{http_code}" --location "${API_SERVER_URL}/api/agent/agent-list?pageIndex=0&pageSize=1" \
               -H 'accept: */*' \
               -H "Authorization: Bearer ${AUTH_TOKEN}")
@@ -386,6 +395,7 @@ jobs:
             if [[ "$TEST_HTTP_CODE" -eq 200 ]]; then
               echo "✅ API server is accessible and token is valid"
             else
+              echo "❌ Agent list API test failed"
               echo "ℹ️ Agent list API response body: $TEST_RESPONSE_BODY"
             fi
             
@@ -415,6 +425,10 @@ jobs:
               echo "✅ updateDockerImage endpoint exists and is accessible"
             fi
             
+            echo "================================================"
+            echo "🚀 STEP 3: MAIN API CALL"
+            echo "================================================"
+            
             # URL encode the image name - use same method as package.yaml (only encode colons)
             ENCODED_IMAGE_NAME=$(echo "$image_name" | sed 's/:/%3A/g')
             echo "ℹ️ Original image name: $image_name"
@@ -422,7 +436,7 @@ jobs:
             echo "ℹ️ Making API call to: ${API_SERVER_URL}/api/users/updateDockerImage?hostType=${host_type}&imageName=${ENCODED_IMAGE_NAME}&version=1"
             
             # Make API call using exact pattern from package.yaml
-            echo "ℹ️ Making updateDockerImage API call..."
+            echo "ℹ️ Executing updateDockerImage API call..."
             API_RESPONSE=$(curl -s -w "%{http_code}" -X 'POST' "${API_SERVER_URL}/api/users/updateDockerImage?hostType=${host_type}&imageName=${ENCODED_IMAGE_NAME}&version=1" \
               -H 'accept: */*' \
               -H "Authorization: Bearer ${AUTH_TOKEN}" \
