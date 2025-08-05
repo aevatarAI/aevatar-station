@@ -258,8 +258,8 @@ jobs:
           # Generate client ID and URLs based on project name
           if [[ "$PROJECT" == "env-"* ]]; then
             CLIENT_ID="${PROJECT#env-}"
-            AUTH_SERVER_URL="http://${PROJECT}.auth-station-testing.aevatar.ai"
-            API_SERVER_URL="http://${PROJECT}.station-testing.aevatar.ai"
+            AUTH_SERVER_URL="https://${PROJECT}.auth-station-testing.aevatar.ai"
+            API_SERVER_URL="https://${PROJECT}.station-testing.aevatar.ai"
             
             echo "ℹ️ Configuration:"
             echo "  - Project: $PROJECT"
@@ -328,7 +328,7 @@ jobs:
             echo "🔐 Getting authentication token from $AUTH_SERVER_URL"
             echo "ℹ️ Using client_id: $CLIENT_ID"
             
-            TOKEN_RESPONSE=$(curl -s -X POST "${AUTH_SERVER_URL}/connect/token" \
+            TOKEN_RESPONSE=$(curl -s -k -X POST "${AUTH_SERVER_URL}/connect/token" \
               -H 'Content-Type: application/x-www-form-urlencoded' \
               -H 'Accept: application/json' \
               --data-urlencode 'grant_type=client_credentials' \
@@ -373,18 +373,21 @@ jobs:
             
             # Test token validity by making a simple API call first
             echo "ℹ️ Testing token validity..."
-            TEST_RESPONSE=$(curl -s -w "%{http_code}" --location "${API_SERVER_URL}/api/app/application-configuration" \
+            TEST_RESPONSE=$(curl -s -w "%{http_code}" -k --location "${API_SERVER_URL}/api/app/application-configuration" \
               -H 'accept: */*' \
               -H "Authorization: Bearer ${AUTH_TOKEN}")
             
             TEST_HTTP_CODE="${TEST_RESPONSE: -3}"
             TEST_RESPONSE_BODY="${TEST_RESPONSE%???}"
             echo "ℹ️ Token test response code: $TEST_HTTP_CODE"
+            echo "ℹ️ Token test response body: $TEST_RESPONSE_BODY"
             
             if [[ "$TEST_HTTP_CODE" -eq 401 ]]; then
               echo "::error ::❌ Authentication token is invalid or expired"
               echo "- ❌ Authentication: Token validation failed" >> "$SUMMARY_FILE"
               exit 1
+            elif [[ "$TEST_HTTP_CODE" -ge 400 ]]; then
+              echo "::warning ::⚠️ Token test returned HTTP $TEST_HTTP_CODE, but continuing with main API call"
             fi
             
             # URL encode the image name - use same method as package.yaml (only encode colons)
@@ -393,12 +396,36 @@ jobs:
             echo "ℹ️ URL encoded image name: $ENCODED_IMAGE_NAME"
             echo "ℹ️ Making API call to: ${API_SERVER_URL}/api/users/updateDockerImage?hostType=${host_type}&imageName=${ENCODED_IMAGE_NAME}&version=1"
             
-            # Update image via API - use same approach as package.yaml (no RequestVerificationToken)
-            API_RESPONSE=$(curl -s -w "%{http_code}" -X 'POST' "${API_SERVER_URL}/api/users/updateDockerImage?hostType=${host_type}&imageName=${ENCODED_IMAGE_NAME}&version=1" \
+            # Try multiple approaches to get detailed error information
+            echo "ℹ️ Attempting API call with verbose curl output..."
+            
+            # First attempt with detailed error logging
+            API_RESPONSE=$(curl -s -w "%{http_code}" -k -X 'POST' "${API_SERVER_URL}/api/users/updateDockerImage?hostType=${host_type}&imageName=${ENCODED_IMAGE_NAME}&version=1" \
               -H 'accept: */*' \
               -H "Authorization: Bearer ${AUTH_TOKEN}" \
               -H 'X-Requested-With: XMLHttpRequest' \
-              -d '')
+              -H 'Content-Type: application/json' \
+              -d '' --max-time 30)
+            
+            # If that fails, try without Content-Type header
+            if [[ "${API_RESPONSE: -3}" -ge 400 ]]; then
+              echo "ℹ️ First attempt failed, trying without Content-Type header..."
+              API_RESPONSE=$(curl -s -w "%{http_code}" -k -X 'POST' "${API_SERVER_URL}/api/users/updateDockerImage?hostType=${host_type}&imageName=${ENCODED_IMAGE_NAME}&version=1" \
+                -H 'accept: */*' \
+                -H "Authorization: Bearer ${AUTH_TOKEN}" \
+                -H 'X-Requested-With: XMLHttpRequest' \
+                -d '' --max-time 30)
+            fi
+            
+            # If still failing, try with verbose output for debugging
+            if [[ "${API_RESPONSE: -3}" -ge 400 ]]; then
+              echo "ℹ️ Second attempt failed, getting verbose curl output..."
+              curl -v -k -X 'POST' "${API_SERVER_URL}/api/users/updateDockerImage?hostType=${host_type}&imageName=${ENCODED_IMAGE_NAME}&version=1" \
+                -H 'accept: */*' \
+                -H "Authorization: Bearer ${AUTH_TOKEN}" \
+                -H 'X-Requested-With: XMLHttpRequest' \
+                -d '' --max-time 30 || true
+            fi
             
             HTTP_CODE="${API_RESPONSE: -3}"
             RESPONSE_BODY="${API_RESPONSE%???}"
