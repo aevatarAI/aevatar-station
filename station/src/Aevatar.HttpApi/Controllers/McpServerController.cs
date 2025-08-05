@@ -353,7 +353,7 @@ public class McpServerController : AevatarController
             Description = config.Description,
             Url = config.Url,
             CreatedAt = DateTime.UtcNow, // Placeholder - consider adding timestamp to MCPServerConfig
-            ModifiedAt = DateTime.UtcNow // Placeholder - consider adding timestamp to MCPServerConfig
+            ModifiedAt = null // No modification timestamp available in MCPServerConfig
         };
     }
 }

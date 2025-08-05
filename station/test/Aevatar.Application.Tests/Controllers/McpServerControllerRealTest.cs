@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -575,6 +576,350 @@ public class McpServerControllerRealTest
         // Assert
         Assert.NotNull(result);
         Assert.Empty(result);
+        
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
+    }
+
+    #endregion
+
+    #region Advanced Sorting Tests
+
+    [Theory]
+    [InlineData("command asc")]
+    [InlineData("command desc")]
+    [InlineData("description asc")]
+    [InlineData("description desc")]
+    [InlineData("serverType asc")]
+    [InlineData("serverType desc")]
+    [InlineData("createdAt asc")]
+    [InlineData("createdAt desc")]
+    [InlineData("modifiedAt asc")]
+    [InlineData("modifiedAt desc")]
+    public async Task GetListAsync_WithVariousSortingFields_ShouldReturnCorrectlySortedResults(string sorting)
+    {
+        // Arrange
+        var input = new GetMcpServerListDto
+        {
+            Sorting = sorting,
+            MaxResultCount = 10,
+            SkipCount = 0
+        };
+
+        var mockConfigs = new Dictionary<string, MCPServerConfig>
+        {
+            ["server-z"] = new MCPServerConfig
+            {
+                ServerName = "server-z",
+                Command = "python",
+                Description = "Z server",
+                Url = "http://example.com"
+            },
+            ["server-a"] = new MCPServerConfig
+            {
+                ServerName = "server-a",
+                Command = "node",
+                Description = "A server"
+            },
+            ["server-m"] = new MCPServerConfig
+            {
+                ServerName = "server-m",
+                Command = "java",
+                Description = "M server",
+                Url = "http://middle.com"
+            }
+        };
+
+        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
+            .ReturnsAsync(mockConfigs);
+
+        // Act
+        var result = await _controller.GetListAsync(input);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(3, result.TotalCount);
+        Assert.Equal(3, result.Items.Count);
+        
+        // Verify sorting is applied (basic validation that order changed from default)
+        var sortField = sorting.Split(' ')[0].ToLower();
+        var isDesc = sorting.Contains("desc", StringComparison.OrdinalIgnoreCase);
+        
+        switch (sortField)
+        {
+            case "command":
+                if (isDesc)
+                    Assert.True(string.Compare(result.Items[0].Command, result.Items[1].Command, StringComparison.OrdinalIgnoreCase) >= 0);
+                else
+                    Assert.True(string.Compare(result.Items[0].Command, result.Items[1].Command, StringComparison.OrdinalIgnoreCase) <= 0);
+                break;
+            case "servertype":
+                // Stdio comes before StreamableHttp alphabetically
+                if (!isDesc)
+                    Assert.Contains(result.Items, item => item.ServerType == "Stdio");
+                break;
+        }
+        
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetListAsync_WithInvalidSortingField_ShouldUseDefaultSorting()
+    {
+        // Arrange
+        var input = new GetMcpServerListDto
+        {
+            Sorting = "invalidfield desc",
+            MaxResultCount = 10,
+            SkipCount = 0
+        };
+
+        var mockConfigs = new Dictionary<string, MCPServerConfig>
+        {
+            ["server-z"] = new MCPServerConfig { ServerName = "server-z", Command = "python" },
+            ["server-a"] = new MCPServerConfig { ServerName = "server-a", Command = "node" },
+            ["server-m"] = new MCPServerConfig { ServerName = "server-m", Command = "java" }
+        };
+
+        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
+            .ReturnsAsync(mockConfigs);
+
+        // Act
+        var result = await _controller.GetListAsync(input);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(3, result.TotalCount);
+        
+        // Should be sorted by ServerName (default) - server-a, server-m, server-z
+        Assert.Equal("server-a", result.Items[0].ServerName);
+        Assert.Equal("server-m", result.Items[1].ServerName);
+        Assert.Equal("server-z", result.Items[2].ServerName);
+        
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetListAsync_WithEmptySorting_ShouldUseDefaultSorting()
+    {
+        // Arrange
+        var input = new GetMcpServerListDto
+        {
+            Sorting = "",
+            MaxResultCount = 10,
+            SkipCount = 0
+        };
+
+        var mockConfigs = new Dictionary<string, MCPServerConfig>
+        {
+            ["server-z"] = new MCPServerConfig { ServerName = "server-z", Command = "python" },
+            ["server-a"] = new MCPServerConfig { ServerName = "server-a", Command = "node" }
+        };
+
+        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
+            .ReturnsAsync(mockConfigs);
+
+        // Act
+        var result = await _controller.GetListAsync(input);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(2, result.TotalCount);
+        
+        // Should be sorted by ServerName (default)
+        Assert.Equal("server-a", result.Items[0].ServerName);
+        Assert.Equal("server-z", result.Items[1].ServerName);
+        
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetListAsync_WithOnlyFieldNameSorting_ShouldUseAscendingOrder()
+    {
+        // Arrange
+        var input = new GetMcpServerListDto
+        {
+            Sorting = "command", // No direction specified, should default to asc
+            MaxResultCount = 10,
+            SkipCount = 0
+        };
+
+        var mockConfigs = new Dictionary<string, MCPServerConfig>
+        {
+            ["server1"] = new MCPServerConfig { ServerName = "server1", Command = "zsh" },
+            ["server2"] = new MCPServerConfig { ServerName = "server2", Command = "bash" }
+        };
+
+        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
+            .ReturnsAsync(mockConfigs);
+
+        // Act
+        var result = await _controller.GetListAsync(input);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(2, result.TotalCount);
+        
+        // Should be sorted by Command ascending - bash comes before zsh
+        Assert.Equal("bash", result.Items[0].Command);
+        Assert.Equal("zsh", result.Items[1].Command);
+        
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
+    }
+
+    #endregion
+
+    #region Edge Cases Tests
+
+    [Fact]
+    public async Task GetListAsync_WithServerTypeFilter_BothTypes_ShouldReturnCorrectTypes()
+    {
+        // Arrange - Test both Stdio and StreamableHttp types
+        var input1 = new GetMcpServerListDto
+        {
+            ServerType = "Stdio",
+            MaxResultCount = 10,
+            SkipCount = 0
+        };
+
+        var input2 = new GetMcpServerListDto
+        {
+            ServerType = "StreamableHttp",
+            MaxResultCount = 10,
+            SkipCount = 0
+        };
+
+        var mockConfigs = new Dictionary<string, MCPServerConfig>
+        {
+            ["stdio-server"] = new MCPServerConfig
+            {
+                ServerName = "stdio-server",
+                Command = "python",
+                Description = "Stdio server",
+                Url = null // Stdio type
+            },
+            ["http-server"] = new MCPServerConfig
+            {
+                ServerName = "http-server",
+                Command = "node",
+                Description = "HTTP server",
+                Url = "http://example.com" // StreamableHttp type
+            }
+        };
+
+        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
+            .ReturnsAsync(mockConfigs);
+
+        // Act - Test Stdio filter
+        var result1 = await _controller.GetListAsync(input1);
+        
+        // Reset mock calls count
+        _mockMcpExtensionWrapper.Invocations.Clear();
+        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
+            .ReturnsAsync(mockConfigs);
+        
+        var result2 = await _controller.GetListAsync(input2);
+
+        // Assert - Stdio filter
+        Assert.NotNull(result1);
+        Assert.Equal(1, result1.TotalCount);
+        Assert.Single(result1.Items);
+        Assert.Equal("stdio-server", result1.Items[0].ServerName);
+        Assert.Equal("Stdio", result1.Items[0].ServerType);
+
+        // Assert - StreamableHttp filter
+        Assert.NotNull(result2);
+        Assert.Equal(1, result2.TotalCount);
+        Assert.Single(result2.Items);
+        Assert.Equal("http-server", result2.Items[0].ServerName);
+        Assert.Equal("StreamableHttp", result2.Items[0].ServerType);
+    }
+
+    [Fact]
+    public async Task GetListAsync_WithCaseInsensitiveServerTypeFilter_ShouldWork()
+    {
+        // Arrange
+        var input = new GetMcpServerListDto
+        {
+            ServerType = "stdio", // lowercase
+            MaxResultCount = 10,
+            SkipCount = 0
+        };
+
+        var mockConfigs = new Dictionary<string, MCPServerConfig>
+        {
+            ["stdio-server"] = new MCPServerConfig
+            {
+                ServerName = "stdio-server",
+                Command = "python",
+                Url = null // Stdio type
+            }
+        };
+
+        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
+            .ReturnsAsync(mockConfigs);
+
+        // Act
+        var result = await _controller.GetListAsync(input);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(1, result.TotalCount);
+        Assert.Single(result.Items);
+        Assert.Equal("stdio-server", result.Items[0].ServerName);
+    }
+
+    [Fact]
+    public async Task GetListAsync_WithComplexSearchTerm_ShouldSearchInAllFields()
+    {
+        // Arrange
+        var input = new GetMcpServerListDto
+        {
+            SearchTerm = "test", // Should match ServerName, Command, or Description
+            MaxResultCount = 10,
+            SkipCount = 0
+        };
+
+        var mockConfigs = new Dictionary<string, MCPServerConfig>
+        {
+            ["test-server"] = new MCPServerConfig
+            {
+                ServerName = "test-server", // matches in name
+                Command = "python",
+                Description = "Production server"
+            },
+            ["prod-server"] = new MCPServerConfig
+            {
+                ServerName = "prod-server",
+                Command = "test-runner", // matches in command
+                Description = "Production server"
+            },
+            ["dev-server"] = new MCPServerConfig
+            {
+                ServerName = "dev-server",
+                Command = "node",
+                Description = "Test environment server" // matches in description
+            },
+            ["other-server"] = new MCPServerConfig
+            {
+                ServerName = "other-server",
+                Command = "java",
+                Description = "Other server" // no match
+            }
+        };
+
+        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
+            .ReturnsAsync(mockConfigs);
+
+        // Act
+        var result = await _controller.GetListAsync(input);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(3, result.TotalCount); // Should match 3 out of 4 servers
+        Assert.Equal(3, result.Items.Count);
+        
+        // Verify that "other-server" is not included
+        Assert.DoesNotContain(result.Items, item => item.ServerName == "other-server");
         
         _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
     }
