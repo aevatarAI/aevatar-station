@@ -392,6 +392,4 @@ public class WorkflowViewServiceTests
             AgentType = "TestAgent"
         };
     }
-
-
 } 
