@@ -279,9 +279,30 @@ public class AgentService : ApplicationService, IAgentService
         if (type == null)
             return false;
 
+        // 1. 检查是否实现了IAIGAgent接口（适用于实际的GAgent类）
+        var implementsAIGAgentInterface = type.GetInterfaces()
+            .Any(i => i.Name == "IAIGAgent" || i.FullName?.Contains("IAIGAgent") == true);
+        
+        // 2. 检查是否继承自AIGAgentBase基类（适用于实际的GAgent类）
+        var baseType = type.BaseType;
+        var inheritsFromAIGAgentBase = false;
+        while (baseType != null)
+        {
+            if (baseType.Name.Contains("AIGAgentBase") || 
+                baseType.FullName?.Contains("AIGAgentBase") == true)
+            {
+                inheritsFromAIGAgentBase = true;
+                break;
+            }
+            baseType = baseType.BaseType;
+        }
+        
+        // 3. 检查类名是否包含"AIGAgent"（适用于配置类等）
         var typeToCheck = type.FullName ?? type.Name;
-        return typeToCheck?.Contains("aigagent", StringComparison.OrdinalIgnoreCase) == true ||
-               typeToCheck?.Contains("AIGAgent", StringComparison.Ordinal) == true;
+        var hasAIGAgentInName = typeToCheck?.Contains("aigagent", StringComparison.OrdinalIgnoreCase) == true ||
+                               typeToCheck?.Contains("AIGAgent", StringComparison.Ordinal) == true;
+        
+        return implementsAIGAgentInterface || inheritsFromAIGAgentBase || hasAIGAgentInName;
     }
 
     private ConfigurationBase SetupConfigurationData(Configuration configuration,
