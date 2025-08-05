@@ -29,7 +29,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
         
         // Assert
         result.ShouldNotBeNull();
@@ -66,7 +66,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
         
         // Assert
         result.ShouldNotBeNull();
@@ -90,7 +90,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
         
         // Assert
         result.ShouldNotBeNull();
@@ -135,7 +135,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
         
         // Assert
         result.ShouldNotBeNull();
@@ -166,7 +166,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
         
         // Assert
         result.ShouldNotBeNull();
@@ -185,7 +185,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
         
         // Assert
         result.ShouldNotBeNull();
@@ -204,7 +204,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
         
         // Assert
         result.ShouldNotBeNull();
@@ -228,7 +228,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
         
         // Assert
         result.ShouldNotBeNull();
@@ -254,7 +254,7 @@ public class AgentServiceTests
         
         // Act
         var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, 
-            new object[] { testConfigType, "Aevatar.Application.Grains.Agents.AI.TestAIGAgent", "TestAIGAgent" });
+            new object[] { testConfigType });
         
         // Assert
         result.ShouldNotBeNull();
