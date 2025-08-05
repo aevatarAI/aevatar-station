@@ -279,30 +279,44 @@ public class AgentService : ApplicationService, IAgentService
         if (type == null)
             return false;
 
-        // 1. 检查是否实现了IAIGAgent接口（适用于实际的GAgent类）
-        var implementsAIGAgentInterface = type.GetInterfaces()
-            .Any(i => i.Name == "IAIGAgent" || i.FullName?.Contains("IAIGAgent") == true);
-        
-        // 2. 检查是否继承自AIGAgentBase基类（适用于实际的GAgent类）
-        var baseType = type.BaseType;
-        var inheritsFromAIGAgentBase = false;
-        while (baseType != null)
+        try
         {
-            if (baseType.Name.Contains("AIGAgentBase") || 
-                baseType.FullName?.Contains("AIGAgentBase") == true)
+            // 1. 优先使用类型检查 - 检查是否实现了IAIGAgent接口
+            var aiGAgentInterface = Type.GetType("Aevatar.GAgents.AIGAgent.Agent.IAIGAgent, Aevatar.GAgents.AIGAgent");
+            if (aiGAgentInterface != null && aiGAgentInterface.IsAssignableFrom(type))
             {
-                inheritsFromAIGAgentBase = true;
-                break;
+                return true;
             }
-            baseType = baseType.BaseType;
+
+            // 2. 检查是否继承自AIGAgentBase基类
+            var aiGAgentBaseType = Type.GetType("Aevatar.GAgents.AIGAgent.Agent.AIGAgentBase`2, Aevatar.GAgents.AIGAgent");
+            if (aiGAgentBaseType != null)
+            {
+                var currentType = type;
+                while (currentType != null)
+                {
+                    if (currentType.IsGenericType)
+                    {
+                        var genericTypeDef = currentType.GetGenericTypeDefinition();
+                        if (genericTypeDef == aiGAgentBaseType)
+                        {
+                            return true;
+                        }
+                    }
+                    currentType = currentType.BaseType;
+                }
+            }
+
+            // 3. 回退策略：如果类型检查无法识别，使用名称检查（主要用于配置类）
+            var typeName = type.FullName ?? type.Name;
+            return typeName.Contains("AIGAgent", StringComparison.OrdinalIgnoreCase);
         }
-        
-        // 3. 检查类名是否包含"AIGAgent"（适用于配置类等）
-        var typeToCheck = type.FullName ?? type.Name;
-        var hasAIGAgentInName = typeToCheck?.Contains("aigagent", StringComparison.OrdinalIgnoreCase) == true ||
-                               typeToCheck?.Contains("AIGAgent", StringComparison.Ordinal) == true;
-        
-        return implementsAIGAgentInterface || inheritsFromAIGAgentBase || hasAIGAgentInName;
+        catch
+        {
+            // 如果类型检查失败，使用名称检查作为最后的回退
+            var typeName = type.FullName ?? type.Name;
+            return typeName.Contains("AIGAgent", StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     private ConfigurationBase SetupConfigurationData(Configuration configuration,
