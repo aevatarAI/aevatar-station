@@ -1,4 +1,5 @@
 ﻿using Aevatar.Application.Grains.Common.Options;
+using Aevatar.Application.Contracts.Services;
 using Aevatar.Common.Options;
 using Aevatar.Core.Abstractions;
 using Aevatar.Developer.Logger;
@@ -36,6 +37,9 @@ public class AevatarHttpApiModule : AbpModule
         Configure<StripeOptions>(configuration.GetSection("Stripe"));
         Configure<ManagerOptions>(configuration.GetSection("ManagerOptions"));
         Configure<GodGPTOptions>(configuration.GetSection("GodGPT"));
+        Configure<GoogleAnalyticsOptions>(configuration.GetSection("GoogleAnalytics"));
+        
+        context.Services.AddHttpClient<IGoogleAnalyticsService, Aevatar.Application.Services.GoogleAnalyticsService>();
     }
 
     private void ConfigureLocalization()
