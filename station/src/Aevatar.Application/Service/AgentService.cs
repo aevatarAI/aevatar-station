@@ -18,6 +18,7 @@ using Aevatar.Options;
 using Aevatar.Query;
 using Aevatar.Schema;
 using Aevatar.Station.Feature.CreatorGAgent;
+using Aevatar.GAgents.AIGAgent.Agent;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -280,8 +281,7 @@ public class AgentService : ApplicationService, IAgentService
             return false;
 
         // 1. 检查是否实现了IAIGAgent接口
-        var interfaces = type.GetInterfaces();
-        if (interfaces.Any(i => i.Name == "IAIGAgent"))
+        if (typeof(IAIGAgent).IsAssignableFrom(type))
         {
             return true;
         }
@@ -293,14 +293,12 @@ public class AgentService : ApplicationService, IAgentService
             if (currentType.IsGenericType)
             {
                 var genericTypeDef = currentType.GetGenericTypeDefinition();
-                if (genericTypeDef.Name.StartsWith("AIGAgentBase"))
+                if (typeof(AIGAgentBase<,>).IsAssignableFrom(genericTypeDef) ||
+                    typeof(AIGAgentBase<,,>).IsAssignableFrom(genericTypeDef) ||
+                    typeof(AIGAgentBase<,,,>).IsAssignableFrom(genericTypeDef))
                 {
                     return true;
                 }
-            }
-            else if (currentType.Name.StartsWith("AIGAgentBase"))
-            {
-                return true;
             }
             currentType = currentType.BaseType;
         }
