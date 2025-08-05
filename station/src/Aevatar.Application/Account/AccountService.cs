@@ -75,7 +75,7 @@ public class AccountService : AccountAppService, IAccountService
         await _registerCode.SetAsync(GetRegisterCodeKey(input.Email), code, _defaultCacheOptions);
         await _aevatarAccountEmailer.SendRegisterCodeAsync(input.Email, code);
         _logger.LogDebug(
-            "The email: {input.Email} code:{code}.");
+            $"The email: {input.Email} code:{code}.");
 
     }
 
