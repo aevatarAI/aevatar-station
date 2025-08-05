@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Aevatar.Application.Grains.Agents.AI;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AIGAgent.Dtos;
+using Aevatar.Options;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Orleans;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
@@ -21,17 +24,20 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
     private readonly ILogger<TextCompletionService> _logger;
     private readonly IUserAppService _userAppService;
     private readonly IGAgentFactory _gAgentFactory;
+    private readonly IOptionsMonitor<AIServicePromptOptions> _promptOptions;
 
     public TextCompletionService(
         IClusterClient clusterClient,
         ILogger<TextCompletionService> logger,
         IUserAppService userAppService,
-        IGAgentFactory gAgentFactory)
+        IGAgentFactory gAgentFactory,
+        IOptionsMonitor<AIServicePromptOptions> promptOptions)
     {
         _clusterClient = clusterClient;
         _logger = logger;
         _userAppService = userAppService;
         _gAgentFactory = gAgentFactory;
+        _promptOptions = promptOptions;
     }
 
     public async Task<TextCompletionResponseDto> GenerateCompletionsAsync(TextCompletionRequestDto request)
@@ -51,19 +57,22 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
 
             var textCompletionAgent = await _gAgentFactory.GetGAgentAsync<ITextCompletionGAgent>(agentId);
             
+            // 构建完整的系统指令（包含用户输入、规则、示例等）
+            var systemInstructions = BuildTextCompletionSystemInstructions(request.UserGoal);
+            
             // AIGAgent需要先初始化才能使用（设置系统提示词和LLM配置）
             var initializeDto = new InitializeDto()
             {
-                Instructions = "You are a text completion assistant specializing in continuing and completing incomplete text. Your role is to provide natural text continuations, not to answer questions. Focus on understanding the context and flow of the given text, then generate coherent continuations that feel like a natural extension of the original content.",
+                Instructions = systemInstructions,
                 LLMConfig = new LLMConfigDto() { SystemLLM = "OpenAI" },
             };
             
-            _logger.LogDebug("Initializing TextCompletionGAgent with config: {@InitializeConfig}", initializeDto);
+            _logger.LogDebug("Initializing TextCompletionGAgent with complete prompt. Instructions length: {InstructionsLength}", systemInstructions.Length);
             await textCompletionAgent.InitializeAsync(initializeDto);
             
-            // 调用agent生成补全
+            // 调用agent生成补全（传递空字符串，因为所有信息都已经在系统指令中了）
             _logger.LogDebug("Calling agent to generate completions");
-            var completions = await textCompletionAgent.GenerateCompletionsAsync(request.UserGoal);
+            var completions = await textCompletionAgent.GenerateCompletionsAsync(string.Empty);
 
             // 构建成功响应
             var response = new TextCompletionResponseDto
@@ -90,6 +99,51 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
             {
                 Completions = new List<string>()
             };
+        }
+    }
+
+    /// <summary>
+    /// 构建文本补全的完整系统指令（包含用户输入、规则、示例等）
+    /// </summary>
+    private string BuildTextCompletionSystemInstructions(string userInput)
+    {
+        try
+        {
+            _logger.LogDebug("Building complete text completion system instructions for input length: {InputLength}", userInput.Length);
+
+            var promptBuilder = new StringBuilder();
+
+            // 1. 系统角色定义
+            promptBuilder.AppendLine(_promptOptions.CurrentValue.TextCompletionSystemRole);
+            promptBuilder.AppendLine();
+
+            // 2. 任务指令（包含用户输入）
+            var taskInstructions = _promptOptions.CurrentValue.TextCompletionTaskTemplate
+                .Replace("{USER_INPUT}", userInput);
+            promptBuilder.AppendLine(taskInstructions);
+            promptBuilder.AppendLine();
+
+            // 3. 重要规则
+            promptBuilder.AppendLine(_promptOptions.CurrentValue.TextCompletionImportantRules);
+            promptBuilder.AppendLine();
+
+            // 4. 示例
+            promptBuilder.AppendLine(_promptOptions.CurrentValue.TextCompletionExamples);
+            promptBuilder.AppendLine();
+
+            // 5. 输出格式要求
+            promptBuilder.AppendLine(_promptOptions.CurrentValue.TextCompletionOutputRequirements);
+
+            var systemInstructions = promptBuilder.ToString();
+            _logger.LogDebug("Built complete text completion system instructions with length: {PromptLength}", systemInstructions.Length);
+
+            return systemInstructions;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error building text completion system instructions");
+            // 返回基础的提示词作为后备
+            return _promptOptions.CurrentValue.TextCompletionSystemRole + "\n\n" + _promptOptions.CurrentValue.TextCompletionOutputRequirements;
         }
     }
 }

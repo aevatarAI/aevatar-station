@@ -64,80 +64,22 @@ public class TextCompletionGAgent : AIGAgentBase<TextCompletionState, TextComple
     /// </summary>
     public async Task<List<string>> GenerateCompletionsAsync(string inputText)
     {
-        if (string.IsNullOrWhiteSpace(inputText))
-        {
-            throw new ArgumentException("Input text cannot be empty", nameof(inputText));
-        }
-
-        if (inputText.Trim().Length < 2)
-        {
-            throw new ArgumentException("Input text must be at least 2 characters long for completion", nameof(inputText));
-        }
-
-        Logger.LogInformation("Starting text completion generation, input text length: {Length} characters", inputText.Length);
+        Logger.LogInformation("Starting text completion generation, input text length: {Length} characters", inputText?.Length ?? 0);
 
         try
         {
-            // 构建AI提示词，明确要求直接续写补全用户的文本
-            var prompt = $@"You are a text completion assistant. Your task is to continue the given incomplete text by adding words that naturally complete it into a full sentence.
-
-**User's Incomplete Text:** {inputText}
-
-**Your Task:** 
-Complete this text by adding words directly after it to form complete, natural sentences. Generate 5 different completions.
-
-**Important Rules:**
-1. Continue the text DIRECTLY from where it ends - do not add punctuation between original and completion
-2. Make the result a complete, grammatically correct sentence 
-3. The completion should feel like a natural continuation of the original text
-4. Generate exactly 5 different completion options
-5. Each completion should result in a meaningful, complete sentence
-6. Use different completion approaches and styles
-
-**Examples:**
-- Input: ""今天天气很""
-  → Completions: [
-    ""今天天气很好适合出门运动"",
-    ""今天天气很糟糕一直在下雨"", 
-    ""今天天气很晴朗阳光充足"",
-    ""今天天气很凉爽有微风"",
-    ""今天天气很热需要开空调""
-  ]
-
-- Input: ""我正在考虑""
-  → Completions: [
-    ""我正在考虑换一个工作环境"",
-    ""我正在考虑这个问题的解决方案"",
-    ""我正在考虑是否要买车"",
-    ""我正在考虑去哪里旅游"",
-    ""我正在考虑学习新的技能""
-  ]
-
-- Input: ""请帮我获取""
-  → Completions: [
-    ""请帮我获取这个文件的最新版本"",
-    ""请帮我获取明天的天气预报信息"",
-    ""请帮我获取会议的详细安排"",
-    ""请帮我获取项目的进度报告"",
-    ""请帮我获取用户的反馈数据""
-  ]
-
-**Response Format:**
-Return ONLY a JSON object: {{""completions"": [""completion1"", ""completion2"", ""completion3"", ""completion4"", ""completion5""]}}
-
-Each completion should be the original text + direct continuation (no punctuation in between).
-Return only JSON, no other explanations.";
-            Logger.LogDebug("Generated prompt length: {PromptLength} characters", prompt.Length);
+            // 简化版本：直接使用初始化时设置的系统指令
+            // 如果 inputText 不为空，则将其作为用户消息发送；否则使用系统指令中已包含的内容
+            string userMessage = string.IsNullOrWhiteSpace(inputText) ? "Please generate the text completions as instructed." : inputText;
+            
+            Logger.LogDebug("Sending user message to AI service: {Message}", userMessage);
 
             // 调用AI服务生成补全结果
-            var aiResult = await CallAIForCompletionAsync(prompt);
+            var aiResult = await CallAIForCompletionAsync(userMessage);
             
             // 解析AI返回的结果
             var completions = ParseCompletionResult(aiResult);
             
-            // 记录日志即可，不需要保存状态
-            Logger.LogDebug("Text completion completed successfully, generated {Count} options", completions.Count);
-
             Logger.LogInformation("Text completion generation completed, generated {Count} options", completions.Count);
             return completions;
         }
@@ -145,22 +87,22 @@ Return only JSON, no other explanations.";
         {
             Logger.LogError(ex, "Error occurred during text completion generation, input text: {InputText}", inputText);
             
-            // 返回空字符串作为回退补全结果
-            return new ();
+            // 返回空列表作为回退补全结果
+            return new List<string>();
         }
     }
 
     /// <summary>
     /// 调用AI服务进行补全生成
     /// </summary>
-    private async Task<string> CallAIForCompletionAsync(string prompt)
+    private async Task<string> CallAIForCompletionAsync(string userMessage)
     {
         try
         {
-            Logger.LogDebug("Sending prompt to AI service, length: {Length} characters", prompt.Length);
+            Logger.LogDebug("Sending user message to AI service, length: {Length} characters", userMessage.Length);
 
             // 调用真正的AI服务
-            var chatResult = await ChatWithHistory(prompt);
+            var chatResult = await ChatWithHistory(userMessage);
 
             if (chatResult == null || !chatResult.Any())
             {

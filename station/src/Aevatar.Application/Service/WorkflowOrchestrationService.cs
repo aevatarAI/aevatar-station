@@ -36,7 +36,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     private readonly IUserAppService _userAppService;
     private readonly IGAgentManager _gAgentManager;
     private readonly IGAgentFactory _gAgentFactory;
-    private readonly IOptionsMonitor<WorkflowOrchestrationPromptOptions> _promptOptions;
+    private readonly IOptionsMonitor<AIServicePromptOptions> _promptOptions;
 
     public WorkflowOrchestrationService(
         ILogger<WorkflowOrchestrationService> logger,
@@ -44,7 +44,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         IUserAppService userAppService,
         IGAgentManager gAgentManager,
         IGAgentFactory gAgentFactory,
-        IOptionsMonitor<WorkflowOrchestrationPromptOptions> promptOptions)
+        IOptionsMonitor<AIServicePromptOptions> promptOptions)
     {
         _logger = logger;
         _clusterClient = clusterClient;
