@@ -274,36 +274,17 @@ public class AgentService : ApplicationService, IAgentService
 
     /// <summary>
     /// Checks if the agent type is an AI GAgent
+    /// Since all AI agents implement IAIGAgent interface (and typically inherit from AIGAgentBase),
+    /// checking the interface is sufficient for identification
     /// </summary>
     private bool IsAIGAgent(Type? type)
     {
         if (type == null)
             return false;
 
-        // 1. 检查是否实现了IAIGAgent接口
-        if (typeof(IAIGAgent).IsAssignableFrom(type))
-        {
-            return true;
-        }
-        
-        // 2. 检查是否继承自AIGAgentBase泛型基类
-        var currentType = type;
-        while (currentType != null)
-        {
-            if (currentType.IsGenericType)
-            {
-                var genericTypeDef = currentType.GetGenericTypeDefinition();
-                if (typeof(AIGAgentBase<,>).IsAssignableFrom(genericTypeDef) ||
-                    typeof(AIGAgentBase<,,>).IsAssignableFrom(genericTypeDef) ||
-                    typeof(AIGAgentBase<,,,>).IsAssignableFrom(genericTypeDef))
-                {
-                    return true;
-                }
-            }
-            currentType = currentType.BaseType;
-        }
-        
-        return false;
+        // Check if the type implements IAIGAgent interface
+        // This covers both direct implementations and AIGAgentBase inheritance
+        return typeof(IAIGAgent).IsAssignableFrom(type);
     }
 
     private ConfigurationBase SetupConfigurationData(Configuration configuration,
