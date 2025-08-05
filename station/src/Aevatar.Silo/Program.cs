@@ -17,11 +17,11 @@ public class Program
         HistogramAggregatorExtension.SetLabelProvider(new AevatarMetricLabelProvider());
         var configuration = new ConfigurationBuilder()
             .AddAevatarSecureConfiguration(
-                systemConfigPaths: new[]
-                {
+                systemConfigPaths:
+                [
                     Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"),
                     Path.Combine(AppContext.BaseDirectory, "appsettings.Silo.Shared.json")
-                })
+                ])
             .AddEnvironmentVariables()
             .Build();
         Log.Logger = new LoggerConfiguration()
@@ -36,11 +36,11 @@ public class Program
             builder.ConfigureHostConfiguration(config =>
             {
                 config.AddAevatarSecureConfiguration(
-                        systemConfigPaths: new[]
-                        {
+                        systemConfigPaths:
+                        [
                             Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"),
                             Path.Combine(AppContext.BaseDirectory, "appsettings.Silo.Shared.json")
-                        })
+                        ])
                     .AddEnvironmentVariables();
             });
             var app = builder.Build();
@@ -54,7 +54,7 @@ public class Program
         }
         finally
         {
-            Log.CloseAndFlush();
+            await Log.CloseAndFlushAsync();
         }
     }
 

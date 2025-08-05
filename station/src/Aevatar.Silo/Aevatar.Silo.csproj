@@ -54,5 +54,6 @@
     <ItemGroup>
         <Content Include="../../configurations/appsettings.Shared.json" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" Link="appsettings.Shared.json" />
         <Content Include="../../configurations/appsettings.Silo.Shared.json" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" Link="appsettings.Silo.Shared.json" />
+        <Content Include="../../configurations/appsettings.mcp.json" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" Link="appsettings.mcp.json" />
     </ItemGroup>
 </Project>
