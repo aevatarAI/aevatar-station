@@ -75,5 +75,6 @@ public class AevatarApplicationModule : AbpModule
         Configure<AccountOptions>(configuration.GetSection("Account"));
         Configure<ApiRequestOptions>(configuration.GetSection("ApiRequest"));
         Configure<BlobStoringOptions>(configuration.GetSection("BlobStoring"));
+        Configure<DebugModeOptions>(configuration.GetSection("DebugMode"));
     }
 }
