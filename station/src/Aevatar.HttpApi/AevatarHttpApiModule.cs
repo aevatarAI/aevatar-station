@@ -6,6 +6,7 @@ using Aevatar.Developer.Logger;
 using Localization.Resources.AbpUi;
 using Aevatar.Localization;
 using Aevatar.Options;
+using Aevatar.Service;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.Account;
@@ -39,7 +40,6 @@ public class AevatarHttpApiModule : AbpModule
         Configure<GodGPTOptions>(configuration.GetSection("GodGPT"));
         Configure<GoogleAnalyticsOptions>(configuration.GetSection("GoogleAnalytics"));
         
-        context.Services.AddHttpClient<IGoogleAnalyticsService, Aevatar.Application.Services.GoogleAnalyticsService>();
     }
 
     private void ConfigureLocalization()

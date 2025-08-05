@@ -30,20 +30,18 @@ public interface IGoogleAnalyticsService
 /// </summary>
 public class GoogleAnalyticsService : IGoogleAnalyticsService, ITransientDependency
 {
-    private readonly HttpClient _httpClient;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly GoogleAnalyticsOptions _options;
     private readonly ILogger<GoogleAnalyticsService> _logger;
 
     public GoogleAnalyticsService(
-        HttpClient httpClient,
+        IHttpClientFactory httpClientFactory,
         IOptions<GoogleAnalyticsOptions> options,
         ILogger<GoogleAnalyticsService> logger)
     {
-        _httpClient = httpClient;
+        _httpClientFactory = httpClientFactory;
         _options = options.Value;
         _logger = logger;
-        
-        _httpClient.Timeout = TimeSpan.FromSeconds(_options.TimeoutSeconds);
     }
 
     /// <summary>
@@ -87,7 +85,11 @@ public class GoogleAnalyticsService : IGoogleAnalyticsService, ITransientDepende
             _logger.LogDebug("[GoogleAnalyticsService][TrackEventAsync] Sending event: {EventName}, ClientId: {ClientId}, URL: {Url}",
                 eventRequest.EventName, eventRequest.ClientId, url);
 
-            var response = await _httpClient.PostAsync(url, content);
+            // Create HttpClient using IHttpClientFactory with proper lifecycle management
+            using var httpClient = _httpClientFactory.CreateClient();
+            httpClient.Timeout = TimeSpan.FromSeconds(_options.TimeoutSeconds);
+
+            var response = await httpClient.PostAsync(url, content);
             var responseContent = await response.Content.ReadAsStringAsync();
 
             if (response.IsSuccessStatusCode)
@@ -134,25 +136,25 @@ public class GoogleAnalyticsService : IGoogleAnalyticsService, ITransientDepende
     {
         var payload = new GAMeasurementProtocolPayload
         {
-            client_id = !string.IsNullOrWhiteSpace(eventRequest.ClientId) 
+            ClientId = !string.IsNullOrWhiteSpace(eventRequest.ClientId) 
                 ? eventRequest.ClientId 
-                : string.Empty,
-            user_id = eventRequest.UserId,
-            timestamp_micros = eventRequest.TimestampMicros ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000
+                : eventRequest.UserId ?? Guid.NewGuid().ToString(),
+            UserId = eventRequest.UserId,
+            TimestampMicros = eventRequest.TimestampMicros ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000
         };
 
         var gaEvent = new GAEvent
         {
-            name = eventRequest.EventName,
-            parameters = new Dictionary<string, object>(eventRequest.Parameters)
+            Name = eventRequest.EventName,
+            Parameters = new Dictionary<string, object>(eventRequest.Parameters)
         };
 
         if (!string.IsNullOrWhiteSpace(eventRequest.SessionId))
         {
-            gaEvent.parameters["session_id"] = eventRequest.SessionId;
+            gaEvent.Parameters["session_id"] = eventRequest.SessionId;
         }
 
-        payload.events.Add(gaEvent);
+        payload.Events.Add(gaEvent);
         return payload;
     }
 

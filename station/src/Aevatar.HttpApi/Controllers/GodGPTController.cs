@@ -725,7 +725,7 @@ public class GodGPTController : AevatarController
     /// <param name="request">GA event request</param>
     /// <returns>Tracking result</returns>
     [HttpPost("godgpt/analytics/track")]
-    public async Task<IActionResult> TrackAnalyticsEventAsync([FromBody] GoogleAnalyticsEventRequestDto request)
+    public async Task<IActionResult> TrackAnalyticsEventAsync(GoogleAnalyticsEventRequestDto request)
     {
         var stopwatch = Stopwatch.StartNew();
         try

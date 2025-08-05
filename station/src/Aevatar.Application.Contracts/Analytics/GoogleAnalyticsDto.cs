@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using Newtonsoft.Json;
 
 namespace Aevatar.Application.Contracts.Analytics;
 
@@ -58,10 +59,29 @@ public class GoogleAnalyticsEventResponseDto
 /// </summary>
 public class GAMeasurementProtocolPayload
 {
-    public string client_id { get; set; } = string.Empty;
-    public string? user_id { get; set; }
-    public long? timestamp_micros { get; set; }
-    public List<GAEvent> events { get; set; } = new List<GAEvent>();
+    /// <summary>
+    /// Client ID for user identification
+    /// </summary>
+    [JsonProperty("client_id")]
+    public string ClientId { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// User ID for cross-platform user identification
+    /// </summary>
+    [JsonProperty("user_id")]
+    public string? UserId { get; set; }
+    
+    /// <summary>
+    /// Timestamp in microseconds since Unix epoch
+    /// </summary>
+    [JsonProperty("timestamp_micros")]
+    public long? TimestampMicros { get; set; }
+    
+    /// <summary>
+    /// Array of events to send
+    /// </summary>
+    [JsonProperty("events")]
+    public List<GAEvent> Events { get; set; } = new List<GAEvent>();
 }
 
 /// <summary>
@@ -69,6 +89,15 @@ public class GAMeasurementProtocolPayload
 /// </summary>
 public class GAEvent
 {
-    public string name { get; set; } = string.Empty;
-    public Dictionary<string, object> parameters { get; set; } = new Dictionary<string, object>();
+    /// <summary>
+    /// Event name
+    /// </summary>
+    [JsonProperty("name")]
+    public string Name { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Event parameters
+    /// </summary>
+    [JsonProperty("params")]
+    public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
 } 
