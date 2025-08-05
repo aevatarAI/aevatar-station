@@ -389,24 +389,30 @@ jobs:
               echo "ℹ️ Agent list API response body: $TEST_RESPONSE_BODY"
             fi
             
-            # Test if updateDockerImage endpoint exists by checking available routes
-            echo "ℹ️ Testing updateDockerImage endpoint existence..."
-            DOCKER_TEST_RESPONSE=$(curl -s -w "%{http_code}" --location "${API_SERVER_URL}/api/users/updateDockerImage?hostType=0&imageName=test&version=1" \
-              -X 'GET' \
+            # Test if updateDockerImage endpoint exists with a minimal POST request
+            echo "ℹ️ Testing updateDockerImage endpoint with minimal request..."
+            DOCKER_TEST_RESPONSE=$(curl -s -w "%{http_code}" --location "${API_SERVER_URL}/api/users/updateDockerImage?hostType=0&imageName=test%3Atest&version=1" \
+              -X 'POST' \
               -H 'accept: */*' \
-              -H "Authorization: Bearer ${AUTH_TOKEN}")
+              -H "Authorization: Bearer ${AUTH_TOKEN}" \
+              -H 'X-Requested-With: XMLHttpRequest' \
+              -d '')
             
             DOCKER_TEST_HTTP_CODE="${DOCKER_TEST_RESPONSE: -3}"
             DOCKER_TEST_RESPONSE_BODY="${DOCKER_TEST_RESPONSE%???}"
-            echo "ℹ️ UpdateDockerImage GET test - Response code: $DOCKER_TEST_HTTP_CODE"
-            echo "ℹ️ UpdateDockerImage GET response body: $DOCKER_TEST_RESPONSE_BODY"
+            echo "ℹ️ UpdateDockerImage POST test - Response code: $DOCKER_TEST_HTTP_CODE"
+            echo "ℹ️ UpdateDockerImage POST response body: $DOCKER_TEST_RESPONSE_BODY"
             
             if [[ "$DOCKER_TEST_HTTP_CODE" -eq 404 ]]; then
               echo "::error ::❌ updateDockerImage API endpoint does not exist in this environment"
               echo "- ❌ API Endpoint: /api/users/updateDockerImage not found (HTTP 404)" >> "$SUMMARY_FILE"
               exit 1
-            elif [[ "$DOCKER_TEST_HTTP_CODE" -eq 405 ]]; then
-              echo "✅ updateDockerImage endpoint exists but GET method not allowed (expected for POST endpoint)"
+            elif [[ "$DOCKER_TEST_HTTP_CODE" -eq 400 ]] && [[ "$DOCKER_TEST_RESPONSE_BODY" == *"nginx"* ]]; then
+              echo "::error ::❌ updateDockerImage API endpoint not configured in nginx"
+              echo "- ❌ API Endpoint: /api/users/updateDockerImage not configured in nginx routing" >> "$SUMMARY_FILE"
+              exit 1
+            elif [[ "$DOCKER_TEST_HTTP_CODE" -eq 200 ]] || [[ "$DOCKER_TEST_HTTP_CODE" -eq 400 ]] && [[ "$DOCKER_TEST_RESPONSE_BODY" != *"nginx"* ]]; then
+              echo "✅ updateDockerImage endpoint exists and is accessible"
             fi
             
             # URL encode the image name - use same method as package.yaml (only encode colons)
@@ -415,35 +421,22 @@ jobs:
             echo "ℹ️ URL encoded image name: $ENCODED_IMAGE_NAME"
             echo "ℹ️ Making API call to: ${API_SERVER_URL}/api/users/updateDockerImage?hostType=${host_type}&imageName=${ENCODED_IMAGE_NAME}&version=1"
             
-            # Try multiple approaches to get detailed error information
-            echo "ℹ️ Attempting API call with verbose curl output..."
-            
-            # First attempt with detailed error logging
-            API_RESPONSE=$(curl -s -w "%{http_code}" -k -X 'POST' "${API_SERVER_URL}/api/users/updateDockerImage?hostType=${host_type}&imageName=${ENCODED_IMAGE_NAME}&version=1" \
+            # Make API call using exact pattern from package.yaml
+            echo "ℹ️ Making updateDockerImage API call..."
+            API_RESPONSE=$(curl -s -w "%{http_code}" -X 'POST' "${API_SERVER_URL}/api/users/updateDockerImage?hostType=${host_type}&imageName=${ENCODED_IMAGE_NAME}&version=1" \
               -H 'accept: */*' \
               -H "Authorization: Bearer ${AUTH_TOKEN}" \
               -H 'X-Requested-With: XMLHttpRequest' \
-              -H 'Content-Type: application/json' \
-              -d '' --max-time 30)
+              -d '')
             
-            # If that fails, try without Content-Type header
+            # If it fails, show verbose output for debugging
             if [[ "${API_RESPONSE: -3}" -ge 400 ]]; then
-              echo "ℹ️ First attempt failed, trying without Content-Type header..."
-              API_RESPONSE=$(curl -s -w "%{http_code}" -k -X 'POST' "${API_SERVER_URL}/api/users/updateDockerImage?hostType=${host_type}&imageName=${ENCODED_IMAGE_NAME}&version=1" \
+              echo "ℹ️ API call failed, getting verbose output for debugging..."
+              curl -v -X 'POST' "${API_SERVER_URL}/api/users/updateDockerImage?hostType=${host_type}&imageName=${ENCODED_IMAGE_NAME}&version=1" \
                 -H 'accept: */*' \
                 -H "Authorization: Bearer ${AUTH_TOKEN}" \
                 -H 'X-Requested-With: XMLHttpRequest' \
-                -d '' --max-time 30)
-            fi
-            
-            # If still failing, try with verbose output for debugging
-            if [[ "${API_RESPONSE: -3}" -ge 400 ]]; then
-              echo "ℹ️ Second attempt failed, getting verbose curl output..."
-              curl -v -k -X 'POST' "${API_SERVER_URL}/api/users/updateDockerImage?hostType=${host_type}&imageName=${ENCODED_IMAGE_NAME}&version=1" \
-                -H 'accept: */*' \
-                -H "Authorization: Bearer ${AUTH_TOKEN}" \
-                -H 'X-Requested-With: XMLHttpRequest' \
-                -d '' --max-time 30 || true
+                -d '' || true
             fi
             
             HTTP_CODE="${API_RESPONSE: -3}"
