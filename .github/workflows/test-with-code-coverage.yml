@@ -106,9 +106,10 @@ jobs:
       - name: Upload unified coverage reports to Codecov
         uses: codecov/codecov-action@v4
         with:
-          fail_ci_if_error: false
+          fail_ci_if_error: true # Set to true to expose errors
           directory: ./
           flags: unittests
           name: codecov-umbrella
+          verbose: true # Detailed logging
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }} 
