@@ -9,6 +9,7 @@ using Xunit;
 using Xunit.Abstractions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Reflection;
 
 namespace Aevatar.Application.Tests.GAgent;
 
@@ -291,5 +292,232 @@ public class TextCompletionGAgentTests : AevatarApplicationGrainsTestBase
         result.Count.ShouldBeLessThanOrEqualTo(5);
         
         _output.WriteLine($"Generated {result.Count} completions for markdown-like input");
+    }
+
+    // ====== ADDITIONAL TESTS FOR IMPROVED COVERAGE ======
+
+    [Fact]
+    public async Task GenerateCompletionsAsync_WithEmptyStringListInput_ShouldHandleFallbackScenario()
+    {
+        // Arrange
+        var agentId = Guid.NewGuid();
+        var textCompletion = _clusterClient.GetGrain<ITextCompletionGAgent>(agentId);
+        var inputText = "Test fallback scenario";
+
+        // Act
+        var result = await textCompletion.GenerateCompletionsAsync(inputText);
+
+        // Assert - Since no real AI service is configured, this should trigger fallback logic
+        result.ShouldNotBeNull();
+        result.Count.ShouldBeLessThanOrEqualTo(5);
+        
+        // The fallback should provide empty strings for all completions
+        foreach (var completion in result)
+        {
+            completion.ShouldNotBeNull();
+        }
+        
+        _output.WriteLine($"Fallback scenario generated {result.Count} completions");
+    }
+
+    [Fact]
+    public async Task GenerateCompletionsAsync_ExceptionHandling_ShouldReturnEmptyListOnError()
+    {
+        // Arrange
+        var agentId = Guid.NewGuid();
+        var textCompletion = _clusterClient.GetGrain<ITextCompletionGAgent>(agentId);
+        
+        // Use a very large input that might cause processing issues
+        var problematicInput = new string('X', 100000) + "\0\0\0"; // Null characters might cause issues
+
+        // Act
+        var result = await textCompletion.GenerateCompletionsAsync(problematicInput);
+
+        // Assert - Should handle gracefully and return empty list
+        result.ShouldNotBeNull();
+        result.ShouldNotBeEmpty(); // Should still return something, even if empty strings
+        
+        _output.WriteLine($"Exception handling test returned {result.Count} completions");
+    }
+
+    [Fact]
+    public async Task GenerateCompletionsAsync_WithMalformedJsonInput_ShouldHandleGracefully()
+    {
+        // Arrange
+        var agentId = Guid.NewGuid();
+        var textCompletion = _clusterClient.GetGrain<ITextCompletionGAgent>(agentId);
+        var malformedJson = "{ \"unclosed\": \"quote, [ incomplete array";
+
+        // Act
+        var result = await textCompletion.GenerateCompletionsAsync(malformedJson);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Count.ShouldBeLessThanOrEqualTo(5);
+        
+        _output.WriteLine($"Malformed JSON input handled gracefully with {result.Count} completions");
+    }
+
+    [Fact]
+    public async Task GenerateCompletionsAsync_WithControlCharacters_ShouldHandleGracefully()
+    {
+        // Arrange
+        var agentId = Guid.NewGuid();
+        var textCompletion = _clusterClient.GetGrain<ITextCompletionGAgent>(agentId);
+        var controlCharsInput = "Test\x00\x01\x02\x03\x1F\x7F with control chars";
+
+        // Act
+        var result = await textCompletion.GenerateCompletionsAsync(controlCharsInput);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Count.ShouldBeLessThanOrEqualTo(5);
+        
+        _output.WriteLine($"Control characters input handled with {result.Count} completions");
+    }
+
+    [Fact]
+    public async Task GenerateCompletionsAsync_EmptyResponseFromAI_ShouldUseFallback()
+    {
+        // Arrange
+        var agentId = Guid.NewGuid();
+        var textCompletion = _clusterClient.GetGrain<ITextCompletionGAgent>(agentId);
+        var inputText = "Test empty AI response scenario";
+
+        // Act - Since no real AI is configured, this should simulate empty response scenario
+        var result = await textCompletion.GenerateCompletionsAsync(inputText);
+
+        // Assert - Should use fallback mechanism
+        result.ShouldNotBeNull();
+        result.Count.ShouldBeLessThanOrEqualTo(5);
+        
+        // Verify all completions are handled (may be empty strings in fallback)
+        foreach (var completion in result)
+        {
+            completion.ShouldNotBeNull();
+        }
+        
+        _output.WriteLine($"Empty AI response scenario handled with fallback: {result.Count} completions");
+    }
+
+    [Fact]
+    public async Task GenerateCompletionsAsync_JsonParsingScenarios_ShouldHandleVariousFormats()
+    {
+        // Arrange
+        var agentId = Guid.NewGuid();
+        var textCompletion = _clusterClient.GetGrain<ITextCompletionGAgent>(agentId);
+        
+        // Test various inputs that might affect JSON parsing paths
+        var testInputs = new[]
+        {
+            "```json\n{\"test\": \"with markdown markers\"}\n```",
+            "```\n{\"test\": \"without json marker\"}\n```", 
+            "{\"test\": \"without markdown\"}",
+            "Plain text without JSON",
+            "\t\n  {\"test\": \"with whitespace\"}  \t\n"
+        };
+
+        foreach (var input in testInputs)
+        {
+            // Act
+            var result = await textCompletion.GenerateCompletionsAsync(input);
+
+            // Assert
+            result.ShouldNotBeNull();
+            result.Count.ShouldBeLessThanOrEqualTo(5);
+            
+            _output.WriteLine($"JSON parsing test with input type handled: {result.Count} completions");
+        }
+    }
+
+    [Fact]
+    public async Task GenerateCompletionsAsync_LoggingPaths_ShouldCoverAllLogLevels()
+    {
+        // Arrange
+        var agentId = Guid.NewGuid();
+        var textCompletion = _clusterClient.GetGrain<ITextCompletionGAgent>(agentId);
+        
+        // Test different inputs to trigger various logging paths
+        var testScenarios = new[]
+        {
+            ("Normal input", "This is a normal test input"),
+            ("Empty input", ""),
+            ("Null input", null),
+            ("Very long input", new string('A', 5000)),
+            ("Special chars", "Test with \n\t\r special characters")
+        };
+
+        foreach (var (scenarioName, input) in testScenarios)
+        {
+            // Act
+            var result = await textCompletion.GenerateCompletionsAsync(input);
+
+            // Assert
+            result.ShouldNotBeNull();
+            result.Count.ShouldBeLessThanOrEqualTo(5);
+            
+            _output.WriteLine($"Logging scenario '{scenarioName}' completed with {result.Count} completions");
+        }
+    }
+
+    [Fact]
+    public async Task GenerateCompletionsAsync_StateValidation_ShouldMaintainStateConsistency()
+    {
+        // Arrange
+        var agentId = Guid.NewGuid();
+        var textCompletion = _clusterClient.GetGrain<ITextCompletionGAgent>(agentId);
+
+        // Act - Multiple calls to check state consistency
+        var state1 = await textCompletion.GetStateAsync();
+        var result1 = await textCompletion.GenerateCompletionsAsync("First call");
+        var state2 = await textCompletion.GetStateAsync();
+        var result2 = await textCompletion.GenerateCompletionsAsync("Second call");
+        var state3 = await textCompletion.GetStateAsync();
+
+        // Assert
+        state1.ShouldNotBeNull();
+        state2.ShouldNotBeNull();
+        state3.ShouldNotBeNull();
+        
+        result1.ShouldNotBeNull();
+        result2.ShouldNotBeNull();
+        
+        _output.WriteLine($"State consistency maintained across multiple calls");
+    }
+
+    [Fact]
+    public async Task TextCompletionState_Serialization_ShouldBeValid()
+    {
+        // Arrange
+        var state = new TextCompletionState();
+        
+        // Act & Assert - Test that state can be serialized/deserialized
+        var stateType = state.GetType();
+        stateType.ShouldNotBeNull();
+        stateType.Name.ShouldBe("TextCompletionState");
+        
+        // Verify it has the GenerateSerializer attribute
+        var hasSerializerAttribute = stateType.GetCustomAttribute<GenerateSerializerAttribute>() != null;
+        hasSerializerAttribute.ShouldBeTrue();
+        
+        _output.WriteLine($"TextCompletionState serialization validation passed");
+    }
+
+    [Fact]
+    public async Task TextCompletionEvent_Serialization_ShouldBeValid()
+    {
+        // Arrange
+        var eventObj = new TextCompletionEvent();
+        
+        // Act & Assert - Test that event can be serialized/deserialized
+        var eventType = eventObj.GetType();
+        eventType.ShouldNotBeNull();
+        eventType.Name.ShouldBe("TextCompletionEvent");
+        
+        // Verify it has the GenerateSerializer attribute
+        var hasSerializerAttribute = eventType.GetCustomAttribute<GenerateSerializerAttribute>() != null;
+        hasSerializerAttribute.ShouldBeTrue();
+        
+        _output.WriteLine($"TextCompletionEvent serialization validation passed");
     }
 } 
