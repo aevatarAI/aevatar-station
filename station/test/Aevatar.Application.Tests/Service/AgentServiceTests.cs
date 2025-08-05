@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Aevatar.Agent;
 using Aevatar.Service;
 using Aevatar.Options;
+using Aevatar.Application.Grains.Agents.AI;
 using Shouldly;
 using Xunit;
 using Microsoft.Extensions.Logging;
@@ -273,6 +274,43 @@ public class AgentServiceTests
         instructionsValue.ShouldNotBeNull();
         instructionsValue.Count.ShouldBe(1);
         instructionsValue[0].ShouldBe("Default AI instructions");
+    }
+
+    [Fact]
+    public async Task IsAIGAgent_WithMultiLevelInterfaceInheritance_ShouldDetectCorrectly()
+    {
+        // Arrange - Create test interfaces and classes to simulate multi-level inheritance
+        // IChatAIGAgent : IAIGAgent
+        // ChatAIGAgent : IChatAIGAgent
+        
+        var agentServiceType = typeof(AgentService);
+        var method = agentServiceType.GetMethod("IsAIGAgent", 
+            BindingFlags.NonPublic | BindingFlags.Instance);
+        
+        method.ShouldNotBeNull("IsAIGAgent method should exist");
+        
+        var agentService = CreateAgentServiceForTesting();
+        
+        // Test direct interface implementation
+        var directImplementationType = typeof(ITextCompletionGAgent); // This directly inherits IAIGAgent
+        var isDirectAI = (bool)method.Invoke(agentService, new object[] { directImplementationType });
+        
+        // Test concrete class that implements interface which inherits IAIGAgent
+        var concreteImplementationType = typeof(TextCompletionGAgent); // This implements ITextCompletionGAgent which inherits IAIGAgent
+        var isConcreteAI = (bool)method.Invoke(agentService, new object[] { concreteImplementationType });
+        
+        // Assert
+        isDirectAI.ShouldBeTrue("Direct interface inheritance should be detected");
+        isConcreteAI.ShouldBeTrue("Multi-level inheritance through interface should be detected");
+        
+        // Test null case
+        var isNullAI = (bool)method.Invoke(agentService, new object[] { null });
+        isNullAI.ShouldBeFalse("Null type should return false");
+        
+        // Test non-AI agent
+        var nonAIType = typeof(string);
+        var isNonAI = (bool)method.Invoke(agentService, new object[] { nonAIType });
+        isNonAI.ShouldBeFalse("Non-AI type should return false");
     }
 
     private AgentService CreateAgentServiceForTesting()
