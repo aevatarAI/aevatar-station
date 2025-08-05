@@ -34,7 +34,7 @@ public class WorkflowViewService : ApplicationService, IWorkflowViewService
         _agentService = agentService;
         _gAgentFactory = gAgentFactory;
         _logger = logger;
-        _debugModeOptions = debugModeOptions.Value;
+        _debugModeOptions = debugModeOptions == null ? new DebugModeOptions() : debugModeOptions.Value;
     }
     
     public async Task<AgentDto> PublishWorkflowAsync(Guid viewAgentId)
