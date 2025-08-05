@@ -229,7 +229,7 @@ public class AgentService : ApplicationService, IAgentService
                         var value = property.GetValue(instance);
 
                         // Special handling for AIGAgent systemLLM property
-                        if (IsAIGAgent(configurationType) && 
+                        if (configurationType != null && typeof(IAIGAgent).IsAssignableFrom(configurationType) && 
                             string.Equals(property.Name, "systemLLM", StringComparison.OrdinalIgnoreCase))
                         {
                             var systemLLMList = _agentDefaultValuesOptions.CurrentValue.SystemLLMConfigs;
@@ -270,21 +270,6 @@ public class AgentService : ApplicationService, IAgentService
         }
 
         return defaultValues;
-    }
-
-    /// <summary>
-    /// Checks if the agent type is an AI GAgent
-    /// Since all AI agents implement IAIGAgent interface (and typically inherit from AIGAgentBase),
-    /// checking the interface is sufficient for identification
-    /// </summary>
-    private bool IsAIGAgent(Type? type)
-    {
-        if (type == null)
-            return false;
-
-        // Check if the type implements IAIGAgent interface
-        // This covers both direct implementations and AIGAgentBase inheritance
-        return typeof(IAIGAgent).IsAssignableFrom(type);
     }
 
     private ConfigurationBase SetupConfigurationData(Configuration configuration,
