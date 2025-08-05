@@ -17,6 +17,7 @@ on:
           - Aevatar.AuthServer
           - Aevatar.DbMigrator
           - Aevatar.Developer.Host
+          - Aevatar.Developer.Silo
 
 run-name: Update Aevatar Station Ephemeral Test Environment Image on ${{ github.ref_name }} from ${{ github.sha }}
 
@@ -42,6 +43,7 @@ jobs:
             matrix=$(jq -c -n '[
               "Aevatar.Silo",
               "Aevatar.Developer.Host",
+              "Aevatar.Developer.Silo",
               "Aevatar.HttpApi.Host",
               "Aevatar.AuthServer",
               "Aevatar.DbMigrator"
@@ -50,14 +52,14 @@ jobs:
             matrix=$(jq -c -n '["Aevatar.Silo"]')
           elif [[ "$service" == "Aevatar.Developer.Host" ]]; then
             matrix=$(jq -c -n '["Aevatar.Developer.Host"]')
+          elif [[ "$service" == "Aevatar.Developer.Silo" ]]; then
+            matrix=$(jq -c -n '["Aevatar.Developer.Silo"]')
           elif [[ "$service" == "Aevatar.HttpApi.Host" ]]; then
             matrix=$(jq -c -n '["Aevatar.HttpApi.Host"]')
           elif [[ "$service" == "Aevatar.AuthServer" ]]; then
             matrix=$(jq -c -n '["Aevatar.AuthServer"]')
           elif [[ "$service" == "Aevatar.DbMigrator" ]]; then
             matrix=$(jq -c -n '["Aevatar.DbMigrator"]')
-          elif [[ "$service" == "Aevatar.Developer.Host" ]]; then
-            matrix=$(jq -c -n '["Aevatar.Developer.Host"]')
           else
             echo "Invalid service input"
             exit 1
@@ -106,7 +108,13 @@ jobs:
 
       # Publish .NET project
       - name: Publish .NET project      
-        run: dotnet publish station/src/${{ matrix.servicename }}/${{ matrix.servicename }}.csproj -o out/${{ matrix.servicename }}
+        run: |
+          # For Developer.Silo, use the regular Silo project but publish to Developer.Silo output directory
+          if [[ "${{ matrix.servicename }}" == "Aevatar.Developer.Silo" ]]; then
+            dotnet publish station/src/Aevatar.Silo/Aevatar.Silo.csproj -o out/${{ matrix.servicename }}
+          else
+            dotnet publish station/src/${{ matrix.servicename }}/${{ matrix.servicename }}.csproj -o out/${{ matrix.servicename }}
+          fi
       
       # Upload build artifacts for the next job
       - name: Upload build artifacts
@@ -246,6 +254,17 @@ jobs:
           PROJECT_RAW="${{ github.event.inputs.project_name }}"
           PROJECT="${PROJECT_RAW// /}"
           SUMMARY_FILE="$GITHUB_STEP_SUMMARY"
+          
+          # Generate client ID and URLs based on project name
+          if [[ "$PROJECT" == "env-"* ]]; then
+            CLIENT_ID="${PROJECT#env-}"
+            AUTH_SERVER_URL="http://${PROJECT}.auth-station-testing.aevatar.ai"
+            API_SERVER_URL="http://${PROJECT}.station-testing.aevatar.ai"
+          else
+            echo "::error ::❌ Project name must start with 'env-'"
+            echo "- ❌ Invalid project name: \`$PROJECT\` (must start with 'env-')" >> "$SUMMARY_FILE"
+            exit 1
+          fi
 
           update_deployment_if_exists() {
             local deployment="$1"
@@ -299,6 +318,66 @@ jobs:
             echo "- ✅ \`$job_name\`: Created with \`$NEW_IMAGE\`" >> "$SUMMARY_FILE"
           }
 
+          get_auth_token() {
+            echo "🔐 Getting authentication token from $AUTH_SERVER_URL"
+            
+            TOKEN_RESPONSE=$(curl -s --location "${AUTH_SERVER_URL}/connect/token" \
+              --header 'Accept: application/json' \
+              --header 'Content-Type: application/x-www-form-urlencoded' \
+              --data-urlencode 'grant_type=client_credentials' \
+              --data-urlencode "client_id=${CLIENT_ID}" \
+              --data-urlencode "client_secret=${CLIENT_ID}" \
+              --data-urlencode 'scope=Aevatar')
+            
+            if [[ $? -ne 0 ]]; then
+              echo "::error ::❌ Failed to get authentication token"
+              echo "- ❌ Authentication: Failed to get token from \`$AUTH_SERVER_URL\`" >> "$SUMMARY_FILE"
+              exit 1
+            fi
+            
+            TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.access_token')
+            
+            if [[ "$TOKEN" == "null" || -z "$TOKEN" ]]; then
+              echo "::error ::❌ Invalid token response"
+              echo "- ❌ Authentication: Invalid token response" >> "$SUMMARY_FILE"
+              exit 1
+            fi
+            
+            echo "✅ Authentication token obtained successfully"
+            echo "$TOKEN"
+          }
+
+          update_image_via_api() {
+            local host_type="$1"
+            local image_name="$2"
+            local service_name="$3"
+            
+            echo "🔄 Updating $service_name via API (hostType=$host_type)"
+            
+            # Get authentication token
+            AUTH_TOKEN=$(get_auth_token)
+            
+            # Update image via API
+            API_RESPONSE=$(curl -s -w "%{http_code}" --location "${API_SERVER_URL}/api/users/updateDockerImage?hostType=${host_type}&imageName=${image_name}&version=1" \
+              -X 'POST' \
+              -H 'accept: */*' \
+              -H "Authorization: Bearer ${AUTH_TOKEN}" \
+              -H 'X-Requested-With: XMLHttpRequest' \
+              -d '')
+            
+            HTTP_CODE="${API_RESPONSE: -3}"
+            RESPONSE_BODY="${API_RESPONSE%???}"
+            
+            if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 300 ]]; then
+              echo "::notice ::✅ $service_name updated via API to $image_name"
+              echo "- ✅ \`$service_name\`: Updated via API to \`$image_name\`" >> "$SUMMARY_FILE"
+            else
+              echo "::error ::❌ Failed to update $service_name via API (HTTP $HTTP_CODE)"
+              echo "- ❌ \`$service_name\`: API update failed (HTTP $HTTP_CODE)" >> "$SUMMARY_FILE"
+              exit 1
+            fi
+          }
+
           echo "## ✅ Aevatar Ephemeral Test Deployment Summary" >> "$SUMMARY_FILE"
           echo "- Namespace: \`$NS\`" >> "$SUMMARY_FILE"
           echo "- Image Tag: \`$IMAGE_TAG\`" >> "$SUMMARY_FILE"
@@ -314,6 +393,13 @@ jobs:
             for deployment in "${deployments[@]}"; do
               update_deployment_if_exists "$deployment"
             done
+            
+            # Also update Developer services via API for "All" option
+            DEVELOPER_HOST_IMAGE="${{ secrets.REPOSITORY_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/aevatar.developer.host:${IMAGE_TAG}"
+            update_image_via_api "1" "$DEVELOPER_HOST_IMAGE" "Aevatar.Developer.Host"
+            
+            DEVELOPER_SILO_IMAGE="${{ secrets.REPOSITORY_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/aevatar.developer.silo:${IMAGE_TAG}"
+            update_image_via_api "0" "$DEVELOPER_SILO_IMAGE" "Aevatar.Developer.Silo"
           elif [[ "$SERVICE" == "Aevatar.AuthServer" ]]; then
             update_deployment_if_exists "${PROJECT}-authserver"
           elif [[ "$SERVICE" == "Aevatar.HttpApi.Host" ]]; then
@@ -323,8 +409,13 @@ jobs:
           elif [[ "$SERVICE" == "Aevatar.DbMigrator" ]]; then
             update_job_if_exists "${PROJECT}-dbmigrator-init-job" "dotnet Aevatar.DbMigrator.dll"
           elif [[ "$SERVICE" == "Aevatar.Developer.Host" ]]; then
-              echo "ℹ️ Skipping image update for Aevatar.Developer.Host"
-              exit 0
+            # Update Developer.Host via API (hostType=1 for client)
+            FULL_IMAGE_NAME="${{ secrets.REPOSITORY_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/aevatar.developer.host:${IMAGE_TAG}"
+            update_image_via_api "1" "$FULL_IMAGE_NAME" "Aevatar.Developer.Host"
+          elif [[ "$SERVICE" == "Aevatar.Developer.Silo" ]]; then
+            # Update Developer.Silo via API (hostType=0 for silo)
+            FULL_IMAGE_NAME="${{ secrets.REPOSITORY_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/aevatar.developer.silo:${IMAGE_TAG}"
+            update_image_via_api "0" "$FULL_IMAGE_NAME" "Aevatar.Developer.Silo"
           else
             echo "::error ::❌ Invalid service input: $SERVICE"
             echo "- ❌ Invalid service: \`$SERVICE\`" >> "$SUMMARY_FILE"
