@@ -329,8 +329,8 @@ jobs:
           }
 
           get_auth_token() {
-            echo "🔐 Getting authentication token from $AUTH_SERVER_URL"
-            echo "ℹ️ Using client_id: $CLIENT_ID"
+            echo "🔐 Getting authentication token from $AUTH_SERVER_URL" >&2
+            echo "ℹ️ Using client_id: $CLIENT_ID" >&2
             
             TOKEN_RESPONSE=$(curl -s -k -X POST "${AUTH_SERVER_URL}/connect/token" \
               -H 'Content-Type: application/x-www-form-urlencoded' \
@@ -340,28 +340,38 @@ jobs:
               --data-urlencode "client_secret=${CLIENT_ID}" \
               --data-urlencode 'scope=Aevatar')
             
-            if [[ $? -ne 0 ]]; then
-              echo "::error ::❌ Failed to get authentication token"
-              echo "- ❌ Authentication: Failed to get token from \`$AUTH_SERVER_URL\`" >> "$SUMMARY_FILE"
+            # Check HTTP response code instead of curl exit code
+            HTTP_RESPONSE=$(curl -s -k -w "%{http_code}" -X POST "${AUTH_SERVER_URL}/connect/token" \
+              -H 'Content-Type: application/x-www-form-urlencoded' \
+              -H 'Accept: application/json' \
+              --data-urlencode 'grant_type=client_credentials' \
+              --data-urlencode "client_id=${CLIENT_ID}" \
+              --data-urlencode "client_secret=${CLIENT_ID}" \
+              --data-urlencode 'scope=Aevatar')
+            
+            HTTP_CODE="${HTTP_RESPONSE: -3}"
+            if [[ "$HTTP_CODE" -ge 400 ]]; then
+              echo "::error ::❌ Failed to get authentication token (HTTP $HTTP_CODE)" >&2
+              echo "- ❌ Authentication: Failed to get token from \`$AUTH_SERVER_URL\` (HTTP $HTTP_CODE)" >> "$SUMMARY_FILE"
               exit 1
             fi
             
-            echo "ℹ️ Auth server response received"
+            echo "ℹ️ Auth server response received (HTTP $HTTP_CODE)" >&2
             # Only show first part of token response for security
             TOKEN_STATUS=$(echo "$TOKEN_RESPONSE" | jq -r '.token_type // "ERROR"' 2>/dev/null || echo "ERROR")
-            echo "ℹ️ Token type: $TOKEN_STATUS"
+            echo "ℹ️ Token type: $TOKEN_STATUS" >&2
             
             TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.access_token')
             
             if [[ "$TOKEN" == "null" || -z "$TOKEN" ]]; then
-              echo "::error ::❌ Invalid token response"
-              echo "ℹ️ Token extracted: '$TOKEN'"
+              echo "::error ::❌ Invalid token response" >&2
+              echo "ℹ️ Token extracted: '$TOKEN'" >&2
               echo "- ❌ Authentication: Invalid token response" >> "$SUMMARY_FILE"
               exit 1
             fi
             
-            echo "✅ Authentication token obtained successfully"
-            echo "ℹ️ Token length: ${#TOKEN} characters"
+            echo "✅ Authentication token obtained successfully" >&2
+            echo "ℹ️ Token length: ${#TOKEN} characters" >&2
             echo "$TOKEN"
           }
 
@@ -377,6 +387,13 @@ jobs:
             
             # Get authentication token
             AUTH_TOKEN=$(get_auth_token)
+            
+            # Verify token was obtained
+            if [[ -z "$AUTH_TOKEN" ]]; then
+              echo "::error ::❌ No authentication token received"
+              echo "- ❌ Authentication: No token received from get_auth_token function" >> "$SUMMARY_FILE"
+              exit 1
+            fi
             
             echo "================================================"
             echo "🧪 STEP 2: API ENDPOINT TESTING"
@@ -414,13 +431,11 @@ jobs:
             echo "ℹ️ UpdateDockerImage POST response body: $DOCKER_TEST_RESPONSE_BODY"
             
             if [[ "$DOCKER_TEST_HTTP_CODE" -eq 404 ]]; then
-              echo "::error ::❌ updateDockerImage API endpoint does not exist in this environment"
-              echo "- ❌ API Endpoint: /api/users/updateDockerImage not found (HTTP 404)" >> "$SUMMARY_FILE"
-              exit 1
+              echo "::warning ::⚠️ updateDockerImage API endpoint does not exist in this environment"
+              echo "- ⚠️ API Endpoint: /api/users/updateDockerImage not found (HTTP 404)" >> "$SUMMARY_FILE"
             elif [[ "$DOCKER_TEST_HTTP_CODE" -eq 400 ]] && [[ "$DOCKER_TEST_RESPONSE_BODY" == *"nginx"* ]]; then
-              echo "::error ::❌ updateDockerImage API endpoint not configured in nginx"
-              echo "- ❌ API Endpoint: /api/users/updateDockerImage not configured in nginx routing" >> "$SUMMARY_FILE"
-              exit 1
+              echo "::warning ::⚠️ updateDockerImage API endpoint not configured in nginx, will try anyway"
+              echo "- ⚠️ API Endpoint: /api/users/updateDockerImage not configured in nginx routing" >> "$SUMMARY_FILE"
             elif [[ "$DOCKER_TEST_HTTP_CODE" -eq 200 ]] || [[ "$DOCKER_TEST_HTTP_CODE" -eq 400 ]] && [[ "$DOCKER_TEST_RESPONSE_BODY" != *"nginx"* ]]; then
               echo "✅ updateDockerImage endpoint exists and is accessible"
             fi
@@ -429,8 +444,8 @@ jobs:
             echo "🚀 STEP 3: MAIN API CALL"
             echo "================================================"
             
-            # URL encode the image name - use same method as package.yaml (only encode colons)
-            ENCODED_IMAGE_NAME=$(echo "$image_name" | sed 's/:/%3A/g')
+            # URL encode the image name properly - encode all special characters
+            ENCODED_IMAGE_NAME=$(printf '%s\n' "$image_name" | jq -sRr @uri)
             echo "ℹ️ Original image name: $image_name"
             echo "ℹ️ URL encoded image name: $ENCODED_IMAGE_NAME"
             echo "ℹ️ Making API call to: ${API_SERVER_URL}/api/users/updateDockerImage?hostType=${host_type}&imageName=${ENCODED_IMAGE_NAME}&version=1"
