@@ -109,10 +109,7 @@ jobs:
           fail_ci_if_error: true # Set to true to expose errors
           directory: ./
           flags: unittests
-          name: codecov-umbrella-${{ github.sha }} # Dynamic name for uniqueness
-          override_branch: ${{ github.head_ref || github.ref_name }}
-          override_commit: ${{ github.sha }}
-          override_build: ${{ github.run_id }} # Explicit build ID
+          name: codecov-umbrella
           verbose: true # Detailed logging
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }} 
