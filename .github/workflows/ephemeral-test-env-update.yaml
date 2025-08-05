@@ -260,6 +260,12 @@ jobs:
             CLIENT_ID="${PROJECT#env-}"
             AUTH_SERVER_URL="http://${PROJECT}.auth-station-testing.aevatar.ai"
             API_SERVER_URL="http://${PROJECT}.station-testing.aevatar.ai"
+            
+            echo "ℹ️ Configuration:"
+            echo "  - Project: $PROJECT"
+            echo "  - Client ID: $CLIENT_ID"
+            echo "  - Auth Server: $AUTH_SERVER_URL"
+            echo "  - API Server: $API_SERVER_URL"
           else
             echo "::error ::❌ Project name must start with 'env-'"
             echo "- ❌ Invalid project name: \`$PROJECT\` (must start with 'env-')" >> "$SUMMARY_FILE"
@@ -320,6 +326,7 @@ jobs:
 
           get_auth_token() {
             echo "🔐 Getting authentication token from $AUTH_SERVER_URL"
+            echo "ℹ️ Using client_id: $CLIENT_ID"
             
             TOKEN_RESPONSE=$(curl -s --location "${AUTH_SERVER_URL}/connect/token" \
               --header 'Accept: application/json' \
@@ -335,15 +342,19 @@ jobs:
               exit 1
             fi
             
+            echo "ℹ️ Auth server response: $TOKEN_RESPONSE"
+            
             TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.access_token')
             
             if [[ "$TOKEN" == "null" || -z "$TOKEN" ]]; then
               echo "::error ::❌ Invalid token response"
+              echo "ℹ️ Token extracted: '$TOKEN'"
               echo "- ❌ Authentication: Invalid token response" >> "$SUMMARY_FILE"
               exit 1
             fi
             
             echo "✅ Authentication token obtained successfully"
+            echo "ℹ️ Token length: ${#TOKEN} characters"
             echo "$TOKEN"
           }
 
@@ -353,12 +364,36 @@ jobs:
             local service_name="$3"
             
             echo "🔄 Updating $service_name via API (hostType=$host_type)"
+            echo "ℹ️ Image name: $image_name"
+            echo "ℹ️ API Server URL: $API_SERVER_URL"
             
             # Get authentication token
             AUTH_TOKEN=$(get_auth_token)
             
+            # Test token validity by making a simple API call first
+            echo "ℹ️ Testing token validity..."
+            TEST_RESPONSE=$(curl -s -w "%{http_code}" --location "${API_SERVER_URL}/api/app/application-configuration" \
+              -H 'accept: */*' \
+              -H "Authorization: Bearer ${AUTH_TOKEN}")
+            
+            TEST_HTTP_CODE="${TEST_RESPONSE: -3}"
+            TEST_RESPONSE_BODY="${TEST_RESPONSE%???}"
+            echo "ℹ️ Token test response code: $TEST_HTTP_CODE"
+            
+            if [[ "$TEST_HTTP_CODE" -eq 401 ]]; then
+              echo "::error ::❌ Authentication token is invalid or expired"
+              echo "- ❌ Authentication: Token validation failed" >> "$SUMMARY_FILE"
+              exit 1
+            fi
+            
+            # URL encode the image name for the API call
+            ENCODED_IMAGE_NAME=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$image_name', safe=''))")
+            echo "ℹ️ Original image name: $image_name"
+            echo "ℹ️ URL encoded image name: $ENCODED_IMAGE_NAME"
+            echo "ℹ️ Making API call to: ${API_SERVER_URL}/api/users/updateDockerImage?hostType=${host_type}&imageName=${ENCODED_IMAGE_NAME}&version=1"
+            
             # Update image via API
-            API_RESPONSE=$(curl -s -w "%{http_code}" --location "${API_SERVER_URL}/api/users/updateDockerImage?hostType=${host_type}&imageName=${image_name}&version=1" \
+            API_RESPONSE=$(curl -s -w "%{http_code}" --location "${API_SERVER_URL}/api/users/updateDockerImage?hostType=${host_type}&imageName=${ENCODED_IMAGE_NAME}&version=1" \
               -X 'POST' \
               -H 'accept: */*' \
               -H "Authorization: Bearer ${AUTH_TOKEN}" \
@@ -368,12 +403,16 @@ jobs:
             HTTP_CODE="${API_RESPONSE: -3}"
             RESPONSE_BODY="${API_RESPONSE%???}"
             
+            echo "ℹ️ API Response Code: $HTTP_CODE"
+            echo "ℹ️ API Response Body: $RESPONSE_BODY"
+            
             if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 300 ]]; then
               echo "::notice ::✅ $service_name updated via API to $image_name"
               echo "- ✅ \`$service_name\`: Updated via API to \`$image_name\`" >> "$SUMMARY_FILE"
             else
               echo "::error ::❌ Failed to update $service_name via API (HTTP $HTTP_CODE)"
-              echo "- ❌ \`$service_name\`: API update failed (HTTP $HTTP_CODE)" >> "$SUMMARY_FILE"
+              echo "::error ::Response Body: $RESPONSE_BODY"
+              echo "- ❌ \`$service_name\`: API update failed (HTTP $HTTP_CODE) - $RESPONSE_BODY" >> "$SUMMARY_FILE"
               exit 1
             fi
           }
