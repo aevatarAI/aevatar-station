@@ -2,15 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Agent;
-using Aevatar.Common;
 using Aevatar.Core.Abstractions;
-
 using Aevatar.Service;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Newtonsoft.Json;
-using Orleans;
-using Orleans.Runtime;
 using Shouldly;
 using Xunit;
 
@@ -32,7 +27,8 @@ public class WorkflowViewServiceTests
         _workflowViewService = new WorkflowViewService(
             _mockAgentService.Object,
             _mockGAgentFactory.Object,
-            _mockLogger.Object);
+            _mockLogger.Object,
+            null);
     }
 
     [Fact]
@@ -312,13 +308,13 @@ public class WorkflowViewServiceTests
     {
         // Arrange & Act & Assert
         // Note: The actual constructor doesn't do null checks, so these tests expect no exceptions
-        var service1 = new WorkflowViewService(null, _mockGAgentFactory.Object, _mockLogger.Object);
+        var service1 = new WorkflowViewService(null, _mockGAgentFactory.Object, _mockLogger.Object, null);
         service1.ShouldNotBeNull();
 
-        var service2 = new WorkflowViewService(_mockAgentService.Object, null, _mockLogger.Object);
+        var service2 = new WorkflowViewService(_mockAgentService.Object, null, _mockLogger.Object, null);
         service2.ShouldNotBeNull();
 
-        var service3 = new WorkflowViewService(_mockAgentService.Object, _mockGAgentFactory.Object, null);
+        var service3 = new WorkflowViewService(_mockAgentService.Object, _mockGAgentFactory.Object, null, null);
         service3.ShouldNotBeNull();
     }
 

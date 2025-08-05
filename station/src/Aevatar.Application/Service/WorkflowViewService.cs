@@ -8,7 +8,9 @@ using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView.Dto;
 using Aevatar.GAgents.GroupChat.WorkflowCoordinator;
 using Aevatar.GAgents.GroupChat.WorkflowCoordinator.Dto;
+using Aevatar.Options;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Orleans;
 using Orleans.Runtime;
@@ -24,12 +26,15 @@ public class WorkflowViewService : ApplicationService, IWorkflowViewService
     private readonly IAgentService _agentService;
     private readonly IGAgentFactory _gAgentFactory;
     private readonly ILogger<WorkflowViewService> _logger;
+    private readonly DebugModeOptions _debugModeOptions;
 
-    public WorkflowViewService(IAgentService agentService, IGAgentFactory gAgentFactory,  ILogger<WorkflowViewService> logger)
+    public WorkflowViewService(IAgentService agentService, IGAgentFactory gAgentFactory,  ILogger<WorkflowViewService> logger,
+        IOptionsSnapshot<DebugModeOptions> debugModeOptions)
     {
         _agentService = agentService;
         _gAgentFactory = gAgentFactory;
         _logger = logger;
+        _debugModeOptions = debugModeOptions == null ? new DebugModeOptions() : debugModeOptions.Value;
     }
     
     public async Task<AgentDto> PublishWorkflowAsync(Guid viewAgentId)
@@ -69,6 +74,7 @@ public class WorkflowViewService : ApplicationService, IWorkflowViewService
         
         // create or update workflowCoordinatorGAgent
         var workflowConfig = new WorkflowCoordinatorConfigDto();
+        workflowConfig.EnableExecutionRecord = _debugModeOptions.ExecuteRecordMode;
         var nodeMap = viewConfigDto.WorkflowNodeList.ToDictionary(r => r.NodeId, r => r);
         foreach (var node in viewConfigDto.WorkflowNodeList)
         {

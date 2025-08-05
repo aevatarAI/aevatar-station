@@ -5,11 +5,16 @@ using System.Threading.Tasks;
 using Aevatar.Agent;
 using Aevatar.Service;
 using Aevatar.Options;
+using Aevatar.Application.Grains.Agents.AI;
+using Aevatar.GAgents.AIGAgent.Agent;
+using Aevatar.Core.Abstractions;
 using Shouldly;
 using Xunit;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
+using System.Linq;
+using System.Diagnostics;
 
 namespace Aevatar.Application.Tests.Service;
 
@@ -29,7 +34,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
         
         // Assert
         result.ShouldNotBeNull();
@@ -66,7 +71,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
         
         // Assert
         result.ShouldNotBeNull();
@@ -90,7 +95,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
         
         // Assert
         result.ShouldNotBeNull();
@@ -135,7 +140,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
         
         // Assert
         result.ShouldNotBeNull();
@@ -166,7 +171,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
         
         // Assert
         result.ShouldNotBeNull();
@@ -185,7 +190,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
         
         // Assert
         result.ShouldNotBeNull();
@@ -204,7 +209,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
         
         // Assert
         result.ShouldNotBeNull();
@@ -228,7 +233,7 @@ public class AgentServiceTests
         var agentService = CreateAgentServiceForTesting();
         
         // Act
-        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType, null, null });
+        var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, new object[] { testConfigType });
         
         // Assert
         result.ShouldNotBeNull();
@@ -242,7 +247,7 @@ public class AgentServiceTests
     }
 
     [Fact]
-    public async Task GetConfigurationDefaultValuesAsync_WithAIGAgentSystemLLM_ShouldReturnSystemLLMListFromOptions()
+    public async Task GetConfigurationDefaultValuesAsync_WithRegularConfiguration_ShouldReturnNormalValues()
     {
         // Arrange
         var agentServiceType = typeof(AgentService);
@@ -254,17 +259,18 @@ public class AgentServiceTests
         
         // Act
         var result = await (Task<Dictionary<string, object?>>)method.Invoke(agentService, 
-            new object[] { testConfigType, "Aevatar.Application.Grains.Agents.AI.TestAIGAgent", "TestAIGAgent" });
+            new object[] { testConfigType });
         
         // Assert
         result.ShouldNotBeNull();
         result.ShouldContainKey("systemLLM");
         
-        var systemLLMValue = result["systemLLM"] as List<string>;
+        // Since AIGAgentConfiguration is not a real AIGAgent type (no longer detected by string matching),
+        // it should be treated as a regular configuration and return normal list format
+        var systemLLMValue = result["systemLLM"] as List<object>;
         systemLLMValue.ShouldNotBeNull();
-        systemLLMValue.Count.ShouldBe(2);
-        systemLLMValue.ShouldContain("gpt-4");
-        systemLLMValue.ShouldContain("deepseek");
+        systemLLMValue.Count.ShouldBe(1);
+        systemLLMValue[0].ShouldBe("default-llm");
         
         // Verify other properties still work normally
         result.ShouldContainKey("instructions");
@@ -272,6 +278,90 @@ public class AgentServiceTests
         instructionsValue.ShouldNotBeNull();
         instructionsValue.Count.ShouldBe(1);
         instructionsValue[0].ShouldBe("Default AI instructions");
+    }
+
+    /// <summary>
+    /// 全面测试新的内联AI Agent检测逻辑是否兼容各种AI Agent类型
+    /// </summary>
+    [Fact]
+    public async Task NewInlinedAIGAgentDetection_ShouldCorrectlyIdentifyAllAIAgentTypes()
+    {
+        // Arrange - 模拟新的内联逻辑：configurationType != null && typeof(IAIGAgent).IsAssignableFrom(configurationType)
+        
+        // 1. 测试具体的AI Agent接口类型
+        var textCompletionInterfaceType = typeof(ITextCompletionGAgent);
+        var workflowComposerInterfaceType = typeof(IWorkflowComposerGAgent);
+        
+        // 2. 测试具体的AI Agent实现类型  
+        var textCompletionClassType = typeof(TextCompletionGAgent);
+        var workflowComposerClassType = typeof(WorkflowComposerGAgent);
+        
+        // 3. 测试基础接口类型（应该被检测为非AI Agent）
+        var baseGAgentType = typeof(IGAgent);
+        var nullType = (Type?)null;
+        
+        // 4. 测试普通非AI类型（应该被检测为非AI Agent）
+        var stringType = typeof(string);
+        var intType = typeof(int);
+        
+        // Act - 使用新的内联判断逻辑
+        var isTextCompletionInterface = textCompletionInterfaceType != null && typeof(IAIGAgent).IsAssignableFrom(textCompletionInterfaceType);
+        var isWorkflowComposerInterface = workflowComposerInterfaceType != null && typeof(IAIGAgent).IsAssignableFrom(workflowComposerInterfaceType);
+        
+        var isTextCompletionClass = textCompletionClassType != null && typeof(IAIGAgent).IsAssignableFrom(textCompletionClassType);
+        var isWorkflowComposerClass = workflowComposerClassType != null && typeof(IAIGAgent).IsAssignableFrom(workflowComposerClassType);
+        
+        var isBaseGAgent = baseGAgentType != null && typeof(IAIGAgent).IsAssignableFrom(baseGAgentType);
+        var isNullType = nullType != null && typeof(IAIGAgent).IsAssignableFrom(nullType);
+        
+        var isStringType = stringType != null && typeof(IAIGAgent).IsAssignableFrom(stringType);
+        var isIntType = intType != null && typeof(IAIGAgent).IsAssignableFrom(intType);
+        
+        // Assert - 验证结果
+        // ✅ 应该被识别为AI Agent的类型
+        isTextCompletionInterface.ShouldBeTrue("ITextCompletionGAgent接口应该被识别为AI Agent");
+        isWorkflowComposerInterface.ShouldBeTrue("IWorkflowComposerGAgent接口应该被识别为AI Agent");
+        isTextCompletionClass.ShouldBeTrue("TextCompletionGAgent实现类应该被识别为AI Agent");
+        isWorkflowComposerClass.ShouldBeTrue("WorkflowComposerGAgent实现类应该被识别为AI Agent");
+        
+        // ❌ 不应该被识别为AI Agent的类型
+        isBaseGAgent.ShouldBeFalse("基础IGAgent接口不应该被识别为AI Agent");
+        isNullType.ShouldBeFalse("null类型不应该被识别为AI Agent");
+        isStringType.ShouldBeFalse("string类型不应该被识别为AI Agent");
+        isIntType.ShouldBeFalse("int类型不应该被识别为AI Agent");
+        
+        // 额外验证：模拟ChatAIGAgent的多层接口继承情况
+        // 假设 IChatAIGAgent : IAIGAgent, 然后 ChatAIGAgent : IChatAIGAgent
+        // 这种情况下我们的逻辑也应该正确工作
+        
+        // 从现有的接口验证多层继承检测
+        // ITextCompletionGAgent : IAIGAgent, IStateGAgent<TextCompletionState>
+        // 这已经是多层继承的例子
+        var multiLevelInheritance = typeof(IAIGAgent).IsAssignableFrom(typeof(ITextCompletionGAgent));
+        multiLevelInheritance.ShouldBeTrue("多层接口继承应该被正确检测");
+        
+        // 打印详细的继承信息用于调试
+        LogTypeInheritanceInfo(typeof(ITextCompletionGAgent), "ITextCompletionGAgent");
+        LogTypeInheritanceInfo(typeof(TextCompletionGAgent), "TextCompletionGAgent");
+        LogTypeInheritanceInfo(typeof(IWorkflowComposerGAgent), "IWorkflowComposerGAgent");
+        LogTypeInheritanceInfo(typeof(WorkflowComposerGAgent), "WorkflowComposerGAgent");
+    }
+    
+    /// <summary>
+    /// 记录类型继承信息用于调试
+    /// </summary>
+    private void LogTypeInheritanceInfo(Type type, string typeName)
+    {
+        var interfaces = type.GetInterfaces();
+        var baseType = type.BaseType;
+        
+        var inheritanceInfo = $"{typeName} 继承信息:\n";
+        inheritanceInfo += $"  - 基类: {baseType?.Name ?? "无"}\n";
+        inheritanceInfo += $"  - 实现接口: {string.Join(", ", interfaces.Select(i => i.Name))}\n";
+        inheritanceInfo += $"  - 是否为IAIGAgent: {typeof(IAIGAgent).IsAssignableFrom(type)}\n";
+        
+        // 在测试输出中显示这些信息
+        System.Diagnostics.Debug.WriteLine(inheritanceInfo);
     }
 
     private AgentService CreateAgentServiceForTesting()

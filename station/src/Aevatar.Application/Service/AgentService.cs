@@ -18,6 +18,7 @@ using Aevatar.Options;
 using Aevatar.Query;
 using Aevatar.Schema;
 using Aevatar.Station.Feature.CreatorGAgent;
+using Aevatar.GAgents.AIGAgent.Agent;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -192,7 +193,7 @@ public class AgentService : ApplicationService, IAgentService
 
                     // Get default values
                     paramDto.DefaultValues =
-                        await GetConfigurationDefaultValuesAsync(kvp.Value.InitializationData.DtoType, kvp.Key, kvp.Value.FullName);
+                        await GetConfigurationDefaultValuesAsync(kvp.Value.InitializationData.DtoType);
                 }
             }
 
@@ -205,7 +206,7 @@ public class AgentService : ApplicationService, IAgentService
     /// <summary>
     /// Gets default values of configuration class properties (returns in list format to prepare for default value list functionality)
     /// </summary>
-    private async Task<Dictionary<string, object?>> GetConfigurationDefaultValuesAsync(Type configurationType, string? agentType = null, string? fullName = null)
+    private async Task<Dictionary<string, object?>> GetConfigurationDefaultValuesAsync(Type configurationType)
     {
         var defaultValues = new Dictionary<string, object?>();
 
@@ -228,7 +229,7 @@ public class AgentService : ApplicationService, IAgentService
                         var value = property.GetValue(instance);
 
                         // Special handling for AIGAgent systemLLM property
-                        if (IsAIGAgent(agentType, fullName) && 
+                        if (configurationType != null && typeof(IAIGAgent).IsAssignableFrom(configurationType) && 
                             string.Equals(property.Name, "systemLLM", StringComparison.OrdinalIgnoreCase))
                         {
                             var systemLLMList = _agentDefaultValuesOptions.CurrentValue.SystemLLMConfigs;
@@ -269,19 +270,6 @@ public class AgentService : ApplicationService, IAgentService
         }
 
         return defaultValues;
-    }
-
-    /// <summary>
-    /// Checks if the agent type is an AI GAgent
-    /// </summary>
-    private bool IsAIGAgent(string? agentType, string? fullName)
-    {
-        if (string.IsNullOrEmpty(agentType) && string.IsNullOrEmpty(fullName))
-            return false;
-
-        var typeToCheck = !string.IsNullOrEmpty(fullName) ? fullName : agentType;
-        return typeToCheck?.Contains("aigagent", StringComparison.OrdinalIgnoreCase) == true ||
-               typeToCheck?.Contains("AIGAgent", StringComparison.Ordinal) == true;
     }
 
     private ConfigurationBase SetupConfigurationData(Configuration configuration,
@@ -692,9 +680,29 @@ public class AgentService : ApplicationService, IAgentService
         var agentState = await creatorAgent.GetAgentAsync();
 
         var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
-        var subAgentGrainIds = await GetSubAgentGrainIds(agent);
-        await RemoveSubAgentAsync(guid,
-            new RemoveSubAgentDto { RemovedSubAgents = subAgentGrainIds.Select(x => x.GetGuidKey()).ToList() });
+        var subAgentGrainIds = await agent.GetChildrenAsync();
+        if (!subAgentGrainIds.IsNullOrEmpty() &&
+            (subAgentGrainIds.Count > 1 || subAgentGrainIds[0] != creatorAgent.GetGrainId()))
+        {
+            _logger.LogInformation("Agent {agentId} has subagents, please remove them first.", guid);
+            throw new UserFriendlyException("Agent has subagents, please remove them first.");
+        }
+
+        var parentGrainId = await agent.GetParentAsync();
+        if (parentGrainId.IsDefault)
+        {
+            if (subAgentGrainIds.Any())
+            {
+                await agent.UnregisterAsync(creatorAgent);
+            }
+
+            await creatorAgent.DeleteAgentAsync();
+        }
+        else
+        {
+            _logger.LogInformation("Agent {agentId} has parent, please remove from it first.", guid);
+            throw new UserFriendlyException("Agent has parent, please remove from it first.");
+        }
     }
 
     private async Task<List<GrainId>> GetSubAgentGrainIds(IGAgent agent)

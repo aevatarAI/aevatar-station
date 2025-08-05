@@ -215,6 +215,7 @@ jobs:
         id: extract
         run: |
           content=$(cat ./downloaded/setup-aevatar-app-env-output.json)
+          echo "project_name=$(echo $content | jq -r '.project_name')" >> $GITHUB_OUTPUT          
           echo "namespace=$(echo $content | jq -r '.namespace')" >> $GITHUB_OUTPUT
           echo "authserver_deployment_name=$(echo $content | jq -r '.authserver_deployment_name')" >> $GITHUB_OUTPUT
           echo "httpapi_deployment_name=$(echo $content | jq -r '.httpapi_deployment_name')" >> $GITHUB_OUTPUT
@@ -226,7 +227,10 @@ jobs:
 
       - name: Set job summary
         run: |
-          echo "## Aevatar Station and App Created Successfully in namespace: \`${{ steps.extract.outputs.namespace }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "## Aevatar Station and App Created Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "## Project Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Project Name**: \`${{ steps.extract.outputs.project_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Project Namespace**: \`${{ steps.extract.outputs.namespace }}\`" >> $GITHUB_STEP_SUMMARY
           echo "## Deployment Names" >> $GITHUB_STEP_SUMMARY
           echo "- **Auth Server**: \`${{ steps.extract.outputs.authserver_deployment_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Http API Host**: \`${{ steps.extract.outputs.httpapi_deployment_name }}\`" >> $GITHUB_STEP_SUMMARY
