@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - "release/*"
-      - "feature/package-staging-workflow-update"
 
 run-name: Deploy Aevatar Station on ${{ github.ref }} to Staging from ${{ github.sha }}
 
