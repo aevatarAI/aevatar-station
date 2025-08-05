@@ -3,6 +3,7 @@ using Aevatar.Account;
 using Asp.Versioning;
 using Volo.Abp;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Volo.Abp.Account;
 using Volo.Abp.Identity;
 
@@ -14,10 +15,13 @@ namespace Aevatar.Controllers;
 public class AccountController : AevatarController
 {
     private readonly IAccountService _accountService;
+    private readonly ILogger<AccountController> _logger;
 
-    public AccountController(IAccountService accountService)
+    public AccountController(IAccountService accountService,ILogger<AccountController> logger)
     {
         _accountService = accountService;
+        _logger = logger;
+
     }
     
     [HttpPost]
@@ -38,6 +42,7 @@ public class AccountController : AevatarController
     [Route("send-register-code")]
     public virtual Task SendRegisterCodeAsync(SendRegisterCodeDto input)
     {
+        _logger.LogDebug($"[AccountController][SendRegisterCodeAsync] http start: email={input.Email}");
         return _accountService.SendRegisterCodeAsync(input);
     }
 
