@@ -328,9 +328,9 @@ jobs:
             echo "🔐 Getting authentication token from $AUTH_SERVER_URL"
             echo "ℹ️ Using client_id: $CLIENT_ID"
             
-            TOKEN_RESPONSE=$(curl -s --location "${AUTH_SERVER_URL}/connect/token" \
-              --header 'Accept: application/json' \
-              --header 'Content-Type: application/x-www-form-urlencoded' \
+            TOKEN_RESPONSE=$(curl -s -X POST "${AUTH_SERVER_URL}/connect/token" \
+              -H 'Content-Type: application/x-www-form-urlencoded' \
+              -H 'Accept: application/json' \
               --data-urlencode 'grant_type=client_credentials' \
               --data-urlencode "client_id=${CLIENT_ID}" \
               --data-urlencode "client_secret=${CLIENT_ID}" \
@@ -358,39 +358,6 @@ jobs:
             echo "$TOKEN"
           }
 
-          get_verification_token() {
-            local auth_token="$1"
-            echo "🔐 Getting RequestVerificationToken from API server"
-            
-            # Get the verification token from a GET request that typically includes it
-            VERIFICATION_RESPONSE=$(curl -s --location "${API_SERVER_URL}/api/app/application-configuration" \
-              -H 'accept: */*' \
-              -H "Authorization: Bearer ${auth_token}" \
-              -D -)
-            
-            if [[ $? -ne 0 ]]; then
-              echo "::error ::❌ Failed to get verification token"
-              echo "- ❌ Verification: Failed to get token" >> "$SUMMARY_FILE"
-              exit 1
-            fi
-            
-            # Extract RequestVerificationToken from response headers or body
-            VERIFICATION_TOKEN=$(echo "$VERIFICATION_RESPONSE" | grep -i "RequestVerificationToken" | head -1 | sed 's/.*RequestVerificationToken[":= ]*\([^"]*\).*/\1/' | tr -d '\r\n')
-            
-            if [[ -z "$VERIFICATION_TOKEN" ]]; then
-              # Try to extract from Set-Cookie header if present
-              VERIFICATION_TOKEN=$(echo "$VERIFICATION_RESPONSE" | grep -i "set-cookie.*__RequestVerificationToken" | sed 's/.*__RequestVerificationToken=\([^;]*\).*/\1/' | tr -d '\r\n')
-            fi
-            
-            if [[ -z "$VERIFICATION_TOKEN" ]]; then
-              echo "::warning ::⚠️ Could not extract RequestVerificationToken, proceeding without it"
-              echo ""
-            else
-              echo "✅ RequestVerificationToken obtained"
-              echo "ℹ️ Token length: ${#VERIFICATION_TOKEN} characters"
-              echo "$VERIFICATION_TOKEN"
-            fi
-          }
 
           update_image_via_api() {
             local host_type="$1"
@@ -403,9 +370,6 @@ jobs:
             
             # Get authentication token
             AUTH_TOKEN=$(get_auth_token)
-            
-            # Get RequestVerificationToken
-            VERIFICATION_TOKEN=$(get_verification_token "$AUTH_TOKEN")
             
             # Test token validity by making a simple API call first
             echo "ℹ️ Testing token validity..."
@@ -423,30 +387,17 @@ jobs:
               exit 1
             fi
             
-            # URL encode the image name for the API call
-            ENCODED_IMAGE_NAME=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$image_name', safe=''))")
+            # URL encode the image name - use same method as package.yaml (only encode colons)
+            ENCODED_IMAGE_NAME=$(echo "$image_name" | sed 's/:/%3A/g')
             echo "ℹ️ Original image name: $image_name"
             echo "ℹ️ URL encoded image name: $ENCODED_IMAGE_NAME"
             echo "ℹ️ Making API call to: ${API_SERVER_URL}/api/users/updateDockerImage?hostType=${host_type}&imageName=${ENCODED_IMAGE_NAME}&version=1"
             
-            # Prepare headers for API call
-            HEADERS=(
-              -H 'accept: */*'
-              -H "Authorization: Bearer ${AUTH_TOKEN}"
-              -H 'X-Requested-With: XMLHttpRequest'
-              -H 'Content-Type: application/x-www-form-urlencoded'
-            )
-            
-            # Add RequestVerificationToken header if available
-            if [[ -n "$VERIFICATION_TOKEN" ]]; then
-              HEADERS+=(-H "RequestVerificationToken: ${VERIFICATION_TOKEN}")
-              echo "ℹ️ Using RequestVerificationToken: ${VERIFICATION_TOKEN:0:20}..."
-            fi
-            
-            # Update image via API
-            API_RESPONSE=$(curl -s -w "%{http_code}" --location "${API_SERVER_URL}/api/users/updateDockerImage?hostType=${host_type}&imageName=${ENCODED_IMAGE_NAME}&version=1" \
-              -X 'POST' \
-              "${HEADERS[@]}" \
+            # Update image via API - use same approach as package.yaml (no RequestVerificationToken)
+            API_RESPONSE=$(curl -s -w "%{http_code}" -X 'POST' "${API_SERVER_URL}/api/users/updateDockerImage?hostType=${host_type}&imageName=${ENCODED_IMAGE_NAME}&version=1" \
+              -H 'accept: */*' \
+              -H "Authorization: Bearer ${AUTH_TOKEN}" \
+              -H 'X-Requested-With: XMLHttpRequest' \
               -d '')
             
             HTTP_CODE="${API_RESPONSE: -3}"
