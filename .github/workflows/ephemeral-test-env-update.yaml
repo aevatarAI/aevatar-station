@@ -396,56 +396,11 @@ jobs:
             fi
             
             echo "================================================"
-            echo "🧪 STEP 2: API ENDPOINT TESTING"
+            echo "🚀 STEP 2: UPDATE DOCKER IMAGE"
             echo "================================================"
             
-            # Test basic agent list endpoint (known to work from regression_test.py)
-            echo "ℹ️ Testing agent-list endpoint to verify API connectivity..."
-            TEST_RESPONSE=$(curl -s -w "%{http_code}" --location "${API_SERVER_URL}/api/agent/agent-list?pageIndex=0&pageSize=1" \
-              -H 'accept: */*' \
-              -H "Authorization: Bearer ${AUTH_TOKEN}")
-            
-            TEST_HTTP_CODE="${TEST_RESPONSE: -3}"
-            TEST_RESPONSE_BODY="${TEST_RESPONSE%???}"
-            echo "ℹ️ Agent list API test - Response code: $TEST_HTTP_CODE"
-            
-            if [[ "$TEST_HTTP_CODE" -eq 200 ]]; then
-              echo "✅ API server is accessible and token is valid"
-            else
-              echo "❌ Agent list API test failed"
-              echo "ℹ️ Agent list API response body: $TEST_RESPONSE_BODY"
-            fi
-            
-            # Test if updateDockerImage endpoint exists with a minimal POST request
-            echo "ℹ️ Testing updateDockerImage endpoint with minimal request..."
-            DOCKER_TEST_RESPONSE=$(curl -s -w "%{http_code}" --location "${API_SERVER_URL}/api/users/updateDockerImage?hostType=0&imageName=test%3Atest&version=1" \
-              -X 'POST' \
-              -H 'accept: */*' \
-              -H "Authorization: Bearer ${AUTH_TOKEN}" \
-              -H 'X-Requested-With: XMLHttpRequest' \
-              -d '')
-            
-            DOCKER_TEST_HTTP_CODE="${DOCKER_TEST_RESPONSE: -3}"
-            DOCKER_TEST_RESPONSE_BODY="${DOCKER_TEST_RESPONSE%???}"
-            echo "ℹ️ UpdateDockerImage POST test - Response code: $DOCKER_TEST_HTTP_CODE"
-            echo "ℹ️ UpdateDockerImage POST response body: $DOCKER_TEST_RESPONSE_BODY"
-            
-            if [[ "$DOCKER_TEST_HTTP_CODE" -eq 404 ]]; then
-              echo "::warning ::⚠️ updateDockerImage API endpoint does not exist in this environment"
-              echo "- ⚠️ API Endpoint: /api/users/updateDockerImage not found (HTTP 404)" >> "$SUMMARY_FILE"
-            elif [[ "$DOCKER_TEST_HTTP_CODE" -eq 400 ]] && [[ "$DOCKER_TEST_RESPONSE_BODY" == *"nginx"* ]]; then
-              echo "::warning ::⚠️ updateDockerImage API endpoint not configured in nginx, will try anyway"
-              echo "- ⚠️ API Endpoint: /api/users/updateDockerImage not configured in nginx routing" >> "$SUMMARY_FILE"
-            elif [[ "$DOCKER_TEST_HTTP_CODE" -eq 200 ]] || [[ "$DOCKER_TEST_HTTP_CODE" -eq 400 ]] && [[ "$DOCKER_TEST_RESPONSE_BODY" != *"nginx"* ]]; then
-              echo "✅ updateDockerImage endpoint exists and is accessible"
-            fi
-            
-            echo "================================================"
-            echo "🚀 STEP 3: MAIN API CALL"
-            echo "================================================"
-            
-            # URL encode the image name properly - encode all special characters
-            ENCODED_IMAGE_NAME=$(printf '%s\n' "$image_name" | jq -sRr @uri)
+            # URL encode the image name properly - encode all special characters but avoid newlines
+            ENCODED_IMAGE_NAME=$(printf '%s' "$image_name" | jq -sRr @uri)
             echo "ℹ️ Original image name: $image_name"
             echo "ℹ️ URL encoded image name: $ENCODED_IMAGE_NAME"
             echo "ℹ️ Making API call to: ${API_SERVER_URL}/api/users/updateDockerImage?hostType=${host_type}&imageName=${ENCODED_IMAGE_NAME}&version=1"
@@ -475,8 +430,21 @@ jobs:
             echo "ℹ️ API Response Body: $RESPONSE_BODY"
             
             if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 300 ]]; then
-              echo "::notice ::✅ $service_name updated via API to $image_name"
-              echo "- ✅ \`$service_name\`: Updated via API to \`$image_name\`" >> "$SUMMARY_FILE"
+              # Check if the response contains Kubernetes Unauthorized error
+              if [[ "$RESPONSE_BODY" == *"Unauthorized"* ]] && [[ "$RESPONSE_BODY" == *"code\":401"* ]]; then
+                echo "::error ::❌ Kubernetes cluster authorization failed for $service_name"
+                echo "::error ::The API server cannot update the deployment due to insufficient Kubernetes RBAC permissions"
+                echo "- ❌ \`$service_name\`: Kubernetes RBAC Unauthorized (401) - API server lacks permissions to update deployments" >> "$SUMMARY_FILE"
+                exit 1
+              elif [[ "$RESPONSE_BODY" == *"\"code\":\"50000\""* ]]; then
+                echo "::error ::❌ API returned error code 50000 for $service_name"
+                echo "::error ::Response: $RESPONSE_BODY"
+                echo "- ❌ \`$service_name\`: API error code 50000 - $RESPONSE_BODY" >> "$SUMMARY_FILE"
+                exit 1
+              else
+                echo "::notice ::✅ $service_name updated via API to $image_name"
+                echo "- ✅ \`$service_name\`: Updated via API to \`$image_name\`" >> "$SUMMARY_FILE"
+              fi
             else
               echo "::error ::❌ Failed to update $service_name via API (HTTP $HTTP_CODE)"
               echo "::error ::Response Body: $RESPONSE_BODY"
