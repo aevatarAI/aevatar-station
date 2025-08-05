@@ -258,8 +258,8 @@ jobs:
           # Generate client ID and URLs based on project name
           if [[ "$PROJECT" == "env-"* ]]; then
             CLIENT_ID="${PROJECT#env-}"
-            AUTH_SERVER_URL="https://${PROJECT}.auth-station-testing.aevatar.ai"
-            API_SERVER_URL="https://${PROJECT}.station-testing.aevatar.ai"
+            AUTH_SERVER_URL="http://${PROJECT}.auth-station-testing.aevatar.ai"
+            API_SERVER_URL="http://${PROJECT}.station-testing.aevatar.ai"
             
             echo "ℹ️ Configuration:"
             echo "  - Project: $PROJECT"
