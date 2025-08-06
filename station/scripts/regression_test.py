@@ -1,16 +1,32 @@
 # regression_test.py
 import os
+import sys
 import time
 import pytest
 import requests
 import logging
 import urllib3
+import subprocess
+
+# Print startup notification
+print("=" * 80)
+print("🧪 REGRESSION_TEST.PY IS NOW RUNNING!")
+print("📍 Aevatar Station Regression Test Suite Starting...")
+print("🕐 Started at:", time.strftime("%Y-%m-%d %H:%M:%S"))
+print("=" * 80)
 
 # Disable SSL warnings for testing with self-signed certificates
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+# Import cleanup function
+try:
+    from cleanup_k8s_resources import cleanup_k8s_resources
+except ImportError:
+    def cleanup_k8s_resources():
+        logger.warning("cleanup_k8s_resources not available")
 
 TEST_AGENT = "agenttest"
 WORKFLOW_VIEW_AGENT = "Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView.WorkflowViewGAgent"
@@ -20,14 +36,31 @@ AGENT_NAME_MODIFIED = "TestAgentNameModified"
 EVENT_TYPE = "Aevatar.Application.Grains.Agents.TestAgent.FrontTestCreateEvent"
 EVENT_PARAM = "Name"
 
-AUTH_HOST = os.getenv("AUTH_HOST")
-API_HOST =  os.getenv("API_HOST")
-CLIENT_ID = os.getenv("CLIENT_ID")
-CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+# Docker environment detection
+RUNNING_IN_DOCKER = os.getenv("RUNNING_IN_DOCKER", "false").lower() == "true" or os.path.exists('/.dockerenv')
+
+# Environment-aware configuration
+if RUNNING_IN_DOCKER:
+    # Use internal Docker network URLs
+    AUTH_HOST = os.getenv("AUTH_HOST", "http://authserver:8082")
+    API_HOST = os.getenv("API_HOST", "http://api:8001")
+    # Disable SSL verification in Docker (internal network)
+    VERIFY_SSL = False
+    KUBECONFIG = os.getenv("KUBECONFIG", "/app/kubeconfig")
+else:
+    # Use localhost URLs for local development
+    AUTH_HOST = os.getenv("AUTH_HOST", "https://localhost:44300")
+    API_HOST = os.getenv("API_HOST", "https://localhost:44301")
+    # Keep SSL verification for external services
+    VERIFY_SSL = False  # Keep as False due to self-signed certs
+    KUBECONFIG = None
+
+CLIENT_ID = os.getenv("CLIENT_ID", "AevatarTestClient")
+CLIENT_SECRET = os.getenv("CLIENT_SECRET", "test-secret-key")
 INDEX_NAME = f"aevatar-{CLIENT_ID}-testagentstateindex"
 
-ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD ="1q2W3e*"
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "1q2W3e*")
 
 PERMISSION_AGENT = "agentpermissiontest"
 PERMISSION_STATE_NAME = "PermissionAgentState"
@@ -47,7 +80,7 @@ def access_token():
         f"{AUTH_HOST}/connect/token",
         data=auth_data,
         headers={"Content-Type": "application/x-www-form-urlencoded"},
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
     return response.json()["access_token"]
@@ -90,7 +123,7 @@ def test_agent(api_headers):
         f"{API_HOST}/api/agent",
         json=agent_data,
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
     agent_id = response.json()["data"]["id"]
@@ -101,7 +134,7 @@ def test_agent(api_headers):
     response = requests.delete(
         f"{API_HOST}/api/agent/{agent_id}",
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert response.status_code == 200
 
@@ -117,7 +150,7 @@ def test_agent_operations(api_headers, test_agent):
     response = requests.get(
         f"{API_HOST}/api/agent/{test_agent}",
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
     assert response.json()["data"]["name"] == AGENT_NAME
@@ -131,7 +164,7 @@ def test_agent_operations(api_headers, test_agent):
         f"{API_HOST}/api/agent/{test_agent}",
         json=update_data,
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
     assert response.json()["data"]["name"] == AGENT_NAME_MODIFIED
@@ -143,7 +176,7 @@ def test_agent_operations(api_headers, test_agent):
         f"{API_HOST}/api/agent/agent-list",
         params={"pageIndex": 0, "pageSize": 100},
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
     
@@ -176,7 +209,7 @@ def test_agent_relationships(api_headers, test_agent):
         f"{API_HOST}/api/agent",
         json=agent_data,
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
     sub_agent = response.json()["data"]["id"]
@@ -186,7 +219,7 @@ def test_agent_relationships(api_headers, test_agent):
         f"{API_HOST}/api/agent/{test_agent}/add-subagent",
         json={"subAgents": [sub_agent]},
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
     assert sub_agent in response.json()["data"]["subAgents"]
@@ -195,7 +228,7 @@ def test_agent_relationships(api_headers, test_agent):
     response = requests.get(
         f"{API_HOST}/api/agent/{test_agent}/relationship",
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
     assert sub_agent in response.json()["data"]["subAgents"]
@@ -205,7 +238,7 @@ def test_agent_relationships(api_headers, test_agent):
         f"{API_HOST}/api/agent/{test_agent}/remove-subagent",
         json={"removedSubAgents": [sub_agent]},
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
     assert sub_agent not in response.json()["data"]["subAgents"]
@@ -214,13 +247,13 @@ def test_agent_relationships(api_headers, test_agent):
     response = requests.get(
         f"{API_HOST}/api/agent/{test_agent}/relationship",
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
     assert sub_agent not in response.json()["data"]["subAgents"]
 
     # delete sub agent
-    response = requests.delete(f"{API_HOST}/api/agent/{sub_agent}", headers=api_headers, verify=False)
+    response = requests.delete(f"{API_HOST}/api/agent/{sub_agent}", headers=api_headers, verify=VERIFY_SSL)
     assert_status_code(response)
 
 
@@ -235,7 +268,7 @@ def test_event_operations(api_headers, test_agent):
         f"{API_HOST}/api/agent",
         json=agent_data,
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
     sub_agent = response.json()["data"]["id"]
@@ -245,7 +278,7 @@ def test_event_operations(api_headers, test_agent):
         f"{API_HOST}/api/agent/{test_agent}/add-subagent",
         json={"subAgents": [sub_agent]},
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
     assert sub_agent in response.json()["data"]["subAgents"]
@@ -254,7 +287,7 @@ def test_event_operations(api_headers, test_agent):
     response = requests.get(
         f"{API_HOST}/api/subscription/events/{test_agent}",
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
     
@@ -299,7 +332,7 @@ def test_event_operations(api_headers, test_agent):
         f"{API_HOST}/api/agent/publishEvent",
         json=event_data,
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
 
@@ -309,7 +342,7 @@ def test_event_operations(api_headers, test_agent):
         f"{API_HOST}/api/query/state",
         params={"stateName": STATE_NAME, "id": test_agent},
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
     assert "state" in response.json()["data"]
@@ -320,7 +353,7 @@ def test_event_operations(api_headers, test_agent):
         f"{API_HOST}/api/query/state",
         params={"stateName": STATE_NAME, "id": sub_agent},
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
     assert "state" in response.json()["data"]
@@ -335,7 +368,7 @@ def test_event_operations(api_headers, test_agent):
             "pageSize": 1
         },
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
 
     assert_status_code(response)
@@ -349,7 +382,7 @@ def test_event_operations(api_headers, test_agent):
             "queryString": f"name: {name}",
         },
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     
     assert_status_code(response)
@@ -364,7 +397,7 @@ def test_event_operations(api_headers, test_agent):
             "pageSize": 1
         },
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(query_response)
     expected_count = query_response.json()["data"]["totalCount"]
@@ -377,7 +410,7 @@ def test_query_agent_list(api_headers, test_agent):
     response = requests.get(
         f"{API_HOST}//api/agent/agent-type-info-list",
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
     
@@ -404,7 +437,7 @@ def test_agent_service_basic_operations(api_headers):
     response = requests.get(
         f"{API_HOST}/api/agent/agent-type-info-list",
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
     
@@ -413,7 +446,7 @@ def test_agent_service_basic_operations(api_headers):
         f"{API_HOST}/api/agent/agent-list",
         params={"pageIndex": 0, "pageSize": 10},
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
     
@@ -437,7 +470,7 @@ def admin_access_token():
         f"{AUTH_HOST}/connect/token",
         data=auth_data,
         headers={"Content-Type": "application/x-www-form-urlencoded"},
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
     return response.json()["access_token"]
@@ -450,6 +483,46 @@ def api_admin_headers(admin_access_token):
         "Authorization": f"Bearer {admin_access_token}",
         "Content-Type": "application/json"
     }
+
+# Add pytest fixture for K8s resource tracking and cleanup
+@pytest.fixture(scope="session", autouse=True)
+def k8s_cleanup():
+    """Cleanup K8s resources after all tests complete"""
+    created_resources = []
+    
+    yield created_resources
+    
+    # Cleanup after all tests
+    if RUNNING_IN_DOCKER and KUBECONFIG:
+        logger.info("Cleaning up Kubernetes resources created during tests...")
+        cleanup_k8s_resources()
+
+# Helper function to verify K8s resources were created
+def verify_k8s_deployment(deployment_name, namespace="aevatar-apps", timeout=60):
+    """Verify that a K8s deployment was created successfully"""
+    if not KUBECONFIG:
+        logger.warning("Skipping K8s verification - no kubeconfig available")
+        return False
+        
+    cmd = [
+        "kubectl", "--kubeconfig", KUBECONFIG,
+        "get", "deployment", deployment_name,
+        "-n", namespace, "-o", "json"
+    ]
+    
+    for attempt in range(timeout // 5):
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode == 0:
+                logger.info(f"✓ Deployment {deployment_name} exists in namespace {namespace}")
+                return True
+        except Exception as e:
+            logger.error(f"Error checking deployment: {e}")
+            
+        time.sleep(5)
+    
+    logger.error(f"✗ Deployment {deployment_name} not found after {timeout}s")
+    return False
     
 
 def test_permission(api_headers, api_admin_headers):
@@ -463,7 +536,7 @@ def test_permission(api_headers, api_admin_headers):
         f"{API_HOST}/api/agent",
         json=agent_data,
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
     agent_id = response.json()["data"]["id"]
@@ -473,7 +546,7 @@ def test_permission(api_headers, api_admin_headers):
         f"{API_HOST}/api/agent/{agent_id}/add-subagent",
         json={"subAgents": [agent_id]},
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
     assert agent_id in response.json()["data"]["subAgents"]
@@ -484,7 +557,7 @@ def test_permission(api_headers, api_admin_headers):
     response = requests.get(
         f"{API_HOST}/api/identity/users/by-username/{ADMIN_USERNAME}",
         headers=api_admin_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     admin_id = response.json()["data"]["id"]
     
@@ -497,7 +570,7 @@ def test_permission(api_headers, api_admin_headers):
         f"{API_HOST}/api/agent/publishEvent",
         json=event_data,
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
 
@@ -512,7 +585,7 @@ def test_permission(api_headers, api_admin_headers):
             "pageSize": 10
         },
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
 
     assert_status_code(response)
@@ -527,7 +600,7 @@ def test_permission(api_headers, api_admin_headers):
             "pageSize": 10
         },
         headers=api_admin_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     
     assert_status_code(response)
@@ -542,7 +615,7 @@ def test_permission(api_headers, api_admin_headers):
             "queryString": f"_id:{agent_id}",
         },
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     
     assert_status_code(response)
@@ -556,7 +629,7 @@ def test_permission(api_headers, api_admin_headers):
             "queryString": f"_id:{agent_id}",
         },
         headers=api_admin_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     
     assert_status_code(response)
@@ -589,7 +662,7 @@ def test_publish_workflow_view(api_headers, api_admin_headers):
         f"{API_HOST}/api/agent",
         json=agent_data,
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
     view_agent_id = response.json()["data"]["id"]
@@ -599,7 +672,7 @@ def test_publish_workflow_view(api_headers, api_admin_headers):
         f"{API_HOST}/api/workflow-view/{view_agent_id}/publish-workflow",
         json={},
         headers=api_headers,
-        verify=False
+        verify=VERIFY_SSL
     )
     assert_status_code(response)
     test_agent_id = response.json()["data"]["properties"]["workflowNodeList"][0]["agentId"]
@@ -609,4 +682,34 @@ def test_publish_workflow_view(api_headers, api_admin_headers):
     
     assert test_agent_id != "00000000-0000-0000-0000-000000000000"
     assert workflow_agent_id != "00000000-0000-0000-0000-000000000000"
+
+# Pytest hook to show completion notification with detailed test counts
+def pytest_sessionfinish(session, exitstatus):
+    """Called after whole test run finished"""
+    # Get test results from session
+    passed = session.testscollected - session.testsfailed - session.testsskipped
+    failed = session.testsfailed
+    skipped = session.testsskipped
+    total = session.testscollected
+    
+    print("\n" + "=" * 80)
+    print("🏁 REGRESSION_TEST.PY EXECUTION COMPLETED!")
+    print("=" * 80)
+    print("📊 TEST RESULTS SUMMARY:")
+    print(f"   Total Tests:   {total}")
+    print(f"   ✅ Passed:     {passed}")
+    print(f"   ❌ Failed:     {failed}")
+    print(f"   ⏭️  Skipped:    {skipped}")
+    print("=" * 80)
+    print("📈 Overall Status:", "✅ ALL TESTS PASSED" if exitstatus == 0 else f"❌ {failed} TEST(S) FAILED")
+    print("🕐 Completed at:", time.strftime("%Y-%m-%d %H:%M:%S"))
+    print("=" * 80)
+
+# Show completion notification when run directly
+if __name__ == "__main__":
+    print("\n" + "=" * 80)
+    print("🏁 REGRESSION_TEST.PY DIRECT EXECUTION COMPLETED!")
+    print("💡 Note: For full test suite, run with pytest")
+    print("🕐 Completed at:", time.strftime("%Y-%m-%d %H:%M:%S"))
+    print("=" * 80)
     
