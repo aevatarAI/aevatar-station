@@ -88,29 +88,17 @@ public static class AiAgentHelper
     /// <returns>字符串数组</returns>
     public static string[] SafeGetStringArray(JObject? json, string propertyName, int defaultSize = 5)
     {
-        if (json?[propertyName] is JArray array && array.Any())
+        // 优化：先获取有效项，再统一填充到指定大小
+        var items = (json?[propertyName] as JArray)?.Select(item => item?.ToString() ?? "").Take(defaultSize).ToList() 
+                   ?? new List<string>();
+        
+        // 填充到指定大小，避免重复遍历
+        while (items.Count < defaultSize)
         {
-            var result = array.Select(item => item?.ToString() ?? "").ToArray();
-
-            // 确保数组大小符合要求
-            if (result.Length >= defaultSize)
-            {
-                return result.Take(defaultSize).ToArray();
-            }
-
-            // 填充到指定大小
-            var padded = new string[defaultSize];
-            Array.Copy(result, padded, result.Length);
-            for (int i = result.Length; i < defaultSize; i++)
-            {
-                padded[i] = "";
-            }
-
-            return padded;
+            items.Add("");
         }
-
-        // 返回默认空字符串数组
-        return Enumerable.Repeat("", defaultSize).ToArray();
+        
+        return items.ToArray();
     }
 
     /// <summary>
