@@ -23,29 +23,16 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
         try
         {
             Logger.LogDebug("Sending user goal to AI service: {UserGoal}", userGoal);
-
             var chatResult = await ChatWithHistory(userGoal);
-
-            if (chatResult == null || !chatResult.Any())
-            {
-                Logger.LogWarning("AI service returned null or empty result for workflow generation");
-                return GetFallbackWorkflowJson("ai_service_empty", "AI service returned empty result");
-            }
-
-            var response = chatResult[0].Content;
-            if (string.IsNullOrWhiteSpace(response))
-            {
-                Logger.LogWarning("AI returned empty content for workflow generation");
-                return GetFallbackWorkflowJson("ai_empty_content", "AI service returned empty content");
-            }
-
-            Logger.LogDebug("AI workflow response received, length: {Length} characters", response.Length);
-
-            // 使用AiAgentHelper清理JSON内容，如果清理失败则返回回退JSON
+            
+            // 使用AiAgentHelper统一处理AI响应并清理JSON
+            var response = AiAgentHelper.ProcessAiChatResult(chatResult, Logger, 
+                msg => GetFallbackWorkflowJson("ai_service_error", msg), "workflow generation");
+            
             var cleanedJson = AiAgentHelper.CleanJsonContent(response);
-
-            // 验证清理后的JSON是否有效
-            if (string.IsNullOrWhiteSpace(cleanedJson) || !AiAgentHelper.IsValidJson(cleanedJson))
+            
+            // 验证JSON有效性
+            if (!AiAgentHelper.IsValidJson(cleanedJson))
             {
                 Logger.LogWarning("AI returned invalid JSON content for workflow generation");
                 return GetFallbackWorkflowJson("invalid_json", "AI returned invalid JSON content");

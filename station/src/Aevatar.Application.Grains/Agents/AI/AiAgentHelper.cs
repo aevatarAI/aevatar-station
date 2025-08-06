@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using Microsoft.Extensions.Logging;
 
 namespace Aevatar.Application.Grains.Agents.AI;
 
@@ -129,5 +130,36 @@ public static class AiAgentHelper
     public static string NormalizeUserInput(string inputText, string defaultMessage = "Please provide assistance as instructed.")
     {
         return string.IsNullOrWhiteSpace(inputText) ? defaultMessage : inputText.Trim();
+    }
+
+    /// <summary>
+    /// 简化的AI响应处理 - 将AI聊天结果转换为字符串，统一处理空值情况
+    /// </summary>
+    /// <param name="chatResult">AI聊天结果列表</param>
+    /// <param name="logger">日志记录器</param>
+    /// <param name="fallbackGenerator">回退内容生成函数</param>
+    /// <param name="operationName">操作名称（用于日志）</param>
+    /// <returns>处理后的AI响应内容或回退内容</returns>
+    public static string ProcessAiChatResult<T>(IList<T> chatResult, ILogger logger, Func<string, string> fallbackGenerator, string operationName)
+        where T : class
+    {
+        // 统一处理空结果
+        if (chatResult?.Any() != true)
+        {
+            logger.LogWarning("AI service returned null or empty result for {Operation}", operationName);
+            return fallbackGenerator("AI service returned empty result");
+        }
+
+        // 通过反射获取Content属性（避免强类型依赖）
+        var content = chatResult[0].GetType().GetProperty("Content")?.GetValue(chatResult[0])?.ToString();
+        
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            logger.LogWarning("AI returned empty content for {Operation}", operationName);
+            return fallbackGenerator("AI service returned empty content");
+        }
+
+        logger.LogDebug("AI {Operation} response received, length: {Length} characters", operationName, content.Length);
+        return content;
     }
 }
