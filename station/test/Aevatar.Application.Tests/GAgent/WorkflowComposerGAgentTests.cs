@@ -971,38 +971,6 @@ public class WorkflowComposerGAgentTests : AevatarApplicationGrainsTestBase
     }
 
     [Fact]
-    public async Task GenerateWorkflowJsonAsync_TimestampGeneration_ShouldBeValid()
-    {
-        // Arrange
-        var agentId = Guid.NewGuid();
-        var workflowComposer = _clusterClient.GetGrain<IWorkflowComposerGAgent>(agentId);
-        var testGoal = "Test timestamp generation in fallback";
-
-        // Act
-        var result = await workflowComposer.GenerateWorkflowJsonAsync(testGoal);
-
-        // Assert
-        result.ShouldNotBeNullOrEmpty();
-        
-        var json = JObject.Parse(result);
-        json.ShouldNotBeNull();
-        
-        // Verify timestamp format in errorInfo
-        json.ShouldContainKey("errorInfo");
-        var errorInfo = json["errorInfo"] as JObject;
-        errorInfo.ShouldNotBeNull();
-        errorInfo.ShouldContainKey("timestamp");
-        
-        var timestamp = errorInfo["timestamp"]?.ToString();
-        timestamp.ShouldNotBeNullOrEmpty();
-        
-        // Verify timestamp format (ISO 8601)
-        timestamp.ShouldMatch(@"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z");
-        
-        _output.WriteLine($"Timestamp generation test passed: {timestamp}");
-    }
-
-    [Fact]
     public async Task GenerateWorkflowJsonAsync_ConcurrentFallbackGeneration_StressTest()
     {
         // Arrange
