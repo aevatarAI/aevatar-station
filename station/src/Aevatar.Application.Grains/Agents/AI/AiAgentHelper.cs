@@ -1,5 +1,3 @@
-using System;
-using System.Linq;
 using Newtonsoft.Json.Linq;
 using Microsoft.Extensions.Logging;
 
@@ -90,31 +88,25 @@ public static class AiAgentHelper
     /// <returns>字符串数组</returns>
     public static string[] SafeGetStringArray(JObject? json, string propertyName, int defaultSize = 5)
     {
-        try
+        if (json?[propertyName] is JArray array && array.Any())
         {
-            if (json?[propertyName] is JArray array && array.Any())
+            var result = array.Select(item => item?.ToString() ?? "").ToArray();
+
+            // 确保数组大小符合要求
+            if (result.Length >= defaultSize)
             {
-                var result = array.Select(item => item?.ToString() ?? "").ToArray();
-                
-                // 确保数组大小符合要求
-                if (result.Length >= defaultSize)
-                {
-                    return result.Take(defaultSize).ToArray();
-                }
-                
-                // 填充到指定大小
-                var padded = new string[defaultSize];
-                Array.Copy(result, padded, result.Length);
-                for (int i = result.Length; i < defaultSize; i++)
-                {
-                    padded[i] = "";
-                }
-                return padded;
+                return result.Take(defaultSize).ToArray();
             }
-        }
-        catch
-        {
-            // 发生异常时返回默认数组
+
+            // 填充到指定大小
+            var padded = new string[defaultSize];
+            Array.Copy(result, padded, result.Length);
+            for (int i = result.Length; i < defaultSize; i++)
+            {
+                padded[i] = "";
+            }
+
+            return padded;
         }
 
         // 返回默认空字符串数组
@@ -127,7 +119,8 @@ public static class AiAgentHelper
     /// <param name="inputText">输入文本</param>
     /// <param name="defaultMessage">默认消息</param>
     /// <returns>标准化后的消息</returns>
-    public static string NormalizeUserInput(string inputText, string defaultMessage = "Please provide assistance as instructed.")
+    public static string NormalizeUserInput(string inputText,
+        string defaultMessage = "Please provide assistance as instructed.")
     {
         return string.IsNullOrWhiteSpace(inputText) ? defaultMessage : inputText.Trim();
     }
@@ -140,7 +133,8 @@ public static class AiAgentHelper
     /// <param name="fallbackGenerator">回退内容生成函数</param>
     /// <param name="operationName">操作名称（用于日志）</param>
     /// <returns>处理后的AI响应内容或回退内容</returns>
-    public static string ProcessAiChatResult<T>(IList<T> chatResult, ILogger logger, Func<string, string> fallbackGenerator, string operationName)
+    public static string ProcessAiChatResult<T>(IList<T> chatResult, ILogger logger,
+        Func<string, string> fallbackGenerator, string operationName)
         where T : class
     {
         // 统一处理空结果
@@ -152,7 +146,7 @@ public static class AiAgentHelper
 
         // 通过反射获取Content属性（避免强类型依赖）
         var content = chatResult[0].GetType().GetProperty("Content")?.GetValue(chatResult[0])?.ToString();
-        
+
         if (string.IsNullOrWhiteSpace(content))
         {
             logger.LogWarning("AI returned empty content for {Operation}", operationName);
