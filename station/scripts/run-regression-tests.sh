@@ -26,15 +26,15 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 print_status() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+    echo -e "${GREEN}[INFO]${NC} $1" >&2
 }
 
 print_warning() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
+    echo -e "${YELLOW}[WARN]${NC} $1" >&2
 }
 
 print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    echo -e "${RED}[ERROR]${NC} $1" >&2
 }
 
 check_dependencies() {
@@ -128,7 +128,7 @@ get_admin_token() {
     
     # First, let's check if we can access the authserver container
     print_status "Checking AuthServer container accessibility..."
-    if ! docker-compose -f "$COMPOSE_FILE" -p "$PROJECT_NAME" exec -T authserver sh -c "echo 'Container accessible'" 2>/dev/null; then
+    if ! docker-compose -f "$COMPOSE_FILE" -p "$PROJECT_NAME" exec -T authserver sh -c "echo 'Container accessible'" >/dev/null 2>&1; then
         print_error "Cannot access AuthServer container via docker-compose exec"
         return 1
     fi
@@ -211,8 +211,8 @@ register_test_client() {
     if command -v jq &> /dev/null; then
         cors_urls_encoded=$(printf "%s" "$CORS_URLS" | jq -s -R -r @uri)
     else
-        # Simple URL encoding for common characters
-        cors_urls_encoded=$(printf "%s" "$CORS_URLS" | sed 's/ /%20/g' | sed 's/,/%2C/g')
+        # More comprehensive URL encoding for common characters
+        cors_urls_encoded=$(printf "%s" "$CORS_URLS" | sed 's/ /%20/g' | sed 's/,/%2C/g' | sed 's/:/%3A/g' | sed 's|/|%2F|g')
     fi
     
     # Make registration request
@@ -239,6 +239,22 @@ register_test_client() {
     if [ -s "$response_file" ]; then
         local response_content=$(cat "$response_file")
         print_status "Registration response (HTTP $http_status): $response_content"
+    else
+        print_status "No response content received (HTTP $http_status)"
+        # Try to get error details with verbose curl
+        if [ "$http_status" != "200" ] && [ "$http_status" != "201" ]; then
+            print_status "Retrying with verbose output for debugging..."
+            local verbose_response=$(curl --verbose \
+                --connect-timeout 10 \
+                --max-time 30 \
+                -X POST \
+                "$full_url" \
+                -H 'Accept: */*' \
+                -H "Authorization: Bearer $admin_token" \
+                -H 'X-Requested-With: XMLHttpRequest' \
+                2>&1)
+            print_status "Verbose curl output: $verbose_response"
+        fi
     fi
     
     # Clean up response file
