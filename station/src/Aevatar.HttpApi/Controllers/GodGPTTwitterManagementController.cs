@@ -261,6 +261,41 @@ public class GodGPTTwitterManagementController : AevatarController
         return result;
     }
 
+    /// <summary>
+    /// Reset awakening state for a specific user for testing purposes
+    /// </summary>
+    /// <param name="userId">User ID to reset awakening state for</param>
+    /// <returns>Operation result with success status</returns>
+    [HttpPost("awakening/reset-for-testing")]
+    public async Task<TwitterOperationResultDto> ResetAwakeningStateForTestingAsync([FromQuery] Guid userId)
+    {
+        await BeforeCheckUserIsManager();
+        var stopwatch = Stopwatch.StartNew();
+        _logger.LogInformation("[GodGPTTwitterManagementController][ResetAwakeningStateForTestingAsync] Starting reset for userId: {UserId}", userId);
+        
+        try
+        {
+            var resetSuccess = await _godGptService.ResetAwakeningStateForTestingAsync(userId);
+            
+            _logger.LogDebug("[GodGPTTwitterManagementController][ResetAwakeningStateForTestingAsync] completed with success: {Success}, duration: {Duration}ms",
+                resetSuccess, stopwatch.ElapsedMilliseconds);
+            
+            return new TwitterOperationResultDto
+            {
+                IsSuccess = resetSuccess
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[GodGPTTwitterManagementController][ResetAwakeningStateForTestingAsync] Error occurred during reset for userId: {UserId}", userId);
+            return new TwitterOperationResultDto
+            {
+                IsSuccess = false,
+                ErrorMessage = $"Error occurred: {ex.Message}"
+            };
+        }
+    }
+
     private async Task BeforeCheckUserIsManager()
     {
         var currentUserId = (Guid)CurrentUser.Id!;

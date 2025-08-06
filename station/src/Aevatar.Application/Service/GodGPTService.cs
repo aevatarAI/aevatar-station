@@ -29,6 +29,8 @@ using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
 using Aevatar.GodGPT.Dtos;
 using Aevatar.Quantum;
+using GodGPT.GAgents;
+using GodGPT.GAgents.Awakening;
 using GodGPT.GAgents.SpeechChat;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -88,7 +90,7 @@ public interface IGodGPTService
     Task<bool> CanGuestChatAsync(string clientIp);
     Task<QuantumShareResponseDto> GetShareKeyWordWithAIAsync(Guid sessionId, string? content, string? region, SessionType sessionType, GodGPTChatLanguage language = GodGPTChatLanguage.English);
 
-    Task<TwitterAuthResultDto> TwitterAuthVerifyAsync(Guid currentUserId, TwitterAuthVerifyInput input);
+    Task<TwitterAuthResultDto> TwitterAuthVerifyAsync(Guid currentUserId, TwitterAuthVerifyInput input,GodGPTChatLanguage language = GodGPTChatLanguage.English);
     Task<PagedResultDto<RewardHistoryDto>> GetCreditsHistoryAsync(Guid currentUserId,
         GetCreditsHistoryInput getCreditsHistoryInput);
     Task<TwitterAuthParamsDto> GetTwitterAuthParamsAsync(Guid currentUserId);
@@ -119,7 +121,23 @@ public interface IGodGPTService
     Task<bool> CheckIsManager(string userId);
     Task<UserProfileDto> SetVoiceLanguageAsync(Guid currentUserId, VoiceLanguageEnum voiceLanguage);
 
+    /// <summary>
+    /// Get today's awakening content for the user
+    /// </summary>
+    /// <param name="currentUserId">Current user ID</param>
+    /// <param name="language">Voice language preference</param>
+    /// <param name="region">Optional region parameter</param>
+    /// <returns>Awakening content DTO</returns>
+    Task<AwakeningContentDto?> GetTodayAwakeningAsync(Guid currentUserId, VoiceLanguageEnum language, string? region);
+
     Task<ExecuteActionResultDto> CanUploadImageAsync(Guid currentUserId,GodGPTChatLanguage language = GodGPTChatLanguage.English);
+    
+    /// <summary>
+    /// Reset awakening state for testing purposes (Admin only)
+    /// </summary>
+    /// <param name="userId">User ID to reset awakening state for</param>
+    /// <returns>True if reset was successful</returns>
+    Task<bool> ResetAwakeningStateForTestingAsync(Guid userId);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -264,6 +282,14 @@ public class GodGPTService : ApplicationService, IGodGPTService
 
     public async Task<Guid> DeleteAccountAsync(Guid currentUserId)
     {
+        try
+        {
+            var awakeningAgent = _clusterClient.GetGrain<IAwakeningGAgent>(currentUserId);
+            await awakeningAgent.ResetTodayContentAsync();
+        }catch(Exception e)
+        {
+            _logger.LogError(e,"IAwakeningGAgent ResetTodayContentAsync error currentUserId:"+currentUserId);
+        }
         var manager = _clusterClient.GetGrain<IChatManagerGAgent>(currentUserId);
         return await manager.ClearAllAsync();
     }
@@ -632,6 +658,43 @@ public class GodGPTService : ApplicationService, IGodGPTService
         return await userQuotaGAgent.CanUploadImageAsync();
     }
 
+
+        public async Task<AwakeningContentDto?> GetTodayAwakeningAsync(Guid currentUserId, VoiceLanguageEnum language, string? region)
+    {
+        _logger.LogInformation("[GodGPTService][GetTodayAwakeningAsync] Starting for userId: {UserId}, language: {Language}, region: {Region}",
+            currentUserId, language, region);
+        
+        try
+        {
+            var awakeningAgent = _clusterClient.GetGrain<IAwakeningGAgent>(currentUserId);
+            var result = await awakeningAgent.GetTodayAwakeningAsync(language, region);
+            
+            _logger.LogInformation("[GodGPTService][GetTodayAwakeningAsync] Completed for userId: {UserId}, result: {HasResult}",
+                currentUserId, result != null);
+            if (result == null)
+            {
+                return new AwakeningContentDto()
+                {
+                    AwakeningMessage = "",
+                    AwakeningLevel = 0,
+                    Status = (int)AwakeningStatus.NotStarted
+                };
+            }
+            return new AwakeningContentDto()
+            {
+                AwakeningMessage = result.AwakeningMessage,
+                AwakeningLevel = result.AwakeningLevel,
+                Status = (int)result.Status
+            };;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[GodGPTService][GetTodayAwakeningAsync] Error for userId: {UserId}, language: {Language}, region: {Region}",
+                currentUserId, language, region);
+            throw;
+        }
+    }
+
     #endregion
 
     /// <summary>
@@ -680,9 +743,10 @@ public class GodGPTService : ApplicationService, IGodGPTService
         };
     }
 
-    public async Task<TwitterAuthResultDto> TwitterAuthVerifyAsync(Guid currentUserId, TwitterAuthVerifyInput input)
+    public async Task<TwitterAuthResultDto> TwitterAuthVerifyAsync(Guid currentUserId, TwitterAuthVerifyInput input,GodGPTChatLanguage language = GodGPTChatLanguage.English)
     {
         var twitterAuthGAgent = _clusterClient.GetGrain<ITwitterAuthGAgent>(currentUserId);
+        RequestContext.Set("GodGPTLanguage", language.ToString());
         return await twitterAuthGAgent.VerifyAuthCodeAsync(input.Platform, input.Code, input.RedirectUri);
     }
 
@@ -1017,6 +1081,27 @@ public class GodGPTService : ApplicationService, IGodGPTService
         {
             _logger.LogError(ex, "Failed to get calculation history list");
             return new List<ManagerRewardCalculationHistoryDto>();
+        }
+    }
+    
+    public async Task<bool> ResetAwakeningStateForTestingAsync(Guid userId)
+    {
+        _logger.LogInformation("[GodGPTService][ResetAwakeningStateForTestingAsync] Starting for userId: {UserId}", userId);
+        
+        try
+        {
+            var awakeningAgent = _clusterClient.GetGrain<IAwakeningGAgent>(userId);
+            bool resetSuccess = await awakeningAgent.ResetAwakeningStateForTestingAsync();
+            
+            _logger.LogInformation("[GodGPTService][ResetAwakeningStateForTestingAsync] Completed for userId: {UserId}, success: {Success}",
+                userId, resetSuccess);
+            
+            return resetSuccess;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[GodGPTService][ResetAwakeningStateForTestingAsync] Error resetting awakening state for userId: {UserId}", userId);
+            return false;
         }
     }
 
