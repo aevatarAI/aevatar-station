@@ -327,7 +327,7 @@ public class GodGPTController : AevatarController
     public async Task<Guid> SetUserProfileAsync(SetUserProfileInput userProfile)
     {
  _logger.LogDebug(
-            $"[GodGPTController][SetUserProfileAsync] start sessionId: {updateUserId}");
+            $"[GodGPTController][SetUserProfileAsync] start");
       
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
