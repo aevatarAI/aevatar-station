@@ -4,15 +4,11 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Aevatar.Agent;
-using Aevatar.Agents.Creator;
-using Aevatar.Agents.Creator.Models;
 using Aevatar.Application.Grains.Agents.Creator;
 using Aevatar.Application.Grains.Subscription;
 using Aevatar.Common;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
-using Aevatar.CQRS.Dto;
-using Aevatar.CQRS.Provider;
 using Aevatar.Exceptions;
 using Aevatar.Options;
 using Aevatar.Query;
@@ -38,7 +34,6 @@ namespace Aevatar.Service;
 public class AgentService : ApplicationService, IAgentService
 {
     private readonly IClusterClient _clusterClient;
-    private readonly ICQRSProvider _cqrsProvider;
     private readonly ILogger<AgentService> _logger;
     private readonly IGAgentFactory _gAgentFactory;
     private readonly IGAgentManager _gAgentManager;
@@ -49,30 +44,21 @@ public class AgentService : ApplicationService, IAgentService
     private readonly ISchemaProvider _schemaProvider;
     private readonly IIndexingService _indexingService;
 
-    public AgentService(
-        IClusterClient clusterClient,
-        ICQRSProvider cqrsProvider,
-        ILogger<AgentService> logger,
-        IGAgentFactory gAgentFactory,
-        IGAgentManager gAgentManager,
-        IUserAppService userAppService,
-        IOptionsMonitor<AgentOptions> agentOptions,
-        IOptionsMonitor<AgentDefaultValuesOptions> agentDefaultValuesOptions,
-        GrainTypeResolver grainTypeResolver,
-        ISchemaProvider schemaProvider,
-        IIndexingService indexingService)
+    public AgentService(IClusterClient clusterClient, ILogger<AgentService> logger, IGAgentFactory gAgentFactory,
+        IGAgentManager gAgentManager, IUserAppService userAppService, IOptionsMonitor<AgentOptions> agentOptions,
+        IOptionsMonitor<AgentDefaultValuesOptions> agentDefaultValuesOptions, GrainTypeResolver grainTypeResolver,
+        ISchemaProvider schemaProvider, IIndexingService indexingService)
     {
-        _clusterClient = clusterClient;
-        _cqrsProvider = cqrsProvider;
         _logger = logger;
+        _agentOptions = agentOptions;
+        _clusterClient = clusterClient;
         _gAgentFactory = gAgentFactory;
         _gAgentManager = gAgentManager;
         _userAppService = userAppService;
-        _agentOptions = agentOptions;
-        _agentDefaultValuesOptions = agentDefaultValuesOptions;
-        _grainTypeResolver = grainTypeResolver;
         _schemaProvider = schemaProvider;
         _indexingService = indexingService;
+        _grainTypeResolver = grainTypeResolver;
+        _agentDefaultValuesOptions = agentDefaultValuesOptions;
     }
 
     private async Task<Dictionary<string, AgentTypeData?>> GetAgentTypeDataMap()
@@ -422,19 +408,60 @@ public class AgentService : ApplicationService, IAgentService
     private async Task<Tuple<IGAgent, ConfigurationBase>> InitializeBusinessAgent(Guid primaryKey, string agentType,
         string agentProperties)
     {
-        var grainId = GrainId.Create(agentType, GuidUtil.GuidToGrainKey(primaryKey));
+        var grainId = CreateGrainIdFromAgentType(agentType, primaryKey);
         var businessAgent = await _gAgentFactory.GetGAgentAsync(grainId);
 
         var initializationData = await GetAgentConfigurationAsync(businessAgent);
-        if (initializationData != null && !agentProperties.IsNullOrEmpty())
+        
+        if (ShouldConfigureAgent(initializationData, agentProperties))
         {
-            var config = SetupConfigurationData(initializationData, agentProperties);
-            await businessAgent.ConfigAsync(config);
-            
+            var config = await ConfigureBusinessAgentAsync(businessAgent, initializationData, agentProperties);
             return new Tuple<IGAgent, ConfigurationBase>(businessAgent, config);
         }
 
         return new Tuple<IGAgent, ConfigurationBase>(businessAgent, null);
+    }
+
+    /// <summary>
+    /// Creates a GrainId from agent type and primary key
+    /// </summary>
+    private GrainId CreateGrainIdFromAgentType(string agentType, Guid primaryKey)
+    {
+        if (agentType.IsNullOrEmpty())
+        {
+            throw new ArgumentException("Agent type cannot be null or empty", nameof(agentType));
+        }
+        
+        return GrainId.Create(agentType, GuidUtil.GuidToGrainKey(primaryKey));
+    }
+
+    /// <summary>
+    /// Determines whether the business agent should be configured
+    /// </summary>
+    private bool ShouldConfigureAgent(Configuration initializationData, string agentProperties)
+    {
+        return initializationData != null && !agentProperties.IsNullOrEmpty();
+    }
+
+    /// <summary>
+    /// Configures the business agent with the provided properties
+    /// </summary>
+    private async Task<ConfigurationBase> ConfigureBusinessAgentAsync(IGAgent businessAgent, Configuration initializationData, string agentProperties)
+    {
+        if (businessAgent == null)
+        {
+            throw new ArgumentNullException(nameof(businessAgent));
+        }
+        
+        if (initializationData == null)
+        {
+            throw new ArgumentNullException(nameof(initializationData));
+        }
+
+        var config = SetupConfigurationData(initializationData, agentProperties);
+        await businessAgent.ConfigAsync(config);
+        
+        return config;
     }
 
     public async Task<AgentDto> UpdateAgentAsync(Guid guid, UpdateAgentInputDto dto)
@@ -708,21 +735,51 @@ public class AgentService : ApplicationService, IAgentService
     private async Task<List<GrainId>> GetSubAgentGrainIds(IGAgent agent)
     {
         var children = await agent.GetChildrenAsync();
-        var subAgentGrainIds = new List<GrainId>();
+        var excludedTypes = GetExcludedAgentTypes();
+        
+        return FilterSubAgentGrainIds(children, excludedTypes);
+    }
+
+    /// <summary>
+    /// Gets the types of agents that should be excluded from sub-agent lists
+    /// </summary>
+    private HashSet<GrainType> GetExcludedAgentTypes()
+    {
         var creatorGAgentType = _grainTypeResolver.GetGrainType(typeof(CreatorGAgent));
         var subscriptionGAgentType = _grainTypeResolver.GetGrainType(typeof(SubscriptionGAgent));
+        
+        return new HashSet<GrainType> { creatorGAgentType, subscriptionGAgentType };
+    }
+
+    /// <summary>
+    /// Filters grain IDs to exclude certain types of agents
+    /// </summary>
+    private List<GrainId> FilterSubAgentGrainIds(List<GrainId> children, HashSet<GrainType> excludedTypes)
+    {
+        if (children == null)
+        {
+            return new List<GrainId>();
+        }
+
+        var subAgentGrainIds = new List<GrainId>();
+        
         foreach (var grainId in children)
         {
-            var grainType = grainId.Type;
-            if (grainType == creatorGAgentType || grainType == subscriptionGAgentType)
+            if (!IsExcludedAgentType(grainId.Type, excludedTypes))
             {
-                continue;
+                subAgentGrainIds.Add(grainId);
             }
-
-            subAgentGrainIds.Add(grainId);
         }
 
         return subAgentGrainIds;
+    }
+
+    /// <summary>
+    /// Determines if a grain type should be excluded from sub-agent lists
+    /// </summary>
+    private bool IsExcludedAgentType(GrainType grainType, HashSet<GrainType> excludedTypes)
+    {
+        return excludedTypes.Contains(grainType);
     }
 
     public async Task DeleteAgentAsync(Guid guid)
