@@ -74,7 +74,7 @@ public class AccountService : AccountAppService, IAccountService
 
         var code = "123456";//GenerateVerificationCode();
         await _registerCode.SetAsync(GetRegisterCodeKey(input.Email), code, _defaultCacheOptions);
-        await _aevatarAccountEmailer.SendRegisterCodeAsync(input.Email, code);
+        //await _aevatarAccountEmailer.SendRegisterCodeAsync(input.Email, code);
         _logger.LogDebug($"[AccountService][SendRegisterCodeAsync] http start: email={input.Email}, code={code}");
     }
 
