@@ -216,7 +216,6 @@ services:
     environment:
       # For K8s testing only, no API services needed
       KUBECONFIG: "/app/shared/kubeconfig"
-      RUNNING_IN_DOCKER: "true"
     depends_on:
       - k3s-setup
     volumes:
