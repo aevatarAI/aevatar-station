@@ -410,49 +410,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
 
         return new PagedResultDto<Dictionary<string, object>>(total, results);
     }
-
-    public async Task<long> CountWithLuceneAsync(LuceneQueryDto queryDto)
-    {
-        _logger.LogInformation("[Lucene Count] Index: {Index}, Query: {QueryString}",
-            queryDto.StateName, queryDto.QueryString);
-
-        try
-        {
-            var index = GetIndexName(queryDto.StateName);
-            
-            var countRequest = new CountRequest(index);
-            
-            if (!queryDto.QueryString.IsNullOrEmpty())
-            {
-                countRequest.Query = new QueryStringQuery
-                {
-                    Query = queryDto.QueryString,
-                    AllowLeadingWildcard = false
-                };
-            }
-
-            var response = await _client.CountAsync(countRequest);
-
-            if (!response.IsValidResponse)
-            {
-                var error = response.ElasticsearchServerError?.Error?.Reason ?? "Unknown error";
-                _logger.LogError("Elasticsearch count failed: {Error}, Debug: {Debug}",
-                    error, response.DebugInformation);
-                throw new UserFriendlyException($"ES Count Failed: {error}");
-            }
-
-            var count = response.Count;
-            _logger.LogInformation("[Lucene Count] Index: {Index}, Total Count: {Count}",
-                queryDto.StateName, count);
-
-            return count;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "[Lucene Count] Exception occurred. Index: {Index}", queryDto.StateName);
-            throw new UserFriendlyException(ex.Message);
-        }
-    }
+    
     
     public async Task<long> CountWithLuceneAsync(LuceneQueryDto queryDto)
     {
