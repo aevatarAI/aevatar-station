@@ -6,7 +6,6 @@ import pytest
 import requests
 import logging
 import urllib3
-import subprocess
 
 # Print startup notification
 print("=" * 80)
@@ -21,12 +20,6 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-# Import cleanup function
-try:
-    from cleanup_k8s_resources import cleanup_k8s_resources
-except ImportError:
-    def cleanup_k8s_resources():
-        logger.warning("cleanup_k8s_resources not available")
 
 TEST_AGENT = "agenttest"
 WORKFLOW_VIEW_AGENT = "Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView.WorkflowViewGAgent"
@@ -483,47 +476,6 @@ def api_admin_headers(admin_access_token):
         "Authorization": f"Bearer {admin_access_token}",
         "Content-Type": "application/json"
     }
-
-# Add pytest fixture for K8s resource tracking and cleanup
-@pytest.fixture(scope="session", autouse=True)
-def k8s_cleanup():
-    """Cleanup K8s resources after all tests complete"""
-    created_resources = []
-    
-    yield created_resources
-    
-    # Cleanup after all tests
-    if RUNNING_IN_DOCKER and KUBECONFIG:
-        logger.info("Cleaning up Kubernetes resources created during tests...")
-        cleanup_k8s_resources()
-
-# Helper function to verify K8s resources were created
-def verify_k8s_deployment(deployment_name, namespace="aevatar-apps", timeout=60):
-    """Verify that a K8s deployment was created successfully"""
-    if not KUBECONFIG:
-        logger.warning("Skipping K8s verification - no kubeconfig available")
-        return False
-        
-    cmd = [
-        "kubectl", "--kubeconfig", KUBECONFIG,
-        "get", "deployment", deployment_name,
-        "-n", namespace, "-o", "json"
-    ]
-    
-    for attempt in range(timeout // 5):
-        try:
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            if result.returncode == 0:
-                logger.info(f"✓ Deployment {deployment_name} exists in namespace {namespace}")
-                return True
-        except Exception as e:
-            logger.error(f"Error checking deployment: {e}")
-            
-        time.sleep(5)
-    
-    logger.error(f"✗ Deployment {deployment_name} not found after {timeout}s")
-    return False
-    
 
 def test_permission(api_headers, api_admin_headers):
     """test event operations"""

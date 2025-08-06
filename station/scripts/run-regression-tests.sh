@@ -191,6 +191,63 @@ get_admin_token() {
     return 1
 }
 
+verify_k8s_deployment() {
+    local deployment_name="$1"
+    local namespace="${2:-aevatar-apps}"
+    local timeout="${3:-60}"
+    local attempt=1
+    local max_attempts=$((timeout / 5))
+    
+    print_status "Verifying K8s deployment: $deployment_name in namespace $namespace"
+    
+    if [ ! -f "$KUBECONFIG_PATH" ]; then
+        print_warning "Skipping K8s deployment verification - no kubeconfig available"
+        return 1
+    fi
+    
+    while [ $attempt -le $max_attempts ]; do
+        if kubectl --kubeconfig="$KUBECONFIG_PATH" --insecure-skip-tls-verify \
+            get deployment "$deployment_name" -n "$namespace" -o json >/dev/null 2>&1; then
+            print_status "✓ Deployment $deployment_name exists in namespace $namespace"
+            return 0
+        fi
+        
+        print_status "Attempt $attempt/$max_attempts: Deployment $deployment_name not found, waiting..."
+        sleep 5
+        ((attempt++))
+    done
+    
+    print_error "✗ Deployment $deployment_name not found after ${timeout}s"
+    return 1
+}
+
+verify_k8s_resources_created() {
+    print_status "Verifying Kubernetes resources created during tests..."
+    
+    # Get all deployments created during tests
+    local deployments
+    if deployments=$(kubectl --kubeconfig="$KUBECONFIG_PATH" --insecure-skip-tls-verify \
+        get deployments -n aevatar-apps -o jsonpath='{.items[*].metadata.name}' 2>/dev/null); then
+        
+        if [ -n "$deployments" ]; then
+            print_status "Found deployments: $deployments"
+            for deployment in $deployments; do
+                verify_k8s_deployment "$deployment" "aevatar-apps" 30
+            done
+        else
+            print_status "No deployments found in aevatar-apps namespace (this may be expected)"
+        fi
+    else
+        print_warning "Could not query deployments in aevatar-apps namespace"
+    fi
+    
+    # Show detailed resource summary
+    print_status "Summary of all K8s resources in aevatar-apps namespace:"
+    kubectl --kubeconfig="$KUBECONFIG_PATH" --insecure-skip-tls-verify \
+        get all,configmaps,secrets -n aevatar-apps 2>/dev/null || \
+        print_warning "Could not retrieve K8s resource summary"
+}
+
 register_test_client() {
     local admin_token="$1"
     local api_url="http://localhost:8080"  # API service external port (mapped from 8001)
@@ -386,9 +443,8 @@ main() {
     echo -e "${GREEN}📊 Exit Code: $TEST_EXIT_CODE${NC}"
     echo -e "${GREEN}================================================${NC}"
     
-    # Show K8s resources created during tests
-    print_status "Kubernetes resources created during tests:"
-    kubectl --kubeconfig="$KUBECONFIG_PATH" --insecure-skip-tls-verify get all -n aevatar-apps || true
+    # Verify K8s resources created during tests
+    verify_k8s_resources_created
     
     # Copy test results
     print_status "Copying test results..."
