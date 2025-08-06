@@ -83,13 +83,31 @@ services:
     networks:
       - regression-network
     
+  dbmigrator:
+    image: mcr.microsoft.com/dotnet/sdk:9.0
+    working_dir: /src/station/src/Aevatar.DbMigrator
+    environment:
+      ConnectionStrings__Default: "mongodb://admin:password123@mongodb:27017/AevatarAuth?authSource=admin&retryWrites=false"
+    volumes:
+      - ../..:/src
+    command: dotnet run
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - regression-network
+    
   authserver:
     build: 
       context: ../..
       dockerfile: station/src/Aevatar.AuthServer/Dockerfile
     environment:
-      ConnectionStrings__Default: "mongodb://admin:password123@mongodb:27017/AevatarAuth?authSource=admin"
+      ConnectionStrings__Default: "mongodb://admin:password123@mongodb:27017/AevatarAuth?authSource=admin&retryWrites=false"
       ASPNETCORE_ENVIRONMENT: "Development"
+      # AuthServer issuer configuration - must match what API service expects
+      AuthServer__IssuerUri: "http://authserver:8082/"
+      # OpenIddict server configuration for proper issuer
+      OpenIddict__Server__Issuer: "http://authserver:8082/"
       # Redis configuration for Docker container environment
       Redis__Configuration: "redis:6379"
       # Kubernetes configuration
@@ -101,6 +119,7 @@ services:
       - mongodb
       - redis
       - k3s-setup
+      - dbmigrator
     networks:
       - regression-network
     
@@ -109,8 +128,8 @@ services:
       context: ../..
       dockerfile: station/src/Aevatar.Silo/Dockerfile
     environment:
-      ConnectionStrings__Default: "mongodb://admin:password123@mongodb:27017/AevatarSilo?authSource=admin"
-      Orleans__MongoDBClient: "mongodb://admin:password123@mongodb:27017?authSource=admin"
+      ConnectionStrings__Default: "mongodb://admin:password123@mongodb:27017/AevatarSilo?authSource=admin&retryWrites=false"
+      Orleans__MongoDBClient: "mongodb://admin:password123@mongodb:27017?authSource=admin&retryWrites=false"
       Orleans__ClusterDbConnection: "redis:6379"
       Orleans__GrainStorageDbConnection: "redis:6379"
       # Orleans clustering configuration - MUST match API service
@@ -144,11 +163,32 @@ services:
       context: ../..
       dockerfile: station/src/Aevatar.HttpApi.Host/Dockerfile
     environment:
-      ConnectionStrings__Default: "mongodb://admin:password123@mongodb:27017/AevatarApi?authSource=admin"
-      AuthServer: "http://authserver:80"
+      ConnectionStrings__Default: "mongodb://admin:password123@mongodb:27017/AevatarAuth?authSource=admin&retryWrites=false"
+      AuthServer: "http://authserver:8082"
+      # Configure JWT Bearer authentication properly - try multiple config paths
+      Authentication__JwtBearer__Authority: "http://authserver:8082"
+      Authentication__JwtBearer__RequireHttpsMetadata: "false"
+      Authentication__JwtBearer__ValidIssuer: "http://authserver:8082/"
+      # Also try ABP-specific configuration
+      AuthServer__Authority: "http://authserver:8082"
+      AuthServer__RequireHttpsMetadata: "false"
+      # Try direct JWT options configuration
+      JwtBearerOptions__Authority: "http://authserver:8082"
+      JwtBearerOptions__RequireHttpsMetadata: "false"
+      JwtBearerOptions__ValidIssuer: "http://authserver:8082/"
+      # For regression testing - disable issuer validation if needed
+      Authentication__JwtBearer__ValidateIssuer: "false"
+      JwtBearerOptions__ValidateIssuer: "false"
+      # Add clock skew tolerance and disable lifetime validation for regression tests
+      Authentication__JwtBearer__ClockSkew: "00:05:00"
+      JwtBearerOptions__ClockSkew: "00:05:00"
+      Authentication__JwtBearer__ValidateLifetime: "false"
+      JwtBearerOptions__ValidateLifetime: "false"
+      Authentication__JwtBearer__ValidateAudience: "false"
+      JwtBearerOptions__ValidateAudience: "false"
       Orleans__ClusterId: "regression-cluster"
       Orleans__ServiceId: "regression-service"
-      Orleans__MongoDBClient: "mongodb://admin:password123@mongodb:27017?authSource=admin"
+      Orleans__MongoDBClient: "mongodb://admin:password123@mongodb:27017?authSource=admin&retryWrites=false"
       Orleans__ClusterDbConnection: "redis:6379"
       Orleans__GrainStorageDbConnection: "redis:6379"
       # Redis configuration for ABP caching

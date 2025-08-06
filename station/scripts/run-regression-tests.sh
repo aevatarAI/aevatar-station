@@ -12,6 +12,13 @@ RESULTS_DIR="$SCRIPT_DIR/test-results"
 K3S_CLUSTER_NAME="regression-cluster"
 KUBECONFIG_PATH="$SCRIPT_DIR/shared/kubeconfig-host"
 
+# Test client configuration (matches regression_test.py defaults)
+TEST_CLIENT_ID="${CLIENT_ID:-AevatarTestClient}"
+TEST_CLIENT_SECRET="${CLIENT_SECRET:-test-secret-key}"
+ADMIN_USERNAME="${ADMIN_USERNAME:-admin}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-1q2W3e*}"
+CORS_URLS="${CORS_URLS:-http://localhost:3000,http://localhost:3001}"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -113,6 +120,163 @@ wait_for_k3s_ready() {
     return 1
 }
 
+get_admin_token() {
+    local max_attempts=5
+    local attempt=1
+    
+    print_status "Getting admin authentication token..."
+    
+    # First, let's check if we can access the authserver container
+    print_status "Checking AuthServer container accessibility..."
+    if ! docker-compose -f "$COMPOSE_FILE" -p "$PROJECT_NAME" exec -T authserver sh -c "echo 'Container accessible'" 2>/dev/null; then
+        print_error "Cannot access AuthServer container via docker-compose exec"
+        return 1
+    fi
+    
+    while [ $attempt -le $max_attempts ]; do
+        print_status "Attempt $attempt/$max_attempts: Trying to get admin token..."
+        
+        # Use docker run with the correct network name to get the token
+        print_status "Using temporary curl container to authenticate..."
+        local token_response
+        token_response=$(docker run --rm \
+            --network="${PROJECT_NAME}_regression-network" \
+            curlimages/curl:latest \
+            --silent --show-error --fail \
+            --connect-timeout 10 \
+            --max-time 30 \
+            'http://authserver:8082/connect/token' \
+            -H 'Content-Type: application/x-www-form-urlencoded' \
+            -H 'Accept: application/json' \
+            --data-urlencode 'grant_type=password' \
+            --data-urlencode "username=$ADMIN_USERNAME" \
+            --data-urlencode "password=$ADMIN_PASSWORD" \
+            --data-urlencode 'scope=Aevatar' \
+            --data-urlencode 'client_id=AevatarAuthServer' 2>/dev/null)
+        
+        print_status "Response from authentication request: '$token_response'"
+        
+        # Check if we got a response
+        if [ -n "$token_response" ]; then
+            # Try to extract token with jq if available, otherwise use awk
+            local ACCESS_TOKEN
+            if command -v jq &> /dev/null; then
+                ACCESS_TOKEN=$(echo "$token_response" | jq -r '.access_token' 2>/dev/null)
+            else
+                # Use awk to properly extract the token
+                ACCESS_TOKEN=$(echo "$token_response" | awk -F'"' '/access_token/{print $4}')
+            fi
+            # Check if token was obtained
+            if [ -n "$ACCESS_TOKEN" ] && [ "$ACCESS_TOKEN" != "null" ] && [ "$ACCESS_TOKEN" != "" ]; then
+                print_status "✓ Successfully obtained admin access token"
+                echo "$ACCESS_TOKEN"
+                return 0
+            else
+                print_status "Token response received but failed to extract access_token: $token_response"
+            fi
+        else
+            print_status "No response received from AuthServer"
+        fi
+        
+        print_status "Attempt $attempt/$max_attempts failed, retrying in 5 seconds..."
+        sleep 5
+        ((attempt++))
+    done
+    
+    print_error "✗ Failed to obtain admin access token after $max_attempts attempts"
+    print_status "Debug: Checking AuthServer container status..."
+    docker-compose -f "$COMPOSE_FILE" -p "$PROJECT_NAME" ps authserver || true
+    print_status "Debug: Checking AuthServer logs..."
+    docker-compose -f "$COMPOSE_FILE" -p "$PROJECT_NAME" logs --tail=20 authserver || true
+    return 1
+}
+
+register_test_client() {
+    local admin_token="$1"
+    local api_url="http://localhost:8080"  # API service external port (mapped from 8001)
+    
+    print_status "Registering test client: $TEST_CLIENT_ID"
+    
+    # Get a fresh token to avoid expiration issues
+    print_status "Getting fresh token for client registration..."
+    local fresh_token
+    if ! fresh_token=$(get_admin_token); then
+        print_error "Failed to get fresh admin token for client registration"
+        return 1
+    fi
+    admin_token="$fresh_token"
+    
+    # URL encode CORS URLs
+    local cors_urls_encoded
+    if command -v jq &> /dev/null; then
+        cors_urls_encoded=$(printf "%s" "$CORS_URLS" | jq -s -R -r @uri)
+    else
+        # Simple URL encoding for common characters
+        cors_urls_encoded=$(printf "%s" "$CORS_URLS" | sed 's/ /%20/g' | sed 's/,/%2C/g')
+    fi
+    
+    # Make registration request
+    local response_file=$(mktemp)
+    local http_status
+    local full_url="$api_url/api/users/registerClient?clientId=$TEST_CLIENT_ID&clientSecret=$TEST_CLIENT_SECRET&corsUrls=$cors_urls_encoded"
+    
+    print_status "Making registration request to: $full_url"
+    print_status "Admin token: $admin_token"
+    
+    http_status=$(curl --silent --show-error \
+        --connect-timeout 10 \
+        --max-time 30 \
+        -o "$response_file" \
+        -w "%{http_code}" \
+        -X POST \
+        "$full_url" \
+        -H 'Accept: */*' \
+        -H "Authorization: Bearer $admin_token" \
+        -H 'X-Requested-With: XMLHttpRequest' \
+        2>/dev/null)
+    
+    # Log response for debugging
+    if [ -s "$response_file" ]; then
+        local response_content=$(cat "$response_file")
+        print_status "Registration response (HTTP $http_status): $response_content"
+    fi
+    
+    # Clean up response file
+    rm -f "$response_file"
+    
+    # Check if registration was successful (200 or 201 status codes)
+    if [ "$http_status" = "200" ] || [ "$http_status" = "201" ]; then
+        print_status "✓ Successfully registered test client: $TEST_CLIENT_ID"
+        return 0
+    elif [ "$http_status" = "409" ]; then
+        print_warning "Test client already exists: $TEST_CLIENT_ID (HTTP $http_status)"
+        return 0  # This is OK - client already registered
+    else
+        print_error "✗ Failed to register test client. HTTP status: $http_status"
+        return 1
+    fi
+}
+
+setup_test_client() {
+    print_status "Setting up test client for regression tests..."
+    
+    # Get admin token
+    local admin_token
+    if ! admin_token=$(get_admin_token); then
+        print_error "Failed to get admin authentication token"
+        return 1
+    fi
+    
+    # Register test client
+    if ! register_test_client "$admin_token"; then
+        print_error "Failed to register test client"
+        return 1
+    fi
+    
+    print_status "✓ Test client setup completed successfully"
+    return 0
+}
+
 # Set trap for cleanup on exit
 trap cleanup EXIT
 
@@ -152,6 +316,10 @@ main() {
     print_status "Waiting for infrastructure to be ready..."
     sleep 30
     
+    # Run database migration and seeding
+    print_status "Running database migration and seeding..."
+    docker-compose -f "$COMPOSE_FILE" -p "$PROJECT_NAME" up dbmigrator
+    
     # Start application services in order
     print_status "Starting AuthServer..."
     docker-compose -f "$COMPOSE_FILE" -p "$PROJECT_NAME" up -d authserver
@@ -176,6 +344,12 @@ main() {
         exit 1
     fi
     
+    # Setup test client for regression tests
+    if ! setup_test_client; then
+        print_error "Test client setup failed"
+        exit 1
+    fi
+    
     # Show K8s cluster info
     print_status "Kubernetes cluster info:"
     kubectl --kubeconfig="$KUBECONFIG_PATH" --insecure-skip-tls-verify cluster-info || true
@@ -185,10 +359,10 @@ main() {
     print_status "🚀 Starting regression_test.py execution..."
     echo -e "${GREEN}================================================${NC}"
     echo -e "${GREEN}🧪 REGRESSION TEST EXECUTION STARTING NOW!${NC}"
-    echo -e "${GREEN}📝 Running: regression_test.py${NC}"
+    echo -e "${GREEN}📝 Running: pytest regression_test.py -v${NC}"
     echo -e "${GREEN}================================================${NC}"
     set +e  # Don't exit on test failures
-    docker-compose -f "$COMPOSE_FILE" -p "$PROJECT_NAME" run --rm regression-tests python regression_test.py "$@"
+    docker-compose -f "$COMPOSE_FILE" -p "$PROJECT_NAME" run --rm regression-tests pytest regression_test.py -v "$@"
     TEST_EXIT_CODE=$?
     set -e
     echo -e "${GREEN}================================================${NC}"
@@ -224,18 +398,27 @@ USAGE:
     $0 [OPTIONS] [PYTEST_ARGS]
 
 OPTIONS:
-    --no-cleanup    Don't cleanup containers after tests (for debugging)
-    --logs         Show service logs after test completion
-    --help         Show this help
+    --no-cleanup      Don't cleanup containers after tests (for debugging)
+    --logs           Show service logs after test completion
+    --setup-client-only   Run only the test client setup (requires services to be running)
+    --help           Show this help
 
 PYTEST_ARGS:
     Any additional arguments are passed to pytest
+
+ENVIRONMENT VARIABLES:
+    CLIENT_ID         Test client ID (default: AevatarTestClient)
+    CLIENT_SECRET     Test client secret (default: test-secret-key)
+    ADMIN_USERNAME    Admin username for client registration (default: admin)
+    ADMIN_PASSWORD    Admin password for client registration (default: 1q2W3e*)
+    CORS_URLS         Comma-separated CORS URLs (default: http://localhost:3000,http://localhost:3001)
 
 EXAMPLES:
     $0                           # Run all tests
     $0 -k "test_login"          # Run specific test
     $0 --maxfail=1              # Stop on first failure
     $0 --no-cleanup --logs      # Keep containers running and show logs
+    CLIENT_ID=MyTestClient CLIENT_SECRET=MySecret $0  # Custom test client
 
 RESULTS:
     Test results are saved to: $RESULTS_DIR
@@ -246,6 +429,7 @@ EOF
 # Handle command line arguments
 CLEANUP_ON_EXIT=true
 SHOW_LOGS=false
+PYTEST_ARGS=()
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -262,15 +446,36 @@ while [[ $# -gt 0 ]]; do
             show_help
             exit 0
             ;;
+        --setup-client-only)
+            # Run only the client setup function
+            print_status "Running client setup only..."
+            cd "$SCRIPT_DIR"
+            
+            # Check if services are running
+            if ! docker-compose -f "$COMPOSE_FILE" -p "$PROJECT_NAME" ps | grep -q "authserver.*Up"; then
+                print_error "AuthServer is not running. Start services first with: $0 --start-services"
+                exit 1
+            fi
+            
+            # Run the setup
+            if setup_test_client; then
+                print_status "✓ Client setup completed successfully"
+                exit 0
+            else
+                print_error "✗ Client setup failed"
+                exit 1
+            fi
+            ;;
         *)
-            # Pass remaining arguments to pytest
-            break
+            # Store remaining arguments for pytest
+            PYTEST_ARGS+=("$1")
+            shift
             ;;
     esac
 done
 
-# Run main function with remaining arguments
-main "$@"
+# Run main function with pytest arguments
+main "${PYTEST_ARGS[@]}"
 TEST_RESULT=$?
 
 # Show logs if requested
