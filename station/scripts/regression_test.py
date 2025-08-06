@@ -20,7 +20,6 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-
 TEST_AGENT = "agenttest"
 WORKFLOW_VIEW_AGENT = "Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView.WorkflowViewGAgent"
 STATE_NAME = "FrontAgentState"
@@ -29,21 +28,8 @@ AGENT_NAME_MODIFIED = "TestAgentNameModified"
 EVENT_TYPE = "Aevatar.Application.Grains.Agents.TestAgent.FrontTestCreateEvent"
 EVENT_PARAM = "Name"
 
-# Docker environment detection
-RUNNING_IN_DOCKER = os.getenv("RUNNING_IN_DOCKER", "false").lower() == "true" or os.path.exists('/.dockerenv')
-
-# Environment-aware configuration
-if RUNNING_IN_DOCKER:
-    # Use internal Docker network URLs
-    AUTH_HOST = os.getenv("AUTH_HOST", "http://authserver:8082")
-    API_HOST = os.getenv("API_HOST", "http://api:8001")
-    # Disable SSL verification in Docker (internal network)
-else:
-    # Use localhost URLs for local development
-    AUTH_HOST = os.getenv("AUTH_HOST", "https://localhost:44300")
-    API_HOST = os.getenv("API_HOST", "https://localhost:44301")
-    # Disable SSL verification due to self-signed certs
-
+AUTH_HOST = os.getenv("AUTH_HOST", "http://authserver:8082")
+API_HOST = os.getenv("API_HOST", "http://api:8001")
 CLIENT_ID = os.getenv("CLIENT_ID", "AevatarTestClient")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET", "test-secret-key")
 INDEX_NAME = f"aevatar-{CLIENT_ID}-testagentstateindex"
