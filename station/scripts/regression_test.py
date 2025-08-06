@@ -38,13 +38,11 @@ if RUNNING_IN_DOCKER:
     AUTH_HOST = os.getenv("AUTH_HOST", "http://authserver:8082")
     API_HOST = os.getenv("API_HOST", "http://api:8001")
     # Disable SSL verification in Docker (internal network)
-    KUBECONFIG = os.getenv("KUBECONFIG", "/app/kubeconfig")
 else:
     # Use localhost URLs for local development
     AUTH_HOST = os.getenv("AUTH_HOST", "https://localhost:44300")
     API_HOST = os.getenv("API_HOST", "https://localhost:44301")
     # Disable SSL verification due to self-signed certs
-    KUBECONFIG = None
 
 CLIENT_ID = os.getenv("CLIENT_ID", "AevatarTestClient")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET", "test-secret-key")
