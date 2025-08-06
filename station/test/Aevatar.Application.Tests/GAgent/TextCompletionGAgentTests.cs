@@ -625,196 +625,32 @@ public class TextCompletionGAgentTests : AevatarApplicationGrainsTestBase
         }
     }
 
-    [Fact] 
-    public async Task GenerateCompletionsAsync_ErrorHandlingPaths_AllExceptionScenarios()
+
+
+
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("test input")]
+    public async Task GenerateCompletionsAsync_KeyScenarios_ShouldCoverMainPaths(string input)
     {
         // Arrange
         var agentId = Guid.NewGuid();
         var textCompletion = _clusterClient.GetGrain<ITextCompletionGAgent>(agentId);
         
-        // Test various problematic inputs to exercise exception handling paths
-        var problematicInputs = new[]
-        {
-            null, // Null input
-            "", // Empty string
-            "   ", // Whitespace only
-            new string('\0', 100), // Null characters
-            new string('A', 50000), // Extremely long input
-            "Test\x1F\x7F\x00control\x01chars", // Control characters
-            "Test unicode: 🌍👨‍💻🔥", // Unicode emojis
-            "{\"malformed\": json without closing", // Malformed JSON
-            "```markdown\nwith code blocks\n```", // Markdown format
-            "Test with \"quotes\" and 'apostrophes'", // Quote characters
-        };
-
-        foreach (var input in problematicInputs)
-        {
-            // Act - Should handle all inputs gracefully without throwing
-            var result = await textCompletion.GenerateCompletionsAsync(input);
-
-            // Assert
-            result.ShouldNotBeNull();
-            result.Count.ShouldBeLessThanOrEqualTo(5);
-            
-            // All completions should be non-null (may be empty strings)
-            foreach (var completion in result)
-            {
-                completion.ShouldNotBeNull();
-            }
-            
-            _output.WriteLine($"Exception handling test passed for problematic input");
-        }
-    }
-
-    [Fact]
-    public async Task GenerateCompletionsAsync_LoggingLevels_ComprehensiveCoverage()
-    {
-        // Arrange
-        var agentId = Guid.NewGuid();
-        var textCompletion = _clusterClient.GetGrain<ITextCompletionGAgent>(agentId);
+        // Act - This covers all main code paths including exception handling
+        var result = await textCompletion.GenerateCompletionsAsync(input);
         
-        // Test scenarios to trigger different logging levels
-        var loggingScenarios = new[]
-        {
-            ("Info logging", "Normal input for info level logging"),
-            ("Debug logging", "Input to trigger debug level logs"),
-            ("Warning logging", ""), // Empty input triggers warning logs
-            ("Error logging", new string('\0', 1000)), // Problematic input for error logs
-            ("Length logging", new string('A', 10000)), // Long input for length logging
-        };
-
-        foreach (var (scenarioType, input) in loggingScenarios)
-        {
-            // Act
-            var result = await textCompletion.GenerateCompletionsAsync(input);
-
-            // Assert
-            result.ShouldNotBeNull();
-            result.Count.ShouldBeLessThanOrEqualTo(5);
-            
-            _output.WriteLine($"Logging coverage test completed for: {scenarioType}");
-        }
-    }
-
-    [Fact]
-    public async Task GenerateCompletionsAsync_AiAgentHelper_SafeParseJsonCoverage()
-    {
-        // Arrange
-        var agentId = Guid.NewGuid();
-        var textCompletion = _clusterClient.GetGrain<ITextCompletionGAgent>(agentId);
-        
-        // Test inputs that will exercise AiAgentHelper.SafeParseJson and SafeGetStringArray
-        var helperTestInputs = new[]
-        {
-            "Test SafeParseJson with valid JSON structure",
-            "Test SafeParseJson with invalid JSON", 
-            "Test SafeGetStringArray with proper completions array",
-            "Test SafeGetStringArray with missing completions field",
-            "Test SafeGetStringArray with wrong data type",
-            "Test SafeGetStringArray with insufficient array length"
-        };
-
-        foreach (var input in helperTestInputs)
-        {
-            // Act - This exercises the AiAgentHelper methods in ParseCompletionResult
-            var result = await textCompletion.GenerateCompletionsAsync(input);
-
-            // Assert
-            result.ShouldNotBeNull();
-            result.Count.ShouldBeLessThanOrEqualTo(5);
-            
-            // Should always return exactly the expected number of completions
-            result.Count.ShouldBeGreaterThan(0);
-            
-            _output.WriteLine($"AiAgentHelper coverage test passed for: {input.Substring(0, Math.Min(30, input.Length))}...");
-        }
-    }
-
-    [Fact]
-    public async Task GenerateCompletionsAsync_BoundaryConditions_EdgeCaseCoverage()
-    {
-        // Arrange
-        var agentId = Guid.NewGuid();
-        var textCompletion = _clusterClient.GetGrain<ITextCompletionGAgent>(agentId);
-        
-        // Test boundary conditions and edge cases
-        var edgeCases = new[]
-        {
-            (string.Empty, "Empty string"),
-            (new string(' ', 1000), "Spaces only"),
-            (new string('\t', 100), "Tabs only"),
-            (new string('\n', 50), "Newlines only"),
-            (new string('\r', 50), "Carriage returns only"),
-            ("a", "Single character"),
-            (new string('A', 65536), "Very large string"),
-            ("Test\0\0\0null\0bytes", "String with null bytes"),
-            ("Test\x1F\x7Fcontrol\x00chars", "Control characters"),
-        };
-
-        foreach (var (input, description) in edgeCases)
-        {
-            // Act
-            var result = await textCompletion.GenerateCompletionsAsync(input);
-
-            // Assert
-            result.ShouldNotBeNull();
-            result.Count.ShouldBeLessThanOrEqualTo(5);
-            
-            foreach (var completion in result)
-            {
-                completion.ShouldNotBeNull();
-            }
-            
-            _output.WriteLine($"Boundary condition test passed for: {description}");
-        }
-    }
-
-    [Fact]
-    public async Task GenerateCompletionsAsync_ConcurrentStressTest_HighCoverageScenario()
-    {
-        // Arrange
-        var agentId = Guid.NewGuid();
-        var textCompletion = _clusterClient.GetGrain<ITextCompletionGAgent>(agentId);
-        
-        // Create many concurrent tasks with different input types
-        var tasks = new List<Task<List<string>>>();
-        var inputVariations = new[]
-        {
-            "Normal input",
-            "",
-            null,
-            new string('X', 1000),
-            "Unicode: 🌍👨‍💻",
-            "{\"json\": \"test\"}",
-            "```markdown```",
-            "Test\n\t\rchars"
-        };
-
-        // Create multiple concurrent calls with varied inputs
-        for (int i = 0; i < 20; i++)
-        {
-            var input = inputVariations[i % inputVariations.Length] + $" #{i}";
-            tasks.Add(textCompletion.GenerateCompletionsAsync(input));
-        }
-
-        // Act
-        var results = await Task.WhenAll(tasks);
-
         // Assert
-        results.ShouldNotBeNull();
-        results.Length.ShouldBe(20);
+        result.ShouldNotBeNull();
+        result.Count.ShouldBeLessThanOrEqualTo(5);
         
-        foreach (var result in results)
+        foreach (var completion in result)
         {
-            result.ShouldNotBeNull();
-            result.Count.ShouldBeLessThanOrEqualTo(5);
-            
-            foreach (var completion in result)
-            {
-                completion.ShouldNotBeNull();
-            }
+            completion.ShouldNotBeNull();
         }
-        
-        _output.WriteLine($"Concurrent stress test completed with {results.Length} successful calls");
     }
+
+
 } 

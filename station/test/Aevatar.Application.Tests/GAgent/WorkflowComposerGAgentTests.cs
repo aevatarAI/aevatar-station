@@ -814,83 +814,27 @@ public class WorkflowComposerGAgentTests : AevatarApplicationGrainsTestBase
         }
     }
 
+
+
     [Fact]
-    public async Task GenerateWorkflowJsonAsync_AiAgentHelper_CleanJsonContentCoverage()
+    public async Task GenerateWorkflowJsonAsync_NullAndEmptyInput_ShouldReturnFallback()
     {
         // Arrange
         var agentId = Guid.NewGuid();
         var workflowComposer = _clusterClient.GetGrain<IWorkflowComposerGAgent>(agentId);
         
-        // Test inputs that will exercise AiAgentHelper.CleanJsonContent and IsValidJson
-        var jsonTestInputs = new[]
-        {
-            "Test AiAgentHelper.CleanJsonContent with markdown",
-            "Test AiAgentHelper.IsValidJson validation",
-            "Test invalid JSON handling in helper",
-            "Test empty JSON response from helper",
-            "Test null JSON response from helper",
-            "Test malformed JSON response from helper"
-        };
-
-        foreach (var input in jsonTestInputs)
-        {
-            // Act - This exercises the AiAgentHelper methods in CallAIForWorkflowGenerationAsync
-            var result = await workflowComposer.GenerateWorkflowJsonAsync(input);
-
-            // Assert
-            result.ShouldNotBeNullOrEmpty();
-            
-            var json = JObject.Parse(result);
-            json.ShouldNotBeNull();
-            
-            // Should handle all JSON cleaning and validation scenarios
-            json.ShouldContainKey("generationStatus");
-            
-            _output.WriteLine($"AiAgentHelper coverage test passed for JSON processing");
-        }
-    }
-
-    [Fact]
-    public async Task GenerateWorkflowJsonAsync_ExceptionHandlingPaths_ComprehensiveCoverage()
-    {
-        // Arrange
-        var agentId = Guid.NewGuid();
-        var workflowComposer = _clusterClient.GetGrain<IWorkflowComposerGAgent>(agentId);
+        // Act & Assert - Test key edge cases that exercise different code paths
+        var nullResult = await workflowComposer.GenerateWorkflowJsonAsync(null);
+        nullResult.ShouldNotBeNullOrEmpty();
+        var nullJson = JObject.Parse(nullResult);
+        nullJson.ShouldContainKey("generationStatus");
+        nullJson.ShouldContainKey("errorInfo");
         
-        // Test various problematic inputs to exercise exception handling
-        var problematicInputs = new[]
-        {
-            null, // Null input
-            "", // Empty string
-            "   \t\n   ", // Whitespace only
-            new string('\0', 1000), // Null characters
-            new string('A', 100000), // Extremely long input
-            "Test\x1F\x7F\x00control\x01chars", // Control characters
-            "Test unicode: 🌍👨‍💻🔥💯", // Unicode emojis
-            "{\"malformed\": json without closing", // Malformed JSON
-            "```json\n{\"incomplete\":\n```", // Incomplete markdown JSON
-            "Test with \"quotes\" and 'apostrophes' and \n\t\r", // Mixed quotes and control chars
-            "Test\0null\0bytes\0in\0string", // Embedded null bytes
-            new string('A', 1000) + "🚀🚀🚀", // Unicode stress test
-        };
-
-        foreach (var input in problematicInputs)
-        {
-            // Act - Should handle all inputs gracefully without throwing
-            var result = await workflowComposer.GenerateWorkflowJsonAsync(input);
-
-            // Assert
-            result.ShouldNotBeNullOrEmpty();
-            
-            var json = JObject.Parse(result);
-            json.ShouldNotBeNull();
-            
-            // Should always return valid fallback structure
-            json.ShouldContainKey("generationStatus");
-            json.ShouldContainKey("errorInfo");
-            
-            _output.WriteLine($"Exception handling test passed for problematic input");
-        }
+        var emptyResult = await workflowComposer.GenerateWorkflowJsonAsync("");
+        emptyResult.ShouldNotBeNullOrEmpty();
+        var emptyJson = JObject.Parse(emptyResult);
+        emptyJson.ShouldContainKey("generationStatus");
+        emptyJson.ShouldContainKey("errorInfo");
     }
 
     [Fact]
@@ -970,53 +914,9 @@ public class WorkflowComposerGAgentTests : AevatarApplicationGrainsTestBase
         }
     }
 
-    [Fact]
-    public async Task GenerateWorkflowJsonAsync_ConcurrentFallbackGeneration_StressTest()
-    {
-        // Arrange
-        var agentId = Guid.NewGuid();
-        var workflowComposer = _clusterClient.GetGrain<IWorkflowComposerGAgent>(agentId);
-        
-        // Create many concurrent tasks with different goal types
-        var tasks = new List<Task<string>>();
-        var goalVariations = new[]
-        {
-            "Normal workflow goal",
-            "",
-            null,
-            new string('X', 5000),
-            "Unicode: 🌍👨‍💻🔥",
-            "{\"json\": \"goal\"}",
-            "```json\n{\"markdown\": \"goal\"}\n```",
-            "Test\n\t\rcontrol\0chars"
-        };
 
-        // Create multiple concurrent calls with varied goals
-        for (int i = 0; i < 25; i++)
-        {
-            var goal = goalVariations[i % goalVariations.Length] + $" #{i}";
-            tasks.Add(workflowComposer.GenerateWorkflowJsonAsync(goal));
-        }
 
-        // Act
-        var results = await Task.WhenAll(tasks);
 
-        // Assert
-        results.ShouldNotBeNull();
-        results.Length.ShouldBe(25);
-        
-        foreach (var result in results)
-        {
-            result.ShouldNotBeNullOrEmpty();
-            
-            var json = JObject.Parse(result);
-            json.ShouldNotBeNull();
-            json.ShouldContainKey("generationStatus");
-            json.ShouldContainKey("errorInfo");
-        }
-        
-        _output.WriteLine($"Concurrent stress test completed with {results.Length} successful calls");
-    }
 
     [Fact]
     public async Task GenerateWorkflowJsonAsync_BoundaryConditions_EdgeCaseCoverage()

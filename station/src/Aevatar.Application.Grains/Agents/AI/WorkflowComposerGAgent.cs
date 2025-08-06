@@ -16,22 +16,7 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
     }
 
     public async Task<string> GenerateWorkflowJsonAsync(string userGoal)
-    {
-        Logger.LogInformation("Starting workflow generation for goal: {UserGoal}", userGoal);
-
-        try
-        {
-            var aiResult = await CallAIForWorkflowGenerationAsync(userGoal);
-            Logger.LogInformation("Successfully generated workflow JSON with length: {ResultLength}", aiResult.Length);
-
-            return aiResult;
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error generating workflow JSON for goal: {UserGoal}", userGoal);
-            throw;
-        }
-    }
+        => await CallAIForWorkflowGenerationAsync(userGoal);
 
     private async Task<string> CallAIForWorkflowGenerationAsync(string userGoal)
     {
@@ -55,7 +40,18 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
             }
 
             Logger.LogDebug("AI workflow response received, length: {Length} characters", response.Length);
-            return CleanJsonContent(response);
+
+            // 使用AiAgentHelper清理JSON内容，如果清理失败则返回回退JSON
+            var cleanedJson = AiAgentHelper.CleanJsonContent(response);
+
+            // 验证清理后的JSON是否有效
+            if (string.IsNullOrWhiteSpace(cleanedJson) || !AiAgentHelper.IsValidJson(cleanedJson))
+            {
+                Logger.LogWarning("AI returned invalid JSON content for workflow generation");
+                return GetFallbackWorkflowJson("invalid_json", "AI returned invalid JSON content");
+            }
+
+            return cleanedJson;
         }
         catch (Exception ex)
         {
@@ -63,7 +59,7 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
             return GetFallbackWorkflowJson("ai_service_error", $"AI service error: {ex.Message}");
         }
     }
-    
+
     private string GetFallbackWorkflowJson(string errorType = "system_error",
         string errorMessage = "AI service unavailable", string[]? actionableSteps = null)
     {
@@ -116,29 +112,5 @@ public class WorkflowComposerGAgent : AIGAgentBase<WorkflowComposerState, Workfl
         };
 
         return fallbackJson.ToString();
-    }
-
-    private string CleanJsonContent(string jsonContent)
-    {
-        if (string.IsNullOrWhiteSpace(jsonContent))
-            return GetFallbackWorkflowJson("empty_content", "AI returned empty content");
-
-        var cleaned = jsonContent.Trim();
-
-        if (cleaned.StartsWith("```json"))
-        {
-            cleaned = cleaned.Substring(7);
-        }
-        else if (cleaned.StartsWith("```"))
-        {
-            cleaned = cleaned.Substring(3);
-        }
-
-        if (cleaned.EndsWith("```"))
-        {
-            cleaned = cleaned.Substring(0, cleaned.Length - 3);
-        }
-
-        return cleaned.Trim();
     }
 }
