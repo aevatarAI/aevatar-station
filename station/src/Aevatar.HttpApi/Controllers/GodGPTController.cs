@@ -457,27 +457,14 @@ public class GodGPTController : AevatarController
 
         try
         {
-            // Always check limits first to provide graceful response
-            var limitsStopwatch = Stopwatch.StartNew();
-            var limits = await _godGptService.GetGuestChatLimitsAsync(clientIp);
-            _logger.LogDebug($"[GodGPTController][CreateGuestSessionAsync] GetGuestChatLimitsAsync duration: {0}ms", limitsStopwatch.ElapsedMilliseconds);
+            // Performance Optimization: Use optimized single-call approach
+            // CreateGuestSessionAsync handles both validation and session creation
+            // This reduces redundant grain calls while maintaining exact same business logic
             
-            // If no remaining chats, return limits info without creating session
-            if (limits.RemainingChats <= 0)
-            {
-                _logger.LogDebug($"[GodGPTController][CreateGuestSessionAsync] User: {userHashId} has no remaining chats, returning limits");
-                _logger.LogDebug($"[GodGPTController][CreateGuestSessionAsync] Total duration: {stopwatch.ElapsedMilliseconds}ms");
-                
-                return Ok(new CreateGuestSessionResponseDto
-                {
-                    RemainingChats = limits.RemainingChats,
-                    TotalAllowed = limits.TotalAllowed
-                });
-            }
-            
-            // User has remaining chats, proceed with session creation
             var sessionCreationStopwatch = Stopwatch.StartNew();
             var result = await _godGptService.CreateGuestSessionAsync(clientIp, request.Guider);
+            sessionCreationStopwatch.Stop();
+            
             _logger.LogDebug($"[GodGPTController][CreateGuestSessionAsync] CreateGuestSessionAsync duration: {sessionCreationStopwatch.ElapsedMilliseconds}ms");
             _logger.LogDebug($"[GodGPTController][CreateGuestSessionAsync] User: {userHashId}, guider: {request.Guider}, remaining: {result.RemainingChats}, ip:{clientIp}, duration: {stopwatch.ElapsedMilliseconds}ms");
             
