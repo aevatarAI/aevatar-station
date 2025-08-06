@@ -7,6 +7,11 @@ on:
         description: "Duration to keep environment (in minutes)"
         required: true
         default: "60"
+      cors_urls:
+        description: "Comma-separated list of allowed CORS URLs"
+        required: true
+        default: 'http://localhost:3000,http://localhost:5173,http://localhost:5174,https://*.aevatar.ai'
+      
 
 run-name: Run Aevatar Station Ephemeral Test Environment on ${{ github.ref_name }} from ${{ github.sha }}
 
@@ -147,7 +152,8 @@ jobs:
                 client_secret: "${{ steps.generate-uuid.outputs.client_secret }}",
                 host_silo_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
                 host_client_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
-                station_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}"
+                station_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
+                cors_urls: "${{ inputs.cors_urls }}",
               }
             });
             
