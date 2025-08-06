@@ -326,6 +326,9 @@ public class GodGPTController : AevatarController
     [HttpPut("godgpt/account")]
     public async Task<Guid> SetUserProfileAsync(SetUserProfileInput userProfile)
     {
+ _logger.LogDebug(
+            $"[GodGPTController][SetUserProfileAsync] start sessionId: {updateUserId}");
+      
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
         if (userProfile != null && userProfile.UserId != null && userProfile.UserId != Guid.Empty)
