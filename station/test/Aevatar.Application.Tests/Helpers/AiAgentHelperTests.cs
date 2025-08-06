@@ -1,4 +1,8 @@
+using System;
+using System.Collections.Generic;
 using Aevatar.Application.Grains.Agents.AI;
+using Microsoft.Extensions.Logging;
+using Moq;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -210,4 +214,212 @@ public class AiAgentHelperTests
         
         _output.WriteLine("Custom default message test passed");
     }
+    
+    #region ProcessAiChatResult Tests
+    
+    [Fact]
+    public void ProcessAiChatResult_NullChatResult_ShouldReturnFallback()
+    {
+        // Arrange
+        var mockLogger = new Mock<ILogger>();
+        List<MockChatResultWithContent>? nullResult = null;
+        
+        // Act
+        var result = AiAgentHelper.ProcessAiChatResult(nullResult, mockLogger.Object, (error) => "fallback", "test_operation");
+        
+        // Assert
+        result.ShouldBe("fallback");
+        mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("AI service returned null or empty result for test_operation")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+    
+    [Fact]
+    public void ProcessAiChatResult_EmptyChatResult_ShouldReturnFallback()
+    {
+        // Arrange
+        var mockLogger = new Mock<ILogger>();
+        var emptyResult = new List<MockChatResultWithContent>();
+        
+        // Act
+        var result = AiAgentHelper.ProcessAiChatResult(emptyResult, mockLogger.Object, (error) => "fallback", "test_operation");
+        
+        // Assert
+        result.ShouldBe("fallback");
+        mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("AI service returned null or empty result for test_operation")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+    
+    [Fact]
+    public void ProcessAiChatResult_NoContentProperty_ShouldReturnFallback()
+    {
+        // Arrange
+        var mockLogger = new Mock<ILogger>();
+        var resultWithoutContent = new List<MockChatResultWithoutContent> { new MockChatResultWithoutContent() };
+        
+        // Act
+        var result = AiAgentHelper.ProcessAiChatResult(resultWithoutContent, mockLogger.Object, (error) => "fallback", "test_operation");
+        
+        // Assert
+        result.ShouldBe("fallback");
+        mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("AI returned empty content for test_operation")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+    
+    [Fact]
+    public void ProcessAiChatResult_NullContent_ShouldReturnFallback()
+    {
+        // Arrange
+        var mockLogger = new Mock<ILogger>();
+        var resultWithNullContent = new List<MockChatResultWithNullContent> { new MockChatResultWithNullContent() };
+        
+        // Act
+        var result = AiAgentHelper.ProcessAiChatResult(resultWithNullContent, mockLogger.Object, (error) => "fallback", "test_operation");
+        
+        // Assert
+        result.ShouldBe("fallback");
+        mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("AI returned empty content for test_operation")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+    
+    [Fact]
+    public void ProcessAiChatResult_EmptyContent_ShouldReturnFallback()
+    {
+        // Arrange
+        var mockLogger = new Mock<ILogger>();
+        var resultWithEmptyContent = new List<MockChatResultWithContent> { new MockChatResultWithContent { Content = "" } };
+        
+        // Act
+        var result = AiAgentHelper.ProcessAiChatResult(resultWithEmptyContent, mockLogger.Object, (error) => "fallback", "test_operation");
+        
+        // Assert
+        result.ShouldBe("fallback");
+        mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("AI returned empty content for test_operation")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+    
+    [Fact]
+    public void ProcessAiChatResult_WhitespaceContent_ShouldReturnFallback()
+    {
+        // Arrange
+        var mockLogger = new Mock<ILogger>();
+        var resultWithWhitespaceContent = new List<MockChatResultWithContent> { new MockChatResultWithContent { Content = "   " } };
+        
+        // Act
+        var result = AiAgentHelper.ProcessAiChatResult(resultWithWhitespaceContent, mockLogger.Object, (error) => "fallback", "test_operation");
+        
+        // Assert
+        result.ShouldBe("fallback");
+        mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("AI returned empty content for test_operation")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+    
+    [Fact]
+    public void ProcessAiChatResult_ValidContent_ShouldReturnContent()
+    {
+        // Arrange
+        var mockLogger = new Mock<ILogger>();
+        var resultWithValidContent = new List<MockChatResultWithContent> 
+        { 
+            new MockChatResultWithContent { Content = "Valid AI response content" } 
+        };
+        
+        // Act
+        var result = AiAgentHelper.ProcessAiChatResult(resultWithValidContent, mockLogger.Object, (error) => "fallback", "test_operation");
+        
+        // Assert
+        result.ShouldBe("Valid AI response content");
+        mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Debug,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("AI test_operation response received, length: 25 characters")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+    
+    [Theory]
+    [InlineData("Short")]
+    [InlineData("This is a longer AI response with more content to test different length scenarios")]
+    [InlineData("{\"json\": \"response\", \"with\": \"valid\", \"structure\": true}")]
+    public void ProcessAiChatResult_DifferentContentLengths_ShouldReturnContentAndLogCorrectLength(string content)
+    {
+        // Arrange
+        var mockLogger = new Mock<ILogger>();
+        var resultWithContent = new List<MockChatResultWithContent> 
+        { 
+            new MockChatResultWithContent { Content = content } 
+        };
+        
+        // Act
+        var result = AiAgentHelper.ProcessAiChatResult(resultWithContent, mockLogger.Object, (error) => "fallback", "test_operation");
+        
+        // Assert
+        result.ShouldBe(content);
+        mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Debug,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains($"AI test_operation response received, length: {content.Length} characters")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+    
+    #endregion
 }
+
+#region Mock Classes for ProcessAiChatResult Tests
+
+public class MockChatResultWithContent
+{
+    public string Content { get; set; } = "Test content";
+}
+
+public class MockChatResultWithoutContent
+{
+    public string NotContent { get; set; } = "This is not the Content property";
+}
+
+public class MockChatResultWithNullContent
+{
+    public string? Content { get; set; } = null;
+}
+
+#endregion
