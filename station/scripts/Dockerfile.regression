@@ -1,0 +1,31 @@
+# ABOUTME: Docker container for running regression tests with Kubernetes support
+# ABOUTME: Includes Python, pytest, kubectl, and test dependencies
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies including kubectl for K8s cleanup
+RUN apt-get update && apt-get install -y \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install kubectl
+RUN curl -LO "https://dl.k8s.io/release/v1.29.0/bin/linux/amd64/kubectl" \
+    && chmod +x kubectl \
+    && mv kubectl /usr/local/bin/
+
+# Install Python dependencies from main requirements.txt
+COPY ../../requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy test script and cleanup script
+COPY regression_test.py .
+
+# Create test results directory
+RUN mkdir -p test-results
+
+# Create a non-root user for security
+RUN useradd -m -u 1000 testuser && chown -R testuser:testuser /app
+USER testuser

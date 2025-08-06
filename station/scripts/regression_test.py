@@ -1,10 +1,18 @@
 # regression_test.py
 import os
+import sys
 import time
 import pytest
 import requests
 import logging
 import urllib3
+
+# Print startup notification
+print("=" * 80)
+print("🧪 REGRESSION_TEST.PY IS NOW RUNNING!")
+print("📍 Aevatar Station Regression Test Suite Starting...")
+print("🕐 Started at:", time.strftime("%Y-%m-%d %H:%M:%S"))
+print("=" * 80)
 
 # Disable SSL warnings for testing with self-signed certificates
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -20,14 +28,14 @@ AGENT_NAME_MODIFIED = "TestAgentNameModified"
 EVENT_TYPE = "Aevatar.Application.Grains.Agents.TestAgent.FrontTestCreateEvent"
 EVENT_PARAM = "Name"
 
-AUTH_HOST = os.getenv("AUTH_HOST")
-API_HOST =  os.getenv("API_HOST")
-CLIENT_ID = os.getenv("CLIENT_ID")
-CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+AUTH_HOST = os.getenv("AUTH_HOST", "http://authserver:8082")
+API_HOST = os.getenv("API_HOST", "http://api:8001")
+CLIENT_ID = os.getenv("CLIENT_ID", "AevatarTestClient")
+CLIENT_SECRET = os.getenv("CLIENT_SECRET", "test-secret-key")
 INDEX_NAME = f"aevatar-{CLIENT_ID}-testagentstateindex"
 
-ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD ="1q2W3e*"
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "1q2W3e*")
 
 PERMISSION_AGENT = "agentpermissiontest"
 PERMISSION_STATE_NAME = "PermissionAgentState"
@@ -450,7 +458,6 @@ def api_admin_headers(admin_access_token):
         "Authorization": f"Bearer {admin_access_token}",
         "Content-Type": "application/json"
     }
-    
 
 def test_permission(api_headers, api_admin_headers):
     """test event operations"""
@@ -609,4 +616,34 @@ def test_publish_workflow_view(api_headers, api_admin_headers):
     
     assert test_agent_id != "00000000-0000-0000-0000-000000000000"
     assert workflow_agent_id != "00000000-0000-0000-0000-000000000000"
+
+# Pytest hook to show completion notification with detailed test counts
+def pytest_sessionfinish(session, exitstatus):
+    """Called after whole test run finished"""
+    # Get test results from session
+    passed = session.testscollected - session.testsfailed - session.testsskipped
+    failed = session.testsfailed
+    skipped = session.testsskipped
+    total = session.testscollected
+    
+    print("\n" + "=" * 80)
+    print("🏁 REGRESSION_TEST.PY EXECUTION COMPLETED!")
+    print("=" * 80)
+    print("📊 TEST RESULTS SUMMARY:")
+    print(f"   Total Tests:   {total}")
+    print(f"   ✅ Passed:     {passed}")
+    print(f"   ❌ Failed:     {failed}")
+    print(f"   ⏭️  Skipped:    {skipped}")
+    print("=" * 80)
+    print("📈 Overall Status:", "✅ ALL TESTS PASSED" if exitstatus == 0 else f"❌ {failed} TEST(S) FAILED")
+    print("🕐 Completed at:", time.strftime("%Y-%m-%d %H:%M:%S"))
+    print("=" * 80)
+
+# Show completion notification when run directly
+if __name__ == "__main__":
+    print("\n" + "=" * 80)
+    print("🏁 REGRESSION_TEST.PY DIRECT EXECUTION COMPLETED!")
+    print("💡 Note: For full test suite, run with pytest")
+    print("🕐 Completed at:", time.strftime("%Y-%m-%d %H:%M:%S"))
+    print("=" * 80)
     

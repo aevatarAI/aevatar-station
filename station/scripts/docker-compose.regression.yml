@@ -1,0 +1,236 @@
+# ABOUTME: Docker Compose configuration for regression testing with Kubernetes support
+# ABOUTME: Sets up Kind cluster, all required services, and test execution environment
+
+version: '3.8'
+
+services:
+  # K3s Kubernetes cluster
+  k3s:
+    image: rancher/k3s:v1.28.8-k3s1
+    container_name: regression-k3s-cluster
+    privileged: true
+    environment:
+      - K3S_KUBECONFIG_OUTPUT=/shared/kubeconfig
+      - K3S_KUBECONFIG_MODE=644
+    volumes:
+      - ./shared:/shared
+      - k3s-data:/var/lib/rancher/k3s
+    ports:
+      - "6443:6443"  # Kubernetes API
+    networks:
+      - regression-network
+    command: server --disable=traefik --disable=servicelb --disable=metrics-server --write-kubeconfig-mode=644
+    healthcheck:
+      test: ["CMD", "sh", "-c", "kubectl get --raw='/readyz' 2>/dev/null || curl -k https://localhost:6443/readyz 2>/dev/null"]
+      interval: 5s
+      timeout: 10s
+      retries: 60
+      start_period: 60s
+
+  # Setup K3s cluster - creates namespace and RBAC
+  k3s-setup:
+    image: bitnami/kubectl:latest
+    depends_on:
+      k3s:
+        condition: service_healthy
+    volumes:
+      - ./shared:/shared
+      - ./setup-k3s.sh:/setup-k3s.sh:ro
+    entrypoint: ["/bin/bash", "/setup-k3s.sh"]
+    networks:
+      - regression-network
+
+  mongodb:
+    image: mongo:7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - regression-network
+    
+  redis:
+    image: redis:7-alpine
+    networks:
+      - regression-network
+
+  # Kafka for Orleans streaming
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
+    networks:
+      - regression-network
+
+  # Zookeeper for Kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - regression-network
+    
+  dbmigrator:
+    image: mcr.microsoft.com/dotnet/sdk:9.0
+    working_dir: /src/station/src/Aevatar.DbMigrator
+    environment:
+      ConnectionStrings__Default: "mongodb://admin:password123@mongodb:27017/AevatarAuth?authSource=admin&retryWrites=false"
+    volumes:
+      - ../..:/src
+    command: dotnet run
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - regression-network
+    
+  authserver:
+    build: 
+      context: ../..
+      dockerfile: station/src/Aevatar.AuthServer/Dockerfile
+    environment:
+      ConnectionStrings__Default: "mongodb://admin:password123@mongodb:27017/AevatarAuth?authSource=admin&retryWrites=false"
+      ASPNETCORE_ENVIRONMENT: "Development"
+      # AuthServer issuer configuration - must match what API service expects
+      AuthServer__IssuerUri: "http://authserver:8082/"
+      # OpenIddict server configuration for proper issuer
+      OpenIddict__Server__Issuer: "http://authserver:8082/"
+      # Redis configuration for Docker container environment
+      Redis__Configuration: "redis:6379"
+      # Kubernetes configuration
+      Kubernetes__KubeConfigPath: "/app/shared/kubeconfig"
+      Kubernetes__AppNameSpace: "aevatar-apps"
+    volumes:
+      - ./shared:/app/shared:ro
+    depends_on:
+      - mongodb
+      - redis
+      - k3s-setup
+      - dbmigrator
+    networks:
+      - regression-network
+    
+  silo:
+    build:
+      context: ../..
+      dockerfile: station/src/Aevatar.Silo/Dockerfile
+    environment:
+      ConnectionStrings__Default: "mongodb://admin:password123@mongodb:27017/AevatarSilo?authSource=admin&retryWrites=false"
+      Orleans__MongoDBClient: "mongodb://admin:password123@mongodb:27017?authSource=admin&retryWrites=false"
+      Orleans__ClusterDbConnection: "redis:6379"
+      Orleans__GrainStorageDbConnection: "redis:6379"
+      # Orleans clustering configuration - MUST match API service
+      Orleans__ClusterId: "regression-cluster"
+      Orleans__ServiceId: "regression-service"
+      # Orleans networking configuration for Docker
+      Orleans__AdvertisedIP: "172.20.0.100"
+      Orleans__SiloPort: "11111"
+      Orleans__GatewayPort: "30000"
+      # Force Orleans to listen on all interfaces
+      ASPNETCORE_URLS: "http://0.0.0.0:8080"
+      # Kafka configuration for Orleans streaming
+      OrleansStream__Brokers__0: "kafka:9092"
+      # Kubernetes configuration
+      Kubernetes__KubeConfigPath: "/app/shared/kubeconfig"
+      Kubernetes__AppNameSpace: "aevatar-apps"
+    volumes:
+      - ./shared:/app/shared:ro
+    depends_on:
+      - mongodb
+      - redis
+      - kafka
+      - authserver
+      - k3s-setup
+    networks:
+      regression-network:
+        ipv4_address: 172.20.0.100
+    
+  api:
+    build:
+      context: ../..
+      dockerfile: station/src/Aevatar.HttpApi.Host/Dockerfile
+    environment:
+      ConnectionStrings__Default: "mongodb://admin:password123@mongodb:27017/AevatarAuth?authSource=admin&retryWrites=false"
+      AuthServer: "http://authserver:8082"
+      # Configure JWT Bearer authentication properly - try multiple config paths
+      Authentication__JwtBearer__Authority: "http://authserver:8082"
+      Authentication__JwtBearer__RequireHttpsMetadata: "false"
+      Authentication__JwtBearer__ValidIssuer: "http://authserver:8082/"
+      # Also try ABP-specific configuration
+      AuthServer__Authority: "http://authserver:8082"
+      AuthServer__RequireHttpsMetadata: "false"
+      # Try direct JWT options configuration
+      JwtBearerOptions__Authority: "http://authserver:8082"
+      JwtBearerOptions__RequireHttpsMetadata: "false"
+      JwtBearerOptions__ValidIssuer: "http://authserver:8082/"
+      # For regression testing - disable issuer validation if needed
+      Authentication__JwtBearer__ValidateIssuer: "false"
+      JwtBearerOptions__ValidateIssuer: "false"
+      # Add clock skew tolerance and disable lifetime validation for regression tests
+      Authentication__JwtBearer__ClockSkew: "00:05:00"
+      JwtBearerOptions__ClockSkew: "00:05:00"
+      Authentication__JwtBearer__ValidateLifetime: "false"
+      JwtBearerOptions__ValidateLifetime: "false"
+      Authentication__JwtBearer__ValidateAudience: "false"
+      JwtBearerOptions__ValidateAudience: "false"
+      Orleans__ClusterId: "regression-cluster"
+      Orleans__ServiceId: "regression-service"
+      Orleans__MongoDBClient: "mongodb://admin:password123@mongodb:27017?authSource=admin&retryWrites=false"
+      Orleans__ClusterDbConnection: "redis:6379"
+      Orleans__GrainStorageDbConnection: "redis:6379"
+      # Redis configuration for ABP caching
+      Redis__Configuration: "redis:6379"
+      # Kubernetes configuration for creating developer pods
+      Kubernetes__KubeConfigPath: "/app/shared/kubeconfig"
+      Kubernetes__AppNameSpace: "aevatar-apps"
+      Kubernetes__AppPodReplicas: "1"
+      Kubernetes__RequestCpuCore: "100m"
+      Kubernetes__RequestMemory: "128Mi"
+    volumes:
+      - ./shared:/app/shared:ro
+    depends_on:
+      - silo
+      - k3s-setup
+    ports:
+      - "8080:8001"
+    networks:
+      - regression-network
+      
+  regression-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.regression
+    environment:
+      # For K8s testing only, no API services needed
+      KUBECONFIG: "/app/shared/kubeconfig"
+    depends_on:
+      - k3s-setup
+    volumes:
+      - ./test-results:/app/test-results
+      - ./shared:/app/shared:ro
+    networks:
+      - regression-network
+
+networks:
+  regression-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  mongodb_data:
+  k3s-data:
