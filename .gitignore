@@ -290,3 +290,9 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# Kubernetes config files
+**/kubeconfig
+**/kubeconfig-*
+station/scripts/shared/kubeconfig
+station/scripts/shared/kubeconfig-*
+
