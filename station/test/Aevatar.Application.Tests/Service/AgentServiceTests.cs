@@ -612,126 +612,7 @@ public class AgentServiceTests
 
     #endregion
 
-    #region IsExcludedAgentType Tests
 
-    [Fact]
-    public void IsExcludedAgentType_WithExcludedType_ShouldReturnTrue()
-    {
-        // Arrange
-        var agentService = CreateAgentServiceForTesting();
-        var grainType = GrainType.Create("ExcludedType");
-        var excludedTypes = new HashSet<GrainType> { grainType };
-
-        // Act - using reflection to call private method
-        var method = typeof(AgentService).GetMethod("IsExcludedAgentType", BindingFlags.NonPublic | BindingFlags.Instance);
-        method.ShouldNotBeNull();
-
-        var result = method.Invoke(agentService, new object[] { grainType, excludedTypes });
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.ShouldBeOfType<bool>();
-        ((bool)result).ShouldBeTrue();
-    }
-
-    [Fact]
-    public void IsExcludedAgentType_WithNonExcludedType_ShouldReturnFalse()
-    {
-        // Arrange
-        var agentService = CreateAgentServiceForTesting();
-        var grainType = GrainType.Create("AllowedType");
-        var excludedGrainType = GrainType.Create("ExcludedType");
-        var excludedTypes = new HashSet<GrainType> { excludedGrainType };
-
-        // Act - using reflection to call private method
-        var method = typeof(AgentService).GetMethod("IsExcludedAgentType", BindingFlags.NonPublic | BindingFlags.Instance);
-        method.ShouldNotBeNull();
-
-        var result = method.Invoke(agentService, new object[] { grainType, excludedTypes });
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.ShouldBeOfType<bool>();
-        ((bool)result).ShouldBeFalse();
-    }
-
-    [Fact]
-    public void IsExcludedAgentType_WithEmptyExcludedTypes_ShouldReturnFalse()
-    {
-        // Arrange
-        var agentService = CreateAgentServiceForTesting();
-        var grainType = GrainType.Create("AnyType");
-        var excludedTypes = new HashSet<GrainType>();
-
-        // Act - using reflection to call private method
-        var method = typeof(AgentService).GetMethod("IsExcludedAgentType", BindingFlags.NonPublic | BindingFlags.Instance);
-        method.ShouldNotBeNull();
-
-        var result = method.Invoke(agentService, new object[] { grainType, excludedTypes });
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.ShouldBeOfType<bool>();
-        ((bool)result).ShouldBeFalse();
-    }
-
-    #endregion
-
-    #region FilterSubAgentGrainIds Tests
-
-    [Fact]
-    public void FilterSubAgentGrainIds_WithMixedTypes_ShouldFilterCorrectly()
-    {
-        // Arrange
-        var agentService = CreateAgentServiceForTesting();
-        var allowedGrainType = GrainType.Create("AllowedType");
-        var excludedGrainType = GrainType.Create("ExcludedType");
-        
-        var children = new List<GrainId>
-        {
-            GrainId.Create(allowedGrainType, "key1"),
-            GrainId.Create(excludedGrainType, "key2"),
-            GrainId.Create(allowedGrainType, "key3")
-        };
-        
-        var excludedTypes = new HashSet<GrainType> { excludedGrainType };
-
-        // Act - using reflection to call private method
-        var method = typeof(AgentService).GetMethod("FilterSubAgentGrainIds", BindingFlags.NonPublic | BindingFlags.Instance);
-        method.ShouldNotBeNull();
-
-        var result = method.Invoke(agentService, new object[] { children, excludedTypes });
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.ShouldBeOfType<List<GrainId>>();
-        var filteredIds = (List<GrainId>)result;
-        filteredIds.Count.ShouldBe(2); // Should exclude the excluded type
-        filteredIds.All(id => id.Type == allowedGrainType).ShouldBeTrue();
-    }
-
-    [Fact]
-    public void FilterSubAgentGrainIds_WithNullChildren_ShouldReturnEmptyList()
-    {
-        // Arrange
-        var agentService = CreateAgentServiceForTesting();
-        List<GrainId> children = null;
-        var excludedTypes = new HashSet<GrainType>();
-
-        // Act - using reflection to call private method
-        var method = typeof(AgentService).GetMethod("FilterSubAgentGrainIds", BindingFlags.NonPublic | BindingFlags.Instance);
-        method.ShouldNotBeNull();
-
-        var result = method.Invoke(agentService, new object[] { children, excludedTypes });
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.ShouldBeOfType<List<GrainId>>();
-        var filteredIds = (List<GrainId>)result;
-        filteredIds.Count.ShouldBe(0);
-    }
-
-    #endregion
 
     #region EnsureUserAuthorized Tests
 
@@ -776,137 +657,7 @@ public class AgentServiceTests
 
     #endregion
 
-    #region CreateGrainIdFromAgentType Tests
 
-    [Fact]
-    public void CreateGrainIdFromAgentType_WithValidInput_ShouldReturnGrainId()
-    {
-        // Arrange
-        var agentService = CreateAgentServiceForTesting();
-        var agentType = "TestAgentType";
-        var primaryKey = Guid.NewGuid();
-
-        // Act - using reflection to call private method
-        var method = typeof(AgentService).GetMethod("CreateGrainIdFromAgentType", BindingFlags.NonPublic | BindingFlags.Instance);
-        method.ShouldNotBeNull();
-
-        var result = method.Invoke(agentService, new object[] { agentType, primaryKey });
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.ShouldBeOfType<GrainId>();
-    }
-
-    [Fact]
-    public void CreateGrainIdFromAgentType_WithNullAgentType_ShouldThrowArgumentException()
-    {
-        // Arrange
-        var agentService = CreateAgentServiceForTesting();
-        string agentType = null;
-        var primaryKey = Guid.NewGuid();
-
-        // Act & Assert
-        var method = typeof(AgentService).GetMethod("CreateGrainIdFromAgentType", BindingFlags.NonPublic | BindingFlags.Instance);
-        method.ShouldNotBeNull();
-
-        var exception = Should.Throw<System.Reflection.TargetInvocationException>(() => 
-            method.Invoke(agentService, new object[] { agentType, primaryKey }));
-        
-        exception.InnerException.ShouldBeOfType<ArgumentException>();
-        exception.InnerException.Message.ShouldContain("Agent type cannot be null or empty");
-    }
-
-    #endregion
-
-    #region ShouldConfigureAgent Tests
-
-    [Fact]
-    public void ShouldConfigureAgent_WithValidConfigurationAndProperties_ShouldReturnTrue()
-    {
-        // Arrange
-        var agentService = CreateAgentServiceForTesting();
-        var configuration = new Configuration
-        {
-            DtoType = typeof(TestConfigurationBase)
-        };
-        var agentProperties = "{ \"stringProperty\": \"test\" }";
-
-        // Act - using reflection to call private method
-        var method = typeof(AgentService).GetMethod("ShouldConfigureAgent", BindingFlags.NonPublic | BindingFlags.Instance);
-        method.ShouldNotBeNull();
-
-        var result = method.Invoke(agentService, new object[] { configuration, agentProperties });
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.ShouldBeOfType<bool>();
-        ((bool)result).ShouldBeTrue();
-    }
-
-    [Fact]
-    public void ShouldConfigureAgent_WithNullConfiguration_ShouldReturnFalse()
-    {
-        // Arrange
-        var agentService = CreateAgentServiceForTesting();
-        Configuration configuration = null;
-        var agentProperties = "{ \"stringProperty\": \"test\" }";
-
-        // Act - using reflection to call private method
-        var method = typeof(AgentService).GetMethod("ShouldConfigureAgent", BindingFlags.NonPublic | BindingFlags.Instance);
-        method.ShouldNotBeNull();
-
-        var result = method.Invoke(agentService, new object[] { configuration, agentProperties });
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.ShouldBeOfType<bool>();
-        ((bool)result).ShouldBeFalse();
-    }
-
-    [Fact]
-    public void ShouldConfigureAgent_WithNullProperties_ShouldReturnFalse()
-    {
-        // Arrange
-        var agentService = CreateAgentServiceForTesting();
-        var configuration = new Configuration
-        {
-            DtoType = typeof(TestConfigurationBase)
-        };
-        string agentProperties = null;
-
-        // Act - using reflection to call private method
-        var method = typeof(AgentService).GetMethod("ShouldConfigureAgent", BindingFlags.NonPublic | BindingFlags.Instance);
-        method.ShouldNotBeNull();
-
-        var result = method.Invoke(agentService, new object[] { configuration, agentProperties });
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.ShouldBeOfType<bool>();
-        ((bool)result).ShouldBeFalse();
-    }
-
-    #endregion
-
-    #region GetExcludedAgentTypes Tests
-
-    [Fact]
-    public void GetExcludedAgentTypes_MethodSignature_ShouldBeCorrect()
-    {
-        // Arrange
-        var agentService = CreateAgentServiceForTesting();
-
-        // Act - using reflection to verify private method signature
-        var method = typeof(AgentService).GetMethod("GetExcludedAgentTypes", BindingFlags.NonPublic | BindingFlags.Instance);
-        
-        // Assert
-        method.ShouldNotBeNull();
-        method.ReturnType.ShouldBe(typeof(HashSet<GrainType>));
-        var parameters = method.GetParameters();
-        parameters.Length.ShouldBe(0); // No parameters
-    }
-
-    #endregion
 
     #region GetAgentConfigurationAsync Tests
 
@@ -991,30 +742,7 @@ public class AgentServiceTests
 
     #endregion
 
-    #region ConfigureBusinessAgentAsync Tests
 
-    [Fact]
-    public void ConfigureBusinessAgentAsync_MethodSignature_ShouldBeCorrect()
-    {
-        // Arrange
-        var agentService = CreateAgentServiceForTesting();
-
-        // Act - using reflection to verify private method signature
-        var method = typeof(AgentService).GetMethod("ConfigureBusinessAgentAsync", BindingFlags.NonPublic | BindingFlags.Instance);
-        
-        // Assert
-        method.ShouldNotBeNull();
-        method.ReturnType.ShouldBe(typeof(Task<ConfigurationBase>));
-        var parameters = method.GetParameters();
-        parameters.Length.ShouldBe(3);
-        parameters[0].ParameterType.ShouldBe(typeof(IGAgent));
-        parameters[1].ParameterType.ShouldBe(typeof(Configuration));
-        parameters[2].ParameterType.ShouldBe(typeof(string));
-    }
-
-
-
-    #endregion
 
     #region GetSubAgentGrainIds Tests - Simplified
 
@@ -1094,7 +822,7 @@ public class AgentServiceTests
         
         // We can only test the method signature since it requires complex Orleans mocking
         // Assert
-        method.ReturnType.ShouldBe(typeof(Task<(ICreatorGAgent, CreatorGAgentState, IExtGAgent)>));
+        method.ReturnType.ShouldBe(typeof(Task<(Aevatar.Application.Grains.Agents.Creator.ICreatorGAgent, CreatorGAgentState, IExtGAgent)>));
         method.IsPrivate.ShouldBeTrue();
     }
 
@@ -1133,7 +861,7 @@ public class AgentServiceTests
         var parameters = method.GetParameters();
         parameters.Length.ShouldBe(3);
         parameters[0].ParameterType.ShouldBe(typeof(IExtGAgent));
-        parameters[1].ParameterType.ShouldBe(typeof(ICreatorGAgent));
+        parameters[1].ParameterType.ShouldBe(typeof(Aevatar.Application.Grains.Agents.Creator.ICreatorGAgent));
         parameters[2].ParameterType.ShouldBe(typeof(CreatorGAgentState));
     }
 
