@@ -16,17 +16,12 @@ RUN curl -LO "https://dl.k8s.io/release/v1.29.0/bin/linux/amd64/kubectl" \
     && chmod +x kubectl \
     && mv kubectl /usr/local/bin/
 
-# Install Python dependencies
-COPY requirements-test.txt .
-RUN pip install --no-cache-dir -r requirements-test.txt
-
-# Install core test dependencies
-RUN pip install pytest requests urllib3
+# Install Python dependencies from main requirements.txt
+COPY ../../requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy test script and cleanup script
 COPY regression_test.py .
-COPY cleanup_k8s_resources.py .
-COPY test_kubernetes.py .
 
 # Create test results directory
 RUN mkdir -p test-results
@@ -34,6 +29,3 @@ RUN mkdir -p test-results
 # Create a non-root user for security
 RUN useradd -m -u 1000 testuser && chown -R testuser:testuser /app
 USER testuser
-
-# Default command runs K8s test
-CMD ["python", "test_kubernetes.py"]

@@ -446,17 +446,11 @@ main() {
     # Verify K8s resources created during tests
     verify_k8s_resources_created
     
-    # Copy test results
-    print_status "Copying test results..."
-    docker-compose -f "$COMPOSE_FILE" -p "$PROJECT_NAME" run --rm \
-        -v "$RESULTS_DIR:/host/results" \
-        regression-tests cp -r /app/test-results/* /host/results/ 2>/dev/null || true
     
     if [ $TEST_EXIT_CODE -eq 0 ]; then
         print_status "✓ All regression tests passed successfully!"
     else
         print_error "✗ Some regression tests failed (exit code: $TEST_EXIT_CODE)"
-        print_status "Check test results in: $RESULTS_DIR"
     fi
     
     return $TEST_EXIT_CODE
