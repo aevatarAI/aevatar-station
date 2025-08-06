@@ -4,14 +4,11 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Aevatar.Agent;
-using Aevatar.Agents.Creator;
-using Aevatar.Agents.Creator.Models;
 using Aevatar.Application.Grains.Agents.Creator;
 using Aevatar.Application.Grains.Subscription;
 using Aevatar.Common;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
-using Aevatar.CQRS.Dto;
 using Aevatar.CQRS.Provider;
 using Aevatar.Exceptions;
 using Aevatar.Options;
@@ -38,7 +35,6 @@ namespace Aevatar.Service;
 public class AgentService : ApplicationService, IAgentService
 {
     private readonly IClusterClient _clusterClient;
-    private readonly ICQRSProvider _cqrsProvider;
     private readonly ILogger<AgentService> _logger;
     private readonly IGAgentFactory _gAgentFactory;
     private readonly IGAgentManager _gAgentManager;
@@ -51,7 +47,6 @@ public class AgentService : ApplicationService, IAgentService
 
     public AgentService(
         IClusterClient clusterClient,
-        ICQRSProvider cqrsProvider,
         ILogger<AgentService> logger,
         IGAgentFactory gAgentFactory,
         IGAgentManager gAgentManager,
@@ -63,7 +58,6 @@ public class AgentService : ApplicationService, IAgentService
         IIndexingService indexingService)
     {
         _clusterClient = clusterClient;
-        _cqrsProvider = cqrsProvider;
         _logger = logger;
         _gAgentFactory = gAgentFactory;
         _gAgentManager = gAgentManager;
@@ -86,17 +80,19 @@ public class AgentService : ApplicationService, IAgentService
 
         foreach (var agentType in businessAgentTypes)
         {
-            var grainType = _grainTypeResolver.GetGrainType(agentType).ToString();
-            if (grainType != null)
+            try
             {
-                var agentTypeData = new AgentTypeData
+                var grainType = _grainTypeResolver.GetGrainType(agentType).ToString();
+                if (grainType != null)
                 {
-                    FullName = agentType.FullName,
-                };
-                var grainId = GrainId.Create(grainType,
-                    GuidUtil.GuidToGrainKey(
-                        GuidUtil.StringToGuid("AgentDefaultId"))); // make sure only one agent instance for each type
-                var agent = await _gAgentFactory.GetGAgentAsync(grainId);
+                    var agentTypeData = new AgentTypeData
+                    {
+                        FullName = agentType.FullName,
+                    };
+                    var grainId = GrainId.Create(grainType,
+                        GuidUtil.GuidToGrainKey(
+                            GuidUtil.StringToGuid("AgentDefaultId"))); // make sure only one agent instance for each type
+                    var agent = await _gAgentFactory.GetGAgentAsync(grainId);
                 var initializeDtoType = await agent.GetConfigurationTypeAsync();
                 if (initializeDtoType == null || initializeDtoType.IsAbstract)
                 {
@@ -124,9 +120,17 @@ public class AgentService : ApplicationService, IAgentService
                     propertyDtos.Add(propertyDto);
                 }
 
-                initializationData.Properties = propertyDtos;
-                agentTypeData.InitializationData = initializationData;
-                dict[grainType] = agentTypeData;
+                    initializationData.Properties = propertyDtos;
+                    agentTypeData.InitializationData = initializationData;
+                    dict[grainType] = agentTypeData;
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log and skip problematic grain types (e.g., generic types with invalid arity)
+                _logger.LogWarning(ex, "Failed to process agent type {AgentType}: {ErrorMessage}", 
+                    agentType.FullName, ex.Message);
+                continue;
             }
         }
 
