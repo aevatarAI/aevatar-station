@@ -26,12 +26,13 @@ using Orleans.Providers.MongoDB.StorageProviders.Serializers;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Orleans.Configuration;
-using Orleans.Providers.MongoDB.StorageProviders.Serializers;
 using Orleans.Providers.MongoDB.Configuration;
 using Orleans.Runtime.Placement;
 using Orleans.Serialization;
 using Orleans.Streams.Kafka.Config;
-using Orleans.Configuration;
+using Orleans.Streaming;
+using Orleans.Streams;
+using Orleans.Hosting;
 using Aevatar.Core.Streaming.Extensions;
 
 namespace Aevatar.Silo.Extensions;
@@ -305,34 +306,61 @@ public static class OrleansHostExtension
                 var streamProvider = configuration.GetSection("OrleansStream:Provider").Get<string>();
                 if (string.Compare(streamProvider, "Kafka", StringComparison.OrdinalIgnoreCase) == 0)
                 {
-                    // Use Aevatar monitored Kafka streaming provider
-                    siloBuilder.AddAevatarKafkaStreaming("Aevatar", options =>
+                    // Use Aevatar monitored Kafka streaming provider with optimized pulling agent options
+                    siloBuilder.ConfigureServices(services =>
                     {
-                        options.BrokerList = configuration.GetSection("OrleansStream:Brokers").Get<List<string>>();
-                        options.ConsumerGroupId = "Aevatar";
-                        options.ConsumeMode = ConsumeMode.LastCommittedMessage;
-
-                        var partitions = configuration.GetSection("OrleansStream:Partitions").Get<int>();
-                        var replicationFactor =
-                            configuration.GetSection("OrleansStream:ReplicationFactor").Get<short>();
-                        var topics = configuration.GetSection("OrleansStream:Topics").Get<string>();
-                        topics = topics.IsNullOrEmpty() ? CommonConstants.StreamNamespace : topics;
-                        foreach (var topic in topics.Split(','))
+                        services.AddAevatarStreamingMonitoring();
+                    })
+                    .AddPersistentStreams("Aevatar", Aevatar.Core.Streaming.Kafka.AevatarKafkaAdapterFactory.Create, b =>
+                    {
+                        b.ConfigureStreamPubSub(StreamPubSubType.ExplicitGrainBasedAndImplicit);
+                        b.Configure<KafkaStreamOptions>(ob => ob.Configure(options =>
                         {
-                            options.AddTopic(topic.Trim(), new TopicCreationConfig
+                            options.BrokerList = configuration.GetSection("OrleansStream:Brokers").Get<List<string>>();
+                            options.ConsumerGroupId = "Aevatar";
+                            options.ConsumeMode = ConsumeMode.LastCommittedMessage;
+                            
+                            // Configure PollTimeout for Kafka consumer polling - defaults to 10ms if not specified
+                            var streamSection = configuration.GetSection("OrleansStream");
+                            options.PollTimeout = TimeSpan.FromMilliseconds(streamSection.GetValue<int>("PollTimeoutMs", 10));
+
+                            var partitions = configuration.GetSection("OrleansStream:Partitions").Get<int>();
+                            var replicationFactor =
+                                configuration.GetSection("OrleansStream:ReplicationFactor").Get<short>();
+                            var topics = configuration.GetSection("OrleansStream:Topics").Get<string>();
+                            topics = topics.IsNullOrEmpty() ? CommonConstants.StreamNamespace : topics;
+                            foreach (var topic in topics.Split(','))
                             {
-                                AutoCreate = true,
-                                Partitions = partitions,
-                                ReplicationFactor = replicationFactor
-                            });
-                        }
+                                options.AddTopic(topic.Trim(), new TopicCreationConfig
+                                {
+                                    AutoCreate = true,
+                                    Partitions = partitions,
+                                    ReplicationFactor = replicationFactor
+                                });
+                            }
+                        }));
+                        // Configure pulling agent options for better performance
+                        b.ConfigurePullingAgent(ob => ob.Configure(options =>
+                        {
+                            // Read GetQueueMsgsTimerPeriod from configuration - defaults to 50ms if not specified
+                            var streamSection = configuration.GetSection("OrleansStream");
+                            options.GetQueueMsgsTimerPeriod = TimeSpan.FromMilliseconds(streamSection.GetValue<int>("GetQueueMsgsTimerPeriodMs", 50));
+                        }));
                     });
                 }
                 else
                 {
-                    // Use Aevatar monitored Memory streaming provider
-                    // Use Orleans built-in memory streaming instead of custom wrapper
-                    siloBuilder.AddMemoryStreams("Aevatar");
+                    // Use Orleans built-in memory streaming with optimized pulling agent options
+                    siloBuilder.AddMemoryStreams("Aevatar", b =>
+                    {
+                        // Configure pulling agent options for better performance
+                        b.ConfigurePullingAgent(ob => ob.Configure(options =>
+                        {
+                            // Read GetQueueMsgsTimerPeriod from configuration - defaults to 50ms if not specified
+                            var streamSection = configuration.GetSection("OrleansStream");
+                            options.GetQueueMsgsTimerPeriod = TimeSpan.FromMilliseconds(streamSection.GetValue<int>("GetQueueMsgsTimerPeriodMs", 50));
+                        }));
+                    });
                 }
 
                 siloBuilder.UseAevatar()

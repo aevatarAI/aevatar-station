@@ -1,19 +1,28 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
-    <Import Project="..\..\common.props" />
+    <Import Project="..\..\common.props"/>
     <PropertyGroup>
         <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
         <RootNamespace>Aevatar.Webhook</RootNamespace>
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Microsoft.Orleans.Client"/>
+        <PackageReference Include="Orleans.Providers.MongoDB"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Aevatar.Domain.Shared\Aevatar.Domain.Shared.csproj"/>
         <PackageReference Include="GodGPT.Webhook"/>
         <PackageReference Include="GodGPT.GAgents"/>
         <PackageReference Include="Stripe.net"/>
         <PackageReference Include="Microsoft.Orleans.Client" />
         <PackageReference Include="Orleans.Providers.MongoDB" />
         <ProjectReference Include="..\Aevatar.WebHook.SDK\Aevatar.WebHook.SDK.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Include="../../configurations/appsettings.Shared.json" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" Link="appsettings.Shared.json" />
     </ItemGroup>
 
 </Project>

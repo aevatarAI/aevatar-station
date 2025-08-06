@@ -17,7 +17,6 @@ public interface IIndexingService
     public Task<string> GetStateIndexDocumentsAsync(string stateName,
         Action<QueryDescriptor<dynamic>> query, int skip = 0, int limit = 1000);
 
-
     Task<PagedResultDto<Dictionary<string, object>>> QueryWithLuceneAsync(LuceneQueryDto queryDto);
     
     /// <summary>

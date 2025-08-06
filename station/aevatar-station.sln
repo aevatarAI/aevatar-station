@@ -115,6 +115,19 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrleansServiceDiscoveryBenc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.GodGPT", "src\Aevatar.GodGPT\Aevatar.GodGPT.csproj", "{7511CC57-DEEA-43F5-A23B-660F157C2A54}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{BB1EB3B4-19C9-4C20-935D-E71B135719F8}"
+	ProjectSection(SolutionItems) = preProject
+		scripts\regression_test.py = scripts\regression_test.py
+		scripts\regression_test_signalr.py = scripts\regression_test_signalr.py
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "resource", "resource", "{22441F23-5B7E-467A-A55B-FA1AC5C914B2}"
+	ProjectSection(SolutionItems) = preProject
+		source\Directory.Build.props = ..\Directory.Build.props
+		source\Directory.Packages.props = ..\Directory.Packages.props
+		source\Dockerfile = ..\Dockerfile
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

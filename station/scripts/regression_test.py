@@ -4,11 +4,16 @@ import time
 import pytest
 import requests
 import logging
+import urllib3
+
+# Disable SSL warnings for testing with self-signed certificates
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 TEST_AGENT = "agenttest"
+WORKFLOW_VIEW_AGENT = "Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView.WorkflowViewGAgent"
 STATE_NAME = "FrontAgentState"
 AGENT_NAME = "TestAgent"
 AGENT_NAME_MODIFIED = "TestAgentNameModified"
@@ -41,7 +46,8 @@ def access_token():
     response = requests.post(
         f"{AUTH_HOST}/connect/token",
         data=auth_data,
-        headers={"Content-Type": "application/x-www-form-urlencoded"}
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        verify=False
     )
     assert_status_code(response)
     return response.json()["access_token"]
@@ -83,7 +89,8 @@ def test_agent(api_headers):
     response = requests.post(
         f"{API_HOST}/api/agent",
         json=agent_data,
-        headers=api_headers
+        headers=api_headers,
+        verify=False
     )
     assert_status_code(response)
     agent_id = response.json()["data"]["id"]
@@ -93,7 +100,8 @@ def test_agent(api_headers):
     # delete agent after test
     response = requests.delete(
         f"{API_HOST}/api/agent/{agent_id}",
-        headers=api_headers
+        headers=api_headers,
+        verify=False
     )
     assert response.status_code == 200
 
@@ -108,7 +116,8 @@ def test_agent_operations(api_headers, test_agent):
     # get agent
     response = requests.get(
         f"{API_HOST}/api/agent/{test_agent}",
-        headers=api_headers
+        headers=api_headers,
+        verify=False
     )
     assert_status_code(response)
     assert response.json()["data"]["name"] == AGENT_NAME
@@ -121,7 +130,8 @@ def test_agent_operations(api_headers, test_agent):
     response = requests.put(
         f"{API_HOST}/api/agent/{test_agent}",
         json=update_data,
-        headers=api_headers
+        headers=api_headers,
+        verify=False
     )
     assert_status_code(response)
     assert response.json()["data"]["name"] == AGENT_NAME_MODIFIED
@@ -132,10 +142,26 @@ def test_agent_operations(api_headers, test_agent):
     response = requests.get(
         f"{API_HOST}/api/agent/agent-list",
         params={"pageIndex": 0, "pageSize": 100},
-        headers=api_headers
+        headers=api_headers,
+        verify=False
     )
     assert_status_code(response)
-    agent_ids = [agent["id"] for agent in response.json()["data"]]
+    
+    # Add defensive programming to handle potential None response
+    response_data = response.json()
+    logger.debug(f"Agent list response: {response_data}")
+    
+    if "data" not in response_data:
+        pytest.fail(f"Response does not contain 'data' field: {response_data}")
+    
+    data = response_data["data"]
+    if data is None:
+        pytest.fail(f"Response data field is None: {response_data}")
+    
+    if not isinstance(data, (list, tuple)):
+        pytest.fail(f"Response data is not iterable, got type {type(data)}: {data}")
+    
+    agent_ids = [agent["id"] for agent in data]
     assert test_agent in agent_ids
 
 
@@ -149,7 +175,8 @@ def test_agent_relationships(api_headers, test_agent):
     response = requests.post(
         f"{API_HOST}/api/agent",
         json=agent_data,
-        headers=api_headers
+        headers=api_headers,
+        verify=False
     )
     assert_status_code(response)
     sub_agent = response.json()["data"]["id"]
@@ -158,7 +185,8 @@ def test_agent_relationships(api_headers, test_agent):
     response = requests.post(
         f"{API_HOST}/api/agent/{test_agent}/add-subagent",
         json={"subAgents": [sub_agent]},
-        headers=api_headers
+        headers=api_headers,
+        verify=False
     )
     assert_status_code(response)
     assert sub_agent in response.json()["data"]["subAgents"]
@@ -166,7 +194,8 @@ def test_agent_relationships(api_headers, test_agent):
     # check relationship
     response = requests.get(
         f"{API_HOST}/api/agent/{test_agent}/relationship",
-        headers=api_headers
+        headers=api_headers,
+        verify=False
     )
     assert_status_code(response)
     assert sub_agent in response.json()["data"]["subAgents"]
@@ -175,7 +204,8 @@ def test_agent_relationships(api_headers, test_agent):
     response = requests.post(
         f"{API_HOST}/api/agent/{test_agent}/remove-subagent",
         json={"removedSubAgents": [sub_agent]},
-        headers=api_headers
+        headers=api_headers,
+        verify=False
     )
     assert_status_code(response)
     assert sub_agent not in response.json()["data"]["subAgents"]
@@ -183,13 +213,14 @@ def test_agent_relationships(api_headers, test_agent):
     # check relationship again
     response = requests.get(
         f"{API_HOST}/api/agent/{test_agent}/relationship",
-        headers=api_headers
+        headers=api_headers,
+        verify=False
     )
     assert_status_code(response)
     assert sub_agent not in response.json()["data"]["subAgents"]
 
     # delete sub agent
-    response = requests.delete(f"{API_HOST}/api/agent/{sub_agent}", headers=api_headers)
+    response = requests.delete(f"{API_HOST}/api/agent/{sub_agent}", headers=api_headers, verify=False)
     assert_status_code(response)
 
 
@@ -203,7 +234,8 @@ def test_event_operations(api_headers, test_agent):
     response = requests.post(
         f"{API_HOST}/api/agent",
         json=agent_data,
-        headers=api_headers
+        headers=api_headers,
+        verify=False
     )
     assert_status_code(response)
     sub_agent = response.json()["data"]["id"]
@@ -212,7 +244,8 @@ def test_event_operations(api_headers, test_agent):
     response = requests.post(
         f"{API_HOST}/api/agent/{test_agent}/add-subagent",
         json={"subAgents": [sub_agent]},
-        headers=api_headers
+        headers=api_headers,
+        verify=False
     )
     assert_status_code(response)
     assert sub_agent in response.json()["data"]["subAgents"]
@@ -220,12 +253,40 @@ def test_event_operations(api_headers, test_agent):
     # query available events
     response = requests.get(
         f"{API_HOST}/api/subscription/events/{test_agent}",
-        headers=api_headers
+        headers=api_headers,
+        verify=False
     )
     assert_status_code(response)
-    assert any(et["eventType"] == EVENT_TYPE for et in response.json()["data"])
-    event = [et for et in response.json()["data"] if et["eventType"] == EVENT_TYPE][0]
-    assert any(property["name"] == EVENT_PARAM for property in event["eventProperties"])
+    
+    # Add defensive programming to handle potential None response
+    response_data = response.json()
+    logger.debug(f"Available events response: {response_data}")
+    
+    if "data" not in response_data:
+        pytest.fail(f"Response does not contain 'data' field: {response_data}")
+    
+    data = response_data["data"]
+    if data is None:
+        pytest.fail(f"Response data field is None: {response_data}")
+    
+    if not isinstance(data, (list, tuple)):
+        pytest.fail(f"Response data is not iterable, got type {type(data)}: {data}")
+    
+    assert any(et["eventType"] == EVENT_TYPE for et in data)
+    event = [et for et in data if et["eventType"] == EVENT_TYPE][0]
+    
+    # Check event properties exist and are iterable
+    if "eventProperties" not in event:
+        pytest.fail(f"Event does not contain 'eventProperties' field: {event}")
+    
+    event_properties = event["eventProperties"]
+    if event_properties is None:
+        pytest.fail(f"Event properties field is None: {event}")
+    
+    if not isinstance(event_properties, (list, tuple)):
+        pytest.fail(f"Event properties is not iterable, got type {type(event_properties)}: {event_properties}")
+    
+    assert any(property["name"] == EVENT_PARAM for property in event_properties)
 
     name = "test name"
     # publish event
@@ -237,7 +298,8 @@ def test_event_operations(api_headers, test_agent):
     response = requests.post(
         f"{API_HOST}/api/agent/publishEvent",
         json=event_data,
-        headers=api_headers
+        headers=api_headers,
+        verify=False
     )
     assert_status_code(response)
 
@@ -246,7 +308,8 @@ def test_event_operations(api_headers, test_agent):
     response = requests.get(
         f"{API_HOST}/api/query/state",
         params={"stateName": STATE_NAME, "id": test_agent},
-        headers=api_headers
+        headers=api_headers,
+        verify=False
     )
     assert_status_code(response)
     assert "state" in response.json()["data"]
@@ -256,7 +319,8 @@ def test_event_operations(api_headers, test_agent):
     response = requests.get(
         f"{API_HOST}/api/query/state",
         params={"stateName": STATE_NAME, "id": sub_agent},
-        headers=api_headers
+        headers=api_headers,
+        verify=False
     )
     assert_status_code(response)
     assert "state" in response.json()["data"]
@@ -270,11 +334,41 @@ def test_event_operations(api_headers, test_agent):
             "queryString": f"name: {name}",
             "pageSize": 1
         },
-        headers=api_headers
+        headers=api_headers,
+        verify=False
     )
 
     assert_status_code(response)
     assert response.json()["data"]["totalCount"] > 0
+
+    # test es count endpoint
+    response = requests.get(
+        f"{API_HOST}/api/query/es/count",
+        params={
+            "stateName": STATE_NAME,
+            "queryString": f"name: {name}",
+        },
+        headers=api_headers,
+        verify=False
+    )
+    
+    assert_status_code(response)
+    assert response.json()["data"]["count"] > 0
+    
+    # verify count matches the query totalCount
+    query_response = requests.get(
+        f"{API_HOST}/api/query/es",
+        params={
+            "stateName": STATE_NAME,
+            "queryString": f"name: {name}",
+            "pageSize": 1
+        },
+        headers=api_headers,
+        verify=False
+    )
+    assert_status_code(query_response)
+    expected_count = query_response.json()["data"]["totalCount"]
+    assert response.json()["data"]["count"] == expected_count
 
 
 def test_query_agent_list(api_headers, test_agent):
@@ -282,11 +376,51 @@ def test_query_agent_list(api_headers, test_agent):
     # query available agent list
     response = requests.get(
         f"{API_HOST}//api/agent/agent-type-info-list",
-        headers=api_headers
+        headers=api_headers,
+        verify=False
     )
     assert_status_code(response)
-    assert any(at["agentType"] == TEST_AGENT for at in response.json()["data"])
+    
+    # Add defensive programming to handle potential None response
+    response_data = response.json()
+    logger.debug(f"Agent type list response: {response_data}")
+    
+    if "data" not in response_data:
+        pytest.fail(f"Response does not contain 'data' field: {response_data}")
+    
+    data = response_data["data"]
+    if data is None:
+        pytest.fail(f"Response data field is None: {response_data}")
+    
+    if not isinstance(data, (list, tuple)):
+        pytest.fail(f"Response data is not iterable, got type {type(data)}: {data}")
+    
+    assert any(at["agentType"] == TEST_AGENT for at in data)
 
+
+def test_agent_service_basic_operations(api_headers):
+    """Basic AgentService functionality test"""
+    # Test get all agent types
+    response = requests.get(
+        f"{API_HOST}/api/agent/agent-type-info-list",
+        headers=api_headers,
+        verify=False
+    )
+    assert_status_code(response)
+    
+    # Test agent list query with pagination
+    response = requests.get(
+        f"{API_HOST}/api/agent/agent-list",
+        params={"pageIndex": 0, "pageSize": 10},
+        headers=api_headers,
+        verify=False
+    )
+    assert_status_code(response)
+    
+    # Verify response structure
+    response_data = response.json()
+    assert "data" in response_data
+    logger.debug(f"Agent service basic operations test passed")
 
 @pytest.fixture(scope="session")
 def admin_access_token():
@@ -302,7 +436,8 @@ def admin_access_token():
     response = requests.post(
         f"{AUTH_HOST}/connect/token",
         data=auth_data,
-        headers={"Content-Type": "application/x-www-form-urlencoded"}
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        verify=False
     )
     assert_status_code(response)
     return response.json()["access_token"]
@@ -327,7 +462,8 @@ def test_permission(api_headers, api_admin_headers):
     response = requests.post(
         f"{API_HOST}/api/agent",
         json=agent_data,
-        headers=api_headers
+        headers=api_headers,
+        verify=False
     )
     assert_status_code(response)
     agent_id = response.json()["data"]["id"]
@@ -336,7 +472,8 @@ def test_permission(api_headers, api_admin_headers):
     response = requests.post(
         f"{API_HOST}/api/agent/{agent_id}/add-subagent",
         json={"subAgents": [agent_id]},
-        headers=api_headers
+        headers=api_headers,
+        verify=False
     )
     assert_status_code(response)
     assert agent_id in response.json()["data"]["subAgents"]
@@ -346,7 +483,8 @@ def test_permission(api_headers, api_admin_headers):
     # publish event
     response = requests.get(
         f"{API_HOST}/api/identity/users/by-username/{ADMIN_USERNAME}",
-        headers=api_admin_headers
+        headers=api_admin_headers,
+        verify=False
     )
     admin_id = response.json()["data"]["id"]
     
@@ -358,7 +496,8 @@ def test_permission(api_headers, api_admin_headers):
     response = requests.post(
         f"{API_HOST}/api/agent/publishEvent",
         json=event_data,
-        headers=api_headers
+        headers=api_headers,
+        verify=False
     )
     assert_status_code(response)
 
@@ -372,7 +511,8 @@ def test_permission(api_headers, api_admin_headers):
             "queryString": f"_id:{agent_id}",
             "pageSize": 10
         },
-        headers=api_headers
+        headers=api_headers,
+        verify=False
     )
 
     assert_status_code(response)
@@ -386,9 +526,87 @@ def test_permission(api_headers, api_admin_headers):
             "queryString": f"_id:{agent_id}",
             "pageSize": 10
         },
-        headers=api_admin_headers
+        headers=api_admin_headers,
+        verify=False
     )
     
     assert_status_code(response)
     logger.debug(response.json()["data"])
     assert response.json()["data"]["totalCount"] > 0
+    
+    # test es count with permissions - non-admin user should get 0
+    response = requests.get(
+        f"{API_HOST}/api/query/es/count",
+        params={
+            "stateName": PERMISSION_STATE_NAME,
+            "queryString": f"_id:{agent_id}",
+        },
+        headers=api_headers,
+        verify=False
+    )
+    
+    assert_status_code(response)
+    assert response.json()["data"]["count"] == 0
+    
+    # test es count with permissions - admin user should get count > 0
+    response = requests.get(
+        f"{API_HOST}/api/query/es/count",
+        params={
+            "stateName": PERMISSION_STATE_NAME,
+            "queryString": f"_id:{agent_id}",
+        },
+        headers=api_admin_headers,
+        verify=False
+    )
+    
+    assert_status_code(response)
+    assert response.json()["data"]["count"] > 0
+
+def test_publish_workflow_view(api_headers, api_admin_headers):
+    """test publish workflow view"""
+    # create workflowView agent
+    agent_data = {
+        "agentType": WORKFLOW_VIEW_AGENT,
+        "name": "workflowViewAgent",
+        "properties": {
+            "workflowNodeList": [
+                {
+                    "agentType": "agenttest",
+                    "name": "agenttest",
+                    "extendedData": {
+                        "xPosition": "1",
+                        "yPosition": "1"
+                    },
+                    "nodeId": "9516a447-ca28-457a-a328-f2019863ebaa",
+                    "jsonProperties": "{}"
+                }
+            ],
+            "workflowNodeUnitList": [],
+            "name": "workflowViewAgent"
+        }
+    }
+    response = requests.post(
+        f"{API_HOST}/api/agent",
+        json=agent_data,
+        headers=api_headers,
+        verify=False
+    )
+    assert_status_code(response)
+    view_agent_id = response.json()["data"]["id"]
+
+    # publish workflow
+    response = requests.post(
+        f"{API_HOST}/api/workflow-view/{view_agent_id}/publish-workflow",
+        json={},
+        headers=api_headers,
+        verify=False
+    )
+    assert_status_code(response)
+    test_agent_id = response.json()["data"]["properties"]["workflowNodeList"][0]["agentId"]
+    workflow_agent_id = response.json()["data"]["properties"]["workflowCoordinatorGAgentId"]
+    logger.debug(f"test_agent_id: {test_agent_id}")
+    logger.debug(f"workflow_agent_id: {workflow_agent_id}")
+    
+    assert test_agent_id != "00000000-0000-0000-0000-000000000000"
+    assert workflow_agent_id != "00000000-0000-0000-0000-000000000000"
+    

@@ -8,19 +8,22 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Aevatar.GAgents.ChatAgent"/>
+        <PackageReference Include="Aevatar.GAgents.ChatAgent" />
         <PackageReference Include="AutoGen.Core"/>
         <PackageReference Include="Microsoft.Extensions.Options"/>
         <PackageReference Include="Microsoft.Orleans.Sdk"/>
         <PackageReference Include="AElf.OpenTelemetry"/>
         <PackageReference Include="Volo.Abp.AutoMapper"/>
         <PackageReference Include="Volo.Abp.EventBus.Abstractions"/>
-        <PackageReference Include="Aevatar.GAgents.AIGAgent"/>
-        <PackageReference Include="Aevatar.GAgents.SemanticKernel"/>
-        <PackageReference Include="Aevatar.GAgents.AI.Abstractions"/>
-        <PackageReference Include="Aevatar.GAgents.Twitter"/>
-        <PackageReference Include="Aevatar.GAgents.GroupChat"/>
-        <PackageReference Include="GodGPT.GAgents" />
+        <PackageReference Include="Aevatar.GAgents.AIGAgent" />
+        <PackageReference Include="Aevatar.GAgents.SemanticKernel" />
+        <PackageReference Include="Aevatar.GAgents.AI.Abstractions" />
+        <PackageReference Include="Aevatar.GAgents.Twitter" />
+        <PackageReference Include="Aevatar.GAgents.GroupChat" />
+        <PackageReference Include="Aevatar.GAgents.PsiOmni" />
+        <PackageReference Include="Aevatar.GAgents.PsiOmni.Plugins" />
+        <PackageReference Include="Aevatar.GAgents.MCP" />
+        <PackageReference Include="Aevatar.GAgents.InputGAgent" />
     </ItemGroup>
 
     <ItemGroup>

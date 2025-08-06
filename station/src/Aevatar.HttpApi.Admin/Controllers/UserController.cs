@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Controllers;
-using Aevatar.Kubernetes.Enum;
+using Aevatar.Enum;
 using Aevatar.Permissions;
 using Aevatar.Service;
 using Asp.Versioning;
@@ -17,7 +17,6 @@ namespace Aevatar.Admin.Controllers;
 [ControllerName("Users")]
 [Route("api/users")]
 public class UserController : AevatarController
-
 {
     private readonly IUserAppService _userAppService;
     private readonly IDeveloperService _developerService;
@@ -37,7 +36,7 @@ public class UserController : AevatarController
     public async Task RegisterClientAuthentication(string clientId, string clientSecret, string corsUrls)
     {
         await _userAppService.RegisterClientAuthentication(clientId, clientSecret);
-        await _developerService.CreateHostAsync(clientId, "1", corsUrls);
+        await _developerService.CreateServiceAsync(clientId, "1", corsUrls);
     }
 
     [HttpPost("grantClientPermissions")]
@@ -49,21 +48,21 @@ public class UserController : AevatarController
 
     [HttpPost("CreateHost")]
     [Authorize(Policy = AevatarPermissions.AdminPolicy)]
-    public async Task CreateHost(string clientId, string corsUrls)
+    public async Task CreateHostAsync(string clientId, string corsUrls)
     {
-        await _developerService.CreateHostAsync(clientId, "1", corsUrls);
+        await _developerService.CreateServiceAsync(clientId, "1", corsUrls);
     }
 
     [HttpPost("destroyHost")]
     [Authorize(Policy = AevatarPermissions.AdminPolicy)]
     public async Task DestroyHostAsync(string clientId)
     {
-        await _developerService.DestroyHostAsync(clientId, "1");
+        await _developerService.DeleteServiceAsync(clientId);
     }
-
+    
     [Authorize]
     [HttpPost("updateDockerImage")]
-    public async Task UpdateDockerImageAsync(HostTypeEnum hostType, string imageName)
+    public async Task UpdateDockerImageAsync(HostTypeEnum hostType, string imageName, string version = "1")
     {
         var clientId = CurrentUser.GetAllClaims().First(o => o.Type == "client_id").Value;
         if (!clientId.IsNullOrEmpty() && clientId.Contains("Aevatar"))
@@ -78,15 +77,23 @@ public class UserController : AevatarController
             appId = appId + "-" + hostType;
         }
 
-        await _developerService.UpdateDockerImageAsync(appId, "1",
+        await _developerService.UpdateDockerImageAsync(appId, version,
             imageName);
     }
 
-    [Authorize(Policy = "OnlyAdminAccess")]
+    [Authorize(Policy = AevatarPermissions.AdminPolicy)]
     [HttpPost("updateDockerImageByAdmin")]
-    public async Task UpdateDockerImageByAdminAsync(string hostId, HostTypeEnum hostType, string imageName)
+    public async Task UpdateDockerImageByAdminAsync(string hostId, HostTypeEnum hostType, string imageName,
+        string version = "1")
     {
-        await _developerService.UpdateDockerImageAsync(hostId + "-" + hostType, "1",
-            imageName);
+        await _developerService.UpdateDockerImageAsync(hostId + "-" + hostType, version, imageName);
+    }
+    
+    
+    [HttpPost("CopyHost")]
+    [Authorize(Policy = AevatarPermissions.AdminPolicy)]
+    public async Task CopyHost(string sourceClientId, string newClientId)
+    {
+        await _developerService.CopyHostAsync(sourceClientId, newClientId, "1");
     }
 }

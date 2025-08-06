@@ -41,7 +41,7 @@ public class DemoStateLogEvent : StateLogEventBase<DemoStateLogEvent>
 }
 
 
-public class DemoGState : BroadCastGState
+public class DemoGState : BroadcastGState
 {
     public int Count { get; set; } = 0;
 
@@ -73,7 +73,7 @@ public interface IDemoBatchSubGAgent : IDemoGAgent
 
 }
 
-public interface IDemoGAgent : IBroadCastGAgent
+public interface IDemoGAgent : IBroadcastGAgent
 {
     Task<int> GetCount();
 
@@ -84,7 +84,7 @@ public interface IDemoGAgent : IBroadCastGAgent
 
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
-public class DemoGAgent : BroadCastGAgentBase<DemoGState, DemoStateLogEvent>, IDemoGAgent
+public class DemoGAgent : BroadcastGAgentBase<DemoGState, DemoStateLogEvent>, IDemoGAgent
 {   
     public async Task PublishAsync<T>(GrainId grainId,T @event) where T : EventBase
     {
@@ -98,7 +98,7 @@ public class DemoGAgent : BroadCastGAgentBase<DemoGState, DemoStateLogEvent>, ID
     protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken = default)
     {
 
-        await SubscribeBroadCastEventAsync<DemoEvent>("DemoScheduleGAgent", OnAddNumberEvent);
+        await SubscribeBroadcastEventAsync<DemoEvent>("DemoScheduleGAgent", OnAddNumberEvent);
 
         await base.OnGAgentActivateAsync(cancellationToken);
     }
@@ -140,14 +140,14 @@ public class DemoGAgent : BroadCastGAgentBase<DemoGState, DemoStateLogEvent>, ID
     public async Task UnSub<T>() where T : EventBase
     {
         Logger.LogInformation($"UnSub called");
-        await UnSubscribeBroadCastAsync<T>("DemoScheduleGAgent");
+        await UnSubscribeBroadcastAsync<T>("DemoScheduleGAgent");
     }
 }
 
 
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
-public class DemoBatchSubGAgent : BroadCastGAgentBase<DemoGState, DemoStateLogEvent>, IDemoBatchSubGAgent
+public class DemoBatchSubGAgent : BroadcastGAgentBase<DemoGState, DemoStateLogEvent>, IDemoBatchSubGAgent
 {
     private Dictionary<string, StreamSubscriptionHandle<EventWrapperBase>> _handles = new();
     
@@ -209,13 +209,13 @@ public class DemoBatchSubGAgent : BroadCastGAgentBase<DemoGState, DemoStateLogEv
     public async Task UnSub<T>() where T : EventBase
     {
         Logger.LogInformation($"UnSub called");
-        await UnSubscribeBroadCastAsync<T>("DemoScheduleGAgent");
+        await UnSubscribeBroadcastAsync<T>("DemoScheduleGAgent");
     }
 }
 
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
-public class DemoScheduleGAgent : BroadCastGAgentBase<BroadCastGState, DemoStateLogEvent>, IBroadCastGAgent
+public class DemoScheduleGAgent : BroadcastGAgentBase<BroadcastGState, DemoStateLogEvent>, IBroadcastGAgent
 {
     public override Task<string> GetDescriptionAsync()
     {

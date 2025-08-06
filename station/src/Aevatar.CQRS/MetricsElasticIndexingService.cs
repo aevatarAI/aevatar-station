@@ -41,7 +41,7 @@ public class MetricsElasticIndexingService : IIndexingService
     private readonly Histogram<double> _queryLuceneDurationHistogram;
     private readonly Counter<long> _queryLuceneSuccessCounter;
     private readonly Counter<long> _queryLuceneFailCounter;
-    
+
     // Metrics for CountWithLuceneAsync
     private readonly Histogram<double> _countLuceneDurationHistogram;
     private readonly Counter<long> _countLuceneSuccessCounter;
@@ -69,7 +69,7 @@ public class MetricsElasticIndexingService : IIndexingService
         _queryLuceneDurationHistogram = meter.CreateHistogram<double>("es.query_lucene.duration", "ms", "ElasticSearch Lucene query operation duration");
         _queryLuceneSuccessCounter = meter.CreateCounter<long>("es.query_lucene.success", "count", "ElasticSearch Lucene query operations succeeded");
         _queryLuceneFailCounter = meter.CreateCounter<long>("es.query_lucene.failure", "count", "ElasticSearch Lucene query operations failed");
-        
+
         _countLuceneDurationHistogram = meter.CreateHistogram<double>("es.count_lucene.duration", "ms", "ElasticSearch Lucene count operation duration");
         _countLuceneSuccessCounter = meter.CreateCounter<long>("es.count_lucene.success", "count", "ElasticSearch Lucene count operations succeeded");
         _countLuceneFailCounter = meter.CreateCounter<long>("es.count_lucene.failure", "count", "ElasticSearch Lucene count operations failed");
@@ -191,7 +191,7 @@ public class MetricsElasticIndexingService : IIndexingService
             activity?.SetTag("es.query_lucene.elapsedMs", stopwatch.ElapsedMilliseconds);
         }
     }
-    
+
     public async Task<long> CountWithLuceneAsync(LuceneQueryDto queryDto)
     {
         using var activity = _activitySource.StartActivity("CountWithLuceneAsync", ActivityKind.Client);

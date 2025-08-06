@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Authorization;
 using Orleans.Hosting;
 using Serilog;
 using Serilog.Events;
+using Aevatar.Domain.Shared.Configuration;
 
 namespace Aevatar;
 
@@ -28,9 +29,13 @@ public class Program
             Log.Information("Starting HttpApi.Host.");
             var builder = WebApplication.CreateBuilder(args);
             builder.Configuration
-                .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
-                .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json"))
-                .AddJsonFile("appsettings.json");
+                .AddAevatarSecureConfiguration(
+                    systemConfigPaths: new[]
+                    {
+                        Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"),
+                        Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json")
+                    })
+                .AddEnvironmentVariables();
             builder.Host
                 .UseOrleansClientConfiguration()
                 .ConfigureDefaults(args)
@@ -67,9 +72,13 @@ public class Program
     private static void ConfigureLogger(LoggerConfiguration? loggerConfiguration = null)
     {
         var configuration = new ConfigurationBuilder()
-            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
-            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json"))
-            .AddJsonFile("appsettings.json")
+            .AddAevatarSecureConfiguration(
+                systemConfigPaths: new[]
+                {
+                    Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"),
+                    Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json")
+                })
+            .AddEnvironmentVariables()
             .Build();
         Log.Logger = (loggerConfiguration ?? new LoggerConfiguration())
             .ReadFrom.Configuration(configuration)

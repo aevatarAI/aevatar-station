@@ -167,7 +167,7 @@ public class MockElasticIndexingService : IIndexingService, ISingletonDependency
 
         return new PagedResultDto<Dictionary<string, object>>(total, documents);
     }
-    
+
     public async Task<long> CountWithLuceneAsync(LuceneQueryDto queryDto)
     {
         var indexName = queryDto.StateName;
@@ -179,7 +179,7 @@ public class MockElasticIndexingService : IIndexingService, ISingletonDependency
         }
 
         var documents = _indexStorage[indexName];
-
+        
         if (string.IsNullOrEmpty(queryDto.QueryString))
         {
             // Return total count if no query string
@@ -192,7 +192,7 @@ public class MockElasticIndexingService : IIndexingService, ISingletonDependency
             .Count();
 
         _logger.LogInformation("[Lucene Count] Index: {Index}, Total Count: {Count}", indexName, filteredCount);
-
+        
         await Task.CompletedTask;
         return filteredCount;
     }

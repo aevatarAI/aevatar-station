@@ -5,7 +5,7 @@
     "tags": ["aevatar", "stream", "latency", "percentiles"],
     "timezone": "browser",
     "schemaVersion": 37,
-    "version": 5,
+    "version": 4,
     "refresh": "10s",
     "time": {
       "from": "now-1h",
@@ -38,16 +38,16 @@
           "label": "Silo ID"
         },
         {
-          "name": "grain_id",
+          "name": "agent_type",
           "type": "query",
           "datasource": "Prometheus",
           "refresh": 1,
-          "query": "label_values(aevatar_stream_event_publish_latency_seconds_bucket, grain_id)",
+          "query": "label_values(aevatar_stream_event_publish_latency_seconds_bucket, agent_type)",
           "includeAll": true,
           "multi": true,
           "sort": 1,
           "current": {"selected": false, "text": "All", "value": "$__all"},
-          "label": "Grain ID"
+          "label": "Agent Type"
         },
         {
           "name": "method_name",
@@ -72,6 +72,18 @@
           "sort": 1,
           "current": {"selected": false, "text": "All", "value": "$__all"},
           "label": "Parameter Type"
+        },
+        {
+          "name": "event_category",
+          "type": "query",
+          "datasource": "Prometheus",
+          "refresh": 1,
+          "query": "label_values(aevatar_stream_event_publish_latency_seconds_bucket, event_category)",
+          "includeAll": true,
+          "multi": true,
+          "sort": 1,
+          "current": {"selected": false, "text": "All", "value": "$__all"},
+          "label": "Event Category"
         }
       ]
     },
@@ -82,23 +94,23 @@
         "description": "P50, P90, P95, P99 percentiles calculated directly from histogram buckets",
         "targets": [
           {
-            "expr": "histogram_quantile(0.50, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", grain_id=~\"$grain_id\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\"}) by (le, cluster_id, silo_id, grain_id, method_name, parameter_type))",
-            "legendFormat": "P50 - {{cluster_id}}/{{silo_id}}/{{method_name}}/{{parameter_type}}",
+            "expr": "histogram_quantile(0.50, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", agent_type=~\"$agent_type\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\", event_category=~\"$event_category\"}) by (le, cluster_id, silo_id, agent_type, method_name, parameter_type, event_category))",
+            "legendFormat": "P50 - {{cluster_id}}/{{silo_id}}/{{agent_type}}/{{method_name}}/{{parameter_type}}",
             "refId": "P50"
           },
           {
-            "expr": "histogram_quantile(0.90, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", grain_id=~\"$grain_id\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\"}) by (le, cluster_id, silo_id, grain_id, method_name, parameter_type))",
-            "legendFormat": "P90 - {{cluster_id}}/{{silo_id}}/{{method_name}}/{{parameter_type}}",
+            "expr": "histogram_quantile(0.90, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", agent_type=~\"$agent_type\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\", event_category=~\"$event_category\"}) by (le, cluster_id, silo_id, agent_type, method_name, parameter_type, event_category))",
+            "legendFormat": "P90 - {{cluster_id}}/{{silo_id}}/{{agent_type}}/{{method_name}}/{{parameter_type}}",
             "refId": "P90"
           },
           {
-            "expr": "histogram_quantile(0.95, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", grain_id=~\"$grain_id\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\"}) by (le, cluster_id, silo_id, grain_id, method_name, parameter_type))",
-            "legendFormat": "P95 - {{cluster_id}}/{{silo_id}}/{{method_name}}/{{parameter_type}}",
+            "expr": "histogram_quantile(0.95, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", agent_type=~\"$agent_type\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\", event_category=~\"$event_category\"}) by (le, cluster_id, silo_id, agent_type, method_name, parameter_type, event_category))",
+            "legendFormat": "P95 - {{cluster_id}}/{{silo_id}}/{{agent_type}}/{{method_name}}/{{parameter_type}}",
             "refId": "P95"
           },
           {
-            "expr": "histogram_quantile(0.99, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", grain_id=~\"$grain_id\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\"}) by (le, cluster_id, silo_id, grain_id, method_name, parameter_type))",
-            "legendFormat": "P99 - {{cluster_id}}/{{silo_id}}/{{method_name}}/{{parameter_type}}",
+            "expr": "histogram_quantile(0.99, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", agent_type=~\"$agent_type\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\", event_category=~\"$event_category\"}) by (le, cluster_id, silo_id, agent_type, method_name, parameter_type, event_category))",
+            "legendFormat": "P99 - {{cluster_id}}/{{silo_id}}/{{agent_type}}/{{method_name}}/{{parameter_type}}",
             "refId": "P99"
           }
         ],
@@ -223,22 +235,22 @@
         "description": "Current percentile values calculated from histogram buckets",
         "targets": [
           {
-            "expr": "histogram_quantile(0.50, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", grain_id=~\"$grain_id\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\"}) by (le))",
+            "expr": "histogram_quantile(0.50, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", agent_type=~\"$agent_type\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\", event_category=~\"$event_category\"}) by (le))",
             "legendFormat": "P50",
             "refId": "P50"
           },
           {
-            "expr": "histogram_quantile(0.90, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", grain_id=~\"$grain_id\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\"}) by (le))",
+            "expr": "histogram_quantile(0.90, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", agent_type=~\"$agent_type\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\", event_category=~\"$event_category\"}) by (le))",
             "legendFormat": "P90",
             "refId": "P90"
           },
           {
-            "expr": "histogram_quantile(0.95, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", grain_id=~\"$grain_id\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\"}) by (le))",
+            "expr": "histogram_quantile(0.95, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", agent_type=~\"$agent_type\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\", event_category=~\"$event_category\"}) by (le))",
             "legendFormat": "P95",
             "refId": "P95"
           },
           {
-            "expr": "histogram_quantile(0.99, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", grain_id=~\"$grain_id\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\"}) by (le))",
+            "expr": "histogram_quantile(0.99, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", agent_type=~\"$agent_type\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\", event_category=~\"$event_category\"}) by (le))",
             "legendFormat": "P99",
             "refId": "P99"
           }
@@ -275,12 +287,12 @@
         "description": "Total events processed and average latency",
         "targets": [
           {
-            "expr": "aevatar_stream_event_publish_latency_seconds_count{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", grain_id=~\"$grain_id\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\"}",
+            "expr": "sum(aevatar_stream_event_publish_latency_seconds_count{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", agent_type=~\"$agent_type\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\", event_category=~\"$event_category\"})",
             "legendFormat": "Total Events",
             "refId": "A"
           },
           {
-            "expr": "aevatar_stream_event_publish_latency_seconds_sum{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", grain_id=~\"$grain_id\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\"} / aevatar_stream_event_publish_latency_seconds_count{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", grain_id=~\"$grain_id\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\"}",
+            "expr": "sum(aevatar_stream_event_publish_latency_seconds_sum{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", agent_type=~\"$agent_type\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\", event_category=~\"$event_category\"}) / sum(aevatar_stream_event_publish_latency_seconds_count{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", agent_type=~\"$agent_type\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\", event_category=~\"$event_category\"})",
             "legendFormat": "Avg Latency",
             "refId": "B"
           }
@@ -330,7 +342,7 @@
         "description": "Distribution of events across latency buckets (cumulative)",
         "targets": [
           {
-            "expr": "aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", grain_id=~\"$grain_id\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\"}",
+            "expr": "sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", agent_type=~\"$agent_type\", method_name=~\"$method_name\", parameter_type=~\"$parameter_type\", event_category=~\"$event_category\"}) by (le)",
             "legendFormat": "≤ {{le}}s",
             "refId": "A"
           }

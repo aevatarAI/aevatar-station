@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Events;
+using Aevatar.Domain.Shared.Configuration;
 
 namespace Aevatar.Webhook;
 
@@ -16,7 +17,12 @@ public class Program
     public async static Task<int> Main(string[] args)
     {
         var configuration = new ConfigurationBuilder()
-            .AddJsonFile("appsettings.json")
+            .AddAevatarSecureConfiguration(
+                systemConfigPaths: new[]
+                {
+                    Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json")
+                })
+            .AddEnvironmentVariables()
             .Build();
 
         var webhookId = configuration["Webhook:WebhookId"];
@@ -35,16 +41,17 @@ public class Program
         try
         {
             Log.Information("Starting Aevatar.Developer.Host.");
-            var builder = WebApplication.CreateBuilder(args);
-            builder.Host
-                .UseOrleansClientConfigration()
-                .ConfigureDefaults(args)
-                .UseAutofac()
-                .UseSerilog();
-            await builder.AddApplicationAsync<AevatarListenerHostModule>();
-            var app = builder.Build();
-            await app.InitializeApplicationAsync();
-            await app.RunAsync();
+            var builder = CreateHostBuilder(args);
+            builder.ConfigureHostConfiguration(config =>
+            {
+                config.AddAevatarSecureConfiguration(
+                    systemConfigPaths: new[]
+                    {
+                        Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json")
+                    })
+                    .AddEnvironmentVariables();
+            });
+            await builder.Build().RunAsync();
             return 0;
         }
         catch (Exception ex)
@@ -56,5 +63,13 @@ public class Program
         {
             Log.CloseAndFlush();
         }
+    }
+
+    private static IHostBuilder CreateHostBuilder(string[] args)
+    {
+        return Host.CreateDefaultBuilder(args).UseOrleansClientConfigration()
+            .UseAutofac()
+            .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); })
+            .UseSerilog();
     }
 }

@@ -39,9 +39,14 @@ public static class OpenTelemetryConstants
     public const string ErrorMessageTag = "error.message";
     public const string ErrorStackTraceTag = "error.stack_trace";
 
-    // Event publish-to-consume latency metrics
+    // Event publish-to-consume latency metrics (includes state projections with event_type label)
     public const string EventPublishLatencyHistogram = "aevatar_stream_event_publish_latency";
     public const string EventPublishLatencyCount = "aevatar_stream_event_publish_latency_count";
     public const string EventPublishLatencySum = "aevatar_stream_event_publish_latency_sum";
+    
+    // Event type labels for latency metrics
+    public const string StreamEventType = "stream_event";
+    public const string StateProjectionEventType = "state_projection";
+    
     public const string AevatarStreamsMeterName = "Aevatar.Streams";
 }

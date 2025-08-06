@@ -79,7 +79,7 @@ var demoEvent = new TestDbEvent
     PublisherGrainId = pubAgent.GetGrainId(),
 };
 
-await pubAgent.BroadCastEventAsync("TestDbScheduleGAgent", demoEvent);
+await pubAgent.BroadcastEventAsync("TestDbScheduleGAgent", demoEvent);
 
 await Task.Delay(500);
 

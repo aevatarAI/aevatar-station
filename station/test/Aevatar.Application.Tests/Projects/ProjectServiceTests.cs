@@ -11,6 +11,7 @@ using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
 using Volo.Abp.PermissionManagement;
 using Volo.Abp.Users;
+using Volo.Abp.Validation;
 using Xunit;
 
 namespace Aevatar.Projects;
@@ -26,6 +27,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
     private readonly IRepository<OrganizationUnit, Guid> _organizationUnitRepository;
     private readonly IdentityRoleManager _roleManager;
     private readonly IPermissionManager _permissionManager;
+    private readonly IProjectDomainRepository _domainRepository;
 
     protected ProjectServiceTests()
     {
@@ -37,6 +39,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         _currentUser = GetRequiredService<ICurrentUser>();
         _permissionManager = GetRequiredService<IPermissionManager>();
         _organizationService = GetRequiredService<IOrganizationService>();
+        _domainRepository = GetRequiredService<IProjectDomainRepository>();
     }
 
     [Fact]
@@ -86,7 +89,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         var ownerPermissions =
             await _permissionManager.GetAllForRoleAsync(ownerRole.Name);
         ownerPermissions = ownerPermissions.Where(o => o.IsGranted).ToList();
-        ownerPermissions.Count.ShouldBe(15);
+        ownerPermissions.Count.ShouldBe(22);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Projects.Default);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Projects.Edit);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Members.Default);
@@ -102,18 +105,88 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Dashboard);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.LLMSModels.Default);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.LLMSModels.Default);
-
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ProjectCorsOrigins.Default);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ProjectCorsOrigins.Create);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ProjectCorsOrigins.Delete);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Plugins.Default);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Plugins.Create);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Plugins.Edit);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Plugins.Delete);
+        
         var readerRole = roles.Items.First(o => o.Name.EndsWith("Reader"));
         var readerPermissions =
             await _permissionManager.GetAllForRoleAsync(readerRole.Name);
         readerPermissions = readerPermissions.Where(o => o.IsGranted).ToList();
-        readerPermissions.Count.ShouldBe(6);
+        readerPermissions.Count.ShouldBe(8);
         readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Projects.Default);
         readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Members.Default);
         readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ApiKeys.Default);
         readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Dashboard);
         readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.LLMSModels.Default);
         readerPermissions.ShouldContain(o => o.Name == AevatarPermissions.LLMSModels.Default);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ProjectCorsOrigins.Default);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Plugins.Default);
+    }
+
+    [Fact]
+    public async Task Project_Create_RepeatDomain_Test()
+    {
+        await _identityUserManager.CreateAsync(
+            new IdentityUser(
+                _currentUser.Id.Value,
+                "test",
+                "test@email.io"));
+
+        var createOrganizationInput = new CreateOrganizationDto
+        {
+            DisplayName = "Test Organization"
+        };
+        var organization = await _organizationService.CreateAsync(createOrganizationInput);
+
+        var createProjectInput = new CreateProjectDto()
+        {
+            OrganizationId = organization.Id,
+            DisplayName = "Test Project",
+            DomainName = "App"
+        };
+        var project = await _projectService.CreateAsync(createProjectInput);
+        project.DisplayName.ShouldBe(createProjectInput.DisplayName);
+        project.DomainName.ShouldBe(createProjectInput.DomainName);
+        
+        await Should.ThrowAsync<UserFriendlyException>(async () => await  _projectService.CreateAsync(createProjectInput));
+
+        createProjectInput.DomainName = "app";
+        await Should.ThrowAsync<UserFriendlyException>(async () => await  _projectService.CreateAsync(createProjectInput));
+        
+        createProjectInput.DomainName = "APP";
+        await Should.ThrowAsync<UserFriendlyException>(async () => await  _projectService.CreateAsync(createProjectInput));
+    }
+
+    [Fact]
+    public async Task Project_WrongDomain_Test()
+    {
+        await _identityUserManager.CreateAsync(
+            new IdentityUser(
+                _currentUser.Id.Value,
+                "test",
+                "test@email.io"));
+
+        var createOrganizationInput = new CreateOrganizationDto
+        {
+            DisplayName = "Test Organization"
+        };
+        var organization = await _organizationService.CreateAsync(createOrganizationInput);
+
+        var createProjectInput = new CreateProjectDto()
+        {
+            OrganizationId = organization.Id,
+            DisplayName = "Test Project",
+            DomainName = "App 2"
+        };
+        await Should.ThrowAsync<AbpValidationException>(async () => await _projectService.CreateAsync(createProjectInput));
+
+        createProjectInput.DomainName = "App@";
+        await Should.ThrowAsync<AbpValidationException>(async () => await _projectService.CreateAsync(createProjectInput));
     }
 
     [Fact]
@@ -141,14 +214,12 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
 
         var updateInput = new UpdateProjectDto
         {
-            DisplayName = "Test Project New",
-            DomainName = "App New"
+            DisplayName = "Test Project New"
         };
         await _projectService.UpdateAsync(project.Id, updateInput);
         
         project = await _projectService.GetProjectAsync(project.Id);
         project.DisplayName.ShouldBe(updateInput.DisplayName);
-        project.DomainName.ShouldBe(updateInput.DomainName);
     }
 
     [Fact]
@@ -185,6 +256,10 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         {
             await Should.ThrowAsync<EntityNotFoundException>(async () => await _roleManager.GetByIdAsync(role.Id));
         }
+
+        var domain =
+            await _domainRepository.FirstOrDefaultAsync(o => o.ProjectId == project.Id && o.IsDeleted == false);
+        domain.DomainName.ShouldBe("App");
     }
 
     [Fact]
