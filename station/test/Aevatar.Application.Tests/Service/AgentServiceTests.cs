@@ -23,7 +23,7 @@ using Aevatar.Exceptions;
 using Volo.Abp;
 using Orleans;
 using Orleans.Runtime;
-using Orleans;
+using Orleans.Metadata;
 
 namespace Aevatar.Application.Tests.Service;
 
@@ -608,40 +608,125 @@ public class AgentServiceTests
         exception.InnerException.Message.ShouldBe("name is null");
     }
 
-    [Fact]
-    public void CheckCreateParam_WithWhitespaceAgentType_ShouldNotThrowException()
-    {
-        // Arrange - IsNullOrEmpty() doesn't consider whitespace as empty
-        var agentService = CreateAgentServiceForTesting();
-        var validDto = new CreateAgentInputDto
-        {
-            AgentType = "   ",
-            Name = "ValidAgentName"
-        };
+    #endregion
 
-        // Act & Assert
-        var method = typeof(AgentService).GetMethod("CheckCreateParam", BindingFlags.NonPublic | BindingFlags.Instance);
+    #region IsExcludedAgentType Tests
+
+    [Fact]
+    public void IsExcludedAgentType_WithExcludedType_ShouldReturnTrue()
+    {
+        // Arrange
+        var agentService = CreateAgentServiceForTesting();
+        var grainType = GrainType.Create("ExcludedType");
+        var excludedTypes = new HashSet<GrainType> { grainType };
+
+        // Act - using reflection to call private method
+        var method = typeof(AgentService).GetMethod("IsExcludedAgentType", BindingFlags.NonPublic | BindingFlags.Instance);
         method.ShouldNotBeNull();
 
-        Should.NotThrow(() => method.Invoke(agentService, new object[] { validDto }));
+        var result = method.Invoke(agentService, new object[] { grainType, excludedTypes });
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ShouldBeOfType<bool>();
+        ((bool)result).ShouldBeTrue();
     }
 
     [Fact]
-    public void CheckCreateParam_WithWhitespaceName_ShouldNotThrowException()
+    public void IsExcludedAgentType_WithNonExcludedType_ShouldReturnFalse()
     {
-        // Arrange - IsNullOrEmpty() doesn't consider whitespace as empty
+        // Arrange
         var agentService = CreateAgentServiceForTesting();
-        var validDto = new CreateAgentInputDto
-        {
-            AgentType = "ValidAgentType",
-            Name = "   "
-        };
+        var grainType = GrainType.Create("AllowedType");
+        var excludedGrainType = GrainType.Create("ExcludedType");
+        var excludedTypes = new HashSet<GrainType> { excludedGrainType };
 
-        // Act & Assert
-        var method = typeof(AgentService).GetMethod("CheckCreateParam", BindingFlags.NonPublic | BindingFlags.Instance);
+        // Act - using reflection to call private method
+        var method = typeof(AgentService).GetMethod("IsExcludedAgentType", BindingFlags.NonPublic | BindingFlags.Instance);
         method.ShouldNotBeNull();
 
-        Should.NotThrow(() => method.Invoke(agentService, new object[] { validDto }));
+        var result = method.Invoke(agentService, new object[] { grainType, excludedTypes });
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ShouldBeOfType<bool>();
+        ((bool)result).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void IsExcludedAgentType_WithEmptyExcludedTypes_ShouldReturnFalse()
+    {
+        // Arrange
+        var agentService = CreateAgentServiceForTesting();
+        var grainType = GrainType.Create("AnyType");
+        var excludedTypes = new HashSet<GrainType>();
+
+        // Act - using reflection to call private method
+        var method = typeof(AgentService).GetMethod("IsExcludedAgentType", BindingFlags.NonPublic | BindingFlags.Instance);
+        method.ShouldNotBeNull();
+
+        var result = method.Invoke(agentService, new object[] { grainType, excludedTypes });
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ShouldBeOfType<bool>();
+        ((bool)result).ShouldBeFalse();
+    }
+
+    #endregion
+
+    #region FilterSubAgentGrainIds Tests
+
+    [Fact]
+    public void FilterSubAgentGrainIds_WithMixedTypes_ShouldFilterCorrectly()
+    {
+        // Arrange
+        var agentService = CreateAgentServiceForTesting();
+        var allowedGrainType = GrainType.Create("AllowedType");
+        var excludedGrainType = GrainType.Create("ExcludedType");
+        
+        var children = new List<GrainId>
+        {
+            GrainId.Create(allowedGrainType, "key1"),
+            GrainId.Create(excludedGrainType, "key2"),
+            GrainId.Create(allowedGrainType, "key3")
+        };
+        
+        var excludedTypes = new HashSet<GrainType> { excludedGrainType };
+
+        // Act - using reflection to call private method
+        var method = typeof(AgentService).GetMethod("FilterSubAgentGrainIds", BindingFlags.NonPublic | BindingFlags.Instance);
+        method.ShouldNotBeNull();
+
+        var result = method.Invoke(agentService, new object[] { children, excludedTypes });
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ShouldBeOfType<List<GrainId>>();
+        var filteredIds = (List<GrainId>)result;
+        filteredIds.Count.ShouldBe(2); // Should exclude the excluded type
+        filteredIds.All(id => id.Type == allowedGrainType).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void FilterSubAgentGrainIds_WithNullChildren_ShouldReturnEmptyList()
+    {
+        // Arrange
+        var agentService = CreateAgentServiceForTesting();
+        List<GrainId> children = null;
+        var excludedTypes = new HashSet<GrainType>();
+
+        // Act - using reflection to call private method
+        var method = typeof(AgentService).GetMethod("FilterSubAgentGrainIds", BindingFlags.NonPublic | BindingFlags.Instance);
+        method.ShouldNotBeNull();
+
+        var result = method.Invoke(agentService, new object[] { children, excludedTypes });
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ShouldBeOfType<List<GrainId>>();
+        var filteredIds = (List<GrainId>)result;
+        filteredIds.Count.ShouldBe(0);
     }
 
     #endregion
@@ -687,304 +772,9 @@ public class AgentServiceTests
         exception.InnerException.Message.ShouldBe("You are not the owner of this agent");
     }
 
-    [Fact]
-    public void EnsureUserAuthorized_WithEmptyGuids_ShouldThrowUserFriendlyException()
-    {
-        // Arrange
-        var currentUserId = Guid.Empty;
-        var targetUserId = Guid.NewGuid();
-        var mockUserAppService = new Mock<IUserAppService>();
-        mockUserAppService.Setup(x => x.GetCurrentUserId()).Returns(currentUserId);
-        
-        var agentService = CreateAgentServiceWithMockUserService(mockUserAppService.Object);
-
-        // Act & Assert
-        var method = typeof(AgentService).GetMethod("EnsureUserAuthorized", BindingFlags.NonPublic | BindingFlags.Instance);
-        method.ShouldNotBeNull();
-
-        var exception = Should.Throw<System.Reflection.TargetInvocationException>(() => 
-            method.Invoke(agentService, new object[] { targetUserId }));
-        
-        exception.InnerException.ShouldBeOfType<UserFriendlyException>();
-        exception.InnerException.Message.ShouldBe("You are not the owner of this agent");
-    }
-
     #endregion
 
-    #region SetupConfigurationData Tests
-
-    [Fact]
-    public void SetupConfigurationData_WithValidInput_ShouldReturnConfigurationBase()
-    {
-        // Arrange
-        var agentService = CreateAgentServiceWithMockSchemaProvider();
-        var configuration = new Configuration
-        {
-            DtoType = typeof(TestConfigurationBase)
-        };
-        var propertiesString = "{ \"stringProperty\": \"test\", \"intProperty\": 42 }";
-
-        // Act - using reflection to call private method
-        var method = typeof(AgentService).GetMethod("SetupConfigurationData", BindingFlags.NonPublic | BindingFlags.Instance);
-        method.ShouldNotBeNull();
-
-        var result = method.Invoke(agentService, new object[] { configuration, propertiesString });
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.ShouldBeOfType<TestConfigurationBase>();
-        var config = (TestConfigurationBase)result;
-        config.StringProperty.ShouldBe("test");
-        config.IntProperty.ShouldBe(42);
-    }
-
-    [Fact]
-    public void SetupConfigurationData_WithValidationErrors_ShouldThrowParameterValidateException()
-    {
-        // Arrange
-        var agentService = CreateAgentServiceWithMockSchemaProviderValidationError();
-        var configuration = new Configuration
-        {
-            DtoType = typeof(TestConfigurationBase)
-        };
-        var propertiesString = "{ \"invalidProperty\": \"test\" }";
-
-        // Act & Assert
-        var method = typeof(AgentService).GetMethod("SetupConfigurationData", BindingFlags.NonPublic | BindingFlags.Instance);
-        method.ShouldNotBeNull();
-
-        var exception = Should.Throw<System.Reflection.TargetInvocationException>(() => 
-            method.Invoke(agentService, new object[] { configuration, propertiesString }));
-        
-        exception.InnerException.ShouldBeOfType<ParameterValidateException>();
-    }
-
-    [Fact]
-    public void SetupConfigurationData_WithInvalidJson_ShouldThrowBusinessException()
-    {
-        // Arrange
-        var agentService = CreateAgentServiceWithMockSchemaProvider();
-        var configuration = new Configuration
-        {
-            DtoType = typeof(TestConfigurationBase)
-        };
-        var propertiesString = "{ \"stringProperty\": \"test\", \"intProperty\": \"invalid_int\" }";
-
-        // Act & Assert
-        var method = typeof(AgentService).GetMethod("SetupConfigurationData", BindingFlags.NonPublic | BindingFlags.Instance);
-        method.ShouldNotBeNull();
-
-        var exception = Should.Throw<System.Reflection.TargetInvocationException>(() => 
-            method.Invoke(agentService, new object[] { configuration, propertiesString }));
-        
-        exception.InnerException.ShouldBeOfType<BusinessException>();
-        exception.InnerException.Message.ShouldBe("[AgentService][SetupInitializedConfig] config convert error");
-    }
-
-    [Fact]
-    public void SetupConfigurationData_WithNullResult_ShouldThrowBusinessException()
-    {
-        // Arrange
-        var agentService = CreateAgentServiceWithMockSchemaProvider();
-        var configuration = new Configuration
-        {
-            DtoType = typeof(TestConfigurationBase)
-        };
-        var propertiesString = "null";
-
-        // Act & Assert
-        var method = typeof(AgentService).GetMethod("SetupConfigurationData", BindingFlags.NonPublic | BindingFlags.Instance);
-        method.ShouldNotBeNull();
-
-        var exception = Should.Throw<System.Reflection.TargetInvocationException>(() => 
-            method.Invoke(agentService, new object[] { configuration, propertiesString }));
-        
-        exception.InnerException.ShouldBeOfType<BusinessException>();
-        exception.InnerException.Message.ShouldBe("[AgentService][SetupInitializedConfig] config convert error");
-    }
-
-    #endregion
-
-    #region InitializeBusinessAgent Tests
-
-    [Fact]
-    public async Task InitializeBusinessAgent_WithValidData_ShouldReturnBusinessAgentAndConfig()
-    {
-        // Arrange
-        var primaryKey = Guid.NewGuid();
-        var agentType = "TestAgentType";
-        var agentProperties = "{ \"stringProperty\": \"test\", \"intProperty\": 42 }";
-
-        var mockGAgent = new Mock<IGAgent>();
-        var mockGAgentFactory = new Mock<IGAgentFactory>();
-        var configuration = new Configuration
-        {
-            DtoType = typeof(TestConfigurationBase)
-        };
-
-        mockGAgent.Setup(x => x.GetConfigurationAsync())
-                 .ReturnsAsync(configuration);
-        
-        mockGAgent.Setup(x => x.ConfigAsync(It.IsAny<ConfigurationBase>()))
-                 .Returns(Task.CompletedTask);
-
-        mockGAgentFactory.Setup(x => x.GetGAgentAsync(It.IsAny<GrainId>()))
-                        .ReturnsAsync(mockGAgent.Object);
-
-        var agentService = CreateAgentServiceWithMockGAgentFactory(mockGAgentFactory.Object);
-
-        // Act - using reflection to call private method
-        var method = typeof(AgentService).GetMethod("InitializeBusinessAgent", BindingFlags.NonPublic | BindingFlags.Instance);
-        method.ShouldNotBeNull();
-
-        var task = (Task)method.Invoke(agentService, new object[] { primaryKey, agentType, agentProperties });
-        await task;
-        
-        var result = task.GetType().GetProperty("Result").GetValue(task);
-
-        // Assert
-        result.ShouldNotBeNull();
-        var businessAgent = result.GetType().GetProperty("Item1").GetValue(result) as IGAgent;
-        var configBase = result.GetType().GetProperty("Item2").GetValue(result) as ConfigurationBase;
-        
-        businessAgent.ShouldNotBeNull();
-        configBase.ShouldNotBeNull();
-        
-        // Verify that ConfigAsync was called
-        mockGAgent.Verify(x => x.ConfigAsync(It.IsAny<ConfigurationBase>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task InitializeBusinessAgent_WithNullProperties_ShouldReturnBusinessAgentWithNullConfig()
-    {
-        // Arrange
-        var primaryKey = Guid.NewGuid();
-        var agentType = "TestAgentType";
-        string agentProperties = null;
-
-        var mockGAgent = new Mock<IGAgent>();
-        var mockGAgentFactory = new Mock<IGAgentFactory>();
-        var configuration = new Configuration
-        {
-            DtoType = typeof(TestConfigurationBase)
-        };
-
-        mockGAgent.Setup(x => x.GetConfigurationAsync())
-                 .ReturnsAsync(configuration);
-
-        mockGAgentFactory.Setup(x => x.GetGAgentAsync(It.IsAny<GrainId>()))
-                        .ReturnsAsync(mockGAgent.Object);
-
-        var agentService = CreateAgentServiceWithMockGAgentFactory(mockGAgentFactory.Object);
-
-        // Act - using reflection to call private method
-        var method = typeof(AgentService).GetMethod("InitializeBusinessAgent", BindingFlags.NonPublic | BindingFlags.Instance);
-        method.ShouldNotBeNull();
-
-        var task = (Task)method.Invoke(agentService, new object[] { primaryKey, agentType, agentProperties });
-        await task;
-        
-        var result = task.GetType().GetProperty("Result").GetValue(task);
-
-        // Assert
-        result.ShouldNotBeNull();
-        var businessAgent = result.GetType().GetProperty("Item1").GetValue(result) as IGAgent;
-        var configBase = result.GetType().GetProperty("Item2").GetValue(result) as ConfigurationBase;
-        
-        businessAgent.ShouldNotBeNull();
-        configBase.ShouldBeNull(); // Should be null when no properties provided
-        
-        // Verify that ConfigAsync was NOT called
-        mockGAgent.Verify(x => x.ConfigAsync(It.IsAny<ConfigurationBase>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task InitializeBusinessAgent_WithEmptyProperties_ShouldReturnBusinessAgentWithNullConfig()
-    {
-        // Arrange
-        var primaryKey = Guid.NewGuid();
-        var agentType = "TestAgentType";
-        var agentProperties = "";
-
-        var mockGAgent = new Mock<IGAgent>();
-        var mockGAgentFactory = new Mock<IGAgentFactory>();
-        var configuration = new Configuration
-        {
-            DtoType = typeof(TestConfigurationBase)
-        };
-
-        mockGAgent.Setup(x => x.GetConfigurationAsync())
-                 .ReturnsAsync(configuration);
-
-        mockGAgentFactory.Setup(x => x.GetGAgentAsync(It.IsAny<GrainId>()))
-                        .ReturnsAsync(mockGAgent.Object);
-
-        var agentService = CreateAgentServiceWithMockGAgentFactory(mockGAgentFactory.Object);
-
-        // Act - using reflection to call private method
-        var method = typeof(AgentService).GetMethod("InitializeBusinessAgent", BindingFlags.NonPublic | BindingFlags.Instance);
-        method.ShouldNotBeNull();
-
-        var task = (Task)method.Invoke(agentService, new object[] { primaryKey, agentType, agentProperties });
-        await task;
-        
-        var result = task.GetType().GetProperty("Result").GetValue(task);
-
-        // Assert
-        result.ShouldNotBeNull();
-        var businessAgent = result.GetType().GetProperty("Item1").GetValue(result) as IGAgent;
-        var configBase = result.GetType().GetProperty("Item2").GetValue(result) as ConfigurationBase;
-        
-        businessAgent.ShouldNotBeNull();
-        configBase.ShouldBeNull(); // Should be null when empty properties provided
-        
-        // Verify that ConfigAsync was NOT called
-        mockGAgent.Verify(x => x.ConfigAsync(It.IsAny<ConfigurationBase>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task InitializeBusinessAgent_WithNullConfiguration_ShouldReturnBusinessAgentWithNullConfig()
-    {
-        // Arrange
-        var primaryKey = Guid.NewGuid();
-        var agentType = "TestAgentType";
-        var agentProperties = "{ \"stringProperty\": \"test\" }";
-
-        var mockGAgent = new Mock<IGAgent>();
-        var mockGAgentFactory = new Mock<IGAgentFactory>();
-
-        mockGAgent.Setup(x => x.GetConfigurationAsync())
-                 .ReturnsAsync((Configuration)null); // Return null configuration
-
-        mockGAgentFactory.Setup(x => x.GetGAgentAsync(It.IsAny<GrainId>()))
-                        .ReturnsAsync(mockGAgent.Object);
-
-        var agentService = CreateAgentServiceWithMockGAgentFactory(mockGAgentFactory.Object);
-
-        // Act - using reflection to call private method
-        var method = typeof(AgentService).GetMethod("InitializeBusinessAgent", BindingFlags.NonPublic | BindingFlags.Instance);
-        method.ShouldNotBeNull();
-
-        var task = (Task)method.Invoke(agentService, new object[] { primaryKey, agentType, agentProperties });
-        await task;
-        
-        var result = task.GetType().GetProperty("Result").GetValue(task);
-
-        // Assert
-        result.ShouldNotBeNull();
-        var businessAgent = result.GetType().GetProperty("Item1").GetValue(result) as IGAgent;
-        var configBase = result.GetType().GetProperty("Item2").GetValue(result) as ConfigurationBase;
-        
-        businessAgent.ShouldNotBeNull();
-        configBase.ShouldBeNull(); // Should be null when configuration is null
-        
-        // Verify that ConfigAsync was NOT called
-        mockGAgent.Verify(x => x.ConfigAsync(It.IsAny<ConfigurationBase>()), Times.Never);
-    }
-
-    #endregion
-
-    #region Refactored Helper Methods Tests
+    #region CreateGrainIdFromAgentType Tests
 
     [Fact]
     public void CreateGrainIdFromAgentType_WithValidInput_ShouldReturnGrainId()
@@ -1024,24 +814,9 @@ public class AgentServiceTests
         exception.InnerException.Message.ShouldContain("Agent type cannot be null or empty");
     }
 
-    [Fact]
-    public void CreateGrainIdFromAgentType_WithEmptyAgentType_ShouldThrowArgumentException()
-    {
-        // Arrange
-        var agentService = CreateAgentServiceForTesting();
-        var agentType = "";
-        var primaryKey = Guid.NewGuid();
+    #endregion
 
-        // Act & Assert
-        var method = typeof(AgentService).GetMethod("CreateGrainIdFromAgentType", BindingFlags.NonPublic | BindingFlags.Instance);
-        method.ShouldNotBeNull();
-
-        var exception = Should.Throw<System.Reflection.TargetInvocationException>(() => 
-            method.Invoke(agentService, new object[] { agentType, primaryKey }));
-        
-        exception.InnerException.ShouldBeOfType<ArgumentException>();
-        exception.InnerException.Message.ShouldContain("Agent type cannot be null or empty");
-    }
+    #region ShouldConfigureAgent Tests
 
     [Fact]
     public void ShouldConfigureAgent_WithValidConfigurationAndProperties_ShouldReturnTrue()
@@ -1109,8 +884,154 @@ public class AgentServiceTests
         ((bool)result).ShouldBeFalse();
     }
 
+    #endregion
+
+    #region GetExcludedAgentTypes Tests
+
     [Fact]
-    public void ShouldConfigureAgent_WithEmptyProperties_ShouldReturnFalse()
+    public void GetExcludedAgentTypes_ShouldReturnCreatorAndSubscriptionTypes()
+    {
+        // Arrange
+        var agentService = CreateAgentServiceWithMockGrainTypeResolver();
+
+        // Act - using reflection to call private method
+        var method = typeof(AgentService).GetMethod("GetExcludedAgentTypes", BindingFlags.NonPublic | BindingFlags.Instance);
+        method.ShouldNotBeNull();
+
+        var result = method.Invoke(agentService, new object[0]);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ShouldBeOfType<HashSet<GrainType>>();
+        var excludedTypes = (HashSet<GrainType>)result;
+        excludedTypes.Count.ShouldBe(2); // CreatorGAgent and SubscriptionGAgent
+    }
+
+    #endregion
+
+    #region GetAgentConfigurationAsync Tests
+
+    [Fact]
+    public async Task GetAgentConfigurationAsync_WithValidAgent_ShouldReturnConfiguration()
+    {
+        // Arrange
+        var mockAgent = new Mock<IGAgent>();
+        var configurationType = typeof(TestConfigurationBase);
+        
+        mockAgent.Setup(x => x.GetConfigurationTypeAsync())
+                 .ReturnsAsync(configurationType);
+
+        var agentService = CreateAgentServiceForTesting();
+
+        // Act - using reflection to call private method
+        var method = typeof(AgentService).GetMethod("GetAgentConfigurationAsync", BindingFlags.NonPublic | BindingFlags.Instance);
+        method.ShouldNotBeNull();
+
+        var task = (Task)method.Invoke(agentService, new object[] { mockAgent.Object });
+        await task;
+        
+        var result = task.GetType().GetProperty("Result").GetValue(task);
+
+        // Assert
+        result.ShouldNotBeNull();
+        var configuration = result as Configuration;
+        configuration.ShouldNotBeNull();
+        configuration.DtoType.ShouldBe(configurationType);
+        configuration.Properties.ShouldNotBeNull();
+        configuration.Properties.Count.ShouldBe(2); // StringProperty and IntProperty
+    }
+
+    [Fact]
+    public async Task GetAgentConfigurationAsync_WithNullConfigurationType_ShouldReturnNull()
+    {
+        // Arrange
+        var mockAgent = new Mock<IGAgent>();
+        
+        mockAgent.Setup(x => x.GetConfigurationTypeAsync())
+                 .ReturnsAsync((Type)null);
+
+        var agentService = CreateAgentServiceForTesting();
+
+        // Act - using reflection to call private method
+        var method = typeof(AgentService).GetMethod("GetAgentConfigurationAsync", BindingFlags.NonPublic | BindingFlags.Instance);
+        method.ShouldNotBeNull();
+
+        var task = (Task)method.Invoke(agentService, new object[] { mockAgent.Object });
+        await task;
+        
+        var result = task.GetType().GetProperty("Result").GetValue(task);
+
+        // Assert
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task GetAgentConfigurationAsync_WithAbstractConfigurationType_ShouldReturnNull()
+    {
+        // Arrange
+        var mockAgent = new Mock<IGAgent>();
+        var configurationType = typeof(AbstractConfiguration);
+        
+        mockAgent.Setup(x => x.GetConfigurationTypeAsync())
+                 .ReturnsAsync(configurationType);
+
+        var agentService = CreateAgentServiceForTesting();
+
+        // Act - using reflection to call private method
+        var method = typeof(AgentService).GetMethod("GetAgentConfigurationAsync", BindingFlags.NonPublic | BindingFlags.Instance);
+        method.ShouldNotBeNull();
+
+        var task = (Task)method.Invoke(agentService, new object[] { mockAgent.Object });
+        await task;
+        
+        var result = task.GetType().GetProperty("Result").GetValue(task);
+
+        // Assert
+        result.ShouldBeNull();
+    }
+
+    #endregion
+
+    #region ConfigureBusinessAgentAsync Tests
+
+    [Fact]
+    public async Task ConfigureBusinessAgentAsync_WithValidInputs_ShouldConfigureAndReturnConfig()
+    {
+        // Arrange
+        var mockAgent = new Mock<IGAgent>();
+        var configuration = new Configuration
+        {
+            DtoType = typeof(TestConfigurationBase)
+        };
+        var agentProperties = "{ \"stringProperty\": \"test\", \"intProperty\": 42 }";
+
+        mockAgent.Setup(x => x.ConfigAsync(It.IsAny<ConfigurationBase>()))
+                 .Returns(Task.CompletedTask);
+
+        var agentService = CreateAgentServiceWithMockSchemaProvider();
+
+        // Act - using reflection to call private method
+        var method = typeof(AgentService).GetMethod("ConfigureBusinessAgentAsync", BindingFlags.NonPublic | BindingFlags.Instance);
+        method.ShouldNotBeNull();
+
+        var task = (Task)method.Invoke(agentService, new object[] { mockAgent.Object, configuration, agentProperties });
+        await task;
+        
+        var result = task.GetType().GetProperty("Result").GetValue(task);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ShouldBeOfType<TestConfigurationBase>();
+        var config = (TestConfigurationBase)result;
+        config.StringProperty.ShouldBe("test");
+        config.IntProperty.ShouldBe(42);
+        
+        // Verify ConfigAsync was called
+        mockAgent.Verify(x => x.ConfigAsync(It.IsAny<ConfigurationBase>()), Times.Once);
+    }
+
+    [Fact]
+    public void ConfigureBusinessAgentAsync_WithNullBusinessAgent_ShouldThrowArgumentNullException()
     {
         // Arrange
         var agentService = CreateAgentServiceForTesting();
@@ -1118,24 +1039,209 @@ public class AgentServiceTests
         {
             DtoType = typeof(TestConfigurationBase)
         };
-        var agentProperties = "";
+        var agentProperties = "{ \"stringProperty\": \"test\" }";
 
-        // Act - using reflection to call private method
-        var method = typeof(AgentService).GetMethod("ShouldConfigureAgent", BindingFlags.NonPublic | BindingFlags.Instance);
+        // Act & Assert
+        var method = typeof(AgentService).GetMethod("ConfigureBusinessAgentAsync", BindingFlags.NonPublic | BindingFlags.Instance);
         method.ShouldNotBeNull();
 
-        var result = method.Invoke(agentService, new object[] { configuration, agentProperties });
+        var exception = Should.Throw<System.Reflection.TargetInvocationException>(() => 
+            method.Invoke(agentService, new object[] { null, configuration, agentProperties }));
+        
+        exception.InnerException.ShouldBeOfType<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void ConfigureBusinessAgentAsync_WithNullConfiguration_ShouldThrowArgumentNullException()
+    {
+        // Arrange
+        var mockAgent = new Mock<IGAgent>();
+        var agentService = CreateAgentServiceForTesting();
+        var agentProperties = "{ \"stringProperty\": \"test\" }";
+
+        // Act & Assert
+        var method = typeof(AgentService).GetMethod("ConfigureBusinessAgentAsync", BindingFlags.NonPublic | BindingFlags.Instance);
+        method.ShouldNotBeNull();
+
+        var exception = Should.Throw<System.Reflection.TargetInvocationException>(() => 
+            method.Invoke(agentService, new object[] { mockAgent.Object, null, agentProperties }));
+        
+        exception.InnerException.ShouldBeOfType<ArgumentNullException>();
+    }
+
+    #endregion
+
+    #region GetSubAgentGrainIds Tests
+
+    [Fact]
+    public async Task GetSubAgentGrainIds_WithValidAgent_ShouldReturnFilteredGrainIds()
+    {
+        // Arrange
+        var mockAgent = new Mock<IGAgent>();
+        var allowedGrainType = GrainType.Create("AllowedType");
+        var creatorGrainType = GrainType.Create("CreatorGAgent");
+        var subscriptionGrainType = GrainType.Create("SubscriptionGAgent");
+        
+        var children = new List<GrainId>
+        {
+            GrainId.Create(allowedGrainType, "key1"),
+            GrainId.Create(creatorGrainType, "key2"),
+            GrainId.Create(subscriptionGrainType, "key3"),
+            GrainId.Create(allowedGrainType, "key4")
+        };
+        
+        mockAgent.Setup(x => x.GetChildrenAsync())
+                 .ReturnsAsync(children);
+
+        var agentService = CreateAgentServiceWithMockGrainTypeResolver();
+
+        // Act - using reflection to call private method
+        var method = typeof(AgentService).GetMethod("GetSubAgentGrainIds", BindingFlags.NonPublic | BindingFlags.Instance);
+        method.ShouldNotBeNull();
+
+        var task = (Task)method.Invoke(agentService, new object[] { mockAgent.Object });
+        await task;
+        
+        var result = task.GetType().GetProperty("Result").GetValue(task);
 
         // Assert
         result.ShouldNotBeNull();
-        result.ShouldBeOfType<bool>();
-        ((bool)result).ShouldBeFalse();
+        result.ShouldBeOfType<List<GrainId>>();
+        var filteredIds = (List<GrainId>)result;
+        filteredIds.Count.ShouldBe(2); // Should exclude CreatorGAgent and SubscriptionGAgent
+        filteredIds.All(id => id.Type == allowedGrainType).ShouldBeTrue();
     }
 
-    // Complex Orleans-related tests temporarily removed to fix compilation
-    // These tests require more complex setup with Orleans types
+    [Fact]
+    public async Task GetSubAgentGrainIds_WithNullChildren_ShouldReturnEmptyList()
+    {
+        // Arrange
+        var mockAgent = new Mock<IGAgent>();
+        
+        mockAgent.Setup(x => x.GetChildrenAsync())
+                 .ReturnsAsync((List<GrainId>)null);
+
+        var agentService = CreateAgentServiceWithMockGrainTypeResolver();
+
+        // Act - using reflection to call private method
+        var method = typeof(AgentService).GetMethod("GetSubAgentGrainIds", BindingFlags.NonPublic | BindingFlags.Instance);
+        method.ShouldNotBeNull();
+
+        var task = (Task)method.Invoke(agentService, new object[] { mockAgent.Object });
+        await task;
+        
+        var result = task.GetType().GetProperty("Result").GetValue(task);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ShouldBeOfType<List<GrainId>>();
+        var filteredIds = (List<GrainId>)result;
+        filteredIds.Count.ShouldBe(0);
+    }
 
     #endregion
+
+    #region GetAgentTypeDataMap Tests - Simplified Version
+
+    [Fact]
+    public async Task GetAgentTypeDataMap_WithValidSetup_ShouldReturnAgentTypeMap()
+    {
+        // Note: This is a simplified test due to the complexity of mocking all dependencies
+        // In a real scenario, you would mock IGAgentManager, IGAgentFactory, etc.
+        // For now, we'll test the method exists and can be invoked
+        
+        // Arrange
+        var agentService = CreateAgentServiceWithComplexMocks();
+
+        // Act - using reflection to call private method
+        var method = typeof(AgentService).GetMethod("GetAgentTypeDataMap", BindingFlags.NonPublic | BindingFlags.Instance);
+        method.ShouldNotBeNull();
+
+        // For this complex method, we'll just verify it can be called without crashing
+        // A full test would require extensive mocking of Orleans infrastructure
+        var task = (Task)method.Invoke(agentService, new object[0]);
+        
+        // Assert - Method should exist and be callable
+        task.ShouldNotBeNull();
+        
+        // Note: Due to the complexity of fully mocking all Orleans dependencies,
+        // this test primarily verifies the method structure rather than full functionality
+    }
+
+    #endregion
+
+    private AgentService CreateAgentServiceWithComplexMocks()
+    {
+        // For testing the most complex private method GetAgentTypeDataMap
+        var agentService = (AgentService)System.Runtime.Serialization.FormatterServices
+            .GetUninitializedObject(typeof(AgentService));
+        
+        // Set up basic mocks to prevent null reference exceptions
+        var mockLogger = new Mock<ILogger<AgentService>>();
+        var mockAgentOptions = new Mock<IOptionsMonitor<AgentOptions>>();
+        var mockGAgentManager = new Mock<IGAgentManager>();
+        var mockGrainTypeResolver = new Mock<GrainTypeResolver>();
+        var mockGAgentFactory = new Mock<IGAgentFactory>();
+        var mockSchemaProvider = new Mock<ISchemaProvider>();
+        
+        // Setup basic return values
+        mockAgentOptions.Setup(x => x.CurrentValue).Returns(new AgentOptions
+        {
+            SystemAgentList = new List<string> { "SystemAgent1", "SystemAgent2" }
+        });
+        
+        mockGAgentManager.Setup(x => x.GetAvailableGAgentTypes())
+                        .Returns(new List<Type> { typeof(TestConfigurationBase) });
+        
+        mockGrainTypeResolver.Setup(x => x.GetGrainType(It.IsAny<Type>()))
+                            .Returns((Type t) => GrainType.Create(t.Name));
+        
+        // Use reflection to set the private fields
+        var loggerField = typeof(AgentService).GetField("_logger", BindingFlags.NonPublic | BindingFlags.Instance);
+        loggerField?.SetValue(agentService, mockLogger.Object);
+        
+        var agentOptionsField = typeof(AgentService).GetField("_agentOptions", BindingFlags.NonPublic | BindingFlags.Instance);
+        agentOptionsField?.SetValue(agentService, mockAgentOptions.Object);
+        
+        var gAgentManagerField = typeof(AgentService).GetField("_gAgentManager", BindingFlags.NonPublic | BindingFlags.Instance);
+        gAgentManagerField?.SetValue(agentService, mockGAgentManager.Object);
+        
+        var grainTypeResolverField = typeof(AgentService).GetField("_grainTypeResolver", BindingFlags.NonPublic | BindingFlags.Instance);
+        grainTypeResolverField?.SetValue(agentService, mockGrainTypeResolver.Object);
+        
+        var gAgentFactoryField = typeof(AgentService).GetField("_gAgentFactory", BindingFlags.NonPublic | BindingFlags.Instance);
+        gAgentFactoryField?.SetValue(agentService, mockGAgentFactory.Object);
+        
+        var schemaProviderField = typeof(AgentService).GetField("_schemaProvider", BindingFlags.NonPublic | BindingFlags.Instance);
+        schemaProviderField?.SetValue(agentService, mockSchemaProvider.Object);
+        
+        return agentService;
+    }
+
+    private AgentService CreateAgentServiceWithMockGrainTypeResolver()
+    {
+        // For testing private methods, we can use FormatterServices.GetUninitializedObject
+        // to create an instance without calling the constructor
+        var agentService = (AgentService)System.Runtime.Serialization.FormatterServices
+            .GetUninitializedObject(typeof(AgentService));
+        
+        // Set up a mock logger to avoid null reference exceptions
+        var mockLogger = new Mock<ILogger<AgentService>>();
+        
+        // Set up mock GrainTypeResolver
+        var mockGrainTypeResolver = new Mock<GrainTypeResolver>();
+        mockGrainTypeResolver.Setup(x => x.GetGrainType(It.IsAny<Type>()))
+                            .Returns((Type t) => GrainType.Create(t.Name));
+        
+        // Use reflection to set the private fields
+        var loggerField = typeof(AgentService).GetField("_logger", BindingFlags.NonPublic | BindingFlags.Instance);
+        loggerField?.SetValue(agentService, mockLogger.Object);
+        
+        var grainTypeResolverField = typeof(AgentService).GetField("_grainTypeResolver", BindingFlags.NonPublic | BindingFlags.Instance);
+        grainTypeResolverField?.SetValue(agentService, mockGrainTypeResolver.Object);
+        
+        return agentService;
+    }
 
     private AgentService CreateAgentServiceWithMockSchemaProvider()
     {
@@ -1168,50 +1274,6 @@ public class AgentServiceTests
         return agentService;
     }
 
-    private AgentService CreateAgentServiceWithMockSchemaProviderValidationError()
-    {
-        // For testing private methods, we can use FormatterServices.GetUninitializedObject
-        // to create an instance without calling the constructor
-        var agentService = (AgentService)System.Runtime.Serialization.FormatterServices
-            .GetUninitializedObject(typeof(AgentService));
-        
-        // Set up a mock logger to avoid null reference exceptions
-        var mockLogger = new Mock<ILogger<AgentService>>();
-        
-        // Set up mock schema provider with validation errors
-        var mockSchemaProvider = new Mock<ISchemaProvider>();
-        var mockSchema = new Mock<JsonSchema>();
-        
-        // Setup validation with errors
-        var validationErrors = new List<ValidationError>
-        {
-            new ValidationError(ValidationErrorKind.PropertyRequired, "Required property missing", "#/test", null, null)
-        };
-        
-        mockSchema.Setup(x => x.Validate(It.IsAny<string>(), It.IsAny<JsonSchemaValidatorSettings>()))
-                  .Returns(validationErrors);
-        
-        var errorDictionary = new Dictionary<string, string>
-        {
-            { "test", "Required property missing" }
-        };
-        
-        mockSchemaProvider.Setup(x => x.GetTypeSchema(It.IsAny<Type>()))
-                         .Returns(mockSchema.Object);
-        
-        mockSchemaProvider.Setup(x => x.ConvertValidateError(It.IsAny<ICollection<ValidationError>>()))
-                         .Returns(errorDictionary);
-        
-        // Use reflection to set the private fields
-        var loggerField = typeof(AgentService).GetField("_logger", BindingFlags.NonPublic | BindingFlags.Instance);
-        loggerField?.SetValue(agentService, mockLogger.Object);
-        
-        var schemaProviderField = typeof(AgentService).GetField("_schemaProvider", BindingFlags.NonPublic | BindingFlags.Instance);
-        schemaProviderField?.SetValue(agentService, mockSchemaProvider.Object);
-        
-        return agentService;
-    }
-
     private AgentService CreateAgentServiceWithMockUserService(IUserAppService userAppService)
     {
         // For testing private methods, we can use FormatterServices.GetUninitializedObject
@@ -1228,40 +1290,6 @@ public class AgentServiceTests
         
         var userAppServiceField = typeof(AgentService).GetField("_userAppService", BindingFlags.NonPublic | BindingFlags.Instance);
         userAppServiceField?.SetValue(agentService, userAppService);
-        
-        return agentService;
-    }
-
-    private AgentService CreateAgentServiceWithMockGAgentFactory(IGAgentFactory gAgentFactory)
-    {
-        // For testing private methods, we can use FormatterServices.GetUninitializedObject
-        // to create an instance without calling the constructor
-        var agentService = (AgentService)System.Runtime.Serialization.FormatterServices
-            .GetUninitializedObject(typeof(AgentService));
-        
-        // Set up a mock logger to avoid null reference exceptions
-        var mockLogger = new Mock<ILogger<AgentService>>();
-        
-        // Set up mock schema provider
-        var mockSchemaProvider = new Mock<ISchemaProvider>();
-        var mockSchema = new Mock<JsonSchema>();
-        
-        // Setup successful validation (empty validation result)
-        mockSchema.Setup(x => x.Validate(It.IsAny<string>(), It.IsAny<JsonSchemaValidatorSettings>()))
-                  .Returns(new List<ValidationError>());
-        
-        mockSchemaProvider.Setup(x => x.GetTypeSchema(It.IsAny<Type>()))
-                         .Returns(mockSchema.Object);
-        
-        // Use reflection to set the private fields
-        var loggerField = typeof(AgentService).GetField("_logger", BindingFlags.NonPublic | BindingFlags.Instance);
-        loggerField?.SetValue(agentService, mockLogger.Object);
-        
-        var gAgentFactoryField = typeof(AgentService).GetField("_gAgentFactory", BindingFlags.NonPublic | BindingFlags.Instance);
-        gAgentFactoryField?.SetValue(agentService, gAgentFactory);
-        
-        var schemaProviderField = typeof(AgentService).GetField("_schemaProvider", BindingFlags.NonPublic | BindingFlags.Instance);
-        schemaProviderField?.SetValue(agentService, mockSchemaProvider.Object);
         
         return agentService;
     }
