@@ -334,8 +334,8 @@ public class GodGPTController : AevatarController
         }
 
         var updateUserId = await _godGptService.SetUserProfileAsync(currentUserId, userProfile);
-        _logger.LogDebug("[GodGPTController][SetUserProfileAsync] sessionId: {0}, currentUserId:{1} duration: {2}ms",
-            updateUserId, currentUserId, stopwatch.ElapsedMilliseconds);
+        _logger.LogDebug(
+            $"[GodGPTController][SetUserProfileAsync] sessionId: {updateUserId}, currentUserId:{currentUserId} duration: {stopwatch.ElapsedMilliseconds}ms");
         return updateUserId;
     }
 
