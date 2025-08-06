@@ -408,60 +408,19 @@ public class AgentService : ApplicationService, IAgentService
     private async Task<Tuple<IGAgent, ConfigurationBase>> InitializeBusinessAgent(Guid primaryKey, string agentType,
         string agentProperties)
     {
-        var grainId = CreateGrainIdFromAgentType(agentType, primaryKey);
+        var grainId = GrainId.Create(agentType, GuidUtil.GuidToGrainKey(primaryKey));
         var businessAgent = await _gAgentFactory.GetGAgentAsync(grainId);
 
         var initializationData = await GetAgentConfigurationAsync(businessAgent);
-        
-        if (ShouldConfigureAgent(initializationData, agentProperties))
+        if (initializationData != null && !agentProperties.IsNullOrEmpty())
         {
-            var config = await ConfigureBusinessAgentAsync(businessAgent, initializationData, agentProperties);
+            var config = SetupConfigurationData(initializationData, agentProperties);
+            await businessAgent.ConfigAsync(config);
+            
             return new Tuple<IGAgent, ConfigurationBase>(businessAgent, config);
         }
 
         return new Tuple<IGAgent, ConfigurationBase>(businessAgent, null);
-    }
-
-    /// <summary>
-    /// Creates a GrainId from agent type and primary key
-    /// </summary>
-    private GrainId CreateGrainIdFromAgentType(string agentType, Guid primaryKey)
-    {
-        if (agentType.IsNullOrEmpty())
-        {
-            throw new ArgumentException("Agent type cannot be null or empty", nameof(agentType));
-        }
-        
-        return GrainId.Create(agentType, GuidUtil.GuidToGrainKey(primaryKey));
-    }
-
-    /// <summary>
-    /// Determines whether the business agent should be configured
-    /// </summary>
-    private bool ShouldConfigureAgent(Configuration initializationData, string agentProperties)
-    {
-        return initializationData != null && !agentProperties.IsNullOrEmpty();
-    }
-
-    /// <summary>
-    /// Configures the business agent with the provided properties
-    /// </summary>
-    private async Task<ConfigurationBase> ConfigureBusinessAgentAsync(IGAgent businessAgent, Configuration initializationData, string agentProperties)
-    {
-        if (businessAgent == null)
-        {
-            throw new ArgumentNullException(nameof(businessAgent));
-        }
-        
-        if (initializationData == null)
-        {
-            throw new ArgumentNullException(nameof(initializationData));
-        }
-
-        var config = SetupConfigurationData(initializationData, agentProperties);
-        await businessAgent.ConfigAsync(config);
-        
-        return config;
     }
 
     public async Task<AgentDto> UpdateAgentAsync(Guid guid, UpdateAgentInputDto dto)
@@ -551,78 +510,30 @@ public class AgentService : ApplicationService, IAgentService
     public async Task<SubAgentDto> AddSubAgentAsync(Guid guid, AddSubAgentDto addSubAgentDto)
     {
         _logger.LogInformation("Add sub Agent: {agent}", JsonConvert.SerializeObject(addSubAgentDto));
-        var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
-        var agentState = await creatorAgent.GetAgentAsync();
-
-        EnsureUserAuthorized(agentState.UserId);
-
-        var agent = await _gAgentFactory.GetGAgentAsync<IExtGAgent>(agentState.BusinessAgentGrainId);
-
-        // check if all sub agent can be added 
-        var newSubAgentGrainIds = new List<GrainId>();
-        foreach (var subAgentGuid in addSubAgentDto.SubAgents)
-        {
-            var subAgent = _clusterClient.GetGrain<ICreatorGAgent>(subAgentGuid);
-            var subAgentState = await subAgent.GetAgentAsync();
-            EnsureUserAuthorized(subAgentState.UserId);
-
-            newSubAgentGrainIds.Add(subAgentState.BusinessAgentGrainId);
-        }
-
-        var allEventsHandled = agentState.EventInfoList.Select(x => x.EventType).ToList();
-        var subAgentGrainIds = await GetSubAgentGrainIds(agent);
-
-        // add parent events and make creator agent child of business agent in order to publish events
-        await agent.RegisterAsync(creatorAgent);
-        var parentEventData = await agent.GetAllSubscribedEventsAsync();
-        if (parentEventData != null)
-        {
-            allEventsHandled.AddRange(parentEventData);
-        }
-
-        // register sub agent and add their events to parent agent
-        var subAgentGuids = subAgentGrainIds.Select(x => x.GetGuidKey()).ToList();
-        var businessAgents = new List<IGAgent>();
-        foreach (var grainId in newSubAgentGrainIds)
-        {
-            if (subAgentGrainIds.Contains(grainId))
-            {
-                continue;
-            }
-
-            var businessAgent = await _gAgentFactory.GetGAgentAsync(grainId);
-            businessAgents.Add(businessAgent);
-            subAgentGuids.Add(grainId.GetGuidKey());
-        }
         
-        await agent.RegisterManyAsync(businessAgents);
+        // Step 1: Validate and initialize agents
+        var (creatorAgent, agentState, agent) = await ValidateAndInitializeAsync(guid);
         
-        foreach (var businessAgent in businessAgents)
-        {
-            var eventsHandledByAgent = await businessAgent.GetAllSubscribedEventsAsync();
-            if (eventsHandledByAgent != null)
-            {
-                _logger.LogInformation("all events for agent {agentId}, events: {events}",
-                    businessAgent.GetGrainId().GetGuidKey(), JsonConvert.SerializeObject(eventsHandledByAgent));
-                var eventsToAdd = eventsHandledByAgent.Except(allEventsHandled).ToList();
-                _logger.LogInformation("Adding events for agent {agentId}, events: {events}",
-                    businessAgent.GetGrainId().GetGuidKey(), JsonConvert.SerializeObject(eventsToAdd));
-                allEventsHandled.AddRange(eventsToAdd);
-            }
-            else
-            {
-                _logger.LogInformation("No events handled by agent {agentId}", businessAgent.GetGrainId().GetGuidKey());
-            }
-        }
-
+        // Step 2: Validate and collect sub-agent GrainIds
+        var newSubAgentGrainIds = await ValidateAndCollectSubAgentGrainIdsAsync(addSubAgentDto);
+        
+        // Step 3: Get existing sub-agent GrainIds
+        var existingSubAgentGrainIds = await GetSubAgentGrainIds(agent);
+        
+        // Step 4: Register parent events and collect existing events
+        var allEventsHandled = await RegisterParentEventsAsync(agent, creatorAgent, agentState);
+        
+        // Step 5: Register new sub-agents and get updated sub-agent list
+        var (businessAgents, subAgentGuids) = await RegisterNewSubAgentsAsync(agent, newSubAgentGrainIds, existingSubAgentGrainIds);
+        
+        // Step 6: Collect and merge events from sub-agents
+        allEventsHandled = await CollectAndMergeSubAgentEventsAsync(businessAgents, allEventsHandled);
+        
+        // Step 7: Update available events
         await creatorAgent.UpdateAvailableEventsAsync(allEventsHandled);
-
-        var resp = new SubAgentDto
-        {
-            SubAgents = subAgentGuids
-        };
-
-        return resp;
+        
+        // Step 8: Build and return response
+        return BuildSubAgentResponse(subAgentGuids);
     }
 
     private void EnsureUserAuthorized(Guid userId)
@@ -735,51 +646,21 @@ public class AgentService : ApplicationService, IAgentService
     private async Task<List<GrainId>> GetSubAgentGrainIds(IGAgent agent)
     {
         var children = await agent.GetChildrenAsync();
-        var excludedTypes = GetExcludedAgentTypes();
-        
-        return FilterSubAgentGrainIds(children, excludedTypes);
-    }
-
-    /// <summary>
-    /// Gets the types of agents that should be excluded from sub-agent lists
-    /// </summary>
-    private HashSet<GrainType> GetExcludedAgentTypes()
-    {
+        var subAgentGrainIds = new List<GrainId>();
         var creatorGAgentType = _grainTypeResolver.GetGrainType(typeof(CreatorGAgent));
         var subscriptionGAgentType = _grainTypeResolver.GetGrainType(typeof(SubscriptionGAgent));
-        
-        return new HashSet<GrainType> { creatorGAgentType, subscriptionGAgentType };
-    }
-
-    /// <summary>
-    /// Filters grain IDs to exclude certain types of agents
-    /// </summary>
-    private List<GrainId> FilterSubAgentGrainIds(List<GrainId> children, HashSet<GrainType> excludedTypes)
-    {
-        if (children == null)
-        {
-            return new List<GrainId>();
-        }
-
-        var subAgentGrainIds = new List<GrainId>();
-        
         foreach (var grainId in children)
         {
-            if (!IsExcludedAgentType(grainId.Type, excludedTypes))
+            var grainType = grainId.Type;
+            if (grainType == creatorGAgentType || grainType == subscriptionGAgentType)
             {
-                subAgentGrainIds.Add(grainId);
+                continue;
             }
+
+            subAgentGrainIds.Add(grainId);
         }
 
         return subAgentGrainIds;
-    }
-
-    /// <summary>
-    /// Determines if a grain type should be excluded from sub-agent lists
-    /// </summary>
-    private bool IsExcludedAgentType(GrainType grainType, HashSet<GrainType> excludedTypes)
-    {
-        return excludedTypes.Contains(grainType);
     }
 
     public async Task DeleteAgentAsync(Guid guid)
@@ -814,4 +695,125 @@ public class AgentService : ApplicationService, IAgentService
             throw new UserFriendlyException("Agent has parent, please remove from it first.");
         }
     }
+
+    #region AddSubAgent Refactored Private Methods
+
+    /// <summary>
+    /// Validates permissions and initializes agents for AddSubAgent operation
+    /// </summary>
+    private async Task<(ICreatorGAgent creatorAgent, CreatorGAgentState agentState, IExtGAgent businessAgent)> 
+        ValidateAndInitializeAsync(Guid guid)
+    {
+        var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
+        var agentState = await creatorAgent.GetAgentAsync();
+        
+        EnsureUserAuthorized(agentState.UserId);
+        
+        var businessAgent = await _gAgentFactory.GetGAgentAsync<IExtGAgent>(agentState.BusinessAgentGrainId);
+        
+        return (creatorAgent, agentState, businessAgent);
+    }
+
+    /// <summary>
+    /// Validates sub-agent permissions and collects their GrainIds
+    /// </summary>
+    private async Task<List<GrainId>> ValidateAndCollectSubAgentGrainIdsAsync(AddSubAgentDto addSubAgentDto)
+    {
+        var newSubAgentGrainIds = new List<GrainId>();
+        
+        foreach (var subAgentGuid in addSubAgentDto.SubAgents)
+        {
+            var subAgent = _clusterClient.GetGrain<ICreatorGAgent>(subAgentGuid);
+            var subAgentState = await subAgent.GetAgentAsync();
+            EnsureUserAuthorized(subAgentState.UserId);
+            
+            newSubAgentGrainIds.Add(subAgentState.BusinessAgentGrainId);
+        }
+        
+        return newSubAgentGrainIds;
+    }
+
+    /// <summary>
+    /// Registers parent agent events and collects existing events
+    /// </summary>
+    private async Task<List<Type>> RegisterParentEventsAsync(IExtGAgent agent, ICreatorGAgent creatorAgent, CreatorGAgentState agentState)
+    {
+        var allEventsHandled = agentState.EventInfoList.Select(x => x.EventType).ToList();
+        
+        // Add parent events and make creator agent child of business agent
+        await agent.RegisterAsync(creatorAgent);
+        var parentEventData = await agent.GetAllSubscribedEventsAsync();
+        
+        if (parentEventData != null)
+        {
+            allEventsHandled.AddRange(parentEventData);
+        }
+        
+        return allEventsHandled;
+    }
+
+    /// <summary>
+    /// Registers new sub-agents, filtering out duplicates
+    /// </summary>
+    private async Task<(List<IGAgent> businessAgents, List<Guid> subAgentGuids)> 
+        RegisterNewSubAgentsAsync(IExtGAgent agent, List<GrainId> newSubAgentGrainIds, List<GrainId> existingSubAgentGrainIds)
+    {
+        var subAgentGuids = existingSubAgentGrainIds.Select(x => x.GetGuidKey()).ToList();
+        var businessAgents = new List<IGAgent>();
+        
+        foreach (var grainId in newSubAgentGrainIds)
+        {
+            if (existingSubAgentGrainIds.Contains(grainId))
+            {
+                continue;
+            }
+            
+            var businessAgent = await _gAgentFactory.GetGAgentAsync(grainId);
+            businessAgents.Add(businessAgent);
+            subAgentGuids.Add(grainId.GetGuidKey());
+        }
+        
+        await agent.RegisterManyAsync(businessAgents);
+        
+        return (businessAgents, subAgentGuids);
+    }
+
+    /// <summary>
+    /// Collects and merges events from sub-agents
+    /// </summary>
+    private async Task<List<Type>> CollectAndMergeSubAgentEventsAsync(List<IGAgent> businessAgents, List<Type> allEventsHandled)
+    {
+        foreach (var businessAgent in businessAgents)
+        {
+            var eventsHandledByAgent = await businessAgent.GetAllSubscribedEventsAsync();
+            if (eventsHandledByAgent != null)
+            {
+                _logger.LogInformation("all events for agent {agentId}, events: {events}",
+                    businessAgent.GetGrainId().GetGuidKey(), JsonConvert.SerializeObject(eventsHandledByAgent));
+                var eventsToAdd = eventsHandledByAgent.Except(allEventsHandled).ToList();
+                _logger.LogInformation("Adding events for agent {agentId}, events: {events}",
+                    businessAgent.GetGrainId().GetGuidKey(), JsonConvert.SerializeObject(eventsToAdd));
+                allEventsHandled.AddRange(eventsToAdd);
+            }
+            else
+            {
+                _logger.LogInformation("No events handled by agent {agentId}", businessAgent.GetGrainId().GetGuidKey());
+            }
+        }
+        
+        return allEventsHandled;
+    }
+
+    /// <summary>
+    /// Builds the response object for AddSubAgent operation
+    /// </summary>
+    private SubAgentDto BuildSubAgentResponse(List<Guid> subAgentGuids)
+    {
+        return new SubAgentDto
+        {
+            SubAgents = subAgentGuids
+        };
+    }
+
+    #endregion
 }
