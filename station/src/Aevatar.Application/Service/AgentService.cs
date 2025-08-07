@@ -9,7 +9,6 @@ using Aevatar.Application.Grains.Subscription;
 using Aevatar.Common;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
-using Aevatar.CQRS.Provider;
 using Aevatar.Exceptions;
 using Aevatar.Options;
 using Aevatar.Query;
