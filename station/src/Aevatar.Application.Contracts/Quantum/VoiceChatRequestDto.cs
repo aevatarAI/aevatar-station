@@ -42,4 +42,6 @@ public class VoiceChatRequestDto
     /// Duration of the voice message in seconds (provided by frontend)
     /// </summary>
     public double VoiceDurationSeconds { get; set; }
+    public Guid UserId{ get; set; }
+
 } 

@@ -463,6 +463,7 @@ public class ChatMiddleware
 
         try
         {
+            userId = request.UserId;
             var stopwatch = Stopwatch.StartNew();
             _logger.LogDebug($"[VoiceChatMiddleware] HTTP start - SessionId: {request.SessionId}, UserId: {userId}, MessageType: {request.MessageType}, VoiceLanguage: {request.VoiceLanguage}");
 
