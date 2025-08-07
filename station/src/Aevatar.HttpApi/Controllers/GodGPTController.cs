@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Aevatar.Account;
 using Aevatar.Anonymous;
 using Aevatar.Application.Constants;
+using Aevatar.Application.Contracts.Analytics;
 using Aevatar.Application.Contracts.Services;
 using Aevatar.Application.Grains.Agents.ChatManager;
 using Aevatar.Application.Grains.Agents.ChatManager.Chat;
@@ -57,12 +58,14 @@ public class GodGPTController : AevatarController
     private readonly IThumbnailService _thumbnailService;
     private readonly IOptions<GodGPTOptions> _godGptOptions;
     private readonly ILocalizationService _localizationService;
+    private readonly IGoogleAnalyticsService _googleAnalyticsService;
 
 
     public GodGPTController(IGodGPTService godGptService, IClusterClient clusterClient,
         IOptions<AevatarOptions> aevatarOptions, ILogger<GodGPTController> logger, IAccountService accountService,
         IBlobContainer blobContainer, IOptionsSnapshot<BlobStoringOptions> blobStoringOptions,
-        IThumbnailService thumbnailService, IOptions<GodGPTOptions> godGptOptions, ILocalizationService localizationService)
+        IThumbnailService thumbnailService, IOptions<GodGPTOptions> godGptOptions, ILocalizationService localizationService,
+        IGoogleAnalyticsService googleAnalyticsService)
     {
         _godGptService = godGptService;
         _clusterClient = clusterClient;
@@ -74,6 +77,7 @@ public class GodGPTController : AevatarController
         _thumbnailService = thumbnailService;
         _godGptOptions = godGptOptions;
         _localizationService = localizationService;
+        _googleAnalyticsService = googleAnalyticsService;
     }
 
     [AllowAnonymous]
@@ -712,6 +716,56 @@ public class GodGPTController : AevatarController
             _logger.LogError(ex, "[GodGPTController][GetTodayAwakeningAsync] Error for userId: {UserId}, language: {Language}, region: {Region}",
                 currentUserId, language, region);
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Track event to Google Analytics
+    /// </summary>
+    /// <param name="request">GA event request</param>
+    /// <returns>Tracking result</returns>
+    [HttpPost("godgpt/analytics/track")]
+    public async Task<IActionResult> TrackAnalyticsEventAsync(GoogleAnalyticsEventRequestDto request)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        try
+        {
+            if (CurrentUser?.Id != null)
+            {
+                request.UserId = CurrentUser.Id.ToString();
+            }
+            
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _googleAnalyticsService.TrackEventAsync(request);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "[GodGPTController][TrackAnalyticsEventAsync] Background GA tracking failed for event: {EventName}", 
+                        request.EventName);
+                }
+            });
+            
+            _logger.LogDebug("[GodGPTController][TrackAnalyticsEventAsync] Event queued: {EventName}, ClientId: {ClientId}, UserId: {UserId}, duration: {Duration}ms",
+                request.EventName, request.ClientId, request.UserId, stopwatch.ElapsedMilliseconds);
+                
+            return Ok(new GoogleAnalyticsEventResponseDto
+            {
+                Success = true
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[GodGPTController][TrackAnalyticsEventAsync] Error processing analytics event: {EventName}",
+                request.EventName);
+                
+            return StatusCode(500, new GoogleAnalyticsEventResponseDto
+            {
+                Success = false,
+                ErrorMessage = "Internal server error"
+            });
         }
     }
 }
