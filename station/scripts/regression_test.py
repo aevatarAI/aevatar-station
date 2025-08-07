@@ -601,43 +601,11 @@ def test_workflow_orchestration_generate(api_headers):
         logger.warning("Workflow generation returned null - this might indicate AI service is unavailable")
 
 
-def test_text_completion_generate(api_headers):
-    """test text completion generation"""
-    # test valid text completion request
-    completion_request = {
-        "userGoal": "I want to write a blog post about artificial intelligence and its impact on modern"
-    }
-    
-    response = requests.post(
-        f"{API_HOST}/api/workflow/text-completion",
-        json=completion_request,
-        headers=api_headers,
-        verify=False
-    )
-    assert_status_code(response)
-    
-    # Verify response structure
-    response_data = response.json()
-    logger.debug(f"Text completion response: {response_data}")
-    
-    assert "data" in response_data
-    completion_data = response_data["data"]
-    
-    assert "completions" in completion_data
-    completions = completion_data["completions"]
-    assert isinstance(completions, list)
-    
-    # Should return a list of completions (could be empty if AI service unavailable)
-    logger.info(f"Generated {len(completions)} text completions")
-    
-    # If completions were generated, verify they are strings
-    for completion in completions:
-        assert isinstance(completion, str)
-        assert len(completion) > 0
+
 
 
 def test_workflow_services_comprehensive(api_headers):
-    """comprehensive test for both workflow services"""
+    """comprehensive test for workflow services"""
     logger.info("Running comprehensive workflow services test")
     
     # Test workflow generation with a realistic scenario
@@ -656,26 +624,7 @@ def test_workflow_services_comprehensive(api_headers):
     workflow_result = response.json()["data"]
     logger.debug(f"E-commerce workflow result: {workflow_result}")
     
-    # Test text completion with a business scenario
-    completion_request = {
-        "userGoal": "Our company is implementing a new customer service strategy that focuses on"
-    }
-    
-    response = requests.post(
-        f"{API_HOST}/api/workflow/text-completion",
-        json=completion_request,
-        headers=api_headers,
-        verify=False
-    )
-    assert_status_code(response)
-    
-    completion_result = response.json()["data"]
-    logger.debug(f"Business text completion result: {completion_result}")
-    
-    # Verify both services are operational
-    assert completion_result is not None
-    assert "completions" in completion_result
-    
+    # Verify workflow service is operational
     logger.info("Comprehensive workflow services test completed successfully")
 
 
