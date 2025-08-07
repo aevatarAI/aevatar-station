@@ -7,6 +7,7 @@ using OpenTelemetry.Trace;
 using Orleans.Configuration;
 using OpenTelemetry;
 using System.Diagnostics.Metrics;
+using Aevatar.Application.Grains.Common.Observability;
 using Aevatar.Core;
 using Aevatar.Core.Observability;
 using GodGPT.GAgents.Common.Observability;
@@ -65,6 +66,7 @@ public static class OpenTelemetryExtensions
                 .AddMeter(serviceName)
                 .AddMeter(OpenTelemetryConstants.AevatarStreamsMeterName)
                 .AddMeter(PaymentTelemetryConstants.PaymentMeterName)
+                .AddMeter(UserLifecycleTelemetryConstants.UserLifecycleMeterName)
                 .AddView(OpenTelemetryConstants.EventPublishLatencyHistogram, new ExplicitBucketHistogramConfiguration 
                 { 
                     Boundaries = new double[] { 0.1, 0.2, 0.5, 0.75, 1.0, 1.5, 2.0, 5.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0 }  // Boundaries in seconds
