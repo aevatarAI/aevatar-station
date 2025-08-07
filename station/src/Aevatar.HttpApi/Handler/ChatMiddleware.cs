@@ -107,7 +107,8 @@ public class ChatMiddleware
             await context.Response.Body.FlushAsync();
             return;
         }
-        
+
+        userId = request.UserId;
         try
         {
             var stopwatch = Stopwatch.StartNew();

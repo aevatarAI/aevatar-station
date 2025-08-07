@@ -9,4 +9,6 @@ public class QuantumChatRequestDto
     public string Content { get; set; }
     public string? Region { get; set; }
     public List<string> Images { get; set; } = new List<string>();
+    public Guid UserId{ get; set; }
+
 }
