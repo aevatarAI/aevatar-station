@@ -138,7 +138,7 @@ public class GoogleAnalyticsService : IGoogleAnalyticsService, ITransientDepende
         {
             ClientId = !string.IsNullOrWhiteSpace(eventRequest.ClientId) 
                 ? eventRequest.ClientId 
-                : eventRequest.UserId ?? Guid.NewGuid().ToString(),
+                : "null",
             UserId = eventRequest.UserId,
             TimestampMicros = eventRequest.TimestampMicros ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000
         };
@@ -152,6 +152,11 @@ public class GoogleAnalyticsService : IGoogleAnalyticsService, ITransientDepende
         if (!string.IsNullOrWhiteSpace(eventRequest.SessionId))
         {
             gaEvent.Parameters["session_id"] = eventRequest.SessionId;
+        }
+
+        if (!string.IsNullOrWhiteSpace(eventRequest.UserId))
+        {
+            gaEvent.Parameters["user_id"] = eventRequest.UserId;
         }
 
         payload.Events.Add(gaEvent);
