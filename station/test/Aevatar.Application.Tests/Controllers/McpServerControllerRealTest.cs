@@ -4,6 +4,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Controllers;
 using Aevatar.Core.Abstractions;
+using Aevatar.GAgents.Basic.BasicGAgents;
+using Aevatar.GAgents.MCP.Core.Extensions;
 using Aevatar.GAgents.MCP.Options;
 using Aevatar.Mcp;
 using Aevatar.Services;
@@ -19,17 +21,14 @@ namespace Aevatar.Application.Tests.Controllers;
 /// </summary>
 public class McpServerControllerRealTest
 {
-    private readonly Mock<IGAgentFactory> _mockGAgentFactory;
-    private readonly Mock<ILogger<McpServerController>> _mockLogger;
-    private readonly Mock<IMcpExtensionWrapper> _mockMcpExtensionWrapper;
+    private readonly Mock<IGAgentFactory> _mockGAgentFactory = new();
+    private readonly Mock<ILogger<McpServerController>> _mockLogger = new();
+    private readonly Mock<IMcpExtensionWrapper> _mockMcpExtensionWrapper  = new();
     private readonly McpServerController _controller;
+    private readonly IConfigManagerGAgent _mockConfigManagerGAgent = new Mock<IConfigManagerGAgent>().Object;
 
     public McpServerControllerRealTest()
     {
-        _mockGAgentFactory = new Mock<IGAgentFactory>();
-        _mockLogger = new Mock<ILogger<McpServerController>>();
-        _mockMcpExtensionWrapper = new Mock<IMcpExtensionWrapper>();
-        
         _controller = new McpServerController(
             _mockLogger.Object,
             _mockGAgentFactory.Object,
@@ -64,8 +63,7 @@ public class McpServerControllerRealTest
             }
         };
 
-        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
-            .ReturnsAsync(mockConfigs);
+        SetupMockConfigManagerGAgent(mockConfigs);
 
         // Act
         var result = await _controller.GetListAsync(input);
@@ -76,8 +74,8 @@ public class McpServerControllerRealTest
         Assert.Equal(2, result.Items.Count);
         Assert.Equal("server1", result.Items.First().ServerName);
         Assert.Equal("python", result.Items.First().Command);
-        
-        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
+
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockConfigManagerGAgent), Times.Once);
     }
 
     [Fact]
@@ -107,8 +105,7 @@ public class McpServerControllerRealTest
             }
         };
 
-        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
-            .ReturnsAsync(mockConfigs);
+        SetupMockConfigManagerGAgent(mockConfigs);
 
         // Act
         var result = await _controller.GetListAsync(input);
@@ -118,8 +115,8 @@ public class McpServerControllerRealTest
         Assert.Equal(1, result.TotalCount);
         Assert.Single(result.Items);
         Assert.Equal("test-server", result.Items.First().ServerName);
-        
-        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
+
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockConfigManagerGAgent), Times.Once);
     }
 
     [Fact]
@@ -149,8 +146,7 @@ public class McpServerControllerRealTest
             }
         };
 
-        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
-            .ReturnsAsync(mockConfigs);
+        SetupMockConfigManagerGAgent(mockConfigs);
 
         // Act
         var result = await _controller.GetListAsync(input);
@@ -160,8 +156,8 @@ public class McpServerControllerRealTest
         Assert.Equal(1, result.TotalCount);
         Assert.Single(result.Items);
         Assert.Equal("server1", result.Items.First().ServerName);
-        
-        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
+
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockConfigManagerGAgent), Times.Once);
     }
 
     [Theory]
@@ -218,8 +214,7 @@ public class McpServerControllerRealTest
             }
         };
 
-        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
-            .ReturnsAsync(mockConfigs);
+        SetupMockConfigManagerGAgent(mockConfigs);
 
         // Act
         var result = await _controller.GetAsync(serverName);
@@ -229,8 +224,8 @@ public class McpServerControllerRealTest
         Assert.Equal(serverName, result.ServerName);
         Assert.Equal("python", result.Command);
         Assert.Equal("Test server", result.Description);
-        
-        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
+
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockConfigManagerGAgent), Times.Once);
     }
 
     [Fact]
@@ -240,15 +235,14 @@ public class McpServerControllerRealTest
         var serverName = "non-existent-server";
         var mockConfigs = new Dictionary<string, MCPServerConfig>();
 
-        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
-            .ReturnsAsync(mockConfigs);
+        SetupMockConfigManagerGAgent(mockConfigs);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<UserFriendlyException>(
             () => _controller.GetAsync(serverName));
         Assert.Contains($"MCP server '{serverName}' not found", exception.Message);
-        
-        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
+
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockConfigManagerGAgent), Times.Once);
     }
 
     [Theory]
@@ -278,10 +272,7 @@ public class McpServerControllerRealTest
         };
 
         var mockConfigs = new Dictionary<string, MCPServerConfig>();
-        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
-            .ReturnsAsync(mockConfigs);
-        _mockMcpExtensionWrapper.Setup(x => x.ConfigMCPWhitelistAsync(_mockGAgentFactory.Object, It.IsAny<string>()))
-            .ReturnsAsync(true);
+        SetupMockConfigManagerGAgent(mockConfigs);
 
         // Act
         var result = await _controller.CreateAsync(input);
@@ -291,9 +282,9 @@ public class McpServerControllerRealTest
         Assert.Equal(input.ServerName, result.ServerName);
         Assert.Equal(input.Command, result.Command);
         Assert.Equal(input.Description, result.Description);
-        
-        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
-        _mockMcpExtensionWrapper.Verify(x => x.ConfigMCPWhitelistAsync(_mockGAgentFactory.Object, It.IsAny<string>()), Times.Once);
+
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockConfigManagerGAgent), Times.Once);
+        _mockMcpExtensionWrapper.Verify(x => x.ConfigMCPWhitelistAsync(_mockConfigManagerGAgent, It.IsAny<string>()), Times.Once);
     }
 
     [Fact]
@@ -311,15 +302,14 @@ public class McpServerControllerRealTest
             ["existing-server"] = new MCPServerConfig { ServerName = "existing-server" }
         };
 
-        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
-            .ReturnsAsync(mockConfigs);
+        SetupMockConfigManagerGAgent(mockConfigs);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<UserFriendlyException>(
             () => _controller.CreateAsync(input));
         Assert.Contains("MCP server 'existing-server' already exists", exception.Message);
-        
-        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
+
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockConfigManagerGAgent), Times.Once);
     }
 
     [Fact]
@@ -378,18 +368,15 @@ public class McpServerControllerRealTest
         };
 
         var mockConfigs = new Dictionary<string, MCPServerConfig>();
-        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
-            .ReturnsAsync(mockConfigs);
-        _mockMcpExtensionWrapper.Setup(x => x.ConfigMCPWhitelistAsync(_mockGAgentFactory.Object, It.IsAny<string>()))
-            .ReturnsAsync(false);
+        SetupMockConfigManagerGAgent(mockConfigs, false);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<UserFriendlyException>(
             () => _controller.CreateAsync(input));
         Assert.Contains("Failed to create MCP server configuration", exception.Message);
-        
-        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
-        _mockMcpExtensionWrapper.Verify(x => x.ConfigMCPWhitelistAsync(_mockGAgentFactory.Object, It.IsAny<string>()), Times.Once);
+
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockConfigManagerGAgent), Times.Once);
+        _mockMcpExtensionWrapper.Verify(x => x.ConfigMCPWhitelistAsync(_mockConfigManagerGAgent, It.IsAny<string>()), Times.Once);
     }
 
     #endregion
@@ -419,10 +406,7 @@ public class McpServerControllerRealTest
             [serverName] = existingConfig
         };
 
-        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
-            .ReturnsAsync(mockConfigs);
-        _mockMcpExtensionWrapper.Setup(x => x.ConfigMCPWhitelistAsync(_mockGAgentFactory.Object, It.IsAny<string>()))
-            .ReturnsAsync(true);
+        SetupMockConfigManagerGAgent(mockConfigs);
 
         // Act
         var result = await _controller.UpdateAsync(serverName, input);
@@ -432,9 +416,9 @@ public class McpServerControllerRealTest
         Assert.Equal(serverName, result.ServerName);
         Assert.Equal("node", result.Command); // Updated
         Assert.Equal("Updated description", result.Description); // Updated
-        
-        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
-        _mockMcpExtensionWrapper.Verify(x => x.ConfigMCPWhitelistAsync(_mockGAgentFactory.Object, It.IsAny<string>()), Times.Once);
+
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockConfigManagerGAgent), Times.Once);
+        _mockMcpExtensionWrapper.Verify(x => x.ConfigMCPWhitelistAsync(_mockConfigManagerGAgent, It.IsAny<string>()), Times.Once);
     }
 
     [Fact]
@@ -448,15 +432,14 @@ public class McpServerControllerRealTest
         };
 
         var mockConfigs = new Dictionary<string, MCPServerConfig>();
-        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
-            .ReturnsAsync(mockConfigs);
+        SetupMockConfigManagerGAgent(mockConfigs);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<UserFriendlyException>(
             () => _controller.UpdateAsync(serverName, input));
         Assert.Contains($"MCP server '{serverName}' not found", exception.Message);
-        
-        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
+
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockConfigManagerGAgent), Times.Once);
     }
 
     [Fact]
@@ -488,17 +471,15 @@ public class McpServerControllerRealTest
             [serverName] = existingConfig
         };
 
-        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
-            .ReturnsAsync(mockConfigs);
-        _mockMcpExtensionWrapper.Setup(x => x.ConfigMCPWhitelistAsync(_mockGAgentFactory.Object, It.IsAny<string>()))
-            .ReturnsAsync(true);
+        SetupMockConfigManagerGAgent(mockConfigs);
 
         // Act
         await _controller.DeleteAsync(serverName);
 
         // Assert
-        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
-        _mockMcpExtensionWrapper.Verify(x => x.ConfigMCPWhitelistAsync(_mockGAgentFactory.Object, It.IsAny<string>()), Times.Once);
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockConfigManagerGAgent), Times.Once);
+        _mockMcpExtensionWrapper.Verify(x => x.ConfigMCPWhitelistAsync(_mockConfigManagerGAgent, It.IsAny<string>()),
+            Times.Once);
     }
 
     [Fact]
@@ -508,15 +489,15 @@ public class McpServerControllerRealTest
         var serverName = "non-existent-server";
         var mockConfigs = new Dictionary<string, MCPServerConfig>();
 
-        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
-            .ReturnsAsync(mockConfigs);
+        SetupMockConfigManagerGAgent(mockConfigs);
+
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<UserFriendlyException>(
             () => _controller.DeleteAsync(serverName));
         Assert.Contains($"MCP server '{serverName}' not found", exception.Message);
-        
-        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
+
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockConfigManagerGAgent), Times.Once);
     }
 
     [Theory]
@@ -545,8 +526,8 @@ public class McpServerControllerRealTest
             ["server3"] = new MCPServerConfig { ServerName = "server3" }
         };
 
-        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
-            .ReturnsAsync(mockConfigs);
+        SetupMockConfigManagerGAgent(mockConfigs);
+
 
         // Act
         var result = await _controller.GetServerNamesAsync();
@@ -557,8 +538,8 @@ public class McpServerControllerRealTest
         Assert.Contains("server1", result);
         Assert.Contains("server2", result);
         Assert.Contains("server3", result);
-        
-        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
+
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockConfigManagerGAgent), Times.Once);
     }
 
     [Fact]
@@ -567,8 +548,8 @@ public class McpServerControllerRealTest
         // Arrange
         var mockConfigs = new Dictionary<string, MCPServerConfig>();
 
-        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
-            .ReturnsAsync(mockConfigs);
+        SetupMockConfigManagerGAgent(mockConfigs);
+
 
         // Act
         var result = await _controller.GetServerNamesAsync();
@@ -576,8 +557,8 @@ public class McpServerControllerRealTest
         // Assert
         Assert.NotNull(result);
         Assert.Empty(result);
-        
-        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
+
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockConfigManagerGAgent), Times.Once);
     }
 
     #endregion
@@ -629,8 +610,8 @@ public class McpServerControllerRealTest
             }
         };
 
-        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
-            .ReturnsAsync(mockConfigs);
+        SetupMockConfigManagerGAgent(mockConfigs);
+
 
         // Act
         var result = await _controller.GetListAsync(input);
@@ -639,18 +620,20 @@ public class McpServerControllerRealTest
         Assert.NotNull(result);
         Assert.Equal(3, result.TotalCount);
         Assert.Equal(3, result.Items.Count);
-        
+
         // Verify sorting is applied (basic validation that order changed from default)
         var sortField = sorting.Split(' ')[0].ToLower();
         var isDesc = sorting.Contains("desc", StringComparison.OrdinalIgnoreCase);
-        
+
         switch (sortField)
         {
             case "command":
                 if (isDesc)
-                    Assert.True(string.Compare(result.Items[0].Command, result.Items[1].Command, StringComparison.OrdinalIgnoreCase) >= 0);
+                    Assert.True(string.Compare(result.Items[0].Command, result.Items[1].Command,
+                        StringComparison.OrdinalIgnoreCase) >= 0);
                 else
-                    Assert.True(string.Compare(result.Items[0].Command, result.Items[1].Command, StringComparison.OrdinalIgnoreCase) <= 0);
+                    Assert.True(string.Compare(result.Items[0].Command, result.Items[1].Command,
+                        StringComparison.OrdinalIgnoreCase) <= 0);
                 break;
             case "servertype":
                 // Stdio comes before StreamableHttp alphabetically
@@ -658,8 +641,8 @@ public class McpServerControllerRealTest
                     Assert.Contains(result.Items, item => item.ServerType == "Stdio");
                 break;
         }
-        
-        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
+
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockConfigManagerGAgent), Times.Once);
     }
 
     [Fact]
@@ -680,8 +663,8 @@ public class McpServerControllerRealTest
             ["server-m"] = new MCPServerConfig { ServerName = "server-m", Command = "java" }
         };
 
-        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
-            .ReturnsAsync(mockConfigs);
+        SetupMockConfigManagerGAgent(mockConfigs);
+
 
         // Act
         var result = await _controller.GetListAsync(input);
@@ -689,13 +672,13 @@ public class McpServerControllerRealTest
         // Assert
         Assert.NotNull(result);
         Assert.Equal(3, result.TotalCount);
-        
+
         // Should be sorted by ServerName (default) - server-a, server-m, server-z
         Assert.Equal("server-a", result.Items[0].ServerName);
         Assert.Equal("server-m", result.Items[1].ServerName);
         Assert.Equal("server-z", result.Items[2].ServerName);
-        
-        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
+
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockConfigManagerGAgent), Times.Once);
     }
 
     [Fact]
@@ -715,8 +698,8 @@ public class McpServerControllerRealTest
             ["server-a"] = new MCPServerConfig { ServerName = "server-a", Command = "node" }
         };
 
-        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
-            .ReturnsAsync(mockConfigs);
+        SetupMockConfigManagerGAgent(mockConfigs);
+
 
         // Act
         var result = await _controller.GetListAsync(input);
@@ -724,12 +707,12 @@ public class McpServerControllerRealTest
         // Assert
         Assert.NotNull(result);
         Assert.Equal(2, result.TotalCount);
-        
+
         // Should be sorted by ServerName (default)
         Assert.Equal("server-a", result.Items[0].ServerName);
         Assert.Equal("server-z", result.Items[1].ServerName);
-        
-        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
+
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockConfigManagerGAgent), Times.Once);
     }
 
     [Fact]
@@ -749,8 +732,8 @@ public class McpServerControllerRealTest
             ["server2"] = new MCPServerConfig { ServerName = "server2", Command = "bash" }
         };
 
-        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
-            .ReturnsAsync(mockConfigs);
+        SetupMockConfigManagerGAgent(mockConfigs);
+
 
         // Act
         var result = await _controller.GetListAsync(input);
@@ -758,12 +741,12 @@ public class McpServerControllerRealTest
         // Assert
         Assert.NotNull(result);
         Assert.Equal(2, result.TotalCount);
-        
+
         // Should be sorted by Command ascending - bash comes before zsh
         Assert.Equal("bash", result.Items[0].Command);
         Assert.Equal("zsh", result.Items[1].Command);
-        
-        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
+
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockConfigManagerGAgent), Times.Once);
     }
 
     #endregion
@@ -806,17 +789,17 @@ public class McpServerControllerRealTest
             }
         };
 
-        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
-            .ReturnsAsync(mockConfigs);
+        SetupMockConfigManagerGAgent(mockConfigs);
+
 
         // Act - Test Stdio filter
         var result1 = await _controller.GetListAsync(input1);
-        
+
         // Reset mock calls count
         _mockMcpExtensionWrapper.Invocations.Clear();
-        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
-            .ReturnsAsync(mockConfigs);
-        
+        SetupMockConfigManagerGAgent(mockConfigs);
+
+
         var result2 = await _controller.GetListAsync(input2);
 
         // Assert - Stdio filter
@@ -855,8 +838,8 @@ public class McpServerControllerRealTest
             }
         };
 
-        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
-            .ReturnsAsync(mockConfigs);
+        SetupMockConfigManagerGAgent(mockConfigs);
+
 
         // Act
         var result = await _controller.GetListAsync(input);
@@ -907,8 +890,7 @@ public class McpServerControllerRealTest
             }
         };
 
-        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
-            .ReturnsAsync(mockConfigs);
+        SetupMockConfigManagerGAgent(mockConfigs);
 
         // Act
         var result = await _controller.GetListAsync(input);
@@ -917,11 +899,11 @@ public class McpServerControllerRealTest
         Assert.NotNull(result);
         Assert.Equal(3, result.TotalCount); // Should match 3 out of 4 servers
         Assert.Equal(3, result.Items.Count);
-        
+
         // Verify that "other-server" is not included
         Assert.DoesNotContain(result.Items, item => item.ServerName == "other-server");
-        
-        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
+
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockConfigManagerGAgent), Times.Once);
     }
 
     #endregion
@@ -934,22 +916,21 @@ public class McpServerControllerRealTest
         // Arrange
         var mockConfigs = new Dictionary<string, MCPServerConfig>
         {
-            ["server1"] = new MCPServerConfig 
-            { 
+            ["server1"] = new MCPServerConfig
+            {
                 ServerName = "server1",
                 Command = "python",
                 Description = "Server 1"
             },
-            ["server2"] = new MCPServerConfig 
-            { 
+            ["server2"] = new MCPServerConfig
+            {
                 ServerName = "server2",
                 Command = "node",
                 Description = "Server 2"
             }
         };
 
-        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object))
-            .ReturnsAsync(mockConfigs);
+        SetupMockConfigManagerGAgent(mockConfigs);
 
         // Act
         var result = await _controller.GetRawConfigurationsAsync();
@@ -961,9 +942,37 @@ public class McpServerControllerRealTest
         Assert.True(result.ContainsKey("server2"));
         Assert.Equal("python", result["server1"].Command);
         Assert.Equal("node", result["server2"].Command);
-        
-        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockGAgentFactory.Object), Times.Once);
+
+        _mockMcpExtensionWrapper.Verify(x => x.GetMCPWhiteListAsync(_mockConfigManagerGAgent), Times.Once);
     }
 
     #endregion
+
+    private readonly Dictionary<string, MCPServerConfig> _mockConfigs = new()
+    {
+        ["test-server"] = new MCPServerConfig
+        {
+            ServerName = "test-server",
+            Command = "python",
+            Description = "Test server"
+        },
+        ["other-server"] = new MCPServerConfig
+        {
+            ServerName = "other-server",
+            Command = "node",
+            Description = "Other server"
+        }
+    };
+
+    private void SetupMockConfigManagerGAgent(Dictionary<string, MCPServerConfig>? configs = null,
+        bool configResult = true)
+    {
+        configs ??= _mockConfigs;
+        _mockMcpExtensionWrapper.Setup(x => x.GetMCPWhiteListAsync(_mockConfigManagerGAgent))
+            .ReturnsAsync(configs);
+        _mockMcpExtensionWrapper.Setup(x => x.ConfigMCPWhitelistAsync(_mockConfigManagerGAgent, It.IsAny<string>()))
+            .ReturnsAsync(configResult);
+        _mockMcpExtensionWrapper.Setup(x => x.GetMcpServerConfigManagerAsync())
+            .ReturnsAsync(_mockConfigManagerGAgent);
+    }
 }

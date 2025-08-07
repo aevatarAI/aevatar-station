@@ -38,7 +38,8 @@ public class AevatarHostedService : IHostedService
             {
                 JsonDocument.Parse(mcpServers);
                 var gAgentFactory = _serviceProvider.GetRequiredService<IGAgentFactory>();
-                if (await gAgentFactory.ConfigMCPWhitelistAsync(mcpServers))
+                var configManagerGAgent = await gAgentFactory.GetMCPServerConfigGAgent();
+                if (await configManagerGAgent.ConfigMCPWhitelistAsync(mcpServers))
                 {
                     _logger.LogInformation("MCPServers configuration updated successfully.");
                 }

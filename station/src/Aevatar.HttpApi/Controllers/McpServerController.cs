@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
+using Aevatar.GAgents.Basic.BasicGAgents;
+using Aevatar.GAgents.MCP.Core.Extensions;
 using Aevatar.GAgents.MCP.Options;
 using Aevatar.Mcp;
 using Aevatar.Permissions;
@@ -24,8 +26,8 @@ namespace Aevatar.Controllers;
 public class McpServerController : AevatarController
 {
     private readonly IGAgentFactory _gAgentFactory;
-    private readonly ILogger<McpServerController> _logger;
     private readonly IMcpExtensionWrapper _mcpExtensionWrapper;
+    private readonly ILogger<McpServerController> _logger;
 
     public McpServerController(
         ILogger<McpServerController> logger,
@@ -55,10 +57,11 @@ public class McpServerController : AevatarController
             throw new UserFriendlyException("Skip count cannot be negative");
         }
 
-        _logger.LogInformation("Getting MCP server list with filter: {filter}, Page: {page}, PageSize: {pageSize}, Sort: {sort}", 
+        _logger.LogInformation(
+            "Getting MCP server list with filter: {filter}, Page: {page}, PageSize: {pageSize}, Sort: {sort}",
             JsonConvert.SerializeObject(input), input.PageNumber, input.MaxResultCount, input.GetSortingDescription());
 
-        var mcpServerConfigs = await _mcpExtensionWrapper.GetMCPWhiteListAsync(_gAgentFactory);
+        var mcpServerConfigs = await GetMCPServerConfigsAsync();
         var serverList = mcpServerConfigs.Select(kvp => ConvertToDto(kvp.Key, kvp.Value)).ToList();
 
         // Apply filters
@@ -115,7 +118,7 @@ public class McpServerController : AevatarController
 
         _logger.LogInformation("Getting MCP server: {serverName}", serverName);
 
-        var mcpServerConfigs = await _mcpExtensionWrapper.GetMCPWhiteListAsync(_gAgentFactory);
+        var mcpServerConfigs = await GetMCPServerConfigsAsync();
 
         if (!mcpServerConfigs.TryGetValue(serverName, out var config))
         {
@@ -149,7 +152,7 @@ public class McpServerController : AevatarController
 
         _logger.LogInformation("Creating MCP server: {serverName}", input.ServerName);
 
-        var mcpServerConfigs = await _mcpExtensionWrapper.GetMCPWhiteListAsync(_gAgentFactory);
+        var mcpServerConfigs = await GetMCPServerConfigsAsync();
 
         if (mcpServerConfigs.ContainsKey(input.ServerName))
         {
@@ -171,7 +174,7 @@ public class McpServerController : AevatarController
 
         // Update the whitelist
         var configJson = JsonConvert.SerializeObject(mcpServerConfigs);
-        var success = await _mcpExtensionWrapper.ConfigMCPWhitelistAsync(_gAgentFactory, configJson);
+        var success = await ConfigWhitelistAsync(configJson);
 
         if (!success)
         {
@@ -202,7 +205,7 @@ public class McpServerController : AevatarController
 
         _logger.LogInformation("Updating MCP server: {serverName}", serverName);
 
-        var mcpServerConfigs = await _mcpExtensionWrapper.GetMCPWhiteListAsync(_gAgentFactory);
+        var mcpServerConfigs = await GetMCPServerConfigsAsync();
 
         if (!mcpServerConfigs.TryGetValue(serverName, out var existingConfig))
         {
@@ -223,7 +226,7 @@ public class McpServerController : AevatarController
         // Update the whitelist
         mcpServerConfigs[serverName] = updatedConfig;
         var configJson = JsonConvert.SerializeObject(mcpServerConfigs);
-        var success = await _mcpExtensionWrapper.ConfigMCPWhitelistAsync(_gAgentFactory, configJson);
+        var success = await ConfigWhitelistAsync(configJson);
 
         if (!success)
         {
@@ -249,7 +252,7 @@ public class McpServerController : AevatarController
 
         _logger.LogInformation("Deleting MCP server: {serverName}", serverName);
 
-        var mcpServerConfigs = await _mcpExtensionWrapper.GetMCPWhiteListAsync(_gAgentFactory);
+        var mcpServerConfigs = await GetMCPServerConfigsAsync();
 
         if (!mcpServerConfigs.ContainsKey(serverName))
         {
@@ -261,7 +264,7 @@ public class McpServerController : AevatarController
 
         // Update the whitelist
         var configJson = JsonConvert.SerializeObject(mcpServerConfigs);
-        var success = await _mcpExtensionWrapper.ConfigMCPWhitelistAsync(_gAgentFactory, configJson);
+        var success = await ConfigWhitelistAsync(configJson);
 
         if (!success)
         {
@@ -278,7 +281,7 @@ public class McpServerController : AevatarController
     [Authorize(Policy = AevatarPermissions.McpServers.Default)]
     public async Task<List<string>> GetServerNamesAsync()
     {
-        var mcpServerConfigs = await _mcpExtensionWrapper.GetMCPWhiteListAsync(_gAgentFactory);
+        var mcpServerConfigs = await GetMCPServerConfigsAsync();
         return mcpServerConfigs.Keys.ToList();
     }
 
@@ -289,7 +292,7 @@ public class McpServerController : AevatarController
     [Authorize(Policy = AevatarPermissions.McpServers.Default)]
     public async Task<Dictionary<string, MCPServerConfig>> GetRawConfigurationsAsync()
     {
-        return await _mcpExtensionWrapper.GetMCPWhiteListAsync(_gAgentFactory);
+        return await GetMCPServerConfigsAsync();
     }
 
     /// <summary>
@@ -311,30 +314,30 @@ public class McpServerController : AevatarController
 
         return sortField switch
         {
-            "servername" => sortDirection == "desc" 
+            "servername" => sortDirection == "desc"
                 ? serverList.OrderByDescending(s => s.ServerName).ToList()
                 : serverList.OrderBy(s => s.ServerName).ToList(),
-            
+
             "command" => sortDirection == "desc"
                 ? serverList.OrderByDescending(s => s.Command).ToList()
                 : serverList.OrderBy(s => s.Command).ToList(),
-            
+
             "description" => sortDirection == "desc"
                 ? serverList.OrderByDescending(s => s.Description).ToList()
                 : serverList.OrderBy(s => s.Description).ToList(),
-            
+
             "servertype" => sortDirection == "desc"
                 ? serverList.OrderByDescending(s => s.ServerType).ToList()
                 : serverList.OrderBy(s => s.ServerType).ToList(),
-            
+
             "createdat" => sortDirection == "desc"
                 ? serverList.OrderByDescending(s => s.CreatedAt).ToList()
                 : serverList.OrderBy(s => s.CreatedAt).ToList(),
-            
+
             "modifiedat" => sortDirection == "desc"
                 ? serverList.OrderByDescending(s => s.ModifiedAt ?? DateTime.MinValue).ToList()
                 : serverList.OrderBy(s => s.ModifiedAt ?? DateTime.MinValue).ToList(),
-            
+
             _ => serverList.OrderBy(s => s.ServerName).ToList() // Default fallback
         };
     }
@@ -355,5 +358,18 @@ public class McpServerController : AevatarController
             CreatedAt = DateTime.UtcNow, // Placeholder - consider adding timestamp to MCPServerConfig
             ModifiedAt = null // No modification timestamp available in MCPServerConfig
         };
+    }
+
+    private IConfigManagerGAgent _mcpServerConfigGAgent;
+
+    private async Task<Dictionary<string, MCPServerConfig>> GetMCPServerConfigsAsync()
+    {
+        _mcpServerConfigGAgent = await _mcpExtensionWrapper.GetMcpServerConfigManagerAsync();
+        return await _mcpExtensionWrapper.GetMCPWhiteListAsync(_mcpServerConfigGAgent);
+    }
+
+    private async Task<bool> ConfigWhitelistAsync(string configJson)
+    {
+        return await _mcpExtensionWrapper.ConfigMCPWhitelistAsync(_mcpServerConfigGAgent, configJson);
     }
 }
