@@ -2,6 +2,8 @@ using Aevatar.CQRS;
 using Aevatar.CQRS.Provider;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans;
+using Orleans.Metadata;
+using Orleans.Runtime;
 using Volo.Abp;
 using Volo.Abp.Auditing;
 using Volo.Abp.Authorization;
@@ -31,6 +33,11 @@ public class AevatarOrleansTestBaseModule : AbpModule
         context.Services.AddSingleton<ClusterFixture>();
         context.Services.AddSingleton<IClusterClient>(sp => context.Services.GetRequiredService<ClusterFixture>().Cluster.Client);
         context.Services.AddSingleton<IGrainFactory>(sp => context.Services.GetRequiredService<ClusterFixture>().Cluster.GrainFactory);
+        
+        // Register GrainTypeResolver for AgentService dependency injection
+        context.Services.AddSingleton<GrainTypeResolver>(sp => sp.GetRequiredService<IClusterClient>().ServiceProvider.GetRequiredService<GrainTypeResolver>());
+        context.Services.AddSingleton<IGrainTypeProvider, AttributeGrainTypeProvider>();
+        
         context.Services.AddSingleton<ICQRSProvider, CQRSProvider>();
         Configure<AbpAutoMapperOptions>(options => { options.AddMaps<AevatarApplicationModule>(); });
 
