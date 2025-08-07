@@ -10,7 +10,6 @@ using System.Diagnostics.Metrics;
 using Aevatar.Application.Grains.Common.Observability;
 using Aevatar.Core;
 using Aevatar.Core.Observability;
-using GodGPT.GAgents.Common.Observability;
 
 namespace Aevatar.Silo.Extensions;
 
