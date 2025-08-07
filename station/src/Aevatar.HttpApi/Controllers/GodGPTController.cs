@@ -86,7 +86,12 @@ public class GodGPTController : AevatarController
     public async Task<Guid> CreateSessionAsync(CreateSessionRequestDto request)
     {
         var stopwatch = Stopwatch.StartNew();
-        var sessionId = await _godGptService.CreateSessionAsync((Guid)CurrentUser.Id!, _defaultLLM, _defaultPrompt, request.Guider);
+        var currentUserId = (Guid)CurrentUser.Id!;
+        if (request != null && request.UserId != null && request.UserId != Guid.Empty)
+        {
+            currentUserId = request.UserId;
+        }
+        var sessionId = await _godGptService.CreateSessionAsync(currentUserId, _defaultLLM, _defaultPrompt, request.Guider);
         _logger.LogDebug("[GodGPTController][CreateSessionAsync] sessionId: {0}, duration: {1}ms",
             sessionId.ToString(), stopwatch.ElapsedMilliseconds);
         return sessionId;
