@@ -15,7 +15,7 @@ using VerifyDbIssue545;
 using Aevatar.Core.Streaming.Extensions;
 
 // Parse command line arguments
-bool useStoredIds = false;
+bool useStoredIds = true; // Default to using stored IDs
 int subscriberCount = 1; // Default value
 
 // Display usage information
