@@ -118,12 +118,13 @@ public class ChatMiddleware
             var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
             if (!await manager.IsUserSessionAsync(request.SessionId))
             {
-                _logger.LogError("[GodGPTController][ChatWithSessionAsync] sessionInfoIsNull sessionId={A}",
-                    request.SessionId);
-                context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                await context.Response.WriteAsync($"Unable to load conversation {request.SessionId}");
-                await context.Response.Body.FlushAsync();
-                return;
+                // TODO: remove this for pressure test
+                // _logger.LogError("[GodGPTController][ChatWithSessionAsync] sessionInfoIsNull sessionId={A}",
+                    // request.SessionId);
+                // context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                // await context.Response.WriteAsync($"Unable to load conversation {request.SessionId}");
+                // await context.Response.Body.FlushAsync();
+                // return;
             }
 
             var streamProvider = _clusterClient.GetStreamProvider("Aevatar");
