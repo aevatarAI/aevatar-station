@@ -601,6 +601,9 @@ def test_workflow_orchestration_generate(api_headers):
         logger.warning("Workflow generation returned null - this might indicate AI service is unavailable")
 
 
+
+
+
 def test_text_completion_generate(api_headers):
     """test text completion generation"""
     # test valid text completion request
@@ -609,7 +612,7 @@ def test_text_completion_generate(api_headers):
     }
     
     response = requests.post(
-        f"{API_HOST}/api/workflow/text-completion",
+        f"{API_HOST}/api/workflow/text-completion/generate",
         json=completion_request,
         headers=api_headers,
         verify=False
@@ -662,7 +665,7 @@ def test_workflow_services_comprehensive(api_headers):
     }
     
     response = requests.post(
-        f"{API_HOST}/api/workflow/text-completion",
+        f"{API_HOST}/api/workflow/text-completion/generate",
         json=completion_request,
         headers=api_headers,
         verify=False

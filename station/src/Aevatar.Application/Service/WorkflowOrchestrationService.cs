@@ -309,7 +309,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             }
 
             // Clean and validate JSON
-            var cleanJson = CleanJsonContent(jsonContent);
+            var cleanJson = AiAgentHelper.CleanJsonContent(jsonContent);
             
             _logger.LogDebug("Parsing workflow JSON content: {CleanJson}", cleanJson);
             
@@ -453,33 +453,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         }
     }
 
-    /// <summary>
-    /// 清理JSON内容（移除markdown标记等）
-    /// </summary>
-    private string CleanJsonContent(string jsonContent)
-    {
-        if (string.IsNullOrWhiteSpace(jsonContent))
-            return string.Empty;
 
-        var cleaned = jsonContent.Trim();
-
-        // 移除markdown代码块标记
-        if (cleaned.StartsWith("```json"))
-        {
-            cleaned = cleaned.Substring(7);
-        }
-        else if (cleaned.StartsWith("```"))
-        {
-            cleaned = cleaned.Substring(3);
-        }
-
-        if (cleaned.EndsWith("```"))
-        {
-            cleaned = cleaned.Substring(0, cleaned.Length - 3);
-        }
-
-        return cleaned.Trim();
-    }
 
     /// <summary>
     /// 应用智能布局算法，根据节点连接关系自动计算坐标
