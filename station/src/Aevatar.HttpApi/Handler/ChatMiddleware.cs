@@ -472,11 +472,12 @@ public class ChatMiddleware
             var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
             if (!await manager.IsUserSessionAsync(request.SessionId))
             {
-                _logger.LogError($"[VoiceChatMiddleware] Session not found or access denied - SessionId: {request.SessionId}, UserId: {userId}");
-                context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                await context.Response.WriteAsync($"Unable to load conversation {request.SessionId}");
-                await context.Response.Body.FlushAsync();
-                return;
+                // TODO: remove this for pressure test
+                // _logger.LogError($"[VoiceChatMiddleware] Session not found or access denied - SessionId: {request.SessionId}, UserId: {userId}");
+                // context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                // await context.Response.WriteAsync($"Unable to load conversation {request.SessionId}");
+                // await context.Response.Body.FlushAsync();
+                // return;
             }
 
             // Set up streaming infrastructure
