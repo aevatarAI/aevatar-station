@@ -422,13 +422,118 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             }
             else
             {
-                _logger.LogWarning("Properties object is missing, creating default");
+                // Fallback: some AI responses return a flat schema without a properties wrapper
+                _logger.LogWarning("Properties object is missing. Falling back to flat-schema parsing at top-level");
+
                 workflowConfig.Properties = new AiWorkflowPropertiesDto
                 {
                     Name = workflowConfig.Name,
                     WorkflowNodeList = new List<AiWorkflowNodeDto>(),
                     WorkflowNodeUnitList = new List<AiWorkflowNodeUnitDto>()
                 };
+
+                // Map nodes from top-level: workflowNodeList
+                var nodeListArrayTop = jsonObject["workflowNodeList"] as JArray
+                                       ?? jsonObject["nodes"] as JArray;
+                if (nodeListArrayTop != null)
+                {
+                    foreach (var nodeToken in nodeListArrayTop)
+                    {
+                        var nodeObj = nodeToken as JObject;
+                        if (nodeObj == null) continue;
+
+                        var mappedNode = new AiWorkflowNodeDto
+                        {
+                            NodeId = nodeObj["nodeId"]?.ToString() ?? Guid.NewGuid().ToString(),
+                            AgentType = nodeObj["nodeType"]?.ToString() ?? nodeObj["agentType"]?.ToString() ?? string.Empty,
+                            Name = nodeObj["nodeName"]?.ToString() ?? nodeObj["name"]?.ToString() ?? string.Empty,
+                            Properties = new Dictionary<string, object>()
+                        };
+
+                        var extendedDataObj = nodeObj["extendedData"] as JObject;
+                        if (extendedDataObj != null)
+                        {
+                            mappedNode.ExtendedData = new AiWorkflowNodeExtendedDataDto
+                            {
+                                XPosition = extendedDataObj["xPosition"]?.ToString() ?? "0",
+                                YPosition = extendedDataObj["yPosition"]?.ToString() ?? "0"
+                            };
+
+                            var description = extendedDataObj["description"]?.ToString();
+                            if (!string.IsNullOrEmpty(description))
+                            {
+                                mappedNode.Properties["description"] = description;
+                            }
+                        }
+                        else
+                        {
+                            mappedNode.ExtendedData = new AiWorkflowNodeExtendedDataDto { XPosition = "0", YPosition = "0" };
+                        }
+
+                        var propertiesObj2 = nodeObj["properties"] as JObject;
+                        if (propertiesObj2 != null)
+                        {
+                            foreach (var prop in propertiesObj2)
+                            {
+                                mappedNode.Properties[prop.Key] = prop.Value?.ToObject<object>() ?? string.Empty;
+                            }
+                        }
+
+                        workflowConfig.Properties.WorkflowNodeList.Add(mappedNode);
+                        _logger.LogDebug("[FlatSchema] Mapped node: {NodeId} -> AgentType: {AgentType}, Name: {Name}",
+                            mappedNode.NodeId, mappedNode.AgentType, mappedNode.Name);
+                    }
+                }
+
+                // Map connections from top-level: workflowNodeUnitList or known aliases
+                JArray? FindConnectionsArray(JObject obj)
+                {
+                    return obj["workflowNodeUnitList"] as JArray
+                           ?? obj["connections"] as JArray
+                           ?? obj["edges"] as JArray
+                           ?? obj["links"] as JArray;
+                }
+
+                var nodeUnitArrayTop = FindConnectionsArray(jsonObject);
+                if (nodeUnitArrayTop != null)
+                {
+                    foreach (var unitToken in nodeUnitArrayTop)
+                    {
+                        var unitObj = unitToken as JObject;
+                        if (unitObj == null) continue;
+
+                        string GetFromNode(JObject o)
+                        {
+                            return o["fromNodeId"]?.ToString()
+                                   ?? o["nodeId"]?.ToString()
+                                   ?? o["from"]?.ToString()
+                                   ?? o["source"]?.ToString()
+                                   ?? string.Empty;
+                        }
+
+                        string GetToNode(JObject o)
+                        {
+                            return o["toNodeId"]?.ToString()
+                                   ?? o["nextNodeId"]?.ToString()
+                                   ?? o["to"]?.ToString()
+                                   ?? o["target"]?.ToString()
+                                   ?? string.Empty;
+                        }
+
+                        var mappedUnit = new AiWorkflowNodeUnitDto
+                        {
+                            NodeId = GetFromNode(unitObj),
+                            NextNodeId = GetToNode(unitObj)
+                        };
+
+                        if (!string.IsNullOrEmpty(mappedUnit.NodeId) && !string.IsNullOrEmpty(mappedUnit.NextNodeId))
+                        {
+                            workflowConfig.Properties.WorkflowNodeUnitList.Add(mappedUnit);
+                            _logger.LogDebug("[FlatSchema] Mapped connection: {NodeId} -> {NextNodeId}",
+                                mappedUnit.NodeId, mappedUnit.NextNodeId);
+                        }
+                    }
+                }
             }
 
             _logger.LogInformation("Successfully parsed and mapped workflow JSON to view config with {NodeCount} nodes and {ConnectionCount} connections",
