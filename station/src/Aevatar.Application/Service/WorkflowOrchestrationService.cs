@@ -301,143 +301,92 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         try
         {
             _logger.LogInformation("开始解析工作流JSON. Content length: {ContentLength}", jsonContent?.Length ?? 0);
-            
+
             if (string.IsNullOrWhiteSpace(jsonContent))
             {
                 _logger.LogWarning("Empty JSON content provided for parsing");
                 return null;
             }
 
-            // Clean and validate JSON
             var cleanJson = AiAgentHelper.CleanJsonContent(jsonContent);
-            
             _logger.LogDebug("Parsing workflow JSON content: {CleanJson}", cleanJson);
-            
-            // Parse as JObject first to handle field mapping
+
             var jsonObject = JObject.Parse(cleanJson);
-            
-            // Create the mapped workflow configuration
-            var workflowConfig = new AiWorkflowViewConfigDto();
-            
-            // Map top-level fields
-            workflowConfig.Name = jsonObject["name"]?.ToString() ?? "Unnamed Workflow";
-            
-            // Handle properties object
-            var propertiesObj = jsonObject["properties"] as JObject;
-            if (propertiesObj != null)
+
+            // Simplified: expect the flat schema as primary, fall back to properties if present
+            var workflow = new AiWorkflowViewConfigDto
             {
-                workflowConfig.Properties = new AiWorkflowPropertiesDto
+                Name = jsonObject["name"]?.ToString() ?? "Unnamed Workflow",
+                Properties = new AiWorkflowPropertiesDto
                 {
-                    Name = propertiesObj["name"]?.ToString() ?? workflowConfig.Name,
+                    Name = jsonObject["name"]?.ToString() ?? "Unnamed Workflow",
                     WorkflowNodeList = new List<AiWorkflowNodeDto>(),
                     WorkflowNodeUnitList = new List<AiWorkflowNodeUnitDto>()
-                };
-                
-                // Map workflow nodes with field transformation
-                var nodeListArray = propertiesObj["workflowNodeList"] as JArray;
-                if (nodeListArray != null)
-                {
-                    foreach (var nodeToken in nodeListArray)
-                    {
-                        var nodeObj = nodeToken as JObject;
-                        if (nodeObj != null)
-                        {
-                            var mappedNode = new AiWorkflowNodeDto
-                            {
-                                NodeId = nodeObj["nodeId"]?.ToString() ?? Guid.NewGuid().ToString(),
-                                // Map AI's nodeType to frontend's agentType
-                                AgentType = nodeObj["nodeType"]?.ToString() ?? nodeObj["agentType"]?.ToString() ?? "",
-                                // Map AI's nodeName to frontend's name
-                                Name = nodeObj["nodeName"]?.ToString() ?? nodeObj["name"]?.ToString() ?? "",
-                                Properties = new Dictionary<string, object>()
-                            };
-                            
-                            // Handle extended data mapping
-                            var extendedDataObj = nodeObj["extendedData"] as JObject;
-                            if (extendedDataObj != null)
-                            {
-                                mappedNode.ExtendedData = new AiWorkflowNodeExtendedDataDto
-                                {
-                                    // Use AI's position if provided, otherwise default to "0"
-                                    XPosition = extendedDataObj["xPosition"]?.ToString() ?? "0",
-                                    YPosition = extendedDataObj["yPosition"]?.ToString() ?? "0"
-                                };
-                                
-                                // Store AI's description in properties for reference
-                                var description = extendedDataObj["description"]?.ToString();
-                                if (!string.IsNullOrEmpty(description))
-                                {
-                                    mappedNode.Properties["description"] = description;
-                                }
-                            }
-                            else
-                            {
-                                mappedNode.ExtendedData = new AiWorkflowNodeExtendedDataDto
-                                {
-                                    XPosition = "0",
-                                    YPosition = "0"
-                                };
-                            }
-                            
-                            // Copy node properties
-                            var propertiesObj2 = nodeObj["properties"] as JObject;
-                            if (propertiesObj2 != null)
-                            {
-                                foreach (var prop in propertiesObj2)
-                                {
-                                    mappedNode.Properties[prop.Key] = prop.Value?.ToObject<object>() ?? "";
-                                }
-                            }
-                            
-                            workflowConfig.Properties.WorkflowNodeList.Add(mappedNode);
-                            _logger.LogDebug("Mapped node: {NodeId} -> AgentType: {AgentType}, Name: {Name}",
-                                mappedNode.NodeId, mappedNode.AgentType, mappedNode.Name);
-                        }
-                    }
                 }
-                
-                // Map workflow node connections with field transformation
-                var nodeUnitArray = propertiesObj["workflowNodeUnitList"] as JArray;
-                if (nodeUnitArray != null)
-                {
-                    foreach (var unitToken in nodeUnitArray)
-                    {
-                        var unitObj = unitToken as JObject;
-                        if (unitObj != null)
-                        {
-                            var mappedUnit = new AiWorkflowNodeUnitDto
-                            {
-                                // Map AI's fromNodeId to frontend's nodeId
-                                NodeId = unitObj["fromNodeId"]?.ToString() ?? unitObj["nodeId"]?.ToString() ?? "",
-                                // Map AI's toNodeId to frontend's nextNodeId
-                                NextNodeId = unitObj["toNodeId"]?.ToString() ?? unitObj["nextNodeId"]?.ToString() ?? ""
-                            };
-                            
-                            workflowConfig.Properties.WorkflowNodeUnitList.Add(mappedUnit);
-                            _logger.LogDebug("Mapped connection: {NodeId} -> {NextNodeId}", 
-                                mappedUnit.NodeId, mappedUnit.NextNodeId);
-                        }
-                    }
-                }
-            }
-            else
+            };
+
+            // Pick node/edge arrays (flat first, then properties wrapper)
+            var nodesArray = (jsonObject["workflowNodeList"] as JArray)
+                             ?? (jsonObject["properties"] as JObject)?["workflowNodeList"] as JArray
+                             ?? new JArray();
+            var edgesArray = (jsonObject["workflowNodeUnitList"] as JArray)
+                             ?? (jsonObject["properties"] as JObject)?["workflowNodeUnitList"] as JArray
+                             ?? new JArray();
+
+            foreach (var token in nodesArray.OfType<JObject>())
             {
-                _logger.LogWarning("Properties object is missing, creating default");
-                workflowConfig.Properties = new AiWorkflowPropertiesDto
+                var node = new AiWorkflowNodeDto
                 {
-                    Name = workflowConfig.Name,
-                    WorkflowNodeList = new List<AiWorkflowNodeDto>(),
-                    WorkflowNodeUnitList = new List<AiWorkflowNodeUnitDto>()
+                    NodeId = token.Value<string>("nodeId") ?? Guid.NewGuid().ToString(),
+                    AgentType = token.Value<string>("nodeType") ?? string.Empty,
+                    Name = token.Value<string>("nodeName") ?? string.Empty,
+                    Properties = new Dictionary<string, object>(),
+                    ExtendedData = new AiWorkflowNodeExtendedDataDto
+                    {
+                        XPosition = token["extendedData"]?[(object)"xPosition"]?.ToString() ?? "0",
+                        YPosition = token["extendedData"]?[(object)"yPosition"]?.ToString() ?? "0"
+                    }
                 };
+
+                var desc = token["extendedData"]?[(object)"description"]?.ToString();
+                if (!string.IsNullOrEmpty(desc))
+                {
+                    node.Properties["description"] = desc;
+                }
+
+                // copy node properties as-is
+                var props = token["properties"] as JObject;
+                if (props != null)
+                {
+                    foreach (var p in props)
+                    {
+                        node.Properties[p.Key] = p.Value?.ToObject<object>() ?? string.Empty;
+                    }
+                }
+
+                workflow.Properties.WorkflowNodeList.Add(node);
             }
 
-            _logger.LogInformation("Successfully parsed and mapped workflow JSON to view config with {NodeCount} nodes and {ConnectionCount} connections",
-                workflowConfig.Properties.WorkflowNodeList.Count, workflowConfig.Properties.WorkflowNodeUnitList.Count);
+            foreach (var token in edgesArray.OfType<JObject>())
+            {
+                var unit = new AiWorkflowNodeUnitDto
+                {
+                    NodeId = token.Value<string>("fromNodeId") ?? string.Empty,
+                    NextNodeId = token.Value<string>("toNodeId") ?? string.Empty
+                };
 
-            // Apply intelligent layout algorithm after parsing
-            ApplyIntelligentLayout(workflowConfig.Properties);
+                if (!string.IsNullOrEmpty(unit.NodeId) && !string.IsNullOrEmpty(unit.NextNodeId))
+                {
+                    workflow.Properties.WorkflowNodeUnitList.Add(unit);
+                }
+            }
 
-            return workflowConfig;
+            _logger.LogInformation("Parsed workflow: nodes={NodeCount}, connections={ConnCount}",
+                workflow.Properties.WorkflowNodeList.Count, workflow.Properties.WorkflowNodeUnitList.Count);
+
+            // Layout
+            ApplyIntelligentLayout(workflow.Properties);
+            return workflow;
         }
         catch (JsonException ex)
         {
