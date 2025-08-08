@@ -383,10 +383,14 @@ public abstract class AgentServiceTests<TStartupModule> : AevatarApplicationTest
         // Remove all sub agents (should not throw if no sub agents)
         await _agentService.RemoveAllSubAgentAsync(agent.Id);
 
-        // Verify agent still exists but now should be deleted
-        // Note: Based on the implementation, this actually deletes the agent if it has no parent
-        await Should.ThrowAsync<Exception>(async () =>
-            await _agentService.GetAgentAsync(agent.Id));
+        // Verify agent still exists and has no sub agents
+        var retrievedAgent = await _agentService.GetAgentAsync(agent.Id);
+        retrievedAgent.ShouldNotBeNull();
+
+        var relationship = await _agentService.GetAgentRelationshipAsync(agent.Id);
+        relationship.ShouldNotBeNull();
+        relationship.SubAgents.ShouldNotBeNull();
+        relationship.SubAgents.ShouldBeEmpty();
     }
 
     [Fact]
@@ -683,11 +687,12 @@ public abstract class AgentServiceTests<TStartupModule> : AevatarApplicationTest
             SubAgents = new List<Guid> { subAgent.Id }
         });
 
-        // This should trigger the "Agent has subagents" exception (lines 690-692)
-        var exception = await Assert.ThrowsAsync<UserFriendlyException>(
-            () => _agentService.RemoveAllSubAgentAsync(parentAgent.Id));
+        // Invoke removal - should succeed and clear all subagents
+        await _agentService.RemoveAllSubAgentAsync(parentAgent.Id);
 
-        Assert.Contains("subagents", exception.Message.ToLower());
+        var relationship = await _agentService.GetAgentRelationshipAsync(parentAgent.Id);
+        relationship.SubAgents.ShouldNotBeNull();
+        relationship.SubAgents.ShouldBeEmpty();
     }
 
     [Fact]
@@ -729,12 +734,12 @@ public abstract class AgentServiceTests<TStartupModule> : AevatarApplicationTest
             SubAgents = new List<Guid> { childAgent.Id }
         });
 
-        // Try to remove all sub agents from child (which has a parent)
-        // This should trigger the "Agent has parent" exception (lines 706-708)
-        var exception = await Assert.ThrowsAsync<UserFriendlyException>(
-            () => _agentService.RemoveAllSubAgentAsync(childAgent.Id));
+        // Removing all sub agents from child (which has a parent) should still succeed
+        await _agentService.RemoveAllSubAgentAsync(childAgent.Id);
 
-        Assert.Contains("parent", exception.Message.ToLower());
+        var relationship = await _agentService.GetAgentRelationshipAsync(childAgent.Id);
+        relationship.SubAgents.ShouldNotBeNull();
+        relationship.SubAgents.ShouldBeEmpty();
     }
 
     [Fact]
