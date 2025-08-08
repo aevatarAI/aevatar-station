@@ -25,6 +25,8 @@ using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
 using Volo.Abp.BlobStoring;
 using Volo.Abp.BlobStoring.Aws;
+using Volo.Abp.Caching;
+using Volo.Abp.Caching.StackExchangeRedis;
 using Volo.Abp.Modularity;
 using Volo.Abp.Swashbuckle;
 using Volo.Abp.Threading;
@@ -34,6 +36,7 @@ namespace Aevatar.Developer.Host;
 
 [DependsOn(
     typeof(AevatarHttpApiModule),
+    typeof(AbpCachingStackExchangeRedisModule),
     typeof(AbpAutofacModule),
     typeof(AevatarApplicationModule),
     typeof(AevatarMongoDbModule),
@@ -56,6 +59,7 @@ public class AevatarDeveloperHostModule : AbpModule
         ConfigureVirtualFileSystem(context);
         ConfigureCors(context, configuration);
         ConfigureSwaggerServices(context, configuration);
+        ConfigCache(context, configuration);
         Configure<GoogleLoginOptions>(configuration.GetSection("GoogleLogin"));
         context.Services.AddMvc(options => { options.Filters.Add(new IgnoreAntiforgeryTokenAttribute()); })
             .AddNewtonsoftJson();
@@ -75,6 +79,13 @@ public class AevatarDeveloperHostModule : AbpModule
                 }); 
             });
         });
+    }
+    
+    private void ConfigCache(ServiceConfigurationContext context, IConfiguration configuration)
+    {
+        var redisOptions = ConfigurationOptions.Parse(configuration["Redis:Configuration"]);
+        context.Services.AddSingleton<IConnectionMultiplexer>(provider => ConnectionMultiplexer.Connect(redisOptions));
+        Configure<AbpDistributedCacheOptions>(options => { options.KeyPrefix = "Aevatar:"; });
     }
     
     private void ConfigureDataProtection(
