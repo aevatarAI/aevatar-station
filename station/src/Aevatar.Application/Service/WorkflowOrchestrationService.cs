@@ -300,7 +300,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     {
         try
         {
-            _logger.LogInformation("开始解析工作流JSON. Content length: {ContentLength}", jsonContent?.Length ?? 0);
+            _logger.LogInformation("Start parsing workflow JSON. Content length: {ContentLength}", jsonContent?.Length ?? 0);
 
             if (string.IsNullOrWhiteSpace(jsonContent))
             {
@@ -319,7 +319,10 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                 Name = jsonObject["name"]?.ToString() ?? "Unnamed Workflow",
                 Properties = new AiWorkflowPropertiesDto
                 {
-                    Name = jsonObject["name"]?.ToString() ?? "Unnamed Workflow",
+                    // Prefer nested properties.name when present, fall back to top-level name
+                    Name = (jsonObject["properties"] as JObject)?["name"]?.ToString()
+                           ?? jsonObject["name"]?.ToString()
+                           ?? "Unnamed Workflow",
                     WorkflowNodeList = new List<AiWorkflowNodeDto>(),
                     WorkflowNodeUnitList = new List<AiWorkflowNodeUnitDto>()
                 }
@@ -338,8 +341,14 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                 var node = new AiWorkflowNodeDto
                 {
                     NodeId = token.Value<string>("nodeId") ?? Guid.NewGuid().ToString(),
-                    AgentType = token.Value<string>("nodeType") ?? string.Empty,
-                    Name = token.Value<string>("nodeName") ?? string.Empty,
+                    // Support both nodeType and agentType as schema variants
+                    AgentType = token.Value<string>("nodeType")
+                                ?? token.Value<string>("agentType")
+                                ?? string.Empty,
+                    // Support both nodeName and name as schema variants
+                    Name = token.Value<string>("nodeName")
+                           ?? token.Value<string>("name")
+                           ?? string.Empty,
                     Properties = new Dictionary<string, object>(),
                     ExtendedData = new AiWorkflowNodeExtendedDataDto
                     {
