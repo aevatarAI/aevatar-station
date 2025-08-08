@@ -300,7 +300,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     {
         try
         {
-            _logger.LogInformation("开始解析工作流JSON. Content length: {ContentLength}", jsonContent?.Length ?? 0);
+            _logger.LogInformation("Start parsing workflow JSON. Content length: {ContentLength}", jsonContent?.Length ?? 0);
 
             if (string.IsNullOrWhiteSpace(jsonContent))
             {
