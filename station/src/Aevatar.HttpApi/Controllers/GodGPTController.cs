@@ -724,7 +724,7 @@ public class GodGPTController : AevatarController
     /// </summary>
     /// <param name="request">GA event request</param>
     /// <returns>Tracking result</returns>
-    [HttpPost("godgpt/analytics/track")]
+    [HttpPost("godgpt/analytics/track/gtag")]
     public async Task<IActionResult> TrackAnalyticsEventAsync(GoogleAnalyticsEventRequestDto request)
     {
         var stopwatch = Stopwatch.StartNew();
@@ -769,7 +769,7 @@ public class GodGPTController : AevatarController
         }
     }
 
-    [HttpPost("godgpt/analytics/track/firebase")]
+    [HttpPost("godgpt/analytics/track")]
     public async Task<IActionResult> TrackFirebaseAnalyticsEventAsync(GoogleAnalyticsEventRequestDto request)
     {
         var stopwatch = Stopwatch.StartNew();
