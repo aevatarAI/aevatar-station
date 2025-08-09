@@ -286,8 +286,8 @@ public class GoogleAnalyticsService : IGoogleAnalyticsService, ITransientDepende
         {
             // Firebase uses app_instance_id instead of client_id
             // Use UserId if available, otherwise fallback to ClientId
-            AppInstanceId = !string.IsNullOrWhiteSpace(eventRequest.UserId) 
-                ? eventRequest.UserId 
+            AppInstanceId = !string.IsNullOrWhiteSpace(eventRequest.AppInstanceId) 
+                ? eventRequest.AppInstanceId
                 : "unknown"
         };
 
@@ -296,17 +296,6 @@ public class GoogleAnalyticsService : IGoogleAnalyticsService, ITransientDepende
             Name = eventRequest.EventName,
             Parameters = new Dictionary<string, object>(eventRequest.Parameters)
         };
-
-        // Add additional parameters
-        if (!string.IsNullOrWhiteSpace(eventRequest.SessionId))
-        {
-            firebaseEvent.Parameters["session_id"] = eventRequest.SessionId;
-        }
-
-        if (!string.IsNullOrWhiteSpace(eventRequest.UserId))
-        {
-            firebaseEvent.Parameters["user_id"] = eventRequest.UserId;
-        }
 
         payload.Events.Add(firebaseEvent);
         return payload;

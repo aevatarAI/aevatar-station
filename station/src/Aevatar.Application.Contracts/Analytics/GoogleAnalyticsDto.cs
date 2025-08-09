@@ -14,6 +14,8 @@ public class GoogleAnalyticsEventRequestDto
     /// </summary>
     public string? ClientId { get; set; }
     
+    public string? AppInstanceId { get; set; }
+    
     public string? UserId { get; set; }
     
     /// <summary>
