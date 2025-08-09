@@ -100,4 +100,40 @@ public class GAEvent
     /// </summary>
     [JsonProperty("params")]
     public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
+}
+
+/// <summary>
+/// Firebase Analytics Measurement Protocol event data structure
+/// </summary>
+public class FirebaseMeasurementProtocolPayload
+{
+    /// <summary>
+    /// App instance ID for user identification (equivalent to user_id)
+    /// </summary>
+    [JsonProperty("app_instance_id")]
+    public string AppInstanceId { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Array of events to send
+    /// </summary>
+    [JsonProperty("events")]
+    public List<FirebaseEvent> Events { get; set; } = new List<FirebaseEvent>();
+}
+
+/// <summary>
+/// Firebase Analytics event internal data structure
+/// </summary>
+public class FirebaseEvent
+{
+    /// <summary>
+    /// Event name
+    /// </summary>
+    [JsonProperty("name")]
+    public string Name { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Event parameters
+    /// </summary>
+    [JsonProperty("params")]
+    public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
 } 
