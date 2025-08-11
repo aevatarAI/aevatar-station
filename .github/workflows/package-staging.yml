@@ -167,6 +167,12 @@ jobs:
             exit 1
           fi
 
+      # Upload SBOM SARIF to GitHub Security Dashboard
+      - name: Upload SBOM results to GitHub Security Dashboard
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-sbom-report.sarif
+
       # Install Cosign CLI for signing
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3.5.0
@@ -192,22 +198,23 @@ jobs:
         run: |
           cosign sign "${{ steps.meta.outputs.tags }}@${{ steps.digest.outputs.digest }}"
 
-  dispatch:
-    runs-on: aismart-runner
-    needs: build-and-push-image
-    steps:
-      - name: Deploy
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.TOK }}
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: 'AElfDevops',
-              repo: 'devops',
-              workflow_id: 'aevatar-station-deploy.yaml',
-              ref: 'main',
-              inputs: {
-                env: 'staging',
-                commit_sha: 'sha-${{ needs.build-and-push-image.outputs.short_sha }}',
-              }
-            })
+
+  # dispatch:
+  #   runs-on: aismart-runner
+  #   needs: build-and-push-image
+  #   steps:
+  #     - name: Deploy
+  #       uses: actions/github-script@v6
+  #       with:
+  #         github-token: ${{ secrets.TOK }}
+  #         script: |
+  #           await github.rest.actions.createWorkflowDispatch({
+  #             owner: 'AElfDevops',
+  #             repo: 'devops',
+  #             workflow_id: 'aevatar-station-deploy.yaml',
+  #             ref: 'main',
+  #             inputs: {
+  #               env: 'staging',
+  #               commit_sha: 'sha-${{ needs.build-and-push-image.outputs.short_sha }}',
+  #             }
+  #           })
