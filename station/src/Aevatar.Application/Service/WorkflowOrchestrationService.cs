@@ -36,17 +36,15 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     private readonly IClusterClient _clusterClient;
     private readonly IUserAppService _userAppService;
     private readonly IGAgentManager _gAgentManager;
-    private readonly IGAgentFactory _gAgentFactory;
     private readonly IOptionsMonitor<AIServicePromptOptions> _promptOptions;
     private readonly IOptionsMonitor<AgentOptions> _agentOptions;
-    private readonly GrainTypeResolver? _grainTypeResolver;
+    private readonly GrainTypeResolver _grainTypeResolver;
 
     public WorkflowOrchestrationService(
         ILogger<WorkflowOrchestrationService> logger,
         IClusterClient clusterClient,
         IUserAppService userAppService,
         IGAgentManager gAgentManager,
-        IGAgentFactory gAgentFactory,
         IOptionsMonitor<AIServicePromptOptions> promptOptions,
         IOptionsMonitor<AgentOptions> agentOptions,
         GrainTypeResolver grainTypeResolver)
@@ -55,7 +53,6 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         _clusterClient = clusterClient;
         _userAppService = userAppService;
         _gAgentManager = gAgentManager;
-        _gAgentFactory = gAgentFactory;
         _promptOptions = promptOptions;
         _agentOptions = agentOptions;
         _grainTypeResolver = grainTypeResolver;

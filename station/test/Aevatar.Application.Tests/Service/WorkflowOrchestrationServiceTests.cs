@@ -29,7 +29,6 @@ public class WorkflowOrchestrationServiceTests
     private readonly Mock<IClusterClient> _mockClusterClient;
     private readonly Mock<IUserAppService> _mockUserAppService;
     private readonly Mock<IGAgentManager> _mockGAgentManager;
-    private readonly Mock<IGAgentFactory> _mockGAgentFactory;
     private readonly Mock<IOptionsMonitor<AIServicePromptOptions>> _mockPromptOptions;
     private readonly Mock<IOptionsMonitor<AgentOptions>> _mockAgentOptions;
     private readonly Mock<IWorkflowComposerGAgent> _mockWorkflowComposerGAgent;
@@ -43,7 +42,6 @@ public class WorkflowOrchestrationServiceTests
         _mockClusterClient = new Mock<IClusterClient>();
         _mockUserAppService = new Mock<IUserAppService>();
         _mockGAgentManager = new Mock<IGAgentManager>();
-        _mockGAgentFactory = new Mock<IGAgentFactory>();
         _mockPromptOptions = new Mock<IOptionsMonitor<AIServicePromptOptions>>();
         _mockAgentOptions = new Mock<IOptionsMonitor<AgentOptions>>();
         _mockWorkflowComposerGAgent = new Mock<IWorkflowComposerGAgent>();
@@ -55,7 +53,6 @@ public class WorkflowOrchestrationServiceTests
             _mockClusterClient.Object,
             _mockUserAppService.Object,
             _mockGAgentManager.Object,
-            _mockGAgentFactory.Object,
             _mockPromptOptions.Object,
             _mockAgentOptions.Object,
             null!);
@@ -265,7 +262,6 @@ public class WorkflowOrchestrationServiceTests
             _mockClusterClient.Object,
             _mockUserAppService.Object,
             _mockGAgentManager.Object,
-            _mockGAgentFactory.Object,
             _mockPromptOptions.Object,
             _mockAgentOptions.Object,
             null); // Null is allowed for unit tests
@@ -974,7 +970,6 @@ public class WorkflowOrchestrationServiceTests
             _mockClusterClient.Object,
             _mockUserAppService.Object,
             _mockGAgentManager.Object,
-            _mockGAgentFactory.Object,
             _mockPromptOptions.Object,
             mockAgentOptions.Object,
             null);
@@ -1021,7 +1016,6 @@ public class WorkflowOrchestrationServiceTests
             _mockClusterClient.Object,
             _mockUserAppService.Object,
             _mockGAgentManager.Object,
-            _mockGAgentFactory.Object,
             _mockPromptOptions.Object,
             mockAgentOptions.Object,
             null);
