@@ -73,7 +73,7 @@ Please strictly follow the following JSON format for workflow generation. This f
 **For AI/LLM Agents:**
 ```json
 ""properties"": {
-  ""model"": ""gpt-4"",
+  ""model"": ""OpenAI"",
   ""temperature"": 0.7,
   ""maxTokens"": 2000,
   ""systemPrompt"": ""You are a helpful assistant"",
