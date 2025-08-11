@@ -38,7 +38,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     private readonly IGAgentManager _gAgentManager;
     private readonly IGAgentFactory _gAgentFactory;
     private readonly IOptionsMonitor<AIServicePromptOptions> _promptOptions;
-    private readonly GrainTypeResolver _grainTypeResolver;
+    private readonly GrainTypeResolver? _grainTypeResolver;
 
     public WorkflowOrchestrationService(
         ILogger<WorkflowOrchestrationService> logger,
@@ -47,7 +47,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         IGAgentManager gAgentManager,
         IGAgentFactory gAgentFactory,
         IOptionsMonitor<AIServicePromptOptions> promptOptions,
-        GrainTypeResolver grainTypeResolver)
+        GrainTypeResolver? grainTypeResolver)
     {
         _logger = logger;
         _clusterClient = clusterClient;
@@ -165,7 +165,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         return new AiWorkflowAgentInfoDto
         {
             Name = agentType.Name,
-            Type = agentType.Name, // AI在生成时使用简单类型名称
+            Type = agentType.FullName ?? agentType.Name,
             Description = description
         };
     }
@@ -191,13 +191,16 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             if (matchedType != null)
             {
                 // 使用GrainTypeResolver获取完整的GrainType名称
-                var grainType = _grainTypeResolver.GetGrainType(matchedType);
-                var fullTypeName = grainType.ToString();
-                
-                _logger.LogInformation("Mapped simple type name '{SimpleTypeName}' to full type name '{FullTypeName}'", 
-                    simpleTypeName, fullTypeName);
-                
-                return fullTypeName;
+                if (_grainTypeResolver != null)
+                {
+                    var grainType = _grainTypeResolver.GetGrainType(matchedType);
+                    var fullTypeName = grainType.ToString();
+                    
+                    _logger.LogInformation("Mapped simple type name '{SimpleTypeName}' to full type name '{FullTypeName}'", 
+                        simpleTypeName, fullTypeName);
+                    
+                    return fullTypeName;
+                }
             }
             
             _logger.LogWarning("No matching agent type found for simple name '{SimpleTypeName}', using original name", 

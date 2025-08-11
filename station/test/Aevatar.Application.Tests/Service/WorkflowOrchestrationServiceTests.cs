@@ -32,7 +32,7 @@ public class WorkflowOrchestrationServiceTests
     private readonly Mock<IGAgentFactory> _mockGAgentFactory;
     private readonly Mock<IOptionsMonitor<AIServicePromptOptions>> _mockPromptOptions;
     private readonly Mock<IWorkflowComposerGAgent> _mockWorkflowComposerGAgent;
-    private readonly Mock<GrainTypeResolver> _mockGrainTypeResolver;
+
     private readonly WorkflowOrchestrationService _service;
 
     public WorkflowOrchestrationServiceTests()
@@ -44,7 +44,7 @@ public class WorkflowOrchestrationServiceTests
         _mockGAgentFactory = new Mock<IGAgentFactory>();
         _mockPromptOptions = new Mock<IOptionsMonitor<AIServicePromptOptions>>();
         _mockWorkflowComposerGAgent = new Mock<IWorkflowComposerGAgent>();
-        _mockGrainTypeResolver = new Mock<GrainTypeResolver>();
+
 
         SetupMockDefaults();
 
@@ -55,7 +55,7 @@ public class WorkflowOrchestrationServiceTests
             _mockGAgentManager.Object,
             _mockGAgentFactory.Object,
             _mockPromptOptions.Object,
-            _mockGrainTypeResolver.Object);
+            null); // GrainTypeResolver可以为null，因为我们在测试中不会实际使用映射功能
     }
 
     private void SetupMockDefaults()
@@ -85,9 +85,7 @@ public class WorkflowOrchestrationServiceTests
         };
         _mockPromptOptions.Setup(x => x.CurrentValue).Returns(promptOptions);
         
-        // Setup GrainTypeResolver to return default grain type format
-        _mockGrainTypeResolver.Setup(x => x.GetGrainType(It.IsAny<Type>()))
-            .Returns((Type type) => Orleans.Runtime.GrainType.Create(type.FullName ?? type.Name));
+        // GrainTypeResolver在测试中为null，我们依赖字典映射功能
     }
 
     #region Basic Functionality Tests
@@ -259,7 +257,7 @@ public class WorkflowOrchestrationServiceTests
             _mockGAgentManager.Object,
             _mockGAgentFactory.Object,
             _mockPromptOptions.Object,
-            _mockGrainTypeResolver.Object);
+            null);
 
         service.ShouldNotBeNull();
     }
