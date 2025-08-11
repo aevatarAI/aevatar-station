@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Agent;
 using Aevatar.Controllers;
@@ -40,9 +41,9 @@ public class AgentController : AevatarController
 
     [HttpGet("agent-list")]
     [Authorize]
-    public async Task<List<AgentInstanceDto>> GetAllAgentInstance(int pageIndex = 0, int pageSize = 20)
+    public async Task<List<AgentInstanceDto>> GetAllAgentInstance([FromQuery] GetAllAgentInstancesQueryDto queryDto)
     {
-        return await _agentService.GetAllAgentInstances(pageIndex, pageSize);
+        return await _agentService.GetAllAgentInstances(queryDto);
     }
 
     [HttpPost]

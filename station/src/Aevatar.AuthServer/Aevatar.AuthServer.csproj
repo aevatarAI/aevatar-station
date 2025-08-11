@@ -47,6 +47,7 @@
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
         <PackageReference Include="GraphQL.Client" />
         <PackageReference Include="GraphQL.Client.Serializer.Newtonsoft" />
+        <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis"/>
     </ItemGroup>
     
     <ItemGroup>

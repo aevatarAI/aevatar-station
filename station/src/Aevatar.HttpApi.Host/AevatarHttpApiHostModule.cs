@@ -94,10 +94,10 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
                 var configSection = configuration.GetSection("AwsS3");
                 container.UseAws(o =>
                 {
-                    o.AccessKeyId = configSection.GetValue<string>("AccessKeyId");
-                    o.SecretAccessKey = configSection.GetValue<string>("SecretAccessKey");
-                    o.Region = configSection.GetValue<string>("Region");
-                    o.ContainerName = configSection.GetValue<string>("ContainerName");
+                    o.AccessKeyId = configSection.GetValue<string>("AccessKeyId", "None");
+                    o.SecretAccessKey = configSection.GetValue<string>("SecretAccessKey", "None");
+                    o.Region = configSection.GetValue<string>("Region", "None");
+                    o.ContainerName = configSection.GetValue<string>("ContainerName", "None");
                 }); 
             });
         });

@@ -62,7 +62,7 @@ public class AgentWarmupTestFixture : IAsyncDisposable
 
                         var partitions = 1;
                         var replicationFactor = (short)1;
-                        var topics = "Aevatar,AevatarStateProjection,AevatarBroadCast";
+                        var topics = "Aevatar,AevatarStateProjection,AevatarBroadcast";
                         foreach (var topic in topics.Split(','))
                         {
                             options.AddTopic(topic.Trim(), new TopicCreationConfig

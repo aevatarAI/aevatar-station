@@ -76,6 +76,8 @@ public class AevatarTokenController : TokenController
 
             await OpenIddictClaimsPrincipalManager.HandleAsync(request, principal);
 
+            principal.SetScopes(new[] { "Aevatar", OpenIddictConstants.Scopes.OfflineAccess });
+            principal.SetResources(new[] { "Aevatar" });
             // Returning a SignInResult will ask OpenIddict to issue the appropriate access/identity tokens.
             return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }

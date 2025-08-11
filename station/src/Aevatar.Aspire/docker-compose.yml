@@ -57,6 +57,20 @@ services:
     volumes:
       - kafka-data:/bitnami/kafka
 
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    container_name: zookeeper
+    networks:
+      - aevatar-network
+    ports:
+      - "2181:2181"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+      - ZOO_SERVER_ID=1
+      - ZOO_SERVERS=server.1=zookeeper:2888:3888
+    volumes:
+      - zookeeper-data:/bitnami/zookeeper
+
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.12.1
     container_name: elasticsearch
@@ -121,6 +135,7 @@ services:
       - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'  # Enable Admin API for metric deletion
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml
@@ -166,3 +181,4 @@ volumes:
   qdrant-data:
   prometheus-data:
   grafana-data:
+  zookeeper-data:

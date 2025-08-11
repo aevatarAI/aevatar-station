@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using Aevatar.AuthServer.Grants.Options;
 using Aevatar.AuthServer.Grants.Providers;
 using Aevatar.OpenIddict;
 using Aevatar.Permissions;
@@ -13,6 +14,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -47,9 +49,24 @@ public class AppleGrantHandler : GrantHandlerBase, ITransientDependency
             var code = context.Request.GetParameter("code")?.ToString();
             var idToken = context.Request.GetParameter("id_token")?.ToString();
             var source = context.Request.GetParameter("source")?.ToString();
+            var platform = context.Request.GetParameter("platform")?.ToString() ?? string.Empty;
+            var appId = context.Request.GetParameter("apple_app_id")?.ToString();
             
-            _logger.LogDebug("AppleGrantHandler.HandleAsync source: {source} idToken: {idToken} code: {code}", 
-                source, idToken, code);
+            if (appId.IsNullOrWhiteSpace())
+            {
+                // TODO: Should not be here
+                appId = "com.gpt.god";
+            }
+            
+            _logger.LogDebug("AppleGrantHandler.HandleAsync source: {source} idToken: {idToken} code: {code} platform: {platform} clientId: {clientId}", 
+                source, idToken, code, platform, appId);
+
+            var appleOptions = context.HttpContext.RequestServices.GetRequiredService<IOptionsMonitor<AppleOptions>>();
+            if (!appleOptions.CurrentValue.APPs.TryGetValue(appId, out var appOptions))
+            {
+                _logger.LogInformation("Invalid apple_app_id ");
+                return CreateForbidResult("Invalid apple_app_id");
+            }
             
             if (string.IsNullOrEmpty(idToken))
             {
@@ -59,7 +76,7 @@ public class AppleGrantHandler : GrantHandlerBase, ITransientDependency
                     return CreateForbidResult("Missing both id_token and code");
                 }
                 
-                idToken = await _appleProvider.ExchangeCodeForTokenAsync(code, source);
+                idToken = await _appleProvider.ExchangeCodeForTokenAsync(code, source, platform, appOptions);
 
                 if (idToken.IsNullOrEmpty())
                 {
@@ -67,7 +84,7 @@ public class AppleGrantHandler : GrantHandlerBase, ITransientDependency
                 }
             }
             
-            var (isValid, principal) = await _appleProvider.ValidateAppleTokenAsync(idToken, source);
+            var (isValid, principal) = await _appleProvider.ValidateAppleTokenAsync(idToken, source, appOptions);
             if (!isValid)
             {
                 return CreateForbidResult("Invalid APPLE token");
@@ -79,6 +96,7 @@ public class AppleGrantHandler : GrantHandlerBase, ITransientDependency
             _logger.LogDebug("AppleGrantHandler.HandleAsync: email: {email}", email);
             var userManager = context.HttpContext.RequestServices.GetRequiredService<IdentityUserManager>();
 
+            var isNewUser = false;
             var user = await userManager.FindByLoginAsync(GrantTypeConstants.APPLE, appleUser.SubjectId);
             if (user == null)
             {
@@ -93,6 +111,7 @@ public class AppleGrantHandler : GrantHandlerBase, ITransientDependency
                 
                 if (user == null)
                 {
+                    isNewUser = true;
                     name = Guid.NewGuid().ToString("N");
                     user = new IdentityUser(Guid.NewGuid(), name, email: email.IsNullOrWhiteSpace() ? $"{name}@apple.com":email);
                     await userManager.CreateAsync(user);
@@ -106,7 +125,7 @@ public class AppleGrantHandler : GrantHandlerBase, ITransientDependency
                     GrantTypeConstants.APPLE));
             }
 
-            var claimsPrincipal = await CreateUserClaimsPrincipalWithFactoryAsync(context, user);
+            var claimsPrincipal = await CreateUserClaimsPrincipalWithFactoryAsync(context, user, isNewUser);
 
             return new SignInResult(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme, claimsPrincipal);
         }
@@ -124,10 +143,10 @@ public class AppleGrantHandler : GrantHandlerBase, ITransientDependency
         var lastName = principal.FindFirstValue(ClaimTypes.Surname);
         var sub = principal.FindFirstValue(ClaimTypes.NameIdentifier);
         
-        if (email?.EndsWith("@privaterelay.appleid.com") == true)
+        if (email.IsNullOrWhiteSpace() || email.EndsWith("@privaterelay.appleid.com"))
         {
             email = $"{sub}@apple.privaterelay.com";
-        }
+        } 
 
         return new AppleUserInfo
         {

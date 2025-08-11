@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using Orleans.Hosting;
 using Serilog;
 using Serilog.Events;
+using Aevatar.Domain.Shared.Configuration;
 
 namespace Aevatar.Developer.Host;
 
@@ -18,9 +19,13 @@ public class Program
     public async static Task<int> Main(string[] args)
     {
         var configuration = new ConfigurationBuilder()
-            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
-            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json"))
-            .AddJsonFile("appsettings.json")
+            .AddAevatarSecureConfiguration(
+                systemConfigPaths: new[]
+                {
+                    Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"),
+                    Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json")
+                })
+            .AddEnvironmentVariables()
             .Build();
         
         var hostId = configuration["Host:HostId"];
@@ -43,9 +48,13 @@ public class Program
             Log.Information("Starting Developer.Host.");
             var builder = WebApplication.CreateBuilder(args);
             builder.Configuration
-                .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
-                .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json"))
-                .AddJsonFile("appsettings.json");
+                .AddAevatarSecureConfiguration(
+                    systemConfigPaths: new[]
+                    {
+                        Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"),
+                        Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json")
+                    })
+                .AddEnvironmentVariables();
             builder.Host
                 .UseOrleansClientConfigration()
                 .ConfigureDefaults(args)

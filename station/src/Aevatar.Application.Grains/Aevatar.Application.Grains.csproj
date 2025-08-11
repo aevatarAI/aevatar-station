@@ -8,32 +8,36 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Aevatar.GAgents.ChatAgent"/>
-        <PackageReference Include="AutoGen.Core"/>
-        <PackageReference Include="Microsoft.Extensions.Options"/>
-        <PackageReference Include="Microsoft.Orleans.Sdk"/>
-        <PackageReference Include="AElf.OpenTelemetry"/>
-        <PackageReference Include="Volo.Abp.AutoMapper"/>
-        <PackageReference Include="Volo.Abp.EventBus.Abstractions"/>
-        <PackageReference Include="Aevatar.GAgents.AIGAgent"/>
-        <PackageReference Include="Aevatar.GAgents.SemanticKernel"/>
-        <PackageReference Include="Aevatar.GAgents.AI.Abstractions"/>
-        <PackageReference Include="Aevatar.GAgents.Twitter"/>
-        <PackageReference Include="Aevatar.GAgents.GroupChat"/>
+        <PackageReference Include="Aevatar.GAgents.ChatAgent" />
+        <PackageReference Include="AutoGen.Core" />
+        <PackageReference Include="Microsoft.Extensions.Options" />
+        <PackageReference Include="Microsoft.Orleans.Sdk" />
+        <PackageReference Include="AElf.OpenTelemetry" />
+        <PackageReference Include="Volo.Abp.AutoMapper" />
+        <PackageReference Include="Volo.Abp.EventBus.Abstractions" />
+        <PackageReference Include="Aevatar.GAgents.AIGAgent" />
+        <PackageReference Include="Aevatar.GAgents.SemanticKernel" />
+        <PackageReference Include="Aevatar.GAgents.AI.Abstractions" />
+        <PackageReference Include="Aevatar.GAgents.Twitter" />
+        <PackageReference Include="Aevatar.GAgents.GroupChat" />
+        <PackageReference Include="Aevatar.GAgents.PsiOmni" />
+        <PackageReference Include="Aevatar.GAgents.PsiOmni.Plugins" />
+        <PackageReference Include="Aevatar.GAgents.MCP" />
+        <PackageReference Include="Aevatar.GAgents.InputGAgent" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\..\..\framework\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
         <ProjectReference Include="..\..\..\signalR\src\Aevatar.SignalR\Aevatar.SignalR.csproj" />
         <ProjectReference Include="..\..\..\framework\src\Aevatar.PermissionManagement\Aevatar.PermissionManagement.csproj" />
-        <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj"/>
-        <ProjectReference Include="..\Aevatar.CQRS\Aevatar.CQRS.csproj"/>
-        <ProjectReference Include="..\Aevatar.Domain.Grains\Aevatar.Domain.Grains.csproj"/>
-        <ProjectReference Include="..\Aevatar.Domain\Aevatar.Domain.csproj"/>
-        <ProjectReference Include="..\Aevatar.Neo4JStore\Aevatar.Neo4JStore.csproj"/>
+        <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj" />
+        <ProjectReference Include="..\Aevatar.CQRS\Aevatar.CQRS.csproj" />
+        <ProjectReference Include="..\Aevatar.Domain.Grains\Aevatar.Domain.Grains.csproj" />
+        <ProjectReference Include="..\Aevatar.Domain\Aevatar.Domain.csproj" />
+        <ProjectReference Include="..\Aevatar.Neo4JStore\Aevatar.Neo4JStore.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <Compile Remove="Agents\TestAgent\TestAgent.cs"/>
+        <Compile Remove="Agents\TestAgent\TestAgent.cs" />
     </ItemGroup>
 </Project>

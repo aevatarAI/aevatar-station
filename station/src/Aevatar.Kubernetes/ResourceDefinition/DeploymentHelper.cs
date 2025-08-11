@@ -1,3 +1,4 @@
+using Aevatar.Domain.Shared.Configuration;
 using k8s.Models;
 
 namespace Aevatar.Kubernetes.ResourceDefinition;
@@ -64,7 +65,8 @@ public class DeploymentHelper
             Metadata = new V1ObjectMeta
             {
                 Name = deploymentName,
-                NamespaceProperty = KubernetesConstants.AppNameSpace
+                NamespaceProperty = KubernetesConstants.AppNameSpace,
+                Labels = labels
             },
             Spec = new V1DeploymentSpec
             {
@@ -79,7 +81,7 @@ public class DeploymentHelper
                         Affinity = CreateNodeAffinity(),
                         Tolerations = CreateNodeTolerations(),
                         Containers = CreateContainers(imageName, containerName, command, containerPort,
-                            requestCpu, requestMemory, readinessProbeHealthPath, isSilo ? MainEnv : otherEnv, otherEnv),
+                            requestCpu, requestMemory, readinessProbeHealthPath, isSilo ? MainEnv : otherEnv, otherEnv, isSilo),
                         Volumes = CreatePodTemplateVolumes(configMapName, sideCarConfigMapName)
                     }
                 }
@@ -174,22 +176,34 @@ public class DeploymentHelper
 
     private static List<V1Container> CreateContainers(string imageName, string containerName, List<string> command,
         int containerPort,
-        string requestCpu, string requestMemory, string readinessProbeHealthPath, V1EnvVar[] env, V1EnvVar[] sidecarEnv)
+        string requestCpu, string requestMemory, string readinessProbeHealthPath, V1EnvVar[] env, V1EnvVar[] sidecarEnv,
+        bool isSilo = false)
     {
         // Main container
+        var ports = new List<V1ContainerPort> { new V1ContainerPort(containerPort) };
+        
+        // For Silo containers, add health check port
+        if (isSilo)
+        {
+            ports.Add(new V1ContainerPort(KubernetesConstants.SiloHealthCheckPort));
+        }
+        
         var mainContainer = new V1Container
         {
             Name = containerName,
             Image = imageName,
             Command = command,
-            Ports = new List<V1ContainerPort> { new V1ContainerPort(containerPort) },
+            Ports = ports,
             VolumeMounts = CreateMainContainerVolumeMounts(),
             Resources = CreateResources(requestCpu, requestMemory),
             Env = env
         };
         if (!string.IsNullOrEmpty(readinessProbeHealthPath))
         {
-            mainContainer.ReadinessProbe = CreateQueryPodReadinessProbe(readinessProbeHealthPath, containerPort);
+            // Use health check port for Silo readiness probe, otherwise use main container port
+            var probePort = isSilo ? KubernetesConstants.SiloHealthCheckPort : containerPort;
+            mainContainer.ReadinessProbe = CreateQueryPodReadinessProbe(readinessProbeHealthPath, probePort);;
+            mainContainer.LivenessProbe = CreateQueryPodLivenessProbe(readinessProbeHealthPath, probePort);
         }
 
         // Filebeat side car container
@@ -294,20 +308,28 @@ public class DeploymentHelper
                 Path = readinessProbeHealthPath,
                 Port = containerPort
             },
-            // Exec = new V1ExecAction()
-            // {
-            //     Command = new List<string>()
-            //     {
-            //         "sh",
-            //         "-c",
-            //         "curl -X POST -H 'Content-Type: application/json' -d '{\"query\":\"{ __schema { types { name } } }\"}' http://localhost:"+containerPort+readinessProbeHealthPath+" | grep 'name'"
-            //     }
-            // },
             InitialDelaySeconds = 5,
             PeriodSeconds = 5,
             TimeoutSeconds = 1,
             SuccessThreshold = 2,
             FailureThreshold = 10
+        };
+    }
+    
+    private static V1Probe CreateQueryPodLivenessProbe(string livenessProbeHealthPath, int containerPort)
+    {
+        return new V1Probe()
+        {
+            HttpGet = new V1HTTPGetAction()
+            {
+                Path = livenessProbeHealthPath, 
+                Port = containerPort
+            },
+            InitialDelaySeconds = 10,     
+            PeriodSeconds = 10,          
+            TimeoutSeconds = 2,          
+            SuccessThreshold = 1,         
+            FailureThreshold = 3 
         };
     }
 
@@ -342,6 +364,13 @@ public class DeploymentHelper
                 MountPath = KubernetesConstants
                     .AppSettingSiloSharedFileMountPath,
                 SubPath = KubernetesConstants.AppSettingSiloSharedFileName
+            },
+            new V1VolumeMount
+            {
+                Name = "config-volume",
+                MountPath = KubernetesConstants
+                    .AppSettingBusinessFileMountPath,
+                SubPath = SecureConfigurationExtensions.DefaultBusinessConfigPath
             },
             new V1VolumeMount
             {
@@ -400,6 +429,11 @@ public class DeploymentHelper
                         {
                             Key = KubernetesConstants.AppSettingSiloSharedFileName,
                             Path = KubernetesConstants.AppSettingSiloSharedFileName
+                        },
+                        new V1KeyToPath
+                        {
+                            Key = SecureConfigurationExtensions.DefaultBusinessConfigPath,
+                            Path = SecureConfigurationExtensions.DefaultBusinessConfigPath
                         }
                     }
                 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using Aevatar.Dapr;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -24,6 +25,11 @@ public static class OrleansHostExtensions
             var hostId = context.Configuration.GetValue<string>("Host:HostId");
             if (configSection == null)
                 throw new ArgumentNullException(nameof(configSection), "The Orleans config node is missing");
+                
+            // Configure Gateway connection
+            // var gatewayPort = configSection.GetValue<int>("GatewayPort", 11111);
+            // clientBuilder.UseStaticClustering(new IPEndPoint(IPAddress.Loopback, gatewayPort));
+                
             clientBuilder.UseMongoDBClient(configSection.GetValue<string>("MongoDBClient"))
                 .UseMongoDBClustering(options =>
                 {

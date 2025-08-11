@@ -2,8 +2,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoDB.Driver.Core.Clusters;
-using Moq;
 using Orleans.Configuration;
 using Orleans.Storage;
 using Shouldly;
@@ -15,52 +13,56 @@ using Aevatar.EventSourcing.Core.Storage;
 using Aevatar.EventSourcing.MongoDB.Hosting;
 using Aevatar.EventSourcing.MongoDB.Options;
 using Aevatar.EventSourcing.MongoDB.Serializers;
+using Aevatar.EventSourcing.MongoDB.Collections;
 
 namespace Aevatar.EventSourcing.MongoDB.Tests;
 
 [Collection(nameof(MongoDbTestCollection))]
 public class MongoDbLogConsistentStorageTests : IAsyncDisposable
 {
-    private readonly Mock<IMongoCollection<BsonDocument>> _mongoCollectionMock;
+    private readonly IMongoCollection<BsonDocument> _mongoCollection;
     private readonly MongoDbLogConsistentStorage _storage;
     private readonly string _name;
     private readonly MongoDbStorageOptions _mongoDbOptions;
-    private readonly Mock<IOptions<ClusterOptions>> _clusterOptionsMock;
-    private readonly Mock<ILogger<MongoDbLogConsistentStorage>> _loggerMock;
-    private readonly Mock<IMongoClient> _mongoClientMock;
-    private readonly Mock<IMongoDatabase> _mongoDatabaseMock;
-    private readonly Mock<ICluster> _clusterMock;
+    private readonly IOptions<ClusterOptions> _clusterOptions;
+    private readonly ILogger<MongoDbLogConsistentStorage> _logger;
+    private readonly IMongoClient _mongoClient;
+    private readonly IMongoDatabase _mongoDatabase;
     private readonly string _mongoDbConnectionString;
+    private readonly string _databaseName;
     private const string TEST_GRAIN_TYPE_NAME = "TestGrainType";
 
     public MongoDbLogConsistentStorageTests()
     {
         _name = "TestStorage";
-        _mongoClientMock = new Mock<IMongoClient>();
-        _mongoDatabaseMock = new Mock<IMongoDatabase>();
-        _mongoCollectionMock = new Mock<IMongoCollection<BsonDocument>>();
-        _clusterMock = new Mock<ICluster>();
-
-        _mongoClientMock.Setup(x => x.GetDatabase(It.IsAny<string>(), null))
-            .Returns(_mongoDatabaseMock.Object);
-        _mongoDatabaseMock.Setup(x => x.GetCollection<BsonDocument>(It.IsAny<string>(), null))
-            .Returns(_mongoCollectionMock.Object);
-        _mongoClientMock.Setup(x => x.Cluster).Returns(_clusterMock.Object);
-
-        _clusterOptionsMock = new Mock<IOptions<ClusterOptions>>();
-        _clusterOptionsMock.Setup(x => x.Value).Returns(new ClusterOptions { ServiceId = "TestService" });
-        _loggerMock = new Mock<ILogger<MongoDbLogConsistentStorage>>();
-
+        
+        // Create real MongoDB connection
         _mongoDbConnectionString = AevatarMongoDbFixture.GetRandomConnectionString();
+        _mongoClient = new MongoClient(_mongoDbConnectionString);
+        _databaseName = $"EventSourcingTest_{Guid.NewGuid():N}";
+        _mongoDatabase = _mongoClient.GetDatabase(_databaseName);
+        _mongoCollection = _mongoDatabase.GetCollection<BsonDocument>("TestCollection");
+
+        // Create real options and services
+        _clusterOptions = Microsoft.Extensions.Options.Options.Create(new ClusterOptions { ServiceId = "TestService" });
+        
+        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        _logger = loggerFactory.CreateLogger<MongoDbLogConsistentStorage>();
+
         var settings = MongoClientSettings.FromConnectionString(_mongoDbConnectionString);
         _mongoDbOptions = new MongoDbStorageOptions
         {
             ClientSettings = settings,
-            Database = "TestDb",
+            Database = _databaseName,
             GrainStateSerializer = new BsonGrainSerializer()
         };
 
-        _storage = new MongoDbLogConsistentStorage(_name, _mongoDbOptions, _clusterOptionsMock.Object, _loggerMock.Object);
+        // Create real collection factory 
+        var optionsMonitor = new MockOptionsMonitor(_mongoDbOptions);
+        var collectionFactory = new EventSourcingCollectionFactory(optionsMonitor, loggerFactory);
+
+        _storage = new MongoDbLogConsistentStorage(_name, _mongoDbOptions, _clusterOptions, 
+            _logger, collectionFactory);
     }
 
     [Fact]
@@ -68,7 +70,7 @@ public class MongoDbLogConsistentStorageTests : IAsyncDisposable
     {
         // Basic connectivity test
         Assert.NotNull(_storage);
-        Assert.NotNull(_mongoClientMock);
+        Assert.NotNull(_mongoClient);
         
         // Initialize the storage
         var observer = new TestSiloLifecycle();
@@ -81,28 +83,16 @@ public class MongoDbLogConsistentStorageTests : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        // Clean up any test data using real MongoDB connection
-        var client = new MongoClient(_mongoDbConnectionString);
-        var database = client.GetDatabase("TestDb");
-        var collectionsCursor = await database.ListCollectionNamesAsync();
-        var collectionNames = new List<string>();
-        while (await collectionsCursor.MoveNextAsync())
-        {
-            collectionNames.AddRange(collectionsCursor.Current);
-        }
-
-        foreach (var collectionName in collectionNames)
-        {
-            var collection = database.GetCollection<BsonDocument>(collectionName);
-            await collection.DeleteManyAsync(FilterDefinition<BsonDocument>.Empty);
-        }
+        // Clean up the test database
+        await _mongoDatabase.Client.DropDatabaseAsync(_databaseName);
+        (_mongoClient as IDisposable)?.Dispose();
     }
 
     [Fact]
     public async Task ReadAsync_WhenNotInitialized_ReturnsEmptyList()
     {
         // Arrange
-        var grainId = GrainId.Create("ReadEmptyGrain", "TestKey");
+        var grainId = GrainId.Create("ReadEmptyGrain", Guid.NewGuid().ToString());
         var grainTypeName = "TestGrainType";
 
         // Act
@@ -116,7 +106,7 @@ public class MongoDbLogConsistentStorageTests : IAsyncDisposable
     public async Task GetLastVersionAsync_WhenNotInitialized_ReturnsNegativeOne()
     {
         // Arrange
-        var grainId = GrainId.Create("VersionCheckGrain", "TestKey");
+        var grainId = GrainId.Create("VersionCheckGrain", Guid.NewGuid().ToString());
         var grainTypeName = "TestGrainType";
 
         // Act
@@ -130,7 +120,7 @@ public class MongoDbLogConsistentStorageTests : IAsyncDisposable
     public async Task AppendAsync_WhenNotInitialized_ReturnsNegativeOne()
     {
         // Arrange
-        var grainId = GrainId.Create("AppendEmptyGrain", "TestKey");
+        var grainId = GrainId.Create("AppendEmptyGrain", Guid.NewGuid().ToString());
         var grainTypeName = "TestGrainType";
         var entries = new List<TestLogEntry>();
 
@@ -145,7 +135,7 @@ public class MongoDbLogConsistentStorageTests : IAsyncDisposable
     public async Task AppendAsync_WithEmptyEntries_ReturnsLastVersion()
     {
         // Arrange
-        var grainId = GrainId.Create("AppendEmptyListGrain", "TestKey");
+        var grainId = GrainId.Create("AppendEmptyListGrain", Guid.NewGuid().ToString());
         var grainTypeName = "TestGrainType";
         var entries = new List<TestLogEntry>();
 
@@ -159,34 +149,28 @@ public class MongoDbLogConsistentStorageTests : IAsyncDisposable
     [Fact]
     public async Task AppendAsync_WithVersionConflict_ThrowsInconsistentStateException()
     {
-        // Arrange
-        var grainId = GrainId.Create("ConflictGrain", "TestKey");
+        // Arrange - use unique grain ID to avoid test interference
+        var grainId = GrainId.Create("ConflictGrain", Guid.NewGuid().ToString());
         var grainTypeName = "TestGrainType";
         var entries = new List<TestLogEntry> 
         { 
             new TestLogEntry { snapshot = new TestGrainState { Data = "Conflict Test Entry" } } 
         };
 
-        var mockCursor = new Mock<IAsyncCursor<BsonDocument>>();
-        mockCursor.Setup(x => x.MoveNextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        mockCursor.SetupSequence(x => x.Current)
-            .Returns(new[] { new BsonDocument { { "Version", 2 } } }); // Return a higher version than expected
-
-        _mongoCollectionMock.Setup(x => x.FindAsync(
-            It.IsAny<FilterDefinition<BsonDocument>>(),
-            It.IsAny<FindOptions<BsonDocument, BsonDocument>>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(mockCursor.Object);
-
         // Initialize the storage
         var observer = new TestSiloLifecycle();
         _storage.Participate(observer);
         await observer.OnStart(CancellationToken.None);
 
-        // Act & Assert
+        // First append data to create a version conflict scenario
+        var firstResult = await _storage.AppendAsync(grainTypeName, grainId, entries, -1);
+        
+        // Verify first append succeeded and returned version 0
+        Assert.Equal(0, firstResult);
+
+        // Act & Assert - try to append with wrong expected version
         var exception = await Assert.ThrowsAsync<InconsistentStateException>(() =>
-            _storage.AppendAsync(grainTypeName, grainId, entries, 1));
+            _storage.AppendAsync(grainTypeName, grainId, entries, 1)); // Wrong expected version - should be 0
 
         Assert.Contains("Version conflict", exception.Message);
     }
@@ -195,7 +179,7 @@ public class MongoDbLogConsistentStorageTests : IAsyncDisposable
     public async Task ReadAsync_ShouldReturnLogEntries_WhenDataExists()
     {
         // Arrange
-        var grainId = GrainId.Create("TestDataExistsGrain", "TestKey");
+        var grainId = GrainId.Create("TestDataExistsGrain", Guid.NewGuid().ToString());
         var grainTypeName = "TestGrainType";
         var fromVersion = 0;
         var maxCount = 10;
@@ -206,42 +190,14 @@ public class MongoDbLogConsistentStorageTests : IAsyncDisposable
             new TestLogEntry { snapshot = new TestGrainState { Data = "Test2" } }
         };
 
-        // Mock GetLastVersionAsync to return -1 initially
-        var mockCursorForVersion = new Mock<IAsyncCursor<BsonDocument>>();
-        mockCursorForVersion.Setup(x => x.MoveNextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
-        _mongoCollectionMock.Setup(x => x.FindAsync(
-            It.IsAny<FilterDefinition<BsonDocument>>(),
-            It.IsAny<FindOptions<BsonDocument, BsonDocument>>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(mockCursorForVersion.Object);
-
-        // Mock InsertManyAsync for AppendAsync
-        _mongoCollectionMock.Setup(x => x.InsertManyAsync(
-            It.IsAny<IEnumerable<BsonDocument>>(),
-            It.IsAny<InsertManyOptions>(),
-            It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        // Mock FindAsync for ReadAsync
-        var mockCursorForRead = new Mock<IAsyncCursor<BsonDocument>>();
-        mockCursorForRead.Setup(x => x.MoveNextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        mockCursorForRead.Setup(x => x.Current)
-            .Returns(testData.Select(d => d.ToBsonDocument()).ToList());
-
-        _mongoCollectionMock.Setup(x => x.FindAsync(
-            It.IsAny<FilterDefinition<BsonDocument>>(),
-            It.IsAny<FindOptions<BsonDocument, BsonDocument>>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(mockCursorForRead.Object);
-
         // Initialize the storage
         var observer = new TestSiloLifecycle();
         _storage.Participate(observer);
         await observer.OnStart(CancellationToken.None);
 
+        // First append data
         await _storage.AppendAsync(grainTypeName, grainId, testData, -1);
+        
         // Act
         var result = await _storage.ReadAsync<TestLogEntry>(grainTypeName, grainId, fromVersion, maxCount);
 
@@ -252,9 +208,6 @@ public class MongoDbLogConsistentStorageTests : IAsyncDisposable
         Assert.NotNull(result[1].snapshot);
         Assert.Equal("Test1", result[0].snapshot.Data);
         Assert.Equal("Test2", result[1].snapshot.Data);
-
-        // Clean up after test
-        await DisposeAsync();
     }
 
     [Fact]
@@ -310,7 +263,7 @@ public class MongoDbLogConsistentStorageTests : IAsyncDisposable
     public async Task Simple_ReadAsync_Test()
     {
         // Arrange
-        var grainId = GrainId.Create("SimpleGrain", "Test");
+        var grainId = GrainId.Create("SimpleGrain", Guid.NewGuid().ToString());
         var grainTypeName = TEST_GRAIN_TYPE_NAME;
         
         // Create test documents
@@ -372,6 +325,23 @@ public class MongoDbLogConsistentStorageTests : IAsyncDisposable
         Assert.Equal("Test2Value", entries[1].snapshot.Value);
     }
 
+
+    // Test helper for options monitoring  
+    private class MockOptionsMonitor : IOptionsMonitor<MongoDbStorageOptions>
+    {
+        private readonly MongoDbStorageOptions _options;
+
+        public MockOptionsMonitor(MongoDbStorageOptions options)
+        {
+            _options = options;
+        }
+
+        public MongoDbStorageOptions CurrentValue => _options;
+
+        public MongoDbStorageOptions Get(string? name) => _options;
+
+        public IDisposable? OnChange(Action<MongoDbStorageOptions, string?> listener) => null;
+    }
 
     // Add mock ISiloLifecycle implementation for testing
     private class TestSiloLifecycle : ISiloLifecycle

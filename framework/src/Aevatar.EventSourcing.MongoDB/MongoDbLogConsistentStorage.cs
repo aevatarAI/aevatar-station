@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Aevatar.EventSourcing.Core.Storage;
+using Aevatar.EventSourcing.MongoDB.Collections;
 using Aevatar.EventSourcing.MongoDB.Options;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -18,21 +19,25 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
     private readonly ILogger<MongoDbLogConsistentStorage> _logger;
     private readonly string _name;
     private readonly MongoDbStorageOptions _mongoDbOptions;
+    private readonly IEventSourcingCollectionFactory _collectionFactory;
 
-    private MongoClient? _client;
+    private IMongoClient? _client;
 
     private bool _initialized;
     private readonly string _serviceId;
 
     private readonly string _fieldData = "snapshot";
     private readonly IGrainStateSerializer _grainStateSerializer;
+    
     public MongoDbLogConsistentStorage(string name, MongoDbStorageOptions options,
-        IOptions<ClusterOptions> clusterOptions, ILogger<MongoDbLogConsistentStorage> logger)
+        IOptions<ClusterOptions> clusterOptions, ILogger<MongoDbLogConsistentStorage> logger,
+        IEventSourcingCollectionFactory collectionFactory)
     {
         _name = name;
         _mongoDbOptions = options;
         _serviceId = clusterOptions.Value.ServiceId;
         _logger = logger;
+        _collectionFactory = collectionFactory;
         
         if (options.GrainStateSerializer is null)
         {
@@ -47,7 +52,7 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
     public async Task<IReadOnlyList<TLogEntry>> ReadAsync<TLogEntry>(string grainTypeName, GrainId grainId,
         int fromVersion, int maxCount)
     {
-        if (_initialized == false || _client == null || maxCount <= 0)
+        if (!_initialized || _client == null || maxCount <= 0)
         {
             return new List<TLogEntry>();
         }
@@ -55,8 +60,7 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
         var collectionName = GetStreamName(grainId);
         try
         {
-            var database = GetDatabase();
-            var collection = database.GetCollection<BsonDocument>(collectionName);
+            var collection = GetCollection(collectionName).GetCollection();
 
             var filter = Builders<BsonDocument>.Filter.And(
                 Builders<BsonDocument>.Filter.Eq("GrainId", grainId.ToString()),
@@ -97,9 +101,19 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
         return _client!.GetDatabase(_mongoDbOptions.Database);
     }
 
+    private IEventSourcingCollection GetCollection(string collectionName)
+    {
+        if (!_initialized || _client == null)
+        {
+            throw new InvalidOperationException("MongoDB client is not initialized. Call Init() first.");
+        }
+
+        return _collectionFactory.CreateCollection(_client, collectionName, _name);
+    }
+
     public async Task<int> GetLastVersionAsync(string grainTypeName, GrainId grainId)
     {
-        if (_initialized == false || _client == null)
+        if (!_initialized || _client == null)
         {
             return -1;
         }
@@ -107,8 +121,7 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
         var collectionName = GetStreamName(grainId);
         try
         {
-            var database = GetDatabase();
-            var collection = database.GetCollection<BsonDocument>(collectionName);
+            var collection = GetCollection(collectionName).GetCollection();
 
             var grainIdString = grainId.ToString();
             var filter = Builders<BsonDocument>.Filter.Eq("GrainId", grainIdString);
@@ -141,7 +154,7 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
     public async Task<int> AppendAsync<TLogEntry>(string grainTypeName, GrainId grainId, IList<TLogEntry> entries,
         int expectedVersion)
     {
-        if (_initialized == false || _client == null)
+        if (!_initialized || _client == null)
         {
             return -1;
         }
@@ -154,8 +167,7 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
 
         try
         {
-            var database = GetDatabase();
-            var collection = database.GetCollection<BsonDocument>(collectionName);
+            var collection = GetCollection(collectionName).GetCollection();
 
             var currentVersion = await GetLastVersionAsync(grainTypeName, grainId).ConfigureAwait(false);
             if (currentVersion != expectedVersion)
@@ -163,6 +175,9 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
                 throw new InconsistentStateException(
                     $"Version conflict ({nameof(AppendAsync)}): ServiceId={_serviceId} ProviderName={_name} GrainType={grainTypeName} GrainId={grainId} Version={expectedVersion}.");
             }
+
+            _logger.LogInformation("AppendAsync: ServiceId={ServiceId} ProviderName={ProviderName} GrainType={GrainType} GrainId={GrainId} ExpectedVersion={ExpectedVersion} CurrentVersion={CurrentVersion}",
+                _serviceId, _name, grainTypeName, grainId, expectedVersion, currentVersion);
 
             var grainIdString = grainId.ToString();
             var documents = new List<BsonDocument>();
@@ -235,9 +250,10 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
 
         return;
     }
+    
     private async Task Close(CancellationToken cancellationToken)
     {
-        if (_initialized == false || _client == null)
+        if (!_initialized || _client == null)
         {
             return;
         }

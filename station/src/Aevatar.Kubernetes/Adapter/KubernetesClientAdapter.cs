@@ -66,6 +66,15 @@ public class KubernetesClientAdapter : IKubernetesClientAdapter, ISingletonDepen
         return deployments;
     }
 
+    public async Task<V1DeploymentList> ListDeploymentAsync(string namespaceParameter, string labelSelector,
+        CancellationToken cancellationToken = default(CancellationToken))
+    {
+        // Call the extension method of the k8s.Kubernetes with labelSelector
+        var deployments =
+            await _k8sClient.ListNamespacedDeploymentAsync(namespaceParameter, labelSelector: labelSelector, cancellationToken: cancellationToken);
+        return deployments;
+    }
+
     public async Task<V1ServiceList> ListServiceAsync(string namespaceParameter,
         CancellationToken cancellationToken = default(CancellationToken))
     {
@@ -220,7 +229,19 @@ public class KubernetesClientAdapter : IKubernetesClientAdapter, ISingletonDepen
     
     public async Task<V2HorizontalPodAutoscaler> CreateNamespacedHorizontalPodAutoscalerAsync( V2HorizontalPodAutoscaler body,string namespaceParameter, CancellationToken cancellationToken = default(CancellationToken))
     {
-            return await _k8sClient.AutoscalingV2.CreateNamespacedHorizontalPodAutoscalerAsync(body, namespaceParameter,
-                cancellationToken: cancellationToken);
+        return await _k8sClient.CreateNamespacedHorizontalPodAutoscalerAsync(body, namespaceParameter, cancellationToken: cancellationToken);
+    }
+
+    public async Task<bool> NamespaceExistsAsync(string namespaceName, CancellationToken cancellationToken = default(CancellationToken))
+    {
+        try
+        {
+            await _k8sClient.ReadNamespaceAsync(namespaceName, cancellationToken: cancellationToken);
+            return true;
+        }
+        catch (HttpOperationException ex) when (ex.Response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return false;
+        }
     }
 }

@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Developer.Logger;
 using Aevatar.Developer.Logger.Entities;
-using Aevatar.Kubernetes.Enum;
+using Aevatar.Enum;
 using Aevatar.Options;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;

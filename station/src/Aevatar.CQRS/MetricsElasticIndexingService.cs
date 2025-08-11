@@ -42,6 +42,11 @@ public class MetricsElasticIndexingService : IIndexingService
     private readonly Counter<long> _queryLuceneSuccessCounter;
     private readonly Counter<long> _queryLuceneFailCounter;
 
+    // Metrics for CountWithLuceneAsync
+    private readonly Histogram<double> _countLuceneDurationHistogram;
+    private readonly Counter<long> _countLuceneSuccessCounter;
+    private readonly Counter<long> _countLuceneFailCounter;
+
     public MetricsElasticIndexingService(IIndexingService inner, ILogger<MetricsElasticIndexingService> logger)
     {
         _inner = inner;
@@ -64,6 +69,10 @@ public class MetricsElasticIndexingService : IIndexingService
         _queryLuceneDurationHistogram = meter.CreateHistogram<double>("es.query_lucene.duration", "ms", "ElasticSearch Lucene query operation duration");
         _queryLuceneSuccessCounter = meter.CreateCounter<long>("es.query_lucene.success", "count", "ElasticSearch Lucene query operations succeeded");
         _queryLuceneFailCounter = meter.CreateCounter<long>("es.query_lucene.failure", "count", "ElasticSearch Lucene query operations failed");
+
+        _countLuceneDurationHistogram = meter.CreateHistogram<double>("es.count_lucene.duration", "ms", "ElasticSearch Lucene count operation duration");
+        _countLuceneSuccessCounter = meter.CreateCounter<long>("es.count_lucene.success", "count", "ElasticSearch Lucene count operations succeeded");
+        _countLuceneFailCounter = meter.CreateCounter<long>("es.count_lucene.failure", "count", "ElasticSearch Lucene count operations failed");
     }
 
     public async Task SaveOrUpdateStateIndexBatchAsync(IEnumerable<SaveStateCommand> commands)
@@ -180,6 +189,36 @@ public class MetricsElasticIndexingService : IIndexingService
         finally
         {
             activity?.SetTag("es.query_lucene.elapsedMs", stopwatch.ElapsedMilliseconds);
+        }
+    }
+
+    public async Task<long> CountWithLuceneAsync(LuceneQueryDto queryDto)
+    {
+        using var activity = _activitySource.StartActivity("CountWithLuceneAsync", ActivityKind.Client);
+        var stopwatch = Stopwatch.StartNew();
+        try
+        {
+            var result = await _inner.CountWithLuceneAsync(queryDto);
+            stopwatch.Stop();
+            _countLuceneDurationHistogram.Record(stopwatch.Elapsed.TotalMilliseconds);
+            _countLuceneSuccessCounter.Add(1);
+            activity?.SetTag("es.count_lucene.success", 1);
+            _logger.LogInformation("[ES-LuceneCount] traceId:{traceId} spanId:{spanId} success", activity?.TraceId, activity?.SpanId);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            _countLuceneDurationHistogram.Record(stopwatch.Elapsed.TotalMilliseconds);
+            _countLuceneFailCounter.Add(1);
+            activity?.SetTag("exception", true);
+            activity?.SetTag("exception.message", ex.Message);
+            _logger.LogError(ex, "[ES-LuceneCount-Error] traceId:{traceId} spanId:{spanId}", activity?.TraceId, activity?.SpanId);
+            throw;
+        }
+        finally
+        {
+            activity?.SetTag("es.count_lucene.elapsedMs", stopwatch.ElapsedMilliseconds);
         }
     }
 } 

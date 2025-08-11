@@ -59,10 +59,12 @@ public class SignatureGrantHandler : GrantHandlerBase, ITransientDependency
             throw;
         }
 
+        var isNewUser = false;
         var userManager = context.HttpContext.RequestServices.GetRequiredService<IdentityUserManager>();
         var user = await userManager.FindByNameAsync(walletAddress);
         if (user == null)
         {
+            isNewUser = true;
             user = new IdentityUser(Guid.NewGuid(), walletAddress, email: Guid.NewGuid().ToString("N") + "@ABP.IO");
             await userManager.CreateAsync(user);
             await userManager.SetRolesAsync(user,
@@ -75,7 +77,7 @@ public class SignatureGrantHandler : GrantHandlerBase, ITransientDependency
         }
 
         var identityUser = await userManager.FindByNameAsync(walletAddress);
-        var claimsPrincipal = await CreateUserClaimsPrincipalWithFactoryAsync(context, identityUser);
+        var claimsPrincipal = await CreateUserClaimsPrincipalWithFactoryAsync(context, identityUser, isNewUser);
 
         return new SignInResult(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme, claimsPrincipal);
     }

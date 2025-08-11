@@ -1,0 +1,250 @@
+name: Run Aevatar Station Ephemeral Test Environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment_ttl:
+        description: "Duration to keep environment (in minutes)"
+        required: true
+        default: "60"
+      cors_urls:
+        description: "Comma-separated list of allowed CORS URLs"
+        required: true
+        default: 'http://localhost:3000,http://localhost:5173,http://localhost:5174,https://*.aevatar.ai'
+      
+
+run-name: Run Aevatar Station Ephemeral Test Environment on ${{ github.ref_name }} from ${{ github.sha }}
+
+env:
+  DOTNET_INSTALL_DIR: "./.dotnet"
+
+jobs:
+  publish:
+    runs-on: ephemeral-env-runner
+    strategy:
+      matrix:
+        servicename:
+          [
+            Aevatar.Silo,
+            Aevatar.Developer.Host,
+            Aevatar.HttpApi.Host,
+            Aevatar.AuthServer,
+            Aevatar.DbMigrator,
+          ]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.0.x'
+      - name: Cache NuGet Packages
+        id: nuget-packages
+        uses: actions/cache@v4
+        env:
+          cache-name: nuget-package-cache
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ matrix.servicename }}
+      - name: List NuGet Packages
+        if: ${{ steps.nuget-packages.outputs.cache-hit == 'true' }}
+        continue-on-error: true
+        run: ls -lh ~/.nuget/packages
+      - run: dotnet publish station/src/${{ matrix.servicename }}/${{ matrix.servicename }}.csproj -o out/${{ matrix.servicename }}
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.servicename }}
+          path: out/${{ matrix.servicename }}
+          retention-days: 1
+
+  build-and-push-image:
+    needs: publish
+    runs-on: ephemeral-env-runner
+    strategy:
+      matrix:
+        servicename:
+          [
+            Aevatar.Silo,
+            Aevatar.Developer.Host,
+            Aevatar.HttpApi.Host,
+            Aevatar.AuthServer,
+            Aevatar.DbMigrator,
+          ]
+    permissions:
+      contents: read
+    outputs:
+      short_sha: ${{ steps.vars.outputs.short_sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set short git commit SHA
+        id: vars
+        run: |
+          calculatedSha=$(git rev-parse --short ${{ github.sha }})
+          echo "short_sha=$calculatedSha" >> "$GITHUB_OUTPUT"
+      - name: Download a single artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.servicename }}
+          path: out/${{ matrix.servicename }}
+      - name: Create image tag
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.REPOSITORY_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/${{ matrix.servicename }}
+          tags: |
+            type=sha
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          build-args: |
+            servicename=${{ matrix.servicename }}
+            ENABLE_EPHEMERAL_CONFIG=true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  setup-ephermeral-test-env:
+    runs-on: ephemeral-env-runner
+    needs: build-and-push-image
+    outputs:
+      auth_server_url: ${{ steps.extract.outputs.auth_server_url }}
+      api_server_url: ${{ steps.extract.outputs.api_server_url }} 
+      app_url: ${{ steps.extract.outputs.app_url }}
+      client_id: ${{ steps.generate-uuid.outputs.client_id }}
+      client_secret: ${{ steps.generate-uuid.outputs.client_secret }}
+    steps:
+      - name: Generate UUID for project and client
+        id: generate-uuid
+        run: |
+          UUID=$(python3 -c 'import uuid; print(str(uuid.uuid4())[:8])')
+          echo "project_name=env-${UUID}" >> "$GITHUB_OUTPUT"
+          echo "client_id=${UUID}" >> "$GITHUB_OUTPUT"
+          echo "client_secret=${UUID}" >> "$GITHUB_OUTPUT"
+      
+      - name: Install GitHub CLI
+        run: |
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt update
+          sudo apt install gh -y
+      
+      - name: Setup Ephermeral Env
+        id: setup_env
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.TOK }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'AElfDevops',
+              repo: 'ephemeral-test-env',
+              workflow_id: 'ephemeral-env-main.yaml',
+              ref: 'main',
+              inputs: {
+                project_name: "${{ steps.generate-uuid.outputs.project_name }}",
+                environment_ttl: "${{ inputs.environment_ttl }}",
+                client_id: "${{ steps.generate-uuid.outputs.client_id }}",
+                client_secret: "${{ steps.generate-uuid.outputs.client_secret }}",
+                host_silo_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
+                host_client_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
+                station_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
+                cors_urls: "${{ inputs.cors_urls }}",
+              }
+            });
+            
+      - name: Wait for workflow run to complete
+        id: setup_wait
+        env:
+          GH_TOKEN: ${{ secrets.TOK }}
+        run: |
+          owner="AElfDevops"
+          repo="ephemeral-test-env"
+          workflow_id="ephemeral-env-main.yaml"
+
+          echo "Waiting for workflow $workflow_id to start..."
+          run_id=""
+
+          # Wait for 30 seconds before attempting to get the workflow run
+          echo "Sleeping for 30 seconds before checking workflow run..."
+          sleep 30
+
+          # Get the workflow run ID based on the latest triggered run
+          run_id=$(gh api repos/$owner/$repo/actions/workflows/$workflow_id/runs \
+            --jq '.workflow_runs | sort_by(.created_at) | reverse | .[0].id')
+
+          # Wait until the workflow run appears
+          for i in {1..30}; do
+            run_id=$(gh api repos/$owner/$repo/actions/workflows/$workflow_id/runs \
+              --jq '.workflow_runs[0].id')
+            if [ -n "$run_id" ]; then
+              echo "Run ID: $run_id"
+              break
+            fi
+            echo "Workflow not yet started, retrying in 10s..."
+            sleep 10
+          done
+
+          # Poll the run status
+          echo "Waiting for workflow run to complete..."
+          for i in {1..360}; do
+            status=$(gh api repos/$owner/$repo/actions/runs/$run_id --jq '.status')
+            conclusion=$(gh api repos/$owner/$repo/actions/runs/$run_id --jq '.conclusion')
+
+            echo "Status: $status | Conclusion: $conclusion"
+            if [ "$status" == "completed" ]; then
+              if [ "$conclusion" != "success" ]; then
+                echo "Workflow failed or was cancelled"
+                exit 1
+              fi
+              break
+            fi
+            sleep 10
+          done
+
+          echo "Workflow completed successfully"
+
+      - name: Download artifact from Devops repo
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: ephemeral-env-main.yaml
+          repo: AElfDevops/ephemeral-test-env
+          name: setup-aevatar-app-env-output  
+          github_token: ${{ secrets.TOK }}
+          path: ./downloaded
+
+      - name: Extract env data from JSON
+        id: extract
+        run: |
+          content=$(cat ./downloaded/setup-aevatar-app-env-output.json)
+          echo "project_name=$(echo $content | jq -r '.project_name')" >> $GITHUB_OUTPUT          
+          echo "namespace=$(echo $content | jq -r '.namespace')" >> $GITHUB_OUTPUT
+          echo "authserver_deployment_name=$(echo $content | jq -r '.authserver_deployment_name')" >> $GITHUB_OUTPUT
+          echo "httpapi_deployment_name=$(echo $content | jq -r '.httpapi_deployment_name')" >> $GITHUB_OUTPUT
+          echo "silo_deployment_name=$(echo $content | jq -r '.silo_deployment_name')" >> $GITHUB_OUTPUT
+          echo "dbmigrator_deployment_name=$(echo $content | jq -r '.dbmigrator_deployment_name')" >> $GITHUB_OUTPUT
+          echo "auth_server_url=$(echo $content | jq -r '.auth_server_url')" >> $GITHUB_OUTPUT
+          echo "api_server_url=$(echo $content | jq -r '.api_server_url')" >> $GITHUB_OUTPUT
+          echo "app_url=$(echo $content | jq -r '.app_url')" >> $GITHUB_OUTPUT
+
+      - name: Set job summary
+        run: |
+          echo "## Aevatar Station and App Created Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "## Project Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Project Name**: \`${{ steps.extract.outputs.project_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Project Namespace**: \`${{ steps.extract.outputs.namespace }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "## Deployment Names" >> $GITHUB_STEP_SUMMARY
+          echo "- **Auth Server**: \`${{ steps.extract.outputs.authserver_deployment_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Http API Host**: \`${{ steps.extract.outputs.httpapi_deployment_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Silo**: \`${{ steps.extract.outputs.silo_deployment_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **DB Migrator**: \`${{ steps.extract.outputs.dbmigrator_deployment_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "## Station and App URLs" >> $GITHUB_STEP_SUMMARY
+          echo "- **Client ID**: \`${{ steps.generate-uuid.outputs.client_id }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Auth Server URL**: \`${{ steps.extract.outputs.auth_server_url }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **API Server URL**: \`${{ steps.extract.outputs.api_server_url }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **App URL**: \`${{ steps.extract.outputs.app_url }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Configuration Mode**: Ephemeral (ENABLE_EPHEMERAL_CONFIG=true)" >> $GITHUB_STEP_SUMMARY

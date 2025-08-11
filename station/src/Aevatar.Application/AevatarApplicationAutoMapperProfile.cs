@@ -32,12 +32,7 @@ public class AevatarApplicationAutoMapperProfile : Profile
             .ForMember(d => d.CreationTime, m => m.MapFrom(s => DateTimeHelper.ToUnixTimeMilliseconds(s.CreationTime)));
         CreateMap<IdentityUser, OrganizationMemberDto>();
         CreateMap<OrganizationUnit, ProjectDto>()
-            .ForMember(d => d.CreationTime, m => m.MapFrom(s => DateTimeHelper.ToUnixTimeMilliseconds(s.CreationTime)))
-            .ForMember(d => d.DomainName,
-                m => m.MapFrom(s =>
-                    s.ExtraProperties.ContainsKey(AevatarConsts.ProjectDomainNameKey)
-                        ? s.ExtraProperties[AevatarConsts.ProjectDomainNameKey].ToString()
-                        : null));
+            .ForMember(d => d.CreationTime, m => m.MapFrom(s => DateTimeHelper.ToUnixTimeMilliseconds(s.CreationTime)));
         
         CreateMap<ApiRequestSnapshot, ApiRequestDto>()
             .ForMember(d => d.Time, m => m.MapFrom(s => DateTimeHelper.ToUnixTimeMilliseconds(s.Time)));
@@ -49,5 +44,8 @@ public class AevatarApplicationAutoMapperProfile : Profile
                     s.LastModificationTime.HasValue
                         ? DateTimeHelper.ToUnixTimeMilliseconds(s.LastModificationTime.Value)
                         : 0));
+        
+        CreateMap<ProjectCorsOrigin, ProjectCorsOriginDto>()
+            .ForMember(d => d.CreationTime, m => m.MapFrom(s => DateTimeHelper.ToUnixTimeMilliseconds(s.CreationTime)));
     }
 }

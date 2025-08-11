@@ -1,3 +1,4 @@
+using Aevatar.AuthServer.Grants.Options;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp;
@@ -18,7 +19,10 @@ public class AevatarAuthServerGrantsTestModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
-        
+        Configure<AppleOptions>(options =>
+        {
+            options.APPs = new Dictionary<string, AppleAppOptions> { { "com.gpt.god", new AppleAppOptions() } };
+        });
     }
     
     

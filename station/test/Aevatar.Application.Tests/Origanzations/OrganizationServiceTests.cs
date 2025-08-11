@@ -71,7 +71,7 @@ public abstract class OrganizationServiceTests<TStartupModule> : AevatarApplicat
         var ownerPermissions =
             await _permissionManager.GetAllForRoleAsync(ownerRole.Name);
         ownerPermissions = ownerPermissions.Where(o => o.IsGranted).ToList();
-        ownerPermissions.Count.ShouldBe(19);
+        ownerPermissions.Count.ShouldBe(26);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Organizations.Default);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Organizations.Edit);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Projects.Default);
@@ -91,6 +91,13 @@ public abstract class OrganizationServiceTests<TStartupModule> : AevatarApplicat
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Dashboard);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.LLMSModels.Default);
         ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.LLMSModels.Default);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ProjectCorsOrigins.Default);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ProjectCorsOrigins.Create);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.ProjectCorsOrigins.Delete);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Plugins.Default);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Plugins.Create);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Plugins.Edit);
+        ownerPermissions.ShouldContain(o => o.Name == AevatarPermissions.Plugins.Delete);
 
         var readerRole = roles.Items.First(o => o.Name.EndsWith("Reader"));
         var readerPermissions =

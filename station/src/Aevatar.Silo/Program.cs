@@ -3,12 +3,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Aevatar.Silo.Extensions;
 using Aevatar.Silo.Observability;
+using Aevatar.Options;
+using Aevatar.Domain.Shared.Configuration;
 using Serilog;
-using Autofac;
-using Autofac.Extensions.DependencyInjection;
-using System.Linq;
-using Orleans.Runtime;
-
+using Microsoft.AspNetCore.Hosting;
 namespace Aevatar.Silo;
 
 public class Program
@@ -18,10 +16,13 @@ public class Program
         // Register the label provider before building the silo host
         HistogramAggregatorExtension.SetLabelProvider(new AevatarMetricLabelProvider());
         var configuration = new ConfigurationBuilder()
-            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
-            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Silo.Shared.json"))
-            .AddJsonFile("appsettings.json")
-            .AddJsonFile("appsettings.secrets.json", optional: true)
+            .AddAevatarSecureConfiguration(
+                systemConfigPaths: new[]
+                {
+                    Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"),
+                    Path.Combine(AppContext.BaseDirectory, "appsettings.Silo.Shared.json")
+                })
+            .AddEnvironmentVariables()
             .Build();
         Log.Logger = new LoggerConfiguration()
             .Enrich.FromLogContext()
@@ -34,9 +35,13 @@ public class Program
             var builder = CreateHostBuilder(args);
             builder.ConfigureHostConfiguration(config =>
             {
-                config.AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
-                    .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Silo.Shared.json"))
-                    .AddJsonFile("appsettings.json");
+                config.AddAevatarSecureConfiguration(
+                        systemConfigPaths: new[]
+                        {
+                            Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"),
+                            Path.Combine(AppContext.BaseDirectory, "appsettings.Silo.Shared.json")
+                        })
+                    .AddEnvironmentVariables();
             });
             var app = builder.Build();
             await app.RunAsync();
@@ -55,9 +60,24 @@ public class Program
 
     internal static IHostBuilder CreateHostBuilder(string[] args) =>
         Host.CreateDefaultBuilder(args)
+            .ConfigureWebHostDefaults(webBuilder =>
+            {
+                // Configure the health check port from configuration
+                webBuilder.ConfigureKestrel((context, options) =>
+                {
+                    var healthCheckOptions = context.Configuration.GetSection("HealthCheck").Get<HealthCheckOptions>() ?? new HealthCheckOptions();
+                    options.ListenAnyIP(healthCheckOptions.Port);
+                });
+                
+                webBuilder.Configure(app =>
+                {
+                    app.MapOrleansHealthChecks();
+                });
+            })
             .ConfigureServices((hostContext, services) =>
             {
                 services.AddApplication<SiloModule>();
+                // Health checks are added in SiloModule
             })
             .UseOrleansConfiguration()
             .UseServiceProviderFactory(new DiagnosticAutofacServiceProviderFactory())

@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Aevatar.Core.Abstractions.Plugin;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Identity;
 using System.Linq;
-using Aevatar.Core.Abstractions.Plugin;
 
 namespace Aevatar.Plugins;
 
@@ -71,6 +71,12 @@ public class PluginService : AevatarAppService, IPluginService
         {
             Items = pluginDtos
         };
+    }
+
+    public async Task<PluginDto> GetAsync(Guid id)
+    {
+        var plugin = await _pluginRepository.GetAsync(id);
+        return ObjectMapper.Map<Plugin, PluginDto>(plugin);
     }
 
     public async Task<PluginDto> CreateAsync(Guid projectId, string name, byte[] code)

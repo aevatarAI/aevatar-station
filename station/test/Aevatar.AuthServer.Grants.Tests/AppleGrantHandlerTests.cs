@@ -1,5 +1,6 @@
 using System.Collections.Specialized;
 using System.Security.Claims;
+using Aevatar.AuthServer.Grants.Options;
 using Aevatar.AuthServer.Grants.Providers;
 using Aevatar.OpenIddict;
 using Microsoft.AspNetCore.Authentication;
@@ -54,7 +55,7 @@ public abstract class AppleGrantHandlerTests<TStartupModule> : AevatarAuthServer
         };
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
         
-        appleProvider.Setup(o => o.ValidateAppleTokenAsync(It.IsAny<string>(), It.IsAny<string>()))
+        appleProvider.Setup(o => o.ValidateAppleTokenAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<AppleAppOptions>()))
             .ReturnsAsync((true, principal));
 
         var handler = new AppleGrantHandler(appleProvider.Object, _logger);
@@ -94,9 +95,9 @@ public abstract class AppleGrantHandlerTests<TStartupModule> : AevatarAuthServer
         };
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
         
-        appleProvider.Setup(o => o.ExchangeCodeForTokenAsync(It.IsAny<string>(), It.IsAny<string>()))
+        appleProvider.Setup(o => o.ExchangeCodeForTokenAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<AppleAppOptions>()))
             .ReturnsAsync("exchanged.token.here");
-        appleProvider.Setup(o => o.ValidateAppleTokenAsync("exchanged.token.here", It.IsAny<string>()))
+        appleProvider.Setup(o => o.ValidateAppleTokenAsync("exchanged.token.here", It.IsAny<string>(), It.IsAny<AppleAppOptions>()))
             .ReturnsAsync((true, principal));
 
         var handler = new AppleGrantHandler(appleProvider.Object, _logger);
@@ -145,7 +146,7 @@ public abstract class AppleGrantHandlerTests<TStartupModule> : AevatarAuthServer
     public async Task Handle_InvalidCode_Test()
     {
         var appleProvider = new Mock<IAppleProvider>();
-        appleProvider.Setup(o => o.ExchangeCodeForTokenAsync(It.IsAny<string>(), It.IsAny<string>()))
+        appleProvider.Setup(o => o.ExchangeCodeForTokenAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<AppleAppOptions>()))
             .ReturnsAsync("");
 
         var handler = new AppleGrantHandler(appleProvider.Object, _logger);
@@ -170,7 +171,7 @@ public abstract class AppleGrantHandlerTests<TStartupModule> : AevatarAuthServer
     public async Task Handle_InvalidIdToken_Test()
     {
         var appleProvider = new Mock<IAppleProvider>();
-        appleProvider.Setup(o => o.ValidateAppleTokenAsync(It.IsAny<string>(), It.IsAny<string>()))
+        appleProvider.Setup(o => o.ValidateAppleTokenAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<AppleAppOptions>()))
             .ReturnsAsync((false, null));
 
         var handler = new AppleGrantHandler(appleProvider.Object, _logger);
@@ -208,7 +209,7 @@ public abstract class AppleGrantHandlerTests<TStartupModule> : AevatarAuthServer
         };
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
         
-        appleProvider.Setup(o => o.ValidateAppleTokenAsync(It.IsAny<string>(), It.IsAny<string>()))
+        appleProvider.Setup(o => o.ValidateAppleTokenAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<AppleAppOptions>()))
             .ReturnsAsync((true, principal));
 
         var handler = new AppleGrantHandler(appleProvider.Object, _logger);
@@ -245,7 +246,7 @@ public abstract class AppleGrantHandlerTests<TStartupModule> : AevatarAuthServer
         };
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
         
-        appleProvider.Setup(o => o.ValidateAppleTokenAsync(It.IsAny<string>(), It.IsAny<string>()))
+        appleProvider.Setup(o => o.ValidateAppleTokenAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<AppleAppOptions>()))
             .ReturnsAsync((true, principal));
 
         var handler = new AppleGrantHandler(appleProvider.Object, _logger);
@@ -283,7 +284,7 @@ public abstract class AppleGrantHandlerTests<TStartupModule> : AevatarAuthServer
         };
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
         
-        appleProvider.Setup(o => o.ValidateAppleTokenAsync(It.IsAny<string>(), It.IsAny<string>()))
+        appleProvider.Setup(o => o.ValidateAppleTokenAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<AppleAppOptions>()))
             .ReturnsAsync((true, principal));
 
         var handler = new AppleGrantHandler(appleProvider.Object, _logger);
@@ -317,7 +318,7 @@ public abstract class AppleGrantHandlerTests<TStartupModule> : AevatarAuthServer
         };
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
         
-        appleProvider.Setup(o => o.ValidateAppleTokenAsync(It.IsAny<string>(), It.IsAny<string>()))
+        appleProvider.Setup(o => o.ValidateAppleTokenAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<AppleAppOptions>()))
             .ReturnsAsync((true, principal));
 
         var handler = new AppleGrantHandler(appleProvider.Object, _logger);
@@ -351,7 +352,7 @@ public abstract class AppleGrantHandlerTests<TStartupModule> : AevatarAuthServer
         };
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
         
-        appleProvider.Setup(o => o.ValidateAppleTokenAsync(It.IsAny<string>(), It.IsAny<string>()))
+        appleProvider.Setup(o => o.ValidateAppleTokenAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<AppleAppOptions>()))
             .ReturnsAsync((true, principal));
 
         var handler = new AppleGrantHandler(appleProvider.Object, _logger);
@@ -370,14 +371,14 @@ public abstract class AppleGrantHandlerTests<TStartupModule> : AevatarAuthServer
         
         var user = await _identityUserManager.FindByLoginAsync(GrantTypeConstants.APPLE, subjectId);
         user.ShouldNotBeNull();
-        user.Email.ShouldEndWith("@apple.com");
+        user.Email.ShouldEndWith("@apple.privaterelay.com");
     }
 
     [Fact]
     public async Task Handle_Exception_Test()
     {
         var appleProvider = new Mock<IAppleProvider>();
-        appleProvider.Setup(o => o.ValidateAppleTokenAsync(It.IsAny<string>(), It.IsAny<string>()))
+        appleProvider.Setup(o => o.ValidateAppleTokenAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<AppleAppOptions>()))
             .ThrowsAsync(new Exception("Validation failed"));
 
         var handler = new AppleGrantHandler(appleProvider.Object, _logger);

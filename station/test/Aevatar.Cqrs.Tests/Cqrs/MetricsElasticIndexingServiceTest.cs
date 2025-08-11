@@ -252,4 +252,89 @@ public class MetricsElasticIndexingServiceTest
             It.IsAny<Exception>(),
             It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.AtLeastOnce);
     }
+
+    [Fact]
+    public async Task CountWithLuceneAsync_Should_Record_Metrics_And_Trace()
+    {
+        var mockInner = new Mock<IIndexingService>();
+        mockInner.Setup(x => x.CountWithLuceneAsync(It.IsAny<LuceneQueryDto>()))
+            .ReturnsAsync(12345);
+        var mockLogger = new Mock<ILogger<MetricsElasticIndexingService>>();
+        var metricsService = new MetricsElasticIndexingService(mockInner.Object, mockLogger.Object);
+        var queryDto = new LuceneQueryDto
+        {
+            StateName = "TestState",
+            QueryString = "status:active"
+        };
+        using var listener = new MeterListener();
+        double? observedDuration = null;
+        long observedSuccess = 0;
+        listener.InstrumentPublished = (instrument, meter) =>
+        {
+            if (instrument.Name == "es.count_lucene.duration")
+                listener.EnableMeasurementEvents(instrument);
+            if (instrument.Name == "es.count_lucene.success")
+                listener.EnableMeasurementEvents(instrument);
+        };
+        listener.SetMeasurementEventCallback<double>((inst, val, tags, state) =>
+        {
+            if (inst.Name == "es.count_lucene.duration")
+                observedDuration = val;
+        });
+        listener.SetMeasurementEventCallback<long>((inst, val, tags, state) =>
+        {
+            if (inst.Name == "es.count_lucene.success")
+                observedSuccess += val;
+        });
+        listener.Start();
+        var result = await metricsService.CountWithLuceneAsync(queryDto);
+        listener.Dispose();
+        mockInner.Verify(x => x.CountWithLuceneAsync(It.IsAny<LuceneQueryDto>()), Times.Once);
+        Assert.Equal(12345, result);
+        Assert.True(observedDuration.HasValue && observedDuration.Value >= 0);
+        Assert.True(observedSuccess > 0);
+        mockLogger.Verify(l => l.Log(
+            LogLevel.Information,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("[ES-LuceneCount]")),
+            It.IsAny<Exception>(),
+            It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task CountWithLuceneAsync_Should_LogError_On_Exception()
+    {
+        var mockInner = new Mock<IIndexingService>();
+        mockInner.Setup(x => x.CountWithLuceneAsync(It.IsAny<LuceneQueryDto>()))
+            .ThrowsAsync(new InvalidOperationException("test error"));
+        var mockLogger = new Mock<ILogger<MetricsElasticIndexingService>>();
+        var metricsService = new MetricsElasticIndexingService(mockInner.Object, mockLogger.Object);
+        var queryDto = new LuceneQueryDto
+        {
+            StateName = "TestState",
+            QueryString = "status:active"
+        };
+        using var listener = new MeterListener();
+        long observedFail = 0;
+        listener.InstrumentPublished = (instrument, meter) =>
+        {
+            if (instrument.Name == "es.count_lucene.failure")
+                listener.EnableMeasurementEvents(instrument);
+        };
+        listener.SetMeasurementEventCallback<long>((inst, val, tags, state) =>
+        {
+            if (inst.Name == "es.count_lucene.failure")
+                observedFail += val;
+        });
+        listener.Start();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => metricsService.CountWithLuceneAsync(queryDto));
+        listener.Dispose();
+        Assert.True(observedFail > 0);
+        mockLogger.Verify(l => l.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("[ES-LuceneCount-Error]")),
+            It.IsAny<Exception>(),
+            It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.AtLeastOnce);
+    }
 } 
