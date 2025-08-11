@@ -69,6 +69,8 @@ Establishes the technical infrastructure for streaming real-time data from workf
 
 As a workflow debugger, I want all agents in my workflow to stream their execution data (inputs, outputs, and states) in real-time to the debug interface, so that I can observe what's happening during workflow execution as it occurs.
 
+**Version:** v0.5
+
 **Time Estimate: 20 hours**
 
 ### Key Features
@@ -178,7 +180,7 @@ Provides visual representation of workflow execution with live updates, showing 
 
 As a workflow debugger, I want to see a live timeline visualization of my workflow execution that updates in real-time, so that I can understand the execution flow, identify bottlenecks, and see which agents are currently running or have completed.
 
-**Version:** v0.6
+**Version:** v1.0
 
 **Time Estimate: 16 hours**
 
