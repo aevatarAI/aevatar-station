@@ -305,7 +305,8 @@ public class AgentService : ApplicationService, IAgentService
         agentData.Properties = JsonConvert.SerializeObject(initialization.Item2, new JsonSerializerSettings
         {
             ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-            ContractResolver = new CamelCasePropertyNamesContractResolver()
+            ContractResolver = new CamelCasePropertyNamesContractResolver(),
+            NullValueHandling = NullValueHandling.Ignore
         });
 
         await creatorAgent.CreateAgentAsync(agentData);
@@ -377,9 +378,9 @@ public class AgentService : ApplicationService, IAgentService
         {
             Id = (string)state["id"],
             Name = (string)state["name"],
-            Properties = state["properties"] == null
-                ? null
-                : JsonConvert.DeserializeObject<Dictionary<string, object>>((string)state["properties"]),
+            Properties = state.TryGetValue("properties", out var properties)
+                ? JsonConvert.DeserializeObject<Dictionary<string, object>>((string)properties)
+                : null,
             AgentType = (string)state["agentType"],
             BusinessAgentGrainId =
                 state.TryGetValue("formattedBusinessAgentGrainId", out var value) ? (string)value : null
@@ -442,7 +443,8 @@ public class AgentService : ApplicationService, IAgentService
                 properties = JsonConvert.SerializeObject(config, new JsonSerializerSettings
                 {
                     ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                    ContractResolver = new CamelCasePropertyNamesContractResolver()
+                    ContractResolver = new CamelCasePropertyNamesContractResolver(),
+                    NullValueHandling = NullValueHandling.Ignore
                 });
             }
             else
@@ -486,7 +488,9 @@ public class AgentService : ApplicationService, IAgentService
             AgentType = agentState.AgentType,
             Name = agentState.Name,
             GrainId = agentState.BusinessAgentGrainId,
-            Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(agentState.Properties),
+            Properties = string.IsNullOrWhiteSpace(agentState.Properties)
+                ? null
+                : JsonConvert.DeserializeObject<Dictionary<string, object>>(agentState.Properties),
             AgentGuid = agentState.BusinessAgentGrainId.GetGuidKey(),
             BusinessAgentGrainId = agentState.BusinessAgentGrainId.ToString()
         };

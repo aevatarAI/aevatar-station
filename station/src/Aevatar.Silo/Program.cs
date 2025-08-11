@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Aevatar.Silo.Extensions;
 using Aevatar.Silo.Observability;
 using Aevatar.Options;
+using Aevatar.Domain.Shared.Configuration;
 using Serilog;
 using Microsoft.AspNetCore.Hosting;
 namespace Aevatar.Silo;
@@ -15,10 +16,13 @@ public class Program
         // Register the label provider before building the silo host
         HistogramAggregatorExtension.SetLabelProvider(new AevatarMetricLabelProvider());
         var configuration = new ConfigurationBuilder()
-            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
-            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Silo.Shared.json"))
-            .AddJsonFile("appsettings.json")
-            .AddJsonFile("appsettings.secrets.json", optional: true)
+            .AddAevatarSecureConfiguration(
+                systemConfigPaths:
+                [
+                    Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"),
+                    Path.Combine(AppContext.BaseDirectory, "appsettings.Silo.Shared.json")
+                ])
+            .AddEnvironmentVariables()
             .Build();
         Log.Logger = new LoggerConfiguration()
             .Enrich.FromLogContext()
@@ -31,9 +35,13 @@ public class Program
             var builder = CreateHostBuilder(args);
             builder.ConfigureHostConfiguration(config =>
             {
-                config.AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
-                    .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Silo.Shared.json"))
-                    .AddJsonFile("appsettings.json");
+                config.AddAevatarSecureConfiguration(
+                        systemConfigPaths:
+                        [
+                            Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"),
+                            Path.Combine(AppContext.BaseDirectory, "appsettings.Silo.Shared.json")
+                        ])
+                    .AddEnvironmentVariables();
             });
             var app = builder.Build();
             await app.RunAsync();
@@ -46,7 +54,7 @@ public class Program
         }
         finally
         {
-            Log.CloseAndFlush();
+            await Log.CloseAndFlushAsync();
         }
     }
 

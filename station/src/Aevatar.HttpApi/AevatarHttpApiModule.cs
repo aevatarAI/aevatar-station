@@ -1,4 +1,5 @@
 ﻿using Aevatar.Developer.Logger;
+using Aevatar.Services;
 using Localization.Resources.AbpUi;
 using Aevatar.Localization;
 using Aevatar.Options;
@@ -25,6 +26,11 @@ public class AevatarHttpApiModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
+        var services = context.Services;
+        
+        // Register MCP extension wrapper
+        services.AddTransient<IMcpExtensionWrapper, McpExtensionWrapper>();
+        
         ConfigureLocalization();
     }
 

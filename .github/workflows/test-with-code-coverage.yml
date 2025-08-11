@@ -14,9 +14,6 @@ env:
 jobs:
   test-framework:
     runs-on: ubuntu-22.04
-    permissions:
-      pull-requests: write
-      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,19 +30,14 @@ jobs:
         run: cd framework && dotnet build --no-restore /clp:ErrorsOnly /p:GeneratePackageOnBuild=false --verbosity quiet
       - name: Test
         run: |
-          cd framework && dotnet test --no-restore --no-build --verbosity normal --logger trx --settings ../CodeCoverage.runsettings --results-directory ../coverage-framework --collect:"XPlat Code Coverage"
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v4
+          cd framework && dotnet test --no-restore --no-build --verbosity normal --logger trx --settings CodeCoverage.runsettings --results-directory ../coverage-framework --collect:"XPlat Code Coverage"
+      - name: Upload framework coverage artifacts
+        uses: actions/upload-artifact@v4
         with:
-          fail_ci_if_error: true
-          files: coverage-framework/*/coverage.cobertura.xml
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          name: coverage-framework
+          path: coverage-framework/
   test-signalr:
     runs-on: ubuntu-22.04
-    permissions:
-      pull-requests: write
-      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -59,19 +51,14 @@ jobs:
         run: cd signalR && dotnet build --no-restore /clp:ErrorsOnly /p:GeneratePackageOnBuild=false --verbosity quiet
       - name: Test
         run: |
-          cd signalR && dotnet test --no-restore --no-build --verbosity normal --logger trx --settings ../CodeCoverage.runsettings --results-directory ../coverage-signalr --collect:"XPlat Code Coverage"
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v4
+          cd signalR && dotnet test --no-restore --no-build --verbosity normal --logger trx --settings CodeCoverage.runsettings --results-directory ../coverage-signalr --collect:"XPlat Code Coverage"
+      - name: Upload signalR coverage artifacts
+        uses: actions/upload-artifact@v4
         with:
-          fail_ci_if_error: true
-          files: coverage-signalr/*/coverage.cobertura.xml
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          name: coverage-signalr
+          path: coverage-signalr/
   test-station:
     runs-on: ubuntu-22.04
-    permissions:
-      pull-requests: write
-      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -85,11 +72,44 @@ jobs:
         run: cd station && dotnet build --no-restore /clp:ErrorsOnly /p:GeneratePackageOnBuild=false --verbosity quiet
       - name: Test
         run: |
-          cd station && dotnet test --no-restore --no-build --verbosity normal --logger trx --settings ../CodeCoverage.runsettings --results-directory ../coverage-station --collect:"XPlat Code Coverage"
-      - name: Upload coverage reports to Codecov
+          cd station && dotnet test --no-restore --no-build --verbosity normal --logger trx --settings CodeCoverage.runsettings --results-directory ../coverage-station --collect:"XPlat Code Coverage"
+      - name: Upload station coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-station
+          path: coverage-station/
+
+  upload-coverage:
+    runs-on: ubuntu-22.04
+    needs: [test-framework, test-signalr, test-station]
+    permissions:
+      pull-requests: write
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Download framework coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-framework
+          path: coverage-framework/
+      - name: Download signalR coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-signalr
+          path: coverage-signalr/
+      - name: Download station coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-station
+          path: coverage-station/
+      - name: Upload unified coverage reports to Codecov
         uses: codecov/codecov-action@v4
         with:
-          fail_ci_if_error: true
-          files: coverage-station/*/coverage.cobertura.xml
+          fail_ci_if_error: true # Set to true to expose errors
+          directory: ./
+          flags: unittests
+          name: codecov-umbrella
+          verbose: true # Detailed logging
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }} 

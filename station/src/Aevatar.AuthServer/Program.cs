@@ -1,5 +1,10 @@
 using Serilog;
 using Serilog.Events;
+using System.IO;
+using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Hosting;
+using Aevatar.Domain.Shared.Configuration;
 namespace Aevatar.AuthServer;
 
 public class Program
@@ -7,7 +12,8 @@ public class Program
     public async static Task<int> Main(string[] args)
     {
         var configuration = new ConfigurationBuilder()
-            .AddJsonFile("appsettings.json")
+            .AddAevatarSecureConfiguration()
+            .AddEnvironmentVariables()
             .Build();
         Log.Logger = new LoggerConfiguration()
 #if DEBUG

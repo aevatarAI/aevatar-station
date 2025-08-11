@@ -7,6 +7,11 @@ on:
         description: "Duration to keep environment (in minutes)"
         required: true
         default: "60"
+      cors_urls:
+        description: "Comma-separated list of allowed CORS URLs"
+        required: true
+        default: 'http://localhost:3000,http://localhost:5173,http://localhost:5174,https://*.aevatar.ai'
+      
 
 run-name: Run Aevatar Station Ephemeral Test Environment on ${{ github.ref_name }} from ${{ github.sha }}
 
@@ -99,6 +104,7 @@ jobs:
           push: true
           build-args: |
             servicename=${{ matrix.servicename }}
+            ENABLE_EPHEMERAL_CONFIG=true
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -146,7 +152,8 @@ jobs:
                 client_secret: "${{ steps.generate-uuid.outputs.client_secret }}",
                 host_silo_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
                 host_client_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
-                station_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}"
+                station_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
+                cors_urls: "${{ inputs.cors_urls }}",
               }
             });
             
@@ -214,6 +221,7 @@ jobs:
         id: extract
         run: |
           content=$(cat ./downloaded/setup-aevatar-app-env-output.json)
+          echo "project_name=$(echo $content | jq -r '.project_name')" >> $GITHUB_OUTPUT          
           echo "namespace=$(echo $content | jq -r '.namespace')" >> $GITHUB_OUTPUT
           echo "authserver_deployment_name=$(echo $content | jq -r '.authserver_deployment_name')" >> $GITHUB_OUTPUT
           echo "httpapi_deployment_name=$(echo $content | jq -r '.httpapi_deployment_name')" >> $GITHUB_OUTPUT
@@ -225,7 +233,10 @@ jobs:
 
       - name: Set job summary
         run: |
-          echo "## Aevatar Station and App Created Successfully in namespace: \`${{ steps.extract.outputs.namespace }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "## Aevatar Station and App Created Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "## Project Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Project Name**: \`${{ steps.extract.outputs.project_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Project Namespace**: \`${{ steps.extract.outputs.namespace }}\`" >> $GITHUB_STEP_SUMMARY
           echo "## Deployment Names" >> $GITHUB_STEP_SUMMARY
           echo "- **Auth Server**: \`${{ steps.extract.outputs.authserver_deployment_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Http API Host**: \`${{ steps.extract.outputs.httpapi_deployment_name }}\`" >> $GITHUB_STEP_SUMMARY
@@ -236,3 +247,4 @@ jobs:
           echo "- **Auth Server URL**: \`${{ steps.extract.outputs.auth_server_url }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **API Server URL**: \`${{ steps.extract.outputs.api_server_url }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **App URL**: \`${{ steps.extract.outputs.app_url }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Configuration Mode**: Ephemeral (ENABLE_EPHEMERAL_CONFIG=true)" >> $GITHUB_STEP_SUMMARY

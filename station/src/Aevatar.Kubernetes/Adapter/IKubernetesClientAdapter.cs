@@ -22,6 +22,9 @@ public interface IKubernetesClientAdapter
     Task<V1DeploymentList> ListDeploymentAsync(string namespaceParameter,
         CancellationToken cancellationToken = default(CancellationToken));
 
+    Task<V1DeploymentList> ListDeploymentAsync(string namespaceParameter, string labelSelector,
+        CancellationToken cancellationToken = default(CancellationToken));
+
     Task<V1ServiceList> ListServiceAsync(string namespaceParameter,
         CancellationToken cancellationToken = default(CancellationToken));
 

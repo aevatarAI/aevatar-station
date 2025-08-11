@@ -20,7 +20,8 @@
       "Bash(dotnet test:*)",
       "Bash(dotnet list:*)",
       "Bash(dotnet restore:*)",
-      "Bash(dotnet nuget locals:*)"
+      "Bash(dotnet nuget locals:*)",
+      "Bash(dotnet publish:*)"
     ]
   },
   "enableAllProjectMcpServers": true
