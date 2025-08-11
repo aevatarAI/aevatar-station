@@ -1,10 +1,12 @@
 ﻿using Aevatar.Application.Grains.Common.Options;
+using Aevatar.Application.Contracts.Services;
 using Aevatar.Common.Options;
 using Aevatar.Core.Abstractions;
 using Aevatar.Developer.Logger;
 using Localization.Resources.AbpUi;
 using Aevatar.Localization;
 using Aevatar.Options;
+using Aevatar.Service;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.Account;
@@ -36,6 +38,9 @@ public class AevatarHttpApiModule : AbpModule
         Configure<StripeOptions>(configuration.GetSection("Stripe"));
         Configure<ManagerOptions>(configuration.GetSection("ManagerOptions"));
         Configure<GodGPTOptions>(configuration.GetSection("GodGPT"));
+        Configure<GoogleAnalyticsOptions>(configuration.GetSection("GoogleAnalytics"));
+        Configure<FirebaseAnalyticsOptions>(configuration.GetSection("FirebaseAnalytics"));
+        
     }
 
     private void ConfigureLocalization()

@@ -79,5 +79,7 @@ public class AevatarApplicationModule : AbpModule
         Configure<ApiRequestOptions>(configuration.GetSection("ApiRequest"));
         Configure<BlobStoringOptions>(configuration.GetSection("BlobStoring"));
         Configure<ThumbnailOptions>(configuration.GetSection("Thumbnail"));
+        Configure<GoogleAnalyticsOptions>(configuration.GetSection("GoogleAnalytics"));
+        Configure<FirebaseAnalyticsOptions>(configuration.GetSection("FirebaseAnalytics"));
     }
 }
