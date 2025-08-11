@@ -38,6 +38,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     private readonly IGAgentManager _gAgentManager;
     private readonly IGAgentFactory _gAgentFactory;
     private readonly IOptionsMonitor<AIServicePromptOptions> _promptOptions;
+    private readonly IOptionsMonitor<AgentOptions> _agentOptions;
     private readonly GrainTypeResolver? _grainTypeResolver;
 
     public WorkflowOrchestrationService(
@@ -47,7 +48,8 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         IGAgentManager gAgentManager,
         IGAgentFactory gAgentFactory,
         IOptionsMonitor<AIServicePromptOptions> promptOptions,
-        GrainTypeResolver? grainTypeResolver)
+        IOptionsMonitor<AgentOptions> agentOptions,
+        GrainTypeResolver grainTypeResolver)
     {
         _logger = logger;
         _clusterClient = clusterClient;
@@ -55,7 +57,24 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         _gAgentManager = gAgentManager;
         _gAgentFactory = gAgentFactory;
         _promptOptions = promptOptions;
+        _agentOptions = agentOptions;
         _grainTypeResolver = grainTypeResolver;
+    }
+
+    /// <summary>
+    /// 获取过滤后的业务Agent类型（排除系统Agent）
+    /// </summary>
+    private List<Type> GetBusinessAgentTypes()
+    {
+        var systemAgents = _agentOptions.CurrentValue.SystemAgentList;
+        var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
+        var validAgents = availableGAgents.Where(a => !a.Namespace?.StartsWith("OrleansCodeGen") == true).ToList();
+        var businessAgentTypes = validAgents.Where(a => !systemAgents.Contains(a.Name)).ToList();
+        
+        _logger.LogDebug("Filtered {TotalCount} available agents to {BusinessCount} business agents. Excluded system agents: {SystemAgents}", 
+            availableGAgents.Count(), businessAgentTypes.Count, string.Join(", ", systemAgents));
+            
+        return businessAgentTypes;
     }
 
     /// <summary>
@@ -119,11 +138,10 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         
         try
         {
-            _logger.LogDebug("Getting available agent types from GAgentManager using reflection approach");
-            var availableTypes = _gAgentManager.GetAvailableGAgentTypes();
-            var validAgentTypes = availableTypes.Where(t => !t.Namespace?.StartsWith("OrleansCodeGen") == true).ToList();
+            _logger.LogDebug("Getting business agent types (excluding system agents)");
+            var validAgentTypes = GetBusinessAgentTypes();
             
-            _logger.LogInformation("Found {TypeCount} valid agent types to process", validAgentTypes.Count);
+            _logger.LogInformation("Found {TypeCount} business agent types to process", validAgentTypes.Count);
             
             var agentDescriptions = new List<AiWorkflowAgentInfoDto>();
             
@@ -178,7 +196,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         if (string.IsNullOrEmpty(simpleTypeName) || _grainTypeResolver == null)
             return simpleTypeName;
 
-        var matchedType = _gAgentManager.GetAvailableGAgentTypes()
+        var matchedType = GetBusinessAgentTypes()
             .FirstOrDefault(t => t.Name == simpleTypeName);
 
         return matchedType != null 
