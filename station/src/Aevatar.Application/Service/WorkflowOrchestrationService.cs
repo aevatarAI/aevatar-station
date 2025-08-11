@@ -175,42 +175,15 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     /// </summary>
     private string MapSimpleTypeNameToFullTypeName(string simpleTypeName)
     {
-        if (string.IsNullOrEmpty(simpleTypeName))
-        {
-            return string.Empty;
-        }
+        if (string.IsNullOrEmpty(simpleTypeName) || _grainTypeResolver == null)
+            return simpleTypeName;
 
-        try
-        {
-            // 获取所有可用的Agent类型
-            var availableTypes = _gAgentManager.GetAvailableGAgentTypes();
-            
-            // 查找与简单类型名称匹配的Type
-            var matchedType = availableTypes.FirstOrDefault(t => t.Name == simpleTypeName);
-            
-            if (matchedType != null && _grainTypeResolver != null)
-            {
-                // 使用GrainTypeResolver获取完整的GrainType名称
-                var grainType = _grainTypeResolver.GetGrainType(matchedType);
-                var fullTypeName = grainType.ToString();
-                
-                _logger.LogInformation("Mapped simple type name '{SimpleTypeName}' to full type name '{FullTypeName}'", 
-                    simpleTypeName, fullTypeName);
-                
-                return fullTypeName;
-            }
-            
-            _logger.LogWarning("No matching agent type found for simple name '{SimpleTypeName}', using original name", 
-                simpleTypeName);
-            
-            // 如果找不到匹配的类型，返回原始名称
-            return simpleTypeName;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error mapping simple type name '{SimpleTypeName}' to full type name", simpleTypeName);
-            return simpleTypeName;
-        }
+        var matchedType = _gAgentManager.GetAvailableGAgentTypes()
+            .FirstOrDefault(t => t.Name == simpleTypeName);
+
+        return matchedType != null 
+            ? _grainTypeResolver.GetGrainType(matchedType).ToString()
+            : simpleTypeName;
     }
 
     #endregion
