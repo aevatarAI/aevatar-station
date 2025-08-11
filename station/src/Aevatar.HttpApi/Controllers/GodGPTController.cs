@@ -724,7 +724,7 @@ public class GodGPTController : AevatarController
     /// </summary>
     /// <param name="request">GA event request</param>
     /// <returns>Tracking result</returns>
-    [HttpPost("godgpt/analytics/track")]
+    [HttpPost("godgpt/analytics/track/gtag")]
     public async Task<IActionResult> TrackAnalyticsEventAsync(GoogleAnalyticsEventRequestDto request)
     {
         var stopwatch = Stopwatch.StartNew();
@@ -759,6 +759,51 @@ public class GodGPTController : AevatarController
         catch (Exception ex)
         {
             _logger.LogError(ex, "[GodGPTController][TrackAnalyticsEventAsync] Error processing analytics event: {EventName}",
+                request.EventName);
+                
+            return StatusCode(500, new GoogleAnalyticsEventResponseDto
+            {
+                Success = false,
+                ErrorMessage = "Internal server error"
+            });
+        }
+    }
+
+    [HttpPost("godgpt/analytics/track")]
+    public async Task<IActionResult> TrackFirebaseAnalyticsEventAsync(GoogleAnalyticsEventRequestDto request)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        try
+        {
+            if (CurrentUser?.Id != null)
+            {
+                request.UserId = CurrentUser.Id.ToString();
+            }
+            
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _googleAnalyticsService.TrackFirebaseEventAsync(request);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "[GodGPTController][TrackFirebaseAnalyticsEventAsync] Background Firebase tracking failed for event: {EventName}", 
+                        request.EventName);
+                }
+            });
+            
+            _logger.LogDebug("[GodGPTController][TrackFirebaseAnalyticsEventAsync] Firebase event queued: {EventName}, UserId: {UserId}, duration: {Duration}ms",
+                request.EventName, request.UserId, stopwatch.ElapsedMilliseconds);
+                
+            return Ok(new GoogleAnalyticsEventResponseDto
+            {
+                Success = true
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[GodGPTController][TrackFirebaseAnalyticsEventAsync] Error processing Firebase analytics event: {EventName}",
                 request.EventName);
                 
             return StatusCode(500, new GoogleAnalyticsEventResponseDto
