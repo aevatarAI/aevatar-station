@@ -162,18 +162,10 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         var descriptionAttr = agentType.GetCustomAttribute<DescriptionAttribute>();
         var description = descriptionAttr?.Description ?? $"{agentType.Name} - Agent for specialized processing";
         
-        // 使用GrainTypeResolver获取完整的GrainType名称，包含完整的namespace路径
-        var grainType = _grainTypeResolver.GetGrainType(agentType);
-        var fullTypeName = grainType.ToString();
-        
-        // Debug日志：确认我们的修改生效
-        _logger.LogInformation("CreateAgentInfo - AgentType: {AgentType}, FullTypeName: {FullTypeName}", 
-            agentType.Name, fullTypeName);
-        
         return new AiWorkflowAgentInfoDto
         {
             Name = agentType.Name,
-            Type = fullTypeName,
+            Type = agentType.Name, // AI在生成时使用简单类型名称
             Description = description
         };
     }
