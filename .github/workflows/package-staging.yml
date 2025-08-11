@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "release/*"
+      - "feature/image-scanning"
 
 run-name: Deploy Aevatar Station on ${{ github.ref }} to Staging from ${{ github.sha }}
 
@@ -22,11 +23,11 @@ jobs:
         servicename:
           [
             Aevatar.HttpApi.Host,
-            Aevatar.Silo,
-            Aevatar.AuthServer,
-            Aevatar.WebHook.Host,
-            Aevatar.Developer.Host,
-            Aevatar.DbMigrator,
+            # Aevatar.Silo,
+            # Aevatar.AuthServer,
+            # Aevatar.WebHook.Host,
+            # Aevatar.Developer.Host,
+            # Aevatar.DbMigrator,
           ]
     steps:
       # Checkout source code
@@ -69,11 +70,11 @@ jobs:
         servicename:
           [
             Aevatar.HttpApi.Host,
-            Aevatar.Silo,
-            Aevatar.AuthServer,
-            Aevatar.WebHook.Host,
-            Aevatar.Developer.Host,
-            Aevatar.DbMigrator,
+            # Aevatar.Silo,
+            # Aevatar.AuthServer,
+            # Aevatar.WebHook.Host,
+            # Aevatar.Developer.Host,
+            # Aevatar.DbMigrator,
           ]
     permissions:
       contents: read
@@ -126,6 +127,45 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Install Syft
+      - name: Install Syft
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+
+      # Generate SBOM in CycloneDX JSON
+      - name: Generate SBOM
+        run: |
+          syft dir:out/${{ matrix.servicename }} -o cyclonedx-json > sbom-${{ matrix.servicename }}.json
+
+      # Upload SBOM artifact
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.servicename }}
+          path: sbom-${{ matrix.servicename }}.json
+          retention-days: 1
+
+     # Install Trivy
+      - name: Install Trivy
+        run: |
+          sudo apt-get update && sudo apt-get install -y wget jq
+          wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.50.1_Linux-64bit.deb
+          sudo dpkg -i trivy_0.50.1_Linux-64bit.deb
+    
+      # Scan SBOM with Trivy (ignore unfixed, fail if CVSS >= 7)
+      - name: Scan SBOM with Trivy
+        run: |
+          trivy sbom \
+            --ignore-unfixed \
+            --severity HIGH,CRITICAL \
+            --format sarif \
+            --output trivy-sbom-report.sarif \
+            sbom-${{ matrix.servicename }}.json
+          if jq -e '.runs[].results[] | select(.properties.cvssScore >= 7)' trivy-sbom-report.sarif > /dev/null; then
+            echo "❌ High severity vulnerabilities (CVSS >= 7) found in SBOM."
+            exit 1
+          fi
 
       # Install Cosign CLI for signing
       - name: Install Cosign
