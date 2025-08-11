@@ -33,6 +33,7 @@ public class WorkflowOrchestrationServiceTests
     private readonly Mock<IOptionsMonitor<AIServicePromptOptions>> _mockPromptOptions;
     private readonly Mock<IWorkflowComposerGAgent> _mockWorkflowComposerGAgent;
 
+
     private readonly WorkflowOrchestrationService _service;
 
     public WorkflowOrchestrationServiceTests()
@@ -45,7 +46,6 @@ public class WorkflowOrchestrationServiceTests
         _mockPromptOptions = new Mock<IOptionsMonitor<AIServicePromptOptions>>();
         _mockWorkflowComposerGAgent = new Mock<IWorkflowComposerGAgent>();
 
-
         SetupMockDefaults();
 
         _service = new WorkflowOrchestrationService(
@@ -55,7 +55,7 @@ public class WorkflowOrchestrationServiceTests
             _mockGAgentManager.Object,
             _mockGAgentFactory.Object,
             _mockPromptOptions.Object,
-            null); // GrainTypeResolver可以为null，因为我们在测试中不会实际使用映射功能
+            null!);
     }
 
     private void SetupMockDefaults()
@@ -85,7 +85,7 @@ public class WorkflowOrchestrationServiceTests
         };
         _mockPromptOptions.Setup(x => x.CurrentValue).Returns(promptOptions);
         
-        // GrainTypeResolver在测试中为null，我们依赖字典映射功能
+        // 在单元测试中，GrainTypeResolver将为null，映射功能不会被调用
     }
 
     #region Basic Functionality Tests
@@ -257,7 +257,7 @@ public class WorkflowOrchestrationServiceTests
             _mockGAgentManager.Object,
             _mockGAgentFactory.Object,
             _mockPromptOptions.Object,
-            null);
+            null!);
 
         service.ShouldNotBeNull();
     }

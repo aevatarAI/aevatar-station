@@ -188,19 +188,16 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             // 查找与简单类型名称匹配的Type
             var matchedType = availableTypes.FirstOrDefault(t => t.Name == simpleTypeName);
             
-            if (matchedType != null)
+            if (matchedType != null && _grainTypeResolver != null)
             {
                 // 使用GrainTypeResolver获取完整的GrainType名称
-                if (_grainTypeResolver != null)
-                {
-                    var grainType = _grainTypeResolver.GetGrainType(matchedType);
-                    var fullTypeName = grainType.ToString();
-                    
-                    _logger.LogInformation("Mapped simple type name '{SimpleTypeName}' to full type name '{FullTypeName}'", 
-                        simpleTypeName, fullTypeName);
-                    
-                    return fullTypeName;
-                }
+                var grainType = _grainTypeResolver.GetGrainType(matchedType);
+                var fullTypeName = grainType.ToString();
+                
+                _logger.LogInformation("Mapped simple type name '{SimpleTypeName}' to full type name '{FullTypeName}'", 
+                    simpleTypeName, fullTypeName);
+                
+                return fullTypeName;
             }
             
             _logger.LogWarning("No matching agent type found for simple name '{SimpleTypeName}', using original name", 
