@@ -105,26 +105,7 @@ As a returning user, I want to land on my last opened project’s Workflow page 
 **Then** I am redirected to the most recently accessed project, or the most recently created project, or a new default project is created and used as a fallback
 
 
-# 6. Persist Last Opened Project
-
-## User Story
-As a user, I want the system to remember my last opened project so that I am redirected to it on future logins.
-
-**Version:** v0.6
-
-**Estimated Time:** 4 hours
-
-### Acceptance Criteria
-**Given** I visit a project’s Workflow page
-**When** the page loads successfully
-**Then** my `lastOpenedProjectId` is updated to that project
-
-**Given** I subsequently log in
-**When** the redirect logic runs
-**Then** it uses `lastOpenedProjectId` unless overridden by a deep link
-
-
-# 7. Onboarding UI States and Messaging
+# 6. Onboarding UI States and Messaging
 
 ## User Story
 As a user, I want clear UI during onboarding so that I understand the setup progress and outcomes.
@@ -147,7 +128,7 @@ As a user, I want clear UI during onboarding so that I understand the setup prog
 **Then** I see a non-blocking error with a one-click retry and a "Create Project" option
 
 
-# 8. Observability and Auditability
+# 7. Observability and Auditability
 
 ## User Story
 As a platform operator, I want metrics and structured logs for onboarding so that I can monitor success rates and diagnose issues.
@@ -166,7 +147,7 @@ As a platform operator, I want metrics and structured logs for onboarding so tha
 **Then** structured audit entries exist for `first_login`, `default_project_created`, and `landing_redirected` with correlation IDs
 
 
-# 9. Concurrency and Idempotency Guarantees
+# 8. Concurrency and Idempotency Guarantees
 
 ## User Story
 As a platform operator, I want onboarding to be safe under concurrency so that duplicate default projects are never created.
@@ -185,7 +166,7 @@ As a platform operator, I want onboarding to be safe under concurrency so that d
 **Then** the operation remains idempotent and does not create duplicates
 
 
-# 10. Invite/Org Flow and Deleted-Only-Project Edge Cases
+# 9. Invite/Org Flow and Deleted-Only-Project Edge Cases
 
 ## User Story
 As a user joining via invite or after deleting my only project, I want onboarding to behave appropriately so that I land on the correct destination without unintended new projects.
@@ -202,24 +183,5 @@ As a user joining via invite or after deleting my only project, I want onboardin
 **Given** I previously deleted my only project
 **When** I next log in without other projects
 **Then** a new default project is created and I am redirected to its Workflow page
-
-
-# 11. Feature Flag Control
-
-## User Story
-As an administrator, I want to enable or disable onboarding auto-creation per tenant so that I can control rollout safely.
-
-**Version:** v0.6
-
-**Estimated Time:** 4 hours
-
-### Acceptance Criteria
-**Given** the feature flag is disabled for a tenant
-**When** a new user logs in
-**Then** no default project is created and the user lands on the project list with a "Create Project" CTA
-
-**Given** the feature flag is enabled
-**When** users log in for the first time
-**Then** the default project creation and landing behavior occur as specified
 
 
