@@ -7,7 +7,7 @@ Epic: 12. Workflow Publishing & Production Deployment
 ## User Story
 As a workflow developer, I want a "Publish" button in the workflow designer so that I can deploy my validated workflow to production with a single action.
 
-**Version:** v0.6
+**Version:** v1.0
 
 **Estimated Time:** 12 hours
 
@@ -29,7 +29,7 @@ As a workflow developer, I want a "Publish" button in the workflow designer so t
 ## User Story
 As a workflow developer, I want the publish button to only be enabled when my workflow passes comprehensive validation so that I don't accidentally deploy broken or incomplete workflows to production.
 
-**Version:** v0.6
+**Version:** v0.5
 
 **Estimated Time:** 16 hours
 
@@ -51,7 +51,7 @@ As a workflow developer, I want the publish button to only be enabled when my wo
 ## User Story
 As a workflow developer, I want to create named releases when publishing so that I can organize my deployments with meaningful version identifiers and release notes.
 
-**Version:** v0.6
+**Version:** v1.0
 
 **Estimated Time:** 10 hours
 
@@ -73,7 +73,7 @@ As a workflow developer, I want to create named releases when publishing so that
 ## User Story
 As a workflow developer, I want an isolated production pod automatically created for my workflows so that my published workflows run in a dedicated, secure environment separate from other users and development environments.
 
-**Version:** v0.6
+**Version:** v1.0
 
 **Estimated Time:** 20 hours
 
@@ -95,7 +95,7 @@ As a workflow developer, I want an isolated production pod automatically created
 ## User Story
 As a workflow developer, I want a unique, secure production URL for my published workflows so that I can access and integrate my workflows from external systems with reliable endpoints.
 
-**Version:** v0.6
+**Version:** v1.0
 
 **Estimated Time:** 14 hours
 
@@ -117,7 +117,7 @@ As a workflow developer, I want a unique, secure production URL for my published
 ## User Story
 As a workflow developer, I want to run multiple versions of my workflow simultaneously in production so that I can perform blue-green deployments, gradual rollouts, and A/B testing.
 
-**Version:** v0.6
+**Version:** v1.0
 
 **Estimated Time:** 18 hours
 
@@ -139,7 +139,7 @@ As a workflow developer, I want to run multiple versions of my workflow simultan
 ## User Story
 As a workflow developer, I want to rollback to previous versions of my published workflow so that I can quickly recover from problematic releases and maintain service reliability.
 
-**Version:** v0.6
+**Version:** v1.0
 
 **Estimated Time:** 16 hours
 
@@ -161,7 +161,7 @@ As a workflow developer, I want to rollback to previous versions of my published
 ## User Story
 As a workflow developer, I want to view the health and performance of my published workflows in a monitoring dashboard so that I can track production status, identify issues, and ensure optimal performance.
 
-**Version:** v0.6
+**Version:** v1.0
 
 **Estimated Time:** 22 hours
 
@@ -183,7 +183,7 @@ As a workflow developer, I want to view the health and performance of my publish
 ## User Story
 As a workflow developer, I want detailed error tracking and logging for my production workflows so that I can troubleshoot issues, analyze failures, and improve workflow reliability.
 
-**Version:** v0.6
+**Version:** v1.0
 
 **Estimated Time:** 18 hours
 
@@ -205,7 +205,7 @@ As a workflow developer, I want detailed error tracking and logging for my produ
 ## User Story
 As a workflow developer, I want secure authentication for my production workflow URLs so that only authorized users and systems can access my published workflows.
 
-**Version:** v0.6
+**Version:** v1.0
 
 **Estimated Time:** 20 hours
 
@@ -227,7 +227,7 @@ As a workflow developer, I want secure authentication for my production workflow
 ## User Story
 As a workflow developer, I want clear feedback about my deployment status and progress so that I know when my workflow is successfully published, available, and ready for production use.
 
-**Version:** v0.6
+**Version:** v1.0
 
 **Estimated Time:** 12 hours
 
@@ -249,7 +249,7 @@ As a workflow developer, I want clear feedback about my deployment status and pr
 ## User Story
 As a workflow developer, I want comprehensive API documentation for my production workflows so that I can integrate them with external systems and enable others to consume my workflow services.
 
-**Version:** v0.6
+**Version:** v1.0
 
 **Estimated Time:** 8 hours
 

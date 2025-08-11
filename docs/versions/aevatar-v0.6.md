@@ -147,6 +147,43 @@ Version 0.6 introduces advanced interactive debugging capabilities, enhanced nod
   - Authentication setup guidance
   - Manual trigger and programmatic access instructions
 
+### 4. User Onboarding: Default Project Creation and Workflow Landing (Complete Implementation)
+**Epic Reference:** [3-1-user-onboarding-default-project-and-workflow-landing-stories.md](../stories/3-1-user-onboarding-default-project-and-workflow-landing-stories.md)
+
+**Stories:**
+- **First-Time Default Project Creation** - [3-1-user-onboarding-default-project-and-workflow-landing-stories.md#1-first-time-default-project-creation](../stories/3-1-user-onboarding-default-project-and-workflow-landing-stories.md#1-first-time-default-project-creation)
+  - Auto-create default project on first login when none exist
+  - Idempotent under retries and concurrency; single project owned by the user
+  - Redirect post-auth to default project’s Workflow page
+
+- **Unique Slug and Name Generation** - [3-1-user-onboarding-default-project-and-workflow-landing-stories.md#2-unique-slug-and-name-generation](../stories/3-1-user-onboarding-default-project-and-workflow-landing-stories.md#2-unique-slug-and-name-generation)
+  - Readable name and unique, URL-safe slug (hash suffix as needed)
+
+- **Owner Role and Permissions Initialization** - [3-1-user-onboarding-default-project-and-workflow-landing-stories.md#3-owner-role-and-permissions-initialization](../stories/3-1-user-onboarding-default-project-and-workflow-landing-stories.md#3-owner-role-and-permissions-initialization)
+  - Assign Owner role with full permissions; ACLs enforce access
+
+- **Seed Starter Workflow** - [3-1-user-onboarding-default-project-and-workflow-landing-stories.md#4-seed-starter-workflow](../stories/3-1-user-onboarding-default-project-and-workflow-landing-stories.md#4-seed-starter-workflow)
+  - Provide starter workflow/template; visible and editable on Workflow page
+
+- **Login Landing Behavior and Precedence** - [3-1-user-onboarding-default-project-and-workflow-landing-stories.md#5-login-landing-behavior-and-precedence](../stories/3-1-user-onboarding-default-project-and-workflow-landing-stories.md#5-login-landing-behavior-and-precedence)
+  - Redirect to last opened project when no deep link
+  - Honor deep link over last-opened; robust fallbacks when unavailable
+
+- **Onboarding UI States and Messaging** - [3-1-user-onboarding-default-project-and-workflow-landing-stories.md#6-onboarding-ui-states-and-messaging](../stories/3-1-user-onboarding-default-project-and-workflow-landing-stories.md#6-onboarding-ui-states-and-messaging)
+  - Loading state: “Initialising workspace…”; notice on project creation
+  - Non-blocking error with retry/Create Project on failure
+
+- **Observability and Auditability** - [3-1-user-onboarding-default-project-and-workflow-landing-stories.md#7-observability-and-auditability](../stories/3-1-user-onboarding-default-project-and-workflow-landing-stories.md#7-observability-and-auditability)
+  - Metrics for first login, default project creation, landing success
+  - Structured audit logs with correlation IDs
+
+- **Concurrency and Idempotency Guarantees** - [3-1-user-onboarding-default-project-and-workflow-landing-stories.md#8-concurrency-and-idempotency-guarantees](../stories/3-1-user-onboarding-default-project-and-workflow-landing-stories.md#8-concurrency-and-idempotency-guarantees)
+  - Single default project under concurrent attempts; idempotent retries
+
+- **Invite/Org Flow and Deleted-Only-Project Edge Cases** - [3-1-user-onboarding-default-project-and-workflow-landing-stories.md#9-inviteorg-flow-and-deleted-only-project-edge-cases](../stories/3-1-user-onboarding-default-project-and-workflow-landing-stories.md#9-inviteorg-flow-and-deleted-only-project-edge-cases)
+  - Redirect to invited resource; no auto-create on invite flow
+  - Re-create default project when user deleted only project
+
 ## Technical Architecture
 
 ### Debug Pod Infrastructure
@@ -258,6 +295,14 @@ Version 0.6 introduces advanced interactive debugging capabilities, enhanced nod
 - ✅ Secure authentication and API key management
 - ✅ Real-time deployment status and feedback
 - ✅ Automatically generated API documentation
+
+ - ✅ First-time default project auto-creation with unique slug/name and Owner role assignment
+ - ✅ Starter workflow seeded and visible on landing
+ - ✅ Login landing precedence: deep link over last opened; robust fallbacks
+ - ✅ Onboarding UI states/messaging with non-blocking error and retry
+ - ✅ Onboarding observability: metrics and structured audit logs with correlation IDs
+ - ✅ Concurrency-safe, idempotent onboarding (no duplicate defaults)
+ - ✅ Correct handling of invite/org flow and deleted-only-project edge cases
 
 ## Dependencies
 - v0.5 Enhanced Execution Progress Tracking and Real-Time Data Streaming Infrastructure

@@ -45,6 +45,8 @@ Epic: 1. Visual Workflow Designer (Drag-and-Drop Interface) - 7. Agent Configura
 ## User Story
 As a user creating a new agent node, I want the system to automatically populate all required fields with appropriate default values, so that I can immediately save and use the agent without having to manually configure every field.
 
+**Version:** v0.5
+
 **Estimated Time: 16 hours**
 
 ## Acceptance Criteria
@@ -78,6 +80,8 @@ As a user creating a new agent node, I want the system to automatically populate
 
 ## User Story
 As a user configuring agent nodes, I want all my configuration changes to be automatically saved without clicking a save button, so that I never lose my work and can focus on building workflows.
+
+**Version:** v0.5
 
 **Estimated Time: 20 hours**
 
@@ -116,6 +120,8 @@ As a user configuring agent nodes, I want all my configuration changes to be aut
 
 ## User Story
 As a user configuring agent nodes, I want immediate validation feedback as I enter values, so that I can quickly identify and fix configuration errors before they cause runtime issues.
+
+**Version:** v0.5
 
 **Estimated Time: 14 hours**
 
@@ -158,6 +164,8 @@ As a user configuring agent nodes, I want immediate validation feedback as I ent
 
 ## User Story
 As a user making configuration changes, I want the ability to undo and redo my recent changes, so that I can easily recover from mistakes and experiment with different configurations.
+
+**Version:** v0.5
 
 **Estimated Time: 12 hours**
 

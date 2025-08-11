@@ -11,6 +11,8 @@ Provides infrastructure for creating, managing, and reusing user-specific debug 
 
 As an authenticated user, I want the system to automatically create and manage a personal debug pod when I enable debug mode, so that I can have an isolated testing environment that persists across multiple workflow debugging sessions.
 
+**Version:** v1.0
+
 **Time Estimate: 16 hours**
 
 ### Key Features
@@ -114,6 +116,8 @@ Enables users to execute workflows directly from the debug interface with real-t
 
 As a workflow debugger, I want to execute workflows directly from the debug interface and see live progress updates, so that I can test my workflows in the debug environment and observe their behavior in real-time.
 
+**Version:** v0.5
+
 **Time Estimate: 12 hours**
 
 ### Key Features
@@ -174,6 +178,8 @@ Provides visual representation of workflow execution with live updates, showing 
 
 As a workflow debugger, I want to see a live timeline visualization of my workflow execution that updates in real-time, so that I can understand the execution flow, identify bottlenecks, and see which agents are currently running or have completed.
 
+**Version:** v0.6
+
 **Time Estimate: 16 hours**
 
 ### Key Features
@@ -229,6 +235,8 @@ Provides detailed interface for inspecting agent inputs, outputs, intermediate s
 ### User Story
 
 As a workflow debugger, I want to inspect the detailed inputs, outputs, and intermediate data for each agent in my workflow, so that I can understand data transformations, identify issues, and validate that my workflow is processing data correctly.
+
+**Version:** v0.5
 
 **Time Estimate: 12 hours**
 
