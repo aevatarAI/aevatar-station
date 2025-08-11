@@ -37,4 +37,10 @@ Additional onboarding at organization creation time:
 - Real-time Option Validation — [1-11-node-input-option-display-stories.md](../stories/1-11-node-input-option-display-stories.md#4-real-time-option-validation)
 - Option Descriptions and Metadata — [1-11-node-input-option-display-stories.md](../stories/1-11-node-input-option-display-stories.md#5-option-descriptions-and-metadata)
 
+### 3. Workflow Error Visibility During Execution
+**Epic Reference:** Epic 13: Workflow Error Visibility During Execution
+
+**Stories (v0.6):**
+- Per-Node Error Indicators on Failure — [1-13-workflow-error-visibility-during-execution-stories.md](../stories/1-13-workflow-error-visibility-during-execution-stories.md#1-per-node-error-indicators-on-failure)
+
 

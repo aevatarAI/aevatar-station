@@ -480,3 +480,39 @@ Enable users to publish stable workflow versions to dedicated production environ
 - Users receive clear feedback about deployment status, errors, and success confirmations.
 
 ---
+
+## 13. Workflow Error Visibility During Execution
+**Version**
+v0.6
+
+**Objective:**
+Ensure users can immediately see, understand, and act on errors that occur while running a workflow in the designer or dashboard.
+
+**Key Requirements:**
+- Inline error surfacing during execution:
+  - Per-node error state with distinct styling (icon, color, tooltip) when a node fails.
+  - Connection-level error indicators when data passing fails or payload is invalid.
+- Global error panel:
+  - Summarizes all current and recent errors with time, node, message, and category (validation, runtime, permission, quota, network).
+  - Click-through navigation focuses the corresponding node on the canvas.
+- Error detail drawer/modal:
+  - Shows human-readable message, underlying exception/message, last input/output snippets, and correlation/execution IDs.
+  - Links to execution logs and traces when available.
+- User guidance and remediation:
+  - Clear recommended actions (e.g., fix config X, check credentials, reduce payload size).
+  - Optional retry on failed node(s) when safe, with safeguards to avoid side effects.
+- Execution context awareness:
+  - Works in both Interactive Debugger mode and standard run from the designer.
+  - Errors propagate to the Execution Progress Tracking Dashboard and stay correlated by run ID.
+- Accessibility & i18n:
+  - ARIA-compliant alerts; keyboard navigable; screen-reader friendly.
+  - Localized error titles/messages where supported.
+
+**Acceptance Criteria:**
+- When a node fails during run, users see a clear per-node error indicator and can open details to view message, context, and logs.
+- A global error panel lists all errors for the current run and supports clicking to focus the related node.
+- Errors are visible in both the designer run view and the execution dashboard, correlated by run/execution ID.
+- Users receive actionable guidance, and where allowed, can retry failed nodes safely.
+- Error UI meets basic accessibility requirements (screen reader labels, keyboard navigation, focus management).
+
+---
