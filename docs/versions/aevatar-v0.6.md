@@ -43,4 +43,10 @@ Additional onboarding at organization creation time:
 **Stories (v0.6):**
 - Per-Node Error Indicators on Failure — [1-13-workflow-error-visibility-during-execution-stories.md](../stories/1-13-workflow-error-visibility-during-execution-stories.md#1-per-node-error-indicators-on-failure)
 
+### 4. Agent Configuration Management (Enhanced UX)
+**Epic Reference:** [1-node-visualizer-specifications.md](../epics/1-node-visualizer-specifications.md#7-agent-configuration-management-enhanced-ux)
+
+**Stories (v0.6):**
+- Configuration Field Tooltips — [1-7-agent-configuration-management-stories.md](../stories/1-7-agent-configuration-management-stories.md#1-configuration-field-tooltips)
+
 
