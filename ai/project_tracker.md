@@ -7,4 +7,4 @@
 
 | 功能名称 | 状态 | 分支名 | 开发机器 | 描述 |
 |---------|------|--------|----------|------|
-| BuildAgentCatalogContent完整类型名称支持 | 🚧 | feature/agent-type-fullname-support | c6:c4:e5:e8:c6:4b | 在WorkflowOrchestrationService的BuildAgentCatalogContent中获取agent.Type时，返回带namespace的完整类型名称（如Aevatar.GAgents.Twitter.GAgents.ChatAIAgent.ChatAIGAgent），通过注入GrainTypeResolver并使用GetGrainType().ToString()方法实现 |
+| BuildAgentCatalogContent完整类型名称支持 | ✅ | feature/agent-type-fullname-support | c6:c4:e5:e8:c6:4b | ✅已完成：在WorkflowOrchestrationService的BuildAgentCatalogContent中获取agent.Type时，返回带namespace的完整类型名称（如Aevatar.GAgents.Twitter.GAgents.ChatAIAgent.ChatAIGAgent），通过注入GrainTypeResolver并使用GetGrainType().ToString()方法实现。包含专门的单元测试WorkflowOrchestrationGrainTypeTests.cs验证功能。整体项目编译通过无破坏性变更。 |
