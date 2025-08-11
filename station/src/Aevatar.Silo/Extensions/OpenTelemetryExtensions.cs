@@ -7,6 +7,7 @@ using OpenTelemetry.Trace;
 using Orleans.Configuration;
 using OpenTelemetry;
 using System.Diagnostics.Metrics;
+using Aevatar.Application.Grains.Common.Observability;
 using Aevatar.Core;
 using Aevatar.Core.Observability;
 
