@@ -17,6 +17,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans;
 using Orleans.Runtime;
+using Orleans.Metadata;
 using Newtonsoft.Json;
 using JsonException = Newtonsoft.Json.JsonException;
 using JsonConvert = Newtonsoft.Json.JsonConvert;
@@ -35,23 +36,42 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     private readonly IClusterClient _clusterClient;
     private readonly IUserAppService _userAppService;
     private readonly IGAgentManager _gAgentManager;
-    private readonly IGAgentFactory _gAgentFactory;
     private readonly IOptionsMonitor<AIServicePromptOptions> _promptOptions;
+    private readonly IOptionsMonitor<AgentOptions> _agentOptions;
+    private readonly GrainTypeResolver _grainTypeResolver;
 
     public WorkflowOrchestrationService(
         ILogger<WorkflowOrchestrationService> logger,
         IClusterClient clusterClient,
         IUserAppService userAppService,
         IGAgentManager gAgentManager,
-        IGAgentFactory gAgentFactory,
-        IOptionsMonitor<AIServicePromptOptions> promptOptions)
+        IOptionsMonitor<AIServicePromptOptions> promptOptions,
+        IOptionsMonitor<AgentOptions> agentOptions,
+        GrainTypeResolver grainTypeResolver)
     {
         _logger = logger;
         _clusterClient = clusterClient;
         _userAppService = userAppService;
         _gAgentManager = gAgentManager;
-        _gAgentFactory = gAgentFactory;
         _promptOptions = promptOptions;
+        _agentOptions = agentOptions;
+        _grainTypeResolver = grainTypeResolver;
+    }
+
+    /// <summary>
+    /// 获取过滤后的业务Agent类型（排除系统Agent）
+    /// </summary>
+    private List<Type> GetBusinessAgentTypes()
+    {
+        var systemAgents = _agentOptions.CurrentValue.SystemAgentList;
+        var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
+        var validAgents = availableGAgents.Where(a => !a.Namespace?.StartsWith("OrleansCodeGen") == true).ToList();
+        var businessAgentTypes = validAgents.Where(a => !systemAgents.Contains(a.Name)).ToList();
+        
+        _logger.LogDebug("Filtered {TotalCount} available agents to {BusinessCount} business agents. Excluded system agents: {SystemAgents}", 
+            availableGAgents.Count(), businessAgentTypes.Count, string.Join(", ", systemAgents));
+            
+        return businessAgentTypes;
     }
 
     /// <summary>
@@ -115,11 +135,10 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         
         try
         {
-            _logger.LogDebug("Getting available agent types from GAgentManager using reflection approach");
-            var availableTypes = _gAgentManager.GetAvailableGAgentTypes();
-            var validAgentTypes = availableTypes.Where(t => !t.Namespace?.StartsWith("OrleansCodeGen") == true).ToList();
+            _logger.LogDebug("Getting business agent types (excluding system agents)");
+            var validAgentTypes = GetBusinessAgentTypes();
             
-            _logger.LogInformation("Found {TypeCount} valid agent types to process", validAgentTypes.Count);
+            _logger.LogInformation("Found {TypeCount} business agent types to process", validAgentTypes.Count);
             
             var agentDescriptions = new List<AiWorkflowAgentInfoDto>();
             
@@ -164,6 +183,22 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             Type = agentType.FullName ?? agentType.Name,
             Description = description
         };
+    }
+
+    /// <summary>
+    /// 将AI生成的简单类型名称映射为完整的GrainType名称
+    /// </summary>
+    private string MapSimpleTypeNameToFullTypeName(string simpleTypeName)
+    {
+        if (string.IsNullOrEmpty(simpleTypeName) || _grainTypeResolver == null)
+            return simpleTypeName;
+
+        var matchedType = GetBusinessAgentTypes()
+            .FirstOrDefault(t => t.Name == simpleTypeName);
+
+        return matchedType != null 
+            ? _grainTypeResolver.GetGrainType(matchedType).ToString()
+            : simpleTypeName;
     }
 
     #endregion
@@ -338,13 +373,19 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
 
             foreach (var token in nodesArray.OfType<JObject>())
             {
+                // 从JSON中获取简单的agent类型名称
+                var simpleAgentType = token.Value<string>("nodeType")
+                                    ?? token.Value<string>("agentType")
+                                    ?? string.Empty;
+                
+                // 将简单类型名称映射为完整的GrainType名称
+                var fullAgentType = MapSimpleTypeNameToFullTypeName(simpleAgentType);
+                
                 var node = new AiWorkflowNodeDto
                 {
                     NodeId = token.Value<string>("nodeId") ?? Guid.NewGuid().ToString(),
-                    // Support both nodeType and agentType as schema variants
-                    AgentType = token.Value<string>("nodeType")
-                                ?? token.Value<string>("agentType")
-                                ?? string.Empty,
+                    // 使用映射后的完整类型名称
+                    AgentType = fullAgentType,
                     // Support both nodeName and name as schema variants
                     Name = token.Value<string>("nodeName")
                            ?? token.Value<string>("name")
