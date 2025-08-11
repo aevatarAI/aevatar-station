@@ -177,6 +177,12 @@ Improve user experience when configuring agent nodes by providing smart defaults
   - Undo/redo functionality for configuration changes
   - Global save status indicator shows overall workflow save state
 
+- **Field Help & Tooltips:**
+  - Every input field in the configuration panel provides a concise tooltip/help description
+  - Tooltip content includes field purpose, expected format/range, default behavior, and example values
+  - Tooltips appear on hover and focus, are keyboard accessible, and support screen readers via ARIA attributes (e.g., aria-describedby)
+  - Tooltip content is localized with the UI language and updates if defaults or validation rules change
+
 - **Configuration Validation:**
   - Real-time validation of configuration inputs as users type
   - Clear visual indicators for invalid or incomplete configurations
@@ -193,6 +199,7 @@ Improve user experience when configuring agent nodes by providing smart defaults
 - Network failures during auto-save are handled gracefully with user notification
 - Users can undo/redo configuration changes within a reasonable history limit
 - Default values are clearly distinguishable from user-entered values in the UI
+  - Each configuration input field exposes an accessible tooltip/help description available on hover/focus and via keyboard
 
 ---
 
