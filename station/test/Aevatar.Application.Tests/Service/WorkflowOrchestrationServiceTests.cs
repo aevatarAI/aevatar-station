@@ -13,6 +13,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Orleans;
+using Orleans.Metadata;
+using Orleans.Runtime;
 using Shouldly;
 using Xunit;
 
@@ -30,6 +32,7 @@ public class WorkflowOrchestrationServiceTests
     private readonly Mock<IGAgentFactory> _mockGAgentFactory;
     private readonly Mock<IOptionsMonitor<AIServicePromptOptions>> _mockPromptOptions;
     private readonly Mock<IWorkflowComposerGAgent> _mockWorkflowComposerGAgent;
+    private readonly Mock<GrainTypeResolver> _mockGrainTypeResolver;
     private readonly WorkflowOrchestrationService _service;
 
     public WorkflowOrchestrationServiceTests()
@@ -41,6 +44,7 @@ public class WorkflowOrchestrationServiceTests
         _mockGAgentFactory = new Mock<IGAgentFactory>();
         _mockPromptOptions = new Mock<IOptionsMonitor<AIServicePromptOptions>>();
         _mockWorkflowComposerGAgent = new Mock<IWorkflowComposerGAgent>();
+        _mockGrainTypeResolver = new Mock<GrainTypeResolver>();
 
         SetupMockDefaults();
 
@@ -50,7 +54,8 @@ public class WorkflowOrchestrationServiceTests
             _mockUserAppService.Object,
             _mockGAgentManager.Object,
             _mockGAgentFactory.Object,
-            _mockPromptOptions.Object);
+            _mockPromptOptions.Object,
+            _mockGrainTypeResolver.Object);
     }
 
     private void SetupMockDefaults()
@@ -79,6 +84,10 @@ public class WorkflowOrchestrationServiceTests
             NoAgentsAvailableMessage = "No agents available"
         };
         _mockPromptOptions.Setup(x => x.CurrentValue).Returns(promptOptions);
+        
+        // Setup GrainTypeResolver to return default grain type format
+        _mockGrainTypeResolver.Setup(x => x.GetGrainType(It.IsAny<Type>()))
+            .Returns((Type type) => Orleans.Runtime.GrainType.Create(type.FullName ?? type.Name));
     }
 
     #region Basic Functionality Tests
@@ -249,7 +258,8 @@ public class WorkflowOrchestrationServiceTests
             _mockUserAppService.Object,
             _mockGAgentManager.Object,
             _mockGAgentFactory.Object,
-            _mockPromptOptions.Object);
+            _mockPromptOptions.Object,
+            _mockGrainTypeResolver.Object);
 
         service.ShouldNotBeNull();
     }

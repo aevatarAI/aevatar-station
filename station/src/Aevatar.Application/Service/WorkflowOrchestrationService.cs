@@ -17,6 +17,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans;
 using Orleans.Runtime;
+using Orleans.Metadata;
 using Newtonsoft.Json;
 using JsonException = Newtonsoft.Json.JsonException;
 using JsonConvert = Newtonsoft.Json.JsonConvert;
@@ -37,6 +38,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     private readonly IGAgentManager _gAgentManager;
     private readonly IGAgentFactory _gAgentFactory;
     private readonly IOptionsMonitor<AIServicePromptOptions> _promptOptions;
+    private readonly GrainTypeResolver _grainTypeResolver;
 
     public WorkflowOrchestrationService(
         ILogger<WorkflowOrchestrationService> logger,
@@ -44,7 +46,8 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         IUserAppService userAppService,
         IGAgentManager gAgentManager,
         IGAgentFactory gAgentFactory,
-        IOptionsMonitor<AIServicePromptOptions> promptOptions)
+        IOptionsMonitor<AIServicePromptOptions> promptOptions,
+        GrainTypeResolver grainTypeResolver)
     {
         _logger = logger;
         _clusterClient = clusterClient;
@@ -52,6 +55,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         _gAgentManager = gAgentManager;
         _gAgentFactory = gAgentFactory;
         _promptOptions = promptOptions;
+        _grainTypeResolver = grainTypeResolver;
     }
 
     /// <summary>
@@ -158,10 +162,14 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         var descriptionAttr = agentType.GetCustomAttribute<DescriptionAttribute>();
         var description = descriptionAttr?.Description ?? $"{agentType.Name} - Agent for specialized processing";
         
+        // 使用GrainTypeResolver获取完整的GrainType名称，包含完整的namespace路径
+        var grainType = _grainTypeResolver.GetGrainType(agentType);
+        var fullTypeName = grainType.ToString();
+        
         return new AiWorkflowAgentInfoDto
         {
             Name = agentType.Name,
-            Type = agentType.FullName ?? agentType.Name,
+            Type = fullTypeName,
             Description = description
         };
     }

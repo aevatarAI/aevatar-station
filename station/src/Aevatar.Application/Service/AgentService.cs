@@ -677,36 +677,15 @@ public class AgentService : ApplicationService, IAgentService
         };
     }
 
-
     public async Task RemoveAllSubAgentAsync(Guid guid)
     {
         var creatorAgent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
         var agentState = await creatorAgent.GetAgentAsync();
 
         var agent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
-        var subAgentGrainIds = await agent.GetChildrenAsync();
-        if (!subAgentGrainIds.IsNullOrEmpty() &&
-            (subAgentGrainIds.Count > 1 || subAgentGrainIds[0] != creatorAgent.GetGrainId()))
-        {
-            _logger.LogInformation("Agent {agentId} has subagents, please remove them first.", guid);
-            throw new UserFriendlyException("Agent has subagents, please remove them first.");
-        }
-
-        var parentGrainId = await agent.GetParentAsync();
-        if (parentGrainId.IsDefault)
-        {
-            if (subAgentGrainIds.Any())
-            {
-                await agent.UnregisterAsync(creatorAgent);
-            }
-
-            await creatorAgent.DeleteAgentAsync();
-        }
-        else
-        {
-            _logger.LogInformation("Agent {agentId} has parent, please remove from it first.", guid);
-            throw new UserFriendlyException("Agent has parent, please remove from it first.");
-        }
+        var subAgentGrainIds = await GetSubAgentGrainIds(agent);
+        await RemoveSubAgentAsync(guid,
+            new RemoveSubAgentDto { RemovedSubAgents = subAgentGrainIds.Select(x => x.GetGuidKey()).ToList() });
     }
 
     private async Task<List<GrainId>> GetSubAgentGrainIds(IGAgent agent)
