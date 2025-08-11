@@ -21,7 +21,10 @@
       "Bash(dotnet list:*)",
       "Bash(dotnet restore:*)",
       "Bash(dotnet nuget locals:*)",
-      "Bash(dotnet publish:*)"
+      "Bash(dotnet publish:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh api:*)"
     ]
   },
   "enableAllProjectMcpServers": true
