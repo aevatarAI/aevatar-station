@@ -7,7 +7,7 @@ Epic: 7. Agent Configuration Management (Enhanced UX)
 ## User Story
 As a workflow designer user, I want each configuration input field to provide an accessible tooltip describing its purpose and expected values so that I can configure agents correctly without guesswork.
 
-**Version:** v0.5
+**Version:** v0.6
 
 **Estimated Time:** 12 hours
 
