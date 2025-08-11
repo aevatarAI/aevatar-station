@@ -107,6 +107,54 @@ public sealed class GAgentBaseTests : AevatarGAgentsTestBase
         state.Called.ShouldBe(true);
     }
 
+    [Fact(DisplayName = "Grain activation sets _isActivated field correctly.")]
+    public async Task GrainActivation_SetsIsActivatedField_Test()
+    {
+        var guid = Guid.NewGuid();
+        // Arrange & Act - Just getting state should activate the grain
+        var stateTrackingGAgent = _grainFactory.GetGrain<IStateTrackingTestGAgent>(guid);
+        var stateAfterActivation = await stateTrackingGAgent.GetStateAsync();
+
+        // Assert - No HandleStateChangedAsync should be called during simple activation
+        stateAfterActivation.HandleStateChangedCallCount.ShouldBe(0);
+        
+        // The grain should be properly activated with initial version 0
+        var currentVersion = await stateTrackingGAgent.GetCurrentVersionAsync();
+        currentVersion.ShouldBe(0);
+    }
+
+    [Fact(DisplayName = "Private field _lastProcessedVersion prevents duplicate state processing.")]
+    public async Task LastProcessedVersionField_PreventsDuplicateProcessing_Test()
+    {
+        var guid = Guid.NewGuid();
+        // Arrange.
+        var stateTrackingGAgent = _grainFactory.GetGrain<IStateTrackingTestGAgent>(guid);
+
+        // Ensure grain is activated and get baseline
+        await stateTrackingGAgent.GetStateAsync();
+        var stateBeforeTest = await stateTrackingGAgent.GetStateAsync();
+        var baselineCallCount = stateBeforeTest.HandleStateChangedCallCount;
+
+        // Act - Trigger multiple state changes
+        await stateTrackingGAgent.UpdateTestDataAsync("test1");
+        await stateTrackingGAgent.UpdateTestDataAsync("test2");
+        await stateTrackingGAgent.UpdateTestDataAsync("test3");
+
+        // Assert
+        var finalState = await stateTrackingGAgent.GetStateAsync();
+        var totalCallsAfterUpdates = finalState.HandleStateChangedCallCount - baselineCallCount;
+        
+        // Each update should trigger HandleStateChangedAsync exactly once
+        totalCallsAfterUpdates.ShouldBe(3);
+        
+        // Verify processed versions are tracked correctly
+        finalState.ProcessedVersions.Count.ShouldBeGreaterThanOrEqualTo(3);
+        
+        // Verify no duplicate versions are processed
+        var uniqueVersions = finalState.ProcessedVersions.Distinct().ToList();
+        uniqueVersions.Count.ShouldBe(finalState.ProcessedVersions.Count);
+    }
+
     private async Task<bool> CheckState(IStateGAgent<InvestorTestGAgentState> investor1)
     {
         var state = await investor1.GetStateAsync();
