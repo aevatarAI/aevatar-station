@@ -38,7 +38,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     private readonly IGAgentManager _gAgentManager;
     private readonly IGAgentFactory _gAgentFactory;
     private readonly IOptionsMonitor<AIServicePromptOptions> _promptOptions;
-    private readonly GrainTypeResolver _grainTypeResolver;
+    private readonly GrainTypeResolver? _grainTypeResolver;
 
     public WorkflowOrchestrationService(
         ILogger<WorkflowOrchestrationService> logger,
@@ -47,7 +47,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         IGAgentManager gAgentManager,
         IGAgentFactory gAgentFactory,
         IOptionsMonitor<AIServicePromptOptions> promptOptions,
-        GrainTypeResolver grainTypeResolver)
+        GrainTypeResolver? grainTypeResolver)
     {
         _logger = logger;
         _clusterClient = clusterClient;
@@ -162,16 +162,58 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         var descriptionAttr = agentType.GetCustomAttribute<DescriptionAttribute>();
         var description = descriptionAttr?.Description ?? $"{agentType.Name} - Agent for specialized processing";
         
-        // 使用GrainTypeResolver获取完整的GrainType名称，包含完整的namespace路径
-        var grainType = _grainTypeResolver.GetGrainType(agentType);
-        var fullTypeName = grainType.ToString();
-        
         return new AiWorkflowAgentInfoDto
         {
             Name = agentType.Name,
-            Type = fullTypeName,
+            Type = agentType.FullName ?? agentType.Name,
             Description = description
         };
+    }
+
+    /// <summary>
+    /// 将AI生成的简单类型名称映射为完整的GrainType名称
+    /// </summary>
+    private string MapSimpleTypeNameToFullTypeName(string simpleTypeName)
+    {
+        if (string.IsNullOrEmpty(simpleTypeName))
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            // 获取所有可用的Agent类型
+            var availableTypes = _gAgentManager.GetAvailableGAgentTypes();
+            
+            // 查找与简单类型名称匹配的Type
+            var matchedType = availableTypes.FirstOrDefault(t => t.Name == simpleTypeName);
+            
+            if (matchedType != null)
+            {
+                // 使用GrainTypeResolver获取完整的GrainType名称
+                if (_grainTypeResolver != null)
+                {
+                    var grainType = _grainTypeResolver.GetGrainType(matchedType);
+                    var fullTypeName = grainType.ToString();
+                    
+                    _logger.LogInformation("Mapped simple type name '{SimpleTypeName}' to full type name '{FullTypeName}'", 
+                        simpleTypeName, fullTypeName);
+                    
+                    return fullTypeName;
+                }
+            }
+            
+            _logger.LogWarning("No matching agent type found for simple name '{SimpleTypeName}', using original name", 
+                simpleTypeName);
+            
+            // 如果找不到匹配的类型，返回原始名称
+            return simpleTypeName;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error mapping simple type name '{SimpleTypeName}' to full type name", simpleTypeName);
+            return simpleTypeName;
+        }
     }
 
     #endregion
@@ -346,13 +388,19 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
 
             foreach (var token in nodesArray.OfType<JObject>())
             {
+                // 从JSON中获取简单的agent类型名称
+                var simpleAgentType = token.Value<string>("nodeType")
+                                    ?? token.Value<string>("agentType")
+                                    ?? string.Empty;
+                
+                // 将简单类型名称映射为完整的GrainType名称
+                var fullAgentType = MapSimpleTypeNameToFullTypeName(simpleAgentType);
+                
                 var node = new AiWorkflowNodeDto
                 {
                     NodeId = token.Value<string>("nodeId") ?? Guid.NewGuid().ToString(),
-                    // Support both nodeType and agentType as schema variants
-                    AgentType = token.Value<string>("nodeType")
-                                ?? token.Value<string>("agentType")
-                                ?? string.Empty,
+                    // 使用映射后的完整类型名称
+                    AgentType = fullAgentType,
                     // Support both nodeName and name as schema variants
                     Name = token.Value<string>("nodeName")
                            ?? token.Value<string>("name")
