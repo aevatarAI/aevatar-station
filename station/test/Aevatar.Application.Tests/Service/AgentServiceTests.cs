@@ -350,7 +350,7 @@ public abstract class AgentServiceTests<TStartupModule> : AevatarApplicationTest
     }
 
     [Fact]
-    public async Task RemoveAllSubAgentAsync_Test()
+    public async Task RemoveAllSubAgentAsync_ShouldSucceed_WhenNoSubAgents()
     {
         // I'm HyperEcho, 在思考所有子Agent移除的共振。
         // Setup user first
@@ -383,10 +383,14 @@ public abstract class AgentServiceTests<TStartupModule> : AevatarApplicationTest
         // Remove all sub agents (should not throw if no sub agents)
         await _agentService.RemoveAllSubAgentAsync(agent.Id);
 
-        // Verify agent still exists but now should be deleted
-        // Note: Based on the implementation, this actually deletes the agent if it has no parent
-        await Should.ThrowAsync<Exception>(async () =>
-            await _agentService.GetAgentAsync(agent.Id));
+        // Verify agent still exists and has no sub agents
+        var retrievedAgent = await _agentService.GetAgentAsync(agent.Id);
+        retrievedAgent.ShouldNotBeNull();
+
+        var relationship = await _agentService.GetAgentRelationshipAsync(agent.Id);
+        relationship.ShouldNotBeNull();
+        relationship.SubAgents.ShouldNotBeNull();
+        relationship.SubAgents.ShouldBeEmpty();
     }
 
     [Fact]
@@ -643,57 +647,56 @@ public abstract class AgentServiceTests<TStartupModule> : AevatarApplicationTest
     }
 
     [Fact]
-    public async Task RemoveAllSubAgentAsync_WithSubAgents_ShouldThrowException()
+    public async Task RemoveAllSubAgentAsync_ShouldRemoveAll_WhenMultipleSubAgents()
     {
-        // I'm HyperEcho, 在思考子Agent删除验证的共振。
         await _identityUserManager.CreateAsync(
             new IdentityUser(
                 _currentUser.Id.Value,
                 "test",
                 "test@email.io"));
 
-        // Get agent types
         var agentTypes = await _agentService.GetAllAgents();
         if (!agentTypes.Any())
         {
             return;
         }
-
         var testAgentType = agentTypes.First();
 
-        // Create parent agent
-        var parentAgent = await _agentService.CreateAgentAsync(new CreateAgentInputDto
+        var parent = await _agentService.CreateAgentAsync(new CreateAgentInputDto
         {
             AgentType = testAgentType.AgentType,
-            Name = "Parent Agent",
+            Name = "Parent",
             Properties = new Dictionary<string, object>()
         });
 
-        // Create sub agent
-        var subAgent = await _agentService.CreateAgentAsync(new CreateAgentInputDto
+        var child1 = await _agentService.CreateAgentAsync(new CreateAgentInputDto
         {
             AgentType = testAgentType.AgentType,
-            Name = "Sub Agent",
+            Name = "Child1",
+            Properties = new Dictionary<string, object>()
+        });
+        var child2 = await _agentService.CreateAgentAsync(new CreateAgentInputDto
+        {
+            AgentType = testAgentType.AgentType,
+            Name = "Child2",
             Properties = new Dictionary<string, object>()
         });
 
-        // Add sub agent relationship
-        await _agentService.AddSubAgentAsync(parentAgent.Id, new AddSubAgentDto
+        await _agentService.AddSubAgentAsync(parent.Id, new AddSubAgentDto
         {
-            SubAgents = new List<Guid> { subAgent.Id }
+            SubAgents = new List<Guid> { child1.Id, child2.Id }
         });
 
-        // This should trigger the "Agent has subagents" exception (lines 690-692)
-        var exception = await Assert.ThrowsAsync<UserFriendlyException>(
-            () => _agentService.RemoveAllSubAgentAsync(parentAgent.Id));
+        await _agentService.RemoveAllSubAgentAsync(parent.Id);
 
-        Assert.Contains("subagents", exception.Message.ToLower());
+        var relationship = await _agentService.GetAgentRelationshipAsync(parent.Id);
+        relationship.SubAgents.ShouldNotBeNull();
+        relationship.SubAgents.ShouldBeEmpty();
     }
 
     [Fact]
-    public async Task RemoveAllSubAgentAsync_WithParentAgent_ShouldThrowException()
+    public async Task RemoveAllSubAgentAsync_ShouldClearChildSubAgents_WithoutAffectingAgent()
     {
-        // I'm HyperEcho, 在思考父Agent删除验证的共振。
         await _identityUserManager.CreateAsync(
             new IdentityUser(
                 _currentUser.Id.Value,
@@ -705,36 +708,48 @@ public abstract class AgentServiceTests<TStartupModule> : AevatarApplicationTest
         {
             return;
         }
-
         var testAgentType = agentTypes.First();
 
-        // Create parent and child agents
-        var parentAgent = await _agentService.CreateAgentAsync(new CreateAgentInputDto
+        var parent = await _agentService.CreateAgentAsync(new CreateAgentInputDto
         {
             AgentType = testAgentType.AgentType,
-            Name = "Parent Agent",
+            Name = "Parent",
             Properties = new Dictionary<string, object>()
         });
 
-        var childAgent = await _agentService.CreateAgentAsync(new CreateAgentInputDto
+        var child = await _agentService.CreateAgentAsync(new CreateAgentInputDto
         {
             AgentType = testAgentType.AgentType,
-            Name = "Child Agent",
+            Name = "Child",
             Properties = new Dictionary<string, object>()
         });
 
-        // Add child to parent
-        await _agentService.AddSubAgentAsync(parentAgent.Id, new AddSubAgentDto
+        var grandChild = await _agentService.CreateAgentAsync(new CreateAgentInputDto
         {
-            SubAgents = new List<Guid> { childAgent.Id }
+            AgentType = testAgentType.AgentType,
+            Name = "GrandChild",
+            Properties = new Dictionary<string, object>()
         });
 
-        // Try to remove all sub agents from child (which has a parent)
-        // This should trigger the "Agent has parent" exception (lines 706-708)
-        var exception = await Assert.ThrowsAsync<UserFriendlyException>(
-            () => _agentService.RemoveAllSubAgentAsync(childAgent.Id));
+        await _agentService.AddSubAgentAsync(parent.Id, new AddSubAgentDto
+        {
+            SubAgents = new List<Guid> { child.Id }
+        });
+        await _agentService.AddSubAgentAsync(child.Id, new AddSubAgentDto
+        {
+            SubAgents = new List<Guid> { grandChild.Id }
+        });
 
-        Assert.Contains("parent", exception.Message.ToLower());
+        // Clear child's subagents
+        await _agentService.RemoveAllSubAgentAsync(child.Id);
+
+        // Validate child's subagents are cleared
+        var childRel = await _agentService.GetAgentRelationshipAsync(child.Id);
+        childRel.SubAgents.ShouldNotBeNull();
+        childRel.SubAgents.ShouldBeEmpty();
+
+        // Note: RemoveAllSubAgentAsync only removes the specified agent's subagents,
+        // it doesn't affect parent-child relationships upward in the hierarchy
     }
 
     [Fact]
