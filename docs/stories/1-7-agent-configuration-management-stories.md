@@ -1,4 +1,42 @@
 ---
+Epic: 7. Agent Configuration Management (Enhanced UX)
+---
+
+# 1. Configuration Field Tooltips
+
+## User Story
+As a workflow designer user, I want each configuration input field to provide an accessible tooltip describing its purpose and expected values so that I can configure agents correctly without guesswork.
+
+**Version:** v0.5
+
+**Estimated Time:** 12 hours
+
+### Acceptance Criteria
+**Given** I am viewing an agent node's configuration panel  
+**When** I hover over or focus on any input field  
+**Then** I see a tooltip that concisely describes the field's purpose, expected format/range, default behavior, and an example value
+
+**Given** I navigate the configuration panel using only the keyboard (Tab/Shift+Tab)  
+**When** focus moves to an input field with a tooltip  
+**Then** the tooltip becomes visible or is easily revealed via keyboard, and a screen reader announces its content via ARIA (e.g., aria-describedby)
+
+**Given** the UI language is set to a supported locale  
+**When** I open any field tooltip  
+**Then** the tooltip text is localized to the selected language
+
+**Given** validation rules or default values for a field are updated  
+**When** I open the tooltip  
+**Then** the tooltip content reflects the latest rules/defaults without requiring a page refresh
+
+**Given** a field tooltip contains lengthy content or is near the viewport edge  
+**When** the tooltip is shown  
+**Then** it is positioned so it does not obscure the field, remains readable on small screens, and can be dismissed without interfering with input
+
+**Given** the tooltip service momentarily fails or content is missing  
+**When** I attempt to open a tooltip  
+**Then** I see a graceful fallback message indicating help is temporarily unavailable, and the UI remains responsive
+
+---
 Epic: 1. Visual Workflow Designer (Drag-and-Drop Interface) - 7. Agent Configuration Management (Enhanced UX)
 ---
 
