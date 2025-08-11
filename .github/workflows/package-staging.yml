@@ -131,7 +131,7 @@ jobs:
       # Install Syft
       - name: Install Syft
         run: |
-          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sudo sh -s -- -b /usr/local/bin
 
       # Generate SBOM in CycloneDX JSON
       - name: Generate SBOM
@@ -149,9 +149,8 @@ jobs:
      # Install Trivy
       - name: Install Trivy
         run: |
-          sudo apt-get update && sudo apt-get install -y wget jq
-          wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.50.1_Linux-64bit.deb
-          sudo dpkg -i trivy_0.50.1_Linux-64bit.deb
+          wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.65.0_Linux-64bit.deb
+          sudo dpkg -i trivy_0.65.0_Linux-64bit.deb
     
       # Scan SBOM with Trivy (ignore unfixed, fail if CVSS >= 7)
       - name: Scan SBOM with Trivy
