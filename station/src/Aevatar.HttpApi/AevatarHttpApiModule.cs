@@ -39,6 +39,7 @@ public class AevatarHttpApiModule : AbpModule
         Configure<ManagerOptions>(configuration.GetSection("ManagerOptions"));
         Configure<GodGPTOptions>(configuration.GetSection("GodGPT"));
         Configure<GoogleAnalyticsOptions>(configuration.GetSection("GoogleAnalytics"));
+        Configure<FirebaseAnalyticsOptions>(configuration.GetSection("FirebaseAnalytics"));
         
     }
 

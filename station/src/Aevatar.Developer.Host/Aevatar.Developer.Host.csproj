@@ -34,6 +34,7 @@
         <PackageReference Include="Volo.Abp.BlobStoring.Aws" />
         <PackageReference Include="StackExchange.Redis" />
         <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis"/>
+        <PackageReference Include="Volo.Abp.Caching.StackExchangeRedis" />
     </ItemGroup>
 
     <ItemGroup>
