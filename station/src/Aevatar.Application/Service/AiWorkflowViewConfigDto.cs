@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using Newtonsoft.Json;
 
 namespace Aevatar.Service
 {
@@ -78,6 +79,26 @@ namespace Aevatar.Service
         /// Properties containing input parameters for the agent
         /// </summary>
         public Dictionary<string, object> Properties { get; set; } = new();
+
+        /// <summary>
+        /// JSON string representation of Properties for serialization and transmission
+        /// </summary>
+        public string JsonProperties
+        {
+            get
+            {
+                try
+                {
+                    return Properties?.Count > 0 
+                        ? JsonConvert.SerializeObject(Properties, Formatting.None)
+                        : "{}";
+                }
+                catch
+                {
+                    return "{}";
+                }
+            }
+        }
     }
 
     /// <summary>
