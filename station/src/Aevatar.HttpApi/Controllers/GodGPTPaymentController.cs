@@ -166,25 +166,14 @@ public class GodGPTPaymentController : AevatarController
         return response;
     }
 
-    [HttpPost("google-pay/verify")]
-    public async Task<GooglePayVerificationResponseDto> VerifyGooglePayAsync(VerifyGooglePayInput input)
+    [HttpPost("google-play/verify-transaction")]
+    public async Task<PaymentVerificationResponseDto> VerifyGooglePlayTransactionAsync(GooglePlayTransactionVerificationRequestDto input)
     {
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
-        var response = await _godGptService.VerifyGooglePayAsync(currentUserId, input);
-        _logger.LogDebug($"[GodGPTPaymentController][VerifyGooglePayAsync] userId: {currentUserId}, productId: {input.ProductId}, duration: {stopwatch.ElapsedMilliseconds}ms");
-        _logger.LogDebug($"[GodGPTPaymentController][VerifyGooglePayAsync] result: {response.IsValid}, errorCode: {response.ErrorCode}");
-        return response;
-    }
-
-    [HttpPost("google-play/verify")]
-    public async Task<GooglePayVerificationResponseDto> VerifyGooglePlayAsync(VerifyGooglePlayInput input)
-    {
-        var stopwatch = Stopwatch.StartNew();
-        var currentUserId = (Guid)CurrentUser.Id!;
-        var response = await _godGptService.VerifyGooglePlayAsync(currentUserId, input);
-        _logger.LogDebug($"[GodGPTPaymentController][VerifyGooglePlayAsync] userId: {currentUserId}, productId: {input.ProductId}, duration: {stopwatch.ElapsedMilliseconds}ms");
-        _logger.LogDebug($"[GodGPTPaymentController][VerifyGooglePlayAsync] result: {response.IsValid}, errorCode: {response.ErrorCode}");
+        var response = await _godGptService.VerifyGooglePlayTransactionAsync(currentUserId, input);
+        _logger.LogDebug($"[GodGPTPaymentController][VerifyGooglePlayTransactionAsync] userId: {currentUserId}, transactionId: {input.TransactionIdentifier}, duration: {stopwatch.ElapsedMilliseconds}ms");
+        _logger.LogDebug($"[GodGPTPaymentController][VerifyGooglePlayTransactionAsync] result: {response.IsValid}, errorCode: {response.ErrorCode}");
         return response;
     }
 
