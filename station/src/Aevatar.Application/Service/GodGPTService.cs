@@ -77,8 +77,7 @@ public interface IGodGPTService
     Task<CancelSubscriptionResponseDto> CancelSubscriptionAsync(Guid currentUserId, CancelSubscriptionInput input);
     Task<List<AppleProductDto>> GetAppleProductsAsync(Guid currentUserId);
     Task<AppStoreSubscriptionResponseDto> VerifyAppStoreReceiptAsync(Guid currentUserId, VerifyAppStoreReceiptInput input);
-    Task<GooglePayVerificationResponseDto> VerifyGooglePayAsync(Guid currentUserId, VerifyGooglePayInput input);
-    Task<GooglePayVerificationResponseDto> VerifyGooglePlayAsync(Guid currentUserId, VerifyGooglePlayInput input);
+    Task<PaymentVerificationResponseDto> VerifyGooglePlayTransactionAsync(Guid currentUserId, GooglePlayTransactionVerificationRequestDto input);
     Task<GrainResultDto<int>> UpdateUserCreditsAsync(Guid currentUserId, UpdateUserCreditsInput input);
     Task<GrainResultDto<List<SubscriptionInfoDto>>> UpdateUserSubscriptionAsync(Guid currentUserId, UpdateUserSubscriptionsInput input);
     Task<bool> HasActiveAppleSubscriptionAsync(Guid currentUserId);
@@ -521,104 +520,48 @@ public class GodGPTService : ApplicationService, IGodGPTService
         });
     }
 
-    public async Task<GooglePayVerificationResponseDto> VerifyGooglePayAsync(Guid currentUserId, VerifyGooglePayInput input)
+    public async Task<PaymentVerificationResponseDto> VerifyGooglePlayTransactionAsync(Guid currentUserId, GooglePlayTransactionVerificationRequestDto input)
     {
-        _logger.LogDebug("[GodGPTService][VerifyGooglePayAsync] Starting verification for userId: {UserId}, productId: {ProductId}", 
-            currentUserId, input.ProductId);
+        _logger.LogDebug("[GodGPTService][VerifyGooglePlayTransactionAsync] Starting verification for userId: {UserId}, transactionId: {TransactionId}", 
+            currentUserId, input.TransactionIdentifier);
         
         try
         {
             var userBillingGAgent = _clusterClient.GetGrain<IUserBillingGAgent>(currentUserId);
             
-            // Call the GodGPT.GAgents interface for Google Pay verification
-            var result = await userBillingGAgent.VerifyGooglePayPaymentAsync(new GooglePayVerificationDto
+            // Convert to GAgents DTO
+            var gagentsDto = new Aevatar.Application.Grains.ChatManager.UserBilling.GooglePlayTransactionVerificationDto
             {
-                PaymentToken = input.PaymentToken,
-                ProductId = input.ProductId,
-                OrderId = input.OrderId,
                 UserId = currentUserId.ToString(),
-                Environment = input.Environment
-            });
-
-            _logger.LogDebug("[GodGPTService][VerifyGooglePayAsync] Verification completed for userId: {UserId}, success: {IsValid}", 
-                currentUserId, result.IsValid);
-
-            return new GooglePayVerificationResponseDto
-            {
-                IsValid = result.IsValid,
-                Message = result.Message,
-                TransactionId = result.TransactionId,
-                SubscriptionStartDate = result.SubscriptionStartDate,
-                SubscriptionEndDate = result.SubscriptionEndDate,
-                ErrorCode = result.ErrorCode,
-                ProductId = result.ProductId,
-                Platform = "GooglePay",
-                PaymentState = result.PaymentState,
-                AutoRenewing = result.AutoRenewing,
-                PurchaseTimeMillis = result.PurchaseTimeMillis,
-                PurchaseToken = input.PaymentToken
+                TransactionIdentifier = input.TransactionIdentifier
             };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "[GodGPTService][VerifyGooglePayAsync] Error verifying Google Pay payment for userId: {UserId}", currentUserId);
-            return new GooglePayVerificationResponseDto
-            {
-                IsValid = false,
-                Message = "Payment verification failed",
-                ErrorCode = "VERIFICATION_ERROR",
-                Platform = "GooglePay"
-            };
-        }
-    }
-
-    public async Task<GooglePayVerificationResponseDto> VerifyGooglePlayAsync(Guid currentUserId, VerifyGooglePlayInput input)
-    {
-        _logger.LogDebug("[GodGPTService][VerifyGooglePlayAsync] Starting verification for userId: {UserId}, productId: {ProductId}", 
-            currentUserId, input.ProductId);
-        
-        try
-        {
-            var userBillingGAgent = _clusterClient.GetGrain<IUserBillingGAgent>(currentUserId);
             
-            // Call the GodGPT.GAgents interface for Google Play verification
-            var result = await userBillingGAgent.VerifyGooglePlayPurchaseAsync(new GooglePlayVerificationDto
-            {
-                PurchaseToken = input.PurchaseToken,
-                ProductId = input.ProductId,
-                PackageName = input.PackageName,
-                OrderId = input.OrderId,
-                UserId = currentUserId.ToString()
-            });
+            // Call the GodGPT.GAgents interface for Google Play transaction verification
+            var result = await userBillingGAgent.VerifyGooglePlayTransactionAsync(gagentsDto);
 
-            _logger.LogDebug("[GodGPTService][VerifyGooglePlayAsync] Verification completed for userId: {UserId}, success: {IsValid}", 
+            _logger.LogDebug("[GodGPTService][VerifyGooglePlayTransactionAsync] Verification completed for userId: {UserId}, success: {IsValid}", 
                 currentUserId, result.IsValid);
 
-            return new GooglePayVerificationResponseDto
+            // Convert back to response DTO
+            return new PaymentVerificationResponseDto
             {
                 IsValid = result.IsValid,
-                Message = result.Message,
-                TransactionId = result.TransactionId,
-                SubscriptionStartDate = result.SubscriptionStartDate,
+                Message = result.Message ?? string.Empty,
+                OrderId = string.Empty, // OrderId not available in GAgents result, will be set from Transaction
+                ProductId = result.ProductId ?? string.Empty,
                 SubscriptionEndDate = result.SubscriptionEndDate,
-                ErrorCode = result.ErrorCode,
-                ProductId = result.ProductId,
-                Platform = "GooglePlay",
-                PaymentState = result.PaymentState,
-                AutoRenewing = result.AutoRenewing,
-                PurchaseTimeMillis = result.PurchaseTimeMillis,
-                PurchaseToken = input.PurchaseToken
+                PurchaseTimeMillis = result.PurchaseTimeMillis ?? 0,
+                ErrorCode = result.ErrorCode ?? string.Empty
             };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[GodGPTService][VerifyGooglePlayAsync] Error verifying Google Play purchase for userId: {UserId}", currentUserId);
-            return new GooglePayVerificationResponseDto
+            _logger.LogError(ex, "[GodGPTService][VerifyGooglePlayTransactionAsync] Error verifying Google Play transaction for userId: {UserId}", currentUserId);
+            return new PaymentVerificationResponseDto
             {
                 IsValid = false,
-                Message = "Purchase verification failed",
-                ErrorCode = "VERIFICATION_ERROR",
-                Platform = "GooglePlay"
+                Message = "Transaction verification failed",
+                ErrorCode = "VERIFICATION_ERROR"
             };
         }
     }
