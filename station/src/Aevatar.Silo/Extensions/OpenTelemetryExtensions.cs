@@ -7,6 +7,7 @@ using OpenTelemetry.Trace;
 using Orleans.Configuration;
 using OpenTelemetry;
 using System.Diagnostics.Metrics;
+using Aevatar.Application.Grains.Common.Observability;
 using Aevatar.Core;
 using Aevatar.Core.Observability;
 
@@ -63,7 +64,6 @@ public static class OpenTelemetryExtensions
                 .AddMeter("Aevatar.Storage")
                 .AddMeter(serviceName)
                 .AddMeter(OpenTelemetryConstants.AevatarStreamsMeterName)
-                //todo
                 .AddMeter(PaymentTelemetryConstants.PaymentMeterName)
                 .AddMeter(UserLifecycleTelemetryConstants.UserLifecycleMeterName)
                 .AddView(OpenTelemetryConstants.EventPublishLatencyHistogram, new ExplicitBucketHistogramConfiguration 
