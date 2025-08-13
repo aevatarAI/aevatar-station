@@ -5,8 +5,8 @@ using System.Threading.Tasks;
 using Aevatar.Agent;
 using Aevatar.Common;
 using Aevatar.Core.Abstractions;
+using Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView;
 using Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView.Dto;
-using Aevatar.GAgents.GroupChat.WorkflowCoordinator;
 using Aevatar.GAgents.GroupChat.WorkflowCoordinator.Dto;
 using Aevatar.Options;
 using Microsoft.Extensions.Logging;
@@ -16,7 +16,6 @@ using Orleans;
 using Orleans.Runtime;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
-using Volo.Abp.ObjectMapping;
 
 namespace Aevatar.Service;
 
@@ -203,9 +202,35 @@ public class WorkflowViewService : ApplicationService, IWorkflowViewService
         });
         return agentDto;
     }
+
+    public async Task<AgentDto> CreateDefaultWorkflowAsync()
+    {
+        var emptyWorkflowViewGAgent = await _gAgentFactory.GetGAgentAsync<IWorkflowViewGAgent>(Guid.Empty);
+        var workflowAgentType = emptyWorkflowViewGAgent.GetGrainId().Type.ToString();
+        var workflowViewList = await _agentService.GetAllAgentInstances(new GetAllAgentInstancesQueryDto()
+        {
+            AgentType = workflowAgentType,
+            PageSize = 1
+        });
+        if (workflowViewList.Count > 0)
+        {
+            throw new UserFriendlyException("User have workflow already.");
+        }
+
+        var configProperties = "{\"workflowNodeList\":[{\"agentType\":\"Aevatar.GAgents.InputGAgent.GAgent.InputGAgent\",\"name\":\"MyInputGAgent\",\"extendedData\":{\"xPosition\":\"2\",\"yPosition\":\"16\"},\"jsonProperties\":\"{\\\"memberName\\\":\\\"inputGAgent1\\\",\\\"input\\\":\\\"I want to eat, get me a choose.\\\"}\",\"nodeId\":\"45dc7d32-1002-4479-8616-b12cbc112bb4\"},{\"agentType\":\"Aevatar.GAgents.Twitter.GAgents.ChatAIAgent.ChatAIGAgent\",\"name\":\"ai\",\"extendedData\":{\"xPosition\":\"365.1172008973645\",\"yPosition\":\"-12.62092346330003\"},\"jsonProperties\":\"{\\\"memberName\\\":\\\"ai\\\",\\\"instructions\\\":\\\"You are a helpful AI assistant\\\",\\\"systemLLM\\\":\\\"OpenAI\\\",\\\"mcpServers\\\":[],\\\"toolGAgentTypes\\\":[],\\\"toolGAgents\\\":[]}\",\"nodeId\":\"6c15ac63-ce9b-4ef2-a982-171e4ed94bdb\"}],\"workflowNodeUnitList\":[{\"nodeId\":\"45dc7d32-1002-4479-8616-b12cbc112bb4\",\"nextNodeId\":\"6c15ac63-ce9b-4ef2-a982-171e4ed94bdb\"}],\"name\":\"default workflow\"}";
+        var properties = JsonConvert.DeserializeObject<Dictionary<string, object>?>(configProperties);
+        var agentDto = await _agentService.CreateAgentAsync(new CreateAgentInputDto()
+        {
+            Name = properties!["name"].ToString()!,
+            AgentType = workflowAgentType!,
+            Properties = properties
+        });
+        return agentDto;
+    }
 }
 
 public interface IWorkflowViewService
 {
     Task<AgentDto> PublishWorkflowAsync(Guid viewAgentId);
+    Task<AgentDto> CreateDefaultWorkflowAsync();
 }

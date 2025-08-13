@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Aevatar.Common;
 using Aevatar.Notification;
 using Aevatar.Organizations;
 using Aevatar.Permissions;
@@ -24,18 +25,20 @@ public class ProjectService : OrganizationService, IProjectService
 {
     private readonly IProjectDomainRepository _domainRepository;
     private readonly IDeveloperService _developerService;
+    private readonly IOrganizationRoleService _organizationRoleService;
 
     public ProjectService(OrganizationUnitManager organizationUnitManager, IdentityUserManager identityUserManager,
         IRepository<OrganizationUnit, Guid> organizationUnitRepository, IdentityRoleManager roleManager,
         IPermissionManager permissionManager, IOrganizationPermissionChecker permissionChecker,
         IPermissionDefinitionManager permissionDefinitionManager, IRepository<IdentityUser, Guid> userRepository,
         INotificationService notificationService, IProjectDomainRepository domainRepository,
-        IDeveloperService developerService) :
+        IDeveloperService developerService, IOrganizationRoleService organizationRoleService) :
         base(organizationUnitManager, identityUserManager, organizationUnitRepository, roleManager, permissionManager,
             permissionChecker, permissionDefinitionManager, userRepository, notificationService)
     {
         _domainRepository = domainRepository;
         _developerService = developerService;
+        _organizationRoleService = organizationRoleService;
     }
 
     public async Task<ProjectDto> CreateAsync(CreateProjectDto input)
@@ -80,12 +83,45 @@ public class ProjectService : OrganizationService, IProjectService
             throw new UserFriendlyException("The same project name already exists");
         }
 
-        await _developerService.CreateServiceAsync(input.DomainName, project.Id);
+        // await _developerService.CreateServiceAsync(input.DomainName, project.Id);
 
         var dto = ObjectMapper.Map<OrganizationUnit, ProjectDto>(project);
         dto.DomainName = input.DomainName;
 
         return dto;
+    }
+
+    public async Task<ProjectDto> CreateDefaultAsync(CreateDefaultProjectDto input)
+    {
+        var projectList = await GetListAsync(new GetProjectListDto()
+        {
+            OrganizationId = input.OrganizationId
+        });
+        if (projectList.Items.Count > 0)
+        {
+            throw new UserFriendlyException("Already have project.");
+        }
+
+        var randomHash = MD5Util.CalculateMD5(Guid.NewGuid().ToString());
+        var projectDto = await CreateAsync(new CreateProjectDto()
+        {
+            OrganizationId = input.OrganizationId,
+            DisplayName = "default project",
+            DomainName = $"DefaultProject-{randomHash.Substring(randomHash.Length - 6)}"
+        });
+        
+        var roleList = await _organizationRoleService.GetListAsync(projectDto.Id);
+        var ownerRole = roleList.Items.FirstOrDefault(t => t.Name.Contains(AevatarConsts.OrganizationOwnerRoleName));
+        if (ownerRole != null)
+        {
+            await SetMemberAsync(projectDto.Id, new SetOrganizationMemberDto()
+            {
+                Email = CurrentUser.Email!,
+                Join = true,
+                RoleId = ownerRole.Id
+            });
+        }
+        return projectDto;
     }
 
     protected override List<string> GetOwnerPermissions()

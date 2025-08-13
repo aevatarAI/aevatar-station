@@ -49,6 +49,14 @@ public class ProjectController : AevatarController
         await _permissionChecker.AuthenticateAsync(input.OrganizationId, AevatarPermissions.Projects.Create);
         return await _projectService.CreateAsync(input);
     }
+    
+    [HttpPost]
+    [Route("default")]
+    public async Task<ProjectDto> CreateDefaultAsync(CreateDefaultProjectDto input)
+    {
+        await _permissionChecker.AuthenticateAsync(input.OrganizationId, AevatarPermissions.Projects.Create);
+        return await _projectService.CreateDefaultAsync(input);
+    }
 
     [HttpPut]
     [Route("{id}")]
