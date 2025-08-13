@@ -168,18 +168,40 @@ jobs:
           dotnet build -c Release station/benchmark/BroadcastLatencyBenchmark/BroadcastLatencyBenchmark.csproj
           dotnet build -c Release station/benchmark/LatencyBenchmark/LatencyBenchmark.csproj
 
-      - name: Start Silo
+      - name: Start Scheduler Silo
         shell: bash
         run: |
-          nohup dotnet run -c Release --project station/src/Aevatar.Silo/Aevatar.Silo.csproj > silo.log 2>&1 &
-          echo $! > silo.pid
+          export UseEnvironmentVariables=true
+          export AevatarOrleans__AdvertisedIP=127.0.0.1
+          export AevatarOrleans__SiloPort=10001
+          export AevatarOrleans__GatewayPort=20001
+          export AevatarOrleans__SILO_NAME_PATTERN=Scheduler
+          export HealthCheck__Port=8081
+          nohup dotnet run -c Release --project station/src/Aevatar.Silo/Aevatar.Silo.csproj > silo-scheduler.log 2>&1 &
+          echo $! > silo-scheduler.pid
 
-      - name: Wait for Silo readiness
+      - name: Start User Silo
+        shell: bash
+        run: |
+          export UseEnvironmentVariables=true
+          export AevatarOrleans__AdvertisedIP=127.0.0.1
+          export AevatarOrleans__SiloPort=10002
+          export AevatarOrleans__GatewayPort=20002
+          export AevatarOrleans__SILO_NAME_PATTERN=User
+          export HealthCheck__Port=8082
+          nohup dotnet run -c Release --project station/src/Aevatar.Silo/Aevatar.Silo.csproj > silo-user.log 2>&1 &
+          echo $! > silo-user.pid
+
+      - name: Wait for Silo readiness (both)
         shell: bash
         run: |
           for i in {1..60}; do
-            if curl -fsS http://localhost:8081/health/ready >/dev/null; then echo "Silo ready"; break; fi; sleep 2; done
-          curl -fsS http://localhost:8081/health/ready || (echo "Silo not ready" && exit 1)
+            ok1=0; ok2=0
+            curl -fsS http://localhost:8081/health/ready >/dev/null && ok1=1 || true
+            curl -fsS http://localhost:8082/health/ready >/dev/null && ok2=1 || true
+            if [ "$ok1" -eq 1 ] && [ "$ok2" -eq 1 ]; then echo "Both silos ready"; break; fi; sleep 2; done
+          curl -fsS http://localhost:8081/health/ready >/dev/null || (echo "Scheduler silo not ready" && exit 1)
+          curl -fsS http://localhost:8082/health/ready >/dev/null || (echo "User silo not ready" && exit 1)
 
       - name: Run BroadcastLatencyBenchmark
         shell: bash
@@ -312,11 +334,13 @@ jobs:
             latency-results.json
             broadcast_metrics.json
             latency_metrics.json
-            silo.log
+            silo-scheduler.log
+            silo-user.log
 
       - name: Stop Silo
         if: always()
         shell: bash
         run: |
-          if [ -f silo.pid ]; then kill $(cat silo.pid) || true; fi
+          if [ -f silo-scheduler.pid ]; then kill $(cat silo-scheduler.pid) || true; fi
+          if [ -f silo-user.pid ]; then kill $(cat silo-user.pid) || true; fi
 
