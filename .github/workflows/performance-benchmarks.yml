@@ -156,7 +156,7 @@ jobs:
       - name: Wait for Kafka (simple socket check)
         shell: bash
         run: |
-          for i in {1..60}; do
+          for i in {1..120}; do
             if nc -z localhost 9092; then echo "Kafka port open"; break; fi; sleep 2; done
 
       - name: Restore and build projects
@@ -176,7 +176,7 @@ jobs:
           export AevatarOrleans__SiloPort=10001
           export AevatarOrleans__GatewayPort=20001
           export AevatarOrleans__SILO_NAME_PATTERN=Scheduler
-          export HealthCheck__Port=8081
+          export HealthCheck__Port=18081
           nohup dotnet run -c Release --project station/src/Aevatar.Silo/Aevatar.Silo.csproj > silo-scheduler.log 2>&1 &
           echo $! > silo-scheduler.pid
 
@@ -188,20 +188,24 @@ jobs:
           export AevatarOrleans__SiloPort=10002
           export AevatarOrleans__GatewayPort=20002
           export AevatarOrleans__SILO_NAME_PATTERN=User
-          export HealthCheck__Port=8082
+          export HealthCheck__Port=18082
           nohup dotnet run -c Release --project station/src/Aevatar.Silo/Aevatar.Silo.csproj > silo-user.log 2>&1 &
           echo $! > silo-user.pid
 
       - name: Wait for Silo readiness (both)
         shell: bash
         run: |
-          for i in {1..60}; do
+          for i in {1..90}; do
             ok1=0; ok2=0
-            curl -fsS http://localhost:8081/health/ready >/dev/null && ok1=1 || true
-            curl -fsS http://localhost:8082/health/ready >/dev/null && ok2=1 || true
-            if [ "$ok1" -eq 1 ] && [ "$ok2" -eq 1 ]; then echo "Both silos ready"; break; fi; sleep 2; done
-          curl -fsS http://localhost:8081/health/ready >/dev/null || (echo "Scheduler silo not ready" && exit 1)
-          curl -fsS http://localhost:8082/health/ready >/dev/null || (echo "User silo not ready" && exit 1)
+            curl -fsS http://localhost:18081/health/ready >/dev/null && ok1=1 || true
+            curl -fsS http://localhost:18082/health/ready >/dev/null && ok2=1 || true
+            if [ "$ok1" -eq 1 ] && [ "$ok2" -eq 1 ]; then echo "Both silos ready"; break; fi;
+            if [ -f silo-scheduler.log ]; then tail -n 10 silo-scheduler.log || true; fi
+            if [ -f silo-user.log ]; then tail -n 10 silo-user.log || true; fi
+            sleep 2;
+          done
+          curl -fsS http://localhost:18081/health/ready >/dev/null || (echo "Scheduler silo not ready" && tail -n 200 silo-scheduler.log || true && exit 1)
+          curl -fsS http://localhost:18082/health/ready >/dev/null || (echo "User silo not ready" && tail -n 200 silo-user.log || true && exit 1)
 
       - name: Run BroadcastLatencyBenchmark
         shell: bash
