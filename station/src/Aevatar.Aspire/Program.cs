@@ -180,7 +180,8 @@ public class Program
             ip: "127.0.0.2",
             siloPort: 11111,
             gatewayPort: 30000,
-            dashboardPort: 8080
+            dashboardPort: 8080,
+            healthCheckPort:10081
         );
         await Task.Delay(1000); // Wait for 1 second to ensure the silo is up and running
 
@@ -191,14 +192,15 @@ public class Program
             ip: "127.0.0.3",
             siloPort: 11112,
             gatewayPort: 30001,
-            dashboardPort: 8081
+            dashboardPort: 8081,
+            healthCheckPort:10082
         );
         await Task.Delay(1000); // Wait for 1 second to ensure the silo is up and running
 
         // Create User type silos in a loop
         var userSiloConfigs = new[]
         {
-            new { Name = "siloUser1", IP = "127.0.0.4", SiloPort = 11113, GatewayPort = 30002, DashboardPort = 8082 },
+            new { Name = "siloUser1", IP = "127.0.0.4", SiloPort = 11113, GatewayPort = 30002, DashboardPort = 8082,HealthCheckPort = 10083 },
             // new { Name = "siloUser2", IP = "127.0.0.5", SiloPort = 11114, GatewayPort = 30003, DashboardPort = 8083 },
             // new { Name = "siloUser3", IP = "127.0.0.6", SiloPort = 11115, GatewayPort = 30004, DashboardPort = 8084 }
         };
@@ -213,7 +215,8 @@ public class Program
                 ip: config.IP,
                 siloPort: config.SiloPort,
                 gatewayPort: config.GatewayPort,
-                dashboardPort: config.DashboardPort
+                dashboardPort: config.DashboardPort,
+                healthCheckPort:config.HealthCheckPort
             );
             userSilos.Add(userSilo);
             await Task.Delay(1000); // Wait for 1 second to ensure the silo is up and running
@@ -347,7 +350,8 @@ public class Program
         string ip,
         int siloPort,
         int gatewayPort,
-        int dashboardPort)
+        int dashboardPort,
+        int healthCheckPort)
     {
         return builder.AddProject(projectName, "../Aevatar.Silo/Aevatar.Silo.csproj")
             // Configure the Orleans silo properly
@@ -384,7 +388,8 @@ public class Program
             .WithEnvironment("Qdrant__Endpoint", "http://{qdrant.bindings.http.host}:{qdrant.bindings.http.port}")
             .WithEnvironment("AevatarOrleans__Stream__Provider", "Kafka")
             .WithEnvironment("AevatarOrleans__EventSourcing__Provider", "MongoDB")
-            
+            .WithEnvironment("HealthCheck__Port", healthCheckPort.ToString())
+
             // Configure Orleans endpoints - both silo and gateway are needed
             .WithEndpoint(port: siloPort, name: "silo")
             .WithEndpoint(port: gatewayPort, name: "gateway");
