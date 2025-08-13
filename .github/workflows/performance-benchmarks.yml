@@ -177,6 +177,12 @@ jobs:
           export AevatarOrleans__GatewayPort=20001
           export AevatarOrleans__SILO_NAME_PATTERN=Scheduler
           export HealthCheck__Port=18081
+          # Orleans Dashboard explicit binding to avoid null/parse/port conflicts
+          export AevatarOrleans__DashboardIp=127.0.0.1
+          export AevatarOrleans__DashboardPort=19080
+          # Use MongoDB event sourcing and point ES client to same Mongo at 27017
+          export OrleansEventSourcing__Provider=mongodb
+          export Orleans__MongoDBESClient=mongodb://localhost:27017
           nohup dotnet run -c Release --project station/src/Aevatar.Silo/Aevatar.Silo.csproj > silo-scheduler.log 2>&1 &
           echo $! > silo-scheduler.pid
 
@@ -189,6 +195,12 @@ jobs:
           export AevatarOrleans__GatewayPort=20002
           export AevatarOrleans__SILO_NAME_PATTERN=User
           export HealthCheck__Port=18082
+          # Orleans Dashboard explicit binding to avoid null/parse/port conflicts
+          export AevatarOrleans__DashboardIp=127.0.0.1
+          export AevatarOrleans__DashboardPort=19081
+          # Use MongoDB event sourcing and point ES client to same Mongo at 27017
+          export OrleansEventSourcing__Provider=mongodb
+          export Orleans__MongoDBESClient=mongodb://localhost:27017
           nohup dotnet run -c Release --project station/src/Aevatar.Silo/Aevatar.Silo.csproj > silo-user.log 2>&1 &
           echo $! > silo-user.pid
 
