@@ -16,77 +16,18 @@ on:
       - '.github/workflows/**'
   workflow_dispatch:
     inputs:
-      # Broadcast params
-      broadcast_subscribers:
-        description: Subscriber count for BroadcastLatencyBenchmark
+      broadcast_args:
+        description: JSON for BroadcastLatencyBenchmark params
         required: false
-        default: '30'
-      broadcast_publishers:
-        description: Publisher count for BroadcastLatencyBenchmark
+        default: '{"subscribers":30,"publishers":1,"eps":5,"duration":20,"warmup":5}'
+      latency_args:
+        description: JSON for LatencyBenchmark params
         required: false
-        default: '1'
-      broadcast_eps:
-        description: Events per second per publisher (broadcast)
+        default: '{"maxConcurrency":8,"duration":30,"warmup":5,"eps":10}'
+      thresholds:
+        description: JSON thresholds for benchmarks
         required: false
-        default: '5'
-      broadcast_duration:
-        description: Duration seconds (broadcast)
-        required: false
-        default: '20'
-      broadcast_warmup:
-        description: Warmup seconds (broadcast)
-        required: false
-        default: '5'
-      # Latency params
-      latency_max_concurrency:
-        description: Max concurrency for LatencyBenchmark
-        required: false
-        default: '8'
-      latency_duration:
-        description: Duration seconds per level (latency)
-        required: false
-        default: '30'
-      latency_warmup:
-        description: Warmup seconds per level (latency)
-        required: false
-        default: '5'
-      latency_eps:
-        description: Events per second per publisher (latency)
-        required: false
-        default: '10'
-      # Thresholds
-      broadcast_avg_ms:
-        description: Max avg latency (ms)
-        required: false
-        default: '80'
-      broadcast_p95_ms:
-        description: Max P95 latency (ms)
-        required: false
-        default: '150'
-      broadcast_success_rate:
-        description: Min success rate (0-1)
-        required: false
-        default: '0.95'
-      broadcast_throughput_factor:
-        description: Min fraction of expected throughput (0-1)
-        required: false
-        default: '0.9'
-      latency_p95_ms:
-        description: Max P95 latency (ms)
-        required: false
-        default: '120'
-      latency_p99_ms:
-        description: Max P99 latency (ms)
-        required: false
-        default: '220'
-      latency_processed_ratio:
-        description: Min processed/sent ratio (0-1)
-        required: false
-        default: '0.98'
-      latency_throughput_factor:
-        description: Min fraction of expected throughput (0-1)
-        required: false
-        default: '0.9'
+        default: '{"broadcast":{"avgMs":80,"p95Ms":150,"successRate":0.95,"throughputFactor":0.9},"latency":{"p95Ms":120,"p99Ms":220,"processedRatio":0.98,"throughputFactor":0.9}}'
 
 concurrency:
   group: perf-pr-${{ github.ref }}
@@ -100,25 +41,25 @@ jobs:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     timeout-minutes: 30
     env:
-      # Thresholds (allow override via workflow_dispatch inputs)
-      BCAST_AVG_MS: ${{ inputs.broadcast_avg_ms || '80' }}
-      BCAST_P95_MS: ${{ inputs.broadcast_p95_ms || '150' }}
-      BCAST_SUCCESS_RATE: ${{ inputs.broadcast_success_rate || '0.95' }}
-      BCAST_THROUGHPUT_FACTOR: ${{ inputs.broadcast_throughput_factor || '0.9' }}
-      LAT_P95_MS: ${{ inputs.latency_p95_ms || '120' }}
-      LAT_P99_MS: ${{ inputs.latency_p99_ms || '220' }}
-      LAT_PROCESSED_RATIO: ${{ inputs.latency_processed_ratio || '0.98' }}
-      LAT_THROUGHPUT_FACTOR: ${{ inputs.latency_throughput_factor || '0.9' }}
-      # Defaults for params
-      BCAST_SUBS: ${{ inputs.broadcast_subscribers || '30' }}
-      BCAST_PUBS: ${{ inputs.broadcast_publishers || '1' }}
-      BCAST_EPS: ${{ inputs.broadcast_eps || '5' }}
-      BCAST_DURATION: ${{ inputs.broadcast_duration || '20' }}
-      BCAST_WARMUP: ${{ inputs.broadcast_warmup || '5' }}
-      LAT_MAX_CONCURRENCY: ${{ inputs.latency_max_concurrency || '8' }}
-      LAT_DURATION: ${{ inputs.latency_duration || '30' }}
-      LAT_WARMUP: ${{ inputs.latency_warmup || '5' }}
-      LAT_EPS: ${{ inputs.latency_eps || '10' }}
+      # Threshold defaults (overridden by workflow_dispatch parsing step)
+      BCAST_AVG_MS: '80'
+      BCAST_P95_MS: '150'
+      BCAST_SUCCESS_RATE: '0.95'
+      BCAST_THROUGHPUT_FACTOR: '0.9'
+      LAT_P95_MS: '120'
+      LAT_P99_MS: '220'
+      LAT_PROCESSED_RATIO: '0.98'
+      LAT_THROUGHPUT_FACTOR: '0.9'
+      # Param defaults (overridden by workflow_dispatch parsing step)
+      BCAST_SUBS: '30'
+      BCAST_PUBS: '1'
+      BCAST_EPS: '5'
+      BCAST_DURATION: '20'
+      BCAST_WARMUP: '5'
+      LAT_MAX_CONCURRENCY: '8'
+      LAT_DURATION: '30'
+      LAT_WARMUP: '5'
+      LAT_EPS: '10'
 
     services:
       mongodb:
@@ -159,6 +100,51 @@ jobs:
 
       - name: Install jq, curl, netcat
         run: sudo apt-get update && sudo apt-get install -y jq curl netcat-openbsd
+
+      - name: Parse workflow_dispatch JSON inputs (if provided)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        shell: bash
+        run: |
+          echo "broadcast_args=${{ toJson(inputs.broadcast_args) }}"
+          echo "latency_args=${{ toJson(inputs.latency_args) }}"
+          echo "thresholds=${{ toJson(inputs.thresholds) }}"
+
+          # Guard empty inputs
+          B_JSON='${{ inputs.broadcast_args }}'
+          L_JSON='${{ inputs.latency_args }}'
+          T_JSON='${{ inputs.thresholds }}'
+
+          if [ -n "$B_JSON" ]; then
+            export BCAST_SUBS=$(echo "$B_JSON" | jq -r '.subscribers // empty') || true
+            export BCAST_PUBS=$(echo "$B_JSON" | jq -r '.publishers // empty') || true
+            export BCAST_EPS=$(echo "$B_JSON" | jq -r '.eps // empty') || true
+            export BCAST_DURATION=$(echo "$B_JSON" | jq -r '.duration // empty') || true
+            export BCAST_WARMUP=$(echo "$B_JSON" | jq -r '.warmup // empty') || true
+          fi
+
+          if [ -n "$L_JSON" ]; then
+            export LAT_MAX_CONCURRENCY=$(echo "$L_JSON" | jq -r '.maxConcurrency // empty') || true
+            export LAT_DURATION=$(echo "$L_JSON" | jq -r '.duration // empty') || true
+            export LAT_WARMUP=$(echo "$L_JSON" | jq -r '.warmup // empty') || true
+            export LAT_EPS=$(echo "$L_JSON" | jq -r '.eps // empty') || true
+          fi
+
+          if [ -n "$T_JSON" ]; then
+            export BCAST_AVG_MS=$(echo "$T_JSON" | jq -r '.broadcast.avgMs // empty') || true
+            export BCAST_P95_MS=$(echo "$T_JSON" | jq -r '.broadcast.p95Ms // empty') || true
+            export BCAST_SUCCESS_RATE=$(echo "$T_JSON" | jq -r '.broadcast.successRate // empty') || true
+            export BCAST_THROUGHPUT_FACTOR=$(echo "$T_JSON" | jq -r '.broadcast.throughputFactor // empty') || true
+            export LAT_P95_MS=$(echo "$T_JSON" | jq -r '.latency.p95Ms // empty') || true
+            export LAT_P99_MS=$(echo "$T_JSON" | jq -r '.latency.p99Ms // empty') || true
+            export LAT_PROCESSED_RATIO=$(echo "$T_JSON" | jq -r '.latency.processedRatio // empty') || true
+            export LAT_THROUGHPUT_FACTOR=$(echo "$T_JSON" | jq -r '.latency.throughputFactor // empty') || true
+          fi
+
+          # Persist to GITHUB_ENV if set
+          for v in BCAST_SUBS BCAST_PUBS BCAST_EPS BCAST_DURATION BCAST_WARMUP LAT_MAX_CONCURRENCY LAT_DURATION LAT_WARMUP LAT_EPS \
+                   BCAST_AVG_MS BCAST_P95_MS BCAST_SUCCESS_RATE BCAST_THROUGHPUT_FACTOR LAT_P95_MS LAT_P99_MS LAT_PROCESSED_RATIO LAT_THROUGHPUT_FACTOR; do
+            if [ -n "${!v}" ] && [ "${!v}" != "null" ]; then echo "$v=${!v}" >> $GITHUB_ENV; fi
+          done
 
       - name: Wait for MongoDB (TCP)
         shell: bash
