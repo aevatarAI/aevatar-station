@@ -7,6 +7,7 @@ using Localization.Resources.AbpUi;
 using Aevatar.Localization;
 using Aevatar.Options;
 using Aevatar.Service;
+using Aevatar.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.Account;
@@ -41,6 +42,9 @@ public class AevatarHttpApiModule : AbpModule
         Configure<GoogleAnalyticsOptions>(configuration.GetSection("GoogleAnalytics"));
         Configure<FirebaseAnalyticsOptions>(configuration.GetSection("FirebaseAnalytics"));
         
+        // Configure security options and services
+        ConfigureSecurityOptions(context, configuration);
+        ConfigureSecurityServices(context);
     }
 
     private void ConfigureLocalization()
@@ -58,5 +62,63 @@ public class AevatarHttpApiModule : AbpModule
         {
             options.Conventions.Add(new ApplicationDescription());
         });
+    }
+
+    private void ConfigureSecurityOptions(ServiceConfigurationContext context, IConfiguration configuration)
+    {
+        // Bind security configuration with safe defaults
+        context.Services.Configure<SecurityOptions>(options =>
+        {
+            var securitySection = configuration.GetSection(SecurityOptions.SectionName);
+            if (securitySection.Exists())
+            {
+                securitySection.Bind(options);
+            }
+            // If Security section doesn't exist, use default values (reCAPTCHA disabled)
+        });
+            
+        // Optional validation - only validate if reCAPTCHA is enabled
+        context.Services.AddOptions<SecurityOptions>()
+            .PostConfigure(options =>
+            {
+                // Ensure safe fallbacks if configuration is missing
+                if (options.Switch == null)
+                {
+                    options.Switch = new SecuritySwitchOptions();
+                }
+                if (options.ReCAPTCHA == null)
+                {
+                    options.ReCAPTCHA = new ReCAPTCHAOptions();
+                }
+                if (options.RateLimit == null)
+                {
+                    options.RateLimit = new RateLimitOptions();
+                }
+                if (options.AppleDeviceCheck == null)
+                {
+                    options.AppleDeviceCheck = new AppleDeviceCheckOptions();
+                }
+            })
+            .Validate(options => 
+            {
+                // Only validate reCAPTCHA configuration if it's enabled
+                if (options.Switch?.EnableReCAPTCHA == true && string.IsNullOrWhiteSpace(options.ReCAPTCHA?.SecretKey))
+                {
+                    return false;
+                }
+                return true;
+            }, "reCAPTCHA SecretKey cannot be empty when reCAPTCHA is enabled");
+    }
+
+    private void ConfigureSecurityServices(ServiceConfigurationContext context)
+    {
+        // Register HTTP client for reCAPTCHA and Firebase verification
+        context.Services.AddHttpClient<SecurityService>(client =>
+        {
+            client.DefaultRequestHeaders.Add("User-Agent", "Aevatar-Station/1.0");
+        });
+
+        // Register unified security service
+        context.Services.AddTransient<ISecurityService, SecurityService>();
     }
 }

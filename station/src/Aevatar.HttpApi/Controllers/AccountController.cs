@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Aevatar.Account;
+using Aevatar.Services;
 using Asp.Versioning;
 using Volo.Abp;
 using Microsoft.AspNetCore.Mvc;
@@ -14,10 +15,14 @@ namespace Aevatar.Controllers;
 public class AccountController : AevatarController
 {
     private readonly IAccountService _accountService;
+    private readonly ISecurityService _securityService;
 
-    public AccountController(IAccountService accountService)
+    public AccountController(
+        IAccountService accountService,
+        ISecurityService securityService)
     {
         _accountService = accountService;
+        _securityService = securityService;
     }
     
     [HttpPost]
@@ -36,12 +41,80 @@ public class AccountController : AevatarController
         return _accountService.GodgptRegisterAsync(input, language);
     }
     
+    /// <summary>
+    /// Send registration verification code with security validation
+    /// </summary>
+    /// <param name="input">Request parameters</param>
+    /// <returns>Operation result</returns>
     [HttpPost]
     [Route("send-register-code")]
-    public virtual Task SendRegisterCodeAsync(SendRegisterCodeDto input)
+    public virtual async Task<IActionResult> SendRegisterCodeAsync(SendRegisterCodeDto input)
     {
-        var language = HttpContext.GetGodGPTLanguage();
-        return _accountService.SendRegisterCodeAsync(input, language);
+        try
+        {
+            // 1. Get real client IP address
+            var clientIp = _securityService.GetRealClientIp(HttpContext);
+            Logger.LogInformation("Send register code request: Email={email}, Platform={platform}, IP={ip}", 
+                input.Email, input.Platform, clientIp);
+
+            // 2. Check if security verification is required
+            var needsVerification = await _securityService.IsSecurityVerificationRequiredAsync(clientIp);
+
+            if (needsVerification)
+            {
+                // 3. Perform security verification
+                var verificationRequest = new SecurityVerificationRequest
+                {
+                    Platform = input.Platform,
+                    ClientIp = clientIp,
+                    ReCAPTCHAToken = input.ReCAPTCHAToken,
+                    AcToken = input.AcToken
+                };
+
+                var verificationResult = await _securityService.VerifySecurityAsync(verificationRequest);
+                if (!verificationResult.Success)
+                {
+                    Logger.LogWarning("Security verification failed: Email={email}, Platform={platform}, IP={ip}, Reason={reason}", 
+                        input.Email, input.Platform, clientIp, verificationResult.Message);
+                    
+                    return BadRequest(new SendRegisterCodeResponseDto
+                    {
+                        Success = false,
+                        Message = verificationResult.Message
+                    });
+                }
+
+                Logger.LogInformation("Security verification successful: Email={email}, Platform={platform}, IP={ip}, Method={method}", 
+                    input.Email, input.Platform, clientIp, verificationResult.VerificationMethod);
+            }
+
+            // 4. Send verification code
+            var language = HttpContext.GetGodGPTLanguage();
+            await _accountService.SendRegisterCodeAsync(input, language);
+
+            // 5. Increment request count
+            await _securityService.IncrementRequestCountAsync(clientIp);
+
+            Logger.LogInformation("Register code sent successfully: Email={email}, Platform={platform}, IP={ip}", 
+                input.Email, input.Platform, clientIp);
+
+            return Ok(new SendRegisterCodeResponseDto
+            {
+                Success = true,
+                Message = "Verification code sent successfully"
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Send register code exception: Email={email}, Platform={platform}", 
+                input.Email, input.Platform);
+            
+            return StatusCode(500, new SendRegisterCodeResponseDto
+            {
+                Success = false,
+                Message = "Internal server error, please try again later"
+            });
+        }
     }
 
     [HttpPost]
