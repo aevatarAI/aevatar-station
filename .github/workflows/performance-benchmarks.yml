@@ -90,12 +90,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET SDKs (9 and 8)
+      - name: Setup .NET 9 SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            9.0.x
-            8.0.x
+          dotnet-version: '9.0.x'
 
       - name: Show dotnet info
         run: dotnet --info
