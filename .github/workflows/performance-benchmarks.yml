@@ -252,15 +252,15 @@ jobs:
           jq -e '.Results | length > 0' broadcast-latency-results.json > /dev/null || (echo "Broadcast results are empty" && exit 1)
           jq -r '
             .Results[0] as $r
-            | $expected := ($r.TotalEventsSent * ($r.SubscriberCount // 0))
-            | $successRate := (if $expected>0 then ($r.TotalEventsProcessed / $expected) else 0 end)
-            | $throughput := (if $r.ActualDurationSeconds>0 then ($r.TotalEventsProcessed / $r.ActualDurationSeconds) else 0 end)
-            | $expectedTp := (($r.PublisherCount // 0) * ($r.EventsPerSecond // 0))
+            | (($r.TotalEventsSent * ($r.SubscriberCount // 0))) as $expected
+            | (if ($r.ActualDurationSeconds // 0) > 0 then ($r.TotalEventsProcessed / $r.ActualDurationSeconds) else 0 end) as $throughput
+            | (if $expected > 0 then ($r.TotalEventsProcessed / $expected) else 0 end) as $successRate
+            | (($r.PublisherCount // 0) * ($r.EventsPerSecond // 0)) as $expectedTp
             | {
                 successRate: $successRate,
                 throughput: $throughput,
-                avg: $r.AverageLatencyMs,
-                p95: $r.P95LatencyMs,
+                avg: ($r.AverageLatencyMs // 0),
+                p95: ($r.P95LatencyMs // 0),
                 expectedThroughput: $expectedTp
               }' broadcast-latency-results.json > broadcast_metrics.json
 
@@ -293,8 +293,8 @@ jobs:
           jq -e '.Results | length > 0' latency-results.json > /dev/null || (echo "Latency results are empty" && exit 1)
           jq -r '
             .Results | max_by(.ConcurrencyLevel) as $r
-            | $expectedTp := (($r.ConcurrencyLevel // 0) * ($r.EventsPerSecond // 0))
-            | $processedRatio := (if $r.TotalEventsSent>0 then ($r.TotalEventsProcessed / $r.TotalEventsSent) else 0 end)
+            | (($r.ConcurrencyLevel // 0) * ($r.EventsPerSecond // 0)) as $expectedTp
+            | (if ($r.TotalEventsSent // 0) > 0 then ($r.TotalEventsProcessed / $r.TotalEventsSent) else 0 end) as $processedRatio
             | {
                 success: ($r.Success // false),
                 throughput: ($r.ActualThroughput // 0),
