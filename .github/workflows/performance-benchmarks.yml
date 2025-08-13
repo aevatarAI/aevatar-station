@@ -1,0 +1,336 @@
+name: PR Performance Benchmarks
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+    paths:
+      - 'station/benchmark/**'
+      - 'station/src/**'
+      - '.github/workflows/**'
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'station/benchmark/**'
+      - 'station/src/**'
+      - '.github/workflows/**'
+  workflow_dispatch:
+    inputs:
+      # Broadcast params
+      broadcast_subscribers:
+        description: Subscriber count for BroadcastLatencyBenchmark
+        required: false
+        default: '30'
+      broadcast_publishers:
+        description: Publisher count for BroadcastLatencyBenchmark
+        required: false
+        default: '1'
+      broadcast_eps:
+        description: Events per second per publisher (broadcast)
+        required: false
+        default: '5'
+      broadcast_duration:
+        description: Duration seconds (broadcast)
+        required: false
+        default: '20'
+      broadcast_warmup:
+        description: Warmup seconds (broadcast)
+        required: false
+        default: '5'
+      # Latency params
+      latency_max_concurrency:
+        description: Max concurrency for LatencyBenchmark
+        required: false
+        default: '8'
+      latency_duration:
+        description: Duration seconds per level (latency)
+        required: false
+        default: '30'
+      latency_warmup:
+        description: Warmup seconds per level (latency)
+        required: false
+        default: '5'
+      latency_eps:
+        description: Events per second per publisher (latency)
+        required: false
+        default: '10'
+      # Thresholds
+      broadcast_avg_ms:
+        description: Max avg latency (ms)
+        required: false
+        default: '80'
+      broadcast_p95_ms:
+        description: Max P95 latency (ms)
+        required: false
+        default: '150'
+      broadcast_success_rate:
+        description: Min success rate (0-1)
+        required: false
+        default: '0.95'
+      broadcast_throughput_factor:
+        description: Min fraction of expected throughput (0-1)
+        required: false
+        default: '0.9'
+      latency_p95_ms:
+        description: Max P95 latency (ms)
+        required: false
+        default: '120'
+      latency_p99_ms:
+        description: Max P99 latency (ms)
+        required: false
+        default: '220'
+      latency_processed_ratio:
+        description: Min processed/sent ratio (0-1)
+        required: false
+        default: '0.98'
+      latency_throughput_factor:
+        description: Min fraction of expected throughput (0-1)
+        required: false
+        default: '0.9'
+
+concurrency:
+  group: perf-pr-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  benchmarks:
+    name: Run Performance Benchmarks
+    runs-on: ubuntu-latest
+    # Skip draft PRs, but allow manual workflow_dispatch and other events
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    timeout-minutes: 30
+    env:
+      # Thresholds (allow override via workflow_dispatch inputs)
+      BCAST_AVG_MS: ${{ inputs.broadcast_avg_ms || '80' }}
+      BCAST_P95_MS: ${{ inputs.broadcast_p95_ms || '150' }}
+      BCAST_SUCCESS_RATE: ${{ inputs.broadcast_success_rate || '0.95' }}
+      BCAST_THROUGHPUT_FACTOR: ${{ inputs.broadcast_throughput_factor || '0.9' }}
+      LAT_P95_MS: ${{ inputs.latency_p95_ms || '120' }}
+      LAT_P99_MS: ${{ inputs.latency_p99_ms || '220' }}
+      LAT_PROCESSED_RATIO: ${{ inputs.latency_processed_ratio || '0.98' }}
+      LAT_THROUGHPUT_FACTOR: ${{ inputs.latency_throughput_factor || '0.9' }}
+      # Defaults for params
+      BCAST_SUBS: ${{ inputs.broadcast_subscribers || '30' }}
+      BCAST_PUBS: ${{ inputs.broadcast_publishers || '1' }}
+      BCAST_EPS: ${{ inputs.broadcast_eps || '5' }}
+      BCAST_DURATION: ${{ inputs.broadcast_duration || '20' }}
+      BCAST_WARMUP: ${{ inputs.broadcast_warmup || '5' }}
+      LAT_MAX_CONCURRENCY: ${{ inputs.latency_max_concurrency || '8' }}
+      LAT_DURATION: ${{ inputs.latency_duration || '30' }}
+      LAT_WARMUP: ${{ inputs.latency_warmup || '5' }}
+      LAT_EPS: ${{ inputs.latency_eps || '10' }}
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+      zookeeper:
+        image: bitnami/zookeeper:3.9
+        ports:
+          - 2181:2181
+        env:
+          ALLOW_ANONYMOUS_LOGIN: 'yes'
+      kafka:
+        image: bitnami/kafka:3.7
+        ports:
+          - 9092:9092
+        env:
+          KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
+          ALLOW_PLAINTEXT_LISTENER: 'yes'
+          KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: 'true'
+          KAFKA_LISTENERS: PLAINTEXT://:9092
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Show dotnet info
+        run: dotnet --info
+
+      - name: Install jq, curl, netcat
+        run: sudo apt-get update && sudo apt-get install -y jq curl netcat-openbsd
+
+      - name: Wait for MongoDB (TCP)
+        shell: bash
+        run: |
+          for i in {1..60}; do
+            if nc -z localhost 27017; then echo "MongoDB port open"; break; fi; sleep 2; done
+          nc -z localhost 27017 || (echo "MongoDB not reachable" && exit 1)
+
+      - name: Wait for Kafka (simple socket check)
+        shell: bash
+        run: |
+          for i in {1..60}; do
+            if nc -z localhost 9092; then echo "Kafka port open"; break; fi; sleep 2; done
+
+      - name: Restore and build projects
+        run: |
+          dotnet restore station/src/Aevatar.Silo/Aevatar.Silo.csproj
+          dotnet restore station/benchmark/BroadcastLatencyBenchmark/BroadcastLatencyBenchmark.csproj
+          dotnet restore station/benchmark/LatencyBenchmark/LatencyBenchmark.csproj
+          dotnet build -c Release station/src/Aevatar.Silo/Aevatar.Silo.csproj
+          dotnet build -c Release station/benchmark/BroadcastLatencyBenchmark/BroadcastLatencyBenchmark.csproj
+          dotnet build -c Release station/benchmark/LatencyBenchmark/LatencyBenchmark.csproj
+
+      - name: Start Silo
+        shell: bash
+        run: |
+          nohup dotnet run -c Release --project station/src/Aevatar.Silo/Aevatar.Silo.csproj > silo.log 2>&1 &
+          echo $! > silo.pid
+
+      - name: Wait for Silo readiness
+        shell: bash
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://localhost:8081/health/ready >/dev/null; then echo "Silo ready"; break; fi; sleep 2; done
+          curl -fsS http://localhost:8081/health/ready || (echo "Silo not ready" && exit 1)
+
+      - name: Run BroadcastLatencyBenchmark
+        shell: bash
+        run: |
+          set -e
+          dotnet run -c Release --project station/benchmark/BroadcastLatencyBenchmark/BroadcastLatencyBenchmark.csproj -- \
+            --subscriber-count ${BCAST_SUBS} \
+            --publisher-count ${BCAST_PUBS} \
+            --events-per-second ${BCAST_EPS} \
+            --duration ${BCAST_DURATION} \
+            --warmup-duration ${BCAST_WARMUP} \
+            --output-file broadcast-latency-results.json
+
+      - name: Run LatencyBenchmark
+        shell: bash
+        run: |
+          set -e
+          dotnet run -c Release --project station/benchmark/LatencyBenchmark/LatencyBenchmark.csproj -- \
+            --max-concurrency ${LAT_MAX_CONCURRENCY} \
+            --events-per-second ${LAT_EPS} \
+            --duration ${LAT_DURATION} \
+            --warmup-duration ${LAT_WARMUP} \
+            --output-file latency-results.json
+
+      - name: Parse and check thresholds - Broadcast
+        id: check_broadcast
+        shell: bash
+        run: |
+          set -e
+          test -f broadcast-latency-results.json || (echo "Missing broadcast-latency-results.json" && exit 1)
+          jq '.' broadcast-latency-results.json > /dev/null || (echo "Invalid broadcast JSON" && exit 1)
+          jq -e '.Results | length > 0' broadcast-latency-results.json > /dev/null || (echo "Broadcast results are empty" && exit 1)
+          jq -r '
+            .Results[0] as $r
+            | $expected := ($r.TotalEventsSent * ($r.SubscriberCount // 0))
+            | $successRate := (if $expected>0 then ($r.TotalEventsProcessed / $expected) else 0 end)
+            | $throughput := (if $r.ActualDurationSeconds>0 then ($r.TotalEventsProcessed / $r.ActualDurationSeconds) else 0 end)
+            | $expectedTp := (($r.PublisherCount // 0) * ($r.EventsPerSecond // 0))
+            | {
+                successRate: $successRate,
+                throughput: $throughput,
+                avg: $r.AverageLatencyMs,
+                p95: $r.P95LatencyMs,
+                expectedThroughput: $expectedTp
+              }' broadcast-latency-results.json > broadcast_metrics.json
+
+          sr=$(jq -r '.successRate' broadcast_metrics.json)
+          tp=$(jq -r '.throughput' broadcast_metrics.json)
+          avg=$(jq -r '.avg' broadcast_metrics.json)
+          p95=$(jq -r '.p95' broadcast_metrics.json)
+          etp=$(jq -r '.expectedThroughput' broadcast_metrics.json)
+
+          echo "Broadcast metrics: successRate=$sr throughput=$tp avg=$avg p95=$p95 expectedThroughput=$etp"
+
+          fail=0
+          awk -v a="$sr" -v b="$BCAST_SUCCESS_RATE" 'BEGIN{ if (a+0 < b+0) exit 1 }' || { echo "❌ Broadcast successRate below $BCAST_SUCCESS_RATE"; fail=1; }
+          if [ "${etp}" != "null" ] && [ "${etp}" != "0" ]; then
+            awk -v a="$tp" -v b="$etp" -v f="$BCAST_THROUGHPUT_FACTOR" 'BEGIN{ if (a+0 < b*f) exit 1 }' || { echo "❌ Broadcast throughput below factor $BCAST_THROUGHPUT_FACTOR of expected"; fail=1; }
+          fi
+          awk -v a="$avg" -v b="$BCAST_AVG_MS" 'BEGIN{ if (a+0 > b+0) exit 1 }' || { echo "❌ Broadcast avg latency above $BCAST_AVG_MS ms"; fail=1; }
+          awk -v a="$p95" -v b="$BCAST_P95_MS" 'BEGIN{ if (a+0 > b+0) exit 1 }' || { echo "❌ Broadcast P95 latency above $BCAST_P95_MS ms"; fail=1; }
+
+          if [ "$fail" -ne 0 ]; then
+            echo "Broadcast thresholds not met"; exit 1; fi
+
+      - name: Parse and check thresholds - Latency
+        id: check_latency
+        shell: bash
+        run: |
+          set -e
+          test -f latency-results.json || (echo "Missing latency-results.json" && exit 1)
+          jq '.' latency-results.json > /dev/null || (echo "Invalid latency JSON" && exit 1)
+          jq -e '.Results | length > 0' latency-results.json > /dev/null || (echo "Latency results are empty" && exit 1)
+          jq -r '
+            .Results | max_by(.ConcurrencyLevel) as $r
+            | $expectedTp := (($r.ConcurrencyLevel // 0) * ($r.EventsPerSecond // 0))
+            | $processedRatio := (if $r.TotalEventsSent>0 then ($r.TotalEventsProcessed / $r.TotalEventsSent) else 0 end)
+            | {
+                success: ($r.Success // false),
+                throughput: ($r.ActualThroughput // 0),
+                p95: ($r.P95LatencyMs // 0),
+                p99: ($r.P99LatencyMs // 0),
+                processedRatio: $processedRatio,
+                expectedThroughput: $expectedTp
+              }' latency-results.json > latency_metrics.json
+
+          succ=$(jq -r '.success' latency_metrics.json)
+          tp=$(jq -r '.throughput' latency_metrics.json)
+          p95=$(jq -r '.p95' latency_metrics.json)
+          p99=$(jq -r '.p99' latency_metrics.json)
+          pratio=$(jq -r '.processedRatio' latency_metrics.json)
+          etp=$(jq -r '.expectedThroughput' latency_metrics.json)
+
+          echo "Latency metrics: success=$succ throughput=$tp p95=$p95 p99=$p99 processedRatio=$pratio expectedThroughput=$etp"
+
+          fail=0
+          if [ "$succ" != "true" ]; then echo "❌ Latency result marked unsuccessful"; fail=1; fi
+          if [ "${etp}" != "null" ] && [ "${etp}" != "0" ]; then
+            awk -v a="$tp" -v b="$etp" -v f="$LAT_THROUGHPUT_FACTOR" 'BEGIN{ if (a+0 < b*f) exit 1 }' || { echo "❌ Latency throughput below factor $LAT_THROUGHPUT_FACTOR of expected"; fail=1; }
+          fi
+          awk -v a="$p95" -v b="$LAT_P95_MS" 'BEGIN{ if (a+0 > b+0) exit 1 }' || { echo "❌ Latency P95 above $LAT_P95_MS ms"; fail=1; }
+          awk -v a="$p99" -v b="$LAT_P99_MS" 'BEGIN{ if (a+0 > b+0) exit 1 }' || { echo "❌ Latency P99 above $LAT_P99_MS ms"; fail=1; }
+          awk -v a="$pratio" -v b="$LAT_PROCESSED_RATIO" 'BEGIN{ if (a+0 < b+0) exit 1 }' || { echo "❌ Latency processed ratio below $LAT_PROCESSED_RATIO"; fail=1; }
+
+          if [ "$fail" -ne 0 ]; then
+            echo "Latency thresholds not met"; exit 1; fi
+
+      - name: Write Job Summary
+        if: always()
+        shell: bash
+        run: |
+          echo "### Performance Benchmarks" >> $GITHUB_STEP_SUMMARY
+          echo "- Broadcast and Latency benchmarks executed" >> $GITHUB_STEP_SUMMARY
+          if [ -f broadcast_metrics.json ]; then
+            echo "\n**Broadcast (key metrics)**" >> $GITHUB_STEP_SUMMARY
+            jq -r 'to_entries | map("- **\(.key)**: \(.value)") | .[]' broadcast_metrics.json >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -f latency_metrics.json ]; then
+            echo "\n**Latency (key metrics)**" >> $GITHUB_STEP_SUMMARY
+            jq -r 'to_entries | map("- **\(.key)**: \(.value)") | .[]' latency_metrics.json >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            broadcast-latency-results.json
+            latency-results.json
+            broadcast_metrics.json
+            latency_metrics.json
+            silo.log
+
+      - name: Stop Silo
+        if: always()
+        shell: bash
+        run: |
+          if [ -f silo.pid ]; then kill $(cat silo.pid) || true; fi
+
