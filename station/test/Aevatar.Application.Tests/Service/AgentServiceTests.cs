@@ -65,6 +65,9 @@ public abstract class AgentServiceTests<TStartupModule> : AevatarApplicationTest
             var firstAgent = agentTypes.First();
             firstAgent.AgentType.ShouldNotBeNullOrWhiteSpace();
             firstAgent.FullName.ShouldNotBeNullOrWhiteSpace();
+            
+            // Verify Description field is properly set (can be null or empty, but should be a string)
+            firstAgent.Description.ShouldNotBeNull(); // Description should not be null, even if empty
         }
     }
 
