@@ -21,7 +21,7 @@ public class AevatarKubernetesModule: AbpModule
             {
                 throw new Exception("the config of [Kubernetes] is missing.");
             }
-            var config = KubernetesClientConfiguration.BuildConfigFromConfigFile(options.KubeConfigPath);
+            var config = KubernetesClientConfiguration.InClusterConfig();
             return new k8s.Kubernetes(config);
         });
     }
