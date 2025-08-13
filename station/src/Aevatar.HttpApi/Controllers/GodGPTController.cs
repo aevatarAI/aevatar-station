@@ -318,10 +318,14 @@ public class GodGPTController : AevatarController
     }
 
     [HttpGet("godgpt/account")]
-    public async Task<UserProfileDto> GetUserProfileAsync()
+    public async Task<UserProfileDto> GetUserProfileAsync(SetUserProfileInput userProfile)
     {
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
+        if (userProfile != null && userProfile.UserId != null && userProfile.UserId != Guid.Empty)
+        {
+            currentUserId = userProfile.UserId;
+        }
         var userProfileDto = await _godGptService.GetUserProfileAsync(currentUserId);
         _logger.LogDebug("[GodGPTController][GetUserProfileAsync] userId: {0}, duration: {1}ms",
             currentUserId, stopwatch.ElapsedMilliseconds);
