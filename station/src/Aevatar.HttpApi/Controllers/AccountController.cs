@@ -66,9 +66,6 @@ public class AccountController : AevatarController
             var language = HttpContext.GetGodGPTLanguage();
             await _accountService.SendRegisterCodeAsync(input, language);
 
-            // Increment request count for rate limiting
-            await _securityService.IncrementRequestCountAsync(securityValidationResult.ClientIp);
-
             Logger.LogInformation("Register code sent successfully: Email={email}, Platform={platform}, IP={ip}", 
                 input.Email, input.Platform, securityValidationResult.ClientIp);
 
@@ -103,12 +100,15 @@ public class AccountController : AevatarController
         Logger.LogInformation("Send register code request: Email={email}, Platform={platform}, IP={ip}", 
             input.Email, input.Platform, clientIp);
 
-        // 2. Check if security verification is required
+        // 2. Check if security verification is required based on current count
         var needsVerification = await _securityService.IsSecurityVerificationRequiredAsync(clientIp);
+
+        // 3. Always increment request count to prevent abuse (regardless of verification result)
+        await _securityService.IncrementRequestCountAsync(clientIp);
 
         if (needsVerification)
         {
-            // 3. Perform security verification
+            // 4. Perform security verification
             var verificationRequest = new SecurityVerificationRequest
             {
                 Platform = input.Platform,
