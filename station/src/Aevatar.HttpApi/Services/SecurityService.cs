@@ -46,6 +46,10 @@ public class SecurityService : ISecurityService
         // Debug configuration loading
         _logger.LogInformation("SecurityService initialized with config: EnableReCAPTCHA={EnableReCAPTCHA}, EnableRateLimit={EnableRateLimit}, FreeRequestsPerDay={FreeRequestsPerDay}",
             _options.Switch?.EnableReCAPTCHA, _options.Switch?.EnableRateLimit, _options.Rate?.FreeRequestsPerDay);
+            
+        // Additional debug info for configuration troubleshooting
+        _logger.LogInformation("SecurityService configuration details: ReCAPTCHA SecretKey length={SecretKeyLength}, Switch object null={SwitchNull}, Rate object null={RateNull}",
+            _options.ReCAPTCHA?.SecretKey?.Length ?? 0, _options.Switch == null, _options.Rate == null);
     }
 
     #region IP Address Handling
