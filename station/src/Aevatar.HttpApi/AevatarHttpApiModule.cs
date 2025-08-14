@@ -98,6 +98,10 @@ public class AevatarHttpApiModule : AbpModule
                 {
                     options.AppleDeviceCheck = new AppleDeviceCheckOptions();
                 }
+                if (options.PlayIntegrity == null)
+                {
+                    options.PlayIntegrity = new PlayIntegrityOptions();
+                }
             })
             .Validate(options => 
             {

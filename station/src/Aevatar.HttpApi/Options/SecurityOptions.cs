@@ -9,6 +9,7 @@ public class SecurityOptions
     
     public ReCAPTCHAOptions ReCAPTCHA { get; set; } = new();
     public AppleDeviceCheckOptions AppleDeviceCheck { get; set; } = new();
+    public PlayIntegrityOptions PlayIntegrity { get; set; } = new();
     public RateLimitOptions RateLimit { get; set; } = new();
     public SecuritySwitchOptions Switch { get; set; } = new();
 }
@@ -34,6 +35,16 @@ public class AppleDeviceCheckOptions
     public string TeamId { get; set; } = "";
     public string KeyId { get; set; } = "";
     public string PrivateKey { get; set; } = "";
+}
+
+/// <summary>
+/// Google Play Integrity configuration options
+/// </summary>
+public class PlayIntegrityOptions
+{
+    public bool EnableValidation { get; set; } = false;
+    public string ProjectId { get; set; } = "";
+    public string ServiceAccountKey { get; set; } = "";
 }
 
 /// <summary>

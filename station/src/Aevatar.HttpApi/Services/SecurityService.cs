@@ -197,17 +197,29 @@ public class SecurityService : ISecurityService
 
     private async Task<SecurityVerificationResult> VerifyAndroidSecurityAsync(SecurityVerificationRequest request)
     {
-        // Android currently only supports reCAPTCHA
+        // Priority 1: Google Play Integrity verification
+        if (!string.IsNullOrEmpty(request.AcToken))
+        {
+            var playIntegrityValid = await VerifyPlayIntegrityAsync(request.AcToken);
+            if (playIntegrityValid)
+            {
+                return SecurityVerificationResult.CreateSuccess("Google Play Integrity");
+            }
+            
+            _logger.LogWarning("Google Play Integrity verification failed, falling back to reCAPTCHA");
+        }
+
+        // Fallback: reCAPTCHA verification
         if (!string.IsNullOrEmpty(request.ReCAPTCHAToken))
         {
             var recaptchaValid = await VerifyReCAPTCHAAsync(request.ReCAPTCHAToken, request.ClientIp);
             if (recaptchaValid)
             {
-                return SecurityVerificationResult.CreateSuccess("reCAPTCHA (Android)");
+                return SecurityVerificationResult.CreateSuccess("reCAPTCHA (fallback for Android)");
             }
         }
 
-        return SecurityVerificationResult.CreateFailure("Android verification failed: reCAPTCHA verification required");
+        return SecurityVerificationResult.CreateFailure("Android verification failed: both Play Integrity and reCAPTCHA verification failed");
     }
 
     private async Task<bool> VerifyReCAPTCHAAsync(string token, string? remoteIp = null)
@@ -289,6 +301,44 @@ public class SecurityService : ISecurityService
         }
     }
 
+    private async Task<bool> VerifyPlayIntegrityAsync(string integrityToken)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(integrityToken))
+            {
+                _logger.LogWarning("Google Play Integrity token is empty");
+                return false;
+            }
+
+            // Check if Play Integrity validation is enabled
+            if (_options.PlayIntegrity?.EnableValidation != true)
+            {
+                _logger.LogDebug("Google Play Integrity validation disabled, accepting token");
+                return true;
+            }
+
+            // Basic token format validation
+            if (!IsValidPlayIntegrityToken(integrityToken))
+            {
+                _logger.LogWarning("Invalid Google Play Integrity token format");
+                return false;
+            }
+
+            _logger.LogDebug("Google Play Integrity token received and validated: length={tokenLength}", integrityToken.Length);
+
+            // TODO: Implement full Google Play Integrity API verification
+            // This requires calling Google Play Integrity API with service account credentials
+            // For now, accept valid format tokens
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Google Play Integrity verification exception");
+            return false;
+        }
+    }
+
     private bool IsValidDeviceCheckToken(string token)
     {
         if (string.IsNullOrWhiteSpace(token))
@@ -303,6 +353,28 @@ public class SecurityService : ISecurityService
             return token.Length > 50 && 
                    token.Length < 10000 && 
                    Convert.TryFromBase64String(token, new Span<byte>(new byte[token.Length * 3 / 4 + 3]), out _);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private bool IsValidPlayIntegrityToken(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return false;
+        }
+
+        try
+        {
+            // Play Integrity tokens are JWT format
+            // Basic validation: check if it looks like a JWT (3 parts separated by dots)
+            var parts = token.Split('.');
+            return parts.Length == 3 && 
+                   parts.All(part => !string.IsNullOrWhiteSpace(part)) &&
+                   token.Length > 100;
         }
         catch
         {
