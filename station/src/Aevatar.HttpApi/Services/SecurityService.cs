@@ -43,13 +43,19 @@ public class SecurityService : ISecurityService
 
         _httpClient.Timeout = TimeSpan.FromSeconds(10);
         
-        // Debug configuration loading
-        _logger.LogInformation("SecurityService initialized with config: EnableRecaptcha={EnableRecaptcha}, EnableRateLimit={EnableRateLimit}, FreeRequestsPerDay={FreeRequestsPerDay}",
+        // Debug configuration loading - will show in Kibana
+        _logger.LogWarning("SecurityService Configuration Debug - EnableRecaptcha={EnableRecaptcha}, EnableRateLimit={EnableRateLimit}, FreeRequestsPerDay={FreeRequestsPerDay}",
             _options.Switch?.EnableRecaptcha, _options.Switch?.EnableRateLimit, _options.Rate?.FreeRequestsPerDay);
             
         // Additional debug info for configuration troubleshooting
-        _logger.LogInformation("SecurityService configuration details: ReCAPTCHA SecretKey length={SecretKeyLength}, Switch object null={SwitchNull}, Rate object null={RateNull}",
-            _options.Recaptcha?.SecretKey?.Length ?? 0, _options.Switch == null, _options.Rate == null);
+        _logger.LogWarning("SecurityService Configuration Details - SecretKey length={SecretKeyLength}, Switch null={SwitchNull}, Rate null={RateNull}, Recaptcha null={RecaptchaNull}",
+            _options.Recaptcha?.SecretKey?.Length ?? 0, _options.Switch == null, _options.Rate == null, _options.Recaptcha == null);
+            
+        // Check if we might still have old configuration keys
+        if (_options.Switch?.EnableRecaptcha == false && (_options.Recaptcha?.SecretKey?.Length ?? 0) == 0)
+        {
+            _logger.LogError("SecurityService Configuration Issue - Both EnableRecaptcha=false and SecretKey is empty. Check server config file for correct naming: EnableRecaptcha and Recaptcha section");
+        }
     }
 
     #region IP Address Handling

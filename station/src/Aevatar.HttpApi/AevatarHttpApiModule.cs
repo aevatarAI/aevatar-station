@@ -67,6 +67,54 @@ public class AevatarHttpApiModule : AbpModule
 
     private void ConfigureSecurityOptions(ServiceConfigurationContext context, IConfiguration configuration)
     {
+        // Debug: Check raw configuration values BEFORE binding
+        var securitySection = configuration.GetSection(SecurityOptions.SectionName);
+        Console.WriteLine($"[Module Config Debug] Security section exists: {securitySection.Exists()}");
+        
+        if (securitySection.Exists())
+        {
+            // Check each subsection and their raw values
+            var switchSection = securitySection.GetSection("Switch");
+            Console.WriteLine($"[Module Config Debug] Switch section exists: {switchSection.Exists()}");
+            
+            if (switchSection.Exists())
+            {
+                var enableRecaptcha = switchSection["EnableRecaptcha"];
+                var enableRateLimit = switchSection["EnableRateLimit"];
+                Console.WriteLine($"[Module Config Debug] Switch.EnableRecaptcha: '{enableRecaptcha}'");
+                Console.WriteLine($"[Module Config Debug] Switch.EnableRateLimit: '{enableRateLimit}'");
+            }
+            
+            var recaptchaSection = securitySection.GetSection("Recaptcha");
+            Console.WriteLine($"[Module Config Debug] Recaptcha section exists: {recaptchaSection.Exists()}");
+            
+            if (recaptchaSection.Exists())
+            {
+                var secretKey = recaptchaSection["SecretKey"];
+                Console.WriteLine($"[Module Config Debug] Recaptcha.SecretKey length: {secretKey?.Length ?? 0}");
+            }
+            
+            // Also check old naming in case server still uses old config
+            var oldReCaptchaSection = securitySection.GetSection("ReCAPTCHA");
+            if (oldReCaptchaSection.Exists())
+            {
+                Console.WriteLine($"[Module Config Debug] Found old ReCAPTCHA section - server config needs update!");
+            }
+            
+            if (switchSection.Exists())
+            {
+                var oldEnableReCAPTCHA = switchSection["EnableReCAPTCHA"];
+                if (!string.IsNullOrEmpty(oldEnableReCAPTCHA))
+                {
+                    Console.WriteLine($"[Module Config Debug] Found old EnableReCAPTCHA: '{oldEnableReCAPTCHA}' - server config needs update!");
+                }
+            }
+        }
+        else
+        {
+            Console.WriteLine("[Module Config Debug] Security section NOT found in configuration!");
+        }
+        
         // Use standard ABP configuration binding
         context.Services.Configure<SecurityOptions>(configuration.GetSection(SecurityOptions.SectionName));
         
