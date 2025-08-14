@@ -1,4 +1,6 @@
+using System.Threading.Tasks;
 using Aevatar.Common;
+using Microsoft.AspNetCore.Http;
 
 namespace Aevatar.Services;
 
@@ -54,10 +56,10 @@ public class SecurityVerificationResult
     public bool Success { get; set; }
     public string Message { get; set; } = "";
     public string VerificationMethod { get; set; } = "";
-    
-    public static SecurityVerificationResult CreateSuccess(string method) => 
+
+    public static SecurityVerificationResult CreateSuccess(string method) =>
         new() { Success = true, Message = "Verification successful", VerificationMethod = method };
-        
-    public static SecurityVerificationResult CreateFailure(string message) => 
+
+    public static SecurityVerificationResult CreateFailure(string message) =>
         new() { Success = false, Message = message };
 }

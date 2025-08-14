@@ -9,6 +9,7 @@ using Aevatar.Options;
 using Aevatar.Service;
 using Aevatar.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.Account;
 using Volo.Abp.AspNetCore.Mvc;
@@ -90,9 +91,9 @@ public class AevatarHttpApiModule : AbpModule
                 {
                     options.ReCAPTCHA = new ReCAPTCHAOptions();
                 }
-                if (options.RateLimit == null)
+                if (options.Rate == null)
                 {
-                    options.RateLimit = new RateLimitOptions();
+                    options.Rate = new RateOptions();
                 }
                 if (options.AppleDeviceCheck == null)
                 {

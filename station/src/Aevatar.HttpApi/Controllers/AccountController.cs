@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Aevatar.Account;
 using Aevatar.Services;
@@ -7,6 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 using Volo.Abp.Account;
 using Volo.Abp.Identity;
 using Aevatar.Extensions;
+using Microsoft.Extensions.Logging;
+
 namespace Aevatar.Controllers;
 
 [RemoteService]
@@ -52,51 +55,22 @@ public class AccountController : AevatarController
     {
         try
         {
-            // 1. Get real client IP address
-            var clientIp = _securityService.GetRealClientIp(HttpContext);
-            Logger.LogInformation("Send register code request: Email={email}, Platform={platform}, IP={ip}", 
-                input.Email, input.Platform, clientIp);
-
-            // 2. Check if security verification is required
-            var needsVerification = await _securityService.IsSecurityVerificationRequiredAsync(clientIp);
-
-            if (needsVerification)
+            // Perform security validation
+            var securityValidationResult = await ValidateSecurityAsync(input);
+            if (!securityValidationResult.Success)
             {
-                // 3. Perform security verification
-                var verificationRequest = new SecurityVerificationRequest
-                {
-                    Platform = input.Platform,
-                    ClientIp = clientIp,
-                    ReCAPTCHAToken = input.ReCAPTCHAToken,
-                    AcToken = input.AcToken
-                };
-
-                var verificationResult = await _securityService.VerifySecurityAsync(verificationRequest);
-                if (!verificationResult.Success)
-                {
-                    Logger.LogWarning("Security verification failed: Email={email}, Platform={platform}, IP={ip}, Reason={reason}", 
-                        input.Email, input.Platform, clientIp, verificationResult.Message);
-                    
-                    return BadRequest(new SendRegisterCodeResponseDto
-                    {
-                        Success = false,
-                        Message = verificationResult.Message
-                    });
-                }
-
-                Logger.LogInformation("Security verification successful: Email={email}, Platform={platform}, IP={ip}, Method={method}", 
-                    input.Email, input.Platform, clientIp, verificationResult.VerificationMethod);
+                return BadRequest(securityValidationResult.ErrorResponse);
             }
 
-            // 4. Send verification code
+            // Send verification code
             var language = HttpContext.GetGodGPTLanguage();
             await _accountService.SendRegisterCodeAsync(input, language);
 
-            // 5. Increment request count
-            await _securityService.IncrementRequestCountAsync(clientIp);
+            // Increment request count for rate limiting
+            await _securityService.IncrementRequestCountAsync(securityValidationResult.ClientIp);
 
             Logger.LogInformation("Register code sent successfully: Email={email}, Platform={platform}, IP={ip}", 
-                input.Email, input.Platform, clientIp);
+                input.Email, input.Platform, securityValidationResult.ClientIp);
 
             return Ok(new SendRegisterCodeResponseDto
             {
@@ -115,6 +89,68 @@ public class AccountController : AevatarController
                 Message = "Internal server error, please try again later"
             });
         }
+    }
+
+    /// <summary>
+    /// Validate security requirements for send register code request
+    /// </summary>
+    /// <param name="input">Request parameters</param>
+    /// <returns>Security validation result</returns>
+    private async Task<SecurityValidationResult> ValidateSecurityAsync(SendRegisterCodeDto input)
+    {
+        // 1. Get real client IP address
+        var clientIp = _securityService.GetRealClientIp(HttpContext);
+        Logger.LogInformation("Send register code request: Email={email}, Platform={platform}, IP={ip}", 
+            input.Email, input.Platform, clientIp);
+
+        // 2. Check if security verification is required
+        var needsVerification = await _securityService.IsSecurityVerificationRequiredAsync(clientIp);
+
+        if (needsVerification)
+        {
+            // 3. Perform security verification
+            var verificationRequest = new SecurityVerificationRequest
+            {
+                Platform = input.Platform,
+                ClientIp = clientIp,
+                ReCAPTCHAToken = input.ReCAPTCHAToken,
+                AcToken = input.AcToken
+            };
+
+            var verificationResult = await _securityService.VerifySecurityAsync(verificationRequest);
+            if (!verificationResult.Success)
+            {
+                Logger.LogWarning("Security verification failed: Email={email}, Platform={platform}, IP={ip}, Reason={reason}", 
+                    input.Email, input.Platform, clientIp, verificationResult.Message);
+                
+                return SecurityValidationResult.CreateFailure(clientIp, new SendRegisterCodeResponseDto
+                {
+                    Success = false,
+                    Message = verificationResult.Message
+                });
+            }
+
+            Logger.LogInformation("Security verification successful: Email={email}, Platform={platform}, IP={ip}, Method={method}", 
+                input.Email, input.Platform, clientIp, verificationResult.VerificationMethod);
+        }
+
+        return SecurityValidationResult.CreateSuccess(clientIp);
+    }
+
+    /// <summary>
+    /// Security validation result for internal use
+    /// </summary>
+    private class SecurityValidationResult
+    {
+        public bool Success { get; set; }
+        public string ClientIp { get; set; } = "";
+        public SendRegisterCodeResponseDto? ErrorResponse { get; set; }
+
+        public static SecurityValidationResult CreateSuccess(string clientIp) => 
+            new() { Success = true, ClientIp = clientIp };
+
+        public static SecurityValidationResult CreateFailure(string clientIp, SendRegisterCodeResponseDto errorResponse) => 
+            new() { Success = false, ClientIp = clientIp, ErrorResponse = errorResponse };
     }
 
     [HttpPost]

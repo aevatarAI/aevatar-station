@@ -1,12 +1,20 @@
+using System;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using Aevatar.Common;
 using Aevatar.Options;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -32,12 +40,12 @@ public class SecurityService : ISecurityService
         _httpClient = httpClient;
         _options = options.Value;
         _logger = logger;
-        
-                       _httpClient.Timeout = TimeSpan.FromSeconds(10);
+
+        _httpClient.Timeout = TimeSpan.FromSeconds(10);
     }
 
     #region IP Address Handling
-    
+
     public string GetRealClientIp(HttpContext context)
     {
         // 1. Check X-Forwarded-For header (highest priority)
@@ -80,7 +88,7 @@ public class SecurityService : ISecurityService
     #endregion
 
     #region Request Count and Rate Limiting
-    
+
     public async Task<bool> IsSecurityVerificationRequiredAsync(string clientIp)
     {
         if (_options.Switch?.EnableRateLimit != true)
@@ -89,11 +97,11 @@ public class SecurityService : ISecurityService
         }
 
         var count = await GetTodayRequestCountAsync(clientIp);
-        var required = count >= _options.RateLimit.FreeRequestsPerDay;
-        
-        _logger.LogDebug("IP {ip} today request count: {count}, verification required: {required}", 
+        var required = count >= _options.Rate.FreeRequestsPerDay;
+
+        _logger.LogDebug("IP {ip} today request count: {count}, verification required: {required}",
             clientIp, count, required);
-        
+
         return required;
     }
 
@@ -102,14 +110,14 @@ public class SecurityService : ISecurityService
         var key = GetCacheKey(clientIp);
         var currentCount = await GetTodayRequestCountAsync(clientIp);
         var newCount = currentCount + 1;
-        
+
         var expiry = GetExpiryTime();
-        await _cache.SetStringAsync(key, newCount.ToString(), 
+        await _cache.SetStringAsync(key, newCount.ToString(),
             new DistributedCacheEntryOptions
             {
                 AbsoluteExpiration = expiry
             });
-        
+
         _logger.LogDebug("IP {ip} request count updated: {count}", clientIp, newCount);
     }
 
@@ -117,20 +125,20 @@ public class SecurityService : ISecurityService
     {
         var key = GetCacheKey(clientIp);
         var countStr = await _cache.GetStringAsync(key);
-        
+
         if (int.TryParse(countStr, out var count))
         {
             return count;
         }
-        
+
         return 0;
     }
 
-            private string GetCacheKey(string clientIp)
-        {
-            var today = DateTime.UtcNow.ToString("yyyyMMdd");
-            return $"SendRegCode:{clientIp}:{today}";
-        }
+    private string GetCacheKey(string clientIp)
+    {
+        var today = DateTime.UtcNow.ToString("yyyyMMdd");
+        return $"SendRegCode:{clientIp}:{today}";
+    }
 
     private DateTimeOffset GetExpiryTime()
     {
@@ -141,7 +149,7 @@ public class SecurityService : ISecurityService
     #endregion
 
     #region Security Verification
-    
+
     public async Task<SecurityVerificationResult> VerifySecurityAsync(SecurityVerificationRequest request)
     {
         return request.Platform switch
@@ -167,7 +175,7 @@ public class SecurityService : ISecurityService
         }
 
         var isValid = await VerifyReCAPTCHAAsync(request.ReCAPTCHAToken, request.ClientIp);
-        return isValid 
+        return isValid
             ? SecurityVerificationResult.CreateSuccess("reCAPTCHA")
             : SecurityVerificationResult.CreateFailure("reCAPTCHA verification failed");
     }
@@ -182,7 +190,7 @@ public class SecurityService : ISecurityService
             {
                 return SecurityVerificationResult.CreateSuccess("Apple DeviceCheck");
             }
-            
+
             _logger.LogWarning("Apple DeviceCheck verification failed, falling back to reCAPTCHA");
         }
 
@@ -196,7 +204,8 @@ public class SecurityService : ISecurityService
             }
         }
 
-        return SecurityVerificationResult.CreateFailure("iOS verification failed: both DeviceCheck and reCAPTCHA verification failed");
+        return SecurityVerificationResult.CreateFailure(
+            "iOS verification failed: both DeviceCheck and reCAPTCHA verification failed");
     }
 
     private async Task<SecurityVerificationResult> VerifyAndroidSecurityAsync(SecurityVerificationRequest request)
@@ -209,7 +218,7 @@ public class SecurityService : ISecurityService
             {
                 return SecurityVerificationResult.CreateSuccess("Google Play Integrity");
             }
-            
+
             _logger.LogWarning("Google Play Integrity verification failed, falling back to reCAPTCHA");
         }
 
@@ -223,7 +232,8 @@ public class SecurityService : ISecurityService
             }
         }
 
-        return SecurityVerificationResult.CreateFailure("Android verification failed: both Play Integrity and reCAPTCHA verification failed");
+        return SecurityVerificationResult.CreateFailure(
+            "Android verification failed: both Play Integrity and reCAPTCHA verification failed");
     }
 
     private async Task<bool> VerifyReCAPTCHAAsync(string token, string? remoteIp = null)
@@ -241,8 +251,8 @@ public class SecurityService : ISecurityService
                 parameters.Add(new KeyValuePair<string, string>("remoteip", remoteIp));
             }
 
-                               var content = new FormUrlEncodedContent(parameters);
-                   var response = await _httpClient.PostAsync(_options.ReCAPTCHA.VerifyUrl, content);
+            var content = new FormUrlEncodedContent(parameters);
+            var response = await _httpClient.PostAsync(_options.ReCAPTCHA.VerifyUrl, content);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -300,7 +310,8 @@ public class SecurityService : ISecurityService
                 return false;
             }
 
-            _logger.LogDebug("Apple DeviceCheck token received and validated: length={tokenLength}", deviceToken.Length);
+            _logger.LogDebug("Apple DeviceCheck token received and validated: length={tokenLength}",
+                deviceToken.Length);
 
             // Generate JWT for Apple DeviceCheck API authentication
             var jwt = GenerateAppleDeviceCheckJwt();
@@ -313,7 +324,7 @@ public class SecurityService : ISecurityService
             // Call Apple DeviceCheck API to validate the device token
             var isValid = await CallAppleDeviceCheckApiAsync(deviceToken, jwt);
             _logger.LogInformation("Apple DeviceCheck validation result: {result}", isValid);
-            
+
             return isValid;
         }
         catch (Exception ex)
@@ -347,7 +358,8 @@ public class SecurityService : ISecurityService
                 return false;
             }
 
-            _logger.LogDebug("Google Play Integrity token received and validated: length={tokenLength}", integrityToken.Length);
+            _logger.LogDebug("Google Play Integrity token received and validated: length={tokenLength}",
+                integrityToken.Length);
 
             // TODO: Implement full Google Play Integrity API verification
             // This requires calling Google Play Integrity API with service account credentials
@@ -372,8 +384,8 @@ public class SecurityService : ISecurityService
         {
             // DeviceCheck tokens are typically base64 encoded
             // Basic validation: length check and base64 format
-            return token.Length > 50 && 
-                   token.Length < 10000 && 
+            return token.Length > 50 &&
+                   token.Length < 10000 &&
                    Convert.TryFromBase64String(token, new Span<byte>(new byte[token.Length * 3 / 4 + 3]), out _);
         }
         catch
@@ -394,7 +406,7 @@ public class SecurityService : ISecurityService
             // Play Integrity tokens are JWT format
             // Basic validation: check if it looks like a JWT (3 parts separated by dots)
             var parts = token.Split('.');
-            return parts.Length == 3 && 
+            return parts.Length == 3 &&
                    parts.All(part => !string.IsNullOrWhiteSpace(part)) &&
                    token.Length > 100;
         }
@@ -427,7 +439,7 @@ public class SecurityService : ISecurityService
 
             // Create ES256 signing credentials
             var signingCredentials = new SigningCredentials(
-                new ECDsaSecurityKey(privateKey), 
+                new ECDsaSecurityKey(privateKey),
                 SecurityAlgorithms.EcdsaSha256)
             {
                 CryptoProviderFactory = new CryptoProviderFactory()
@@ -507,7 +519,7 @@ public class SecurityService : ISecurityService
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Apple DeviceCheck API request failed: {statusCode}, {content}", 
+                _logger.LogError("Apple DeviceCheck API request failed: {statusCode}, {content}",
                     response.StatusCode, errorContent);
                 return false;
             }
@@ -529,27 +541,25 @@ public class SecurityService : ISecurityService
     #endregion
 
     #region Helper Classes
-    
+
     private class GoogleReCAPTCHAResponse
     {
         public bool Success { get; set; }
         public DateTime ChallengeTs { get; set; }
         public string Hostname { get; set; } = "";
-        [JsonPropertyName("error-codes")]
-        public string[] ErrorCodes { get; set; } = Array.Empty<string>();
+        [JsonPropertyName("error-codes")] public string[] ErrorCodes { get; set; } = Array.Empty<string>();
     }
 
     private class AppleDeviceCheckResponse
     {
-        [JsonPropertyName("bit0")]
-        public bool? Bit0 { get; set; }
-        
-        [JsonPropertyName("bit1")]
-        public bool? Bit1 { get; set; }
-        
-        [JsonPropertyName("last_update_time")]
-        public string? LastUpdateTime { get; set; }
+        [JsonPropertyName("bit0")] public bool? Bit0 { get; set; }
+
+        [JsonPropertyName("bit1")] public bool? Bit1 { get; set; }
+
+        [JsonPropertyName("last_update_time")] public string? LastUpdateTime { get; set; }
     }
+
+    #endregion
 
     #endregion
 }

@@ -10,7 +10,7 @@ public class SecurityOptions
     public ReCAPTCHAOptions ReCAPTCHA { get; set; } = new();
     public AppleDeviceCheckOptions AppleDeviceCheck { get; set; } = new();
     public PlayIntegrityOptions PlayIntegrity { get; set; } = new();
-    public RateLimitOptions RateLimit { get; set; } = new();
+    public RateOptions Rate { get; set; } = new();
     public SecuritySwitchOptions Switch { get; set; } = new();
 }
 
@@ -49,7 +49,7 @@ public class PlayIntegrityOptions
 /// <summary>
 /// Rate limiting configuration options
 /// </summary>
-public class RateLimitOptions
+public class RateOptions
 {
     public int FreeRequestsPerDay { get; set; } = 5;
 }
