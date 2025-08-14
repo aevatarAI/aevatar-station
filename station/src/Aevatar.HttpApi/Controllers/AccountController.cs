@@ -125,7 +125,7 @@ public class AccountController : AevatarController
             {
                 Platform = input.Platform,
                 ClientIp = clientIp,
-                ReCAPTCHAToken = input.ReCAPTCHAToken,
+                RecaptchaToken = input.ReCAPTCHAToken,
                 AcToken = input.AcToken
             };
 

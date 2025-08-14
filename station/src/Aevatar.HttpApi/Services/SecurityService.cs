@@ -44,12 +44,12 @@ public class SecurityService : ISecurityService
         _httpClient.Timeout = TimeSpan.FromSeconds(10);
         
         // Debug configuration loading
-        _logger.LogInformation("SecurityService initialized with config: EnableReCAPTCHA={EnableReCAPTCHA}, EnableRateLimit={EnableRateLimit}, FreeRequestsPerDay={FreeRequestsPerDay}",
-            _options.Switch?.EnableReCAPTCHA, _options.Switch?.EnableRateLimit, _options.Rate?.FreeRequestsPerDay);
+        _logger.LogInformation("SecurityService initialized with config: EnableRecaptcha={EnableRecaptcha}, EnableRateLimit={EnableRateLimit}, FreeRequestsPerDay={FreeRequestsPerDay}",
+            _options.Switch?.EnableRecaptcha, _options.Switch?.EnableRateLimit, _options.Rate?.FreeRequestsPerDay);
             
         // Additional debug info for configuration troubleshooting
         _logger.LogInformation("SecurityService configuration details: ReCAPTCHA SecretKey length={SecretKeyLength}, Switch object null={SwitchNull}, Rate object null={RateNull}",
-            _options.ReCAPTCHA?.SecretKey?.Length ?? 0, _options.Switch == null, _options.Rate == null);
+            _options.Recaptcha?.SecretKey?.Length ?? 0, _options.Switch == null, _options.Rate == null);
     }
 
     #region IP Address Handling
@@ -171,22 +171,22 @@ public class SecurityService : ISecurityService
 
     private async Task<SecurityVerificationResult> VerifyWebSecurityAsync(SecurityVerificationRequest request)
     {
-        _logger.LogInformation("Web security verification: EnableReCAPTCHA={enabled}, HasToken={hasToken}", 
-            _options.Switch?.EnableReCAPTCHA, !string.IsNullOrEmpty(request.ReCAPTCHAToken));
+        _logger.LogInformation("Web security verification: EnableRecaptcha={enabled}, HasToken={hasToken}", 
+            _options.Switch?.EnableRecaptcha, !string.IsNullOrEmpty(request.RecaptchaToken));
             
-        if (_options.Switch?.EnableReCAPTCHA != true)
+        if (_options.Switch?.EnableRecaptcha != true)
         {
             _logger.LogWarning("Web reCAPTCHA verification disabled, skipping verification - this allows bypass!");
             return SecurityVerificationResult.CreateSuccess("reCAPTCHA (disabled)");
         }
 
-        if (string.IsNullOrEmpty(request.ReCAPTCHAToken))
+        if (string.IsNullOrEmpty(request.RecaptchaToken))
         {
             _logger.LogWarning("Missing reCAPTCHA token for web platform verification");
             return SecurityVerificationResult.CreateFailure("Missing reCAPTCHA verification token");
         }
 
-        var isValid = await VerifyReCAPTCHAAsync(request.ReCAPTCHAToken, request.ClientIp);
+        var isValid = await VerifyRecaptchaAsync(request.RecaptchaToken, request.ClientIp);
         return isValid
             ? SecurityVerificationResult.CreateSuccess("reCAPTCHA")
             : SecurityVerificationResult.CreateFailure("reCAPTCHA verification failed");
@@ -207,9 +207,9 @@ public class SecurityService : ISecurityService
         }
 
         // Fallback: reCAPTCHA verification
-        if (!string.IsNullOrEmpty(request.ReCAPTCHAToken))
+        if (!string.IsNullOrEmpty(request.RecaptchaToken))
         {
-            var recaptchaValid = await VerifyReCAPTCHAAsync(request.ReCAPTCHAToken, request.ClientIp);
+            var recaptchaValid = await VerifyRecaptchaAsync(request.RecaptchaToken, request.ClientIp);
             if (recaptchaValid)
             {
                 return SecurityVerificationResult.CreateSuccess("reCAPTCHA (fallback for iOS)");
@@ -235,9 +235,9 @@ public class SecurityService : ISecurityService
         }
 
         // Fallback: reCAPTCHA verification
-        if (!string.IsNullOrEmpty(request.ReCAPTCHAToken))
+        if (!string.IsNullOrEmpty(request.RecaptchaToken))
         {
-            var recaptchaValid = await VerifyReCAPTCHAAsync(request.ReCAPTCHAToken, request.ClientIp);
+            var recaptchaValid = await VerifyRecaptchaAsync(request.RecaptchaToken, request.ClientIp);
             if (recaptchaValid)
             {
                 return SecurityVerificationResult.CreateSuccess("reCAPTCHA (fallback for Android)");
@@ -248,13 +248,13 @@ public class SecurityService : ISecurityService
             "Android verification failed: both Play Integrity and reCAPTCHA verification failed");
     }
 
-    private async Task<bool> VerifyReCAPTCHAAsync(string token, string? remoteIp = null)
+    private async Task<bool> VerifyRecaptchaAsync(string token, string? remoteIp = null)
     {
         try
         {
             var parameters = new List<KeyValuePair<string, string>>
             {
-                new("secret", _options.ReCAPTCHA.SecretKey),
+                new("secret", _options.Recaptcha.SecretKey),
                 new("response", token)
             };
 
@@ -264,7 +264,7 @@ public class SecurityService : ISecurityService
             }
 
             var content = new FormUrlEncodedContent(parameters);
-            var response = await _httpClient.PostAsync(_options.ReCAPTCHA.VerifyUrl, content);
+            var response = await _httpClient.PostAsync(_options.Recaptcha.VerifyUrl, content);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -275,7 +275,7 @@ public class SecurityService : ISecurityService
             var jsonResponse = await response.Content.ReadAsStringAsync();
             _logger.LogDebug("reCAPTCHA response: {response}", jsonResponse);
 
-            var result = JsonSerializer.Deserialize<GoogleReCAPTCHAResponse>(jsonResponse, new JsonSerializerOptions
+            var result = JsonSerializer.Deserialize<GoogleRecaptchaResponse>(jsonResponse, new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
@@ -554,7 +554,7 @@ public class SecurityService : ISecurityService
 
     #region Helper Classes
 
-    private class GoogleReCAPTCHAResponse
+    private class GoogleRecaptchaResponse
     {
         public bool Success { get; set; }
         public DateTime ChallengeTs { get; set; }

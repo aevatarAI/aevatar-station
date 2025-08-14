@@ -75,7 +75,7 @@ public class AevatarHttpApiModule : AbpModule
             .Validate(options => 
             {
                 // Only validate reCAPTCHA configuration if it's enabled
-                if (options.Switch?.EnableReCAPTCHA == true && string.IsNullOrWhiteSpace(options.ReCAPTCHA?.SecretKey))
+                if (options.Switch?.EnableRecaptcha == true && string.IsNullOrWhiteSpace(options.Recaptcha?.SecretKey))
                 {
                     return false;
                 }

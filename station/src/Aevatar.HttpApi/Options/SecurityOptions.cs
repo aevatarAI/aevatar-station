@@ -7,7 +7,7 @@ public class SecurityOptions
 {
     public const string SectionName = "Security";
     
-    public ReCAPTCHAOptions ReCAPTCHA { get; set; } = new();
+    public RecaptchaOptions Recaptcha { get; set; } = new();
     public AppleDeviceCheckOptions AppleDeviceCheck { get; set; } = new();
     public PlayIntegrityOptions PlayIntegrity { get; set; } = new();
     public RateOptions Rate { get; set; } = new();
@@ -17,7 +17,7 @@ public class SecurityOptions
 /// <summary>
 /// reCAPTCHA configuration options
 /// </summary>
-public class ReCAPTCHAOptions
+public class RecaptchaOptions
 {
     public string SecretKey { get; set; } = "";
     public string VerifyUrl { get; set; } = "https://www.google.com/recaptcha/api/siteverify";
@@ -59,6 +59,6 @@ public class RateOptions
 /// </summary>
 public class SecuritySwitchOptions
 {
-    public bool EnableReCAPTCHA { get; set; } = false;
+    public bool EnableRecaptcha { get; set; } = false;
     public bool EnableRateLimit { get; set; } = true;
 }
