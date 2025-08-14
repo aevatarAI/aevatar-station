@@ -290,7 +290,12 @@ public class SecurityService : ISecurityService
             _logger.LogDebug("Apple DeviceCheck token received and validated: length={tokenLength}", deviceToken.Length);
 
             // TODO: Implement full Apple DeviceCheck API verification
-            // This requires calling Apple's DeviceCheck API with proper JWT authentication
+            // This requires:
+            // 1. Generate JWT using TeamId, KeyId, and PrivateKey
+            // 2. Call Apple's DeviceCheck API with JWT authentication
+            // 3. Verify the device token response
+            // JWT Header: { "alg": "ES256", "kid": KeyId }
+            // JWT Payload: { "iss": TeamId, "iat": timestamp }
             // For now, accept valid format tokens
             return true;
         }
