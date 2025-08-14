@@ -171,7 +171,8 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
                 throw new InconsistentStateException(
                     $"Version conflict ({nameof(AppendAsync)}): ServiceId={_serviceId} ProviderName={_name} GrainType={grainTypeName} GrainId={grainId} Version={expectedVersion}.");
             }
-
+            _logger.LogInformation("AppendAsync: ServiceId={ServiceId} ProviderName={ProviderName} GrainType={GrainType} GrainId={GrainId} ExpectedVersion={ExpectedVersion} CurrentVersion={CurrentVersion}",
+                _serviceId, _name, grainTypeName, grainId, expectedVersion, currentVersion);
             var grainIdString = grainId.ToString();
             var documents = new List<BsonDocument>();
 
