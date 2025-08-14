@@ -19,7 +19,6 @@ public class SecurityOptions
 /// </summary>
 public class ReCAPTCHAOptions
 {
-    public string SiteKey { get; set; } = "";
     public string SecretKey { get; set; } = "";
     public string VerifyUrl { get; set; } = "https://www.google.com/recaptcha/api/siteverify";
 }
