@@ -29,6 +29,9 @@ public class SecurityService : ISecurityService
     private readonly HttpClient _httpClient;
     private readonly SecurityOptions _options;
     private readonly ILogger<SecurityService> _logger;
+    
+    // Static flag to ensure configuration is logged only once
+    private static bool _hasLoggedConfiguration = false;
 
     public SecurityService(
         IDistributedCache cache,
@@ -43,18 +46,21 @@ public class SecurityService : ISecurityService
 
         _httpClient.Timeout = TimeSpan.FromSeconds(10);
         
-        // Debug configuration loading - will show in Kibana
-        _logger.LogWarning("SecurityService Configuration Debug - EnableRecaptcha={EnableRecaptcha}, EnableRateLimit={EnableRateLimit}, FreeRequestsPerDay={FreeRequestsPerDay}",
-            _options.Switch?.EnableRecaptcha, _options.Switch?.EnableRateLimit, _options.Rate?.FreeRequestsPerDay);
-            
-        // Additional debug info for configuration troubleshooting
-        _logger.LogWarning("SecurityService Configuration Details - SecretKey length={SecretKeyLength}, Switch null={SwitchNull}, Rate null={RateNull}, Recaptcha null={RecaptchaNull}",
-            _options.Recaptcha?.SecretKey?.Length ?? 0, _options.Switch == null, _options.Rate == null, _options.Recaptcha == null);
-            
-        // Check if we might still have old configuration keys
-        if (_options.Switch?.EnableRecaptcha == false && (_options.Recaptcha?.SecretKey?.Length ?? 0) == 0)
+        // Log configuration only once at first instance creation (reduce log noise)
+        if (!_hasLoggedConfiguration)
         {
-            _logger.LogError("SecurityService Configuration Issue - Both EnableRecaptcha=false and SecretKey is empty. Check server config file for correct naming: EnableRecaptcha and Recaptcha section");
+            _hasLoggedConfiguration = true;
+            _logger.LogWarning("SecurityService Configuration Debug - EnableRecaptcha={EnableRecaptcha}, EnableRateLimit={EnableRateLimit}, FreeRequestsPerDay={FreeRequestsPerDay}",
+                _options.Switch?.EnableRecaptcha, _options.Switch?.EnableRateLimit, _options.Rate?.FreeRequestsPerDay);
+                
+            _logger.LogWarning("SecurityService Configuration Details - SecretKey length={SecretKeyLength}, Switch null={SwitchNull}, Rate null={RateNull}, Recaptcha null={RecaptchaNull}",
+                _options.Recaptcha?.SecretKey?.Length ?? 0, _options.Switch == null, _options.Rate == null, _options.Recaptcha == null);
+                
+            // Check if we might still have old configuration keys
+            if (_options.Switch?.EnableRecaptcha == false && (_options.Recaptcha?.SecretKey?.Length ?? 0) == 0)
+            {
+                _logger.LogError("SecurityService Configuration Issue - Both EnableRecaptcha=false and SecretKey is empty. Check server config file for correct naming: EnableRecaptcha and Recaptcha section");
+            }
         }
     }
 
