@@ -501,7 +501,8 @@ public class ChatMiddleware
         try
         {
             var stopwatch = Stopwatch.StartNew();
-            _logger.LogDebug($"[VoiceChatMiddleware] HTTP start - SessionId: {request.SessionId}, UserId: {userId}, MessageType: {request.MessageType}, VoiceLanguage: {request.VoiceLanguage}");
+            RequestContext.Set("GodGPTLanguage", language.ToString());
+            _logger.LogDebug($"[VoiceChatMiddleware] HTTP start - SessionId: {request.SessionId}, UserId: {userId}, MessageType: {request.MessageType}, VoiceLanguage: {request.VoiceLanguage}, Language: {language}");
 
             // Validate session access
             var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
