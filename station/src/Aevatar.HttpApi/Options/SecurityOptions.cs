@@ -21,9 +21,6 @@ public class ReCAPTCHAOptions
 {
     public string SiteKey { get; set; } = "";
     public string SecretKey { get; set; } = "";
-    public string Version { get; set; } = "v2";
-    public string VerifyUrl { get; set; } = "https://www.google.com/recaptcha/api/siteverify";
-    public int TimeoutSeconds { get; set; } = 10;
 }
 
 /// <summary>
@@ -53,8 +50,6 @@ public class PlayIntegrityOptions
 public class RateLimitOptions
 {
     public int FreeRequestsPerDay { get; set; } = 5;
-    public int WindowHours { get; set; } = 24;
-    public string CacheKeyPrefix { get; set; } = "SendRegCode:";
 }
 
 /// <summary>

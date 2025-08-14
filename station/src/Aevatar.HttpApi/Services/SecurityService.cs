@@ -29,7 +29,7 @@ public class SecurityService : ISecurityService
         _options = options.Value;
         _logger = logger;
         
-        _httpClient.Timeout = TimeSpan.FromSeconds(_options.ReCAPTCHA.TimeoutSeconds);
+                       _httpClient.Timeout = TimeSpan.FromSeconds(10);
     }
 
     #region IP Address Handling
@@ -122,11 +122,11 @@ public class SecurityService : ISecurityService
         return 0;
     }
 
-    private string GetCacheKey(string clientIp)
-    {
-        var today = DateTime.UtcNow.ToString("yyyyMMdd");
-        return $"{_options.RateLimit.CacheKeyPrefix}{clientIp}:{today}";
-    }
+            private string GetCacheKey(string clientIp)
+        {
+            var today = DateTime.UtcNow.ToString("yyyyMMdd");
+            return $"SendRegCode:{clientIp}:{today}";
+        }
 
     private DateTimeOffset GetExpiryTime()
     {
@@ -237,8 +237,8 @@ public class SecurityService : ISecurityService
                 parameters.Add(new KeyValuePair<string, string>("remoteip", remoteIp));
             }
 
-            var content = new FormUrlEncodedContent(parameters);
-            var response = await _httpClient.PostAsync(_options.ReCAPTCHA.VerifyUrl, content);
+                               var content = new FormUrlEncodedContent(parameters);
+                   var response = await _httpClient.PostAsync("https://www.google.com/recaptcha/api/siteverify", content);
 
             if (!response.IsSuccessStatusCode)
             {
