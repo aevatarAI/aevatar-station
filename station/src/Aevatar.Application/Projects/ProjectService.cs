@@ -107,7 +107,7 @@ public class ProjectService : OrganizationService, IProjectService
         {
             OrganizationId = input.OrganizationId,
             DisplayName = "default project",
-            DomainName = $"DefaultProject-{randomHash.Substring(randomHash.Length - 6)}"
+            DomainName = $"defaultProject{randomHash.Substring(randomHash.Length - 6)}"
         });
         
         var roleList = await _organizationRoleService.GetListAsync(projectDto.Id);
