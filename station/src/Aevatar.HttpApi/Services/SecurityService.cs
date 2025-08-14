@@ -42,6 +42,10 @@ public class SecurityService : ISecurityService
         _logger = logger;
 
         _httpClient.Timeout = TimeSpan.FromSeconds(10);
+        
+        // Debug configuration loading
+        _logger.LogInformation("SecurityService initialized with config: EnableReCAPTCHA={EnableReCAPTCHA}, EnableRateLimit={EnableRateLimit}, FreeRequestsPerDay={FreeRequestsPerDay}",
+            _options.Switch?.EnableReCAPTCHA, _options.Switch?.EnableRateLimit, _options.Rate?.FreeRequestsPerDay);
     }
 
     #region IP Address Handling
