@@ -67,15 +67,18 @@ public class AevatarHttpApiModule : AbpModule
 
     private void ConfigureSecurityOptions(ServiceConfigurationContext context, IConfiguration configuration)
     {
-        // Use standard ABP configuration binding
-        context.Services.Configure<SecurityOptions>(configuration.GetSection(SecurityOptions.SectionName));
+        // Configure each security module as separate 2-level configuration
+        context.Services.Configure<RecaptchaOptions>(configuration.GetSection(RecaptchaOptions.SectionName));
+        context.Services.Configure<AppleDeviceCheckOptions>(configuration.GetSection(AppleDeviceCheckOptions.SectionName));
+        context.Services.Configure<PlayIntegrityOptions>(configuration.GetSection(PlayIntegrityOptions.SectionName));
+        context.Services.Configure<RateOptions>(configuration.GetSection(RateOptions.SectionName));
         
-        // Only add validation if needed
-        context.Services.AddOptions<SecurityOptions>()
+        // Add validation for reCAPTCHA configuration
+        context.Services.AddOptions<RecaptchaOptions>()
             .Validate(options => 
             {
                 // Only validate reCAPTCHA configuration if it's enabled
-                if (options.Switch?.EnableRecaptcha == true && string.IsNullOrWhiteSpace(options.Recaptcha?.SecretKey))
+                if (options.Enabled && string.IsNullOrWhiteSpace(options.SecretKey))
                 {
                     return false;
                 }
