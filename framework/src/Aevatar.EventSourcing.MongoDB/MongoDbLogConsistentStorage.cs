@@ -278,7 +278,7 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
     {
         // Orleans pattern: use GetOrAdd to ensure collection is created and set up only once per collection name
         var collection = _collections.GetOrAdd(collectionName, x =>
-            _collectionFactory.CreateCollection(_client, _mongoDbOptions.Database, collectionName));
+            _collectionFactory.CreateCollection(_client, collectionName, _name));
         
         return collection.GetCollection();
     }
