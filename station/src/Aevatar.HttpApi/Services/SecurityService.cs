@@ -163,14 +163,18 @@ public class SecurityService : ISecurityService
 
     private async Task<SecurityVerificationResult> VerifyWebSecurityAsync(SecurityVerificationRequest request)
     {
+        _logger.LogInformation("Web security verification: EnableReCAPTCHA={enabled}, HasToken={hasToken}", 
+            _options.Switch?.EnableReCAPTCHA, !string.IsNullOrEmpty(request.ReCAPTCHAToken));
+            
         if (_options.Switch?.EnableReCAPTCHA != true)
         {
-            _logger.LogDebug("Web reCAPTCHA verification disabled, skipping verification");
+            _logger.LogWarning("Web reCAPTCHA verification disabled, skipping verification - this allows bypass!");
             return SecurityVerificationResult.CreateSuccess("reCAPTCHA (disabled)");
         }
 
         if (string.IsNullOrEmpty(request.ReCAPTCHAToken))
         {
+            _logger.LogWarning("Missing reCAPTCHA token for web platform verification");
             return SecurityVerificationResult.CreateFailure("Missing reCAPTCHA verification token");
         }
 
