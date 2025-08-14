@@ -123,6 +123,9 @@ public class AevatarHttpApiModule : AbpModule
             client.DefaultRequestHeaders.Add("User-Agent", "Aevatar-Station/1.0");
         });
 
+        // Register distributed cache for rate limiting (use memory cache as fallback)
+        context.Services.AddDistributedMemoryCache();
+
         // Register unified security service
         context.Services.AddTransient<ISecurityService, SecurityService>();
     }
