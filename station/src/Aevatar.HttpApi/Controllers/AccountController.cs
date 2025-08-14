@@ -75,6 +75,18 @@ public class AccountController : AevatarController
                 Message = "Verification code sent successfully"
             });
         }
+        catch (UserFriendlyException ex)
+        {
+            // Allow business exceptions to be returned to frontend
+            Logger.LogWarning("Send register code business exception: Email={email}, Platform={platform}, Message={message}", 
+                input.Email, input.Platform, ex.Message);
+            
+            return BadRequest(new SendRegisterCodeResponseDto
+            {
+                Success = false,
+                Message = ex.Message
+            });
+        }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Send register code exception: Email={email}, Platform={platform}", 
