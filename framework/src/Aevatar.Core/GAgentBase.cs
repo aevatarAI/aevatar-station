@@ -55,6 +55,9 @@ public abstract partial class
     protected AevatarOptions? AevatarOptions;
 
     private DeepCopier? _copier;
+    private bool _isActivated = false;
+
+    private int _lastProcessedVersion = -1;
     public async Task ActivateAsync()
     {
         await Task.Yield();
@@ -253,6 +256,8 @@ public abstract partial class
         try
         {
             await base.OnActivateAsync(cancellationToken);
+            _isActivated = true;
+            _lastProcessedVersion = Version;
         }
         catch (Exception e)
         {
@@ -341,6 +346,16 @@ public abstract partial class
 
     protected sealed override void OnStateChanged()
     {
+        if (!_isActivated)
+        {
+            return;
+        }
+
+        // If the version is not greater than the last processed version, do not process the state change.
+        if (Version <= _lastProcessedVersion)
+        {
+            return;
+        }
         InternalOnStateChangedAsync().ContinueWith(task =>
         {
             if (task.Exception != null)
@@ -348,6 +363,7 @@ public abstract partial class
                 Logger.LogError(task.Exception, "InternalOnStateChangedAsync operation failed");
             }
         }, TaskContinuationOptions.OnlyOnFaulted);
+        _lastProcessedVersion = Version;       
     }
 
     private async Task InternalOnStateChangedAsync()

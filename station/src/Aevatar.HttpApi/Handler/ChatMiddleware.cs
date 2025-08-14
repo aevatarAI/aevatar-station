@@ -501,10 +501,7 @@ public class ChatMiddleware
         try
         {
             var stopwatch = Stopwatch.StartNew();
-            
-            // Get language from request headers and set context for Orleans grains
             RequestContext.Set("GodGPTLanguage", language.ToString());
-            
             _logger.LogDebug($"[VoiceChatMiddleware] HTTP start - SessionId: {request.SessionId}, UserId: {userId}, MessageType: {request.MessageType}, VoiceLanguage: {request.VoiceLanguage}, Language: {language}");
 
             // Validate session access
@@ -528,6 +525,13 @@ public class ChatMiddleware
             var streamId = StreamId.Create(_aevatarOptions.Value.StreamNamespace, request.SessionId);
             _logger.LogDebug($"[VoiceChatMiddleware] SessionId: {request.SessionId}, Namespace: {_aevatarOptions.Value.StreamNamespace}, StreamId: {streamId.ToString()}");
 
+            // Check if client is still connected before proceeding
+            if (context.RequestAborted.IsCancellationRequested)
+            {
+                _logger.LogInformation($"[VoiceChatMiddleware] Client disconnected before voice chat start - SessionId: {request.SessionId}");
+                return;
+            }
+
             // Set SSE response headers
             context.Response.ContentType = "text/event-stream";
             context.Response.Headers.Connection = "keep-alive";
@@ -539,9 +543,25 @@ public class ChatMiddleware
 
             // Generate unique chat ID and initiate voice chat
             var chatId = Guid.NewGuid().ToString();
-            await godChat.StreamVoiceChatWithSessionAsync(request.SessionId, string.Empty, request.Content, "",
-                chatId, null, true, request.Region, request.VoiceLanguage, request.VoiceDurationSeconds);
-            _logger.LogDebug($"[VoiceChatMiddleware] Voice chat initiated - SessionId: {request.SessionId}, ChatId: {chatId} Duration: {stopwatch.ElapsedMilliseconds}ms");
+            
+            // Add timeout for voice chat operation
+            var voiceChatTimeout = TimeSpan.FromMinutes(5); // 5 minutes timeout
+            var voiceChatCts = new CancellationTokenSource(voiceChatTimeout);
+            var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted, voiceChatCts.Token);
+            
+            try
+            {
+                await godChat.StreamVoiceChatWithSessionAsync(request.SessionId, string.Empty, request.Content, "",
+                    chatId, null, true, request.Region, request.VoiceLanguage, request.VoiceDurationSeconds);
+                _logger.LogDebug($"[VoiceChatMiddleware] Voice chat initiated - SessionId: {request.SessionId}, ChatId: {chatId} Duration: {stopwatch.ElapsedMilliseconds}ms");
+            }
+            catch (OperationCanceledException) when (voiceChatCts.Token.IsCancellationRequested)
+            {
+                _logger.LogWarning($"[VoiceChatMiddleware] Voice chat timeout - SessionId: {request.SessionId}, ChatId: {chatId}");
+                context.Response.StatusCode = StatusCodes.Status408RequestTimeout;
+                await context.Response.WriteAsync("Voice chat operation timed out");
+                return;
+            }
 
             // Handle streaming response
             var exitSignal = new TaskCompletionSource();
@@ -581,7 +601,18 @@ public class ChatMiddleware
             }, ex =>
             {
                 _logger.LogError($"[VoiceChatMiddleware] Stream error - SessionId: {request.SessionId}, ChatId: {chatId}, Error: {ex.Message}");
-                exitSignal.TrySetException(ex);
+                
+                // Handle specific error types
+                if (ex is OperationCanceledException || ex is TaskCanceledException)
+                {
+                    _logger.LogInformation($"[VoiceChatMiddleware] Stream cancelled - SessionId: {request.SessionId}, ChatId: {chatId}");
+                    exitSignal.TrySetCanceled();
+                }
+                else
+                {
+                    exitSignal.TrySetException(ex);
+                }
+                
                 return Task.CompletedTask;
             }, () =>
             {
@@ -592,14 +623,32 @@ public class ChatMiddleware
 
             try
             {
-                await exitSignal.Task.WaitAsync(context.RequestAborted);
+                await exitSignal.Task.WaitAsync(combinedCts.Token);
+            }
+            catch (OperationCanceledException ex)
+            {
+                // Handle client disconnection or timeout gracefully
+                if (voiceChatCts.Token.IsCancellationRequested)
+                {
+                    _logger.LogWarning($"[VoiceChatMiddleware] Voice chat timeout during streaming - SessionId: {request.SessionId}");
+                }
+                else if (context.RequestAborted.IsCancellationRequested)
+                {
+                    _logger.LogInformation($"[VoiceChatMiddleware] Client disconnected - SessionId: {request.SessionId}");
+                }
+                else
+                {
+                    _logger.LogInformation($"[VoiceChatMiddleware] Stream cancelled - SessionId: {request.SessionId}, Reason: {ex.Message}");
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError($"[VoiceChatMiddleware] Error waiting for stream completion - SessionId: {request.SessionId}, Error: {ex.Message}");
+                _logger.LogError(ex, $"[VoiceChatMiddleware] Unexpected error waiting for stream completion - SessionId: {request.SessionId}");
             }
             finally
             {
+                voiceChatCts?.Dispose();
+                combinedCts?.Dispose();
                 if (subscription != null)
                 {
                     await subscription.UnsubscribeAsync();
