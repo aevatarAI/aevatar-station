@@ -238,7 +238,7 @@ public class SecurityService : ISecurityService
             }
 
                                var content = new FormUrlEncodedContent(parameters);
-                   var response = await _httpClient.PostAsync("https://www.google.com/recaptcha/api/siteverify", content);
+                   var response = await _httpClient.PostAsync(_options.ReCAPTCHA.VerifyUrl, content);
 
             if (!response.IsSuccessStatusCode)
             {
