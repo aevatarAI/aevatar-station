@@ -44,7 +44,7 @@ public class SecurityVerificationRequest
 {
     public PlatformType Platform { get; set; }
     public string ClientIp { get; set; } = "";
-    public string? ReCAPTCHAToken { get; set; }
+    public string? RecaptchaToken { get; set; }
     public string? AcToken { get; set; }
 }
 
