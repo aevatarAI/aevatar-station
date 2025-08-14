@@ -27,34 +27,49 @@ public class SecurityService : ISecurityService
 {
     private readonly IDistributedCache _cache;
     private readonly HttpClient _httpClient;
-    private readonly SecurityOptions _options;
+    private readonly RecaptchaOptions _recaptchaOptions;
+    private readonly AppleDeviceCheckOptions _appleOptions;
+    private readonly PlayIntegrityOptions _playOptions;
+    private readonly RateOptions _rateOptions;
     private readonly ILogger<SecurityService> _logger;
+    
+    // Static flag to ensure configuration is logged only once
+    private static bool _hasLoggedConfiguration = false;
 
     public SecurityService(
         IDistributedCache cache,
         HttpClient httpClient,
-        IOptions<SecurityOptions> options,
+        IOptions<RecaptchaOptions> recaptchaOptions,
+        IOptions<AppleDeviceCheckOptions> appleOptions,
+        IOptions<PlayIntegrityOptions> playOptions,
+        IOptions<RateOptions> rateOptions,
         ILogger<SecurityService> logger)
     {
         _cache = cache;
         _httpClient = httpClient;
-        _options = options.Value;
+        _recaptchaOptions = recaptchaOptions.Value;
+        _appleOptions = appleOptions.Value;
+        _playOptions = playOptions.Value;
+        _rateOptions = rateOptions.Value;
         _logger = logger;
 
         _httpClient.Timeout = TimeSpan.FromSeconds(10);
         
-        // Debug configuration loading - will show in Kibana
-        _logger.LogWarning("SecurityService Configuration Debug - EnableRecaptcha={EnableRecaptcha}, EnableRateLimit={EnableRateLimit}, FreeRequestsPerDay={FreeRequestsPerDay}",
-            _options.Switch?.EnableRecaptcha, _options.Switch?.EnableRateLimit, _options.Rate?.FreeRequestsPerDay);
-            
-        // Additional debug info for configuration troubleshooting
-        _logger.LogWarning("SecurityService Configuration Details - SecretKey length={SecretKeyLength}, Switch null={SwitchNull}, Rate null={RateNull}, Recaptcha null={RecaptchaNull}",
-            _options.Recaptcha?.SecretKey?.Length ?? 0, _options.Switch == null, _options.Rate == null, _options.Recaptcha == null);
-            
-        // Check if we might still have old configuration keys
-        if (_options.Switch?.EnableRecaptcha == false && (_options.Recaptcha?.SecretKey?.Length ?? 0) == 0)
+        // Log configuration only once at first instance creation (reduce log noise)
+        if (!_hasLoggedConfiguration)
         {
-            _logger.LogError("SecurityService Configuration Issue - Both EnableRecaptcha=false and SecretKey is empty. Check server config file for correct naming: EnableRecaptcha and Recaptcha section");
+            _hasLoggedConfiguration = true;
+            _logger.LogWarning("SecurityService Configuration Debug - EnableRecaptcha={EnableRecaptcha}, EnableRateLimit={EnableRateLimit}, FreeRequestsPerDay={FreeRequestsPerDay}",
+                _recaptchaOptions.Enabled, _rateOptions.Enabled, _rateOptions.FreeRequestsPerDay);
+                
+            _logger.LogWarning("SecurityService Configuration Details - SecretKey length={SecretKeyLength}",
+                _recaptchaOptions.SecretKey?.Length ?? 0);
+                
+            // Check if we might still have old configuration keys
+            if (_recaptchaOptions.Enabled == false && (_recaptchaOptions.SecretKey?.Length ?? 0) == 0)
+            {
+                _logger.LogError("SecurityService Configuration Issue - Both EnableRecaptcha=false and SecretKey is empty. Check config: Recaptcha.Enabled and Recaptcha.SecretKey");
+            }
         }
     }
 
@@ -105,13 +120,13 @@ public class SecurityService : ISecurityService
 
     public async Task<bool> IsSecurityVerificationRequiredAsync(string clientIp)
     {
-        if (_options.Switch?.EnableRateLimit != true)
+        if (!_rateOptions.Enabled)
         {
             return false;
         }
 
         var count = await GetTodayRequestCountAsync(clientIp);
-        var required = count >= _options.Rate.FreeRequestsPerDay;
+        var required = count >= _rateOptions.FreeRequestsPerDay;
 
         _logger.LogDebug("IP {ip} today request count: {count}, verification required: {required}",
             clientIp, count, required);
@@ -178,9 +193,9 @@ public class SecurityService : ISecurityService
     private async Task<SecurityVerificationResult> VerifyWebSecurityAsync(SecurityVerificationRequest request)
     {
         _logger.LogInformation("Web security verification: EnableRecaptcha={enabled}, HasToken={hasToken}", 
-            _options.Switch?.EnableRecaptcha, !string.IsNullOrEmpty(request.RecaptchaToken));
+            _recaptchaOptions.Enabled, !string.IsNullOrEmpty(request.RecaptchaToken));
             
-        if (_options.Switch?.EnableRecaptcha != true)
+        if (!_recaptchaOptions.Enabled)
         {
             _logger.LogWarning("Web reCAPTCHA verification disabled, skipping verification - this allows bypass!");
             return SecurityVerificationResult.CreateSuccess("reCAPTCHA (disabled)");
@@ -260,7 +275,7 @@ public class SecurityService : ISecurityService
         {
             var parameters = new List<KeyValuePair<string, string>>
             {
-                new("secret", _options.Recaptcha.SecretKey),
+                new("secret", _recaptchaOptions.SecretKey),
                 new("response", token)
             };
 
@@ -270,7 +285,7 @@ public class SecurityService : ISecurityService
             }
 
             var content = new FormUrlEncodedContent(parameters);
-            var response = await _httpClient.PostAsync(_options.Recaptcha.VerifyUrl, content);
+            var response = await _httpClient.PostAsync(_recaptchaOptions.VerifyUrl, content);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -306,7 +321,7 @@ public class SecurityService : ISecurityService
             }
 
             // Check if Apple DeviceCheck validation is enabled
-            if (_options.AppleDeviceCheck?.EnableValidation != true)
+            if (!_appleOptions.Enabled)
             {
                 _logger.LogDebug("Apple DeviceCheck validation disabled, accepting token");
                 return true;
@@ -320,9 +335,9 @@ public class SecurityService : ISecurityService
             }
 
             // Validate required configuration
-            if (string.IsNullOrEmpty(_options.AppleDeviceCheck.TeamId) ||
-                string.IsNullOrEmpty(_options.AppleDeviceCheck.KeyId) ||
-                string.IsNullOrEmpty(_options.AppleDeviceCheck.PrivateKey))
+            if (string.IsNullOrEmpty(_appleOptions.TeamId) ||
+                string.IsNullOrEmpty(_appleOptions.KeyId) ||
+                string.IsNullOrEmpty(_appleOptions.PrivateKey))
             {
                 _logger.LogError("Apple DeviceCheck configuration incomplete: missing TeamId, KeyId, or PrivateKey");
                 return false;
@@ -363,7 +378,7 @@ public class SecurityService : ISecurityService
             }
 
             // Check if Play Integrity validation is enabled
-            if (_options.PlayIntegrity?.EnableValidation != true)
+            if (!_playOptions.Enabled)
             {
                 _logger.LogDebug("Google Play Integrity validation disabled, accepting token");
                 return true;
@@ -443,12 +458,12 @@ public class SecurityService : ISecurityService
             var now = DateTimeOffset.UtcNow;
             var claims = new[]
             {
-                new Claim("iss", _options.AppleDeviceCheck.TeamId),
+                new Claim("iss", _appleOptions.TeamId),
                 new Claim("iat", now.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer)
             };
 
             // Parse the private key
-            var privateKey = ParseApplePrivateKey(_options.AppleDeviceCheck.PrivateKey);
+            var privateKey = ParseApplePrivateKey(_appleOptions.PrivateKey);
             if (privateKey == null)
             {
                 _logger.LogError("Failed to parse Apple DeviceCheck private key");
@@ -474,7 +489,7 @@ public class SecurityService : ISecurityService
             // Add kid (Key ID) to header
             var tokenHandler = new JwtSecurityTokenHandler();
             var token = tokenHandler.CreateJwtSecurityToken(tokenDescriptor);
-            token.Header["kid"] = _options.AppleDeviceCheck.KeyId;
+            token.Header["kid"] = _appleOptions.KeyId;
             token.Header["alg"] = "ES256";
 
             var jwt = tokenHandler.WriteToken(token);
@@ -532,7 +547,7 @@ public class SecurityService : ISecurityService
             _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {jwt}");
 
             // Call Apple DeviceCheck API
-            var response = await _httpClient.PostAsync(_options.AppleDeviceCheck.ApiUrl, content);
+            var response = await _httpClient.PostAsync(_appleOptions.ApiUrl, content);
 
             if (!response.IsSuccessStatusCode)
             {
