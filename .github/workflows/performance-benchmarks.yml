@@ -19,7 +19,7 @@ on:
       broadcast_args:
         description: JSON for BroadcastLatencyBenchmark params
         required: false
-        default: '{"subscribers":120,"publishers":1,"eps":1,"duration":20,"warmup":5}'
+        default: '{"subscribers":128,"publishers":1,"eps":1,"duration":20,"warmup":5}'
       latency_args:
         description: JSON for LatencyBenchmark params
         required: false
@@ -50,7 +50,7 @@ jobs:
       LAT_PROCESSED_RATIO: '1.0'
       LAT_THROUGHPUT_FACTOR: '0.9'
       # Param defaults (overridden by workflow_dispatch parsing step)
-      BCAST_SUBS: '120'
+      BCAST_SUBS: '128'
       BCAST_PUBS: '1'
       BCAST_EPS: '1'
       BCAST_DURATION: '20'
