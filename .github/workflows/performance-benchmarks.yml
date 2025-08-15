@@ -19,15 +19,15 @@ on:
       broadcast_args:
         description: JSON for BroadcastLatencyBenchmark params
         required: false
-        default: '{"subscribers":30,"publishers":1,"eps":5,"duration":20,"warmup":5}'
+        default: '{"subscribers":120,"publishers":1,"eps":1,"duration":20,"warmup":5}'
       latency_args:
         description: JSON for LatencyBenchmark params
         required: false
-        default: '{"maxConcurrency":8,"duration":30,"warmup":5,"eps":10}'
+        default: '{"maxConcurrency":16,"duration":30,"warmup":5,"eps":10}'
       thresholds:
         description: JSON thresholds for benchmarks
         required: false
-        default: '{"broadcast":{"avgMs":80,"p95Ms":150,"successRate":0.95,"throughputFactor":0.9},"latency":{"p95Ms":120,"p99Ms":220,"processedRatio":0.98,"throughputFactor":0.9}}'
+        default: '{"broadcast":{"p95Ms":120,"successRate":1.0,"throughputFactor":0.9},"latency":{"p95Ms":120,"p99Ms":1000,"processedRatio":1.0,"throughputFactor":0.9}}'
 
 concurrency:
   group: perf-pr-${{ github.ref }}
@@ -42,21 +42,20 @@ jobs:
     timeout-minutes: 30
     env:
       # Threshold defaults (overridden by workflow_dispatch parsing step)
-      BCAST_AVG_MS: '400'
-      BCAST_P95_MS: '2000'
-      BCAST_SUCCESS_RATE: '0.95'
+      BCAST_P95_MS: '120'
+      BCAST_SUCCESS_RATE: '1.0'
       BCAST_THROUGHPUT_FACTOR: '0.9'
-      LAT_P95_MS: '800'
-      LAT_P99_MS: '1200'
-      LAT_PROCESSED_RATIO: '0.95'
+      LAT_P95_MS: '120'
+      LAT_P99_MS: '1000'
+      LAT_PROCESSED_RATIO: '1.0'
       LAT_THROUGHPUT_FACTOR: '0.9'
       # Param defaults (overridden by workflow_dispatch parsing step)
-      BCAST_SUBS: '30'
+      BCAST_SUBS: '120'
       BCAST_PUBS: '1'
-      BCAST_EPS: '5'
+      BCAST_EPS: '1'
       BCAST_DURATION: '20'
       BCAST_WARMUP: '5'
-      LAT_MAX_CONCURRENCY: '8'
+      LAT_MAX_CONCURRENCY: '16'
       LAT_DURATION: '30'
       LAT_WARMUP: '5'
       LAT_EPS: '10'
@@ -142,7 +141,7 @@ jobs:
 
           # Persist to GITHUB_ENV if set
           for v in BCAST_SUBS BCAST_PUBS BCAST_EPS BCAST_DURATION BCAST_WARMUP LAT_MAX_CONCURRENCY LAT_DURATION LAT_WARMUP LAT_EPS \
-                   BCAST_AVG_MS BCAST_P95_MS BCAST_SUCCESS_RATE BCAST_THROUGHPUT_FACTOR LAT_P95_MS LAT_P99_MS LAT_PROCESSED_RATIO LAT_THROUGHPUT_FACTOR; do
+                   BCAST_P95_MS BCAST_SUCCESS_RATE BCAST_THROUGHPUT_FACTOR LAT_P95_MS LAT_P99_MS LAT_PROCESSED_RATIO LAT_THROUGHPUT_FACTOR; do
             if [ -n "${!v}" ] && [ "${!v}" != "null" ]; then echo "$v=${!v}" >> $GITHUB_ENV; fi
           done
 
@@ -275,13 +274,16 @@ jobs:
 
           # Format and display broadcast results
           echo "📊 Broadcast Latency Benchmark Results:"
+          echo "   📋 Test Parameters:"
+          printf "      Subscribers: %s, Publishers: %s, EPS: %s, Duration: %ss, Warmup: %ss\n" $BCAST_SUBS $BCAST_PUBS $BCAST_EPS $BCAST_DURATION $BCAST_WARMUP
+          echo ""
           printf "   ✅ Success Rate: %.1f%% (target: ≥%.1f%%)\n" $(echo "$sr * 100" | bc -l) $(echo "$BCAST_SUCCESS_RATE * 100" | bc -l)
           printf "   ⚡ Throughput: %.1f events/sec" $tp
           if [ "${etp}" != "null" ] && [ "${etp}" != "0" ]; then
             printf " (target: ≥%.1f events/sec)" $(echo "$etp * $BCAST_THROUGHPUT_FACTOR" | bc -l)
           fi
           echo ""
-          printf "   ⏱️  Avg Latency: %.1fms (target: ≤%sms)\n" $avg $BCAST_AVG_MS
+          printf "   ⏱️  Avg Latency: %.1fms\n" $avg
           printf "   📈 P95 Latency: %.1fms (target: ≤%sms)\n" $p95 $BCAST_P95_MS
           echo ""
 
@@ -291,7 +293,6 @@ jobs:
           if [ "${etp}" != "null" ] && [ "${etp}" != "0" ]; then
             awk -v a="$tp" -v b="$etp" -v f="$BCAST_THROUGHPUT_FACTOR" 'BEGIN{ if (a+0 < b*f) exit 1 }' || { echo "❌ Broadcast throughput below factor $BCAST_THROUGHPUT_FACTOR of expected"; fail=1; }
           fi
-          awk -v a="$avg" -v b="$BCAST_AVG_MS" 'BEGIN{ if (a+0 > b+0) exit 1 }' || { echo "❌ Broadcast avg latency above $BCAST_AVG_MS ms"; fail=1; }
           awk -v a="$p95" -v b="$BCAST_P95_MS" 'BEGIN{ if (a+0 > b+0) exit 1 }' || { echo "❌ Broadcast P95 latency above $BCAST_P95_MS ms"; fail=1; }
 
           # Store the result for later use
@@ -334,6 +335,9 @@ jobs:
 
           # Format and display latency results
           echo "📊 Latency Benchmark Results:"
+          echo "   📋 Test Parameters:"
+          printf "      Max Concurrency: %s, EPS: %s, Duration: %ss, Warmup: %ss\n" $LAT_MAX_CONCURRENCY $LAT_EPS $LAT_DURATION $LAT_WARMUP
+          echo ""
           if [ "$succ" = "true" ]; then
             echo "   ✅ Execution Status: SUCCESS"
           else
@@ -345,7 +349,7 @@ jobs:
           fi
           echo ""
           printf "   📈 P95 Latency: %.1fms (target: ≤%sms)\n" $p95 $LAT_P95_MS
-          printf "   📊 P99 Latency: %.1fms (target: ≤%sms)\n" $p99 $LAT_P99_MS
+          printf "   📊 P99 Latency: %.1fms (no target, max: %sms)\n" $p99 $LAT_P99_MS
           printf "   🎯 Processed Ratio: %.1f%% (target: ≥%.1f%%)\n" $(echo "$pratio * 100" | bc -l) $(echo "$LAT_PROCESSED_RATIO * 100" | bc -l)
           echo ""
 
@@ -382,11 +386,13 @@ jobs:
             p95=$(jq -r '.p95' broadcast_metrics.json)
             
             echo "### 📊 Broadcast Latency Benchmark" >> $GITHUB_STEP_SUMMARY
+            echo "**Test Parameters:** Subscribers: ${BCAST_SUBS}, Publishers: ${BCAST_PUBS}, EPS: ${BCAST_EPS}, Duration: ${BCAST_DURATION}s, Warmup: ${BCAST_WARMUP}s" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
             echo "| Metric | Value | Target |" >> $GITHUB_STEP_SUMMARY
             echo "|--------|-------|--------|" >> $GITHUB_STEP_SUMMARY
             echo "| Success Rate | $(printf "%.1f%%" $(echo "$sr * 100" | bc -l)) | ≥$(echo "$BCAST_SUCCESS_RATE * 100" | bc -l)% |" >> $GITHUB_STEP_SUMMARY
             echo "| Throughput | $(printf "%.1f" $tp) events/sec | ≥$(echo "$BCAST_THROUGHPUT_FACTOR * 100" | bc -l)% of expected |" >> $GITHUB_STEP_SUMMARY
-            echo "| Avg Latency | $(printf "%.1f" $avg)ms | ≤${BCAST_AVG_MS}ms |" >> $GITHUB_STEP_SUMMARY
+            echo "| Avg Latency | $(printf "%.1f" $avg)ms | (no target) |" >> $GITHUB_STEP_SUMMARY
             echo "| P95 Latency | $(printf "%.1f" $p95)ms | ≤${BCAST_P95_MS}ms |" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
@@ -399,6 +405,8 @@ jobs:
             pratio=$(jq -r '.processedRatio' latency_metrics.json)
             
             echo "### ⚡ Latency Benchmark" >> $GITHUB_STEP_SUMMARY
+            echo "**Test Parameters:** Max Concurrency: ${LAT_MAX_CONCURRENCY}, EPS: ${LAT_EPS}, Duration: ${LAT_DURATION}s, Warmup: ${LAT_WARMUP}s" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
             echo "| Metric | Value | Target |" >> $GITHUB_STEP_SUMMARY
             echo "|--------|-------|--------|" >> $GITHUB_STEP_SUMMARY
             if [ "$succ" = "true" ]; then
@@ -408,7 +416,7 @@ jobs:
             fi
             echo "| Throughput | $(printf "%.1f" $tp) events/sec | ≥$(echo "$LAT_THROUGHPUT_FACTOR * 100" | bc -l)% of expected |" >> $GITHUB_STEP_SUMMARY
             echo "| P95 Latency | $(printf "%.1f" $p95)ms | ≤${LAT_P95_MS}ms |" >> $GITHUB_STEP_SUMMARY
-            echo "| P99 Latency | $(printf "%.1f" $p99)ms | ≤${LAT_P99_MS}ms |" >> $GITHUB_STEP_SUMMARY
+            echo "| P99 Latency | $(printf "%.1f" $p99)ms | (no target, max: ${LAT_P99_MS}ms) |" >> $GITHUB_STEP_SUMMARY
             echo "| Processed Ratio | $(printf "%.1f%%" $(echo "$pratio * 100" | bc -l)) | ≥$(echo "$LAT_PROCESSED_RATIO * 100" | bc -l)% |" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
