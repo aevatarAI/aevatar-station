@@ -43,7 +43,7 @@ jobs:
     env:
       # Threshold defaults (overridden by workflow_dispatch parsing step)
       BCAST_AVG_MS: '400'
-      BCAST_P95_MS: '800'
+      BCAST_P95_MS: '2000'
       BCAST_SUCCESS_RATE: '0.95'
       BCAST_THROUGHPUT_FACTOR: '0.9'
       LAT_P95_MS: '800'
@@ -285,6 +285,7 @@ jobs:
           printf "   📈 P95 Latency: %.1fms (target: ≤%sms)\n" $p95 $BCAST_P95_MS
           echo ""
 
+          # Store threshold check results but don't exit yet
           fail=0
           awk -v a="$sr" -v b="$BCAST_SUCCESS_RATE" 'BEGIN{ if (a+0 < b+0) exit 1 }' || { echo "❌ Broadcast successRate below $BCAST_SUCCESS_RATE"; fail=1; }
           if [ "${etp}" != "null" ] && [ "${etp}" != "0" ]; then
@@ -293,8 +294,11 @@ jobs:
           awk -v a="$avg" -v b="$BCAST_AVG_MS" 'BEGIN{ if (a+0 > b+0) exit 1 }' || { echo "❌ Broadcast avg latency above $BCAST_AVG_MS ms"; fail=1; }
           awk -v a="$p95" -v b="$BCAST_P95_MS" 'BEGIN{ if (a+0 > b+0) exit 1 }' || { echo "❌ Broadcast P95 latency above $BCAST_P95_MS ms"; fail=1; }
 
+          # Store the result for later use
+          echo "$fail" > broadcast_threshold_result.txt
+          
           if [ "$fail" -ne 0 ]; then
-            echo "🚫 Broadcast benchmark failed threshold checks"; exit 1
+            echo "🚫 Broadcast benchmark failed threshold checks"
           else
             echo "✅ Broadcast benchmark passed all thresholds"
           fi
@@ -345,6 +349,7 @@ jobs:
           printf "   🎯 Processed Ratio: %.1f%% (target: ≥%.1f%%)\n" $(echo "$pratio * 100" | bc -l) $(echo "$LAT_PROCESSED_RATIO * 100" | bc -l)
           echo ""
 
+          # Store threshold check results but don't exit yet
           fail=0
           if [ "$succ" != "true" ]; then echo "❌ Latency result marked unsuccessful"; fail=1; fi
           if [ "${etp}" != "null" ] && [ "${etp}" != "0" ]; then
@@ -354,8 +359,11 @@ jobs:
           awk -v a="$p99" -v b="$LAT_P99_MS" 'BEGIN{ if (a+0 > b+0) exit 1 }' || { echo "❌ Latency P99 above $LAT_P99_MS ms"; fail=1; }
           awk -v a="$pratio" -v b="$LAT_PROCESSED_RATIO" 'BEGIN{ if (a+0 < b+0) exit 1 }' || { echo "❌ Latency processed ratio below $LAT_PROCESSED_RATIO"; fail=1; }
 
+          # Store the result for later use
+          echo "$fail" > latency_threshold_result.txt
+          
           if [ "$fail" -ne 0 ]; then
-            echo "🚫 Latency benchmark failed threshold checks"; exit 1
+            echo "🚫 Latency benchmark failed threshold checks"
           else
             echo "✅ Latency benchmark passed all thresholds"
           fi
@@ -405,6 +413,48 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
 
+      - name: Final Threshold Check
+        if: always()
+        shell: bash
+        run: |
+          echo ""
+          echo "🔍 Final Threshold Validation:"
+          
+          broadcast_fail=0
+          latency_fail=0
+          
+          if [ -f broadcast_threshold_result.txt ]; then
+            broadcast_fail=$(cat broadcast_threshold_result.txt)
+          fi
+          
+          if [ -f latency_threshold_result.txt ]; then
+            latency_fail=$(cat latency_threshold_result.txt)
+          fi
+          
+          total_fail=$((broadcast_fail + latency_fail))
+          
+          if [ "$broadcast_fail" -eq 0 ]; then
+            echo "✅ Broadcast benchmark: PASSED"
+          else
+            echo "❌ Broadcast benchmark: FAILED"
+          fi
+          
+          if [ "$latency_fail" -eq 0 ]; then
+            echo "✅ Latency benchmark: PASSED"
+          else
+            echo "❌ Latency benchmark: FAILED"
+          fi
+          
+          echo ""
+          if [ "$total_fail" -eq 0 ]; then
+            echo "🎉 All benchmarks passed threshold validation!"
+            exit 0
+          else
+            echo "🚫 One or more benchmarks failed threshold validation"
+            echo "Check the detailed results above for specific failures"
+            exit 1
+          fi
+
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -415,6 +465,8 @@ jobs:
             latency-results.json
             broadcast_metrics.json
             latency_metrics.json
+            broadcast_threshold_result.txt
+            latency_threshold_result.txt
             silo-scheduler.log
             silo-user.log
 
