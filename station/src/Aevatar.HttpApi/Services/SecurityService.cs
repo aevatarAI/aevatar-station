@@ -125,10 +125,10 @@ public class SecurityService : ISecurityService
             return false;
         }
 
-        var count = await GetTodayRequestCountAsync(clientIp);
+        var count = await GetCurrent10MinutesRequestCountAsync(clientIp);
         var required = count >= _rateOptions.FreeRequestsPerDay;
 
-        _logger.LogDebug("IP {ip} today request count: {count}, verification required: {required}",
+        _logger.LogDebug("IP {ip} current 10-minute window request count: {count}, verification required: {required}",
             clientIp, count, required);
 
         return required;
@@ -137,7 +137,7 @@ public class SecurityService : ISecurityService
     public async Task IncrementRequestCountAsync(string clientIp)
     {
         var key = GetCacheKey(clientIp);
-        var currentCount = await GetTodayRequestCountAsync(clientIp);
+        var currentCount = await GetCurrent10MinutesRequestCountAsync(clientIp);
         var newCount = currentCount + 1;
 
         var expiry = GetExpiryTime();
@@ -150,7 +150,7 @@ public class SecurityService : ISecurityService
         _logger.LogDebug("IP {ip} request count updated: {count}", clientIp, newCount);
     }
 
-    private async Task<int> GetTodayRequestCountAsync(string clientIp)
+    private async Task<int> GetCurrent10MinutesRequestCountAsync(string clientIp)
     {
         var key = GetCacheKey(clientIp);
         var countStr = await _cache.GetStringAsync(key);
@@ -165,14 +165,20 @@ public class SecurityService : ISecurityService
 
     private string GetCacheKey(string clientIp)
     {
-        var today = DateTime.UtcNow.ToString("yyyyMMdd");
-        return $"SendRegCode:{clientIp}:{today}";
+        // Generate cache key based on 10-minute windows
+        var now = DateTime.UtcNow;
+        var windowStart = new DateTime(now.Year, now.Month, now.Day, now.Hour, (now.Minute / 10) * 10, 0);
+        var windowKey = windowStart.ToString("yyyyMMddHHmm");
+        return $"SendRegCode:{clientIp}:{windowKey}";
     }
 
     private DateTimeOffset GetExpiryTime()
     {
-        var tomorrow = DateTime.UtcNow.Date.AddDays(1);
-        return new DateTimeOffset(tomorrow);
+        // Set expiry to end of current 10-minute window
+        var now = DateTime.UtcNow;
+        var windowStart = new DateTime(now.Year, now.Month, now.Day, now.Hour, (now.Minute / 10) * 10, 0);
+        var windowEnd = windowStart.AddMinutes(10);
+        return new DateTimeOffset(windowEnd);
     }
 
     #endregion
