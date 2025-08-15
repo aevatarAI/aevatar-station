@@ -13,6 +13,8 @@ using Volo.Abp.PermissionManagement;
 using Volo.Abp.Users;
 using Volo.Abp.Validation;
 using Xunit;
+using System.Security.Claims;
+using Volo.Abp.Security.Claims;
 
 namespace Aevatar.Projects;
 
@@ -28,6 +30,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
     private readonly IdentityRoleManager _roleManager;
     private readonly IPermissionManager _permissionManager;
     private readonly IProjectDomainRepository _domainRepository;
+    private readonly ICurrentPrincipalAccessor _principalAccessor;
 
     protected ProjectServiceTests()
     {
@@ -40,6 +43,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         _permissionManager = GetRequiredService<IPermissionManager>();
         _organizationService = GetRequiredService<IOrganizationService>();
         _domainRepository = GetRequiredService<IProjectDomainRepository>();
+        _principalAccessor = GetRequiredService<ICurrentPrincipalAccessor>();
     }
 
     [Fact]
@@ -458,5 +462,74 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         owner = await _identityUserManager.GetByIdAsync(reader.Id);
         owner.IsInOrganizationUnit(organization.Id).ShouldBeFalse();
         owner.IsInOrganizationUnit(project.Id).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Project_CreateDefault_Should_Create_Project_And_Assign_Current_User_As_Owner()
+    {
+        var email = "owner@email.io";
+        using (_principalAccessor.Change(new[]
+               {
+                   new Claim(AbpClaimTypes.UserId, _currentUser.Id!.Value.ToString()),
+                   new Claim(AbpClaimTypes.UserName, _currentUser.UserName!),
+                   new Claim(AbpClaimTypes.Email, email)
+               }))
+        {
+            await _identityUserManager.CreateAsync(new IdentityUser(_currentUser.Id!.Value, "owner", email));
+
+            var organization = await _organizationService.CreateAsync(new CreateOrganizationDto
+            {
+                DisplayName = "Test Organization"
+            });
+
+            var project = await _projectService.CreateDefaultAsync(new CreateDefaultProjectDto
+            {
+                OrganizationId = organization.Id
+            });
+
+            project.DisplayName.ShouldBe("default project");
+            project.DomainName.ShouldStartWith("defaultProject");
+            project.DomainName.Length.ShouldBe("defaultProject".Length + 6);
+
+            var roles = await _projectService.GetRoleListAsync(project.Id);
+            var ownerRole = roles.Items.First(o => o.Name.EndsWith("Owner"));
+
+            var members = await _projectService.GetMemberListAsync(project.Id, new GetOrganizationMemberListDto());
+            members.Items.Count.ShouldBe(1);
+            members.Items[0].Email.ShouldBe(email);
+            members.Items[0].RoleId.ShouldBe(ownerRole.Id);
+        }
+    }
+
+    [Fact]
+    public async Task Project_CreateDefault_Should_Throw_When_Project_Exists()
+    {
+        var email = "owner@email.io";
+        using (_principalAccessor.Change(new[]
+               {
+                   new Claim(AbpClaimTypes.UserId, _currentUser.Id!.Value.ToString()),
+                   new Claim(AbpClaimTypes.UserName, _currentUser.UserName!),
+                   new Claim(AbpClaimTypes.Email, email)
+               }))
+        {
+            await _identityUserManager.CreateAsync(new IdentityUser(_currentUser.Id!.Value, "owner", email));
+
+            var organization = await _organizationService.CreateAsync(new CreateOrganizationDto
+            {
+                DisplayName = "Test Organization"
+            });
+
+            var first = await _projectService.CreateDefaultAsync(new CreateDefaultProjectDto
+            {
+                OrganizationId = organization.Id
+            });
+            first.ShouldNotBeNull();
+
+            await Should.ThrowAsync<UserFriendlyException>(async () =>
+                await _projectService.CreateDefaultAsync(new CreateDefaultProjectDto
+                {
+                    OrganizationId = organization.Id
+                }));
+        }
     }
 }
