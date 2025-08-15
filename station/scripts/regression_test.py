@@ -681,6 +681,18 @@ def test_workflow_services_comprehensive(api_headers):
     
     logger.info("Comprehensive workflow services test completed successfully")
 
+def test_create_default_workflow_view(api_headers, api_admin_headers):
+    """test create default workflow view"""
+    response = requests.post(
+        f"{API_HOST}/api/workflow-view/default",
+        json={},
+        headers=api_headers,
+        verify=False
+    )
+    assert_status_code(response)
+    view_agent_id = response.json()["data"]["id"]
+    logger.debug(f"view_agent_id: {view_agent_id}")
+    assert view_agent_id != "00000000-0000-0000-0000-000000000000"
 
 def test_publish_workflow_view(api_headers, api_admin_headers):
     """test publish workflow view"""
