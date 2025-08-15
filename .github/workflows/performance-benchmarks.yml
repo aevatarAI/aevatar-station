@@ -470,10 +470,35 @@ jobs:
             silo-scheduler.log
             silo-user.log
 
-      - name: Stop Silo
+      - name: Stop Silo and Cleanup Services
         if: always()
         shell: bash
         run: |
-          if [ -f silo-scheduler.pid ]; then kill $(cat silo-scheduler.pid) || true; fi
-          if [ -f silo-user.pid ]; then kill $(cat silo-user.pid) || true; fi
+          echo "🧹 Cleaning up services..."
+          
+          # Stop Silo processes
+          if [ -f silo-scheduler.pid ]; then
+            echo "Stopping Scheduler Silo (PID: $(cat silo-scheduler.pid))"
+            kill $(cat silo-scheduler.pid) || true
+            rm -f silo-scheduler.pid
+          fi
+          
+          if [ -f silo-user.pid ]; then
+            echo "Stopping User Silo (PID: $(cat silo-user.pid))"
+            kill $(cat silo-user.pid) || true
+            rm -f silo-user.pid
+          fi
+          
+          # Wait a moment for graceful shutdown
+          sleep 2
+          
+          # Force kill any remaining dotnet processes related to our silos
+          pkill -f "Aevatar.Silo" || true
+          
+          # Service containers (MongoDB, Kafka, Zookeeper) will be automatically 
+          # cleaned up by GitHub Actions, but we can verify their status
+          echo "Service containers status:"
+          docker ps | grep -E "(mongo|kafka|zookeeper)" || echo "No service containers found (already cleaned up)"
+          
+          echo "✅ Cleanup completed"
 
