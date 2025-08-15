@@ -23,7 +23,7 @@ on:
       latency_args:
         description: JSON for LatencyBenchmark params
         required: false
-        default: '{"maxConcurrency":16,"duration":30,"warmup":5,"eps":10}'
+        default: '{"maxConcurrency":16,"duration":120,"warmup":5,"eps":10}'
       thresholds:
         description: JSON thresholds for benchmarks
         required: false
@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     # Skip draft PRs, but allow manual workflow_dispatch and other events
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       # Threshold defaults (overridden by workflow_dispatch parsing step)
       BCAST_P95_MS: '120'
@@ -56,7 +56,7 @@ jobs:
       BCAST_DURATION: '20'
       BCAST_WARMUP: '5'
       LAT_MAX_CONCURRENCY: '16'
-      LAT_DURATION: '30'
+      LAT_DURATION: '120'
       LAT_WARMUP: '5'
       LAT_EPS: '10'
 
