@@ -19,7 +19,7 @@ on:
       broadcast_args:
         description: JSON for BroadcastLatencyBenchmark params
         required: false
-        default: '{"subscribers":128,"publishers":1,"eps":1,"duration":20,"warmup":5}'
+        default: '{"subscribers":128,"publishers":1,"eps":1,"duration":120,"warmup":5}'
       latency_args:
         description: JSON for LatencyBenchmark params
         required: false
@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     # Skip draft PRs, but allow manual workflow_dispatch and other events
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
-    timeout-minutes: 45
+    timeout-minutes: 60
     env:
       # Threshold defaults (overridden by workflow_dispatch parsing step)
       BCAST_P95_MS: '120'
@@ -53,7 +53,7 @@ jobs:
       BCAST_SUBS: '128'
       BCAST_PUBS: '1'
       BCAST_EPS: '1'
-      BCAST_DURATION: '20'
+      BCAST_DURATION: '120'
       BCAST_WARMUP: '5'
       LAT_MAX_CONCURRENCY: '16'
       LAT_DURATION: '120'
