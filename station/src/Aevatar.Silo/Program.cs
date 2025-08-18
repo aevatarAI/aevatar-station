@@ -82,12 +82,7 @@ public class Program
             .UseOrleansConfiguration()
             .UseServiceProviderFactory(new DiagnosticAutofacServiceProviderFactory())
             .UseSerilog()
-            .ConfigureServices((context, services) =>
-            {
-                // Configure OpenTelemetry
-                services.AddAevatarOpenTelemetry(context.Configuration);
-                services.UseGrainStorageWithMetrics();
-            });
+            ;
 
     // Pluggable metric label provider for Orleans metrics
     public class AevatarMetricLabelProvider : IMetricLabelProvider
