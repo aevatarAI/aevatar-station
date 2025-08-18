@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using System.Threading.Tasks;
 using Aevatar.Account;
 using Asp.Versioning;
@@ -7,6 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 using Volo.Abp.Account;
 using Volo.Abp.Identity;
 using Aevatar.Extensions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Aevatar.Controllers;
 
@@ -42,7 +45,47 @@ public class AccountController : AevatarController
     [Route("send-register-code")]
     public virtual Task SendRegisterCodeAsync(SendRegisterCodeDto input)
     {
+        var ip = GetRealClientIp(HttpContext);
+        // TODO remove
+        Logger.LogInformation("Send register code request: Email={email}, AppName={appName}, IP={ip}", 
+            input.Email, input.AppName, ip);
         return _accountService.SendRegisterCodeAsync(input);
+    }
+    
+    private string GetRealClientIp(HttpContext context)
+    {
+        // 1. Check X-Forwarded-For header (highest priority)
+        if (context.Request.Headers.TryGetValue("X-Forwarded-For", out var forwardedFor))
+        {
+            var ips = forwardedFor.ToString().Split(',', StringSplitOptions.RemoveEmptyEntries);
+            if (ips.Length > 0)
+            {
+                var firstIp = ips[0].Trim();
+                if (IsValidIpAddress(firstIp))
+                {
+                    return firstIp;
+                }
+            }
+        }
+
+        // 2. Check X-Real-IP header
+        if (context.Request.Headers.TryGetValue("X-Real-IP", out var realIp))
+        {
+            var ip = realIp.ToString().Trim();
+            if (IsValidIpAddress(ip))
+            {
+                return ip;
+            }
+        }
+
+        // 3. Use connection remote IP
+        var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return remoteIp;
+    }
+    
+    private bool IsValidIpAddress(string ipAddress)
+    {
+        return IPAddress.TryParse(ipAddress, out _);
     }
 
     [HttpPost]
