@@ -127,26 +127,96 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
 
     private Type? FindConfigTypeInAgentAssembly(Type agentType)
     {
-        var agentAssembly = agentType.Assembly;
-        var expectedConfigTypeName = $"{agentType.FullName}Config";
-        
         try
         {
-            var configType = agentAssembly.GetTypes()
+            // First, try to extract configuration type from GAgent generic parameters
+            var configType = ExtractConfigurationFromGenericParameters(agentType);
+            if (configType != null)
+            {
+                _logger.LogDebug("✅ Found config type via generic parameters: {ConfigType}", configType.FullName);
+                return configType;
+            }
+
+            // Fallback: scan assembly for ConfigurationBase-derived types
+            var agentAssembly = agentType.Assembly;
+            configType = agentAssembly.GetTypes()
                 .FirstOrDefault(type => 
-                    type.FullName == expectedConfigTypeName &&
                     type.IsClass && 
                     !type.IsAbstract &&
-                    typeof(IValidatableObject).IsAssignableFrom(type));
+                    IsConfigurationBaseType(type) &&
+                    IsRelatedToAgent(type, agentType));
+            
+            if (configType != null)
+            {
+                _logger.LogDebug("✅ Found config type via assembly scan: {ConfigType}", configType.FullName);
+            }
             
             return configType;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "⚠️  Error scanning assembly {AssemblyName}: {ErrorMessage}", 
-                agentAssembly.GetName().Name, ex.Message);
+            _logger.LogWarning(ex, "⚠️  Error finding config type for agent {AgentType}: {ErrorMessage}", 
+                agentType.FullName, ex.Message);
             return null;
         }
+    }
+
+    private Type? ExtractConfigurationFromGenericParameters(Type agentType)
+    {
+        // Check if agent inherits from GAgentBase<TState, TStateLogEvent, TEvent, TConfiguration>
+        var baseType = agentType.BaseType;
+        while (baseType != null)
+        {
+            if (baseType.IsGenericType)
+            {
+                var genericDefinition = baseType.GetGenericTypeDefinition();
+                var genericName = genericDefinition.Name;
+                
+                // Look for GAgentBase with 4 generic parameters
+                if (genericName.StartsWith("GAgentBase") && baseType.GenericTypeArguments.Length >= 4)
+                {
+                    var configurationType = baseType.GenericTypeArguments[3]; // TConfiguration is the 4th parameter
+                    if (IsConfigurationBaseType(configurationType))
+                    {
+                        return configurationType;
+                    }
+                }
+            }
+            baseType = baseType.BaseType;
+        }
+        
+        return null;
+    }
+
+    private bool IsConfigurationBaseType(Type type)
+    {
+        if (type == null) return false;
+        
+        // Check if type inherits from ConfigurationBase
+        var baseType = type.BaseType;
+        while (baseType != null)
+        {
+            if (baseType.Name == "ConfigurationBase")
+            {
+                return true;
+            }
+            baseType = baseType.BaseType;
+        }
+        
+        return false;
+    }
+
+    private bool IsRelatedToAgent(Type configType, Type agentType)
+    {
+        // Check if config type name is related to agent type name (fallback heuristic)
+        var agentName = agentType.Name;
+        var configName = configType.Name;
+        
+        // Remove common suffixes/prefixes
+        agentName = agentName.Replace("GAgent", "").Replace("Agent", "");
+        configName = configName.Replace("Configuration", "").Replace("Config", "");
+        
+        return configName.Contains(agentName) || agentName.Contains(configName);
     }
 
     private async Task<ConfigValidationResultDto> ValidateConfigByTypeAsync(Type configType, string configJson)
