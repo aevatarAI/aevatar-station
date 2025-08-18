@@ -176,31 +176,6 @@ public class AgentController : AevatarController
     }
 
     /// <summary>
-    /// Get list of available agent types that can be validated
-    /// </summary>
-    /// <returns>List of available agent type namespaces</returns>
-    [HttpGet("validation/available-agent-types")]
-    [Authorize]
-    public async Task<List<string>> GetAvailableAgentTypesAsync()
-    {
-        _logger.LogInformation("🔍 Retrieving available agent types");
-        
-        try
-        {
-            var agentTypes = await _agentValidationService.GetAvailableAgentTypesAsync();
-            
-            _logger.LogInformation("✅ Retrieved {Count} available agent types", agentTypes.Count);
-            
-            return agentTypes;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "❌ Error retrieving available agent types");
-            return new List<string>();
-        }
-    }
-
-    /// <summary>
     /// Health check endpoint for the validation service
     /// </summary>
     /// <returns>Service health status</returns>

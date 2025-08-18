@@ -82,39 +82,6 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
         }
     }
 
-    public async Task<List<string>> GetAvailableAgentTypesAsync()
-    {
-        _logger.LogInformation("🔍 Retrieving available agent types (real-time)");
-        
-        var systemAgents = _agentOptions.CurrentValue.SystemAgentList;
-        var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
-        
-        // Filter out Orleans generated types and system agents
-        var validAgents = availableGAgents.Where(a => !a.Namespace.StartsWith("OrleansCodeGen")).ToList();
-        var businessAgentTypes = validAgents.Where(a => !systemAgents.Contains(a.Name)).ToList();
-        
-        var agentTypesWithConfig = new List<string>();
-        
-        foreach (var agentType in businessAgentTypes)
-        {
-            try
-            {
-                var configType = FindConfigTypeInAgentAssembly(agentType);
-                if (configType != null)
-                {
-                    agentTypesWithConfig.Add(agentType.FullName);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "⚠️  Failed to check config type for agent: {AgentType}", agentType.FullName);
-            }
-        }
-        
-        _logger.LogInformation("✅ Found {Count} agent types with valid configurations", agentTypesWithConfig.Count);
-        return agentTypesWithConfig;
-    }
-
     private Type? FindConfigTypeByAgentNamespace(string agentNamespace)
     {
         _logger.LogDebug("🔍 Finding config type for agent: {AgentNamespace}", agentNamespace);

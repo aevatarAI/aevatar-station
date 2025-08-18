@@ -15,10 +15,4 @@ public interface IAgentValidationService
     /// <param name="request">Validation request containing GAgent namespace and config JSON</param>
     /// <returns>Validation result with success status and error details</returns>
     Task<ConfigValidationResultDto> ValidateConfigAsync(ValidationRequestDto request);
-    
-    /// <summary>
-    /// Get available agent types with their configuration schemas
-    /// </summary>
-    /// <returns>List of available agent types</returns>
-    Task<List<string>> GetAvailableAgentTypesAsync();
 }
