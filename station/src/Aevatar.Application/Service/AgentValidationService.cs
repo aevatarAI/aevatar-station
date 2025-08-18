@@ -147,29 +147,30 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
     {
         try
         {
-            // First, try to extract configuration type from GAgent generic parameters
-            var configType = ExtractConfigurationFromGenericParameters(agentType);
+            // Try to get configuration type from GAgent generic parameters
+            var configType = GetConfigurationTypeFromGAgent(agentType);
             if (configType != null)
             {
-                _logger.LogDebug("Found config type via generic parameters: {ConfigType}", configType.FullName);
+                _logger.LogDebug("Found config type from GAgent generics: {ConfigType}", configType.FullName);
                 return configType;
             }
 
-            // Fallback: scan assembly for ConfigurationBase-derived types
-            var agentAssembly = agentType.Assembly;
-            configType = agentAssembly.GetTypes()
-                .FirstOrDefault(type => 
-                    type.IsClass && 
-                    !type.IsAbstract &&
-                    IsConfigurationBaseType(type) &&
-                    IsRelatedToAgent(type, agentType));
-            
-            if (configType != null)
+            // Fallback: find ConfigurationBase-derived types in same assembly
+            var configTypes = agentType.Assembly.GetTypes()
+                .Where(type => type.IsClass && 
+                              !type.IsAbstract && 
+                              IsConfigurationBase(type))
+                .ToList();
+
+            if (configTypes.Count == 1)
             {
-                _logger.LogDebug("Found config type via assembly scan: {ConfigType}", configType.FullName);
+                _logger.LogDebug("Found single config type in assembly: {ConfigType}", configTypes[0].FullName);
+                return configTypes[0];
             }
-            
-            return configType;
+
+            _logger.LogDebug("Found {Count} potential config types for agent {AgentType}", 
+                configTypes.Count, agentType.FullName);
+            return configTypes.FirstOrDefault();
         }
         catch (Exception ex)
         {
@@ -179,62 +180,43 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
         }
     }
 
-    private Type? ExtractConfigurationFromGenericParameters(Type agentType)
+    private Type? GetConfigurationTypeFromGAgent(Type agentType)
     {
-        // Check if agent inherits from GAgentBase<TState, TStateLogEvent, TEvent, TConfiguration>
-        var baseType = agentType.BaseType;
-        while (baseType != null)
+        // Walk up the inheritance chain to find GAgentBase<TState, TStateLogEvent, TEvent, TConfiguration>
+        var currentType = agentType;
+        while (currentType != null)
         {
-            if (baseType.IsGenericType)
+            if (currentType.IsGenericType && 
+                currentType.GetGenericTypeDefinition().Name.StartsWith("GAgentBase") &&
+                currentType.GenericTypeArguments.Length >= 4)
             {
-                var genericDefinition = baseType.GetGenericTypeDefinition();
-                var genericName = genericDefinition.Name;
-                
-                // Look for GAgentBase with 4 generic parameters
-                if (genericName.StartsWith("GAgentBase") && baseType.GenericTypeArguments.Length >= 4)
+                var configurationType = currentType.GenericTypeArguments[3]; // TConfiguration is 4th parameter
+                if (IsConfigurationBase(configurationType))
                 {
-                    var configurationType = baseType.GenericTypeArguments[3]; // TConfiguration is the 4th parameter
-                    if (IsConfigurationBaseType(configurationType))
-                    {
-                        return configurationType;
-                    }
+                    return configurationType;
                 }
             }
-            baseType = baseType.BaseType;
+            currentType = currentType.BaseType;
         }
-        
         return null;
     }
 
-    private bool IsConfigurationBaseType(Type type)
+    private bool IsConfigurationBase(Type type)
     {
         if (type == null) return false;
         
-        // Check if type inherits from ConfigurationBase
-        var baseType = type.BaseType;
-        while (baseType != null)
+        // Walk up the inheritance chain to find ConfigurationBase
+        var currentType = type.BaseType;
+        while (currentType != null)
         {
-            if (baseType.Name == "ConfigurationBase")
+            if (currentType.Name == "ConfigurationBase")
             {
                 return true;
             }
-            baseType = baseType.BaseType;
+            currentType = currentType.BaseType;
         }
         
         return false;
-    }
-
-    private bool IsRelatedToAgent(Type configType, Type agentType)
-    {
-        // Check if config type name is related to agent type name (fallback heuristic)
-        var agentName = agentType.Name;
-        var configName = configType.Name;
-        
-        // Remove common suffixes/prefixes
-        agentName = agentName.Replace("GAgent", "").Replace("Agent", "");
-        configName = configName.Replace("Configuration", "").Replace("Config", "");
-        
-        return configName.Contains(agentName) || agentName.Contains(configName);
     }
 
     private async Task<ConfigValidationResultDto> ValidateConfigByTypeAsync(Type configType, string configJson)
