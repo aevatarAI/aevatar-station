@@ -25,11 +25,6 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
     private readonly IGAgentManager _gAgentManager;
     private readonly IOptionsMonitor<AgentOptions> _agentOptions;
     private readonly GrainTypeResolver _grainTypeResolver;
-    
-    // Cache for agent type to config type mapping
-    private readonly Dictionary<string, Type> _agentToConfigTypeCache = new();
-    private readonly object _cacheLock = new();
-    private bool _isInitialized = false;
 
     public AgentValidationService(
         ILogger<AgentValidationService> logger,
@@ -66,11 +61,9 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
 
         try
         {
-            // Ensure cache is initialized
-            await EnsureCacheInitializedAsync();
-
-            // Find configuration type by GAgent namespace
-            if (!_agentToConfigTypeCache.TryGetValue(request.GAgentNamespace, out var configType))
+            // Find configuration type by GAgent namespace (real-time lookup)
+            var configType = FindConfigTypeByAgentNamespace(request.GAgentNamespace);
+            if (configType == null)
             {
                 return ConfigValidationResultDto.Failure(
                     new[] { new ValidationErrorDto { PropertyName = nameof(request.GAgentNamespace), Message = $"Unknown GAgent type: {request.GAgentNamespace}" } },
@@ -91,45 +84,17 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
 
     public async Task<List<string>> GetAvailableAgentTypesAsync()
     {
-        await EnsureCacheInitializedAsync();
-        return _agentToConfigTypeCache.Keys.ToList();
-    }
-
-    private async Task EnsureCacheInitializedAsync()
-    {
-        if (_isInitialized) return;
-
-        lock (_cacheLock)
-        {
-            if (_isInitialized) return;
-
-            try
-            {
-                _logger.LogInformation("🔍 Initializing Agent->Config type mapping...");
-                InitializeAgentConfigMapping();
-                _isInitialized = true;
-                _logger.LogInformation("✅ Agent->Config mapping initialized successfully with {Count} mappings", _agentToConfigTypeCache.Count);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ Failed to initialize Agent->Config type mapping");
-                throw;
-            }
-        }
-    }
-
-    private void InitializeAgentConfigMapping()
-    {
+        _logger.LogInformation("🔍 Retrieving available agent types (real-time)");
+        
         var systemAgents = _agentOptions.CurrentValue.SystemAgentList;
         var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
         
         // Filter out Orleans generated types and system agents
         var validAgents = availableGAgents.Where(a => !a.Namespace.StartsWith("OrleansCodeGen")).ToList();
         var businessAgentTypes = validAgents.Where(a => !systemAgents.Contains(a.Name)).ToList();
-
-        _logger.LogInformation("🔍 Found {TotalCount} available agents, filtered to {BusinessCount} business agents", 
-            availableGAgents.Count(), businessAgentTypes.Count);
-
+        
+        var agentTypesWithConfig = new List<string>();
+        
         foreach (var agentType in businessAgentTypes)
         {
             try
@@ -137,19 +102,59 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
                 var configType = FindConfigTypeInAgentAssembly(agentType);
                 if (configType != null)
                 {
-                    _agentToConfigTypeCache[agentType.FullName] = configType;
-                    _logger.LogDebug("✅ Mapped: {AgentType} -> {ConfigType}", agentType.FullName, configType.FullName);
-                }
-                else
-                {
-                    _logger.LogWarning("⚠️  No config type found for agent: {AgentType}", agentType.FullName);
+                    agentTypesWithConfig.Add(agentType.FullName);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "⚠️  Failed to process agent type {AgentType}: {ErrorMessage}", 
-                    agentType.FullName, ex.Message);
+                _logger.LogWarning(ex, "⚠️  Failed to check config type for agent: {AgentType}", agentType.FullName);
             }
+        }
+        
+        _logger.LogInformation("✅ Found {Count} agent types with valid configurations", agentTypesWithConfig.Count);
+        return agentTypesWithConfig;
+    }
+
+    private Type? FindConfigTypeByAgentNamespace(string agentNamespace)
+    {
+        _logger.LogDebug("🔍 Finding config type for agent: {AgentNamespace}", agentNamespace);
+        
+        var systemAgents = _agentOptions.CurrentValue.SystemAgentList;
+        var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
+        
+        // Find the specific agent type by namespace
+        var agentType = availableGAgents.FirstOrDefault(a => a.FullName == agentNamespace);
+        if (agentType == null)
+        {
+            _logger.LogWarning("⚠️  Agent type not found: {AgentNamespace}", agentNamespace);
+            return null;
+        }
+        
+        // Skip Orleans generated types and system agents
+        if (agentType.Namespace.StartsWith("OrleansCodeGen") || systemAgents.Contains(agentType.Name))
+        {
+            _logger.LogWarning("⚠️  Agent type is system/generated: {AgentNamespace}", agentNamespace);
+            return null;
+        }
+        
+        try
+        {
+            var configType = FindConfigTypeInAgentAssembly(agentType);
+            if (configType != null)
+            {
+                _logger.LogDebug("✅ Found config type: {AgentType} -> {ConfigType}", agentType.FullName, configType.FullName);
+            }
+            else
+            {
+                _logger.LogWarning("⚠️  No config type found for agent: {AgentType}", agentType.FullName);
+            }
+            return configType;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "⚠️  Failed to find config type for agent {AgentType}: {ErrorMessage}", 
+                agentType.FullName, ex.Message);
+            return null;
         }
     }
 
