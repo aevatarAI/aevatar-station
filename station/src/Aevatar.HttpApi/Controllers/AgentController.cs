@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Agent;
+using Aevatar.AgentValidation;
 using Aevatar.Controllers;
 using Aevatar.CQRS.Dto;
 using Aevatar.Permissions;
@@ -19,15 +20,18 @@ public class AgentController : AevatarController
     private readonly ILogger<AgentController> _logger;
     private readonly IAgentService _agentService;
     private readonly SubscriptionAppService _subscriptionAppService;
+    private readonly IAgentValidationService _agentValidationService;
 
     public AgentController(
         ILogger<AgentController> logger,
         SubscriptionAppService subscriptionAppService,
-        IAgentService agentService)
+        IAgentService agentService,
+        IAgentValidationService agentValidationService)
     {
         _logger = logger;
         _agentService = agentService;
         _subscriptionAppService = subscriptionAppService;
+        _agentValidationService = agentValidationService;
     }
 
 
@@ -130,5 +134,79 @@ public class AgentController : AevatarController
     public async Task PublishAsync([FromBody] PublishEventDto input)
     {
         await _subscriptionAppService.PublishEventAsync(input);
+    }
+
+    /// <summary>
+    /// Validate agent configuration
+    /// </summary>
+    /// <param name="request">Validation request containing GAgent namespace and configuration JSON</param>
+    /// <returns>Validation result with success status and error details</returns>
+    [HttpPost("validation/validate-config")]
+    [Authorize]
+    public async Task<ConfigValidationResultDto> ValidateConfigAsync([FromBody] ValidationRequestDto request)
+    {
+        _logger.LogInformation("🔍 Received validation request for GAgent: {GAgentNamespace}", 
+            request?.GAgentNamespace ?? "null");
+        
+        try
+        {
+            if (request == null)
+            {
+                return ConfigValidationResultDto.Failure(
+                    new[] { new ValidationErrorDto { PropertyName = "Request", Message = "Request body is required" } },
+                    "Invalid request");
+            }
+
+            var result = await _agentValidationService.ValidateConfigAsync(request);
+            
+            _logger.LogInformation("✅ Validation completed for GAgent: {GAgentNamespace}, IsValid: {IsValid}", 
+                request.GAgentNamespace, result.IsValid);
+            
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error during validation request for GAgent: {GAgentNamespace}", 
+                request?.GAgentNamespace ?? "unknown");
+            
+            return ConfigValidationResultDto.Failure(
+                new[] { new ValidationErrorDto { PropertyName = "System", Message = "Internal server error" } },
+                "An unexpected error occurred during validation");
+        }
+    }
+
+    /// <summary>
+    /// Get list of available agent types that can be validated
+    /// </summary>
+    /// <returns>List of available agent type namespaces</returns>
+    [HttpGet("validation/available-agent-types")]
+    [Authorize]
+    public async Task<List<string>> GetAvailableAgentTypesAsync()
+    {
+        _logger.LogInformation("🔍 Retrieving available agent types");
+        
+        try
+        {
+            var agentTypes = await _agentValidationService.GetAvailableAgentTypesAsync();
+            
+            _logger.LogInformation("✅ Retrieved {Count} available agent types", agentTypes.Count);
+            
+            return agentTypes;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error retrieving available agent types");
+            return new List<string>();
+        }
+    }
+
+    /// <summary>
+    /// Health check endpoint for the validation service
+    /// </summary>
+    /// <returns>Service health status</returns>
+    [HttpGet("validation/health")]
+    public IActionResult ValidationHealthCheck()
+    {
+        return Ok(new { status = "healthy", timestamp = DateTime.UtcNow });
     }
 }
