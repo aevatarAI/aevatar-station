@@ -522,11 +522,24 @@ public class GodGPTService : ApplicationService, IGodGPTService
 
     public async Task<PaymentVerificationResponseDto> VerifyGooglePlayTransactionAsync(Guid currentUserId, GooglePlayTransactionVerificationRequestDto input)
     {
-        _logger.LogDebug("[GodGPTService][VerifyGooglePlayTransactionAsync] Starting verification for userId: {UserId}, transactionId: {TransactionId}", 
+        _logger.LogInformation("[GodGPTService][VerifyGooglePlayTransactionAsync] Starting verification for userId: {UserId}, transactionId: {TransactionId}", 
             currentUserId, input.TransactionIdentifier);
+        
+        // Validate input parameters
+        if (string.IsNullOrWhiteSpace(input.TransactionIdentifier))
+        {
+            _logger.LogWarning("[GodGPTService][VerifyGooglePlayTransactionAsync] Invalid transaction identifier for userId: {UserId}", currentUserId);
+            return new PaymentVerificationResponseDto
+            {
+                IsValid = false,
+                Message = "Invalid transaction identifier",
+                ErrorCode = "INVALID_TRANSACTION_ID"
+            };
+        }
         
         try
         {
+            _logger.LogDebug("[GodGPTService][VerifyGooglePlayTransactionAsync] Getting UserBillingGAgent for userId: {UserId}", currentUserId);
             var userBillingGAgent = _clusterClient.GetGrain<IUserBillingGAgent>(currentUserId);
             
             // Convert to GAgents DTO
@@ -536,14 +549,18 @@ public class GodGPTService : ApplicationService, IGodGPTService
                 TransactionIdentifier = input.TransactionIdentifier
             };
             
+            _logger.LogDebug("[GodGPTService][VerifyGooglePlayTransactionAsync] Converted DTO for userId: {UserId}, gagentsUserId: {GagentsUserId}", 
+                currentUserId, gagentsDto.UserId);
+            
             // Call the GodGPT.GAgents interface for Google Play transaction verification
+            _logger.LogDebug("[GodGPTService][VerifyGooglePlayTransactionAsync] Calling UserBillingGAgent.VerifyGooglePlayTransactionAsync for userId: {UserId}", currentUserId);
             var result = await userBillingGAgent.VerifyGooglePlayTransactionAsync(gagentsDto);
 
-            _logger.LogDebug("[GodGPTService][VerifyGooglePlayTransactionAsync] Verification completed for userId: {UserId}, success: {IsValid}", 
-                currentUserId, result.IsValid);
+            _logger.LogInformation("[GodGPTService][VerifyGooglePlayTransactionAsync] Verification completed for userId: {UserId}, success: {IsValid}, message: {Message}, errorCode: {ErrorCode}, productId: {ProductId}", 
+                currentUserId, result.IsValid, result.Message, result.ErrorCode, result.ProductId);
 
             // Convert back to response DTO
-            return new PaymentVerificationResponseDto
+            var response = new PaymentVerificationResponseDto
             {
                 IsValid = result.IsValid,
                 Message = result.Message ?? string.Empty,
@@ -553,10 +570,35 @@ public class GodGPTService : ApplicationService, IGodGPTService
                 PurchaseTimeMillis = result.PurchaseTimeMillis ?? 0,
                 ErrorCode = result.ErrorCode ?? string.Empty
             };
+            
+            _logger.LogDebug("[GodGPTService][VerifyGooglePlayTransactionAsync] Response created for userId: {UserId}, responseValid: {ResponseIsValid}, responseErrorCode: {ResponseErrorCode}", 
+                currentUserId, response.IsValid, response.ErrorCode);
+                
+            return response;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[GodGPTService][VerifyGooglePlayTransactionAsync] Error verifying Google Play transaction for userId: {UserId}", currentUserId);
+            _logger.LogError(ex, "[GodGPTService][VerifyGooglePlayTransactionAsync] Exception occurred during Google Play transaction verification. UserId: {UserId}, TransactionId: {TransactionId}, ExceptionType: {ExceptionType}, ExceptionMessage: {ExceptionMessage}, StackTrace: {StackTrace}", 
+                currentUserId, input.TransactionIdentifier, ex.GetType().Name, ex.Message, ex.StackTrace);
+            
+            // Log additional details for common exception types
+            if (ex is TimeoutException)
+            {
+                _logger.LogError("[GodGPTService][VerifyGooglePlayTransactionAsync] Timeout exception detected for userId: {UserId} - possible Orleans cluster or network issues", currentUserId);
+            }
+            else if (ex is System.Net.Http.HttpRequestException)
+            {
+                _logger.LogError("[GodGPTService][VerifyGooglePlayTransactionAsync] HTTP request exception detected for userId: {UserId} - possible Google Play API connectivity issues", currentUserId);
+            }
+            else if (ex is Orleans.Runtime.OrleansException)
+            {
+                _logger.LogError("[GodGPTService][VerifyGooglePlayTransactionAsync] Orleans exception detected for userId: {UserId} - possible Orleans cluster issues", currentUserId);
+            }
+            else if (ex is System.Text.Json.JsonException || ex is Newtonsoft.Json.JsonException)
+            {
+                _logger.LogError("[GodGPTService][VerifyGooglePlayTransactionAsync] JSON serialization exception detected for userId: {UserId} - possible data format issues", currentUserId);
+            }
+            
             return new PaymentVerificationResponseDto
             {
                 IsValid = false,

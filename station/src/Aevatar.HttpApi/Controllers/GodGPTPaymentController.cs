@@ -171,10 +171,55 @@ public class GodGPTPaymentController : AevatarController
     {
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
-        var response = await _godGptService.VerifyGooglePlayTransactionAsync(currentUserId, input);
-        _logger.LogDebug($"[GodGPTPaymentController][VerifyGooglePlayTransactionAsync] userId: {currentUserId}, transactionId: {input.TransactionIdentifier}, duration: {stopwatch.ElapsedMilliseconds}ms");
-        _logger.LogDebug($"[GodGPTPaymentController][VerifyGooglePlayTransactionAsync] result: {response.IsValid}, errorCode: {response.ErrorCode}");
-        return response;
+        
+        _logger.LogInformation("[GodGPTPaymentController][VerifyGooglePlayTransactionAsync] Request received for userId: {UserId}, transactionId: {TransactionId}, requestIP: {RequestIP}", 
+            currentUserId, input.TransactionIdentifier, HttpContext.Connection.RemoteIpAddress?.ToString());
+        
+        // Validate input
+        if (input == null)
+        {
+            _logger.LogWarning("[GodGPTPaymentController][VerifyGooglePlayTransactionAsync] Null input received for userId: {UserId}", currentUserId);
+            return new PaymentVerificationResponseDto
+            {
+                IsValid = false,
+                Message = "Invalid request",
+                ErrorCode = "INVALID_REQUEST"
+            };
+        }
+        
+        try
+        {
+            var response = await _godGptService.VerifyGooglePlayTransactionAsync(currentUserId, input);
+            
+            _logger.LogInformation("[GodGPTPaymentController][VerifyGooglePlayTransactionAsync] Request completed for userId: {UserId}, transactionId: {TransactionId}, duration: {Duration}ms, result: {IsValid}, errorCode: {ErrorCode}", 
+                currentUserId, input.TransactionIdentifier, stopwatch.ElapsedMilliseconds, response.IsValid, response.ErrorCode);
+            
+            // Log additional details for failed verifications
+            if (!response.IsValid)
+            {
+                _logger.LogWarning("[GodGPTPaymentController][VerifyGooglePlayTransactionAsync] Verification failed for userId: {UserId}, transactionId: {TransactionId}, errorCode: {ErrorCode}, message: {Message}", 
+                    currentUserId, input.TransactionIdentifier, response.ErrorCode, response.Message);
+            }
+            else
+            {
+                _logger.LogInformation("[GodGPTPaymentController][VerifyGooglePlayTransactionAsync] Verification successful for userId: {UserId}, transactionId: {TransactionId}, productId: {ProductId}", 
+                    currentUserId, input.TransactionIdentifier, response.ProductId);
+            }
+            
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[GodGPTPaymentController][VerifyGooglePlayTransactionAsync] Unexpected exception in controller for userId: {UserId}, transactionId: {TransactionId}, duration: {Duration}ms", 
+                currentUserId, input.TransactionIdentifier, stopwatch.ElapsedMilliseconds);
+            
+            return new PaymentVerificationResponseDto
+            {
+                IsValid = false,
+                Message = "Internal server error during verification",
+                ErrorCode = "CONTROLLER_ERROR"
+            };
+        }
     }
 
     [Obsolete("Use has-active-subscription instead")]
