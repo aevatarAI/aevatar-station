@@ -203,20 +203,41 @@ jobs:
           nohup dotnet run -c Release --project station/src/Aevatar.Silo/Aevatar.Silo.csproj > silo-user.log 2>&1 &
           echo $! > silo-user.pid
 
-      - name: Wait for Silo readiness (both)
+      - name: Start Projector Silo
+        shell: bash
+        run: |
+          export UseEnvironmentVariables=true
+          export AevatarOrleans__AdvertisedIP=127.0.0.1
+          export AevatarOrleans__SiloPort=10003
+          export AevatarOrleans__GatewayPort=20003
+          export AevatarOrleans__SILO_NAME_PATTERN=Projector
+          export HealthCheck__Port=18083
+          # Orleans Dashboard explicit binding to avoid null/parse/port conflicts
+          export AevatarOrleans__DashboardIp=127.0.0.1
+          export AevatarOrleans__DashboardPort=19082
+          # Use MongoDB event sourcing and point ES client to same Mongo at 27017
+          export OrleansEventSourcing__Provider=mongodb
+          export Orleans__MongoDBESClient=mongodb://localhost:27017
+          nohup dotnet run -c Release --project station/src/Aevatar.Silo/Aevatar.Silo.csproj > silo-projector.log 2>&1 &
+          echo $! > silo-projector.pid
+
+      - name: Wait for Silo readiness (all three)
         shell: bash
         run: |
           for i in {1..90}; do
-            ok1=0; ok2=0
+            ok1=0; ok2=0; ok3=0
             curl -fsS http://localhost:18081/health/ready >/dev/null && ok1=1 || true
             curl -fsS http://localhost:18082/health/ready >/dev/null && ok2=1 || true
-            if [ "$ok1" -eq 1 ] && [ "$ok2" -eq 1 ]; then echo "Both silos ready"; break; fi;
+            curl -fsS http://localhost:18083/health/ready >/dev/null && ok3=1 || true
+            if [ "$ok1" -eq 1 ] && [ "$ok2" -eq 1 ] && [ "$ok3" -eq 1 ]; then echo "All three silos ready"; break; fi;
             if [ -f silo-scheduler.log ]; then tail -n 10 silo-scheduler.log || true; fi
             if [ -f silo-user.log ]; then tail -n 10 silo-user.log || true; fi
+            if [ -f silo-projector.log ]; then tail -n 10 silo-projector.log || true; fi
             sleep 2;
           done
           curl -fsS http://localhost:18081/health/ready >/dev/null || (echo "Scheduler silo not ready" && tail -n 200 silo-scheduler.log || true && exit 1)
           curl -fsS http://localhost:18082/health/ready >/dev/null || (echo "User silo not ready" && tail -n 200 silo-user.log || true && exit 1)
+          curl -fsS http://localhost:18083/health/ready >/dev/null || (echo "Projector silo not ready" && tail -n 200 silo-projector.log || true && exit 1)
 
       - name: Run BroadcastLatencyBenchmark
         if: ${{ success() }}
@@ -477,6 +498,7 @@ jobs:
             latency_threshold_result.txt
             silo-scheduler.log
             silo-user.log
+            silo-projector.log
 
       - name: Stop Silo and Cleanup Services
         if: always()
@@ -495,6 +517,12 @@ jobs:
             echo "Stopping User Silo (PID: $(cat silo-user.pid))"
             kill $(cat silo-user.pid) || true
             rm -f silo-user.pid
+          fi
+          
+          if [ -f silo-projector.pid ]; then
+            echo "Stopping Projector Silo (PID: $(cat silo-projector.pid))"
+            kill $(cat silo-projector.pid) || true
+            rm -f silo-projector.pid
           fi
           
           # Wait a moment for graceful shutdown
