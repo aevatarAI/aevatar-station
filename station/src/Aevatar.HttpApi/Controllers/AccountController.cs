@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 using Volo.Abp.Account;
 using Volo.Abp.Identity;
 using Aevatar.Extensions;
+using Microsoft.Extensions.Logging;
+
 namespace Aevatar.Controllers;
 
 [RemoteService]
@@ -14,10 +16,12 @@ namespace Aevatar.Controllers;
 public class AccountController : AevatarController
 {
     private readonly IAccountService _accountService;
+    private readonly ILogger<AccountController> _logger;
 
-    public AccountController(IAccountService accountService)
+    public AccountController(IAccountService accountService, ILogger<AccountController> logger)
     {
         _accountService = accountService;
+        _logger = logger;
     }
     
     [HttpPost]
@@ -40,6 +44,7 @@ public class AccountController : AevatarController
     [Route("send-register-code")]
     public virtual Task SendRegisterCodeAsync(SendRegisterCodeDto input)
     {
+        _logger.LogDebug("[AccountController][GodgptRegisterAsync] send code: {Email}, {AppName}", input.Email, input.AppName);
         var language = HttpContext.GetGodGPTLanguage();
         return _accountService.SendRegisterCodeAsync(input, language);
     }
