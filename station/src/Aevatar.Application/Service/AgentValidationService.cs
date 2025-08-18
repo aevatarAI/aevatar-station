@@ -42,43 +42,62 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
 
     public async Task<ConfigValidationResultDto> ValidateConfigAsync(ValidationRequestDto request)
     {
-        _logger.LogInformation("🔍 Starting validation for GAgent: {GAgentNamespace}", request.GAgentNamespace);
-        
-        // Validate request parameters
-        if (string.IsNullOrWhiteSpace(request.GAgentNamespace))
-        {
-            return ConfigValidationResultDto.Failure(
-                new[] { new ValidationErrorDto { PropertyName = nameof(request.GAgentNamespace), Message = "Complete GAgent Namespace is required" } },
-                "Missing required GAgent Namespace");
-        }
-
-        if (string.IsNullOrWhiteSpace(request.ConfigJson))
-        {
-            return ConfigValidationResultDto.Failure(
-                new[] { new ValidationErrorDto { PropertyName = nameof(request.ConfigJson), Message = "Configuration JSON is required" } },
-                "Missing required Configuration JSON");
-        }
-
         try
         {
+            _logger.LogInformation("🔍 Starting validation for GAgent: {GAgentNamespace}", 
+                request?.GAgentNamespace ?? "null");
+            
+            // Handle null request - this is now handled in service layer
+            if (request == null)
+            {
+                _logger.LogWarning("⚠️  Received null validation request");
+                return ConfigValidationResultDto.Failure(
+                    new[] { new ValidationErrorDto { PropertyName = "Request", Message = "Request body is required" } },
+                    "Invalid request: Request body cannot be null");
+            }
+            
+            // Validate request parameters
+            if (string.IsNullOrWhiteSpace(request.GAgentNamespace))
+            {
+                _logger.LogWarning("⚠️  Missing GAgent namespace in validation request");
+                return ConfigValidationResultDto.Failure(
+                    new[] { new ValidationErrorDto { PropertyName = nameof(request.GAgentNamespace), Message = "Complete GAgent Namespace is required" } },
+                    "Missing required GAgent Namespace");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.ConfigJson))
+            {
+                _logger.LogWarning("⚠️  Missing configuration JSON in validation request");
+                return ConfigValidationResultDto.Failure(
+                    new[] { new ValidationErrorDto { PropertyName = nameof(request.ConfigJson), Message = "Configuration JSON is required" } },
+                    "Missing required Configuration JSON");
+            }
+
             // Find configuration type by GAgent namespace (real-time lookup)
             var configType = FindConfigTypeByAgentNamespace(request.GAgentNamespace);
             if (configType == null)
             {
+                _logger.LogWarning("⚠️  Unknown GAgent type: {GAgentNamespace}", request.GAgentNamespace);
                 return ConfigValidationResultDto.Failure(
                     new[] { new ValidationErrorDto { PropertyName = nameof(request.GAgentNamespace), Message = $"Unknown GAgent type: {request.GAgentNamespace}" } },
                     $"GAgent type '{request.GAgentNamespace}' not found or no corresponding configuration type available");
             }
 
             // Validate configuration JSON
-            return await ValidateConfigByTypeAsync(configType, request.ConfigJson);
+            var result = await ValidateConfigByTypeAsync(configType, request.ConfigJson);
+            
+            _logger.LogInformation("✅ Validation completed for GAgent: {GAgentNamespace}, IsValid: {IsValid}", 
+                request.GAgentNamespace, result.IsValid);
+                
+            return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "❌ Error validating configuration for GAgent: {GAgentNamespace}", request.GAgentNamespace);
+            _logger.LogError(ex, "❌ Unexpected error during validation for GAgent: {GAgentNamespace}", 
+                request?.GAgentNamespace ?? "unknown");
             return ConfigValidationResultDto.Failure(
-                new[] { new ValidationErrorDto { PropertyName = "System", Message = "Internal validation error occurred" } },
-                "An error occurred during validation");
+                new[] { new ValidationErrorDto { PropertyName = "System", Message = "Internal server error" } },
+                "An unexpected error occurred during validation");
         }
     }
 

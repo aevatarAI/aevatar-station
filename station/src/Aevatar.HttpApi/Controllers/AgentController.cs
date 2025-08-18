@@ -145,34 +145,7 @@ public class AgentController : AevatarController
     [Authorize]
     public async Task<ConfigValidationResultDto> ValidateConfigAsync([FromBody] ValidationRequestDto request)
     {
-        _logger.LogInformation("🔍 Received validation request for GAgent: {GAgentNamespace}", 
-            request?.GAgentNamespace ?? "null");
-        
-        try
-        {
-            if (request == null)
-            {
-                return ConfigValidationResultDto.Failure(
-                    new[] { new ValidationErrorDto { PropertyName = "Request", Message = "Request body is required" } },
-                    "Invalid request");
-            }
-
-            var result = await _agentValidationService.ValidateConfigAsync(request);
-            
-            _logger.LogInformation("✅ Validation completed for GAgent: {GAgentNamespace}, IsValid: {IsValid}", 
-                request.GAgentNamespace, result.IsValid);
-            
-            return result;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "❌ Error during validation request for GAgent: {GAgentNamespace}", 
-                request?.GAgentNamespace ?? "unknown");
-            
-            return ConfigValidationResultDto.Failure(
-                new[] { new ValidationErrorDto { PropertyName = "System", Message = "Internal server error" } },
-                "An unexpected error occurred during validation");
-        }
+        return await _agentValidationService.ValidateConfigAsync(request);
     }
 
     /// <summary>
