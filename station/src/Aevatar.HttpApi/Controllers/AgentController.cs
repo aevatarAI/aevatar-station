@@ -149,6 +149,40 @@ public class AgentController : AevatarController
     }
 
     /// <summary>
+    /// Get configuration schema for the specified GAgent type
+    /// </summary>
+    /// <param name="gAgentNamespace">Complete GAgent namespace (URL encoded)</param>
+    /// <returns>JSON schema for the configuration type</returns>
+    [HttpGet("validation/schema/{gAgentNamespace}")]
+    [Authorize]
+    public async Task<ActionResult<string>> GetConfigurationSchemaAsync(string gAgentNamespace)
+    {
+        _logger.LogInformation("Getting configuration schema for GAgent: {GAgentNamespace}", gAgentNamespace);
+        
+        try
+        {
+            // URL decode the namespace parameter
+            var decodedNamespace = Uri.UnescapeDataString(gAgentNamespace);
+            
+            var schema = await _agentValidationService.GetConfigurationSchemaAsync(decodedNamespace);
+            
+            if (schema == null)
+            {
+                _logger.LogWarning("Configuration schema not found for GAgent: {GAgentNamespace}", decodedNamespace);
+                return NotFound($"Configuration schema not found for GAgent: {decodedNamespace}");
+            }
+            
+            _logger.LogInformation("Successfully retrieved configuration schema for GAgent: {GAgentNamespace}", decodedNamespace);
+            return Ok(schema);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving configuration schema for GAgent: {GAgentNamespace}", gAgentNamespace);
+            return StatusCode(500, "Internal server error while retrieving configuration schema");
+        }
+    }
+
+    /// <summary>
     /// Health check endpoint for the validation service
     /// </summary>
     /// <returns>Service health status</returns>

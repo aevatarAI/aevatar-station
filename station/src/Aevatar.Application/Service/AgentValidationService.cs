@@ -7,8 +7,11 @@ using System.Threading.Tasks;
 using Aevatar.AgentValidation;
 using Aevatar.Core.Abstractions;
 using Aevatar.Options;
+using Aevatar.Schema;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NJsonSchema;
+using NJsonSchema.Validation;
 using Orleans;
 using Orleans.Runtime;
 using Orleans.Metadata;
@@ -25,19 +28,22 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
     private readonly IGAgentManager _gAgentManager;
     private readonly IOptionsMonitor<AgentOptions> _agentOptions;
     private readonly GrainTypeResolver _grainTypeResolver;
+    private readonly ISchemaProvider _schemaProvider;
 
     public AgentValidationService(
         ILogger<AgentValidationService> logger,
         IGAgentFactory gAgentFactory,
         IGAgentManager gAgentManager,
         IOptionsMonitor<AgentOptions> agentOptions,
-        GrainTypeResolver grainTypeResolver)
+        GrainTypeResolver grainTypeResolver,
+        ISchemaProvider schemaProvider)
     {
         _logger = logger;
         _gAgentFactory = gAgentFactory;
         _gAgentManager = gAgentManager;
         _agentOptions = agentOptions;
         _grainTypeResolver = grainTypeResolver;
+        _schemaProvider = schemaProvider;
     }
 
     public async Task<ConfigValidationResultDto> ValidateConfigAsync(ValidationRequestDto request)
@@ -223,57 +229,110 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
     {
         try
         {
-            // JSON deserialzation with case-insensitive options
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
+            // Get JSON Schema for the configuration type using SchemaProvider
+            var schema = _schemaProvider.GetTypeSchema(configType);
             
-            var config = JsonSerializer.Deserialize(configJson, configType, options);
-            if (config == null)
+            _logger.LogDebug("Validating configuration using schema for type {ConfigType}", configType.Name);
+            
+            // Validate JSON against schema
+            var validationErrors = schema.Validate(configJson);
+            
+            if (validationErrors.Any())
             {
+                _logger.LogDebug("Schema validation found {ErrorCount} errors", validationErrors.Count);
+                
+                // Convert schema validation errors to our DTO format
+                var errorDict = _schemaProvider.ConvertValidateError(validationErrors);
+                var errors = errorDict.Select(kvp => new ValidationErrorDto
+                {
+                    PropertyName = kvp.Key,
+                    Message = kvp.Value
+                }).ToList();
+                
+                return ConfigValidationResultDto.Failure(errors, "Configuration schema validation failed");
+            }
+
+            // Additional DataAnnotations validation if needed
+            try
+            {
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+                
+                var config = JsonSerializer.Deserialize(configJson, configType, options);
+                if (config != null)
+                {
+                    var validationContext = new ValidationContext(config);
+                    var validationResults = new List<ValidationResult>();
+                    
+                    System.ComponentModel.DataAnnotations.Validator.TryValidateObject(config, validationContext, validationResults, validateAllProperties: true);
+
+                    // IValidatableObject custom validation
+                    if (config is IValidatableObject validatableConfig)
+                    {
+                        var customResults = validatableConfig.Validate(validationContext);
+                        validationResults.AddRange(customResults);
+                    }
+
+                    if (validationResults.Any())
+                    {
+                        var additionalErrors = validationResults.Select(vr => new ValidationErrorDto
+                        {
+                            PropertyName = vr.MemberNames.FirstOrDefault() ?? "Unknown",
+                            Message = vr.ErrorMessage ?? "Validation error"
+                        }).ToList();
+                        
+                        return ConfigValidationResultDto.Failure(additionalErrors, "Configuration validation failed");
+                    }
+                }
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex, "JSON deserialization error during additional validation for {ConfigType}", configType.Name);
                 return ConfigValidationResultDto.Failure(
-                    new[] { new ValidationErrorDto { PropertyName = "ConfigJson", Message = "Failed to deserialize configuration JSON" } },
-                    "Invalid JSON format");
+                    new[] { new ValidationErrorDto { PropertyName = "ConfigJson", Message = "Invalid JSON format: " + ex.Message } },
+                    "JSON format error");
             }
 
-            // DataAnnotations validation
-            var validationContext = new ValidationContext(config);
-            var validationResults = new List<ValidationResult>();
-            
-            var isValid = System.ComponentModel.DataAnnotations.Validator.TryValidateObject(config, validationContext, validationResults, validateAllProperties: true);
-
-            // IValidatableObject custom validation
-            if (config is IValidatableObject validatableConfig)
-            {
-                var customResults = validatableConfig.Validate(validationContext);
-                validationResults.AddRange(customResults);
-            }
-
-            // Convert validation results to DTOs
-            var errors = validationResults.Select(vr => new ValidationErrorDto
-            {
-                PropertyName = vr.MemberNames.FirstOrDefault() ?? "Unknown",
-                Message = vr.ErrorMessage ?? "Validation error"
-            }).ToList();
-
-            return errors.Any() 
-                ? ConfigValidationResultDto.Failure(errors, "Configuration validation failed")
-                : ConfigValidationResultDto.Success("Configuration validation passed");
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogWarning(ex, "JSON deserialization error for config type {ConfigType}", configType.Name);
-            return ConfigValidationResultDto.Failure(
-                new[] { new ValidationErrorDto { PropertyName = "ConfigJson", Message = "Invalid JSON format: " + ex.Message } },
-                "JSON format error");
+            _logger.LogDebug("Configuration validation passed for type {ConfigType}", configType.Name);
+            return ConfigValidationResultDto.Success("Configuration validation passed");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error during validation for config type {ConfigType}", configType.Name);
+            _logger.LogError(ex, "Unexpected error during schema validation for config type {ConfigType}", configType.Name);
             return ConfigValidationResultDto.Failure(
-                new[] { new ValidationErrorDto { PropertyName = "System", Message = "Validation system error" } },
+                new[] { new ValidationErrorDto { PropertyName = "System", Message = "Schema validation system error" } },
                 "System validation error");
+        }
+    }
+
+    public async Task<string?> GetConfigurationSchemaAsync(string gAgentNamespace)
+    {
+        try
+        {
+            _logger.LogDebug("Getting configuration schema for GAgent: {GAgentNamespace}", gAgentNamespace);
+            
+            // Find configuration type by GAgent namespace
+            var configType = FindConfigTypeByAgentNamespace(gAgentNamespace);
+            if (configType == null)
+            {
+                _logger.LogWarning("No configuration type found for GAgent: {GAgentNamespace}", gAgentNamespace);
+                return null;
+            }
+
+            // Get JSON Schema using SchemaProvider
+            var schema = _schemaProvider.GetTypeSchema(configType);
+            
+            _logger.LogDebug("Generated schema for configuration type {ConfigType}", configType.Name);
+            
+            // Return schema as JSON string
+            return schema.ToJson();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting configuration schema for GAgent: {GAgentNamespace}", gAgentNamespace);
+            return null;
         }
     }
 }
