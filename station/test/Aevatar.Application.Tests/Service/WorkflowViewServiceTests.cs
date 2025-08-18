@@ -412,35 +412,26 @@ public class WorkflowViewServiceTests
     }
 
     [Fact]
-    public async Task CreateDefaultWorkflowAsync_CallsRequiredServices()
+    public async Task CreateDefaultWorkflowAsync_CallsGAgentFactoryCorrectly()
     {
-        // This test verifies the method structure and service interactions
-        // Note: Due to Orleans GAgent Factory complexity, we focus on testing 
-        // the parts we can control - the service interactions
+        // This test verifies the method attempts to call the GAgent Factory
+        // Due to Orleans complexity (extension methods cannot be mocked), we simulate the expected failure
         
-        var emptyWorkflowList = new List<AgentInstanceDto>();
-        var expectedAgentDto = CreateTestAgentDto(Guid.NewGuid(), "test workflow");
-        
-        _mockAgentService.Setup(x => x.GetAllAgentInstances(It.IsAny<GetAllAgentInstancesQueryDto>()))
-            .ReturnsAsync(emptyWorkflowList);
+        var callCount = 0;
+        _mockGAgentFactory.Setup(x => x.GetGAgentAsync<IWorkflowViewGAgent>(Guid.Empty, null))
+            .Callback(() => callCount++)
+            .ThrowsAsync(new InvalidOperationException("Orleans GAgent Factory not available in unit test"));
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            () => _workflowViewService.CreateDefaultWorkflowAsync());
             
-        _mockAgentService.Setup(x => x.CreateAgentAsync(It.IsAny<CreateAgentInputDto>()))
-            .ReturnsAsync(expectedAgentDto);
-
-        // Act - This will fail at GAgent factory level, but that's expected in unit tests
-        // The important thing is that we can verify the method exists and has correct structure
-        try
-        {
-            await _workflowViewService.CreateDefaultWorkflowAsync();
-        }
-        catch (NullReferenceException)
-        {
-            // Expected due to Orleans GAgent Factory not being mockable in unit test environment
-            // This is acceptable as we're primarily testing the method structure exists
-        }
-
-        // The key verification is that the method signature and basic structure are correct
-        // Integration tests or full system tests would be needed to test the Orleans interaction
+        exception.Message.ShouldBe("Orleans GAgent Factory not available in unit test");
+        callCount.ShouldBe(1, "GAgent Factory should be called exactly once");
+        
+        // Verify other services were not called due to early failure
+        _mockAgentService.Verify(x => x.GetAllAgentInstances(It.IsAny<GetAllAgentInstancesQueryDto>()), Times.Never);
+        _mockAgentService.Verify(x => x.CreateAgentAsync(It.IsAny<CreateAgentInputDto>()), Times.Never);
     }
 
     // Note: Due to the complexity of mocking Orleans GAgent Factory in unit tests,
