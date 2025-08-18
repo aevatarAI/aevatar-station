@@ -105,7 +105,6 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
     {
         _logger.LogDebug("Finding config type for agent: {AgentNamespace}", agentNamespace);
         
-        var systemAgents = _agentOptions.CurrentValue.SystemAgentList;
         var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
         
         // Find the specific agent type by namespace
@@ -116,10 +115,10 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
             return null;
         }
         
-        // Skip Orleans generated types and system agents
-        if (agentType.Namespace.StartsWith("OrleansCodeGen") || systemAgents.Contains(agentType.Name))
+        // Skip Orleans generated types only
+        if (agentType.Namespace.StartsWith("OrleansCodeGen"))
         {
-            _logger.LogWarning("Agent type is system/generated: {AgentNamespace}", agentNamespace);
+            _logger.LogWarning("Agent type is Orleans generated: {AgentNamespace}", agentNamespace);
             return null;
         }
         
