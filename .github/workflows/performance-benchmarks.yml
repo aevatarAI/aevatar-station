@@ -23,7 +23,7 @@ on:
       latency_args:
         description: JSON for LatencyBenchmark params
         required: false
-        default: '{"maxConcurrency":16,"duration":120,"warmup":5,"eps":10}'
+        default: '{"maxConcurrency":16,"duration":120,"warmup":5,"eps":1}'
       thresholds:
         description: JSON thresholds for benchmarks
         required: false
@@ -58,7 +58,7 @@ jobs:
       LAT_MAX_CONCURRENCY: '16'
       LAT_DURATION: '120'
       LAT_WARMUP: '5'
-      LAT_EPS: '10'
+      LAT_EPS: '1'
 
     services:
       mongodb:
