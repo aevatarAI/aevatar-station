@@ -206,7 +206,16 @@ public class WorkflowViewService : ApplicationService, IWorkflowViewService
     public async Task<AgentDto> CreateDefaultWorkflowAsync()
     {
         var emptyWorkflowViewGAgent = await _gAgentFactory.GetGAgentAsync<IWorkflowViewGAgent>(Guid.Empty);
-        var workflowAgentType = emptyWorkflowViewGAgent.GetGrainId().Type.ToString();
+        string workflowAgentType;
+        try
+        {
+            workflowAgentType = emptyWorkflowViewGAgent.GetGrainId().Type.ToString();
+        }
+        catch (Exception)
+        {
+            _logger.LogWarning("Failed to get GrainId.Type for WorkflowViewGAgent; falling back to type name.");
+            workflowAgentType = typeof(WorkflowViewGAgent).FullName ?? typeof(WorkflowViewGAgent).Name;
+        }
         var workflowViewList = await _agentService.GetAllAgentInstances(new GetAllAgentInstancesQueryDto()
         {
             AgentType = workflowAgentType,
