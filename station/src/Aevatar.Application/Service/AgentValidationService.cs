@@ -44,13 +44,13 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
     {
         try
         {
-            _logger.LogInformation("🔍 Starting validation for GAgent: {GAgentNamespace}", 
+            _logger.LogInformation("Starting validation for GAgent: {GAgentNamespace}", 
                 request?.GAgentNamespace ?? "null");
             
             // Handle null request - this is now handled in service layer
             if (request == null)
             {
-                _logger.LogWarning("⚠️  Received null validation request");
+                _logger.LogWarning("Received null validation request");
                 return ConfigValidationResultDto.Failure(
                     new[] { new ValidationErrorDto { PropertyName = "Request", Message = "Request body is required" } },
                     "Invalid request: Request body cannot be null");
@@ -59,7 +59,7 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
             // Validate request parameters
             if (string.IsNullOrWhiteSpace(request.GAgentNamespace))
             {
-                _logger.LogWarning("⚠️  Missing GAgent namespace in validation request");
+                _logger.LogWarning("Missing GAgent namespace in validation request");
                 return ConfigValidationResultDto.Failure(
                     new[] { new ValidationErrorDto { PropertyName = nameof(request.GAgentNamespace), Message = "Complete GAgent Namespace is required" } },
                     "Missing required GAgent Namespace");
@@ -67,7 +67,7 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
 
             if (string.IsNullOrWhiteSpace(request.ConfigJson))
             {
-                _logger.LogWarning("⚠️  Missing configuration JSON in validation request");
+                _logger.LogWarning("Missing configuration JSON in validation request");
                 return ConfigValidationResultDto.Failure(
                     new[] { new ValidationErrorDto { PropertyName = nameof(request.ConfigJson), Message = "Configuration JSON is required" } },
                     "Missing required Configuration JSON");
@@ -77,7 +77,7 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
             var configType = FindConfigTypeByAgentNamespace(request.GAgentNamespace);
             if (configType == null)
             {
-                _logger.LogWarning("⚠️  Unknown GAgent type: {GAgentNamespace}", request.GAgentNamespace);
+                _logger.LogWarning("Unknown GAgent type: {GAgentNamespace}", request.GAgentNamespace);
                 return ConfigValidationResultDto.Failure(
                     new[] { new ValidationErrorDto { PropertyName = nameof(request.GAgentNamespace), Message = $"Unknown GAgent type: {request.GAgentNamespace}" } },
                     $"GAgent type '{request.GAgentNamespace}' not found or no corresponding configuration type available");
@@ -86,14 +86,14 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
             // Validate configuration JSON
             var result = await ValidateConfigByTypeAsync(configType, request.ConfigJson);
             
-            _logger.LogInformation("✅ Validation completed for GAgent: {GAgentNamespace}, IsValid: {IsValid}", 
+            _logger.LogInformation("Validation completed for GAgent: {GAgentNamespace}, IsValid: {IsValid}", 
                 request.GAgentNamespace, result.IsValid);
                 
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "❌ Unexpected error during validation for GAgent: {GAgentNamespace}", 
+            _logger.LogError(ex, "Unexpected error during validation for GAgent: {GAgentNamespace}", 
                 request?.GAgentNamespace ?? "unknown");
             return ConfigValidationResultDto.Failure(
                 new[] { new ValidationErrorDto { PropertyName = "System", Message = "Internal server error" } },
@@ -103,7 +103,7 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
 
     private Type? FindConfigTypeByAgentNamespace(string agentNamespace)
     {
-        _logger.LogDebug("🔍 Finding config type for agent: {AgentNamespace}", agentNamespace);
+        _logger.LogDebug("Finding config type for agent: {AgentNamespace}", agentNamespace);
         
         var systemAgents = _agentOptions.CurrentValue.SystemAgentList;
         var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
@@ -112,14 +112,14 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
         var agentType = availableGAgents.FirstOrDefault(a => a.FullName == agentNamespace);
         if (agentType == null)
         {
-            _logger.LogWarning("⚠️  Agent type not found: {AgentNamespace}", agentNamespace);
+            _logger.LogWarning("Agent type not found: {AgentNamespace}", agentNamespace);
             return null;
         }
         
         // Skip Orleans generated types and system agents
         if (agentType.Namespace.StartsWith("OrleansCodeGen") || systemAgents.Contains(agentType.Name))
         {
-            _logger.LogWarning("⚠️  Agent type is system/generated: {AgentNamespace}", agentNamespace);
+            _logger.LogWarning("Agent type is system/generated: {AgentNamespace}", agentNamespace);
             return null;
         }
         
@@ -128,17 +128,17 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
             var configType = FindConfigTypeInAgentAssembly(agentType);
             if (configType != null)
             {
-                _logger.LogDebug("✅ Found config type: {AgentType} -> {ConfigType}", agentType.FullName, configType.FullName);
+                _logger.LogDebug("Found config type: {AgentType} -> {ConfigType}", agentType.FullName, configType.FullName);
             }
             else
             {
-                _logger.LogWarning("⚠️  No config type found for agent: {AgentType}", agentType.FullName);
+                _logger.LogWarning("No config type found for agent: {AgentType}", agentType.FullName);
             }
             return configType;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "⚠️  Failed to find config type for agent {AgentType}: {ErrorMessage}", 
+            _logger.LogWarning(ex, "Failed to find config type for agent {AgentType}: {ErrorMessage}", 
                 agentType.FullName, ex.Message);
             return null;
         }
@@ -152,7 +152,7 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
             var configType = ExtractConfigurationFromGenericParameters(agentType);
             if (configType != null)
             {
-                _logger.LogDebug("✅ Found config type via generic parameters: {ConfigType}", configType.FullName);
+                _logger.LogDebug("Found config type via generic parameters: {ConfigType}", configType.FullName);
                 return configType;
             }
 
@@ -167,14 +167,14 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
             
             if (configType != null)
             {
-                _logger.LogDebug("✅ Found config type via assembly scan: {ConfigType}", configType.FullName);
+                _logger.LogDebug("Found config type via assembly scan: {ConfigType}", configType.FullName);
             }
             
             return configType;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "⚠️  Error finding config type for agent {AgentType}: {ErrorMessage}", 
+            _logger.LogWarning(ex, "Error finding config type for agent {AgentType}: {ErrorMessage}", 
                 agentType.FullName, ex.Message);
             return null;
         }
