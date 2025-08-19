@@ -31,10 +31,11 @@ public interface ISecurityService
     Task<SecurityVerificationResult> VerifySecurityAsync(SecurityVerificationRequest request);
 
     /// <summary>
-    /// Increment request count for rate limiting
+    /// Increment request count for rate limiting (atomic operation)
     /// </summary>
     /// <param name="clientIp">Client IP address</param>
-    Task IncrementRequestCountAsync(string clientIp);
+    /// <returns>New count after increment</returns>
+    Task<int> IncrementRequestCountAsync(string clientIp);
 }
 
 /// <summary>

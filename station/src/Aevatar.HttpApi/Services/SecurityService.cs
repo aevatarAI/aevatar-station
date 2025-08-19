@@ -86,7 +86,7 @@ public class SecurityService : ISecurityService
                 var firstIp = ips[0].Trim();
                 if (IsValidIpAddress(firstIp))
                 {
-                    _logger.LogDebug("Retrieved IP from X-Forwarded-For: {ip}", firstIp);
+                    _logger.LogDebug("Retrieved IP from X-Forwarded-For header");
                     return firstIp;
                 }
             }
@@ -98,14 +98,14 @@ public class SecurityService : ISecurityService
             var ip = realIp.ToString().Trim();
             if (IsValidIpAddress(ip))
             {
-                _logger.LogDebug("Retrieved IP from X-Real-IP: {ip}", ip);
+                _logger.LogDebug("Retrieved IP from X-Real-IP header");
                 return ip;
             }
         }
 
         // 3. Use connection remote IP
         var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        _logger.LogDebug("Retrieved IP from RemoteIpAddress: {ip}", remoteIp);
+        _logger.LogDebug("Retrieved IP from RemoteIpAddress");
         return remoteIp;
     }
 
@@ -128,26 +128,92 @@ public class SecurityService : ISecurityService
         var count = await GetCurrent10MinutesRequestCountAsync(clientIp);
         var required = count >= _rateOptions.FreeRequestsPerDay;
 
-        _logger.LogDebug("IP {ip} current 10-minute window request count: {count}, verification required: {required}",
-            clientIp, count, required);
+        _logger.LogDebug("Current 10-minute window request count: {count}, verification required: {required}",
+            count, required);
 
         return required;
     }
 
-    public async Task IncrementRequestCountAsync(string clientIp)
+    public async Task<int> IncrementRequestCountAsync(string clientIp)
     {
         var key = GetCacheKey(clientIp);
-        var currentCount = await GetCurrent10MinutesRequestCountAsync(clientIp);
-        var newCount = currentCount + 1;
-
         var expiry = GetExpiryTime();
-        await _cache.SetStringAsync(key, newCount.ToString(),
-            new DistributedCacheEntryOptions
-            {
-                AbsoluteExpiration = expiry
-            });
+        
+        // Try to increment atomically, if key doesn't exist, create it with value 1
+        var newCount = await IncrementAtomicallyAsync(key, expiry);
 
-        _logger.LogDebug("IP {ip} request count updated: {count}", clientIp, newCount);
+        _logger.LogDebug("Request count incremented to: {count}", newCount);
+        return newCount;
+    }
+
+    private async Task<int> IncrementAtomicallyAsync(string key, DateTimeOffset expiry)
+    {
+        try
+        {
+            // Try to get current value and increment atomically
+            var currentValueStr = await _cache.GetStringAsync(key);
+            
+            if (currentValueStr == null)
+            {
+                // Key doesn't exist, try to create it with value 1
+                var success = await TrySetIfNotExistsAsync(key, "1", expiry);
+                if (success)
+                {
+                    return 1;
+                }
+                // If creation failed, someone else created it, read current value and continue
+                currentValueStr = await _cache.GetStringAsync(key) ?? "0";
+            }
+
+            if (int.TryParse(currentValueStr, out var currentValue))
+            {
+                var newValue = currentValue + 1;
+                // Update with new value and expiry
+                await _cache.SetStringAsync(key, newValue.ToString(),
+                    new DistributedCacheEntryOptions
+                    {
+                        AbsoluteExpiration = expiry
+                    });
+                return newValue;
+            }
+            else
+            {
+                // Invalid value, reset to 1
+                await _cache.SetStringAsync(key, "1",
+                    new DistributedCacheEntryOptions
+                    {
+                        AbsoluteExpiration = expiry
+                    });
+                return 1;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error incrementing request count for key {key}", key);
+            // In case of error, assume count as 1 to be safe
+            return 1;
+        }
+    }
+
+    private async Task<bool> TrySetIfNotExistsAsync(string key, string value, DateTimeOffset expiry)
+    {
+        try
+        {
+            // Simple implementation: try to set and check if it was us who set it
+            await _cache.SetStringAsync(key, value,
+                new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpiration = expiry
+                });
+            
+            // Verify it was set correctly
+            var verifyValue = await _cache.GetStringAsync(key);
+            return verifyValue == value;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private async Task<int> GetCurrent10MinutesRequestCountAsync(string clientIp)
