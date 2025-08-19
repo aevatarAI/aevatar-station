@@ -225,9 +225,7 @@ public class WorkflowViewService : ApplicationService, IWorkflowViewService
         {
             throw new UserFriendlyException("User have workflow already.");
         }
-
-        var configProperties = "{\"workflowNodeList\":[{\"agentType\":\"Aevatar.GAgents.InputGAgent.GAgent.InputGAgent\",\"name\":\"MyInputGAgent\",\"extendedData\":{\"xPosition\":\"2\",\"yPosition\":\"16\"},\"jsonProperties\":\"{\\\"memberName\\\":\\\"inputGAgent1\\\",\\\"input\\\":\\\"I want to eat, get me a choose.\\\"}\",\"nodeId\":\"45dc7d32-1002-4479-8616-b12cbc112bb4\"},{\"agentType\":\"Aevatar.GAgents.Twitter.GAgents.ChatAIAgent.ChatAIGAgent\",\"name\":\"ai\",\"extendedData\":{\"xPosition\":\"365.1172008973645\",\"yPosition\":\"-12.62092346330003\"},\"jsonProperties\":\"{\\\"memberName\\\":\\\"ai\\\",\\\"instructions\\\":\\\"You are a helpful AI assistant\\\",\\\"systemLLM\\\":\\\"OpenAI\\\",\\\"mcpServers\\\":[],\\\"toolGAgentTypes\\\":[],\\\"toolGAgents\\\":[]}\",\"nodeId\":\"6c15ac63-ce9b-4ef2-a982-171e4ed94bdb\"}],\"workflowNodeUnitList\":[{\"nodeId\":\"45dc7d32-1002-4479-8616-b12cbc112bb4\",\"nextNodeId\":\"6c15ac63-ce9b-4ef2-a982-171e4ed94bdb\"}],\"name\":\"default workflow\"}";
-        var properties = JsonConvert.DeserializeObject<Dictionary<string, object>?>(configProperties);
+        var properties = JsonConvert.DeserializeObject<Dictionary<string, object>?>(DefaultWorkflowProperties);
         var agentDto = await _agentService.CreateAgentAsync(new CreateAgentInputDto()
         {
             Name = properties!["name"].ToString()!,
@@ -236,6 +234,9 @@ public class WorkflowViewService : ApplicationService, IWorkflowViewService
         });
         return agentDto;
     }
+
+    private const string DefaultWorkflowProperties =
+        "{\"workflowNodeList\":[{\"agentType\":\"Aevatar.GAgents.InputGAgent.GAgent.InputGAgent\",\"name\":\"MyInputGAgent\",\"extendedData\":{\"xPosition\":\"2\",\"yPosition\":\"16\"},\"jsonProperties\":\"{\\\"memberName\\\":\\\"inputGAgent1\\\",\\\"input\\\":\\\"I want to eat, get me a choose.\\\"}\",\"nodeId\":\"45dc7d32-1002-4479-8616-b12cbc112bb4\"},{\"agentType\":\"Aevatar.GAgents.Twitter.GAgents.ChatAIAgent.ChatAIGAgent\",\"name\":\"ai\",\"extendedData\":{\"xPosition\":\"365.1172008973645\",\"yPosition\":\"-12.62092346330003\"},\"jsonProperties\":\"{\\\"memberName\\\":\\\"ai\\\",\\\"instructions\\\":\\\"You are a helpful AI assistant\\\",\\\"systemLLM\\\":\\\"OpenAI\\\",\\\"mcpServers\\\":[],\\\"toolGAgentTypes\\\":[],\\\"toolGAgents\\\":[]}\",\"nodeId\":\"6c15ac63-ce9b-4ef2-a982-171e4ed94bdb\"}],\"workflowNodeUnitList\":[{\"nodeId\":\"45dc7d32-1002-4479-8616-b12cbc112bb4\",\"nextNodeId\":\"6c15ac63-ce9b-4ef2-a982-171e4ed94bdb\"}],\"name\":\"default workflow\"}";
 }
 
 public interface IWorkflowViewService
