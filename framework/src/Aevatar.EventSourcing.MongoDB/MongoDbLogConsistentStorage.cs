@@ -11,6 +11,7 @@ using MongoDB.Driver;
 using Orleans.Configuration;
 using Orleans.Storage;
 using Orleans.Providers.MongoDB.StorageProviders.Serializers;
+using System.Collections.Concurrent;
 
 namespace Aevatar.EventSourcing.MongoDB;
 
@@ -29,6 +30,9 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
     private readonly string _fieldData = "snapshot";
     private readonly IGrainStateSerializer _grainStateSerializer;
     
+    // Orleans pattern: Create collection instances once during Init, use for all operations
+    private readonly ConcurrentDictionary<string, IEventSourcingCollection> _collections = new();
+
     public MongoDbLogConsistentStorage(string name, MongoDbStorageOptions options,
         IOptions<ClusterOptions> clusterOptions, ILogger<MongoDbLogConsistentStorage> logger,
         IEventSourcingCollectionFactory collectionFactory)
@@ -60,7 +64,7 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
         var collectionName = GetStreamName(grainId);
         try
         {
-            var collection = GetCollection(collectionName).GetCollection();
+            var collection = GetCollection(collectionName);
 
             var filter = Builders<BsonDocument>.Filter.And(
                 Builders<BsonDocument>.Filter.Eq("GrainId", grainId.ToString()),
@@ -101,15 +105,7 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
         return _client!.GetDatabase(_mongoDbOptions.Database);
     }
 
-    private IEventSourcingCollection GetCollection(string collectionName)
-    {
-        if (!_initialized || _client == null)
-        {
-            throw new InvalidOperationException("MongoDB client is not initialized. Call Init() first.");
-        }
 
-        return _collectionFactory.CreateCollection(_client, collectionName, _name);
-    }
 
     public async Task<int> GetLastVersionAsync(string grainTypeName, GrainId grainId)
     {
@@ -121,7 +117,7 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
         var collectionName = GetStreamName(grainId);
         try
         {
-            var collection = GetCollection(collectionName).GetCollection();
+            var collection = GetCollection(collectionName);
 
             var grainIdString = grainId.ToString();
             var filter = Builders<BsonDocument>.Filter.Eq("GrainId", grainIdString);
@@ -167,7 +163,7 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
 
         try
         {
-            var collection = GetCollection(collectionName).GetCollection();
+            var collection = GetCollection(collectionName);
 
             var currentVersion = await GetLastVersionAsync(grainTypeName, grainId).ConfigureAwait(false);
             if (currentVersion != expectedVersion)
@@ -175,6 +171,9 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
                 throw new InconsistentStateException(
                     $"Version conflict ({nameof(AppendAsync)}): ServiceId={_serviceId} ProviderName={_name} GrainType={grainTypeName} GrainId={grainId} Version={expectedVersion}.");
             }
+
+            _logger.LogInformation("AppendAsync: ServiceId={ServiceId} ProviderName={ProviderName} GrainType={GrainType} GrainId={GrainId} ExpectedVersion={ExpectedVersion} CurrentVersion={CurrentVersion}",
+                _serviceId, _name, grainTypeName, grainId, expectedVersion, currentVersion);
 
             var grainIdString = grainId.ToString();
             var documents = new List<BsonDocument>();
@@ -257,6 +256,10 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
 
         try
         {
+            // Clear collection cache on close
+            _collections.Clear();
+            _logger.LogInformation("Close: Name={Name} ServiceId={ServiceId} Cluster={Cluster}", _name, _serviceId, _client.Cluster == null);
+            
             _client.Cluster.Dispose();
         }
         catch (Exception ex)
@@ -269,5 +272,14 @@ public class MongoDbLogConsistentStorage : ILogConsistentStorage, ILifecyclePart
     private string GetStreamName(GrainId grainId)
     {
         return $"{_serviceId}/{_name}/log/{grainId.Type}";
+    }
+
+    private IMongoCollection<BsonDocument> GetCollection(string collectionName)
+    {
+        // Orleans pattern: use GetOrAdd to ensure collection is created and set up only once per collection name
+        var collection = _collections.GetOrAdd(collectionName, x =>
+            _collectionFactory.CreateCollection(_client, collectionName, _name));
+        
+        return collection.GetCollection();
     }
 }

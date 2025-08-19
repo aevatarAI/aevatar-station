@@ -1,8 +1,10 @@
-﻿using System;
+using System;
 using System.Linq;
 using Aevatar.Account;
 using Aevatar.ApiRequests;
 using Aevatar.Application.Grains;
+using Aevatar.Application.Service;
+using Aevatar.Service;
 using Aevatar.BlobStorings;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
@@ -66,6 +68,7 @@ public class AevatarApplicationModule : AbpModule
         context.Services.AddSingleton<ISchemaProvider, SchemaProvider>();
         Configure<WebhookDeployOptions>(configuration.GetSection("WebhookDeploy"));
         Configure<AgentOptions>(configuration.GetSection("Agent"));
+        Configure<AgentDefaultValuesOptions>(configuration.GetSection("AgentDefaults"));
         context.Services.AddTransient<IHostDeployManager, KubernetesHostManager>();
         context.Services.AddTransient<IHostCopyManager, KubernetesHostManager>();
         context.Services.AddSingleton<INotificationHandlerFactory, NotificationProcessorFactory>();
@@ -76,5 +79,23 @@ public class AevatarApplicationModule : AbpModule
         Configure<ApiRequestOptions>(configuration.GetSection("ApiRequest"));
         Configure<BlobStoringOptions>(configuration.GetSection("BlobStoring"));
         Configure<DebugModeOptions>(configuration.GetSection("DebugMode"));
+        
+        // 配置 AI 服务提示词选项
+        Configure<AIServicePromptOptions>(configuration.GetSection("AIServicePrompt"));
+        
+        // 配置工作流编排服务
+        ConfigureWorkflowOrchestrationServices(context);
+    }
+    
+    /// <summary>
+    /// Configure workflow orchestration related services
+    /// </summary>
+    private void ConfigureWorkflowOrchestrationServices(ServiceConfigurationContext context)
+    {
+        // Unified workflow orchestration service - includes prompt building and JSON validation functionality
+        context.Services.AddTransient<IWorkflowOrchestrationService, WorkflowOrchestrationService>();
+        
+        // Text completion service  
+        context.Services.AddTransient<ITextCompletionService, TextCompletionService>();
     }
 }

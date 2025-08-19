@@ -4,20 +4,17 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Aevatar.Agent;
-using Aevatar.Agents.Creator;
-using Aevatar.Agents.Creator.Models;
 using Aevatar.Application.Grains.Agents.Creator;
 using Aevatar.Application.Grains.Subscription;
 using Aevatar.Common;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
-using Aevatar.CQRS.Dto;
-using Aevatar.CQRS.Provider;
 using Aevatar.Exceptions;
 using Aevatar.Options;
 using Aevatar.Query;
 using Aevatar.Schema;
 using Aevatar.Station.Feature.CreatorGAgent;
+using Aevatar.GAgents.AIGAgent.Agent;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -37,35 +34,35 @@ namespace Aevatar.Service;
 public class AgentService : ApplicationService, IAgentService
 {
     private readonly IClusterClient _clusterClient;
-    private readonly ICQRSProvider _cqrsProvider;
     private readonly ILogger<AgentService> _logger;
     private readonly IGAgentFactory _gAgentFactory;
     private readonly IGAgentManager _gAgentManager;
     private readonly IUserAppService _userAppService;
     private readonly IOptionsMonitor<AgentOptions> _agentOptions;
+    private readonly IOptionsMonitor<AgentDefaultValuesOptions> _agentDefaultValuesOptions;
     private readonly GrainTypeResolver _grainTypeResolver;
     private readonly ISchemaProvider _schemaProvider;
     private readonly IIndexingService _indexingService;
 
     public AgentService(
         IClusterClient clusterClient,
-        ICQRSProvider cqrsProvider,
         ILogger<AgentService> logger,
         IGAgentFactory gAgentFactory,
         IGAgentManager gAgentManager,
         IUserAppService userAppService,
         IOptionsMonitor<AgentOptions> agentOptions,
+        IOptionsMonitor<AgentDefaultValuesOptions> agentDefaultValuesOptions,
         GrainTypeResolver grainTypeResolver,
         ISchemaProvider schemaProvider,
         IIndexingService indexingService)
     {
         _clusterClient = clusterClient;
-        _cqrsProvider = cqrsProvider;
         _logger = logger;
         _gAgentFactory = gAgentFactory;
         _gAgentManager = gAgentManager;
         _userAppService = userAppService;
         _agentOptions = agentOptions;
+        _agentDefaultValuesOptions = agentDefaultValuesOptions;
         _grainTypeResolver = grainTypeResolver;
         _schemaProvider = schemaProvider;
         _indexingService = indexingService;
@@ -82,17 +79,19 @@ public class AgentService : ApplicationService, IAgentService
 
         foreach (var agentType in businessAgentTypes)
         {
-            var grainType = _grainTypeResolver.GetGrainType(agentType).ToString();
-            if (grainType != null)
+            try
             {
-                var agentTypeData = new AgentTypeData
+                var grainType = _grainTypeResolver.GetGrainType(agentType).ToString();
+                if (grainType != null)
                 {
-                    FullName = agentType.FullName,
-                };
-                var grainId = GrainId.Create(grainType,
-                    GuidUtil.GuidToGrainKey(
-                        GuidUtil.StringToGuid("AgentDefaultId"))); // make sure only one agent instance for each type
-                var agent = await _gAgentFactory.GetGAgentAsync(grainId);
+                    var agentTypeData = new AgentTypeData
+                    {
+                        FullName = agentType.FullName,
+                    };
+                    var grainId = GrainId.Create(grainType,
+                        GuidUtil.GuidToGrainKey(
+                            GuidUtil.StringToGuid("AgentDefaultId"))); // make sure only one agent instance for each type
+                    var agent = await _gAgentFactory.GetGAgentAsync(grainId);
                 var initializeDtoType = await agent.GetConfigurationTypeAsync();
                 if (initializeDtoType == null || initializeDtoType.IsAbstract)
                 {
@@ -120,9 +119,17 @@ public class AgentService : ApplicationService, IAgentService
                     propertyDtos.Add(propertyDto);
                 }
 
-                initializationData.Properties = propertyDtos;
-                agentTypeData.InitializationData = initializationData;
-                dict[grainType] = agentTypeData;
+                    initializationData.Properties = propertyDtos;
+                    agentTypeData.InitializationData = initializationData;
+                    dict[grainType] = agentTypeData;
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log and skip problematic grain types (e.g., generic types with invalid arity)
+                _logger.LogWarning(ex, "Failed to process agent type {AgentType}: {ErrorMessage}", 
+                    agentType.FullName, ex.Message);
+                continue;
             }
         }
 
@@ -224,17 +231,28 @@ public class AgentService : ApplicationService, IAgentService
                     {
                         var value = property.GetValue(instance);
 
-                        // Convert all default values to list format
-                        
-                        if (value == null)
+                        // Special handling for AIGAgent systemLLM property
+                        if (configurationType != null && typeof(IAIGAgent).IsAssignableFrom(configurationType) && 
+                            string.Equals(property.Name, "systemLLM", StringComparison.OrdinalIgnoreCase))
                         {
-                            // Convert null values to empty list
-                            defaultValues[propertyName] = new List<object>();
+                            var systemLLMList = _agentDefaultValuesOptions.CurrentValue.SystemLLMConfigs;
+                            defaultValues[propertyName] = systemLLMList;
+                            _logger.LogInformation("AIGAgent detected, setting systemLLM default values: {SystemLLMList}", 
+                                string.Join(", ", systemLLMList));
                         }
                         else
                         {
-                            // Convert non-null values to single-item list
-                            defaultValues[propertyName] = new List<object> { value };
+                            // Convert all default values to list format
+                            if (value == null)
+                            {
+                                // Convert null values to empty list
+                                defaultValues[propertyName] = new List<object>();
+                            }
+                            else
+                            {
+                                // Convert non-null values to single-item list
+                                defaultValues[propertyName] = new List<object> { value };
+                            }
                         }
                     }
                     catch (Exception ex)
@@ -657,7 +675,6 @@ public class AgentService : ApplicationService, IAgentService
             SubAgents = subAgentGuids
         };
     }
-
 
     public async Task RemoveAllSubAgentAsync(Guid guid)
     {

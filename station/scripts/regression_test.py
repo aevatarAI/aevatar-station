@@ -562,6 +562,126 @@ def test_permission(api_headers, api_admin_headers):
     assert_status_code(response)
     assert response.json()["data"]["count"] > 0
 
+def test_workflow_orchestration_generate(api_headers):
+    """test workflow generation"""
+    # test valid workflow generation request
+    workflow_request = {
+        "userGoal": "Create a social media marketing campaign workflow that includes content creation, review, and publishing"
+    }
+    
+    response = requests.post(
+        f"{API_HOST}/api/workflow/generate",
+        json=workflow_request,
+        headers=api_headers,
+        verify=False
+    )
+    assert_status_code(response)
+    
+    # Verify response structure
+    response_data = response.json()
+    logger.debug(f"Workflow generation response: {response_data}")
+    
+    assert "data" in response_data
+    workflow_data = response_data["data"]
+    
+    if workflow_data is not None:
+        # If workflow was generated, verify structure
+        assert "name" in workflow_data
+        assert "properties" in workflow_data
+        assert workflow_data["name"] is not None
+        assert len(workflow_data["name"]) > 0
+        
+        properties = workflow_data["properties"]
+        assert "workflowNodeList" in properties
+        assert "workflowNodeUnitList" in properties
+        
+        logger.info(f"Generated workflow '{workflow_data['name']}' with {len(properties['workflowNodeList'])} nodes")
+    else:
+        # If workflow generation returned null, that's acceptable (might happen if AI service unavailable)
+        logger.warning("Workflow generation returned null - this might indicate AI service is unavailable")
+
+
+
+
+
+def test_text_completion_generate(api_headers):
+    """test text completion generation"""
+    # test valid text completion request
+    completion_request = {
+        "userGoal": "I want to write a blog post about artificial intelligence and its impact on modern"
+    }
+    
+    response = requests.post(
+        f"{API_HOST}/api/workflow/text-completion/generate",
+        json=completion_request,
+        headers=api_headers,
+        verify=False
+    )
+    assert_status_code(response)
+    
+    # Verify response structure
+    response_data = response.json()
+    logger.debug(f"Text completion response: {response_data}")
+    
+    assert "data" in response_data
+    completion_data = response_data["data"]
+    
+    assert "completions" in completion_data
+    completions = completion_data["completions"]
+    assert isinstance(completions, list)
+    
+    # Should return a list of completions (could be empty if AI service unavailable)
+    logger.info(f"Generated {len(completions)} text completions")
+    
+    # If completions were generated, verify they are strings
+    for completion in completions:
+        assert isinstance(completion, str)
+        assert len(completion) > 0
+
+
+def test_workflow_services_comprehensive(api_headers):
+    """comprehensive test for both workflow services"""
+    logger.info("Running comprehensive workflow services test")
+    
+    # Test workflow generation with a realistic scenario
+    workflow_request = {
+        "userGoal": "Create an e-commerce order processing workflow that handles payment verification, inventory check, shipping, and customer notification"
+    }
+    
+    response = requests.post(
+        f"{API_HOST}/api/workflow/generate",
+        json=workflow_request,
+        headers=api_headers,
+        verify=False
+    )
+    assert_status_code(response)
+    
+    workflow_result = response.json()["data"]
+    logger.debug(f"E-commerce workflow result: {workflow_result}")
+    
+    # Test text completion with a business scenario
+    completion_request = {
+        "userGoal": "Our company is implementing a new customer service strategy that focuses on"
+    }
+    
+    response = requests.post(
+        f"{API_HOST}/api/workflow/text-completion/generate",
+        json=completion_request,
+        headers=api_headers,
+        verify=False
+    )
+    assert_status_code(response)
+    
+    completion_result = response.json()["data"]
+    logger.debug(f"Business text completion result: {completion_result}")
+    
+    # Verify both services are operational
+    assert completion_result is not None
+    assert "completions" in completion_result
+    
+    logger.info("Comprehensive workflow services test completed successfully")
+
+
 def test_publish_workflow_view(api_headers, api_admin_headers):
     """test publish workflow view"""
     # create workflowView agent
@@ -609,4 +729,3 @@ def test_publish_workflow_view(api_headers, api_admin_headers):
     
     assert test_agent_id != "00000000-0000-0000-0000-000000000000"
     assert workflow_agent_id != "00000000-0000-0000-0000-000000000000"
-    
