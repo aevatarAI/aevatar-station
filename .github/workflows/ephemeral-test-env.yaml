@@ -10,7 +10,7 @@ on:
       cors_urls:
         description: "Comma-separated list of allowed CORS URLs"
         required: true
-        default: 'http://localhost:3000,http://localhost:5173,http://localhost:5174,https://*.aevatar.ai'
+        default: 'http://localhost:3000,http://localhost:5173,http://localhost:5174,https://*.aevatar.ai,http://*.aevatar.ai'
       frontend_needed:
         description: 'Whether to deploy the frontend'
         type: boolean
@@ -244,6 +244,7 @@ jobs:
           echo "auth_server_url=$(echo $content | jq -r '.auth_server_url')" >> $GITHUB_OUTPUT
           echo "api_server_url=$(echo $content | jq -r '.api_server_url')" >> $GITHUB_OUTPUT
           echo "app_url=$(echo $content | jq -r '.app_url')" >> $GITHUB_OUTPUT
+          echo "frontend_url=$(echo $content | jq -r '.frontend_url')" >> $GITHUB_OUTPUT
 
       - name: Set job summary
         run: |
@@ -261,4 +262,5 @@ jobs:
           echo "- **Auth Server URL**: \`${{ steps.extract.outputs.auth_server_url }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **API Server URL**: \`${{ steps.extract.outputs.api_server_url }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **App URL**: \`${{ steps.extract.outputs.app_url }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Frontend URL**: \`${{ steps.extract.outputs.frontend_url }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Configuration Mode**: Ephemeral (ENABLE_EPHEMERAL_CONFIG=true)" >> $GITHUB_STEP_SUMMARY
