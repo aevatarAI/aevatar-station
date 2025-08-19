@@ -24,18 +24,20 @@ public class ProjectService : OrganizationService, IProjectService
 {
     private readonly IProjectDomainRepository _domainRepository;
     private readonly IDeveloperService _developerService;
+    private readonly ISimpleDomainGenerationService _simpleDomainGenerationService;
 
     public ProjectService(OrganizationUnitManager organizationUnitManager, IdentityUserManager identityUserManager,
         IRepository<OrganizationUnit, Guid> organizationUnitRepository, IdentityRoleManager roleManager,
         IPermissionManager permissionManager, IOrganizationPermissionChecker permissionChecker,
         IPermissionDefinitionManager permissionDefinitionManager, IRepository<IdentityUser, Guid> userRepository,
         INotificationService notificationService, IProjectDomainRepository domainRepository,
-        IDeveloperService developerService) :
+        IDeveloperService developerService, ISimpleDomainGenerationService simpleDomainGenerationService) :
         base(organizationUnitManager, identityUserManager, organizationUnitRepository, roleManager, permissionManager,
             permissionChecker, permissionDefinitionManager, userRepository, notificationService)
     {
         _domainRepository = domainRepository;
         _developerService = developerService;
+        _simpleDomainGenerationService = simpleDomainGenerationService;
     }
 
     public async Task<ProjectDto> CreateAsync(CreateProjectDto input)
@@ -84,6 +86,56 @@ public class ProjectService : OrganizationService, IProjectService
 
         var dto = ObjectMapper.Map<OrganizationUnit, ProjectDto>(project);
         dto.DomainName = input.DomainName;
+
+        return dto;
+    }
+
+    /// <summary>
+    /// 创建项目 - V2版本
+    /// 自动基于项目名称生成域名
+    /// </summary>
+    public async Task<ProjectDto> CreateV2Async(CreateProjectV2Dto input)
+    {
+        // 自动生成域名
+        var domainName = await _simpleDomainGenerationService.GenerateFromProjectNameAsync(input.DisplayName);
+
+        var organization = await OrganizationUnitRepository.GetAsync(input.OrganizationId);
+
+        var displayName = input.DisplayName.Trim();
+        var project = new OrganizationUnit(
+            GuidGenerator.Create(),
+            displayName,
+            parentId: organization.Id
+        );
+
+        await _domainRepository.InsertAsync(new ProjectDomain
+        {
+            OrganizationId = organization.Id,
+            ProjectId = project.Id,
+            DomainName = domainName,
+            NormalizedDomainName = domainName.ToUpperInvariant()
+        });
+
+        var ownerRoleId = await AddOwnerRoleAsync(project.Id);
+        var readerRoleId = await AddReaderRoleAsync(project.Id);
+
+        project.ExtraProperties[AevatarConsts.OrganizationTypeKey] = OrganizationType.Project;
+        project.ExtraProperties[AevatarConsts.OrganizationRoleKey] = new List<Guid> { ownerRoleId, readerRoleId };
+
+        try
+        {
+            await OrganizationUnitManager.CreateAsync(project);
+        }
+        catch (BusinessException ex)
+            when (ex.Code == IdentityErrorCodes.DuplicateOrganizationUnitDisplayName)
+        {
+            throw new UserFriendlyException("The same project name already exists");
+        }
+
+        await _developerService.CreateServiceAsync(domainName, project.Id);
+
+        var dto = ObjectMapper.Map<OrganizationUnit, ProjectDto>(project);
+        dto.DomainName = domainName;
 
         return dto;
     }
