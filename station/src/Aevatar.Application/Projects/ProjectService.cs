@@ -75,7 +75,6 @@ public class ProjectService : OrganizationService, IProjectService
         try
         {
             // 检查域名唯一性
-            Logger.LogDebug("Checking domain name uniqueness for: {DomainName}", domainName);
             var domain = await _domainRepository.FirstOrDefaultAsync(o =>
                 o.NormalizedDomainName == domainName.ToUpperInvariant() && o.IsDeleted == false);
             if (domain != null)
@@ -84,12 +83,9 @@ public class ProjectService : OrganizationService, IProjectService
                     domainName, domain.ProjectId);
                 throw new UserFriendlyException($"DomainName: {domainName} already exists");
             }
-            Logger.LogDebug("Domain name is available: {DomainName}", domainName);
 
             // 获取组织信息
-            Logger.LogDebug("Retrieving organization: {OrganizationId}", organizationId);
             var organization = await OrganizationUnitRepository.GetAsync(organizationId);
-            Logger.LogDebug("Organization retrieved successfully: {OrganizationName}", organization.DisplayName);
 
             // 创建项目实体
             var trimmedDisplayName = displayName.Trim();
@@ -103,7 +99,6 @@ public class ProjectService : OrganizationService, IProjectService
                 projectId, trimmedDisplayName);
 
             // 插入域名记录
-            Logger.LogDebug("Creating project domain record for: {DomainName}", domainName);
             await _domainRepository.InsertAsync(new ProjectDomain
             {
                 OrganizationId = organization.Id,
@@ -114,7 +109,6 @@ public class ProjectService : OrganizationService, IProjectService
             Logger.LogInformation("Project domain record created successfully for: {DomainName}", domainName);
 
             // 创建角色
-            Logger.LogDebug("Creating project roles for project: {ProjectId}", project.Id);
             var ownerRoleId = await AddOwnerRoleAsync(project.Id);
             var readerRoleId = await AddReaderRoleAsync(project.Id);
             Logger.LogInformation("Project roles created successfully. OwnerRoleId: {OwnerRoleId}, ReaderRoleId: {ReaderRoleId}", 
@@ -125,7 +119,6 @@ public class ProjectService : OrganizationService, IProjectService
             project.ExtraProperties[AevatarConsts.OrganizationRoleKey] = new List<Guid> { ownerRoleId, readerRoleId };
 
             // 在组织管理器中创建项目
-            Logger.LogDebug("Creating project in OrganizationUnitManager: {ProjectId}", project.Id);
             try
             {
                 await OrganizationUnitManager.CreateAsync(project);
@@ -139,8 +132,6 @@ public class ProjectService : OrganizationService, IProjectService
             }
 
             // 创建开发者服务
-            Logger.LogDebug("Creating developer service for domain: {DomainName}, ProjectId: {ProjectId}", 
-                domainName, project.Id);
             await _developerService.CreateServiceAsync(domainName, project.Id);
             Logger.LogInformation("Developer service created successfully for domain: {DomainName}", domainName);
 
