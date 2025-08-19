@@ -5,7 +5,6 @@ using Aevatar.ApiRequests;
 using Aevatar.Application.Grains;
 using Aevatar.Application.Service;
 using Aevatar.Service;
-using Aevatar.Projects;
 using Aevatar.BlobStorings;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
@@ -86,9 +85,6 @@ public class AevatarApplicationModule : AbpModule
         
         // 配置工作流编排服务
         ConfigureWorkflowOrchestrationServices(context);
-        
-        // 配置域名生成服务
-        context.Services.AddTransient<ISimpleDomainGenerationService, SimpleDomainGenerationService>();
     }
     
     /// <summary>

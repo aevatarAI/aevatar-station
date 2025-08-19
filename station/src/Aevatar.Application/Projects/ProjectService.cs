@@ -24,20 +24,18 @@ public class ProjectService : OrganizationService, IProjectService
 {
     private readonly IProjectDomainRepository _domainRepository;
     private readonly IDeveloperService _developerService;
-    private readonly ISimpleDomainGenerationService _simpleDomainGenerationService;
 
     public ProjectService(OrganizationUnitManager organizationUnitManager, IdentityUserManager identityUserManager,
         IRepository<OrganizationUnit, Guid> organizationUnitRepository, IdentityRoleManager roleManager,
         IPermissionManager permissionManager, IOrganizationPermissionChecker permissionChecker,
         IPermissionDefinitionManager permissionDefinitionManager, IRepository<IdentityUser, Guid> userRepository,
         INotificationService notificationService, IProjectDomainRepository domainRepository,
-        IDeveloperService developerService, ISimpleDomainGenerationService simpleDomainGenerationService) :
+        IDeveloperService developerService) :
         base(organizationUnitManager, identityUserManager, organizationUnitRepository, roleManager, permissionManager,
             permissionChecker, permissionDefinitionManager, userRepository, notificationService)
     {
         _domainRepository = domainRepository;
         _developerService = developerService;
-        _simpleDomainGenerationService = simpleDomainGenerationService;
     }
 
     public async Task<ProjectDto> CreateAsync(CreateProjectDto input)
@@ -97,7 +95,7 @@ public class ProjectService : OrganizationService, IProjectService
     public async Task<ProjectDto> CreateProjectAsync(CreateProjectV2Dto input)
     {
         // 直接基于项目名称生成域名
-        var domainName = _simpleDomainGenerationService.NormalizeProjectNameToDomain(input.DisplayName);
+        var domainName = NormalizeProjectNameToDomain(input.DisplayName);
         
         // 检查域名唯一性，如有冲突则添加数字后缀
         var originalDomain = domainName;
@@ -295,5 +293,30 @@ public class ProjectService : OrganizationService, IProjectService
         {
             await _developerService.DeleteServiceAsync(domain.DomainName);
         }
+    }
+
+    /// <summary>
+    /// 将项目名称规范化为域名格式
+    /// 规则：小写 + 只保留字母数字
+    /// </summary>
+    private string NormalizeProjectNameToDomain(string projectName)
+    {
+        if (string.IsNullOrWhiteSpace(projectName))
+        {
+            throw new ArgumentException("Project name cannot be empty", nameof(projectName));
+        }
+
+        // 规范化：小写 + 只保留字母数字
+        var normalized = new string(projectName
+            .ToLowerInvariant()
+            .Where(char.IsLetterOrDigit)
+            .ToArray());
+
+        if (string.IsNullOrEmpty(normalized))
+        {
+            throw new ArgumentException("Project name must contain at least one letter or digit", nameof(projectName));
+        }
+
+        return normalized;
     }
 }
