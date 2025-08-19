@@ -12,4 +12,7 @@ public interface IProjectService : IOrganizationService
     Task<ListResultDto<ProjectDto>> GetListAsync(GetProjectListDto input);
     Task<ProjectDto> GetProjectAsync(Guid id);
     Task<ProjectDto> CreateDefaultAsync(CreateDefaultProjectDto input);
+    
+    Task SaveRecentUsedProjectAsync(RecentUsedProjectDto input);
+    Task<RecentUsedProjectDto> GetRecentUsedProjectAsync();
 }

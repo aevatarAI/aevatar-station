@@ -11,11 +11,12 @@ using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.Domain.Repositories;
-using Volo.Abp.EventBus.Distributed;
 using Volo.Abp.Identity;
 using Volo.Abp.PermissionManagement;
 using Microsoft.AspNetCore.Identity;
-using IdentityRole = Volo.Abp.Identity.IdentityRole;
+using Newtonsoft.Json;
+using Volo.Abp.Caching;
+using DistributedCacheEntryOptions = Microsoft.Extensions.Caching.Distributed.DistributedCacheEntryOptions;
 using IdentityUser = Volo.Abp.Identity.IdentityUser;
 
 namespace Aevatar.Projects;
@@ -26,19 +27,23 @@ public class ProjectService : OrganizationService, IProjectService
     private readonly IProjectDomainRepository _domainRepository;
     private readonly IDeveloperService _developerService;
     private readonly IOrganizationRoleService _organizationRoleService;
+    private readonly IDistributedCache<string, string> _recentUsedProjectCache;
+    private const string UserRecentUsedProjectKey = "UserRecentUsedProjectKey";
 
     public ProjectService(OrganizationUnitManager organizationUnitManager, IdentityUserManager identityUserManager,
         IRepository<OrganizationUnit, Guid> organizationUnitRepository, IdentityRoleManager roleManager,
         IPermissionManager permissionManager, IOrganizationPermissionChecker permissionChecker,
         IPermissionDefinitionManager permissionDefinitionManager, IRepository<IdentityUser, Guid> userRepository,
         INotificationService notificationService, IProjectDomainRepository domainRepository,
-        IDeveloperService developerService, IOrganizationRoleService organizationRoleService) :
+        IDeveloperService developerService, IOrganizationRoleService organizationRoleService,
+        IDistributedCache<string, string> recentUsedProjectCache) :
         base(organizationUnitManager, identityUserManager, organizationUnitRepository, roleManager, permissionManager,
             permissionChecker, permissionDefinitionManager, userRepository, notificationService)
     {
         _domainRepository = domainRepository;
         _developerService = developerService;
         _organizationRoleService = organizationRoleService;
+        _recentUsedProjectCache = recentUsedProjectCache;
     }
 
     public async Task<ProjectDto> CreateAsync(CreateProjectDto input)
@@ -264,5 +269,24 @@ public class ProjectService : OrganizationService, IProjectService
         {
             await _developerService.DeleteServiceAsync(domain.DomainName);
         }
+    }
+
+    public async Task SaveRecentUsedProjectAsync(RecentUsedProjectDto input)
+    {
+        var userId = CurrentUser.Id;
+        var cacheKey = $"{UserRecentUsedProjectKey}:{userId.ToString()}";
+        await _recentUsedProjectCache.SetAsync(cacheKey, JsonConvert.SerializeObject(input), new DistributedCacheEntryOptions());
+    }
+
+    public async Task<RecentUsedProjectDto> GetRecentUsedProjectAsync()
+    {
+        var userId = CurrentUser.Id;
+        var cacheKey = $"{UserRecentUsedProjectKey}:{userId.ToString()}";
+        var value = await _recentUsedProjectCache.GetAsync(cacheKey);
+        if (value.IsNullOrEmpty())
+        {
+            throw new UserFriendlyException("No recent used projectId");
+        }
+        return JsonConvert.DeserializeObject<RecentUsedProjectDto>(value)!;
     }
 }

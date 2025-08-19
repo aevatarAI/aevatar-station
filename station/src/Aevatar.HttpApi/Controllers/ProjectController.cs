@@ -110,4 +110,18 @@ public class ProjectController : AevatarController
     {
         return await _projectService.GetPermissionListAsync(projectId);
     }
+    
+    [HttpPost]
+    [Route("recent-used")]
+    public async Task SaveRecentUsedProjectAsync(RecentUsedProjectDto recentUsedProjectDto)
+    {
+        await _projectService.SaveRecentUsedProjectAsync(recentUsedProjectDto);
+    }
+    
+    [HttpGet]
+    [Route("recent-used")]
+    public async Task<RecentUsedProjectDto> GetRecentUsedProjectAsync()
+    {
+        return await _projectService.GetRecentUsedProjectAsync();
+    }
 }
