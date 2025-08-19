@@ -113,7 +113,7 @@ public class ProjectServiceV2Tests : AevatarApplicationTestBase
             OrganizationId = organization.Id,
             DisplayName = "Test App"
         };
-        var firstProject = await _projectService.CreateV2Async(firstProjectInput);
+        var firstProject = await _projectService.CreateProjectAsync(firstProjectInput);
         firstProject.DomainName.ShouldBe("testapp");
 
         // 再创建同名项目
@@ -124,7 +124,7 @@ public class ProjectServiceV2Tests : AevatarApplicationTestBase
         };
 
         // Act
-        var secondProject = await _projectService.CreateV2Async(secondProjectInput);
+        var secondProject = await _projectService.CreateProjectAsync(secondProjectInput);
 
         // Assert
         secondProject.DomainName.ShouldBe("testapp2"); // 应该添加后缀
@@ -184,6 +184,6 @@ public class ProjectServiceV2Tests : AevatarApplicationTestBase
 
         // Act & Assert
         await Should.ThrowAsync<ArgumentException>(async () => 
-            await _projectService.CreateV2Async(createProjectInput));
+            await _projectService.CreateProjectAsync(createProjectInput));
     }
 }
