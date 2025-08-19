@@ -174,6 +174,19 @@ public class GodGPTPaymentController : AevatarController
         
         _logger.LogInformation("[GodGPTPaymentController][VerifyGooglePlayTransactionAsync] Request received for userId: {UserId}, transactionId: {TransactionId}, requestIP: {RequestIP}", 
             currentUserId, input.TransactionIdentifier, HttpContext.Connection.RemoteIpAddress?.ToString());
+
+        //todo tem for test
+        if(true){
+           _logger.LogInformation("[GodGPTPaymentController][VerifyGooglePlayTransactionAsync] For Test for userId: {UserId}, transactionId: {TransactionId}, requestIP: {RequestIP}", 
+           currentUserId, input.TransactionIdentifier, HttpContext.Connection.RemoteIpAddress?.ToString());
+            return new PaymentVerificationResponseDto
+            {
+                IsValid = true,
+                Message = "Tem For Test",
+                ErrorCode = "Tem For Test"
+            };
+        }
+        
         
         // Validate input
         if (input == null)
