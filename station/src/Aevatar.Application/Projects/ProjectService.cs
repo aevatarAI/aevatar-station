@@ -89,10 +89,10 @@ public class ProjectService : OrganizationService, IProjectService
     }
 
     /// <summary>
-    /// 创建项目 - V2版本
+    /// 创建项目 - 自动域名版本
     /// 自动基于项目名称生成域名
     /// </summary>
-    public async Task<ProjectDto> CreateProjectAsync(CreateProjectV2Dto input)
+    public async Task<ProjectDto> CreateProjectAsync(CreateProjectAutoDto input)
     {
         // 直接基于项目名称生成域名
         var domainName = NormalizeProjectNameToDomain(input.DisplayName);

@@ -41,7 +41,7 @@ public class ProjectServiceV2Tests : AevatarApplicationTestBase
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
-        var createProjectInput = new CreateProjectV2Dto()
+        var createProjectInput = new CreateProjectAutoDto()
         {
             OrganizationId = organization.Id,
             DisplayName = "My Awesome App"
@@ -77,7 +77,7 @@ public class ProjectServiceV2Tests : AevatarApplicationTestBase
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
-        var createProjectInput = new CreateProjectV2Dto()
+        var createProjectInput = new CreateProjectAutoDto()
         {
             OrganizationId = organization.Id,
             DisplayName = "My App@#$%^&*()123!"
@@ -108,7 +108,7 @@ public class ProjectServiceV2Tests : AevatarApplicationTestBase
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
         // 先创建一个项目占用基础域名
-        var firstProjectInput = new CreateProjectV2Dto()
+        var firstProjectInput = new CreateProjectAutoDto()
         {
             OrganizationId = organization.Id,
             DisplayName = "Test App"
@@ -117,7 +117,7 @@ public class ProjectServiceV2Tests : AevatarApplicationTestBase
         firstProject.DomainName.ShouldBe("testapp");
 
         // 再创建同名项目
-        var secondProjectInput = new CreateProjectV2Dto()
+        var secondProjectInput = new CreateProjectAutoDto()
         {
             OrganizationId = organization.Id,
             DisplayName = "Test App"
@@ -146,7 +146,7 @@ public class ProjectServiceV2Tests : AevatarApplicationTestBase
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
-        var createProjectInput = new CreateProjectV2Dto()
+        var createProjectInput = new CreateProjectAutoDto()
         {
             OrganizationId = organization.Id,
             DisplayName = "中文项目App123"
@@ -176,7 +176,7 @@ public class ProjectServiceV2Tests : AevatarApplicationTestBase
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
-        var createProjectInput = new CreateProjectV2Dto()
+        var createProjectInput = new CreateProjectAutoDto()
         {
             OrganizationId = organization.Id,
             DisplayName = "   " // 空白字符串

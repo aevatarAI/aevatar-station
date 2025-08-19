@@ -9,10 +9,10 @@ public interface IProjectService : IOrganizationService
 {
     Task<ProjectDto> CreateAsync(CreateProjectDto input);
     /// <summary>
-    /// 创建项目 - V2版本
+    /// 创建项目 - 自动域名版本
     /// 自动基于项目名称生成域名
     /// </summary>
-    Task<ProjectDto> CreateProjectAsync(CreateProjectV2Dto input);
+    Task<ProjectDto> CreateProjectAsync(CreateProjectAutoDto input);
     Task<ProjectDto> UpdateAsync(Guid id, UpdateProjectDto input);
     Task<ListResultDto<ProjectDto>> GetListAsync(GetProjectListDto input);
     Task<ProjectDto> GetProjectAsync(Guid id);

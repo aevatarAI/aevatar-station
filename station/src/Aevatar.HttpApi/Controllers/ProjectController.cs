@@ -51,11 +51,11 @@ public class ProjectController : AevatarController
     }
 
     /// <summary>
-    /// 创建项目 - V2版本
+    /// 创建项目 - 自动域名版本
     /// 自动基于项目名称生成域名，无需手动指定域名
     /// </summary>
-    [HttpPost("v2")]
-    public async Task<ProjectDto> CreateProjectAsync(CreateProjectV2Dto input)
+    [HttpPost("auto")]
+    public async Task<ProjectDto> CreateProjectAsync(CreateProjectAutoDto input)
     {
         await _permissionChecker.AuthenticateAsync(input.OrganizationId, AevatarPermissions.Projects.Create);
         return await _projectService.CreateProjectAsync(input);
