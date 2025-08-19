@@ -57,19 +57,18 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
-        var createProjectInput = new CreateProjectDto()
+        var createProjectInput = new CreateProjectAutoDto()
         {
             OrganizationId = organization.Id,
-            DisplayName = "Test Project",
-            DomainName = "App"
+            DisplayName = "Test Project"
         };
-        var project = await _projectService.CreateAsync(createProjectInput);
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
         project.DisplayName.ShouldBe(createProjectInput.DisplayName);
-        project.DomainName.ShouldBe(createProjectInput.DomainName);
+        project.DomainName.ShouldBe("testproject");
 
         project = await _projectService.GetProjectAsync(project.Id);
         project.DisplayName.ShouldBe(createProjectInput.DisplayName);
-        project.DomainName.ShouldBe(createProjectInput.DomainName);
+        project.DomainName.ShouldBe("testproject");
         project.MemberCount.ShouldBe(0);
         project.CreationTime.ShouldBeGreaterThan(0);
 
@@ -143,27 +142,35 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
-        var createProjectInput = new CreateProjectDto()
+        var createProjectInput = new CreateProjectAutoDto()
         {
             OrganizationId = organization.Id,
-            DisplayName = "Test Project",
-            DomainName = "App"
+            DisplayName = "Test Project"
         };
-        var project = await _projectService.CreateAsync(createProjectInput);
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
         project.DisplayName.ShouldBe(createProjectInput.DisplayName);
-        project.DomainName.ShouldBe(createProjectInput.DomainName);
+        project.DomainName.ShouldBe("testproject");
         
-        await Should.ThrowAsync<UserFriendlyException>(async () => await  _projectService.CreateAsync(createProjectInput));
+        await Should.ThrowAsync<UserFriendlyException>(async () => await  _projectService.CreateProjectAsync(createProjectInput));
 
-        createProjectInput.DomainName = "app";
-        await Should.ThrowAsync<UserFriendlyException>(async () => await  _projectService.CreateAsync(createProjectInput));
+        // Test with different display names that generate the same domain
+        var secondProjectInput = new CreateProjectAutoDto()
+        {
+            OrganizationId = organization.Id,
+            DisplayName = "Test!!! Project"  // Still generates "testproject"
+        };
+        await Should.ThrowAsync<UserFriendlyException>(async () => await  _projectService.CreateProjectAsync(secondProjectInput));
         
-        createProjectInput.DomainName = "APP";
-        await Should.ThrowAsync<UserFriendlyException>(async () => await  _projectService.CreateAsync(createProjectInput));
+        var thirdProjectInput = new CreateProjectAutoDto()
+        {
+            OrganizationId = organization.Id,
+            DisplayName = "TEST PROJECT"  // Still generates "testproject"
+        };
+        await Should.ThrowAsync<UserFriendlyException>(async () => await  _projectService.CreateProjectAsync(thirdProjectInput));
     }
 
     [Fact]
-    public async Task Project_WrongDomain_Test()
+    public async Task Project_Create_InvalidDisplayName_Test()
     {
         await _identityUserManager.CreateAsync(
             new IdentityUser(
@@ -177,16 +184,17 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
-        var createProjectInput = new CreateProjectDto()
+        // Test with display name containing only special characters (no letters or digits)
+        var createProjectInput = new CreateProjectAutoDto()
         {
             OrganizationId = organization.Id,
-            DisplayName = "Test Project",
-            DomainName = "App 2"
+            DisplayName = "!@#$%^&*()"
         };
-        await Should.ThrowAsync<AbpValidationException>(async () => await _projectService.CreateAsync(createProjectInput));
+        await Should.ThrowAsync<ArgumentException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
 
-        createProjectInput.DomainName = "App@";
-        await Should.ThrowAsync<AbpValidationException>(async () => await _projectService.CreateAsync(createProjectInput));
+        // Test with display name containing only spaces and special characters
+        createProjectInput.DisplayName = "   !!!   ";
+        await Should.ThrowAsync<ArgumentException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
     }
 
     [Fact]
@@ -204,13 +212,12 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
-        var createProjectInput = new CreateProjectDto()
+        var createProjectInput = new CreateProjectAutoDto()
         {
             OrganizationId = organization.Id,
-            DisplayName = "Test Project",
-            DomainName = "App"
+            DisplayName = "Test Project"
         };
-        var project = await _projectService.CreateAsync(createProjectInput);
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
 
         var updateInput = new UpdateProjectDto
         {
@@ -237,13 +244,12 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
-        var createProjectInput = new CreateProjectDto()
+        var createProjectInput = new CreateProjectAutoDto()
         {
             OrganizationId = organization.Id,
-            DisplayName = "Test Project",
-            DomainName = "App"
+            DisplayName = "Test Project"
         };
-        var project = await _projectService.CreateAsync(createProjectInput);
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
         
         var roles = await _projectService.GetRoleListAsync(project.Id);
 
@@ -259,7 +265,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
 
         var domain =
             await _domainRepository.FirstOrDefaultAsync(o => o.ProjectId == project.Id && o.IsDeleted == false);
-        domain.DomainName.ShouldBe("App");
+        domain.DomainName.ShouldBe("testproject");
     }
 
     [Fact]
@@ -274,13 +280,12 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
-        var createProjectInput = new CreateProjectDto()
+        var createProjectInput = new CreateProjectAutoDto()
         {
             OrganizationId = organization.Id,
-            DisplayName = "Test Project",
-            DomainName = "App"
+            DisplayName = "Test Project"
         };
-        var project = await _projectService.CreateAsync(createProjectInput);
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
         
         var roles = await _projectService.GetRoleListAsync(project.Id);
         var ownerRole = roles.Items.First(o => o.Name.EndsWith("Owner"));
@@ -356,13 +361,12 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
-        var createProjectInput = new CreateProjectDto()
+        var createProjectInput = new CreateProjectAutoDto()
         {
             OrganizationId = organization.Id,
-            DisplayName = "Test Project",
-            DomainName = "App"
+            DisplayName = "Test Project"
         };
-        var project = await _projectService.CreateAsync(createProjectInput);
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
         
         var organizationRoles = await _organizationService.GetRoleListAsync(organization.Id);
         var projectRoles = await _projectService.GetRoleListAsync(project.Id);
@@ -404,13 +408,12 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
-        var createProjectInput = new CreateProjectDto()
+        var createProjectInput = new CreateProjectAutoDto()
         {
             OrganizationId = organization.Id,
-            DisplayName = "Test Project",
-            DomainName = "App"
+            DisplayName = "Test Project"
         };
-        var project = await _projectService.CreateAsync(createProjectInput);
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
         
         var roles = await _projectService.GetRoleListAsync(project.Id);
         var ownerRole = roles.Items.First(o => o.Name.EndsWith("Owner"));

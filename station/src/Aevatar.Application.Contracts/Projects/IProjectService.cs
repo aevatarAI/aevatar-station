@@ -7,7 +7,6 @@ namespace Aevatar.Projects;
 
 public interface IProjectService : IOrganizationService
 {
-    Task<ProjectDto> CreateAsync(CreateProjectDto input);
     /// <summary>
     /// 创建项目 - 自动域名版本
     /// 自动基于项目名称生成域名

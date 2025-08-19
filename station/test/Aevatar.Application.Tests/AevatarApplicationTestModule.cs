@@ -43,9 +43,6 @@ public class AevatarApplicationTestModule : AbpModule
     {
         base.ConfigureServices(context);
         Configure<AbpAutoMapperOptions>(options => { options.AddMaps<AevatarApplicationModule>(); });
-        
-
-        
         var configuration = context.Services.GetConfiguration();
         Configure<ChatConfigOptions>(configuration.GetSection("Chat"));
         context.Services.AddSingleton<ElasticsearchClient>(sp =>

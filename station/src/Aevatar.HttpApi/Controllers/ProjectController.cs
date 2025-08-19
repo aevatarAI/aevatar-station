@@ -43,18 +43,11 @@ public class ProjectController : AevatarController
         return await _projectService.GetProjectAsync(id);
     }
 
-    [HttpPost]
-    public async Task<ProjectDto> CreateAsync(CreateProjectDto input)
-    {
-        await _permissionChecker.AuthenticateAsync(input.OrganizationId, AevatarPermissions.Projects.Create);
-        return await _projectService.CreateAsync(input);
-    }
-
     /// <summary>
-    /// 创建项目 - 自动域名版本
+    /// 创建项目
     /// 自动基于项目名称生成域名，无需手动指定域名
     /// </summary>
-    [HttpPost("auto")]
+    [HttpPost]
     public async Task<ProjectDto> CreateProjectAsync(CreateProjectAutoDto input)
     {
         await _permissionChecker.AuthenticateAsync(input.OrganizationId, AevatarPermissions.Projects.Create);

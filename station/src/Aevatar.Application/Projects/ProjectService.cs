@@ -41,11 +41,6 @@ public class ProjectService : OrganizationService, IProjectService
         _logger = logger;
     }
 
-    public async Task<ProjectDto> CreateAsync(CreateProjectDto input)
-    {
-        return await CreateProjectInternalAsync(input.OrganizationId, input.DisplayName, input.DomainName);
-    }
-
     public async Task<ProjectDto> CreateProjectAsync(CreateProjectAutoDto input)
     {
         var domainName = new string(input.DisplayName
