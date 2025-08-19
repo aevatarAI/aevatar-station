@@ -11,8 +11,16 @@ on:
         description: "Comma-separated list of allowed CORS URLs"
         required: true
         default: 'http://localhost:3000,http://localhost:5173,http://localhost:5174,https://*.aevatar.ai'
+      frontend_needed:
+        description: 'Whether to deploy the frontend'
+        type: boolean
+        default: false
+      frontend_branch:
+        description: 'Branch to deploy'
+        type: string
+        default: 'main'
       
-
+      
 run-name: Run Aevatar Station Ephemeral Test Environment on ${{ github.ref_name }} from ${{ github.sha }}
 
 env:
@@ -140,21 +148,29 @@ jobs:
         with:
           github-token: ${{ secrets.TOK }}
           script: |
+            const inputs = {
+              project_name: "${{ steps.generate-uuid.outputs.project_name }}",
+              environment_ttl: "${{ inputs.environment_ttl }}",
+              client_id: "${{ steps.generate-uuid.outputs.client_id }}",
+              client_secret: "${{ steps.generate-uuid.outputs.client_secret }}",
+              host_silo_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
+              host_client_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
+              station_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
+              cors_urls: "${{ inputs.cors_urls }}"
+            };
+
+            // Conditionally add frontend inputs
+            if ("${{ github.event.inputs.frontend_needed }}" === "true") {
+              inputs.frontend_needed = "true";
+              inputs.frontend_branch = "${{ github.event.inputs.frontend_branch }}";
+            }
+            
             await github.rest.actions.createWorkflowDispatch({
               owner: 'AElfDevops',
               repo: 'ephemeral-test-env',
               workflow_id: 'ephemeral-env-main.yaml',
               ref: 'main',
-              inputs: {
-                project_name: "${{ steps.generate-uuid.outputs.project_name }}",
-                environment_ttl: "${{ inputs.environment_ttl }}",
-                client_id: "${{ steps.generate-uuid.outputs.client_id }}",
-                client_secret: "${{ steps.generate-uuid.outputs.client_secret }}",
-                host_silo_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
-                host_client_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
-                station_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
-                cors_urls: "${{ inputs.cors_urls }}",
-              }
+              inputs: inputs
             });
             
       - name: Wait for workflow run to complete
