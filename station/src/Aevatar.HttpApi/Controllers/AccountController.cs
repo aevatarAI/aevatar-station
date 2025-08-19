@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Generic;
-using System.Net;
 using System.Threading.Tasks;
 using Aevatar.Account;
 using Aevatar.Application.Constants;
 using Aevatar.Application.Contracts.Services;
+using Aevatar.Domain.Shared;
 using Aevatar.Extensions;
 using Aevatar.Services;
 using Asp.Versioning;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
