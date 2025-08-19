@@ -49,12 +49,7 @@ public class ProjectService : OrganizationService, IProjectService
     /// </summary>
     public async Task<ProjectDto> CreateProjectAsync(CreateProjectAutoDto input)
     {
-        // 基于项目名称生成域名
-        if (string.IsNullOrWhiteSpace(input.DisplayName))
-        {
-            throw new ArgumentException("Project name cannot be empty", nameof(input.DisplayName));
-        }
-
+        // 基于项目名称生成域名（框架已验证DisplayName不为空）
         var domainName = new string(input.DisplayName
             .ToLowerInvariant()
             .Where(char.IsLetterOrDigit)
