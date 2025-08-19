@@ -120,12 +120,12 @@ public class ProjectService : OrganizationService, IProjectService
             await _developerService.CreateServiceAsync(domainName, project.Id);
             _logger.LogInformation("Developer service created successfully for domain: {DomainName}", domainName);
 
-            var projectDto = ObjectMapper.Map<OrganizationUnit, ProjectDto>(project);
-            projectDto.DomainName = domainName;
+            var result = ObjectMapper.Map<OrganizationUnit, ProjectDto>(project);
+            result.DomainName = domainName;
 
             _logger.LogInformation("Project creation completed successfully. ProjectId: {ProjectId}, DomainName: {DomainName}", 
                 project.Id, domainName);
-            return projectDto;
+            return result;
         }
         catch (Exception ex) when (!(ex is UserFriendlyException))
         {

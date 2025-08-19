@@ -1,11 +1,13 @@
-﻿using Aevatar.Options;
+﻿using Aevatar.MongoDB;
+using Aevatar.Options;
 using Volo.Abp.Modularity;
 
 namespace Aevatar;
 
 [DependsOn(
     typeof(AevatarDomainModule),
-    typeof(AevatarTestBaseModule)
+    typeof(AevatarTestBaseModule),
+    typeof(AevatarMongoDbTestModule)
 )]
 public class AevatarDomainTestModule : AbpModule
 {

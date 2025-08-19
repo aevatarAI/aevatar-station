@@ -25,6 +25,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\Aevatar.Domain\Aevatar.Domain.csproj" />
         <ProjectReference Include="..\Aevatar.TestBase\Aevatar.TestBase.csproj" />
+        <ProjectReference Include="..\Aevatar.MongoDB.Tests\Aevatar.MongoDB.Tests.csproj" />
     </ItemGroup>
 
 </Project>

@@ -43,6 +43,14 @@ public class AevatarApplicationTestModule : AbpModule
     {
         base.ConfigureServices(context);
         Configure<AbpAutoMapperOptions>(options => { options.AddMaps<AevatarApplicationModule>(); });
+        
+        // 添加Mock的IIdentityRoleRepository来解决依赖注入问题
+        context.Services.AddTransient<IIdentityRoleRepository>(provider =>
+        {
+            var mockRepo = new Mock<IIdentityRoleRepository>();
+            return mockRepo.Object;
+        });
+        
         var configuration = context.Services.GetConfiguration();
         Configure<ChatConfigOptions>(configuration.GetSection("Chat"));
         context.Services.AddSingleton<ElasticsearchClient>(sp =>
