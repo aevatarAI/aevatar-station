@@ -25,18 +25,20 @@ public class ProjectService : OrganizationService, IProjectService
 {
     private readonly IProjectDomainRepository _domainRepository;
     private readonly IDeveloperService _developerService;
+    private readonly ILogger<ProjectService> _logger;
 
     public ProjectService(OrganizationUnitManager organizationUnitManager, IdentityUserManager identityUserManager,
         IRepository<OrganizationUnit, Guid> organizationUnitRepository, IdentityRoleManager roleManager,
         IPermissionManager permissionManager, IOrganizationPermissionChecker permissionChecker,
         IPermissionDefinitionManager permissionDefinitionManager, IRepository<IdentityUser, Guid> userRepository,
         INotificationService notificationService, IProjectDomainRepository domainRepository,
-        IDeveloperService developerService) :
+        IDeveloperService developerService, ILogger<ProjectService> logger) :
         base(organizationUnitManager, identityUserManager, organizationUnitRepository, roleManager, permissionManager,
             permissionChecker, permissionDefinitionManager, userRepository, notificationService)
     {
         _domainRepository = domainRepository;
         _developerService = developerService;
+        _logger = logger;
     }
 
     public async Task<ProjectDto> CreateAsync(CreateProjectDto input)
@@ -69,25 +71,21 @@ public class ProjectService : OrganizationService, IProjectService
     /// </summary>
     private async Task<ProjectDto> CreateProjectInternalAsync(Guid organizationId, string displayName, string domainName)
     {
-        Logger.LogInformation("Starting project creation process. OrganizationId: {OrganizationId}, DisplayName: {DisplayName}, DomainName: {DomainName}", 
+        _logger.LogInformation("Starting project creation process. OrganizationId: {OrganizationId}, DisplayName: {DisplayName}, DomainName: {DomainName}", 
             organizationId, displayName, domainName);
 
         try
         {
-            // 检查域名唯一性
             var domain = await _domainRepository.FirstOrDefaultAsync(o =>
                 o.NormalizedDomainName == domainName.ToUpperInvariant() && o.IsDeleted == false);
             if (domain != null)
             {
-                Logger.LogWarning("Domain name already exists: {DomainName}, ExistingProjectId: {ExistingProjectId}", 
+                _logger.LogWarning("Domain name already exists: {DomainName}, ExistingProjectId: {ExistingProjectId}", 
                     domainName, domain.ProjectId);
                 throw new UserFriendlyException($"DomainName: {domainName} already exists");
             }
 
-            // 获取组织信息
             var organization = await OrganizationUnitRepository.GetAsync(organizationId);
-
-            // 创建项目实体
             var trimmedDisplayName = displayName.Trim();
             var projectId = GuidGenerator.Create();
             var project = new OrganizationUnit(
@@ -95,10 +93,9 @@ public class ProjectService : OrganizationService, IProjectService
                 trimmedDisplayName,
                 parentId: organization.Id
             );
-            Logger.LogInformation("Project entity created with ID: {ProjectId}, Name: {ProjectName}", 
+            _logger.LogInformation("Project entity created with ID: {ProjectId}, Name: {ProjectName}", 
                 projectId, trimmedDisplayName);
 
-            // 插入域名记录
             await _domainRepository.InsertAsync(new ProjectDomain
             {
                 OrganizationId = organization.Id,
@@ -106,46 +103,41 @@ public class ProjectService : OrganizationService, IProjectService
                 DomainName = domainName,
                 NormalizedDomainName = domainName.ToUpperInvariant()
             });
-            Logger.LogInformation("Project domain record created successfully for: {DomainName}", domainName);
+            _logger.LogInformation("Project domain record created successfully for: {DomainName}", domainName);
 
-            // 创建角色
             var ownerRoleId = await AddOwnerRoleAsync(project.Id);
             var readerRoleId = await AddReaderRoleAsync(project.Id);
-            Logger.LogInformation("Project roles created successfully. OwnerRoleId: {OwnerRoleId}, ReaderRoleId: {ReaderRoleId}", 
+            _logger.LogInformation("Project roles created successfully. OwnerRoleId: {OwnerRoleId}, ReaderRoleId: {ReaderRoleId}", 
                 ownerRoleId, readerRoleId);
 
-            // 设置项目属性
             project.ExtraProperties[AevatarConsts.OrganizationTypeKey] = OrganizationType.Project;
             project.ExtraProperties[AevatarConsts.OrganizationRoleKey] = new List<Guid> { ownerRoleId, readerRoleId };
 
-            // 在组织管理器中创建项目
             try
             {
                 await OrganizationUnitManager.CreateAsync(project);
-                Logger.LogInformation("Project created successfully in OrganizationUnitManager: {ProjectId}", project.Id);
+                _logger.LogInformation("Project created successfully in OrganizationUnitManager: {ProjectId}", project.Id);
             }
             catch (BusinessException ex)
                 when (ex.Code == IdentityErrorCodes.DuplicateOrganizationUnitDisplayName)
             {
-                Logger.LogWarning("Duplicate project name detected: {ProjectName}", trimmedDisplayName);
+                _logger.LogWarning("Duplicate project name detected: {ProjectName}", trimmedDisplayName);
                 throw new UserFriendlyException("The same project name already exists");
             }
 
-            // 创建开发者服务
             await _developerService.CreateServiceAsync(domainName, project.Id);
-            Logger.LogInformation("Developer service created successfully for domain: {DomainName}", domainName);
+            _logger.LogInformation("Developer service created successfully for domain: {DomainName}", domainName);
 
-            // 构建返回DTO
             var dto = ObjectMapper.Map<OrganizationUnit, ProjectDto>(project);
             dto.DomainName = domainName;
 
-            Logger.LogInformation("Project creation completed successfully. ProjectId: {ProjectId}, DomainName: {DomainName}", 
+            _logger.LogInformation("Project creation completed successfully. ProjectId: {ProjectId}, DomainName: {DomainName}", 
                 project.Id, domainName);
             return dto;
         }
         catch (Exception ex) when (!(ex is UserFriendlyException))
         {
-            Logger.LogError(ex, "Failed to create project. OrganizationId: {OrganizationId}, DisplayName: {DisplayName}, DomainName: {DomainName}", 
+            _logger.LogError(ex, "Failed to create project. OrganizationId: {OrganizationId}, DisplayName: {DisplayName}, DomainName: {DomainName}", 
                 organizationId, displayName, domainName);
             throw;
         }
