@@ -12,7 +12,7 @@ public interface IProjectService : IOrganizationService
     /// 创建项目 - V2版本
     /// 自动基于项目名称生成域名
     /// </summary>
-    Task<ProjectDto> CreateV2Async(CreateProjectV2Dto input);
+    Task<ProjectDto> CreateProjectAsync(CreateProjectV2Dto input);
     Task<ProjectDto> UpdateAsync(Guid id, UpdateProjectDto input);
     Task<ListResultDto<ProjectDto>> GetListAsync(GetProjectListDto input);
     Task<ProjectDto> GetProjectAsync(Guid id);

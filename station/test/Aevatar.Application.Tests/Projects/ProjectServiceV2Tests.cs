@@ -48,7 +48,7 @@ public class ProjectServiceV2Tests : AevatarApplicationTestBase
         };
 
         // Act
-        var project = await _projectService.CreateV2Async(createProjectInput);
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
 
         // Assert
         project.DisplayName.ShouldBe(createProjectInput.DisplayName);
@@ -84,7 +84,7 @@ public class ProjectServiceV2Tests : AevatarApplicationTestBase
         };
 
         // Act
-        var project = await _projectService.CreateV2Async(createProjectInput);
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
 
         // Assert
         project.DisplayName.ShouldBe(createProjectInput.DisplayName);
@@ -153,7 +153,7 @@ public class ProjectServiceV2Tests : AevatarApplicationTestBase
         };
 
         // Act
-        var project = await _projectService.CreateV2Async(createProjectInput);
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
 
         // Assert
         project.DisplayName.ShouldBe(createProjectInput.DisplayName);

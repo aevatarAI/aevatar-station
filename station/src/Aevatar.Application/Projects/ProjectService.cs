@@ -94,7 +94,7 @@ public class ProjectService : OrganizationService, IProjectService
     /// 创建项目 - V2版本
     /// 自动基于项目名称生成域名
     /// </summary>
-    public async Task<ProjectDto> CreateV2Async(CreateProjectV2Dto input)
+    public async Task<ProjectDto> CreateProjectAsync(CreateProjectV2Dto input)
     {
         // 自动生成域名
         var domainName = await _simpleDomainGenerationService.GenerateFromProjectNameAsync(input.DisplayName);
