@@ -92,7 +92,7 @@ public class ProjectAutoCreationTests : AevatarApplicationTestBase
     }
 
     [Fact]
-    public async Task Create_Project_Auto_With_Domain_Conflict_Should_Add_Suffix()
+    public async Task Create_Project_Auto_With_Domain_Conflict_Should_Throw_Exception()
     {
         // Arrange
         await _identityUserManager.CreateAsync(
@@ -123,11 +123,12 @@ public class ProjectAutoCreationTests : AevatarApplicationTestBase
             DisplayName = "Test App"
         };
 
-        // Act
-        var secondProject = await _projectService.CreateProjectAsync(secondProjectInput);
-
-        // Assert
-        secondProject.DomainName.ShouldBe("testapp2"); // 应该添加后缀
+        // Act & Assert - 应该抛出域名已存在的异常
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _projectService.CreateProjectAsync(secondProjectInput));
+        
+        exception.Message.ShouldContain("testapp");
+        exception.Message.ShouldContain("already exists");
     }
 
     [Fact]

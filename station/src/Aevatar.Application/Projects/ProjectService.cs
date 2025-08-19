@@ -97,19 +97,12 @@ public class ProjectService : OrganizationService, IProjectService
         // 直接基于项目名称生成域名
         var domainName = NormalizeProjectNameToDomain(input.DisplayName);
         
-        // 检查域名唯一性，如有冲突则添加数字后缀
-        var originalDomain = domainName;
-        int suffix = 2;
-        while (await _domainRepository.FirstOrDefaultAsync(d => 
-            d.NormalizedDomainName == domainName.ToUpperInvariant() && !d.IsDeleted) != null)
+        // 检查域名唯一性，如存在则抛出错误（与CreateAsync保持一致）
+        var existingDomain = await _domainRepository.FirstOrDefaultAsync(o =>
+            o.NormalizedDomainName == domainName.ToUpperInvariant() && o.IsDeleted == false);
+        if (existingDomain != null)
         {
-            domainName = $"{originalDomain}{suffix}";
-            suffix++;
-            
-            if (suffix > 99)
-            {
-                throw new UserFriendlyException($"Unable to generate unique domain name for project: {input.DisplayName}");
-            }
+            throw new UserFriendlyException($"DomainName: {domainName} already exists");
         }
 
         var organization = await OrganizationUnitRepository.GetAsync(input.OrganizationId);
