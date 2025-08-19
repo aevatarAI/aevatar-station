@@ -30,6 +30,7 @@
         <PackageReference Include="Serilog.Sinks.OpenTelemetry" />
         <PackageReference Include="Orleans.Streams.Kafka" />
         <PackageReference Include="Volo.Abp.BlobStoring.Aws" />
+        <PackageReference Include="Aevatar.GAgents.MCP" />
     </ItemGroup>
 
     <ItemGroup>
@@ -57,5 +58,6 @@
     <ItemGroup>
         <Content Include="../../configurations/appsettings.Shared.json" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" Link="appsettings.Shared.json" />
         <Content Include="../../configurations/appsettings.Silo.Shared.json" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" Link="appsettings.Silo.Shared.json" />
+        <Content Include="../../configurations/appsettings.mcp.json" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" Link="appsettings.mcp.json" />
     </ItemGroup>
 </Project>

@@ -5,6 +5,7 @@ using Aevatar.Application.Grains;
 using Aevatar.GAgents.AI.Options;
 using Aevatar.GAgents.Executor;
 using Aevatar.GAgents.MCP;
+using Aevatar.GAgents.MCP.Services;
 using Aevatar.GAgents.PsiOmni.Interfaces;
 using Aevatar.GAgents.PsiOmni.Plugins;
 using Aevatar.GAgents.PsiOmni.Plugins.Services;
@@ -44,6 +45,7 @@ public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
     {
         Configure<AbpAutoMapperOptions>(options => { options.AddMaps<SiloModule>(); });
         context.Services.AddHostedService<AevatarHostedService>();
+        context.Services.AddHostedService<MCPWhitelistInitializationService>();
         var configuration = context.Services.GetConfiguration();
         //add dependencies here
         context.Services.AddSerilog(loggerConfiguration => { },

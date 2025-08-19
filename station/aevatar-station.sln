@@ -134,6 +134,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "resource", "resource", "{22
 		source\Dockerfile = ..\Dockerfile
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "configurations", "configurations", "{B03C34E3-F378-4CD2-87E5-4A4570A4BF4F}"
+	ProjectSection(SolutionItems) = preProject
+		configurations\appsettings.Shared.json = configurations\appsettings.Shared.json
+		configurations\appsettings.Silo.Shared.json = configurations\appsettings.Silo.Shared.json
+		configurations\appsettings.HttpApi.Host.Shared.json = configurations\appsettings.HttpApi.Host.Shared.json
+		configurations\appsettings.mcp.json = configurations\appsettings.mcp.json
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

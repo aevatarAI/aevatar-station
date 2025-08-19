@@ -49,6 +49,7 @@ public static class SecureConfigurationExtensions
         }
         // 2. Add default appsettings.json (optional)
         builder.AddJsonFile("appsettings.json", optional: true);
+        builder.AddJsonFile("appsettings.mcp.json", optional: true);
         // 3. Add business configuration with validation if it exists
         builder.AddJsonFile(businessConfigPath, optional: optional);
         
