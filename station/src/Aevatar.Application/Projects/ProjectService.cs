@@ -40,52 +40,7 @@ public class ProjectService : OrganizationService, IProjectService
 
     public async Task<ProjectDto> CreateAsync(CreateProjectDto input)
     {
-        var domain = await _domainRepository.FirstOrDefaultAsync(o =>
-            o.NormalizedDomainName == input.DomainName.ToUpperInvariant() && o.IsDeleted == false);
-        if (domain != null)
-        {
-            throw new UserFriendlyException($"DomainName: {input.DomainName} already exists");
-        }
-
-        var organization = await OrganizationUnitRepository.GetAsync(input.OrganizationId);
-
-        var displayName = input.DisplayName.Trim();
-        var project = new OrganizationUnit(
-            GuidGenerator.Create(),
-            displayName,
-            parentId: organization.Id
-        );
-
-        await _domainRepository.InsertAsync(new ProjectDomain
-        {
-            OrganizationId = organization.Id,
-            ProjectId = project.Id,
-            DomainName = input.DomainName,
-            NormalizedDomainName = input.DomainName.ToUpperInvariant()
-        });
-
-        var ownerRoleId = await AddOwnerRoleAsync(project.Id);
-        var readerRoleId = await AddReaderRoleAsync(project.Id);
-
-        project.ExtraProperties[AevatarConsts.OrganizationTypeKey] = OrganizationType.Project;
-        project.ExtraProperties[AevatarConsts.OrganizationRoleKey] = new List<Guid> { ownerRoleId, readerRoleId };
-
-        try
-        {
-            await OrganizationUnitManager.CreateAsync(project);
-        }
-        catch (BusinessException ex)
-            when (ex.Code == IdentityErrorCodes.DuplicateOrganizationUnitDisplayName)
-        {
-            throw new UserFriendlyException("The same project name already exists");
-        }
-
-        await _developerService.CreateServiceAsync(input.DomainName, project.Id);
-
-        var dto = ObjectMapper.Map<OrganizationUnit, ProjectDto>(project);
-        dto.DomainName = input.DomainName;
-
-        return dto;
+        return await CreateProjectInternalAsync(input.OrganizationId, input.DisplayName, input.DomainName);
     }
 
     /// <summary>
@@ -94,23 +49,44 @@ public class ProjectService : OrganizationService, IProjectService
     /// </summary>
     public async Task<ProjectDto> CreateProjectAsync(CreateProjectAutoDto input)
     {
-        // 直接基于项目名称生成域名
-        var domainName = NormalizeProjectNameToDomain(input.DisplayName);
-        
-        // 检查域名唯一性，如存在则抛出错误（与CreateAsync保持一致）
-        var existingDomain = await _domainRepository.FirstOrDefaultAsync(o =>
+        // 基于项目名称生成域名
+        if (string.IsNullOrWhiteSpace(input.DisplayName))
+        {
+            throw new ArgumentException("Project name cannot be empty", nameof(input.DisplayName));
+        }
+
+        var domainName = new string(input.DisplayName
+            .ToLowerInvariant()
+            .Where(char.IsLetterOrDigit)
+            .ToArray());
+
+        if (string.IsNullOrEmpty(domainName))
+        {
+            throw new ArgumentException("Project name must contain at least one letter or digit", nameof(input.DisplayName));
+        }
+
+        return await CreateProjectInternalAsync(input.OrganizationId, input.DisplayName, domainName);
+    }
+
+    /// <summary>
+    /// 项目创建的核心逻辑
+    /// </summary>
+    private async Task<ProjectDto> CreateProjectInternalAsync(Guid organizationId, string displayName, string domainName)
+    {
+        // 检查域名唯一性
+        var domain = await _domainRepository.FirstOrDefaultAsync(o =>
             o.NormalizedDomainName == domainName.ToUpperInvariant() && o.IsDeleted == false);
-        if (existingDomain != null)
+        if (domain != null)
         {
             throw new UserFriendlyException($"DomainName: {domainName} already exists");
         }
 
-        var organization = await OrganizationUnitRepository.GetAsync(input.OrganizationId);
+        var organization = await OrganizationUnitRepository.GetAsync(organizationId);
 
-        var displayName = input.DisplayName.Trim();
+        var trimmedDisplayName = displayName.Trim();
         var project = new OrganizationUnit(
             GuidGenerator.Create(),
-            displayName,
+            trimmedDisplayName,
             parentId: organization.Id
         );
 
@@ -288,28 +264,5 @@ public class ProjectService : OrganizationService, IProjectService
         }
     }
 
-    /// <summary>
-    /// 将项目名称规范化为域名格式
-    /// 规则：小写 + 只保留字母数字
-    /// </summary>
-    private string NormalizeProjectNameToDomain(string projectName)
-    {
-        if (string.IsNullOrWhiteSpace(projectName))
-        {
-            throw new ArgumentException("Project name cannot be empty", nameof(projectName));
-        }
 
-        // 规范化：小写 + 只保留字母数字
-        var normalized = new string(projectName
-            .ToLowerInvariant()
-            .Where(char.IsLetterOrDigit)
-            .ToArray());
-
-        if (string.IsNullOrEmpty(normalized))
-        {
-            throw new ArgumentException("Project name must contain at least one letter or digit", nameof(projectName));
-        }
-
-        return normalized;
-    }
 }
