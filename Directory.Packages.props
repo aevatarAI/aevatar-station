@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVersion>9.0.1</OrleansVersion>
-    <AevatarGAgentVersion>1.5.5-tool.5</AevatarGAgentVersion>
+    <AevatarGAgentVersion>1.5.6-feature-mcp-whitelist.1</AevatarGAgentVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- AElf packages -->
