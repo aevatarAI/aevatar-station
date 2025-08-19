@@ -198,8 +198,6 @@ jobs:
                 environment_ttl: "5",
                 client_id: "${{ steps.generate-uuid.outputs.client_id }}",
                 client_secret: "${{ steps.generate-uuid.outputs.client_secret }}",
-                host_silo_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
-                host_client_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
                 station_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}"
               }
             });
