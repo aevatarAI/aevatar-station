@@ -49,4 +49,12 @@ public static class GodGPTExceptionMessageKeys
     public const string UnsetLanguage = "UnsetLanguage";
     public const string VoiceLanguageNotSet = "VoiceLanguageNotSet";
     
+    // Security Verification
+    public const string SecurityVerificationRequired = "SecurityVerificationRequired";
+    public const string SecurityVerificationFailed = "SecurityVerificationFailed";
+    public const string RecaptchaVerificationFailed = "RecaptchaVerificationFailed";
+    public const string DeviceCheckVerificationFailed = "DeviceCheckVerificationFailed";
+    public const string PlayIntegrityVerificationFailed = "PlayIntegrityVerificationFailed";
+    public const string UnsupportedPlatformType = "UnsupportedPlatformType";
+    
 } 

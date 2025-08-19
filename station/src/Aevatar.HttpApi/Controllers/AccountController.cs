@@ -1,15 +1,19 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Aevatar.Account;
+using Aevatar.Application.Constants;
+using Aevatar.Application.Contracts.Services;
+using Aevatar.Extensions;
+using Aevatar.Services;
 using Asp.Versioning;
-using Volo.Abp;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Volo.Abp;
 using Volo.Abp.Account;
 using Volo.Abp.Identity;
-using Aevatar.Extensions;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
 
 namespace Aevatar.Controllers;
 
@@ -19,10 +23,20 @@ namespace Aevatar.Controllers;
 public class AccountController : AevatarController
 {
     private readonly IAccountService _accountService;
+    private readonly ISecurityService _securityService;
+    private readonly ILocalizationService _localizationService;
+    private readonly ILogger<AccountController> _logger;
 
-    public AccountController(IAccountService accountService)
+    public AccountController(
+        IAccountService accountService,
+        ISecurityService securityService,
+        ILocalizationService localizationService,
+        ILogger<AccountController> logger)
     {
         _accountService = accountService;
+        _securityService = securityService;
+        _localizationService = localizationService;
+        _logger = logger;
     }
     
     [HttpPost]
@@ -41,51 +55,99 @@ public class AccountController : AevatarController
         return _accountService.GodgptRegisterAsync(input, language);
     }
     
+    /// <summary>
+    /// Send registration verification code with security verification
+    /// </summary>
+    /// <param name="input">Request parameters including platform type and security tokens</param>
+    /// <returns>Operation result</returns>
     [HttpPost]
     [Route("send-register-code")]
-    public virtual Task SendRegisterCodeAsync(SendRegisterCodeDto input)
+    public virtual async Task<SendRegisterCodeResponseDto> SendRegisterCodeAsync(SendRegisterCodeDto input)
     {
-        var ip = GetRealClientIp(HttpContext);
-        // TODO remove
-        Logger.LogInformation("Send register code request: Email={email}, AppName={appName}, IP={ip}", 
-            input.Email, input.AppName, ip);
-        return _accountService.SendRegisterCodeAsync(input);
-    }
-    
-    private string GetRealClientIp(HttpContext context)
-    {
-        // 1. Check X-Forwarded-For header (highest priority)
-        if (context.Request.Headers.TryGetValue("X-Forwarded-For", out var forwardedFor))
+        var language = HttpContext.GetGodGPTLanguage();
+        var clientIp = _securityService.GetRealClientIp(HttpContext);
+        
+        _logger.LogInformation("SendRegisterCodeAsync request from IP {clientIp}, Platform: {platform}, Email: {email}", 
+            clientIp, input.Platform, input.Email);
+
+        try
         {
-            var ips = forwardedFor.ToString().Split(',', StringSplitOptions.RemoveEmptyEntries);
-            if (ips.Length > 0)
+            // Step 1: Check if security verification is required based on rate limiting
+            var verificationRequired = await _securityService.IsSecurityVerificationRequiredAsync(clientIp);
+            
+            if (verificationRequired)
             {
-                var firstIp = ips[0].Trim();
-                if (IsValidIpAddress(firstIp))
+                _logger.LogInformation("Security verification required for IP {clientIp}", clientIp);
+                
+                // Step 2: Perform security verification based on platform
+                var verificationRequest = new SecurityVerificationRequest
                 {
-                    return firstIp;
+                    Platform = input.Platform,
+                    ClientIp = clientIp,
+                    RecaptchaToken = input.RecaptchaToken,
+                    AcToken = input.AcToken
+                };
+                
+                var verificationResult = await _securityService.VerifySecurityAsync(verificationRequest);
+                
+                if (!verificationResult.Success)
+                {
+                    _logger.LogWarning("Security verification failed for IP {clientIp}: {reason}", 
+                        clientIp, verificationResult.Message);
+                    
+                    // Return SecurityVerificationRequired (always English) as frontend signal
+                    if (verificationResult.Message.Contains("Missing") || verificationResult.Message.Contains("token"))
+                    {
+                        // This tells frontend that verification is needed
+                        throw new UserFriendlyException(
+                            _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.SecurityVerificationRequired, 
+                                GodGPTChatLanguage.English, // Always use English for frontend detection
+                                new Dictionary<string, string>()));
+                    }
+                    else
+                    {
+                        // This tells user about verification failure with localized message
+                        var parameters = new Dictionary<string, string> { ["reason"] = verificationResult.Message };
+                        throw new UserFriendlyException(
+                            _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.SecurityVerificationFailed, 
+                                language, parameters));
+                    }
                 }
+                
+                _logger.LogInformation("Security verification passed for IP {clientIp} using {method}", 
+                    clientIp, verificationResult.VerificationMethod);
             }
-        }
-
-        // 2. Check X-Real-IP header
-        if (context.Request.Headers.TryGetValue("X-Real-IP", out var realIp))
-        {
-            var ip = realIp.ToString().Trim();
-            if (IsValidIpAddress(ip))
+            
+            // Step 3: Increment request count for rate limiting
+            await _securityService.IncrementRequestCountAsync(clientIp);
+            
+            // Step 4: Call the account service to send verification code
+            await _accountService.SendRegisterCodeAsync(input, language);
+            
+            _logger.LogInformation("Verification code sent successfully for email {email} from IP {clientIp}", 
+                input.Email, clientIp);
+            
+            return new SendRegisterCodeResponseDto
             {
-                return ip;
-            }
+                Success = true,
+                Message = "Verification code sent successfully"
+            };
         }
-
-        // 3. Use connection remote IP
-        var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        return remoteIp;
-    }
-    
-    private bool IsValidIpAddress(string ipAddress)
-    {
-        return IPAddress.TryParse(ipAddress, out _);
+        catch (UserFriendlyException)
+        {
+            // Re-throw UserFriendlyException as-is (already localized)
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending registration code for email {email} from IP {clientIp}", 
+                input.Email, clientIp);
+            
+            // Return localized internal server error
+            throw new UserFriendlyException(
+                _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InternalServerError, 
+                    language, new Dictionary<string, string>()));
+        }
     }
 
     [HttpPost]
