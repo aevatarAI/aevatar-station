@@ -41,7 +41,7 @@ public class ProjectService : OrganizationService, IProjectService
         _logger = logger;
     }
 
-    public async Task<ProjectDto> CreateProjectAsync(CreateProjectAutoDto input)
+    public async Task<ProjectDto> CreateProjectAsync(CreateProjectDto input)
     {
         var domainName = new string(input.DisplayName
             .ToLowerInvariant()
@@ -53,13 +53,8 @@ public class ProjectService : OrganizationService, IProjectService
             throw new ArgumentException("Project name must contain at least one letter or digit", nameof(input.DisplayName));
         }
 
-        return await CreateProjectInternalAsync(input.OrganizationId, input.DisplayName, domainName);
-    }
-
-    private async Task<ProjectDto> CreateProjectInternalAsync(Guid organizationId, string displayName, string domainName)
-    {
         _logger.LogInformation("Starting project creation process. OrganizationId: {OrganizationId}, DisplayName: {DisplayName}, DomainName: {DomainName}", 
-            organizationId, displayName, domainName);
+            input.OrganizationId, input.DisplayName, domainName);
 
         try
         {
@@ -72,8 +67,8 @@ public class ProjectService : OrganizationService, IProjectService
                 throw new UserFriendlyException($"DomainName: {domainName} already exists");
             }
 
-            var organization = await OrganizationUnitRepository.GetAsync(organizationId);
-            var trimmedDisplayName = displayName.Trim();
+            var organization = await OrganizationUnitRepository.GetAsync(input.OrganizationId);
+            var trimmedDisplayName = input.DisplayName.Trim();
             var projectId = GuidGenerator.Create();
             var project = new OrganizationUnit(
                 projectId,
@@ -125,7 +120,7 @@ public class ProjectService : OrganizationService, IProjectService
         catch (Exception ex) when (!(ex is UserFriendlyException))
         {
             _logger.LogError(ex, "Failed to create project. OrganizationId: {OrganizationId}, DisplayName: {DisplayName}, DomainName: {DomainName}", 
-                organizationId, displayName, domainName);
+                input.OrganizationId, input.DisplayName, domainName);
             throw;
         }
     }

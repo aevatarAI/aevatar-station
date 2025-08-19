@@ -57,7 +57,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
-        var createProjectInput = new CreateProjectAutoDto()
+        var createProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
             DisplayName = "Test Project"
@@ -142,7 +142,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
-        var createProjectInput = new CreateProjectAutoDto()
+        var createProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
             DisplayName = "Test Project"
@@ -154,14 +154,14 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         await Should.ThrowAsync<UserFriendlyException>(async () => await  _projectService.CreateProjectAsync(createProjectInput));
 
         // Test with different display names that generate the same domain
-        var secondProjectInput = new CreateProjectAutoDto()
+        var secondProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
             DisplayName = "Test!!! Project"  // Still generates "testproject"
         };
         await Should.ThrowAsync<UserFriendlyException>(async () => await  _projectService.CreateProjectAsync(secondProjectInput));
         
-        var thirdProjectInput = new CreateProjectAutoDto()
+        var thirdProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
             DisplayName = "TEST PROJECT"  // Still generates "testproject"
@@ -185,7 +185,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
         // Test with display name containing only special characters (no letters or digits)
-        var createProjectInput = new CreateProjectAutoDto()
+        var createProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
             DisplayName = "!@#$%^&*()"
@@ -212,7 +212,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
-        var createProjectInput = new CreateProjectAutoDto()
+        var createProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
             DisplayName = "Test Project"
@@ -244,7 +244,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
-        var createProjectInput = new CreateProjectAutoDto()
+        var createProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
             DisplayName = "Test Project"
@@ -280,7 +280,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
-        var createProjectInput = new CreateProjectAutoDto()
+        var createProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
             DisplayName = "Test Project"
@@ -361,7 +361,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
-        var createProjectInput = new CreateProjectAutoDto()
+        var createProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
             DisplayName = "Test Project"
@@ -408,7 +408,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
-        var createProjectInput = new CreateProjectAutoDto()
+        var createProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
             DisplayName = "Test Project"
@@ -479,7 +479,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
-        var createProjectInput = new CreateProjectAutoDto()
+        var createProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
             DisplayName = "My Awesome App"
@@ -515,7 +515,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
-        var createProjectInput = new CreateProjectAutoDto()
+        var createProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
             DisplayName = "My App@#$%^&*()123!"
@@ -546,7 +546,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
         // 先创建一个项目占用基础域名
-        var firstProjectInput = new CreateProjectAutoDto()
+        var firstProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
             DisplayName = "Test App"
@@ -555,7 +555,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         firstProject.DomainName.ShouldBe("testapp");
 
         // 再创建同名项目
-        var secondProjectInput = new CreateProjectAutoDto()
+        var secondProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
             DisplayName = "Test App"
@@ -585,7 +585,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
-        var createProjectInput = new CreateProjectAutoDto()
+        var createProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
             DisplayName = "中文项目App123"
@@ -615,7 +615,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
-        var createProjectInput = new CreateProjectAutoDto()
+        var createProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
             DisplayName = "   " // 空白字符串
