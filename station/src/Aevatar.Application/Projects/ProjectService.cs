@@ -56,73 +56,63 @@ public class ProjectService : OrganizationService, IProjectService
         _logger.LogInformation("Starting project creation process. OrganizationId: {OrganizationId}, DisplayName: {DisplayName}, DomainName: {DomainName}", 
             input.OrganizationId, input.DisplayName, domainName);
 
+        var domain = await _domainRepository.FirstOrDefaultAsync(o =>
+            o.NormalizedDomainName == domainName.ToUpperInvariant() && o.IsDeleted == false);
+        if (domain != null)
+        {
+            _logger.LogWarning("Domain name already exists: {DomainName}, ExistingProjectId: {ExistingProjectId}", 
+                domainName, domain.ProjectId);
+            throw new UserFriendlyException($"DomainName: {domainName} already exists");
+        }
+
+        var organization = await OrganizationUnitRepository.GetAsync(input.OrganizationId);
+        var trimmedDisplayName = input.DisplayName.Trim();
+        var projectId = GuidGenerator.Create();
+        var project = new OrganizationUnit(
+            projectId,
+            trimmedDisplayName,
+            parentId: organization.Id
+        );
+        _logger.LogInformation("Project entity created with ID: {ProjectId}, Name: {ProjectName}", 
+            projectId, trimmedDisplayName);
+
+        await _domainRepository.InsertAsync(new ProjectDomain
+        {
+            OrganizationId = organization.Id,
+            ProjectId = project.Id,
+            DomainName = domainName,
+            NormalizedDomainName = domainName.ToUpperInvariant()
+        });
+        _logger.LogInformation("Project domain record created successfully for: {DomainName}", domainName);
+
+        var ownerRoleId = await AddOwnerRoleAsync(project.Id);
+        var readerRoleId = await AddReaderRoleAsync(project.Id);
+        _logger.LogInformation("Project roles created successfully. OwnerRoleId: {OwnerRoleId}, ReaderRoleId: {ReaderRoleId}", 
+            ownerRoleId, readerRoleId);
+
+        project.ExtraProperties[AevatarConsts.OrganizationTypeKey] = OrganizationType.Project;
+        project.ExtraProperties[AevatarConsts.OrganizationRoleKey] = new List<Guid> { ownerRoleId, readerRoleId };
+
         try
         {
-            var domain = await _domainRepository.FirstOrDefaultAsync(o =>
-                o.NormalizedDomainName == domainName.ToUpperInvariant() && o.IsDeleted == false);
-            if (domain != null)
-            {
-                _logger.LogWarning("Domain name already exists: {DomainName}, ExistingProjectId: {ExistingProjectId}", 
-                    domainName, domain.ProjectId);
-                throw new UserFriendlyException($"DomainName: {domainName} already exists");
-            }
-
-            var organization = await OrganizationUnitRepository.GetAsync(input.OrganizationId);
-            var trimmedDisplayName = input.DisplayName.Trim();
-            var projectId = GuidGenerator.Create();
-            var project = new OrganizationUnit(
-                projectId,
-                trimmedDisplayName,
-                parentId: organization.Id
-            );
-            _logger.LogInformation("Project entity created with ID: {ProjectId}, Name: {ProjectName}", 
-                projectId, trimmedDisplayName);
-
-            await _domainRepository.InsertAsync(new ProjectDomain
-            {
-                OrganizationId = organization.Id,
-                ProjectId = project.Id,
-                DomainName = domainName,
-                NormalizedDomainName = domainName.ToUpperInvariant()
-            });
-            _logger.LogInformation("Project domain record created successfully for: {DomainName}", domainName);
-
-            var ownerRoleId = await AddOwnerRoleAsync(project.Id);
-            var readerRoleId = await AddReaderRoleAsync(project.Id);
-            _logger.LogInformation("Project roles created successfully. OwnerRoleId: {OwnerRoleId}, ReaderRoleId: {ReaderRoleId}", 
-                ownerRoleId, readerRoleId);
-
-            project.ExtraProperties[AevatarConsts.OrganizationTypeKey] = OrganizationType.Project;
-            project.ExtraProperties[AevatarConsts.OrganizationRoleKey] = new List<Guid> { ownerRoleId, readerRoleId };
-
-            try
-            {
-                await OrganizationUnitManager.CreateAsync(project);
-                _logger.LogInformation("Project created successfully in OrganizationUnitManager: {ProjectId}", project.Id);
-            }
-            catch (BusinessException ex)
-                when (ex.Code == IdentityErrorCodes.DuplicateOrganizationUnitDisplayName)
-            {
-                _logger.LogWarning("Duplicate project name detected: {ProjectName}", trimmedDisplayName);
-                throw new UserFriendlyException("The same project name already exists");
-            }
-
-            await _developerService.CreateServiceAsync(domainName, project.Id);
-            _logger.LogInformation("Developer service created successfully for domain: {DomainName}", domainName);
-
-            var result = ObjectMapper.Map<OrganizationUnit, ProjectDto>(project);
-            result.DomainName = domainName;
-
-            _logger.LogInformation("Project creation completed successfully. ProjectId: {ProjectId}, DomainName: {DomainName}", 
-                project.Id, domainName);
-            return result;
+            await OrganizationUnitManager.CreateAsync(project);
+            _logger.LogInformation("Project created successfully in OrganizationUnitManager: {ProjectId}", project.Id);
         }
-        catch (Exception ex) when (!(ex is UserFriendlyException))
+        catch (BusinessException ex) when (ex.Code == IdentityErrorCodes.DuplicateOrganizationUnitDisplayName)
         {
-            _logger.LogError(ex, "Failed to create project. OrganizationId: {OrganizationId}, DisplayName: {DisplayName}, DomainName: {DomainName}", 
-                input.OrganizationId, input.DisplayName, domainName);
-            throw;
+            _logger.LogWarning("Duplicate project name detected: {ProjectName}", input.DisplayName);
+            throw new UserFriendlyException("The same project name already exists");
         }
+
+        await _developerService.CreateServiceAsync(domainName, project.Id);
+        _logger.LogInformation("Developer service created successfully for domain: {DomainName}", domainName);
+
+        var result = ObjectMapper.Map<OrganizationUnit, ProjectDto>(project);
+        result.DomainName = domainName;
+
+        _logger.LogInformation("Project creation completed successfully. ProjectId: {ProjectId}, DomainName: {DomainName}", 
+            project.Id, domainName);
+        return result;
     }
 
     protected override List<string> GetOwnerPermissions()
