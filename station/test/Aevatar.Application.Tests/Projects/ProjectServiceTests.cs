@@ -459,4 +459,167 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         owner.IsInOrganizationUnit(organization.Id).ShouldBeFalse();
         owner.IsInOrganizationUnit(project.Id).ShouldBeFalse();
     }
+
+    [Fact]
+    public async Task Project_Auto_Create_Test()
+    {
+        // Arrange
+        await _identityUserManager.CreateAsync(
+            new IdentityUser(
+                _currentUser.Id.Value,
+                "test",
+                "test@email.io"));
+        
+        var createOrganizationInput = new CreateOrganizationDto
+        {
+            DisplayName = "Test Organization Auto"
+        };
+        var organization = await _organizationService.CreateAsync(createOrganizationInput);
+
+        var createProjectInput = new CreateProjectAutoDto()
+        {
+            OrganizationId = organization.Id,
+            DisplayName = "My Awesome App"
+        };
+
+        // Act
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
+
+        // Assert
+        project.DisplayName.ShouldBe(createProjectInput.DisplayName);
+        project.DomainName.ShouldBe("myawesomeapp"); // 应该自动生成
+        
+        // 验证项目详情
+        var projectDetails = await _projectService.GetProjectAsync(project.Id);
+        projectDetails.DisplayName.ShouldBe(createProjectInput.DisplayName);
+        projectDetails.DomainName.ShouldBe("myawesomeapp");
+        projectDetails.MemberCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Project_Auto_Create_SpecialCharacters_Test()
+    {
+        // Arrange
+        await _identityUserManager.CreateAsync(
+            new IdentityUser(
+                _currentUser.Id.Value,
+                "test",
+                "test@email.io"));
+        
+        var createOrganizationInput = new CreateOrganizationDto
+        {
+            DisplayName = "Test Organization Auto"
+        };
+        var organization = await _organizationService.CreateAsync(createOrganizationInput);
+
+        var createProjectInput = new CreateProjectAutoDto()
+        {
+            OrganizationId = organization.Id,
+            DisplayName = "My App@#$%^&*()123!"
+        };
+
+        // Act
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
+
+        // Assert
+        project.DisplayName.ShouldBe(createProjectInput.DisplayName);
+        project.DomainName.ShouldBe("myapp123"); // 特殊字符应该被过滤
+    }
+
+    [Fact]
+    public async Task Project_Auto_Create_DomainConflict_Test()
+    {
+        // Arrange
+        await _identityUserManager.CreateAsync(
+            new IdentityUser(
+                _currentUser.Id.Value,
+                "test",
+                "test@email.io"));
+        
+        var createOrganizationInput = new CreateOrganizationDto
+        {
+            DisplayName = "Test Organization Auto"
+        };
+        var organization = await _organizationService.CreateAsync(createOrganizationInput);
+
+        // 先创建一个项目占用基础域名
+        var firstProjectInput = new CreateProjectAutoDto()
+        {
+            OrganizationId = organization.Id,
+            DisplayName = "Test App"
+        };
+        var firstProject = await _projectService.CreateProjectAsync(firstProjectInput);
+        firstProject.DomainName.ShouldBe("testapp");
+
+        // 再创建同名项目
+        var secondProjectInput = new CreateProjectAutoDto()
+        {
+            OrganizationId = organization.Id,
+            DisplayName = "Test App"
+        };
+
+        // Act & Assert - 应该抛出域名已存在的异常
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _projectService.CreateProjectAsync(secondProjectInput));
+        
+        exception.Message.ShouldContain("testapp");
+        exception.Message.ShouldContain("already exists");
+    }
+
+    [Fact]
+    public async Task Project_Auto_Create_Unicode_Test()
+    {
+        // Arrange
+        await _identityUserManager.CreateAsync(
+            new IdentityUser(
+                _currentUser.Id.Value,
+                "test",
+                "test@email.io"));
+        
+        var createOrganizationInput = new CreateOrganizationDto
+        {
+            DisplayName = "Test Organization Auto"
+        };
+        var organization = await _organizationService.CreateAsync(createOrganizationInput);
+
+        var createProjectInput = new CreateProjectAutoDto()
+        {
+            OrganizationId = organization.Id,
+            DisplayName = "中文项目App123"
+        };
+
+        // Act
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
+
+        // Assert
+        project.DisplayName.ShouldBe(createProjectInput.DisplayName);
+        project.DomainName.ShouldBe("app123"); // 只保留英文字母和数字
+    }
+
+    [Fact]
+    public async Task Project_Auto_Create_EmptyName_Test()
+    {
+        // Arrange
+        await _identityUserManager.CreateAsync(
+            new IdentityUser(
+                _currentUser.Id.Value,
+                "test",
+                "test@email.io"));
+        
+        var createOrganizationInput = new CreateOrganizationDto
+        {
+            DisplayName = "Test Organization Auto"
+        };
+        var organization = await _organizationService.CreateAsync(createOrganizationInput);
+
+        var createProjectInput = new CreateProjectAutoDto()
+        {
+            OrganizationId = organization.Id,
+            DisplayName = "   " // 空白字符串
+        };
+
+        // Act & Assert
+        await Should.ThrowAsync<ArgumentException>(async () => 
+            await _projectService.CreateProjectAsync(createProjectInput));
+    }
 }
