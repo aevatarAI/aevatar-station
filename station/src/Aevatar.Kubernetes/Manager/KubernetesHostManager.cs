@@ -815,37 +815,92 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
         var sourceDeploymentName = DeploymentHelper.GetAppDeploymentName(sourceAppId, version);
         var targetDeploymentName = DeploymentHelper.GetAppDeploymentName(targetAppId, version);
 
-        var sourceDeployment = await _kubernetesClientAdapter.ReadNamespacedDeploymentAsync(sourceDeploymentName, KubernetesConstants.AppNameSpace);
-        
-        var targetDeployment = new V1Deployment
-        {
-            Metadata = new V1ObjectMeta
+        await CopyDeploymentCoreAsync(
+            sourceDeploymentName,
+            targetDeploymentName,
+            $"from {sourceAppId} to {targetAppId} (version {version})",
+            sourceDeployment => new DeploymentCopyContext
             {
-                Name = targetDeploymentName,
-                NamespaceProperty = KubernetesConstants.AppNameSpace,
-                Labels = ReplaceClientIdInLabels(sourceDeployment.Metadata.Labels, sourceAppId, targetAppId)
-            },
-            Spec = new V1DeploymentSpec
-            {
-                Replicas = sourceDeployment.Spec.Replicas,
-                Selector = new V1LabelSelector
-                {
-                    MatchLabels = ReplaceClientIdInLabels(sourceDeployment.Spec.Selector.MatchLabels, sourceAppId, targetAppId)
-                },
-                Template = new V1PodTemplateSpec
-                {
-                    Metadata = new V1ObjectMeta
-                    {
-                        Labels = ReplaceClientIdInLabels(sourceDeployment.Spec.Template.Metadata.Labels, sourceAppId, targetAppId)
-                    },
-                    Spec = CopyPodSpecWithUpdatedConfigMaps(sourceDeployment.Spec.Template.Spec, sourceAppId, targetAppId, version)
-                },
-                Strategy = sourceDeployment.Spec.Strategy
-            }
-        };
+                MetadataLabels = ReplaceClientIdInLabels(sourceDeployment.Metadata.Labels, sourceAppId, targetAppId),
+                SelectorLabels = ReplaceClientIdInLabels(sourceDeployment.Spec.Selector.MatchLabels, sourceAppId, targetAppId),
+                TemplateLabels = ReplaceClientIdInLabels(sourceDeployment.Spec.Template.Metadata.Labels, sourceAppId, targetAppId),
+                PodSpec = CopyPodSpecWithUpdatedConfigMaps(sourceDeployment.Spec.Template.Spec, sourceAppId, targetAppId, version)
+            });
+    }
 
-        await _kubernetesClientAdapter.CreateDeploymentAsync(targetDeployment, KubernetesConstants.AppNameSpace);
-        _logger.LogInformation($"[KubernetesHostManager] Deployment {targetDeploymentName} copied successfully");
+    /// <summary>
+    /// Core deployment copying logic - handles common structure and error handling
+    /// Uses strategy pattern for different label and PodSpec update approaches
+    /// </summary>
+    private async Task CopyDeploymentCoreAsync(
+        string sourceDeploymentName,
+        string targetDeploymentName,
+        string operationDescription,
+        Func<V1Deployment, DeploymentCopyContext> contextFactory)
+    {
+        _logger.LogInformation($"[KubernetesHostManager] Starting deployment copy {operationDescription}");
+
+        try
+        {
+            // Fetch source deployment with null check
+            var sourceDeployment = await _kubernetesClientAdapter.ReadNamespacedDeploymentAsync(
+                sourceDeploymentName, KubernetesConstants.AppNameSpace);
+            if (sourceDeployment == null)
+            {
+                throw new InvalidOperationException($"Source deployment {sourceDeploymentName} not found in namespace {KubernetesConstants.AppNameSpace}");
+            }
+
+            // Generate copy context using the provided strategy
+            var context = contextFactory(sourceDeployment);
+
+            // Create target deployment with common structure
+            var targetDeployment = new V1Deployment
+            {
+                Metadata = new V1ObjectMeta
+                {
+                    Name = targetDeploymentName,
+                    NamespaceProperty = KubernetesConstants.AppNameSpace,
+                    Labels = context.MetadataLabels
+                },
+                Spec = new V1DeploymentSpec
+                {
+                    Replicas = sourceDeployment.Spec.Replicas,
+                    Selector = new V1LabelSelector
+                    {
+                        MatchLabels = context.SelectorLabels
+                    },
+                    Template = new V1PodTemplateSpec
+                    {
+                        Metadata = new V1ObjectMeta
+                        {
+                            Labels = context.TemplateLabels
+                        },
+                        Spec = context.PodSpec
+                    },
+                    Strategy = sourceDeployment.Spec.Strategy
+                }
+            };
+
+            await _kubernetesClientAdapter.CreateDeploymentAsync(targetDeployment, KubernetesConstants.AppNameSpace);
+            _logger.LogInformation($"[KubernetesHostManager] Deployment {targetDeploymentName} copied successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"[KubernetesHostManager] Failed to copy deployment {operationDescription}");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Context for deployment copying operations
+    /// Encapsulates the different strategies for label and PodSpec updates
+    /// </summary>
+    private class DeploymentCopyContext
+    {
+        public Dictionary<string, string> MetadataLabels { get; init; } = new();
+        public Dictionary<string, string> SelectorLabels { get; init; } = new();
+        public Dictionary<string, string> TemplateLabels { get; init; } = new();
+        public V1PodSpec PodSpec { get; init; } = new();
     }
 
     private V1PodSpec CopyPodSpecWithUpdatedConfigMaps(V1PodSpec sourcePodSpec, string sourceAppId, string targetAppId, string version)
@@ -967,6 +1022,141 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
 
         await _kubernetesClientAdapter.CreateServiceAsync(targetService, KubernetesConstants.AppNameSpace);
         _logger.LogInformation($"[KubernetesHostManager] Service {targetServiceName} copied successfully");
+    }
+
+    public async Task CopyDeploymentWithPatternAsync(string clientId, string sourceVersion, string targetVersion, 
+        string siloNamePattern)
+    {
+        var hostName = GetHostName(clientId, KubernetesConstants.HostSilo);
+        var sourceDeploymentName = DeploymentHelper.GetAppDeploymentName(hostName, sourceVersion);
+        var targetDeploymentName = DeploymentHelper.GetAppDeploymentName(hostName, targetVersion);
+        
+        var sourceContainerName = sourceDeploymentName.Replace("deployment-", "container-");
+        var targetContainerName = targetDeploymentName.Replace("deployment-", "container-");
+
+        await CopyDeploymentCoreAsync(
+            sourceDeploymentName,
+            targetDeploymentName,
+            $"client {clientId} from version {sourceVersion} to {targetVersion} with silo pattern {siloNamePattern}",
+            sourceDeployment => new DeploymentCopyContext
+            {
+                MetadataLabels = ReplaceDeploymentNameInLabels(sourceDeployment.Metadata.Labels, sourceDeploymentName, targetDeploymentName),
+                SelectorLabels = UpdateSelectorLabels(sourceDeployment.Spec.Selector.MatchLabels, targetDeploymentName),
+                TemplateLabels = UpdateTemplateLabels(sourceDeployment.Spec.Template.Metadata.Labels, targetDeploymentName),
+                PodSpec = UpdatePodSpecWithNewPattern(sourceDeployment.Spec.Template.Spec, sourceContainerName, targetContainerName, siloNamePattern)
+            });
+    }
+
+    private Dictionary<string, string> ReplaceDeploymentNameInLabels(IDictionary<string, string> sourceLabels, string sourceDeployment, string targetDeployment)
+    {
+        if (sourceLabels == null) return new Dictionary<string, string>();
+        
+        var targetLabels = new Dictionary<string, string>();
+        foreach (var label in sourceLabels)
+        {
+            var newValue = label.Value?.Replace(sourceDeployment, targetDeployment) ?? label.Value;
+            targetLabels[label.Key] = newValue;
+        }
+        return targetLabels;
+    }
+
+    private Dictionary<string, string> UpdateSelectorLabels(IDictionary<string, string> sourceSelector, string targetDeploymentName)
+    {
+        if (sourceSelector == null) return new Dictionary<string, string>();
+        
+        var targetSelector = new Dictionary<string, string>();
+        foreach (var selector in sourceSelector)
+        {
+            if (selector.Key == "app")
+            {
+                targetSelector[selector.Key] = targetDeploymentName;
+            }
+            else
+            {
+                targetSelector[selector.Key] = selector.Value;
+            }
+        }
+        return targetSelector;
+    }
+
+    private Dictionary<string, string> UpdateTemplateLabels(IDictionary<string, string> sourceLabels, string targetDeploymentName)
+    {
+        if (sourceLabels == null) return new Dictionary<string, string>();
+        
+        var targetLabels = new Dictionary<string, string>();
+        foreach (var label in sourceLabels)
+        {
+            if (label.Key == "app")
+            {
+                targetLabels[label.Key] = targetDeploymentName;
+            }
+            else
+            {
+                targetLabels[label.Key] = label.Value;
+            }
+        }
+        return targetLabels;
+    }
+
+    private V1PodSpec UpdatePodSpecWithNewPattern(V1PodSpec sourcePodSpec, string sourceContainerName, string targetContainerName, string siloNamePattern)
+    {
+        // Follow the same pattern as CopyPodSpecWithUpdatedConfigMaps but with pattern updates
+        var targetPodSpec = new V1PodSpec
+        {
+            Containers = sourcePodSpec.Containers.Select(container => new V1Container
+            {
+                Name = container.Name == sourceContainerName ? targetContainerName : container.Name,
+                Image = container.Image,
+                Command = container.Command, // Critical: Copy the startup command
+                Args = container.Args, // Critical: Copy the startup arguments
+                Ports = container.Ports,
+                Env = UpdateEnvironmentVariables(container.Env, siloNamePattern), // Only difference: update SILO_NAME_PATTERN
+                Resources = container.Resources,
+                VolumeMounts = container.VolumeMounts, // Keep original volume mounts
+                LivenessProbe = container.LivenessProbe,
+                ReadinessProbe = container.ReadinessProbe,
+                SecurityContext = container.SecurityContext
+            }).ToList(),
+            Volumes = sourcePodSpec.Volumes, // Keep original volumes/ConfigMaps - they can be shared
+            RestartPolicy = sourcePodSpec.RestartPolicy,
+            NodeSelector = sourcePodSpec.NodeSelector,
+            Affinity = sourcePodSpec.Affinity,
+            Tolerations = sourcePodSpec.Tolerations
+        };
+
+        return targetPodSpec;
+    }
+
+    private IList<V1EnvVar> UpdateEnvironmentVariables(IList<V1EnvVar> sourceEnvVars, string siloNamePattern)
+    {
+        if (sourceEnvVars == null) return new List<V1EnvVar>();
+
+        var targetEnvVars = new List<V1EnvVar>();
+        var siloPatternUpdated = false;
+
+        foreach (var envVar in sourceEnvVars)
+        {
+            if (envVar.Name == "SILO_NAME_PATTERN")
+            {
+                targetEnvVars.Add(new V1EnvVar(envVar.Name, siloNamePattern));
+                siloPatternUpdated = true;
+            }
+            else
+            {
+                targetEnvVars.Add(new V1EnvVar(envVar.Name, envVar.Value)
+                {
+                    ValueFrom = envVar.ValueFrom
+                });
+            }
+        }
+
+        // Add SILO_NAME_PATTERN if it wasn't in the original environment variables
+        if (!siloPatternUpdated && !string.IsNullOrEmpty(siloNamePattern))
+        {
+            targetEnvVars.Add(new V1EnvVar("SILO_NAME_PATTERN", siloNamePattern));
+        }
+
+        return targetEnvVars;
     }
 
     private async Task CopyIngressAsync(string sourceAppId, string targetAppId, string version)
