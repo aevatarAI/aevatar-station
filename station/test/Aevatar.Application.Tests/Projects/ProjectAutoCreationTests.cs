@@ -10,14 +10,14 @@ using Xunit;
 
 namespace Aevatar.Application.Tests.Projects;
 
-public class ProjectServiceV2Tests : AevatarApplicationTestBase
+public class ProjectAutoCreationTests : AevatarApplicationTestBase
 {
     private readonly IProjectService _projectService;
     private readonly IOrganizationService _organizationService;
     private readonly IdentityUserManager _identityUserManager;
     private readonly ICurrentUser _currentUser;
 
-    public ProjectServiceV2Tests()
+    public ProjectAutoCreationTests()
     {
         _projectService = GetRequiredService<IProjectService>();
         _organizationService = GetRequiredService<IOrganizationService>();
@@ -26,7 +26,7 @@ public class ProjectServiceV2Tests : AevatarApplicationTestBase
     }
 
     [Fact]
-    public async Task Create_Project_V2_With_Auto_Generated_Domain()
+    public async Task Create_Project_Auto_With_Auto_Generated_Domain()
     {
         // Arrange
         await _identityUserManager.CreateAsync(
@@ -37,7 +37,7 @@ public class ProjectServiceV2Tests : AevatarApplicationTestBase
         
         var createOrganizationInput = new CreateOrganizationDto
         {
-            DisplayName = "Test Organization V2"
+            DisplayName = "Test Organization Auto"
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
@@ -62,7 +62,7 @@ public class ProjectServiceV2Tests : AevatarApplicationTestBase
     }
 
     [Fact]
-    public async Task Create_Project_V2_With_Special_Characters_In_Name()
+    public async Task Create_Project_Auto_With_Special_Characters_In_Name()
     {
         // Arrange
         await _identityUserManager.CreateAsync(
@@ -73,7 +73,7 @@ public class ProjectServiceV2Tests : AevatarApplicationTestBase
         
         var createOrganizationInput = new CreateOrganizationDto
         {
-            DisplayName = "Test Organization V2"
+            DisplayName = "Test Organization Auto"
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
@@ -92,7 +92,7 @@ public class ProjectServiceV2Tests : AevatarApplicationTestBase
     }
 
     [Fact]
-    public async Task Create_Project_V2_With_Domain_Conflict_Should_Add_Suffix()
+    public async Task Create_Project_Auto_With_Domain_Conflict_Should_Add_Suffix()
     {
         // Arrange
         await _identityUserManager.CreateAsync(
@@ -103,7 +103,7 @@ public class ProjectServiceV2Tests : AevatarApplicationTestBase
         
         var createOrganizationInput = new CreateOrganizationDto
         {
-            DisplayName = "Test Organization V2"
+            DisplayName = "Test Organization Auto"
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
@@ -131,7 +131,7 @@ public class ProjectServiceV2Tests : AevatarApplicationTestBase
     }
 
     [Fact]
-    public async Task Create_Project_V2_With_Unicode_Characters()
+    public async Task Create_Project_Auto_With_Unicode_Characters()
     {
         // Arrange
         await _identityUserManager.CreateAsync(
@@ -142,7 +142,7 @@ public class ProjectServiceV2Tests : AevatarApplicationTestBase
         
         var createOrganizationInput = new CreateOrganizationDto
         {
-            DisplayName = "Test Organization V2"
+            DisplayName = "Test Organization Auto"
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
@@ -161,7 +161,7 @@ public class ProjectServiceV2Tests : AevatarApplicationTestBase
     }
 
     [Fact]
-    public async Task Create_Project_V2_Empty_Display_Name_Should_Throw()
+    public async Task Create_Project_Auto_Empty_Display_Name_Should_Throw()
     {
         // Arrange
         await _identityUserManager.CreateAsync(
@@ -172,7 +172,7 @@ public class ProjectServiceV2Tests : AevatarApplicationTestBase
         
         var createOrganizationInput = new CreateOrganizationDto
         {
-            DisplayName = "Test Organization V2"
+            DisplayName = "Test Organization Auto"
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
