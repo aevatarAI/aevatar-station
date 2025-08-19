@@ -46,13 +46,8 @@ public class ProjectService : OrganizationService, IProjectService
         return await CreateProjectInternalAsync(input.OrganizationId, input.DisplayName, input.DomainName);
     }
 
-    /// <summary>
-    /// 创建项目 - 自动域名版本
-    /// 自动基于项目名称生成域名
-    /// </summary>
     public async Task<ProjectDto> CreateProjectAsync(CreateProjectAutoDto input)
     {
-        // 基于项目名称生成域名（框架已验证DisplayName不为空）
         var domainName = new string(input.DisplayName
             .ToLowerInvariant()
             .Where(char.IsLetterOrDigit)
@@ -66,9 +61,6 @@ public class ProjectService : OrganizationService, IProjectService
         return await CreateProjectInternalAsync(input.OrganizationId, input.DisplayName, domainName);
     }
 
-    /// <summary>
-    /// 项目创建的核心逻辑
-    /// </summary>
     private async Task<ProjectDto> CreateProjectInternalAsync(Guid organizationId, string displayName, string domainName)
     {
         _logger.LogInformation("Starting project creation process. OrganizationId: {OrganizationId}, DisplayName: {DisplayName}, DomainName: {DomainName}", 
@@ -128,12 +120,12 @@ public class ProjectService : OrganizationService, IProjectService
             await _developerService.CreateServiceAsync(domainName, project.Id);
             _logger.LogInformation("Developer service created successfully for domain: {DomainName}", domainName);
 
-            var dto = ObjectMapper.Map<OrganizationUnit, ProjectDto>(project);
-            dto.DomainName = domainName;
+            var projectDto = ObjectMapper.Map<OrganizationUnit, ProjectDto>(project);
+            projectDto.DomainName = domainName;
 
             _logger.LogInformation("Project creation completed successfully. ProjectId: {ProjectId}, DomainName: {DomainName}", 
                 project.Id, domainName);
-            return dto;
+            return projectDto;
         }
         catch (Exception ex) when (!(ex is UserFriendlyException))
         {
