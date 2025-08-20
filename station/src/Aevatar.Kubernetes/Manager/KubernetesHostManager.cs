@@ -435,7 +435,7 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
                     KubernetesConstants.AppNameSpace);
             // Add or update annotations to trigger rolling updates
             var annotations = deployment.Spec.Template.Metadata.Annotations ?? new Dictionary<string, string>();
-            annotations["kubectl.kubernetes.io/restartedAt"] = DateTime.UtcNow.ToString("s");
+            annotations[KubernetesConstants.RestartAnnotationKey] = DateTime.UtcNow.ToString(KubernetesConstants.TimestampFormat);
             deployment.Spec.Template.Metadata.Annotations = annotations;
             //Update container image 
             var containers = deployment.Spec.Template.Spec.Containers;
@@ -462,7 +462,7 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
     }
 
 
-    private string GetHealthPath() => "/health";
+    private string GetHealthPath() => KubernetesConstants.HealthCheckPath;
 
     private string GetHostName(string appId, string appType) => $"{appId}-{appType}";
 
@@ -667,14 +667,14 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
 
         // Add or update the 'restartedAt' annotation to trigger the restart
         var annotations = deployment.Spec.Template.Metadata.Annotations ?? new Dictionary<string, string>();
-        annotations["kubectl.kubernetes.io/restartedAt"] = DateTime.UtcNow.ToString("s");
+        annotations[KubernetesConstants.RestartAnnotationKey] = DateTime.UtcNow.ToString(KubernetesConstants.TimestampFormat);
         deployment.Spec.Template.Metadata.Annotations = annotations;
 
         // Update the Deployment to apply the changes
         await _kubernetesClientAdapter.ReplaceNamespacedDeploymentAsync(deployment, deploymentName,
             KubernetesConstants.AppNameSpace);
         _logger.LogInformation(
-            $"[KubernetesAppManager] Deployment {deploymentName} restarted at {annotations["kubectl.kubernetes.io/restartedAt"]}");
+            $"[KubernetesAppManager] Deployment {deploymentName} restarted at {annotations[KubernetesConstants.RestartAnnotationKey]}");
     }
 
     public async Task CopyHostAsync(string sourceClientId, string newClientId, string version)
@@ -1104,8 +1104,8 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
     private (string source, string target) BuildContainerNames(string sourceDeploymentName, string targetDeploymentName)
     {
         return (
-            sourceDeploymentName.Replace("deployment-", "container-"),
-            targetDeploymentName.Replace("deployment-", "container-")
+            sourceDeploymentName.Replace(KubernetesConstants.DeploymentNamePrefix, KubernetesConstants.ContainerNamePrefix),
+            targetDeploymentName.Replace(KubernetesConstants.DeploymentNamePrefix, KubernetesConstants.ContainerNamePrefix)
         );
     }
 
@@ -1156,7 +1156,7 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
 
         foreach (var envVar in sourceEnvVars)
         {
-            if (envVar.Name == "SILO_NAME_PATTERN")
+            if (envVar.Name == KubernetesConstants.SiloNamePatternEnvVar)
             {
                 siloPatternFound = true;
                 // Only add/update SILO_NAME_PATTERN if siloNamePattern is provided
@@ -1178,7 +1178,7 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
         // Add SILO_NAME_PATTERN if it wasn't in the original environment variables and is provided
         if (!siloPatternFound && !string.IsNullOrEmpty(siloNamePattern))
         {
-            targetEnvVars.Add(new V1EnvVar("SILO_NAME_PATTERN", siloNamePattern));
+            targetEnvVars.Add(new V1EnvVar(KubernetesConstants.SiloNamePatternEnvVar, siloNamePattern));
         }
 
         return targetEnvVars;
@@ -1273,11 +1273,11 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
             var configAgent = _grainFactory.GetGrain<IHostConfigurationGAgent>(GuidUtil.StringToGuid(grainKey));
             var businessConfigResult = await configAgent.GetBusinessConfigurationJsonAsync();
 
-            if (string.IsNullOrWhiteSpace(businessConfigResult.ConfigurationJson) || businessConfigResult.ConfigurationJson == "{}")
+            if (string.IsNullOrWhiteSpace(businessConfigResult.ConfigurationJson) || businessConfigResult.ConfigurationJson == KubernetesConstants.EmptyJsonObject)
             {
                 _logger.LogDebug("No business configuration found for {HostId}:{HostType}", hostId, hostType);
                 // Add empty business config file
-                configFiles[SecureConfigurationExtensions.DefaultBusinessConfigPath] = "{}";
+                configFiles[SecureConfigurationExtensions.DefaultBusinessConfigPath] = KubernetesConstants.EmptyJsonObject;
                 return;
             }
 
@@ -1290,7 +1290,7 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
         {
             _logger.LogError(ex, "Failed to load business configuration for {HostId}:{HostType}, adding empty config", hostId, hostType);
             // Add empty business config file as fallback
-            configFiles[SecureConfigurationExtensions.DefaultBusinessConfigPath] = "{}";
+            configFiles[SecureConfigurationExtensions.DefaultBusinessConfigPath] = KubernetesConstants.EmptyJsonObject;
         }
     }
 
