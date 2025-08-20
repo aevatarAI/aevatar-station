@@ -20,6 +20,7 @@ Use web search whenever you need more data.
 
 When analysing:
 - ALWAYS validate facts
+- ALWAYS try to fit into existing epic document in `docs/epics` if they can be categorized together
 
 When an existing specifications for product epics is changed, 
 MAKE SURE to find the corresponding story document in `docs/stories` directory and update it accordingly. For stories related, ONLY use the rule `.cursor/rules/story-breakdown.mdc`.`

@@ -17,12 +17,29 @@ namespace Aevatar.Kubernetes.Manager;
 
 public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingletonDependency
 {
+    /// <summary>
+    /// Kubernetes label key used for pod-service matching and deployment identification
+    /// </summary>
+    private const string AppLabelKey = "app";
+    
     // private readonly k8s.Kubernetes _k8sClient;
     private readonly KubernetesOptions _kubernetesOptions;
     private readonly HostDeployOptions _hostDeployOptions;
     private readonly ILogger<KubernetesHostManager> _logger;
     private readonly IKubernetesClientAdapter _kubernetesClientAdapter;
     private readonly IGrainFactory _grainFactory;
+
+    /// <summary>
+    /// Context for deployment copying operations
+    /// Encapsulates the different strategies for label and PodSpec updates
+    /// </summary>
+    private class DeploymentCopyContext
+    {
+        public Dictionary<string, string> MetadataLabels { get; init; } = new();
+        public Dictionary<string, string> SelectorLabels { get; init; } = new();
+        public Dictionary<string, string> TemplateLabels { get; init; } = new();
+        public V1PodSpec PodSpec { get; init; } = new();
+    }
 
     public KubernetesHostManager(ILogger<KubernetesHostManager> logger,
         IKubernetesClientAdapter kubernetesClientAdapter,
@@ -418,7 +435,7 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
                     KubernetesConstants.AppNameSpace);
             // Add or update annotations to trigger rolling updates
             var annotations = deployment.Spec.Template.Metadata.Annotations ?? new Dictionary<string, string>();
-            annotations["kubectl.kubernetes.io/restartedAt"] = DateTime.UtcNow.ToString("s");
+            annotations[KubernetesConstants.RestartAnnotationKey] = DateTime.UtcNow.ToString(KubernetesConstants.TimestampFormat);
             deployment.Spec.Template.Metadata.Annotations = annotations;
             //Update container image 
             var containers = deployment.Spec.Template.Spec.Containers;
@@ -445,7 +462,7 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
     }
 
 
-    private string GetHealthPath() => "/health";
+    private string GetHealthPath() => KubernetesConstants.HealthCheckPath;
 
     private string GetHostName(string appId, string appType) => $"{appId}-{appType}";
 
@@ -650,14 +667,14 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
 
         // Add or update the 'restartedAt' annotation to trigger the restart
         var annotations = deployment.Spec.Template.Metadata.Annotations ?? new Dictionary<string, string>();
-        annotations["kubectl.kubernetes.io/restartedAt"] = DateTime.UtcNow.ToString("s");
+        annotations[KubernetesConstants.RestartAnnotationKey] = DateTime.UtcNow.ToString(KubernetesConstants.TimestampFormat);
         deployment.Spec.Template.Metadata.Annotations = annotations;
 
         // Update the Deployment to apply the changes
         await _kubernetesClientAdapter.ReplaceNamespacedDeploymentAsync(deployment, deploymentName,
             KubernetesConstants.AppNameSpace);
         _logger.LogInformation(
-            $"[KubernetesAppManager] Deployment {deploymentName} restarted at {annotations["kubectl.kubernetes.io/restartedAt"]}");
+            $"[KubernetesAppManager] Deployment {deploymentName} restarted at {annotations[KubernetesConstants.RestartAnnotationKey]}");
     }
 
     public async Task CopyHostAsync(string sourceClientId, string newClientId, string version)
@@ -815,37 +832,80 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
         var sourceDeploymentName = DeploymentHelper.GetAppDeploymentName(sourceAppId, version);
         var targetDeploymentName = DeploymentHelper.GetAppDeploymentName(targetAppId, version);
 
-        var sourceDeployment = await _kubernetesClientAdapter.ReadNamespacedDeploymentAsync(sourceDeploymentName, KubernetesConstants.AppNameSpace);
-        
-        var targetDeployment = new V1Deployment
-        {
-            Metadata = new V1ObjectMeta
+        await CopyDeploymentCoreAsync(
+            sourceDeploymentName,
+            targetDeploymentName,
+            $"from {sourceAppId} to {targetAppId} (version {version})",
+            sourceDeployment => new DeploymentCopyContext
             {
-                Name = targetDeploymentName,
-                NamespaceProperty = KubernetesConstants.AppNameSpace,
-                Labels = ReplaceClientIdInLabels(sourceDeployment.Metadata.Labels, sourceAppId, targetAppId)
-            },
-            Spec = new V1DeploymentSpec
-            {
-                Replicas = sourceDeployment.Spec.Replicas,
-                Selector = new V1LabelSelector
-                {
-                    MatchLabels = ReplaceClientIdInLabels(sourceDeployment.Spec.Selector.MatchLabels, sourceAppId, targetAppId)
-                },
-                Template = new V1PodTemplateSpec
-                {
-                    Metadata = new V1ObjectMeta
-                    {
-                        Labels = ReplaceClientIdInLabels(sourceDeployment.Spec.Template.Metadata.Labels, sourceAppId, targetAppId)
-                    },
-                    Spec = CopyPodSpecWithUpdatedConfigMaps(sourceDeployment.Spec.Template.Spec, sourceAppId, targetAppId, version)
-                },
-                Strategy = sourceDeployment.Spec.Strategy
-            }
-        };
+                MetadataLabels = ReplaceClientIdInLabels(sourceDeployment.Metadata.Labels, sourceAppId, targetAppId),
+                SelectorLabels = ReplaceClientIdInLabels(sourceDeployment.Spec.Selector.MatchLabels, sourceAppId, targetAppId),
+                TemplateLabels = ReplaceClientIdInLabels(sourceDeployment.Spec.Template.Metadata.Labels, sourceAppId, targetAppId),
+                PodSpec = CopyPodSpecWithUpdatedConfigMaps(sourceDeployment.Spec.Template.Spec, sourceAppId, targetAppId, version)
+            });
+    }
 
-        await _kubernetesClientAdapter.CreateDeploymentAsync(targetDeployment, KubernetesConstants.AppNameSpace);
-        _logger.LogInformation($"[KubernetesHostManager] Deployment {targetDeploymentName} copied successfully");
+    /// <summary>
+    /// Core deployment copying logic - handles common structure and error handling
+    /// Uses strategy pattern for different label and PodSpec update approaches
+    /// </summary>
+    private async Task CopyDeploymentCoreAsync(
+        string sourceDeploymentName,
+        string targetDeploymentName,
+        string operationDescription,
+        Func<V1Deployment, DeploymentCopyContext> contextFactory)
+    {
+        _logger.LogInformation($"[KubernetesHostManager] Starting deployment copy {operationDescription}");
+
+        try
+        {
+            // Fetch source deployment with null check
+            var sourceDeployment = await _kubernetesClientAdapter.ReadNamespacedDeploymentAsync(
+                sourceDeploymentName, KubernetesConstants.AppNameSpace);
+            if (sourceDeployment == null)
+            {
+                throw new InvalidOperationException($"Source deployment {sourceDeploymentName} not found in namespace {KubernetesConstants.AppNameSpace}");
+            }
+
+            // Generate copy context using the provided strategy
+            var context = contextFactory(sourceDeployment);
+
+            // Create target deployment with common structure
+            var targetDeployment = new V1Deployment
+            {
+                Metadata = new V1ObjectMeta
+                {
+                    Name = targetDeploymentName,
+                    NamespaceProperty = KubernetesConstants.AppNameSpace,
+                    Labels = context.MetadataLabels
+                },
+                Spec = new V1DeploymentSpec
+                {
+                    Replicas = sourceDeployment.Spec.Replicas,
+                    Selector = new V1LabelSelector
+                    {
+                        MatchLabels = context.SelectorLabels
+                    },
+                    Template = new V1PodTemplateSpec
+                    {
+                        Metadata = new V1ObjectMeta
+                        {
+                            Labels = context.TemplateLabels
+                        },
+                        Spec = context.PodSpec
+                    },
+                    Strategy = sourceDeployment.Spec.Strategy
+                }
+            };
+
+            await _kubernetesClientAdapter.CreateDeploymentAsync(targetDeployment, KubernetesConstants.AppNameSpace);
+            _logger.LogInformation($"[KubernetesHostManager] Deployment {targetDeploymentName} copied successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"[KubernetesHostManager] Failed to copy deployment {operationDescription}");
+            throw;
+        }
     }
 
     private V1PodSpec CopyPodSpecWithUpdatedConfigMaps(V1PodSpec sourcePodSpec, string sourceAppId, string targetAppId, string version)
@@ -969,6 +1029,161 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
         _logger.LogInformation($"[KubernetesHostManager] Service {targetServiceName} copied successfully");
     }
 
+    public async Task CopyDeploymentWithPatternAsync(string clientId, string sourceVersion, string targetVersion, 
+        string siloNamePattern)
+    {
+        var (sourceDeploymentName, targetDeploymentName) = BuildDeploymentNames(clientId, sourceVersion, targetVersion);
+        var (sourceContainerName, targetContainerName) = BuildContainerNames(sourceDeploymentName, targetDeploymentName);
+
+        await CopyDeploymentCoreAsync(
+            sourceDeploymentName,
+            targetDeploymentName,
+            $"client {clientId} from version {sourceVersion} to {targetVersion} with silo pattern {siloNamePattern}",
+            sourceDeployment => new DeploymentCopyContext
+            {
+                MetadataLabels = ReplaceDeploymentNameInLabels(sourceDeployment.Metadata.Labels, sourceDeploymentName, targetDeploymentName),
+                SelectorLabels = UpdateLabelsWithAppKey(sourceDeployment.Spec.Selector.MatchLabels, targetDeploymentName),
+                TemplateLabels = UpdateLabelsWithAppKey(sourceDeployment.Spec.Template.Metadata.Labels, targetDeploymentName),
+                PodSpec = UpdatePodSpecWithNewPattern(sourceDeployment.Spec.Template.Spec, sourceContainerName, targetContainerName, siloNamePattern)
+            });
+    }
+
+    private Dictionary<string, string> ReplaceDeploymentNameInLabels(IDictionary<string, string> sourceLabels, string sourceDeployment, string targetDeployment)
+    {
+        if (sourceLabels == null) return new Dictionary<string, string>();
+        
+        var targetLabels = new Dictionary<string, string>();
+        foreach (var label in sourceLabels)
+        {
+            var newValue = label.Value?.Replace(sourceDeployment, targetDeployment) ?? label.Value;
+            targetLabels[label.Key] = newValue;
+        }
+        return targetLabels;
+    }
+
+    /// <summary>
+    /// Updates labels by replacing the 'app' key with the target deployment name
+    /// The 'app' key is used by Kubernetes selectors to match pods to services and deployments
+    /// </summary>
+    private Dictionary<string, string> UpdateLabelsWithAppKey(IDictionary<string, string> sourceLabels, string targetDeploymentName)
+    {
+        if (sourceLabels == null) return new Dictionary<string, string>();
+        
+        var targetLabels = new Dictionary<string, string>();
+        foreach (var label in sourceLabels)
+        {
+            // Replace 'app' label with target deployment name for proper pod-service matching
+            if (label.Key == AppLabelKey)
+            {
+                targetLabels[label.Key] = targetDeploymentName;
+            }
+            else
+            {
+                targetLabels[label.Key] = label.Value;
+            }
+        }
+        return targetLabels;
+    }
+
+    /// <summary>
+    /// Creates deployment names tuple for source and target versions
+    /// </summary>
+    private (string source, string target) BuildDeploymentNames(string clientId, string sourceVersion, string targetVersion)
+    {
+        var hostName = GetHostName(clientId, KubernetesConstants.HostSilo);
+        return (
+            DeploymentHelper.GetAppDeploymentName(hostName, sourceVersion),
+            DeploymentHelper.GetAppDeploymentName(hostName, targetVersion)
+        );
+    }
+
+    /// <summary>
+    /// Creates container names tuple based on deployment names
+    /// Container names are derived from deployment names by replacing 'deployment-' with 'container-'
+    /// </summary>
+    private (string source, string target) BuildContainerNames(string sourceDeploymentName, string targetDeploymentName)
+    {
+        return (
+            sourceDeploymentName.Replace(KubernetesConstants.DeploymentNamePrefix, KubernetesConstants.ContainerNamePrefix),
+            targetDeploymentName.Replace(KubernetesConstants.DeploymentNamePrefix, KubernetesConstants.ContainerNamePrefix)
+        );
+    }
+
+    /// <summary>
+    /// Updates PodSpec with new silo name pattern for Orleans configuration
+    /// Only updates SILO_NAME_PATTERN environment variable if siloNamePattern is provided
+    /// </summary>
+    private V1PodSpec UpdatePodSpecWithNewPattern(V1PodSpec sourcePodSpec, string sourceContainerName, string targetContainerName, string siloNamePattern)
+    {
+        // Follow the same pattern as CopyPodSpecWithUpdatedConfigMaps but with pattern updates
+        var targetPodSpec = new V1PodSpec
+        {
+            Containers = sourcePodSpec.Containers.Select(container => new V1Container
+            {
+                // Replace container name only if it matches the source container name pattern
+                Name = container.Name == sourceContainerName ? targetContainerName : container.Name,
+                Image = container.Image,
+                Command = container.Command, // Critical: Copy the startup command
+                Args = container.Args, // Critical: Copy the startup arguments
+                Ports = container.Ports,
+                Env = UpdateEnvironmentVariables(container.Env, siloNamePattern),
+                Resources = container.Resources,
+                VolumeMounts = container.VolumeMounts, // Keep original volume mounts
+                LivenessProbe = container.LivenessProbe,
+                ReadinessProbe = container.ReadinessProbe,
+                SecurityContext = container.SecurityContext
+            }).ToList(),
+            Volumes = sourcePodSpec.Volumes, // Keep original volumes/ConfigMaps - they can be shared
+            RestartPolicy = sourcePodSpec.RestartPolicy,
+            NodeSelector = sourcePodSpec.NodeSelector,
+            Affinity = sourcePodSpec.Affinity,
+            Tolerations = sourcePodSpec.Tolerations
+        };
+
+        return targetPodSpec;
+    }
+
+    /// <summary>
+    /// Updates environment variables, specifically handling SILO_NAME_PATTERN for Orleans configuration
+    /// If siloNamePattern is empty/null, SILO_NAME_PATTERN will be removed or left unchanged
+    /// </summary>
+    private IList<V1EnvVar> UpdateEnvironmentVariables(IList<V1EnvVar> sourceEnvVars, string siloNamePattern)
+    {
+        if (sourceEnvVars == null) return new List<V1EnvVar>();
+
+        var targetEnvVars = new List<V1EnvVar>();
+        var siloPatternFound = false;
+
+        foreach (var envVar in sourceEnvVars)
+        {
+            if (envVar.Name == KubernetesConstants.SiloNamePatternEnvVar)
+            {
+                siloPatternFound = true;
+                // Only add/update SILO_NAME_PATTERN if siloNamePattern is provided
+                if (!string.IsNullOrEmpty(siloNamePattern))
+                {
+                    targetEnvVars.Add(new V1EnvVar(envVar.Name, siloNamePattern));
+                }
+                // If siloNamePattern is empty/null, skip adding this env var (effectively removes it)
+            }
+            else
+            {
+                targetEnvVars.Add(new V1EnvVar(envVar.Name, envVar.Value)
+                {
+                    ValueFrom = envVar.ValueFrom
+                });
+            }
+        }
+
+        // Add SILO_NAME_PATTERN if it wasn't in the original environment variables and is provided
+        if (!siloPatternFound && !string.IsNullOrEmpty(siloNamePattern))
+        {
+            targetEnvVars.Add(new V1EnvVar(KubernetesConstants.SiloNamePatternEnvVar, siloNamePattern));
+        }
+
+        return targetEnvVars;
+    }
+
     private async Task CopyIngressAsync(string sourceAppId, string targetAppId, string version)
     {
         var sourceIngressName = IngressHelper.GetAppIngressName(sourceAppId, version);
@@ -1058,11 +1273,11 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
             var configAgent = _grainFactory.GetGrain<IHostConfigurationGAgent>(GuidUtil.StringToGuid(grainKey));
             var businessConfigResult = await configAgent.GetBusinessConfigurationJsonAsync();
 
-            if (string.IsNullOrWhiteSpace(businessConfigResult.ConfigurationJson) || businessConfigResult.ConfigurationJson == "{}")
+            if (string.IsNullOrWhiteSpace(businessConfigResult.ConfigurationJson) || businessConfigResult.ConfigurationJson == KubernetesConstants.EmptyJsonObject)
             {
                 _logger.LogDebug("No business configuration found for {HostId}:{HostType}", hostId, hostType);
                 // Add empty business config file
-                configFiles[SecureConfigurationExtensions.DefaultBusinessConfigPath] = "{}";
+                configFiles[SecureConfigurationExtensions.DefaultBusinessConfigPath] = KubernetesConstants.EmptyJsonObject;
                 return;
             }
 
@@ -1075,7 +1290,7 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
         {
             _logger.LogError(ex, "Failed to load business configuration for {HostId}:{HostType}, adding empty config", hostId, hostType);
             // Add empty business config file as fallback
-            configFiles[SecureConfigurationExtensions.DefaultBusinessConfigPath] = "{}";
+            configFiles[SecureConfigurationExtensions.DefaultBusinessConfigPath] = KubernetesConstants.EmptyJsonObject;
         }
     }
 
