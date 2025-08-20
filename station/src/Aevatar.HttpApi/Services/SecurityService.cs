@@ -126,7 +126,7 @@ public class SecurityService : ISecurityService
         }
 
         var count = await GetCurrent10MinutesRequestCountAsync(clientIp);
-        var required = count >= _rateOptions.FreeRequestsPerDay;
+        var required = count > _rateOptions.FreeRequestsPerDay;
 
         _logger.LogDebug("IP {clientIp} current 10-minute window request count: {count}, verification required: {required}",
             clientIp, count, required);
