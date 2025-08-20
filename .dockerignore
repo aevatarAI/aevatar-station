@@ -1,8 +1,9 @@
 # Build outputs
 **/bin/
 **/obj/
-**/out/
 **/dist/
+
+# Note: out/ is needed for GitHub Actions artifacts, so not excluded
 
 # IDE files
 **/.vs/
