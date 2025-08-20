@@ -1,0 +1,36 @@
+# Unified Benchmark Container - All benchmarks in one image
+FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS build
+WORKDIR /src
+
+# Copy everything needed for benchmark builds
+COPY framework/ framework/
+COPY signalR/ signalR/
+COPY station/ station/
+
+# Restore packages for all benchmarks
+RUN dotnet restore "station/benchmark/BroadcastLatencyBenchmark/BroadcastLatencyBenchmark.csproj"
+RUN dotnet restore "station/benchmark/LatencyBenchmark/LatencyBenchmark.csproj"
+
+# Publish all benchmarks to separate directories
+RUN dotnet publish "station/benchmark/BroadcastLatencyBenchmark/BroadcastLatencyBenchmark.csproj" -c Release -o /app/broadcast --no-restore
+RUN dotnet publish "station/benchmark/LatencyBenchmark/LatencyBenchmark.csproj" -c Release -o /app/latency --no-restore
+
+# Runtime image
+FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS runtime
+WORKDIR /app
+
+# Install required tools for results processing
+RUN apk add --no-cache jq curl bash bc
+
+# Copy all built applications
+COPY --from=build /app/broadcast /app/broadcast/
+COPY --from=build /app/latency /app/latency/
+
+# Copy unified benchmark execution script
+COPY unified-benchmark-runner.sh /app/
+RUN chmod +x /app/unified-benchmark-runner.sh
+
+# Set default benchmark type (can be overridden)
+ENV BENCHMARK_TYPE=broadcast
+
+ENTRYPOINT ["/app/unified-benchmark-runner.sh"]

@@ -219,10 +219,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile
-          build-args: |
-            servicename=BenchmarkRunner
-            ENABLE_EPHEMERAL_CONFIG=true
+          file: Dockerfile.benchmark
           push: true
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
