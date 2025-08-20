@@ -7,7 +7,7 @@
         <Configuration>
           <Format>cobertura</Format>
           <Exclude>[xunit.*]*,[*Tests]*</Exclude> <!-- [Assembly-Filter]Type-Filter -->
-          <ExcludeByFile>**/test/**/*.cs,**/samples/**/*.cs,**/src/Aevatar.Application.Contracts/Permissions/**/*.cs,**/src/Aevatar.DbMigrator/**/*.cs,**/src/Aevatar.Domain/**/*.cs,**/src/Aevatar.Domain.Shared/**/*.cs,**/src/Aevatar.HttpApi.Host/**/*.cs,**/src/Aevatar.HttpApi.Client/**/*.cs,**/src/Aevatar.AuthServer/**/*.cs,**/src/Aevatar.MongoDB/**/*.cs,**/src/Aevatar.Kubernetes/**/*.cs,**/src/Aevatar.HttpApi/**/*.cs,**/src/Aevatar.HttpApi.Admin/**/*.cs,**/src/Aevatar.WebHook.Host/**/*.cs,**/src/Aevatar.Worker/**/*.cs,**/src/Aevatar.Application.Contracts/Contract/*.cs</ExcludeByFile>
+          <ExcludeByFile>**/test/**/*.cs,**/samples/**/*.cs,**/src/Aevatar.Application.Contracts/Permissions/**/*.cs,**/src/Aevatar.DbMigrator/**/*.cs,**/src/Aevatar.Domain/**/*.cs,**/src/Aevatar.Domain.Shared/**/*.cs,**/src/Aevatar.HttpApi.Host/**/*.cs,**/src/Aevatar.HttpApi.Client/**/*.cs,**/src/Aevatar.AuthServer/**/*.cs,**/src/Aevatar.MongoDB/**/*.cs,**/src/Aevatar.Kubernetes/**/*.cs,**/src/Aevatar.WebHook.Host/**/*.cs,**/src/Aevatar.Worker/**/*.cs,**/src/Aevatar.Application.Contracts/Contract/*.cs</ExcludeByFile>
           <ExcludeByAttribute>Obsolete,GeneratedCodeAttribute</ExcludeByAttribute>
           <SingleHit>false</SingleHit>
         </Configuration>
