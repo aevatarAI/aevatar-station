@@ -227,7 +227,7 @@ jobs:
               ref: 'main',
               inputs: {
                 project_name: "${{ steps.generate-uuid.outputs.project_name }}",
-                environment_ttl: "20",
+                environment_ttl: "40",
                 client_id: "${{ steps.generate-uuid.outputs.client_id }}",
                 client_secret: "${{ steps.generate-uuid.outputs.client_secret }}",
                 station_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}"

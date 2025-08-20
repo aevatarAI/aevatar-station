@@ -1,13 +1,6 @@
 name: PR Performance Benchmarks
 
 on:
-  push:
-    branches:
-      - 'feature/**'
-    paths:
-      - 'station/benchmark/**'
-      - 'station/src/**'
-      - '.github/workflows/**'
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
