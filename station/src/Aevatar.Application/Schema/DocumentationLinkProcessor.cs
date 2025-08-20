@@ -24,7 +24,6 @@ public class DocumentationLinkProcessor : ISchemaProcessor
     private void ProcessDocumentationLinks(SchemaProcessorContext context)
     {
         var classType = context.ContextualType.Type;
-        var documentationLinks = new Dictionary<string, object>();
 
         // Get all properties that have DocumentationLinkAttribute
         var properties = classType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
@@ -38,18 +37,17 @@ public class DocumentationLinkProcessor : ISchemaProcessor
                 var docLinkAttribute = docLinkAttributes.First();
                 var propertyName = GetPropertyName(property.Name);
                 
-                // Add documentation URL to the metadata
-                documentationLinks[propertyName] = new
+                // Find the corresponding property schema and add documentation URL directly
+                if (context.Schema.Properties.TryGetValue(propertyName, out var propertySchema))
                 {
-                    documentationUrl = docLinkAttribute.DocumentationUrl
-                };
+                    // Add documentationUrl directly to the property schema
+                    if (propertySchema.ExtensionData == null)
+                    {
+                        propertySchema.ExtensionData = new Dictionary<string, object>();
+                    }
+                    propertySchema.ExtensionData["documentationUrl"] = docLinkAttribute.DocumentationUrl;
+                }
             }
-        }
-
-        // If we found any documentation links, add them to the schema
-        if (documentationLinks.Any())
-        {
-            AddDocumentationLinksToSchema(context, documentationLinks);
         }
     }
 
@@ -62,19 +60,5 @@ public class DocumentationLinkProcessor : ISchemaProcessor
             return propertyName;
             
         return char.ToLowerInvariant(propertyName[0]) + propertyName[1..];
-    }
-
-    /// <summary>
-    /// Add documentation links metadata to the schema's extension data
-    /// </summary>
-    private void AddDocumentationLinksToSchema(SchemaProcessorContext context, Dictionary<string, object> documentationLinks)
-    {
-        if (context.Schema.ExtensionData == null)
-        {
-            context.Schema.ExtensionData = new Dictionary<string, object>();
-        }
-
-        // Add documentation links under x-documentationLinks extension
-        context.Schema.ExtensionData["x-documentationLinks"] = documentationLinks;
     }
 }
