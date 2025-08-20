@@ -2,7 +2,6 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Kubernetes;
-using Aevatar.Kubernetes.Adapter;
 using Aevatar.Kubernetes.ResourceDefinition;
 using Aevatar.Projects;
 using Aevatar.WebHook.Deploy;
@@ -10,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using Volo.Abp;
 using Aevatar.Enum;
+using Aevatar.Kubernetes.Abstractions.Adapter;
 using Aevatar.Kubernetes.Manager;
 using Volo.Abp.Application.Services;
 

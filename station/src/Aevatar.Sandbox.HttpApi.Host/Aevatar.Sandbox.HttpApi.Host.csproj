@@ -1,0 +1,66 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <Import Project="..\..\common.props" />
+  <PropertyGroup>
+    <DisableStaticWebAssets>true</DisableStaticWebAssets>
+  </PropertyGroup>
+  <PropertyGroup>
+    <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Aevatar</RootNamespace>
+    <PreserveCompilationReferences>true</PreserveCompilationReferences>
+    <UserSecretsId>Aevatar-4681b4fd-151f-4221-84a4-929d86723e4c</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
+    <PackageReference Include="Serilog.AspNetCore" />
+    <PackageReference Include="Serilog.Sinks.Async" />
+    <PackageReference Include="Serilog.Sinks.Console" />
+    <PackageReference Include="Serilog.Sinks.OpenTelemetry" />
+    <PackageReference Include="Volo.Abp.Autofac" />
+    <PackageReference Include="Volo.Abp.AspNetCore.Serilog" />
+    <PackageReference Include="Volo.Abp.Caching.StackExchangeRedis" />
+    <PackageReference Include="Volo.Abp.Swashbuckle" />
+    <PackageReference Include="Volo.Abp.Account.Web.OpenIddict" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+    <PackageReference Include="Microsoft.Orleans.Client" />
+    <PackageReference Include="Orleans.Providers.MongoDB" />
+    <PackageReference Include="MongoDB.Driver.Core.Extensions.DiagnosticSources" />
+    <PackageReference Include="AElf.OpenTelemetry" />
+    <PackageReference Include="AutoResponseWrapper" />
+    <PackageReference Include="MongoDB.Driver" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Common" />
+    <PackageReference Include="Orleans.Streams.Kafka" />
+    <PackageReference Include="Volo.Abp.BlobStoring.Aws" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\signalR\src\Aevatar.SignalR\Aevatar.SignalR.csproj" />
+    <ProjectReference Include="..\Aevatar.Application\Aevatar.Application.csproj" />
+    <ProjectReference Include="..\Aevatar.HttpApi.Admin\Aevatar.HttpApi.Admin.csproj" />
+    <ProjectReference Include="..\Aevatar.MongoDB\Aevatar.MongoDB.csproj" />
+    <ProjectReference Include="..\Aevatar.Sandbox.Abstractions\Aevatar.Sandbox.Abstractions.csproj" />
+    <ProjectReference Include="..\Aevatar.Sandbox.Core\Aevatar.Sandbox.Core.csproj" />
+    <ProjectReference Include="..\Aevatar.Sandbox.HttpApi.Core\Aevatar.Sandbox.HttpApi.Core.csproj" />
+    <ProjectReference Include="..\Aevatar.Sandbox.Python\Aevatar.Sandbox.Python.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Logs\**" />
+    <Content Remove="Logs\**" />
+    <EmbeddedResource Remove="Logs\**" />
+    <None Remove="Logs\**" />
+    <Content Include="../../configurations/appsettings.Shared.json" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" Link="appsettings.Shared.json" />
+    <Content Include="../../configurations/appsettings.HttpApi.Host.Shared.json" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" Link="appsettings.HttpApi.Host.Shared.json" />
+    <Content Include="../../configurations/appsettings.Silo.Shared.json" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" Link="appsettings.Silo.Shared.json" />
+  </ItemGroup>
+</Project>

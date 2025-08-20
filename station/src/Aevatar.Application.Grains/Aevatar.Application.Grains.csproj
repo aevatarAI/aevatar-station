@@ -8,22 +8,22 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Aevatar.GAgents.ChatAgent" />
+        <ProjectReference Include="../../../../aevatar-gagents/src/Aevatar.GAgents.ChatAgent/Aevatar.GAgents.ChatAgent.csproj" />
         <PackageReference Include="AutoGen.Core" />
         <PackageReference Include="Microsoft.Extensions.Options" />
         <PackageReference Include="Microsoft.Orleans.Sdk" />
         <PackageReference Include="AElf.OpenTelemetry" />
         <PackageReference Include="Volo.Abp.AutoMapper" />
         <PackageReference Include="Volo.Abp.EventBus.Abstractions" />
-        <PackageReference Include="Aevatar.GAgents.AIGAgent" />
-        <PackageReference Include="Aevatar.GAgents.SemanticKernel" />
-        <PackageReference Include="Aevatar.GAgents.AI.Abstractions" />
-        <PackageReference Include="Aevatar.GAgents.Twitter" />
-        <PackageReference Include="Aevatar.GAgents.GroupChat" />
-        <PackageReference Include="Aevatar.GAgents.PsiOmni" />
-        <PackageReference Include="Aevatar.GAgents.PsiOmni.Plugins" />
-        <PackageReference Include="Aevatar.GAgents.MCP" />
-        <PackageReference Include="Aevatar.GAgents.InputGAgent" />
+        <ProjectReference Include="../../../../aevatar-gagents/src/Aevatar.GAgents.AIGAgent/Aevatar.GAgents.AIGAgent.csproj" />
+        <ProjectReference Include="../../../../aevatar-gagents/src/Aevatar.GAgents.SemanticKernel/Aevatar.GAgents.SemanticKernel.csproj" />
+        <ProjectReference Include="../../../../aevatar-gagents/src/Aevatar.GAgents.AI.Abstractions/Aevatar.GAgents.AI.Abstractions.csproj" />
+        <ProjectReference Include="../../../../aevatar-gagents/src/Aevatar.GAgents.Twitter/Aevatar.GAgents.Twitter.csproj" />
+        <ProjectReference Include="../../../../aevatar-gagents/src/Aevatar.GAgents.GroupChat/Aevatar.GAgents.GroupChat.csproj" />
+        <ProjectReference Include="../../../../aevatar-gagents/src/Aevatar.GAgents.PsiOmni/Aevatar.GAgents.PsiOmni.csproj" />
+        <ProjectReference Include="../../../../aevatar-gagents/src/Aevatar.GAgents.PsiOmni.Plugins/Aevatar.GAgents.PsiOmni.Plugins.csproj" />
+        <ProjectReference Include="../../../../aevatar-gagents/src/Aevatar.GAgents.MCP/Aevatar.GAgents.MCP.csproj" />
+        <ProjectReference Include="../../../../aevatar-gagents/src/Aevatar.GAgents.InputGAgent/Aevatar.GAgents.InputGAgent.csproj" />
     </ItemGroup>
 
     <ItemGroup>

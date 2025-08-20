@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Aevatar.Kubernetes\Aevatar.Kubernetes.csproj" />
+        <ProjectReference Include="..\Aevatar.Sandbox.Abstractions\Aevatar.Sandbox.Abstractions.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Update="Runner\entry.py">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+</Project>

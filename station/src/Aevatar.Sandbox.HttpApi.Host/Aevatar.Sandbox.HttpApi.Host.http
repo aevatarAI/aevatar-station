@@ -1,0 +1,6 @@
+@Aevatar.Sandbox.HttpApi.Host_HostAddress = http://localhost:5279
+
+GET {{Aevatar.Sandbox.HttpApi.Host_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

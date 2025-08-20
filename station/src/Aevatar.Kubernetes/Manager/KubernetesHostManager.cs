@@ -1,5 +1,4 @@
 using System.Text.RegularExpressions;
-using Aevatar.Kubernetes.Adapter;
 using Aevatar.Kubernetes.ResourceDefinition;
 using Aevatar.Options;
 using Aevatar.WebHook.Deploy;
@@ -12,6 +11,7 @@ using Aevatar.Enum;
 using Aevatar.Application.Grains.Agents.Configuration;
 using Aevatar.Common;
 using Aevatar.Domain.Shared.Configuration;
+using Aevatar.Kubernetes.Abstractions.Adapter;
 
 namespace Aevatar.Kubernetes.Manager;
 
