@@ -1,0 +1,54 @@
+# Build outputs
+**/bin/
+**/obj/
+**/out/
+**/dist/
+
+# IDE files
+**/.vs/
+**/.vscode/
+**/.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+**/logs/
+**/*.log
+
+# Runtime files
+**/*.pid
+
+# Node modules (if any)
+**/node_modules/
+
+# Test results
+**/TestResults/
+**/coverage/
+
+# NuGet packages (will be restored in Docker)
+**/packages/
+
+# Git
+.git/
+.gitignore
+
+# Docker files themselves
+Dockerfile*
+.dockerignore
+
+# Temporary files
+**/*.tmp
+**/*.temp
+
+# Local development files
+**/*.user
+**/*.local
