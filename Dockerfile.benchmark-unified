@@ -4,6 +4,7 @@ WORKDIR /src
 
 # Copy everything needed for benchmark builds
 COPY framework/ framework/
+COPY signalR/ signalR/
 COPY station/ station/
 
 # Restore packages for all benchmarks
