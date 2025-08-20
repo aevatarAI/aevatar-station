@@ -86,7 +86,7 @@ public class SecurityService : ISecurityService
                 var firstIp = ips[0].Trim();
                 if (IsValidIpAddress(firstIp))
                 {
-                    _logger.LogDebug("Retrieved IP from X-Forwarded-For header");
+                    _logger.LogDebug("Retrieved IP from X-Forwarded-For: {ip}", firstIp);
                     return firstIp;
                 }
             }
@@ -98,14 +98,14 @@ public class SecurityService : ISecurityService
             var ip = realIp.ToString().Trim();
             if (IsValidIpAddress(ip))
             {
-                _logger.LogDebug("Retrieved IP from X-Real-IP header");
+                _logger.LogDebug("Retrieved IP from X-Real-IP: {ip}", ip);
                 return ip;
             }
         }
 
         // 3. Use connection remote IP
         var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        _logger.LogDebug("Retrieved IP from RemoteIpAddress");
+        _logger.LogDebug("Retrieved IP from RemoteIpAddress: {ip}", remoteIp);
         return remoteIp;
     }
 
@@ -128,8 +128,8 @@ public class SecurityService : ISecurityService
         var count = await GetCurrent10MinutesRequestCountAsync(clientIp);
         var required = count >= _rateOptions.FreeRequestsPerDay;
 
-        _logger.LogDebug("Current 10-minute window request count: {count}, verification required: {required}",
-            count, required);
+        _logger.LogDebug("IP {clientIp} current 10-minute window request count: {count}, verification required: {required}",
+            clientIp, count, required);
 
         return required;
     }
@@ -142,7 +142,7 @@ public class SecurityService : ISecurityService
         // Try to increment atomically, if key doesn't exist, create it with value 1
         var newCount = await IncrementAtomicallyAsync(key, expiry);
 
-        _logger.LogDebug("Request count incremented to: {count}", newCount);
+        _logger.LogDebug("IP {clientIp} request count incremented to: {count}", clientIp, newCount);
         return newCount;
     }
 
@@ -235,7 +235,16 @@ public class SecurityService : ISecurityService
         var now = DateTime.UtcNow;
         var windowStart = new DateTime(now.Year, now.Month, now.Day, now.Hour, (now.Minute / 10) * 10, 0);
         var windowKey = windowStart.ToString("yyyyMMddHHmm");
-        return $"SendRegCode:{clientIp}:{windowKey}";
+        var cacheKey = $"SendRegCode:{clientIp}:{windowKey}";
+        
+        _logger.LogDebug("Cache key calculation - IP: {clientIp}, Now: {now}, Window: {windowStart}-{windowEnd}, Key: {key}", 
+            clientIp,
+            now.ToString("yyyy-MM-dd HH:mm:ss"), 
+            windowStart.ToString("yyyy-MM-dd HH:mm:ss"), 
+            windowStart.AddMinutes(10).ToString("yyyy-MM-dd HH:mm:ss"),
+            cacheKey);
+            
+        return cacheKey;
     }
 
     private DateTimeOffset GetExpiryTime()
