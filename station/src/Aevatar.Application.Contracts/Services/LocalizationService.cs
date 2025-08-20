@@ -123,6 +123,7 @@ public class LocalizationService : ILocalizationService
             GodGPTChatLanguage.English => "en",
             GodGPTChatLanguage.TraditionalChinese => "zh-tw",
             GodGPTChatLanguage.Spanish => "es",
+            GodGPTChatLanguage.CN => "zh",
             _ => "en"
         };
     }
@@ -224,7 +225,36 @@ public class LocalizationService : ILocalizationService
                 ["es.VoiceLanguageNotSet"] = "Idioma de voz no establecido.",
                 ["es.HasBeenRegistered"] = "El correo electrónico: {input.Email} ha sido registrado.",
                 ["es.WebhookValidatingError"] = "Error al validar el webhook ",
-                ["es.InvalidShare"] = "Cadena de compartir inválida"
+                ["es.InvalidShare"] = "Cadena de compartir inválida",
+                
+                ["zh.Unauthorized"] = "未授权：用户未通过身份验证。",
+                ["zh.UserNotAuthenticated"] = "未授权：用户未通过身份验证。",
+                ["zh.UnableToRetrieveUserId"] = "未授权：无法获取 UserId。",
+                ["zh.SessionNotFound"] = "找不到会话或拒绝访问。",
+                ["zh.SessionInfoIsNull"] = "会话信息为空。",
+                ["zh.UnableToLoadConversation"] = "无法加载会话 {sessionId}",
+                ["zh.NoActiveGuestSession"] = "没有活跃的游客会话。请先创建会话。",
+                ["zh.InsufficientCredits"] = "credits 不足。",
+                ["zh.RateLimitExceeded"] = "请求频率超限。",
+                ["zh.DailyChatLimitExceeded"] = "已超出每日聊天次数限制。",
+                ["zh.InvalidRequest"] = "无效的请求体。",
+                ["zh.InvalidRequestBody"] = "无效的请求体。",
+                ["zh.InvalidCaptchaCode"] = "无效的验证码",
+                ["zh.EmailIsRequired"] = "邮箱是必填项",
+                ["zh.UserUnRegister"] = "用户未注册",
+                ["zh.TooManyFiles"] = "文件过多。每次最多上传 {TooManyFiles} 张图片。",
+                ["zh.FileTooLarge"] = "文件太大，最大限制为 {MaxSizeBytes} 字节。",
+                ["zh.MaximumFileSizeExceeded"] = "超过最大文件大小。",
+                ["zh.InternalServerError"] = "内部服务器错误。",
+                ["zh.ServiceUnavailable"] = "服务暂时不可用，请稍后再试。",
+                ["zh.OperationFailed"] = "操作失败。",
+                ["zh.ChatLimitExceeded"] = "已超出聊天限制。",
+                ["zh.GuestChatLimitExceeded"] = "已超出访客聊天限制",
+                ["zh.UnsetLanguage"] = "Unset language request body.",
+                ["zh.VoiceLanguageNotSet"] = "语言请求体未设置。",
+                ["zh.HasBeenRegistered"] = "邮箱: {input.Email} 已注册。",
+                ["zh.WebhookValidatingError"] = "验证 webhook 时出错",
+                ["zh.InvalidShare"] = "分享的字符串无效。"
 
             },
             
@@ -233,7 +263,9 @@ public class LocalizationService : ILocalizationService
                 // Add validation messages here if needed
                 ["en.Required"] = "This field is required.",
                 ["zh-tw.Required"] = "此字段为必填项。",
-                ["es.Required"] = "Este campo es requerido."
+                ["es.Required"] = "Este campo es requerido.",
+                ["zh.Required"] = "此字段为必填项。"
+
             },
             
             ["messages"] = new Dictionary<string, string>
@@ -241,7 +273,9 @@ public class LocalizationService : ILocalizationService
                 // Add general messages here if needed
                 ["en.Success"] = "Operation completed successfully.",
                 ["zh-tw.Success"] = "操作成功完成。",
-                ["es.Success"] = "Operación completada exitosamente."
+                ["es.Success"] = "Operación completada exitosamente.",
+                ["en.Success"] = "操作已成功完成。"
+
             }
         };
 
