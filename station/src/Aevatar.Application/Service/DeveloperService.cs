@@ -287,7 +287,6 @@ public class DeveloperService : ApplicationService, IDeveloperService
 
         _logger.LogInformation("Combined CORS URLs result: {CombinedCorsUrls}", combinedCorsUrls);
         return combinedCorsUrls;
-       
     }
 
     private string GetConfigValue(params string[] keys) =>

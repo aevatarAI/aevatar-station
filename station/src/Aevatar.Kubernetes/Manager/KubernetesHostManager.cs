@@ -17,12 +17,29 @@ namespace Aevatar.Kubernetes.Manager;
 
 public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingletonDependency
 {
+    /// <summary>
+    /// Kubernetes label key used for pod-service matching and deployment identification
+    /// </summary>
+    private const string AppLabelKey = "app";
+    
     // private readonly k8s.Kubernetes _k8sClient;
     private readonly KubernetesOptions _kubernetesOptions;
     private readonly HostDeployOptions _hostDeployOptions;
     private readonly ILogger<KubernetesHostManager> _logger;
     private readonly IKubernetesClientAdapter _kubernetesClientAdapter;
     private readonly IGrainFactory _grainFactory;
+
+    /// <summary>
+    /// Context for deployment copying operations
+    /// Encapsulates the different strategies for label and PodSpec updates
+    /// </summary>
+    private class DeploymentCopyContext
+    {
+        public Dictionary<string, string> MetadataLabels { get; init; } = new();
+        public Dictionary<string, string> SelectorLabels { get; init; } = new();
+        public Dictionary<string, string> TemplateLabels { get; init; } = new();
+        public V1PodSpec PodSpec { get; init; } = new();
+    }
 
     public KubernetesHostManager(ILogger<KubernetesHostManager> logger,
         IKubernetesClientAdapter kubernetesClientAdapter,
@@ -891,18 +908,6 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
         }
     }
 
-    /// <summary>
-    /// Context for deployment copying operations
-    /// Encapsulates the different strategies for label and PodSpec updates
-    /// </summary>
-    private class DeploymentCopyContext
-    {
-        public Dictionary<string, string> MetadataLabels { get; init; } = new();
-        public Dictionary<string, string> SelectorLabels { get; init; } = new();
-        public Dictionary<string, string> TemplateLabels { get; init; } = new();
-        public V1PodSpec PodSpec { get; init; } = new();
-    }
-
     private V1PodSpec CopyPodSpecWithUpdatedConfigMaps(V1PodSpec sourcePodSpec, string sourceAppId, string targetAppId, string version)
     {
         var targetPodSpec = new V1PodSpec
@@ -1027,12 +1032,8 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
     public async Task CopyDeploymentWithPatternAsync(string clientId, string sourceVersion, string targetVersion, 
         string siloNamePattern)
     {
-        var hostName = GetHostName(clientId, KubernetesConstants.HostSilo);
-        var sourceDeploymentName = DeploymentHelper.GetAppDeploymentName(hostName, sourceVersion);
-        var targetDeploymentName = DeploymentHelper.GetAppDeploymentName(hostName, targetVersion);
-        
-        var sourceContainerName = sourceDeploymentName.Replace("deployment-", "container-");
-        var targetContainerName = targetDeploymentName.Replace("deployment-", "container-");
+        var (sourceDeploymentName, targetDeploymentName) = BuildDeploymentNames(clientId, sourceVersion, targetVersion);
+        var (sourceContainerName, targetContainerName) = BuildContainerNames(sourceDeploymentName, targetDeploymentName);
 
         await CopyDeploymentCoreAsync(
             sourceDeploymentName,
@@ -1041,8 +1042,8 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
             sourceDeployment => new DeploymentCopyContext
             {
                 MetadataLabels = ReplaceDeploymentNameInLabels(sourceDeployment.Metadata.Labels, sourceDeploymentName, targetDeploymentName),
-                SelectorLabels = UpdateSelectorLabels(sourceDeployment.Spec.Selector.MatchLabels, targetDeploymentName),
-                TemplateLabels = UpdateTemplateLabels(sourceDeployment.Spec.Template.Metadata.Labels, targetDeploymentName),
+                SelectorLabels = UpdateLabelsWithAppKey(sourceDeployment.Spec.Selector.MatchLabels, targetDeploymentName),
+                TemplateLabels = UpdateLabelsWithAppKey(sourceDeployment.Spec.Template.Metadata.Labels, targetDeploymentName),
                 PodSpec = UpdatePodSpecWithNewPattern(sourceDeployment.Spec.Template.Spec, sourceContainerName, targetContainerName, siloNamePattern)
             });
     }
@@ -1060,33 +1061,19 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
         return targetLabels;
     }
 
-    private Dictionary<string, string> UpdateSelectorLabels(IDictionary<string, string> sourceSelector, string targetDeploymentName)
-    {
-        if (sourceSelector == null) return new Dictionary<string, string>();
-        
-        var targetSelector = new Dictionary<string, string>();
-        foreach (var selector in sourceSelector)
-        {
-            if (selector.Key == "app")
-            {
-                targetSelector[selector.Key] = targetDeploymentName;
-            }
-            else
-            {
-                targetSelector[selector.Key] = selector.Value;
-            }
-        }
-        return targetSelector;
-    }
-
-    private Dictionary<string, string> UpdateTemplateLabels(IDictionary<string, string> sourceLabels, string targetDeploymentName)
+    /// <summary>
+    /// Updates labels by replacing the 'app' key with the target deployment name
+    /// The 'app' key is used by Kubernetes selectors to match pods to services and deployments
+    /// </summary>
+    private Dictionary<string, string> UpdateLabelsWithAppKey(IDictionary<string, string> sourceLabels, string targetDeploymentName)
     {
         if (sourceLabels == null) return new Dictionary<string, string>();
         
         var targetLabels = new Dictionary<string, string>();
         foreach (var label in sourceLabels)
         {
-            if (label.Key == "app")
+            // Replace 'app' label with target deployment name for proper pod-service matching
+            if (label.Key == AppLabelKey)
             {
                 targetLabels[label.Key] = targetDeploymentName;
             }
@@ -1098,6 +1085,34 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
         return targetLabels;
     }
 
+    /// <summary>
+    /// Creates deployment names tuple for source and target versions
+    /// </summary>
+    private (string source, string target) BuildDeploymentNames(string clientId, string sourceVersion, string targetVersion)
+    {
+        var hostName = GetHostName(clientId, KubernetesConstants.HostSilo);
+        return (
+            DeploymentHelper.GetAppDeploymentName(hostName, sourceVersion),
+            DeploymentHelper.GetAppDeploymentName(hostName, targetVersion)
+        );
+    }
+
+    /// <summary>
+    /// Creates container names tuple based on deployment names
+    /// Container names are derived from deployment names by replacing 'deployment-' with 'container-'
+    /// </summary>
+    private (string source, string target) BuildContainerNames(string sourceDeploymentName, string targetDeploymentName)
+    {
+        return (
+            sourceDeploymentName.Replace("deployment-", "container-"),
+            targetDeploymentName.Replace("deployment-", "container-")
+        );
+    }
+
+    /// <summary>
+    /// Updates PodSpec with new silo name pattern for Orleans configuration
+    /// Only updates SILO_NAME_PATTERN environment variable if siloNamePattern is provided
+    /// </summary>
     private V1PodSpec UpdatePodSpecWithNewPattern(V1PodSpec sourcePodSpec, string sourceContainerName, string targetContainerName, string siloNamePattern)
     {
         // Follow the same pattern as CopyPodSpecWithUpdatedConfigMaps but with pattern updates
@@ -1105,12 +1120,13 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
         {
             Containers = sourcePodSpec.Containers.Select(container => new V1Container
             {
+                // Replace container name only if it matches the source container name pattern
                 Name = container.Name == sourceContainerName ? targetContainerName : container.Name,
                 Image = container.Image,
                 Command = container.Command, // Critical: Copy the startup command
                 Args = container.Args, // Critical: Copy the startup arguments
                 Ports = container.Ports,
-                Env = UpdateEnvironmentVariables(container.Env, siloNamePattern), // Only difference: update SILO_NAME_PATTERN
+                Env = UpdateEnvironmentVariables(container.Env, siloNamePattern),
                 Resources = container.Resources,
                 VolumeMounts = container.VolumeMounts, // Keep original volume mounts
                 LivenessProbe = container.LivenessProbe,
@@ -1127,19 +1143,28 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
         return targetPodSpec;
     }
 
+    /// <summary>
+    /// Updates environment variables, specifically handling SILO_NAME_PATTERN for Orleans configuration
+    /// If siloNamePattern is empty/null, SILO_NAME_PATTERN will be removed or left unchanged
+    /// </summary>
     private IList<V1EnvVar> UpdateEnvironmentVariables(IList<V1EnvVar> sourceEnvVars, string siloNamePattern)
     {
         if (sourceEnvVars == null) return new List<V1EnvVar>();
 
         var targetEnvVars = new List<V1EnvVar>();
-        var siloPatternUpdated = false;
+        var siloPatternFound = false;
 
         foreach (var envVar in sourceEnvVars)
         {
             if (envVar.Name == "SILO_NAME_PATTERN")
             {
-                targetEnvVars.Add(new V1EnvVar(envVar.Name, siloNamePattern));
-                siloPatternUpdated = true;
+                siloPatternFound = true;
+                // Only add/update SILO_NAME_PATTERN if siloNamePattern is provided
+                if (!string.IsNullOrEmpty(siloNamePattern))
+                {
+                    targetEnvVars.Add(new V1EnvVar(envVar.Name, siloNamePattern));
+                }
+                // If siloNamePattern is empty/null, skip adding this env var (effectively removes it)
             }
             else
             {
@@ -1150,8 +1175,8 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
             }
         }
 
-        // Add SILO_NAME_PATTERN if it wasn't in the original environment variables
-        if (!siloPatternUpdated && !string.IsNullOrEmpty(siloNamePattern))
+        // Add SILO_NAME_PATTERN if it wasn't in the original environment variables and is provided
+        if (!siloPatternFound && !string.IsNullOrEmpty(siloNamePattern))
         {
             targetEnvVars.Add(new V1EnvVar("SILO_NAME_PATTERN", siloNamePattern));
         }
