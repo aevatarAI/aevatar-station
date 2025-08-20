@@ -104,6 +104,38 @@ jobs:
           path: out/${{ matrix.servicename }}
           retention-days: 1
 
+  publish-benchmarks:
+    if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
+    needs: approval-count
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.0.x'
+      - name: Cache NuGet Packages
+        id: nuget-packages
+        uses: actions/cache@v4
+        env:
+          cache-name: nuget-package-cache
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-${{ env.cache-name }}-benchmarks
+      - name: Publish BroadcastLatencyBenchmark
+        run: dotnet publish station/benchmark/BroadcastLatencyBenchmark/BroadcastLatencyBenchmark.csproj -o out/BroadcastLatencyBenchmark
+      - name: Publish LatencyBenchmark  
+        run: dotnet publish station/benchmark/LatencyBenchmark/LatencyBenchmark.csproj -o out/LatencyBenchmark
+      - name: Copy unified runner script
+        run: cp unified-benchmark-runner.sh out/
+      - name: Upload benchmark artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: BenchmarkRunner
+          path: out/
+          retention-days: 1
+
   build-and-push-image:
     if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
     needs: publish
@@ -158,7 +190,7 @@ jobs:
 
   build-unified-benchmark-image:
     if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
-    needs: approval-count
+    needs: [approval-count, publish-benchmarks]
     runs-on: ephemeral-env-runner
     outputs:
       image: ${{ steps.meta.outputs.tags }}
@@ -174,6 +206,12 @@ jobs:
           tags: |
             type=sha
 
+      - name: Download benchmark artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: BenchmarkRunner
+          path: out/BenchmarkRunner
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -181,7 +219,10 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile.benchmark-unified
+          file: Dockerfile
+          build-args: |
+            servicename=BenchmarkRunner
+            ENABLE_EPHEMERAL_CONFIG=true
           push: true
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
