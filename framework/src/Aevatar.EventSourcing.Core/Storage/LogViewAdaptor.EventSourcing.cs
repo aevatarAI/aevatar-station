@@ -85,7 +85,7 @@ public partial class LogViewAdaptor<TLogView, TLogEntry>
                     bool isAlreadyMigrated = _globalSnapshot.RecordExists && 
                                            (_globalSnapshot.State.SnapshotVersion > 0 || HasMigrationFlag(_globalSnapshot.State.WriteVector));
                     
-                    if (isAlreadyMigrated)
+                    if (isAlreadyMigrated || !_globalSnapshot.RecordExists)
                     {
                         Services.Log(LogLevel.Information, "Found migrated framework snapshot, processing normally");
                         await ProcessFrameworkDataAsync(grainId);
@@ -511,7 +511,7 @@ public partial class LogViewAdaptor<TLogView, TLogEntry>
     {
         _confirmedView = new TLogView();
         _confirmedVersion = 0;
-        _globalVersion = 0;
+        _globalVersion = -1;
         _globalSnapshot.State.Snapshot = DeepCopy(_confirmedView);
         _globalSnapshot.State.SnapshotVersion = 0;
         _globalSnapshot.State.WriteVector = string.Empty;

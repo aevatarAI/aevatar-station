@@ -352,7 +352,8 @@ public class GodGPTService : ApplicationService, IGodGPTService
     public async Task UpdateShowToastAsync(Guid currentUserId)
     {
         var userQuotaGAgent = _clusterClient.GetGrain<IUserQuotaGAgent>(currentUserId);
-        await userQuotaGAgent.SetShownCreditsToastAsync(true);
+        //No need to save immediately, can be executed in one step
+        userQuotaGAgent.SetShownCreditsToastAsync(true);
     }
 
     public async Task<List<StripeProductDto>> GetStripeProductsAsync(Guid currentUserId)
