@@ -176,6 +176,7 @@ jobs:
           push: true
           build-args: |
             servicename=${{ matrix.servicename }}
+            ENABLE_EPHEMERAL_CONFIG=true
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

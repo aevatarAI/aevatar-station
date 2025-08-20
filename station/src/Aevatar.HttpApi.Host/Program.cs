@@ -22,23 +22,17 @@ public class Program
 {
     public async static Task<int> Main(string[] args)
     {
-        ConfigureLogger();
-
         try
         {
             Log.Information("Starting HttpApi.Host.");
             var builder = WebApplication.CreateBuilder(args);
-            builder.Configuration
-                .AddAevatarSecureConfiguration(
-                    systemConfigPaths: new[]
-                    {
-                        Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"),
-                        Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json")
-                    })
-                .AddEnvironmentVariables();
+            
+            // Configure all configuration sources once
+            ConfigureAppConfiguration(builder.Configuration, args);
+            ConfigureLogger(builder.Configuration);
+            
             builder.Host
                 .UseOrleansClientConfiguration()
-                .ConfigureDefaults(args)
                 .UseAutofac()
                 .UseSerilog();
             builder.Services.AddSignalR(options => { options.EnableDetailedErrors = true; }).AddOrleans();
@@ -69,9 +63,11 @@ public class Program
         }
     }
 
-    private static void ConfigureLogger(LoggerConfiguration? loggerConfiguration = null)
+    private static void ConfigureAppConfiguration(IConfigurationBuilder configBuilder, string[] args)
     {
-        var configuration = new ConfigurationBuilder()
+        // Clear default configuration sources to avoid duplicate loading
+        configBuilder.Sources.Clear();
+        configBuilder
             .AddAevatarSecureConfiguration(
                 systemConfigPaths: new[]
                 {
@@ -79,7 +75,13 @@ public class Program
                     Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json")
                 })
             .AddEnvironmentVariables()
-            .Build();
+            .AddCommandLine(args);
+            
+        Log.Information("Configuration loaded with ephemeral config support");
+    }
+    
+    private static void ConfigureLogger(IConfiguration configuration, LoggerConfiguration? loggerConfiguration = null)
+    {
         Log.Logger = (loggerConfiguration ?? new LoggerConfiguration())
             .ReadFrom.Configuration(configuration)
             .MinimumLevel.Information()
@@ -87,5 +89,8 @@ public class Program
             .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
             .Enrich.FromLogContext()
             .CreateLogger();
+            
+        var corsOrigins = configuration["App:CorsOrigins"];
+        Log.Information("Application configured with CORS origins: {CorsOrigins}", corsOrigins);
     }
 }
