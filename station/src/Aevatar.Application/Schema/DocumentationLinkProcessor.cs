@@ -14,6 +14,12 @@ public class DocumentationLinkProcessor : ISchemaProcessor
 {
     public void Process(SchemaProcessorContext context)
     {
+        // Handle null context gracefully
+        if (context == null)
+        {
+            return;
+        }
+
         // Only process class/object types, not enums or primitives
         if (context.ContextualType.Type.IsClass && !context.ContextualType.Type.IsEnum)
         {
