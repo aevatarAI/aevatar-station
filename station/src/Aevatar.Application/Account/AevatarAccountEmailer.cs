@@ -22,7 +22,7 @@ namespace Aevatar.Account;
 public interface IAevatarAccountEmailer
 {
     Task SendRegisterCodeAsync(string email, string code);
-    Task SendPasswordResetLinkAsync(IdentityUser user, string resetToken);
+    Task SendPasswordResetLinkAsync(IdentityUser user, string inputEmail, string resetToken);
 }
 
 public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependency
@@ -66,10 +66,10 @@ public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependenc
         );
     }
 
-    public async Task SendPasswordResetLinkAsync(IdentityUser user, string resetToken)
+    public async Task SendPasswordResetLinkAsync(IdentityUser user, string inputEmail, string resetToken)
     {
         var url = _accountOptions.ResetPasswordUrl;
-        var link = $"{url}?userId={user.Id}&resetToken={UrlEncoder.Default.Encode(resetToken)}";
+        var link = $"{url}?userId={user.Id}&email={UrlEncoder.Default.Encode(inputEmail)}&resetToken={UrlEncoder.Default.Encode(resetToken)}";
 
         var emailContent = await _templateRenderer.RenderAsync(
             AccountEmailTemplates.PasswordResetLink,
