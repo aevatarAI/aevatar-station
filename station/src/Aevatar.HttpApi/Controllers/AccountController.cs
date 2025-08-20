@@ -66,21 +66,21 @@ public class AccountController : AevatarController
         var language = HttpContext.GetGodGPTLanguage();
         var clientIp = _securityService.GetRealClientIp(HttpContext);
         
-        _logger.LogInformation("SendRegisterCodeAsync request - Platform: {platform}, Email: {email}", 
-            input.Platform, input.Email);
+        _logger.LogInformation("SendRegisterCodeAsync request from IP {clientIp}, Platform: {platform}, Email: {email}", 
+            clientIp, input.Platform, input.Email);
 
         try
         {
             // Step 1: Increment request count immediately to prevent abuse (Option A - Anti-spam priority)
             var currentCount = await _securityService.IncrementRequestCountAsync(clientIp);
-            _logger.LogInformation("Request count incremented: {count}", currentCount);
+            _logger.LogInformation("IP {clientIp} request count incremented: {count}", clientIp, currentCount);
             
             // Step 2: Check if security verification is required based on rate limiting
             var verificationRequired = await _securityService.IsSecurityVerificationRequiredAsync(clientIp);
             
             if (verificationRequired)
             {
-                _logger.LogInformation("Security verification required");
+                _logger.LogInformation("IP {clientIp} security verification required", clientIp);
                 
                 // Step 3: Perform security verification based on platform
                 var verificationRequest = new SecurityVerificationRequest
@@ -95,8 +95,8 @@ public class AccountController : AevatarController
                 
                 if (!verificationResult.Success)
                 {
-                    _logger.LogWarning("Security verification failed: {reason}", 
-                        verificationResult.Message);
+                    _logger.LogWarning("IP {clientIp} security verification failed: {reason}", 
+                        clientIp, verificationResult.Message);
                     
                     // Return SecurityVerificationRequired (always English) as frontend signal
                     if (verificationResult.Message.Contains("Missing") || verificationResult.Message.Contains("token"))
@@ -117,15 +117,15 @@ public class AccountController : AevatarController
                     }
                 }
                 
-                _logger.LogInformation("Security verification passed using {method}", 
-                    verificationResult.VerificationMethod);
+                _logger.LogInformation("IP {clientIp} security verification passed using {method}", 
+                    clientIp, verificationResult.VerificationMethod);
             }
             
             // Step 4: Call the account service to send verification code
             await _accountService.SendRegisterCodeAsync(input, language);
             
-            _logger.LogInformation("Verification code sent successfully for email {email}", 
-                input.Email);
+            _logger.LogInformation("Verification code sent successfully for email {email} from IP {clientIp}", 
+                input.Email, clientIp);
             
             return new SendRegisterCodeResponseDto
             {
@@ -140,8 +140,8 @@ public class AccountController : AevatarController
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error sending registration code for email {email}", 
-                input.Email);
+            _logger.LogError(ex, "Error sending registration code for email {email} from IP {clientIp}", 
+                input.Email, clientIp);
             
             // Return localized internal server error
             throw new UserFriendlyException(
