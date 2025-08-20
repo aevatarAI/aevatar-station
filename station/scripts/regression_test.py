@@ -682,6 +682,37 @@ def test_workflow_services_comprehensive(api_headers):
     logger.info("Comprehensive workflow services test completed successfully")
 
 
+def test_silo_deployment_operations(api_admin_headers):
+    """Comprehensive test for silo deployment operations"""
+    logger.info("Running comprehensive silo deployment test")
+    
+    # Test copying multiple silo types
+    silo_types = [
+        {"pattern": "Scheduler", "version": "scheduler-v1"},
+        {"pattern": "User", "version": "user-v1"}
+    ]
+    
+    for silo_config in silo_types:
+        copy_params = {
+            "clientId": CLIENT_ID,
+            "sourceVersion": "1",
+            "targetVersion": silo_config["version"],
+            "siloNamePattern": silo_config["pattern"]
+        }
+        
+        logger.info(f"Copying {silo_config['pattern']} silo with version {silo_config['version']}")
+        response = requests.post(
+            f"{API_HOST}/api/user/CopyDeploymentWithPattern",
+            params=copy_params,
+            headers=api_admin_headers,
+            verify=False
+        )
+        assert_status_code(response)
+        logger.info(f"{silo_config['pattern']} silo deployment completed")
+    
+    logger.info("Comprehensive silo deployment test completed successfully")
+
+
 def test_publish_workflow_view(api_headers, api_admin_headers):
     """test publish workflow view"""
     # create workflowView agent

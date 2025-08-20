@@ -1,0 +1,43 @@
+# Unified Benchmark Container - All benchmarks in one image
+FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS build
+WORKDIR /src
+
+# Copy all benchmark projects at once
+COPY ["station/benchmark/BroadcastLatencyBenchmark/BroadcastLatencyBenchmark.csproj", "station/benchmark/BroadcastLatencyBenchmark/"]
+COPY ["station/benchmark/LatencyBenchmark/LatencyBenchmark.csproj", "station/benchmark/LatencyBenchmark/"]
+
+# Copy shared dependencies
+COPY ["station/src/Aevatar.Core.Abstractions/Aevatar.Core.Abstractions.csproj", "station/src/Aevatar.Core.Abstractions/"]
+COPY ["station/src/Aevatar.Core/Aevatar.Core.csproj", "station/src/Aevatar.Core/"]
+COPY ["station/src/Aevatar.TestKit/Aevatar.TestKit.csproj", "station/src/Aevatar.TestKit/"]
+
+# Restore packages for all benchmarks
+RUN dotnet restore "station/benchmark/BroadcastLatencyBenchmark/BroadcastLatencyBenchmark.csproj"
+RUN dotnet restore "station/benchmark/LatencyBenchmark/LatencyBenchmark.csproj"
+
+# Copy all source code
+COPY . .
+
+# Build all benchmarks to separate directories
+RUN dotnet build "station/benchmark/BroadcastLatencyBenchmark/BroadcastLatencyBenchmark.csproj" -c Release -o /app/broadcast
+RUN dotnet build "station/benchmark/LatencyBenchmark/LatencyBenchmark.csproj" -c Release -o /app/latency
+
+# Runtime image
+FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS runtime
+WORKDIR /app
+
+# Install required tools for results processing
+RUN apk add --no-cache jq curl bash bc
+
+# Copy all built applications
+COPY --from=build /app/broadcast /app/broadcast/
+COPY --from=build /app/latency /app/latency/
+
+# Copy unified benchmark execution script
+COPY unified-benchmark-runner.sh /app/
+RUN chmod +x /app/unified-benchmark-runner.sh
+
+# Set default benchmark type (can be overridden)
+ENV BENCHMARK_TYPE=broadcast
+
+ENTRYPOINT ["/app/unified-benchmark-runner.sh"]
