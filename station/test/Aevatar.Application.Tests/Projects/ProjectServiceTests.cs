@@ -532,4 +532,50 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
                 }));
         }
     }
+    
+    [Fact]
+    public async Task Project_Recent_Used_Test()
+    {
+        await _identityUserManager.CreateAsync(
+            new IdentityUser(
+                _currentUser.Id.Value,
+                "test",
+                "test@email.io"));
+        
+        var createOrganizationInput = new CreateOrganizationDto
+        {
+            DisplayName = "Test Organization"
+        };
+        var organization = await _organizationService.CreateAsync(createOrganizationInput);
+
+        var createProjectInput = new CreateProjectDto()
+        {
+            OrganizationId = organization.Id,
+            DisplayName = "Test Project",
+            DomainName = "App"
+        };
+        var project = await _projectService.CreateAsync(createProjectInput);
+        await _projectService.SaveRecentUsedProjectAsync(new RecentUsedProjectDto()
+        {
+            OrganizationId = organization.Id,
+            ProjectId = project.Id
+        });
+        var recentUsedProject = await _projectService.GetRecentUsedProjectAsync();
+        recentUsedProject.OrganizationId.ShouldBe(organization.Id);
+        recentUsedProject.ProjectId.ShouldBe(project.Id);
+        
+        await Should.ThrowAsync<UserFriendlyException>(async () =>
+            await _projectService.SaveRecentUsedProjectAsync(new RecentUsedProjectDto()
+            {
+                OrganizationId = organization.Id,
+                ProjectId = Guid.NewGuid()
+            }));
+        
+        await Should.ThrowAsync<UserFriendlyException>(async () =>
+            await _projectService.SaveRecentUsedProjectAsync(new RecentUsedProjectDto()
+            {
+                OrganizationId = Guid.NewGuid(),
+                ProjectId = project.Id
+            }));
+    }
 }

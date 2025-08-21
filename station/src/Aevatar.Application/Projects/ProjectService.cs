@@ -273,6 +273,17 @@ public class ProjectService : OrganizationService, IProjectService
 
     public async Task SaveRecentUsedProjectAsync(RecentUsedProjectDto input)
     {
+        try
+        {
+            await OrganizationUnitRepository.GetAsync(input.OrganizationId);
+            await OrganizationUnitRepository.GetAsync(input.ProjectId);
+        }
+        catch (Exception e)
+        {
+            throw new UserFriendlyException("Organization or project not existed");
+        }
+        
+
         var userId = CurrentUser.Id;
         var cacheKey = $"{UserRecentUsedProjectKey}:{userId.ToString()}";
         await _recentUsedProjectCache.SetAsync(cacheKey, JsonConvert.SerializeObject(input), new DistributedCacheEntryOptions());
