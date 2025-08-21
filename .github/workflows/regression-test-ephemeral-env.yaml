@@ -355,6 +355,7 @@ jobs:
     runs-on: ephemeral-env-runner
     env:
       AUTH_HOST: ${{ needs.setup-ephermeral-test-env.outputs.auth_server_url }}
+      API_SERVER_HOST: ${{ needs.setup-ephermeral-test-env.outputs.api_server_url }}
       API_HOST: ${{ needs.setup-ephermeral-test-env.outputs.app_url }}
       CLIENT_ID: ${{ needs.setup-ephermeral-test-env.outputs.client_id }}
       CLIENT_SECRET: ${{ needs.setup-ephermeral-test-env.outputs.client_secret }}
@@ -416,6 +417,7 @@ jobs:
       status: ${{ steps.collect_results.outputs.status }}
     env:
       AUTH_HOST: ${{ needs.setup-ephermeral-test-env.outputs.auth_server_url }}
+      API_SERVER_HOST: ${{ needs.setup-ephermeral-test-env.outputs.api_server_url }}
       API_HOST: ${{ needs.setup-ephermeral-test-env.outputs.app_url }}
       CLIENT_ID: ${{ needs.setup-ephermeral-test-env.outputs.client_id }}
       CLIENT_SECRET: ${{ needs.setup-ephermeral-test-env.outputs.client_secret }}
@@ -673,6 +675,7 @@ jobs:
       status: ${{ steps.collect_results.outputs.status }}
     env:
       AUTH_HOST: ${{ needs.setup-ephermeral-test-env.outputs.auth_server_url }}
+      API_SERVER_HOST: ${{ needs.setup-ephermeral-test-env.outputs.api_server_url }}
       API_HOST: ${{ needs.setup-ephermeral-test-env.outputs.app_url }}
       CLIENT_ID: ${{ needs.setup-ephermeral-test-env.outputs.client_id }}
       CLIENT_SECRET: ${{ needs.setup-ephermeral-test-env.outputs.client_secret }}

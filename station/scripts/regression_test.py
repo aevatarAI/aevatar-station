@@ -21,7 +21,8 @@ EVENT_TYPE = "Aevatar.Application.Grains.Agents.TestAgent.FrontTestCreateEvent"
 EVENT_PARAM = "Name"
 
 AUTH_HOST = os.getenv("AUTH_HOST")
-API_HOST =  os.getenv("API_HOST")
+API_SERVER_HOST = os.getenv("API_SERVER_HOST")  # Only for CopyDeploymentWithPattern
+API_HOST = os.getenv("API_HOST")  # For most API endpoints
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 INDEX_NAME = f"aevatar-{CLIENT_ID}-testagentstateindex"
@@ -702,7 +703,7 @@ def test_silo_deployment_operations(api_admin_headers):
         
         logger.info(f"Copying {silo_config['pattern']} silo with version {silo_config['version']}")
         response = requests.post(
-            f"{API_HOST}/api/user/CopyDeploymentWithPattern",
+            f"{API_SERVER_HOST}/api/user/CopyDeploymentWithPattern",
             params=copy_params,
             headers=api_admin_headers,
             verify=False
