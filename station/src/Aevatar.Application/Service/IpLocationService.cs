@@ -16,7 +16,7 @@ public class IpLocationService : IIpLocationService
     public IpLocationService(ILogger<IpLocationService> logger)
     {
         _logger = logger;
-        var ipdbFilePath = "/geoip/ipipfree.ipdb";//"/Users/**/Downloads/ipipfreedb/ipipfree.ipdb";
+        var ipdbFilePath = "/app/geoip/ipipfree.ipdb";//"/Users/**/Downloads/ipipfreedb/ipipfree.ipdb";
         
         try
         {
