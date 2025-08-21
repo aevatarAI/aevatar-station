@@ -222,6 +222,27 @@ Please strictly follow the following JSON format for workflow generation. This f
 The output must be a valid JSON object that can be parsed directly. Do not include any additional text or explanation outside the JSON structure.";
 
     /// <summary>
+    /// Critical constraints template for workflow generation
+    /// </summary>
+    public string CriticalConstraintsTemplate { get; set; } = @"## CRITICAL CONSTRAINTS
+
+1. **Agent Scope Restriction**: Only use Agent types explicitly listed in the above Agent catalog for workflow construction. Do not use any Agent types not listed in the catalog.
+
+2. **Handling Unclear Requirements**: If the user goal description is unclear, cannot be understood, or cannot generate a valid workflow using available Agents, return empty workflowNodeList and workflowNodeUnitList:
+```json
+{
+  ""name"": ""Unable to Generate Workflow"",
+  ""properties"": {
+    ""name"": ""Unable to Generate Workflow"",
+    ""workflowNodeList"": [],
+    ""workflowNodeUnitList"": []
+  }
+}
+```
+
+3. **Strict Validation**: Before generating the workflow, you must verify that each selected Agent type exists in the provided Agent catalog.";
+
+    /// <summary>
     /// 无可用Agent时的提示消息
     /// </summary>
     public string NoAgentsAvailableMessage { get; set; } = "No agents available for workflow composition.";

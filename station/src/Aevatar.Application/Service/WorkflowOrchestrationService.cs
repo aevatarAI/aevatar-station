@@ -280,7 +280,11 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             promptBuilder.AppendLine(_promptOptions.CurrentValue.OutputRequirementsTemplate);
             promptBuilder.AppendLine();
 
-            // 4. JSON格式规范
+            // 4. 重要约束条件
+            promptBuilder.AppendLine(_promptOptions.CurrentValue.CriticalConstraintsTemplate);
+            promptBuilder.AppendLine();
+
+            // 5. JSON格式规范
             promptBuilder.AppendLine(_promptOptions.CurrentValue.JsonFormatSpecificationTemplate);
 
             var baseInstructions = promptBuilder.ToString();
@@ -383,7 +387,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                 
                 var node = new AiWorkflowNodeDto
                 {
-                    NodeId = token.Value<string>("nodeId") ?? Guid.NewGuid().ToString(),
+                    NodeId = Guid.NewGuid().ToString(),
                     // 使用映射后的完整类型名称
                     AgentType = fullAgentType,
                     // Support both nodeName and name as schema variants
