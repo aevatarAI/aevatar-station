@@ -64,14 +64,39 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     /// </summary>
     private List<Type> GetBusinessAgentTypes()
     {
-        var systemAgents = _agentOptions.CurrentValue.SystemAgentList;
-        var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
-        var validAgents = availableGAgents.Where(a => !a.Namespace?.StartsWith("OrleansCodeGen") == true).ToList();
-        var businessAgentTypes = validAgents.Where(a => !systemAgents.Contains(a.Name)).ToList();
+        _logger.LogInformation("=== GetBusinessAgentTypes: Starting agent filtering process ===");
         
-        _logger.LogDebug("Filtered {TotalCount} available agents to {BusinessCount} business agents. Excluded system agents: {SystemAgents}", 
-            availableGAgents.Count(), businessAgentTypes.Count, string.Join(", ", systemAgents));
-            
+        var systemAgents = _agentOptions.CurrentValue.SystemAgentList;
+        _logger.LogInformation("System agents to exclude: [{SystemAgents}]", string.Join(", ", systemAgents));
+        
+        var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
+        _logger.LogInformation("Total available GAgent types: {Count}", availableGAgents.Count());
+        _logger.LogDebug("All available GAgent types: [{AllAgents}]", 
+            string.Join(", ", availableGAgents.Select(a => $"{a.Name}({a.Namespace})")));
+        
+        var validAgents = availableGAgents.Where(a => !a.Namespace?.StartsWith("OrleansCodeGen") == true).ToList();
+        _logger.LogInformation("After filtering OrleansCodeGen: {Count} agents", validAgents.Count);
+        
+        if (validAgents.Count != availableGAgents.Count())
+        {
+            var excludedCodeGen = availableGAgents.Where(a => a.Namespace?.StartsWith("OrleansCodeGen") == true);
+            _logger.LogDebug("Excluded OrleansCodeGen agents: [{ExcludedAgents}]", 
+                string.Join(", ", excludedCodeGen.Select(a => a.Name)));
+        }
+        
+        var businessAgentTypes = validAgents.Where(a => !systemAgents.Contains(a.Name)).ToList();
+        _logger.LogInformation("Final business agents after excluding system agents: {Count}", businessAgentTypes.Count);
+        _logger.LogInformation("Business agent types: [{BusinessAgents}]", 
+            string.Join(", ", businessAgentTypes.Select(a => a.Name)));
+        
+        if (validAgents.Count != businessAgentTypes.Count)
+        {
+            var excludedSystemAgents = validAgents.Where(a => systemAgents.Contains(a.Name));
+            _logger.LogDebug("Excluded system agents: [{ExcludedSystemAgents}]", 
+                string.Join(", ", excludedSystemAgents.Select(a => a.Name)));
+        }
+        
+        _logger.LogInformation("=== GetBusinessAgentTypes: Filtering complete ===");
         return businessAgentTypes;
     }
 
@@ -333,73 +358,6 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     #region Private Methods - JSON Parsing
 
     /// <summary>
-    /// Validates that all agent types in the workflow are within allowed business agent types
-    /// </summary>
-    /// <param name="workflowNodes">List of workflow nodes to validate</param>
-    /// <returns>True if all agent types are valid, false otherwise</returns>
-    private bool ValidateWorkflowAgentTypes(List<AiWorkflowNodeDto> workflowNodes)
-    {
-        try
-        {
-            _logger.LogDebug("Validating agent types for {NodeCount} workflow nodes", workflowNodes.Count);
-            
-            // Get allowed business agent types
-            var allowedAgentTypes = GetBusinessAgentTypes();
-            var allowedTypeNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            
-            // Add both simple names and full type names to allowed set
-            foreach (var agentType in allowedAgentTypes)
-            {
-                allowedTypeNames.Add(agentType.Name);
-                allowedTypeNames.Add(agentType.FullName ?? agentType.Name);
-                
-                // Also add GrainType string representation if available
-                if (_grainTypeResolver != null)
-                {
-                    try
-                    {
-                        var grainTypeStr = _grainTypeResolver.GetGrainType(agentType).ToString();
-                        allowedTypeNames.Add(grainTypeStr);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogDebug(ex, "Could not get grain type for {AgentType}", agentType.Name);
-                    }
-                }
-            }
-
-            _logger.LogDebug("Allowed agent types: {AllowedTypes}", string.Join(", ", allowedTypeNames));
-
-            // Validate each node's agent type
-            foreach (var node in workflowNodes)
-            {
-                if (string.IsNullOrEmpty(node.AgentType))
-                {
-                    _logger.LogDebug("Node {NodeId} has empty AgentType, skipping validation", node.NodeId);
-                    continue;
-                }
-
-                if (!allowedTypeNames.Contains(node.AgentType))
-                {
-                    _logger.LogWarning("Node {NodeId} uses invalid agent type: {AgentType}. Not found in allowed business agent types.", 
-                        node.NodeId, node.AgentType);
-                    return false;
-                }
-                
-                _logger.LogDebug("Node {NodeId} agent type {AgentType} is valid", node.NodeId, node.AgentType);
-            }
-
-            _logger.LogInformation("All {NodeCount} workflow nodes use valid business agent types", workflowNodes.Count);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error during workflow agent type validation");
-            return false; // Fail safe - reject if validation fails
-        }
-    }
-
-    /// <summary>
     /// Parse workflow JSON to frontend format DTO
     /// </summary>
     /// <param name="jsonContent">JSON content from WorkflowComposerGAgent</param>
@@ -444,17 +402,21 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                              ?? (jsonObject["properties"] as JObject)?["workflowNodeUnitList"] as JArray
                              ?? new JArray();
 
-            // Create mapping from original node IDs to new GUIDs
+            // 创建originalId到GUID的映射
             var nodeIdMapping = new Dictionary<string, string>();
             var nodeIndex = 0;
 
+            // 解析节点并建立映射关系
             foreach (var token in nodesArray.OfType<JObject>())
             {
-                // 从JSON中获取原始的node ID（始终需要建立映射，即使是非GUID格式）
+                // 从JSON中获取原始的node ID
                 var originalNodeId = token.Value<string>("nodeId")
-                                   ?? token.Value<string>("id")
-                                   ?? token.Value<string>("node_id")
                                    ?? $"node_{nodeIndex}"; // 为没有ID的节点创建fallback ID
+                
+                // 生成新的GUID并建立映射
+                var newNodeId = Guid.NewGuid().ToString();
+                nodeIdMapping[originalNodeId] = newNodeId;
+                _logger.LogDebug("Node ID mapping: {OriginalId} -> {NewGuid}", originalNodeId, newNodeId);
                 
                 // 从JSON中获取简单的agent类型名称
                 var simpleAgentType = token.Value<string>("nodeType")
@@ -464,19 +426,10 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                 // 将简单类型名称映射为完整的GrainType名称
                 var fullAgentType = MapSimpleTypeNameToFullTypeName(simpleAgentType);
                 
-                // Always generate new GUID for this node (原始ID是非GUID格式，始终需要替换)
-                var newNodeId = Guid.NewGuid().ToString();
-                
-                // Always build mapping from original ID to new GUID (不管原始ID格式如何，都要建立映射)
-                nodeIdMapping[originalNodeId] = newNodeId;
-                
-                _logger.LogDebug("Node ID mapping: {OriginalId} -> {NewId}", originalNodeId, newNodeId);
-                nodeIndex++;
-                
+                // 直接使用GUID作为NodeId
                 var node = new AiWorkflowNodeDto
                 {
-                    NodeId = newNodeId,
-                    // 使用映射后的完整类型名称
+                    NodeId = newNodeId, // 直接使用GUID
                     AgentType = fullAgentType,
                     // Support both nodeName and name as schema variants
                     Name = token.Value<string>("nodeName")
@@ -507,30 +460,30 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                 }
 
                 workflow.Properties.WorkflowNodeList.Add(node);
+                nodeIndex++;
             }
 
+            // 解析边并使用映射转换ID
             foreach (var token in edgesArray.OfType<JObject>())
             {
                 var originalFromNodeId = token.Value<string>("fromNodeId") ?? string.Empty;
                 var originalToNodeId = token.Value<string>("toNodeId") ?? string.Empty;
 
-                // Map original node IDs to new GUIDs using the mapping
-                var mappedFromNodeId = !string.IsNullOrEmpty(originalFromNodeId) && nodeIdMapping.ContainsKey(originalFromNodeId)
-                    ? nodeIdMapping[originalFromNodeId]
-                    : originalFromNodeId;
-                
-                var mappedToNodeId = !string.IsNullOrEmpty(originalToNodeId) && nodeIdMapping.ContainsKey(originalToNodeId)
-                    ? nodeIdMapping[originalToNodeId]
-                    : originalToNodeId;
+                // 使用映射转换为GUID
+                var mappedFromNodeId = nodeIdMapping.ContainsKey(originalFromNodeId) 
+                    ? nodeIdMapping[originalFromNodeId] 
+                    : string.Empty;
+                var mappedToNodeId = nodeIdMapping.ContainsKey(originalToNodeId) 
+                    ? nodeIdMapping[originalToNodeId] 
+                    : string.Empty;
 
-                var unit = new AiWorkflowNodeUnitDto
+                if (!string.IsNullOrEmpty(mappedFromNodeId) && !string.IsNullOrEmpty(mappedToNodeId))
                 {
-                    NodeId = mappedFromNodeId,
-                    NextNodeId = mappedToNodeId
-                };
-
-                if (!string.IsNullOrEmpty(unit.NodeId) && !string.IsNullOrEmpty(unit.NextNodeId))
-                {
+                    var unit = new AiWorkflowNodeUnitDto
+                    {
+                        NodeId = mappedFromNodeId,     // 使用映射后的GUID
+                        NextNodeId = mappedToNodeId    // 使用映射后的GUID
+                    };
                     workflow.Properties.WorkflowNodeUnitList.Add(unit);
                 }
                 else
@@ -543,12 +496,15 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             _logger.LogInformation("Parsed workflow: nodes={NodeCount}, connections={ConnCount}, nodeIdMappings={MappingCount}",
                 workflow.Properties.WorkflowNodeList.Count, workflow.Properties.WorkflowNodeUnitList.Count, nodeIdMapping.Count);
 
-            // Validate agent types - ensure all agents are within allowed business agent types
-            if (!ValidateWorkflowAgentTypes(workflow.Properties.WorkflowNodeList))
-            {
-                _logger.LogWarning("Workflow contains agents outside of allowed business agent types, returning null");
-                return null;
-            }
+            // Log all agent types generated by AI for debugging
+            var generatedAgentTypes = workflow.Properties.WorkflowNodeList
+                .Where(n => !string.IsNullOrEmpty(n.AgentType))
+                .Select(n => n.AgentType)
+                .Distinct()
+                .ToList();
+            _logger.LogInformation("AI generated agent types: [{GeneratedAgents}]", string.Join(", ", generatedAgentTypes));
+
+
 
             // Layout
             ApplyIntelligentLayout(workflow.Properties);

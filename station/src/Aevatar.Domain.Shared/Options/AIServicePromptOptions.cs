@@ -55,8 +55,16 @@ Please strictly follow the following JSON format for workflow generation. This f
 
 - **nodeType**: The exact agent class name that will handle this node's execution
 - **extendedData.description**: Detailed explanation of what this node accomplishes in the workflow
+- **extendedData.xPosition**: X coordinate for horizontal layout (start from 100, increment by 200 for each node: 100, 300, 500, 700...)
+- **extendedData.yPosition**: Y coordinate with natural variation (base 100, add gentle waves: 80-120 range with slight variations)
 - **properties**: Configuration parameters specific to the agent type (see examples below)
 - **connectionType**: Defines execution flow - use ""Sequential"" for step-by-step execution
+
+### Node Layout Guidelines:
+- Arrange nodes horizontally from left to right (100, 300, 500, 700...)
+- Add natural Y-position variations for aesthetic appeal (80, 90, 110, 105...)
+- Maintain readable spacing between nodes (200px X intervals)
+- Create gentle vertical waves rather than straight lines for better visual flow
 
 ### Configuration Examples by Agent Type:
 
@@ -115,7 +123,9 @@ Please strictly follow the following JSON format for workflow generation. This f
         ""nodeName"": ""Collect User Data"",
         ""nodeType"": ""DataCollectorGAgent"",
         ""extendedData"": {
-          ""description"": ""Gathers input data from various sources for analysis""
+          ""description"": ""Gathers input data from various sources for analysis"",
+          ""xPosition"": ""100"",
+          ""yPosition"": ""85""
         },
         ""properties"": {
           ""dataSource"": ""user_input"",
@@ -128,7 +138,9 @@ Please strictly follow the following JSON format for workflow generation. This f
         ""nodeName"": ""Analyze Data Patterns"",
         ""nodeType"": ""DataAnalysisGAgent"",
         ""extendedData"": {
-          ""description"": ""Performs statistical analysis and pattern recognition on collected data""
+          ""description"": ""Performs statistical analysis and pattern recognition on collected data"",
+          ""xPosition"": ""300"",
+          ""yPosition"": ""110""
         },
         ""properties"": {
           ""analysisType"": ""pattern_recognition"",
@@ -141,7 +153,9 @@ Please strictly follow the following JSON format for workflow generation. This f
         ""nodeName"": ""Generate Analysis Report"",
         ""nodeType"": ""ReportGeneratorGAgent"",
         ""extendedData"": {
-          ""description"": ""Creates comprehensive report with findings and visualizations""
+          ""description"": ""Creates comprehensive report with findings and visualizations"",
+          ""xPosition"": ""500"",
+          ""yPosition"": ""95""
         },
         ""properties"": {
           ""reportFormat"": ""pdf_with_charts"",
@@ -178,7 +192,9 @@ Please strictly follow the following JSON format for workflow generation. This f
         ""nodeName"": ""Classify Customer Inquiry"",
         ""nodeType"": ""InquiryClassifierGAgent"",
         ""extendedData"": {
-          ""description"": ""Analyzes customer request and categorizes it for appropriate handling""
+          ""description"": ""Analyzes customer request and categorizes it for appropriate handling"",
+          ""xPosition"": ""100"",
+          ""yPosition"": ""105""
         },
         ""properties"": {
           ""classificationModel"": ""intent_detection_v2"",
@@ -191,7 +207,9 @@ Please strictly follow the following JSON format for workflow generation. This f
         ""nodeName"": ""Search Knowledge Base"",
         ""nodeType"": ""KnowledgeSearchGAgent"",
         ""extendedData"": {
-          ""description"": ""Searches internal knowledge base for relevant information""
+          ""description"": ""Searches internal knowledge base for relevant information"",
+          ""xPosition"": ""300"",
+          ""yPosition"": ""85""
         },
         ""properties"": {
           ""searchEngine"": ""semantic_search"",
@@ -205,7 +223,9 @@ Please strictly follow the following JSON format for workflow generation. This f
         ""nodeName"": ""Generate Customer Response"",
         ""nodeType"": ""ResponseGeneratorGAgent"",
         ""extendedData"": {
-          ""description"": ""Crafts personalized response based on inquiry type and knowledge base results""
+          ""description"": ""Crafts personalized response based on inquiry type and knowledge base results"",
+          ""xPosition"": ""500"",
+          ""yPosition"": ""115""
         },
         ""properties"": {
           ""responseStyle"": ""professional_friendly"",
