@@ -140,21 +140,40 @@ public class LatencyBenchmarkRunner : IDisposable
     {
         _logger.LogInformation("Setting up Orleans Client...");
 
+        // Read Orleans configuration from environment variables
+        var mongoClient = Environment.GetEnvironmentVariable("Orleans__MongoDBClient") ?? "mongodb://localhost:27017";
+        var clusterId = Environment.GetEnvironmentVariable("Orleans__ClusterId") ?? "AevatarSiloCluster";
+        var serviceId = Environment.GetEnvironmentVariable("Orleans__ServiceId") ?? "AevatarBasicService";
+        var database = Environment.GetEnvironmentVariable("Orleans__DataBase") ?? "AevatarDb";
+        var hostId = Environment.GetEnvironmentVariable("Orleans__HostId") ?? "Aevatar";
+        
+        _logger.LogInformation("Orleans Configuration:");
+        _logger.LogInformation("  MongoDB Client: {MongoClient}", mongoClient);
+        _logger.LogInformation("  Cluster ID: {ClusterId}", clusterId);
+        _logger.LogInformation("  Service ID: {ServiceId}", serviceId);
+        _logger.LogInformation("  Database: {Database}", database);
+        _logger.LogInformation("  Host ID: {HostId}", hostId);
+        
+        // Log Kafka topics configuration
+        var kafkaTopics = !string.IsNullOrEmpty(hostId) && !hostId.Equals("Aevatar", StringComparison.OrdinalIgnoreCase)
+            ? $"{hostId}Silo,{hostId}SiloProjector,{hostId}SiloBroadcast"
+            : "Aevatar,AevatarStateProjection,AevatarBroadCast";
+        _logger.LogInformation("  Kafka Topics: {KafkaTopics}", kafkaTopics);
+
         var hostBuilder = Host.CreateDefaultBuilder()
             .UseOrleansClient(client =>
             {
-                var hostId = "Aevatar";
-                client.UseMongoDBClient("mongodb://localhost:27017")
+                client.UseMongoDBClient(mongoClient)
                     .UseMongoDBClustering(options =>
                     {
-                        options.DatabaseName = "AevatarDb";
+                        options.DatabaseName = database;
                         options.Strategy = MongoDBMembershipStrategy.SingleDocument;
                         options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" : $"Orleans{hostId}";
                     })
                     .Configure<ClusterOptions>(options =>
                     {
-                        options.ClusterId = "AevatarSiloCluster";
-                        options.ServiceId = "AevatarBasicService";
+                        options.ClusterId = clusterId;
+                        options.ServiceId = serviceId;
                     })
                     .AddActivityPropagation()
                     .AddAevatarKafkaStreaming("Aevatar", options =>
@@ -165,7 +184,9 @@ public class LatencyBenchmarkRunner : IDisposable
 
                         var partitions = 8; // Multiple partitions for load distribution
                         var replicationFactor = (short)1;  // ReplicationFactor should be short
-                        var topics = "Aevatar,AevatarStateProjection,AevatarBroadCast";
+                        var topics = !string.IsNullOrEmpty(hostId) && !hostId.Equals("Aevatar", StringComparison.OrdinalIgnoreCase)
+                            ? $"{hostId}Silo,{hostId}SiloProjector,{hostId}SiloBroadcast"
+                            : "Aevatar,AevatarStateProjection,AevatarBroadCast";
                         foreach (var topic in topics.Split(','))
                         {
                             options.AddTopic(topic.Trim(), new TopicCreationConfig

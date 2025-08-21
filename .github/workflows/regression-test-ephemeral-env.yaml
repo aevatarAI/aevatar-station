@@ -104,6 +104,38 @@ jobs:
           path: out/${{ matrix.servicename }}
           retention-days: 1
 
+  publish-benchmarks:
+    if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
+    needs: approval-count
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.0.x'
+      - name: Cache NuGet Packages
+        id: nuget-packages
+        uses: actions/cache@v4
+        env:
+          cache-name: nuget-package-cache
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-${{ env.cache-name }}-benchmarks
+      - name: Publish BroadcastLatencyBenchmark
+        run: dotnet publish station/benchmark/BroadcastLatencyBenchmark/BroadcastLatencyBenchmark.csproj -o out/BroadcastLatencyBenchmark
+      - name: Publish LatencyBenchmark  
+        run: dotnet publish station/benchmark/LatencyBenchmark/LatencyBenchmark.csproj -o out/LatencyBenchmark
+      - name: Copy unified runner script
+        run: cp unified-benchmark-runner.sh out/
+      - name: Upload benchmark artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: BenchmarkRunner
+          path: out/
+          retention-days: 1
+
   build-and-push-image:
     if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
     needs: publish
@@ -156,16 +188,54 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+  build-unified-benchmark-image:
+    if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
+    needs: [approval-count, publish-benchmarks]
+    runs-on: ephemeral-env-runner
+    outputs:
+      image: ${{ steps.meta.outputs.tags }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create image tag for unified benchmark
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.REPOSITORY_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/benchmark-unified
+          tags: |
+            type=sha
+
+      - name: Download benchmark artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: BenchmarkRunner
+          path: out/BenchmarkRunner
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push unified benchmark image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.benchmark
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
   setup-ephermeral-test-env:
     if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ephemeral-env-runner
-    needs: build-and-push-image
+    needs: [build-and-push-image, build-unified-benchmark-image]
     outputs:
       auth_server_url: ${{ steps.extract.outputs.auth_server_url }}
       api_server_url: ${{ steps.extract.outputs.api_server_url }} 
       app_url: ${{ steps.extract.outputs.app_url }}
       client_id: ${{ steps.generate-uuid.outputs.client_id }}
       client_secret: ${{ steps.generate-uuid.outputs.client_secret }}
+      project_name: ${{ steps.generate-uuid.outputs.project_name }}
     steps:
       - name: Generate UUID for project and client
         id: generate-uuid
@@ -195,7 +265,7 @@ jobs:
               ref: 'main',
               inputs: {
                 project_name: "${{ steps.generate-uuid.outputs.project_name }}",
-                environment_ttl: "20",
+                environment_ttl: "40",
                 client_id: "${{ steps.generate-uuid.outputs.client_id }}",
                 client_secret: "${{ steps.generate-uuid.outputs.client_secret }}",
                 station_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}"
@@ -285,6 +355,7 @@ jobs:
     runs-on: ephemeral-env-runner
     env:
       AUTH_HOST: ${{ needs.setup-ephermeral-test-env.outputs.auth_server_url }}
+      API_SERVER_HOST: ${{ needs.setup-ephermeral-test-env.outputs.api_server_url }}
       API_HOST: ${{ needs.setup-ephermeral-test-env.outputs.app_url }}
       CLIENT_ID: ${{ needs.setup-ephermeral-test-env.outputs.client_id }}
       CLIENT_SECRET: ${{ needs.setup-ephermeral-test-env.outputs.client_secret }}
@@ -334,3 +405,566 @@ jobs:
           LARK_WEBHOOK: ${{ secrets.LARK_WEBHOOK }}
           LARK_MESSAGE_TITLE: "Regression Test Failed"
           LARK_MESSAGE_TEMPLATE: "red"
+
+  run-broadcast-benchmark:
+    if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
+    needs: [setup-ephermeral-test-env, run-regression-test, build-unified-benchmark-image]
+    runs-on: ephemeral-env-runner
+    timeout-minutes: 20
+    outputs:
+      job_name: ${{ steps.run_benchmark_job.outputs.job_name }}
+      namespace: ${{ steps.run_benchmark_job.outputs.namespace }}
+      status: ${{ steps.collect_results.outputs.status }}
+    env:
+      AUTH_HOST: ${{ needs.setup-ephermeral-test-env.outputs.auth_server_url }}
+      API_SERVER_HOST: ${{ needs.setup-ephermeral-test-env.outputs.api_server_url }}
+      API_HOST: ${{ needs.setup-ephermeral-test-env.outputs.app_url }}
+      CLIENT_ID: ${{ needs.setup-ephermeral-test-env.outputs.client_id }}
+      CLIENT_SECRET: ${{ needs.setup-ephermeral-test-env.outputs.client_secret }}
+      PROJECT_NAME: ${{ needs.setup-ephermeral-test-env.outputs.project_name }}
+      BENCHMARK_IMAGE: ${{ needs.build-unified-benchmark-image.outputs.image }}
+
+    steps:
+      - name: Install kubectl and setup kubeconfig
+        run: |
+          # Install kubectl if not already present
+          if ! command -v kubectl &> /dev/null; then
+            curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+            chmod +x kubectl
+            sudo mv kubectl /usr/local/bin/
+          fi
+          
+          # Setup kubeconfig for ephemeral environment
+          echo "Setting up kubeconfig for project: $PROJECT_NAME"
+          
+      - name: Wait for Ephemeral Environment Services
+        run: |
+          echo "🔍 Checking ephemeral environment services readiness..."
+          echo "API Host: $API_HOST"
+          echo "Project: $PROJECT_NAME"
+          
+          # Wait for API service to be ready
+          for i in {1..30}; do
+            if curl -fsS "$API_HOST/health" >/dev/null 2>&1; then 
+              echo "✅ API service is ready"
+              break
+            fi
+            echo "⏳ Waiting for API service... (attempt $i/30)"
+            sleep 10
+          done
+          
+          # Verify API service is accessible
+          curl -fsS "$API_HOST/health" >/dev/null || {
+            echo "❌ API service not accessible at $API_HOST/health"
+            exit 1
+          }
+          
+          echo "✅ Ephemeral environment is ready for benchmarking"
+
+      - name: Run Benchmark Job in Ephemeral Environment
+        id: run_benchmark_job
+        run: |
+          set -e
+          echo "🚀 Creating benchmark job in ephemeral Kubernetes environment..."
+          
+          NS="$PROJECT_NAME"
+          JOB_NAME="benchmark-runner-$(date +%s)"
+          
+          echo "Namespace: $NS"
+          echo "Job Name: $JOB_NAME"
+          echo "Benchmark Image: $BENCHMARK_IMAGE"
+          
+          # Create Kubernetes Job manifest for Broadcast Benchmark (Unified Image)
+          cat > broadcast-benchmark-job.yaml << EOF
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: $JOB_NAME
+            namespace: $NS
+            labels:
+              benchmark-type: broadcast
+          spec:
+            ttlSecondsAfterFinished: 300
+            template:
+              spec:
+                restartPolicy: Never
+                containers:
+                - name: unified-benchmark
+                  image: $BENCHMARK_IMAGE
+                  env:
+                  # Unified benchmark type selector
+                  - name: BENCHMARK_TYPE
+                    value: "broadcast"
+                  # Common connection parameters
+                  - name: CLIENT_ID
+                    value: "$CLIENT_ID"
+                  - name: SILO_SERVICE_HOST
+                    value: "aevatar-silo-service.$NS.svc.cluster.local"
+                  - name: SILO_GATEWAY_PORT
+                    value: "20001"
+                  # Broadcast benchmark parameters
+                  - name: BCAST_SUBS
+                    value: "32"
+                  - name: BCAST_PUBS
+                    value: "1"
+                  - name: BCAST_EPS
+                    value: "1"
+                  - name: BCAST_DURATION
+                    value: "45"
+                  - name: BCAST_WARMUP
+                    value: "5"
+                  # Broadcast thresholds
+                  - name: BCAST_P95_MS
+                    value: "300"
+                  - name: BCAST_SUCCESS_RATE
+                    value: "0.90"
+                  resources:
+                    requests:
+                      memory: "256Mi"
+                      cpu: "200m"
+          EOF
+          
+          # Apply the job
+          kubectl apply -f broadcast-benchmark-job.yaml
+          
+          echo "✅ Broadcast benchmark job created successfully"
+          echo "job_name=$JOB_NAME" >> $GITHUB_OUTPUT
+          echo "namespace=$NS" >> $GITHUB_OUTPUT
+
+      - name: Wait for Benchmark Completion
+        run: |
+          set -e
+          JOB_NAME="${{ steps.run_benchmark_job.outputs.job_name }}"
+          NS="${{ steps.run_benchmark_job.outputs.namespace }}"
+          
+          echo "⏳ Waiting for benchmark job to complete..."
+          echo "Job: $JOB_NAME in namespace: $NS"
+          
+          # Wait for job completion (up to 20 minutes)
+          for i in {1..120}; do
+            status=$(kubectl get job $JOB_NAME -n $NS -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' 2>/dev/null || echo "")
+            failed=$(kubectl get job $JOB_NAME -n $NS -o jsonpath='{.status.conditions[?(@.type=="Failed")].status}' 2>/dev/null || echo "")
+            
+            if [ "$status" = "True" ]; then
+              echo "✅ Benchmark job completed successfully"
+              break
+            elif [ "$failed" = "True" ]; then
+              echo "❌ Benchmark job failed"
+              kubectl logs job/$JOB_NAME -n $NS || echo "No logs available"
+              exit 1
+            else
+              echo "   ⏱️  Job still running... (check $i/120)"
+              sleep 10
+            fi
+          done
+          
+          # Check if we timed out
+          if [ "$status" != "True" ]; then
+            echo "⚠️  Benchmark job timed out"
+            kubectl logs job/$JOB_NAME -n $NS || echo "No logs available"
+            exit 1
+          fi
+
+      - name: Collect Broadcast Benchmark Results
+        id: collect_results
+        if: always()
+        run: |
+          JOB_NAME="${{ steps.run_benchmark_job.outputs.job_name }}"
+          NS="${{ steps.run_benchmark_job.outputs.namespace }}"
+          
+          echo "📊 Collecting broadcast benchmark results from job: $JOB_NAME"
+          
+          # Get pod name
+          POD_NAME=$(kubectl get pods -l job-name=$JOB_NAME -n $NS -o jsonpath='{.items[0].metadata.name}')
+          
+          if [ -n "$POD_NAME" ]; then
+            echo "Pod: $POD_NAME"
+            
+            # Collect logs
+            echo "📝 Collecting benchmark logs..."
+            kubectl logs $POD_NAME -n $NS > broadcast-benchmark.log 2>&1 || echo "Failed to get logs"
+            
+            # Try to copy result files from container
+            echo "📁 Copying result files..."
+            kubectl cp $NS/$POD_NAME:/tmp/results/ ./broadcast-results/ || echo "Failed to copy results (this is expected if job failed)"
+            
+            # Extract status from results
+            if [ -f "broadcast-results/benchmark_status.txt" ]; then
+              STATUS=$(cat broadcast-results/benchmark_status.txt | cut -d'=' -f2)
+              echo "status=$STATUS" >> $GITHUB_OUTPUT
+            else
+              echo "status=UNKNOWN" >> $GITHUB_OUTPUT
+            fi
+            
+            # Display summary from logs
+            echo "📊 Broadcast Benchmark Summary:"
+            grep -E "(📊|✅|❌|🎯)" broadcast-benchmark.log || echo "No summary found in logs"
+            
+          else
+            echo "❌ Could not find broadcast benchmark pod"
+            echo "status=ERROR" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Process and Display Broadcast Results
+        if: always()
+        run: |
+          echo "## 📊 Broadcast Latency Benchmark Report (Ephemeral K8s)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** Ephemeral Kubernetes Environment" >> $GITHUB_STEP_SUMMARY
+          echo "**Project:** \`$PROJECT_NAME\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Client ID:** \`$CLIENT_ID\`" >> $GITHUB_STEP_SUMMARY
+          echo "** benchmark Status:** \`${{ steps.collect_results.outputs.status }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Add benchmark execution details
+          echo "### 📋 Execution Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Job Name:** \`${{ steps.run_benchmark_job.outputs.job_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Namespace:** \`${{ steps.run_benchmark_job.outputs.namespace }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image:** \`$BENCHMARK_IMAGE\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Try to parse results if available
+          if [ -f "broadcast-results/broadcast_metrics.json" ]; then
+            echo "### 📊 Broadcast Latency Results" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+            cat broadcast-results/broadcast_metrics.json >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Add benchmark logs summary
+          echo "### 📝 Benchmark Logs Summary" >> $GITHUB_STEP_SUMMARY
+          if [ -f "broadcast-benchmark.log" ]; then
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            tail -n 30 broadcast-benchmark.log >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No benchmark logs available" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Cleanup Broadcast Benchmark Job
+        if: always()
+        run: |
+          JOB_NAME="${{ steps.run_benchmark_job.outputs.job_name }}"
+          NS="${{ steps.run_benchmark_job.outputs.namespace }}"
+          
+          if [ -n "$JOB_NAME" ] && [ -n "$NS" ]; then
+            echo "🧹 Cleaning up broadcast benchmark job: $JOB_NAME"
+            kubectl delete job $JOB_NAME -n $NS --ignore-not-found=true
+            echo "✅ Cleanup completed"
+          fi
+
+      - name: Upload broadcast benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: broadcast-benchmark-results
+          path: |
+            broadcast-results/
+            broadcast-benchmark.log
+            broadcast-benchmark-job.yaml
+
+  run-latency-benchmark:
+    if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
+    needs: [setup-ephermeral-test-env, run-broadcast-benchmark, build-unified-benchmark-image]
+    runs-on: ephemeral-env-runner
+    timeout-minutes: 20
+    outputs:
+      job_name: ${{ steps.run_benchmark_job.outputs.job_name }}
+      namespace: ${{ steps.run_benchmark_job.outputs.namespace }}
+      status: ${{ steps.collect_results.outputs.status }}
+    env:
+      AUTH_HOST: ${{ needs.setup-ephermeral-test-env.outputs.auth_server_url }}
+      API_SERVER_HOST: ${{ needs.setup-ephermeral-test-env.outputs.api_server_url }}
+      API_HOST: ${{ needs.setup-ephermeral-test-env.outputs.app_url }}
+      CLIENT_ID: ${{ needs.setup-ephermeral-test-env.outputs.client_id }}
+      CLIENT_SECRET: ${{ needs.setup-ephermeral-test-env.outputs.client_secret }}
+      PROJECT_NAME: ${{ needs.setup-ephermeral-test-env.outputs.project_name }}
+      BENCHMARK_IMAGE: ${{ needs.build-unified-benchmark-image.outputs.image }}
+      BROADCAST_STATUS: ${{ needs.run-broadcast-benchmark.outputs.status }}
+
+    steps:
+      - name: Check Broadcast Benchmark Status
+        run: |
+          echo "🔍 Checking broadcast benchmark status: $BROADCAST_STATUS"
+          if [ "$BROADCAST_STATUS" = "FAILED" ] || [ "$BROADCAST_STATUS" = "ERROR" ]; then
+            echo "⚠️  Broadcast benchmark failed, but continuing with latency benchmark"
+          else
+            echo "✅ Broadcast benchmark completed successfully"
+          fi
+
+      - name: Install kubectl and setup kubeconfig
+        run: |
+          # Install kubectl if not already present
+          if ! command -v kubectl &> /dev/null; then
+            curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+            chmod +x kubectl
+            sudo mv kubectl /usr/local/bin/
+          fi
+
+      - name: Wait for Ephemeral Environment Services
+        run: |
+          echo "🔍 Checking ephemeral environment services readiness..."
+          echo "API Host: $API_HOST"
+          
+          # Wait for API service to be ready
+          for i in {1..15}; do
+            if curl -fsS "$API_HOST/health" >/dev/null 2>&1; then 
+              echo "✅ API service is ready"
+              break
+            fi
+            echo "⏳ Waiting for API service... (attempt $i/15)"
+            sleep 5
+          done
+          
+          # Verify API service is accessible
+          curl -fsS "$API_HOST/health" >/dev/null || {
+            echo "❌ API service not accessible at $API_HOST/health"
+            exit 1
+          }
+
+      - name: Run Latency Benchmark Job in Ephemeral Environment
+        id: run_benchmark_job
+        run: |
+          set -e
+          echo "🚀 Creating latency benchmark job in ephemeral Kubernetes environment..."
+          
+          NS="$PROJECT_NAME"
+          JOB_NAME="latency-benchmark-$(date +%s)"
+          
+          echo "Namespace: $NS"
+          echo "Job Name: $JOB_NAME"
+          echo "Benchmark Image: $BENCHMARK_IMAGE"
+          
+          # Create Kubernetes Job manifest for Latency Benchmark (Unified Image)
+          cat > latency-benchmark-job.yaml << EOF
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: $JOB_NAME
+            namespace: $NS
+            labels:
+              benchmark-type: latency
+          spec:
+            ttlSecondsAfterFinished: 300
+            template:
+              spec:
+                restartPolicy: Never
+                containers:
+                - name: unified-benchmark
+                  image: $BENCHMARK_IMAGE
+                  env:
+                  # Unified benchmark type selector
+                  - name: BENCHMARK_TYPE
+                    value: "latency"
+                  # Common connection parameters
+                  - name: CLIENT_ID
+                    value: "$CLIENT_ID"
+                  - name: SILO_SERVICE_HOST
+                    value: "aevatar-silo-service.$NS.svc.cluster.local"
+                  - name: SILO_GATEWAY_PORT
+                    value: "20001"
+                  # Latency benchmark parameters
+                  - name: LAT_MAX_CONCURRENCY
+                    value: "4"
+                  - name: LAT_DURATION
+                    value: "45"
+                  - name: LAT_WARMUP
+                    value: "5"
+                  - name: LAT_EPS
+                    value: "1"
+                  # Latency thresholds
+                  - name: LAT_P95_MS
+                    value: "300"
+                  - name: LAT_P99_MS
+                    value: "3000"
+                  - name: LAT_PROCESSED_RATIO
+                    value: "0.90"
+                  resources:
+                    requests:
+                      memory: "256Mi"
+                      cpu: "200m"
+                    limits:
+                      memory: "512Mi"
+                      cpu: "500m"
+          EOF
+          
+          # Apply the job
+          kubectl apply -f latency-benchmark-job.yaml
+          
+          echo "✅ Latency benchmark job created successfully"
+          echo "job_name=$JOB_NAME" >> $GITHUB_OUTPUT
+          echo "namespace=$NS" >> $GITHUB_OUTPUT
+
+      - name: Wait for Latency Benchmark Completion
+        run: |
+          set -e
+          JOB_NAME="${{ steps.run_benchmark_job.outputs.job_name }}"
+          NS="${{ steps.run_benchmark_job.outputs.namespace }}"
+          
+          echo "⏳ Waiting for latency benchmark job to complete..."
+          echo "Job: $JOB_NAME in namespace: $NS"
+          
+          # Wait for job completion (up to 15 minutes)
+          for i in {1..90}; do
+            status=$(kubectl get job $JOB_NAME -n $NS -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' 2>/dev/null || echo "")
+            failed=$(kubectl get job $JOB_NAME -n $NS -o jsonpath='{.status.conditions[?(@.type=="Failed")].status}' 2>/dev/null || echo "")
+            
+            if [ "$status" = "True" ]; then
+              echo "✅ Latency benchmark job completed successfully"
+              break
+            elif [ "$failed" = "True" ]; then
+              echo "❌ Latency benchmark job failed"
+              kubectl logs job/$JOB_NAME -n $NS || echo "No logs available"
+              exit 1
+            else
+              echo "   ⏱️  Job still running... (check $i/90)"
+              sleep 10
+            fi
+          done
+          
+          # Check if we timed out
+          if [ "$status" != "True" ]; then
+            echo "⚠️  Latency benchmark job timed out"
+            kubectl logs job/$JOB_NAME -n $NS || echo "No logs available"
+            exit 1
+          fi
+
+      - name: Collect Latency Benchmark Results
+        id: collect_results
+        if: always()
+        run: |
+          JOB_NAME="${{ steps.run_benchmark_job.outputs.job_name }}"
+          NS="${{ steps.run_benchmark_job.outputs.namespace }}"
+          
+          echo "📊 Collecting latency benchmark results from job: $JOB_NAME"
+          
+          # Get pod name
+          POD_NAME=$(kubectl get pods -l job-name=$JOB_NAME -n $NS -o jsonpath='{.items[0].metadata.name}')
+          
+          if [ -n "$POD_NAME" ]; then
+            echo "Pod: $POD_NAME"
+            
+            # Collect logs
+            echo "📝 Collecting benchmark logs..."
+            kubectl logs $POD_NAME -n $NS > latency-benchmark.log 2>&1 || echo "Failed to get logs"
+            
+            # Try to copy result files from container
+            echo "📁 Copying result files..."
+            kubectl cp $NS/$POD_NAME:/tmp/results/ ./latency-results/ || echo "Failed to copy results (this is expected if job failed)"
+            
+            # Extract status from results
+            if [ -f "latency-results/benchmark_status.txt" ]; then
+              STATUS=$(cat latency-results/benchmark_status.txt | cut -d'=' -f2)
+              echo "status=$STATUS" >> $GITHUB_OUTPUT
+            else
+              echo "status=UNKNOWN" >> $GITHUB_OUTPUT
+            fi
+            
+            # Display summary from logs
+            echo "📊 Latency Benchmark Summary:"
+            grep -E "(📊|✅|❌|🎯)" latency-benchmark.log || echo "No summary found in logs"
+            
+          else
+            echo "❌ Could not find latency benchmark pod"
+            echo "status=ERROR" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Process and Display Latency Results
+        if: always()
+        run: |
+          echo "## ⚡ Latency Benchmark Report (Ephemeral K8s)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** Ephemeral Kubernetes Environment" >> $GITHUB_STEP_SUMMARY
+          echo "**Project:** \`$PROJECT_NAME\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Client ID:** \`$CLIENT_ID\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Benchmark Status:** \`${{ steps.collect_results.outputs.status }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Broadcast Status:** \`$BROADCAST_STATUS\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Add benchmark execution details
+          echo "### 📋 Execution Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Job Name:** \`${{ steps.run_benchmark_job.outputs.job_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Namespace:** \`${{ steps.run_benchmark_job.outputs.namespace }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image:** \`$BENCHMARK_IMAGE\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Try to parse results if available
+          if [ -f "latency-results/latency_metrics.json" ]; then
+            echo "### ⚡ Latency Benchmark Results" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+            cat latency-results/latency_metrics.json >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Add benchmark logs summary
+          echo "### 📝 Benchmark Logs Summary" >> $GITHUB_STEP_SUMMARY
+          if [ -f "latency-benchmark.log" ]; then
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            tail -n 30 latency-benchmark.log >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No benchmark logs available" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Cleanup Latency Benchmark Job
+        if: always()
+        run: |
+          JOB_NAME="${{ steps.run_benchmark_job.outputs.job_name }}"
+          NS="${{ steps.run_benchmark_job.outputs.namespace }}"
+          
+          if [ -n "$JOB_NAME" ] && [ -n "$NS" ]; then
+            echo "🧹 Cleaning up latency benchmark job: $JOB_NAME"
+            kubectl delete job $JOB_NAME -n $NS --ignore-not-found=true
+            echo "✅ Cleanup completed"
+          fi
+
+      - name: Upload latency benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: latency-benchmark-results
+          path: |
+            latency-results/
+            latency-benchmark.log
+            latency-benchmark-job.yaml
+
+  benchmark-summary:
+    if: always() && (needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch')
+    needs: [run-broadcast-benchmark, run-latency-benchmark]
+    runs-on: ephemeral-env-runner
+    steps:
+      - name: Generate Combined Benchmark Report
+        run: |
+          echo "## 🚀 Complete Performance Benchmarks Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Benchmark | Status | Details |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|---------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Broadcast Latency | \`${{ needs.run-broadcast-benchmark.outputs.status }}\` | Job: \`${{ needs.run-broadcast-benchmark.outputs.job_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Latency | \`${{ needs.run-latency-benchmark.outputs.status }}\` | Job: \`${{ needs.run-latency-benchmark.outputs.job_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Determine overall status
+          BROADCAST_STATUS="${{ needs.run-broadcast-benchmark.outputs.status }}"
+          LATENCY_STATUS="${{ needs.run-latency-benchmark.outputs.status }}"
+          
+          if [ "$BROADCAST_STATUS" = "PASSED" ] && [ "$LATENCY_STATUS" = "PASSED" ]; then
+            echo "### ✅ Overall Result: ALL BENCHMARKS PASSED" >> $GITHUB_STEP_SUMMARY
+          elif [ "$BROADCAST_STATUS" = "FAILED" ] || [ "$LATENCY_STATUS" = "FAILED" ]; then
+            echo "### ⚠️  Overall Result: SOME BENCHMARKS FAILED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ❌ Overall Result: BENCHMARK ERRORS OCCURRED" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Note:** Individual benchmark results and detailed logs are available in the respective job artifacts." >> $GITHUB_STEP_SUMMARY
+
+      - name: Final Lark Notification
+        if: always()
+        uses: drayeasy/action-lark-notify@main
+        env:
+          LARK_WEBHOOK: ${{ secrets.LARK_WEBHOOK }}
+          LARK_MESSAGE_TITLE: "Ephemeral K8s Benchmarks Summary - Broadcast: ${{ needs.run-broadcast-benchmark.outputs.status }}, Latency: ${{ needs.run-latency-benchmark.outputs.status }}"
+          LARK_MESSAGE_TEMPLATE: ${{ (needs.run-broadcast-benchmark.outputs.status == 'PASSED' && needs.run-latency-benchmark.outputs.status == 'PASSED') && 'green' || 'yellow' }}
