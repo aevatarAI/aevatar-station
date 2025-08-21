@@ -408,8 +408,6 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             {
                 // 从JSON中获取原始的node ID
                 var originalNodeId = token.Value<string>("nodeId")
-                                   ?? token.Value<string>("id")
-                                   ?? token.Value<string>("node_id")
                                    ?? $"node_{nodeIndex}"; // 为没有ID的节点创建fallback ID
                 
                 // 从JSON中获取简单的agent类型名称
