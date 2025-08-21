@@ -24,6 +24,7 @@ using JsonConvert = Newtonsoft.Json.JsonConvert;
 using Newtonsoft.Json.Linq;
 using Aevatar.Application.Contracts.WorkflowOrchestration;
 using Aevatar.Options;
+using Volo.Abp;
 
 namespace Aevatar.Application.Service;
 
@@ -85,6 +86,13 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         {
             _logger.LogWarning("Empty user goal provided for workflow generation");
             return null;
+        }
+
+        // Check if user goal is too short - require minimum meaningful description length
+        if (userGoal.Trim().Length < 10)
+        {
+            _logger.LogWarning("User goal too short for workflow generation: {UserGoal}", userGoal);
+            throw new UserFriendlyException("Your description is too simple, please provide more detailed generation requirements.");
         }
 
         var currentUserId = _userAppService.GetCurrentUserId();
