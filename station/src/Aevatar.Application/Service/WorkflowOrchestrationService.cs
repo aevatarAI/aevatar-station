@@ -82,16 +82,10 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     /// <returns>前端可渲染的工作流视图配置</returns>
     public async Task<AiWorkflowViewConfigDto?> GenerateWorkflowAsync(string userGoal)
     {
-        if (string.IsNullOrWhiteSpace(userGoal))
+        // Check if user goal is empty or too short - require minimum meaningful description length
+        if (string.IsNullOrWhiteSpace(userGoal) || userGoal.Trim().Length < 10)
         {
-            _logger.LogWarning("Empty user goal provided for workflow generation");
-            return null;
-        }
-
-        // Check if user goal is too short - require minimum meaningful description length
-        if (userGoal.Trim().Length < 10)
-        {
-            _logger.LogWarning("User goal too short for workflow generation: {UserGoal}", userGoal);
+            _logger.LogWarning("User goal empty or too short for workflow generation: {UserGoal}", userGoal ?? "null");
             throw new UserFriendlyException("Your description is too simple, please provide more detailed generation requirements.");
         }
 

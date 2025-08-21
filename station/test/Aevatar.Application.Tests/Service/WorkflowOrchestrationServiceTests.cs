@@ -16,6 +16,7 @@ using Orleans;
 using Orleans.Metadata;
 using Orleans.Runtime;
 using Shouldly;
+using Volo.Abp;
 using Xunit;
 
 namespace Aevatar.Application.Tests.Service;
@@ -98,32 +99,69 @@ public class WorkflowOrchestrationServiceTests
     #region Basic Functionality Tests
 
     [Fact]
-    public async Task GenerateWorkflowAsync_WithEmptyUserGoal_ShouldReturnNull()
+    public async Task GenerateWorkflowAsync_WithEmptyUserGoal_ShouldThrowUserFriendlyException()
     {
-        // Act
-        var result = await _service.GenerateWorkflowAsync("");
-
-        // Assert
-        result.ShouldBeNull();
+        // Act & Assert
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _service.GenerateWorkflowAsync(""));
+        
+        exception.Message.ShouldBe("Your description is too simple, please provide more detailed generation requirements.");
     }
 
     [Fact]
-    public async Task GenerateWorkflowAsync_WithNullUserGoal_ShouldReturnNull()
+    public async Task GenerateWorkflowAsync_WithNullUserGoal_ShouldThrowUserFriendlyException()
     {
-        // Act
-        var result = await _service.GenerateWorkflowAsync(null);
-
-        // Assert
-        result.ShouldBeNull();
+        // Act & Assert
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _service.GenerateWorkflowAsync(null));
+        
+        exception.Message.ShouldBe("Your description is too simple, please provide more detailed generation requirements.");
     }
 
     [Fact]
-    public async Task GenerateWorkflowAsync_WithWhitespaceUserGoal_ShouldReturnNull()
+    public async Task GenerateWorkflowAsync_WithWhitespaceUserGoal_ShouldThrowUserFriendlyException()
     {
-        // Act
-        var result = await _service.GenerateWorkflowAsync("   \t\n   ");
+        // Act & Assert
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _service.GenerateWorkflowAsync("   \t\n   "));
+        
+        exception.Message.ShouldBe("Your description is too simple, please provide more detailed generation requirements.");
+    }
 
-        // Assert
+    [Fact]
+    public async Task GenerateWorkflowAsync_WithTooShortUserGoal_ShouldThrowUserFriendlyException()
+    {
+        // Act & Assert
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _service.GenerateWorkflowAsync("help"));
+        
+        exception.Message.ShouldBe("Your description is too simple, please provide more detailed generation requirements.");
+    }
+
+    [Fact]
+    public async Task GenerateWorkflowAsync_WithExactly9Characters_ShouldThrowUserFriendlyException()
+    {
+        // Act & Assert
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _service.GenerateWorkflowAsync("123456789"));
+        
+        exception.Message.ShouldBe("Your description is too simple, please provide more detailed generation requirements.");
+    }
+
+    [Fact]
+    public async Task GenerateWorkflowAsync_WithExactly10Characters_ShouldNotThrowException()
+    {
+        // Arrange
+        _mockWorkflowComposerGAgent.Setup(x => x.InitializeAsync(It.IsAny<InitializeDto>()))
+            .Returns(Task.CompletedTask);
+        _mockWorkflowComposerGAgent.Setup(x => x.GenerateWorkflowJsonAsync(It.IsAny<string>()))
+            .ReturnsAsync("{}");
+
+        // Act
+        var result = await _service.GenerateWorkflowAsync("1234567890");
+
+        // Assert - Should not throw exception and should attempt to process
+        // (Will return null due to empty JSON but that's fine for this test)
         result.ShouldBeNull();
     }
 
