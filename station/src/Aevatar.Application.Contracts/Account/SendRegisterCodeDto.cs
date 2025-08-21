@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using Aevatar.Common;
+
 using Volo.Abp.Identity;
 using Volo.Abp.Validation;
 
@@ -15,19 +15,10 @@ public class SendRegisterCodeDto
     [Required]
     public string AppName { get; set; }
 
-    /// <summary>
-    /// Platform type for the client application
-    /// </summary>
-    [Required]
-    public PlatformType Platform { get; set; } = PlatformType.Web;
+
 
     /// <summary>
-    /// Recaptcha verification token (required for Web platform when rate limit exceeded)
+    /// Recaptcha verification token (required when rate limit exceeded for all platforms)
     /// </summary>
     public string? RecaptchaToken { get; set; }
-
-    /// <summary>
-    /// Apple DeviceCheck token for iOS or Play Integrity token for Android (used for mobile platform verification)
-    /// </summary>
-    public string? AcToken { get; set; }
 }
