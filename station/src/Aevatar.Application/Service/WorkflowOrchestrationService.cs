@@ -24,6 +24,7 @@ using JsonConvert = Newtonsoft.Json.JsonConvert;
 using Newtonsoft.Json.Linq;
 using Aevatar.Application.Contracts.WorkflowOrchestration;
 using Aevatar.Options;
+using Volo.Abp;
 
 namespace Aevatar.Application.Service;
 
@@ -81,10 +82,11 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     /// <returns>前端可渲染的工作流视图配置</returns>
     public async Task<AiWorkflowViewConfigDto?> GenerateWorkflowAsync(string userGoal)
     {
-        if (string.IsNullOrWhiteSpace(userGoal))
+        // Check if user goal is empty or too short - require minimum meaningful description length
+        if (string.IsNullOrWhiteSpace(userGoal) || userGoal.Trim().Length < 10)
         {
-            _logger.LogWarning("Empty user goal provided for workflow generation");
-            return null;
+            _logger.LogWarning("User goal empty or too short for workflow generation: {UserGoal}", userGoal ?? "null");
+            throw new UserFriendlyException("Your description is too simple, please provide more detailed generation requirements.");
         }
 
         var currentUserId = _userAppService.GetCurrentUserId();
@@ -280,7 +282,11 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             promptBuilder.AppendLine(_promptOptions.CurrentValue.OutputRequirementsTemplate);
             promptBuilder.AppendLine();
 
-            // 4. JSON格式规范
+            // 4. 重要约束条件
+            promptBuilder.AppendLine(_promptOptions.CurrentValue.CriticalConstraintsTemplate);
+            promptBuilder.AppendLine();
+
+            // 5. JSON格式规范
             promptBuilder.AppendLine(_promptOptions.CurrentValue.JsonFormatSpecificationTemplate);
 
             var baseInstructions = promptBuilder.ToString();
@@ -325,6 +331,73 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     #endregion
 
     #region Private Methods - JSON Parsing
+
+    /// <summary>
+    /// Validates that all agent types in the workflow are within allowed business agent types
+    /// </summary>
+    /// <param name="workflowNodes">List of workflow nodes to validate</param>
+    /// <returns>True if all agent types are valid, false otherwise</returns>
+    private bool ValidateWorkflowAgentTypes(List<AiWorkflowNodeDto> workflowNodes)
+    {
+        try
+        {
+            _logger.LogDebug("Validating agent types for {NodeCount} workflow nodes", workflowNodes.Count);
+            
+            // Get allowed business agent types
+            var allowedAgentTypes = GetBusinessAgentTypes();
+            var allowedTypeNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            
+            // Add both simple names and full type names to allowed set
+            foreach (var agentType in allowedAgentTypes)
+            {
+                allowedTypeNames.Add(agentType.Name);
+                allowedTypeNames.Add(agentType.FullName ?? agentType.Name);
+                
+                // Also add GrainType string representation if available
+                if (_grainTypeResolver != null)
+                {
+                    try
+                    {
+                        var grainTypeStr = _grainTypeResolver.GetGrainType(agentType).ToString();
+                        allowedTypeNames.Add(grainTypeStr);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogDebug(ex, "Could not get grain type for {AgentType}", agentType.Name);
+                    }
+                }
+            }
+
+            _logger.LogDebug("Allowed agent types: {AllowedTypes}", string.Join(", ", allowedTypeNames));
+
+            // Validate each node's agent type
+            foreach (var node in workflowNodes)
+            {
+                if (string.IsNullOrEmpty(node.AgentType))
+                {
+                    _logger.LogDebug("Node {NodeId} has empty AgentType, skipping validation", node.NodeId);
+                    continue;
+                }
+
+                if (!allowedTypeNames.Contains(node.AgentType))
+                {
+                    _logger.LogWarning("Node {NodeId} uses invalid agent type: {AgentType}. Not found in allowed business agent types.", 
+                        node.NodeId, node.AgentType);
+                    return false;
+                }
+                
+                _logger.LogDebug("Node {NodeId} agent type {AgentType} is valid", node.NodeId, node.AgentType);
+            }
+
+            _logger.LogInformation("All {NodeCount} workflow nodes use valid business agent types", workflowNodes.Count);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during workflow agent type validation");
+            return false; // Fail safe - reject if validation fails
+        }
+    }
 
     /// <summary>
     /// Parse workflow JSON to frontend format DTO
@@ -383,7 +456,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                 
                 var node = new AiWorkflowNodeDto
                 {
-                    NodeId = token.Value<string>("nodeId") ?? Guid.NewGuid().ToString(),
+                    NodeId = Guid.NewGuid().ToString(),
                     // 使用映射后的完整类型名称
                     AgentType = fullAgentType,
                     // Support both nodeName and name as schema variants
@@ -433,6 +506,13 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
 
             _logger.LogInformation("Parsed workflow: nodes={NodeCount}, connections={ConnCount}",
                 workflow.Properties.WorkflowNodeList.Count, workflow.Properties.WorkflowNodeUnitList.Count);
+
+            // Validate agent types - ensure all agents are within allowed business agent types
+            if (!ValidateWorkflowAgentTypes(workflow.Properties.WorkflowNodeList))
+            {
+                _logger.LogWarning("Workflow contains agents outside of allowed business agent types, returning null");
+                return null;
+            }
 
             // Layout
             ApplyIntelligentLayout(workflow.Properties);
