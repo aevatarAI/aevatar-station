@@ -23,6 +23,9 @@ export Orleans__ServiceId="${CLIENT_ID}BasicService"
 export Orleans__DataBase="AevatarDb"
 export Orleans__HostId="${CLIENT_ID}"
 
+# Kafka broker configuration for ephemeral environment
+export KAFKA_BROKERS="env-${CLIENT_ID}-kafka:9092"
+
 echo "🔗 Orleans Connection:"
 echo "  MongoDB: ${Orleans__MongoDBClient}"
 echo "  Cluster ID: ${Orleans__ClusterId}"
@@ -30,6 +33,8 @@ echo "  Service ID: ${Orleans__ServiceId}"
 echo "  Database: ${Orleans__DataBase}"
 echo "  Host ID: ${Orleans__HostId}"
 echo "  Discovery: MongoDB Clustering (Auto-Discovery)"
+echo "📡 Kafka Connection:"
+echo "  Brokers: ${KAFKA_BROKERS}"
 
 # Orleans client will handle connection automatically via MongoDB clustering
 

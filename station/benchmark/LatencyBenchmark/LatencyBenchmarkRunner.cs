@@ -178,7 +178,10 @@ public class LatencyBenchmarkRunner : IDisposable
                     .AddActivityPropagation()
                     .AddAevatarKafkaStreaming("Aevatar", options =>
                     {
-                        options.BrokerList = new List<string> { "localhost:9092" };
+                        // Read Kafka broker from environment variable, fallback to localhost for local development
+                        var kafkaBrokers = Environment.GetEnvironmentVariable("KAFKA_BROKERS") ?? "localhost:9092";
+                        options.BrokerList = kafkaBrokers.Split(',').Select(b => b.Trim()).ToList();
+                        _logger.LogInformation("  Kafka Brokers: {KafkaBrokers}", string.Join(", ", options.BrokerList));
                         options.ConsumerGroupId = "Aevatar";
                         options.ConsumeMode = ConsumeMode.LastCommittedMessage;
 
