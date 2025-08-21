@@ -703,7 +703,7 @@ def test_silo_deployment_operations(api_admin_headers):
         
         logger.info(f"Copying {silo_config['pattern']} silo with version {silo_config['version']}")
         response = requests.post(
-            f"{API_SERVER_HOST}/api/user/CopyDeploymentWithPattern",
+            f"{API_SERVER_HOST}/api/users/CopyDeploymentWithPattern",
             params=copy_params,
             headers=api_admin_headers,
             verify=False
