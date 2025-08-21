@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-using Aevatar.Common;
+
 using Microsoft.AspNetCore.Http;
 
 namespace Aevatar.Services;
@@ -39,14 +39,12 @@ public interface ISecurityService
 }
 
 /// <summary>
-/// Security verification request model
+/// Security verification request model - unified reCAPTCHA verification
 /// </summary>
 public class SecurityVerificationRequest
 {
-    public PlatformType Platform { get; set; }
     public string ClientIp { get; set; } = "";
     public string? RecaptchaToken { get; set; }
-    public string? AcToken { get; set; }
 }
 
 /// <summary>

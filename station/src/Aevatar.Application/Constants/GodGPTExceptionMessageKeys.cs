@@ -53,8 +53,8 @@ public static class GodGPTExceptionMessageKeys
     public const string SecurityVerificationRequired = "SecurityVerificationRequired";
     public const string SecurityVerificationFailed = "SecurityVerificationFailed";
     public const string RecaptchaVerificationFailed = "RecaptchaVerificationFailed";
-    public const string DeviceCheckVerificationFailed = "DeviceCheckVerificationFailed";
-    public const string PlayIntegrityVerificationFailed = "PlayIntegrityVerificationFailed";
-    public const string UnsupportedPlatformType = "UnsupportedPlatformType";
+
+
+
     
 } 
