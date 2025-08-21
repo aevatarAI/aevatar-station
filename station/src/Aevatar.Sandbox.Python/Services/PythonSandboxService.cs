@@ -1,26 +1,38 @@
-using Aevatar.Sandbox.Abstractions.Services;
-using Aevatar.Sandbox.Kubernetes.Manager;
+using Aevatar.Kubernetes.Abstractions;
+using Aevatar.Sandbox.Core.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Aevatar.Sandbox.Python.Services;
 
-public sealed class PythonSandboxService : SandboxServiceBase
+public class PythonSandboxService : SandboxServiceBase
 {
-    protected override string LanguageId => "python";
-    protected override string Image => "python-3.11-sandbox";
-    protected override string[] CommandTemplate => new[] { "python", "/runner/entry.py" };
+    private readonly string _pythonImage;
+    private readonly string _namespace;
 
-    protected override SandboxResourceLimits DefaultResourceLimits => new()
+    public PythonSandboxService(
+        ILogger<PythonSandboxService> logger,
+        IKubernetesHostManager kubernetesManager,
+        IOptions<SandboxOptions> options,
+        IOptions<PythonSandboxOptions> pythonOptions,
+        SandboxExecDispatcher dispatcher)
+        : base(logger, kubernetesManager, options, dispatcher)
     {
-        CpuMillicores = 1000, // 1 vCPU
-        MemoryMB = 512,
-        TimeoutSeconds = 30
-    };
+        _pythonImage = pythonOptions.Value.PythonImage;
+        _namespace = pythonOptions.Value.Namespace;
+    }
 
-    protected override NetworkPolicy DefaultNetworkPolicy => new() { AllowEgress = false };
+    protected override string GetImage() => _pythonImage;
+    protected override string GetNamespace() => _namespace;
+    protected override string GetLanguage() => "python";
 
-    public PythonSandboxService(ISandboxKubernetesManager kubernetes, ILogger<PythonSandboxService> logger)
-        : base(kubernetes, logger)
+    protected override string[] GetCommand(string code)
     {
+        return new[]
+        {
+            "python",
+            "-c",
+            code
+        };
     }
 }

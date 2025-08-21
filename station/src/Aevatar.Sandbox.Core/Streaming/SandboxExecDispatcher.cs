@@ -7,6 +7,7 @@ using Aevatar.Sandbox.Abstractions.Grains;
 using Aevatar.Sandbox.Core.Streaming.Messages;
 using Microsoft.Extensions.Logging;
 using Orleans;
+using Orleans.Runtime;
 using Orleans.Streams;
 
 namespace Aevatar.Sandbox.Core.Streaming;
@@ -34,24 +35,27 @@ public sealed class SandboxExecDispatcher : IAsyncObserver<SandboxExecEnqueueMes
         {
             try
             {
-                var grain = _clusterClient.GetGrain<ISandboxExecutionClientGrain>(
-                    Guid.Parse(item.SandboxExecutionId));
+                var grain = _clusterClient.GetGrain<ISandboxExecutionClientGrain>(item.ExecutionId);
 
                 var result = await grain.ExecuteAsync(new SandboxExecutionClientParams
                 {
-                    LanguageId = item.LanguageId,
+                    Language = item.Language,
                     Code = item.Code,
-                    TimeoutSeconds = item.TimeoutSeconds,
-                    TenantId = item.TenantId,
-                    ChatId = item.ChatId
+                    Timeout = item.Timeout,
+                    Resources = new ResourceLimits
+                    {
+                        CpuLimitCores = double.TryParse(item.CpuLimit, out var cpu) ? cpu : 1.0,
+                        MemoryLimitBytes = long.TryParse(item.MemoryLimit, out var memory) ? memory : 512 * 1024 * 1024,
+                        TimeoutSeconds = item.Timeout
+                    }
                 });
 
                 await PublishResultAsync(result);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to process sandbox execution request {SandboxExecutionId}",
-                    item.SandboxExecutionId);
+                _logger.LogError(ex, "Failed to process sandbox execution request {ExecutionId}",
+                    item.ExecutionId);
             }
             finally
             {
@@ -73,27 +77,28 @@ public sealed class SandboxExecDispatcher : IAsyncObserver<SandboxExecEnqueueMes
         try
         {
             var streamProvider = _clusterClient.GetStreamProvider(AevatarCoreConstants.StreamProvider);
-            var stream = streamProvider.GetStream<SandboxExecResultMessage>(
-                StreamId.Create("sandbox.exec.results", result.SandboxExecutionId));
+            var streamId = StreamId.Create("sandbox.exec.results", result.ExecutionId);
+            var stream = streamProvider.GetStream<SandboxExecResultMessage>(streamId);
 
             await stream.OnNextAsync(new SandboxExecResultMessage
             {
-                SandboxExecutionId = result.SandboxExecutionId,
-                Success = result.Success,
-                Stdout = result.Stdout,
-                Stderr = result.Stderr,
-                ExitCode = result.ExitCode,
-                TimedOut = result.TimedOut,
-                ExecTimeSec = result.ExecTimeSec,
-                MemoryUsedMB = result.MemoryUsedMB,
-                ScriptHash = result.ScriptHash,
-                FinishedAtUtc = result.FinishedAtUtc
+                SandboxExecutionId = result.ExecutionId,
+                Success = result.Status == ExecutionStatus.Completed,
+                Stdout = result.Output,
+                Stderr = result.Error,
+                TimedOut = result.Status == ExecutionStatus.TimedOut,
+                ExecTimeSec = result.EndTime.HasValue && result.StartTime.HasValue
+                    ? (result.EndTime.Value - result.StartTime.Value).TotalSeconds
+                    : 0,
+                MemoryUsedMB = result.ResourceUsage.MemoryUsageBytes / (1024 * 1024),
+                ScriptHash = string.Empty,
+                FinishedAtUtc = result.EndTime ?? DateTime.UtcNow
             });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to publish sandbox execution result {SandboxExecutionId}",
-                result.SandboxExecutionId);
+            _logger.LogError(ex, "Failed to publish sandbox execution result {ExecutionId}",
+                result.ExecutionId);
         }
     }
 }

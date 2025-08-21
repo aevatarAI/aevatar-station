@@ -144,6 +144,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Kubernetes.Abstract
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Sandbox.Kubernetes", "src\Aevatar.Sandbox.Kubernetes\Aevatar.Sandbox.Kubernetes.csproj", "{2E0A7C02-BEA7-49E8-89EB-EB76733BF19A}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{3E5A0B81-7AAA-4097-9DEE-41B909138898}"
+	ProjectSection(SolutionItems) = preProject
+		docs\Python_Sandbox_Testing_Guide.md = docs\Python_Sandbox_Testing_Guide.md
+		docs\Python_Sandbox_Testing_Guide.zh.md = docs\Python_Sandbox_Testing_Guide.zh.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

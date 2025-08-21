@@ -6,8 +6,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Aevatar.Extensions;
-using Aevatar.Handler;
-using Microsoft.AspNetCore.Authorization;
 using Orleans.Hosting;
 using Serilog;
 using Serilog.Events;
@@ -31,7 +29,7 @@ public class Program
                     systemConfigPaths: new[]
                     {
                         Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"),
-                        Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json")
+                        Path.Combine(AppContext.BaseDirectory, "appsettings.Sandbox.HttpApi.Host.Shared.json")
                     })
                 .AddEnvironmentVariables();
 
@@ -41,8 +39,6 @@ public class Program
                 .UseAutofac()
                 .UseSerilog();
 
-            builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, AevatarAuthorizationMiddlewareResultHandler>();
-            
             await builder.AddApplicationAsync<AevatarSandboxHttpApiHostModule>();
             
             var app = builder.Build();

@@ -1,87 +1,134 @@
 using System;
-using System.Net.Http;
-using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Aevatar.Sandbox.Abstractions.Contracts;
+using Aevatar.Sandbox.Abstractions.Services;
 using Microsoft.Extensions.Logging;
+using Orleans;
 using Orleans.Runtime;
 
 namespace Aevatar.Sandbox.Abstractions.Grains;
 
+[GenerateSerializer]
+public class SandboxExecutionState
+{
+    [Id(0)]
+    public ExecutionStatus Status { get; set; }
+
+    [Id(1)]
+    public DateTime? StartTime { get; set; }
+
+    [Id(2)]
+    public DateTime? EndTime { get; set; }
+
+    [Id(3)]
+    public SandboxExecutionResult? Result { get; set; }
+
+    [Id(4)]
+    public string Error { get; set; } = string.Empty;
+
+    [Id(5)]
+    public SandboxLogs? Logs { get; set; }
+}
+
 public abstract class SandboxClientGrainBase : Grain, ISandboxExecutionClientGrain
 {
-    protected readonly HttpClient HttpClient;
-    protected readonly ILogger Logger;
-    protected Guid SandboxExecutionId => this.GetPrimaryKey();
+    private readonly IPersistentState<SandboxExecutionState> _state;
+    private readonly ISandboxService _sandboxService;
+    private readonly ILogger _logger;
 
-    protected SandboxClientGrainBase(HttpClient httpClient, ILogger logger)
+    protected SandboxClientGrainBase(
+        [PersistentState("execution")] IPersistentState<SandboxExecutionState> state,
+        ISandboxService sandboxService,
+        ILogger logger)
     {
-        HttpClient = httpClient;
-        Logger = logger;
+        _state = state;
+        _sandboxService = sandboxService;
+        _logger = logger;
     }
 
-    public virtual async Task<SandboxExecutionResult> ExecuteAsync(SandboxExecutionClientParams @params)
+    public virtual async Task<SandboxExecutionResult> ExecuteAsync(SandboxExecutionClientParams parameters)
     {
         try
         {
-            // Create execution request
-            var request = new SandboxExecutionRequest
-            {
-                SandboxExecutionId = SandboxExecutionId.ToString(),
-                LanguageId = @params.LanguageId,
-                Code = @params.Code,
-                TimeoutSeconds = @params.TimeoutSeconds,
-                TenantId = @params.TenantId,
-                ChatId = @params.ChatId
-            };
+            _state.State.Status = ExecutionStatus.Running;
+            _state.State.StartTime = DateTime.UtcNow;
+            await _state.WriteStateAsync();
 
-            // Start execution
-            var handle = await StartExecutionAsync(request);
-            Logger.LogInformation("Started sandbox execution {SandboxExecutionId} with workload {WorkloadName}",
-                SandboxExecutionId, handle.WorkloadName);
+            var result = await _sandboxService.ExecuteAsync(
+                parameters.Code,
+                parameters.Timeout,
+                parameters.Resources);
 
-            // Poll for result with exponential backoff
-            var result = await PollForResultAsync(request.SandboxExecutionId, @params.TimeoutSeconds);
-
-            // Deactivate after completion
-            DeactivateOnIdle();
+            _state.State.Status = result.Status;
+            _state.State.EndTime = result.EndTime;
+            _state.State.Result = result;
+            await _state.WriteStateAsync();
 
             return result;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to execute sandbox request {SandboxExecutionId}", SandboxExecutionId);
+            _logger.LogError(ex, "Failed to execute sandbox code");
+            _state.State.Status = ExecutionStatus.Failed;
+            _state.State.EndTime = DateTime.UtcNow;
+            _state.State.Error = ex.Message;
+            await _state.WriteStateAsync();
+
+            return new SandboxExecutionResult
+            {
+                ExecutionId = this.GetPrimaryKeyString(),
+                Status = ExecutionStatus.Failed,
+                StartTime = _state.State.StartTime ?? DateTime.UtcNow,
+                EndTime = _state.State.EndTime ?? DateTime.UtcNow,
+                Error = ex.Message
+            };
+        }
+    }
+
+    public virtual async Task<SandboxExecutionResult> GetResultAsync()
+    {
+        if (_state.State.Result != null)
+        {
+            return _state.State.Result;
+        }
+
+        return new SandboxExecutionResult
+        {
+            ExecutionId = this.GetPrimaryKeyString(),
+            Status = _state.State.Status,
+            StartTime = _state.State.StartTime ?? DateTime.UtcNow,
+            EndTime = _state.State.EndTime ?? DateTime.UtcNow,
+            Error = _state.State.Error
+        };
+    }
+
+    public virtual async Task<SandboxLogs> GetLogsAsync(LogQueryOptions? options = null)
+    {
+        if (_state.State.Logs != null)
+        {
+            return _state.State.Logs;
+        }
+
+        var logs = await _sandboxService.GetLogsAsync(this.GetPrimaryKeyString(), options);
+        _state.State.Logs = logs;
+        await _state.WriteStateAsync();
+
+        return logs;
+    }
+
+    public virtual async Task CancelAsync()
+    {
+        try
+        {
+            await _sandboxService.CancelAsync(this.GetPrimaryKeyString());
+            _state.State.Status = ExecutionStatus.Cancelled;
+            _state.State.EndTime = DateTime.UtcNow;
+            await _state.WriteStateAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to cancel sandbox execution");
             throw;
         }
-    }
-
-    protected virtual async Task<SandboxExecutionHandle> StartExecutionAsync(SandboxExecutionRequest request)
-    {
-        var response = await HttpClient.PostAsJsonAsync("api/sandbox/execute", request);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<SandboxExecutionHandle>();
-    }
-
-    protected virtual async Task<SandboxExecutionResult> PollForResultAsync(string sandboxExecutionId, int timeoutSeconds)
-    {
-        var deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds + 5); // Add buffer for cleanup
-        var delay = TimeSpan.FromSeconds(1);
-
-        while (DateTime.UtcNow < deadline)
-        {
-            var response = await HttpClient.GetAsync($"api/sandbox/result/{sandboxExecutionId}");
-            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                await Task.Delay(delay);
-                delay = TimeSpan.FromSeconds(Math.Min(delay.TotalSeconds * 1.5, 5)); // Cap at 5s
-                continue;
-            }
-
-            response.EnsureSuccessStatusCode();
-            var result = await response.Content.ReadFromJsonAsync<SandboxExecutionResult>();
-            return result ?? throw new InvalidOperationException("Received null result from API");
-        }
-
-        throw new TimeoutException($"Sandbox execution {sandboxExecutionId} timed out after {timeoutSeconds}s");
     }
 }

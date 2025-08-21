@@ -1,20 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
 
+    <Import Project="..\..\common.props" />
+
     <PropertyGroup>
-        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
+        <TargetFramework>net9.0</TargetFramework>
+        <RootNamespace>Aevatar.Sandbox.Python</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Aevatar.Kubernetes\Aevatar.Kubernetes.csproj" />
+        <ProjectReference Include="..\Aevatar.Sandbox.Core\Aevatar.Sandbox.Core.csproj" />
         <ProjectReference Include="..\Aevatar.Sandbox.Abstractions\Aevatar.Sandbox.Abstractions.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <None Update="Runner\entry.py">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
     </ItemGroup>
 
 </Project>

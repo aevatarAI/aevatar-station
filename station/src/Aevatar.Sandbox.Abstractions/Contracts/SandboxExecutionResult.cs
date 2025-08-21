@@ -1,17 +1,38 @@
 using System;
+using Orleans;
 
 namespace Aevatar.Sandbox.Abstractions.Contracts;
 
-public sealed class SandboxExecutionResult
+[GenerateSerializer]
+public class SandboxExecutionResult
 {
-    public required string SandboxExecutionId { get; init; }
-    public bool Success { get; init; }
-    public string Stdout { get; init; } = string.Empty;
-    public string Stderr { get; init; } = string.Empty;
-    public int ExitCode { get; init; }
-    public bool TimedOut { get; init; }
-    public double ExecTimeSec { get; init; }
-    public int MemoryUsedMB { get; init; }
-    public string ScriptHash { get; init; } = string.Empty;
-    public DateTime FinishedAtUtc { get; init; }
+    [Id(0)]
+    public string ExecutionId { get; set; } = string.Empty;
+
+    [Id(1)]
+    public ExecutionStatus Status { get; set; }
+
+    [Id(2)]
+    public DateTime? StartTime { get; set; }
+
+    [Id(3)]
+    public DateTime? EndTime { get; set; }
+
+    [Id(4)]
+    public string Language { get; set; } = string.Empty;
+
+    [Id(5)]
+    public string PodName { get; set; } = string.Empty;
+
+    [Id(6)]
+    public ResourceUsage ResourceUsage { get; set; } = new();
+
+    [Id(7)]
+    public int ExitCode { get; set; }
+
+    [Id(8)]
+    public string Output { get; set; } = string.Empty;
+
+    [Id(9)]
+    public string Error { get; set; } = string.Empty;
 }

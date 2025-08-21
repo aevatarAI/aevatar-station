@@ -1,14 +1,10 @@
-using Aevatar.Kubernetes;
 using Aevatar.Sandbox.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.Modularity;
 
 namespace Aevatar.Sandbox.Core;
 
-[DependsOn(
-    typeof(AevatarKubernetesModule)
-)]
-public class SandboxCoreModule : AbpModule
+public class AevatarSandboxCoreModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {

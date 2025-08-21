@@ -47,6 +47,7 @@
     <ProjectReference Include="..\..\..\signalR\src\Aevatar.SignalR\Aevatar.SignalR.csproj" />
     <ProjectReference Include="..\Aevatar.Application\Aevatar.Application.csproj" />
     <ProjectReference Include="..\Aevatar.HttpApi.Admin\Aevatar.HttpApi.Admin.csproj" />
+    <ProjectReference Include="..\Aevatar.HttpApi.Host\Aevatar.HttpApi.Host.csproj" />
     <ProjectReference Include="..\Aevatar.MongoDB\Aevatar.MongoDB.csproj" />
     <ProjectReference Include="..\Aevatar.Sandbox.Abstractions\Aevatar.Sandbox.Abstractions.csproj" />
     <ProjectReference Include="..\Aevatar.Sandbox.Core\Aevatar.Sandbox.Core.csproj" />

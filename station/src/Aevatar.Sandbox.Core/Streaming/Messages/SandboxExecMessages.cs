@@ -1,30 +1,59 @@
-using System;
+using Orleans;
 
 namespace Aevatar.Sandbox.Core.Streaming.Messages;
 
 [GenerateSerializer]
-public sealed class SandboxExecEnqueueMessage
+public class SandboxExecStartMessage
 {
-    [Id(0)] public required string SandboxExecutionId { get; init; }
-    [Id(1)] public required string LanguageId { get; init; }
-    [Id(2)] public required string Code { get; init; }
-    [Id(3)] public int TimeoutSeconds { get; init; } = 30;
-    [Id(4)] public string? TenantId { get; init; }
-    [Id(5)] public string? ChatId { get; init; }
-    [Id(6)] public int Priority { get; init; }
+    [Id(0)]
+    public string ExecutionId { get; set; } = string.Empty;
+
+    [Id(1)]
+    public string Code { get; set; } = string.Empty;
+
+    [Id(2)]
+    public string Language { get; set; } = string.Empty;
+
+    [Id(3)]
+    public int Timeout { get; set; }
+
+    [Id(4)]
+    public string CpuLimit { get; set; } = string.Empty;
+
+    [Id(5)]
+    public string MemoryLimit { get; set; } = string.Empty;
+
+    [Id(6)]
+    public string DiskLimit { get; set; } = string.Empty;
 }
 
 [GenerateSerializer]
-public sealed class SandboxExecResultMessage
+public class SandboxExecStatusMessage
 {
-    [Id(0)] public required string SandboxExecutionId { get; init; }
-    [Id(1)] public bool Success { get; init; }
-    [Id(2)] public string Stdout { get; init; } = string.Empty;
-    [Id(3)] public string Stderr { get; init; } = string.Empty;
-    [Id(4)] public int ExitCode { get; init; }
-    [Id(5)] public bool TimedOut { get; init; }
-    [Id(6)] public double ExecTimeSec { get; init; }
-    [Id(7)] public int MemoryUsedMB { get; init; }
-    [Id(8)] public string ScriptHash { get; init; } = string.Empty;
-    [Id(9)] public DateTime FinishedAtUtc { get; init; }
+    [Id(0)]
+    public string ExecutionId { get; set; } = string.Empty;
+
+    [Id(1)]
+    public string Status { get; set; } = string.Empty;
+
+    [Id(2)]
+    public string Output { get; set; } = string.Empty;
+
+    [Id(3)]
+    public string Error { get; set; } = string.Empty;
+
+    [Id(4)]
+    public int ExitCode { get; set; }
+
+    [Id(5)]
+    public string PodName { get; set; } = string.Empty;
+
+    [Id(6)]
+    public string CpuUsage { get; set; } = string.Empty;
+
+    [Id(7)]
+    public string MemoryUsage { get; set; } = string.Empty;
+
+    [Id(8)]
+    public string DiskUsage { get; set; } = string.Empty;
 }

@@ -1,59 +1,72 @@
+using System;
 using System.Threading.Tasks;
 using Aevatar.Sandbox.Abstractions.Contracts;
-using Aevatar.Sandbox.Abstractions.Services;
+using Aevatar.Sandbox.Abstractions.Grains;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Orleans;
+using Volo.Abp;
+using Volo.Abp.AspNetCore.Mvc;
 
-namespace Aevatar.Sandbox.HttpApi.Host.Controllers;
+namespace Aevatar.Sandbox.Controllers;
 
-[ApiController]
+[RemoteService]
 [Route("api/sandbox")]
-[Authorize]
-public class SandboxController : ControllerBase
+public class SandboxController : AbpController
 {
-    private readonly ISandboxService _pythonService; // Inject specific language service
+    private readonly IGrainFactory _grainFactory;
 
-    public SandboxController(ISandboxService pythonService)
+    public SandboxController(IGrainFactory grainFactory)
     {
-        _pythonService = pythonService;
+        _grainFactory = grainFactory;
     }
 
     [HttpPost("execute")]
-    public async Task<ActionResult<SandboxExecutionHandle>> Execute(
-        [FromBody] SandboxExecutionRequest request)
+    public async Task<ActionResult<SandboxExecutionResult>> ExecuteAsync([FromBody] SandboxExecutionRequest request)
     {
-        // TODO: Add request validation
-        var handle = await _pythonService.StartAsync(request);
-        return Ok(handle);
-    }
+        var executionId = Guid.NewGuid().ToString("N");
+        var grain = _grainFactory.GetGrain<ISandboxExecutionClientGrain>(executionId);
 
-    [HttpGet("result/{sandboxExecutionId}")]
-    public async Task<ActionResult<SandboxExecutionResult>> GetResult(
-        string sandboxExecutionId)
-    {
-        var result = await _pythonService.TryGetResultAsync(sandboxExecutionId);
-        if (result == null)
-            return NotFound();
+        var parameters = new SandboxExecutionClientParams
+        {
+            Code = request.Code,
+            Timeout = request.Timeout,
+            Language = request.Language,
+            Resources = new ResourceLimits
+            {
+                CpuLimitCores = request.Resources?.CpuLimitCores ?? 1.0,
+                MemoryLimitBytes = request.Resources?.MemoryLimitBytes ?? 512 * 1024 * 1024,
+                TimeoutSeconds = request.Timeout
+            }
+        };
 
+        var result = await grain.ExecuteAsync(parameters);
+        result.ExecutionId = executionId;
+        
         return Ok(result);
     }
 
-    [HttpPost("cancel/{sandboxExecutionId}")]
-    public async Task<IActionResult> Cancel(string sandboxExecutionId)
+    [HttpGet("status/{executionId}")]
+    public async Task<ActionResult<SandboxExecutionResult>> GetStatusAsync(string executionId)
     {
-        var cancelled = await _pythonService.CancelAsync(sandboxExecutionId);
-        if (!cancelled)
-            return NotFound();
-
-        return Ok();
+        var grain = _grainFactory.GetGrain<ISandboxExecutionClientGrain>(executionId);
+        var result = await grain.GetResultAsync();
+        return Ok(result);
     }
 
-    [HttpGet("logs/{sandboxExecutionId}")]
-    public async Task<ActionResult<SandboxLogs>> GetLogs(
-        string sandboxExecutionId,
-        [FromQuery] LogQueryOptions options)
+    [HttpGet("logs/{executionId}")]
+    public async Task<ActionResult<string>> GetLogsAsync(string executionId)
     {
-        var logs = await _pythonService.GetLogsAsync(sandboxExecutionId, options);
+        var grain = _grainFactory.GetGrain<ISandboxExecutionClientGrain>(executionId);
+        var logs = await grain.GetLogsAsync();
         return Ok(logs);
+    }
+
+    [HttpPost("cancel/{executionId}")]
+    public async Task<ActionResult> CancelAsync(string executionId)
+    {
+        var grain = _grainFactory.GetGrain<ISandboxExecutionClientGrain>(executionId);
+        await grain.CancelAsync();
+        return Ok();
     }
 }

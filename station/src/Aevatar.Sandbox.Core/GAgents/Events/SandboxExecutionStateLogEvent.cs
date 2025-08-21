@@ -1,31 +1,45 @@
 using System;
-using Orleans.Serialization.GeneratedCodeHelpers;
-using Orleans.Serialization.Cloning;
-using Orleans.Serialization.Buffers;
-using Orleans.Serialization.WireProtocol;
-using Orleans.Serialization.Serializers;
-using Orleans.Serialization.Codecs;
-using Orleans.Serialization.Buffers.Adaptors;
-using Orleans.Serialization;
-using System.Text;
+using System.Collections.Generic;
+using Orleans;
 
 namespace Aevatar.Sandbox.Core.GAgents.Events;
 
 [GenerateSerializer]
-public abstract record SandboxExecutionStateLogEvent
+public class SandboxExecutionStateLogEvent
 {
-    public string SandboxExecutionId { get; init; } = string.Empty;
-    public DateTime Timestamp { get; init; } = DateTime.UtcNow;
+    [Id(0)]
+    public string ExecutionId { get; set; } = string.Empty;
+
+    [Id(1)]
+    public string Status { get; set; } = string.Empty;
+
+    [Id(2)]
+    public DateTime? StartTime { get; set; }
+
+    [Id(3)]
+    public DateTime? EndTime { get; set; }
+
+    [Id(4)]
+    public string? Output { get; set; }
+
+    [Id(5)]
+    public string? Error { get; set; }
+
+    [Id(6)]
+    public int ExitCode { get; set; }
+
+    [Id(7)]
+    public string PodName { get; set; } = string.Empty;
+
+    [Id(8)]
+    public string CpuUsage { get; set; } = string.Empty;
+
+    [Id(9)]
+    public string MemoryUsage { get; set; } = string.Empty;
+
+    [Id(10)]
+    public string DiskUsage { get; set; } = string.Empty;
+
+    [Id(11)]
+    public List<string> Logs { get; set; } = new List<string>();
 }
-
-[GenerateSerializer]
-public sealed record ExecutionStartedEvent(string SandboxExecutionId, string LanguageId, DateTime StartedAtUtc) : SandboxExecutionStateLogEvent;
-
-[GenerateSerializer]
-public sealed record ExecutionCompletedEvent(string SandboxExecutionId, bool Success, string Stdout, string Stderr, int ExitCode, bool TimedOut, double ExecTimeSec, int MemoryUsedMB, string ScriptHash, DateTime FinishedAtUtc) : SandboxExecutionStateLogEvent;
-
-[GenerateSerializer]
-public sealed record ExecutionFailedEvent(string SandboxExecutionId, string Error, DateTime FailedAtUtc) : SandboxExecutionStateLogEvent;
-
-[GenerateSerializer]
-public sealed record ExecutionCancelledEvent(string SandboxExecutionId, DateTime CancelledAtUtc) : SandboxExecutionStateLogEvent;
