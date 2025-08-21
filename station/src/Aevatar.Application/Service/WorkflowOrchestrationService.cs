@@ -438,8 +438,8 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                     Properties = new Dictionary<string, object>(),
                     ExtendedData = new AiWorkflowNodeExtendedDataDto
                     {
-                        XPosition = token["extendedData"]?[(object)"xPosition"]?.ToString() ?? "0",
-                        YPosition = token["extendedData"]?[(object)"yPosition"]?.ToString() ?? "0"
+                        XPosition = (nodeIndex * 200 + 100).ToString(), // 横向排列，每个节点间隔200px，起始位置100px
+                        YPosition = "100" // 固定Y坐标为100px，保持在同一水平线
                     }
                 };
 
