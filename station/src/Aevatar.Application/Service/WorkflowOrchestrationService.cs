@@ -358,73 +358,6 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     #region Private Methods - JSON Parsing
 
     /// <summary>
-    /// Validates that all agent types in the workflow are within allowed business agent types
-    /// </summary>
-    /// <param name="workflowNodes">List of workflow nodes to validate</param>
-    /// <returns>True if all agent types are valid, false otherwise</returns>
-    private bool ValidateWorkflowAgentTypes(List<AiWorkflowNodeDto> workflowNodes)
-    {
-        try
-        {
-            _logger.LogDebug("Validating agent types for {NodeCount} workflow nodes", workflowNodes.Count);
-            
-            // Get allowed business agent types
-            var allowedAgentTypes = GetBusinessAgentTypes();
-            var allowedTypeNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            
-            // Add both simple names and full type names to allowed set
-            foreach (var agentType in allowedAgentTypes)
-            {
-                allowedTypeNames.Add(agentType.Name);
-                allowedTypeNames.Add(agentType.FullName ?? agentType.Name);
-                
-                // Also add GrainType string representation if available
-                if (_grainTypeResolver != null)
-                {
-                    try
-                    {
-                        var grainTypeStr = _grainTypeResolver.GetGrainType(agentType).ToString();
-                        allowedTypeNames.Add(grainTypeStr);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogDebug(ex, "Could not get grain type for {AgentType}", agentType.Name);
-                    }
-                }
-            }
-
-            _logger.LogDebug("Allowed agent types: {AllowedTypes}", string.Join(", ", allowedTypeNames));
-
-            // Validate each node's agent type
-            foreach (var node in workflowNodes)
-            {
-                if (string.IsNullOrEmpty(node.AgentType))
-                {
-                    _logger.LogDebug("Node {NodeId} has empty AgentType, skipping validation", node.NodeId);
-                    continue;
-                }
-
-                if (!allowedTypeNames.Contains(node.AgentType))
-                {
-                    _logger.LogWarning("Node {NodeId} uses invalid agent type: {AgentType}. Not found in allowed business agent types.", 
-                        node.NodeId, node.AgentType);
-                    return false;
-                }
-                
-                _logger.LogDebug("Node {NodeId} agent type {AgentType} is valid", node.NodeId, node.AgentType);
-            }
-
-            _logger.LogInformation("All {NodeCount} workflow nodes use valid business agent types", workflowNodes.Count);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error during workflow agent type validation");
-            return false; // Fail safe - reject if validation fails
-        }
-    }
-
-    /// <summary>
     /// Parse workflow JSON to frontend format DTO
     /// </summary>
     /// <param name="jsonContent">JSON content from WorkflowComposerGAgent</param>
@@ -576,13 +509,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                 .ToList();
             _logger.LogInformation("AI generated agent types: [{GeneratedAgents}]", string.Join(", ", generatedAgentTypes));
 
-            // TODO: Temporarily disabled agent validation for debugging - check if AI generates unsupported agents
-            // Validate agent types - ensure all agents are within allowed business agent types
-            //if (!ValidateWorkflowAgentTypes(workflow.Properties.WorkflowNodeList))
-            //{
-            //    _logger.LogWarning("Workflow contains agents outside of allowed business agent types, returning null");
-            //    return null;
-            //}
+
 
             // Layout
             ApplyIntelligentLayout(workflow.Properties);
