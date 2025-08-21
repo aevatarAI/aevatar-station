@@ -623,9 +623,9 @@ public class GodGPTService : ApplicationService, IGodGPTService
     /// Get chat limits for anonymous users
     /// </summary>
     public async Task<GuestChatLimitsResponseDto> GetGuestChatLimitsAsync(string clientIp)
-    {
-                    var grainId = CommonHelper.StringToGuid(CommonHelper.GetAnonymousUserGAgentId(clientIp));
-            var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(grainId);
+    { 
+        var grainId = CommonHelper.StringToGuid(CommonHelper.GetAnonymousUserGAgentId(clientIp));
+        var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(grainId);
         var remaining = await anonymousUserGrain.GetRemainingChatsAsync();
         
         return new GuestChatLimitsResponseDto
