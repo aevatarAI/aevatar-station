@@ -231,13 +231,14 @@ public class AgentService : ApplicationService, IAgentService
                     {
                         var value = property.GetValue(instance);
 
-                        // Special handling for AIGAgent systemLLM property
-                        if (configurationType != null && typeof(IAIGAgent).IsAssignableFrom(configurationType) && 
-                            string.Equals(property.Name, "systemLLM", StringComparison.OrdinalIgnoreCase))
+                        // Special handling for systemLLM property
+                        // Note: configurationType here is the DTO type, not the agent type, so
+                        // checking assignability to IAIGAgent would be incorrect.
+                        if (string.Equals(property.Name, "systemLLM", StringComparison.OrdinalIgnoreCase))
                         {
                             var systemLLMList = _agentDefaultValuesOptions.CurrentValue.SystemLLMConfigs;
                             defaultValues[propertyName] = systemLLMList;
-                            _logger.LogInformation("AIGAgent detected, setting systemLLM default values: {SystemLLMList}", 
+                            _logger.LogInformation("Detected systemLLM property, setting default values: {SystemLLMList}", 
                                 string.Join(", ", systemLLMList));
                         }
                         else
