@@ -402,13 +402,11 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                              ?? (jsonObject["properties"] as JObject)?["workflowNodeUnitList"] as JArray
                              ?? new JArray();
 
-            // Create mapping from original node IDs to new GUIDs
-            var nodeIdMapping = new Dictionary<string, string>();
+            // 第一阶段：解析节点时保持原始ID
             var nodeIndex = 0;
-
             foreach (var token in nodesArray.OfType<JObject>())
             {
-                // 从JSON中获取原始的node ID（始终需要建立映射，即使是非GUID格式）
+                // 从JSON中获取原始的node ID
                 var originalNodeId = token.Value<string>("nodeId")
                                    ?? token.Value<string>("id")
                                    ?? token.Value<string>("node_id")
@@ -422,19 +420,10 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                 // 将简单类型名称映射为完整的GrainType名称
                 var fullAgentType = MapSimpleTypeNameToFullTypeName(simpleAgentType);
                 
-                // Always generate new GUID for this node (原始ID是非GUID格式，始终需要替换)
-                var newNodeId = Guid.NewGuid().ToString();
-                
-                // Always build mapping from original ID to new GUID (不管原始ID格式如何，都要建立映射)
-                nodeIdMapping[originalNodeId] = newNodeId;
-                
-                _logger.LogDebug("Node ID mapping: {OriginalId} -> {NewId}", originalNodeId, newNodeId);
-                nodeIndex++;
-                
+                // 保持使用原始nodeId，不在此阶段生成GUID
                 var node = new AiWorkflowNodeDto
                 {
-                    NodeId = newNodeId,
-                    // 使用映射后的完整类型名称
+                    NodeId = originalNodeId, // 保持原始ID
                     AgentType = fullAgentType,
                     // Support both nodeName and name as schema variants
                     Name = token.Value<string>("nodeName")
@@ -465,26 +454,19 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                 }
 
                 workflow.Properties.WorkflowNodeList.Add(node);
+                nodeIndex++;
             }
 
+            // 第二阶段：解析边时也保持原始ID
             foreach (var token in edgesArray.OfType<JObject>())
             {
-                var originalFromNodeId = token.Value<string>("fromNodeId") ?? string.Empty;
-                var originalToNodeId = token.Value<string>("toNodeId") ?? string.Empty;
-
-                // Map original node IDs to new GUIDs using the mapping
-                var mappedFromNodeId = !string.IsNullOrEmpty(originalFromNodeId) && nodeIdMapping.ContainsKey(originalFromNodeId)
-                    ? nodeIdMapping[originalFromNodeId]
-                    : originalFromNodeId;
-                
-                var mappedToNodeId = !string.IsNullOrEmpty(originalToNodeId) && nodeIdMapping.ContainsKey(originalToNodeId)
-                    ? nodeIdMapping[originalToNodeId]
-                    : originalToNodeId;
+                var fromNodeId = token.Value<string>("fromNodeId") ?? string.Empty;
+                var toNodeId = token.Value<string>("toNodeId") ?? string.Empty;
 
                 var unit = new AiWorkflowNodeUnitDto
                 {
-                    NodeId = mappedFromNodeId,
-                    NextNodeId = mappedToNodeId
+                    NodeId = fromNodeId,     // 保持原始ID
+                    NextNodeId = toNodeId    // 保持原始ID
                 };
 
                 if (!string.IsNullOrEmpty(unit.NodeId) && !string.IsNullOrEmpty(unit.NextNodeId))
@@ -493,8 +475,58 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                 }
                 else
                 {
-                    _logger.LogWarning("Skipping edge with unmapped node IDs: fromNodeId={FromNodeId}, toNodeId={ToNodeId}", 
-                        originalFromNodeId, originalToNodeId);
+                    _logger.LogWarning("Skipping edge with empty node IDs: fromNodeId={FromNodeId}, toNodeId={ToNodeId}", 
+                        fromNodeId, toNodeId);
+                }
+            }
+
+            // 第三阶段：收集所有唯一的nodeId并创建GUID映射
+            var allNodeIds = new HashSet<string>();
+            foreach (var node in workflow.Properties.WorkflowNodeList)
+            {
+                if (!string.IsNullOrEmpty(node.NodeId))
+                {
+                    allNodeIds.Add(node.NodeId);
+                }
+            }
+            foreach (var edge in workflow.Properties.WorkflowNodeUnitList)
+            {
+                if (!string.IsNullOrEmpty(edge.NodeId))
+                {
+                    allNodeIds.Add(edge.NodeId);
+                }
+                if (!string.IsNullOrEmpty(edge.NextNodeId))
+                {
+                    allNodeIds.Add(edge.NextNodeId);
+                }
+            }
+
+            // 为每个唯一的原始nodeId生成对应的GUID
+            var nodeIdMapping = new Dictionary<string, string>();
+            foreach (var originalId in allNodeIds)
+            {
+                var newGuid = Guid.NewGuid().ToString();
+                nodeIdMapping[originalId] = newGuid;
+                _logger.LogDebug("Node ID mapping: {OriginalId} -> {NewGuid}", originalId, newGuid);
+            }
+
+            // 第四阶段：统一替换所有nodeId为GUID
+            foreach (var node in workflow.Properties.WorkflowNodeList)
+            {
+                if (!string.IsNullOrEmpty(node.NodeId) && nodeIdMapping.ContainsKey(node.NodeId))
+                {
+                    node.NodeId = nodeIdMapping[node.NodeId];
+                }
+            }
+            foreach (var edge in workflow.Properties.WorkflowNodeUnitList)
+            {
+                if (!string.IsNullOrEmpty(edge.NodeId) && nodeIdMapping.ContainsKey(edge.NodeId))
+                {
+                    edge.NodeId = nodeIdMapping[edge.NodeId];
+                }
+                if (!string.IsNullOrEmpty(edge.NextNodeId) && nodeIdMapping.ContainsKey(edge.NextNodeId))
+                {
+                    edge.NextNodeId = nodeIdMapping[edge.NextNodeId];
                 }
             }
 
