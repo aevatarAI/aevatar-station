@@ -28,6 +28,7 @@ using Volo.Abp.Modularity;
 using Volo.Abp.PermissionManagement;
 using Volo.Abp.EventBus;
 using Volo.Abp.VirtualFileSystem;
+using Aevatar.Application.Service;
 
 namespace Aevatar;
 
@@ -74,12 +75,15 @@ public class AevatarApplicationModule : AbpModule
         context.Services.Configure<HostOptions>(configuration.GetSection("Host"));
         context.Services.Configure<AppleAuthOption>(configuration.GetSection("AppleAuth"));
 		context.Services.AddTransient<IProfileService, ProfileService>();
-        
+        context.Services.AddTransient<Aevatar.Profiles.IProfileService, Aevatar.Service.ProfileService>();
+
         Configure<AccountOptions>(configuration.GetSection("Account"));
         Configure<ApiRequestOptions>(configuration.GetSection("ApiRequest"));
         Configure<BlobStoringOptions>(configuration.GetSection("BlobStoring"));
         Configure<ThumbnailOptions>(configuration.GetSection("Thumbnail"));
         Configure<GoogleAnalyticsOptions>(configuration.GetSection("GoogleAnalytics"));
         Configure<FirebaseAnalyticsOptions>(configuration.GetSection("FirebaseAnalytics"));
+        context.Services.AddSingleton<IIpLocationService, IpLocationService>();
+
     }
 }
