@@ -24,7 +24,7 @@ export Orleans__DataBase="AevatarDb"
 export Orleans__HostId="${CLIENT_ID}"
 
 # Kafka broker configuration for ephemeral environment
-export KAFKA_BROKERS="env-${CLIENT_ID}-kafka:9092"
+export KAFKA_BROKERS="env-${CLIENT_ID}-kafka-kafka-bootstrap:9092"
 
 echo "🔗 Orleans Connection:"
 echo "  MongoDB: ${Orleans__MongoDBClient}"
