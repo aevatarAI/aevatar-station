@@ -153,7 +153,7 @@ public class WorkflowOrchestrationServiceTests
     {
         // Arrange
         _mockWorkflowComposerGAgent.Setup(x => x.InitializeAsync(It.IsAny<InitializeDto>()))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(true);
         _mockWorkflowComposerGAgent.Setup(x => x.GenerateWorkflowJsonAsync(It.IsAny<string>()))
             .ReturnsAsync("{}");
 
