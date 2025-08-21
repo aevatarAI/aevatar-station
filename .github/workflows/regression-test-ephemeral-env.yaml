@@ -192,8 +192,6 @@ jobs:
     if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
     needs: [approval-count, publish-benchmarks]
     runs-on: ephemeral-env-runner
-    outputs:
-      image: ${{ steps.meta.outputs.tags }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -205,15 +203,6 @@ jobs:
           images: ${{ secrets.REPOSITORY_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/benchmark-unified
           tags: |
             type=sha
-      
-      - name: Debug metadata outputs
-        run: |
-          echo "=== Metadata Debug Info ==="
-          echo "tags: ${{ steps.meta.outputs.tags }}"
-          echo "labels: ${{ steps.meta.outputs.labels }}"
-          echo "digest: ${{ steps.meta.outputs.digest }}"
-          echo "imageid: ${{ steps.meta.outputs.imageid }}"
-          echo "=========================="
 
       - name: Download benchmark artifacts
         uses: actions/download-artifact@v4
@@ -433,9 +422,17 @@ jobs:
       CLIENT_ID: ${{ needs.setup-ephermeral-test-env.outputs.client_id }}
       CLIENT_SECRET: ${{ needs.setup-ephermeral-test-env.outputs.client_secret }}
       PROJECT_NAME: ${{ needs.setup-ephermeral-test-env.outputs.project_name }}
-      BENCHMARK_IMAGE: ${{ needs.build-unified-benchmark-image.outputs.image }}
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set short git commit SHA
+        id: vars
+        run: |
+          calculatedSha=$(git rev-parse --short ${{ github.sha }})
+          echo "short_sha=$calculatedSha" >> "$GITHUB_OUTPUT"
+
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
 
@@ -473,6 +470,8 @@ jobs:
         id: run_benchmark_job
         run: |
           set -e
+          # Set benchmark image with proper tag
+          BENCHMARK_IMAGE="${{ secrets.REPOSITORY_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/benchmark-unified:sha-${{ steps.vars.outputs.short_sha }}"
           echo "🚀 Creating benchmark job in ephemeral Kubernetes environment..."
           
           # Generate proper namespace following ephemeral-test-env naming convention
@@ -692,7 +691,6 @@ jobs:
       CLIENT_ID: ${{ needs.setup-ephermeral-test-env.outputs.client_id }}
       CLIENT_SECRET: ${{ needs.setup-ephermeral-test-env.outputs.client_secret }}
       PROJECT_NAME: ${{ needs.setup-ephermeral-test-env.outputs.project_name }}
-      BENCHMARK_IMAGE: ${{ needs.build-unified-benchmark-image.outputs.image }}
       BROADCAST_STATUS: ${{ needs.run-broadcast-benchmark.outputs.status }}
 
     steps:
@@ -704,6 +702,15 @@ jobs:
           else
             echo "✅ Broadcast benchmark completed successfully"
           fi
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set short git commit SHA
+        id: vars
+        run: |
+          calculatedSha=$(git rev-parse --short ${{ github.sha }})
+          echo "short_sha=$calculatedSha" >> "$GITHUB_OUTPUT"
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
@@ -739,6 +746,8 @@ jobs:
         id: run_benchmark_job
         run: |
           set -e
+          # Set benchmark image with proper tag
+          BENCHMARK_IMAGE="${{ secrets.REPOSITORY_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/benchmark-unified:sha-${{ steps.vars.outputs.short_sha }}"
           echo "🚀 Creating latency benchmark job in ephemeral Kubernetes environment..."
           
           # Generate proper namespace following ephemeral-test-env naming convention
