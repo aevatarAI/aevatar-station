@@ -260,7 +260,47 @@ The output must be a valid JSON object that can be parsed directly. Do not inclu
 }
 ```
 
-3. **Strict Validation**: You MUST NOT use any Agent types that are not explicitly listed in the provided Agent catalog. Only select from the available agents shown above. Do not create or reference any agents outside of this list.";
+3. **Strict Validation**: You MUST NOT use any Agent types that are not explicitly listed in the provided Agent catalog. Only select from the available agents shown above. Do not create or reference any agents outside of this list.
+
+4. **Insufficient Agent Capabilities**: If the available agents cannot fulfill the requirements to build the target workflow, return an empty workflow. This applies when the goal requires functionality that none of the available agents can provide.
+
+### Empty Workflow Return Examples:
+
+**Example 1: Unclear/Ambiguous Goal**
+```json
+{
+  ""name"": ""Unable to Generate Workflow - Unclear Goal"",
+  ""properties"": {
+    ""name"": ""Unable to Generate Workflow - Unclear Goal"",
+    ""workflowNodeList"": [],
+    ""workflowNodeUnitList"": []
+  }
+}
+```
+
+**Example 2: Insufficient Agent Capabilities**
+```json
+{
+  ""name"": ""Unable to Generate Workflow - Insufficient Capabilities"",
+  ""properties"": {
+    ""name"": ""Unable to Generate Workflow - Insufficient Capabilities"",
+    ""workflowNodeList"": [],
+    ""workflowNodeUnitList"": []
+  }
+}
+```
+
+**Example 3: Goal Cannot Be Achieved**
+```json
+{
+  ""name"": ""Unable to Generate Workflow - Goal Not Achievable"",
+  ""properties"": {
+    ""name"": ""Unable to Generate Workflow - Goal Not Achievable"",
+    ""workflowNodeList"": [],
+    ""workflowNodeUnitList"": []
+  }
+}
+```";
 
     /// <summary>
     /// 无可用Agent时的提示消息
