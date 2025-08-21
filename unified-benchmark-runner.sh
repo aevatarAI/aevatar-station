@@ -157,8 +157,8 @@ main() {
             
             echo "  Parameters: ${BCAST_SUBS} subscribers, ${BCAST_PUBS} publishers, ${BCAST_DURATION}s duration"
             
-            # Run broadcast benchmark
-            dotnet /app/broadcast/BroadcastLatencyBenchmark.dll \
+                    # Run broadcast benchmark
+        dotnet /app/BroadcastLatencyBenchmark/BroadcastLatencyBenchmark.dll \
                 --subscriber-count ${BCAST_SUBS} \
                 --publisher-count ${BCAST_PUBS} \
                 --events-per-second ${BCAST_EPS} \
@@ -182,8 +182,8 @@ main() {
             
             echo "  Parameters: ${LAT_MAX_CONCURRENCY} max concurrency, ${LAT_DURATION}s duration"
             
-            # Run latency benchmark
-            dotnet /app/latency/LatencyBenchmark.dll \
+                    # Run latency benchmark
+        dotnet /app/LatencyBenchmark/LatencyBenchmark.dll \
                 --max-concurrency ${LAT_MAX_CONCURRENCY} \
                 --events-per-second ${LAT_EPS} \
                 --duration ${LAT_DURATION} \
