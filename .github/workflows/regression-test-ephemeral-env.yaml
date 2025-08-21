@@ -646,36 +646,70 @@ jobs:
           echo "## 📊 Broadcast Latency Benchmark Report (Ephemeral K8s)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Environment:** Ephemeral Kubernetes Environment" >> $GITHUB_STEP_SUMMARY
-          echo "**Project:** \`$PROJECT_NAME\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Client ID:** \`$CLIENT_ID\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Broadcast Benchmark Status:** \`${{ steps.collect_results.outputs.status }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Project:** \`$PROJECT_NAME\` | **Client ID:** \`$CLIENT_ID\` | **Status:** \`${{ steps.collect_results.outputs.status }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          # Add benchmark execution details
+          # Extract and parse benchmark results from logs
+          if [ -f "broadcast-benchmark.log" ]; then
+            # Try to parse JSON results from logs or create metrics from log analysis
+            echo "📊 Parsing broadcast benchmark results..."
+            
+            # Extract key metrics from logs using grep and awk
+            success_rate=$(grep -o "Success Rate: [0-9.]*%" broadcast-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
+            p95_latency=$(grep -o "P95 Latency: [0-9.]*ms" broadcast-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
+            avg_latency=$(grep -o "Avg Latency: [0-9.]*ms" broadcast-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
+            throughput=$(grep -o "Throughput: [0-9.]* events/sec" broadcast-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
+            
+            # Extract test parameters from logs
+            subscribers=$(grep -o "subscribers, [0-9]* publishers" broadcast-benchmark.log | head -1 | grep -o "^[0-9]*" || echo "32")
+            publishers=$(grep -o "[0-9]* publishers" broadcast-benchmark.log | head -1 | grep -o "[0-9]*" || echo "1")
+            duration=$(grep -o "[0-9]*s duration" broadcast-benchmark.log | head -1 | grep -o "[0-9]*" || echo "45")
+            
+            # Set thresholds
+            success_rate_target="90.0"
+            p95_target="300"
+            
+            echo "### 📊 Broadcast Latency Benchmark" >> $GITHUB_STEP_SUMMARY
+            echo "**Test Parameters:** Subscribers: ${subscribers}, Publishers: ${publishers}, EPS: 1, Duration: ${duration}s, Warmup: 5s" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Value | Target |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|--------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Success Rate | ${success_rate}% | ≥${success_rate_target}% |" >> $GITHUB_STEP_SUMMARY
+            echo "| Throughput | ${throughput} events/sec | ≥90.0% of expected |" >> $GITHUB_STEP_SUMMARY
+            echo "| Avg Latency | ${avg_latency}ms | (no target) |" >> $GITHUB_STEP_SUMMARY
+            echo "| P95 Latency | ${p95_latency}ms | ≤${p95_target}ms |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Determine pass/fail status
+            pass_status="✅ PASSED"
+            fail_reasons=""
+            
+            if awk -v a="$success_rate" -v b="$success_rate_target" 'BEGIN{ if (a+0 < b+0) exit 0; else exit 1 }'; then
+              pass_status="❌ FAILED"
+              fail_reasons="$fail_reasons Success rate below target. "
+            fi
+            
+            if awk -v a="$p95_latency" -v b="$p95_target" 'BEGIN{ if (a+0 > b+0) exit 0; else exit 1 }'; then
+              pass_status="❌ FAILED"
+              fail_reasons="$fail_reasons P95 latency above target. "
+            fi
+            
+            echo "### 🎯 Overall Assessment" >> $GITHUB_STEP_SUMMARY
+            echo "**Status:** $pass_status" >> $GITHUB_STEP_SUMMARY
+            if [ "$fail_reasons" != "" ]; then
+              echo "**Issues:** $fail_reasons" >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **No benchmark results available**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Add execution details
           echo "### 📋 Execution Details" >> $GITHUB_STEP_SUMMARY
           echo "- **Job Name:** \`${{ steps.run_benchmark_job.outputs.job_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Namespace:** \`${{ steps.run_benchmark_job.outputs.namespace }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Image:** \`$BENCHMARK_IMAGE\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          # Try to parse results if available
-          if [ -f "broadcast-results/broadcast_metrics.json" ]; then
-            echo "### 📊 Broadcast Latency Results" >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
-            cat broadcast-results/broadcast_metrics.json >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          # Add benchmark logs summary
-          echo "### 📝 Benchmark Logs Summary" >> $GITHUB_STEP_SUMMARY
-          if [ -f "broadcast-benchmark.log" ]; then
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-            tail -n 30 broadcast-benchmark.log >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "No benchmark logs available" >> $GITHUB_STEP_SUMMARY
-          fi
 
       - name: Cleanup Broadcast Benchmark Job
         if: always()
@@ -951,37 +985,89 @@ jobs:
           echo "## ⚡ Latency Benchmark Report (Ephemeral K8s)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Environment:** Ephemeral Kubernetes Environment" >> $GITHUB_STEP_SUMMARY
-          echo "**Project:** \`$PROJECT_NAME\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Client ID:** \`$CLIENT_ID\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Benchmark Status:** \`${{ steps.collect_results.outputs.status }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Broadcast Status:** \`$BROADCAST_STATUS\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Project:** \`$PROJECT_NAME\` | **Client ID:** \`$CLIENT_ID\` | **Status:** \`${{ steps.collect_results.outputs.status }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          # Add benchmark execution details
+          # Extract and parse latency benchmark results from logs
+          if [ -f "latency-benchmark.log" ]; then
+            # Try to parse key metrics from logs
+            echo "📊 Parsing latency benchmark results..."
+            
+            # Extract metrics from logs using various patterns
+            success_status=$(grep -o "✅ SUCCESS\|❌ FAILED" latency-benchmark.log | tail -1 || echo "UNKNOWN")
+            p95_latency=$(grep -o "P95 Latency: [0-9.]*ms\|P95: [0-9.]*ms" latency-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
+            p99_latency=$(grep -o "P99 Latency: [0-9.]*ms\|P99: [0-9.]*ms" latency-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
+            throughput=$(grep -o "Throughput: [0-9.]* events/sec\|ActualThroughput.*[0-9.]*" latency-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
+            processed_ratio=$(grep -o "Processed Ratio: [0-9.]*%\|processed.*[0-9.]*%" latency-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
+            
+            # Extract test parameters from logs
+            max_concurrency=$(grep -o "max concurrency, [0-9]*s duration\|Max Concurrency: [0-9]*" latency-benchmark.log | head -1 | grep -o "[0-9]*" || echo "4")
+            duration=$(grep -o "[0-9]*s duration" latency-benchmark.log | head -1 | grep -o "[0-9]*" || echo "45")
+            
+            # Set thresholds
+            p95_target="120"
+            p99_target="1000"
+            processed_ratio_target="100.0"
+            
+            echo "### ⚡ Latency Benchmark" >> $GITHUB_STEP_SUMMARY
+            echo "**Test Parameters:** Max Concurrency: ${max_concurrency}, EPS: 1, Duration: ${duration}s, Warmup: 5s" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Value | Target |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|--------|" >> $GITHUB_STEP_SUMMARY
+            
+            # Status row
+            if [ "$success_status" = "✅ SUCCESS" ]; then
+              echo "| Status | ✅ SUCCESS | ✅ SUCCESS |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| Status | ❌ FAILED | ✅ SUCCESS |" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            echo "| Throughput | ${throughput} events/sec | ≥90.0% of expected |" >> $GITHUB_STEP_SUMMARY
+            echo "| P95 Latency | ${p95_latency}ms | ≤${p95_target}ms |" >> $GITHUB_STEP_SUMMARY
+            echo "| P99 Latency | ${p99_latency}ms | (no target, max: ${p99_target}ms) |" >> $GITHUB_STEP_SUMMARY
+            echo "| Processed Ratio | ${processed_ratio}% | ≥${processed_ratio_target}% |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Determine overall pass/fail status
+            pass_status="✅ PASSED"
+            fail_reasons=""
+            
+            if [ "$success_status" != "✅ SUCCESS" ]; then
+              pass_status="❌ FAILED"
+              fail_reasons="$fail_reasons Execution unsuccessful. "
+            fi
+            
+            if awk -v a="$p95_latency" -v b="$p95_target" 'BEGIN{ if (a+0 > b+0) exit 0; else exit 1 }'; then
+              pass_status="❌ FAILED"
+              fail_reasons="$fail_reasons P95 latency above target. "
+            fi
+            
+            if awk -v a="$p99_latency" -v b="$p99_target" 'BEGIN{ if (a+0 > b+0) exit 0; else exit 1 }'; then
+              pass_status="❌ FAILED"
+              fail_reasons="$fail_reasons P99 latency above limit. "
+            fi
+            
+            if awk -v a="$processed_ratio" -v b="$processed_ratio_target" 'BEGIN{ if (a+0 < b+0) exit 0; else exit 1 }'; then
+              pass_status="❌ FAILED"
+              fail_reasons="$fail_reasons Processed ratio below target. "
+            fi
+            
+            echo "### 🎯 Overall Assessment" >> $GITHUB_STEP_SUMMARY
+            echo "**Status:** $pass_status" >> $GITHUB_STEP_SUMMARY
+            if [ "$fail_reasons" != "" ]; then
+              echo "**Issues:** $fail_reasons" >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **No benchmark results available**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Add execution details
           echo "### 📋 Execution Details" >> $GITHUB_STEP_SUMMARY
           echo "- **Job Name:** \`${{ steps.run_benchmark_job.outputs.job_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Namespace:** \`${{ steps.run_benchmark_job.outputs.namespace }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Image:** \`$BENCHMARK_IMAGE\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          # Try to parse results if available
-          if [ -f "latency-results/latency_metrics.json" ]; then
-            echo "### ⚡ Latency Benchmark Results" >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
-            cat latency-results/latency_metrics.json >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          # Add benchmark logs summary
-          echo "### 📝 Benchmark Logs Summary" >> $GITHUB_STEP_SUMMARY
-          if [ -f "latency-benchmark.log" ]; then
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-            tail -n 30 latency-benchmark.log >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "No benchmark logs available" >> $GITHUB_STEP_SUMMARY
-          fi
 
       - name: Cleanup Latency Benchmark Job
         if: always()
