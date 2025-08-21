@@ -222,9 +222,10 @@ EOF
     echo "🎉 $BENCHMARK_TYPE Benchmark completed"
     echo "📁 Results available in /tmp/results/"
     
-    # Keep container running for result collection
-    echo "💤 Waiting for results collection..."
-    tail -f /dev/null
+    # Results are ready, let container exit so K8s Job can complete
+    echo "📁 Results ready for collection in /tmp/results/"
+    echo "🎉 Container will now exit to complete K8s Job"
+    echo "✅ Benchmark execution finished successfully"
 }
 
 # Execute main function
