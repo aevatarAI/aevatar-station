@@ -29,6 +29,6 @@ public interface IKubernetesClientAdapter
     Task<V1Ingress> CreateIngressAsync(V1Ingress ingress, string namespaceParameter);
     Task<V1IngressList> ListIngressAsync(string namespaceParameter);
     Task DeleteIngressAsync(string name, string namespaceParameter);
-    Task<V1HorizontalPodAutoscaler> ReadNamespacedHorizontalPodAutoscalerAsync(string name, string version);
-    Task<V1HorizontalPodAutoscaler> CreateNamespacedHorizontalPodAutoscalerAsync(V1HorizontalPodAutoscaler horizontalPodAutoscaler, string namespaceParameter);
+    Task<V2HorizontalPodAutoscaler> ReadNamespacedHorizontalPodAutoscalerAsync(string name, string version);
+    Task<V2HorizontalPodAutoscaler> CreateNamespacedHorizontalPodAutoscalerAsync(V2HorizontalPodAutoscaler horizontalPodAutoscaler, string namespaceParameter);
 }

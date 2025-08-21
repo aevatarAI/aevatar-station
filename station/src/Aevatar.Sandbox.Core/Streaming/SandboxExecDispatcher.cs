@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Aevatar.Core.Abstractions;
 using Aevatar.Sandbox.Abstractions.Contracts;
 using Aevatar.Sandbox.Abstractions.Grains;
 using Aevatar.Sandbox.Core.Streaming.Messages;
@@ -12,16 +13,16 @@ namespace Aevatar.Sandbox.Core.Streaming;
 
 public sealed class SandboxExecDispatcher : IAsyncObserver<SandboxExecEnqueueMessage>
 {
-    private readonly IGrainFactory _grainFactory;
+    private readonly IClusterClient _clusterClient;
     private readonly ILogger<SandboxExecDispatcher> _logger;
     private readonly SemaphoreSlim _concurrency;
 
     public SandboxExecDispatcher(
-        IGrainFactory grainFactory,
+        IClusterClient clusterClient,
         ILogger<SandboxExecDispatcher> logger,
         int maxConcurrency)
     {
-        _grainFactory = grainFactory;
+        _clusterClient = clusterClient;
         _logger = logger;
         _concurrency = new SemaphoreSlim(maxConcurrency);
     }
@@ -33,7 +34,7 @@ public sealed class SandboxExecDispatcher : IAsyncObserver<SandboxExecEnqueueMes
         {
             try
             {
-                var grain = _grainFactory.GetGrain<ISandboxExecutionClientGrain>(
+                var grain = _clusterClient.GetGrain<ISandboxExecutionClientGrain>(
                     Guid.Parse(item.SandboxExecutionId));
 
                 var result = await grain.ExecuteAsync(new SandboxExecutionClientParams
@@ -71,7 +72,7 @@ public sealed class SandboxExecDispatcher : IAsyncObserver<SandboxExecEnqueueMes
     {
         try
         {
-            var streamProvider = GetStreamProvider("kafka");
+            var streamProvider = _clusterClient.GetStreamProvider(AevatarCoreConstants.StreamProvider);
             var stream = streamProvider.GetStream<SandboxExecResultMessage>(
                 StreamId.Create("sandbox.exec.results", result.SandboxExecutionId));
 

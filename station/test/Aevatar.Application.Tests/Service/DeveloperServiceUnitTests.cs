@@ -15,7 +15,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Aevatar.Projects;
-using Aevatar.Kubernetes.Adapter;
+using Aevatar.Kubernetes.Abstractions.Adapter;
 using k8s.Models;
 using Aevatar.Kubernetes.ResourceDefinition;
 using System.Threading;
@@ -212,7 +212,7 @@ public class DeveloperServiceUnitTests
         };
         
         kubernetesClientAdapter
-            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(mockDeploymentList);
         
         // Setup mock to track method calls
@@ -229,7 +229,7 @@ public class DeveloperServiceUnitTests
         
         // Assert
         mockHostDeployManager.Verify(x => x.DestroyApplicationAsync(testClientId, testVersion), Times.Once);
-        kubernetesClientAdapter.Verify(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        kubernetesClientAdapter.Verify(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
     }
 
     [Fact]
@@ -251,7 +251,7 @@ public class DeveloperServiceUnitTests
         };
         
         kubernetesClientAdapter
-            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(mockDeploymentList);
         
         var mockHostCopyManager = new Mock<IHostCopyManager>();
@@ -263,7 +263,7 @@ public class DeveloperServiceUnitTests
         exception.Message.ShouldContain("No Host service found to delete for client: testId");
         
         // Verify kubernetes client was called but no destroy operation
-        kubernetesClientAdapter.Verify(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        kubernetesClientAdapter.Verify(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
         mockHostDeployManager.Verify(x => x.DestroyApplicationAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
@@ -445,7 +445,7 @@ public class DeveloperServiceUnitTests
         };
         
         kubernetesClientAdapter
-            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(mockDeploymentList);
         
         // Setup CORS configuration
@@ -474,7 +474,7 @@ public class DeveloperServiceUnitTests
         await developerService.RestartServiceAsync(input);
         
         // Assert
-        kubernetesClientAdapter.Verify(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        kubernetesClientAdapter.Verify(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
         projectCorsOriginService.Verify(x => x.GetListAsync(input.ProjectId), Times.Once);
         mockHostDeployManager.Verify(x => x.UpgradeApplicationAsync(input.DomainName, "1", 
             "http://localhost:3000,http://business.com", input.ProjectId), Times.Once);
@@ -504,7 +504,7 @@ public class DeveloperServiceUnitTests
         };
         
         kubernetesClientAdapter
-            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(mockDeploymentList);
         
         var developerService = new DeveloperService(mockHostDeployManager.Object, kubernetesClientAdapter.Object, 
@@ -656,7 +656,7 @@ public class DeveloperServiceUnitTests
         };
         
         kubernetesClientAdapter
-            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(mockDeploymentList);
         
         var developerService = new DeveloperService(mockHostDeployManager.Object, kubernetesClientAdapter.Object, 
@@ -689,7 +689,7 @@ public class DeveloperServiceUnitTests
         };
         
         kubernetesClientAdapter
-            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(mockDeploymentList);
         
         // Setup CORS configuration
@@ -718,7 +718,7 @@ public class DeveloperServiceUnitTests
         await developerService.CreateServiceAsync(testClientId, testProjectId);
         
         // Assert
-        kubernetesClientAdapter.Verify(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        kubernetesClientAdapter.Verify(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
         projectCorsOriginService.Verify(x => x.GetListAsync(testProjectId), Times.Once);
         mockHostDeployManager.Verify(x => x.CreateApplicationAsync(testClientId, "1", 
             "http://localhost:3000,http://business.com", testProjectId), Times.Once);
@@ -744,7 +744,7 @@ public class DeveloperServiceUnitTests
         
         // Setup empty deployment list
         kubernetesClientAdapter
-            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(new V1DeploymentList { Items = new List<V1Deployment>() });
         
         // Setup platform CORS URLs
@@ -795,7 +795,7 @@ public class DeveloperServiceUnitTests
         var testProjectId = Guid.NewGuid();
         
         kubernetesClientAdapter
-            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(new V1DeploymentList { Items = new List<V1Deployment>() });
         
         // Setup fallback CORS URLs configuration
@@ -844,7 +844,7 @@ public class DeveloperServiceUnitTests
         var testProjectId = Guid.NewGuid();
         
         kubernetesClientAdapter
-            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(new V1DeploymentList { Items = new List<V1Deployment>() });
         
         // Setup no platform CORS URLs
@@ -893,7 +893,7 @@ public class DeveloperServiceUnitTests
         var testProjectId = Guid.NewGuid();
         
         kubernetesClientAdapter
-            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(new V1DeploymentList { Items = new List<V1Deployment>() });
         
         // Setup no CORS URLs anywhere
@@ -985,7 +985,7 @@ public class DeveloperServiceUnitTests
         
         // Setup Kubernetes client to throw exception
         kubernetesClientAdapter
-            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ThrowsAsync(new Exception("Kubernetes API error"));
         
         var developerService = new DeveloperService(mockHostDeployManager.Object, kubernetesClientAdapter.Object, 
@@ -1027,7 +1027,7 @@ public class DeveloperServiceUnitTests
         };
         
         kubernetesClientAdapter
-            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(mockDeploymentList);
         
         mockHostDeployManager
@@ -1041,7 +1041,7 @@ public class DeveloperServiceUnitTests
         await developerService.DeleteServiceAsync(testClientId);
         
         // Assert
-        kubernetesClientAdapter.Verify(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        kubernetesClientAdapter.Verify(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
         mockHostDeployManager.Verify(x => x.DestroyApplicationAsync(testClientId, "1"), Times.Once);
     }
 
@@ -1077,7 +1077,7 @@ public class DeveloperServiceUnitTests
         };
         
         kubernetesClientAdapter
-            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(mockDeploymentList);
         
         mockHostDeployManager
@@ -1091,7 +1091,7 @@ public class DeveloperServiceUnitTests
         await developerService.DeleteServiceAsync(testClientId);
         
         // Assert
-        kubernetesClientAdapter.Verify(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        kubernetesClientAdapter.Verify(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
         mockHostDeployManager.Verify(x => x.DestroyApplicationAsync(testClientId, "1"), Times.Once);
     }
 
@@ -1118,7 +1118,7 @@ public class DeveloperServiceUnitTests
         
         // Setup Kubernetes client to throw exception
         kubernetesClientAdapter
-            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ThrowsAsync(new Exception("Kubernetes API error"));
         
         var developerService = new DeveloperService(mockHostDeployManager.Object, kubernetesClientAdapter.Object, 
@@ -1150,7 +1150,7 @@ public class DeveloperServiceUnitTests
         
         // Setup Kubernetes client to throw exception (which means no services exist)
         kubernetesClientAdapter
-            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ListDeploymentAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ThrowsAsync(new Exception("Kubernetes API error"));
         
         // Setup CORS configuration
