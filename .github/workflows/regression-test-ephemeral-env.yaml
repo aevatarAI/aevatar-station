@@ -205,6 +205,15 @@ jobs:
           images: ${{ secrets.REPOSITORY_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/benchmark-unified
           tags: |
             type=sha
+      
+      - name: Debug metadata outputs
+        run: |
+          echo "=== Metadata Debug Info ==="
+          echo "tags: ${{ steps.meta.outputs.tags }}"
+          echo "labels: ${{ steps.meta.outputs.labels }}"
+          echo "digest: ${{ steps.meta.outputs.digest }}"
+          echo "imageid: ${{ steps.meta.outputs.imageid }}"
+          echo "=========================="
 
       - name: Download benchmark artifacts
         uses: actions/download-artifact@v4
