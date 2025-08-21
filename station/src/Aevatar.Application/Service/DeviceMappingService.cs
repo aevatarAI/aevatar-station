@@ -22,14 +22,6 @@ public interface IDeviceMappingService
     Task<DeviceMappingRegistrationResponseDto> RegisterDeviceMappingAsync(DeviceMappingRegistrationDto request);
 
     /// <summary>
-    /// Find Firebase App Instance ID using multiple strategies
-    /// </summary>
-    /// <param name="appId">Apple App ID from attribution report</param>
-    /// <param name="attributedOnDevice">Attribution timestamp for time-window matching</param>
-    /// <returns>Firebase App Instance ID if found, null otherwise</returns>
-    Task<string?> FindAppInstanceIdAsync(string appId, DateTime? attributedOnDevice = null);
-
-    /// <summary>
     /// Retrieve device mapping data
     /// </summary>
     /// <param name="bundleId">iOS App Bundle ID</param>
@@ -55,7 +47,6 @@ public class DeviceMappingService : IDeviceMappingService, ITransientDependency
 
     // Redis key constants
     private const string DEVICE_MAPPING_KEY_PREFIX = "device_mapping";
-    private const string APP_INSTANCE_MAPPING_KEY_PREFIX = "app_instance_mapping"; 
     private const int MAPPING_TTL_DAYS = 30;
 
     public DeviceMappingService(
@@ -73,7 +64,7 @@ public class DeviceMappingService : IDeviceMappingService, ITransientDependency
     {
         try
         {
-            _logger.LogInformation("[DeviceMappingService][RegisterDeviceMappingAsync] Registering device mapping: IDFV={Idfv}, BundleId={BundleId}, AppInstanceId={AppInstanceId}",
+            _logger.LogDebug("[DeviceMappingService][RegisterDeviceMappingAsync] Registering device mapping: IDFV={Idfv}, BundleId={BundleId}, AppInstanceId={AppInstanceId}",
                 request.Idfv, request.BundleId, request.AppInstanceId);
 
             // 1. Validate IDFV format
@@ -83,8 +74,7 @@ public class DeviceMappingService : IDeviceMappingService, ITransientDependency
                 return new DeviceMappingRegistrationResponseDto
                 {
                     Success = false,
-                    Message = "Invalid IDFV format",
-                    RegisteredAt = DateTime.UtcNow
+                    Message = "Invalid IDFV format"
                 };
             }
 
@@ -115,12 +105,10 @@ public class DeviceMappingService : IDeviceMappingService, ITransientDependency
             {
                 Success = true,
                 Message = isUpdate ? "Device mapping updated successfully" : "Device mapping registered successfully",
-                RegisteredAt = DateTime.UtcNow,
-                IsUpdate = isUpdate,
-                ExpiresAt = DateTime.UtcNow.AddDays(MAPPING_TTL_DAYS)
+                IsUpdate = isUpdate
             };
 
-            _logger.LogInformation("[DeviceMappingService][RegisterDeviceMappingAsync] Device mapping {Action} successfully: IDFV={Idfv}",
+            _logger.LogDebug("[DeviceMappingService][RegisterDeviceMappingAsync] Device mapping {Action} successfully: IDFV={Idfv}",
                 isUpdate ? "updated" : "registered", request.Idfv);
 
             return response;
@@ -132,42 +120,8 @@ public class DeviceMappingService : IDeviceMappingService, ITransientDependency
             return new DeviceMappingRegistrationResponseDto
             {
                 Success = false,
-                Message = "Internal server error occurred during registration",
-                RegisteredAt = DateTime.UtcNow
+                Message = "Internal server error occurred during registration"
             };
-        }
-    }
-
-    /// <summary>
-    /// Find Firebase App Instance ID using multiple strategies
-    /// </summary>
-    public async Task<string?> FindAppInstanceIdAsync(string appId, DateTime? attributedOnDevice = null)
-    {
-        try
-        {
-            // Strategy 1: Direct mapping lookup (requires IDFV from Apple report - this is challenging)
-            // Apple attribution reports typically don't include IDFV directly
-            // So we'll implement time-based matching as primary strategy
-            
-            // Strategy 2: Time-window matching (fallback strategy)
-            if (attributedOnDevice.HasValue)
-            {
-                var appInstanceId = await FindAppInstanceIdByTimeWindowAsync(appId, attributedOnDevice.Value);
-                if (!string.IsNullOrEmpty(appInstanceId))
-                {
-                    _logger.LogInformation("[DeviceMappingService][FindAppInstanceIdAsync] Found app_instance_id via time window: {AppInstanceId} for AppId={AppId}", 
-                        appInstanceId, appId);
-                    return appInstanceId;
-                }
-            }
-
-            _logger.LogWarning("[DeviceMappingService][FindAppInstanceIdAsync] No app_instance_id found for AppId={AppId}", appId);
-            return null;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "[DeviceMappingService][FindAppInstanceIdAsync] Error finding app_instance_id for AppId={AppId}", appId);
-            return null;
         }
     }
 
@@ -207,8 +161,6 @@ public class DeviceMappingService : IDeviceMappingService, ITransientDependency
         return Guid.TryParse(idfv, out _);
     }
 
-    #region Private Methods
-
     /// <summary>
     /// Store device mapping data in Redis
     /// </summary>
@@ -227,40 +179,10 @@ public class DeviceMappingService : IDeviceMappingService, ITransientDependency
     }
 
     /// <summary>
-    /// Find app instance ID by matching installation time window
-    /// </summary>
-    private async Task<string?> FindAppInstanceIdByTimeWindowAsync(string appId, DateTime attributedOnDevice)
-    {
-        // Time window matching logic - scan registrations within ±24 hours
-        var windowStart = attributedOnDevice.AddHours(-24);
-        var windowEnd = attributedOnDevice.AddHours(24);
-        
-        // Note: This is a simplified implementation
-        // In production, you might want to use Redis SCAN or maintain time-based indexes
-        // For now, we'll return null and suggest implementing proper indexing
-        
-        _logger.LogDebug("[DeviceMappingService][FindAppInstanceIdByTimeWindowAsync] Time window matching not fully implemented. " +
-            "AppId={AppId}, Window={WindowStart}-{WindowEnd}", appId, windowStart, windowEnd);
-        
-        // TODO: Implement time-window based matching using Redis SCAN or time-based indexes
-        return null;
-    }
-
-    /// <summary>
     /// Build Redis key for device mapping
     /// </summary>
     private static string BuildDeviceMappingKey(string idfv)
     {
         return $"{DEVICE_MAPPING_KEY_PREFIX}:{idfv}";
     }
-
-    /// <summary>
-    /// Build Redis key for app instance mapping
-    /// </summary>
-    private static string BuildAppInstanceMappingKey(string appInstanceId)
-    {
-        return $"{APP_INSTANCE_MAPPING_KEY_PREFIX}:{appInstanceId}";
-    }
-
-    #endregion
 }

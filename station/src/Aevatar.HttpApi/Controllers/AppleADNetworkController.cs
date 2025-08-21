@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Aevatar.Application.Contracts.Analytics;
 using Aevatar.Dtos;
@@ -22,7 +25,7 @@ namespace Aevatar.Controllers;
 [RemoteService]
 [ControllerName("AppleADNetwork")]
 [Route("api/apple/ad-network")]
-public class AppleADNetworkController : ControllerBase
+public class AppleADNetworkController : AevatarController
 {
     private readonly IAppleSignatureVerificationService _signatureVerificationService;
     private readonly IGoogleAnalyticsService _googleAnalyticsService;
@@ -48,7 +51,7 @@ public class AppleADNetworkController : ControllerBase
     /// <param name="request">Device mapping registration data</param>
     /// <returns>Registration result</returns>
     [HttpPost("register-device-mapping")]
-    public async Task<IActionResult> RegisterDeviceMappingAsync([FromBody] DeviceMappingRegistrationDto request)
+    public async Task<IActionResult> RegisterDeviceMappingAsync(DeviceMappingRegistrationDto request)
     {
         var stopwatch = Stopwatch.StartNew();
         
@@ -85,8 +88,7 @@ public class AppleADNetworkController : ControllerBase
             return StatusCode(500, new DeviceMappingRegistrationResponseDto
             {
                 Success = false,
-                Message = "Internal server error occurred during registration",
-                RegisteredAt = DateTime.UtcNow
+                Message = "Internal server error occurred during registration"
             });
         }
     }
@@ -98,7 +100,7 @@ public class AppleADNetworkController : ControllerBase
     /// <param name="report">Attribution report data</param>
     /// <returns>Processing result</returns>
     [HttpPost("postback")]
-    public async Task<IActionResult> ReceiveAttributionReportAsync([FromBody] JsonElement requestData)
+    public async Task<IActionResult> ReceiveAttributionReportAsync()
     {
         var stopwatch = Stopwatch.StartNew();
         
@@ -106,25 +108,48 @@ public class AppleADNetworkController : ControllerBase
         {
             // Log all request headers
             var headersInfo = string.Join(", ", HttpContext.Request.Headers.Select(h => $"{h.Key}:{h.Value}"));
-            _logger.LogInformation("[AppleAttributionController][ReceiveAttributionReportAsync] REQUEST HEADERS: {Headers}", headersInfo);
+            _logger.LogDebug("[AppleAttributionController][ReceiveAttributionReportAsync] REQUEST HEADERS: {Headers}", headersInfo);
             
-            // Log ALL parameters (including unknown ones) - much more elegant!
-            var allParameters = JsonSerializer.Serialize(requestData, new JsonSerializerOptions { WriteIndented = true });
-            _logger.LogInformation("[AppleAttributionController][ReceiveAttributionReportAsync] ALL PARAMETERS: {AllParameters}", allParameters);
+            // Read request body directly - simple and effective approach
+            using var streamReader = new StreamReader(Request.Body, Encoding.UTF8);
+            var requestJson = await streamReader.ReadToEndAsync();
             
-            // Convert to strongly typed object for business logic
-            var report = JsonSerializer.Deserialize<AppleAttributionReportDto>(requestData.GetRawText());
+            // Log raw request body
+            _logger.LogDebug("[AppleAttributionController][ReceiveAttributionReportAsync] RAW BODY: {RawBody}", requestJson);
+            
+            // Check if body is empty
+            if (string.IsNullOrWhiteSpace(requestJson))
+            {
+                _logger.LogWarning("[AppleAttributionController][ReceiveAttributionReportAsync] Request body is empty");
+                return BadRequest(new { status = "error", message = "Request body is empty" });
+            }
+            
+            // Convert to strongly typed object
+            AppleAttributionReportDto report;
+            try
+            {
+                report = JsonSerializer.Deserialize<AppleAttributionReportDto>(requestJson, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    NumberHandling = JsonNumberHandling.AllowReadingFromString
+                })!;
+                
+                // Additional null check after deserialization
+                if (report == null)
+                {
+                    _logger.LogError("[AppleAttributionController][ReceiveAttributionReportAsync] Deserialization returned null");
+                    return BadRequest(new { status = "error", message = "Invalid JSON format or structure" });
+                }
+            }
+            catch (JsonException jsonEx)
+            {
+                _logger.LogError(jsonEx, "[AppleAttributionController][ReceiveAttributionReportAsync] JSON deserialization failed: {JsonBody}", requestJson);
+                return BadRequest(new { status = "error", message = "Invalid JSON format", details = jsonEx.Message });
+            }
             
             _logger.LogInformation("[AppleAttributionController][ReceiveAttributionReportAsync] Received Apple attribution report: TransactionId={TransactionId}, AdNetworkId={AdNetworkId}, AppId={AppId}",
                 report.TransactionId, report.AdNetworkId, report.AppId);
-
-            // 1. Validate basic parameters
-            if (!ModelState.IsValid)
-            {
-                _logger.LogWarning("[AppleAttributionController][ReceiveAttributionReportAsync] Invalid model state for transaction: {TransactionId}", 
-                    report.TransactionId);
-                return BadRequest(ModelState);
-            }
 
             // 2. Verify Apple signature
             var verificationResult = await _signatureVerificationService.VerifySignatureAsync(report);
