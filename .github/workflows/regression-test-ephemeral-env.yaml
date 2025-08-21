@@ -411,6 +411,8 @@ jobs:
     needs: [setup-ephermeral-test-env, run-regression-test, build-unified-benchmark-image]
     runs-on: ephemeral-env-runner
     timeout-minutes: 20
+    permissions:
+      contents: read
     outputs:
       job_name: ${{ steps.run_benchmark_job.outputs.job_name }}
       namespace: ${{ steps.run_benchmark_job.outputs.namespace }}
@@ -425,17 +427,14 @@ jobs:
       BENCHMARK_IMAGE: ${{ needs.build-unified-benchmark-image.outputs.image }}
 
     steps:
-      - name: Install kubectl and setup kubeconfig
-        run: |
-          # Install kubectl if not already present
-          if ! command -v kubectl &> /dev/null; then
-            curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-            chmod +x kubectl
-            sudo mv kubectl /usr/local/bin/
-          fi
-          
-          # Setup kubeconfig for ephemeral environment
-          echo "Setting up kubeconfig for project: $PROJECT_NAME"
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Configure Kubernetes credentials
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
           
       - name: Wait for Ephemeral Environment Services
         run: |
@@ -669,6 +668,8 @@ jobs:
     needs: [setup-ephermeral-test-env, run-broadcast-benchmark, build-unified-benchmark-image]
     runs-on: ephemeral-env-runner
     timeout-minutes: 20
+    permissions:
+      contents: read
     outputs:
       job_name: ${{ steps.run_benchmark_job.outputs.job_name }}
       namespace: ${{ steps.run_benchmark_job.outputs.namespace }}
@@ -693,14 +694,14 @@ jobs:
             echo "✅ Broadcast benchmark completed successfully"
           fi
 
-      - name: Install kubectl and setup kubeconfig
-        run: |
-          # Install kubectl if not already present
-          if ! command -v kubectl &> /dev/null; then
-            curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-            chmod +x kubectl
-            sudo mv kubectl /usr/local/bin/
-          fi
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Configure Kubernetes credentials
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
 
       - name: Wait for Ephemeral Environment Services
         run: |
@@ -935,6 +936,8 @@ jobs:
     needs: [run-broadcast-benchmark, run-latency-benchmark]
     runs-on: ephemeral-env-runner
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
       - name: Generate Combined Benchmark Report
         run: |
           echo "## 🚀 Complete Performance Benchmarks Report" >> $GITHUB_STEP_SUMMARY
