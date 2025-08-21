@@ -466,7 +466,9 @@ jobs:
           set -e
           echo "🚀 Creating benchmark job in ephemeral Kubernetes environment..."
           
-          NS="$PROJECT_NAME"
+          # Generate proper namespace following ephemeral-test-env naming convention
+          PROJECT_NAME_NO_SPACES="${PROJECT_NAME// /}"
+          NS="${PROJECT_NAME_NO_SPACES}-ephemeral-test-1"
           JOB_NAME="benchmark-runner-$(date +%s)"
           
           echo "Namespace: $NS"
@@ -730,7 +732,9 @@ jobs:
           set -e
           echo "🚀 Creating latency benchmark job in ephemeral Kubernetes environment..."
           
-          NS="$PROJECT_NAME"
+          # Generate proper namespace following ephemeral-test-env naming convention
+          PROJECT_NAME_NO_SPACES="${PROJECT_NAME// /}"
+          NS="${PROJECT_NAME_NO_SPACES}-ephemeral-test-1"
           JOB_NAME="latency-benchmark-$(date +%s)"
           
           echo "Namespace: $NS"
