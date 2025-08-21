@@ -444,8 +444,18 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                              ?? (jsonObject["properties"] as JObject)?["workflowNodeUnitList"] as JArray
                              ?? new JArray();
 
+            // Create mapping from original node IDs to new GUIDs
+            var nodeIdMapping = new Dictionary<string, string>();
+            var nodeIndex = 0;
+
             foreach (var token in nodesArray.OfType<JObject>())
             {
+                // 从JSON中获取原始的node ID（始终需要建立映射，即使是非GUID格式）
+                var originalNodeId = token.Value<string>("nodeId")
+                                   ?? token.Value<string>("id")
+                                   ?? token.Value<string>("node_id")
+                                   ?? $"node_{nodeIndex}"; // 为没有ID的节点创建fallback ID
+                
                 // 从JSON中获取简单的agent类型名称
                 var simpleAgentType = token.Value<string>("nodeType")
                                     ?? token.Value<string>("agentType")
@@ -454,9 +464,18 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                 // 将简单类型名称映射为完整的GrainType名称
                 var fullAgentType = MapSimpleTypeNameToFullTypeName(simpleAgentType);
                 
+                // Always generate new GUID for this node (原始ID是非GUID格式，始终需要替换)
+                var newNodeId = Guid.NewGuid().ToString();
+                
+                // Always build mapping from original ID to new GUID (不管原始ID格式如何，都要建立映射)
+                nodeIdMapping[originalNodeId] = newNodeId;
+                
+                _logger.LogDebug("Node ID mapping: {OriginalId} -> {NewId}", originalNodeId, newNodeId);
+                nodeIndex++;
+                
                 var node = new AiWorkflowNodeDto
                 {
-                    NodeId = Guid.NewGuid().ToString(),
+                    NodeId = newNodeId,
                     // 使用映射后的完整类型名称
                     AgentType = fullAgentType,
                     // Support both nodeName and name as schema variants
@@ -492,20 +511,37 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
 
             foreach (var token in edgesArray.OfType<JObject>())
             {
+                var originalFromNodeId = token.Value<string>("fromNodeId") ?? string.Empty;
+                var originalToNodeId = token.Value<string>("toNodeId") ?? string.Empty;
+
+                // Map original node IDs to new GUIDs using the mapping
+                var mappedFromNodeId = !string.IsNullOrEmpty(originalFromNodeId) && nodeIdMapping.ContainsKey(originalFromNodeId)
+                    ? nodeIdMapping[originalFromNodeId]
+                    : originalFromNodeId;
+                
+                var mappedToNodeId = !string.IsNullOrEmpty(originalToNodeId) && nodeIdMapping.ContainsKey(originalToNodeId)
+                    ? nodeIdMapping[originalToNodeId]
+                    : originalToNodeId;
+
                 var unit = new AiWorkflowNodeUnitDto
                 {
-                    NodeId = token.Value<string>("fromNodeId") ?? string.Empty,
-                    NextNodeId = token.Value<string>("toNodeId") ?? string.Empty
+                    NodeId = mappedFromNodeId,
+                    NextNodeId = mappedToNodeId
                 };
 
                 if (!string.IsNullOrEmpty(unit.NodeId) && !string.IsNullOrEmpty(unit.NextNodeId))
                 {
                     workflow.Properties.WorkflowNodeUnitList.Add(unit);
                 }
+                else
+                {
+                    _logger.LogWarning("Skipping edge with unmapped node IDs: fromNodeId={FromNodeId}, toNodeId={ToNodeId}", 
+                        originalFromNodeId, originalToNodeId);
+                }
             }
 
-            _logger.LogInformation("Parsed workflow: nodes={NodeCount}, connections={ConnCount}",
-                workflow.Properties.WorkflowNodeList.Count, workflow.Properties.WorkflowNodeUnitList.Count);
+            _logger.LogInformation("Parsed workflow: nodes={NodeCount}, connections={ConnCount}, nodeIdMappings={MappingCount}",
+                workflow.Properties.WorkflowNodeList.Count, workflow.Properties.WorkflowNodeUnitList.Count, nodeIdMapping.Count);
 
             // Validate agent types - ensure all agents are within allowed business agent types
             if (!ValidateWorkflowAgentTypes(workflow.Properties.WorkflowNodeList))
