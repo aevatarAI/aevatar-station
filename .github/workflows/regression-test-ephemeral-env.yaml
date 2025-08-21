@@ -593,21 +593,47 @@ jobs:
             echo "📝 Collecting benchmark logs..."
             kubectl logs $POD_NAME -n $NS > broadcast-benchmark.log 2>&1 || echo "Failed to get logs"
             
-            # Try to copy result files from container
+            # Try to copy result files from container (may fail if pod completed)
             echo "📁 Copying result files..."
-            kubectl cp $NS/$POD_NAME:/tmp/results/ ./broadcast-results/ || echo "Failed to copy results (this is expected if job failed)"
+            mkdir -p ./broadcast-results
+            kubectl cp $NS/$POD_NAME:/tmp/results/ ./broadcast-results/ 2>/dev/null || echo "📝 Pod completed, extracting results from logs instead"
             
-            # Extract status from results
-            if [ -f "broadcast-results/benchmark_status.txt" ]; then
-              STATUS=$(cat broadcast-results/benchmark_status.txt | cut -d'=' -f2)
+            # Extract results from logs if file copy failed
+            if [ ! -f "broadcast-results/benchmark_status.txt" ]; then
+              echo "📊 Parsing results from benchmark logs..."
+              
+              # Extract status from logs
+              if grep -q "status=PASSED" broadcast-benchmark.log; then
+                STATUS="PASSED"
+              elif grep -q "status=FAILED" broadcast-benchmark.log; then
+                STATUS="FAILED" 
+              elif grep -q "❌.*benchmark.*FAILED" broadcast-benchmark.log; then
+                STATUS="FAILED"
+              elif grep -q "✅.*benchmark.*PASSED" broadcast-benchmark.log; then
+                STATUS="PASSED"
+              else
+                STATUS="UNKNOWN"
+              fi
+              
+              # Create status file for consistency
+              echo "status=$STATUS" > broadcast-results/benchmark_status.txt
               echo "status=$STATUS" >> $GITHUB_OUTPUT
             else
-              echo "status=UNKNOWN" >> $GITHUB_OUTPUT
+              # Use copied file if available
+              STATUS=$(cat broadcast-results/benchmark_status.txt | cut -d'=' -f2)
+              echo "status=$STATUS" >> $GITHUB_OUTPUT
+            fi
+            
+            # Extract JSON results from logs if available
+            if grep -q "broadcast-latency-results.json" broadcast-benchmark.log; then
+              echo "📄 Extracting JSON results from logs..."
+              # Try to extract JSON result lines from logs and create result file
+              grep -A 50 -B 5 "broadcast-latency-results.json\|{.*Results.*}" broadcast-benchmark.log > broadcast-results/extracted-results.log || true
             fi
             
             # Display summary from logs
             echo "📊 Broadcast Benchmark Summary:"
-            grep -E "(📊|✅|❌|🎯)" broadcast-benchmark.log || echo "No summary found in logs"
+            grep -E "(📊|✅|❌|🎯|Status|Success Rate|Latency)" broadcast-benchmark.log || echo "No summary found in logs"
             
           else
             echo "❌ Could not find broadcast benchmark pod"
@@ -872,21 +898,47 @@ jobs:
             echo "📝 Collecting benchmark logs..."
             kubectl logs $POD_NAME -n $NS > latency-benchmark.log 2>&1 || echo "Failed to get logs"
             
-            # Try to copy result files from container
+            # Try to copy result files from container (may fail if pod completed)
             echo "📁 Copying result files..."
-            kubectl cp $NS/$POD_NAME:/tmp/results/ ./latency-results/ || echo "Failed to copy results (this is expected if job failed)"
+            mkdir -p ./latency-results
+            kubectl cp $NS/$POD_NAME:/tmp/results/ ./latency-results/ 2>/dev/null || echo "📝 Pod completed, extracting results from logs instead"
             
-            # Extract status from results
-            if [ -f "latency-results/benchmark_status.txt" ]; then
-              STATUS=$(cat latency-results/benchmark_status.txt | cut -d'=' -f2)
+            # Extract results from logs if file copy failed
+            if [ ! -f "latency-results/benchmark_status.txt" ]; then
+              echo "📊 Parsing results from benchmark logs..."
+              
+              # Extract status from logs
+              if grep -q "status=PASSED" latency-benchmark.log; then
+                STATUS="PASSED"
+              elif grep -q "status=FAILED" latency-benchmark.log; then
+                STATUS="FAILED" 
+              elif grep -q "❌.*benchmark.*FAILED" latency-benchmark.log; then
+                STATUS="FAILED"
+              elif grep -q "✅.*benchmark.*PASSED" latency-benchmark.log; then
+                STATUS="PASSED"
+              else
+                STATUS="UNKNOWN"
+              fi
+              
+              # Create status file for consistency
+              echo "status=$STATUS" > latency-results/benchmark_status.txt
               echo "status=$STATUS" >> $GITHUB_OUTPUT
             else
-              echo "status=UNKNOWN" >> $GITHUB_OUTPUT
+              # Use copied file if available
+              STATUS=$(cat latency-results/benchmark_status.txt | cut -d'=' -f2)
+              echo "status=$STATUS" >> $GITHUB_OUTPUT
+            fi
+            
+            # Extract JSON results from logs if available
+            if grep -q "latency-results.json" latency-benchmark.log; then
+              echo "📄 Extracting JSON results from logs..."
+              # Try to extract JSON result lines from logs and create result file
+              grep -A 50 -B 5 "latency-results.json\|{.*Results.*}" latency-benchmark.log > latency-results/extracted-results.log || true
             fi
             
             # Display summary from logs
             echo "📊 Latency Benchmark Summary:"
-            grep -E "(📊|✅|❌|🎯)" latency-benchmark.log || echo "No summary found in logs"
+            grep -E "(📊|✅|❌|🎯|Status|Success Rate|Latency|Throughput)" latency-benchmark.log || echo "No summary found in logs"
             
           else
             echo "❌ Could not find latency benchmark pod"
