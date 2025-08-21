@@ -5,11 +5,8 @@ RUN apk add --no-cache jq curl bash bc
 
 WORKDIR /app
 
-# Copy pre-built benchmark artifacts
-COPY out/BenchmarkRunner/ .
-
-# Debug: List all files to understand structure
-RUN ls -la /app/
+# Copy pre-built benchmark artifacts  
+COPY out/ .
 
 # Make runner script executable
 RUN chmod +x unified-benchmark-runner.sh
