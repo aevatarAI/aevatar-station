@@ -170,9 +170,9 @@ public class LocalizationService : ILocalizationService
                 ["en.SecurityVerificationRequired"] = "Security verification is required. Please complete the verification and try again.",
                 ["en.SecurityVerificationFailed"] = "Security verification failed: {reason}",
                 ["en.RecaptchaVerificationFailed"] = "reCAPTCHA verification failed. Please try again.",
-                ["en.DeviceCheckVerificationFailed"] = "Apple DeviceCheck verification failed. Please try again.",
-                ["en.PlayIntegrityVerificationFailed"] = "Google Play Integrity verification failed. Please try again.",
-                ["en.UnsupportedPlatformType"] = "Unsupported platform type: {platform}",
+
+
+
 
                 // Traditional Chinese translations
                 ["zh-tw.Unauthorized"] = "未授權：使用者未通過身份驗證。 ",
@@ -207,9 +207,9 @@ public class LocalizationService : ILocalizationService
                 // Security Verification - Traditional Chinese
                 ["zh-tw.SecurityVerificationFailed"] = "安全驗證失敗：{reason}",
                 ["zh-tw.RecaptchaVerificationFailed"] = "reCAPTCHA 驗證失敗。請重試。",
-                ["zh-tw.DeviceCheckVerificationFailed"] = "Apple DeviceCheck 驗證失敗。請重試。",
-                ["zh-tw.PlayIntegrityVerificationFailed"] = "Google Play Integrity 驗證失敗。請重試。",
-                ["zh-tw.UnsupportedPlatformType"] = "不支持的平台類型：{platform}",
+
+
+
 
                 // Spanish translations
                 ["es.Unauthorized"] = "No autorizado: El usuario no está autenticado. ",
@@ -245,9 +245,9 @@ public class LocalizationService : ILocalizationService
                 // ["es.SecurityVerificationRequired"] = "Se requiere verificación de seguridad.", // Not used - frontend signal
                 ["es.SecurityVerificationFailed"] = "Falló la verificación de seguridad: {reason}",
                 ["es.RecaptchaVerificationFailed"] = "Falló la verificación de reCAPTCHA. Inténtalo de nuevo.",
-                ["es.DeviceCheckVerificationFailed"] = "Falló la verificación de Apple DeviceCheck. Inténtalo de nuevo.",
-                ["es.PlayIntegrityVerificationFailed"] = "Falló la verificación de Google Play Integrity. Inténtalo de nuevo.",
-                ["es.UnsupportedPlatformType"] = "Tipo de plataforma no compatible: {platform}"
+
+
+
 
             },
             
