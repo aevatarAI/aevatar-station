@@ -38,22 +38,18 @@ echo "  Brokers: ${KAFKA_BROKERS}"
 
 # Orleans client will handle connection automatically via MongoDB clustering
 
-# Common function: Process benchmark results with jq
-process_results() {
-    local result_file="$1"
-    local metrics_file="$2"
-    local test_type="$3"
-    
-    if [ ! -f "$result_file" ]; then
-        echo "❌ Result file $result_file not found"
-        echo "status=ERROR" > benchmark_status.txt
-        return 1
-    fi
-    
-    echo "📊 Processing $test_type benchmark results..."
+# Removed process_results function - thresholds now checked directly from results.json
+
+# Parse and check thresholds - adapted from performance-benchmarks.yml
+parse_and_check_thresholds() {
+    local test_type="$1"
+    local results_file="$2"
     
     case $test_type in
         "BroadcastLatency")
+            echo "📊 Processing broadcast benchmark results..."
+            
+            # Extract metrics using the proven jq logic from performance-benchmarks.yml
             jq -r '
                 .Results[0] as $r
                 | (($r.TotalEventsSent * ($r.SubscriberCount // 0))) as $expected
@@ -65,10 +61,37 @@ process_results() {
                     avg: ($r.AverageLatencyMs // 0),
                     p95: ($r.P95LatencyMs // 0),
                     testType: "BroadcastLatency"
-                  }' "$result_file" > "$metrics_file"
+                  }' "$results_file" > broadcast_metrics.json
+            
+            # Extract values for display and threshold checking
+            local success_rate=$(jq -r '.successRate' broadcast_metrics.json)
+            local p95=$(jq -r '.p95' broadcast_metrics.json)
+            local avg=$(jq -r '.avg' broadcast_metrics.json)
+            local throughput=$(jq -r '.throughput' broadcast_metrics.json)
+            local threshold_success_rate=${BCAST_SUCCESS_RATE:-"0.90"}
+            local threshold_p95=${BCAST_P95_MS:-"120"}
+            
+            echo "📊 Broadcast Benchmark Results:"
+            printf "   ✅ Success Rate: %.1f%% (target: ≥%.1f%%)\n" $(echo "$success_rate * 100" | bc -l) $(echo "$threshold_success_rate * 100" | bc -l)
+            printf "   📈 P95 Latency: %.1fms (target: ≤%sms)\n" $p95 $threshold_p95
+            printf "   ⏱️  Avg Latency: %.1fms\n" $avg  
+            printf "   ⚡ Throughput: %.1f events/sec\n" $throughput
+            
+            # Output compact metrics JSON to logs
+            echo "📊 === BROADCAST_METRICS_BEGIN ==="
+            cat broadcast_metrics.json
+            echo "📊 === BROADCAST_METRICS_END ==="
+            
+            # Check thresholds
+            local fail=0
+            awk -v a="$success_rate" -v b="$threshold_success_rate" 'BEGIN{ if (a+0 < b+0) exit 1 }' || fail=1
+            awk -v a="$p95" -v b="$threshold_p95" 'BEGIN{ if (a+0 > b+0) exit 1 }' || fail=1
             ;;
             
         "Latency")
+            echo "📊 Processing latency benchmark results..."
+            
+            # Extract metrics using the proven jq logic from performance-benchmarks.yml
             jq -r '
                 .Results | max_by(.ConcurrencyLevel) as $r
                 | (if ($r.TotalEventsSent // 0) > 0 then ($r.TotalEventsProcessed / $r.TotalEventsSent) else 0 end) as $processedRatio
@@ -79,47 +102,29 @@ process_results() {
                     p99: ($r.P99LatencyMs // 0),
                     processedRatio: $processedRatio,
                     testType: "Latency"
-                  }' "$result_file" > "$metrics_file"
-            ;;
-    esac
-}
-
-# Common function: Check thresholds and generate status
-check_thresholds() {
-    local test_type="$1"
-    local metrics_file="$2"
-    
-    case $test_type in
-        "BroadcastLatency")
-            local success_rate=$(jq -r '.successRate' "$metrics_file")
-            local p95=$(jq -r '.p95' "$metrics_file")
-            local threshold_success_rate=${BCAST_SUCCESS_RATE:-"0.90"}
-            local threshold_p95=${BCAST_P95_MS:-"300"}
+                  }' "$results_file" > latency_metrics.json
             
-            echo "📊 Broadcast Benchmark Results:"
-            printf "   ✅ Success Rate: %.1f%% (target: ≥%.1f%%)\n" $(echo "$success_rate * 100" | bc -l) $(echo "$threshold_success_rate * 100" | bc -l)
-            printf "   📈 P95 Latency: %.1fms (target: ≤%sms)\n" $p95 $threshold_p95
-            
-            # Check thresholds
-            local fail=0
-            awk -v a="$success_rate" -v b="$threshold_success_rate" 'BEGIN{ if (a+0 < b+0) exit 1 }' || fail=1
-            awk -v a="$p95" -v b="$threshold_p95" 'BEGIN{ if (a+0 > b+0) exit 1 }' || fail=1
-            ;;
-            
-        "Latency")
-            local success=$(jq -r '.success' "$metrics_file")
-            local p95=$(jq -r '.p95' "$metrics_file")
-            local p99=$(jq -r '.p99' "$metrics_file")
-            local processed_ratio=$(jq -r '.processedRatio' "$metrics_file")
-            local threshold_p95=${LAT_P95_MS:-"300"}
-            local threshold_p99=${LAT_P99_MS:-"3000"}
-            local threshold_processed=${LAT_PROCESSED_RATIO:-"0.90"}
+            # Extract values for display and threshold checking
+            local success=$(jq -r '.success' latency_metrics.json)
+            local p95=$(jq -r '.p95' latency_metrics.json)
+            local p99=$(jq -r '.p99' latency_metrics.json)
+            local throughput=$(jq -r '.throughput' latency_metrics.json)
+            local processed_ratio=$(jq -r '.processedRatio' latency_metrics.json)
+            local threshold_p95=${LAT_P95_MS:-"120"}
+            local threshold_p99=${LAT_P99_MS:-"1000"}
+            local threshold_processed=${LAT_PROCESSED_RATIO:-"1.0"}
             
             echo "📊 Latency Benchmark Results:"
             echo "   ✅ Execution Status: $success"
             printf "   📈 P95 Latency: %.1fms (target: ≤%sms)\n" $p95 $threshold_p95
             printf "   📊 P99 Latency: %.1fms (target: ≤%sms)\n" $p99 $threshold_p99
             printf "   🎯 Processed Ratio: %.1f%% (target: ≥%.1f%%)\n" $(echo "$processed_ratio * 100" | bc -l) $(echo "$threshold_processed * 100" | bc -l)
+            printf "   ⚡ Throughput: %.1f events/sec\n" $throughput
+            
+            # Output compact metrics JSON to logs
+            echo "📊 === LATENCY_METRICS_BEGIN ==="
+            cat latency_metrics.json
+            echo "📊 === LATENCY_METRICS_END ==="
             
             # Check thresholds
             local fail=0
@@ -140,6 +145,8 @@ check_thresholds() {
         echo "status=FAILED" > benchmark_status.txt
     fi
 }
+
+# Removed size control function - now using compact metrics JSON approach from performance-benchmarks.yml
 
 # Main execution logic
 main() {
@@ -171,18 +178,8 @@ main() {
                 --warmup-duration ${BCAST_WARMUP} \
                 --output-file broadcast-latency-results.json
             
-            # Process results
-            process_results "broadcast-latency-results.json" "broadcast_metrics.json" "BroadcastLatency"
-            check_thresholds "BroadcastLatency" "broadcast_metrics.json"
-            
-            # Output complete JSON to logs for reliable collection
-            echo "📄 === BROADCAST_JSON_BEGIN ==="
-            cat broadcast-latency-results.json
-            echo "📄 === BROADCAST_JSON_END ==="
-            
-            echo "📊 === BROADCAST_METRICS_BEGIN ==="
-            cat broadcast_metrics.json
-            echo "📊 === BROADCAST_METRICS_END ==="
+            # Parse and check thresholds using proven performance-benchmarks.yml logic
+            parse_and_check_thresholds "BroadcastLatency" "broadcast-latency-results.json"
             ;;
             
         "latency")
@@ -204,18 +201,8 @@ main() {
                 --warmup-duration ${LAT_WARMUP} \
                 --output-file latency-results.json
             
-            # Process results
-            process_results "latency-results.json" "latency_metrics.json" "Latency"
-            check_thresholds "Latency" "latency_metrics.json"
-            
-            # Output complete JSON to logs for reliable collection
-            echo "📄 === LATENCY_JSON_BEGIN ==="
-            cat latency-results.json
-            echo "📄 === LATENCY_JSON_END ==="
-            
-            echo "📊 === LATENCY_METRICS_BEGIN ==="
-            cat latency_metrics.json
-            echo "📊 === LATENCY_METRICS_END ==="
+            # Parse and check thresholds using proven performance-benchmarks.yml logic
+            parse_and_check_thresholds "Latency" "latency-results.json"
             ;;
             
         *)
