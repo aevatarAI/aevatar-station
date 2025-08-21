@@ -174,6 +174,15 @@ main() {
             # Process results
             process_results "broadcast-latency-results.json" "broadcast_metrics.json" "BroadcastLatency"
             check_thresholds "BroadcastLatency" "broadcast_metrics.json"
+            
+            # Output complete JSON to logs for reliable collection
+            echo "📄 === BROADCAST_JSON_BEGIN ==="
+            cat broadcast-latency-results.json
+            echo "📄 === BROADCAST_JSON_END ==="
+            
+            echo "📊 === BROADCAST_METRICS_BEGIN ==="
+            cat broadcast_metrics.json
+            echo "📊 === BROADCAST_METRICS_END ==="
             ;;
             
         "latency")
@@ -198,6 +207,15 @@ main() {
             # Process results
             process_results "latency-results.json" "latency_metrics.json" "Latency"
             check_thresholds "Latency" "latency_metrics.json"
+            
+            # Output complete JSON to logs for reliable collection
+            echo "📄 === LATENCY_JSON_BEGIN ==="
+            cat latency-results.json
+            echo "📄 === LATENCY_JSON_END ==="
+            
+            echo "📊 === LATENCY_METRICS_BEGIN ==="
+            cat latency_metrics.json
+            echo "📊 === LATENCY_METRICS_END ==="
             ;;
             
         *)

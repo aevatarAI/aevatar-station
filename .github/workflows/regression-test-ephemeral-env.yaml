@@ -624,10 +624,36 @@ jobs:
               echo "status=$STATUS" >> $GITHUB_OUTPUT
             fi
             
-            # Extract JSON results from logs if available
-            if grep -q "broadcast-latency-results.json" broadcast-benchmark.log; then
-              echo "📄 Extracting JSON results from logs..."
-              # Try to extract JSON result lines from logs and create result file
+            # Extract complete JSON results from logs if available
+            if grep -q "=== BROADCAST_JSON_BEGIN ===" broadcast-benchmark.log; then
+              echo "📄 Extracting complete JSON results from logs..."
+              # Extract complete JSON from logs using markers
+              sed -n '/=== BROADCAST_JSON_BEGIN ===/,/=== BROADCAST_JSON_END ===/p' broadcast-benchmark.log | 
+                sed '1d;$d' > broadcast-results/broadcast-latency-results.json || true
+              
+              echo "📊 Extracting processed metrics from logs..."
+              sed -n '/=== BROADCAST_METRICS_BEGIN ===/,/=== BROADCAST_METRICS_END ===/p' broadcast-benchmark.log | 
+                sed '1d;$d' > broadcast-results/broadcast_metrics.json || true
+              
+              # Verify JSON files are valid
+              if [ -f "broadcast-results/broadcast-latency-results.json" ]; then
+                if jq empty broadcast-results/broadcast-latency-results.json 2>/dev/null; then
+                  echo "✅ Successfully extracted broadcast JSON results ($(wc -c < broadcast-results/broadcast-latency-results.json) bytes)"
+                else
+                  echo "⚠️  Extracted JSON may be malformed, keeping for debugging"
+                fi
+              fi
+              
+              if [ -f "broadcast-results/broadcast_metrics.json" ]; then
+                if jq empty broadcast-results/broadcast_metrics.json 2>/dev/null; then
+                  echo "✅ Successfully extracted broadcast metrics ($(wc -c < broadcast-results/broadcast_metrics.json) bytes)"
+                else
+                  echo "⚠️  Extracted metrics may be malformed, keeping for debugging"
+                fi
+              fi
+            else
+              echo "📝 No JSON markers found, falling back to pattern extraction..."
+              # Fallback: try to extract JSON result lines from logs
               grep -A 50 -B 5 "broadcast-latency-results.json\|{.*Results.*}" broadcast-benchmark.log > broadcast-results/extracted-results.log || true
             fi
             
@@ -649,16 +675,25 @@ jobs:
           echo "**Project:** \`$PROJECT_NAME\` | **Client ID:** \`$CLIENT_ID\` | **Status:** \`${{ steps.collect_results.outputs.status }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          # Extract and parse benchmark results from logs
+          # Extract and parse benchmark results from JSON files or logs
           if [ -f "broadcast-benchmark.log" ]; then
-            # Try to parse JSON results from logs or create metrics from log analysis
             echo "📊 Parsing broadcast benchmark results..."
             
-            # Extract key metrics from logs using grep and awk
-            success_rate=$(grep -o "Success Rate: [0-9.]*%" broadcast-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
-            p95_latency=$(grep -o "P95 Latency: [0-9.]*ms" broadcast-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
-            avg_latency=$(grep -o "Avg Latency: [0-9.]*ms" broadcast-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
-            throughput=$(grep -o "Throughput: [0-9.]* events/sec" broadcast-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
+            # Try to use extracted JSON files first, then fall back to log parsing
+            if [ -f "broadcast-results/broadcast_metrics.json" ] && jq empty broadcast-results/broadcast_metrics.json 2>/dev/null; then
+              echo "📄 Using extracted JSON metrics for accurate reporting..."
+              success_rate=$(jq -r '.successRate // 0' broadcast-results/broadcast_metrics.json)
+              p95_latency=$(jq -r '.p95 // 0' broadcast-results/broadcast_metrics.json) 
+              avg_latency=$(jq -r '.avg // 0' broadcast-results/broadcast_metrics.json)
+              throughput=$(jq -r '.throughput // 0' broadcast-results/broadcast_metrics.json)
+            else
+              echo "📝 JSON metrics not available, parsing from logs..."
+              # Extract key metrics from logs using grep and awk  
+              success_rate=$(grep -o "Success Rate: [0-9.]*%" broadcast-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
+              p95_latency=$(grep -o "P95 Latency: [0-9.]*ms" broadcast-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
+              avg_latency=$(grep -o "Avg Latency: [0-9.]*ms" broadcast-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
+              throughput=$(grep -o "Throughput: [0-9.]* events/sec" broadcast-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
+            fi
             
             # Extract test parameters from logs
             subscribers=$(grep -o "subscribers, [0-9]* publishers" broadcast-benchmark.log | head -1 | grep -o "^[0-9]*" || echo "128")
@@ -732,6 +767,7 @@ jobs:
             broadcast-results/
             broadcast-benchmark.log
             broadcast-benchmark-job.yaml
+          retention-days: 7
 
   run-latency-benchmark:
     if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
@@ -963,10 +999,36 @@ jobs:
               echo "status=$STATUS" >> $GITHUB_OUTPUT
             fi
             
-            # Extract JSON results from logs if available
-            if grep -q "latency-results.json" latency-benchmark.log; then
-              echo "📄 Extracting JSON results from logs..."
-              # Try to extract JSON result lines from logs and create result file
+            # Extract complete JSON results from logs if available
+            if grep -q "=== LATENCY_JSON_BEGIN ===" latency-benchmark.log; then
+              echo "📄 Extracting complete JSON results from logs..."
+              # Extract complete JSON from logs using markers
+              sed -n '/=== LATENCY_JSON_BEGIN ===/,/=== LATENCY_JSON_END ===/p' latency-benchmark.log | 
+                sed '1d;$d' > latency-results/latency-results.json || true
+              
+              echo "📊 Extracting processed metrics from logs..."
+              sed -n '/=== LATENCY_METRICS_BEGIN ===/,/=== LATENCY_METRICS_END ===/p' latency-benchmark.log | 
+                sed '1d;$d' > latency-results/latency_metrics.json || true
+              
+              # Verify JSON files are valid
+              if [ -f "latency-results/latency-results.json" ]; then
+                if jq empty latency-results/latency-results.json 2>/dev/null; then
+                  echo "✅ Successfully extracted latency JSON results ($(wc -c < latency-results/latency-results.json) bytes)"
+                else
+                  echo "⚠️  Extracted JSON may be malformed, keeping for debugging"
+                fi
+              fi
+              
+              if [ -f "latency-results/latency_metrics.json" ]; then
+                if jq empty latency-results/latency_metrics.json 2>/dev/null; then
+                  echo "✅ Successfully extracted latency metrics ($(wc -c < latency-results/latency_metrics.json) bytes)"
+                else
+                  echo "⚠️  Extracted metrics may be malformed, keeping for debugging"
+                fi
+              fi
+            else
+              echo "📝 No JSON markers found, falling back to pattern extraction..."
+              # Fallback: try to extract JSON result lines from logs
               grep -A 50 -B 5 "latency-results.json\|{.*Results.*}" latency-benchmark.log > latency-results/extracted-results.log || true
             fi
             
@@ -988,17 +1050,27 @@ jobs:
           echo "**Project:** \`$PROJECT_NAME\` | **Client ID:** \`$CLIENT_ID\` | **Status:** \`${{ steps.collect_results.outputs.status }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          # Extract and parse latency benchmark results from logs
+          # Extract and parse latency benchmark results from JSON files or logs
           if [ -f "latency-benchmark.log" ]; then
-            # Try to parse key metrics from logs
             echo "📊 Parsing latency benchmark results..."
             
-            # Extract metrics from logs using various patterns
-            success_status=$(grep -o "✅ SUCCESS\|❌ FAILED" latency-benchmark.log | tail -1 || echo "UNKNOWN")
-            p95_latency=$(grep -o "P95 Latency: [0-9.]*ms\|P95: [0-9.]*ms" latency-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
-            p99_latency=$(grep -o "P99 Latency: [0-9.]*ms\|P99: [0-9.]*ms" latency-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
-            throughput=$(grep -o "Throughput: [0-9.]* events/sec\|ActualThroughput.*[0-9.]*" latency-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
-            processed_ratio=$(grep -o "Processed Ratio: [0-9.]*%\|processed.*[0-9.]*%" latency-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
+            # Try to use extracted JSON files first, then fall back to log parsing
+            if [ -f "latency-results/latency_metrics.json" ] && jq empty latency-results/latency_metrics.json 2>/dev/null; then
+              echo "📄 Using extracted JSON metrics for accurate reporting..."
+              success_status=$(jq -r 'if .success == true then "✅ SUCCESS" else "❌ FAILED" end' latency-results/latency_metrics.json)
+              p95_latency=$(jq -r '.p95 // 0' latency-results/latency_metrics.json)
+              p99_latency=$(jq -r '.p99 // 0' latency-results/latency_metrics.json)
+              throughput=$(jq -r '.throughput // 0' latency-results/latency_metrics.json)
+              processed_ratio=$(jq -r '.processedRatio // 0' latency-results/latency_metrics.json)
+            else
+              echo "📝 JSON metrics not available, parsing from logs..."
+              # Extract metrics from logs using various patterns
+              success_status=$(grep -o "✅ SUCCESS\|❌ FAILED" latency-benchmark.log | tail -1 || echo "UNKNOWN")
+              p95_latency=$(grep -o "P95 Latency: [0-9.]*ms\|P95: [0-9.]*ms" latency-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
+              p99_latency=$(grep -o "P99 Latency: [0-9.]*ms\|P99: [0-9.]*ms" latency-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
+              throughput=$(grep -o "Throughput: [0-9.]* events/sec\|ActualThroughput.*[0-9.]*" latency-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
+              processed_ratio=$(grep -o "Processed Ratio: [0-9.]*%\|processed.*[0-9.]*%" latency-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
+            fi
             
             # Extract test parameters from logs
             max_concurrency=$(grep -o "max concurrency, [0-9]*s duration\|Max Concurrency: [0-9]*" latency-benchmark.log | head -1 | grep -o "[0-9]*" || echo "16")
@@ -1090,6 +1162,7 @@ jobs:
             latency-results/
             latency-benchmark.log
             latency-benchmark-job.yaml
+          retention-days: 7
 
   benchmark-summary:
     if: always() && (needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch')
