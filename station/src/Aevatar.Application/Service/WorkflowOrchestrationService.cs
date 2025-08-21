@@ -402,13 +402,21 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                              ?? (jsonObject["properties"] as JObject)?["workflowNodeUnitList"] as JArray
                              ?? new JArray();
 
-            // 第一阶段：解析节点时保持原始ID
+            // 创建originalId到GUID的映射
+            var nodeIdMapping = new Dictionary<string, string>();
             var nodeIndex = 0;
+
+            // 解析节点并建立映射关系
             foreach (var token in nodesArray.OfType<JObject>())
             {
                 // 从JSON中获取原始的node ID
                 var originalNodeId = token.Value<string>("nodeId")
                                    ?? $"node_{nodeIndex}"; // 为没有ID的节点创建fallback ID
+                
+                // 生成新的GUID并建立映射
+                var newNodeId = Guid.NewGuid().ToString();
+                nodeIdMapping[originalNodeId] = newNodeId;
+                _logger.LogDebug("Node ID mapping: {OriginalId} -> {NewGuid}", originalNodeId, newNodeId);
                 
                 // 从JSON中获取简单的agent类型名称
                 var simpleAgentType = token.Value<string>("nodeType")
@@ -418,10 +426,10 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                 // 将简单类型名称映射为完整的GrainType名称
                 var fullAgentType = MapSimpleTypeNameToFullTypeName(simpleAgentType);
                 
-                // 保持使用原始nodeId，不在此阶段生成GUID
+                // 直接使用GUID作为NodeId
                 var node = new AiWorkflowNodeDto
                 {
-                    NodeId = originalNodeId, // 保持原始ID
+                    NodeId = newNodeId, // 直接使用GUID
                     AgentType = fullAgentType,
                     // Support both nodeName and name as schema variants
                     Name = token.Value<string>("nodeName")
@@ -455,76 +463,33 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                 nodeIndex++;
             }
 
-            // 第二阶段：解析边时也保持原始ID
+            // 解析边并使用映射转换ID
             foreach (var token in edgesArray.OfType<JObject>())
             {
-                var fromNodeId = token.Value<string>("fromNodeId") ?? string.Empty;
-                var toNodeId = token.Value<string>("toNodeId") ?? string.Empty;
+                var originalFromNodeId = token.Value<string>("fromNodeId") ?? string.Empty;
+                var originalToNodeId = token.Value<string>("toNodeId") ?? string.Empty;
 
-                var unit = new AiWorkflowNodeUnitDto
-                {
-                    NodeId = fromNodeId,     // 保持原始ID
-                    NextNodeId = toNodeId    // 保持原始ID
-                };
+                // 使用映射转换为GUID
+                var mappedFromNodeId = nodeIdMapping.ContainsKey(originalFromNodeId) 
+                    ? nodeIdMapping[originalFromNodeId] 
+                    : string.Empty;
+                var mappedToNodeId = nodeIdMapping.ContainsKey(originalToNodeId) 
+                    ? nodeIdMapping[originalToNodeId] 
+                    : string.Empty;
 
-                if (!string.IsNullOrEmpty(unit.NodeId) && !string.IsNullOrEmpty(unit.NextNodeId))
+                if (!string.IsNullOrEmpty(mappedFromNodeId) && !string.IsNullOrEmpty(mappedToNodeId))
                 {
+                    var unit = new AiWorkflowNodeUnitDto
+                    {
+                        NodeId = mappedFromNodeId,     // 使用映射后的GUID
+                        NextNodeId = mappedToNodeId    // 使用映射后的GUID
+                    };
                     workflow.Properties.WorkflowNodeUnitList.Add(unit);
                 }
                 else
                 {
-                    _logger.LogWarning("Skipping edge with empty node IDs: fromNodeId={FromNodeId}, toNodeId={ToNodeId}", 
-                        fromNodeId, toNodeId);
-                }
-            }
-
-            // 第三阶段：收集所有唯一的nodeId并创建GUID映射
-            var allNodeIds = new HashSet<string>();
-            foreach (var node in workflow.Properties.WorkflowNodeList)
-            {
-                if (!string.IsNullOrEmpty(node.NodeId))
-                {
-                    allNodeIds.Add(node.NodeId);
-                }
-            }
-            foreach (var edge in workflow.Properties.WorkflowNodeUnitList)
-            {
-                if (!string.IsNullOrEmpty(edge.NodeId))
-                {
-                    allNodeIds.Add(edge.NodeId);
-                }
-                if (!string.IsNullOrEmpty(edge.NextNodeId))
-                {
-                    allNodeIds.Add(edge.NextNodeId);
-                }
-            }
-
-            // 为每个唯一的原始nodeId生成对应的GUID
-            var nodeIdMapping = new Dictionary<string, string>();
-            foreach (var originalId in allNodeIds)
-            {
-                var newGuid = Guid.NewGuid().ToString();
-                nodeIdMapping[originalId] = newGuid;
-                _logger.LogDebug("Node ID mapping: {OriginalId} -> {NewGuid}", originalId, newGuid);
-            }
-
-            // 第四阶段：统一替换所有nodeId为GUID
-            foreach (var node in workflow.Properties.WorkflowNodeList)
-            {
-                if (!string.IsNullOrEmpty(node.NodeId) && nodeIdMapping.ContainsKey(node.NodeId))
-                {
-                    node.NodeId = nodeIdMapping[node.NodeId];
-                }
-            }
-            foreach (var edge in workflow.Properties.WorkflowNodeUnitList)
-            {
-                if (!string.IsNullOrEmpty(edge.NodeId) && nodeIdMapping.ContainsKey(edge.NodeId))
-                {
-                    edge.NodeId = nodeIdMapping[edge.NodeId];
-                }
-                if (!string.IsNullOrEmpty(edge.NextNodeId) && nodeIdMapping.ContainsKey(edge.NextNodeId))
-                {
-                    edge.NextNodeId = nodeIdMapping[edge.NextNodeId];
+                    _logger.LogWarning("Skipping edge with unmapped node IDs: fromNodeId={FromNodeId}, toNodeId={ToNodeId}", 
+                        originalFromNodeId, originalToNodeId);
                 }
             }
 
