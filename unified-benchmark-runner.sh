@@ -154,10 +154,10 @@ main() {
             echo "📡 Running Broadcast Latency Benchmark..."
             
             # Broadcast benchmark parameters with defaults
-            BCAST_SUBS=${BCAST_SUBS:-"32"}
+            BCAST_SUBS=${BCAST_SUBS:-"128"}
             BCAST_PUBS=${BCAST_PUBS:-"1"}
             BCAST_EPS=${BCAST_EPS:-"1"}
-            BCAST_DURATION=${BCAST_DURATION:-"45"}
+            BCAST_DURATION=${BCAST_DURATION:-"120"}
             BCAST_WARMUP=${BCAST_WARMUP:-"5"}
             
             echo "  Parameters: ${BCAST_SUBS} subscribers, ${BCAST_PUBS} publishers, ${BCAST_DURATION}s duration"
@@ -180,8 +180,8 @@ main() {
             echo "⚡ Running Latency Benchmark..."
             
             # Latency benchmark parameters with defaults
-            LAT_MAX_CONCURRENCY=${LAT_MAX_CONCURRENCY:-"4"}
-            LAT_DURATION=${LAT_DURATION:-"45"}
+            LAT_MAX_CONCURRENCY=${LAT_MAX_CONCURRENCY:-"16"}
+            LAT_DURATION=${LAT_DURATION:-"120"}
             LAT_WARMUP=${LAT_WARMUP:-"5"}
             LAT_EPS=${LAT_EPS:-"1"}
             

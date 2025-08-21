@@ -661,13 +661,13 @@ jobs:
             throughput=$(grep -o "Throughput: [0-9.]* events/sec" broadcast-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
             
             # Extract test parameters from logs
-            subscribers=$(grep -o "subscribers, [0-9]* publishers" broadcast-benchmark.log | head -1 | grep -o "^[0-9]*" || echo "32")
+            subscribers=$(grep -o "subscribers, [0-9]* publishers" broadcast-benchmark.log | head -1 | grep -o "^[0-9]*" || echo "128")
             publishers=$(grep -o "[0-9]* publishers" broadcast-benchmark.log | head -1 | grep -o "[0-9]*" || echo "1")
-            duration=$(grep -o "[0-9]*s duration" broadcast-benchmark.log | head -1 | grep -o "[0-9]*" || echo "45")
+            duration=$(grep -o "[0-9]*s duration" broadcast-benchmark.log | head -1 | grep -o "[0-9]*" || echo "120")
             
             # Set thresholds
             success_rate_target="90.0"
-            p95_target="300"
+            p95_target="120"
             
             echo "### 📊 Broadcast Latency Benchmark" >> $GITHUB_STEP_SUMMARY
             echo "**Test Parameters:** Subscribers: ${subscribers}, Publishers: ${publishers}, EPS: 1, Duration: ${duration}s, Warmup: 5s" >> $GITHUB_STEP_SUMMARY
@@ -1001,8 +1001,8 @@ jobs:
             processed_ratio=$(grep -o "Processed Ratio: [0-9.]*%\|processed.*[0-9.]*%" latency-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
             
             # Extract test parameters from logs
-            max_concurrency=$(grep -o "max concurrency, [0-9]*s duration\|Max Concurrency: [0-9]*" latency-benchmark.log | head -1 | grep -o "[0-9]*" || echo "4")
-            duration=$(grep -o "[0-9]*s duration" latency-benchmark.log | head -1 | grep -o "[0-9]*" || echo "45")
+            max_concurrency=$(grep -o "max concurrency, [0-9]*s duration\|Max Concurrency: [0-9]*" latency-benchmark.log | head -1 | grep -o "[0-9]*" || echo "16")
+            duration=$(grep -o "[0-9]*s duration" latency-benchmark.log | head -1 | grep -o "[0-9]*" || echo "120")
             
             # Set thresholds
             p95_target="120"
