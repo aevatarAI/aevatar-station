@@ -614,7 +614,7 @@ jobs:
           echo "**Environment:** Ephemeral Kubernetes Environment" >> $GITHUB_STEP_SUMMARY
           echo "**Project:** \`$PROJECT_NAME\`" >> $GITHUB_STEP_SUMMARY
           echo "**Client ID:** \`$CLIENT_ID\`" >> $GITHUB_STEP_SUMMARY
-          echo "** benchmark Status:** \`${{ steps.collect_results.outputs.status }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Broadcast Benchmark Status:** \`${{ steps.collect_results.outputs.status }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           # Add benchmark execution details
@@ -974,4 +974,4 @@ jobs:
         env:
           LARK_WEBHOOK: ${{ secrets.LARK_WEBHOOK }}
           LARK_MESSAGE_TITLE: "Ephemeral K8s Benchmarks Summary - Broadcast: ${{ needs.run-broadcast-benchmark.outputs.status }}, Latency: ${{ needs.run-latency-benchmark.outputs.status }}"
-          LARK_MESSAGE_TEMPLATE: ${{ (needs.run-broadcast-benchmark.outputs.status == 'PASSED' && needs.run-latency-benchmark.outputs.status == 'PASSED') && 'green' || 'yellow' }}
+          LARK_MESSAGE_TEMPLATE: ${{ (needs.run-broadcast-benchmark.outputs.status == 'PASSED' && needs.run-latency-benchmark.outputs.status == 'PASSED') && 'green' || ((needs.run-broadcast-benchmark.outputs.status == 'ERROR' || needs.run-broadcast-benchmark.outputs.status == 'UNKNOWN' || needs.run-latency-benchmark.outputs.status == 'ERROR' || needs.run-latency-benchmark.outputs.status == 'UNKNOWN') && 'red' || 'yellow') }}
