@@ -154,11 +154,13 @@ public class LatencyBenchmarkRunner : IDisposable
         _logger.LogInformation("  Database: {Database}", database);
         _logger.LogInformation("  Host ID: {HostId}", hostId);
         
-        // Log Kafka topics configuration
+        // Kafka configuration
         var kafkaTopics = !string.IsNullOrEmpty(hostId) && !hostId.Equals("Aevatar", StringComparison.OrdinalIgnoreCase)
             ? $"{hostId}Silo,{hostId}SiloProjector,{hostId}SiloBroadcast"
             : "Aevatar,AevatarStateProjection,AevatarBroadCast";
+        var kafkaBrokers = Environment.GetEnvironmentVariable("KAFKA_BROKERS") ?? "localhost:9092";
         _logger.LogInformation("  Kafka Topics: {KafkaTopics}", kafkaTopics);
+        _logger.LogInformation("  Kafka Brokers: {KafkaBrokers}", kafkaBrokers);
 
         var hostBuilder = Host.CreateDefaultBuilder()
             .UseOrleansClient(client =>
@@ -178,10 +180,7 @@ public class LatencyBenchmarkRunner : IDisposable
                     .AddActivityPropagation()
                     .AddAevatarKafkaStreaming("Aevatar", options =>
                     {
-                        // Read Kafka broker from environment variable, fallback to localhost for local development
-                        var kafkaBrokers = Environment.GetEnvironmentVariable("KAFKA_BROKERS") ?? "localhost:9092";
                         options.BrokerList = kafkaBrokers.Split(',').Select(b => b.Trim()).ToList();
-                        _logger.LogInformation("  Kafka Brokers: {KafkaBrokers}", string.Join(", ", options.BrokerList));
                         options.ConsumerGroupId = "Aevatar";
                         options.ConsumeMode = ConsumeMode.LastCommittedMessage;
 
