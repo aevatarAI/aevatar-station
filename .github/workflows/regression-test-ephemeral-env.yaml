@@ -981,7 +981,7 @@ jobs:
             warmup="$LAT_WARMUP"
             
             # Set thresholds
-            p95_target="140"
+            p95_target="120"
             p99_target="1000"
             processed_ratio_target="100.0"
             
