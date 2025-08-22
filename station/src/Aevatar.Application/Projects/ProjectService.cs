@@ -267,12 +267,12 @@ public class ProjectService : OrganizationService, IProjectService
             throw new UserFriendlyException("Project name must contain at least one ASCII letter or digit for domain name generation");
         }
 
-        // Check for invalid characters - only ASCII letters, digits, and hyphens are allowed for domain names
-        var invalidChars = displayName.Where(c => !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-')).ToArray();
+        // Check for invalid characters - only ASCII letters, digits, hyphens, and spaces are allowed
+        var invalidChars = displayName.Where(c => !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == ' ')).ToArray();
         if (invalidChars.Length > 0)
         {
             var invalidCharString = string.Join(", ", invalidChars.Distinct().Select(c => $"'{c}'"));
-            throw new UserFriendlyException($"Project name contains invalid characters for domain generation: {invalidCharString}. Only ASCII letters, digits, and hyphens are allowed.");
+            throw new UserFriendlyException($"Project name contains invalid characters for domain generation: {invalidCharString}. Only ASCII letters, digits, hyphens, and spaces are allowed.");
         }
     }
 }

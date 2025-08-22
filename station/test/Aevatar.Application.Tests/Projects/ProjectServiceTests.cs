@@ -216,11 +216,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         createProjectInput.DisplayName = "测试项目";
         await Should.ThrowAsync<UserFriendlyException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
 
-        // Test with display name containing spaces (no longer allowed)
-        createProjectInput.DisplayName = "Project Name";
-        await Should.ThrowAsync<UserFriendlyException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
-
-        // Test with display name containing underscores (no longer allowed)
+        // Test with display name containing underscores (not allowed)
         createProjectInput.DisplayName = "Project_Name";
         await Should.ThrowAsync<UserFriendlyException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
     }
@@ -261,6 +257,12 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         var project3 = await _projectService.CreateProjectAsync(createProjectInput);
         project3.ShouldNotBeNull();
         project3.DisplayName.ShouldBe("Project123");
+
+        // Test with valid display name containing spaces
+        createProjectInput.DisplayName = "Project Name With Spaces";
+        var project4 = await _projectService.CreateProjectAsync(createProjectInput);
+        project4.ShouldNotBeNull();
+        project4.DisplayName.ShouldBe("Project Name With Spaces");
     }
 
     [Fact]
