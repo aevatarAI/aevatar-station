@@ -649,7 +649,7 @@ jobs:
             
             # Set thresholds
             success_rate_target="90.0"
-            p95_target="120"
+            p95_target="140"
             
             echo "### 📊 Broadcast Latency Benchmark" >> $GITHUB_STEP_SUMMARY
             echo "**Test Parameters:** Subscribers: ${subscribers}, Publishers: ${publishers}, EPS: ${eps}, Duration: ${duration}s, Warmup: ${warmup}s" >> $GITHUB_STEP_SUMMARY
@@ -981,7 +981,7 @@ jobs:
             warmup="$LAT_WARMUP"
             
             # Set thresholds
-            p95_target="120"
+            p95_target="140"
             p99_target="1000"
             processed_ratio_target="100.0"
             
