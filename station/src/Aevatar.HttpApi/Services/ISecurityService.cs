@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 
 using Microsoft.AspNetCore.Http;
+using Aevatar.Common;
 
 namespace Aevatar.Services;
 
@@ -17,11 +18,12 @@ public interface ISecurityService
     string GetRealClientIp(HttpContext context);
 
     /// <summary>
-    /// Check if security verification is required for the client
+    /// Check if security verification is required for the client based on platform
     /// </summary>
     /// <param name="clientIp">Client IP address</param>
+    /// <param name="platform">Platform type (Web, iOS, Android)</param>
     /// <returns>True if verification is required</returns>
-    Task<bool> IsSecurityVerificationRequiredAsync(string clientIp);
+    Task<bool> IsSecurityVerificationRequiredAsync(string clientIp, PlatformType platform = PlatformType.Web);
 
     /// <summary>
     /// Verify security based on platform and provided tokens

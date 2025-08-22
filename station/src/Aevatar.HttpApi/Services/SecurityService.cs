@@ -108,18 +108,27 @@ public class SecurityService : ISecurityService
 
     #region Request Count and Rate Limiting
 
-    public async Task<bool> IsSecurityVerificationRequiredAsync(string clientIp)
+    public async Task<bool> IsSecurityVerificationRequiredAsync(string clientIp, PlatformType platform = PlatformType.Web)
     {
         if (!_rateOptions.Enabled)
         {
             return false;
         }
 
+        // Check if current platform should be bypassed (if BypassPlatforms list contains it)
+        if (_recaptchaOptions.BypassPlatforms.Count > 0 && 
+            _recaptchaOptions.BypassPlatforms.Contains(platform.ToString()))
+        {
+            _logger.LogInformation("IP {clientIp} platform {platform} bypassed security verification (platform in bypass list)",
+                clientIp, platform);
+            return false;
+        }
+
         var count = await GetCurrent10MinutesRequestCountAsync(clientIp);
         var required = count > _rateOptions.FreeRequestsPerDay;
 
-        _logger.LogDebug("IP {clientIp} current 10-minute window request count: {count}, verification required: {required}",
-            clientIp, count, required);
+        _logger.LogDebug("IP {clientIp} platform {platform} current 10-minute window request count: {count}, verification required: {required}",
+            clientIp, platform, count, required);
 
         return required;
     }
