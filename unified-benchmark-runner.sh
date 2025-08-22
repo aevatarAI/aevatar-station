@@ -40,7 +40,7 @@ echo "  Brokers: ${KAFKA_BROKERS}"
 
 # Removed process_results function - thresholds now checked directly from results.json
 
-# Parse and check thresholds - adapted from performance-benchmarks.yml
+# Parse and check thresholds - implement performance-benchmarks.yml logic in script and print to logs
 parse_and_check_thresholds() {
     local test_type="$1"
     local results_file="$2"
@@ -49,25 +49,15 @@ parse_and_check_thresholds() {
         "BroadcastLatency")
             echo "📊 Processing broadcast benchmark results..."
             
-            # Extract metrics using the proven jq logic from performance-benchmarks.yml
-            jq -r '
-                .Results[0] as $r
+            # Extract metrics directly using jq logic from performance-benchmarks.yml
+            local success_rate=$(jq -r '.Results[0] as $r
                 | (($r.TotalEventsSent * ($r.SubscriberCount // 0))) as $expected
-                | (if ($r.ActualDurationSeconds // 0) > 0 then ($r.TotalEventsProcessed / $r.ActualDurationSeconds) else 0 end) as $throughput
-                | (if $expected > 0 then ($r.TotalEventsProcessed / $expected) else 0 end) as $successRate
-                | {
-                    successRate: $successRate,
-                    throughput: $throughput,
-                    avg: ($r.AverageLatencyMs // 0),
-                    p95: ($r.P95LatencyMs // 0),
-                    testType: "BroadcastLatency"
-                  }' "$results_file" > broadcast_metrics.json
+                | (if $expected > 0 then ($r.TotalEventsProcessed / $expected) else 0 end)' "$results_file")
+            local throughput=$(jq -r '.Results[0] as $r
+                | (if ($r.ActualDurationSeconds // 0) > 0 then ($r.TotalEventsProcessed / $r.ActualDurationSeconds) else 0 end)' "$results_file")
+            local avg=$(jq -r '.Results[0].AverageLatencyMs // 0' "$results_file")
+            local p95=$(jq -r '.Results[0].P95LatencyMs // 0' "$results_file")
             
-            # Extract values for display and threshold checking
-            local success_rate=$(jq -r '.successRate' broadcast_metrics.json)
-            local p95=$(jq -r '.p95' broadcast_metrics.json)
-            local avg=$(jq -r '.avg' broadcast_metrics.json)
-            local throughput=$(jq -r '.throughput' broadcast_metrics.json)
             local threshold_success_rate=${BCAST_SUCCESS_RATE:-"0.90"}
             local threshold_p95=${BCAST_P95_MS:-"120"}
             
@@ -77,9 +67,9 @@ parse_and_check_thresholds() {
             printf "   ⏱️  Avg Latency: %.1fms\n" $avg  
             printf "   ⚡ Throughput: %.1f events/sec\n" $throughput
             
-            # Output compact metrics JSON to logs
+            # Print metrics to logs in structured format for workflow parsing
             echo "📊 === BROADCAST_METRICS_BEGIN ==="
-            cat broadcast_metrics.json
+            echo "{\"successRate\": $success_rate, \"throughput\": $throughput, \"avg\": $avg, \"p95\": $p95, \"testType\": \"BroadcastLatency\"}"
             echo "📊 === BROADCAST_METRICS_END ==="
             
             # Check thresholds
@@ -91,25 +81,14 @@ parse_and_check_thresholds() {
         "Latency")
             echo "📊 Processing latency benchmark results..."
             
-            # Extract metrics using the proven jq logic from performance-benchmarks.yml
-            jq -r '
-                .Results | max_by(.ConcurrencyLevel) as $r
-                | (if ($r.TotalEventsSent // 0) > 0 then ($r.TotalEventsProcessed / $r.TotalEventsSent) else 0 end) as $processedRatio
-                | {
-                    success: ($r.Success // false),
-                    throughput: ($r.ActualThroughput // 0),
-                    p95: ($r.P95LatencyMs // 0),
-                    p99: ($r.P99LatencyMs // 0),
-                    processedRatio: $processedRatio,
-                    testType: "Latency"
-                  }' "$results_file" > latency_metrics.json
+            # Extract metrics directly using jq logic from performance-benchmarks.yml
+            local success=$(jq -r '.Results | max_by(.ConcurrencyLevel).Success // false' "$results_file")
+            local throughput=$(jq -r '.Results | max_by(.ConcurrencyLevel).ActualThroughput // 0' "$results_file")
+            local p95=$(jq -r '.Results | max_by(.ConcurrencyLevel).P95LatencyMs // 0' "$results_file")
+            local p99=$(jq -r '.Results | max_by(.ConcurrencyLevel).P99LatencyMs // 0' "$results_file")
+            local processed_ratio=$(jq -r '.Results | max_by(.ConcurrencyLevel) as $r
+                | (if ($r.TotalEventsSent // 0) > 0 then ($r.TotalEventsProcessed / $r.TotalEventsSent) else 0 end)' "$results_file")
             
-            # Extract values for display and threshold checking
-            local success=$(jq -r '.success' latency_metrics.json)
-            local p95=$(jq -r '.p95' latency_metrics.json)
-            local p99=$(jq -r '.p99' latency_metrics.json)
-            local throughput=$(jq -r '.throughput' latency_metrics.json)
-            local processed_ratio=$(jq -r '.processedRatio' latency_metrics.json)
             local threshold_p95=${LAT_P95_MS:-"120"}
             local threshold_p99=${LAT_P99_MS:-"1000"}
             local threshold_processed=${LAT_PROCESSED_RATIO:-"1.0"}
@@ -121,9 +100,9 @@ parse_and_check_thresholds() {
             printf "   🎯 Processed Ratio: %.1f%% (target: ≥%.1f%%)\n" $(echo "$processed_ratio * 100" | bc -l) $(echo "$threshold_processed * 100" | bc -l)
             printf "   ⚡ Throughput: %.1f events/sec\n" $throughput
             
-            # Output compact metrics JSON to logs
+            # Print metrics to logs in structured format for workflow parsing
             echo "📊 === LATENCY_METRICS_BEGIN ==="
-            cat latency_metrics.json
+            echo "{\"success\": $success, \"throughput\": $throughput, \"p95\": $p95, \"p99\": $p99, \"processedRatio\": $processed_ratio, \"testType\": \"Latency\"}"
             echo "📊 === LATENCY_METRICS_END ==="
             
             # Check thresholds
