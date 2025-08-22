@@ -511,6 +511,13 @@ jobs:
                     value: "aevatar-silo-service.$NS.svc.cluster.local"
                   - name: SILO_GATEWAY_PORT
                     value: "20001"
+                  # Common benchmark parameters
+                  - name: COMMON_DURATION
+                    value: "120"
+                  - name: COMMON_WARMUP
+                    value: "5"
+                  - name: COMMON_EPS
+                    value: "1"
                   # Broadcast benchmark parameters
                   - name: BCAST_SUBS
                     value: "128"
@@ -698,14 +705,16 @@ jobs:
             # Use environment variables directly instead of parsing logs
             subscribers="128"
             publishers="1" 
-            duration="120"
+            duration="120"  # Using common duration value
+            eps="1"         # Using common EPS value
+            warmup="5"      # Using common warmup value
             
             # Set thresholds
             success_rate_target="90.0"
             p95_target="120"
             
             echo "### 📊 Broadcast Latency Benchmark" >> $GITHUB_STEP_SUMMARY
-            echo "**Test Parameters:** Subscribers: ${subscribers}, Publishers: ${publishers}, EPS: 1, Duration: ${duration}s, Warmup: 5s" >> $GITHUB_STEP_SUMMARY
+            echo "**Test Parameters:** Subscribers: ${subscribers}, Publishers: ${publishers}, EPS: ${eps}, Duration: ${duration}s, Warmup: ${warmup}s" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "| Metric | Value | Target |" >> $GITHUB_STEP_SUMMARY
             echo "|--------|-------|--------|" >> $GITHUB_STEP_SUMMARY
@@ -882,6 +891,13 @@ jobs:
                     value: "aevatar-silo-service.$NS.svc.cluster.local"
                   - name: SILO_GATEWAY_PORT
                     value: "20001"
+                  # Common benchmark parameters  
+                  - name: COMMON_DURATION
+                    value: "120"
+                  - name: COMMON_WARMUP
+                    value: "5"
+                  - name: COMMON_EPS
+                    value: "1"
                   # Latency benchmark parameters
                   - name: LAT_MAX_CONCURRENCY
                     value: "16"
@@ -1077,7 +1093,9 @@ jobs:
             
             # Use environment variables directly instead of parsing logs
             max_concurrency="16"
-            duration="120"
+            duration="120"  # Using common duration value  
+            eps="1"         # Using common EPS value
+            warmup="5"      # Using common warmup value
             
             # Set thresholds
             p95_target="120"
@@ -1085,7 +1103,7 @@ jobs:
             processed_ratio_target="100.0"
             
             echo "### ⚡ Latency Benchmark" >> $GITHUB_STEP_SUMMARY
-            echo "**Test Parameters:** Max Concurrency: ${max_concurrency}, EPS: 1, Duration: ${duration}s, Warmup: 5s" >> $GITHUB_STEP_SUMMARY
+            echo "**Test Parameters:** Max Concurrency: ${max_concurrency}, EPS: ${eps}, Duration: ${duration}s, Warmup: ${warmup}s" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "| Metric | Value | Target |" >> $GITHUB_STEP_SUMMARY
             echo "|--------|-------|--------|" >> $GITHUB_STEP_SUMMARY

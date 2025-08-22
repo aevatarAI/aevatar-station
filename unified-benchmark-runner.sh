@@ -133,6 +133,11 @@ main() {
     mkdir -p /tmp/results
     cd /tmp/results
     
+    # Common benchmark parameters with defaults
+    COMMON_DURATION=${COMMON_DURATION:-"120"}
+    COMMON_WARMUP=${COMMON_WARMUP:-"5"}
+    COMMON_EPS=${COMMON_EPS:-"1"}
+    
     # Orleans client will auto-connect via MongoDB clustering
     
     case $BENCHMARK_TYPE in
@@ -142,9 +147,9 @@ main() {
             # Broadcast benchmark parameters with defaults
             BCAST_SUBS=${BCAST_SUBS:-"128"}
             BCAST_PUBS=${BCAST_PUBS:-"1"}
-            BCAST_EPS=${BCAST_EPS:-"1"}
-            BCAST_DURATION=${BCAST_DURATION:-"120"}
-            BCAST_WARMUP=${BCAST_WARMUP:-"5"}
+            BCAST_EPS=${BCAST_EPS:-$COMMON_EPS}
+            BCAST_DURATION=${BCAST_DURATION:-$COMMON_DURATION}
+            BCAST_WARMUP=${BCAST_WARMUP:-$COMMON_WARMUP}
             
             echo "  Parameters: ${BCAST_SUBS} subscribers, ${BCAST_PUBS} publishers, ${BCAST_DURATION}s duration"
             
@@ -168,9 +173,9 @@ main() {
             LAT_MAX_CONCURRENCY=${LAT_MAX_CONCURRENCY:-"16"}
             LAT_START_FROM_LEVEL=${LAT_START_FROM_LEVEL:-"16"}
             LAT_STOP_AT_LEVEL=${LAT_STOP_AT_LEVEL:-"16"}
-            LAT_DURATION=${LAT_DURATION:-"120"}
-            LAT_WARMUP=${LAT_WARMUP:-"5"}
-            LAT_EPS=${LAT_EPS:-"1"}
+            LAT_DURATION=${LAT_DURATION:-$COMMON_DURATION}
+            LAT_WARMUP=${LAT_WARMUP:-$COMMON_WARMUP}
+            LAT_EPS=${LAT_EPS:-$COMMON_EPS}
             
             echo "  Parameters: ${LAT_MAX_CONCURRENCY} max concurrency (testing level ${LAT_START_FROM_LEVEL}-${LAT_STOP_AT_LEVEL}), ${LAT_DURATION}s duration"
             
