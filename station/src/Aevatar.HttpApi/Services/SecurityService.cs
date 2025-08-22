@@ -55,8 +55,8 @@ public class SecurityService : ISecurityService
                     _logger.LogWarning("SecurityService Configuration Details - SecretKey length={SecretKeyLength}",
             _recaptchaOptions.SecretKey?.Length ?? 0);
             
-        // Log bypass platforms configuration for debugging
-        _logger.LogInformation("SecurityService BypassPlatforms Configuration: [{platforms}] (Count: {count})",
+        // Log bypass platforms configuration for debugging  
+        _logger.LogDebug("SecurityService BypassPlatforms Configuration: [{platforms}] (Count: {count})",
             string.Join(", ", _recaptchaOptions.BypassPlatforms), _recaptchaOptions.BypassPlatforms.Count);
             
         // Check if we might still have old configuration keys
@@ -116,23 +116,23 @@ public class SecurityService : ISecurityService
     {
         try
         {
-            _logger.LogInformation("{operationName} security check started for IP {clientIp}, Platform: {platform}", 
-                operationName, clientIp, platform);
+            _logger.LogInformation("{operationName} security check started for Platform: {platform}", 
+                operationName, platform);
 
             // Step 1: Increment request count immediately to prevent abuse
             var currentCount = await IncrementRequestCountAsync(clientIp);
-            _logger.LogInformation("IP {clientIp} request count incremented: {count}", clientIp, currentCount);
+            _logger.LogInformation("Request count incremented: {count}", currentCount);
             
             // Step 2: Check if security verification is required based on rate limiting and platform
             var verificationRequired = await IsSecurityVerificationRequiredAsync(clientIp, platform);
             
             if (!verificationRequired)
             {
-                _logger.LogInformation("IP {clientIp} platform {platform} - no security verification required", clientIp, platform);
+                _logger.LogInformation("Platform {platform} - no security verification required", platform);
                 return SecurityVerificationResult.CreateSuccess("No verification required");
             }
 
-            _logger.LogInformation("IP {clientIp} platform {platform} security verification required", clientIp, platform);
+            _logger.LogInformation("Platform {platform} security verification required", platform);
             
             // Step 3: Perform security verification using reCAPTCHA
             var verificationRequest = new SecurityVerificationRequest
@@ -145,20 +145,20 @@ public class SecurityService : ISecurityService
             
             if (!verificationResult.Success)
             {
-                _logger.LogWarning("IP {clientIp} security verification failed: {reason}", 
-                    clientIp, verificationResult.Message);
+                _logger.LogWarning("Security verification failed: {reason}", 
+                    verificationResult.Message);
                 return verificationResult;
             }
             
-            _logger.LogInformation("IP {clientIp} security verification passed using {method}", 
-                clientIp, verificationResult.VerificationMethod);
+            _logger.LogInformation("Security verification passed using {method}", 
+                verificationResult.VerificationMethod);
             
             return verificationResult;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during security verification for IP {clientIp} operation {operationName}", 
-                clientIp, operationName);
+            _logger.LogError(ex, "Error during security verification for operation {operationName}", 
+                operationName);
             return SecurityVerificationResult.CreateFailure("Security verification error occurred");
         }
     }
@@ -178,16 +178,16 @@ public class SecurityService : ISecurityService
         if (_recaptchaOptions.BypassPlatforms.Count > 0 && 
             _recaptchaOptions.BypassPlatforms.Contains(platform.ToString()))
         {
-            _logger.LogInformation("IP {clientIp} platform {platform} bypassed security verification (platform in bypass list)",
-                clientIp, platform);
+            _logger.LogInformation("Platform {platform} bypassed security verification (platform in bypass list)",
+                platform);
             return false;
         }
 
-        var count = await GetCurrent10MinutesRequestCountAsync(clientIp);
+        var count = await GetTodayRequestCountAsync(clientIp);
         var required = count > _rateOptions.FreeRequestsPerDay;
 
-        _logger.LogDebug("IP {clientIp} platform {platform} current 10-minute window request count: {count}, verification required: {required}",
-            clientIp, platform, count, required);
+        _logger.LogDebug("Platform {platform} daily request count: {count}, verification required: {required}",
+            platform, count, required);
 
         return required;
     }
@@ -200,7 +200,7 @@ public class SecurityService : ISecurityService
         // Try to increment atomically, if key doesn't exist, create it with value 1
         var newCount = await IncrementAtomicallyAsync(key, expiry);
 
-        _logger.LogDebug("IP {clientIp} request count incremented to: {count}", clientIp, newCount);
+        _logger.LogDebug("Daily request count incremented to: {count}", newCount);
         return newCount;
     }
 
@@ -274,7 +274,7 @@ public class SecurityService : ISecurityService
         }
     }
 
-    private async Task<int> GetCurrent10MinutesRequestCountAsync(string clientIp)
+    private async Task<int> GetTodayRequestCountAsync(string clientIp)
     {
         var key = GetCacheKey(clientIp);
         var countStr = await _cache.GetStringAsync(key);
@@ -289,29 +289,20 @@ public class SecurityService : ISecurityService
 
     private string GetCacheKey(string clientIp)
     {
-        // Generate cache key based on 10-minute windows
+        // Generate cache key based on daily windows
         var now = DateTime.UtcNow;
-        var windowStart = new DateTime(now.Year, now.Month, now.Day, now.Hour, (now.Minute / 10) * 10, 0);
-        var windowKey = windowStart.ToString("yyyyMMddHHmm");
-        var cacheKey = $"SendRegCode:{clientIp}:{windowKey}";
+        var dateKey = now.ToString("yyyyMMdd");
+        var cacheKey = $"SendRegCode:{clientIp}:{dateKey}";
         
-        _logger.LogDebug("Cache key calculation - IP: {clientIp}, Now: {now}, Window: {windowStart}-{windowEnd}, Key: {key}", 
-            clientIp,
-            now.ToString("yyyy-MM-dd HH:mm:ss"), 
-            windowStart.ToString("yyyy-MM-dd HH:mm:ss"), 
-            windowStart.AddMinutes(10).ToString("yyyy-MM-dd HH:mm:ss"),
-            cacheKey);
-            
         return cacheKey;
     }
 
     private DateTimeOffset GetExpiryTime()
     {
-        // Set expiry to end of current 10-minute window
+        // Set expiry to end of current day (24-hour window)
         var now = DateTime.UtcNow;
-        var windowStart = new DateTime(now.Year, now.Month, now.Day, now.Hour, (now.Minute / 10) * 10, 0);
-        var windowEnd = windowStart.AddMinutes(10);
-        return new DateTimeOffset(windowEnd);
+        var dayEnd = new DateTime(now.Year, now.Month, now.Day, 23, 59, 59).AddSeconds(1);
+        return new DateTimeOffset(dayEnd);
     }
 
     #endregion
