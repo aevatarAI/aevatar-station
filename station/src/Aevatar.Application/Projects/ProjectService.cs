@@ -43,15 +43,12 @@ public class ProjectService : OrganizationService, IProjectService
 
     public async Task<ProjectDto> CreateProjectAsync(CreateProjectDto input)
     {
+        ValidateDisplayName(input.DisplayName);
+
         var domainName = new string(input.DisplayName
             .ToLowerInvariant()
-            .Where(char.IsLetterOrDigit)
+            .Where(c => (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-')
             .ToArray());
-
-        if (string.IsNullOrEmpty(domainName))
-        {
-            throw new ArgumentException("Project name must contain at least one letter or digit", nameof(input.DisplayName));
-        }
 
         _logger.LogInformation("Starting project creation process. OrganizationId: {OrganizationId}, DisplayName: {DisplayName}, DomainName: {DomainName}", 
             input.OrganizationId, input.DisplayName, domainName);
@@ -257,5 +254,25 @@ public class ProjectService : OrganizationService, IProjectService
         }
     }
 
+    private static void ValidateDisplayName(string displayName)
+    {
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            throw new UserFriendlyException("Project name cannot be empty or whitespace");
+        }
 
+        // Check if there are any valid ASCII characters for domain name generation
+        if (!displayName.Any(c => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')))
+        {
+            throw new UserFriendlyException("Project name must contain at least one ASCII letter or digit for domain name generation");
+        }
+
+        // Check for invalid characters - only ASCII letters, digits, and hyphens are allowed for domain names
+        var invalidChars = displayName.Where(c => !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-')).ToArray();
+        if (invalidChars.Length > 0)
+        {
+            var invalidCharString = string.Join(", ", invalidChars.Distinct().Select(c => $"'{c}'"));
+            throw new UserFriendlyException($"Project name contains invalid characters for domain generation: {invalidCharString}. Only ASCII letters, digits, and hyphens are allowed.");
+        }
+    }
 }

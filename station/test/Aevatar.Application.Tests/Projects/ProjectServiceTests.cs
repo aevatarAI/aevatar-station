@@ -184,17 +184,83 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
-        // Test with display name containing only special characters (no letters or digits)
+        // Test with null display name - ABP Required attribute validation kicks in first
         var createProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
-            DisplayName = "!@#$%^&*()"
+            DisplayName = null
         };
-        await Should.ThrowAsync<ArgumentException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
+        await Should.ThrowAsync<AbpValidationException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
+
+        // Test with empty display name - ABP Required attribute validation kicks in first
+        createProjectInput.DisplayName = "";
+        await Should.ThrowAsync<AbpValidationException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
+
+        // Test with whitespace-only display name - ABP Required attribute validation kicks in first
+        createProjectInput.DisplayName = "   ";
+        await Should.ThrowAsync<AbpValidationException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
+
+        // Test with display name containing only special characters (no letters or digits)
+        createProjectInput.DisplayName = "!@#$%^&*()";
+        await Should.ThrowAsync<UserFriendlyException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
 
         // Test with display name containing only spaces and special characters
         createProjectInput.DisplayName = "   !!!   ";
-        await Should.ThrowAsync<ArgumentException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
+        await Should.ThrowAsync<UserFriendlyException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
+
+        // Test with display name containing problematic special characters for domain names
+        createProjectInput.DisplayName = "Test@Project#Name$";
+        await Should.ThrowAsync<UserFriendlyException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
+
+        // Test with display name containing Chinese characters or other unsupported characters
+        createProjectInput.DisplayName = "测试项目";
+        await Should.ThrowAsync<UserFriendlyException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
+
+        // Test with display name containing spaces (no longer allowed)
+        createProjectInput.DisplayName = "Project Name";
+        await Should.ThrowAsync<UserFriendlyException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
+
+        // Test with display name containing underscores (no longer allowed)
+        createProjectInput.DisplayName = "Project_Name";
+        await Should.ThrowAsync<UserFriendlyException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
+    }
+
+    [Fact]
+    public async Task Project_Create_ValidDisplayName_Test()
+    {
+        await _identityUserManager.CreateAsync(
+            new IdentityUser(
+                _currentUser.Id.Value,
+                "test",
+                "test@email.io"));
+
+        var createOrganizationInput = new CreateOrganizationDto
+        {
+            DisplayName = "Test Organization"
+        };
+        var organization = await _organizationService.CreateAsync(createOrganizationInput);
+
+        // Test with valid display name containing letters and hyphens
+        var createProjectInput = new CreateProjectDto()
+        {
+            OrganizationId = organization.Id,
+            DisplayName = "Valid-Project-Name"
+        };
+        var project1 = await _projectService.CreateProjectAsync(createProjectInput);
+        project1.ShouldNotBeNull();
+        project1.DisplayName.ShouldBe("Valid-Project-Name");
+
+        // Test with valid display name containing letters, numbers, and hyphens
+        createProjectInput.DisplayName = "Project-123-Test";
+        var project2 = await _projectService.CreateProjectAsync(createProjectInput);
+        project2.ShouldNotBeNull();
+        project2.DisplayName.ShouldBe("Project-123-Test");
+
+        // Test with valid display name containing only letters and numbers
+        createProjectInput.DisplayName = "Project123";
+        var project3 = await _projectService.CreateProjectAsync(createProjectInput);
+        project3.ShouldNotBeNull();
+        project3.DisplayName.ShouldBe("Project123");
     }
 
     [Fact]
@@ -622,7 +688,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         };
 
         // Act & Assert
-        await Should.ThrowAsync<ArgumentException>(async () => 
+        await Should.ThrowAsync<UserFriendlyException>(async () => 
             await _projectService.CreateProjectAsync(createProjectInput));
     }
 }
