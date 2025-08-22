@@ -8,3 +8,4 @@
 | 功能名称 | 状态 | 分支名 | 开发机器 | 描述 |
 |---------|------|--------|----------|------|
 | BuildAgentCatalogContent完整类型名称支持 | ✅ | feature/agent-type-fullname-support | c6:c4:e5:e8:c6:4b | ✅已完成：在WorkflowOrchestrationService的BuildAgentCatalogContent中获取agent.Type时，返回带namespace的完整类型名称（如Aevatar.GAgents.Twitter.GAgents.ChatAIAgent.ChatAIGAgent），通过注入GrainTypeResolver并使用GetGrainType().ToString()方法实现。包含专门的单元测试WorkflowOrchestrationGrainTypeTests.cs验证功能。整体项目编译通过无破坏性变更。 |
+| Auto-Generated Domain Names for New Projects | ✅ | feature/auto-generated-domain-names | c6:c4:e5:e8:c6:4b | ✅已完成并推送：实现项目创建的自动域名生成功能，完成最终API简化重构。统一使用`CreateProjectAsync`方法和`POST /api/app/project`接口，移除原有`CreateAsync`方法和多余的私有方法。基于项目名称自动生成域名，冲突时抛出UserFriendlyException保持一致性。代码架构最终优化：简化异常处理，移除不必要的try-catch嵌套，显式依赖注入ILogger，利用框架[Required]验证，重命名DTO为标准命名。单元测试完全整合，代码已推送到远程仓库。功能完整交付。 |
