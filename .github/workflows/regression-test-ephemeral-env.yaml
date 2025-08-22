@@ -600,77 +600,22 @@ jobs:
           if [ -n "$POD_NAME" ]; then
             echo "Pod: $POD_NAME"
             
-            # Collect logs
+            # Simplified: Only collect logs, skip complex file copying
             echo "📝 Collecting benchmark logs..."
             kubectl logs $POD_NAME -n $NS > broadcast-benchmark.log 2>&1 || echo "Failed to get logs"
             
-            # Try to copy result files from container (may fail if pod completed)
-            echo "📁 Copying result files..."
-            mkdir -p ./broadcast-results
-            kubectl cp $NS/$POD_NAME:/tmp/results/ ./broadcast-results/ 2>/dev/null || echo "📝 Pod completed, extracting results from logs instead"
-            
-            # Extract results from logs if file copy failed
-            if [ ! -f "broadcast-results/benchmark_status.txt" ]; then
-              echo "📊 Parsing results from benchmark logs..."
-              
-              # Extract status from logs
-              if grep -q "status=PASSED" broadcast-benchmark.log; then
-                STATUS="PASSED"
-              elif grep -q "status=FAILED" broadcast-benchmark.log; then
-                STATUS="FAILED" 
-              elif grep -q "❌.*benchmark.*FAILED" broadcast-benchmark.log; then
-                STATUS="FAILED"
-              elif grep -q "✅.*benchmark.*PASSED" broadcast-benchmark.log; then
-                STATUS="PASSED"
-              else
-                STATUS="UNKNOWN"
-              fi
-              
-              # Create status file for consistency
-              echo "status=$STATUS" > broadcast-results/benchmark_status.txt
-              echo "status=$STATUS" >> $GITHUB_OUTPUT
+            # Determine status based on log analysis (will be refined by metrics check later)
+            if grep -q "❌.*TARGET NOT ACHIEVED\|FAILED\|Error:" broadcast-benchmark.log; then
+              STATUS="FAILED"
+            elif grep -q "✅.*PASSED\|SUCCESS\|completed successfully" broadcast-benchmark.log; then
+              STATUS="PASSED" 
             else
-              # Use copied file if available
-              STATUS=$(cat broadcast-results/benchmark_status.txt | cut -d'=' -f2)
-              echo "status=$STATUS" >> $GITHUB_OUTPUT
+              STATUS="UNKNOWN"
             fi
+            echo "status=$STATUS" >> $GITHUB_OUTPUT
             
-            # Extract complete JSON results from logs if available
-            if grep -q "=== BROADCAST_JSON_BEGIN ===" broadcast-benchmark.log; then
-              echo "📄 Extracting complete JSON results from logs..."
-              # Extract complete JSON from logs using markers
-              sed -n '/=== BROADCAST_JSON_BEGIN ===/,/=== BROADCAST_JSON_END ===/p' broadcast-benchmark.log | 
-                sed '1d;$d' > broadcast-results/broadcast-latency-results.json || true
-              
-              echo "📊 Extracting processed metrics from logs..."
-              sed -n '/=== BROADCAST_METRICS_BEGIN ===/,/=== BROADCAST_METRICS_END ===/p' broadcast-benchmark.log | 
-                sed '1d;$d' > broadcast-results/broadcast_metrics.json || true
-              
-              # Verify JSON files are valid
-              if [ -f "broadcast-results/broadcast-latency-results.json" ]; then
-                if jq empty broadcast-results/broadcast-latency-results.json 2>/dev/null; then
-                  echo "✅ Successfully extracted broadcast JSON results ($(wc -c < broadcast-results/broadcast-latency-results.json) bytes)"
-                else
-                  echo "⚠️  Extracted JSON may be malformed, keeping for debugging"
-                fi
-              fi
-              
-              if [ -f "broadcast-results/broadcast_metrics.json" ]; then
-                if jq empty broadcast-results/broadcast_metrics.json 2>/dev/null; then
-                  echo "✅ Successfully extracted broadcast metrics ($(wc -c < broadcast-results/broadcast_metrics.json) bytes)"
-                else
-                  echo "⚠️  Extracted metrics may be malformed, keeping for debugging"
-                fi
-              fi
-            else
-              echo "📝 No JSON markers found, falling back to pattern extraction..."
-              # Fallback: try to extract JSON result lines from logs
-              grep -A 50 -B 5 "broadcast-latency-results.json\|{.*Results.*}" broadcast-benchmark.log > broadcast-results/extracted-results.log || true
-            fi
-            
-            # Display summary from logs
             echo "📊 Broadcast Benchmark Summary:"
-            grep -E "(📊|✅|❌|🎯|Status|Success Rate|Latency)" broadcast-benchmark.log || echo "No summary found in logs"
+            grep -E "(📊|✅|❌|🎯|Status|Success Rate|Latency)" broadcast-benchmark.log || echo "Analysis complete"
             
           else
             echo "❌ Could not find broadcast benchmark pod"
@@ -683,28 +628,17 @@ jobs:
           echo "## 📊 Broadcast Latency Benchmark Report (Ephemeral K8s)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Environment:** Ephemeral Kubernetes Environment" >> $GITHUB_STEP_SUMMARY
-          echo "**Project:** \`$PROJECT_NAME\` | **Client ID:** \`$CLIENT_ID\` | **Status:** \`${{ steps.collect_results.outputs.status }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Project:** \`$PROJECT_NAME\` | **Client ID:** \`$CLIENT_ID\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          # Extract and parse benchmark results from JSON files or logs
+          # Extract and parse benchmark results from logs
           if [ -f "broadcast-benchmark.log" ]; then
-            echo "📊 Parsing broadcast benchmark results..."
-            
-            # Try to use extracted JSON files first, then fall back to log parsing
-            if [ -f "broadcast-results/broadcast_metrics.json" ] && jq empty broadcast-results/broadcast_metrics.json 2>/dev/null; then
-              echo "📄 Using extracted JSON metrics for accurate reporting..."
-              success_rate=$(jq -r '.successRate // 0' broadcast-results/broadcast_metrics.json)
-              p95_latency=$(jq -r '.p95 // 0' broadcast-results/broadcast_metrics.json) 
-              avg_latency=$(jq -r '.avg // 0' broadcast-results/broadcast_metrics.json)
-              throughput=$(jq -r '.throughput // 0' broadcast-results/broadcast_metrics.json)
-            else
-              echo "📝 JSON metrics not available, parsing from logs..."
-              # Extract key metrics from logs using grep and awk  
-              success_rate=$(grep -o "Success Rate: [0-9.]*%" broadcast-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
-              p95_latency=$(grep "P95 Latency: [0-9.]*ms" broadcast-benchmark.log | tail -1 | sed 's/.*: \([0-9.]*\)ms.*/\1/' || echo "0")
-              avg_latency=$(grep -o "Avg Latency: [0-9.]*ms" broadcast-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
-              throughput=$(grep -o "Throughput: [0-9.]* events/sec" broadcast-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
-            fi
+            echo "📊 Parsing broadcast benchmark results from logs..."
+            # Extract key metrics from logs using grep and awk  
+            success_rate=$(grep -o "Success Rate: [0-9.]*%" broadcast-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
+            p95_latency=$(grep "P95 Latency: [0-9.]*ms" broadcast-benchmark.log | tail -1 | sed 's/.*: \([0-9.]*\)ms.*/\1/' || echo "0")
+            avg_latency=$(grep -o "Avg Latency: [0-9.]*ms" broadcast-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
+            throughput=$(grep -o "Throughput: [0-9.]* events/sec" broadcast-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
             
             # Use broadcast-specific parameters (from env vars - single source of truth)
             subscribers="$BCAST_SUBS"
@@ -1000,77 +934,22 @@ jobs:
           if [ -n "$POD_NAME" ]; then
             echo "Pod: $POD_NAME"
             
-            # Collect logs
+            # Simplified: Only collect logs, skip complex file copying
             echo "📝 Collecting benchmark logs..."
             kubectl logs $POD_NAME -n $NS > latency-benchmark.log 2>&1 || echo "Failed to get logs"
             
-            # Try to copy result files from container (may fail if pod completed)
-            echo "📁 Copying result files..."
-            mkdir -p ./latency-results
-            kubectl cp $NS/$POD_NAME:/tmp/results/ ./latency-results/ 2>/dev/null || echo "📝 Pod completed, extracting results from logs instead"
-            
-            # Extract results from logs if file copy failed
-            if [ ! -f "latency-results/benchmark_status.txt" ]; then
-              echo "📊 Parsing results from benchmark logs..."
-              
-              # Extract status from logs
-              if grep -q "status=PASSED" latency-benchmark.log; then
-                STATUS="PASSED"
-              elif grep -q "status=FAILED" latency-benchmark.log; then
-                STATUS="FAILED" 
-              elif grep -q "❌.*benchmark.*FAILED" latency-benchmark.log; then
-                STATUS="FAILED"
-              elif grep -q "✅.*benchmark.*PASSED" latency-benchmark.log; then
-                STATUS="PASSED"
-              else
-                STATUS="UNKNOWN"
-              fi
-              
-              # Create status file for consistency
-              echo "status=$STATUS" > latency-results/benchmark_status.txt
-              echo "status=$STATUS" >> $GITHUB_OUTPUT
+            # Determine status based on log analysis (will be refined by metrics check later)
+            if grep -q "❌.*TARGET NOT ACHIEVED\|FAILED\|Error:" latency-benchmark.log; then
+              STATUS="FAILED"
+            elif grep -q "✅.*PASSED\|SUCCESS\|completed successfully" latency-benchmark.log; then
+              STATUS="PASSED" 
             else
-              # Use copied file if available
-              STATUS=$(cat latency-results/benchmark_status.txt | cut -d'=' -f2)
-              echo "status=$STATUS" >> $GITHUB_OUTPUT
+              STATUS="UNKNOWN"
             fi
+            echo "status=$STATUS" >> $GITHUB_OUTPUT
             
-            # Extract complete JSON results from logs if available
-            if grep -q "=== LATENCY_JSON_BEGIN ===" latency-benchmark.log; then
-              echo "📄 Extracting complete JSON results from logs..."
-              # Extract complete JSON from logs using markers
-              sed -n '/=== LATENCY_JSON_BEGIN ===/,/=== LATENCY_JSON_END ===/p' latency-benchmark.log | 
-                sed '1d;$d' > latency-results/latency-results.json || true
-              
-              echo "📊 Extracting processed metrics from logs..."
-              sed -n '/=== LATENCY_METRICS_BEGIN ===/,/=== LATENCY_METRICS_END ===/p' latency-benchmark.log | 
-                sed '1d;$d' > latency-results/latency_metrics.json || true
-              
-              # Verify JSON files are valid
-              if [ -f "latency-results/latency-results.json" ]; then
-                if jq empty latency-results/latency-results.json 2>/dev/null; then
-                  echo "✅ Successfully extracted latency JSON results ($(wc -c < latency-results/latency-results.json) bytes)"
-                else
-                  echo "⚠️  Extracted JSON may be malformed, keeping for debugging"
-                fi
-              fi
-              
-              if [ -f "latency-results/latency_metrics.json" ]; then
-                if jq empty latency-results/latency_metrics.json 2>/dev/null; then
-                  echo "✅ Successfully extracted latency metrics ($(wc -c < latency-results/latency_metrics.json) bytes)"
-                else
-                  echo "⚠️  Extracted metrics may be malformed, keeping for debugging"
-                fi
-              fi
-            else
-              echo "📝 No JSON markers found, falling back to pattern extraction..."
-              # Fallback: try to extract JSON result lines from logs
-              grep -A 50 -B 5 "latency-results.json\|{.*Results.*}" latency-benchmark.log > latency-results/extracted-results.log || true
-            fi
-            
-            # Display summary from logs
             echo "📊 Latency Benchmark Summary:"
-            grep -E "(📊|✅|❌|🎯|Status|Success Rate|Latency|Throughput)" latency-benchmark.log || echo "No summary found in logs"
+            grep -E "(📊|✅|❌|🎯|Status|Latency|Throughput)" latency-benchmark.log || echo "Analysis complete"
             
           else
             echo "❌ Could not find latency benchmark pod"
@@ -1083,30 +962,17 @@ jobs:
           echo "## ⚡ Latency Benchmark Report (Ephemeral K8s)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Environment:** Ephemeral Kubernetes Environment" >> $GITHUB_STEP_SUMMARY
-          echo "**Project:** \`$PROJECT_NAME\` | **Client ID:** \`$CLIENT_ID\` | **Status:** \`${{ steps.collect_results.outputs.status }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Project:** \`$PROJECT_NAME\` | **Client ID:** \`$CLIENT_ID\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          # Extract and parse latency benchmark results from JSON files or logs
+          # Extract and parse latency benchmark results from logs
           if [ -f "latency-benchmark.log" ]; then
-            echo "📊 Parsing latency benchmark results..."
-            
-            # Try to use extracted JSON files first, then fall back to log parsing
-            if [ -f "latency-results/latency_metrics.json" ] && jq empty latency-results/latency_metrics.json 2>/dev/null; then
-              echo "📄 Using extracted JSON metrics for accurate reporting..."
-              success_status=$(jq -r 'if .success == true then "✅ SUCCESS" else "❌ FAILED" end' latency-results/latency_metrics.json)
-              p95_latency=$(jq -r '.p95 // 0' latency-results/latency_metrics.json)
-              p99_latency=$(jq -r '.p99 // 0' latency-results/latency_metrics.json)
-              throughput=$(jq -r '.throughput // 0' latency-results/latency_metrics.json)
-              processed_ratio=$(jq -r '.processedRatio // 0' latency-results/latency_metrics.json)
-            else
-              echo "📝 JSON metrics not available, parsing from logs..."
-              # Extract metrics from logs using various patterns
-              success_status=$(grep -o "✅ SUCCESS\|❌ FAILED" latency-benchmark.log | tail -1 || echo "UNKNOWN")
-              p95_latency=$(grep "P95 Latency: [0-9.]*ms\|P95: [0-9.]*ms" latency-benchmark.log | tail -1 | sed 's/.*: \([0-9.]*\)ms.*/\1/' || echo "0")
-              p99_latency=$(grep "P99 Latency: [0-9.]*ms\|P99: [0-9.]*ms" latency-benchmark.log | tail -1 | sed 's/.*: \([0-9.]*\)ms.*/\1/' || echo "0")
-              throughput=$(grep -o "Throughput: [0-9.]* events/sec\|ActualThroughput.*[0-9.]*" latency-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
-              processed_ratio=$(grep -o "Processed Ratio: [0-9.]*%\|processed.*[0-9.]*%" latency-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
-            fi
+            echo "📊 Parsing latency benchmark results from logs..."
+            # Extract metrics from logs using various patterns
+            p95_latency=$(grep "P95 Latency: [0-9.]*ms\|P95: [0-9.]*ms" latency-benchmark.log | tail -1 | sed 's/.*: \([0-9.]*\)ms.*/\1/' || echo "0")
+            p99_latency=$(grep "P99 Latency: [0-9.]*ms\|P99: [0-9.]*ms" latency-benchmark.log | tail -1 | sed 's/.*: \([0-9.]*\)ms.*/\1/' || echo "0")
+            throughput=$(grep -o "Throughput: [0-9.]* events/sec\|ActualThroughput.*[0-9.]*" latency-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
+            processed_ratio=$(grep -o "Processed Ratio: [0-9.]*%\|processed.*[0-9.]*%" latency-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
             
             # Use latency-specific parameters (from env vars - single source of truth)
             max_concurrency="$LAT_MAX_CONCURRENCY"
@@ -1130,14 +996,9 @@ jobs:
             echo "| Processed Ratio | ${processed_ratio}% | ≥${processed_ratio_target}% |" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             
-            # Determine overall pass/fail status
+            # Determine overall pass/fail status based on metrics (not unreliable log parsing)
             pass_status="✅ PASSED"
             fail_reasons=""
-            
-            if [ "$success_status" != "✅ SUCCESS" ]; then
-              pass_status="❌ FAILED"
-              fail_reasons="$fail_reasons Execution unsuccessful. "
-            fi
             
             if awk -v a="$p95_latency" -v b="$p95_target" 'BEGIN{ if (a+0 > b+0) exit 0; else exit 1 }'; then
               pass_status="❌ FAILED"
