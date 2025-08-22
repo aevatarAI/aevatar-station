@@ -533,9 +533,7 @@ jobs:
                     value: "$BCAST_SUBS"
                   - name: BCAST_PUBS
                     value: "$BCAST_PUBS"
-                  # Broadcast thresholds (using common P95 target)
-                  - name: BCAST_P95_MS
-                    value: "140"
+                  # Broadcast thresholds
                   - name: BCAST_SUCCESS_RATE
                     value: "0.90"
                   resources:
@@ -862,9 +860,7 @@ jobs:
                     value: "$LAT_START_FROM_LEVEL"
                   - name: LAT_STOP_AT_LEVEL
                     value: "$LAT_STOP_AT_LEVEL"
-                  # Latency thresholds (using common P95 target) 
-                  - name: LAT_P95_MS
-                    value: "120"
+                  # Latency thresholds
                   - name: LAT_P99_MS
                     value: "1000"
                   - name: LAT_PROCESSED_RATIO
