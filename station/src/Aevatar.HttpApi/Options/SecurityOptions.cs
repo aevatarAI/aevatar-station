@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Aevatar.Options;
 
 /// <summary>
@@ -10,6 +12,13 @@ public class RecaptchaOptions
     public bool Enabled { get; set; } = false;
     public string SecretKey { get; set; } = "";
     public string VerifyUrl { get; set; } = "https://www.google.com/recaptcha/api/siteverify";
+    
+    /// <summary>
+    /// Platforms that should bypass human verification (e.g., "iOS", "Android")
+    /// Web platform always requires verification when rate limit exceeded
+    /// If empty, all platforms require verification
+    /// </summary>
+    public List<string> BypassPlatforms { get; set; } = new() { "iOS", "Android" };
 }
 
 
@@ -31,5 +40,7 @@ public class RateOptions
     /// </summary>
     public int FreeRequestsPerDay { get; set; } = 5;
 }
+
+
 
 

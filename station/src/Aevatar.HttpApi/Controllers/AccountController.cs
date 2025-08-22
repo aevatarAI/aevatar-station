@@ -66,8 +66,8 @@ public class AccountController : AevatarController
         var language = HttpContext.GetGodGPTLanguage();
         var clientIp = _securityService.GetRealClientIp(HttpContext);
         
-        _logger.LogInformation("SendRegisterCodeAsync request from IP {clientIp}, Email: {email}", 
-            clientIp, input.Email);
+        _logger.LogInformation("SendRegisterCodeAsync request from IP {clientIp}, Email: {email}, Platform: {platform}", 
+            clientIp, input.Email, input.Platform);
 
         try
         {
@@ -75,12 +75,12 @@ public class AccountController : AevatarController
             var currentCount = await _securityService.IncrementRequestCountAsync(clientIp);
             _logger.LogInformation("IP {clientIp} request count incremented: {count}", clientIp, currentCount);
             
-            // Step 2: Check if security verification is required based on rate limiting
-            var verificationRequired = await _securityService.IsSecurityVerificationRequiredAsync(clientIp);
+            // Step 2: Check if security verification is required based on rate limiting and platform
+            var verificationRequired = await _securityService.IsSecurityVerificationRequiredAsync(clientIp, input.Platform);
             
             if (verificationRequired)
             {
-                _logger.LogInformation("IP {clientIp} security verification required", clientIp);
+                _logger.LogInformation("IP {clientIp} platform {platform} security verification required", clientIp, input.Platform);
                 
                 // Step 3: Perform security verification using reCAPTCHA
                 var verificationRequest = new SecurityVerificationRequest

@@ -69,8 +69,6 @@ public class AevatarHttpApiModule : AbpModule
     {
         // Configure each security module as separate 2-level configuration
         context.Services.Configure<RecaptchaOptions>(configuration.GetSection(RecaptchaOptions.SectionName));
-
-
         context.Services.Configure<RateOptions>(configuration.GetSection(RateOptions.SectionName));
         
         // Add validation for reCAPTCHA configuration
