@@ -695,10 +695,10 @@ jobs:
               throughput=$(grep -o "Throughput: [0-9.]* events/sec" broadcast-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
             fi
             
-            # Extract test parameters from logs
-            subscribers=$(grep -o "[0-9]* subscribers" broadcast-benchmark.log | head -1 | grep -o "[0-9]*" || echo "128")
-            publishers=$(grep -o "[0-9]* publishers" broadcast-benchmark.log | head -1 | grep -o "[0-9]*" || echo "1")
-            duration=$(grep -o "[0-9]*s duration" broadcast-benchmark.log | head -1 | grep -o "[0-9]*" || echo "120")
+            # Use environment variables directly instead of parsing logs
+            subscribers="128"
+            publishers="1" 
+            duration="120"
             
             # Set thresholds
             success_rate_target="90.0"
@@ -1071,9 +1071,9 @@ jobs:
               processed_ratio=$(grep -o "Processed Ratio: [0-9.]*%\|processed.*[0-9.]*%" latency-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
             fi
             
-            # Extract test parameters from logs
-            max_concurrency=$(grep -o "[0-9]* max concurrency" latency-benchmark.log | head -1 | grep -o "[0-9]*" || echo "16")
-            duration=$(grep -o "[0-9]*s duration" latency-benchmark.log | head -1 | grep -o "[0-9]*" || echo "120")
+            # Use environment variables directly instead of parsing logs
+            max_concurrency="16"
+            duration="120"
             
             # Set thresholds
             p95_target="120"
