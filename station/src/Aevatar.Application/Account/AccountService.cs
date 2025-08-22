@@ -85,7 +85,7 @@ public class AccountService : AccountAppService, IAccountService
 
         var code = GenerateVerificationCode();
         await _registerCode.SetAsync(GetRegisterCodeKey(input.Email), code, _defaultCacheOptions);
-        await _aevatarAccountEmailer.SendRegisterCodeAsync(input.Email, code);
+        await _aevatarAccountEmailer.SendRegisterCodeAsync(input.Email, code, language);
     }
 
     public async Task<bool> VerifyRegisterCodeAsync(VerifyRegisterCodeDto input)

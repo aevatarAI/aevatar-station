@@ -31,6 +31,7 @@ public static class GodGPTExceptionMessageKeys
     public const string HASREGISTERED = "HasBeenRegistered";
     public const string WebhookValidatingError = "WebhookValidatingError";
     public const string InvalidShare = "InvalidShare";
+    public const string EmailFrequently = "EmailFrequently";
 
     // File Operations
     public const string FileTooLarge = "FileTooLarge";
