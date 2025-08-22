@@ -1190,10 +1190,23 @@ jobs:
           
           if [ "$BROADCAST_STATUS" = "PASSED" ] && [ "$LATENCY_STATUS" = "PASSED" ]; then
             echo "### ✅ Overall Result: ALL BENCHMARKS PASSED" >> $GITHUB_STEP_SUMMARY
+            echo "✅ All benchmarks passed successfully"
           elif [ "$BROADCAST_STATUS" = "FAILED" ] || [ "$LATENCY_STATUS" = "FAILED" ]; then
             echo "### ⚠️  Overall Result: SOME BENCHMARKS FAILED" >> $GITHUB_STEP_SUMMARY
+            echo "❌ Benchmark failure detected:"
+            if [ "$BROADCAST_STATUS" = "FAILED" ]; then
+              echo "  - Broadcast Latency: FAILED"
+            fi
+            if [ "$LATENCY_STATUS" = "FAILED" ]; then
+              echo "  - Latency: FAILED"
+            fi
+            exit 1
           else
             echo "### ❌ Overall Result: BENCHMARK ERRORS OCCURRED" >> $GITHUB_STEP_SUMMARY
+            echo "❌ Benchmark errors occurred:"
+            echo "  - Broadcast Status: $BROADCAST_STATUS"
+            echo "  - Latency Status: $LATENCY_STATUS"
+            exit 1
           fi
           
           echo "" >> $GITHUB_STEP_SUMMARY
