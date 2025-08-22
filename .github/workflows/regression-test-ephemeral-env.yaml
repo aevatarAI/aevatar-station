@@ -426,7 +426,7 @@ jobs:
       BCAST_EPS: "1"
       BCAST_SUBS: "120"
       BCAST_PUBS: "1"
-      BCAST_DURATION: "120"
+      BCAST_DURATION: "300"
       BCAST_WARMUP: "5"
 
     steps:
