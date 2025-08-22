@@ -42,16 +42,16 @@ public static class SecurityExtensions
     {
         var clientIp = securityService.GetRealClientIp(httpContext);
         
-        logger.LogInformation("{operationName} request from IP {clientIp}, Platform: {platform}", 
-            operationName, clientIp, platform);
+        logger.LogInformation("{operationName} request from Platform: {platform}", 
+            operationName, platform);
 
         var verificationResult = await securityService.PerformSecurityVerificationAsync(
             clientIp, platform, recaptchaToken, operationName);
 
         if (!verificationResult.Success)
         {
-            logger.LogWarning("IP {clientIp} {operationName} security verification failed: {reason}", 
-                clientIp, operationName, verificationResult.Message);
+            logger.LogWarning("{operationName} security verification failed: {reason}", 
+                operationName, verificationResult.Message);
             
             // Return SecurityVerificationRequired (always English) as frontend signal
             if (verificationResult.Message.Contains("Missing") || verificationResult.Message.Contains("token"))
@@ -72,7 +72,7 @@ public static class SecurityExtensions
             }
         }
         
-        logger.LogInformation("IP {clientIp} {operationName} security verification passed using {method}", 
-            clientIp, operationName, verificationResult.VerificationMethod);
+                logger.LogInformation("{operationName} security verification passed using {method}",
+            operationName, verificationResult.VerificationMethod);
     }
 }

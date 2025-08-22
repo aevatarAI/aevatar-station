@@ -35,7 +35,7 @@ public class RateOptions
     public bool Enabled { get; set; } = true;
     
     /// <summary>
-    /// Number of free requests allowed per 10-minute window before requiring verification.
+    /// Number of free requests allowed per day before requiring verification.
     /// For example: if set to 5, requests 1-5 are free, request 6+ require verification.
     /// </summary>
     public int FreeRequestsPerDay { get; set; } = 5;
