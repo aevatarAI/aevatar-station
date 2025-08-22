@@ -64,66 +64,23 @@ public class AccountController : AevatarController
     public virtual async Task<SendRegisterCodeResponseDto> SendRegisterCodeAsync(SendRegisterCodeDto input)
     {
         var language = HttpContext.GetGodGPTLanguage();
-        var clientIp = _securityService.GetRealClientIp(HttpContext);
-        
-        _logger.LogInformation("SendRegisterCodeAsync request from IP {clientIp}, Email: {email}, Platform: {platform}", 
-            clientIp, input.Email, input.Platform);
 
         try
         {
-            // Step 1: Increment request count immediately to prevent abuse (Option A - Anti-spam priority)
-            var currentCount = await _securityService.IncrementRequestCountAsync(clientIp);
-            _logger.LogInformation("IP {clientIp} request count incremented: {count}", clientIp, currentCount);
+            // Perform security verification (rate limiting + platform-based verification)
+            await _securityService.ValidateSecurityAsync(
+                HttpContext, 
+                input.Platform, 
+                input.RecaptchaToken, 
+                nameof(SendRegisterCodeAsync),
+                _localizationService,
+                language,
+                _logger);
             
-            // Step 2: Check if security verification is required based on rate limiting and platform
-            var verificationRequired = await _securityService.IsSecurityVerificationRequiredAsync(clientIp, input.Platform);
-            
-            if (verificationRequired)
-            {
-                _logger.LogInformation("IP {clientIp} platform {platform} security verification required", clientIp, input.Platform);
-                
-                // Step 3: Perform security verification using reCAPTCHA
-                var verificationRequest = new SecurityVerificationRequest
-                {
-                    ClientIp = clientIp,
-                    RecaptchaToken = input.RecaptchaToken
-                };
-                
-                var verificationResult = await _securityService.VerifySecurityAsync(verificationRequest);
-                
-                if (!verificationResult.Success)
-                {
-                    _logger.LogWarning("IP {clientIp} security verification failed: {reason}", 
-                        clientIp, verificationResult.Message);
-                    
-                    // Return SecurityVerificationRequired (always English) as frontend signal
-                    if (verificationResult.Message.Contains("Missing") || verificationResult.Message.Contains("token"))
-                    {
-                        // This tells frontend that verification is needed
-                        throw new UserFriendlyException(
-                            _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.SecurityVerificationRequired, 
-                                GodGPTChatLanguage.English, // Always use English for frontend detection
-                                new Dictionary<string, string>()));
-                    }
-                    else
-                    {
-                        // This tells user about verification failure with localized message
-                        var parameters = new Dictionary<string, string> { ["reason"] = verificationResult.Message };
-                        throw new UserFriendlyException(
-                            _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.SecurityVerificationFailed, 
-                                language, parameters));
-                    }
-                }
-                
-                _logger.LogInformation("IP {clientIp} security verification passed using {method}", 
-                    clientIp, verificationResult.VerificationMethod);
-            }
-            
-            // Step 4: Call the account service to send verification code
+            // Call the account service to send verification code
             await _accountService.SendRegisterCodeAsync(input, language);
             
-            _logger.LogInformation("Verification code sent successfully for email {email} from IP {clientIp}", 
-                input.Email, clientIp);
+            _logger.LogInformation("Verification code sent successfully for email {email}", input.Email);
             
             return new SendRegisterCodeResponseDto
             {
@@ -138,6 +95,7 @@ public class AccountController : AevatarController
         }
         catch (Exception ex)
         {
+            var clientIp = _securityService.GetRealClientIp(HttpContext);
             _logger.LogError(ex, "Error sending registration code for email {email} from IP {clientIp}", 
                 input.Email, clientIp);
             
