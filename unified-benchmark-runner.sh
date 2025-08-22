@@ -49,6 +49,11 @@ parse_and_check_thresholds() {
         "BroadcastLatency")
             echo "📊 Processing broadcast benchmark results..."
             
+            # Output complete JSON results for workflow extraction
+            echo "📄 === BROADCAST_JSON_BEGIN ==="
+            cat "$results_file"
+            echo "📄 === BROADCAST_JSON_END ==="
+            
             # Extract metrics directly using jq logic from performance-benchmarks.yml
             local success_rate=$(jq -r '.Results[0] as $r
                 | (($r.TotalEventsSent * ($r.SubscriberCount // 0))) as $expected
@@ -80,6 +85,11 @@ parse_and_check_thresholds() {
             
         "Latency")
             echo "📊 Processing latency benchmark results..."
+            
+            # Output complete JSON results for workflow extraction  
+            echo "📄 === LATENCY_JSON_BEGIN ==="
+            cat "$results_file"
+            echo "📄 === LATENCY_JSON_END ==="
             
             # Extract metrics directly using jq logic from performance-benchmarks.yml
             local success=$(jq -r '.Results | max_by(.ConcurrencyLevel).Success // false' "$results_file")
