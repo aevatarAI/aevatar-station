@@ -424,6 +424,10 @@ jobs:
       PROJECT_NAME: ${{ needs.setup-ephermeral-test-env.outputs.project_name }}
       # Broadcast benchmark parameters - single source of truth
       BCAST_EPS: "1"
+      BCAST_SUBS: "128"
+      BCAST_PUBS: "1"
+      BCAST_DURATION: "120"
+      BCAST_WARMUP: "5"
 
     steps:
       - name: Checkout code
@@ -515,20 +519,20 @@ jobs:
                     value: "20001"
                   # Common benchmark parameters
                   - name: COMMON_DURATION
-                    value: "120"
+                    value: "$BCAST_DURATION"
                   - name: COMMON_WARMUP
-                    value: "5"
+                    value: "$BCAST_WARMUP"
                   # Broadcast-specific parameters  
                   - name: BCAST_EPS
                     value: "$BCAST_EPS"
                   # Common thresholds
                   - name: COMMON_P95_TARGET
                     value: "120"
-                  # Broadcast benchmark parameters (using common params for EPS/DURATION/WARMUP)
+                  # Broadcast benchmark parameters
                   - name: BCAST_SUBS
-                    value: "128"
+                    value: "$BCAST_SUBS"
                   - name: BCAST_PUBS
-                    value: "1"
+                    value: "$BCAST_PUBS"
                   # Broadcast thresholds (using common P95 target)
                   - name: BCAST_P95_MS
                     value: "120"
@@ -702,12 +706,12 @@ jobs:
               throughput=$(grep -o "Throughput: [0-9.]* events/sec" broadcast-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
             fi
             
-            # Use broadcast-specific parameters (from env vars)
-            subscribers="128"
-            publishers="1" 
-            duration="120"
-            eps="$BCAST_EPS"    # Single source of truth
-            warmup="5"
+            # Use broadcast-specific parameters (from env vars - single source of truth)
+            subscribers="$BCAST_SUBS"
+            publishers="$BCAST_PUBS" 
+            duration="$BCAST_DURATION"
+            eps="$BCAST_EPS"
+            warmup="$BCAST_WARMUP"
             
             # Set thresholds
             success_rate_target="90.0"
@@ -806,6 +810,11 @@ jobs:
       BROADCAST_STATUS: ${{ needs.run-broadcast-benchmark.outputs.status }}
       # Latency benchmark parameters - single source of truth
       LAT_EPS: "10"
+      LAT_MAX_CONCURRENCY: "16"
+      LAT_DURATION: "120"
+      LAT_WARMUP: "5"
+      LAT_START_FROM_LEVEL: "16"
+      LAT_STOP_AT_LEVEL: "16"
 
     steps:
       - name: Check Broadcast Benchmark Status
@@ -903,22 +912,22 @@ jobs:
                     value: "20001"
                   # Common benchmark parameters  
                   - name: COMMON_DURATION
-                    value: "120"
+                    value: "$LAT_DURATION"
                   - name: COMMON_WARMUP
-                    value: "5"
+                    value: "$LAT_WARMUP"
                   # Latency-specific parameters
                   - name: LAT_EPS
                     value: "$LAT_EPS"
                   # Common thresholds
                   - name: COMMON_P95_TARGET
                     value: "120"
-                  # Latency benchmark parameters (using common params for EPS/DURATION/WARMUP)
+                  # Latency benchmark parameters
                   - name: LAT_MAX_CONCURRENCY
-                    value: "16"
+                    value: "$LAT_MAX_CONCURRENCY"
                   - name: LAT_START_FROM_LEVEL
-                    value: "16"
+                    value: "$LAT_START_FROM_LEVEL"
                   - name: LAT_STOP_AT_LEVEL
-                    value: "16"
+                    value: "$LAT_STOP_AT_LEVEL"
                   # Latency thresholds (using common P95 target) 
                   - name: LAT_P95_MS
                     value: "120"
@@ -1099,11 +1108,11 @@ jobs:
               processed_ratio=$(grep -o "Processed Ratio: [0-9.]*%\|processed.*[0-9.]*%" latency-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
             fi
             
-            # Use latency-specific parameters (from env vars)
-            max_concurrency="16"
-            duration="120"
-            eps="$LAT_EPS"  # Single source of truth
-            warmup="5"
+            # Use latency-specific parameters (from env vars - single source of truth)
+            max_concurrency="$LAT_MAX_CONCURRENCY"
+            duration="$LAT_DURATION"
+            eps="$LAT_EPS"
+            warmup="$LAT_WARMUP"
             
             # Set thresholds
             p95_target="120"
