@@ -95,9 +95,8 @@ public class AccountController : AevatarController
         }
         catch (Exception ex)
         {
-            var clientIp = _securityService.GetRealClientIp(HttpContext);
-            _logger.LogError(ex, "Error sending registration code for email {email} from IP {clientIp}", 
-                input.Email, clientIp);
+            _logger.LogError(ex, "Error sending registration code for email {email}", 
+                input.Email);
             
             // Return localized internal server error
             throw new UserFriendlyException(
