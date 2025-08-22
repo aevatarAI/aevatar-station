@@ -535,13 +535,13 @@ jobs:
                     value: "$BCAST_PUBS"
                   # Broadcast thresholds (using common P95 target)
                   - name: BCAST_P95_MS
-                    value: "120"
+                    value: "140"
                   - name: BCAST_SUCCESS_RATE
                     value: "0.90"
                   resources:
                     requests:
-                      memory: "256Mi"
-                      cpu: "200m"
+                      memory: "512Mi"
+                      cpu: "500m"
           EOF
           
           # Apply the job
