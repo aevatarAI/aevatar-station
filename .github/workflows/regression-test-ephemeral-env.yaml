@@ -424,7 +424,7 @@ jobs:
       PROJECT_NAME: ${{ needs.setup-ephermeral-test-env.outputs.project_name }}
       # Broadcast benchmark parameters - single source of truth
       BCAST_EPS: "1"
-      BCAST_SUBS: "128"
+      BCAST_SUBS: "120"
       BCAST_PUBS: "1"
       BCAST_DURATION: "120"
       BCAST_WARMUP: "5"
