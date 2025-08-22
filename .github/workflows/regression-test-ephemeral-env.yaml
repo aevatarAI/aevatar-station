@@ -894,7 +894,7 @@ jobs:
                   - name: COMMON_WARMUP
                     value: "5"
                   - name: COMMON_EPS
-                    value: "1"
+                    value: "10"
                   # Common thresholds
                   - name: COMMON_P95_TARGET
                     value: "120"
@@ -1079,8 +1079,8 @@ jobs:
               echo "📝 JSON metrics not available, parsing from logs..."
               # Extract metrics from logs using various patterns
               success_status=$(grep -o "✅ SUCCESS\|❌ FAILED" latency-benchmark.log | tail -1 || echo "UNKNOWN")
-              p95_latency=$(grep -o "P95 Latency: [0-9.]*ms\|P95: [0-9.]*ms" latency-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
-              p99_latency=$(grep -o "P99 Latency: [0-9.]*ms\|P99: [0-9.]*ms" latency-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
+              p95_latency=$(grep -o "P95 Latency: [0-9.]*ms\|P95: [0-9.]*ms" latency-benchmark.log | tail -1 | sed 's/.*: \([0-9.]*\)ms.*/\1/' || echo "0")
+              p99_latency=$(grep -o "P99 Latency: [0-9.]*ms\|P99: [0-9.]*ms" latency-benchmark.log | tail -1 | sed 's/.*: \([0-9.]*\)ms.*/\1/' || echo "0")
               throughput=$(grep -o "Throughput: [0-9.]* events/sec\|ActualThroughput.*[0-9.]*" latency-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
               processed_ratio=$(grep -o "Processed Ratio: [0-9.]*%\|processed.*[0-9.]*%" latency-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
             fi
@@ -1088,7 +1088,7 @@ jobs:
             # Use environment variables directly instead of parsing logs
             max_concurrency="16"
             duration="120"  # Using common duration value  
-            eps="1"         # Using common EPS value
+            eps="10"        # Using common EPS value
             warmup="5"      # Using common warmup value
             
             # Set thresholds
