@@ -52,14 +52,18 @@ public class SecurityService : ISecurityService
             _logger.LogWarning("SecurityService Configuration Debug - EnableRecaptcha={EnableRecaptcha}, EnableRateLimit={EnableRateLimit}, FreeRequestsPerDay={FreeRequestsPerDay}",
                 _recaptchaOptions.Enabled, _rateOptions.Enabled, _rateOptions.FreeRequestsPerDay);
                 
-            _logger.LogWarning("SecurityService Configuration Details - SecretKey length={SecretKeyLength}",
-                _recaptchaOptions.SecretKey?.Length ?? 0);
-                
-            // Check if we might still have old configuration keys
-            if (_recaptchaOptions.Enabled == false && (_recaptchaOptions.SecretKey?.Length ?? 0) == 0)
-            {
-                _logger.LogError("SecurityService Configuration Issue - Both EnableRecaptcha=false and SecretKey is empty. Check config: Recaptcha.Enabled and Recaptcha.SecretKey");
-            }
+                    _logger.LogWarning("SecurityService Configuration Details - SecretKey length={SecretKeyLength}",
+            _recaptchaOptions.SecretKey?.Length ?? 0);
+            
+        // Log bypass platforms configuration for debugging
+        _logger.LogInformation("SecurityService BypassPlatforms Configuration: [{platforms}] (Count: {count})",
+            string.Join(", ", _recaptchaOptions.BypassPlatforms), _recaptchaOptions.BypassPlatforms.Count);
+            
+        // Check if we might still have old configuration keys
+        if (_recaptchaOptions.Enabled == false && (_recaptchaOptions.SecretKey?.Length ?? 0) == 0)
+        {
+            _logger.LogError("SecurityService Configuration Issue - Both EnableRecaptcha=false and SecretKey is empty. Check config: Recaptcha.Enabled and Recaptcha.SecretKey");
+        }
         }
     }
 
