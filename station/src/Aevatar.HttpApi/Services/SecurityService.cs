@@ -106,6 +106,61 @@ public class SecurityService : ISecurityService
 
     #endregion
 
+    #region Complete Security Verification Flow
+
+    public async Task<SecurityVerificationResult> PerformSecurityVerificationAsync(string clientIp, PlatformType platform, string? recaptchaToken, string operationName)
+    {
+        try
+        {
+            _logger.LogInformation("{operationName} security check started for IP {clientIp}, Platform: {platform}", 
+                operationName, clientIp, platform);
+
+            // Step 1: Increment request count immediately to prevent abuse
+            var currentCount = await IncrementRequestCountAsync(clientIp);
+            _logger.LogInformation("IP {clientIp} request count incremented: {count}", clientIp, currentCount);
+            
+            // Step 2: Check if security verification is required based on rate limiting and platform
+            var verificationRequired = await IsSecurityVerificationRequiredAsync(clientIp, platform);
+            
+            if (!verificationRequired)
+            {
+                _logger.LogInformation("IP {clientIp} platform {platform} - no security verification required", clientIp, platform);
+                return SecurityVerificationResult.CreateSuccess("No verification required");
+            }
+
+            _logger.LogInformation("IP {clientIp} platform {platform} security verification required", clientIp, platform);
+            
+            // Step 3: Perform security verification using reCAPTCHA
+            var verificationRequest = new SecurityVerificationRequest
+            {
+                ClientIp = clientIp,
+                RecaptchaToken = recaptchaToken
+            };
+            
+            var verificationResult = await VerifySecurityAsync(verificationRequest);
+            
+            if (!verificationResult.Success)
+            {
+                _logger.LogWarning("IP {clientIp} security verification failed: {reason}", 
+                    clientIp, verificationResult.Message);
+                return verificationResult;
+            }
+            
+            _logger.LogInformation("IP {clientIp} security verification passed using {method}", 
+                clientIp, verificationResult.VerificationMethod);
+            
+            return verificationResult;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during security verification for IP {clientIp} operation {operationName}", 
+                clientIp, operationName);
+            return SecurityVerificationResult.CreateFailure("Security verification error occurred");
+        }
+    }
+
+    #endregion
+
     #region Request Count and Rate Limiting
 
     public async Task<bool> IsSecurityVerificationRequiredAsync(string clientIp, PlatformType platform = PlatformType.Web)

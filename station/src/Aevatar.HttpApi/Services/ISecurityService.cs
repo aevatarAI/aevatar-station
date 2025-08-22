@@ -38,6 +38,16 @@ public interface ISecurityService
     /// <param name="clientIp">Client IP address</param>
     /// <returns>New count after increment</returns>
     Task<int> IncrementRequestCountAsync(string clientIp);
+
+    /// <summary>
+    /// Perform complete security verification flow including rate limiting and verification
+    /// </summary>
+    /// <param name="clientIp">Client IP address</param>
+    /// <param name="platform">Platform type</param>
+    /// <param name="recaptchaToken">reCAPTCHA token (if provided)</param>
+    /// <param name="operationName">Operation name for logging</param>
+    /// <returns>Verification result</returns>
+    Task<SecurityVerificationResult> PerformSecurityVerificationAsync(string clientIp, PlatformType platform, string? recaptchaToken, string operationName);
 }
 
 /// <summary>
