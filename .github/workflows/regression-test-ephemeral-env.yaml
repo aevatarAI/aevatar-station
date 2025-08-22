@@ -696,7 +696,7 @@ jobs:
             fi
             
             # Extract test parameters from logs
-            subscribers=$(grep -o "subscribers, [0-9]* publishers" broadcast-benchmark.log | head -1 | grep -o "^[0-9]*" || echo "128")
+            subscribers=$(grep -o "[0-9]* subscribers" broadcast-benchmark.log | head -1 | grep -o "[0-9]*" || echo "128")
             publishers=$(grep -o "[0-9]* publishers" broadcast-benchmark.log | head -1 | grep -o "[0-9]*" || echo "1")
             duration=$(grep -o "[0-9]*s duration" broadcast-benchmark.log | head -1 | grep -o "[0-9]*" || echo "120")
             
@@ -744,7 +744,6 @@ jobs:
           echo "### 📋 Execution Details" >> $GITHUB_STEP_SUMMARY
           echo "- **Job Name:** \`${{ steps.run_benchmark_job.outputs.job_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Namespace:** \`${{ steps.run_benchmark_job.outputs.namespace }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Image:** \`$BENCHMARK_IMAGE\`" >> $GITHUB_STEP_SUMMARY
 
       - name: Cleanup Broadcast Benchmark Job
         if: always()
@@ -1073,7 +1072,7 @@ jobs:
             fi
             
             # Extract test parameters from logs
-            max_concurrency=$(grep -o "max concurrency, [0-9]*s duration\|Max Concurrency: [0-9]*" latency-benchmark.log | head -1 | grep -o "[0-9]*" || echo "16")
+            max_concurrency=$(grep -o "[0-9]* max concurrency" latency-benchmark.log | head -1 | grep -o "[0-9]*" || echo "16")
             duration=$(grep -o "[0-9]*s duration" latency-benchmark.log | head -1 | grep -o "[0-9]*" || echo "120")
             
             # Set thresholds
@@ -1139,7 +1138,6 @@ jobs:
           echo "### 📋 Execution Details" >> $GITHUB_STEP_SUMMARY
           echo "- **Job Name:** \`${{ steps.run_benchmark_job.outputs.job_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Namespace:** \`${{ steps.run_benchmark_job.outputs.namespace }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Image:** \`$BENCHMARK_IMAGE\`" >> $GITHUB_STEP_SUMMARY
 
       - name: Cleanup Latency Benchmark Job
         if: always()
