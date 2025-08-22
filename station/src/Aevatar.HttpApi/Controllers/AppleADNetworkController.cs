@@ -11,6 +11,7 @@ using Aevatar.Application.Contracts.Analytics;
 using Aevatar.Dtos;
 using Aevatar.Service;
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
@@ -50,6 +51,7 @@ public class AppleADNetworkController : AevatarController
     /// </summary>
     /// <param name="request">Device mapping registration data</param>
     /// <returns>Registration result</returns>
+    [Authorize]
     [HttpPost("register-device-mapping")]
     public async Task<IActionResult> RegisterDeviceMappingAsync(DeviceMappingRegistrationDto request)
     {
