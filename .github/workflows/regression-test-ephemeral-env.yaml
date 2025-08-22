@@ -885,6 +885,10 @@ jobs:
                   # Latency benchmark parameters
                   - name: LAT_MAX_CONCURRENCY
                     value: "16"
+                  - name: LAT_START_FROM_LEVEL
+                    value: "16"
+                  - name: LAT_STOP_AT_LEVEL
+                    value: "16"
                   - name: LAT_DURATION
                     value: "120"
                   - name: LAT_WARMUP

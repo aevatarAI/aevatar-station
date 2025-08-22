@@ -166,15 +166,19 @@ main() {
             
             # Latency benchmark parameters with defaults
             LAT_MAX_CONCURRENCY=${LAT_MAX_CONCURRENCY:-"16"}
+            LAT_START_FROM_LEVEL=${LAT_START_FROM_LEVEL:-"16"}
+            LAT_STOP_AT_LEVEL=${LAT_STOP_AT_LEVEL:-"16"}
             LAT_DURATION=${LAT_DURATION:-"120"}
             LAT_WARMUP=${LAT_WARMUP:-"5"}
             LAT_EPS=${LAT_EPS:-"1"}
             
-            echo "  Parameters: ${LAT_MAX_CONCURRENCY} max concurrency, ${LAT_DURATION}s duration"
+            echo "  Parameters: ${LAT_MAX_CONCURRENCY} max concurrency (testing level ${LAT_START_FROM_LEVEL}-${LAT_STOP_AT_LEVEL}), ${LAT_DURATION}s duration"
             
                     # Run latency benchmark
         dotnet /app/LatencyBenchmark/LatencyBenchmark.dll \
                 --max-concurrency ${LAT_MAX_CONCURRENCY} \
+                --start-from-level ${LAT_START_FROM_LEVEL} \
+                --stop-at-level ${LAT_STOP_AT_LEVEL} \
                 --events-per-second ${LAT_EPS} \
                 --duration ${LAT_DURATION} \
                 --warmup-duration ${LAT_WARMUP} \
