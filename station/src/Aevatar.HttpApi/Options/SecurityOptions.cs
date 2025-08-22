@@ -18,7 +18,7 @@ public class RecaptchaOptions
     /// Web platform always requires verification when rate limit exceeded
     /// If empty, all platforms require verification
     /// </summary>
-    public List<string> BypassPlatforms { get; set; } = new() { "iOS", "Android" };
+    public List<string> BypassPlatforms { get; set; } = new();
 }
 
 
