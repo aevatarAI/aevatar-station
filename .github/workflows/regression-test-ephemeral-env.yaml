@@ -518,18 +518,15 @@ jobs:
                     value: "5"
                   - name: COMMON_EPS
                     value: "1"
-                  # Broadcast benchmark parameters
+                  # Common thresholds
+                  - name: COMMON_P95_TARGET
+                    value: "120"
+                  # Broadcast benchmark parameters (using common params for EPS/DURATION/WARMUP)
                   - name: BCAST_SUBS
                     value: "128"
                   - name: BCAST_PUBS
                     value: "1"
-                  - name: BCAST_EPS
-                    value: "1"
-                  - name: BCAST_DURATION
-                    value: "120"
-                  - name: BCAST_WARMUP
-                    value: "5"
-                  # Broadcast thresholds
+                  # Broadcast thresholds (using common P95 target)
                   - name: BCAST_P95_MS
                     value: "120"
                   - name: BCAST_SUCCESS_RATE
@@ -898,20 +895,17 @@ jobs:
                     value: "5"
                   - name: COMMON_EPS
                     value: "1"
-                  # Latency benchmark parameters
+                  # Common thresholds
+                  - name: COMMON_P95_TARGET
+                    value: "120"
+                  # Latency benchmark parameters (using common params for EPS/DURATION/WARMUP)
                   - name: LAT_MAX_CONCURRENCY
                     value: "16"
                   - name: LAT_START_FROM_LEVEL
                     value: "16"
                   - name: LAT_STOP_AT_LEVEL
                     value: "16"
-                  - name: LAT_DURATION
-                    value: "120"
-                  - name: LAT_WARMUP
-                    value: "5"
-                  - name: LAT_EPS
-                    value: "1"
-                  # Latency thresholds
+                  # Latency thresholds (using common P95 target) 
                   - name: LAT_P95_MS
                     value: "120"
                   - name: LAT_P99_MS
