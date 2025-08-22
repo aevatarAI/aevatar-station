@@ -422,6 +422,8 @@ jobs:
       CLIENT_ID: ${{ needs.setup-ephermeral-test-env.outputs.client_id }}
       CLIENT_SECRET: ${{ needs.setup-ephermeral-test-env.outputs.client_secret }}
       PROJECT_NAME: ${{ needs.setup-ephermeral-test-env.outputs.project_name }}
+      # Broadcast benchmark parameters - single source of truth
+      BCAST_EPS: "1"
 
     steps:
       - name: Checkout code
@@ -518,7 +520,7 @@ jobs:
                     value: "5"
                   # Broadcast-specific parameters  
                   - name: BCAST_EPS
-                    value: "1"
+                    value: "$BCAST_EPS"
                   # Common thresholds
                   - name: COMMON_P95_TARGET
                     value: "120"
@@ -700,11 +702,11 @@ jobs:
               throughput=$(grep -o "Throughput: [0-9.]* events/sec" broadcast-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
             fi
             
-            # Use broadcast-specific parameters
+            # Use broadcast-specific parameters (from env vars)
             subscribers="128"
             publishers="1" 
             duration="120"
-            eps="1"    # From BCAST_EPS
+            eps="$BCAST_EPS"    # Single source of truth
             warmup="5"
             
             # Set thresholds
@@ -802,6 +804,8 @@ jobs:
       CLIENT_SECRET: ${{ needs.setup-ephermeral-test-env.outputs.client_secret }}
       PROJECT_NAME: ${{ needs.setup-ephermeral-test-env.outputs.project_name }}
       BROADCAST_STATUS: ${{ needs.run-broadcast-benchmark.outputs.status }}
+      # Latency benchmark parameters - single source of truth
+      LAT_EPS: "10"
 
     steps:
       - name: Check Broadcast Benchmark Status
@@ -904,7 +908,7 @@ jobs:
                     value: "5"
                   # Latency-specific parameters
                   - name: LAT_EPS
-                    value: "10"
+                    value: "$LAT_EPS"
                   # Common thresholds
                   - name: COMMON_P95_TARGET
                     value: "120"
@@ -1095,10 +1099,10 @@ jobs:
               processed_ratio=$(grep -o "Processed Ratio: [0-9.]*%\|processed.*[0-9.]*%" latency-benchmark.log | tail -1 | grep -o "[0-9.]*" || echo "0")
             fi
             
-            # Use environment variables directly from COMMON_EPS in job
+            # Use latency-specific parameters (from env vars)
             max_concurrency="16"
             duration="120"
-            eps="10"  # From COMMON_EPS env var
+            eps="$LAT_EPS"  # Single source of truth
             warmup="5"
             
             # Set thresholds
