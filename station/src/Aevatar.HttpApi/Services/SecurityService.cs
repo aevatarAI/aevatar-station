@@ -289,9 +289,10 @@ public class SecurityService : ISecurityService
 
     private string GetCacheKey(string clientIp)
     {
-        // Generate cache key based on daily windows
+        // Generate cache key based on 10-minute windows (for testing)
         var now = DateTime.UtcNow;
-        var dateKey = now.ToString("yyyyMMdd");
+        var tenMinuteWindow = new DateTime(now.Year, now.Month, now.Day, now.Hour, (now.Minute / 10) * 10, 0);
+        var dateKey = tenMinuteWindow.ToString("yyyyMMddHHmm");
         var cacheKey = $"SendRegCode:{clientIp}:{dateKey}";
         
         return cacheKey;
@@ -299,10 +300,11 @@ public class SecurityService : ISecurityService
 
     private DateTimeOffset GetExpiryTime()
     {
-        // Set expiry to end of current day (24-hour window)
+        // Set expiry to end of current 10-minute window (for testing)
         var now = DateTime.UtcNow;
-        var dayEnd = new DateTime(now.Year, now.Month, now.Day, 23, 59, 59).AddSeconds(1);
-        return new DateTimeOffset(dayEnd);
+        var tenMinuteWindow = new DateTime(now.Year, now.Month, now.Day, now.Hour, (now.Minute / 10) * 10, 0);
+        var windowEnd = tenMinuteWindow.AddMinutes(10);
+        return new DateTimeOffset(windowEnd);
     }
 
     #endregion
