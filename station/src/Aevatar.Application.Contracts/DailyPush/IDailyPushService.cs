@@ -1,0 +1,54 @@
+using System;
+using System.Threading.Tasks;
+
+namespace Aevatar.Application.Contracts.DailyPush;
+
+/// <summary>
+/// Service interface for daily push notification operations
+/// </summary>
+public interface IDailyPushService
+{
+    /// <summary>
+    /// Register or update device for daily push notifications
+    /// </summary>
+    /// <param name="userId">User ID</param>
+    /// <param name="request">Device registration request</param>
+    /// <returns>True if this is a new device registration, false if update</returns>
+    Task<bool> RegisterOrUpdateDeviceAsync(Guid userId, DeviceRequest request);
+    
+    /// <summary>
+    /// Mark daily push as read for specific device
+    /// </summary>
+    /// <param name="userId">User ID</param>
+    /// <param name="pushToken">Push token to identify device</param>
+    Task MarkPushAsReadAsync(Guid userId, string pushToken);
+    
+    /// <summary>
+    /// Get device status by device ID
+    /// </summary>
+    /// <param name="userId">User ID</param>
+    /// <param name="deviceId">Device ID</param>
+    /// <returns>Device status or null if not found</returns>
+    Task<DeviceStatusResponse?> GetDeviceStatusAsync(Guid userId, string deviceId);
+    
+    // Test mode methods - TODO: Remove before production
+    
+    /// <summary>
+    /// Start test mode for rapid push testing in specified timezone
+    /// </summary>
+    /// <param name="timezone">Timezone identifier (e.g., "Asia/Shanghai")</param>
+    Task StartTestModeAsync(string timezone);
+    
+    /// <summary>
+    /// Stop test mode and cleanup test reminders for specified timezone
+    /// </summary>
+    /// <param name="timezone">Timezone identifier (e.g., "Asia/Shanghai")</param>
+    Task StopTestModeAsync(string timezone);
+    
+    /// <summary>
+    /// Get test mode status for specified timezone
+    /// </summary>
+    /// <param name="timezone">Timezone identifier (e.g., "Asia/Shanghai")</param>
+    /// <returns>Test mode status information</returns>
+    Task<(bool IsActive, DateTime StartTime, int RoundsCompleted, int MaxRounds)> GetTestStatusAsync(string timezone);
+}
