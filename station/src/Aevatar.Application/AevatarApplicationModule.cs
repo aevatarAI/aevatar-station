@@ -16,6 +16,7 @@ using Aevatar.Profiles;
 using Aevatar.Schema;
 using Aevatar.Service;
 using Aevatar.WebHook.Deploy;
+using Aevatar.Application.Contracts.DailyPush;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans;
 using Volo.Abp.Account;
@@ -84,6 +85,9 @@ public class AevatarApplicationModule : AbpModule
         Configure<GoogleAnalyticsOptions>(configuration.GetSection("GoogleAnalytics"));
         Configure<FirebaseAnalyticsOptions>(configuration.GetSection("FirebaseAnalytics"));
         context.Services.AddSingleton<IIpLocationService, IpLocationService>();
+        
+        // Daily Push Service
+        context.Services.AddTransient<IDailyPushService, Service.DailyPushService>();
 
     }
 }
