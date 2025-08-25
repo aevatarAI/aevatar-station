@@ -6,27 +6,24 @@ using Microsoft.Extensions.Logging;
 using Orleans;
 using Volo.Abp.Application.Services;
 
+namespace Aevatar.Application.Service;
+
 // TODO: Remove these temporary interfaces once godgpt NuGet package is updated
-namespace Aevatar.Application.Service
+// Temporary interface placeholder for new GAgent methods
+public interface IChatManagerGAgentExtensions : IChatManagerGAgent
 {
-    // Temporary interface placeholder for new GAgent methods
-    public interface IChatManagerGAgentExtensions : IChatManagerGAgent
-    {
-        Task<bool> RegisterOrUpdateDeviceAsync(string deviceId, string pushToken, string timeZoneId, bool? pushEnabled, string pushLanguage);
-        Task MarkPushAsReadAsync(string pushToken);
-        Task<dynamic> GetDeviceStatusAsync(string deviceId);
-    }
-    
-    // Temporary interface placeholder for TimezoneSchedulerGAgent
-    public interface ITimezoneSchedulerGAgent : IGrainWithStringKey
-    {
-        Task StartTestModeAsync();
-        Task StopTestModeAsync();
-        Task<(bool IsActive, DateTime StartTime, int RoundsCompleted, int MaxRounds)> GetTestStatusAsync();
-    }
+    Task<bool> RegisterOrUpdateDeviceAsync(string deviceId, string pushToken, string timeZoneId, bool? pushEnabled, string pushLanguage);
+    Task MarkPushAsReadAsync(string pushToken);
+    Task<dynamic> GetDeviceStatusAsync(string deviceId);
 }
 
-namespace Aevatar.Application.Service;
+// Temporary interface placeholder for TimezoneSchedulerGAgent
+public interface ITimezoneSchedulerGAgent : IGrainWithStringKey
+{
+    Task StartTestModeAsync();
+    Task StopTestModeAsync();
+    Task<(bool IsActive, DateTime StartTime, int RoundsCompleted, int MaxRounds)> GetTestStatusAsync();
+}
 
 /// <summary>
 /// Service for daily push notification operations
