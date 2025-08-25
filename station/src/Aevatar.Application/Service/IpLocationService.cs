@@ -50,10 +50,10 @@ public class IpLocationService : IIpLocationService
     /// <summary>
     /// check IP belong china mainland
     /// </summary>
-    public async Task<bool> IsIpInMainlandChinaAsync(string ipAddress)
+    public Task<bool> IsIpInMainlandChinaAsync(string ipAddress)
     {
-        return true;
-        /*return Task.Run(() =>
+       // return true;
+        return Task.Run(() =>
         {
             try
             {
@@ -95,7 +95,7 @@ public class IpLocationService : IIpLocationService
                 _logger.LogError(ex, "Error checking if IP {IpAddress} is in mainland China", ipAddress);
                 return false;
             }
-        });*/
+        });
     }
 
     /// <summary>
