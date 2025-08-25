@@ -42,12 +42,12 @@ public class ProjectController : AevatarController
         await _permissionChecker.AuthenticateAsync(id, AevatarPermissions.Projects.Default);
         return await _projectService.GetProjectAsync(id);
     }
-    
+
     [HttpPost]
-    public async Task<ProjectDto> CreateProjectAsync(CreateProjectDto input)
+    public async Task<ProjectDto> CreateAsync(CreateProjectDto input)
     {
         await _permissionChecker.AuthenticateAsync(input.OrganizationId, AevatarPermissions.Projects.Create);
-        return await _projectService.CreateProjectAsync(input);
+        return await _projectService.CreateAsync(input);
     }
 
     [HttpPut]
