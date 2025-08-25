@@ -61,24 +61,26 @@ public class DailyPushService : ApplicationService, IDailyPushService
             
             if (existingDevice != null)
             {
-                // Handle language comparison - existingDevice.PushLanguage might be stored as different types
-                var existingLanguageEnum = existingDevice.PushLanguage;
-                languageChanged = !existingLanguageEnum.Equals(languageEnum);
+                // Convert enum to string for comparison with stored string value
+                var newLanguageString = ConvertGodGPTLanguageToString(languageEnum);
+                var existingLanguageString = existingDevice.PushLanguage;
+                languageChanged = !string.Equals(existingLanguageString, newLanguageString, StringComparison.OrdinalIgnoreCase);
                 
                 if (languageChanged)
                 {
                     _logger.LogInformation("Language changed for device {DeviceId} (User: {UserId}): {OldLanguage} → {NewLanguage}", 
-                        request.DeviceId, userId, existingLanguageEnum, languageEnum);
+                        request.DeviceId, userId, existingLanguageString, newLanguageString);
                 }
             }
             
-            // Call GAgent with basic types - no DTO conversion needed
+            // Call GAgent with basic types - convert enum to string
+            var languageString = ConvertGodGPTLanguageToString(languageEnum);
             var isNewRegistration = await chatManagerGAgent.RegisterOrUpdateDeviceAsync(
                 request.DeviceId,
                 request.PushToken,
                 request.TimeZoneId,
                 request.PushEnabled,
-                languageEnum.ToString().ToLowerInvariant()
+                languageString
             );
             
             _logger.LogInformation("Device {DeviceId} registered/updated for user {UserId}, isNew: {IsNew}, languageChanged: {LanguageChanged}", 
@@ -225,6 +227,18 @@ public class DailyPushService : ApplicationService, IDailyPushService
             Domain.Shared.GodGPTChatLanguage.Spanish => GodGPTLanguage.Spanish,
             Domain.Shared.GodGPTChatLanguage.CN => GodGPTLanguage.CN,
             _ => GodGPTLanguage.English
+        };
+    }
+    
+    private static string ConvertGodGPTLanguageToString(GodGPTLanguage language)
+    {
+        return language switch
+        {
+            GodGPTLanguage.TraditionalChinese => "zh",
+            GodGPTLanguage.CN => "zh_sc",
+            GodGPTLanguage.Spanish => "es",
+            GodGPTLanguage.English => "en",
+            _ => "en"
         };
     }
 }
