@@ -35,13 +35,8 @@ public class DailyPushController : AbpControllerBase
         var userId = (Guid)CurrentUser.Id!;
         var language = HttpContext.GetGodGPTLanguage();
         
-        // Use language from HTTP context if request doesn't specify one
-        if (string.IsNullOrEmpty(request.PushLanguage))
-        {
-            request.PushLanguage = language.ToString();
-        }
-        
-        var isNewRegistration = await _dailyPushService.RegisterOrUpdateDeviceAsync(userId, request);
+        // Always use language from HTTP header, following system convention
+        var isNewRegistration = await _dailyPushService.RegisterOrUpdateDeviceAsync(userId, request, language);
         
         _logger.LogInformation("Device {DeviceId} registered/updated for user {UserId}", 
             request.DeviceId, userId);

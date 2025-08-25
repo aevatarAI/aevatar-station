@@ -34,9 +34,5 @@ public class DeviceRequest
     /// </summary>
     public bool PushEnabled { get; set; } = true;
     
-    /// <summary>
-    /// Preferred language for push notifications (e.g., "en", "zh-CN")
-    /// </summary>
-    [StringLength(8, MinimumLength = 2)]
-    public string PushLanguage { get; set; } = "en";
+
 }

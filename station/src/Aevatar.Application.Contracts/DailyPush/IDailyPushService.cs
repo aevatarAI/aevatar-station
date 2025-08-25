@@ -13,8 +13,9 @@ public interface IDailyPushService
     /// </summary>
     /// <param name="userId">User ID</param>
     /// <param name="request">Device registration request</param>
+    /// <param name="language">Language from HTTP context</param>
     /// <returns>True if this is a new device registration, false if update</returns>
-    Task<bool> RegisterOrUpdateDeviceAsync(Guid userId, DeviceRequest request);
+    Task<bool> RegisterOrUpdateDeviceAsync(Guid userId, DeviceRequest request, Domain.Shared.GodGPTChatLanguage language);
     
     /// <summary>
     /// Mark daily push as read for specific device
