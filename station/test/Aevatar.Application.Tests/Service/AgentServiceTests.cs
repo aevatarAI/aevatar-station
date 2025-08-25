@@ -224,7 +224,7 @@ public abstract class AgentServiceTests<TStartupModule> : AevatarApplicationTest
         var updateInput = new UpdateAgentInputDto
         {
             Name = "Updated Test Agent",
-            Properties = new Dictionary<string, object> { { "testKey", "testValue" } }
+            Properties = new Dictionary<string, object> { { "Name", "Updated Configuration Name" } }
         };
 
         var updatedAgent = await _agentService.UpdateAgentAsync(createdAgent.Id, updateInput);
