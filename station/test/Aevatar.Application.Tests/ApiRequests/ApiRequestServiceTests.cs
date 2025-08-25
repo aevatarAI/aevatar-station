@@ -53,16 +53,18 @@ public abstract class ApiRequestServiceTests<TStartupModule> : AevatarApplicatio
         var createProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
-            DisplayName = "Test Project1"
+            DisplayName = "Test Project1",
+            DomainName = "App"
         };
-        var project1 = await _projectService.CreateProjectAsync(createProjectInput);
+        var project1 = await _projectService.CreateAsync(createProjectInput);
         
         var createProjectInput2 = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
-            DisplayName = "Test Project2"
+            DisplayName = "Test Project2",
+            DomainName = "App2"
         };
-        var project2 = await _projectService.CreateProjectAsync(createProjectInput2);
+        var project2 = await _projectService.CreateAsync(createProjectInput2);
 
         await _projectAppIdService.CreateAsync(project1.Id, "TestKey1", _currentUser.Id);
         var apps = await _projectAppIdService.GetApiKeysAsync(project1.Id);

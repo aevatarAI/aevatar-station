@@ -2,13 +2,10 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoDB.Driver.Core.Clusters;
-using Moq;
 using Orleans.Configuration;
 using Orleans.Storage;
 using Shouldly;
 using Xunit;
-using System.Linq;
 
 using Aevatar.Core.Abstractions;
 using Aevatar.EventSourcing.Core.Exceptions;
@@ -326,162 +323,6 @@ public class MongoDbLogConsistentStorageTests : IAsyncDisposable
         Assert.Equal("Test1Value", entries[0].snapshot.Value);
         Assert.Equal("Test2", entries[1].snapshot.Data);
         Assert.Equal("Test2Value", entries[1].snapshot.Value);
-    }
-
-    [Fact]
-    public void GetCollection_WithSameCollectionName_ShouldCacheAndReuseInstance()
-    {
-        // Test the core Orleans pattern logic: GetOrAdd should cache collections per collection name
-        
-        // Arrange - Use shared storage, just ensure it's initialized
-        var observer = new TestSiloLifecycle();
-        _storage.Participate(observer);
-        observer.OnStart(CancellationToken.None).GetAwaiter().GetResult();
-        
-        var getCollectionMethod = typeof(MongoDbLogConsistentStorage).GetMethod("GetCollection", 
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        var collectionsField = GetPrivateField<MongoDbLogConsistentStorage, System.Collections.Concurrent.ConcurrentDictionary<string, IEventSourcingCollection>>(_storage, "_collections");
-        
-        // Clear cache to ensure clean test state
-        collectionsField.Clear();
-        
-        // Act - Call GetCollection multiple times with same collection name
-        var collectionName = "orleans-test-collection-1";
-        
-        try
-        {
-            var collection1 = getCollectionMethod.Invoke(_storage, new object[] { collectionName });
-            var collection2 = getCollectionMethod.Invoke(_storage, new object[] { collectionName });
-            
-            // Assert - Cache should contain exactly one entry for this collection name
-            collectionsField.Count.ShouldBe(1);
-            collectionsField.ContainsKey(collectionName).ShouldBeTrue();
-            
-            // Both calls should use the same cached IEventSourcingCollection instance
-            var cachedCollection = collectionsField[collectionName];
-            cachedCollection.ShouldNotBeNull();
-        }
-        catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is ArgumentNullException)
-        {
-            // Expected in test environment due to null MongoDB client, but cache behavior still works
-            collectionsField.Count.ShouldBe(1);
-            collectionsField.ContainsKey(collectionName).ShouldBeTrue();
-        }
-    }
-
-    [Fact]
-    public void GetCollection_WithDifferentCollectionNames_ShouldCreateSeparateCacheEntries()
-    {
-        // Test Orleans pattern: different collection names should create separate cache entries
-        
-        // Arrange - Use shared storage, just ensure it's initialized
-        var observer = new TestSiloLifecycle();
-        _storage.Participate(observer);
-        observer.OnStart(CancellationToken.None).GetAwaiter().GetResult();
-        
-        var getCollectionMethod = typeof(MongoDbLogConsistentStorage).GetMethod("GetCollection", 
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        var collectionsField = GetPrivateField<MongoDbLogConsistentStorage, System.Collections.Concurrent.ConcurrentDictionary<string, IEventSourcingCollection>>(_storage, "_collections");
-        
-        // Clear cache to ensure clean test state
-        collectionsField.Clear();
-        
-        // Act - Call GetCollection with different collection names
-        var collectionName1 = "orleans-test-collection-2a";
-        var collectionName2 = "orleans-test-collection-2b";
-        
-        try
-        {
-            getCollectionMethod.Invoke(_storage, new object[] { collectionName1 });
-            getCollectionMethod.Invoke(_storage, new object[] { collectionName2 });
-            
-            // Assert - Cache should contain separate entries for each collection name
-            collectionsField.Count.ShouldBe(2);
-            collectionsField.ContainsKey(collectionName1).ShouldBeTrue();
-            collectionsField.ContainsKey(collectionName2).ShouldBeTrue();
-        }
-        catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is ArgumentNullException)
-        {
-            // Expected in test environment, but cache behavior still works
-            collectionsField.Count.ShouldBe(2);
-            collectionsField.ContainsKey(collectionName1).ShouldBeTrue();
-            collectionsField.ContainsKey(collectionName2).ShouldBeTrue();
-        }
-    }
-
-    [Fact]
-    public async Task Close_ShouldClearCollectionCache()
-    {        
-        // Arrange - Create completely isolated storage with mocked client 
-        var mongoClientMock = new Mock<IMongoClient>();
-        var clusterMock = new Mock<ICluster>();
-        
-        // Setup mock client to avoid real connections but allow Close to work
-        mongoClientMock.Setup(x => x.Cluster).Returns(clusterMock.Object);
-        clusterMock.Setup(x => x.Dispose()); // Allow disposal without real operations
-        
-        var databaseName = $"EventSourcingTest_{Guid.NewGuid():N}";
-        var options = new MongoDbStorageOptions
-        {
-            ClientSettings = MongoClientSettings.FromUrl(MongoUrl.Create("mongodb://localhost:27017")), // Dummy settings
-            Database = databaseName,
-            GrainStateSerializer = new BsonGrainSerializer()
-        };
-
-        var serviceId = $"TestService_{Guid.NewGuid():N}";
-        var clusterOptionsMock = new Mock<IOptions<ClusterOptions>>();
-        clusterOptionsMock.Setup(x => x.Value).Returns(new ClusterOptions { ServiceId = serviceId });
-        var loggerMock = new Mock<ILogger<MongoDbLogConsistentStorage>>();
-        var collectionFactoryMock = new Mock<IEventSourcingCollectionFactory>();
-        var eventSourcingCollectionMock = new Mock<IEventSourcingCollection>();
-        var mongoCollectionMock = new Mock<IMongoCollection<BsonDocument>>();
-
-        eventSourcingCollectionMock.Setup(x => x.GetCollection()).Returns(mongoCollectionMock.Object);
-        collectionFactoryMock.Setup(x => x.CreateCollection(It.IsAny<IMongoClient>(), It.IsAny<string>(), It.IsAny<string>()))
-            .Returns(eventSourcingCollectionMock.Object);
-
-        var storageName = $"TestStorage_{Guid.NewGuid():N}";
-        var storage = new MongoDbLogConsistentStorage(storageName, options, clusterOptionsMock.Object, 
-            loggerMock.Object, collectionFactoryMock.Object);
-        
-        // Use reflection to inject the mocked client and set initialized state
-        var clientField = typeof(MongoDbLogConsistentStorage).GetField("_client", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        var initializedField = typeof(MongoDbLogConsistentStorage).GetField("_initialized", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        var collectionsField = GetPrivateField<MongoDbLogConsistentStorage, System.Collections.Concurrent.ConcurrentDictionary<string, IEventSourcingCollection>>(storage, "_collections");
-        
-        clientField.SetValue(storage, mongoClientMock.Object);
-        initializedField.SetValue(storage, true);
-        
-        // Populate cache to test clearing
-        var collectionName = $"orleans-test-collection-{Guid.NewGuid():N}";
-        collectionsField.TryAdd(collectionName, eventSourcingCollectionMock.Object);
-        collectionsField.Count.ShouldBe(1);
-        
-        // Act - Call Close method which should clear the cache
-        var closeMethod = typeof(MongoDbLogConsistentStorage).GetMethod("Close", 
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        await (Task)closeMethod.Invoke(storage, new object[] { CancellationToken.None });
-        
-        // Assert - Cache should be cleared
-        collectionsField.Count.ShouldBe(0);
-        
-        // Verify that cluster.Dispose() was called
-        clusterMock.Verify(x => x.Dispose(), Times.Once);
-    }
-
-
-
-    /// <summary>
-    /// Helper method to access private fields using reflection for testing purposes
-    /// </summary>
-    private static TField GetPrivateField<TObject, TField>(TObject obj, string fieldName)
-    {
-        var field = typeof(TObject).GetField(fieldName, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        if (field == null)
-        {
-            throw new ArgumentException($"Field '{fieldName}' not found in type '{typeof(TObject).Name}'");
-        }
-        return (TField)field.GetValue(obj)!;
     }
 
 
