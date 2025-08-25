@@ -306,33 +306,4 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
                 "System validation error");
         }
     }
-
-    public async Task<string?> GetConfigurationSchemaAsync(string gAgentNamespace)
-    {
-        try
-        {
-            _logger.LogDebug("Getting configuration schema for GAgent: {GAgentNamespace}", gAgentNamespace);
-            
-            // Find configuration type by GAgent namespace
-            var configType = FindConfigTypeByAgentNamespace(gAgentNamespace);
-            if (configType == null)
-            {
-                _logger.LogWarning("No configuration type found for GAgent: {GAgentNamespace}", gAgentNamespace);
-                return null;
-            }
-
-            // Get JSON Schema using SchemaProvider
-            var schema = _schemaProvider.GetTypeSchema(configType);
-            
-            _logger.LogDebug("Generated schema for configuration type {ConfigType}", configType.Name);
-            
-            // Return schema as JSON string
-            return schema.ToJson();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting configuration schema for GAgent: {GAgentNamespace}", gAgentNamespace);
-            return null;
-        }
-    }
 }
