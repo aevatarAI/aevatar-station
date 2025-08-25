@@ -349,11 +349,6 @@ public class DeveloperServiceUnitTests
         {
             return Task.CompletedTask;
         }
-
-        public Task CopyDeploymentWithPatternAsync(string clientId, string sourceVersion, string targetVersion, string siloNamePattern)
-        {
-            return Task.CompletedTask;
-        }
     }
 
     #region UpdateDockerImageAsync Tests
@@ -1003,115 +998,6 @@ public class DeveloperServiceUnitTests
         
         // Verify that destroy was not called due to exception
         mockHostDeployManager.Verify(x => x.DestroyApplicationAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-    }
-
-    [Fact]
-    public void DeveloperService_Should_Have_CopyDeploymentWithPatternAsync_Method()
-    {
-        // Arrange & Act
-        var methodInfo = typeof(IDeveloperService).GetMethod("CopyDeploymentWithPatternAsync");
-
-        // Assert
-        methodInfo.ShouldNotBeNull();
-        methodInfo.ReturnType.ShouldBe(typeof(Task));
-        
-        var parameters = methodInfo.GetParameters();
-        parameters.Length.ShouldBe(4);
-        parameters[0].Name.ShouldBe("clientId");
-        parameters[0].ParameterType.ShouldBe(typeof(string));
-        parameters[1].Name.ShouldBe("sourceVersion");
-        parameters[1].ParameterType.ShouldBe(typeof(string));
-        parameters[2].Name.ShouldBe("targetVersion");
-        parameters[2].ParameterType.ShouldBe(typeof(string));
-        parameters[3].Name.ShouldBe("siloNamePattern");
-        parameters[3].ParameterType.ShouldBe(typeof(string));
-    }
-
-    [Fact]
-    public void IHostCopyManager_Should_Have_CopyDeploymentWithPatternAsync_Method()
-    {
-        // Arrange & Act
-        var methodInfo = typeof(IHostCopyManager).GetMethod("CopyDeploymentWithPatternAsync");
-
-        // Assert
-        methodInfo.ShouldNotBeNull();
-        methodInfo.ReturnType.ShouldBe(typeof(Task));
-        
-        var parameters = methodInfo.GetParameters();
-        parameters.Length.ShouldBe(4);
-        parameters[0].Name.ShouldBe("clientId");
-        parameters[0].ParameterType.ShouldBe(typeof(string));
-        parameters[1].Name.ShouldBe("sourceVersion");
-        parameters[1].ParameterType.ShouldBe(typeof(string));
-        parameters[2].Name.ShouldBe("targetVersion");
-        parameters[2].ParameterType.ShouldBe(typeof(string));
-        parameters[3].Name.ShouldBe("siloNamePattern");
-        parameters[3].ParameterType.ShouldBe(typeof(string));
-    }
-
-    [Fact]
-    public async Task DeveloperService_CopyDeploymentWithPatternAsync_Should_Call_CopyManager()
-    {
-        // Arrange
-        var mockHostDeployManager = new Mock<IHostDeployManager>();
-        var mockHostCopyManager = new Mock<IHostCopyManager>();
-        
-        var clientId = "testclient";
-        var sourceVersion = "1";
-        var targetVersion = "2";
-        var siloNamePattern = "User";
-        
-        // Setup mock to track method calls
-        mockHostCopyManager
-            .Setup(x => x.CopyDeploymentWithPatternAsync(clientId, sourceVersion, targetVersion, siloNamePattern))
-            .Returns(Task.CompletedTask);
-        
-        var mockLogger = new Mock<ILogger<DeveloperService>>();
-        var mockProjectCorsOriginService = new Mock<IProjectCorsOriginService>();
-        var mockConfiguration = new Mock<IConfiguration>();
-        var mockKubernetesClientAdapter = new Mock<IKubernetesClientAdapter>();
-        
-        var service = new DeveloperService(mockHostDeployManager.Object, mockKubernetesClientAdapter.Object, 
-            mockLogger.Object, mockProjectCorsOriginService.Object, mockConfiguration.Object, mockHostCopyManager.Object);
-
-        // Act
-        await service.CopyDeploymentWithPatternAsync(clientId, sourceVersion, targetVersion, siloNamePattern);
-        
-        // Assert
-        mockHostCopyManager.Verify(x => x.CopyDeploymentWithPatternAsync(clientId, sourceVersion, targetVersion, siloNamePattern), Times.Once);
-    }
-
-    [Fact]
-    public async Task DeveloperService_CopyDeploymentWithPatternAsync_Should_Handle_Exception()
-    {
-        // Arrange
-        var mockHostDeployManager = new Mock<IHostDeployManager>();
-        var mockHostCopyManager = new Mock<IHostCopyManager>();
-        
-        var clientId = "testclient";
-        var sourceVersion = "1";
-        var targetVersion = "2";
-        var siloNamePattern = "User";
-        
-        // Setup mock to throw exception
-        mockHostCopyManager
-            .Setup(x => x.CopyDeploymentWithPatternAsync(clientId, sourceVersion, targetVersion, siloNamePattern))
-            .ThrowsAsync(new InvalidOperationException("Source deployment not found"));
-        
-        var mockLogger = new Mock<ILogger<DeveloperService>>();
-        var mockProjectCorsOriginService = new Mock<IProjectCorsOriginService>();
-        var mockConfiguration = new Mock<IConfiguration>();
-        var mockKubernetesClientAdapter = new Mock<IKubernetesClientAdapter>();
-        
-        var service = new DeveloperService(mockHostDeployManager.Object, mockKubernetesClientAdapter.Object, 
-            mockLogger.Object, mockProjectCorsOriginService.Object, mockConfiguration.Object, mockHostCopyManager.Object);
-
-        // Act & Assert
-        var exception = await Should.ThrowAsync<InvalidOperationException>(() => 
-            service.CopyDeploymentWithPatternAsync(clientId, sourceVersion, targetVersion, siloNamePattern));
-        
-        exception.Message.ShouldBe("Source deployment not found");
-        mockHostCopyManager.Verify(x => x.CopyDeploymentWithPatternAsync(clientId, sourceVersion, targetVersion, siloNamePattern), Times.Once);
     }
 
     [Fact]
