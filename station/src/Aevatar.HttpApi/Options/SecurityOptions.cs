@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Aevatar.Options;
 
 /// <summary>
@@ -10,34 +12,18 @@ public class RecaptchaOptions
     public bool Enabled { get; set; } = false;
     public string SecretKey { get; set; } = "";
     public string VerifyUrl { get; set; } = "https://www.google.com/recaptcha/api/siteverify";
+    
+    /// <summary>
+    /// Platforms that should bypass human verification (e.g., "iOS", "Android")
+    /// Web platform always requires verification when rate limit exceeded
+    /// If empty, all platforms require verification
+    /// </summary>
+    public List<string> BypassPlatforms { get; set; } = new();
 }
 
-/// <summary>
-/// Apple DeviceCheck configuration options - 2-level configuration  
-/// </summary>
-public class AppleDeviceCheckOptions
-{
-    public const string SectionName = "AppleDeviceCheck";
-    
-    public bool Enabled { get; set; } = false;
-    public string TeamId { get; set; } = "";
-    public string KeyId { get; set; } = "";
-    public string PrivateKey { get; set; } = "";
-    public string ApiUrl { get; set; } = "https://api.devicecheck.apple.com/v1/validate_device_token";
-}
 
-/// <summary>
-/// Google Play Integrity configuration options - 2-level configuration
-/// </summary>
-public class PlayIntegrityOptions
-{
-    public const string SectionName = "PlayIntegrity";
-    
-    public bool Enabled { get; set; } = false;
-    public string ProjectId { get; set; } = "";
-    public string ServiceAccountKey { get; set; } = "";
-    public string ApiUrl { get; set; } = "https://playintegrity.googleapis.com/v1";
-}
+
+
 
 /// <summary>
 /// Rate limiting configuration options - 2-level configuration
@@ -47,7 +33,14 @@ public class RateOptions
     public const string SectionName = "RateLimit";
     
     public bool Enabled { get; set; } = true;
+    
+    /// <summary>
+    /// Number of free requests allowed per day before requiring verification.
+    /// For example: if set to 5, requests 1-5 are free, request 6+ require verification.
+    /// </summary>
     public int FreeRequestsPerDay { get; set; } = 5;
 }
+
+
 
 
