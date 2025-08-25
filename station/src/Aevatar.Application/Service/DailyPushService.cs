@@ -2,28 +2,17 @@ using System;
 using System.Threading.Tasks;
 using Aevatar.Application.Contracts.DailyPush;
 using Aevatar.Application.Grains.Agents.ChatManager;
+using Aevatar.Application.Grains.Agents.ChatManager.Common;
+using GodGPT.GAgents.DailyPush;
 using Microsoft.Extensions.Logging;
 using Orleans;
 using Volo.Abp.Application.Services;
 
+
 namespace Aevatar.Application.Service;
 
-// TODO: Remove these temporary interfaces once godgpt NuGet package is updated
-// Temporary interface placeholder for new GAgent methods
-public interface IChatManagerGAgentExtensions : IChatManagerGAgent
-{
-    Task<bool> RegisterOrUpdateDeviceAsync(string deviceId, string pushToken, string timeZoneId, bool? pushEnabled, string pushLanguage);
-    Task MarkPushAsReadAsync(string pushToken);
-    Task<dynamic> GetDeviceStatusAsync(string deviceId);
-}
-
-// Temporary interface placeholder for TimezoneSchedulerGAgent
-public interface ITimezoneSchedulerGAgent : IGrainWithStringKey
-{
-    Task StartTestModeAsync();
-    Task StopTestModeAsync();
-    Task<(bool IsActive, DateTime StartTime, int RoundsCompleted, int MaxRounds)> GetTestStatusAsync();
-}
+// TODO: Remove these temporary interfaces once godgpt NuGet package is updated  
+// Note: These interfaces are for compilation only until godgpt NuGet package is updated
 
 /// <summary>
 /// Service for daily push notification operations
@@ -39,10 +28,13 @@ public class DailyPushService : ApplicationService, IDailyPushService
         _logger = logger;
     }
 
-        public async Task<bool> RegisterOrUpdateDeviceAsync(Guid userId, Aevatar.Application.Contracts.DailyPush.DeviceRequest request)
+        public async Task<bool> RegisterOrUpdateDeviceAsync(Guid userId, Aevatar.Application.Contracts.DailyPush.DeviceRequest request, Domain.Shared.GodGPTChatLanguage language)
     {
         try
         {
+            // Convert to internal enum type
+            var languageEnum = ConvertGodGPTChatLanguageToGodGPTLanguage(language);
+            
             // Simple timezone validation - let it throw if invalid
             if (!string.IsNullOrEmpty(request.TimeZoneId))
             {
@@ -62,17 +54,37 @@ public class DailyPushService : ApplicationService, IDailyPushService
 
             var chatManagerGAgent = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
 
-            // Call GAgent with basic types - no DTO conversion needed
+            // Check for existing device to detect language changes
+            var existingDeviceResult = await chatManagerGAgent.GetDeviceStatusAsync(request.DeviceId);
+            var existingDevice = existingDeviceResult as UserDeviceInfo;
+            bool languageChanged = false;
+            
+            if (existingDevice != null)
+            {
+                // Convert enum to string for comparison with stored string value
+                var newLanguageString = ConvertGodGPTLanguageToString(languageEnum);
+                var existingLanguageString = existingDevice.PushLanguage;
+                languageChanged = !string.Equals(existingLanguageString, newLanguageString, StringComparison.OrdinalIgnoreCase);
+                
+                if (languageChanged)
+                {
+                    _logger.LogInformation("Language changed for device {DeviceId} (User: {UserId}): {OldLanguage} → {NewLanguage}", 
+                        request.DeviceId, userId, existingLanguageString, newLanguageString);
+                }
+            }
+            
+            // Call GAgent with basic types - convert enum to string
+            var languageString = ConvertGodGPTLanguageToString(languageEnum);
             var isNewRegistration = await chatManagerGAgent.RegisterOrUpdateDeviceAsync(
                 request.DeviceId,
                 request.PushToken,
                 request.TimeZoneId,
                 request.PushEnabled,
-                string.IsNullOrEmpty(request.PushLanguage) ? "en" : request.PushLanguage
+                languageString
             );
             
-            _logger.LogInformation("Device {DeviceId} registered/updated for user {UserId}, isNew: {IsNew}", 
-                request.DeviceId, userId, isNewRegistration);
+            _logger.LogInformation("Device {DeviceId} registered/updated for user {UserId}, isNew: {IsNew}, languageChanged: {LanguageChanged}", 
+                request.DeviceId, userId, isNewRegistration, languageChanged);
                 
             return isNewRegistration;
         }
@@ -199,5 +211,34 @@ public class DailyPushService : ApplicationService, IDailyPushService
             _logger.LogError(ex, "Failed to get test status for timezone {Timezone}", timezone);
             throw;
         }
+    }
+    
+
+    
+    /// <summary>
+    /// Convert GodGPTChatLanguage enum to GodGPTLanguage enum
+    /// </summary>
+    private static GodGPTLanguage ConvertGodGPTChatLanguageToGodGPTLanguage(Domain.Shared.GodGPTChatLanguage chatLanguage)
+    {
+        return chatLanguage switch
+        {
+            Domain.Shared.GodGPTChatLanguage.English => GodGPTLanguage.English,
+            Domain.Shared.GodGPTChatLanguage.TraditionalChinese => GodGPTLanguage.TraditionalChinese,
+            Domain.Shared.GodGPTChatLanguage.Spanish => GodGPTLanguage.Spanish,
+            Domain.Shared.GodGPTChatLanguage.CN => GodGPTLanguage.CN,
+            _ => GodGPTLanguage.English
+        };
+    }
+    
+    private static string ConvertGodGPTLanguageToString(GodGPTLanguage language)
+    {
+        return language switch
+        {
+            GodGPTLanguage.TraditionalChinese => "zh",
+            GodGPTLanguage.CN => "zh_sc",
+            GodGPTLanguage.Spanish => "es",
+            GodGPTLanguage.English => "en",
+            _ => "en"
+        };
     }
 }
