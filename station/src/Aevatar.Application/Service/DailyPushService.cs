@@ -102,4 +102,72 @@ public class DailyPushService : ApplicationService, IDailyPushService
             throw;
         }
     }
+    
+    // Test mode methods - TODO: Remove before production
+    
+    /// <summary>
+    /// Start test mode for rapid push testing in specified timezone
+    /// </summary>
+    public async Task StartTestModeAsync(string timezone)
+    {
+        try
+        {
+            _logger.LogInformation("Starting test mode for timezone {Timezone}", timezone);
+            
+            var timezoneScheduler = _grainFactory.GetGrain<ITimezoneSchedulerGAgent>(timezone);
+            await timezoneScheduler.StartTestModeAsync();
+            
+            _logger.LogInformation("Test mode started successfully for timezone {Timezone}", timezone);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to start test mode for timezone {Timezone}", timezone);
+            throw;
+        }
+    }
+    
+    /// <summary>
+    /// Stop test mode and cleanup test reminders for specified timezone
+    /// </summary>
+    public async Task StopTestModeAsync(string timezone)
+    {
+        try
+        {
+            _logger.LogInformation("Stopping test mode for timezone {Timezone}", timezone);
+            
+            var timezoneScheduler = _grainFactory.GetGrain<ITimezoneSchedulerGAgent>(timezone);
+            await timezoneScheduler.StopTestModeAsync();
+            
+            _logger.LogInformation("Test mode stopped successfully for timezone {Timezone}", timezone);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to stop test mode for timezone {Timezone}", timezone);
+            throw;
+        }
+    }
+    
+    /// <summary>
+    /// Get test mode status for specified timezone
+    /// </summary>
+    public async Task<(bool IsActive, DateTime StartTime, int RoundsCompleted, int MaxRounds)> GetTestStatusAsync(string timezone)
+    {
+        try
+        {
+            _logger.LogDebug("Getting test status for timezone {Timezone}", timezone);
+            
+            var timezoneScheduler = _grainFactory.GetGrain<ITimezoneSchedulerGAgent>(timezone);
+            var status = await timezoneScheduler.GetTestStatusAsync();
+            
+            _logger.LogDebug("Retrieved test status for timezone {Timezone}: Active={IsActive}, Rounds={RoundsCompleted}/{MaxRounds}", 
+                timezone, status.IsActive, status.RoundsCompleted, status.MaxRounds);
+                
+            return status;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get test status for timezone {Timezone}", timezone);
+            throw;
+        }
+    }
 }

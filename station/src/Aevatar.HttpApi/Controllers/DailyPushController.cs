@@ -94,4 +94,95 @@ public class DailyPushController : AbpControllerBase
             data = response
         });
     }
+    
+    // Test mode APIs - TODO: Remove before production
+    
+    /// <summary>
+    /// Start test mode for rapid push testing in specified timezone
+    /// </summary>
+    [HttpPost("test/start")]
+    public async Task<IActionResult> StartTestMode([FromQuery] string timezone = "Asia/Shanghai")
+    {
+        try
+        {
+            await _dailyPushService.StartTestModeAsync(timezone);
+            
+            return Ok(new {
+                success = true,
+                message = $"Test mode started for timezone {timezone}",
+                timezone = timezone,
+                interval = "10 minutes",
+                maxRounds = 6
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to start test mode for timezone {Timezone}", timezone);
+            return BadRequest(new {
+                success = false,
+                error = "Failed to start test mode",
+                details = ex.Message
+            });
+        }
+    }
+    
+    /// <summary>
+    /// Stop test mode and cleanup test reminders for specified timezone
+    /// </summary>
+    [HttpPost("test/stop")]
+    public async Task<IActionResult> StopTestMode([FromQuery] string timezone = "Asia/Shanghai")
+    {
+        try
+        {
+            await _dailyPushService.StopTestModeAsync(timezone);
+            
+            return Ok(new {
+                success = true,
+                message = $"Test mode stopped for timezone {timezone}",
+                timezone = timezone
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to stop test mode for timezone {Timezone}", timezone);
+            return BadRequest(new {
+                success = false,
+                error = "Failed to stop test mode",
+                details = ex.Message
+            });
+        }
+    }
+    
+    /// <summary>
+    /// Get test mode status for specified timezone
+    /// </summary>
+    [HttpGet("test/status")]
+    public async Task<IActionResult> GetTestStatus([FromQuery] string timezone = "Asia/Shanghai")
+    {
+        try
+        {
+            var status = await _dailyPushService.GetTestStatusAsync(timezone);
+            
+            return Ok(new {
+                success = true,
+                data = new {
+                    timezone = timezone,
+                    isActive = status.IsActive,
+                    startTime = status.StartTime,
+                    roundsCompleted = status.RoundsCompleted,
+                    maxRounds = status.MaxRounds,
+                    nextRoundIn = status.IsActive ? "10 minutes from last execution" : "N/A"
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get test status for timezone {Timezone}", timezone);
+            return BadRequest(new {
+                success = false,
+                error = "Failed to get test status",
+                details = ex.Message
+            });
+        }
+    }
 }

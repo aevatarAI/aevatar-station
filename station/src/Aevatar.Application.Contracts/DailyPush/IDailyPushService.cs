@@ -30,4 +30,25 @@ public interface IDailyPushService
     /// <param name="deviceId">Device ID</param>
     /// <returns>Device status or null if not found</returns>
     Task<DeviceStatusResponse?> GetDeviceStatusAsync(Guid userId, string deviceId);
+    
+    // Test mode methods - TODO: Remove before production
+    
+    /// <summary>
+    /// Start test mode for rapid push testing in specified timezone
+    /// </summary>
+    /// <param name="timezone">Timezone identifier (e.g., "Asia/Shanghai")</param>
+    Task StartTestModeAsync(string timezone);
+    
+    /// <summary>
+    /// Stop test mode and cleanup test reminders for specified timezone
+    /// </summary>
+    /// <param name="timezone">Timezone identifier (e.g., "Asia/Shanghai")</param>
+    Task StopTestModeAsync(string timezone);
+    
+    /// <summary>
+    /// Get test mode status for specified timezone
+    /// </summary>
+    /// <param name="timezone">Timezone identifier (e.g., "Asia/Shanghai")</param>
+    /// <returns>Test mode status information</returns>
+    Task<(bool IsActive, DateTime StartTime, int RoundsCompleted, int MaxRounds)> GetTestStatusAsync(string timezone);
 }
