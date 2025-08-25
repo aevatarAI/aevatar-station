@@ -31,6 +31,7 @@ public static class GodGPTExceptionMessageKeys
     public const string HASREGISTERED = "HasBeenRegistered";
     public const string WebhookValidatingError = "WebhookValidatingError";
     public const string InvalidShare = "InvalidShare";
+    public const string EmailFrequently = "EmailFrequently";
 
     // File Operations
     public const string FileTooLarge = "FileTooLarge";
@@ -48,5 +49,13 @@ public static class GodGPTExceptionMessageKeys
     // Voice Chat
     public const string UnsetLanguage = "UnsetLanguage";
     public const string VoiceLanguageNotSet = "VoiceLanguageNotSet";
+    
+    // Security Verification
+    public const string SecurityVerificationRequired = "SecurityVerificationRequired";
+    public const string SecurityVerificationFailed = "SecurityVerificationFailed";
+    public const string RecaptchaVerificationFailed = "RecaptchaVerificationFailed";
+
+
+
     
 } 

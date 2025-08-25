@@ -97,6 +97,11 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
                 }); 
             });
         });
+        
+        Configure<DataProtectionTokenProviderOptions>(options =>
+        {
+            options.TokenLifespan = TimeSpan.FromMinutes(configuration.GetValue<long>("Account:TokenLifespan", 1440));
+        });
     }
     
     
