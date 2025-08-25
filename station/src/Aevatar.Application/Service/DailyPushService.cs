@@ -39,12 +39,29 @@ public class DailyPushService : ApplicationService, IDailyPushService
         _logger = logger;
     }
 
-    public async Task<bool> RegisterOrUpdateDeviceAsync(Guid userId, Aevatar.Application.Contracts.DailyPush.DeviceRequest request)
+        public async Task<bool> RegisterOrUpdateDeviceAsync(Guid userId, Aevatar.Application.Contracts.DailyPush.DeviceRequest request)
     {
         try
         {
+            // Simple timezone validation - let it throw if invalid
+            if (!string.IsNullOrEmpty(request.TimeZoneId))
+            {
+                try
+                {
+                    TimeZoneInfo.FindSystemTimeZoneById(request.TimeZoneId);
+                }
+                catch (TimeZoneNotFoundException ex)
+                {
+                    throw new ArgumentException($"Invalid timezone ID: {request.TimeZoneId}", ex);
+                }
+                catch (InvalidTimeZoneException ex)
+                {
+                    throw new ArgumentException($"Invalid timezone format: {request.TimeZoneId}", ex);
+                }
+            }
+
             var chatManagerGAgent = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
-            
+
             // Call GAgent with basic types - no DTO conversion needed
             var isNewRegistration = await chatManagerGAgent.RegisterOrUpdateDeviceAsync(
                 request.DeviceId,
