@@ -26,6 +26,7 @@ public class DeviceRequest
     /// </summary>
     [Required]
     [StringLength(64, MinimumLength = 1)]
+
     public string TimeZoneId { get; set; } = "";
     
     /// <summary>
