@@ -6,15 +6,8 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Aevatar.AgentValidation;
 using Aevatar.Core.Abstractions;
-using Aevatar.Options;
 using Aevatar.Schema;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using NJsonSchema;
-using NJsonSchema.Validation;
-using Orleans;
-using Orleans.Runtime;
-using Orleans.Metadata;
 using Volo.Abp.Application.Services;
 using Volo.Abp;
 
@@ -24,25 +17,16 @@ namespace Aevatar.Service;
 public class AgentValidationService : ApplicationService, IAgentValidationService
 {
     private readonly ILogger<AgentValidationService> _logger;
-    private readonly IGAgentFactory _gAgentFactory;
     private readonly IGAgentManager _gAgentManager;
-    private readonly IOptionsMonitor<AgentOptions> _agentOptions;
-    private readonly GrainTypeResolver _grainTypeResolver;
     private readonly ISchemaProvider _schemaProvider;
 
     public AgentValidationService(
         ILogger<AgentValidationService> logger,
-        IGAgentFactory gAgentFactory,
         IGAgentManager gAgentManager,
-        IOptionsMonitor<AgentOptions> agentOptions,
-        GrainTypeResolver grainTypeResolver,
         ISchemaProvider schemaProvider)
     {
         _logger = logger;
-        _gAgentFactory = gAgentFactory;
         _gAgentManager = gAgentManager;
-        _agentOptions = agentOptions;
-        _grainTypeResolver = grainTypeResolver;
         _schemaProvider = schemaProvider;
     }
 
@@ -109,8 +93,6 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
 
     private Type? FindConfigTypeByAgentNamespace(string agentNamespace)
     {
-        _logger.LogDebug("Finding config type for agent: {AgentNamespace}", agentNamespace);
-        
         var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
         
         // Find the specific agent type by namespace
@@ -121,69 +103,34 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
             return null;
         }
         
-        // Skip Orleans generated types only
-        if (agentType.Namespace.StartsWith("OrleansCodeGen"))
-        {
-            _logger.LogWarning("Agent type is Orleans generated: {AgentNamespace}", agentNamespace);
-            return null;
-        }
-        
         try
         {
-            var configType = FindConfigTypeInAgentAssembly(agentType);
-            if (configType != null)
-            {
-                _logger.LogDebug("Found config type: {AgentType} -> {ConfigType}", agentType.FullName, configType.FullName);
-            }
-            else
-            {
-                _logger.LogWarning("No config type found for agent: {AgentType}", agentType.FullName);
-            }
-            return configType;
+            return FindConfigTypeInAgentAssembly(agentType);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to find config type for agent {AgentType}: {ErrorMessage}", 
-                agentType.FullName, ex.Message);
+            _logger.LogWarning(ex, "Failed to find config type for agent {AgentType}", agentType.FullName);
             return null;
         }
     }
 
     private Type? FindConfigTypeInAgentAssembly(Type agentType)
     {
-        try
+        // Try to get configuration type from GAgent generic parameters
+        var configType = GetConfigurationTypeFromGAgent(agentType);
+        if (configType != null)
         {
-            // Try to get configuration type from GAgent generic parameters
-            var configType = GetConfigurationTypeFromGAgent(agentType);
-            if (configType != null)
-            {
-                _logger.LogDebug("Found config type from GAgent generics: {ConfigType}", configType.FullName);
-                return configType;
-            }
-
-            // Fallback: find ConfigurationBase-derived types in same assembly
-            var configTypes = agentType.Assembly.GetTypes()
-                .Where(type => type.IsClass && 
-                              !type.IsAbstract && 
-                              IsConfigurationBase(type))
-                .ToList();
-
-            if (configTypes.Count == 1)
-            {
-                _logger.LogDebug("Found single config type in assembly: {ConfigType}", configTypes[0].FullName);
-                return configTypes[0];
-            }
-
-            _logger.LogDebug("Found {Count} potential config types for agent {AgentType}", 
-                configTypes.Count, agentType.FullName);
-            return configTypes.FirstOrDefault();
+            return configType;
         }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Error finding config type for agent {AgentType}: {ErrorMessage}", 
-                agentType.FullName, ex.Message);
-            return null;
-        }
+
+        // Fallback: find ConfigurationBase-derived types in same assembly
+        var configTypes = agentType.Assembly.GetTypes()
+            .Where(type => type.IsClass && 
+                          !type.IsAbstract && 
+                          IsConfigurationBase(type))
+            .ToList();
+
+        return configTypes.FirstOrDefault();
     }
 
     private Type? GetConfigurationTypeFromGAgent(Type agentType)
@@ -232,15 +179,11 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
             // Get JSON Schema for the configuration type using SchemaProvider
             var schema = _schemaProvider.GetTypeSchema(configType);
             
-            _logger.LogDebug("Validating configuration using schema for type {ConfigType}", configType.Name);
-            
             // Validate JSON against schema
             var validationErrors = schema.Validate(configJson);
             
             if (validationErrors.Any())
             {
-                _logger.LogDebug("Schema validation found {ErrorCount} errors", validationErrors.Count);
-                
                 // Convert schema validation errors to our DTO format
                 var errorDict = _schemaProvider.ConvertValidateError(validationErrors);
                 var errors = errorDict.Select(kvp => new ValidationErrorDto
@@ -289,18 +232,17 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
             }
             catch (JsonException ex)
             {
-                _logger.LogWarning(ex, "JSON deserialization error during additional validation for {ConfigType}", configType.Name);
+                _logger.LogWarning(ex, "JSON deserialization error during validation for {ConfigType}", configType.Name);
                 return ConfigValidationResultDto.Failure(
                     new[] { new ValidationErrorDto { PropertyName = "ConfigJson", Message = "Invalid JSON format: " + ex.Message } },
                     "JSON format error");
             }
 
-            _logger.LogDebug("Configuration validation passed for type {ConfigType}", configType.Name);
             return ConfigValidationResultDto.Success("Configuration validation passed");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error during schema validation for config type {ConfigType}", configType.Name);
+            _logger.LogError(ex, "Unexpected error during validation for config type {ConfigType}", configType.Name);
             return ConfigValidationResultDto.Failure(
                 new[] { new ValidationErrorDto { PropertyName = "System", Message = "Schema validation system error" } },
                 "System validation error");
