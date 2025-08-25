@@ -1,11 +1,30 @@
 using System;
 using System.Threading.Tasks;
 using Aevatar.Application.Contracts.DailyPush;
-using GodGPT.GAgents.ChatManager;
-using GodGPT.GAgents.DailyPush;
+using Aevatar.Application.Grains.Agents.ChatManager;
 using Microsoft.Extensions.Logging;
 using Orleans;
 using Volo.Abp.Application.Services;
+
+// TODO: Remove these temporary interfaces once godgpt NuGet package is updated
+namespace Aevatar.Application.Service
+{
+    // Temporary interface placeholder for new GAgent methods
+    public interface IChatManagerGAgentExtensions : IChatManagerGAgent
+    {
+        Task<bool> RegisterOrUpdateDeviceAsync(string deviceId, string pushToken, string timeZoneId, bool? pushEnabled, string pushLanguage);
+        Task MarkPushAsReadAsync(string pushToken);
+        Task<dynamic> GetDeviceStatusAsync(string deviceId);
+    }
+    
+    // Temporary interface placeholder for TimezoneSchedulerGAgent
+    public interface ITimezoneSchedulerGAgent : IGrainWithStringKey
+    {
+        Task StartTestModeAsync();
+        Task StopTestModeAsync();
+        Task<(bool IsActive, DateTime StartTime, int RoundsCompleted, int MaxRounds)> GetTestStatusAsync();
+    }
+}
 
 namespace Aevatar.Application.Service;
 
@@ -29,17 +48,14 @@ public class DailyPushService : ApplicationService, IDailyPushService
         {
             var chatManagerGAgent = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
             
-            // Convert station DTO to godgpt DTO
-            var godGptRequest = new GodGPT.GAgents.DailyPush.DeviceRequest
-            {
-                DeviceId = request.DeviceId,
-                PushToken = request.PushToken,
-                TimeZoneId = request.TimeZoneId,
-                PushEnabled = request.PushEnabled,
-                PushLanguage = string.IsNullOrEmpty(request.PushLanguage) ? "en" : request.PushLanguage
-            };
-
-            var isNewRegistration = await chatManagerGAgent.RegisterOrUpdateDeviceAsync(godGptRequest);
+            // Call GAgent with basic types - no DTO conversion needed
+            var isNewRegistration = await chatManagerGAgent.RegisterOrUpdateDeviceAsync(
+                request.DeviceId,
+                request.PushToken,
+                request.TimeZoneId,
+                request.PushEnabled,
+                string.IsNullOrEmpty(request.PushLanguage) ? "en" : request.PushLanguage
+            );
             
             _logger.LogInformation("Device {DeviceId} registered/updated for user {UserId}, isNew: {IsNew}", 
                 request.DeviceId, userId, isNewRegistration);
@@ -114,7 +130,7 @@ public class DailyPushService : ApplicationService, IDailyPushService
         {
             _logger.LogInformation("Starting test mode for timezone {Timezone}", timezone);
             
-            var timezoneScheduler = _grainFactory.GetGrain<ITimezoneSchedulerGAgent>(timezone);
+            var timezoneScheduler = _clusterClient.GetGrain<ITimezoneSchedulerGAgent>(timezone);
             await timezoneScheduler.StartTestModeAsync();
             
             _logger.LogInformation("Test mode started successfully for timezone {Timezone}", timezone);
@@ -135,7 +151,7 @@ public class DailyPushService : ApplicationService, IDailyPushService
         {
             _logger.LogInformation("Stopping test mode for timezone {Timezone}", timezone);
             
-            var timezoneScheduler = _grainFactory.GetGrain<ITimezoneSchedulerGAgent>(timezone);
+            var timezoneScheduler = _clusterClient.GetGrain<ITimezoneSchedulerGAgent>(timezone);
             await timezoneScheduler.StopTestModeAsync();
             
             _logger.LogInformation("Test mode stopped successfully for timezone {Timezone}", timezone);
@@ -156,7 +172,7 @@ public class DailyPushService : ApplicationService, IDailyPushService
         {
             _logger.LogDebug("Getting test status for timezone {Timezone}", timezone);
             
-            var timezoneScheduler = _grainFactory.GetGrain<ITimezoneSchedulerGAgent>(timezone);
+            var timezoneScheduler = _clusterClient.GetGrain<ITimezoneSchedulerGAgent>(timezone);
             var status = await timezoneScheduler.GetTestStatusAsync();
             
             _logger.LogDebug("Retrieved test status for timezone {Timezone}: Active={IsActive}, Rounds={RoundsCompleted}/{MaxRounds}", 

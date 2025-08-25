@@ -87,7 +87,7 @@ public class AevatarApplicationModule : AbpModule
         context.Services.AddSingleton<IIpLocationService, IpLocationService>();
         
         // Daily Push Service
-        context.Services.AddTransient<IDailyPushService, Service.DailyPushService>();
+        context.Services.AddTransient<IDailyPushService, DailyPushService>();
 
     }
 }
