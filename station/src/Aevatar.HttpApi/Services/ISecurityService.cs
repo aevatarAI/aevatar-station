@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
-using Aevatar.Common;
+
 using Microsoft.AspNetCore.Http;
+using Aevatar.Common;
 
 namespace Aevatar.Services;
 
@@ -17,11 +18,12 @@ public interface ISecurityService
     string GetRealClientIp(HttpContext context);
 
     /// <summary>
-    /// Check if security verification is required for the client
+    /// Check if security verification is required for the client based on platform
     /// </summary>
     /// <param name="clientIp">Client IP address</param>
+    /// <param name="platform">Platform type (Web, iOS, Android)</param>
     /// <returns>True if verification is required</returns>
-    Task<bool> IsSecurityVerificationRequiredAsync(string clientIp);
+    Task<bool> IsSecurityVerificationRequiredAsync(string clientIp, PlatformType platform = PlatformType.Web);
 
     /// <summary>
     /// Verify security based on platform and provided tokens
@@ -31,21 +33,30 @@ public interface ISecurityService
     Task<SecurityVerificationResult> VerifySecurityAsync(SecurityVerificationRequest request);
 
     /// <summary>
-    /// Increment request count for rate limiting
+    /// Increment request count for rate limiting (atomic operation)
     /// </summary>
     /// <param name="clientIp">Client IP address</param>
-    Task IncrementRequestCountAsync(string clientIp);
+    /// <returns>New count after increment</returns>
+    Task<int> IncrementRequestCountAsync(string clientIp);
+
+    /// <summary>
+    /// Perform complete security verification flow including rate limiting and verification
+    /// </summary>
+    /// <param name="clientIp">Client IP address</param>
+    /// <param name="platform">Platform type</param>
+    /// <param name="recaptchaToken">reCAPTCHA token (if provided)</param>
+    /// <param name="operationName">Operation name for logging</param>
+    /// <returns>Verification result</returns>
+    Task<SecurityVerificationResult> PerformSecurityVerificationAsync(string clientIp, PlatformType platform, string? recaptchaToken, string operationName);
 }
 
 /// <summary>
-/// Security verification request model
+/// Security verification request model - unified reCAPTCHA verification
 /// </summary>
 public class SecurityVerificationRequest
 {
-    public PlatformType Platform { get; set; }
     public string ClientIp { get; set; } = "";
     public string? RecaptchaToken { get; set; }
-    public string? AcToken { get; set; }
 }
 
 /// <summary>

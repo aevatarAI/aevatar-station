@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -78,6 +79,11 @@ public class AevatarDeveloperHostModule : AbpModule
                     o.ContainerName = configSection.GetValue<string>("ContainerName", "None");
                 }); 
             });
+        });
+        
+        Configure<DataProtectionTokenProviderOptions>(options =>
+        {
+            options.TokenLifespan = TimeSpan.FromMinutes(configuration.GetValue<long>("Account:TokenLifespan", 1440));
         });
     }
     
