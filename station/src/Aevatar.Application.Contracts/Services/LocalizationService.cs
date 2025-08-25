@@ -123,6 +123,7 @@ public class LocalizationService : ILocalizationService
             GodGPTChatLanguage.English => "en",
             GodGPTChatLanguage.TraditionalChinese => "zh-tw",
             GodGPTChatLanguage.Spanish => "es",
+            GodGPTChatLanguage.CN => "zh",
             _ => "en"
         };
     }
@@ -165,6 +166,15 @@ public class LocalizationService : ILocalizationService
                 ["en.HasBeenRegistered"] = "The email: {input.Email} has been registered.",
                 ["en.WebhookValidatingError"] = "Error validating webhook",
                 ["en.InvalidShare"] = "Invalid Share string",
+                ["en.EmailFrequently"] = "Email sent too frequently. Please try again later.",
+
+                // Security Verification - English (SecurityVerificationRequired is used as frontend signal, always English)
+                ["en.SecurityVerificationRequired"] = "Security verification is required. Please complete the verification and try again.",
+                ["en.SecurityVerificationFailed"] = "Security verification failed: {reason}",
+                ["en.RecaptchaVerificationFailed"] = "reCAPTCHA verification failed. Please try again.",
+
+
+
 
                 // Traditional Chinese translations
                 ["zh-tw.Unauthorized"] = "未授權：使用者未通過身份驗證。 ",
@@ -195,6 +205,15 @@ public class LocalizationService : ILocalizationService
                 ["zh-tw.HasBeenRegistered"] = "電子郵件：｛input.email｝已注册。",
                 ["zh-tw.WebhookValidatingError"] = " 驗證 webhook 失敗 ",
                 ["zh-tw.InvalidShare"] = "共亯字串無效",
+                ["zh-tw.EmailFrequently"] = "電子郵件發送過於頻繁，請稍後再試。",
+
+                // Security Verification - Traditional Chinese
+                ["zh-tw.SecurityVerificationRequired"] = "需要進行安全驗證。 請完成驗證並重試。",
+                ["zh-tw.SecurityVerificationFailed"] = "安全驗證失敗：{reason}",
+                ["zh-tw.RecaptchaVerificationFailed"] = "reCAPTCHA 驗證失敗。請重試。",
+
+
+
 
                 // Spanish translations
                 ["es.Unauthorized"] = "No autorizado: El usuario no está autenticado. ",
@@ -224,7 +243,52 @@ public class LocalizationService : ILocalizationService
                 ["es.VoiceLanguageNotSet"] = "Idioma de voz no establecido.",
                 ["es.HasBeenRegistered"] = "El correo electrónico: {input.Email} ha sido registrado.",
                 ["es.WebhookValidatingError"] = "Error al validar el webhook ",
-                ["es.InvalidShare"] = "Cadena de compartir inválida"
+                ["es.InvalidShare"] = "Cadena de compartir inválida",
+                ["es.EmailFrequently"] = "El correo electrónico se envía con demasiada frecuencia. Por favor, intenta de nuevo más tarde.",
+
+                // Security Verification - Spanish (SecurityVerificationRequired always uses English as frontend signal)
+                ["es.SecurityVerificationRequired"] = "Se requiere verificación de seguridad.", // Not used - frontend signal
+                ["es.SecurityVerificationFailed"] = "Falló la verificación de seguridad: {reason}",
+                ["es.RecaptchaVerificationFailed"] = "Falló la verificación de reCAPTCHA. Inténtalo de nuevo.",
+                
+                //zh
+                ["zh.Unauthorized"] = "未授权：用户未通过身份验证。",
+                ["zh.UserNotAuthenticated"] = "未授权：用户未通过身份验证。",
+                ["zh.UnableToRetrieveUserId"] = "未授权：无法获取 UserId。",
+                ["zh.SessionNotFound"] = "找不到会话或拒绝访问。",
+                ["zh.SessionInfoIsNull"] = "会话信息为空。",
+                ["zh.UnableToLoadConversation"] = "无法加载会话 {sessionId}",
+                ["zh.NoActiveGuestSession"] = "没有活跃的游客会话。请先创建会话。",
+                ["zh.InsufficientCredits"] = "credits 不足。",
+                ["zh.RateLimitExceeded"] = "请求频率超限。",
+                ["zh.DailyChatLimitExceeded"] = "已超出每日聊天次数限制。",
+                ["zh.InvalidRequest"] = "无效的请求体。",
+                ["zh.InvalidRequestBody"] = "无效的请求体。",
+                ["zh.InvalidCaptchaCode"] = "无效的验证码",
+                ["zh.EmailIsRequired"] = "邮箱是必填项",
+                ["zh.UserUnRegister"] = "用户未注册",
+                ["zh.TooManyFiles"] = "文件过多。每次最多上传 {TooManyFiles} 张图片。",
+                ["zh.FileTooLarge"] = "文件太大，最大限制为 {MaxSizeBytes} 字节。",
+                ["zh.MaximumFileSizeExceeded"] = "超过最大文件大小。",
+                ["zh.InternalServerError"] = "内部服务器错误。",
+                ["zh.ServiceUnavailable"] = "服务暂时不可用，请稍后再试。",
+                ["zh.OperationFailed"] = "操作失败。",
+                ["zh.ChatLimitExceeded"] = "已超出聊天限制。",
+                ["zh.GuestChatLimitExceeded"] = "已超出访客聊天限制",
+                ["zh.UnsetLanguage"] = "Unset language request body.",
+                ["zh.VoiceLanguageNotSet"] = "语言请求体未设置。",
+                ["zh.HasBeenRegistered"] = "邮箱: {input.Email} 已注册。",
+                ["zh.WebhookValidatingError"] = "验证 webhook 时出错",
+                ["zh.InvalidShare"] = "分享的字符串无效。",
+                ["zh.EmailFrequently"] = "电子邮件发送过于频繁，请稍后再试。",
+
+                // Security Verification - Traditional Chinese
+                ["zh.SecurityVerificationRequired"] = "需要进行安全验证。请完成验证并重试。",
+                ["zh.SecurityVerificationFailed"] = "安全验证失败：{reason}",
+                ["zh.RecaptchaVerificationFailed"] = "reCAPTCHA 验证失败。请重试。"
+
+
+
 
             },
             
@@ -233,7 +297,9 @@ public class LocalizationService : ILocalizationService
                 // Add validation messages here if needed
                 ["en.Required"] = "This field is required.",
                 ["zh-tw.Required"] = "此字段为必填项。",
-                ["es.Required"] = "Este campo es requerido."
+                ["es.Required"] = "Este campo es requerido.",
+                ["zh.Required"] = "此字段为必填项。"
+
             },
             
             ["messages"] = new Dictionary<string, string>
@@ -241,7 +307,9 @@ public class LocalizationService : ILocalizationService
                 // Add general messages here if needed
                 ["en.Success"] = "Operation completed successfully.",
                 ["zh-tw.Success"] = "操作成功完成。",
-                ["es.Success"] = "Operación completada exitosamente."
+                ["es.Success"] = "Operación completada exitosamente.",
+                ["en.Success"] = "操作已成功完成。"
+
             }
         };
 

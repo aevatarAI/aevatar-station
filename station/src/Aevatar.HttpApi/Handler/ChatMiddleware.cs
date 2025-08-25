@@ -12,6 +12,7 @@ using Aevatar.Application.Grains.Agents.ChatManager;
 using Aevatar.Application.Grains.Agents.ChatManager.Chat;
 using Aevatar.Application.Grains.Agents.ChatManager.Common;
 using Aevatar.Application.Grains.ChatManager.UserQuota;
+using Aevatar.Application.Service;
 using Aevatar.Core.Abstractions;
 using Aevatar.Extensions;
 using Aevatar.Quantum;
@@ -34,17 +35,22 @@ public class ChatMiddleware
     private readonly ILogger<ChatMiddleware> _logger;
     private readonly IOptions<AevatarOptions> _aevatarOptions;
     private readonly ILocalizationService _localizationService;
+    private readonly IIpLocationService _ipLocationService;
 
     private const int MaxImageCount = 10;
-
+    private const string CNDefaultRegion = "CN";
+    private const string DefaultRegion = "DEFAULT";
+    private const string CNConsoleRegion = "CNCONSOLE";
+    private const string ConsoleRegion = "CONSOLE";
     public ChatMiddleware(RequestDelegate next, ILogger<ChatMiddleware> logger, IClusterClient clusterClient,
-        IOptions<AevatarOptions> aevatarOptions, ILocalizationService localizationService)
+        IOptions<AevatarOptions> aevatarOptions, ILocalizationService localizationService,IIpLocationService ipLocationService)
     {
         _next = next;
         _logger = logger;
         _clusterClient = clusterClient;
         _aevatarOptions = aevatarOptions;
         _localizationService = localizationService;
+        _ipLocationService = ipLocationService;
 
     }
 
@@ -108,6 +114,22 @@ public class ChatMiddleware
 
         var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
         var request = JsonConvert.DeserializeObject<QuantumChatRequestDto>(body);
+        var clientIp = context.GetClientIpAddress();
+        var isCN = await _ipLocationService.IsIpInMainlandChinaAsync(clientIp);
+
+        if (string.IsNullOrWhiteSpace(request.Region))
+        {
+            request.Region = isCN ? CNDefaultRegion : DefaultRegion;
+        }
+        else
+        {
+            if (request.Region.Equals(ConsoleRegion) && isCN)
+            {
+                request.Region = CNConsoleRegion;
+            }
+        }
+
+        RequestContext.Set("IsCN", isCN);
         if (!request.Images.IsNullOrEmpty() && request.Images.Count > MaxImageCount)
         {
             _logger.LogDebug("[GodGPTController][ChatWithSessionAsync] {0} Too many files. {1}", userId, request.Images.Count);
@@ -269,7 +291,20 @@ public class ChatMiddleware
         {
             var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
             var request = JsonConvert.DeserializeObject<GuestChatRequestDto>(body);
-            
+            var isCN = await _ipLocationService.IsIpInMainlandChinaAsync(clientIp);
+            if (string.IsNullOrWhiteSpace(request.Region))
+            {
+                request.Region = isCN ? CNDefaultRegion : DefaultRegion;
+            }
+            else
+            {
+                if (request.Region.Equals(ConsoleRegion) && isCN)
+                {
+                    request.Region = CNConsoleRegion;
+                }
+            }
+
+            RequestContext.Set("IsCN", isCN);
             if (request == null || string.IsNullOrWhiteSpace(request.Content))
             {
                 _logger.LogWarning("[GuestChatMiddleware] Invalid request body for user: {0}", userHashId);
@@ -481,7 +516,22 @@ public class ChatMiddleware
         // Parse request body
         var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
         var request = JsonConvert.DeserializeObject<VoiceChatRequestDto>(body);
-        
+        var clientIp = context.GetClientIpAddress();
+        var isCN = await _ipLocationService.IsIpInMainlandChinaAsync(clientIp);
+
+        if (string.IsNullOrWhiteSpace(request.Region))
+        {
+            request.Region = isCN ? CNDefaultRegion : DefaultRegion;
+        }
+        else
+        {
+            if (request.Region.Equals(ConsoleRegion) && isCN)
+            {
+                request.Region = CNConsoleRegion;
+            }
+        }
+
+        RequestContext.Set("IsCN", isCN);
         if (request == null || string.IsNullOrWhiteSpace(request.Content))
         {
             _logger.LogWarning($"[VoiceChatMiddleware] Invalid request body for user: {userId}");
