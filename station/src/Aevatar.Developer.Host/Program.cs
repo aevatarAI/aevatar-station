@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+using Aevatar.Background;
 using Aevatar.Developer.Host.Extensions;
 using Aevatar.SignalR;
 using Microsoft.AspNetCore.Builder;
@@ -32,6 +33,7 @@ public class Program
                 .UseAutofac()
                 .UseSerilog();
             builder.Services.AddSignalR().AddOrleans();
+            builder.Services.AddHostedService<DocumentLinkScheduledTask>();
             await builder.AddApplicationAsync<AevatarDeveloperHostModule>();
             var app = builder.Build();
             await app.InitializeApplicationAsync();
