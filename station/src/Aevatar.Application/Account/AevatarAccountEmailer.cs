@@ -2,6 +2,8 @@ using System;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 using Aevatar.Account.Templates;
+using Aevatar.Application.Contracts.Services;
+using Aevatar.Domain.Shared;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -21,7 +23,7 @@ namespace Aevatar.Account;
 
 public interface IAevatarAccountEmailer
 {
-    Task SendRegisterCodeAsync(string email, string code);
+    Task SendRegisterCodeAsync(string email, string code, GodGPTChatLanguage godGptChatLanguage);
     Task SendPasswordResetLinkAsync(IdentityUser user, string resetToken);
 }
 
@@ -30,17 +32,19 @@ public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependenc
     private readonly ITemplateRenderer _templateRenderer;
     private readonly IEmailSender _emailSender;
     private readonly IStringLocalizer<AccountResource> _stringLocalizer;
+    private readonly ILocalizationService _localizationService;
     private readonly AccountOptions _accountOptions;
     private readonly IDistributedCache<string,string> _lastEmailCache;
     private readonly DistributedCacheEntryOptions _defaultCacheOptions;
 
     public AevatarAccountEmailer(IEmailSender emailSender, ITemplateRenderer templateRenderer,
-        IStringLocalizer<AccountResource> stringLocalizer, IOptionsSnapshot<AccountOptions> accountOptions,
-        IDistributedCache<string,string> lastEmailCache)
+        IStringLocalizer<AccountResource> stringLocalizer, ILocalizationService localizationService,
+        IOptionsSnapshot<AccountOptions> accountOptions, IDistributedCache<string,string> lastEmailCache)
     {
         _emailSender = emailSender;
         _templateRenderer = templateRenderer;
         _stringLocalizer = stringLocalizer;
+        _localizationService = localizationService;
         _lastEmailCache = lastEmailCache;
         _accountOptions = accountOptions.Value;
 
@@ -50,18 +54,20 @@ public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependenc
         };
     }
 
-    public async Task SendRegisterCodeAsync(string email, string code)
+    public async Task SendRegisterCodeAsync(string email, string code, GodGPTChatLanguage language = GodGPTChatLanguage.English)
     {
+        var templateName = GetTemplateNameByLanguage(language);
         var emailContent = await _templateRenderer.RenderAsync(
-            AevatarAccountEmailTemplates.RegisterCode,
+            templateName,
             new { code = code }
         );
 
         await CheckSendEmailAsync(email);
         
+        var subject = GetEmailSubjectByLanguage(language);
         await _emailSender.SendAsync(
             email,
-            "Registration",
+            subject,
             emailContent
         );
     }
@@ -95,5 +101,22 @@ public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependenc
         }
         
         await _lastEmailCache.SetAsync(key, email, _defaultCacheOptions);
+    }
+
+    private string GetTemplateNameByLanguage(GodGPTChatLanguage language)
+    {
+        return language switch
+        {
+            GodGPTChatLanguage.English => AevatarAccountEmailTemplates.RegisterCode,
+            GodGPTChatLanguage.CN => $"{AevatarAccountEmailTemplates.RegisterCode}_zh-cn",
+            GodGPTChatLanguage.TraditionalChinese => $"{AevatarAccountEmailTemplates.RegisterCode}_zh-tw",
+            GodGPTChatLanguage.Spanish => $"{AevatarAccountEmailTemplates.RegisterCode}_es",
+            _ => AevatarAccountEmailTemplates.RegisterCode // Default to English
+        };
+    }
+
+    private string GetEmailSubjectByLanguage(GodGPTChatLanguage language)
+    {
+        return _localizationService.GetLocalizedMessage("RegistrationSubject", language, "emails");
     }
 }

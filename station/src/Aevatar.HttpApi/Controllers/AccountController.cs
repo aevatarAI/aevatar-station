@@ -46,10 +46,11 @@ public class AccountController : AevatarController
     public virtual Task SendRegisterCodeAsync(SendRegisterCodeDto input)
     {
         var ip = GetRealClientIp(HttpContext);
+        var language = HttpContext.GetGodGPTLanguage();
         // TODO remove
         Logger.LogInformation("Send register code request: Email={email}, AppName={appName}, IP={ip}", 
             input.Email, input.AppName, ip);
-        return _accountService.SendRegisterCodeAsync(input);
+        return _accountService.SendRegisterCodeAsync(input, language);
     }
     
     private string GetRealClientIp(HttpContext context)

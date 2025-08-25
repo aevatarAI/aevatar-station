@@ -35,6 +35,9 @@
 
     <ItemGroup>
         <EmbeddedResource Include="Account\Templates\RegisterCode.tpl" />
+        <EmbeddedResource Include="Account\Templates\RegisterCode_es.tpl" />
+        <EmbeddedResource Include="Account\Templates\RegisterCode_zh-cn.tpl" />
+        <EmbeddedResource Include="Account\Templates\RegisterCode_zh-tw.tpl" />
     </ItemGroup>
 
 </Project>
