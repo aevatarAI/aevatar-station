@@ -10,6 +10,8 @@
     <RootNamespace>Aevatar</RootNamespace>
     <PreserveCompilationReferences>true</PreserveCompilationReferences>
     <UserSecretsId>Aevatar-4681b4fd-151f-4221-84a4-929d86723e4c</UserSecretsId>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -47,7 +49,6 @@
     <ProjectReference Include="..\..\..\signalR\src\Aevatar.SignalR\Aevatar.SignalR.csproj" />
     <ProjectReference Include="..\Aevatar.Application\Aevatar.Application.csproj" />
     <ProjectReference Include="..\Aevatar.HttpApi.Admin\Aevatar.HttpApi.Admin.csproj" />
-    <ProjectReference Include="..\Aevatar.HttpApi.Host\Aevatar.HttpApi.Host.csproj" />
     <ProjectReference Include="..\Aevatar.MongoDB\Aevatar.MongoDB.csproj" />
     <ProjectReference Include="..\Aevatar.Sandbox.Abstractions\Aevatar.Sandbox.Abstractions.csproj" />
     <ProjectReference Include="..\Aevatar.Sandbox.Core\Aevatar.Sandbox.Core.csproj" />

@@ -5,13 +5,13 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Aevatar.Extensions;
 using Aevatar.Handler;
 using Microsoft.AspNetCore.Authorization;
 using Orleans.Hosting;
 using Serilog;
 using Serilog.Events;
 using Aevatar.Domain.Shared.Configuration;
+using Aevatar.Sandbox.HttpApi.Host.Extensions;
 
 namespace Aevatar.Sandbox;
 
@@ -30,13 +30,13 @@ public class Program
                 .AddAevatarSecureConfiguration(
                     systemConfigPaths: new[]
                     {
-                        Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"),
-                        Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json")
+                        Path.Combine(AppContext.BaseDirectory, "..", "..", "configurations", "appsettings.Shared.json"),
+                        Path.Combine(AppContext.BaseDirectory, "..", "..", "configurations", "appsettings.HttpApi.Host.Shared.json")
                     })
                 .AddEnvironmentVariables();
 
             builder.Host
-                .UseOrleansClientConfiguration()
+                .UseOrleansClientConfigration()
                 .ConfigureDefaults(args)
                 .UseAutofac()
                 .UseSerilog();
