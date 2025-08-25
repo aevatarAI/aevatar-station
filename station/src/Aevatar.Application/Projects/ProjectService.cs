@@ -286,7 +286,10 @@ public class ProjectService : OrganizationService, IProjectService
 
         var userId = CurrentUser.Id;
         var cacheKey = $"{UserRecentUsedProjectKey}:{userId.ToString()}";
-        await _recentUsedProjectCache.SetAsync(cacheKey, JsonConvert.SerializeObject(input), new DistributedCacheEntryOptions());
+        await _recentUsedProjectCache.SetAsync(cacheKey, JsonConvert.SerializeObject(input), new DistributedCacheEntryOptions()
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(30)
+        });
     }
 
     public async Task<RecentUsedProjectDto> GetRecentUsedProjectAsync()
