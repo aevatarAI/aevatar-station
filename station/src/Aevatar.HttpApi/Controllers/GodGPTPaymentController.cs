@@ -81,6 +81,11 @@ public class GodGPTPaymentController : AevatarController
     {
         var stopwatch = Stopwatch.StartNew();
         var currentUserId = (Guid)CurrentUser.Id!;
+        
+        // Check PriceId parameter
+        if (string.IsNullOrWhiteSpace(createCheckoutSessionInput.PriceId))
+            return BadRequest("PriceId cannot be empty");
+        
         try
         {
             var result = await _godGptService.CreateCheckoutSessionAsync(currentUserId, createCheckoutSessionInput);
