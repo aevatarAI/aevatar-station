@@ -60,16 +60,15 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         var createProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
-            DisplayName = "Test Project",
-            DomainName = "App"
+            DisplayName = "Test Project"
         };
-        var project = await _projectService.CreateAsync(createProjectInput);
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
         project.DisplayName.ShouldBe(createProjectInput.DisplayName);
-        project.DomainName.ShouldBe(createProjectInput.DomainName);
+        project.DomainName.ShouldBe("testproject");
 
         project = await _projectService.GetProjectAsync(project.Id);
         project.DisplayName.ShouldBe(createProjectInput.DisplayName);
-        project.DomainName.ShouldBe(createProjectInput.DomainName);
+        project.DomainName.ShouldBe("testproject");
         project.MemberCount.ShouldBe(0);
         project.CreationTime.ShouldBeGreaterThan(0);
 
@@ -146,24 +145,32 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         var createProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
-            DisplayName = "Test Project",
-            DomainName = "App"
+            DisplayName = "Test Project"
         };
-        var project = await _projectService.CreateAsync(createProjectInput);
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
         project.DisplayName.ShouldBe(createProjectInput.DisplayName);
-        project.DomainName.ShouldBe(createProjectInput.DomainName);
+        project.DomainName.ShouldBe("testproject");
         
-        await Should.ThrowAsync<UserFriendlyException>(async () => await  _projectService.CreateAsync(createProjectInput));
+        await Should.ThrowAsync<UserFriendlyException>(async () => await  _projectService.CreateProjectAsync(createProjectInput));
 
-        createProjectInput.DomainName = "app";
-        await Should.ThrowAsync<UserFriendlyException>(async () => await  _projectService.CreateAsync(createProjectInput));
+        // Test with different display names that generate the same domain
+        var secondProjectInput = new CreateProjectDto()
+        {
+            OrganizationId = organization.Id,
+            DisplayName = "Test!!! Project"  // Still generates "testproject"
+        };
+        await Should.ThrowAsync<UserFriendlyException>(async () => await  _projectService.CreateProjectAsync(secondProjectInput));
         
-        createProjectInput.DomainName = "APP";
-        await Should.ThrowAsync<UserFriendlyException>(async () => await  _projectService.CreateAsync(createProjectInput));
+        var thirdProjectInput = new CreateProjectDto()
+        {
+            OrganizationId = organization.Id,
+            DisplayName = "TEST PROJECT"  // Still generates "testproject"
+        };
+        await Should.ThrowAsync<UserFriendlyException>(async () => await  _projectService.CreateProjectAsync(thirdProjectInput));
     }
 
     [Fact]
-    public async Task Project_WrongDomain_Test()
+    public async Task Project_Create_InvalidDisplayName_Test()
     {
         await _identityUserManager.CreateAsync(
             new IdentityUser(
@@ -177,16 +184,83 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         };
         var organization = await _organizationService.CreateAsync(createOrganizationInput);
 
+        // Test with null display name - ABP Required attribute validation kicks in first
         var createProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
-            DisplayName = "Test Project",
-            DomainName = "App 2"
+            DisplayName = null
         };
-        await Should.ThrowAsync<AbpValidationException>(async () => await _projectService.CreateAsync(createProjectInput));
+        await Should.ThrowAsync<AbpValidationException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
 
-        createProjectInput.DomainName = "App@";
-        await Should.ThrowAsync<AbpValidationException>(async () => await _projectService.CreateAsync(createProjectInput));
+        // Test with empty display name - ABP Required attribute validation kicks in first
+        createProjectInput.DisplayName = "";
+        await Should.ThrowAsync<AbpValidationException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
+
+        // Test with whitespace-only display name - ABP Required attribute validation kicks in first
+        createProjectInput.DisplayName = "   ";
+        await Should.ThrowAsync<AbpValidationException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
+
+        // Test with display name containing only special characters (no letters or digits)
+        createProjectInput.DisplayName = "!@#$%^&*()";
+        await Should.ThrowAsync<UserFriendlyException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
+
+        // Test with display name containing only spaces and special characters
+        createProjectInput.DisplayName = "   !!!   ";
+        await Should.ThrowAsync<UserFriendlyException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
+
+        // Test with display name containing problematic special characters for domain names
+        createProjectInput.DisplayName = "Test@Project#Name$";
+        await Should.ThrowAsync<UserFriendlyException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
+
+        // Test with display name containing Chinese characters or other unsupported characters
+        createProjectInput.DisplayName = "测试项目";
+        await Should.ThrowAsync<UserFriendlyException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
+
+        // Test with display name containing spaces (no longer allowed)
+        createProjectInput.DisplayName = "Project Name";
+        await Should.ThrowAsync<UserFriendlyException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
+
+        // Test with display name containing underscores (no longer allowed)
+        createProjectInput.DisplayName = "Project_Name";
+        await Should.ThrowAsync<UserFriendlyException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
+    }
+
+    [Fact]
+    public async Task Project_Create_ValidDisplayName_Test()
+    {
+        await _identityUserManager.CreateAsync(
+            new IdentityUser(
+                _currentUser.Id.Value,
+                "test",
+                "test@email.io"));
+
+        var createOrganizationInput = new CreateOrganizationDto
+        {
+            DisplayName = "Test Organization"
+        };
+        var organization = await _organizationService.CreateAsync(createOrganizationInput);
+
+        // Test with valid display name containing letters and hyphens
+        var createProjectInput = new CreateProjectDto()
+        {
+            OrganizationId = organization.Id,
+            DisplayName = "Valid-Project-Name"
+        };
+        var project1 = await _projectService.CreateProjectAsync(createProjectInput);
+        project1.ShouldNotBeNull();
+        project1.DisplayName.ShouldBe("Valid-Project-Name");
+
+        // Test with valid display name containing letters, numbers, and hyphens
+        createProjectInput.DisplayName = "Project-123-Test";
+        var project2 = await _projectService.CreateProjectAsync(createProjectInput);
+        project2.ShouldNotBeNull();
+        project2.DisplayName.ShouldBe("Project-123-Test");
+
+        // Test with valid display name containing only letters and numbers
+        createProjectInput.DisplayName = "Project123";
+        var project3 = await _projectService.CreateProjectAsync(createProjectInput);
+        project3.ShouldNotBeNull();
+        project3.DisplayName.ShouldBe("Project123");
     }
 
     [Fact]
@@ -207,10 +281,9 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         var createProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
-            DisplayName = "Test Project",
-            DomainName = "App"
+            DisplayName = "Test Project"
         };
-        var project = await _projectService.CreateAsync(createProjectInput);
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
 
         var updateInput = new UpdateProjectDto
         {
@@ -240,10 +313,9 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         var createProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
-            DisplayName = "Test Project",
-            DomainName = "App"
+            DisplayName = "Test Project"
         };
-        var project = await _projectService.CreateAsync(createProjectInput);
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
         
         var roles = await _projectService.GetRoleListAsync(project.Id);
 
@@ -259,7 +331,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
 
         var domain =
             await _domainRepository.FirstOrDefaultAsync(o => o.ProjectId == project.Id && o.IsDeleted == false);
-        domain.DomainName.ShouldBe("App");
+        domain.DomainName.ShouldBe("testproject");
     }
 
     [Fact]
@@ -277,10 +349,9 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         var createProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
-            DisplayName = "Test Project",
-            DomainName = "App"
+            DisplayName = "Test Project"
         };
-        var project = await _projectService.CreateAsync(createProjectInput);
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
         
         var roles = await _projectService.GetRoleListAsync(project.Id);
         var ownerRole = roles.Items.First(o => o.Name.EndsWith("Owner"));
@@ -359,10 +430,9 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         var createProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
-            DisplayName = "Test Project",
-            DomainName = "App"
+            DisplayName = "Test Project"
         };
-        var project = await _projectService.CreateAsync(createProjectInput);
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
         
         var organizationRoles = await _organizationService.GetRoleListAsync(organization.Id);
         var projectRoles = await _projectService.GetRoleListAsync(project.Id);
@@ -407,10 +477,9 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         var createProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
-            DisplayName = "Test Project",
-            DomainName = "App"
+            DisplayName = "Test Project"
         };
-        var project = await _projectService.CreateAsync(createProjectInput);
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
         
         var roles = await _projectService.GetRoleListAsync(project.Id);
         var ownerRole = roles.Items.First(o => o.Name.EndsWith("Owner"));
@@ -458,5 +527,168 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         owner = await _identityUserManager.GetByIdAsync(reader.Id);
         owner.IsInOrganizationUnit(organization.Id).ShouldBeFalse();
         owner.IsInOrganizationUnit(project.Id).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Project_Auto_Create_Test()
+    {
+        // Arrange
+        await _identityUserManager.CreateAsync(
+            new IdentityUser(
+                _currentUser.Id.Value,
+                "test",
+                "test@email.io"));
+        
+        var createOrganizationInput = new CreateOrganizationDto
+        {
+            DisplayName = "Test Organization Auto"
+        };
+        var organization = await _organizationService.CreateAsync(createOrganizationInput);
+
+        var createProjectInput = new CreateProjectDto()
+        {
+            OrganizationId = organization.Id,
+            DisplayName = "My Awesome App"
+        };
+
+        // Act
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
+
+        // Assert
+        project.DisplayName.ShouldBe(createProjectInput.DisplayName);
+        project.DomainName.ShouldBe("myawesomeapp"); // 应该自动生成
+        
+        // 验证项目详情
+        var projectDetails = await _projectService.GetProjectAsync(project.Id);
+        projectDetails.DisplayName.ShouldBe(createProjectInput.DisplayName);
+        projectDetails.DomainName.ShouldBe("myawesomeapp");
+        projectDetails.MemberCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Project_Auto_Create_SpecialCharacters_Test()
+    {
+        // Arrange
+        await _identityUserManager.CreateAsync(
+            new IdentityUser(
+                _currentUser.Id.Value,
+                "test",
+                "test@email.io"));
+        
+        var createOrganizationInput = new CreateOrganizationDto
+        {
+            DisplayName = "Test Organization Auto"
+        };
+        var organization = await _organizationService.CreateAsync(createOrganizationInput);
+
+        var createProjectInput = new CreateProjectDto()
+        {
+            OrganizationId = organization.Id,
+            DisplayName = "My App@#$%^&*()123!"
+        };
+
+        // Act
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
+
+        // Assert
+        project.DisplayName.ShouldBe(createProjectInput.DisplayName);
+        project.DomainName.ShouldBe("myapp123"); // 特殊字符应该被过滤
+    }
+
+    [Fact]
+    public async Task Project_Auto_Create_DomainConflict_Test()
+    {
+        // Arrange
+        await _identityUserManager.CreateAsync(
+            new IdentityUser(
+                _currentUser.Id.Value,
+                "test",
+                "test@email.io"));
+        
+        var createOrganizationInput = new CreateOrganizationDto
+        {
+            DisplayName = "Test Organization Auto"
+        };
+        var organization = await _organizationService.CreateAsync(createOrganizationInput);
+
+        // 先创建一个项目占用基础域名
+        var firstProjectInput = new CreateProjectDto()
+        {
+            OrganizationId = organization.Id,
+            DisplayName = "Test App"
+        };
+        var firstProject = await _projectService.CreateProjectAsync(firstProjectInput);
+        firstProject.DomainName.ShouldBe("testapp");
+
+        // 再创建同名项目
+        var secondProjectInput = new CreateProjectDto()
+        {
+            OrganizationId = organization.Id,
+            DisplayName = "Test App"
+        };
+
+        // Act & Assert - 应该抛出域名已存在的异常
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _projectService.CreateProjectAsync(secondProjectInput));
+        
+        exception.Message.ShouldContain("testapp");
+        exception.Message.ShouldContain("already exists");
+    }
+
+    [Fact]
+    public async Task Project_Auto_Create_Unicode_Test()
+    {
+        // Arrange
+        await _identityUserManager.CreateAsync(
+            new IdentityUser(
+                _currentUser.Id.Value,
+                "test",
+                "test@email.io"));
+        
+        var createOrganizationInput = new CreateOrganizationDto
+        {
+            DisplayName = "Test Organization Auto"
+        };
+        var organization = await _organizationService.CreateAsync(createOrganizationInput);
+
+        var createProjectInput = new CreateProjectDto()
+        {
+            OrganizationId = organization.Id,
+            DisplayName = "中文项目App123"
+        };
+
+        // Act
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
+
+        // Assert
+        project.DisplayName.ShouldBe(createProjectInput.DisplayName);
+        project.DomainName.ShouldBe("app123"); // 只保留英文字母和数字
+    }
+
+    [Fact]
+    public async Task Project_Auto_Create_EmptyName_Test()
+    {
+        // Arrange
+        await _identityUserManager.CreateAsync(
+            new IdentityUser(
+                _currentUser.Id.Value,
+                "test",
+                "test@email.io"));
+        
+        var createOrganizationInput = new CreateOrganizationDto
+        {
+            DisplayName = "Test Organization Auto"
+        };
+        var organization = await _organizationService.CreateAsync(createOrganizationInput);
+
+        var createProjectInput = new CreateProjectDto()
+        {
+            OrganizationId = organization.Id,
+            DisplayName = "   " // 空白字符串
+        };
+
+        // Act & Assert
+        await Should.ThrowAsync<UserFriendlyException>(async () => 
+            await _projectService.CreateProjectAsync(createProjectInput));
     }
 }
