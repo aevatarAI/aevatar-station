@@ -96,4 +96,13 @@ public class UserController : AevatarController
     {
         await _developerService.CopyHostAsync(sourceClientId, newClientId, "1");
     }
+
+    [HttpPost("CopyDeploymentWithPattern")]
+    [Authorize(Policy = AevatarPermissions.AdminPolicy)]
+    public async Task CopyDeploymentWithPattern(string clientId, string sourceVersion, string targetVersion,
+        string siloNamePattern)
+    {
+        await _developerService.CopyDeploymentWithPatternAsync(clientId, sourceVersion, targetVersion, 
+            siloNamePattern);
+    }
 }
