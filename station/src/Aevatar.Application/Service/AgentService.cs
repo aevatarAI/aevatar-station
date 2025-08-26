@@ -41,6 +41,7 @@ public class AgentService : ApplicationService, IAgentService
     private readonly GrainTypeResolver _grainTypeResolver;
     private readonly ISchemaProvider _schemaProvider;
     private readonly IIndexingService _indexingService;
+    private readonly IOptionsMonitor<SystemLLMConfigOptions> _systemLLMConfigOptions;
 
     public AgentService(
         IClusterClient clusterClient,
@@ -51,7 +52,8 @@ public class AgentService : ApplicationService, IAgentService
         IOptionsMonitor<AgentOptions> agentOptions,
         GrainTypeResolver grainTypeResolver,
         ISchemaProvider schemaProvider,
-        IIndexingService indexingService)
+        IIndexingService indexingService,
+        IOptionsMonitor<SystemLLMConfigOptions> systemLLMConfigOptions)
     {
         _clusterClient = clusterClient;
         _logger = logger;
@@ -62,6 +64,7 @@ public class AgentService : ApplicationService, IAgentService
         _grainTypeResolver = grainTypeResolver;
         _schemaProvider = schemaProvider;
         _indexingService = indexingService;
+        _systemLLMConfigOptions = systemLLMConfigOptions;
     }
 
     public async Task<List<AgentTypeDto>> GetAllAgents()
@@ -94,6 +97,9 @@ public class AgentService : ApplicationService, IAgentService
                     // Get default values
                     paramDto.DefaultValues =
                         await GetConfigurationDefaultValuesAsync(kvp.Value.InitializationData.DtoType);
+                    
+                    // Check if agent has SystemLLMConfig and add it
+                    paramDto.SystemLLMConfigs = GetSystemLLMConfigsForAgent(kvp.Value.InitializationData);
                 }
             }
 
@@ -681,5 +687,24 @@ public class AgentService : ApplicationService, IAgentService
         }
 
         return subAgentGrainIds;
+    }
+
+    /// <summary>
+    /// Check if agent configuration DTO has SystemLLM property and return the configuration list
+    /// </summary>
+    private List<SystemLLMConfigDto>? GetSystemLLMConfigsForAgent(Configuration? configuration)
+    {
+        if (configuration?.DtoType == null)
+            return null;
+
+        // Check if the configuration DTO has SystemLLM property using reflection
+        var hasSystemLLMProperty = configuration.DtoType
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Any(p => p.Name.Equals("SystemLLM", StringComparison.OrdinalIgnoreCase));
+
+        if (!hasSystemLLMProperty)
+            return null;
+
+        return _systemLLMConfigOptions.CurrentValue.SystemLLMConfigs;
     }
 }

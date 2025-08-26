@@ -83,6 +83,9 @@ public class AevatarApplicationModule : AbpModule
         // 配置 AI 服务提示词选项
         Configure<AIServicePromptOptions>(configuration.GetSection("AIServicePrompt"));
         
+        // 配置 SystemLLM 配置选项 (使用默认构造函数初始化)
+        Configure<SystemLLMConfigOptions>(options => { });
+        
         // 配置工作流编排服务
         ConfigureWorkflowOrchestrationServices(context);
     }
