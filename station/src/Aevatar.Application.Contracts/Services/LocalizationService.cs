@@ -174,6 +174,15 @@ public class LocalizationService : ILocalizationService
                 ["en.HasBeenRegistered"] = "The email: {input.Email} has been registered.",
                 ["en.WebhookValidatingError"] = "Error validating webhook",
                 ["en.InvalidShare"] = "Invalid Share string",
+                ["en.EmailFrequently"] = "Email sent too frequently. Please try again later.",
+
+                // Security Verification - English (SecurityVerificationRequired is used as frontend signal, always English)
+                ["en.SecurityVerificationRequired"] = "Security verification is required. Please complete the verification and try again.",
+                ["en.SecurityVerificationFailed"] = "Security verification failed: {reason}",
+                ["en.RecaptchaVerificationFailed"] = "reCAPTCHA verification failed. Please try again.",
+
+
+
 
                 // Traditional Chinese translations
                 ["zh-tw.Unauthorized"] = "未授權：使用者未通過身份驗證。 ",
@@ -204,6 +213,14 @@ public class LocalizationService : ILocalizationService
                 ["zh-tw.HasBeenRegistered"] = "電子郵件：｛input.email｝已注册。",
                 ["zh-tw.WebhookValidatingError"] = " 驗證 webhook 失敗 ",
                 ["zh-tw.InvalidShare"] = "共亯字串無效",
+                ["zh-tw.EmailFrequently"] = "電子郵件發送過於頻繁，請稍後再試。",
+
+                // Security Verification - Traditional Chinese
+                ["zh-tw.SecurityVerificationFailed"] = "安全驗證失敗：{reason}",
+                ["zh-tw.RecaptchaVerificationFailed"] = "reCAPTCHA 驗證失敗。請重試。",
+
+
+
 
                 // Spanish translations
                 ["es.Unauthorized"] = "No autorizado: El usuario no está autenticado. ",
@@ -233,7 +250,16 @@ public class LocalizationService : ILocalizationService
                 ["es.VoiceLanguageNotSet"] = "Idioma de voz no establecido.",
                 ["es.HasBeenRegistered"] = "El correo electrónico: {input.Email} ha sido registrado.",
                 ["es.WebhookValidatingError"] = "Error al validar el webhook ",
-                ["es.InvalidShare"] = "Cadena de compartir inválida"
+                ["es.InvalidShare"] = "Cadena de compartir inválida",
+                ["es.EmailFrequently"] = "El correo electrónico se envía con demasiada frecuencia. Por favor, intenta de nuevo más tarde.",
+
+                // Security Verification - Spanish (SecurityVerificationRequired always uses English as frontend signal)
+                // ["es.SecurityVerificationRequired"] = "Se requiere verificación de seguridad.", // Not used - frontend signal
+                ["es.SecurityVerificationFailed"] = "Falló la verificación de seguridad: {reason}",
+                ["es.RecaptchaVerificationFailed"] = "Falló la verificación de reCAPTCHA. Inténtalo de nuevo.",
+
+
+
 
             },
             

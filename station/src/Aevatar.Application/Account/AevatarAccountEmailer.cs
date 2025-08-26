@@ -2,6 +2,7 @@ using System;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 using Aevatar.Account.Templates;
+using Aevatar.Application.Constants;
 using Aevatar.Application.Contracts.Services;
 using Aevatar.Domain.Shared;
 using Microsoft.Extensions.Caching.Distributed;
@@ -23,8 +24,8 @@ namespace Aevatar.Account;
 
 public interface IAevatarAccountEmailer
 {
-    Task SendRegisterCodeAsync(string email, string code, GodGPTChatLanguage godGptChatLanguage);
-    Task SendPasswordResetLinkAsync(IdentityUser user, string resetToken, GodGPTChatLanguage language = GodGPTChatLanguage.English);
+    Task SendRegisterCodeAsync(string email, string code,GodGPTChatLanguage language = GodGPTChatLanguage.English);
+    Task SendPasswordResetLinkAsync(IdentityUser user, string inputEmail, string resetToken,GodGPTChatLanguage language = GodGPTChatLanguage.English);
 }
 
 public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependency
@@ -36,10 +37,11 @@ public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependenc
     private readonly AccountOptions _accountOptions;
     private readonly IDistributedCache<string,string> _lastEmailCache;
     private readonly DistributedCacheEntryOptions _defaultCacheOptions;
+    private readonly ILocalizationService _localizationService;
 
     public AevatarAccountEmailer(IEmailSender emailSender, ITemplateRenderer templateRenderer,
-        IStringLocalizer<AccountResource> stringLocalizer, ILocalizationService localizationService,
-        IOptionsSnapshot<AccountOptions> accountOptions, IDistributedCache<string,string> lastEmailCache)
+        IStringLocalizer<AccountResource> stringLocalizer, IOptionsSnapshot<AccountOptions> accountOptions,
+        IDistributedCache<string,string> lastEmailCache,ILocalizationService localizationService)
     {
         _emailSender = emailSender;
         _templateRenderer = templateRenderer;
@@ -47,6 +49,7 @@ public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependenc
         _localizationService = localizationService;
         _lastEmailCache = lastEmailCache;
         _accountOptions = accountOptions.Value;
+        _localizationService = localizationService;
 
         _defaultCacheOptions = new DistributedCacheEntryOptions
         {
@@ -62,7 +65,7 @@ public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependenc
             new { code = code }
         );
 
-        await CheckSendEmailAsync(email);
+        await CheckSendEmailAsync(email, language);
         
         var subject = GetEmailSubjectByLanguage(language);
         await _emailSender.SendAsync(
@@ -72,10 +75,10 @@ public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependenc
         );
     }
 
-    public async Task SendPasswordResetLinkAsync(IdentityUser user, string resetToken, GodGPTChatLanguage language = GodGPTChatLanguage.English)
+    public async Task SendPasswordResetLinkAsync(IdentityUser user, string inputEmail, string resetToken, GodGPTChatLanguage language = GodGPTChatLanguage.English)
     {
         var url = _accountOptions.ResetPasswordUrl;
-        var link = $"{url}?userId={user.Id}&resetToken={UrlEncoder.Default.Encode(resetToken)}";
+        var link = $"{url}?userId={user.Id}&email={UrlEncoder.Default.Encode(inputEmail)}&resetToken={UrlEncoder.Default.Encode(resetToken)}";
 
         var templateName = GetPasswordResetTemplateNameByLanguage(language);
         var emailContent = await _templateRenderer.RenderAsync(
@@ -83,7 +86,7 @@ public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependenc
             new { link = link }
         );
         
-        await CheckSendEmailAsync(user.Email);
+        await CheckSendEmailAsync(user.Email, language);
         
         var subject = GetPasswordResetSubjectByLanguage(language);
         await _emailSender.SendAsync(
@@ -93,13 +96,15 @@ public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependenc
         );
     }
 
-    private async Task CheckSendEmailAsync(string email)
+    private async Task CheckSendEmailAsync(string email,GodGPTChatLanguage language = GodGPTChatLanguage.English)
     {
+
         var key = $"LastEmail_{email.ToLower()}";
         var lastSend = await _lastEmailCache.GetAsync(key);
         if (!lastSend.IsNullOrWhiteSpace())
         {
-            throw new UserFriendlyException("Email sent too frequently. Please try again later.");
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.EmailFrequently, language);
+            throw new UserFriendlyException(localizedMessage);
         }
         
         await _lastEmailCache.SetAsync(key, email, _defaultCacheOptions);
