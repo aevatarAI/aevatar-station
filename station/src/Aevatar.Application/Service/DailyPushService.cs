@@ -107,8 +107,7 @@ public class DailyPushService : ApplicationService, IDailyPushService
             var chatManagerGAgent = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
             await chatManagerGAgent.MarkPushAsReadAsync(pushToken);
             
-            _logger.LogInformation("Push marked as read for user {UserId} with token {TokenPrefix}...", 
-                userId, pushToken[..Math.Min(8, pushToken.Length)]);
+            _logger.LogInformation("Push marked as read for user {UserId}", userId);
         }
         catch (Exception ex)
         {
