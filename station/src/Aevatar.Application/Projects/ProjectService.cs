@@ -134,17 +134,16 @@ public class ProjectService : OrganizationService, IProjectService
             DomainName = $"defaultProject{randomHash.Substring(randomHash.Length - 6)}"
         });
         
-        var roleList = await _organizationRoleService.GetListAsync(projectDto.Id);
-        var ownerRole = roleList.Items.FirstOrDefault(t => t.Name.Contains(AevatarConsts.OrganizationOwnerRoleName));
-        if (ownerRole != null)
-        {
-            await SetMemberAsync(projectDto.Id, new SetOrganizationMemberDto()
-            {
-                Email = CurrentUser.Email!,
-                Join = true,
-                RoleId = ownerRole.Id
-            });
-        }
+        // var roleList = await _organizationRoleService.GetListAsync(projectDto.Id);
+        // var ownerRole = roleList.Items.FirstOrDefault(t => t.Name.Contains(AevatarConsts.OrganizationOwnerRoleName));
+        // if (ownerRole != null)
+        // {
+        //     await SetMemberRoleAsync(projectDto.Id, new SetOrganizationMemberRoleDto()
+        //     {
+        //         UserId = CurrentUser.Id!.Value,
+        //         RoleId = ownerRole.Id
+        //     });
+        // }
         return projectDto;
     }
 

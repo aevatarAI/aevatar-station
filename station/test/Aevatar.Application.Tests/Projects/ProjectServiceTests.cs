@@ -491,10 +491,10 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
             project.DomainName.ShouldStartWith("defaultProject");
             project.DomainName.Length.ShouldBe("defaultProject".Length + 6);
 
-            var roles = await _projectService.GetRoleListAsync(project.Id);
+            var roles = await _projectService.GetRoleListAsync(organization.Id);
             var ownerRole = roles.Items.First(o => o.Name.EndsWith("Owner"));
 
-            var members = await _projectService.GetMemberListAsync(project.Id, new GetOrganizationMemberListDto());
+            var members = await _projectService.GetMemberListAsync(organization.Id, new GetOrganizationMemberListDto());
             members.Items.Count.ShouldBe(1);
             members.Items[0].Email.ShouldBe(email);
             members.Items[0].RoleId.ShouldBe(ownerRole.Id);
@@ -604,10 +604,10 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
             result.Project.DomainName.ShouldStartWith("defaultProject");
             result.Project.DomainName.Length.ShouldBe("defaultProject".Length + 6);
 
-            var roles = await _projectService.GetRoleListAsync(result.Project.Id);
+            var roles = await _projectService.GetRoleListAsync(result.Id);
             var ownerRole = roles.Items.First(o => o.Name.EndsWith("Owner"));
-
-            var members = await _projectService.GetMemberListAsync(result.Project.Id, new GetOrganizationMemberListDto());
+            
+            var members = await _projectService.GetMemberListAsync(result.Id, new GetOrganizationMemberListDto());
             members.Items.Count.ShouldBe(1);
             members.Items[0].Email.ShouldBe(email);
             members.Items[0].RoleId.ShouldBe(ownerRole.Id);
