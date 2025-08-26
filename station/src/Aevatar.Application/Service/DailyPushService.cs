@@ -75,6 +75,10 @@ public class DailyPushService : ApplicationService, IDailyPushService
             
             // Call GAgent with basic types - convert enum to string
             var languageString = ConvertGodGPTLanguageToString(languageEnum);
+            
+            _logger.LogInformation("📱 Device registration: DeviceId={DeviceId}, User={UserId}, Language={LanguageEnum}→{LanguageString}", 
+                request.DeviceId, userId, languageEnum, languageString);
+                
             var isNewRegistration = await chatManagerGAgent.RegisterOrUpdateDeviceAsync(
                 request.DeviceId,
                 request.PushToken,
@@ -103,8 +107,7 @@ public class DailyPushService : ApplicationService, IDailyPushService
             var chatManagerGAgent = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
             await chatManagerGAgent.MarkPushAsReadAsync(pushToken);
             
-            _logger.LogInformation("Push marked as read for user {UserId} with token {TokenPrefix}...", 
-                userId, pushToken[..Math.Min(8, pushToken.Length)]);
+            _logger.LogInformation("Push marked as read for user {UserId}", userId);
         }
         catch (Exception ex)
         {
@@ -132,7 +135,8 @@ public class DailyPushService : ApplicationService, IDailyPushService
                 DeviceId = deviceInfo.DeviceId,
                 TimeZoneId = deviceInfo.TimeZoneId,
                 PushEnabled = deviceInfo.PushEnabled,
-                PushLanguage = deviceInfo.PushLanguage
+                PushLanguage = deviceInfo.PushLanguage,
+                PushToken = deviceInfo.PushToken
             };
             
             _logger.LogDebug("Retrieved device status for {DeviceId}, user {UserId}", deviceId, userId);
@@ -235,7 +239,7 @@ public class DailyPushService : ApplicationService, IDailyPushService
         return language switch
         {
             GodGPTLanguage.TraditionalChinese => "zh",
-            GodGPTLanguage.CN => "zh_sc",
+            GodGPTLanguage.CN => "zh-sc",  // Use hyphen to match GodGPT project
             GodGPTLanguage.Spanish => "es",
             GodGPTLanguage.English => "en",
             _ => "en"

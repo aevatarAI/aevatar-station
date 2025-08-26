@@ -24,4 +24,9 @@ public class DeviceStatusResponse
     /// Preferred language for push notifications
     /// </summary>
     public string PushLanguage { get; set; } = "";
+    
+    /// <summary>
+    /// Push token for Firebase notifications
+    /// </summary>
+    public string PushToken { get; set; } = "";
 }
