@@ -27,6 +27,7 @@
 | F007 | Upgrade pod template | 🚧 | High | feature/upgrade-pod-template | 42:82:57:47:65:d3 | - | - | - | 新增功能：支持pod模板升级 |
 | F008 | Agent Warmup Unit Tests Implementation | ✅ | High | feature/agent-warmup-unit-tests | 3e:58:e5:c6:ab:31 | 100% | ✓ | ✓ | Implemented comprehensive unit tests for SampleBasedAgentWarmupStrategy - 30 tests covering all aspects with 100% pass rate |
 | F009 | Aevatar Version Update | 🚧 | High | feature/aevatar-version-update-dev | 16:1e:a9:7a:1c:39 | - | - | - | CORS config fix, auth options, chat middleware, hybrid grain state serializer |
+| F010 | Silo Configuration Update | ✅ | High | feature/silo-configuration-update | 42:82 | - | - | - | Updated AgentWarmup, OrleansHost extension and appsettings configuration |
 
 ## Technical Debt & Refactoring
 
