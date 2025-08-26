@@ -15,6 +15,7 @@ using IdentityUser = Volo.Abp.Identity.IdentityUser;
 using Aevatar.Application.Constants;
 using Aevatar.Application.Contracts.Services;
 using Aevatar.Domain.Shared;
+using Exception = System.Exception;
 
 namespace Aevatar.Account;
 
@@ -134,6 +135,8 @@ public class AccountService : AccountAppService, IAccountService
     
     public async Task<IdentityUserDto> GodgptRegisterAsync(GodGptRegisterDto input, GodGPTChatLanguage language = GodGPTChatLanguage.English)
     {
+        _logger.LogDebug(
+            $"[GodgptRegisterAsync] Email: {input.EmailAddress}");
         var code = await _registerCode.GetAsync(GetRegisterCodeKey(input.EmailAddress));
         if (code != input.Code)
         {
@@ -153,8 +156,17 @@ public class AccountService : AccountAppService, IAccountService
         }
         catch (UserFriendlyException ex) when (ex.Code == "Volo.Abp.Identity:InvalidUserName")
         {
-            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InvalidUserName, language);
+            _logger.LogDebug(
+                $"[GodgptRegisterAsync] error UserFriendlyException. Email: {input.EmailAddress} error:{ex.Message}");
+            var localizedMessage =
+                _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InvalidUserName, language);
             throw new UserFriendlyException(localizedMessage);
+        }
+        catch (Exception e)
+        {
+            _logger.LogDebug(
+                $"[GodgptRegisterAsync] error exception. Email: {input.EmailAddress} error:{e.Message}");
+            throw new UserFriendlyException(e.Message);
         }
 
         await UserManager.SetEmailAsync(user, input.EmailAddress);
