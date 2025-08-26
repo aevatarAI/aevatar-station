@@ -16,6 +16,7 @@ using Aevatar.Application.Constants;
 using Aevatar.Application.Contracts.Services;
 using Aevatar.Domain.Shared;
 using Exception = System.Exception;
+using Newtonsoft.Json;
 
 namespace Aevatar.Account;
 
@@ -135,8 +136,6 @@ public class AccountService : AccountAppService, IAccountService
     
     public async Task<IdentityUserDto> GodgptRegisterAsync(GodGptRegisterDto input, GodGPTChatLanguage language = GodGPTChatLanguage.English)
     {
-        _logger.LogDebug(
-            $"[GodgptRegisterAsync] Email: {input.EmailAddress}");
         var code = await _registerCode.GetAsync(GetRegisterCodeKey(input.EmailAddress));
         if (code != input.Code)
         {
@@ -154,19 +153,18 @@ public class AccountService : AccountAppService, IAccountService
         {
             (await UserManager.CreateAsync(user, input.Password)).CheckErrors();
         }
-        catch (UserFriendlyException ex) when (ex.Code == "Volo.Abp.Identity:InvalidUserName")
+        catch (Exception ex)
         {
-            _logger.LogDebug(
-                $"[GodgptRegisterAsync] error UserFriendlyException. Email: {input.EmailAddress} error:{ex.Message}");
-            var localizedMessage =
-                _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InvalidUserName, language);
-            throw new UserFriendlyException(localizedMessage);
-        }
-        catch (Exception e)
-        {
-            _logger.LogDebug(
-                $"[GodgptRegisterAsync] error exception. Email: {input.EmailAddress} error:{e.Message}");
-            throw new UserFriendlyException(e.Message);
+            var errorMessage = ex.Message.ToLower();
+            if (errorMessage.Contains("username") && errorMessage.Contains("is invalid"))
+            {
+                var localizedMessage =
+                    _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InvalidUserName, language);
+                throw new Exception(localizedMessage);
+            }
+            _logger.LogError(
+                    $"[GodgptRegisterAsync] error UserFriendlyException. Email: {input.EmailAddress} input:{JsonConvert.SerializeObject(input)} error:{ex.Message}");
+            throw ex;
         }
 
         await UserManager.SetEmailAsync(user, input.EmailAddress);
