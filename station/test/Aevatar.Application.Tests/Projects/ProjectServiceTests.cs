@@ -578,4 +578,39 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
                 ProjectId = project.Id
             }));
     }
+
+    [Fact]
+    public async Task Organization_Create_With_Default_Project_Should_Create_And_Assign_Owner()
+    {
+        var email = "owner2@email.io";
+        using (_principalAccessor.Change(new[]
+               {
+                   new Claim(AbpClaimTypes.UserId, _currentUser.Id!.Value.ToString()),
+                   new Claim(AbpClaimTypes.UserName, _currentUser.UserName!),
+                   new Claim(AbpClaimTypes.Email, email)
+               }))
+        {
+            await _identityUserManager.CreateAsync(new IdentityUser(_currentUser.Id!.Value, "owner2", email));
+
+            var result = await _projectService.CreateOrgWithDefaultProjectAsync(new CreateOrganizationDto
+            {
+                DisplayName = "Org With Default"
+            });
+
+            result.ShouldNotBeNull();
+            result.DisplayName.ShouldBe("Org With Default");
+            result.Project.ShouldNotBeNull();
+            result.Project.DisplayName.ShouldBe("default project");
+            result.Project.DomainName.ShouldStartWith("defaultProject");
+            result.Project.DomainName.Length.ShouldBe("defaultProject".Length + 6);
+
+            var roles = await _projectService.GetRoleListAsync(result.Project.Id);
+            var ownerRole = roles.Items.First(o => o.Name.EndsWith("Owner"));
+
+            var members = await _projectService.GetMemberListAsync(result.Project.Id, new GetOrganizationMemberListDto());
+            members.Items.Count.ShouldBe(1);
+            members.Items[0].Email.ShouldBe(email);
+            members.Items[0].RoleId.ShouldBe(ownerRole.Id);
+        }
+    }
 }

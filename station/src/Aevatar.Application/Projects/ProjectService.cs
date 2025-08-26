@@ -7,6 +7,7 @@ using Aevatar.Notification;
 using Aevatar.Organizations;
 using Aevatar.Permissions;
 using Aevatar.Service;
+using Elastic.Clients.Elasticsearch;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Authorization.Permissions;
@@ -103,8 +104,14 @@ public class ProjectService : OrganizationService, IProjectService
         {
             OrganizationId = organizationDto.Id
         });
-        var result = (OrganizationWithDefaultProjectDto) organizationDto;
-        result.Project = defaultProject;
+        var result = new OrganizationWithDefaultProjectDto()
+        {
+            Id = organizationDto.Id,
+            DisplayName = organizationDto.DisplayName,
+            MemberCount = organizationDto.MemberCount,
+            CreationTime = organizationDto.CreationTime,
+            Project = defaultProject
+        };
         return result;
     }
 
