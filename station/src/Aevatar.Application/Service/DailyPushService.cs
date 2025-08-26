@@ -154,16 +154,20 @@ public class DailyPushService : ApplicationService, IDailyPushService
     /// <summary>
     /// Start test mode for rapid push testing in specified timezone
     /// </summary>
-    public async Task StartTestModeAsync(string timezone)
+    /// <param name="timezone">Target timezone</param>
+    /// <param name="intervalSeconds">Push interval in seconds (default: 600 = 10 minutes)</param>
+    public async Task StartTestModeAsync(string timezone, int intervalSeconds = 600)
     {
         try
         {
-            _logger.LogInformation("Starting test mode for timezone {Timezone}", timezone);
+            _logger.LogInformation("Starting test mode for timezone {Timezone} with {IntervalSeconds}s interval", 
+                timezone, intervalSeconds);
             
             var timezoneScheduler = _clusterClient.GetGrain<ITimezoneSchedulerGAgent>(timezone);
-            await timezoneScheduler.StartTestModeAsync();
+            await timezoneScheduler.StartTestModeAsync(intervalSeconds);
             
-            _logger.LogInformation("Test mode started successfully for timezone {Timezone}", timezone);
+            _logger.LogInformation("Test mode started successfully for timezone {Timezone} with {IntervalSeconds}s interval", 
+                timezone, intervalSeconds);
         }
         catch (Exception ex)
         {

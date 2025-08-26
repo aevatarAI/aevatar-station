@@ -159,19 +159,33 @@ public class DailyPushController : AbpControllerBase
     /// <summary>
     /// Start test mode for rapid push testing in specified timezone
     /// </summary>
+    /// <param name="timezone">Target timezone (e.g., Asia/Shanghai)</param>
+    /// <param name="intervalSeconds">Push interval in seconds (default: 600 = 10 minutes, min: 10, max: 3600)</param>
     [HttpPost("test/start")]
-    public async Task<IActionResult> StartTestMode([FromQuery] string timezone = "Asia/Shanghai")
+    public async Task<IActionResult> StartTestMode([FromQuery] string timezone = "Asia/Shanghai", [FromQuery] int intervalSeconds = 600)
     {
         try
         {
-            await _dailyPushService.StartTestModeAsync(timezone);
+            // Validate interval range
+            if (intervalSeconds < 10 || intervalSeconds > 3600)
+            {
+                var language = HttpContext.GetGodGPTLanguage();
+                var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InvalidParameter, language);
+                return BadRequest(new {
+                    error = new { code = 1, message = $"{localizedMessage}: intervalSeconds must be between 10 and 3600 seconds" },
+                    result = false
+                });
+            }
+            
+            await _dailyPushService.StartTestModeAsync(timezone, intervalSeconds);
             
             // Follow GodGPT pattern: direct return with result data
             return Ok(new {
                 result = true,
                 message = $"Test mode started for timezone {timezone}",
                 timezone = timezone,
-                interval = "10 minutes",
+                intervalSeconds = intervalSeconds,
+                intervalDescription = $"{intervalSeconds} seconds ({intervalSeconds / 60.0:F1} minutes)",
                 maxRounds = 6
             });
         }
