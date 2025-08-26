@@ -140,33 +140,53 @@ public class LatencyBenchmarkRunner : IDisposable
     {
         _logger.LogInformation("Setting up Orleans Client...");
 
+        // Read Orleans configuration from environment variables
+        var mongoClient = Environment.GetEnvironmentVariable("Orleans__MongoDBClient") ?? "mongodb://localhost:27017";
+        var clusterId = Environment.GetEnvironmentVariable("Orleans__ClusterId") ?? "AevatarSiloCluster";
+        var serviceId = Environment.GetEnvironmentVariable("Orleans__ServiceId") ?? "AevatarBasicService";
+        var database = Environment.GetEnvironmentVariable("Orleans__DataBase") ?? "AevatarDb";
+        var hostId = Environment.GetEnvironmentVariable("Orleans__HostId") ?? "Aevatar";
+        
+        _logger.LogInformation("Orleans Configuration:");
+        _logger.LogInformation("  MongoDB Client: {MongoClient}", mongoClient);
+        _logger.LogInformation("  Cluster ID: {ClusterId}", clusterId);
+        _logger.LogInformation("  Service ID: {ServiceId}", serviceId);
+        _logger.LogInformation("  Database: {Database}", database);
+        _logger.LogInformation("  Host ID: {HostId}", hostId);
+        
+        // Kafka configuration
+        var kafkaTopics = !string.IsNullOrEmpty(hostId) && !hostId.Equals("Aevatar", StringComparison.OrdinalIgnoreCase)
+            ? $"{hostId}Silo,{hostId}SiloProjector,{hostId}SiloBroadcast"
+            : "Aevatar,AevatarStateProjection,AevatarBroadCast";
+        var kafkaBrokers = Environment.GetEnvironmentVariable("KAFKA_BROKERS") ?? "localhost:9092";
+        _logger.LogInformation("  Kafka Topics: {KafkaTopics}", kafkaTopics);
+        _logger.LogInformation("  Kafka Brokers: {KafkaBrokers}", kafkaBrokers);
+
         var hostBuilder = Host.CreateDefaultBuilder()
             .UseOrleansClient(client =>
             {
-                var hostId = "Aevatar";
-                client.UseMongoDBClient("mongodb://localhost:27017")
+                client.UseMongoDBClient(mongoClient)
                     .UseMongoDBClustering(options =>
                     {
-                        options.DatabaseName = "AevatarDb";
+                        options.DatabaseName = database;
                         options.Strategy = MongoDBMembershipStrategy.SingleDocument;
                         options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" : $"Orleans{hostId}";
                     })
                     .Configure<ClusterOptions>(options =>
                     {
-                        options.ClusterId = "AevatarSiloCluster";
-                        options.ServiceId = "AevatarBasicService";
+                        options.ClusterId = clusterId;
+                        options.ServiceId = serviceId;
                     })
                     .AddActivityPropagation()
                     .AddAevatarKafkaStreaming("Aevatar", options =>
                     {
-                        options.BrokerList = new List<string> { "localhost:9092" };
+                        options.BrokerList = kafkaBrokers.Split(',').Select(b => b.Trim()).ToList();
                         options.ConsumerGroupId = "Aevatar";
                         options.ConsumeMode = ConsumeMode.LastCommittedMessage;
 
-                        var partitions = 8; // Multiple partitions for load distribution
-                        var replicationFactor = (short)1;  // ReplicationFactor should be short
-                        var topics = "Aevatar,AevatarStateProjection,AevatarBroadCast";
-                        foreach (var topic in topics.Split(','))
+                        const int partitions = 8; // Multiple partitions for load distribution
+                        const short replicationFactor = 1;  // ReplicationFactor should be short
+                        foreach (var topic in kafkaTopics.Split(','))
                         {
                             options.AddTopic(topic.Trim(), new TopicCreationConfig
                             {
