@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Aevatar.Notification;
 using Aevatar.Notification.Parameters;
 using Aevatar.Permissions;
+using Aevatar.Projects;
 using Microsoft.AspNetCore.Identity;
 using Newtonsoft.Json;
 using Volo.Abp;
@@ -31,12 +32,13 @@ public class OrganizationService : AevatarAppService, IOrganizationService
     protected readonly IPermissionDefinitionManager PermissionDefinitionManager;
     protected readonly IRepository<IdentityUser, Guid> UserRepository;
     protected readonly INotificationService NotificationService;
+    private readonly IProjectService _projectService;
 
     public OrganizationService(OrganizationUnitManager organizationUnitManager, IdentityUserManager identityUserManager,
         IRepository<OrganizationUnit, Guid> organizationUnitRepository, IdentityRoleManager roleManager,
         IPermissionManager permissionManager, IOrganizationPermissionChecker permissionChecker,
         IPermissionDefinitionManager permissionDefinitionManager, IRepository<IdentityUser, Guid> userRepository,
-        INotificationService notificationService)
+        INotificationService notificationService, IProjectService projectService)
     {
         OrganizationUnitManager = organizationUnitManager;
         IdentityUserManager = identityUserManager;
@@ -47,6 +49,7 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         PermissionDefinitionManager = permissionDefinitionManager;
         UserRepository = userRepository;
         NotificationService = notificationService;
+        _projectService = projectService;
     }
 
     public virtual async Task<ListResultDto<OrganizationDto>> GetListAsync(GetOrganizationListDto input)
@@ -146,6 +149,18 @@ public class OrganizationService : AevatarAppService, IOrganizationService
         }
 
         return ObjectMapper.Map<OrganizationUnit, OrganizationDto>(organizationUnit);
+    }
+
+    public async Task<OrganizationWithDefaultProjectDto> CreateWithDefaultProjectAsync(CreateOrganizationDto input)
+    {
+        var organizationDto = await CreateAsync(input);
+        var defaultProject = await _projectService.CreateDefaultAsync(new CreateDefaultProjectDto()
+        {
+            OrganizationId = organizationDto.Id
+        });
+        var result = (OrganizationWithDefaultProjectDto) organizationDto;
+        result.DefaultProjectId = defaultProject.Id;
+        return result;
     }
 
     protected virtual async Task<Guid> AddOwnerRoleAsync(Guid organizationId)

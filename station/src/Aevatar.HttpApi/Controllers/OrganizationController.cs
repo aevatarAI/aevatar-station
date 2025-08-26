@@ -2,12 +2,12 @@ using System;
 using System.Threading.Tasks;
 using Aevatar.Organizations;
 using Aevatar.Permissions;
+using Aevatar.Projects;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
-using Volo.Abp.Identity;
 using Volo.Abp.PermissionManagement;
 
 namespace Aevatar.Controllers;
@@ -46,6 +46,13 @@ public class OrganizationController : AevatarController
     public async Task<OrganizationDto> CreateAsync(CreateOrganizationDto input)
     {
         return await _organizationService.CreateAsync(input);
+    }
+    
+    [HttpPost]
+    [Route("create-with-default-project")]
+    public async Task<OrganizationWithDefaultProjectDto> CreateDefaultAsync(CreateOrganizationDto input)
+    {
+        return await _organizationService.CreateWithDefaultProjectAsync(input);
     }
 
     [HttpPut]
