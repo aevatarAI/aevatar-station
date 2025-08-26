@@ -100,18 +100,18 @@ public class DailyPushService : ApplicationService, IDailyPushService
         }
     }
 
-    public async Task MarkPushAsReadAsync(Guid userId, string pushToken)
+    public async Task MarkPushAsReadAsync(Guid userId, string deviceId)
     {
         try
         {
             var chatManagerGAgent = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
-            await chatManagerGAgent.MarkPushAsReadAsync(pushToken);
+            await chatManagerGAgent.MarkPushAsReadAsync(deviceId);
             
-            _logger.LogInformation("Push marked as read for user {UserId}", userId);
+            _logger.LogInformation("Push marked as read for user {UserId} with device {DeviceId}", userId, deviceId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to mark push as read for user {UserId}", userId);
+            _logger.LogError(ex, "Failed to mark push as read for user {UserId} with device {DeviceId}", userId, deviceId);
             throw;
         }
     }

@@ -99,10 +99,10 @@ public class DailyPushController : AbpControllerBase
         {
             var userId = (Guid)CurrentUser.Id!;
             
-            await _dailyPushService.MarkPushAsReadAsync(userId, request.PushToken);
+            await _dailyPushService.MarkPushAsReadAsync(userId, request.DeviceId);
             
-            _logger.LogInformation("Push marked as read for user {UserId} with token {TokenPrefix}...", 
-                userId, request.PushToken[..Math.Min(8, request.PushToken.Length)]);
+            _logger.LogInformation("Push marked as read for user {UserId} with device {DeviceId}", 
+                userId, request.DeviceId);
             
             // Follow GodGPT pattern: simple success result
             return Ok(new { result = true });

@@ -8,9 +8,9 @@ namespace Aevatar.Application.Contracts.DailyPush;
 public class MarkReadRequest
 {
     /// <summary>
-    /// Firebase push token to identify which device read the notification
+    /// Device ID to identify which device read the notification
     /// </summary>
     [Required]
-    [StringLength(512, MinimumLength = 1)]
-    public string PushToken { get; set; } = "";
+    [StringLength(128, MinimumLength = 1)]
+    public string DeviceId { get; set; } = "";
 }
