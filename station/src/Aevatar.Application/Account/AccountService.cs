@@ -147,7 +147,15 @@ public class AccountService : AccountAppService, IAccountService
     
         input.MapExtraPropertiesTo(user);
 
-        (await UserManager.CreateAsync(user, input.Password)).CheckErrors();
+        try
+        {
+            (await UserManager.CreateAsync(user, input.Password)).CheckErrors();
+        }
+        catch (UserFriendlyException ex) when (ex.Code == "Volo.Abp.Identity:InvalidUserName")
+        {
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InvalidUserName, language);
+            throw new UserFriendlyException(localizedMessage);
+        }
 
         await UserManager.SetEmailAsync(user, input.EmailAddress);
         await UserManager.AddDefaultRolesAsync(user);
