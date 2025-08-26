@@ -237,13 +237,13 @@ public class IpLocationService : IIpLocationService
 
     public Task<bool> IsInMainlandChinaAsync(string ipAddress)
     {
-        return IsIpInMainlandChinaAsync(ipAddress);
+        return IsIpInMainlandChinaMaxMindAsync(ipAddress);
 
     }
 
     public Task<IpLocationInfo> GetLocationAsync(string ipAddress)
     {
-        return GetIpLocationAsync(ipAddress);
+        return GetIpLocationMaxMindAsync(ipAddress);
     }
 
     /// <summary>
