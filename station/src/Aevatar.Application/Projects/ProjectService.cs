@@ -30,6 +30,7 @@ public class ProjectService : OrganizationService, IProjectService
     private readonly IOrganizationRoleService _organizationRoleService;
     private readonly IDistributedCache<string, string> _recentUsedProjectCache;
     private const string UserRecentUsedProjectKey = "UserRecentUsedProjectKey";
+    private readonly IOrganizationService _organizationService;
 
     public ProjectService(OrganizationUnitManager organizationUnitManager, IdentityUserManager identityUserManager,
         IRepository<OrganizationUnit, Guid> organizationUnitRepository, IdentityRoleManager roleManager,
@@ -37,7 +38,7 @@ public class ProjectService : OrganizationService, IProjectService
         IPermissionDefinitionManager permissionDefinitionManager, IRepository<IdentityUser, Guid> userRepository,
         INotificationService notificationService, IProjectDomainRepository domainRepository,
         IDeveloperService developerService, IOrganizationRoleService organizationRoleService,
-        IDistributedCache<string, string> recentUsedProjectCache) :
+        IDistributedCache<string, string> recentUsedProjectCache, IOrganizationService organizationService) :
         base(organizationUnitManager, identityUserManager, organizationUnitRepository, roleManager, permissionManager,
             permissionChecker, permissionDefinitionManager, userRepository, notificationService)
     {
@@ -45,6 +46,7 @@ public class ProjectService : OrganizationService, IProjectService
         _developerService = developerService;
         _organizationRoleService = organizationRoleService;
         _recentUsedProjectCache = recentUsedProjectCache;
+        _organizationService = organizationService;
     }
 
     public async Task<ProjectDto> CreateAsync(CreateProjectDto input)
@@ -99,7 +101,7 @@ public class ProjectService : OrganizationService, IProjectService
     
     public async Task<OrganizationWithDefaultProjectDto> CreateOrgWithDefaultProjectAsync(CreateOrganizationDto input)
     {
-        var organizationDto = await base.CreateAsync(input);
+        var organizationDto = await _organizationService.CreateAsync(input);
         var defaultProject = await CreateDefaultAsync(new CreateDefaultProjectDto()
         {
             OrganizationId = organizationDto.Id
@@ -133,17 +135,6 @@ public class ProjectService : OrganizationService, IProjectService
             DisplayName = "default project",
             DomainName = $"defaultProject{randomHash.Substring(randomHash.Length - 6)}"
         });
-        
-        // var roleList = await _organizationRoleService.GetListAsync(projectDto.Id);
-        // var ownerRole = roleList.Items.FirstOrDefault(t => t.Name.Contains(AevatarConsts.OrganizationOwnerRoleName));
-        // if (ownerRole != null)
-        // {
-        //     await SetMemberRoleAsync(projectDto.Id, new SetOrganizationMemberRoleDto()
-        //     {
-        //         UserId = CurrentUser.Id!.Value,
-        //         RoleId = ownerRole.Id
-        //     });
-        // }
         return projectDto;
     }
 
