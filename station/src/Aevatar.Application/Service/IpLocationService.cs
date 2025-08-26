@@ -235,6 +235,17 @@ public class IpLocationService : IIpLocationService
         });
     }
 
+    public Task<bool> IsInMainlandChinaAsync(string ipAddress)
+    {
+        return IsIpInMainlandChinaAsync(ipAddress);
+
+    }
+
+    public Task<IpLocationInfo> GetLocationAsync(string ipAddress)
+    {
+        return GetIpLocationAsync(ipAddress);
+    }
+
     /// <summary>
     /// IsValidIpAddress
     /// </summary>

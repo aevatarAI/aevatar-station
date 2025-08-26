@@ -33,7 +33,7 @@ public class IpLocationController : ControllerBase
 
             _logger.LogInformation("Checking if IP {IpAddress} is in mainland China", ip);
             
-            var result = await _ipLocationService.IsIpInMainlandChinaAsync(ip);
+            var result = await _ipLocationService.IsInMainlandChinaAsync(ip);
             
             return Ok(new
             {
@@ -61,7 +61,7 @@ public class IpLocationController : ControllerBase
 
             _logger.LogInformation("Getting location for IP {IpAddress}", ip);
             
-            var locationInfo = await _ipLocationService.GetIpLocationAsync(ip);
+            var locationInfo = await _ipLocationService.GetLocationAsync(ip);
             
             return Ok(new
             {
