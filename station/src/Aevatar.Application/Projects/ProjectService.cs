@@ -95,6 +95,18 @@ public class ProjectService : OrganizationService, IProjectService
 
         return dto;
     }
+    
+    public async Task<OrganizationWithDefaultProjectDto> CreateOrgWithDefaultProjectAsync(CreateOrganizationDto input)
+    {
+        var organizationDto = await base.CreateAsync(input);
+        var defaultProject = await CreateDefaultAsync(new CreateDefaultProjectDto()
+        {
+            OrganizationId = organizationDto.Id
+        });
+        var result = (OrganizationWithDefaultProjectDto) organizationDto;
+        result.Project = defaultProject;
+        return result;
+    }
 
     public async Task<ProjectDto> CreateDefaultAsync(CreateDefaultProjectDto input)
     {

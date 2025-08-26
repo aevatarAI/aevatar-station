@@ -11,7 +11,6 @@ public interface IOrganizationService
     Task<ListResultDto<OrganizationDto>> GetListAsync(GetOrganizationListDto input);
     Task<OrganizationDto> GetAsync(Guid id);
     Task<OrganizationDto> CreateAsync(CreateOrganizationDto input);
-    Task<OrganizationWithDefaultProjectDto> CreateWithDefaultProjectAsync(CreateOrganizationDto input);
     Task<OrganizationDto> UpdateAsync(Guid id, UpdateOrganizationDto input);
     Task DeleteAsync(Guid id);
 

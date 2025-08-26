@@ -1,8 +1,9 @@
 using System;
+using Aevatar.Projects;
 
 namespace Aevatar.Organizations;
 
 public class OrganizationWithDefaultProjectDto : OrganizationDto
 {
-    public Guid DefaultProjectId { get; set; }
+    public ProjectDto Project { get; set; }
 }

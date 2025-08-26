@@ -19,13 +19,15 @@ namespace Aevatar.Controllers;
 public class OrganizationController : AevatarController
 {
     private readonly IOrganizationService _organizationService;
+    private readonly IProjectService _projectService;
     private readonly IOrganizationPermissionChecker _permissionChecker;
 
     public OrganizationController(IOrganizationService organizationService,
-        IOrganizationPermissionChecker permissionChecker)
+        IOrganizationPermissionChecker permissionChecker, IProjectService projectService)
     {
         _organizationService = organizationService;
         _permissionChecker = permissionChecker;
+        _projectService = projectService;
     }
 
     [HttpGet]
@@ -52,7 +54,7 @@ public class OrganizationController : AevatarController
     [Route("create-with-default-project")]
     public async Task<OrganizationWithDefaultProjectDto> CreateDefaultAsync(CreateOrganizationDto input)
     {
-        return await _organizationService.CreateWithDefaultProjectAsync(input);
+        return await _projectService.CreateOrgWithDefaultProjectAsync(input);
     }
 
     [HttpPut]
