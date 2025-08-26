@@ -148,7 +148,7 @@ public class ChatMiddleware
         {
             var stopwatch = Stopwatch.StartNew();
             _logger.LogDebug(
-                $"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}, userId {userId}");
+                $"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}, userId: {userId}, clientIp:{clientIp},isCN:{isCN},region:{request.Region}");
             var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
             if (!await manager.IsUserSessionAsync(request.SessionId))
             {
@@ -314,7 +314,7 @@ public class ChatMiddleware
                 return;
             }
             var stopwatch = Stopwatch.StartNew();
-            _logger.LogDebug("[GuestChatMiddleware] Start processing guest chat for user: {0}", userHashId);
+            _logger.LogDebug($"[GuestChatMiddleware] Start processing guest chat for user: {userHashId} , clientIP:{clientIp}, isCN:{isCN}, region:{request.Region}");
 
             // Get or create anonymous user grain for this IP
             var grainId = CommonHelper.StringToGuid(CommonHelper.GetAnonymousUserGAgentId(clientIp));
@@ -553,7 +553,7 @@ public class ChatMiddleware
         {
             var stopwatch = Stopwatch.StartNew();
             RequestContext.Set("GodGPTLanguage", language.ToString());
-            _logger.LogDebug($"[VoiceChatMiddleware] HTTP start - SessionId: {request.SessionId}, UserId: {userId}, MessageType: {request.MessageType}, VoiceLanguage: {request.VoiceLanguage}, Language: {language}");
+            _logger.LogDebug($"[VoiceChatMiddleware] HTTP start - SessionId: {request.SessionId}, UserId: {userId}, MessageType: {request.MessageType}, VoiceLanguage: {request.VoiceLanguage}, Language: {language},clientIp:{clientIp},isCN:{isCN}, region:{request.Region}");
 
             // Validate session access
             var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
