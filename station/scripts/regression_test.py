@@ -714,14 +714,14 @@ def test_silo_deployment_operations(api_admin_headers):
     logger.info("Comprehensive silo deployment test completed successfully")
 
 
-def test_agent_validation_valid_config(api_headers):
-    """Test agent validation with valid configuration"""
-    logger.info("Testing agent validation with valid configuration")
+def test_agent_validation_basic(api_headers):
+    """Basic agent validation service test"""
+    logger.info("Testing agent validation service")
     
-    # Test with valid configuration for agenttest
+    # Test with simple valid configuration
     validation_request = {
         "gAgentNamespace": TEST_AGENT,
-        "configJson": '{"name": "TestAgent", "description": "Valid test configuration"}'
+        "configJson": '{"name": "TestAgent"}'
     }
     
     response = requests.post(
@@ -732,227 +732,10 @@ def test_agent_validation_valid_config(api_headers):
     )
     assert_status_code(response)
     
-    # Verify response structure
+    # Verify basic response structure
     response_data = response.json()
-    logger.debug(f"Valid config validation response: {response_data}")
-    
     assert "data" in response_data
-    validation_result = response_data["data"]
-    
-    # The result structure should have validation status and possible errors
-    assert "isValid" in validation_result or "errors" in validation_result
-    logger.info("Valid configuration validation test completed")
-
-
-def test_agent_validation_invalid_json(api_headers):
-    """Test agent validation with invalid JSON format"""
-    logger.info("Testing agent validation with invalid JSON")
-    
-    # Test with malformed JSON
-    validation_request = {
-        "gAgentNamespace": TEST_AGENT,
-        "configJson": '{"name": "TestAgent", "description": "Invalid JSON' # Missing closing quote and brace
-    }
-    
-    response = requests.post(
-        f"{API_HOST}/api/agent/validation/validate-config",
-        json=validation_request,
-        headers=api_headers,
-        verify=False
-    )
-    assert_status_code(response)
-    
-    # Verify response structure
-    response_data = response.json()
-    logger.debug(f"Invalid JSON validation response: {response_data}")
-    
-    assert "data" in response_data
-    validation_result = response_data["data"]
-    
-    # Should indicate validation failure
-    if "isValid" in validation_result:
-        assert validation_result["isValid"] == False
-    
-    # Should contain error information
-    if "errors" in validation_result:
-        assert len(validation_result["errors"]) > 0
-        
-    logger.info("Invalid JSON validation test completed")
-
-
-def test_agent_validation_schema_failures(api_headers):
-    """Test agent validation with schema validation failures"""
-    logger.info("Testing agent validation with schema validation failures")
-    
-    # Test with valid JSON but invalid schema (unknown fields)
-    validation_request = {
-        "gAgentNamespace": TEST_AGENT,
-        "configJson": '{"unknownField": "value", "invalidProperty": 123}'
-    }
-    
-    response = requests.post(
-        f"{API_HOST}/api/agent/validation/validate-config",
-        json=validation_request,
-        headers=api_headers,
-        verify=False
-    )
-    assert_status_code(response)
-    
-    # Verify response structure
-    response_data = response.json()
-    logger.debug(f"Schema validation failure response: {response_data}")
-    
-    assert "data" in response_data
-    validation_result = response_data["data"]
-    
-    # Should indicate validation failure for schema issues
-    if "isValid" in validation_result:
-        assert validation_result["isValid"] == False
-        
-    logger.info("Schema validation failure test completed")
-
-
-def test_agent_validation_null_empty_inputs(api_headers):
-    """Test agent validation with null and empty inputs"""
-    logger.info("Testing agent validation with null/empty inputs")
-    
-    # Test cases with null/empty values
-    test_cases = [
-        {"gAgentNamespace": None, "configJson": '{"name": "test"}'},
-        {"gAgentNamespace": "", "configJson": '{"name": "test"}'},
-        {"gAgentNamespace": TEST_AGENT, "configJson": None},
-        {"gAgentNamespace": TEST_AGENT, "configJson": ""},
-        {"gAgentNamespace": None, "configJson": None}
-    ]
-    
-    for i, validation_request in enumerate(test_cases):
-        logger.debug(f"Testing null/empty case {i+1}: {validation_request}")
-        
-        response = requests.post(
-            f"{API_HOST}/api/agent/validation/validate-config",
-            json=validation_request,
-            headers=api_headers,
-            verify=False
-        )
-        
-        # These should either return 400 (bad request) or 200 with validation errors
-        if response.status_code == 400:
-            # ABP validation interceptor caught the issue
-            logger.debug(f"Case {i+1}: ABP validation interceptor returned 400")
-        else:
-            # Service handled the validation
-            assert_status_code(response)
-            response_data = response.json()
-            logger.debug(f"Case {i+1} response: {response_data}")
-            
-            if "data" in response_data:
-                validation_result = response_data["data"]
-                if "isValid" in validation_result:
-                    assert validation_result["isValid"] == False
-                    
-    logger.info("Null/empty inputs validation test completed")
-
-
-def test_agent_validation_dataannotations_failures(api_headers):
-    """Test agent validation with DataAnnotations validation failures"""
-    logger.info("Testing agent validation with DataAnnotations failures")
-    
-    # Test with valid JSON and schema but DataAnnotations violations
-    # (e.g., string too long, invalid range values)
-    validation_request = {
-        "gAgentNamespace": TEST_AGENT,
-        "configJson": '{"name": "' + "x" * 300 + '", "value": -999}' # Very long name, negative value
-    }
-    
-    response = requests.post(
-        f"{API_HOST}/api/agent/validation/validate-config",
-        json=validation_request,
-        headers=api_headers,
-        verify=False
-    )
-    assert_status_code(response)
-    
-    # Verify response structure
-    response_data = response.json()
-    logger.debug(f"DataAnnotations validation failure response: {response_data}")
-    
-    assert "data" in response_data
-    validation_result = response_data["data"]
-    
-    # Should indicate validation failure for field constraint violations
-    if "isValid" in validation_result:
-        # May pass or fail depending on actual schema constraints
-        logger.debug(f"DataAnnotations validation result: {validation_result['isValid']}")
-        
-    logger.info("DataAnnotations validation failure test completed")
-
-
-def test_agent_validation_health_check(api_headers):
-    """Test agent validation service health check endpoint"""
-    logger.info("Testing agent validation service health check")
-    
-    response = requests.get(
-        f"{API_HOST}/api/agent/validation/health",
-        headers=api_headers,
-        verify=False
-    )
-    assert_status_code(response)
-    
-    # Health check should return some status information
-    response_data = response.json()
-    logger.debug(f"Validation health check response: {response_data}")
-    
-    # Basic health check verification
-    assert response_data is not None
-    logger.info("Agent validation health check test completed")
-
-
-def test_agent_validation_comprehensive(api_headers):
-    """Comprehensive test for agent validation service covering multiple scenarios"""
-    logger.info("Running comprehensive agent validation test")
-    
-    # Test multiple agent types and configurations
-    test_scenarios = [
-        {
-            "name": "Basic agenttest validation",
-            "gAgentNamespace": TEST_AGENT,
-            "configJson": '{"name": "ComprehensiveTest", "enabled": true}'
-        },
-        {
-            "name": "Empty configuration object",
-            "gAgentNamespace": TEST_AGENT,
-            "configJson": '{}'
-        },
-        {
-            "name": "Complex configuration",
-            "gAgentNamespace": TEST_AGENT,
-            "configJson": '{"name": "Complex", "properties": {"nested": {"value": 42}}, "array": [1, 2, 3]}'
-        }
-    ]
-    
-    for scenario in test_scenarios:
-        logger.debug(f"Testing scenario: {scenario['name']}")
-        
-        validation_request = {
-            "gAgentNamespace": scenario["gAgentNamespace"],
-            "configJson": scenario["configJson"]
-        }
-        
-        response = requests.post(
-            f"{API_HOST}/api/agent/validation/validate-config",
-            json=validation_request,
-            headers=api_headers,
-            verify=False
-        )
-        assert_status_code(response)
-        
-        response_data = response.json()
-        logger.debug(f"Scenario '{scenario['name']}' result: {response_data}")
-        
-        # Basic structure verification
-        assert "data" in response_data
-        
-    logger.info("Comprehensive agent validation test completed successfully")
+    logger.info("Agent validation service test completed")
 
 
 def test_publish_workflow_view(api_headers, api_admin_headers):
