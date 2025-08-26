@@ -33,7 +33,6 @@ public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependenc
     private readonly ITemplateRenderer _templateRenderer;
     private readonly IEmailSender _emailSender;
     private readonly IStringLocalizer<AccountResource> _stringLocalizer;
-    private readonly ILocalizationService _localizationService;
     private readonly AccountOptions _accountOptions;
     private readonly IDistributedCache<string,string> _lastEmailCache;
     private readonly DistributedCacheEntryOptions _defaultCacheOptions;
@@ -46,7 +45,6 @@ public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependenc
         _emailSender = emailSender;
         _templateRenderer = templateRenderer;
         _stringLocalizer = stringLocalizer;
-        _localizationService = localizationService;
         _lastEmailCache = lastEmailCache;
         _accountOptions = accountOptions.Value;
         _localizationService = localizationService;
