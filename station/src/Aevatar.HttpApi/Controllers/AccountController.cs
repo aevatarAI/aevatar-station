@@ -47,8 +47,7 @@ public class AccountController : AevatarController
     {
         var ip = GetRealClientIp(HttpContext);
         var language = HttpContext.GetGodGPTLanguage();
-        // TODO remove
-        Logger.LogInformation("Send register code request: Email={email}, AppName={appName}, IP={ip}", 
+        Logger.LogDebug("Send register code request: Email={email}, AppName={appName}, IP={ip}", 
             input.Email, input.AppName, ip);
         return _accountService.SendRegisterCodeAsync(input, language);
     }
@@ -100,7 +99,8 @@ public class AccountController : AevatarController
     [Route("send-password-reset-code")]
     public virtual Task SendPasswordResetCodeAsync(SendPasswordResetCodeDto input)
     {
-        return _accountService.SendPasswordResetCodeAsync(input);
+        var language = HttpContext.GetGodGPTLanguage();
+        return _accountService.SendPasswordResetCodeAsync(input, language);
     }
 
     [HttpPost]

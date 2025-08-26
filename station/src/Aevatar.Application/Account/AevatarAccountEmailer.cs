@@ -24,7 +24,7 @@ namespace Aevatar.Account;
 public interface IAevatarAccountEmailer
 {
     Task SendRegisterCodeAsync(string email, string code, GodGPTChatLanguage godGptChatLanguage);
-    Task SendPasswordResetLinkAsync(IdentityUser user, string resetToken);
+    Task SendPasswordResetLinkAsync(IdentityUser user, string resetToken, GodGPTChatLanguage language = GodGPTChatLanguage.English);
 }
 
 public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependency
@@ -72,21 +72,23 @@ public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependenc
         );
     }
 
-    public async Task SendPasswordResetLinkAsync(IdentityUser user, string resetToken)
+    public async Task SendPasswordResetLinkAsync(IdentityUser user, string resetToken, GodGPTChatLanguage language = GodGPTChatLanguage.English)
     {
         var url = _accountOptions.ResetPasswordUrl;
         var link = $"{url}?userId={user.Id}&resetToken={UrlEncoder.Default.Encode(resetToken)}";
 
+        var templateName = GetPasswordResetTemplateNameByLanguage(language);
         var emailContent = await _templateRenderer.RenderAsync(
-            AccountEmailTemplates.PasswordResetLink,
+            templateName,
             new { link = link }
         );
         
         await CheckSendEmailAsync(user.Email);
         
+        var subject = GetPasswordResetSubjectByLanguage(language);
         await _emailSender.SendAsync(
             user.Email,
-            "PasswordReset",
+            subject,
             emailContent
         );
     }
@@ -118,5 +120,22 @@ public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependenc
     private string GetEmailSubjectByLanguage(GodGPTChatLanguage language)
     {
         return _localizationService.GetLocalizedMessage("RegistrationSubject", language, "emails");
+    }
+
+    private string GetPasswordResetTemplateNameByLanguage(GodGPTChatLanguage language)
+    {
+        return language switch
+        {
+            GodGPTChatLanguage.English => AevatarAccountEmailTemplates.PasswordResetLink,
+            GodGPTChatLanguage.CN => $"{AevatarAccountEmailTemplates.PasswordResetLink}_zh-cn",
+            GodGPTChatLanguage.TraditionalChinese => $"{AevatarAccountEmailTemplates.PasswordResetLink}_zh-tw",
+            GodGPTChatLanguage.Spanish => $"{AevatarAccountEmailTemplates.PasswordResetLink}_es",
+            _ => AevatarAccountEmailTemplates.PasswordResetLink // Default to English
+        };
+    }
+
+    private string GetPasswordResetSubjectByLanguage(GodGPTChatLanguage language)
+    {
+        return _localizationService.GetLocalizedMessage("PasswordResetSubject", language, "emails");
     }
 }
