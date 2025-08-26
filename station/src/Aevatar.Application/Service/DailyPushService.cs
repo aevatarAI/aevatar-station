@@ -135,7 +135,8 @@ public class DailyPushService : ApplicationService, IDailyPushService
                 DeviceId = deviceInfo.DeviceId,
                 TimeZoneId = deviceInfo.TimeZoneId,
                 PushEnabled = deviceInfo.PushEnabled,
-                PushLanguage = deviceInfo.PushLanguage
+                PushLanguage = deviceInfo.PushLanguage,
+                PushToken = deviceInfo.PushToken
             };
             
             _logger.LogDebug("Retrieved device status for {DeviceId}, user {UserId}", deviceId, userId);
