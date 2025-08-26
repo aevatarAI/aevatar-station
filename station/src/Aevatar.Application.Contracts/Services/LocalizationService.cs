@@ -167,6 +167,7 @@ public class LocalizationService : ILocalizationService
                 ["en.WebhookValidatingError"] = "Error validating webhook",
                 ["en.InvalidShare"] = "Invalid Share string",
                 ["en.EmailFrequently"] = "Email sent too frequently. Please try again later.",
+                ["en.InvalidUserName"] = "Username can only contain letters or digits..",
 
                 // Security Verification - English (SecurityVerificationRequired is used as frontend signal, always English)
                 ["en.SecurityVerificationRequired"] = "Security verification is required. Please complete the verification and try again.",
@@ -206,6 +207,7 @@ public class LocalizationService : ILocalizationService
                 ["zh-tw.WebhookValidatingError"] = " 驗證 webhook 失敗 ",
                 ["zh-tw.InvalidShare"] = "共亯字串無效",
                 ["zh-tw.EmailFrequently"] = "電子郵件發送過於頻繁，請稍後再試。",
+                ["zh-tw.InvalidUserName"] = "用戶名只能包含字母或數位。",
 
                 // Security Verification - Traditional Chinese
                 ["zh-tw.SecurityVerificationRequired"] = "需要進行安全驗證。 請完成驗證並重試。",
@@ -245,6 +247,7 @@ public class LocalizationService : ILocalizationService
                 ["es.WebhookValidatingError"] = "Error al validar el webhook ",
                 ["es.InvalidShare"] = "Cadena de compartir inválida",
                 ["es.EmailFrequently"] = "El correo electrónico se envía con demasiada frecuencia. Por favor, intenta de nuevo más tarde.",
+                ["es.InvalidUserName"] = "El nombre de usuario solo puede contener letras o números.",
 
                 // Security Verification - Spanish (SecurityVerificationRequired always uses English as frontend signal)
                 ["es.SecurityVerificationRequired"] = "Se requiere verificación de seguridad.", // Not used - frontend signal
@@ -281,6 +284,7 @@ public class LocalizationService : ILocalizationService
                 ["zh.WebhookValidatingError"] = "验证 webhook 时出错",
                 ["zh.InvalidShare"] = "分享的字符串无效。",
                 ["zh.EmailFrequently"] = "电子邮件发送过于频繁，请稍后再试。",
+                ["zh.InvalidUserName"] = "用户名只能包含字母或数字。",
 
                 // Security Verification - Traditional Chinese
                 ["zh.SecurityVerificationRequired"] = "需要进行安全验证。请完成验证并重试。",
