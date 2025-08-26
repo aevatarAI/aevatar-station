@@ -20,7 +20,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Aevatar.GAgents.Basic" />
         <PackageReference Include="Azure.AI.TextAnalytics" />
         <PackageReference Include="OpenAI.API" />
         <PackageReference Include="Volo.Abp.Account.Application" />

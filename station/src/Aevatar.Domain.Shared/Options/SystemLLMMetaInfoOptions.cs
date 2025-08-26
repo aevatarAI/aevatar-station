@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Aevatar.Options;
 
-public class SystemLLMConfigOptions
+public class SystemLLMMetaInfoOptions
 {
     public List<SystemLLMConfigDto> SystemLLMConfigs { get; set; } = new ()
     {

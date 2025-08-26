@@ -41,7 +41,7 @@ public class AgentService : ApplicationService, IAgentService
     private readonly GrainTypeResolver _grainTypeResolver;
     private readonly ISchemaProvider _schemaProvider;
     private readonly IIndexingService _indexingService;
-    private readonly IOptionsMonitor<SystemLLMConfigOptions> _systemLLMConfigOptions;
+    private readonly IOptionsMonitor<SystemLLMMetaInfoOptions> _systemLLMConfigOptions;
 
     public AgentService(
         IClusterClient clusterClient,
@@ -53,7 +53,7 @@ public class AgentService : ApplicationService, IAgentService
         GrainTypeResolver grainTypeResolver,
         ISchemaProvider schemaProvider,
         IIndexingService indexingService,
-        IOptionsMonitor<SystemLLMConfigOptions> systemLLMConfigOptions)
+        IOptionsMonitor<SystemLLMMetaInfoOptions> systemLLMConfigOptions)
     {
         _clusterClient = clusterClient;
         _logger = logger;
