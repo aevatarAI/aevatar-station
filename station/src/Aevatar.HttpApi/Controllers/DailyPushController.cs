@@ -111,8 +111,8 @@ public class DailyPushController : AbpControllerBase
         {
             var language = HttpContext.GetGodGPTLanguage();
             var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InternalServerError, language);
-            _logger.LogError(ex, "Failed to mark push as read for token {TokenPrefix}...", 
-                request.PushToken[..Math.Min(8, request.PushToken.Length)]);
+            _logger.LogError(ex, "Failed to mark push as read for device {DeviceId}", 
+                request.DeviceId);
             return StatusCode(500, new { error = localizedMessage });
         }
     }
@@ -170,7 +170,7 @@ public class DailyPushController : AbpControllerBase
             if (intervalSeconds < 10 || intervalSeconds > 3600)
             {
                 var language = HttpContext.GetGodGPTLanguage();
-                var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InvalidParameter, language);
+                var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InvalidRequest, language);
                 return BadRequest(new {
                     error = new { code = 1, message = $"{localizedMessage}: intervalSeconds must be between 10 and 3600 seconds" },
                     result = false
