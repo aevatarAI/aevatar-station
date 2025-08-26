@@ -10,6 +10,9 @@ public interface IIpLocationService
     // MaxMind specific methods
     Task<bool> IsIpInMainlandChinaMaxMindAsync(string ipAddress);
     Task<IpLocationInfo> GetIpLocationMaxMindAsync(string ipAddress);
+    
+    Task<bool> IsInMainlandChinaAsync(string ipAddress);
+    Task<IpLocationInfo> GetLocationAsync(string ipAddress);
 }
 
 
