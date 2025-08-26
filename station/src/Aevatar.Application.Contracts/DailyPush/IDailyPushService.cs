@@ -21,8 +21,8 @@ public interface IDailyPushService
     /// Mark daily push as read for specific device
     /// </summary>
     /// <param name="userId">User ID</param>
-    /// <param name="pushToken">Push token to identify device</param>
-    Task MarkPushAsReadAsync(Guid userId, string pushToken);
+    /// <param name="deviceId">Device ID to identify device</param>
+    Task MarkPushAsReadAsync(Guid userId, string deviceId);
     
     /// <summary>
     /// Get device status by device ID
@@ -38,7 +38,8 @@ public interface IDailyPushService
     /// Start test mode for rapid push testing in specified timezone
     /// </summary>
     /// <param name="timezone">Timezone identifier (e.g., "Asia/Shanghai")</param>
-    Task StartTestModeAsync(string timezone);
+    /// <param name="intervalSeconds">Push interval in seconds (default: 600 seconds = 10 minutes)</param>
+    Task StartTestModeAsync(string timezone, int intervalSeconds = 600);
     
     /// <summary>
     /// Stop test mode and cleanup test reminders for specified timezone

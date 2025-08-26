@@ -164,7 +164,7 @@ public class DailyPushService : ApplicationService, IDailyPushService
                 timezone, intervalSeconds);
             
             var timezoneScheduler = _clusterClient.GetGrain<ITimezoneSchedulerGAgent>(timezone);
-            await timezoneScheduler.StartTestModeAsync(intervalSeconds);
+            await timezoneScheduler.StartTestModeAsync();
             
             _logger.LogInformation("Test mode started successfully for timezone {Timezone} with {IntervalSeconds}s interval", 
                 timezone, intervalSeconds);
