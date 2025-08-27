@@ -108,6 +108,18 @@ public class AccountService : AccountAppService, IAccountService
         await _aevatarAccountEmailer.SendPasswordResetLinkAsync(user, input.Email, resetToken);
     }
     
+    public async Task SendPasswordResetCodeAsync(SendPasswordResetCodeDto input, GodGPTChatLanguage language)
+    {
+        var user = await GetUserByEmailAsync(input.Email);
+        if (user == null)
+        {
+            _logger.LogWarning("[AccountService][SendPasswordResetCodeAsync] {Email} User not found.", input.Email);
+            return;
+        }
+        var resetToken = await UserManager.GeneratePasswordResetTokenAsync(user);
+        await _aevatarAccountEmailer.SendPasswordResetLinkAsync(user, input.Email, resetToken, language);
+    }
+    
     public async Task<bool> CheckEmailRegisteredAsync(CheckEmailRegisteredDto input)
     {
         var existingUser = await UserManager.FindByEmailAsync(input.EmailAddress);
