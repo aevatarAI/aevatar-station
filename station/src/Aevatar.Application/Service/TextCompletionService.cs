@@ -52,7 +52,6 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
             // 验证用户目标长度
             ValidateUserGoal(request.UserGoal ?? string.Empty);
             
-            _logger.LogDebug("UserGoal validation passed for input length: {InputLength}", request.UserGoal?.Length ?? 0);
             _logger.LogInformation("Starting text completion generation with request: {@Request}", 
                 new { 
                     UserGoalLength = request.UserGoal.Length, 
