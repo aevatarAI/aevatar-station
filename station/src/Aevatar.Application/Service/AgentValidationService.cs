@@ -32,30 +32,30 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
             {
                 _logger.LogWarning("Null validation request");
                 return ConfigValidationResultDto.Failure(
-                    new[] { new ValidationErrorDto { PropertyName = "Request", Message = "Request body is required" } },
-                    "Invalid request: Request body cannot be null");
+                    Array.Empty<ValidationErrorDto>(),
+                    "Data validation failed");
             }
             if (string.IsNullOrWhiteSpace(request.GAgentNamespace))
             {
                 _logger.LogWarning("Missing GAgent namespace in validation request");
                 return ConfigValidationResultDto.Failure(
-                    new[] { new ValidationErrorDto { PropertyName = nameof(request.GAgentNamespace), Message = "Complete GAgent Namespace is required" } },
-                    "Missing required GAgent Namespace");
+                    Array.Empty<ValidationErrorDto>(),
+                    "Data validation failed");
             }
             if (string.IsNullOrWhiteSpace(request.ConfigJson))
             {
                 _logger.LogWarning("Missing configuration JSON");
                 return ConfigValidationResultDto.Failure(
-                    new[] { new ValidationErrorDto { PropertyName = nameof(request.ConfigJson), Message = "Configuration JSON is required" } },
-                    "Missing required Configuration JSON");
+                    Array.Empty<ValidationErrorDto>(),
+                    "Data validation failed");
             }
             var configType = FindConfigTypeByAgentNamespace(request.GAgentNamespace);
             if (configType == null)
             {
                 _logger.LogWarning("Unknown GAgent type: {GAgentNamespace}", request.GAgentNamespace);
                 return ConfigValidationResultDto.Failure(
-                    new[] { new ValidationErrorDto { PropertyName = nameof(request.GAgentNamespace), Message = $"Unknown GAgent type: {request.GAgentNamespace}" } },
-                    $"GAgent type '{request.GAgentNamespace}' not found or no corresponding configuration type available");
+                    Array.Empty<ValidationErrorDto>(),
+                    "Data validation failed");
             }
             var result = await ValidateConfigByTypeAsync(configType, request.ConfigJson);
             _logger.LogInformation("Validation completed: {GAgentNamespace}, IsValid: {IsValid}", request.GAgentNamespace, result.IsValid);
@@ -65,8 +65,8 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
         {
             _logger.LogError(ex, "Validation error for {GAgentNamespace}", request?.GAgentNamespace ?? "unknown");
             return ConfigValidationResultDto.Failure(
-                new[] { new ValidationErrorDto { PropertyName = "System", Message = "Internal server error" } },
-                "An unexpected error occurred during validation");
+                Array.Empty<ValidationErrorDto>(),
+                "Data validation failed");
         }
     }
     private Type? FindConfigTypeByAgentNamespace(string agentNamespace)
@@ -117,46 +117,71 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
     {
         try
         {
+            // 1. Schema validation
             var schema = _schemaProvider.GetTypeSchema(configType);
             var validationErrors = schema.Validate(configJson);
             if (validationErrors.Any())
             {
-                var errorDict = _schemaProvider.ConvertValidateError(validationErrors);
-                var errors = errorDict.Select(kvp => new ValidationErrorDto { PropertyName = kvp.Key, Message = kvp.Value }).ToList();
-                return ConfigValidationResultDto.Failure(errors, "Configuration schema validation failed");
+                _logger.LogInformation("Schema validation failed for {ConfigType}", configType.Name);
+                return ConfigValidationResultDto.Failure(
+                    Array.Empty<ValidationErrorDto>(),
+                    "Data validation failed");
             }
+
+            // 2. JSON deserialization
             try
             {
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                 var config = JsonSerializer.Deserialize(configJson, configType, options);
-                if (config != null)
+                
+                if (config == null)
                 {
-                    var validationContext = new ValidationContext(config);
-                    var validationResults = new List<ValidationResult>();
-                    System.ComponentModel.DataAnnotations.Validator.TryValidateObject(config, validationContext, validationResults, validateAllProperties: true);
-                    if (config is IValidatableObject validatableConfig)
+                    _logger.LogInformation("JSON deserialization resulted in null for {ConfigType}", configType.Name);
+                    return ConfigValidationResultDto.Failure(
+                        Array.Empty<ValidationErrorDto>(),
+                        "Data validation failed");
+                }
+
+                // 3. DataAnnotations validation
+                var validationContext = new ValidationContext(config);
+                var validationResults = new List<ValidationResult>();
+                if (!System.ComponentModel.DataAnnotations.Validator.TryValidateObject(config, validationContext, validationResults, validateAllProperties: true))
+                {
+                    _logger.LogInformation("DataAnnotations validation failed for {ConfigType}", configType.Name);
+                    return ConfigValidationResultDto.Failure(
+                        Array.Empty<ValidationErrorDto>(),
+                        "Data validation failed");
+                }
+
+                // 4. Custom validation
+                if (config is IValidatableObject validatableConfig)
+                {
+                    var customResults = validatableConfig.Validate(validationContext).ToList();
+                    if (customResults.Any())
                     {
-                        var customResults = validatableConfig.Validate(validationContext);
-                        validationResults.AddRange(customResults);
-                    }
-                    if (validationResults.Any())
-                    {
-                        var additionalErrors = validationResults.Select(vr => new ValidationErrorDto { PropertyName = vr.MemberNames.FirstOrDefault() ?? "Unknown", Message = vr.ErrorMessage ?? "Validation error" }).ToList();
-                        return ConfigValidationResultDto.Failure(additionalErrors, "Configuration validation failed");
+                        _logger.LogInformation("Custom validation failed for {ConfigType}", configType.Name);
+                        return ConfigValidationResultDto.Failure(
+                            Array.Empty<ValidationErrorDto>(),
+                            "Data validation failed");
                     }
                 }
             }
             catch (JsonException ex)
             {
-                _logger.LogWarning(ex, "JSON error for {ConfigType}", configType.Name);
-                return ConfigValidationResultDto.Failure(new[] { new ValidationErrorDto { PropertyName = "ConfigJson", Message = "Invalid JSON format: " + ex.Message } }, "JSON format error");
+                _logger.LogInformation(ex, "JSON parsing failed for {ConfigType}", configType.Name);
+                return ConfigValidationResultDto.Failure(
+                    Array.Empty<ValidationErrorDto>(),
+                    "Data validation failed");
             }
+
             return ConfigValidationResultDto.Success("Configuration validation passed");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Validation error for {ConfigType}", configType.Name);
-            return ConfigValidationResultDto.Failure(new[] { new ValidationErrorDto { PropertyName = "System", Message = "Schema validation system error" } }, "System validation error");
+            return ConfigValidationResultDto.Failure(
+                Array.Empty<ValidationErrorDto>(),
+                "Data validation failed");
         }
     }
 }
