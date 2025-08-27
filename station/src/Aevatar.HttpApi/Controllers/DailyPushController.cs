@@ -239,6 +239,12 @@ public class DailyPushController : AbpControllerBase
     {
         try
         {
+            // Ensure timezone is not empty (defensive programming)
+            if (string.IsNullOrEmpty(timezone))
+            {
+                timezone = "Asia/Shanghai";
+            }
+            
             var status = await _dailyPushService.GetTestStatusAsync(timezone);
             
             // Follow GodGPT pattern: direct return of data object
