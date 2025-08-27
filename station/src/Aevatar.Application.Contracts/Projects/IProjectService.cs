@@ -7,8 +7,13 @@ namespace Aevatar.Projects;
 
 public interface IProjectService : IOrganizationService
 {
-    Task<ProjectDto> CreateAsync(CreateProjectDto input);
+    Task<ProjectDto> CreateProjectAsync(CreateProjectDto input);
     Task<ProjectDto> UpdateAsync(Guid id, UpdateProjectDto input);
     Task<ListResultDto<ProjectDto>> GetListAsync(GetProjectListDto input);
     Task<ProjectDto> GetProjectAsync(Guid id);
+    Task<OrganizationWithDefaultProjectDto> CreateOrgWithDefaultProjectAsync(CreateOrganizationDto input);
+    Task<ProjectDto> CreateDefaultAsync(CreateDefaultProjectDto input);
+    
+    Task SaveRecentUsedProjectAsync(RecentUsedProjectDto input);
+    Task<RecentUsedProjectDto> GetRecentUsedProjectAsync();
 }
