@@ -85,7 +85,7 @@ public class AccountService : AccountAppService, IAccountService
 
         var code = GenerateVerificationCode();
         await _registerCode.SetAsync(GetRegisterCodeKey(input.Email), code, _defaultCacheOptions);
-        await _aevatarAccountEmailer.SendRegisterCodeAsync(input.Email, code);
+        await _aevatarAccountEmailer.SendRegisterCodeAsync(input.Email, code, language);
     }
 
     public async Task<bool> VerifyRegisterCodeAsync(VerifyRegisterCodeDto input)
@@ -97,8 +97,13 @@ public class AccountService : AccountAppService, IAccountService
     public override async Task SendPasswordResetCodeAsync(SendPasswordResetCodeDto input)
     {
         var user = await GetUserByEmailAsync(input.Email);
+        if (user == null)
+        {
+            _logger.LogWarning("[AccountService][SendPasswordResetCodeAsync] {Email} User not found.", input.Email);
+            return;
+        }
         var resetToken = await UserManager.GeneratePasswordResetTokenAsync(user);
-        await _aevatarAccountEmailer.SendPasswordResetLinkAsync(user, resetToken);
+        await _aevatarAccountEmailer.SendPasswordResetLinkAsync(user, input.Email, resetToken);
     }
     
     public async Task<bool> CheckEmailRegisteredAsync(CheckEmailRegisteredDto input)
