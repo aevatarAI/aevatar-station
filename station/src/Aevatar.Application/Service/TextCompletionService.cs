@@ -45,10 +45,14 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
         // 为每次请求创建新的agent实例，避免并发冲突  
         var agentId = Guid.NewGuid();
         
-        using var scope = _logger.BeginScope("AgentId: {AgentId}, RequestInputLength: {InputLength}", agentId, request.UserGoal.Length);
+        using var scope = _logger.BeginScope("AgentId: {AgentId}, RequestInputLength: {InputLength}", agentId, request.UserGoal?.Length ?? 0);
         
         try
         {
+            // 验证用户目标长度
+            ValidateUserGoal(request.UserGoal ?? string.Empty);
+            
+            _logger.LogDebug("UserGoal validation passed for input length: {InputLength}", request.UserGoal?.Length ?? 0);
             _logger.LogInformation("Starting text completion generation with request: {@Request}", 
                 new { 
                     UserGoalLength = request.UserGoal.Length, 
@@ -90,6 +94,11 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
                 });
             
             return response;
+        }
+        catch (UserFriendlyException)
+        {
+            // 用户友好异常直接抛出，不处理
+            throw;
         }
         catch (Exception ex)
         {
@@ -144,6 +153,32 @@ public class TextCompletionService : ApplicationService, ITextCompletionService
             _logger.LogError(ex, "Error building text completion system instructions");
             // 返回基础的提示词作为后备
             return _promptOptions.CurrentValue.TextCompletionSystemRole + "\n\n" + _promptOptions.CurrentValue.TextCompletionOutputRequirements;
+        }
+    }
+
+    /// <summary>
+    /// 验证用户目标的长度限制
+    /// </summary>
+    /// <param name="userGoal">用户目标文本</param>
+    /// <exception cref="UserFriendlyException">当用户目标不符合长度要求时抛出</exception>
+    private void ValidateUserGoal(string userGoal)
+    {
+        if (string.IsNullOrWhiteSpace(userGoal))
+        {
+            _logger.LogWarning("UserGoal validation failed: input is null or empty");
+            throw new UserFriendlyException("User goal cannot be empty.");
+        }
+
+        if (userGoal.Length < 15)
+        {
+            _logger.LogWarning("UserGoal validation failed: input too short. Length: {InputLength}, Required minimum: 15", userGoal.Length);
+            throw new UserFriendlyException("User goal must be at least 15 characters long.");
+        }
+
+        if (userGoal.Length > 250)
+        {
+            _logger.LogWarning("UserGoal validation failed: input too long. Length: {InputLength}, Maximum allowed: 250", userGoal.Length);
+            throw new UserFriendlyException("User goal cannot exceed 250 characters.");
         }
     }
 }
