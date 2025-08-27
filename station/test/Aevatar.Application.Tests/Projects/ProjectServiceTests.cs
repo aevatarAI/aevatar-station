@@ -783,10 +783,9 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         var createProjectInput = new CreateProjectDto()
         {
             OrganizationId = organization.Id,
-            DisplayName = "Test Project",
-            DomainName = "App"
+            DisplayName = "Test Project"
         };
-        var project = await _projectService.CreateAsync(createProjectInput);
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
         await _projectService.SaveRecentUsedProjectAsync(new RecentUsedProjectDto()
         {
             OrganizationId = organization.Id,

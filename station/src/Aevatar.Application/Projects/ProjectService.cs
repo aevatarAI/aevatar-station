@@ -154,11 +154,10 @@ public class ProjectService : OrganizationService, IProjectService
         }
 
         var randomHash = MD5Util.CalculateMD5(Guid.NewGuid().ToString());
-        var projectDto = await CreateAsync(new CreateProjectDto()
+        var projectDto = await CreateProjectAsync(new CreateProjectDto()
         {
             OrganizationId = input.OrganizationId,
-            DisplayName = "default project",
-            DomainName = $"defaultProject{randomHash.Substring(randomHash.Length - 6)}"
+            DisplayName = $"default project {randomHash.Substring(randomHash.Length - 6)}"
         });
         return projectDto;
     }
