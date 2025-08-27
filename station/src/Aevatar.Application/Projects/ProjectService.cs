@@ -2,20 +2,23 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Aevatar.Common;
 using Aevatar.Notification;
 using Aevatar.Organizations;
 using Aevatar.Permissions;
 using Aevatar.Service;
 using Microsoft.Extensions.Logging;
+using Elastic.Clients.Elasticsearch;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.Domain.Repositories;
-using Volo.Abp.EventBus.Distributed;
 using Volo.Abp.Identity;
 using Volo.Abp.PermissionManagement;
 using Microsoft.AspNetCore.Identity;
-using IdentityRole = Volo.Abp.Identity.IdentityRole;
+using Newtonsoft.Json;
+using Volo.Abp.Caching;
+using DistributedCacheEntryOptions = Microsoft.Extensions.Caching.Distributed.DistributedCacheEntryOptions;
 using IdentityUser = Volo.Abp.Identity.IdentityUser;
 
 namespace Aevatar.Projects;
@@ -26,19 +29,28 @@ public class ProjectService : OrganizationService, IProjectService
     private readonly IProjectDomainRepository _domainRepository;
     private readonly IDeveloperService _developerService;
     private readonly ILogger<ProjectService> _logger;
+    private readonly IOrganizationRoleService _organizationRoleService;
+    private readonly IDistributedCache<string, string> _recentUsedProjectCache;
+    private const string UserRecentUsedProjectKey = "UserRecentUsedProjectKey";
+    private readonly IOrganizationService _organizationService;
 
     public ProjectService(OrganizationUnitManager organizationUnitManager, IdentityUserManager identityUserManager,
         IRepository<OrganizationUnit, Guid> organizationUnitRepository, IdentityRoleManager roleManager,
         IPermissionManager permissionManager, IOrganizationPermissionChecker permissionChecker,
         IPermissionDefinitionManager permissionDefinitionManager, IRepository<IdentityUser, Guid> userRepository,
         INotificationService notificationService, IProjectDomainRepository domainRepository,
-        IDeveloperService developerService, ILogger<ProjectService> logger) :
+        IDeveloperService developerService, ILogger<ProjectService> logger,
+        IOrganizationRoleService organizationRoleService,
+        IDistributedCache<string, string> recentUsedProjectCache, IOrganizationService organizationService) :
         base(organizationUnitManager, identityUserManager, organizationUnitRepository, roleManager, permissionManager,
             permissionChecker, permissionDefinitionManager, userRepository, notificationService)
     {
         _domainRepository = domainRepository;
         _developerService = developerService;
         _logger = logger;
+        _organizationRoleService = organizationRoleService;
+        _recentUsedProjectCache = recentUsedProjectCache;
+        _organizationService = organizationService;
     }
 
     public async Task<ProjectDto> CreateProjectAsync(CreateProjectDto input)
@@ -110,6 +122,45 @@ public class ProjectService : OrganizationService, IProjectService
         _logger.LogInformation("Project creation completed successfully. ProjectId: {ProjectId}, DomainName: {DomainName}", 
             project.Id, domainName);
         return result;
+    }
+    
+    public async Task<OrganizationWithDefaultProjectDto> CreateOrgWithDefaultProjectAsync(CreateOrganizationDto input)
+    {
+        var organizationDto = await _organizationService.CreateAsync(input);
+        var defaultProject = await CreateDefaultAsync(new CreateDefaultProjectDto()
+        {
+            OrganizationId = organizationDto.Id
+        });
+        var result = new OrganizationWithDefaultProjectDto()
+        {
+            Id = organizationDto.Id,
+            DisplayName = organizationDto.DisplayName,
+            MemberCount = organizationDto.MemberCount,
+            CreationTime = organizationDto.CreationTime,
+            Project = defaultProject
+        };
+        return result;
+    }
+
+    public async Task<ProjectDto> CreateDefaultAsync(CreateDefaultProjectDto input)
+    {
+        var projectList = await GetListAsync(new GetProjectListDto()
+        {
+            OrganizationId = input.OrganizationId
+        });
+        if (projectList.Items.Count > 0)
+        {
+            throw new UserFriendlyException("Already have project.");
+        }
+
+        var randomHash = MD5Util.CalculateMD5(Guid.NewGuid().ToString());
+        var projectDto = await CreateAsync(new CreateProjectDto()
+        {
+            OrganizationId = input.OrganizationId,
+            DisplayName = "default project",
+            DomainName = $"defaultProject{randomHash.Substring(randomHash.Length - 6)}"
+        });
+        return projectDto;
     }
 
     protected override List<string> GetOwnerPermissions()
@@ -274,5 +325,38 @@ public class ProjectService : OrganizationService, IProjectService
             var invalidCharString = string.Join(", ", invalidChars.Distinct().Select(c => $"'{c}'"));
             throw new UserFriendlyException($"Project name contains invalid characters for domain generation: {invalidCharString}. Only ASCII letters, digits, and hyphens are allowed.");
         }
+    }
+
+    public async Task SaveRecentUsedProjectAsync(RecentUsedProjectDto input)
+    {
+        try
+        {
+            await OrganizationUnitRepository.GetAsync(input.OrganizationId);
+            await OrganizationUnitRepository.GetAsync(input.ProjectId);
+        }
+        catch (Exception e)
+        {
+            throw new UserFriendlyException("Organization or project not existed");
+        }
+        
+
+        var userId = CurrentUser.Id;
+        var cacheKey = $"{UserRecentUsedProjectKey}:{userId.ToString()}";
+        await _recentUsedProjectCache.SetAsync(cacheKey, JsonConvert.SerializeObject(input), new DistributedCacheEntryOptions()
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(30)
+        });
+    }
+
+    public async Task<RecentUsedProjectDto> GetRecentUsedProjectAsync()
+    {
+        var userId = CurrentUser.Id;
+        var cacheKey = $"{UserRecentUsedProjectKey}:{userId.ToString()}";
+        var value = await _recentUsedProjectCache.GetAsync(cacheKey);
+        if (value.IsNullOrEmpty())
+        {
+            throw new UserFriendlyException("No recent used projectId");
+        }
+        return JsonConvert.DeserializeObject<RecentUsedProjectDto>(value)!;
     }
 }
