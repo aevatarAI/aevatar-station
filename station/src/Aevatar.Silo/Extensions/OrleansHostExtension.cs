@@ -136,10 +136,8 @@ public static class OrleansHostExtension
                             options.DefaultStrategy.MaxIdentifiersPerType = int.MaxValue;
                             
                             // Use gentle processing parameters for system stability
-                            options.MaxConcurrency = 2;          // Lower concurrency 
-                            options.InitialBatchSize = 5;        // Small initial batches
-                            options.MaxBatchSize = 20;           // Conservative max batch size
-                            options.DelayBetweenBatchesMs = 8000; // Longer delays for system recovery
+                            options.DelayBetweenBatchesMs = agentWarmupSection.GetValue<int>("DelayBetweenBatchesMs", 1000);
+
                         }
                         else
                         {
