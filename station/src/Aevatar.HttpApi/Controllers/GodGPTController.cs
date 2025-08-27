@@ -15,6 +15,7 @@ using Aevatar.Application.Grains.Agents.ChatManager.Common;
 using Aevatar.Application.Grains.Agents.ChatManager.Dtos;
 using Aevatar.Application.Grains.ChatManager.Dtos;
 using Aevatar.Application.Grains.ChatManager.UserQuota;
+using Aevatar.Application.Service;
 using Aevatar.BlobStorings;
 using Aevatar.Core.Abstractions;
 using Aevatar.Extensions;
@@ -59,13 +60,14 @@ public class GodGPTController : AevatarController
     private readonly IOptions<GodGPTOptions> _godGptOptions;
     private readonly ILocalizationService _localizationService;
     private readonly IGoogleAnalyticsService _googleAnalyticsService;
+    private readonly IIpLocationService _ipLocationService;
 
 
     public GodGPTController(IGodGPTService godGptService, IClusterClient clusterClient,
         IOptions<AevatarOptions> aevatarOptions, ILogger<GodGPTController> logger, IAccountService accountService,
         IBlobContainer blobContainer, IOptionsSnapshot<BlobStoringOptions> blobStoringOptions,
         IThumbnailService thumbnailService, IOptions<GodGPTOptions> godGptOptions, ILocalizationService localizationService,
-        IGoogleAnalyticsService googleAnalyticsService)
+        IGoogleAnalyticsService googleAnalyticsService,IIpLocationService ipLocationService)
     {
         _godGptService = godGptService;
         _clusterClient = clusterClient;
@@ -78,6 +80,8 @@ public class GodGPTController : AevatarController
         _godGptOptions = godGptOptions;
         _localizationService = localizationService;
         _googleAnalyticsService = googleAnalyticsService;
+        _ipLocationService = ipLocationService;
+
     }
 
     [AllowAnonymous]
@@ -91,6 +95,9 @@ public class GodGPTController : AevatarController
     public async Task<Guid> CreateSessionAsync(CreateSessionRequestDto request)
     {
         var stopwatch = Stopwatch.StartNew();
+        var clientIp = HttpContext.GetClientIpAddress();
+        var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp);
+        RequestContext.Set("IsCN", isCN);
         var sessionId = await _godGptService.CreateSessionAsync((Guid)CurrentUser.Id!, _defaultLLM, _defaultPrompt, request.Guider);
         _logger.LogDebug("[GodGPTController][CreateSessionAsync] sessionId: {0}, duration: {1}ms",
             sessionId.ToString(), stopwatch.ElapsedMilliseconds);
@@ -102,6 +109,9 @@ public class GodGPTController : AevatarController
     public async Task<Guid> CreateSessionAsync()
     {
         var stopwatch = Stopwatch.StartNew();
+        var clientIp = HttpContext.GetClientIpAddress();
+        var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp);
+        RequestContext.Set("IsCN", isCN);
         var sessionId = await _godGptService.CreateSessionAsync((Guid)CurrentUser.Id!, _defaultLLM, _defaultPrompt, "");
         _logger.LogDebug("[GodGPTController][CreateSessionAsync] sessionId: {0}, duration: {1}ms",
             sessionId.ToString(), stopwatch.ElapsedMilliseconds);
@@ -471,6 +481,9 @@ public class GodGPTController : AevatarController
         
         try
         {
+            var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp);
+            RequestContext.Set("IsCN", isCN);
+
             // Always check limits first to provide graceful response
             var limits = await _godGptService.GetGuestChatLimitsAsync(clientIp);
             
@@ -567,7 +580,9 @@ public class GodGPTController : AevatarController
         // Append language-specific prompt requirement if content is provided
         var processedContent = SessionTypeExtensions.SharePrompt;
         processedContent = processedContent.AppendLanguagePrompt(language);
-        
+        var clientIp = HttpContext.GetClientIpAddress();
+        var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp);
+        RequestContext.Set("IsCN", isCN);
         var response = await _godGptService.GetShareKeyWordWithAIAsync(sessionId, processedContent, region, sessionType, language);
         _logger.LogDebug(
             $"[GodGPTController][GetShareKeyWordWithAIAsync] completed for sessionId={sessionId}, language={language},processedContent={processedContent}, duration: {stopwatch.ElapsedMilliseconds}ms");
