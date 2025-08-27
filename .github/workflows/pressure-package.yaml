@@ -42,12 +42,12 @@ jobs:
         if: ${{ steps.nuget-packages.outputs.cache-hit == 'true' }}
         continue-on-error: true
         run: ls -lh ~/.nuget/packages
-      - run: dotnet publish src/${{ github.event.inputs.servicename}}/${{ github.event.inputs.servicename }}.csproj -o out/${{ github.event.inputs.servicename }}
+      - run: cd station && dotnet publish src/${{ github.event.inputs.servicename}}/${{ github.event.inputs.servicename }}.csproj -o out/${{ github.event.inputs.servicename }}
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ github.event.inputs.servicename }}
-          path: out/${{ github.event.inputs.servicename }}
+          path: station/out/${{ github.event.inputs.servicename }}
           retention-days: 1
 
   build-and-push-image:

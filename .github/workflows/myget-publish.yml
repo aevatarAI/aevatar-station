@@ -1,0 +1,125 @@
+name: Publish MyGet Package
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+run-name: Publish MyGet Package from ${{ github.ref }}
+
+env:
+  DOTNET_INSTALL_DIR: "./.dotnet"
+
+concurrency:
+  group: workflow-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: Aevatar
+            path: src/Aevatar
+            project_root: framework
+          - name: Aevatar.Core
+            path: src/Aevatar.Core
+            project_root: framework
+          - name: Aevatar.Core.Abstractions
+            path: src/Aevatar.Core.Abstractions
+            project_root: framework
+          - name: Aevatar.EventSourcing.Core
+            path: src/Aevatar.EventSourcing.Core
+            project_root: framework
+          - name: Aevatar.EventSourcing.MongoDB
+            path: src/Aevatar.EventSourcing.MongoDB
+            project_root: framework
+          - name: Aevatar.PermissionManagement
+            path: src/Aevatar.PermissionManagement
+            project_root: framework
+          - name: Aevatar.Plugins
+            path: src/Aevatar.Plugins
+            project_root: framework
+          - name: Aevatar.TestKit
+            path: src/Aevatar.TestKit
+            project_root: framework
+          - name: Aevatar.SignalR
+            path: src/Aevatar.SignalR
+            project_root: signalR
+          - name: Aevatar.CQRS
+            path: src/Aevatar.CQRS
+            project_root: station
+          - name: Aevatar.WebHook.SDK
+            path: src/Aevatar.WebHook.SDK
+            project_root: station
+          - name: Aevatar.Station.Feature
+            path: src/Aevatar.Station.Feature
+            project_root: station
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Cache NuGet Packages
+        id: nuget-packages
+        uses: actions/cache@v4
+        env:
+          cache-name: nuget-package-cache
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-${{ env.cache-name }}
+
+      - name: Restore dependencies
+        run: cd ${{ matrix.project_root }} && dotnet restore ${{ matrix.path }}/${{ matrix.name }}.csproj
+
+      - name: Get the version from git tags
+        id: get_version
+        run: |
+          TAG=$(git describe --tags --abbrev=0)
+          VERSION=${TAG#v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Build the project
+        run: cd ${{ matrix.project_root }} && dotnet build ${{ matrix.path }}/${{ matrix.name }}.csproj --configuration Release --no-restore
+
+      - name: Create nupkg directory
+        run: mkdir -p ${{ github.workspace }}/nupkg/${{ matrix.name }}
+
+      - name: Pack the MyGet package
+        run: cd ${{ matrix.project_root }} && dotnet pack ${{ matrix.path }}/${{ matrix.name }}.csproj --configuration Release --no-build --output ${{ github.workspace }}/nupkg/${{ matrix.name }} -p:PackageVersion=${{ env.VERSION }}
+
+      - name: List nupkg contents
+        run: |
+          echo "Contents of nupkg directory for ${{ matrix.name }}:"
+          ls -la ${{ github.workspace }}/nupkg/${{ matrix.name }}/
+
+      - name: Publish the MyGet package
+        env:
+          MYGET_URL: ${{ secrets.MYGET_URL }}
+          MYGET_API_KEY: ${{ secrets.MYGET_API_KEY }}
+        run: |
+          echo "Pushing NuGet package for ${{ matrix.name }} version ${{ env.VERSION }}"
+          PACKAGE_DIR="${{ github.workspace }}/nupkg/${{ matrix.name }}"
+          PACKAGE_COUNT=$(find "$PACKAGE_DIR" -name "*.nupkg" -type f 2>/dev/null | wc -l)
+          
+          if [ "$PACKAGE_COUNT" -eq 0 ]; then
+            echo "Error: No .nupkg files found in $PACKAGE_DIR"
+            exit 1
+          fi
+          
+          echo "Found $PACKAGE_COUNT package(s) to push"
+          
+          for package in "$PACKAGE_DIR"/*.nupkg; do
+            echo "Pushing: $(basename "$package")"
+            dotnet nuget push "$package" --api-key $MYGET_API_KEY --source $MYGET_URL
+          done
+
+      - name: Clean up nupkg directory
+        if: always()
+        run: rm -rf ${{ github.workspace }}/nupkg/${{ matrix.name }} 

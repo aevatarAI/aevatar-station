@@ -1,0 +1,377 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Workspace Navigation and Path Resolution Rule
+
+## Configuration
+
+### Customize for Your Environment
+Before using this rule, customize these variables for your local setup:
+
+```bash
+# Set these environment variables or update paths throughout this document
+export WORKSPACE_ROOT="$HOME/workspace/github"        # Default: ~/workspace/github
+export NON_FORK_ROOT="$HOME/workspace/github/non-fork" # Default: ~/workspace/github/non-fork
+
+# Alternative examples:
+# export WORKSPACE_ROOT="$HOME/projects"              # Different base structure
+# export NON_FORK_ROOT="$HOME/projects/non-fork"      # Matching structure
+# export WORKSPACE_ROOT="$HOME/dev/repos"             # Corporate setup
+# export NON_FORK_ROOT="$HOME/dev/repos/forks"        # Custom fork location
+# export WORKSPACE_ROOT="/opt/development"            # System-wide setup
+# export NON_FORK_ROOT="/opt/development/external"    # System-wide external repos
+```
+
+### Quick Setup Commands
+```bash
+# Option 1: Set in your shell profile (~/.zshrc, ~/.bashrc, etc.)
+echo 'export WORKSPACE_ROOT="$HOME/workspace/github"' >> ~/.zshrc
+echo 'export NON_FORK_ROOT="$HOME/workspace/github/non-fork"' >> ~/.zshrc
+
+# Option 2: Create a workspace-specific config file
+cat > ~/.workspace-config << EOF
+export WORKSPACE_ROOT="$HOME/workspace/github"
+export NON_FORK_ROOT="$HOME/workspace/github/non-fork"
+EOF
+
+# Then source it: source ~/.workspace-config
+```
+
+## Overview
+This rule provides comprehensive guidance for navigating the workspace, understanding project structure, and resolving path issues between terminal commands and file operations.
+
+## Workspace Structure
+
+### Workspace Root
+- **Base Path**: `${WORKSPACE_ROOT}` (configurable)
+- **Always check current directory**: Use `pwd` before executing commands
+
+### Main Project: Aevatar Station (Unified Repository)
+- **Path**: `${WORKSPACE_ROOT}/aevatar-station`
+- **Description**: All-in-one platform for creating, managing, and deploying AI agents (unified repository)
+- **Solution Files**: Multiple solutions for different components
+
+#### Core Components within Aevatar Station:
+
+##### 1. Framework (formerly aevatar-framework)
+- **Path**: `${WORKSPACE_ROOT}/aevatar-station/framework/`
+- **Description**: Distributed actor-based framework built on Microsoft Orleans
+- **Solution File**: `aevatar-framework.sln`
+- **Key Directories**:
+  - `src/` - Core framework source code
+  - `samples/` - Framework sample projects
+  - `test/` - Framework unit tests
+  - `docs/` - Framework documentation
+
+##### 2. SignalR (formerly aevatar-signalR)
+- **Path**: `${WORKSPACE_ROOT}/aevatar-station/signalR/`
+- **Description**: Real-time communication and SignalR integration
+- **Solution File**: `aevatar-signalR.sln`
+- **Key Directories**:
+  - `src/` - SignalR implementation
+  - `samples/` - SignalR samples
+  - `test/` - SignalR tests
+
+##### 3. Station Core (main platform)
+- **Path**: `${WORKSPACE_ROOT}/aevatar-station/station/`
+- **Description**: Main platform implementation
+- **Solution File**: `aevatar-station.sln`
+- **Key Directories**:
+  - `src/` - Platform source code
+  - `samples/` - Platform samples
+  - `test/` - Platform tests
+  - `benchmark/` - Performance benchmarks
+  - `docs/` - Platform documentation
+
+##### 4. Root Level (orchestration)
+- **Path**: `${WORKSPACE_ROOT}/aevatar-station/`
+- **Description**: Top-level orchestration and shared components
+- **Key Directories**:
+  - `src/` - Shared components and orchestration (Aspire, etc.)
+  - `test/` - Integration tests
+  - `components/` - Reusable components
+  - `configurations/` - Configuration files
+
+### Legacy/Reference Projects (Still Separate)
+- **Orleans (Custom Fork)**: `${NON_FORK_ROOT}/orleans`
+- **AevatarAI Orleans**: `${WORKSPACE_ROOT}/aevatarAI/orleans`
+- **Orleans Extensions**: 
+  - `${NON_FORK_ROOT}/Orleans.Providers.MongoDB`
+  - `${NON_FORK_ROOT}/Orleans.Streams.Utils`
+- **Other Tools**:
+  - `${NON_FORK_ROOT}/ai-mining-server`
+  - `${NON_FORK_ROOT}/aevatar-gagents`
+  - `${NON_FORK_ROOT}/mongo-csharp-driver`
+
+## Path Resolution Strategy
+
+### Critical Issue: Terminal vs File Operation Context
+**Problem**: Terminal commands and file editing tools operate from different base directories:
+- **Terminal context**: Current working directory
+- **File tool context**: Workspace root (`${WORKSPACE_ROOT}`)
+
+### Solution: Context-Aware Path Usage
+
+#### 1. Terminal Commands (Use Relative Paths)
+```bash
+# Always check current location first
+pwd
+
+# From aevatar-station root
+dotnet build station/samples/GrainWarmupE2E
+cd station/src/Aevatar.Aspire && dotnet run
+dotnet test framework/test/Aevatar.Core.Tests
+
+# Working within specific components
+cd framework && dotnet build
+cd signalR && dotnet test
+cd station && dotnet run samples/SpecificSample
+```
+
+#### 2. File Operations (Use Full Project-Prefixed Paths)
+```bash
+# CORRECT - Always include full path from workspace root
+read_file: aevatar-station/framework/src/Aevatar.Core/file.cs
+edit_file: aevatar-station/signalR/src/SignalR.Core/file.cs
+delete_file: aevatar-station/station/src/Platform/file.cs
+
+# WRONG - Missing project context
+read_file: framework/src/file.cs  # Will fail!
+```
+
+### Path Mapping Table
+
+| Component | Terminal Context | File Operation Path | Example |
+|---|---|---|---|
+| **Framework** | `${WORKSPACE_ROOT}/aevatar-station/framework` | `aevatar-station/framework/` | `aevatar-station/framework/src/Aevatar.Core/Program.cs` |
+| **SignalR** | `${WORKSPACE_ROOT}/aevatar-station/signalR` | `aevatar-station/signalR/` | `aevatar-station/signalR/src/SignalR.Core/Hub.cs` |
+| **Station** | `${WORKSPACE_ROOT}/aevatar-station/station` | `aevatar-station/station/` | `aevatar-station/station/src/Platform/Service.cs` |
+| **Root** | `${WORKSPACE_ROOT}/aevatar-station` | `aevatar-station/` | `aevatar-station/src/Aevatar.Aspire/Program.cs` |
+| **Orleans** | `${NON_FORK_ROOT}/orleans` | `non-fork/orleans/` | `non-fork/orleans/src/Orleans.Core/file.cs` |
+
+## Navigation Workflow
+
+### 1. Before Any Operation
+```bash
+# Step 1: Check current location
+pwd
+
+# Step 2: Navigate to correct component if needed
+cd ${WORKSPACE_ROOT}/aevatar-station          # Root
+cd ${WORKSPACE_ROOT}/aevatar-station/framework # Framework
+cd ${WORKSPACE_ROOT}/aevatar-station/signalR  # SignalR
+cd ${WORKSPACE_ROOT}/aevatar-station/station  # Station
+
+# Step 3: Verify project structure
+ls -la
+```
+
+### 2. Common Navigation Patterns
+
+#### Working in Aevatar Station (Unified Repository)
+
+**Root Level Operations:**
+```bash
+# Navigate to unified repository root
+cd ${WORKSPACE_ROOT}/aevatar-station
+
+# Start Aspire (orchestration)
+cd src/Aevatar.Aspire && dotnet run
+
+# Build specific components
+dotnet build framework/
+dotnet build signalR/
+dotnet build station/
+```
+
+**Framework Operations:**
+```bash
+# Navigate to framework component
+cd ${WORKSPACE_ROOT}/aevatar-station/framework
+
+# Build and test framework
+dotnet build
+dotnet test test/Aevatar.Core.Tests
+```
+
+**SignalR Operations:**
+```bash
+# Navigate to SignalR component
+cd ${WORKSPACE_ROOT}/aevatar-station/signalR
+
+# Build and test SignalR
+dotnet build
+dotnet test
+```
+
+**Station Operations:**
+```bash
+# Navigate to station component
+cd ${WORKSPACE_ROOT}/aevatar-station/station
+
+# Build samples and tests
+dotnet build samples/GrainWarmupE2E
+dotnet test test/Aevatar.Silo.Tests
+```
+
+#### Working with Legacy Orleans
+```bash
+# Custom Orleans fork
+cd ${NON_FORK_ROOT}/orleans
+dotnet build Orleans.sln
+
+# AevatarAI Orleans
+cd ${WORKSPACE_ROOT}/aevatarAI/orleans
+dotnet build Orleans.sln
+```
+
+### 3. File Operation Best Practices
+
+#### Before File Operations
+- [ ] Check current terminal directory with `pwd`
+- [ ] Identify which component you're working in (framework/signalR/station/root)
+- [ ] Add correct full path prefix to file paths
+- [ ] Verify file exists with correct path before editing
+
+#### Path Resolution Examples
+```bash
+# If terminal is in: ${WORKSPACE_ROOT}/aevatar-station/framework
+# And you want to edit: src/Aevatar.Core/BroadCastGAgentBase.cs
+
+# Terminal command (relative path)
+code src/Aevatar.Core/BroadCastGAgentBase.cs
+
+# File operation (full project-prefixed path)
+edit_file: aevatar-station/framework/src/Aevatar.Core/BroadCastGAgentBase.cs
+```
+
+## Error Prevention and Troubleshooting
+
+### Common Path Issues
+1. **File not found errors**: Usually caused by missing component prefix in file operations
+2. **Command not found errors**: Usually caused by wrong terminal directory
+3. **Build failures**: Often due to running commands from wrong component directory
+
+### Quick Fix Commands
+```bash
+# Find correct file path within unified repository
+find . -name "filename.cs" -type f
+
+# Check if you're in the right component
+pwd && ls -la
+
+# Navigate to workspace root
+cd ${WORKSPACE_ROOT}
+
+# Navigate to unified repository root
+cd ${WORKSPACE_ROOT}/aevatar-station
+
+# List all components
+ls -la
+```
+
+### Verification Checklist
+- [ ] Current directory verified with `pwd`
+- [ ] Component structure confirmed with `ls`
+- [ ] File paths use correct component prefix for file operations
+- [ ] Terminal commands use relative paths from correct component directory
+- [ ] Absolute paths used when uncertain about location
+
+## Component Categories for Reference
+
+### Unified Repository (aevatar-station)
+- **Framework**: `aevatar-station/framework/` (core framework, Orleans-based)
+- **SignalR**: `aevatar-station/signalR/` (real-time communication)
+- **Station**: `aevatar-station/station/` (main platform)
+- **Root**: `aevatar-station/` (orchestration, Aspire, shared components)
+
+### Legacy/Reference
+- **Orleans Ecosystem**: `${NON_FORK_ROOT}/orleans`, `aevatarAI/orleans`
+- **Orleans Extensions**: `${NON_FORK_ROOT}/Orleans.Providers.MongoDB`, `${NON_FORK_ROOT}/Orleans.Streams.Utils`
+- **Infrastructure Tools**: `${NON_FORK_ROOT}/ai-mining-server`, `${NON_FORK_ROOT}/mongo-csharp-driver`
+
+## Quick Reference Commands
+```bash
+# Navigation
+pwd                                                           # Check current directory
+cd ${WORKSPACE_ROOT}                                          # Go to workspace root
+cd ${WORKSPACE_ROOT}/aevatar-station                         # Go to unified repository
+cd ${WORKSPACE_ROOT}/aevatar-station/framework               # Go to framework component
+cd ${WORKSPACE_ROOT}/aevatar-station/signalR                # Go to SignalR component
+cd ${WORKSPACE_ROOT}/aevatar-station/station                # Go to station component
+
+# Component-specific operations
+cd framework && dotnet build                                  # Build framework
+cd signalR && dotnet test                                     # Test SignalR
+cd station && dotnet run samples/SampleProject               # Run station sample
+cd src/Aevatar.Aspire && dotnet run                          # Start Aspire orchestration
+```
+
+## Multi-Component Development Tips
+
+### Building All Components
+```bash
+# From aevatar-station root
+dotnet build framework/
+dotnet build signalR/
+dotnet build station/
+dotnet build  # Build root level components
+```
+
+### Running Tests Across Components
+```bash
+# From aevatar-station root
+dotnet test framework/test/
+dotnet test signalR/test/
+dotnet test station/test/
+dotnet test test/  # Root level integration tests
+```
+
+### Component Dependencies
+- **Framework**: Core foundation, used by other components
+- **SignalR**: Depends on Framework
+- **Station**: Depends on Framework and SignalR
+- **Root**: Orchestrates all components (Aspire)
+
+## Environment-Specific Examples
+
+### Common Setups
+
+#### Default Setup (as shown above)
+```bash
+export WORKSPACE_ROOT="$HOME/workspace/github"
+export NON_FORK_ROOT="$HOME/workspace/github/non-fork"
+```
+
+#### Corporate/Enterprise Setup
+```bash
+export WORKSPACE_ROOT="/opt/development/projects"
+export NON_FORK_ROOT="/opt/development/external-repos"
+# or
+export WORKSPACE_ROOT="$HOME/dev/company-repos"
+export NON_FORK_ROOT="$HOME/dev/forks"
+```
+
+#### Simplified Setup
+```bash
+export WORKSPACE_ROOT="$HOME/projects"
+export NON_FORK_ROOT="$HOME/external-repos"
+```
+
+#### Multi-User System
+```bash
+export WORKSPACE_ROOT="/shared/development/$USER"
+export NON_FORK_ROOT="/shared/external/$USER"
+```
+
+### Setup Verification
+```bash
+# Verify your configuration
+echo "Workspace root: $WORKSPACE_ROOT"
+ls -la $WORKSPACE_ROOT/
+
+# Test navigation
+cd $WORKSPACE_ROOT/aevatar-station && pwd
+```
