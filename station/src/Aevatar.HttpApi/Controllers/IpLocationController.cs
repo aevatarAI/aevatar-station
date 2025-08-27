@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Aevatar.Application.Service;
+using Aevatar.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -26,6 +27,11 @@ public class IpLocationController : ControllerBase
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(ip))
+            {
+                ip = HttpContext.GetClientIpAddress();
+            }
+
             if (string.IsNullOrWhiteSpace(ip))
             {
                 return BadRequest("IP address is required");
