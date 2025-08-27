@@ -123,9 +123,27 @@ public static class OrleansHostExtension
                         options.MongoDbIntegration.BatchSize = 100;
                         options.MongoDbIntegration.QueryTimeoutMs = 30000;
                         
-                        // Configure default strategy for high-volume agent warmup
+                        // Configure migration mode for Orleans EventSourcing to Framework conversion
+                        var migrationModeSection = agentWarmupSection.GetSection("MigrationMode");
+                        options.MigrationMode.Enabled = migrationModeSection.GetValue<bool>("Enabled", false);
+                        
+                        // Configure default strategy based on migration mode
                         var defaultStrategySection = agentWarmupSection.GetSection("DefaultStrategy");
-                        options.DefaultStrategy.MaxIdentifiersPerType = defaultStrategySection.GetValue<int>("MaxIdentifiersPerType", 1000000);
+                        
+                        if (options.MigrationMode.Enabled)
+                        {
+                            // Full-scale conversion: process ALL historical data with no limits
+                            options.DefaultStrategy.MaxIdentifiersPerType = int.MaxValue;
+                            
+                            // Use gentle processing parameters for system stability
+                            options.DelayBetweenBatchesMs = agentWarmupSection.GetValue<int>("DelayBetweenBatchesMs", 1000);
+
+                        }
+                        else
+                        {
+                            // Normal warmup mode
+                            options.DefaultStrategy.MaxIdentifiersPerType = defaultStrategySection.GetValue<int>("MaxIdentifiersPerType", 1000000);
+                        }
                     });
                 }
                     
@@ -210,8 +228,19 @@ public static class OrleansHostExtension
                         })
                     .Configure<GrainCollectionOptions>(options =>
                     {
-                        // Set default collection age for all grains (in days)
-                        options.CollectionAge = TimeSpan.FromDays(180);
+                        // Check if migration mode is enabled
+                        var migrationMode = configuration.GetSection("AgentWarmup:MigrationMode").GetValue<bool>("Enabled", false);
+                        
+                        if (migrationMode)
+                        {
+                            // In migration mode, use much shorter collection age to reduce memory pressure
+                            options.CollectionAge = TimeSpan.FromMinutes(10);
+                        }
+                        else
+                        {
+                            // Set default collection age for all grains (in days)
+                            options.CollectionAge = TimeSpan.FromDays(180);
+                        }
                         
                         // Optionally, set specific collection ages for particular grain types
                         // options.ClassSpecificCollectionAge[typeof(UserGridGAgent).FullName] = TimeSpan.FromMinutes(10);
