@@ -71,11 +71,6 @@ public class AgentWarmupConfiguration
     /// MongoDB integration configuration
     /// </summary>
     public MongoDbIntegrationConfiguration MongoDbIntegration { get; set; } = new();
-    
-    /// <summary>
-    /// Migration mode configuration for Orleans EventSourcing to Framework conversion
-    /// </summary>
-    public MigrationModeConfiguration MigrationMode { get; set; } = new();
 }
 
 /// <summary>
