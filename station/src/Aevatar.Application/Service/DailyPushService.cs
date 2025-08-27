@@ -264,35 +264,59 @@ public class DailyPushService : ApplicationService, IDailyPushService
     {
         try
         {
-            // Get timezone scheduler GAgent
-            var timezoneScheduler = _clusterClient.GetGrain<ITimezoneSchedulerGAgent>(DailyPushConstants.TimezoneToGuid(timezone));
-            
-            // Get all user devices from timezone scheduler
-            var allUserDevices = await timezoneScheduler.GetDevicesInTimezoneAsync();
-            
             var result = new List<Contracts.DailyPush.TimezoneDeviceInfo>();
             
-            _logger.LogInformation("Raw devices from TimezoneSchedulerGAgent: {DeviceCount} devices", allUserDevices.Count);
+            // Get timezone user index GAgent to get active users
+            var timezoneIndexGAgent = _clusterClient.GetGrain<ITimezoneUserIndexGAgent>(DailyPushConstants.TimezoneToGuid(timezone));
             
-            foreach (var userDevice in allUserDevices)
+            // Get all active users in this timezone
+            var activeUsers = await timezoneIndexGAgent.GetActiveUsersInTimezoneAsync(0, 1000); // Get up to 1000 users
+            
+            _logger.LogInformation("Active users in timezone {Timezone}: {UserCount} users", timezone, activeUsers.Count);
+            
+            foreach (var userId in activeUsers)
             {
-                _logger.LogDebug("Device: UserId={UserId}, DeviceId={DeviceId}, TimeZoneId='{TimeZoneId}', PushEnabled={PushEnabled}", 
-                    userDevice.UserId, userDevice.DeviceId, userDevice.TimeZoneId, userDevice.PushEnabled);
-                    
-                // Convert from GodGPT.GAgents.DailyPush.TimezoneDeviceInfo to Contracts.DailyPush.TimezoneDeviceInfo
-                result.Add(new Contracts.DailyPush.TimezoneDeviceInfo
+                try
                 {
-                    UserId = userDevice.UserId,
-                    DeviceId = userDevice.DeviceId,
-                    PushToken = TruncateToken(userDevice.PushToken),
-                    TimeZoneId = userDevice.TimeZoneId,
-                    PushLanguage = userDevice.PushLanguage,
-                    PushEnabled = userDevice.PushEnabled,
-                    HasEnabledDeviceInTimezone = userDevice.HasEnabledDeviceInTimezone,
-                    TotalDeviceCount = userDevice.TotalDeviceCount,
-                    EnabledDeviceCount = userDevice.EnabledDeviceCount
-                });
+                    // Get user's chat manager to access device information
+                    var chatManager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
+                    var allDevicesForUser = await chatManager.GetAllUserDevicesAsync();
+                    
+                    _logger.LogDebug("User {UserId} has {DeviceCount} total devices", userId, allDevicesForUser.Count);
+                    
+                    // Filter devices that match the timezone and are enabled
+                    var userTimezoneDevices = allDevicesForUser.Where(d => 
+                        d.TimeZoneId == timezone && d.PushEnabled).ToList();
+                    
+                    var enabledDevicesInTimezone = allDevicesForUser.Count(d => 
+                        d.TimeZoneId == timezone && d.PushEnabled);
+                        
+                    foreach (var device in userTimezoneDevices)
+                    {
+                        _logger.LogDebug("Adding device: UserId={UserId}, DeviceId={DeviceId}, TimeZoneId='{TimeZoneId}', PushEnabled={PushEnabled}", 
+                            userId, device.DeviceId, device.TimeZoneId, device.PushEnabled);
+                            
+                        result.Add(new Contracts.DailyPush.TimezoneDeviceInfo
+                        {
+                            UserId = userId,
+                            DeviceId = device.DeviceId,
+                            PushToken = TruncateToken(device.PushToken),
+                            TimeZoneId = device.TimeZoneId,
+                            PushLanguage = device.PushLanguage ?? "en",
+                            PushEnabled = device.PushEnabled,
+                            HasEnabledDeviceInTimezone = enabledDevicesInTimezone > 0,
+                            TotalDeviceCount = allDevicesForUser.Count,
+                            EnabledDeviceCount = enabledDevicesInTimezone
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to get devices for user {UserId}", userId);
+                }
             }
+            
+            _logger.LogInformation("Total devices found in timezone {Timezone}: {DeviceCount}", timezone, result.Count);
             
             return result;
         }
