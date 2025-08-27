@@ -18,8 +18,8 @@ public class IpLocationService : IIpLocationService
     public IpLocationService(ILogger<IpLocationService> logger)
     {
         _logger = logger;
-        var ipdbFilePath = "/app/geoip/ipipfree.ipdb";//"/Users/**/Downloads/ipipfreedb/ipipfree.ipdb";
-        var maxMindFilePath ="/app/geoip/GeoLite2-City.mmdb";// "/Users/**/Downloads/GeoLite2-City_20250819/GeoLite2-City.mmdb";
+        var ipdbFilePath = "/app/geoip/ipipfree.ipdb";
+        var maxMindFilePath ="/app/geoip/GeoLite2-City.mmdb";
         
         try
         {

@@ -312,7 +312,7 @@ public class LocalizationService : ILocalizationService
                 ["en.Success"] = "Operation completed successfully.",
                 ["zh-tw.Success"] = "操作成功完成。",
                 ["es.Success"] = "Operación completada exitosamente.",
-                ["en.Success"] = "操作已成功完成。"
+                ["zh.Success"] = "操作已成功完成。"
 
             }
         };
