@@ -3,8 +3,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using Shouldly;
-using Xunit;
 
 namespace Aevatar.Sandbox.Python.Tests
 {
@@ -15,7 +13,7 @@ namespace Aevatar.Sandbox.Python.Tests
         public PythonAdvancedTests()
         {
             // 使用环境中的Python解释器
-            _pythonPath = "/opt/homebrew/bin/python3";
+            _pythonPath = "python3";
         }
 
         /// <summary>
