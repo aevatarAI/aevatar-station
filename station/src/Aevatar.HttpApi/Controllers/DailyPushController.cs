@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Application.Constants;
 using Aevatar.Application.Contracts.DailyPush;
@@ -300,8 +301,6 @@ public class DailyPushController : AbpControllerBase
                         timeZoneId = d.TimeZoneId,
                         pushLanguage = d.PushLanguage,
                         pushEnabled = d.PushEnabled,
-                        registeredAt = d.RegisteredAt,
-                        lastTokenUpdate = d.LastTokenUpdate,
                         hasEnabledDeviceInTimezone = d.HasEnabledDeviceInTimezone,
                         totalDeviceCount = d.TotalDeviceCount,
                         enabledDeviceCount = d.EnabledDeviceCount
