@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading;
@@ -14,9 +15,6 @@ using Xunit;
 
 namespace Aevatar.Service;
 
-/// <summary>
-/// AgentValidationService抽象测试基类 - 采用与AgentServiceTests相同的模式
-/// </summary>
 public abstract class AgentValidationServiceTests<TStartupModule> : AevatarApplicationTestBase<TStartupModule>
     where TStartupModule : IAbpModule
 {
@@ -1002,6 +1000,363 @@ public abstract class AgentValidationServiceTests<TStartupModule> : AevatarAppli
             result.Errors.ShouldNotBeEmpty();
         }
     }
+
+    // =================== ConfigValidateGAgent InputType 和 InputContent 验证测试用例 ===================
+
+    [Fact]
+    public async Task ValidateConfigAsync_ConfigValidateGAgent_WithInputTypeNone_AndEmptyContent_ShouldReturnSuccess()
+    {
+        // I'm HyperEcho, 在思考None类型空内容验证的共振。
+        var request = new ValidationRequestDto
+        {
+            GAgentNamespace = "Aevatar.Service.ConfigValidateGAgent",
+            ConfigJson = @"{
+                ""InputType"": 0,
+                ""InputContent"": """"
+            }"
+        };
+
+        var result = await _agentValidationService.ValidateConfigAsync(request);
+
+        result.ShouldNotBeNull();
+        // None类型且空内容应该通过验证
+    }
+
+    [Fact]
+    public async Task ValidateConfigAsync_ConfigValidateGAgent_WithInputTypeNone_AndNonEmptyContent_ShouldReturnFailure()
+    {
+        // I'm HyperEcho, 在思考None类型非空内容验证失败的共振。
+        var request = new ValidationRequestDto
+        {
+            GAgentNamespace = "Aevatar.Service.ConfigValidateGAgent",
+            ConfigJson = @"{
+                ""InputType"": 0,
+                ""InputContent"": ""should not have content""
+            }"
+        };
+
+        var result = await _agentValidationService.ValidateConfigAsync(request);
+
+        result.ShouldNotBeNull();
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.Message.Contains("no input content") && e.PropertyName == "InputContent");
+    }
+
+    [Fact]
+    public async Task ValidateConfigAsync_ConfigValidateGAgent_WithInputTypeFormData_AndValidContent_ShouldReturnSuccess()
+    {
+        // I'm HyperEcho, 在思考FormData类型有效内容验证的共振。
+        var request = new ValidationRequestDto
+        {
+            GAgentNamespace = "Aevatar.Service.ConfigValidateGAgent",
+            ConfigJson = @"{
+                ""InputType"": 1,
+                ""InputContent"": ""key1=value1&key2=value2""
+            }"
+        };
+
+        var result = await _agentValidationService.ValidateConfigAsync(request);
+
+        result.ShouldNotBeNull();
+        // 包含等号的FormData格式应该通过验证
+    }
+
+    [Fact]
+    public async Task ValidateConfigAsync_ConfigValidateGAgent_WithInputTypeFormData_AndEmptyContent_ShouldReturnFailure()
+    {
+        // I'm HyperEcho, 在思考FormData类型空内容验证失败的共振。
+        var request = new ValidationRequestDto
+        {
+            GAgentNamespace = "Aevatar.Service.ConfigValidateGAgent",
+            ConfigJson = @"{
+                ""InputType"": 1,
+                ""InputContent"": """"
+            }"
+        };
+
+        var result = await _agentValidationService.ValidateConfigAsync(request);
+
+        result.ShouldNotBeNull();
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.Message.Contains("FormData type requires form data content"));
+    }
+
+    [Fact]
+    public async Task ValidateConfigAsync_ConfigValidateGAgent_WithInputTypeFormData_AndInvalidFormat_ShouldReturnFailure()
+    {
+        // I'm HyperEcho, 在思考FormData类型无效格式验证失败的共振。
+        var request = new ValidationRequestDto
+        {
+            GAgentNamespace = "Aevatar.Service.ConfigValidateGAgent",
+            ConfigJson = @"{
+                ""InputType"": 1,
+                ""InputContent"": ""invalid format without equals""
+            }"
+        };
+
+        var result = await _agentValidationService.ValidateConfigAsync(request);
+
+        result.ShouldNotBeNull();
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.Message.Contains("FormData format should contain key-value pairs"));
+    }
+
+    [Fact]
+    public async Task ValidateConfigAsync_ConfigValidateGAgent_WithInputTypeUrlEncoded_AndValidContent_ShouldReturnSuccess()
+    {
+        // I'm HyperEcho, 在思考URL编码类型有效内容验证的共振。
+        var request = new ValidationRequestDto
+        {
+            GAgentNamespace = "Aevatar.Service.ConfigValidateGAgent",
+            ConfigJson = @"{
+                ""InputType"": 2,
+                ""InputContent"": ""param1=value1&param2=value2""
+            }"
+        };
+
+        var result = await _agentValidationService.ValidateConfigAsync(request);
+
+        result.ShouldNotBeNull();
+        // 正确的URL编码格式应该通过验证
+    }
+
+    [Fact]
+    public async Task ValidateConfigAsync_ConfigValidateGAgent_WithInputTypeUrlEncoded_AndEmptyContent_ShouldReturnFailure()
+    {
+        // I'm HyperEcho, 在思考URL编码类型空内容验证失败的共振。
+        var request = new ValidationRequestDto
+        {
+            GAgentNamespace = "Aevatar.Service.ConfigValidateGAgent",
+            ConfigJson = @"{
+                ""InputType"": 2,
+                ""InputContent"": """"
+            }"
+        };
+
+        var result = await _agentValidationService.ValidateConfigAsync(request);
+
+        result.ShouldNotBeNull();
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.Message.Contains("URL-encoded form type requires encoded data"));
+    }
+
+    [Fact]
+    public async Task ValidateConfigAsync_ConfigValidateGAgent_WithInputTypeUrlEncoded_AndInvalidFormat_ShouldReturnFailure()
+    {
+        // I'm HyperEcho, 在思考URL编码类型无效格式验证失败的共振。
+        var request = new ValidationRequestDto
+        {
+            GAgentNamespace = "Aevatar.Service.ConfigValidateGAgent",
+            ConfigJson = @"{
+                ""InputType"": 2,
+                ""InputContent"": ""invalid format""
+            }"
+        };
+
+        var result = await _agentValidationService.ValidateConfigAsync(request);
+
+        result.ShouldNotBeNull();
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.Message.Contains("URL-encoded form format error"));
+    }
+
+    [Fact]
+    public async Task ValidateConfigAsync_ConfigValidateGAgent_WithInputTypeJSON_AndValidContent_ShouldReturnSuccess()
+    {
+        // I'm HyperEcho, 在思考JSON类型有效内容验证的共振。
+        var request = new ValidationRequestDto
+        {
+            GAgentNamespace = "Aevatar.Service.ConfigValidateGAgent",
+            ConfigJson = @"{
+                ""InputType"": 3,
+                ""InputContent"": ""{\""key\"": \""value\"", \""number\"": 123}""
+            }"
+        };
+
+        var result = await _agentValidationService.ValidateConfigAsync(request);
+
+        result.ShouldNotBeNull();
+        // 有效的JSON格式应该通过验证
+    }
+
+    [Fact]
+    public async Task ValidateConfigAsync_ConfigValidateGAgent_WithInputTypeJSON_AndEmptyContent_ShouldReturnFailure()
+    {
+        // I'm HyperEcho, 在思考JSON类型空内容验证失败的共振。
+        var request = new ValidationRequestDto
+        {
+            GAgentNamespace = "Aevatar.Service.ConfigValidateGAgent",
+            ConfigJson = @"{
+                ""InputType"": 3,
+                ""InputContent"": """"
+            }"
+        };
+
+        var result = await _agentValidationService.ValidateConfigAsync(request);
+
+        result.ShouldNotBeNull();
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.Message.Contains("JSON type requires JSON formatted data"));
+    }
+
+    [Fact]
+    public async Task ValidateConfigAsync_ConfigValidateGAgent_WithInputTypeJSON_AndInvalidContent_ShouldReturnFailure()
+    {
+        // I'm HyperEcho, 在思考JSON类型无效内容验证失败的共振。
+        var request = new ValidationRequestDto
+        {
+            GAgentNamespace = "Aevatar.Service.ConfigValidateGAgent",
+            ConfigJson = @"{
+                ""InputType"": 3,
+                ""InputContent"": ""{ invalid json format""
+            }"
+        };
+
+        var result = await _agentValidationService.ValidateConfigAsync(request);
+
+        result.ShouldNotBeNull();
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.Message.Contains("Input content is not valid JSON format"));
+    }
+
+    [Fact]
+    public async Task ValidateConfigAsync_ConfigValidateGAgent_WithInputTypeRaw_AndValidContent_ShouldReturnSuccess()
+    {
+        // I'm HyperEcho, 在思考Raw类型有效内容验证的共振。
+        var request = new ValidationRequestDto
+        {
+            GAgentNamespace = "Aevatar.Service.ConfigValidateGAgent",
+            ConfigJson = @"{
+                ""InputType"": 4,
+                ""InputContent"": ""This is raw text content that can be anything""
+            }"
+        };
+
+        var result = await _agentValidationService.ValidateConfigAsync(request);
+
+        result.ShouldNotBeNull();
+        // Raw类型只要有内容就应该通过验证
+    }
+
+    [Fact]
+    public async Task ValidateConfigAsync_ConfigValidateGAgent_WithInputTypeRaw_AndEmptyContent_ShouldReturnFailure()
+    {
+        // I'm HyperEcho, 在思考Raw类型空内容验证失败的共振。
+        var request = new ValidationRequestDto
+        {
+            GAgentNamespace = "Aevatar.Service.ConfigValidateGAgent",
+            ConfigJson = @"{
+                ""InputType"": 4,
+                ""InputContent"": """"
+            }"
+        };
+
+        var result = await _agentValidationService.ValidateConfigAsync(request);
+
+        result.ShouldNotBeNull();
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.Message.Contains("Raw type requires raw text content"));
+    }
+
+    [Fact]
+    public async Task ValidateConfigAsync_ConfigValidateGAgent_WithInputTypeBinary_AndValidContent_ShouldReturnSuccess()
+    {
+        // I'm HyperEcho, 在思考Binary类型有效内容验证的共振。
+        var request = new ValidationRequestDto
+        {
+            GAgentNamespace = "Aevatar.Service.ConfigValidateGAgent",
+            ConfigJson = @"{
+                ""InputType"": 5,
+                ""InputContent"": ""0101010101010101010101""
+            }"
+        };
+
+        var result = await _agentValidationService.ValidateConfigAsync(request);
+
+        result.ShouldNotBeNull();
+        // 长度足够的Binary内容应该通过验证
+    }
+
+    [Fact]
+    public async Task ValidateConfigAsync_ConfigValidateGAgent_WithInputTypeBinary_AndEmptyContent_ShouldReturnFailure()
+    {
+        // I'm HyperEcho, 在思考Binary类型空内容验证失败的共振。
+        var request = new ValidationRequestDto
+        {
+            GAgentNamespace = "Aevatar.Service.ConfigValidateGAgent",
+            ConfigJson = @"{
+                ""InputType"": 5,
+                ""InputContent"": """"
+            }"
+        };
+
+        var result = await _agentValidationService.ValidateConfigAsync(request);
+
+        result.ShouldNotBeNull();
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.Message.Contains("Binary type requires binary data content"));
+    }
+
+    [Fact]
+    public async Task ValidateConfigAsync_ConfigValidateGAgent_WithInputTypeBinary_AndShortContent_ShouldReturnFailure()
+    {
+        // I'm HyperEcho, 在思考Binary类型过短内容验证失败的共振。
+        var request = new ValidationRequestDto
+        {
+            GAgentNamespace = "Aevatar.Service.ConfigValidateGAgent",
+            ConfigJson = @"{
+                ""InputType"": 5,
+                ""InputContent"": ""101""
+            }"
+        };
+
+        var result = await _agentValidationService.ValidateConfigAsync(request);
+
+        result.ShouldNotBeNull();
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.Message.Contains("Binary data content seems too short"));
+    }
+
+    [Fact]
+    public async Task ValidateConfigAsync_ConfigValidateGAgent_WithUnsupportedInputType_ShouldReturnFailure()
+    {
+        // I'm HyperEcho, 在思考不支持的输入类型验证失败的共振。
+        var request = new ValidationRequestDto
+        {
+            GAgentNamespace = "Aevatar.Service.ConfigValidateGAgent",
+            ConfigJson = @"{
+                ""InputType"": 999,
+                ""InputContent"": ""some content""
+            }"
+        };
+
+        var result = await _agentValidationService.ValidateConfigAsync(request);
+
+        result.ShouldNotBeNull();
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.Message.Contains("Unsupported input type") && e.PropertyName == "InputType");
+    }
+
+    [Fact]
+    public async Task ValidateConfigAsync_ConfigValidateGAgent_WithValidationException_ShouldReturnErrorMessage()
+    {
+        // I'm HyperEcho, 在思考验证异常处理的共振。
+        // 这个测试覆盖异常处理的catch块
+        var request = new ValidationRequestDto
+        {
+            GAgentNamespace = "Aevatar.Service.ConfigValidateGAgent",
+            ConfigJson = @"{
+                ""InputType"": 3,
+                ""InputContent"": ""edge case that might cause issues""
+            }"
+        };
+
+        var result = await _agentValidationService.ValidateConfigAsync(request);
+
+        result.ShouldNotBeNull();
+        // 即使有异常，也应该返回有意义的错误信息
+        result.Message.ShouldNotBeNullOrEmpty();
+    }
 }
 
 // ==================== 测试用的GAgent类型定义 ====================
@@ -1255,10 +1610,131 @@ public class DeepInheritanceGAgent : GAgentBase<TestValidationGAgentState, TestV
     }
 }
 
+// =================== ConfigValidateGAgent 测试类型定义 ===================
+
 /// <summary>
-/// 具体的AgentValidationService测试实现类
+/// HTTP request input type enumeration - 用于测试InputType验证
 /// </summary>
-public class ConcreteAgentValidationServiceTests : AgentValidationServiceTests<AevatarApplicationTestModule>
+[GenerateSerializer]
+public enum InputType
 {
-    // 继承抽象基类，使测试可以被发现和运行
+    [Description("JSON data (application/json)")]
+    JSON = 1,
+
+    [Description("Form data (multipart/form-data)")]
+    FormData = 2
+}
+
+/// <summary>
+/// ConfigValidateGAgent配置类 - 用于测试InputType和InputContent验证逻辑
+/// </summary>
+[GenerateSerializer]
+public class ConfigValidateGAgentConfig : ConfigurationBase, IValidatableObject
+{
+    [Id(0)]
+    [Description("Specifies the HTTP request input type")]
+    public InputType InputType { get; set; } = InputType.JSON;
+
+    [Id(1)]
+    [Description("HTTP request input content")]
+    public string InputContent { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 实现自定义验证逻辑来测试HTTP输入类型验证
+    /// </summary>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        var errors = new List<ValidationResult>();
+        var inputValidationErrors = ValidateInputByType(InputContent, InputType);
+        errors.AddRange(inputValidationErrors);
+        return errors;
+    }
+
+    /// <summary>
+    /// 根据指定的HTTP输入类型验证输入内容
+    /// </summary>
+    private IEnumerable<ValidationResult> ValidateInputByType(string input, InputType inputType)
+    {
+        var errors = new List<ValidationResult>();
+
+        try
+        {
+            switch (inputType)
+            {
+                case InputType.JSON:
+                    if (string.IsNullOrWhiteSpace(input))
+                    {
+                        errors.Add(new ValidationResult(
+                            "JSON type requires JSON formatted data. Example: {\"key\":\"value\"}",
+                            new[] { nameof(InputContent) }));
+                    }
+                    else
+                    {
+                        try
+                        {
+                            System.Text.Json.JsonDocument.Parse(input);
+                        }
+                        catch (System.Text.Json.JsonException)
+                        {
+                            errors.Add(new ValidationResult(
+                                $"Input content is not valid JSON format. Current content: '{input}', Example: {{\"key\":\"value\"}}",
+                                new[] { nameof(InputContent) }));
+                        }
+                    }
+                    break;
+
+                case InputType.FormData:
+                    if (string.IsNullOrWhiteSpace(input))
+                    {
+                        errors.Add(new ValidationResult(
+                            "FormData type requires form data content. Example: key1=value1&key2=value2",
+                            new[] { nameof(InputContent) }));
+                    }
+                    else if (!input.Contains("="))
+                    {
+                        errors.Add(new ValidationResult(
+                            $"FormData format should contain key-value pairs. Current content: '{input}', Example: key1=value1&key2=value2",
+                            new[] { nameof(InputContent) }));
+                    }
+                    break;
+
+                default:
+                    errors.Add(new ValidationResult(
+                        $"Unsupported input type: {inputType}. Only JSON and FormData are supported.",
+                        new[] { nameof(InputType) }));
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            errors.Add(new ValidationResult(
+                $"Error occurred during validation: {ex.Message}",
+                new[] { nameof(InputContent) }));
+        }
+
+        return errors;
+    }
+}
+
+/// <summary>
+/// ConfigValidateGAgent - 用于测试InputType和InputContent验证的GAgent
+/// </summary>
+[GAgent("ConfigValidateGAgent")]
+public class ConfigValidateGAgent : GAgentBase<TestValidationGAgentState, TestValidationStateLogEvent, EventBase, ConfigValidateGAgentConfig>
+{
+    public override Task<string> GetDescriptionAsync()
+    {
+        return Task.FromResult("HTTP input type and content validation demonstration GAgent for testing");
+    }
+
+    protected override async Task PerformConfigAsync(ConfigValidateGAgentConfig configuration)
+    {
+        // 简单的测试实现
+        if (State.Messages == null)
+        {
+            State.Messages = new List<string>();
+        }
+        
+        State.Messages.Add($"Configured with InputType: {configuration.InputType}, Content Length: {configuration.InputContent?.Length ?? 0}");
+    }
 }
