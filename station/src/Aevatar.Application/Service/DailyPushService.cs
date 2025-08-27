@@ -166,7 +166,7 @@ public class DailyPushService : ApplicationService, IDailyPushService
             _logger.LogInformation("Starting test mode for timezone {Timezone} with {IntervalSeconds}s interval", 
                 timezone, intervalSeconds);
             
-            var timezoneScheduler = _clusterClient.GetGrain<ITimezoneSchedulerGAgent>(DailyPushConstants.TimezoneToGuid(timezone));
+            var timezoneScheduler = _clusterClient.GetGrain<IDailyPushCoordinatorGAgent>(DailyPushConstants.TimezoneToGuid(timezone));
             await timezoneScheduler.InitializeAsync(timezone);
             await timezoneScheduler.StartTestModeAsync(intervalSeconds);
             
@@ -189,7 +189,7 @@ public class DailyPushService : ApplicationService, IDailyPushService
         {
             _logger.LogInformation("Stopping test mode for timezone {Timezone}", timezone);
             
-            var timezoneScheduler = _clusterClient.GetGrain<ITimezoneSchedulerGAgent>(DailyPushConstants.TimezoneToGuid(timezone));
+            var timezoneScheduler = _clusterClient.GetGrain<IDailyPushCoordinatorGAgent>(DailyPushConstants.TimezoneToGuid(timezone));
             await timezoneScheduler.InitializeAsync(timezone);
             await timezoneScheduler.StopTestModeAsync();
             
@@ -211,7 +211,7 @@ public class DailyPushService : ApplicationService, IDailyPushService
         {
             _logger.LogDebug("Getting test status for timezone {Timezone}", timezone);
             
-            var timezoneScheduler = _clusterClient.GetGrain<ITimezoneSchedulerGAgent>(DailyPushConstants.TimezoneToGuid(timezone));
+            var timezoneScheduler = _clusterClient.GetGrain<IDailyPushCoordinatorGAgent>(DailyPushConstants.TimezoneToGuid(timezone));
             await timezoneScheduler.InitializeAsync(timezone);
             var status = await timezoneScheduler.GetTestStatusAsync();
             
@@ -267,7 +267,7 @@ public class DailyPushService : ApplicationService, IDailyPushService
             var result = new List<Contracts.DailyPush.TimezoneDeviceInfo>();
             
             // Get timezone user index GAgent to get active users
-            var timezoneIndexGAgent = _clusterClient.GetGrain<ITimezoneUserIndexGAgent>(DailyPushConstants.TimezoneToGuid(timezone));
+            var timezoneIndexGAgent = _clusterClient.GetGrain<IPushSubscriberIndexGAgent>(DailyPushConstants.TimezoneToGuid(timezone));
             
             // Get all active users in this timezone
             var activeUsers = await timezoneIndexGAgent.GetActiveUsersInTimezoneAsync(0, 1000); // Get up to 1000 users
