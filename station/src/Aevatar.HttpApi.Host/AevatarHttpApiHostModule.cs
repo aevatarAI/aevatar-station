@@ -41,6 +41,7 @@ using Volo.Abp.Modularity;
 using Volo.Abp.Swashbuckle;
 using Volo.Abp.Threading;
 using Volo.Abp.VirtualFileSystem;
+using Aevatar.Core.Interception.Extensions;
 
 namespace Aevatar;
 
@@ -273,6 +274,7 @@ public class AevatarHttpApiHostModule : AIApplicationGrainsModule, IDomainGrains
         app.UseAuthentication();
         app.UseAuthorization();
         app.UseMiddleware<ApiRequestStatisticsMiddleware>();
+        app.UseTraceContext();
         // app.UsePathBase("/developer-client");
         app.UseUnitOfWork();
         app.UseDynamicClaims();

@@ -9,6 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.Core.Interception\Aevatar.Core.Interception.csproj" />
         <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj" />
         <ProjectReference Include="..\Aevatar.Application\Aevatar.Application.csproj" />
         <ProjectReference Include="..\Aevatar.Domain.Shared\Aevatar.Domain.Shared.csproj" />

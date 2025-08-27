@@ -97,5 +97,11 @@ public class AevatarApplicationModule : AbpModule
         
         // Text completion service  
         context.Services.AddTransient<ITextCompletionService, TextCompletionService>();
+        
+        // Trace management service
+        context.Services.AddTransient<ITraceManagementService, TraceManagementService>();
+        
+        // Register ITraceManager dependency
+        context.Services.AddSingleton<Aevatar.Core.Interception.Services.ITraceManager, Aevatar.Core.Interception.Services.TraceManager>();
     }
 }

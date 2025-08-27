@@ -11,6 +11,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\..\framework\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
         <ProjectReference Include="..\..\..\framework\src\Aevatar\Aevatar.csproj" />
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.Core.Interception\Aevatar.Core.Interception.csproj" />
         <ProjectReference Include="..\Aevatar.CQRS\Aevatar.CQRS.csproj"/>
         <ProjectReference Include="..\Aevatar.Domain\Aevatar.Domain.csproj"/>
         <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj"/>

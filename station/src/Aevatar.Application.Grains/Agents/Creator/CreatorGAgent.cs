@@ -9,6 +9,9 @@ using Aevatar.Core.Abstractions;
 using Aevatar.Station.Feature.CreatorGAgent;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Aevatar.Core.Interception;
+
+[module: Interceptor]
 
 namespace Aevatar.Application.Grains.Agents.Creator;
 
@@ -17,23 +20,23 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
 {
     private readonly ILogger<CreatorGAgent> _logger;
 
-    public CreatorGAgent(ILogger<CreatorGAgent> logger) 
+    public CreatorGAgent(ILogger<CreatorGAgent> logger)
     {
         _logger = logger;
     }
-    
+
     public override Task<string> GetDescriptionAsync()
     {
         return Task.FromResult(
             "Represents an agent responsible for creating and grouping other agents");
     }
-    
+
     public async Task<CreatorGAgentState> GetAgentAsync()
     {
         _logger.LogInformation("GetAgentAsync {state}", JsonConvert.SerializeObject(State));
         return State;
     }
-    
+
     public async Task CreateAgentAsync(AgentData agentData)
     {
         _logger.LogInformation("CreateAgentAsync");
@@ -50,7 +53,7 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
         });
         await ConfirmEvents();
     }
-    
+
     public async Task UpdateAgentAsync(UpdateAgentInput dto)
     {
         _logger.LogInformation("UpdateAgentAsync");
@@ -71,9 +74,9 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
         });
         await ConfirmEvents();
     }
-    
+
     public async Task UpdateAvailableEventsAsync(List<Type>? eventTypeList)
-    {   
+    {
         _logger.LogInformation("UpdateAvailableEventsAsync {list}", JsonConvert.SerializeObject(eventTypeList));
         if (eventTypeList == null)
         {
@@ -90,7 +93,7 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
                 Description = t.GetCustomAttribute<DescriptionAttribute>()?.Description ?? "No description",
             });
         }
-        
+
         RaiseEvent(new UpdateAvailableEventsGEvent()
         {
             EventInfoList = eventDescriptionList
@@ -98,7 +101,7 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
         await ConfirmEvents();
         _logger.LogInformation("UpdateAvailableEventsAsync Finish {list}", JsonConvert.SerializeObject(eventDescriptionList));
     }
-    
+    [Interceptor]
     public async Task PublishEventAsync<T>(T @event) where T : EventBase
     {
         if (@event == null)
@@ -106,10 +109,10 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
             throw new ArgumentNullException(nameof(@event));
         }
 
-        Logger.LogInformation( "publish event: {event}", @event);
+        Logger.LogInformation("publish event: {event}", @event);
         await PublishAsync(@event);
     }
-    
+    [Interceptor]
     protected override void GAgentTransitionState(CreatorGAgentState state, StateLogEventBase<CreatorAgentGEvent> @event)
     {
         switch (@event)
