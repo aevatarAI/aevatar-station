@@ -163,8 +163,9 @@ public class DailyPushService : ApplicationService, IDailyPushService
             _logger.LogInformation("Starting test mode for timezone {Timezone} with {IntervalSeconds}s interval", 
                 timezone, intervalSeconds);
             
-            var timezoneScheduler = _clusterClient.GetGrain<ITimezoneSchedulerGAgent>(timezone);
-            await timezoneScheduler.StartTestModeAsync();
+            var timezoneScheduler = _clusterClient.GetGrain<ITimezoneSchedulerGAgent>(DailyPushConstants.TimezoneToGuid(timezone));
+            await timezoneScheduler.InitializeAsync(timezone);
+            await timezoneScheduler.StartTestModeAsync(intervalSeconds);
             
             _logger.LogInformation("Test mode started successfully for timezone {Timezone} with {IntervalSeconds}s interval", 
                 timezone, intervalSeconds);
@@ -185,7 +186,8 @@ public class DailyPushService : ApplicationService, IDailyPushService
         {
             _logger.LogInformation("Stopping test mode for timezone {Timezone}", timezone);
             
-            var timezoneScheduler = _clusterClient.GetGrain<ITimezoneSchedulerGAgent>(timezone);
+            var timezoneScheduler = _clusterClient.GetGrain<ITimezoneSchedulerGAgent>(DailyPushConstants.TimezoneToGuid(timezone));
+            await timezoneScheduler.InitializeAsync(timezone);
             await timezoneScheduler.StopTestModeAsync();
             
             _logger.LogInformation("Test mode stopped successfully for timezone {Timezone}", timezone);
@@ -206,7 +208,8 @@ public class DailyPushService : ApplicationService, IDailyPushService
         {
             _logger.LogDebug("Getting test status for timezone {Timezone}", timezone);
             
-            var timezoneScheduler = _clusterClient.GetGrain<ITimezoneSchedulerGAgent>(timezone);
+            var timezoneScheduler = _clusterClient.GetGrain<ITimezoneSchedulerGAgent>(DailyPushConstants.TimezoneToGuid(timezone));
+            await timezoneScheduler.InitializeAsync(timezone);
             var status = await timezoneScheduler.GetTestStatusAsync();
             
             _logger.LogDebug("Retrieved test status for timezone {Timezone}: Active={IsActive}, Rounds={RoundsCompleted}/{MaxRounds}", 
