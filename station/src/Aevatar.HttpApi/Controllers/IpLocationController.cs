@@ -22,16 +22,41 @@ public class IpLocationController : ControllerBase
         _logger = logger;
     }
     
+    [HttpGet("is-mainland-cn")]
+    public async Task<IActionResult> IsIpInMainlandCN()
+    {
+        try
+        {
+            var ip = HttpContext.GetClientIpAddress();
+
+            if (string.IsNullOrWhiteSpace(ip))
+            {
+                return BadRequest("IP address is required");
+            }
+
+            _logger.LogInformation("Checking if IP {IpAddress} is in mainland China", ip);
+            
+            var result = await _ipLocationService.IsInMainlandChinaAsync(ip);
+            
+            return Ok(new
+            {
+                Ip = ip,
+                IsInMainlandChina = result,
+                Message = result ? "The IP address belongs to Chinese Mainland" :"The IP address does not belong to Chinese Mainland"
+            });
+        }
+        catch (System.Exception ex)
+        {
+            _logger.LogError(ex, "Error checking IP {IpAddress}", HttpContext.GetClientIpAddress());
+            return StatusCode(500, new { Error = "Internal server error", Message = ex.Message });
+        }
+    }
+    
     [HttpGet("is-mainland-china")]
     public async Task<IActionResult> IsIpInMainlandChina([FromQuery] string ip)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(ip))
-            {
-                ip = HttpContext.GetClientIpAddress();
-            }
-
             if (string.IsNullOrWhiteSpace(ip))
             {
                 return BadRequest("IP address is required");
