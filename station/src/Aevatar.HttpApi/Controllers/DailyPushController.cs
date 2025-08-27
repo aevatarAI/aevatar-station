@@ -268,4 +268,56 @@ public class DailyPushController : AbpControllerBase
             });
         }
     }
+    
+    /// <summary>
+    /// Get all devices in specified timezone for debugging - TODO: Remove before production
+    /// </summary>
+    [HttpGet("test/devices")]
+    public async Task<IActionResult> GetDevicesInTimezone([FromQuery] string timezone = "Asia/Shanghai")
+    {
+        try
+        {
+            // Defensive check for empty timezone
+            if (string.IsNullOrEmpty(timezone))
+            {
+                timezone = "Asia/Shanghai";
+            }
+            
+            var devices = await _dailyPushService.GetDevicesInTimezoneAsync(timezone);
+            return Ok(new
+            {
+                result = new
+                {
+                    timezone = timezone,
+                    totalUsers = devices.Select(d => d.UserId).Distinct().Count(),
+                    totalDevices = devices.Count,
+                    enabledDevices = devices.Count(d => d.PushEnabled),
+                    devices = devices.Select(d => new
+                    {
+                        userId = d.UserId,
+                        deviceId = d.DeviceId,
+                        pushToken = d.PushToken, // Already truncated for privacy
+                        timeZoneId = d.TimeZoneId,
+                        pushLanguage = d.PushLanguage,
+                        pushEnabled = d.PushEnabled,
+                        registeredAt = d.RegisteredAt,
+                        lastTokenUpdate = d.LastTokenUpdate,
+                        hasEnabledDeviceInTimezone = d.HasEnabledDeviceInTimezone,
+                        totalDeviceCount = d.TotalDeviceCount,
+                        enabledDeviceCount = d.EnabledDeviceCount
+                    }).ToList()
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            var language = HttpContext.GetGodGPTLanguage();
+            var localizedMessage = "Failed to get devices in timezone"; // TODO: Add proper localization
+            _logger.LogError(ex, "Failed to get devices in timezone {Timezone}", timezone);
+            return BadRequest(new {
+                error = new { code = 1, message = localizedMessage, details = ex.Message },
+                result = false
+            });
+        }
+    }
 }

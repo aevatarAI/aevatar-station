@@ -6,6 +6,7 @@ using Aevatar.Application.Grains.Agents.ChatManager.Common;
 using GodGPT.GAgents.DailyPush;
 using Microsoft.Extensions.Logging;
 using Orleans;
+using System.Collections.Generic;
 using Volo.Abp.Application.Services;
 
 
@@ -220,6 +221,30 @@ public class DailyPushService : ApplicationService, IDailyPushService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get test status for timezone {Timezone}", timezone);
+            throw;
+        }
+    }
+    
+    /// <summary>
+    /// Get all devices in specified timezone for debugging - TODO: Remove before production
+    /// </summary>
+    public async Task<List<TimezoneDeviceInfo>> GetDevicesInTimezoneAsync(string timezone = "Asia/Shanghai")
+    {
+        try
+        {
+            _logger.LogDebug("Getting devices in timezone {Timezone}", timezone);
+            
+            var timezoneScheduler = _clusterClient.GetGrain<ITimezoneSchedulerGAgent>(DailyPushConstants.TimezoneToGuid(timezone));
+            await timezoneScheduler.InitializeAsync(timezone);
+            var devices = await timezoneScheduler.GetDevicesInTimezoneAsync();
+            
+            _logger.LogDebug("Retrieved {DeviceCount} devices in timezone {Timezone}", devices.Count, timezone);
+                
+            return devices;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get devices in timezone {Timezone}", timezone);
             throw;
         }
     }
