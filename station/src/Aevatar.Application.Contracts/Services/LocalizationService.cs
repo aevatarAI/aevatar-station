@@ -129,7 +129,6 @@ public class LocalizationService : ILocalizationService
         return language switch
         {
             GodGPTChatLanguage.English => "en",
-            GodGPTChatLanguage.CN => "zh-cn",
             GodGPTChatLanguage.TraditionalChinese => "zh-tw",
             GodGPTChatLanguage.Spanish => "es",
             GodGPTChatLanguage.CN => "zh",
@@ -319,12 +318,12 @@ public class LocalizationService : ILocalizationService
             {
                 // Email subjects
                 ["en.RegistrationSubject"] = "Registration Verification Code",
-                ["zh-cn.RegistrationSubject"] = "注册验证码",
+                ["zh.RegistrationSubject"] = "注册验证码",
                 ["zh-tw.RegistrationSubject"] = "註冊驗證碼",
                 ["es.RegistrationSubject"] = "Código de Verificación de Registro",
                 
                 ["en.PasswordResetSubject"] = "Password Reset",
-                ["zh-cn.PasswordResetSubject"] = "密码重置",
+                ["zh.PasswordResetSubject"] = "密码重置",
                 ["zh-tw.PasswordResetSubject"] = "密碼重置",
                 ["es.PasswordResetSubject"] = "Restablecimiento de Contraseña"
             },
