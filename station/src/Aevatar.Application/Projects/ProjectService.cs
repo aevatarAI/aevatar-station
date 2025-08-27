@@ -62,6 +62,12 @@ public class ProjectService : OrganizationService, IProjectService
             .Where(c => (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-')
             .ToArray());
 
+        // Ensure the generated domain name is not empty after filtering
+        if (string.IsNullOrEmpty(domainName))
+        {
+            throw new UserFriendlyException("Project name must contain at least one valid character (letter, digit, or hyphen) for domain name generation");
+        }
+
         _logger.LogInformation("Starting project creation process. OrganizationId: {OrganizationId}, DisplayName: {DisplayName}, DomainName: {DomainName}", 
             input.OrganizationId, input.DisplayName, domainName);
 
@@ -317,13 +323,8 @@ public class ProjectService : OrganizationService, IProjectService
             throw new UserFriendlyException("Project name must contain at least one ASCII letter or digit for domain name generation");
         }
 
-        // Check for invalid characters - only ASCII letters, digits, and hyphens are allowed for domain names
-        var invalidChars = displayName.Where(c => !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-')).ToArray();
-        if (invalidChars.Length > 0)
-        {
-            var invalidCharString = string.Join(", ", invalidChars.Distinct().Select(c => $"'{c}'"));
-            throw new UserFriendlyException($"Project name contains invalid characters for domain generation: {invalidCharString}. Only ASCII letters, digits, and hyphens are allowed.");
-        }
+        // No need to validate individual characters - we'll filter them during domain name generation
+        // This allows DisplayName to contain spaces and special characters for better UX
     }
 
     public async Task SaveRecentUsedProjectAsync(RecentUsedProjectDto input)
