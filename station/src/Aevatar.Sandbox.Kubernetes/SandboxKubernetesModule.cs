@@ -12,7 +12,7 @@ public class SandboxKubernetesModule : AbpModule
     {
         var config = KubernetesClientConfiguration.BuildDefaultConfig();
         context.Services.AddSingleton<IKubernetes>(_ => new k8s.Kubernetes(config));
-        context.Services.AddSingleton<IKubernetesClientAdapter, KubernetesClientAdapter>();
+        context.Services.AddSingleton<ISandboxKubernetesClientAdapter, SandboxKubernetesClientAdapter>();
         context.Services.AddSingleton<ISandboxKubernetesManager, SandboxKubernetesManager>();
     }
 }

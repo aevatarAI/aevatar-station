@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Kubernetes;
-using Aevatar.Kubernetes.Adapter;
 using Aevatar.Kubernetes.Manager;
 using Aevatar.Options;
 using k8s.Models;
@@ -14,10 +13,9 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Shouldly;
 using Xunit;
-using Aevatar.Application.Grains.Agents.Configuration;
 using Orleans;
 using System.Linq;
-using System.Threading;
+using Aevatar.Kubernetes.Abstractions.Adapter;
 
 namespace Aevatar.Application.Tests.Service;
 
@@ -80,11 +78,11 @@ public class KubernetesHostManagerUnitTests
         var sourceDeployment = CreateMockDeployment("deployment-testclient-silo-1", "container-testclient-silo-1");
         
         _mockKubernetesClientAdapter
-            .Setup(x => x.ReadNamespacedDeploymentAsync("deployment-testclient-silo-1", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ReadNamespacedDeploymentAsync("deployment-testclient-silo-1", It.IsAny<string>()))
             .ReturnsAsync(sourceDeployment);
 
         _mockKubernetesClientAdapter
-            .Setup(x => x.CreateDeploymentAsync(It.IsAny<V1Deployment>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.CreateDeploymentAsync(It.IsAny<V1Deployment>(), It.IsAny<string>()))
             .ReturnsAsync(new V1Deployment());
 
         // Act
@@ -92,7 +90,7 @@ public class KubernetesHostManagerUnitTests
 
         // Assert
         _mockKubernetesClientAdapter.Verify(
-            x => x.ReadNamespacedDeploymentAsync("deployment-testclient-silo-1", It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            x => x.ReadNamespacedDeploymentAsync("deployment-testclient-silo-1", It.IsAny<string>()),
             Times.Once);
 
         _mockKubernetesClientAdapter.Verify(
@@ -100,7 +98,7 @@ public class KubernetesHostManagerUnitTests
                 d.Metadata.Name == "deployment-testclient-silo-2" &&
                 d.Spec.Template.Spec.Containers.Any(c => 
                     c.Env.Any(e => e.Name == "SILO_NAME_PATTERN" && e.Value == siloNamePattern))),
-                It.IsAny<string>(), It.IsAny<CancellationToken>()),
+                It.IsAny<string>()),
             Times.Once);
     }
 
@@ -115,7 +113,7 @@ public class KubernetesHostManagerUnitTests
         var siloNamePattern = "User";
 
         _mockKubernetesClientAdapter
-            .Setup(x => x.ReadNamespacedDeploymentAsync("deployment-testclient-silo-1", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ReadNamespacedDeploymentAsync("deployment-testclient-silo-1", It.IsAny<string>()))
             .ReturnsAsync((V1Deployment)null);
 
         // Act & Assert
@@ -138,11 +136,11 @@ public class KubernetesHostManagerUnitTests
         var sourceDeployment = CreateMockDeployment("deployment-testclient-silo-1", "container-testclient-silo-1");
         
         _mockKubernetesClientAdapter
-            .Setup(x => x.ReadNamespacedDeploymentAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ReadNamespacedDeploymentAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(sourceDeployment);
 
         _mockKubernetesClientAdapter
-            .Setup(x => x.CreateDeploymentAsync(It.IsAny<V1Deployment>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.CreateDeploymentAsync(It.IsAny<V1Deployment>(), It.IsAny<string>()))
             .ReturnsAsync(new V1Deployment());
 
         // Act
@@ -150,7 +148,7 @@ public class KubernetesHostManagerUnitTests
 
         // Assert
         _mockKubernetesClientAdapter.Verify(
-            x => x.ReadNamespacedDeploymentAsync("deployment-testclient-silo-1", "test-namespace", It.IsAny<CancellationToken>()),
+            x => x.ReadNamespacedDeploymentAsync("deployment-testclient-silo-1", "test-namespace"),
             Times.Once);
     }
 
@@ -167,11 +165,11 @@ public class KubernetesHostManagerUnitTests
         var sourceDeployment = CreateMockDeployment("deployment-testclient-silo-1", "container-testclient-silo-1");
         
         _mockKubernetesClientAdapter
-            .Setup(x => x.ReadNamespacedDeploymentAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ReadNamespacedDeploymentAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(sourceDeployment);
 
         _mockKubernetesClientAdapter
-            .Setup(x => x.CreateDeploymentAsync(It.IsAny<V1Deployment>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.CreateDeploymentAsync(It.IsAny<V1Deployment>(), It.IsAny<string>()))
             .ReturnsAsync(new V1Deployment());
 
         // Act
@@ -179,7 +177,7 @@ public class KubernetesHostManagerUnitTests
 
         // Assert
         _mockKubernetesClientAdapter.Verify(
-            x => x.CreateDeploymentAsync(It.IsAny<V1Deployment>(), "test-namespace", It.IsAny<CancellationToken>()),
+            x => x.CreateDeploymentAsync(It.IsAny<V1Deployment>(), "test-namespace"),
             Times.Once);
     }
 
@@ -194,7 +192,7 @@ public class KubernetesHostManagerUnitTests
         var siloNamePattern = "User";
 
         _mockKubernetesClientAdapter
-            .Setup(x => x.ReadNamespacedDeploymentAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ReadNamespacedDeploymentAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync((V1Deployment)null);
 
         // Act & Assert
@@ -216,7 +214,7 @@ public class KubernetesHostManagerUnitTests
         var siloNamePattern = "User";
 
         _mockKubernetesClientAdapter
-            .Setup(x => x.ReadNamespacedDeploymentAsync("deployment-testclient-silo-1", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ReadNamespacedDeploymentAsync("deployment-testclient-silo-1", It.IsAny<string>()))
             .ThrowsAsync(new Exception("Kubernetes API error"));
 
         // Act & Assert

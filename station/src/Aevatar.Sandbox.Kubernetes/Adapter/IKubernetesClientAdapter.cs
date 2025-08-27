@@ -3,7 +3,7 @@ using Volo.Abp.DependencyInjection;
 
 namespace Aevatar.Sandbox.Kubernetes.Adapter;
 
-public interface IKubernetesClientAdapter : ISingletonDependency
+public interface ISandboxKubernetesClientAdapter : ISingletonDependency
 {
     Task<V1Job> CreateJobAsync(V1Job job, string namespaceParameter, CancellationToken ct = default);
     Task<V1Job> ReadNamespacedJobAsync(string name, string namespaceParameter, CancellationToken ct = default);

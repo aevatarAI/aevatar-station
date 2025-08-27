@@ -7,12 +7,12 @@ namespace Aevatar.Sandbox.Kubernetes.Manager;
 
 public class SandboxKubernetesManager : ISandboxKubernetesManager
 {
-    private readonly IKubernetesClientAdapter _kubernetesClientAdapter;
+    private readonly ISandboxKubernetesClientAdapter _kubernetesClientAdapter;
     private readonly ILogger<SandboxKubernetesManager> _logger;
     private const string SandboxNamespace = "sandbox";
 
     public SandboxKubernetesManager(
-        IKubernetesClientAdapter kubernetesClientAdapter,
+        ISandboxKubernetesClientAdapter kubernetesClientAdapter,
         ILogger<SandboxKubernetesManager> logger)
     {
         _kubernetesClientAdapter = kubernetesClientAdapter;
@@ -147,7 +147,19 @@ public class SandboxKubernetesManager : ISandboxKubernetesManager
         var job = await _kubernetesClientAdapter.ReadNamespacedJobAsync(jobName, SandboxNamespace, ct);
         
         if (job == null)
-            throw new InvalidOperationException($"Job {jobName} not found");
+        {
+            // 如果Job不存在，返回一个默认的状态而不是抛出异常
+            return new SandboxJobStatus
+            {
+                IsComplete = false,
+                ExitCode = -1,
+                TimedOut = false,
+                ExecutionTimeSeconds = 0,
+                MemoryUsedMB = 0,
+                ScriptHash = string.Empty,
+                FinishedAtUtc = DateTime.UtcNow
+            };
+        }
 
         var status = job.Status;
         var isComplete = status.CompletionTime.HasValue;

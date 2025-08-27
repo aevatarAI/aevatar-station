@@ -4,12 +4,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Aevatar.Sandbox.Kubernetes.Adapter;
 
-public class KubernetesClientAdapter : IKubernetesClientAdapter
+public class SandboxKubernetesClientAdapter : ISandboxKubernetesClientAdapter
 {
     private readonly IKubernetes _client;
-    private readonly ILogger<KubernetesClientAdapter> _logger;
+    private readonly ILogger<SandboxKubernetesClientAdapter> _logger;
 
-    public KubernetesClientAdapter(IKubernetes client, ILogger<KubernetesClientAdapter> logger)
+    public SandboxKubernetesClientAdapter(IKubernetes client, ILogger<SandboxKubernetesClientAdapter> logger)
     {
         _client = client;
         _logger = logger;

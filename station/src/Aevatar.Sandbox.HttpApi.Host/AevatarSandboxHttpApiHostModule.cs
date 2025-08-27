@@ -52,7 +52,7 @@ public class AevatarSandboxHttpApiHostModule : AbpModule
         
         context.Services.AddSingleton<SandboxKubernetesManager>();
         context.Services.AddSingleton<ISandboxService, PythonSandboxService>();
-        context.Services.AddSingleton<IKubernetesClientAdapter, KubernetesClientAdapter>();
+        context.Services.AddSingleton<ISandboxKubernetesClientAdapter, SandboxKubernetesClientAdapter>();
         
         // PythonSandboxService will be configured through ISandboxService
     }

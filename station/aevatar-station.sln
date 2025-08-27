@@ -125,9 +125,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{BB1E
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "resource", "resource", "{22441F23-5B7E-467A-A55B-FA1AC5C914B2}"
 	ProjectSection(SolutionItems) = preProject
-		source\Directory.Build.props = ..\Directory.Build.props
-		source\Directory.Packages.props = ..\Directory.Packages.props
-		source\Dockerfile = ..\Dockerfile
+		source\Directory.Build.props = source\Directory.Build.props
+		source\Directory.Packages.props = source\Directory.Packages.props
+		source\Dockerfile = source\Dockerfile
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Sandbox.HttpApi.Core", "src\Aevatar.Sandbox.HttpApi.Core\Aevatar.Sandbox.HttpApi.Core.csproj", "{D658ECAC-0D82-4272-B3D4-80525C4D0F96}"
@@ -149,6 +149,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{3E5A0B81-7
 		docs\Python_Sandbox_Testing_Guide.md = docs\Python_Sandbox_Testing_Guide.md
 		docs\Python_Sandbox_Testing_Guide.zh.md = docs\Python_Sandbox_Testing_Guide.zh.md
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Sandbox.Kubernetes.Tests", "test\Aevatar.Sandbox.Kubernetes.Tests\Aevatar.Sandbox.Kubernetes.Tests.csproj", "{DA09F76D-CDFD-4F1B-AE28-706F88D9174D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.Sandbox.Python.Tests", "test\Aevatar.Sandbox.Python.Tests\Aevatar.Sandbox.Python.Tests.csproj", "{AE2334E6-4C68-491D-9E6A-B3ECB7450F6B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -856,6 +860,30 @@ Global
 		{2E0A7C02-BEA7-49E8-89EB-EB76733BF19A}.Release|x64.Build.0 = Release|Any CPU
 		{2E0A7C02-BEA7-49E8-89EB-EB76733BF19A}.Release|x86.ActiveCfg = Release|Any CPU
 		{2E0A7C02-BEA7-49E8-89EB-EB76733BF19A}.Release|x86.Build.0 = Release|Any CPU
+		{DA09F76D-CDFD-4F1B-AE28-706F88D9174D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA09F76D-CDFD-4F1B-AE28-706F88D9174D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA09F76D-CDFD-4F1B-AE28-706F88D9174D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{DA09F76D-CDFD-4F1B-AE28-706F88D9174D}.Debug|x64.Build.0 = Debug|Any CPU
+		{DA09F76D-CDFD-4F1B-AE28-706F88D9174D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{DA09F76D-CDFD-4F1B-AE28-706F88D9174D}.Debug|x86.Build.0 = Debug|Any CPU
+		{DA09F76D-CDFD-4F1B-AE28-706F88D9174D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA09F76D-CDFD-4F1B-AE28-706F88D9174D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DA09F76D-CDFD-4F1B-AE28-706F88D9174D}.Release|x64.ActiveCfg = Release|Any CPU
+		{DA09F76D-CDFD-4F1B-AE28-706F88D9174D}.Release|x64.Build.0 = Release|Any CPU
+		{DA09F76D-CDFD-4F1B-AE28-706F88D9174D}.Release|x86.ActiveCfg = Release|Any CPU
+		{DA09F76D-CDFD-4F1B-AE28-706F88D9174D}.Release|x86.Build.0 = Release|Any CPU
+		{AE2334E6-4C68-491D-9E6A-B3ECB7450F6B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE2334E6-4C68-491D-9E6A-B3ECB7450F6B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE2334E6-4C68-491D-9E6A-B3ECB7450F6B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{AE2334E6-4C68-491D-9E6A-B3ECB7450F6B}.Debug|x64.Build.0 = Debug|Any CPU
+		{AE2334E6-4C68-491D-9E6A-B3ECB7450F6B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{AE2334E6-4C68-491D-9E6A-B3ECB7450F6B}.Debug|x86.Build.0 = Debug|Any CPU
+		{AE2334E6-4C68-491D-9E6A-B3ECB7450F6B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE2334E6-4C68-491D-9E6A-B3ECB7450F6B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AE2334E6-4C68-491D-9E6A-B3ECB7450F6B}.Release|x64.ActiveCfg = Release|Any CPU
+		{AE2334E6-4C68-491D-9E6A-B3ECB7450F6B}.Release|x64.Build.0 = Release|Any CPU
+		{AE2334E6-4C68-491D-9E6A-B3ECB7450F6B}.Release|x86.ActiveCfg = Release|Any CPU
+		{AE2334E6-4C68-491D-9E6A-B3ECB7450F6B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -919,6 +947,8 @@ Global
 		{F2DA28F0-2023-4A55-A0A7-F1C9E9DF9BAA} = {CA9AC87F-097E-4F15-8393-4BC07735A5B0}
 		{B6775834-515E-4E30-8BB3-4FFE04F9DEF8} = {CA9AC87F-097E-4F15-8393-4BC07735A5B0}
 		{2E0A7C02-BEA7-49E8-89EB-EB76733BF19A} = {CA9AC87F-097E-4F15-8393-4BC07735A5B0}
+		{DA09F76D-CDFD-4F1B-AE28-706F88D9174D} = {04DBDB01-70F4-4E06-B468-8F87850B22BE}
+		{AE2334E6-4C68-491D-9E6A-B3ECB7450F6B} = {04DBDB01-70F4-4E06-B468-8F87850B22BE}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {28315BFD-90E7-4E14-A2EA-F3D23AF4126F}
