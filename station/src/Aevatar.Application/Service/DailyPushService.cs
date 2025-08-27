@@ -4,9 +4,11 @@ using Aevatar.Application.Contracts.DailyPush;
 using Aevatar.Application.Grains.Agents.ChatManager;
 using Aevatar.Application.Grains.Agents.ChatManager.Common;
 using GodGPT.GAgents.DailyPush;
+
 using Microsoft.Extensions.Logging;
 using Orleans;
 using System.Collections.Generic;
+using System.Linq;
 using Volo.Abp.Application.Services;
 
 
@@ -225,31 +227,6 @@ public class DailyPushService : ApplicationService, IDailyPushService
         }
     }
     
-    /// <summary>
-    /// Get all devices in specified timezone for debugging - TODO: Remove before production
-    /// </summary>
-    public async Task<List<TimezoneDeviceInfo>> GetDevicesInTimezoneAsync(string timezone = "Asia/Shanghai")
-    {
-        try
-        {
-            _logger.LogDebug("Getting devices in timezone {Timezone}", timezone);
-            
-            var timezoneScheduler = _clusterClient.GetGrain<ITimezoneSchedulerGAgent>(DailyPushConstants.TimezoneToGuid(timezone));
-            await timezoneScheduler.InitializeAsync(timezone);
-            var devices = await timezoneScheduler.GetDevicesInTimezoneAsync();
-            
-            _logger.LogDebug("Retrieved {DeviceCount} devices in timezone {Timezone}", devices.Count, timezone);
-                
-            return devices;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to get devices in timezone {Timezone}", timezone);
-            throw;
-        }
-    }
-    
-
     
     /// <summary>
     /// Convert GodGPTChatLanguage enum to GodGPTLanguage enum
@@ -276,5 +253,59 @@ public class DailyPushService : ApplicationService, IDailyPushService
             GodGPTLanguage.English => "en",
             _ => "en"
         };
+    }
+    
+    /// <summary>
+    /// Get devices in specified timezone for debugging purposes
+    /// </summary>
+    /// <param name="timezone">Timezone identifier (e.g., "Asia/Shanghai")</param>
+    /// <returns>List of device information in the timezone</returns>
+    public async Task<List<Contracts.DailyPush.TimezoneDeviceInfo>> GetDevicesInTimezoneAsync(string timezone)
+    {
+        try
+        {
+            // Get timezone scheduler GAgent
+            var timezoneScheduler = _clusterClient.GetGrain<ITimezoneSchedulerGAgent>(DailyPushConstants.TimezoneToGuid(timezone));
+            
+            // Get all user devices from timezone scheduler
+            var allUserDevices = await timezoneScheduler.GetDevicesInTimezoneAsync();
+            
+            var result = new List<Contracts.DailyPush.TimezoneDeviceInfo>();
+            
+            foreach (var userDevice in allUserDevices)
+            {
+                // Convert from GodGPT.GAgents.DailyPush.TimezoneDeviceInfo to Contracts.DailyPush.TimezoneDeviceInfo
+                result.Add(new Contracts.DailyPush.TimezoneDeviceInfo
+                {
+                    UserId = userDevice.UserId,
+                    DeviceId = userDevice.DeviceId,
+                    PushToken = TruncateToken(userDevice.PushToken),
+                    TimeZoneId = userDevice.TimeZoneId,
+                    PushLanguage = userDevice.PushLanguage,
+                    PushEnabled = userDevice.PushEnabled,
+                    HasEnabledDeviceInTimezone = userDevice.HasEnabledDeviceInTimezone,
+                    TotalDeviceCount = userDevice.TotalDeviceCount,
+                    EnabledDeviceCount = userDevice.EnabledDeviceCount
+                });
+            }
+            
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get devices in timezone {Timezone}", timezone);
+            return new List<Contracts.DailyPush.TimezoneDeviceInfo>();
+        }
+    }
+    
+    /// <summary>
+    /// Truncate push token for privacy protection
+    /// </summary>
+    private static string TruncateToken(string token)
+    {
+        if (string.IsNullOrEmpty(token) || token.Length <= 10)
+            return token;
+            
+        return $"{token[..5]}...{token[^5..]}";
     }
 }

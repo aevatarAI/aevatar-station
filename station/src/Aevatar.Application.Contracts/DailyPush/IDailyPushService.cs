@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Aevatar.Application.Contracts.DailyPush;
@@ -53,4 +54,11 @@ public interface IDailyPushService
     /// <param name="timezone">Timezone identifier (e.g., "Asia/Shanghai")</param>
     /// <returns>Test mode status information</returns>
     Task<(bool IsActive, DateTime StartTime, int RoundsCompleted, int MaxRounds)> GetTestStatusAsync(string timezone);
+    
+    /// <summary>
+    /// Get devices in specified timezone for debugging purposes
+    /// </summary>
+    /// <param name="timezone">Timezone identifier (e.g., "Asia/Shanghai")</param>
+    /// <returns>List of device information in the timezone</returns>
+    Task<List<TimezoneDeviceInfo>> GetDevicesInTimezoneAsync(string timezone);
 }
