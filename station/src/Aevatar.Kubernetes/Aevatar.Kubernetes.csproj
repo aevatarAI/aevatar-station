@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    
+    <Import Project="..\..\common.props" />
+    <PropertyGroup>
+        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <PackageId>Aevatar.Kubernetes</PackageId>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="KubernetesClient" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="AppConfigTemplate\appsettings-template.json" />
+      <None Remove="AppConfigTemplate\filebeat-template.yml" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Aevatar.WebHook.Deploy\Aevatar.WebHook.Deploy.csproj" />
+      <ProjectReference Include="..\Aevatar.Domain.Shared\Aevatar.Domain.Shared.csproj" />
+      <ProjectReference Include="..\Aevatar.Application.Grains\Aevatar.Application.Grains.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -11,6 +11,7 @@ on:
         options:
           - Aevatar.Silo
           - Aevatar.Developer.Host
+          - Aevatar.WebHook.Host
 
 env:
   DOTNET_INSTALL_DIR: "./.dotnet"
@@ -42,12 +43,12 @@ jobs:
         if: ${{ steps.nuget-packages.outputs.cache-hit == 'true' }}
         continue-on-error: true
         run: ls -lh ~/.nuget/packages
-      - run: dotnet publish src/${{ github.event.inputs.servicename}}/${{ github.event.inputs.servicename }}.csproj -o out/${{ github.event.inputs.servicename }}
+      - run: cd station && dotnet publish src/${{ github.event.inputs.servicename}}/${{ github.event.inputs.servicename }}.csproj -o out/${{ github.event.inputs.servicename }}
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ github.event.inputs.servicename }}
-          path: out/${{ github.event.inputs.servicename }}
+          path: station/out/${{ github.event.inputs.servicename }}
           retention-days: 1
 
   build-and-push-image:
@@ -89,8 +90,6 @@ jobs:
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Determine hostType
         id: determine_host_type
@@ -101,19 +100,21 @@ jobs:
             hostType="0"
           elif [ "${{ github.event.inputs.servicename }}" = "Aevatar.Developer.Host" ]; then
             hostType="1"
+          elif [ "${{ github.event.inputs.servicename }}" = "Aevatar.WebHook.Host" ]; then
+            hostType="2"
           fi
           echo "hostType=$hostType" >> $GITHUB_ENV
-          
+
       - name: Exit early for unsupported applications
         if: env.hostType == '-1'
         run: |
           echo "Unsupported application: ${{ github.event.inputs.servicename }}. Skipping workflow."
           exit 0
-      
+
       - name: Request token from auth-station
         id: auth_token_request
         run: |
-          response=$(curl -X POST "https://auth-station-staging.aevatar.ai/connect/token" \
+          response=$(curl -X POST "https://auth-station-dev-staging.aevatar.ai/connect/token" \
           -H "Content-Type: application/x-www-form-urlencoded" \
           -H "Accept: application/json" \
           --data-urlencode "grant_type=client_credentials" \
@@ -128,7 +129,7 @@ jobs:
         run: |
           echo "Calling UpdateDockerImage for hostType=${{ env.hostType }} with imageName=${{ steps.meta.outputs.tags }}"
 
-          curl -X 'POST' "https://station-staging.aevatar.ai/api/users/updateDockerImage?hostType=${{ env.hostType }}&imageName=$(echo '${{ steps.meta.outputs.tags }}' | sed 's/:/%3A/g')" \
+          curl -X 'POST' "https://station-dev-staging.aevatar.ai/api/users/updateDockerImage?hostType=${{ env.hostType }}&imageName=$(echo '${{ steps.meta.outputs.tags }}' | sed 's/:/%3A/g')" \
             -H "accept: */*" \
             -H "Authorization: Bearer ${{ env.access_token }}" \
             -H "X-Requested-With: XMLHttpRequest" \

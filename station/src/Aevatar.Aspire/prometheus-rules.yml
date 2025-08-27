@@ -1,0 +1,85 @@
+groups:
+  - name: service_metrics
+    interval: 15s
+    rules:
+      # Create service_up metrics from blackbox exporter probe_success
+      - record: service_up
+        expr: probe_success{job="aevatar-http-services"}
+        labels:
+          metric_type: "service_metrics"
+
+  # HTTP API Metrics derived from OpenTelemetry collector
+  - name: http_api_metrics
+    interval: 15s
+    rules:
+      # Total HTTP requests (all status codes)
+      - record: http_requests_total
+        expr: sum by (exported_job, http_request_method, http_route, exported_instance) (http_server_request_duration_seconds_count{exported_job=~"Aevatar\\..+"})
+        labels:
+          metric_type: "http_requests"
+
+      # Total HTTP error requests (4xx and 5xx status codes)
+      - record: http_requests_errors_total
+        expr: sum by (exported_job, http_request_method, http_route, exported_instance, http_response_status_code) (http_server_request_duration_seconds_count{exported_job=~"Aevatar\\..+", http_response_status_code=~"[45].*"})
+        labels:
+          metric_type: "http_errors"
+          error_type: "client_server_error"
+
+      # HTTP 4xx client error requests
+      - record: http_requests_4xx_total
+        expr: sum by (exported_job, http_request_method, http_route, exported_instance, http_response_status_code) (http_server_request_duration_seconds_count{exported_job=~"Aevatar\\..+", http_response_status_code=~"4.*"})
+        labels:
+          metric_type: "http_errors"
+          error_type: "client_error"
+
+      # HTTP 5xx server error requests
+      - record: http_requests_5xx_total
+        expr: sum by (exported_job, http_request_method, http_route, exported_instance, http_response_status_code) (http_server_request_duration_seconds_count{exported_job=~"Aevatar\\..+", http_response_status_code=~"5.*"})
+        labels:
+          metric_type: "http_errors"
+          error_type: "server_error"
+
+  - name: service_availability
+    interval: 30s
+    rules:
+      # Service availability percentage (using probe_success from blackbox exporter)
+      - record: service_availability_percentage_1h
+        expr: avg_over_time(probe_success{job="aevatar-http-services"}[1h]) * 100
+        labels:
+          time_window: "1h"
+
+      - record: service_availability_percentage_24h
+        expr: avg_over_time(probe_success{job="aevatar-http-services"}[24h]) * 100
+        labels:
+          time_window: "24h"
+
+      - record: service_availability_percentage_7d
+        expr: avg_over_time(probe_success{job="aevatar-http-services"}[7d]) * 100
+        labels:
+          time_window: "7d"
+
+      - record: service_availability_percentage_30d
+        expr: avg_over_time(probe_success{job="aevatar-http-services"}[30d]) * 100
+        labels:
+          time_window: "30d"
+
+      # Service downtime duration in minutes (using probe_success from blackbox exporter)
+      - record: service_downtime_minutes_1h
+        expr: (1 - avg_over_time(probe_success{job="aevatar-http-services"}[1h])) * 60
+        labels:
+          time_window: "1h"
+
+      - record: service_downtime_minutes_24h
+        expr: (1 - avg_over_time(probe_success{job="aevatar-http-services"}[24h])) * 1440
+        labels:
+          time_window: "24h"
+
+      - record: service_downtime_minutes_7d
+        expr: (1 - avg_over_time(probe_success{job="aevatar-http-services"}[7d])) * 10080
+        labels:
+          time_window: "7d"
+
+      - record: service_downtime_minutes_30d
+        expr: (1 - avg_over_time(probe_success{job="aevatar-http-services"}[30d])) * 43200
+        labels:
+          time_window: "30d" 

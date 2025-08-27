@@ -1,0 +1,15 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+## Aspire Rules
+
+1. Reference file [aspire_references.md](mdc:ai/aspire_references.md) for service endpoints and configuration.
+2. Workflow:
+   - Run Docker: `docker compose -f station/src/Aevatar.Aspire/docker-compose.yml up -d`
+   - Make sure all services in [docker-compose.yml](mdc:station/src/Aevatar.Aspire/docker-compose.yml) are running. If not, run docker again
+   - Start Aspire [Program.cs](mdc:station/src/Aevatar.Aspire/Program.cs)
+   - When prompted with login URL (e.g., `https://localhost:18888/login?t=token`), open it
+   - Get authentication key from AuthServer API (`http://localhost:7001/connect/token`)
+   - Use this key for all authenticated operations (e.g. `http://localhost:7002` endpoints)
