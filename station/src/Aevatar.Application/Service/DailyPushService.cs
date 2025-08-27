@@ -272,8 +272,13 @@ public class DailyPushService : ApplicationService, IDailyPushService
             
             var result = new List<Contracts.DailyPush.TimezoneDeviceInfo>();
             
+            _logger.LogInformation("Raw devices from TimezoneSchedulerGAgent: {DeviceCount} devices", allUserDevices.Count);
+            
             foreach (var userDevice in allUserDevices)
             {
+                _logger.LogDebug("Device: UserId={UserId}, DeviceId={DeviceId}, TimeZoneId='{TimeZoneId}', PushEnabled={PushEnabled}", 
+                    userDevice.UserId, userDevice.DeviceId, userDevice.TimeZoneId, userDevice.PushEnabled);
+                    
                 // Convert from GodGPT.GAgents.DailyPush.TimezoneDeviceInfo to Contracts.DailyPush.TimezoneDeviceInfo
                 result.Add(new Contracts.DailyPush.TimezoneDeviceInfo
                 {
