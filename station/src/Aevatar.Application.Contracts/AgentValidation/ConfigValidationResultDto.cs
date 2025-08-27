@@ -12,12 +12,7 @@ public class ConfigValidationResultDto
     /// Whether the validation passed
     /// </summary>
     public bool IsValid { get; set; }
-    
-    /// <summary>
-    /// List of validation errors
-    /// </summary>
-    public List<ValidationErrorDto> Errors { get; set; } = new();
-    
+
     /// <summary>
     /// Overall validation message
     /// </summary>
@@ -38,12 +33,11 @@ public class ConfigValidationResultDto
     /// <summary>
     /// Create a failed validation result
     /// </summary>
-    public static ConfigValidationResultDto Failure(IEnumerable<ValidationErrorDto> errors, string message = "Validation failed")
+    public static ConfigValidationResultDto Failure(string message = "Data validation failed")
     {
         return new ConfigValidationResultDto
         {
             IsValid = false,
-            Errors = errors.ToList(),
             Message = message
         };
     }
