@@ -28,4 +28,11 @@ public class WorkflowViewController : AevatarController
     {
         return _workflowViewService.PublishWorkflowAsync(guid);
     }
+    
+    [HttpPost]
+    [Route("default")]
+    public virtual Task<AgentDto> CreateDefaultWorkflowAsync()
+    {
+        return _workflowViewService.CreateDefaultWorkflowAsync();
+    }
 }
