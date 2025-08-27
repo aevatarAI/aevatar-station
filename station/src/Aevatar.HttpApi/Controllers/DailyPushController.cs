@@ -132,13 +132,15 @@ public class DailyPushController : AbpControllerBase
             
             if (response == null)
             {
-                var language = HttpContext.GetGodGPTLanguage();
-                var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.DeviceNotFound, language);
-                // Follow GodGPT pattern: Ok with error for business logic failure
+                // Return empty object with pushEnabled=true for non-existent devices
                 return Ok(new
                 {
-                    error = new { code = 0, message = localizedMessage },
-                    result = false
+                    result = true,
+                    deviceId = deviceId,
+                    timeZoneId = "",
+                    pushEnabled = true,
+                    pushLanguage = "",
+                    pushToken = ""
                 });
             }
             
