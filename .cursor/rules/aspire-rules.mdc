@@ -6,7 +6,11 @@ alwaysApply: false
 ## Aspire Rules
 
 1. Reference file [aspire_references.md](mdc:ai/aspire_references.md) for service endpoints and configuration.
-2. Workflow:
+2. Setup Alias:
+   - run `sudo ifconfig lo0 alias 127.0.0.2`
+   - run `sudo ifconfig lo0 alias 127.0.0.3`
+   - run `sudo ifconfig lo0 alias 127.0.0.4`
+3. Workflow:
    - Run Docker: `docker compose -f station/src/Aevatar.Aspire/docker-compose.yml up -d`
    - Make sure all services in [docker-compose.yml](mdc:station/src/Aevatar.Aspire/docker-compose.yml) are running. If not, run docker again
    - Start Aspire [Program.cs](mdc:station/src/Aevatar.Aspire/Program.cs)

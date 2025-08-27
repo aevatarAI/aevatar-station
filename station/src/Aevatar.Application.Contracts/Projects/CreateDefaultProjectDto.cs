@@ -1,10 +1,9 @@
 using System;
 using System.ComponentModel.DataAnnotations;
-using Aevatar.Organizations;
 
 namespace Aevatar.Projects;
 
-public class CreateProjectDto : CreateOrganizationDto
+public class CreateDefaultProjectDto
 {
     [Required]
     public Guid OrganizationId { get; set; }
