@@ -1,0 +1,52 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.ComponentModel;
+using Aevatar.Code;
+using Aevatar.Code.GEvents;
+using Aevatar.Core;
+using Aevatar.Core.Abstractions;
+using Microsoft.Extensions.Logging;
+using Orleans.Providers;
+
+namespace Aevatar.Application.Grains.Agents.Code;
+
+[Description("Handle Agent Combination")]
+[StorageProvider(ProviderName = "PubSubStore")]
+[LogConsistencyProvider(ProviderName = "LogStorage")]
+public class CodeGAgent : GAgentBase<CodeGAgentState, CodeAgentGEvent>, ICodeGAgent
+{
+    public CodeGAgent(ILogger<CodeGAgent> logger)
+    {
+    }
+
+    public override Task<string> GetDescriptionAsync()
+    {
+        return Task.FromResult(
+            "This agent is used to store the code needed to create a webhook.");
+    }
+
+    public async Task UploadCodeAsync(string webhookId, string version, Dictionary<string, byte[]> codeFiles)
+    {
+        var addCodeAgentGEvent = new AddCodeAgentGEvent
+        {
+            Ctime = DateTime.UtcNow,
+            WebhookId = webhookId,
+            WebhookVersion = version,
+            CodeFiles = codeFiles
+        };
+        RaiseEvent(addCodeAgentGEvent);
+        await ConfirmEvents();
+    }
+
+    public async Task<Dictionary<string, byte[]>> GetCodeAsync()
+    {
+        return State.CodeFiles;
+    }
+}
+
+public interface ICodeGAgent : IStateGAgent<CodeGAgentState>
+{
+    Task UploadCodeAsync(string webhookId, string version, Dictionary<string, byte[]> codeFiles);
+    Task<Dictionary<string, byte[]>> GetCodeAsync();
+}

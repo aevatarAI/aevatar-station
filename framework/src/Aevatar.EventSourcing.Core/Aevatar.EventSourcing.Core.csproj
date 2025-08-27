@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+        <Version>$(AevatarSourceCodeVersion)</Version>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <PackageType>Dependency</PackageType>
+        <PackageId>Aevatar.EventSourcing.Core</PackageId>
+        <Title>Event Sourcing Abstraction for Orleans</Title>
+        <Authors>AElf</Authors>
+        <Description>The abstraction of event sourcing for Orleans to be used in aevatar Framework.</Description>
+        <PackageTags>agent</PackageTags>
+        <RepositoryUrl>https://github.com/aevatarAI/aevatar-framework</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageProjectUrl>https://github.com/aevatarAI/aevatar-framework</PackageProjectUrl>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
+      <PackageReference Include="Microsoft.Orleans.EventSourcing" />
+      <PackageReference Include="System.Text.Json" />
+    </ItemGroup>
+
+</Project>

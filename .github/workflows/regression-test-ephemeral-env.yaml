@@ -1,0 +1,336 @@
+name: Run Aevatar Station Regression Test on Ephemeral Test Environment
+
+on:
+  workflow_dispatch:
+  pull_request_review:
+    types: [submitted]
+
+run-name: Run Aevatar Station Regression Test on Ephemeral Test Environment on ${{ github.ref_name }} from ${{ github.sha }}
+
+# concurrency:
+#   group: workflow-${{ github.ref }}
+#   cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: 3.11
+  # Setting PYTHONUNBUFFERED to 1 to ensure that Python output is sent straight to the terminal without being buffered
+  PYTHONUNBUFFERED: 1
+  DOTNET_INSTALL_DIR: "./.dotnet"
+
+jobs:
+  approval-count:
+    if: github.event.review.state == 'approved' || github.event_name == 'workflow_dispatch'
+    runs-on: ephemeral-env-runner
+    outputs:
+      approved_enough: ${{ steps.check.outputs.approved_enough }}
+    steps:
+      - name: Install GitHub CLI
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Skip Install GitHub CLI"
+            exit 0
+          fi
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt update
+          sudo apt install gh -y
+      - name: Check Approve Count
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Skip approval count check"
+            exit 0
+          fi
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          REPO=${{ github.repository }}
+          OWNER=$(echo "$REPO" | cut -d'/' -f1)
+          REPO_NAME=$(echo "$REPO" | cut -d'/' -f2)
+          gh pr view $PR_NUMBER -R $REPO --json reviews > reviews.json
+          jq '[.reviews | group_by(.author.login) | map(.[-1]) | map(select(.state=="APPROVED")) | .[].author.login] | unique' reviews.json > approved_users.json
+          APPROVED_COUNT=0
+          for user in $(jq -r '.[]' approved_users.json); do
+            PERM=$(gh api repos/$OWNER/$REPO_NAME/collaborators/$user/permission --jq '.permission')
+            if [[ "$PERM" == "admin" || "$PERM" == "write" ]]; then
+              APPROVED_COUNT=$((APPROVED_COUNT+1))
+            fi
+          done
+          echo "Approve count: $APPROVED_COUNT"
+          if [ "$APPROVED_COUNT" -eq 1 ]; then
+            echo "approved_enough=true" >> $GITHUB_OUTPUT
+          else
+            echo "approved_enough=false" >> $GITHUB_OUTPUT
+          fi
+
+  publish:
+    if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
+    needs: approval-count
+    runs-on: ephemeral-env-runner
+    strategy:
+      matrix:
+        servicename:
+          [
+            Aevatar.Silo,
+            Aevatar.Developer.Host,
+            Aevatar.HttpApi.Host,
+            Aevatar.AuthServer,
+            Aevatar.DbMigrator,
+          ]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.0.x'
+      - name: Cache NuGet Packages
+        id: nuget-packages
+        uses: actions/cache@v4
+        env:
+          cache-name: nuget-package-cache
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ matrix.servicename }}
+      - name: List NuGet Packages
+        if: ${{ steps.nuget-packages.outputs.cache-hit == 'true' }}
+        continue-on-error: true
+        run: ls -lh ~/.nuget/packages
+      - run: dotnet publish station/src/${{ matrix.servicename }}/${{ matrix.servicename }}.csproj -o out/${{ matrix.servicename }}
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.servicename }}
+          path: out/${{ matrix.servicename }}
+          retention-days: 1
+
+  build-and-push-image:
+    if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
+    needs: publish
+    runs-on: ephemeral-env-runner
+    strategy:
+      matrix:
+        servicename:
+          [
+            Aevatar.Silo,
+            Aevatar.Developer.Host,
+            Aevatar.HttpApi.Host,
+            Aevatar.AuthServer,
+            Aevatar.DbMigrator,
+          ]
+    permissions:
+      contents: read
+    outputs:
+      short_sha: ${{ steps.vars.outputs.short_sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set short git commit SHA
+        id: vars
+        run: |
+          calculatedSha=$(git rev-parse --short ${{ github.sha }})
+          echo "short_sha=$calculatedSha" >> "$GITHUB_OUTPUT"
+      - name: Download a single artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.servicename }}
+          path: out/${{ matrix.servicename }}
+      - name: Create image tag
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.REPOSITORY_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/${{ matrix.servicename }}
+          tags: |
+            type=sha
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          build-args: |
+            servicename=${{ matrix.servicename }}
+            ENABLE_EPHEMERAL_CONFIG=true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  setup-ephermeral-test-env:
+    if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ephemeral-env-runner
+    needs: build-and-push-image
+    outputs:
+      auth_server_url: ${{ steps.extract.outputs.auth_server_url }}
+      api_server_url: ${{ steps.extract.outputs.api_server_url }} 
+      app_url: ${{ steps.extract.outputs.app_url }}
+      client_id: ${{ steps.generate-uuid.outputs.client_id }}
+      client_secret: ${{ steps.generate-uuid.outputs.client_secret }}
+    steps:
+      - name: Generate UUID for project and client
+        id: generate-uuid
+        run: |
+          UUID=$(python3 -c 'import uuid; print(str(uuid.uuid4())[:8])')
+          echo "project_name=env-${UUID}" >> "$GITHUB_OUTPUT"
+          echo "client_id=${UUID}" >> "$GITHUB_OUTPUT"
+          echo "client_secret=${UUID}" >> "$GITHUB_OUTPUT"
+      
+      - name: Install GitHub CLI
+        run: |
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt update
+          sudo apt install gh -y
+      
+      - name: Setup Ephermeral Env
+        id: setup_env
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.TOK }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'AElfDevops',
+              repo: 'ephemeral-test-env',
+              workflow_id: 'ephemeral-env-main.yaml',
+              ref: 'main',
+              inputs: {
+                project_name: "${{ steps.generate-uuid.outputs.project_name }}",
+                environment_ttl: "20",
+                client_id: "${{ steps.generate-uuid.outputs.client_id }}",
+                client_secret: "${{ steps.generate-uuid.outputs.client_secret }}",
+                station_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}"
+              }
+            });
+            
+      - name: Wait for workflow run to complete
+        id: setup_wait
+        env:
+          GH_TOKEN: ${{ secrets.TOK }}
+        run: |
+          owner="AElfDevops"
+          repo="ephemeral-test-env"
+          workflow_id="ephemeral-env-main.yaml"
+
+          echo "Waiting for workflow $workflow_id to start..."
+          run_id=""
+
+          # Wait for 30 seconds before attempting to get the workflow run
+          echo "Sleeping for 30 seconds before checking workflow run..."
+          sleep 30
+
+          # Get the workflow run ID based on the latest triggered run
+          run_id=$(gh api repos/$owner/$repo/actions/workflows/$workflow_id/runs \
+            --jq '.workflow_runs | sort_by(.created_at) | reverse | .[0].id')
+
+          # Wait until the workflow run appears
+          for i in {1..30}; do
+            run_id=$(gh api repos/$owner/$repo/actions/workflows/$workflow_id/runs \
+              --jq '.workflow_runs[0].id')
+            if [ -n "$run_id" ]; then
+              echo "Run ID: $run_id"
+              break
+            fi
+            echo "Workflow not yet started, retrying in 10s..."
+            sleep 10
+          done
+
+          # Poll the run status
+          echo "Waiting for workflow run to complete..."
+          for i in {1..360}; do
+            status=$(gh api repos/$owner/$repo/actions/runs/$run_id --jq '.status')
+            conclusion=$(gh api repos/$owner/$repo/actions/runs/$run_id --jq '.conclusion')
+
+            echo "Status: $status | Conclusion: $conclusion"
+            if [ "$status" == "completed" ]; then
+              if [ "$conclusion" != "success" ]; then
+                echo "Workflow failed or was cancelled"
+                exit 1
+              fi
+              break
+            fi
+            sleep 10
+          done
+
+          echo "Workflow completed successfully"
+
+      - name: Download artifact from Devops repo
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: ephemeral-env-main.yaml
+          repo: AElfDevops/ephemeral-test-env
+          name: setup-aevatar-app-env-output  
+          github_token: ${{ secrets.TOK }}
+          path: ./downloaded
+
+      - name: Extract env data from JSON
+        id: extract
+        run: |
+          content=$(cat ./downloaded/setup-aevatar-app-env-output.json)
+          echo "auth_server_url=$(echo $content | jq -r '.auth_server_url')" >> $GITHUB_OUTPUT
+          echo "api_server_url=$(echo $content | jq -r '.api_server_url')" >> $GITHUB_OUTPUT
+          echo "app_url=$(echo $content | jq -r '.app_url')" >> $GITHUB_OUTPUT
+
+      - name: Set job summary
+        run: |
+          echo "## Aevatar App Created Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "- **Client ID**: \`${{ steps.generate-uuid.outputs.client_id }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Auth Server URL**: \`${{ steps.extract.outputs.auth_server_url }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **API Server URL**: \`${{ steps.extract.outputs.api_server_url }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **APP URL**: \`${{ steps.extract.outputs.app_url }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Configuration Mode**: Ephemeral (ENABLE_EPHEMERAL_CONFIG=true)" >> $GITHUB_STEP_SUMMARY
+
+  run-regression-test:
+    if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
+    needs: setup-ephermeral-test-env 
+    runs-on: ephemeral-env-runner
+    env:
+      AUTH_HOST: ${{ needs.setup-ephermeral-test-env.outputs.auth_server_url }}
+      API_HOST: ${{ needs.setup-ephermeral-test-env.outputs.app_url }}
+      CLIENT_ID: ${{ needs.setup-ephermeral-test-env.outputs.client_id }}
+      CLIENT_SECRET: ${{ needs.setup-ephermeral-test-env.outputs.client_secret }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.arch }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.arch }}-pip-
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Python Script
+        run: |
+          source venv/bin/activate
+          pytest -s -v station/scripts/regression_test.py
+          
+      - name: Lark Notification on Success
+        if: success()
+        uses: drayeasy/action-lark-notify@main
+        env:
+          LARK_WEBHOOK: ${{ secrets.LARK_WEBHOOK }}
+          LARK_MESSAGE_TITLE: "Regression Testing Successful"
+
+      - name: Lark Notification on Failure
+        if: failure()
+        uses: drayeasy/action-lark-notify@main
+        env:
+          LARK_WEBHOOK: ${{ secrets.LARK_WEBHOOK }}
+          LARK_MESSAGE_TITLE: "Regression Test Failed"
+          LARK_MESSAGE_TEMPLATE: "red"

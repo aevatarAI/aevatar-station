@@ -1,0 +1,52 @@
+filebeat.inputs:
+  - type: log
+    enabled: true
+    paths:
+      - /app/Logs/*.log
+    fields:
+      environment: "localTest"
+    fields_under_root: true
+    processors:
+      - add_id:
+          target_field: log_id
+      - add_kubernetes_metadata:
+          in_cluster: true
+          matchers:
+            - logs_path:
+                logs_path: "/app/Logs/"
+      - decode_json_fields:
+          fields: [ "message" ]
+          target: "app_log"
+          overwrite_keys: true
+          add_error_key: true
+
+
+setup.template.settings:
+  index.number_of_shards: 1
+  index.number_of_replicas: 1
+
+setup.template.enabled: true
+setup.template.overwrite: true
+setup.template.name: "[NameSpace]-[HostId]-[Version]-log-index-template"
+setup.template.pattern: "[NameSpace]-[HostId]-[Version]-log-index-*"
+
+#setup.ilm.enabled: false
+
+setup.ilm.enabled: true
+setup.ilm.rollover_alias: "[NameSpace]-[HostId]-[Version]-log-index"
+setup.ilm.pattern: "{now/d}-000001"
+setup.ilm.policy_name: "[NameSpace]-filebeat-log-policy"
+
+output.elasticsearch:
+  hosts: [
+    "http://localhost:9200" ]
+  index: "[NameSpace]-[HostId]-[Version]-log-index-%{+yyyy-MM-dd}"
+  # username: "your_username"
+  # password: "your_password"
+  
+processors:
+  - drop_fields:
+      fields: [ "agent", "ecs","input","log","message" ]
+#  - add_host_metadata:
+#      when.not.contains.tags: forwarded
+#  - add_docker_metadata: ~

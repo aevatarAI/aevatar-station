@@ -1,0 +1,51 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "prometheus-rules.yml"
+
+scrape_configs:
+  - job_name: 'opentelemetry-collector'
+    static_configs:
+      - targets: ['otel-collector:9090']
+    
+  # Unified Aevatar Services monitoring
+  - job_name: 'aevatar-http-services'
+    static_configs:
+      - targets:
+        - 'http://host.docker.internal:7001/health'  # AuthServer
+        - 'http://host.docker.internal:7002/health'  # HttpApi
+        - 'http://host.docker.internal:7003/health'  # Developer
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    relabel_configs:
+      # Extract service name from URL
+      - source_labels: [__address__]
+        regex: 'http://host\.docker\.internal:7001/health'
+        target_label: service
+        replacement: 'authserver'
+      - source_labels: [__address__]
+        regex: 'http://host\.docker\.internal:7002/health'
+        target_label: service
+        replacement: 'httpapi'
+      - source_labels: [__address__]
+        regex: 'http://host\.docker\.internal:7003/health'
+        target_label: service
+        replacement: 'developer'
+      - source_labels: [service]
+        target_label: service_type
+        replacement: 'http_api'
+      # Use blackbox exporter
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 'blackbox-exporter:9115'
+
+  # Add a Prometheus self-monitoring job
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
