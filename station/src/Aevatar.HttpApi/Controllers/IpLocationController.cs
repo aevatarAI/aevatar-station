@@ -20,6 +20,7 @@ public class IpLocationController : ControllerBase
     {
         _ipLocationService = ipLocationService;
         _logger = logger;
+        
     }
     
     [HttpGet("is-mainland-cn")]
