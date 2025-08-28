@@ -364,4 +364,83 @@ public class DailyPushService : ApplicationService, IDailyPushService
             };
         }
     }
+    
+    /// <summary>
+    /// Clear read status for specific device - TODO: Remove before production
+    /// </summary>
+    /// <param name="deviceId">Target device ID</param>
+    public async Task<ClearReadStatusResult> ClearReadStatusForDeviceAsync(string deviceId)
+    {
+        try
+        {
+            _logger.LogInformation("Starting clear read status for device {DeviceId}", deviceId);
+            
+            // Find user by device ID through devices endpoint logic
+            var devicesInAllTimezones = new List<Contracts.DailyPush.TimezoneDeviceInfo>();
+            
+            // Search through common timezones to find the device
+            var commonTimezones = new[] { "Asia/Shanghai", "America/New_York", "Europe/London", "Asia/Tokyo", "UTC" };
+            Guid? foundUserId = null;
+            
+            foreach (var timezone in commonTimezones)
+            {
+                try
+                {
+                    var devices = await GetDevicesInTimezoneAsync(timezone);
+                    var device = devices.FirstOrDefault(d => d.DeviceId == deviceId);
+                    if (device != null)
+                    {
+                        foundUserId = device.UserId;
+                        break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to search devices in timezone {Timezone}", timezone);
+                }
+            }
+            
+            if (!foundUserId.HasValue)
+            {
+                _logger.LogWarning("Device {DeviceId} not found in any timezone", deviceId);
+                return new ClearReadStatusResult
+                {
+                    UserId = Guid.Empty,
+                    DeviceId = deviceId,
+                    Cleared = false,
+                    Timestamp = DateTime.UtcNow
+                };
+            }
+            
+            // Clear read status for the user
+            var chatManagerGAgent = _clusterClient.GetGrain<IChatManagerGAgent>(foundUserId.Value);
+            await chatManagerGAgent.ClearReadStatusAsync();
+            
+            _logger.LogInformation("Read status cleared for device {DeviceId} (User: {UserId})", deviceId, foundUserId.Value);
+                
+            return new ClearReadStatusResult
+            {
+                UserId = foundUserId.Value,
+                DeviceId = deviceId,
+                Cleared = true,
+                Timestamp = DateTime.UtcNow
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to clear read status for device {DeviceId}", deviceId);
+            throw;
+        }
+    }
+}
+
+/// <summary>
+/// Result of clear read status operation
+/// </summary>
+public class ClearReadStatusResult
+{
+    public Guid UserId { get; set; }
+    public string DeviceId { get; set; } = "";
+    public bool Cleared { get; set; }
+    public DateTime Timestamp { get; set; }
 }

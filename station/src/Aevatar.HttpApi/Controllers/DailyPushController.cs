@@ -348,4 +348,49 @@ public class DailyPushController : AbpControllerBase
             });
         }
     }
+    
+    /// <summary>
+    /// Clear read status for specific device - TODO: Remove before production
+    /// </summary>
+    /// <param name="deviceId">Target device ID</param>
+    [HttpPost("test/clear-read-status")]
+    public async Task<IActionResult> ClearReadStatusForDevice([FromQuery] string deviceId)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(deviceId))
+            {
+                var language = HttpContext.GetGodGPTLanguage();
+                var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InvalidRequest, language);
+                return BadRequest(new {
+                    error = new { code = 1, message = $"{localizedMessage}: deviceId is required" },
+                    result = false
+                });
+            }
+            
+            _logger.LogInformation("Starting clear read status for device {DeviceId}", deviceId);
+            
+            var result = await _dailyPushService.ClearReadStatusForDeviceAsync(deviceId);
+            
+            // Follow GodGPT pattern: direct return with result data
+            return Ok(new {
+                result = true,
+                message = $"Read status cleared for device {deviceId}",
+                deviceId = deviceId,
+                userId = result.UserId,
+                cleared = result.Cleared,
+                timestamp = DateTime.Now
+            });
+        }
+        catch (Exception ex)
+        {
+            var language = HttpContext.GetGodGPTLanguage();
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.OperationFailed, language);
+            _logger.LogError(ex, "Failed to clear read status for device {DeviceId}", deviceId);
+            return BadRequest(new {
+                error = new { code = 1, message = localizedMessage, details = ex.Message },
+                result = false
+            });
+        }
+    }
 }
