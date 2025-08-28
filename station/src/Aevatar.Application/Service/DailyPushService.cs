@@ -247,8 +247,8 @@ public class DailyPushService : ApplicationService, IDailyPushService
     {
         return language switch
         {
-            GodGPTLanguage.TraditionalChinese => "zh",
-            GodGPTLanguage.CN => "zh-sc",  // Use hyphen to match GodGPT project
+            GodGPTLanguage.TraditionalChinese => "zh-tw",  // Traditional Chinese
+            GodGPTLanguage.CN => "zh-cn",                  // Simplified Chinese 
             GodGPTLanguage.Spanish => "es",
             GodGPTLanguage.English => "en",
             _ => "en"
