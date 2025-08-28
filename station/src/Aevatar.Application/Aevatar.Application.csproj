@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <Import Project="..\..\common.props"/>
+    <Import Project="..\..\common.props" />
 
     <PropertyGroup>
         <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
@@ -21,18 +21,18 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Azure.AI.TextAnalytics"/>
-        <PackageReference Include="OpenAI.API"/>
-        <PackageReference Include="Volo.Abp.Account.Application"/>
-        <PackageReference Include="Volo.Abp.Identity.Application"/>
-        <PackageReference Include="Volo.Abp.PermissionManagement.Application"/>
-        <PackageReference Include="AElf.OpenTelemetry"/>
-        <PackageReference Include="FluentValidation"/>
+        <PackageReference Include="Azure.AI.TextAnalytics" />
+        <PackageReference Include="OpenAI.API" />
+        <PackageReference Include="Volo.Abp.Account.Application" />
+        <PackageReference Include="Volo.Abp.Identity.Application" />
+        <PackageReference Include="Volo.Abp.PermissionManagement.Application" />
+        <PackageReference Include="AElf.OpenTelemetry" />
+        <PackageReference Include="FluentValidation" />
         <PackageReference Include="Volo.Abp.BlobStoring" />
     </ItemGroup>
 
     <ItemGroup>
-        <EmbeddedResource Include="Account\Templates\RegisterCode.tpl"/>
+        <EmbeddedResource Include="Account\Templates\RegisterCode.tpl" />
     </ItemGroup>
 
 </Project>

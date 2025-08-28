@@ -726,6 +726,30 @@ def test_silo_deployment_operations(api_admin_headers):
     logger.info("Comprehensive silo deployment test completed successfully")
 
 
+def test_agent_validation_basic(api_headers):
+    """Basic agent validation service test"""
+    logger.info("Testing agent validation service")
+    
+    # Test with simple valid configuration
+    validation_request = {
+        "gAgentNamespace": TEST_AGENT,
+        "configJson": '{"name": "TestAgent"}'
+    }
+    
+    response = requests.post(
+        f"{API_HOST}/api/agent/validation/validate-config",
+        json=validation_request,
+        headers=api_headers,
+        verify=False
+    )
+    assert_status_code(response)
+    
+    # Verify basic response structure
+    response_data = response.json()
+    assert "data" in response_data
+    logger.info("Agent validation service test completed")
+
+
 def test_publish_workflow_view(api_headers, api_admin_headers):
     """test publish workflow view"""
     # create workflowView agent
