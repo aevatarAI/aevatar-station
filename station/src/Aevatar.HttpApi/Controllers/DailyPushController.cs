@@ -340,7 +340,7 @@ public class DailyPushController : AbpControllerBase
         catch (Exception ex)
         {
             var language = HttpContext.GetGodGPTLanguage();
-            var localizedMessage = "Failed to send instant push"; // TODO: Add proper localization
+            var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.OperationFailed, language);
             _logger.LogError(ex, "Failed to send instant push for timezone {Timezone}", timezone);
             return BadRequest(new {
                 error = new { code = 1, message = localizedMessage, details = ex.Message },
