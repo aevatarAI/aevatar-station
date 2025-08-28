@@ -23,8 +23,11 @@ using Aevatar.Application.Grains.TwitterInteraction;
 using Aevatar.Application.Grains.TwitterInteraction.Dtos;
 using Aevatar.Application.Grains.UserBilling;
 using Aevatar.Application.Grains.UserQuota;
+using Aevatar.Application.Grains.UserStatistics;
+using Aevatar.Application.Grains.UserStatistics.Dtos;
 using Aevatar.Common.Options;
 using Aevatar.Domain.Shared;
+using Aevatar.Dtos;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
 using Aevatar.GodGPT.Dtos;
@@ -32,6 +35,7 @@ using Aevatar.Quantum;
 using GodGPT.GAgents;
 using GodGPT.GAgents.Awakening;
 using GodGPT.GAgents.SpeechChat;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
@@ -77,6 +81,7 @@ public interface IGodGPTService
     Task<CancelSubscriptionResponseDto> CancelSubscriptionAsync(Guid currentUserId, CancelSubscriptionInput input);
     Task<List<AppleProductDto>> GetAppleProductsAsync(Guid currentUserId);
     Task<AppStoreSubscriptionResponseDto> VerifyAppStoreReceiptAsync(Guid currentUserId, VerifyAppStoreReceiptInput input);
+    Task<PaymentVerificationResponseDto> VerifyGooglePlayTransactionAsync(Guid currentUserId, GooglePlayTransactionVerificationRequestDto input);
     Task<GrainResultDto<int>> UpdateUserCreditsAsync(Guid currentUserId, UpdateUserCreditsInput input);
     Task<GrainResultDto<List<SubscriptionInfoDto>>> UpdateUserSubscriptionAsync(Guid currentUserId, UpdateUserSubscriptionsInput input);
     Task<bool> HasActiveAppleSubscriptionAsync(Guid currentUserId);
@@ -138,6 +143,9 @@ public interface IGodGPTService
     /// <param name="userId">User ID to reset awakening state for</param>
     /// <returns>True if reset was successful</returns>
     Task<bool> ResetAwakeningStateForTestingAsync(Guid userId);
+
+    Task<AppRatingRecordDto> RecordAppRatingAsync(Guid currentUserId, RecordAppRatingInput input);
+    Task<bool> CanUserRateAppAsync(Guid currentUserId, CanUserRateAppInput input);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -520,6 +528,94 @@ public class GodGPTService : ApplicationService, IGodGPTService
         });
     }
 
+    public async Task<PaymentVerificationResponseDto> VerifyGooglePlayTransactionAsync(Guid currentUserId, GooglePlayTransactionVerificationRequestDto input)
+    {
+        _logger.LogInformation("[GodGPTService][VerifyGooglePlayTransactionAsync] Starting verification for userId: {UserId}, transactionId: {TransactionId}", 
+            currentUserId, input.TransactionIdentifier);
+        
+        // Validate input parameters
+        if (string.IsNullOrWhiteSpace(input.TransactionIdentifier))
+        {
+            _logger.LogWarning("[GodGPTService][VerifyGooglePlayTransactionAsync] Invalid transaction identifier for userId: {UserId}", currentUserId);
+            return new PaymentVerificationResponseDto
+            {
+                IsValid = false,
+                Message = "Invalid transaction identifier",
+                ErrorCode = "INVALID_TRANSACTION_ID"
+            };
+        }
+        
+        try
+        {
+            _logger.LogDebug("[GodGPTService][VerifyGooglePlayTransactionAsync] Getting UserBillingGAgent for userId: {UserId}", currentUserId);
+            var userBillingGAgent = _clusterClient.GetGrain<IUserBillingGAgent>(currentUserId);
+            
+            // Convert to GAgents DTO
+            var gagentsDto = new Aevatar.Application.Grains.ChatManager.UserBilling.GooglePlayTransactionVerificationDto
+            {
+                UserId = currentUserId.ToString(),
+                TransactionIdentifier = input.TransactionIdentifier
+            };
+            
+            _logger.LogDebug("[GodGPTService][VerifyGooglePlayTransactionAsync] Converted DTO for userId: {UserId}, gagentsUserId: {GagentsUserId}", 
+                currentUserId, gagentsDto.UserId);
+            
+            // Call the GodGPT.GAgents interface for Google Play transaction verification
+            _logger.LogDebug("[GodGPTService][VerifyGooglePlayTransactionAsync] Calling UserBillingGAgent.VerifyGooglePlayTransactionAsync for userId: {UserId}", currentUserId);
+            var result = await userBillingGAgent.VerifyGooglePlayTransactionAsync(gagentsDto);
+
+            _logger.LogInformation("[GodGPTService][VerifyGooglePlayTransactionAsync] Verification completed for userId: {UserId}, success: {IsValid}, message: {Message}, errorCode: {ErrorCode}, productId: {ProductId}", 
+                currentUserId, result.IsValid, result.Message, result.ErrorCode, result.ProductId);
+
+            // Convert back to response DTO
+            var response = new PaymentVerificationResponseDto
+            {
+                IsValid = result.IsValid,
+                Message = result.Message ?? string.Empty,
+                OrderId = string.Empty, // OrderId not available in GAgents result, will be set from Transaction
+                ProductId = result.ProductId ?? string.Empty,
+                SubscriptionEndDate = result.SubscriptionEndDate,
+                PurchaseTimeMillis = result.PurchaseTimeMillis ?? 0,
+                ErrorCode = result.ErrorCode ?? string.Empty
+            };
+            
+            _logger.LogDebug("[GodGPTService][VerifyGooglePlayTransactionAsync] Response created for userId: {UserId}, responseValid: {ResponseIsValid}, responseErrorCode: {ResponseErrorCode}", 
+                currentUserId, response.IsValid, response.ErrorCode);
+                
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[GodGPTService][VerifyGooglePlayTransactionAsync] Exception occurred during Google Play transaction verification. UserId: {UserId}, TransactionId: {TransactionId}, ExceptionType: {ExceptionType}, ExceptionMessage: {ExceptionMessage}, StackTrace: {StackTrace}", 
+                currentUserId, input.TransactionIdentifier, ex.GetType().Name, ex.Message, ex.StackTrace);
+            
+            // Log additional details for common exception types
+            if (ex is TimeoutException)
+            {
+                _logger.LogError("[GodGPTService][VerifyGooglePlayTransactionAsync] Timeout exception detected for userId: {UserId} - possible Orleans cluster or network issues", currentUserId);
+            }
+            else if (ex is System.Net.Http.HttpRequestException)
+            {
+                _logger.LogError("[GodGPTService][VerifyGooglePlayTransactionAsync] HTTP request exception detected for userId: {UserId} - possible Google Play API connectivity issues", currentUserId);
+            }
+            else if (ex is Orleans.Runtime.OrleansException)
+            {
+                _logger.LogError("[GodGPTService][VerifyGooglePlayTransactionAsync] Orleans exception detected for userId: {UserId} - possible Orleans cluster issues", currentUserId);
+            }
+            else if (ex is System.Text.Json.JsonException || ex is Newtonsoft.Json.JsonException)
+            {
+                _logger.LogError("[GodGPTService][VerifyGooglePlayTransactionAsync] JSON serialization exception detected for userId: {UserId} - possible data format issues", currentUserId);
+            }
+            
+            return new PaymentVerificationResponseDto
+            {
+                IsValid = false,
+                Message = "Transaction verification failed",
+                ErrorCode = "VERIFICATION_ERROR"
+            };
+        }
+    }
+
     public async Task<GrainResultDto<int>> UpdateUserCreditsAsync(Guid currentUserId, UpdateUserCreditsInput input)
     {
         var userQuotaGAgent =
@@ -623,9 +719,9 @@ public class GodGPTService : ApplicationService, IGodGPTService
     /// Get chat limits for anonymous users
     /// </summary>
     public async Task<GuestChatLimitsResponseDto> GetGuestChatLimitsAsync(string clientIp)
-    {
-                    var grainId = CommonHelper.StringToGuid(CommonHelper.GetAnonymousUserGAgentId(clientIp));
-            var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(grainId);
+    { 
+        var grainId = CommonHelper.StringToGuid(CommonHelper.GetAnonymousUserGAgentId(clientIp));
+        var anonymousUserGrain = _clusterClient.GetGrain<IAnonymousUserGAgent>(grainId);
         var remaining = await anonymousUserGrain.GetRemainingChatsAsync();
         
         return new GuestChatLimitsResponseDto
@@ -1104,6 +1200,18 @@ public class GodGPTService : ApplicationService, IGodGPTService
             _logger.LogError(ex, "[GodGPTService][ResetAwakeningStateForTestingAsync] Error resetting awakening state for userId: {UserId}", userId);
             return false;
         }
+    }
+
+    public async Task<AppRatingRecordDto> RecordAppRatingAsync(Guid currentUserId, RecordAppRatingInput input)
+    {
+        var userStatisticsGAgent = _clusterClient.GetGrain<IUserStatisticsGAgent>(currentUserId);
+        return await userStatisticsGAgent.RecordAppRatingAsync(input.Platform, input.DeviceId);
+    }
+
+    public async Task<bool> CanUserRateAppAsync(Guid currentUserId, CanUserRateAppInput input)
+    {
+        var userStatisticsGAgent = _clusterClient.GetGrain<IUserStatisticsGAgent>(currentUserId);
+        return await userStatisticsGAgent.CanUserRateAppAsync(input.DeviceId);
     }
 
     public async Task<bool> CheckIsManager(string userId)

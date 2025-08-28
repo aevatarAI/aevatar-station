@@ -29,6 +29,7 @@ public static class HttpContextExtensions
             "zh-cn" => GodGPTChatLanguage.CN,
             "zh-tw" => GodGPTChatLanguage.TraditionalChinese,
             "es" => GodGPTChatLanguage.Spanish,
+            "zh" => GodGPTChatLanguage.CN,
             _ => GodGPTChatLanguage.English // Default to English for unknown values
         };
     }
