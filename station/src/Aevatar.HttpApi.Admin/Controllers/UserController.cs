@@ -59,7 +59,7 @@ public class UserController : AevatarController
     {
         await _developerService.DeleteServiceAsync(clientId);
     }
-    
+
     [Authorize]
     [HttpPost("updateDockerImage")]
     public async Task UpdateDockerImageAsync(HostTypeEnum hostType, string imageName, string version = "1")
