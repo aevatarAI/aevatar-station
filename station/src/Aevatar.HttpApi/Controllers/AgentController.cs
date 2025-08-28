@@ -19,12 +19,12 @@ public class AgentController : AevatarController
 {
     private readonly ILogger<AgentController> _logger;
     private readonly IAgentService _agentService;
-    private readonly SubscriptionAppService _subscriptionAppService;
+    private readonly ISubscriptionAppService _subscriptionAppService;
     private readonly IAgentValidationService _agentValidationService;
 
     public AgentController(
         ILogger<AgentController> logger,
-        SubscriptionAppService subscriptionAppService,
+        ISubscriptionAppService subscriptionAppService,
         IAgentService agentService,
         IAgentValidationService agentValidationService)
     {
