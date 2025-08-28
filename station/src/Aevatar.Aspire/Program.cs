@@ -40,10 +40,9 @@ public class Program
         
         // var mongoDBClient = $"mongodb://{dockerMongoName}:{dockerMongoPassword}@localhost:{dockerMongoPort}?authSource=admin";
 
-        // var esUrl = $"[\"http://{dockerEsName}:{dockerEsPassword}@localhost:{dockerEsPort}\"]";
-        var esUrl = $"[\"http://localhost:{dockerEsPort}\"]";
-        var qrUrl = $"http://127.0.0.1:{dockerQrPort}";
-        var kafkaUrl = $"127.0.0.1:{dockerKafkaPort}";
+        // var esUrl = $"[\"http://{dockerEsName}:{dockerMongoPassword}@localhost:{dockerEsPort}\"]";
+        // var qrUrl = $"http://127.0.0.1:{dockerQrPort}";
+        // var kafkaUrl = $"127.0.0.1:{dockerKafkaPort}";
         var redisUrl = $"127.0.0.1:{dockerRedisPort}";
 
         var builder = DistributedApplication.CreateBuilder(args);
@@ -147,36 +146,21 @@ public class Program
         //     .WithEnvironment("OrleansEventSourcing__Provider", "MongoDB");
 
 // Add Aevatar.Developer.Silo (Orleans) project with its dependencies
-        // var developerSilo = builder.AddProject("developerSilo", "../Aevatar.Silo/Aevatar.Silo.csproj")
-        //     .WithReference(mongodb)
-        //     .WithReference(elasticsearch)
-        //     .WithReference(kafka)
-        //     // Wait for dependencies
-        //     .WaitFor(mongodb)
-        //     .WaitFor(elasticsearch)
-        //     .WaitFor(kafka)
-        //     .WaitFor(qdrant)
-        //     // Configure the Orleans silo properly
-        //     .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
-        //     // MongoDB connection string
-        //     .WithEnvironment("ConnectionStrings__Default", mongodbConnections)
-        //     .WithEnvironment("Elasticsearch__Url", esUrl)
+        var developerSilo = CreateSilo(
+            builder,
+            projectName: "developerSilo", 
+            siloNamePattern: "Developer",
+            ip: "127.0.0.10",
+            siloPort: 22222,
+            gatewayPort: 40000,
+            dashboardPort: 9090,
+            healthCheckPort: 20084
+        )
+        // Override cluster configuration for developer environment
+        .WithEnvironment("AevatarOrleans__ClusterId", "AevatarSiloClusterDeveloper")
+        .WithEnvironment("AevatarOrleans__DataBase", "AevatarDbDeveloper");
 
-        //     // Orleans Clustering configuration
-        //     .WithEnvironment("Orleans__ClusterId", "AevatarSiloClusterDeveloper")
-        //     .WithEnvironment("Orleans__ServiceId", "AevatarBasicService")
-        //     .WithEnvironment("Orleans__AdvertisedIP", "127.0.0.1")
-        //     .WithEnvironment("Orleans__GatewayPort", "40000")
-        //     .WithEnvironment("Orleans__SiloPort", "22222")
-        //     .WithEnvironment("Orleans__MongoDBClient", mongoDBClient)
-        //     .WithEnvironment("Orleans__DataBase", "AevatarDbDeveloper")
-        //     .WithEnvironment("Orleans__DashboardPort", "8081")
-
-        //     // MongoDB provider configuration - Properly configured to work with Orleans
-        //     .WithEnvironment("Qdrant__Endpoint", qrUrl)
-        //     // .WithEnvironment("OrleansStream__Provider", "Kafka")
-        //     // .WithEnvironment("OrleansStream__Broker", kfakaUrl)
-        //     .WithEnvironment("OrleansEventSourcing__Provider", "MongoDB");
+        await Task.Delay(1000); // Wait for 1 second to ensure the developer silo is up and running
 
 // Add Aevatar.AuthServer project with its dependencies
         var authServer = builder.AddProject("authserver", "../Aevatar.AuthServer/Aevatar.AuthServer.csproj")
@@ -270,50 +254,31 @@ public class Program
             .WithHttpEndpoint(port: 7002, name: "httpapi-http");
 
 // Add Aevatar.Developer.Host project with its dependencies
-        // var developerHost = builder
-        //     .AddProject("developerhost", "../Aevatar.Developer.Host/Aevatar.Developer.Host.csproj")
-        //     .WithReference(mongodb)
-        //     .WithReference(elasticsearch)
-        //     .WithReference(authServer)
-        //     .WithReference(developerSilo)
-        //     // Wait for dependencies
-        //     .WaitFor(mongodb)
-        //     .WaitFor(elasticsearch)
-        //     .WaitFor(authServer)
-        //     .WaitFor(developerSilo)
-        //     // Setting environment variables individually
-        //     .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
-        //     .WithEnvironment("ConnectionStrings__Default", mongodbConnections)
-        //     .WithEnvironment("Orleans__ClusterId", "AevatarSiloClusterDeveloper")
-        //     .WithEnvironment("Orleans__MongoDBClient", mongoDBClient)
-        //     .WithEnvironment("Orleans__DataBase", "AevatarDbDeveloper")
-        //     .WithEnvironment("Elasticsearch__Url", esUrl)
-        //     .WithEnvironment("AuthServer__Authority", "http://localhost:7001")
-        //     // Configure Swagger as default page with auto-launch
-        //     .WithEnvironment("SwaggerUI__RoutePrefix", "")
-        //     .WithEnvironment("SwaggerUI__DefaultModelsExpandDepth", "-1")
-        //     .WithHttpEndpoint(port: 7003, name: "developerhost-http");
-        
-        // Add Aevatar.Sandbox.HttpApi.Host project with its dependencies
-        var sandboxHttpApiHost = builder.AddProject("sandboxhttpapi", "../Aevatar.Sandbox.HttpApi.Host/Aevatar.Sandbox.HttpApi.Host.csproj")
-            .WithReference(siloScheduler)
+        var developerHost = builder
+            .AddProject("developerhost", "../Aevatar.Developer.Host/Aevatar.Developer.Host.csproj")
+            // .WithReference(mongodb)
+            // .WithReference(elasticsearch)
+            // .WithReference(authServer)
+            .WithReference(developerSilo)
             // Wait for dependencies
-            .WaitFor(siloScheduler)
-            .WaitFor(k3s)
+            // .WaitFor(mongodb)
+            // .WaitFor(elasticsearch)
+            // .WaitFor(authServer)
+            .WaitFor(developerSilo)
             // Setting environment variables individually
             .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
+            // .WithEnvironment("ConnectionStrings__Default", mongodbConnections)
             .WithEnvironment("MongoDB__ConnectionString", "{mongodb.connectionString}")
             .WithEnvironment("AevatarOrleans__MongoDBClient", "{mongodb.connectionString}")
-            .WithEnvironment("Orleans__ClusterId", "AevatarSiloCluster")
+            .WithEnvironment("Orleans__ClusterId", "AevatarSiloClusterDeveloper")
+            // .WithEnvironment("Orleans__MongoDBClient", mongoDBClient)
+            .WithEnvironment("Orleans__DataBase", "AevatarDbDeveloper")
+            // .WithEnvironment("Elasticsearch__Url", esUrl)
             .WithEnvironment("AuthServer__Authority", "http://localhost:7001")
-            // Configure Kubernetes to use k3s
-            .WithEnvironment("Kubernetes__InCluster", "false")
-            .WithEnvironment("Kubernetes__KubeConfig", Path.Combine(Environment.CurrentDirectory, "data", "k3s", "kubeconfig", "kubeconfig.yaml"))
-            .WithEnvironment("Kubernetes__Namespace", "sandbox")
-            // Configure Swagger as default page
+            // Configure Swagger as default page with auto-launch
             .WithEnvironment("SwaggerUI__RoutePrefix", "")
             .WithEnvironment("SwaggerUI__DefaultModelsExpandDepth", "-1")
-            .WithHttpEndpoint(port: 7004, name: "sandboxhttpapi-http");
+            .WithHttpEndpoint(port: 7003, name: "developerhost-http");
 
 // Add Aevatar.Worker project with its dependencies
         var worker = builder.AddProject("worker", "../Aevatar.Worker/Aevatar.Worker.csproj")

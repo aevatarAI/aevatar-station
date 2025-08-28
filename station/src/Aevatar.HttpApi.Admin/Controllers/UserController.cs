@@ -99,7 +99,7 @@ public class UserController : AevatarController
 
     [HttpPost("CopyDeploymentWithPattern")]
     [Authorize(Policy = AevatarPermissions.AdminPolicy)]
-    public async Task CopyDeploymentWithPattern(string clientId, string sourceVersion, string targetVersion, 
+    public async Task CopyDeploymentWithPattern(string clientId, string sourceVersion, string targetVersion,
         string siloNamePattern)
     {
         await _developerService.CopyDeploymentWithPatternAsync(clientId, sourceVersion, targetVersion, 

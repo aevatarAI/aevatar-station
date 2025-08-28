@@ -5,8 +5,8 @@ using Aevatar.EventSourcing.Core;
 using Aevatar.EventSourcing.Core.Hosting;
 using Aevatar.EventSourcing.Core.LogConsistency;
 using Aevatar.EventSourcing.Core.Storage;
-using Castle.Core.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -80,7 +80,7 @@ public class TestKitSilo
             .AddSingleton<IGrainTypeProvider, AttributeGrainTypeProvider>()
             .AddSerializer()
             .AddInMemoryBasedLogConsistencyProvider("LogStorage")
-            .AddSingleton<ILoggerFactory>(new NullLogFactory());
+            .AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         // ReSharper disable once VirtualMemberCallInConstructor
         ConfigureServices(services);
         var provider = services.BuildServiceProvider();

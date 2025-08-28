@@ -46,6 +46,7 @@ public static class OpenTelemetryExtensions
                     .AddSource("Orleans.Messaging")
                     .AddSource("Microsoft.Orleans")
                     .AddSource("Aevatar.CQRS")
+                    .AddSource("Aevatar.Core.Interception")
                     .AddSource("LatencyBenchmark.Root")
                     .AddSource("LatencyPublisherAgent")
                     .AddSource("LatencyBenchmark.Handler")

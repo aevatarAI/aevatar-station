@@ -49,6 +49,14 @@ public class ProjectController : AevatarController
         await _permissionChecker.AuthenticateAsync(input.OrganizationId, AevatarPermissions.Projects.Create);
         return await _projectService.CreateAsync(input);
     }
+    
+    [HttpPost]
+    [Route("default")]
+    public async Task<ProjectDto> CreateDefaultAsync(CreateDefaultProjectDto input)
+    {
+        await _permissionChecker.AuthenticateAsync(input.OrganizationId, AevatarPermissions.Projects.Create);
+        return await _projectService.CreateDefaultAsync(input);
+    }
 
     [HttpPut]
     [Route("{id}")]
@@ -101,5 +109,19 @@ public class ProjectController : AevatarController
     public async Task<ListResultDto<PermissionGrantInfoDto>> GetPermissionsListAsync(Guid projectId)
     {
         return await _projectService.GetPermissionListAsync(projectId);
+    }
+    
+    [HttpPost]
+    [Route("recent-used")]
+    public async Task SaveRecentUsedProjectAsync(RecentUsedProjectDto recentUsedProjectDto)
+    {
+        await _projectService.SaveRecentUsedProjectAsync(recentUsedProjectDto);
+    }
+    
+    [HttpGet]
+    [Route("recent-used")]
+    public async Task<RecentUsedProjectDto> GetRecentUsedProjectAsync()
+    {
+        return await _projectService.GetRecentUsedProjectAsync();
     }
 }

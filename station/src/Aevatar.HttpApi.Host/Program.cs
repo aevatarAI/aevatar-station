@@ -15,6 +15,7 @@ using Orleans.Hosting;
 using Serilog;
 using Serilog.Events;
 using Aevatar.Domain.Shared.Configuration;
+using Aevatar.Core.Interception.Extensions;
 
 namespace Aevatar;
 
@@ -41,6 +42,10 @@ public class Program
             await builder.AddApplicationAsync<AevatarHttpApiHostModule>();
             var app = builder.Build();
             await app.InitializeApplicationAsync();
+            
+            // Add trace context middleware to capture trace IDs from HTTP requests
+            app.UseTraceContext();
+            
             app.MapHub<AevatarSignalRHub>("api/agent/aevatarHub");
             app.MapHub<StationSignalRHub>("api/notifications").RequireAuthorization();
 

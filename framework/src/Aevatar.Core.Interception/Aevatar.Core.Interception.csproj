@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AssemblyVersion>1.0.0</AssemblyVersion>
+    <AssemblyName>Aevatar.Core.Interception</AssemblyName>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FodyHelpers" />
+    <PackageReference Include="MethodDecorator.Fody" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="OpenTelemetry" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Aevatar.Core/Aevatar.Core.csproj" PrivateAssets="all" />
+    <ProjectReference Include="../Aevatar.Core.Abstractions/Aevatar.Core.Abstractions.csproj" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

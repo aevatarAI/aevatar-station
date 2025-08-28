@@ -24,6 +24,8 @@
         <PackageReference Include="Aevatar.GAgents.PsiOmni.Plugins" />
         <PackageReference Include="Aevatar.GAgents.MCP" />
         <PackageReference Include="Aevatar.GAgents.InputGAgent" />
+        <PackageReference Include="MethodDecorator.Fody" />
+        <PackageReference Include="Fody" />
     </ItemGroup>
 
     <ItemGroup>
@@ -35,6 +37,7 @@
         <ProjectReference Include="..\Aevatar.Domain.Grains\Aevatar.Domain.Grains.csproj" />
         <ProjectReference Include="..\Aevatar.Domain\Aevatar.Domain.csproj" />
         <ProjectReference Include="..\Aevatar.Neo4JStore\Aevatar.Neo4JStore.csproj" />
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.Core.Interception\Aevatar.Core.Interception.csproj" />
     </ItemGroup>
 
     <ItemGroup>

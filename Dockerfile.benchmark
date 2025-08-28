@@ -1,0 +1,16 @@
+FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine
+
+# Install required tools for benchmark results processing
+RUN apk add --no-cache jq curl bash bc
+
+WORKDIR /app
+
+# Copy pre-built benchmark artifacts  
+COPY out/ .
+
+# Make runner script executable
+RUN chmod +x unified-benchmark-runner.sh
+
+ENV BENCHMARK_TYPE=broadcast
+
+ENTRYPOINT ["./unified-benchmark-runner.sh"]

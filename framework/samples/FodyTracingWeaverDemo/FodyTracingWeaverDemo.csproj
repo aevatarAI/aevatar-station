@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AssemblyVersion>1.0.0</AssemblyVersion>
+    <AssemblyName>MethodTracing.Fody</AssemblyName>
+    <!-- <ProduceReferenceAssembly>true</ProduceReferenceAssembly>d -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FodyHelpers" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Aevatar.Core/Aevatar.Core.csproj" PrivateAssets="all" />
+    <ProjectReference Include="../../src/Aevatar.Core.Abstractions/Aevatar.Core.Abstractions.csproj" PrivateAssets="all" />
+    <ProjectReference Include="../../src/Aevatar.Core.Interception/Aevatar.Core.Interception.csproj" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

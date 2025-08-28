@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <Import Project="..\..\common.props"/>
+    <Import Project="..\..\common.props" />
 
     <PropertyGroup>
         <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
@@ -11,6 +11,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\..\framework\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
         <ProjectReference Include="..\..\..\framework\src\Aevatar\Aevatar.csproj" />
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.Core.Interception\Aevatar.Core.Interception.csproj" />
         <ProjectReference Include="..\Aevatar.CQRS\Aevatar.CQRS.csproj"/>
         <ProjectReference Include="..\Aevatar.Domain\Aevatar.Domain.csproj"/>
         <ProjectReference Include="..\Aevatar.Application.Contracts\Aevatar.Application.Contracts.csproj"/>
@@ -21,18 +22,18 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Azure.AI.TextAnalytics"/>
-        <PackageReference Include="OpenAI.API"/>
-        <PackageReference Include="Volo.Abp.Account.Application"/>
-        <PackageReference Include="Volo.Abp.Identity.Application"/>
-        <PackageReference Include="Volo.Abp.PermissionManagement.Application"/>
-        <PackageReference Include="AElf.OpenTelemetry"/>
-        <PackageReference Include="FluentValidation"/>
+        <PackageReference Include="Azure.AI.TextAnalytics" />
+        <PackageReference Include="OpenAI.API" />
+        <PackageReference Include="Volo.Abp.Account.Application" />
+        <PackageReference Include="Volo.Abp.Identity.Application" />
+        <PackageReference Include="Volo.Abp.PermissionManagement.Application" />
+        <PackageReference Include="AElf.OpenTelemetry" />
+        <PackageReference Include="FluentValidation" />
         <PackageReference Include="Volo.Abp.BlobStoring" />
     </ItemGroup>
 
     <ItemGroup>
-        <EmbeddedResource Include="Account\Templates\RegisterCode.tpl"/>
+        <EmbeddedResource Include="Account\Templates\RegisterCode.tpl" />
     </ItemGroup>
 
 </Project>

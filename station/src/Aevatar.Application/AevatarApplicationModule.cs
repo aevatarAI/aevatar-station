@@ -78,6 +78,9 @@ public class AevatarApplicationModule : AbpModule
         // 配置 AI 服务提示词选项
         Configure<AIServicePromptOptions>(configuration.GetSection("AIServicePrompt"));
         
+        // 配置 SystemLLM 元信息选项
+        Configure<SystemLLMMetaInfoOptions>(configuration.GetSection("SystemLLMConfig"));
+        
         // 配置工作流编排服务
         ConfigureWorkflowOrchestrationServices(context);
     }
@@ -92,5 +95,11 @@ public class AevatarApplicationModule : AbpModule
         
         // Text completion service  
         context.Services.AddTransient<ITextCompletionService, TextCompletionService>();
+        
+        // Trace management service
+        context.Services.AddTransient<ITraceManagementService, TraceManagementService>();
+        
+        // Register ITraceManager dependency
+        context.Services.AddSingleton<Aevatar.Core.Interception.Services.ITraceManager, Aevatar.Core.Interception.Services.TraceManager>();
     }
 }
