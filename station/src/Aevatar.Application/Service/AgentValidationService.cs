@@ -55,15 +55,7 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
             return null;
         }
 
-        try
-        {
-            return FindConfigTypeInAgentAssembly(agentType);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to find config type for agent {AgentType}", agentType.FullName);
-            return null;
-        }
+        return FindConfigTypeInAgentAssembly(agentType);
     }
 
     private Type? FindConfigTypeInAgentAssembly(Type agentType)
@@ -121,24 +113,13 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var config = JsonSerializer.Deserialize(configJson, configType, options);
 
-            if (config == null)
-            {
-                _logger.LogInformation("JSON deserialization resulted in null for {ConfigType}", configType.Name);
-                return ConfigValidationResultDto.Failure();
-            }
+            if (config == null) return ConfigValidationResultDto.Failure();
 
             var validationContext = new ValidationContext(config);
-            if (config is IValidatableObject validatableConfig)
-            {
-                var customResults = validatableConfig.Validate(validationContext).ToList();
-                if (customResults.Any())
-                {
-                    _logger.LogInformation("Custom validation failed for {ConfigType}", configType.Name);
-                    return ConfigValidationResultDto.Failure();
-                }
-            }
-
-            return ConfigValidationResultDto.Success("Configuration validation passed");
+            if (config is not IValidatableObject validatableConfig)
+                return ConfigValidationResultDto.Success("Configuration validation passed");
+            var customResults = validatableConfig.Validate(validationContext).ToList();
+            return !customResults.Any() ? ConfigValidationResultDto.Success("Configuration validation passed") : ConfigValidationResultDto.Failure();
         }
         catch (Exception ex)
         {

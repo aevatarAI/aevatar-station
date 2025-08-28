@@ -97,7 +97,7 @@ public class AgentService : ApplicationService, IAgentService
                     // Get default values
                     paramDto.DefaultValues =
                         await GetConfigurationDefaultValuesAsync(kvp.Value.InitializationData.DtoType);
-                    
+
                     // Check if agent has SystemLLMConfig and add it
                     paramDto.SystemLLMConfigs = GetSystemLLMConfigsForAgent(kvp.Value.InitializationData);
                 }
@@ -177,21 +177,17 @@ public class AgentService : ApplicationService, IAgentService
         PagedResultDto<Dictionary<string, object>> response;
         try
         {
-            response =
-                await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
-                {
-                    QueryString = queryString,
-                    StateName = nameof(CreatorGAgentState),
-                    PageSize = queryDto.PageSize,
-                    PageIndex = queryDto.PageIndex
-                });
+            response = await _indexingService.QueryWithLuceneAsync(new LuceneQueryDto()
+            {
+                QueryString = queryString,
+                StateName = nameof(CreatorGAgentState),
+                PageSize = queryDto.PageSize,
+                PageIndex = queryDto.PageIndex
+            });
         }
         catch (UserFriendlyException e)
         {
-            if (e.Code == "index_not_found_exception")
-            {
-                return result;
-            }
+            if (e.Code == "index_not_found_exception") return result;
 
             throw;
         }
@@ -228,18 +224,19 @@ public class AgentService : ApplicationService, IAgentService
         string properties = null;
         if (!dto.Properties.IsNullOrEmpty())
         {
-            var updatedParam = JsonConvert.SerializeObject(dto.Properties);
+            var jsonSerializerSettings = new JsonSerializerSettings
+            {
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                ContractResolver = new CamelCasePropertyNamesContractResolver(),
+                NullValueHandling = NullValueHandling.Ignore
+            };
             var configuration = await GetAgentConfigurationAsync(businessAgent);
+            var updatedParam = JsonConvert.SerializeObject(dto.Properties);
             if (configuration != null && !updatedParam.IsNullOrEmpty())
             {
                 var config = SetupConfigurationData(configuration, updatedParam);
                 await businessAgent.ConfigAsync(config);
-                properties = JsonConvert.SerializeObject(config, new JsonSerializerSettings
-                {
-                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                    ContractResolver = new CamelCasePropertyNamesContractResolver(),
-                    NullValueHandling = NullValueHandling.Ignore
-                });
+                properties = JsonConvert.SerializeObject(config, jsonSerializerSettings);
             }
             else
             {
@@ -292,10 +289,7 @@ public class AgentService : ApplicationService, IAgentService
         var businessAgent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
 
         var configuration = await GetAgentConfigurationAsync(businessAgent);
-        if (configuration != null)
-        {
-            resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration.DtoType).ToJson();
-        }
+        if (configuration != null) resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration.DtoType).ToJson();
 
         return resp;
     }
@@ -337,10 +331,7 @@ public class AgentService : ApplicationService, IAgentService
         var businessAgents = new List<IGAgent>();
         foreach (var grainId in newSubAgentGrainIds)
         {
-            if (subAgentGrainIds.Contains(grainId))
-            {
-                continue;
-            }
+            if (subAgentGrainIds.Contains(grainId)) continue;
 
             var businessAgent = await _gAgentFactory.GetGAgentAsync(grainId);
             businessAgents.Add(businessAgent);
@@ -361,10 +352,7 @@ public class AgentService : ApplicationService, IAgentService
                     businessAgent.GetGrainId().GetGuidKey(), JsonConvert.SerializeObject(eventsToAdd));
                 allEventsHandled.AddRange(eventsToAdd);
             }
-            else
-            {
-                _logger.LogInformation("No events handled by agent {agentId}", businessAgent.GetGrainId().GetGuidKey());
-            }
+            else _logger.LogInformation("No events handled by agent {agentId}", businessAgent.GetGrainId().GetGuidKey());
         }
 
         await creatorAgent.UpdateAvailableEventsAsync(allEventsHandled);
