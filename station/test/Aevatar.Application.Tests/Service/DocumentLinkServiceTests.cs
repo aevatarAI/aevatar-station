@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Aevatar.Service;
@@ -63,10 +64,20 @@ public abstract class DocumentLinkServiceTests<TStartupModule> : AevatarApplicat
     {
         // Arrange
         var cache = new Mock<IDistributedCache<DocumentLinkStatus, string>>();
-        // var service = new DocumentLinkService(null, cache.Object);
 
         // Act
         await _documentLinkService.RefreshDocumentLinkStatusAsync();
+        
+        var propertiesWithDocLinks = DocumentLinkService.FindAllDocumentationLinkProperties();
+        var urls = propertiesWithDocLinks
+            .Select(x => x.Attribute.DocumentationUrl)
+            .Where(u => !string.IsNullOrWhiteSpace(u))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (urls.Count > 0)
+        {
+            await _documentLinkService.GetDocumentLinkStatusAsync(urls[0]);
+        }
 
         // Assert
         cache.Verify(c => c.SetAsync(

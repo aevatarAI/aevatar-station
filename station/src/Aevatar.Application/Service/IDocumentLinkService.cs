@@ -155,7 +155,7 @@ public class DocumentLinkService : ApplicationService, IDocumentLinkService
         }
     }
 
-    private static IEnumerable<(Type DeclaringType, PropertyInfo Property, DocumentationLinkAttribute Attribute)> FindAllDocumentationLinkProperties()
+    public static IEnumerable<(Type DeclaringType, PropertyInfo Property, DocumentationLinkAttribute Attribute)> FindAllDocumentationLinkProperties()
     {
         var result = new List<(Type DeclaringType, PropertyInfo Property, DocumentationLinkAttribute Attribute)>();
 
