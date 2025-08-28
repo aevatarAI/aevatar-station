@@ -87,9 +87,31 @@ public class Program
         qdrant.WithLifetime(ContainerLifetime.Persistent);
     */
 
+        // Create k3s data directory if it doesn't exist
+        Directory.CreateDirectory(Path.Combine(Environment.CurrentDirectory, "data", "k3s"));
+        Directory.CreateDirectory(Path.Combine(Environment.CurrentDirectory, "data", "k3s", "kubelet"));
+        Directory.CreateDirectory(Path.Combine(Environment.CurrentDirectory, "data", "k3s", "kubeconfig"));
+        
+        // Add k3s container for sandbox code execution
+        var k3s = builder.AddContainer("k3s", "rancher/k3s:v1.27.4-k3s1")
+            .WithHttpEndpoint(port: 6443, name: "kubernetes-api", targetPort: 6443)
+            .WithEndpoint(port: 8472, name: "flannel-vxlan", targetPort: 8472)
+            .WithEndpoint(port: 10250, name: "kubelet", targetPort: 10250)
+            // Mount volumes for k3s data
+            .WithBindMount(Path.Combine(Environment.CurrentDirectory, "data", "k3s"), "/var/lib/rancher/k3s")
+            .WithBindMount(Path.Combine(Environment.CurrentDirectory, "data", "k3s", "kubelet"), "/var/lib/kubelet")
+            .WithBindMount(Path.Combine(Environment.CurrentDirectory, "data", "k3s", "kubeconfig"), "/output")
+            // Set environment variables
+            .WithEnvironment("K3S_KUBECONFIG_OUTPUT", "/output/kubeconfig.yaml")
+            .WithEnvironment("K3S_KUBECONFIG_MODE", "666")
+            .WithEnvironment("K3S_TOKEN", "aevatar-sandbox")
+            .WithEnvironment("K3S_ARGS", "--disable traefik --disable servicelb");
+        k3s.WithContainerName("aevatar-k3s");
+        k3s.WithLifetime(ContainerLifetime.Persistent);
+
         // Create a dependency group for all infrastructure resources
         // This ensures all these resources are fully started before any application components
-        // var infrastructureDependencies = new[] {mongodb, redis, elasticsearch, kafka, qdrant};
+        // var infrastructureDependencies = new[] {mongodb, redis, elasticsearch, kafka, qdrant, k3s};
 
         // Add Aevatar.Silo (Orleans) project with its dependencies
         // Orleans requires specific configuration for clustering and streams
@@ -271,6 +293,27 @@ public class Program
         //     .WithEnvironment("SwaggerUI__RoutePrefix", "")
         //     .WithEnvironment("SwaggerUI__DefaultModelsExpandDepth", "-1")
         //     .WithHttpEndpoint(port: 7003, name: "developerhost-http");
+        
+        // Add Aevatar.Sandbox.HttpApi.Host project with its dependencies
+        var sandboxHttpApiHost = builder.AddProject("sandboxhttpapi", "../Aevatar.Sandbox.HttpApi.Host/Aevatar.Sandbox.HttpApi.Host.csproj")
+            .WithReference(siloScheduler)
+            // Wait for dependencies
+            .WaitFor(siloScheduler)
+            .WaitFor(k3s)
+            // Setting environment variables individually
+            .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
+            .WithEnvironment("MongoDB__ConnectionString", "{mongodb.connectionString}")
+            .WithEnvironment("AevatarOrleans__MongoDBClient", "{mongodb.connectionString}")
+            .WithEnvironment("Orleans__ClusterId", "AevatarSiloCluster")
+            .WithEnvironment("AuthServer__Authority", "http://localhost:7001")
+            // Configure Kubernetes to use k3s
+            .WithEnvironment("Kubernetes__InCluster", "false")
+            .WithEnvironment("Kubernetes__KubeConfig", Path.Combine(Environment.CurrentDirectory, "data", "k3s", "kubeconfig", "kubeconfig.yaml"))
+            .WithEnvironment("Kubernetes__Namespace", "sandbox")
+            // Configure Swagger as default page
+            .WithEnvironment("SwaggerUI__RoutePrefix", "")
+            .WithEnvironment("SwaggerUI__DefaultModelsExpandDepth", "-1")
+            .WithHttpEndpoint(port: 7004, name: "sandboxhttpapi-http");
 
 // Add Aevatar.Worker project with its dependencies
         var worker = builder.AddProject("worker", "../Aevatar.Worker/Aevatar.Worker.csproj")
@@ -300,8 +343,40 @@ public class Program
             // The rest of the app will auto-start based on the WaitFor dependencies
             Console.WriteLine("Starting application components...");
 
+            // Initialize k3s for sandbox code execution
+            Console.WriteLine("Initializing k3s for sandbox code execution...");
+            try
+            {
+                // Make the script executable
+                var chmodProcess = Process.Start(new ProcessStartInfo
+                {
+                    FileName = "chmod",
+                    Arguments = "+x k3s-init.sh",
+                    UseShellExecute = false,
+                    WorkingDirectory = Environment.CurrentDirectory
+                });
+                if (chmodProcess != null)
+                {
+                    chmodProcess.WaitForExit();
+                }
+
+                // Run the initialization script
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "./k3s-init.sh",
+                    UseShellExecute = false,
+                    WorkingDirectory = Environment.CurrentDirectory
+                });
+                
+                Console.WriteLine("K3s initialization started in background.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to initialize k3s: {ex.Message}");
+            }
+
             // Start a timer to open Swagger UIs after services are ready
-            System.Timers.Timer launchTimer = new System.Timers.Timer(30000); // 20 seconds
+            System.Timers.Timer launchTimer = new System.Timers.Timer(30000); // 30 seconds
             launchTimer.Elapsed += (sender, e) =>
             {
                 launchTimer.Stop();
@@ -318,7 +393,42 @@ public class Program
 
                     psi.Arguments = "http://localhost:7003";
                     Process.Start(psi);
-                    RegisterClientAsync();
+                    
+                    psi.Arguments = "http://localhost:7004";
+                    Process.Start(psi);
+                    
+                    // Register client
+                    _ = RegisterClientAsync();
+                    
+                    // Run the test script for sandbox execution
+                    try
+                    {
+                        // Make the script executable
+                        var chmodProcess = Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "chmod",
+                            Arguments = "+x test-sandbox.sh",
+                            UseShellExecute = false,
+                            WorkingDirectory = Environment.CurrentDirectory
+                        });
+                        if (chmodProcess != null)
+                        {
+                            chmodProcess.WaitForExit();
+                        }
+
+                        // Run the test script
+                        Console.WriteLine("Running sandbox test script...");
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "./test-sandbox.sh",
+                            UseShellExecute = true,
+                            WorkingDirectory = Environment.CurrentDirectory
+                        });
+                    }
+                    catch (Exception testEx)
+                    {
+                        Console.WriteLine($"Failed to run sandbox test: {testEx.Message}");
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -415,9 +525,9 @@ public class Program
                 var response = await client.PostAsync(requestUrl, content);
                 response.EnsureSuccessStatusCode();
                 var responseBody = await response.Content.ReadAsStringAsync();
-                var responseJson = JsonConvert.DeserializeObject<Dictionary<string, Object>>(responseBody);
+                var responseJson = JsonConvert.DeserializeObject<Dictionary<string, object>>(responseBody);
                 Console.WriteLine($"connect/token response: {responseBody}");
-                if (!responseJson.TryGetValue("access_token", out var accessToken))
+                if (responseJson == null || !responseJson.TryGetValue("access_token", out var accessToken))
                 {
                     return;
                 }
@@ -428,7 +538,7 @@ public class Program
                 client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
                 client.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", accessToken.ToString());
-                response = await client.PostAsync(registerClientUrl, new StringContent(String.Empty));
+                response = await client.PostAsync(registerClientUrl, new StringContent(string.Empty));
                 response.EnsureSuccessStatusCode();
                 responseBody = await response.Content.ReadAsStringAsync();
                 Console.WriteLine($"registerClient response: {responseBody}");
@@ -442,7 +552,7 @@ public class Program
                 };
                 var clientContent = new FormUrlEncodedContent(clientFormData);
                 var clientResponse = await client.PostAsync(requestUrl, clientContent);
-                response.EnsureSuccessStatusCode();
+                clientResponse.EnsureSuccessStatusCode();
                 var clientResponseBody = await clientResponse.Content.ReadAsStringAsync();
                 Console.WriteLine($"clientId connect/token response: {clientResponseBody}");
             }
