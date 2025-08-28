@@ -48,8 +48,23 @@ public class ProjectService : OrganizationService, IProjectService
         var organization = await OrganizationUnitRepository.GetAsync(input.OrganizationId);
         var domainName = GenerateDomainName(input.DisplayName, organization);
 
+        // Ensure the generated domain name is not empty after filtering
+        if (string.IsNullOrEmpty(domainName))
+        {
+            throw new UserFriendlyException("Project name must contain at least one valid character (letter, digit, or hyphen) for domain name generation");
+        }
+
         _logger.LogInformation("Starting project creation process. OrganizationId: {OrganizationId}, DisplayName: {DisplayName}, DomainName: {DomainName}", 
             input.OrganizationId, input.DisplayName, domainName);
+
+        var domain = await _domainRepository.FirstOrDefaultAsync(o =>
+            o.NormalizedDomainName == domainName.ToUpperInvariant() && o.IsDeleted == false);
+        if (domain != null)
+        {
+            _logger.LogWarning("Domain name already exists: {DomainName}, ExistingProjectId: {ExistingProjectId}", 
+                domainName, domain.ProjectId);
+            throw new UserFriendlyException($"DomainName: {domainName} already exists");
+        }
 
         var trimmedDisplayName = input.DisplayName.Trim();
         var projectId = GuidGenerator.Create();
@@ -244,25 +259,14 @@ public class ProjectService : OrganizationService, IProjectService
 
     private static string GenerateDomainName(string displayName, OrganizationUnit organization)
     {
-        // Generate project slug from display name
-        // Note: ValidateDisplayName already ensures at least one letter/digit exists
-        var projectSlug = new string(displayName
+        // Generate domain name from display name by filtering valid characters
+        // Only keep letters, digits, and hyphens - remove spaces and special characters
+        var domainName = new string(displayName
             .ToLowerInvariant()
-            .Where(c => (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == ' ')
-            .ToArray())
-            .Replace(' ', '-') // Replace spaces with hyphens
-            .Trim('-'); // Remove leading/trailing hyphens
+            .Where(c => (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-')
+            .ToArray());
         
-        // Use organization ID directly as identifier
-        var orgIdentifier = organization.Id.ToString("N");
-        
-        // Generate unique suffix using timestamp and hash (guaranteed unique)
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-        var hash = (displayName + organization.Id.ToString() + timestamp).GetHashCode();
-        var uniqueSuffix = Math.Abs(hash).ToString("x")[..6]; // Take first 6 hex digits
-        
-        // Format: {project-slug}-{org-identifier}-{unique-suffix}
-        return $"{projectSlug}-{orgIdentifier}-{uniqueSuffix}";
+        return domainName;
     }
 
     private static void ValidateDisplayName(string displayName)
@@ -278,12 +282,7 @@ public class ProjectService : OrganizationService, IProjectService
             throw new UserFriendlyException("Project name must contain at least one ASCII letter or digit for domain name generation");
         }
 
-        // Check for invalid characters - only ASCII letters, digits, hyphens, and spaces are allowed
-        var invalidChars = displayName.Where(c => !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == ' ')).ToArray();
-        if (invalidChars.Length > 0)
-        {
-            var invalidCharString = string.Join(", ", invalidChars.Distinct().Select(c => $"'{c}'"));
-            throw new UserFriendlyException($"Project name contains invalid characters for domain generation: {invalidCharString}. Only ASCII letters, digits, hyphens, and spaces are allowed.");
-        }
+        // No need to validate individual characters - we'll filter them during domain name generation
+        // This allows DisplayName to contain spaces and special characters for better UX
     }
 }

@@ -208,17 +208,27 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         createProjectInput.DisplayName = "   !!!   ";
         await Should.ThrowAsync<UserFriendlyException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
 
-        // Test with display name containing problematic special characters for domain names
+        // Test with display name containing special characters - should be allowed as it contains valid letters
         createProjectInput.DisplayName = "Test@Project#Name$";
-        await Should.ThrowAsync<UserFriendlyException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
+        var projectWithSpecialChars = await _projectService.CreateProjectAsync(createProjectInput);
+        projectWithSpecialChars.ShouldNotBeNull();
+        projectWithSpecialChars.DomainName.ShouldBe("testprojectname"); // Special chars filtered out
 
         // Test with display name containing Chinese characters or other unsupported characters
         createProjectInput.DisplayName = "测试项目";
         await Should.ThrowAsync<UserFriendlyException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
 
-        // Test with display name containing underscores (not allowed)
-        createProjectInput.DisplayName = "Project_Name";
-        await Should.ThrowAsync<UserFriendlyException>(async () => await _projectService.CreateProjectAsync(createProjectInput));
+        // Test with display name containing spaces - should be allowed
+        createProjectInput.DisplayName = "My Project Space";
+        var projectWithSpaces = await _projectService.CreateProjectAsync(createProjectInput);
+        projectWithSpaces.ShouldNotBeNull();
+        projectWithSpaces.DomainName.ShouldBe("myprojectspace"); // Spaces filtered out
+
+        // Test with display name containing underscores - should be allowed, underscores filtered out for domain
+        createProjectInput.DisplayName = "User_Profile_Manager";
+        var projectWithUnderscores = await _projectService.CreateProjectAsync(createProjectInput);
+        projectWithUnderscores.ShouldNotBeNull();
+        projectWithUnderscores.DomainName.ShouldBe("userprofilemanager"); // Underscores filtered out
     }
 
     [Fact]
@@ -245,24 +255,28 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         var project1 = await _projectService.CreateProjectAsync(createProjectInput);
         project1.ShouldNotBeNull();
         project1.DisplayName.ShouldBe("Valid-Project-Name");
+        project1.DomainName.ShouldBe("valid-project-name");
 
         // Test with valid display name containing letters, numbers, and hyphens
         createProjectInput.DisplayName = "Project-123-Test";
         var project2 = await _projectService.CreateProjectAsync(createProjectInput);
         project2.ShouldNotBeNull();
         project2.DisplayName.ShouldBe("Project-123-Test");
+        project2.DomainName.ShouldBe("project-123-test");
 
         // Test with valid display name containing only letters and numbers
         createProjectInput.DisplayName = "Project123";
         var project3 = await _projectService.CreateProjectAsync(createProjectInput);
         project3.ShouldNotBeNull();
         project3.DisplayName.ShouldBe("Project123");
+        project3.DomainName.ShouldBe("project123");
 
         // Test with valid display name containing spaces
         createProjectInput.DisplayName = "Project Name With Spaces";
         var project4 = await _projectService.CreateProjectAsync(createProjectInput);
         project4.ShouldNotBeNull();
         project4.DisplayName.ShouldBe("Project Name With Spaces");
+        project4.DomainName.ShouldBe("projectnamewithspaces");
     }
 
     [Fact]
@@ -690,7 +704,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         };
 
         // Act & Assert
-        await Should.ThrowAsync<UserFriendlyException>(async () => 
+        await Should.ThrowAsync<AbpValidationException>(async () => 
             await _projectService.CreateProjectAsync(createProjectInput));
     }
 }
