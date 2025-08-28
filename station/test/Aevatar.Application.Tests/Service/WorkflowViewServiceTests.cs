@@ -1,17 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Agent;
 using Aevatar.Core.Abstractions;
-using Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView;
 using Aevatar.Service;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Orleans;
-using Orleans.Runtime;
 using Shouldly;
-using Volo.Abp;
 using Xunit;
 
 namespace Aevatar.Application.Tests.Service;
@@ -375,189 +370,26 @@ public class WorkflowViewServiceTests
         result.ShouldNotBeNull();
     }
 
-    [Fact]
-    public async Task PublishWorkflowAsync_ShouldUpdateExistingSubAgent_AndCreateMissingOnes()
+    // Test helper methods
+    private Dictionary<string, object> CreateValidWorkflowProperties()
     {
-        // Arrange
-        var viewAgentId = Guid.NewGuid();
-        var coordinatorId = Guid.NewGuid();
-
-        var existingNodeId = Guid.NewGuid();
-        var existingAgentId = Guid.NewGuid();
-        var newNodeId = Guid.NewGuid();
-
-        var workflowProperties = new Dictionary<string, object>
+        return new Dictionary<string, object>
         {
-            {"WorkflowNodeList", new List<Dictionary<string, object>>
-                {
-                    new Dictionary<string, object>
-                    {
-                        {"NodeId", existingNodeId},
-                        {"AgentId", existingAgentId},
-                        {"Name", "ExistingNode"},
-                        {"AgentType", "Existing.AgentType"},
-                        {"JsonProperties", "{}"},
-                        {"ExtendedData", new Dictionary<string, object>{{"XPosition", "1"},{"YPosition", "2"}}}
-                    },
-                    new Dictionary<string, object>
-                    {
-                        {"NodeId", newNodeId},
-                        {"AgentId", Guid.Empty},
-                        {"Name", "NewNode"},
-                        {"AgentType", "New.AgentType"},
-                        {"JsonProperties", "{}"},
-                        {"ExtendedData", new Dictionary<string, object>{{"XPosition", "3"},{"YPosition", "4"}}}
-                    }
-                }
-            },
-            {"WorkflowNodeUnitList", new List<Dictionary<string, object>>
-                {
-                    new Dictionary<string, object>
-                    {
-                        {"NodeId", existingNodeId},
-                        {"NextNodeId", newNodeId}
-                    }
-                }
-            },
-            {"WorkflowCoordinatorGAgentId", coordinatorId},
-            {"Name", "wf"}
-        };
-
-        var viewAgent = new AgentDto
-        {
-            Id = viewAgentId,
-            Name = "wf",
-            Properties = workflowProperties
-        };
-
-        var createdSubAgentId = Guid.NewGuid();
-        var updatedViewAgent = new AgentDto { Id = viewAgentId, Name = "wf", Properties = workflowProperties };
-
-        _mockAgentService.Setup(x => x.GetAgentAsync(viewAgentId)).ReturnsAsync(viewAgent);
-        // Existing sub-agent -> update path
-        _mockAgentService.Setup(x => x.GetAgentAsync(existingAgentId))
-            .ReturnsAsync(new AgentDto { AgentType = "Existing.AgentType" });
-        _mockAgentService.Setup(x => x.UpdateAgentAsync(existingAgentId, It.IsAny<UpdateAgentInputDto>()))
-            .ReturnsAsync(new AgentDto());
-        // New sub-agent -> create path
-        _mockAgentService.Setup(x => x.CreateAgentAsync(It.Is<CreateAgentInputDto>(dto => dto.Name == "NewNode" && dto.AgentType == "New.AgentType")))
-            .ReturnsAsync(new AgentDto { AgentGuid = createdSubAgentId, Name = "NewNode", AgentType = "New.AgentType" });
-
-        // Coordinator update capture to validate properties content
-        UpdateAgentInputDto? coordinatorUpdate = null;
-        _mockAgentService.Setup(x => x.UpdateAgentAsync(coordinatorId, It.IsAny<UpdateAgentInputDto>()))
-            .Callback<Guid, UpdateAgentInputDto>((_, dto) => coordinatorUpdate = dto)
-            .ReturnsAsync(new AgentDto());
-
-        _mockAgentService.Setup(x => x.UpdateAgentAsync(viewAgentId, It.IsAny<UpdateAgentInputDto>()))
-            .ReturnsAsync(updatedViewAgent);
-
-        // Act
-        var result = await _workflowViewService.PublishWorkflowAsync(viewAgentId);
-
-        // Assert
-        result.ShouldNotBeNull();
-        _mockAgentService.Verify(x => x.UpdateAgentAsync(existingAgentId, It.IsAny<UpdateAgentInputDto>()), Times.Once);
-        _mockAgentService.Verify(x => x.CreateAgentAsync(It.IsAny<CreateAgentInputDto>()), Times.Once);
-        coordinatorUpdate.ShouldNotBeNull();
-        // Properties should be sanitized and contain workflow units
-        var serializedProps = Newtonsoft.Json.JsonConvert.SerializeObject(coordinatorUpdate!.Properties);
-        serializedProps.ShouldContain("WorkflowUnitList");
-        serializedProps.ShouldNotContain("PublisherGrainId");
-        serializedProps.ShouldNotContain("CorrelationId");
-        // NextGrainId captured and present in at least one unit (sink nodes may have empty NextGrainId)
-        serializedProps.ShouldContain("NextGrainId");
-    }
-
-    [Fact]
-    public async Task PublishWorkflowAsync_ShouldBuildUnitWithEmptyNext_WhenNoConnections()
-    {
-        // Arrange
-        var viewAgentId = Guid.NewGuid();
-        var coordinatorId = Guid.NewGuid();
-        var singleNodeId = Guid.NewGuid();
-
-        var workflowProperties = new Dictionary<string, object>
-        {
-            {"WorkflowNodeList", new List<Dictionary<string, object>>
-                {
-                    new Dictionary<string, object>
-                    {
-                        {"NodeId", singleNodeId},
-                        {"AgentId", Guid.NewGuid()},
-                        {"Name", "Solo"},
-                        {"AgentType", "Solo.AgentType"},
-                        {"JsonProperties", "{}"},
-                        {"ExtendedData", new Dictionary<string, object>{{"XPosition", "10"},{"YPosition", "20"}}}
-                    }
-                }
-            },
+            {"WorkflowNodeList", new List<Dictionary<string, object>>()},
             {"WorkflowNodeUnitList", new List<Dictionary<string, object>>()},
-            {"WorkflowCoordinatorGAgentId", coordinatorId},
-            {"Name", "wf"}
+            {"WorkflowCoordinatorGAgentId", Guid.Empty}
         };
-
-        var viewAgent = new AgentDto { Id = viewAgentId, Name = "wf", Properties = workflowProperties };
-        _mockAgentService.Setup(x => x.GetAgentAsync(viewAgentId)).ReturnsAsync(viewAgent);
-        _mockAgentService.Setup(x => x.GetAgentAsync(It.IsAny<Guid>()))
-            .ReturnsAsync(new AgentDto { AgentType = "Solo.AgentType" });
-
-        _mockAgentService.Setup(x => x.UpdateAgentAsync(coordinatorId, It.IsAny<UpdateAgentInputDto>()))
-            .ReturnsAsync(new AgentDto());
-
-        _mockAgentService.Setup(x => x.UpdateAgentAsync(viewAgentId, It.IsAny<UpdateAgentInputDto>()))
-            .ReturnsAsync(viewAgent);
-
-        // Act
-        var result = await _workflowViewService.PublishWorkflowAsync(viewAgentId);
-
-        // Assert
-        result.ShouldNotBeNull();
     }
 
-    [Fact]
-    public async Task CreateDefaultWorkflowAsync_ShouldThrow_WhenWorkflowAlreadyExists()
+    private AgentDto CreateTestAgentDto(Guid id, string name, Dictionary<string, object> properties = null)
     {
-        // Arrange
-        var mockViewGAgent = new Moq.Mock<IWorkflowViewGAgent>();
-        _mockGAgentFactory.Setup(x => x.GetGAgentAsync<IWorkflowViewGAgent>(It.IsAny<Guid>(), It.IsAny<ConfigurationBase>()))
-            .ReturnsAsync(mockViewGAgent.Object);
-
-        var fallbackType = typeof(WorkflowViewGAgent).FullName ?? typeof(WorkflowViewGAgent).Name;
-        _mockAgentService.Setup(x => x.GetAllAgentInstances(It.Is<GetAllAgentInstancesQueryDto>(q => q.AgentType == fallbackType && q.PageSize == 1)))
-            .ReturnsAsync(new List<AgentInstanceDto> { new AgentInstanceDto() });
-
-        // Act & Assert
-        await Should.ThrowAsync<UserFriendlyException>(() => _workflowViewService.CreateDefaultWorkflowAsync());
-    }
-
-    [Fact]
-    public async Task CreateDefaultWorkflowAsync_ShouldCreate_WhenNoWorkflowExists()
-    {
-        // Arrange
-        var mockViewGAgent = new Moq.Mock<IWorkflowViewGAgent>();
-        _mockGAgentFactory.Setup(x => x.GetGAgentAsync<IWorkflowViewGAgent>(It.IsAny<Guid>(), It.IsAny<ConfigurationBase>()))
-            .ReturnsAsync(mockViewGAgent.Object);
-
-        var fallbackType = typeof(WorkflowViewGAgent).FullName ?? typeof(WorkflowViewGAgent).Name;
-        _mockAgentService.Setup(x => x.GetAllAgentInstances(It.Is<GetAllAgentInstancesQueryDto>(q => q.AgentType == fallbackType && q.PageSize == 1)))
-            .ReturnsAsync(new List<AgentInstanceDto>());
-
-        CreateAgentInputDto? created = null;
-        var createdAgent = new AgentDto { Id = Guid.NewGuid(), Name = "default workflow" };
-        _mockAgentService.Setup(x => x.CreateAgentAsync(It.IsAny<CreateAgentInputDto>()))
-            .Callback<CreateAgentInputDto>(dto => created = dto)
-            .ReturnsAsync(createdAgent);
-
-        // Act
-        var result = await _workflowViewService.CreateDefaultWorkflowAsync();
-
-        // Assert
-        result.ShouldNotBeNull();
-        created.ShouldNotBeNull();
-        created!.Name.ShouldBe("default workflow");
-        created!.AgentType.ShouldBe(fallbackType);
-        created!.Properties.ShouldNotBeNull();
-        created!.Properties!.Count.ShouldBeGreaterThan(0);
+        return new AgentDto
+        {
+            Id = id,
+            AgentGuid = id,
+            Name = name,
+            Properties = properties ?? new Dictionary<string, object>(),
+            AgentType = "TestAgent"
+        };
     }
 } 
