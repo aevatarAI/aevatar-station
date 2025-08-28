@@ -61,4 +61,12 @@ public interface IDailyPushService
     /// <param name="timezone">Timezone identifier (e.g., "Asia/Shanghai")</param>
     /// <returns>List of device information in the timezone</returns>
     Task<List<TimezoneDeviceInfo>> GetDevicesInTimezoneAsync(string timezone);
+    
+    /// <summary>
+    /// Send instant push notification to all devices in specified timezone
+    /// Each device will receive two identical notifications
+    /// </summary>
+    /// <param name="timezone">Timezone identifier (e.g., "Asia/Shanghai")</param>
+    /// <returns>Push result summary</returns>
+    Task<object> SendInstantPushAsync(string timezone = "Asia/Shanghai");
 }

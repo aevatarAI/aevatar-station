@@ -319,4 +319,33 @@ public class DailyPushController : AbpControllerBase
             });
         }
     }
+    
+    /// <summary>
+    /// Send instant push notification to all devices in specified timezone
+    /// Each device will receive two identical notifications for testing
+    /// </summary>
+    /// <param name="timezone">Target timezone (default: Asia/Shanghai)</param>
+    [HttpPost("test/instant")]
+    public async Task<IActionResult> SendInstantPush([FromQuery] string timezone = "Asia/Shanghai")
+    {
+        try
+        {
+            _logger.LogInformation("Starting instant push for timezone {Timezone}", timezone);
+            
+            var result = await _dailyPushService.SendInstantPushAsync(timezone);
+            
+            // Follow GodGPT pattern: direct return of data object
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            var language = HttpContext.GetGodGPTLanguage();
+            var localizedMessage = "Failed to send instant push"; // TODO: Add proper localization
+            _logger.LogError(ex, "Failed to send instant push for timezone {Timezone}", timezone);
+            return BadRequest(new {
+                error = new { code = 1, message = localizedMessage, details = ex.Message },
+                result = false
+            });
+        }
+    }
 }

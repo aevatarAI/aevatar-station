@@ -337,4 +337,31 @@ public class DailyPushService : ApplicationService, IDailyPushService
             
         return $"{token[..5]}...{token[^5..]}";
     }
+    
+    public async Task<object> SendInstantPushAsync(string timezone = "Asia/Shanghai")
+    {
+        try
+        {
+            _logger.LogInformation("Starting instant push for timezone {Timezone}", timezone);
+            
+            // Delegate to DailyPushCoordinatorGAgent for actual push logic
+            var coordinator = _clusterClient.GetGrain<IDailyPushCoordinatorGAgent>(DailyPushConstants.TimezoneToGuid(timezone));
+            await coordinator.InitializeAsync(timezone);
+            
+            // Call the coordinator's instant push method
+            var result = await coordinator.SendInstantPushAsync();
+            
+            _logger.LogInformation("Instant push completed for timezone {Timezone}", timezone);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during instant push for timezone {Timezone}", timezone);
+            return new { 
+                timezone = timezone, 
+                error = ex.Message, 
+                timestamp = DateTime.Now 
+            };
+        }
+    }
 }
