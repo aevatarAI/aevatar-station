@@ -43,6 +43,7 @@
         <ProjectReference Include="..\Aevatar.Domain.Grains\Aevatar.Domain.Grains.csproj" />
         <ProjectReference Include="..\Aevatar.Application.Grains\Aevatar.Application.Grains.csproj" />
         <ProjectReference Include="..\..\samples\E2E.Grains\E2E.Grains.csproj" />
+        <ProjectReference Include="..\Aevatar.Sandbox.Abstractions\Aevatar.Sandbox.Abstractions.csproj" />
     </ItemGroup>
 
     <ItemGroup>

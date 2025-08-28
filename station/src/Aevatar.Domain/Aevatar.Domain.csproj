@@ -25,8 +25,4 @@
     <PackageReference Include="AElf.OpenTelemetry" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Host\" />
-  </ItemGroup>
-  
 </Project>

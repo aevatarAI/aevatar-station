@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <Import Project="..\..\common.props" />
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <RootNamespace>Aevatar.Sandbox.Python</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Aevatar.Sandbox.Core\Aevatar.Sandbox.Core.csproj" />
+        <ProjectReference Include="..\Aevatar.Sandbox.Abstractions\Aevatar.Sandbox.Abstractions.csproj" />
+    </ItemGroup>
+
+</Project>

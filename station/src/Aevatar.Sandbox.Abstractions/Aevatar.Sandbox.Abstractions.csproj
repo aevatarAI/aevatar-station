@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+        <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
+        <PackageReference Include="Microsoft.Orleans.Sdk" />
+        <PackageReference Include="Volo.Abp.Core" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Aevatar.Sandbox.Kubernetes\Aevatar.Sandbox.Kubernetes.csproj" />
+    </ItemGroup>
+
+</Project>

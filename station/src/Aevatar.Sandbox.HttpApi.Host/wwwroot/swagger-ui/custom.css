@@ -1,0 +1,86 @@
+/* Custom styles for Swagger UI */
+
+.swagger-ui .topbar {
+    background-color: #2c3e50;
+    padding: 10px 0;
+}
+
+.swagger-ui .topbar .download-url-wrapper .select-label {
+    color: white;
+}
+
+.swagger-ui .info .title {
+    color: #2c3e50;
+    font-size: 36px;
+}
+
+.swagger-ui .info .title small.version-stamp {
+    background-color: #3498db;
+}
+
+.swagger-ui .btn.execute {
+    background-color: #2ecc71;
+    color: white;
+    border-color: #27ae60;
+}
+
+.swagger-ui .btn.execute:hover {
+    background-color: #27ae60;
+}
+
+.swagger-ui .opblock.opblock-post {
+    background: rgba(73, 204, 144, 0.1);
+    border-color: #49cc90;
+}
+
+.swagger-ui .opblock.opblock-get {
+    background: rgba(97, 175, 254, 0.1);
+    border-color: #61affe;
+}
+
+.swagger-ui .opblock.opblock-delete {
+    background: rgba(249, 62, 62, 0.1);
+    border-color: #f93e3e;
+}
+
+.swagger-ui .opblock.opblock-put {
+    background: rgba(252, 161, 48, 0.1);
+    border-color: #fca130;
+}
+
+.swagger-ui .opblock.opblock-patch {
+    background: rgba(80, 227, 194, 0.1);
+    border-color: #50e3c2;
+}
+
+/* Python code example styling */
+.swagger-ui textarea.body-param__text {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* Response styling */
+.swagger-ui .responses-table .response-col_status {
+    font-weight: bold;
+}
+
+.swagger-ui .response-col_description__inner p {
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* Make the Execute button more prominent */
+.swagger-ui .btn.execute {
+    font-size: 16px;
+    padding: 8px 16px;
+}
+
+/* Add Aevatar branding */
+.swagger-ui .info:before {
+    content: "Aevatar Sandbox";
+    display: block;
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 10px;
+}
