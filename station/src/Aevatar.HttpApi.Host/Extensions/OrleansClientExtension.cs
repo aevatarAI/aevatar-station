@@ -12,6 +12,7 @@ using Orleans.Providers.MongoDB.Configuration;
 using Orleans.Serialization;
 using Orleans.Streams.Kafka.Config;
 using Serilog;
+using Aevatar.Core.Interception.Extensions;
 
 namespace Aevatar.Extensions;
 
@@ -45,6 +46,7 @@ public static class OrleansClientExtension
                     options.SupportedNamespacePrefixes.Add("MongoDB.Driver");
                 })
                 .AddActivityPropagation()
+                .AddTraceContextFilters() // Add trace context filters for grain calls
                 .UseAevatar();
                 
             var streamProvider = config.GetSection("OrleansStream:Provider").Get<string>();

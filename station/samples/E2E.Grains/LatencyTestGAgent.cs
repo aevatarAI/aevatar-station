@@ -8,6 +8,9 @@ using Orleans.Concurrency;
 using System.Diagnostics;
 using System.Collections.Concurrent;
 using Orleans;
+using Aevatar.Core.Interception;
+
+[module: Interceptor]
 
 namespace E2E.Grains;
 
@@ -122,7 +125,7 @@ public class LatencyPublisherAgent : GAgentBase<LatencyPublisherState, LatencyPu
     public async Task PublishEventAsync(LatencyTestEvent @event, Guid targetHandlerStreamId)
     {
         using var activity = ActivitySource.StartActivity("PublishEvent", ActivityKind.Producer);
-        
+
         if (activity != null)
         {
             activity.SetTag("publisher.agent.id", this.GetPrimaryKey());
@@ -139,7 +142,7 @@ public class LatencyPublisherAgent : GAgentBase<LatencyPublisherState, LatencyPu
         var stream = GetEventBaseStream(handlerGrainId);
         var eventWrapper = new EventWrapper<LatencyTestEvent>(@event, Guid.NewGuid(), this.GetGrainId());
         await stream.OnNextAsync(eventWrapper);
-        
+
         // Update metrics
         RaiseEvent(new LatencyPublisherStateLogEvent { EventsSent = State.EventsSent + 1 });
         await ConfirmEvents();
@@ -173,7 +176,7 @@ public class LatencyPublisherAgent : GAgentBase<LatencyPublisherState, LatencyPu
 public class LatencyHandlerAgent : GAgentBase<LatencyHandlerState, LatencyHandlerStateLogEvent>, ILatencyHandlerAgent
 {
     private static readonly ActivitySource ActivitySource = new("LatencyBenchmark.Handler");
-    
+
     private readonly ConcurrentDictionary<string, LatencyMeasurement> _latencyMeasurements = new();
 
     public override Task<string> GetDescriptionAsync()
@@ -195,20 +198,20 @@ public class LatencyHandlerAgent : GAgentBase<LatencyHandlerState, LatencyHandle
     {
         try
         {
-            Logger.LogInformation("🎯 LatencyHandlerAgent {AgentId} starting to listen for LatencyTestEvent on stream {StreamId}", 
+            Logger.LogInformation("🎯 LatencyHandlerAgent {AgentId} starting to listen for LatencyTestEvent on stream {StreamId}",
                 this.GetPrimaryKey(), streamId);
-                
+
             // With EventHandler attribute, Orleans automatically routes events to the handler method
             // No manual subscription needed - Orleans handles this automatically
-            
-            Logger.LogInformation("✅ LatencyHandlerAgent {AgentId} ready to receive LatencyTestEvent on stream {StreamId}", 
+
+            Logger.LogInformation("✅ LatencyHandlerAgent {AgentId} ready to receive LatencyTestEvent on stream {StreamId}",
                 this.GetPrimaryKey(), streamId);
-                
+
             await Task.CompletedTask;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "❌ LatencyHandlerAgent {AgentId} failed to set up listening for stream {StreamId}", 
+            Logger.LogError(ex, "❌ LatencyHandlerAgent {AgentId} failed to set up listening for stream {StreamId}",
                 this.GetPrimaryKey(), streamId);
             throw;
         }
@@ -221,15 +224,16 @@ public class LatencyHandlerAgent : GAgentBase<LatencyHandlerState, LatencyHandle
     }
 
     [EventHandler]
+    [Interceptor]
     public async Task OnLatencyTestEvent(LatencyTestEvent @event)
     {
         using var activity = ActivitySource.StartActivity("OnLatencyTestEvent", ActivityKind.Consumer);
         var processingTimestamp = DateTimeOffset.UtcNow.Ticks;
         var handlerId = this.GetPrimaryKey().ToString();
-        
-        Logger.LogInformation("🎯 Handler {HandlerId} processing LatencyTestEvent {CorrelationId} from publisher {PublisherId} (event #{EventNumber})", 
+
+        Logger.LogInformation("🎯 Handler {HandlerId} processing LatencyTestEvent {CorrelationId} from publisher {PublisherId} (event #{EventNumber})",
             handlerId, @event.CorrelationId, @event.PublisherAgentId, @event.EventNumber);
-        
+
         if (activity != null)
         {
             activity.SetTag("handler.agent.id", handlerId);
@@ -244,15 +248,15 @@ public class LatencyHandlerAgent : GAgentBase<LatencyHandlerState, LatencyHandle
         // Calculate latency
         var latencyTicks = processingTimestamp - @event.SentTimestamp;
         var latencyMs = TimeSpan.FromTicks(latencyTicks).TotalMilliseconds;
-        
+
         // Check for duplicate processing
         if (_latencyMeasurements.ContainsKey(@event.CorrelationId))
         {
-            Logger.LogWarning("⚠️ Handler {HandlerId} received DUPLICATE event {CorrelationId} - this indicates stream replay or multiple subscriptions!", 
+            Logger.LogWarning("⚠️ Handler {HandlerId} received DUPLICATE event {CorrelationId} - this indicates stream replay or multiple subscriptions!",
                 handlerId, @event.CorrelationId);
             return; // Skip duplicate processing
         }
-        
+
         // Record latency measurement
         _latencyMeasurements.TryAdd(@event.CorrelationId, new LatencyMeasurement
         {
@@ -266,14 +270,14 @@ public class LatencyHandlerAgent : GAgentBase<LatencyHandlerState, LatencyHandle
             PublisherAgentId = @event.PublisherAgentId.ToString(),
             ProcessorAgentId = handlerId
         });
-        
+
         // Update metrics using event sourcing
         RaiseEvent(new LatencyHandlerStateLogEvent { TotalEventsProcessed = State.TotalEventsProcessed + 1 });
         await ConfirmEvents();
 
         if (Logger.IsEnabled(LogLevel.Debug))
         {
-            Logger.LogDebug("✅ Handler {HandlerId} processed event {CorrelationId} from {PublisherId} with latency {LatencyMs:F2}ms", 
+            Logger.LogDebug("✅ Handler {HandlerId} processed event {CorrelationId} from {PublisherId} with latency {LatencyMs:F2}ms",
                 handlerId, @event.CorrelationId, @event.PublisherAgentId, latencyMs);
         }
     }
@@ -355,20 +359,20 @@ public class LatencyMetrics
     private static double GetPercentile(List<double> sortedValues, double percentile)
     {
         if (sortedValues.Count == 0) return 0;
-        
+
         var index = (percentile / 100.0) * (sortedValues.Count - 1);
         var lowerIndex = (int)Math.Floor(index);
         var upperIndex = (int)Math.Ceiling(index);
-        
+
         if (lowerIndex == upperIndex)
         {
             return sortedValues[lowerIndex];
         }
-        
+
         var lowerValue = sortedValues[lowerIndex];
         var upperValue = sortedValues[upperIndex];
         var weight = index - lowerIndex;
-        
+
         return lowerValue + weight * (upperValue - lowerValue);
     }
 } 

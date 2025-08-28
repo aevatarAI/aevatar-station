@@ -14,6 +14,7 @@ using Aevatar.SignalR;
 using Aevatar.Silo.Startup;
 using E2E.Grains;
 using Aevatar.Silo.AgentWarmup.Extensions;
+using Aevatar.Core.Interception.Extensions;
 
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
@@ -361,6 +362,7 @@ public static class OrleansHostExtension
                 }
 
                 siloBuilder.UseAevatar()
+                    .AddTraceContextFilters() // Add trace context filters for grain calls
                     .UseAevatarPermissionManagement()
                     .UseSignalR()
                     .RegisterHub<AevatarSignalRHub>();
