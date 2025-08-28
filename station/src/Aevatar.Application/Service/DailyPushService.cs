@@ -433,14 +433,3 @@ public class DailyPushService : ApplicationService, IDailyPushService
         }
     }
 }
-
-/// <summary>
-/// Result of clear read status operation
-/// </summary>
-public class ClearReadStatusResult
-{
-    public Guid UserId { get; set; }
-    public string DeviceId { get; set; } = "";
-    public bool Cleared { get; set; }
-    public DateTime Timestamp { get; set; }
-}

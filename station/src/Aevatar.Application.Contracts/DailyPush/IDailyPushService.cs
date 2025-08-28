@@ -69,4 +69,11 @@ public interface IDailyPushService
     /// <param name="timezone">Timezone identifier (e.g., "Asia/Shanghai")</param>
     /// <returns>Push result summary</returns>
     Task<object> SendInstantPushAsync(string timezone = "Asia/Shanghai");
+    
+    /// <summary>
+    /// Clear read status for specific device - TODO: Remove before production
+    /// </summary>
+    /// <param name="deviceId">Target device ID</param>
+    /// <returns>Clear read status result</returns>
+    Task<ClearReadStatusResult> ClearReadStatusForDeviceAsync(string deviceId);
 }
