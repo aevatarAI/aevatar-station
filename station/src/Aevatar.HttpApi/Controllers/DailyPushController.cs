@@ -297,7 +297,7 @@ public class DailyPushController : AbpControllerBase
                     {
                         userId = d.UserId,
                         deviceId = d.DeviceId,
-                        pushToken = d.PushToken, // Already truncated for privacy
+                        pushToken = d.PushToken, // Full pushToken for testing
                         timeZoneId = d.TimeZoneId,
                         pushLanguage = d.PushLanguage,
                         pushEnabled = d.PushEnabled,

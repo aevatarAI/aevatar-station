@@ -300,7 +300,7 @@ public class DailyPushService : ApplicationService, IDailyPushService
                         {
                             UserId = userId,
                             DeviceId = device.DeviceId,
-                            PushToken = TruncateToken(device.PushToken),
+                            PushToken = device.PushToken, // Show full pushToken for testing interface
                             TimeZoneId = device.TimeZoneId,
                             PushLanguage = device.PushLanguage ?? "en",
                             PushEnabled = device.PushEnabled,
@@ -328,14 +328,17 @@ public class DailyPushService : ApplicationService, IDailyPushService
     }
     
     /// <summary>
-    /// Truncate push token for privacy protection
+    /// Truncate push token for privacy protection - DISABLED for testing interface
     /// </summary>
     private static string TruncateToken(string token)
     {
-        if (string.IsNullOrEmpty(token) || token.Length <= 10)
-            return token;
-            
-        return $"{token[..5]}...{token[^5..]}";
+        // Return full token for testing interface
+        return token;
+        
+        // Original privacy protection logic (commented out for testing)
+        // if (string.IsNullOrEmpty(token) || token.Length <= 10)
+        //     return token;
+        // return $"{token[..5]}...{token[^5..]}";
     }
     
     public async Task<object> SendInstantPushAsync(string timezone = "Asia/Shanghai")
