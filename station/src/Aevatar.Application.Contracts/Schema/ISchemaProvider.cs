@@ -7,7 +7,7 @@ namespace Aevatar.Schema;
 
 public interface ISchemaProvider
 {
-    JsonSchema GetTypeSchema(Type type);
+    JsonSchema GetTypeSchema(Type type, SchemaProcessingContext? context = null);
 
     Dictionary<string, string> ConvertValidateError(ICollection<ValidationError> errors);
 }

@@ -43,6 +43,7 @@ public class AgentService : ApplicationService, IAgentService
     private readonly GrainTypeResolver _grainTypeResolver;
     private readonly ISchemaProvider _schemaProvider;
     private readonly IIndexingService _indexingService;
+    private readonly IDocumentLinkService _documentLinkService;
 
     public AgentService(
         IClusterClient clusterClient,
@@ -54,7 +55,8 @@ public class AgentService : ApplicationService, IAgentService
         IOptionsMonitor<AgentDefaultValuesOptions> agentDefaultValuesOptions,
         GrainTypeResolver grainTypeResolver,
         ISchemaProvider schemaProvider,
-        IIndexingService indexingService)
+        IIndexingService indexingService,
+        IDocumentLinkService documentLinkService)
     {
         _clusterClient = clusterClient;
         _logger = logger;
@@ -66,8 +68,9 @@ public class AgentService : ApplicationService, IAgentService
         _grainTypeResolver = grainTypeResolver;
         _schemaProvider = schemaProvider;
         _indexingService = indexingService;
+        _documentLinkService = documentLinkService;
     }
-
+    
     private async Task<Dictionary<string, AgentTypeData?>> GetAgentTypeDataMap()
     {
         var systemAgents = _agentOptions.CurrentValue.SystemAgentList;
@@ -191,8 +194,10 @@ public class AgentService : ApplicationService, IAgentService
                         Type = p.Type.ToString()
                     }).ToList();
 
+                    // Create schema context with documentation link validation
+                    var context = await CreateSchemaContextAsync(kvp.Value.InitializationData.DtoType);
                     paramDto.PropertyJsonSchema =
-                        _schemaProvider.GetTypeSchema(kvp.Value.InitializationData.DtoType).ToJson();
+                        _schemaProvider.GetTypeSchema(kvp.Value.InitializationData.DtoType, context).ToJson();
 
                     // Get default values
                     paramDto.DefaultValues =
@@ -345,7 +350,8 @@ public class AgentService : ApplicationService, IAgentService
         var configuration = await GetAgentConfigurationAsync(businessAgent);
         if (configuration != null)
         {
-            resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration.DtoType).ToJson();
+            var context = await CreateSchemaContextAsync(configuration.DtoType);
+            resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration.DtoType, context).ToJson();
         }
 
         return resp;
@@ -518,7 +524,8 @@ public class AgentService : ApplicationService, IAgentService
         var configuration = await GetAgentConfigurationAsync(businessAgent);
         if (configuration != null)
         {
-            resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration.DtoType).ToJson();
+            var context = await CreateSchemaContextAsync(configuration.DtoType);
+            resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration.DtoType, context).ToJson();
         }
 
         return resp;
@@ -738,5 +745,35 @@ public class AgentService : ApplicationService, IAgentService
             _logger.LogInformation("Agent {agentId} has parent, please remove from it first.", guid);
             throw new UserFriendlyException("Agent has parent, please remove from it first.");
         }
+    }
+
+    /// <summary>
+    /// Creates schema processing context by scanning configuration type for documentation links
+    /// </summary>
+    /// <param name="configurationType">The configuration type to scan</param>
+    /// <returns>Schema processing context with invalid URLs</returns>
+    private async Task<SchemaProcessingContext> CreateSchemaContextAsync(Type configurationType)
+    {
+        var context = new SchemaProcessingContext();
+        var properties = configurationType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+        
+        foreach (var property in properties)
+        {
+            var docLinkAttributes = property.GetCustomAttributes<Aevatar.GAgents.Basic.Common.DocumentationLinkAttribute>(true);
+            
+            foreach (var attribute in docLinkAttributes)
+            {
+                var url = attribute.DocumentationUrl;
+                if (string.IsNullOrWhiteSpace(url)) continue;
+
+                var isValid = await _documentLinkService.GetDocumentLinkStatusAsync(url);
+                if (!isValid)
+                {
+                    context.InvalidUrls.Add(url);
+                }
+            }
+        }
+
+        return context;
     }
 }
