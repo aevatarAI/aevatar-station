@@ -23,8 +23,11 @@ using Aevatar.Application.Grains.TwitterInteraction;
 using Aevatar.Application.Grains.TwitterInteraction.Dtos;
 using Aevatar.Application.Grains.UserBilling;
 using Aevatar.Application.Grains.UserQuota;
+using Aevatar.Application.Grains.UserStatistics;
+using Aevatar.Application.Grains.UserStatistics.Dtos;
 using Aevatar.Common.Options;
 using Aevatar.Domain.Shared;
+using Aevatar.Dtos;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
 using Aevatar.GodGPT.Dtos;
@@ -32,6 +35,7 @@ using Aevatar.Quantum;
 using GodGPT.GAgents;
 using GodGPT.GAgents.Awakening;
 using GodGPT.GAgents.SpeechChat;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
@@ -139,6 +143,9 @@ public interface IGodGPTService
     /// <param name="userId">User ID to reset awakening state for</param>
     /// <returns>True if reset was successful</returns>
     Task<bool> ResetAwakeningStateForTestingAsync(Guid userId);
+
+    Task<AppRatingRecordDto> RecordAppRatingAsync(Guid currentUserId, RecordAppRatingInput input);
+    Task<bool> CanUserRateAppAsync(Guid currentUserId, CanUserRateAppInput input);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -1193,6 +1200,18 @@ public class GodGPTService : ApplicationService, IGodGPTService
             _logger.LogError(ex, "[GodGPTService][ResetAwakeningStateForTestingAsync] Error resetting awakening state for userId: {UserId}", userId);
             return false;
         }
+    }
+
+    public async Task<AppRatingRecordDto> RecordAppRatingAsync(Guid currentUserId, RecordAppRatingInput input)
+    {
+        var userStatisticsGAgent = _clusterClient.GetGrain<IUserStatisticsGAgent>(currentUserId);
+        return await userStatisticsGAgent.RecordAppRatingAsync(input.Platform, input.DeviceId);
+    }
+
+    public async Task<bool> CanUserRateAppAsync(Guid currentUserId, CanUserRateAppInput input)
+    {
+        var userStatisticsGAgent = _clusterClient.GetGrain<IUserStatisticsGAgent>(currentUserId);
+        return await userStatisticsGAgent.CanUserRateAppAsync(input.DeviceId);
     }
 
     public async Task<bool> CheckIsManager(string userId)

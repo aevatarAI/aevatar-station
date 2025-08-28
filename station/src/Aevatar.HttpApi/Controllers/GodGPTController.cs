@@ -15,8 +15,10 @@ using Aevatar.Application.Grains.Agents.ChatManager.Common;
 using Aevatar.Application.Grains.Agents.ChatManager.Dtos;
 using Aevatar.Application.Grains.ChatManager.Dtos;
 using Aevatar.Application.Grains.ChatManager.UserQuota;
+using Aevatar.Application.Grains.UserStatistics.Dtos;
 using Aevatar.BlobStorings;
 using Aevatar.Core.Abstractions;
+using Aevatar.Dtos;
 using Aevatar.Extensions;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GodGPT.Dtos;
@@ -812,5 +814,27 @@ public class GodGPTController : AevatarController
                 ErrorMessage = "Internal server error"
             });
         }
+    }
+    
+    [HttpPost("godgpt/user-statistics/app-rating")]
+    public async Task<AppRatingRecordDto> RecordAppRatingAsync(RecordAppRatingInput input)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var response = await _godGptService.RecordAppRatingAsync(currentUserId, input);
+        _logger.LogDebug("[GodGPTController][RecordAppRatingAsync] userId: {0}, duration: {3}ms",
+            currentUserId, stopwatch.ElapsedMilliseconds);
+        return response;
+    }
+    
+    [HttpPost("godgpt/user-statistics/can-rate")]
+    public async Task<bool> CanUserRateAppAsync(CanUserRateAppInput input)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var currentUserId = (Guid)CurrentUser.Id!;
+        var response = await _godGptService.CanUserRateAppAsync(currentUserId, input);
+        _logger.LogDebug("[GodGPTController][CanUserRateAppAsync] userId: {0}, duration: {3}ms",
+            currentUserId, stopwatch.ElapsedMilliseconds);
+        return response;
     }
 }
