@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Aevatar.Service;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -9,11 +10,13 @@ namespace Aevatar.Background
     public class DocumentLinkScheduledTask : BackgroundService
     {
         private readonly ILogger<DocumentLinkScheduledTask> _logger;
-        private readonly TimeSpan _delay = TimeSpan.FromMinutes(1);
+        private readonly IDocumentLinkService _documentLinkService;
+        private readonly TimeSpan _delay = TimeSpan.FromMinutes(30);
 
-        public DocumentLinkScheduledTask(ILogger<DocumentLinkScheduledTask> logger)
+        public DocumentLinkScheduledTask(ILogger<DocumentLinkScheduledTask> logger, IDocumentLinkService documentLinkService)
         {
             _logger = logger;
+            _documentLinkService = documentLinkService;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -50,8 +53,8 @@ namespace Aevatar.Background
 
         private async Task RunOnceAsync(CancellationToken cancellationToken)
         {
-            // TODO: Implement scheduled logic here
             _logger.LogInformation("DocumentLinkScheduledTask tick at: {time}", DateTimeOffset.Now);
+            await _documentLinkService.RefreshDocumentLinkStatusAsync();
             await Task.CompletedTask;
         }
     }
