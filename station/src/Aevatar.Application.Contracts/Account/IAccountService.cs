@@ -13,4 +13,5 @@ public interface IAccountService: IAccountAppService
     Task<bool> CheckEmailRegisteredAsync(CheckEmailRegisteredDto input);
     Task<bool> VerifyEmailRegistrationWithTimeAsync(CheckEmailRegisteredDto input);
     Task<IdentityUserDto> GodgptRegisterAsync(GodGptRegisterDto input, GodGPTChatLanguage language = GodGPTChatLanguage.English);
+    Task SendPasswordResetCodeAsync(SendPasswordResetCodeDto input, GodGPTChatLanguage language);
 }

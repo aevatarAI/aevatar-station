@@ -116,7 +116,8 @@ public class AccountController : AevatarController
     [Route("send-password-reset-code")]
     public virtual Task SendPasswordResetCodeAsync(SendPasswordResetCodeDto input)
     {
-        return _accountService.SendPasswordResetCodeAsync(input);
+        var language = HttpContext.GetGodGPTLanguage();
+        return _accountService.SendPasswordResetCodeAsync(input, language);
     }
 
     [HttpPost]
