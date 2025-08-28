@@ -7,7 +7,9 @@ using Aevatar.Application.Contracts.Services;
 using Aevatar.Domain.Shared;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Orleans.Runtime;
 using Volo.Abp;
 using Volo.Abp.Account.Emailing;
 using Volo.Abp.Account.Emailing.Templates;
@@ -37,10 +39,11 @@ public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependenc
     private readonly IDistributedCache<string,string> _lastEmailCache;
     private readonly DistributedCacheEntryOptions _defaultCacheOptions;
     private readonly ILocalizationService _localizationService;
+    private readonly ILogger<AevatarAccountEmailer> _logger;
 
     public AevatarAccountEmailer(IEmailSender emailSender, ITemplateRenderer templateRenderer,
         IStringLocalizer<AccountResource> stringLocalizer, IOptionsSnapshot<AccountOptions> accountOptions,
-        IDistributedCache<string,string> lastEmailCache,ILocalizationService localizationService)
+        IDistributedCache<string,string> lastEmailCache,ILocalizationService localizationService,ILogger<AevatarAccountEmailer> logger)
     {
         _emailSender = emailSender;
         _templateRenderer = templateRenderer;
@@ -48,6 +51,7 @@ public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependenc
         _lastEmailCache = lastEmailCache;
         _accountOptions = accountOptions.Value;
         _localizationService = localizationService;
+        _logger = logger;
 
         _defaultCacheOptions = new DistributedCacheEntryOptions
         {
@@ -74,6 +78,19 @@ public class AevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependenc
     public async Task SendPasswordResetLinkAsync(IdentityUser user, string inputEmail, string resetToken,GodGPTChatLanguage language = GodGPTChatLanguage.English)
     {
         var url = _accountOptions.ResetPasswordUrl;
+        var context = RequestContext.Get("IsCN");
+        var isCN = RequestContext.Get("IsCN") is bool cnValue and true;        
+        if (isCN)
+        {
+            url = _accountOptions.CNResetPasswordUrl;
+            if (url.IsNullOrEmpty())
+            {
+                _logger.LogDebug("[AevatarAccountEmailer][SendPasswordResetLinkAsync] CNResetPasswordUrl not found");
+                url = _accountOptions.ResetPasswordUrl;
+            }
+        }
+        _logger.LogDebug("[AevatarAccountEmailer][SendPasswordResetLinkAsync] reset url:{url},requestContext:{context} isCN:{isCN}", url, context, isCN);
+
         var link = $"{url}?userId={user.Id}&email={UrlEncoder.Default.Encode(inputEmail)}&resetToken={UrlEncoder.Default.Encode(resetToken)}";
 
         var emailContent = await _templateRenderer.RenderAsync(
