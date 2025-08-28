@@ -388,19 +388,14 @@ public class AgentService : ApplicationService, IAgentService
             var subAgent = await _gAgentFactory.GetGAgentAsync(subAgentGrainId);
             var subAgentGuid = subAgent.GetPrimaryKey();
 
-            if (removeSubAgentDto.RemovedSubAgents.Contains(subAgentGuid))
-            {
-                await agent.UnregisterAsync(subAgent);
-            }
+            if (removeSubAgentDto.RemovedSubAgents.Contains(subAgentGuid)) await agent.UnregisterAsync(subAgent);
             else
             {
                 remainSubAgentGuids.Add(subAgentGuid);
                 var eventsHandledByAgent = await subAgent.GetAllSubscribedEventsAsync();
-                if (eventsHandledByAgent != null)
-                {
-                    var eventsToAdd = eventsHandledByAgent.Except(allEventsHandled).ToList();
-                    allEventsHandled.AddRange(eventsToAdd);
-                }
+                if (eventsHandledByAgent == null) continue;
+                var eventsToAdd = eventsHandledByAgent.Except(allEventsHandled).ToList();
+                allEventsHandled.AddRange(eventsToAdd);
             }
         }
 
@@ -460,10 +455,7 @@ public class AgentService : ApplicationService, IAgentService
         var parentGrainId = await agent.GetParentAsync();
         if (parentGrainId.IsDefault)
         {
-            if (subAgentGrainIds.Any())
-            {
-                await agent.UnregisterAsync(creatorAgent);
-            }
+            if (subAgentGrainIds.Any()) await agent.UnregisterAsync(creatorAgent);
 
             await creatorAgent.DeleteAgentAsync();
         }
@@ -556,33 +548,28 @@ public class AgentService : ApplicationService, IAgentService
             var instance = Activator.CreateInstance(configurationType);
             if (instance != null)
             {
-                var properties =
-                    configurationType.GetProperties(BindingFlags.Public | BindingFlags.Instance |
-                                                    BindingFlags.DeclaredOnly);
+                var properties = configurationType.GetProperties(BindingFlags.Public | 
+                    BindingFlags.Instance | BindingFlags.DeclaredOnly);
 
                 foreach (var property in properties)
                 {
                     var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
                     try
                     {
-                        var value = property.GetValue(instance);
-                        defaultValues[propertyName] = value;
+                        defaultValues[propertyName] = property.GetValue(instance);
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
-                        _logger.LogWarning(ex,
-                            "Failed to get default value for property {PropertyName} in {ConfigType}",
-                            property.Name, configurationType.Name);
-                        // Return null for exception cases
                         defaultValues[propertyName] = null;
                     }
+                    _logger.LogWarning("Get default value {Value} for property {PropertyName} in {ConfigType}",
+                            defaultValues[propertyName], property.Name, configurationType.Name);
                 }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to create instance of configuration type {ConfigType}",
-                configurationType.Name);
+            _logger.LogWarning(ex, "Failed to create instance of configuration type {ConfigType}", configurationType.Name);
         }
 
         return defaultValues;
@@ -595,21 +582,11 @@ public class AgentService : ApplicationService, IAgentService
 
         var config = (ConfigurationBase)actualDto!;
         var schema = _schemaProvider.GetTypeSchema(config.GetType());
-        var validateResponse = schema.Validate(propertiesString, new JsonSchemaValidatorSettings
-        {
-            PropertyStringComparer = StringComparer.CurrentCultureIgnoreCase
-        });
-        if (validateResponse.Count > 0)
-        {
-            var validateDic = _schemaProvider.ConvertValidateError(validateResponse);
-            throw new ParameterValidateException(validateDic);
-        }
+        var validateResponse = schema.Validate(propertiesString, new JsonSchemaValidatorSettings { PropertyStringComparer = StringComparer.CurrentCultureIgnoreCase });
+        if (validateResponse.Count > 0) throw new UserFriendlyException("[AgentService][SetupInitializedConfig] Setup configuration data error");
 
         config = JsonConvert.DeserializeObject(propertiesString, configuration.DtoType) as ConfigurationBase;
-        if (config == null)
-        {
-            throw new BusinessException("[AgentService][SetupInitializedConfig] config convert error");
-        }
+        if (config == null) throw new UserFriendlyException("[AgentService][SetupInitializedConfig] config convert error");
 
         return config;
     }
