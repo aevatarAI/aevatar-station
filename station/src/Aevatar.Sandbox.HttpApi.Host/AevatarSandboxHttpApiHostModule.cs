@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.Extensions.Configuration;
@@ -11,12 +12,17 @@ using Microsoft.OpenApi.Models;
 using Aevatar.Kubernetes.Manager;
 using Aevatar.Sandbox.Abstractions.Contracts;
 using Aevatar.Sandbox.Abstractions.Services;
+using Aevatar.Sandbox.HttpApi.Host.Authentication;
 using Aevatar.Sandbox.Kubernetes.Adapter;
 using Aevatar.Sandbox.Kubernetes.Manager;
 using Aevatar.Sandbox.Python.Services;
 using Volo.Abp;
 using Volo.Abp.AspNetCore.Mvc;
+using Volo.Abp.AspNetCore.Mvc.Libs;
+using Volo.Abp.AspNetCore.Mvc.UI;
+using Volo.Abp.AspNetCore.Mvc.UI.Bundling;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite;
+using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
 using Volo.Abp.Modularity;
@@ -42,6 +48,9 @@ public class AevatarSandboxHttpApiHostModule : AbpModule
         ConfigureSwaggerServices(context, configuration);
         ConfigureCors(context, configuration);
         ConfigureSandboxServices(context);
+        
+        // 不需要前端库检查，因为我们只提供API
+        Configure<AbpMvcLibsOptions>(options => { options.CheckLibs = false; });
 
         context.Services.AddHealthChecks();
     }
@@ -67,13 +76,12 @@ public class AevatarSandboxHttpApiHostModule : AbpModule
 
     private void ConfigureAuthentication(ServiceConfigurationContext context, IConfiguration configuration)
     {
-        context.Services.AddAuthentication()
-            .AddJwtBearer(options =>
-            {
-                options.Authority = configuration["AuthServer:Authority"];
-                options.RequireHttpsMetadata = Convert.ToBoolean(configuration["AuthServer:RequireHttpsMetadata"]);
-                options.Audience = "Sandbox";
-            });
+        // 完全禁用认证，仅用于开发环境
+        context.Services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = "NoAuth";
+            options.DefaultChallengeScheme = "NoAuth";
+        }).AddScheme<AuthenticationSchemeOptions, NoAuthHandler>("NoAuth", options => { });
     }
 
     private void ConfigureSwaggerServices(ServiceConfigurationContext context, IConfiguration configuration)

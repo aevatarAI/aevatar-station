@@ -10,12 +10,14 @@ using Orleans.Hosting;
 using Orleans.Serialization;
 using Orleans.Streams.Kafka.Config;
 using Serilog;
+using Aevatar.Core.Interception.Extensions;
+using Orleans.Providers.MongoDB.Configuration;
 
-namespace Aevatar.Sandbox.HttpApi.Host.Extensions;
+namespace Aevatar.Extensions;
 
-public static class OrleansHostExtensions
+public static class OrleansClientExtension
 {
-    public static IHostBuilder UseOrleansClientConfigration(this IHostBuilder hostBuilder)
+    public static IHostBuilder UseOrleansClientConfiguration(this IHostBuilder hostBuilder)
     {
         return hostBuilder.UseOrleansClient((context, clientBuilder) =>
         {
@@ -25,26 +27,27 @@ public static class OrleansHostExtensions
             if (configSection == null)
                 throw new ArgumentNullException(nameof(configSection), "The Orleans config node is missing");
                 
-            // Configure Gateway connection
-            // 使用静态集群连接，完全禁用MongoDB集群发现
-            clientBuilder.UseStaticClustering(new IPEndPoint(IPAddress.Loopback, 20001))
+            clientBuilder.UseMongoDBClient(configSection.GetValue<string>("MongoDBClient"))
+                .UseMongoDBClustering(options =>
+                {
+                    options.DatabaseName = configSection.GetValue<string>("DataBase");
+                    options.Strategy = MongoDBMembershipStrategy.SingleDocument;
+                    options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" : $"Orleans{hostId}";
+                })
                 .Configure<ClusterOptions>(options =>
                 {
                     options.ClusterId = configSection.GetValue<string>("ClusterId");
                     options.ServiceId = configSection.GetValue<string>("ServiceId");
-                });
-                
-            // 保留MongoDB客户端用于其他存储，但不使用集群发现
-            clientBuilder.UseMongoDBClient(configSection.GetValue<string>("MongoDBClient"))
+                })
                 .Configure<ClientMessagingOptions>(options =>
                 {
-                    options.ResponseTimeout = TimeSpan.FromSeconds(10); // 增加响应超时时间
-                    options.ResponseTimeoutWithDebugger = TimeSpan.FromSeconds(10);
+                    options.ResponseTimeout = TimeSpan.FromSeconds(30); // 增加响应超时时间
+                    options.ResponseTimeoutWithDebugger = TimeSpan.FromSeconds(30);
                     options.DropExpiredMessages = false; // 不丢弃过期消息
                 })
                 .Configure<ConnectionOptions>(options => 
                 {
-                    options.OpenConnectionTimeout = TimeSpan.FromSeconds(10); // 增加连接打开超时
+                    options.OpenConnectionTimeout = TimeSpan.FromSeconds(30); // 增加连接打开超时
                 });
                 
             // 配置其他选项
@@ -55,7 +58,9 @@ public static class OrleansHostExtensions
                     options.SupportedNamespacePrefixes.Add("Newtonsoft.Json");
                     options.SupportedNamespacePrefixes.Add("MongoDB.Driver");
                 })
-                .AddActivityPropagation();
+                .AddActivityPropagation()
+                .AddTraceContextFilters() // Add trace context filters for grain calls
+                .UseAevatar();
                 
             var streamProvider = config.GetSection("OrleansStream:Provider").Get<string>();
             Log.Information("Stream Provider: {streamProvider}", streamProvider);

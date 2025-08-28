@@ -280,6 +280,30 @@ public class Program
             .WithEnvironment("SwaggerUI__DefaultModelsExpandDepth", "-1")
             .WithHttpEndpoint(port: 7003, name: "developerhost-http");
 
+// Add Aevatar.Sandbox.HttpApi.Host project with its dependencies
+        var sandboxHttpApiHost = builder.AddProject("sandboxhttpapi", "../Aevatar.Sandbox.HttpApi.Host/Aevatar.Sandbox.HttpApi.Host.csproj")
+            .WithReference(siloScheduler)
+            // Wait for dependencies
+            .WaitFor(siloScheduler)
+            .WaitFor(k3s)
+            // Setting environment variables individually
+            .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
+            .WithEnvironment("MongoDB__ConnectionString", "{mongodb.connectionString}")
+            .WithEnvironment("AevatarOrleans__MongoDBClient", "{mongodb.connectionString}")
+            .WithEnvironment("Orleans__ClusterId", "AevatarSiloCluster")
+            .WithEnvironment("Orleans__ServiceId", "AevatarBasicService")
+            .WithEnvironment("Orleans__DataBase", "AevatarDb")
+            .WithEnvironment("Host__HostId", "Aevatar")
+            .WithEnvironment("AuthServer__Authority", "http://localhost:7001")
+            // Configure Kubernetes to use k3s
+            .WithEnvironment("Kubernetes__InCluster", "false")
+            .WithEnvironment("Kubernetes__KubeConfig", Path.Combine(Environment.CurrentDirectory, "data", "k3s", "kubeconfig", "kubeconfig.yaml"))
+            .WithEnvironment("Kubernetes__Namespace", "sandbox")
+            // Configure Swagger as default page
+            .WithEnvironment("SwaggerUI__RoutePrefix", "")
+            .WithEnvironment("SwaggerUI__DefaultModelsExpandDepth", "-1")
+            .WithHttpEndpoint(port: 7004, name: "sandboxhttpapi-http");
+
 // Add Aevatar.Worker project with its dependencies
         var worker = builder.AddProject("worker", "../Aevatar.Worker/Aevatar.Worker.csproj")
             // .WithReference(mongodb)

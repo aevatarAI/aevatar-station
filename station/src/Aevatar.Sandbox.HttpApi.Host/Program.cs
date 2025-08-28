@@ -11,7 +11,7 @@ using Orleans.Hosting;
 using Serilog;
 using Serilog.Events;
 using Aevatar.Domain.Shared.Configuration;
-using Aevatar.Sandbox.HttpApi.Host.Extensions;
+using Aevatar.Extensions;
 
 namespace Aevatar.Sandbox;
 
@@ -36,7 +36,7 @@ public class Program
                 .AddEnvironmentVariables();
 
             builder.Host
-                .UseOrleansClientConfigration()
+                .UseOrleansClientConfiguration()
                 .ConfigureDefaults(args)
                 .UseAutofac()
                 .UseSerilog();
