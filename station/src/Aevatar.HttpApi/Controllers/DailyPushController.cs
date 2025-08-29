@@ -5,9 +5,11 @@ using Aevatar.Application.Constants;
 using Aevatar.Application.Contracts.DailyPush;
 using Aevatar.Application.Contracts.Services;
 using Aevatar.Extensions;
+using GodGPT.GAgents.DailyPush;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Orleans;
 using Volo.Abp;
 using Volo.Abp.AspNetCore.Mvc;
 
@@ -24,22 +26,25 @@ public class DailyPushController : AbpControllerBase
     private readonly IDailyPushService _dailyPushService;
     private readonly ILogger<DailyPushController> _logger;
     private readonly ILocalizationService _localizationService;
+    private readonly IGrainFactory _grainFactory;
 
     public DailyPushController(
         IDailyPushService dailyPushService, 
         ILogger<DailyPushController> logger,
-        ILocalizationService localizationService)
+        ILocalizationService localizationService,
+        IGrainFactory grainFactory)
     {
         _dailyPushService = dailyPushService;
         _logger = logger;
         _localizationService = localizationService;
+        _grainFactory = grainFactory;
     }
 
     /// <summary>
     /// Register or update device for daily push notifications
     /// </summary>
     [HttpPost("device")]
-    public async Task<IActionResult> RegisterDeviceAsync([FromBody] DeviceRequest request)
+    public async Task<IActionResult> RegisterDeviceAsync([FromBody] Aevatar.Application.Contracts.DailyPush.DeviceRequest request)
     {
         try
         {
@@ -384,6 +389,97 @@ public class DailyPushController : AbpControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to clear read status for user");
+            return StatusCode(500, new {
+                error = new { code = 500, message = "Internal server error" },
+                result = false
+            });
+        }
+    }
+
+    /// <summary>
+    /// Manually trigger daily push for testing - TODO: Remove before production
+    /// </summary>
+    /// <param name="timezone">Target timezone (default: Asia/Shanghai)</param>
+    /// <param name="type">Push type: "morning" for 8AM push, "retry" for 3PM retry push (default: morning)</param>
+    /// <param name="targetDate">Target date for push (format: yyyy-MM-dd, default: today)</param>
+    [HttpPost("test/trigger-daily-push")]
+    public async Task<IActionResult> TriggerDailyPush(
+        [FromQuery] string timezone = "Asia/Shanghai", 
+        [FromQuery] string type = "morning",
+        [FromQuery] string? targetDate = null)
+    {
+        try
+        {
+            // Validate timezone
+            if (string.IsNullOrEmpty(timezone))
+            {
+                var language = HttpContext.GetGodGPTLanguage();
+                var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InvalidRequest, language);
+                return BadRequest(new {
+                    error = new { code = 1, message = $"{localizedMessage}: timezone is required" },
+                    result = false
+                });
+            }
+
+            // Validate push type
+            type = type?.ToLower() ?? "morning";
+            if (type != "morning" && type != "retry")
+            {
+                var language = HttpContext.GetGodGPTLanguage();
+                var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InvalidRequest, language);
+                return BadRequest(new {
+                    error = new { code = 1, message = $"{localizedMessage}: type must be 'morning' or 'retry'" },
+                    result = false
+                });
+            }
+
+            // Parse target date
+            DateTime parsedTargetDate;
+            if (string.IsNullOrEmpty(targetDate))
+            {
+                parsedTargetDate = DateTime.UtcNow.Date;
+            }
+            else if (!DateTime.TryParseExact(targetDate, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out parsedTargetDate))
+            {
+                var language = HttpContext.GetGodGPTLanguage();
+                var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InvalidRequest, language);
+                return BadRequest(new {
+                    error = new { code = 1, message = $"{localizedMessage}: targetDate must be in format yyyy-MM-dd" },
+                    result = false
+                });
+            }
+
+            _logger.LogInformation("Manually triggering {PushType} daily push for timezone {TimeZone} on {TargetDate}", 
+                type, timezone, parsedTargetDate.ToString("yyyy-MM-dd"));
+
+            // Get the DailyPushCoordinatorGAgent for the timezone
+            var coordinatorGAgent = _grainFactory.GetGrain<IDailyPushCoordinatorGAgent>(
+                DailyPushConstants.TimezoneToGuid(timezone));
+
+            // Trigger the appropriate push type
+            if (type == "morning")
+            {
+                await coordinatorGAgent.ProcessMorningPushAsync(parsedTargetDate);
+                _logger.LogInformation("✅ Morning push triggered successfully for timezone {TimeZone}", timezone);
+            }
+            else // retry
+            {
+                await coordinatorGAgent.ProcessAfternoonRetryAsync(parsedTargetDate);
+                _logger.LogInformation("✅ Afternoon retry push triggered successfully for timezone {TimeZone}", timezone);
+            }
+
+            return Ok(new {
+                result = true,
+                message = $"{type} daily push triggered successfully",
+                timezone = timezone,
+                type = type,
+                targetDate = parsedTargetDate.ToString("yyyy-MM-dd"),
+                timestamp = DateTime.Now
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to trigger daily push for timezone {TimeZone}, type {Type}", timezone, type);
             return StatusCode(500, new {
                 error = new { code = 500, message = "Internal server error" },
                 result = false
