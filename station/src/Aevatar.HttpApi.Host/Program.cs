@@ -11,6 +11,7 @@ using Aevatar.Handler;
 using Aevatar.Hubs;
 using Aevatar.SignalR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Rewrite;
 using Orleans.Hosting;
 using Serilog;
 using Serilog.Events;
@@ -45,6 +46,14 @@ public class Program
             
             // Add trace context middleware to capture trace IDs from HTTP requests
             app.UseTraceContext();
+            
+            // URL rewriting for local development only
+            if (app.Environment.IsDevelopment())
+            {
+                var rewriteOptions = new RewriteOptions()
+                    .AddRewrite(@"^/[^/]*-client(/.*)?$", "$1", skipRemainingRules: true);
+                app.UseRewriter(rewriteOptions);
+            }
             
             app.MapHub<AevatarSignalRHub>("api/agent/aevatarHub");
             app.MapHub<StationSignalRHub>("api/notifications").RequireAuthorization();
