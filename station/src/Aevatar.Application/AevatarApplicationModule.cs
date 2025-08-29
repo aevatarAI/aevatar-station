@@ -17,6 +17,7 @@ using Aevatar.Plugins;
 using Aevatar.Schema;
 using Aevatar.WebHook.Deploy;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Orleans;
 using Volo.Abp.Account;
 using Volo.Abp.AspNetCore.Mvc.Dapr;
@@ -86,8 +87,25 @@ public class AevatarApplicationModule : AbpModule
         // 配置 SystemLLM 元信息选项
         Configure<SystemLLMMetaInfoOptions>(configuration.GetSection("SystemLLMConfig"));
         
+        // Configure local development email service
+        ConfigureLocalDevelopmentServices(context);
+        
         // 配置工作流编排服务
         ConfigureWorkflowOrchestrationServices(context);
+    }
+    
+    /// <summary>
+    /// Configure local development specific services
+    /// </summary>
+    private void ConfigureLocalDevelopmentServices(ServiceConfigurationContext context)
+    {
+        var hostingEnvironment = context.Services.GetHostingEnvironment();
+        
+        if (hostingEnvironment.IsDevelopment())
+        {
+            // Use local development emailer that only logs instead of sending real emails
+            context.Services.AddTransient<IAevatarAccountEmailer, LocalDevelopmentAevatarAccountEmailer>();
+        }
     }
     
     /// <summary>
