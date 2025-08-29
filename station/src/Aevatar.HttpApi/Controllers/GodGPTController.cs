@@ -842,7 +842,7 @@ public class GodGPTController : AevatarController
         return response;
     }
     
-    [HttpPost("godgpt/user-statistics/can-rate")]
+    [HttpGet("godgpt/user-statistics/can-rate")]
     public async Task<bool> CanUserRateAppAsync(CanUserRateAppInput input)
     {
         var stopwatch = Stopwatch.StartNew();
