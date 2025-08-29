@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+        <Nullable>enable</Nullable>
+        <RootNamespace>Aevatar.GAgents.AI</RootNamespace>
+        <PackageId>Aevatar.GAgents.AI.Abstractions</PackageId>
+        <PackageType>Dependency</PackageType>
+        <Title>Aevatar GAgents</Title>
+        <Authors>AElf</Authors>
+        <Description>The abstraction package to the Aevatar.GAgents.AI framework.</Description>
+        <PackageTags>agent</PackageTags>
+        <RepositoryUrl>https://github.com/AevatarAI/Aevatar.GAgents-framework</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageProjectUrl>https://github.com/aevatarAI/aevatar-gagents</PackageProjectUrl>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="System.Configuration.ConfigurationManager" />
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Aevatar.Core" />
+        <PackageReference Include="Aevatar.Core.Abstractions" />
+    </ItemGroup>
+</Project>

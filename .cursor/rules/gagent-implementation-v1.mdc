@@ -1,0 +1,599 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# GAgent 实现指南
+
+## 概述
+本指南提供了在 Aevatar 框架中实现 GAgent 的全面规则和最佳实践。这些规则是通用的，可以应用于任何基于 Aevatar 的项目。
+
+## 第一部分：核心实现规则
+
+### 1.1 先定义接口
+```csharp
+// 普通 GAgent（无 AI）
+public interface IMyGAgent : IStateGAgent<MyState>
+{
+    // 根据需要添加自定义方法
+}
+
+// AI 增强的 GAgent
+public interface IMyAIGAgent : IStateGAgent<MyAIState>, IAIGAgent
+{
+    // 根据需要添加自定义方法
+}
+```
+
+### 1.2 基本结构
+```csharp
+using Aevatar.Core;
+using Aevatar.Core.Abstractions;
+
+[GAgent("my-agent", "workshop")]  // 必需的特性
+public class MyGAgent : GAgentBase<MyState, MyStateLogEvent>, IMyGAgent
+{
+    // 不要使用带参数的构造函数！
+    
+    public override Task<string> GetDescriptionAsync()
+        => Task.FromResult("此 GAgent 的详细描述");
+}
+```
+
+### 1.3 核心继承规则
+
+#### GAgentBase 继承
+```csharp
+// 普通 GAgent
+public class MyGAgent : GAgentBase<MyState, MyStateLogEvent>, IMyGAgent
+{
+    // 实现
+}
+
+// AI 增强的 GAgent
+public class MyAIGAgent : AIGAgentBase<MyState, MyStateLogEvent>, IMyAIGAgent
+{
+    // 实现
+}
+```
+
+### 1.4 绝对不要做这些
+```csharp
+// ❌ 绝不要注入 logger
+public MyGAgent(ILogger<MyGAgent> logger) { }
+
+// ❌ 绝不要直接修改状态  
+State.Counter++;
+
+// ❌ 绝不要使用 IGrainFactory
+var grainFactory = ServiceProvider.GetRequiredService<IGrainFactory>();
+```
+
+### 1.5 服务访问模式
+```csharp
+// 简单的延迟加载服务属性
+private IGAgentFactory GAgentFactory => 
+    ServiceProvider.GetRequiredService<IGAgentFactory>();
+
+// 直接使用
+var agent = await GAgentFactory.GetGAgentAsync<IOtherGAgent>(id);
+```
+
+## 第二部分：状态管理规则
+
+### 2.1 状态管理（Orleans 事件溯源）
+```csharp
+// 步骤 1：定义状态
+[GenerateSerializer]
+public class MyState : StateBase
+{
+    [Id(0)] public int Counter { get; set; }
+    [Id(1)] public List<string> Items { get; set; } = new(); // 始终初始化！
+}
+
+// 步骤 2：定义状态更改事件
+[GenerateSerializer]
+public class MyStateLogEvent : StateLogEventBase<MyStateLogEvent> { }
+
+[GenerateSerializer]
+public class CounterIncrementedEvent : MyStateLogEvent
+{
+    [Id(0)] public int Amount { get; set; }
+}
+
+// 步骤 3：通过触发事件来更改状态
+public async Task IncrementAsync(int amount)
+{
+    RaiseEvent(new CounterIncrementedEvent { Amount = amount });
+    await ConfirmEvents();
+}
+
+// 步骤 4：在 GAgentTransitionState 中应用状态更改
+protected override void GAgentTransitionState(MyState state, StateLogEventBase<MyStateLogEvent> @event)
+{
+    switch (@event)
+    {
+        case CounterIncrementedEvent e:
+            state.Counter += e.Amount;
+            break;
+    }
+}
+```
+
+### 2.2 状态初始化
+
+状态初始化应该通过 `PerformConfigAsync` 方法完成，但必须遵守事件溯源原则，通过 `RaiseEvent` 来修改状态。这需要使用带有四个泛型参数的 GAgentBase，其中第四个参数是配置类型。
+
+#### 正确的状态初始化方式
+
+**步骤 1: 定义配置类**
+```csharp
+[GenerateSerializer]
+public class MyGAgentConfiguration : ConfigurationBase
+{
+    [Id(0)] public string InitialName { get; set; } = string.Empty;
+    [Id(1)] public int MaxRetries { get; set; } = 3;
+    [Id(2)] public Dictionary<string, string> Settings { get; set; } = new();
+}
+```
+
+**步骤 2: 定义配置相关的状态日志事件**
+```csharp
+[GenerateSerializer]
+public class SetInitialConfigurationLogEvent : MyStateLogEvent
+{
+    [Id(0)] public string Name { get; set; } = string.Empty;
+    [Id(1)] public int MaxRetries { get; set; }
+    [Id(2)] public Dictionary<string, string> Settings { get; set; } = new();
+}
+```
+
+**步骤 3: 使用带四个泛型参数的 GAgentBase 并实现 PerformConfigAsync**
+```csharp
+// 四个泛型参数: State, StateLogEvent, Event, Configuration
+public class MyGAgent : GAgentBase<MyState, MyStateLogEvent, EventBase, MyGAgentConfiguration>, IMyGAgent
+{
+    protected override async Task PerformConfigAsync(MyGAgentConfiguration configuration)
+    {
+        // 通过 RaiseEvent 来初始化状态，而不是直接修改
+        RaiseEvent(new SetInitialConfigurationLogEvent
+        {
+            Name = configuration.InitialName,
+            MaxRetries = configuration.MaxRetries,
+            Settings = configuration.Settings
+        });
+        
+        await ConfirmEvents();
+        
+        // 如果需要根据配置执行其他初始化操作
+        await PerformAdditionalInitializationAsync(configuration);
+    }
+    
+    // 在 GAgentTransitionState 中处理配置事件
+    protected override void GAgentTransitionState(MyState state, StateLogEventBase<MyStateLogEvent> @event)
+    {
+        switch (@event)
+        {
+            case SetInitialConfigurationLogEvent configEvent:
+                state.Id = this.GetGrainId().Key.ToString() ?? "default-id";
+                state.Name = configEvent.Name;
+                state.MaxRetries = configEvent.MaxRetries;
+                state.Settings = configEvent.Settings ?? new Dictionary<string, string>();
+                state.Items = new List<string>(); // 初始化集合
+                break;
+            // 处理其他事件...
+        }
+    }
+    
+    private Task PerformAdditionalInitializationAsync(MyGAgentConfiguration configuration)
+    {
+        // 执行其他不涉及状态修改的初始化操作
+        Logger.LogInformation("GAgent 已配置：{Name}", configuration.InitialName);
+        return Task.CompletedTask;
+    }
+}
+```
+
+**步骤 4: 通过 GAgentFactory 传递配置**
+```csharp
+// 创建配置实例
+var config = new MyGAgentConfiguration
+{
+    InitialName = "MyAgent",
+    MaxRetries = 5,
+    Settings = new Dictionary<string, string>
+    {
+        ["timeout"] = "30",
+        ["mode"] = "production"
+    }
+};
+
+// 通过 GAgentFactory 创建并配置 GAgent
+var myAgent = await gAgentFactory.GetGAgentAsync<IMyGAgent>(
+    Guid.NewGuid(), 
+    config  // 传递配置
+);
+
+// GAgentFactory 会自动调用 ConfigAsync，进而调用 PerformConfigAsync
+// PerformConfigAsync 会通过 RaiseEvent 触发状态更新
+// GAgentTransitionState 会应用这些状态更改
+```
+
+#### 为什么使用 PerformConfigAsync？
+
+1. **正确的生命周期**：PerformConfigAsync 在 GAgent 激活后立即调用，是初始化的正确时机
+2. **配置驱动**：通过配置对象传递初始化参数，而不是硬编码
+3. **可测试性**：可以轻松通过不同配置测试 GAgent 的行为
+4. **分离关注点**：将配置逻辑与激活逻辑分离
+5. **事件溯源合规**：所有状态更改都通过事件进行，保持了事件溯源的完整性
+
+#### 注意事项
+
+- 如果不需要配置，可以继续使用两个或三个泛型参数的 GAgentBase
+- PerformConfigAsync 中必须通过 RaiseEvent 来修改状态，不能直接赋值
+- 所有的状态初始化逻辑都应该在 GAgentTransitionState 中处理
+- 配置类必须继承自 `ConfigurationBase` 并使用 `[GenerateSerializer]` 和 `[Id(n)]` 属性
+- 记得定义相应的状态日志事件来承载配置数据
+
+### 2.3 状态日志事件
+```csharp
+[GenerateSerializer]
+public abstract record MyStateLogEvent : StateLogEventBase<MyStateLogEvent>;
+
+[GenerateSerializer]
+public record MySpecificLogEvent : MyStateLogEvent
+{
+    [Id(0)] public string Details { get; init; } = string.Empty;
+}
+```
+
+## 第三部分：重写方法
+
+### 3.1 GAgentBase 重写方法
+```csharp
+// 使用 OnGAgentActivateAsync 进行初始化
+protected override Task OnGAgentActivateAsync(CancellationToken cancellationToken)
+{
+    // 初始化逻辑
+    return base.OnGAgentActivateAsync(cancellationToken);
+}
+
+// 使用 OnDeactivateAsync 进行清理
+public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+{
+    // 清理逻辑（例如，释放定时器）
+    _timer?.Dispose();
+    return base.OnDeactivateAsync(reason, cancellationToken);
+}
+
+// 处理状态转换
+protected override void GAgentTransitionState(TState state, StateLogEventBase<TStateLogEvent> @event)
+{
+    // 状态转换逻辑
+}
+
+// 其他可重写的方法
+protected override Task HandleStateChangedAsync()
+{
+    Logger.LogInformation("状态已更改：{GrainId}", this.GetGrainId());
+    return Task.CompletedTask;
+}
+
+protected override Task OnRegisterAgentAsync(GrainId agentGuid)
+{
+    Logger.LogInformation("代理已注册：{AgentId}", agentGuid);
+    return Task.CompletedTask;
+}
+```
+
+### 3.2 AIGAgentBase 重写方法
+```csharp
+// 对于 AI GAgent，改为重写 AIGAgentTransitionState
+protected override void AIGAgentTransitionState(TState state, StateLogEventBase<TStateLogEvent> @event)
+{
+    // AI 特定的状态转换
+    // 注意：GAgentTransitionState 在 AIGAgentBase 中是密封的
+}
+
+protected override Task OnAIGAgentActivateAsync(CancellationToken cancellationToken)
+{
+    // AI GAgent 初始化
+    return Task.CompletedTask;
+}
+```
+
+## 第四部分：事件系统
+
+### 4.1 事件发布
+```csharp
+// 使用 PublishAsync 发布事件
+await PublishAsync(new MyEvent { /* 属性 */ });
+
+// 发布到特定 GAgent
+await PublishAsync(targetGrainId, new MyEvent { /* 属性 */ });
+```
+
+### 4.2 事件定义模式
+```csharp
+[GenerateSerializer]
+public record MyEvent : EventBase
+{
+    [Id(0)] public string PropertyName { get; init; } = string.Empty;
+}
+```
+
+### 4.3 事件处理器类型
+```csharp
+// 类型 1：基于特性的处理器
+[EventHandler]
+public async Task HandleMyEventAsync(MyEvent @event)
+{
+    Logger.LogInformation("处理事件：{EventId}", @event.Id);
+}
+
+// 类型 2：所有事件处理器
+[AllEventHandler(allowSelfHandling: false)]
+public Task HandleAllEventsAsync(EventWrapperBase eventWrapper)
+{
+    Logger.LogDebug("接收到事件");
+    return Task.CompletedTask;
+}
+
+// 类型 3：基于约定（方法名必须是 "HandleEventAsync"）
+public async Task HandleEventAsync(MyConcreteEvent @event)
+{
+    // 自动识别为处理器
+}
+```
+
+### 4.4 事件订阅
+```csharp
+// 订阅另一个 GAgent 的事件
+await SubscribeToAsync(otherGAgent);
+
+// 取消订阅
+await UnsubscribeFromAsync(otherGAgent);
+
+// 注意：事件订阅是基于 GAgent 级别的，而不是特定事件类型
+```
+
+### 4.5 事件通信设置
+```csharp
+// GAgent 必须在同一组中才能进行事件通信
+var publisher = await GAgentFactory.GetGAgentAsync<IPublishingGAgent>();
+
+// 通过 RegisterAsync 建立父子关系
+await publisher.RegisterAsync(myAgent);
+await publisher.RegisterAsync(otherAgent);
+
+// 现在它们可以通过事件进行通信
+await publisher.PublishAsync(new MyEvent());
+```
+
+## 第五部分：定时器注册
+
+### 5.1 无状态的定时器注册
+```csharp
+// 无状态参数 - lambda 仅接受 CancellationToken
+_timer = this.RegisterGrainTimer(
+    async (token) => await MyMethodAsync(),  // 注意：单个参数
+    new GrainTimerCreationOptions
+    {
+        DueTime = TimeSpan.FromSeconds(30),
+        Period = TimeSpan.FromSeconds(30),
+        Interleave = true
+    }
+);
+```
+
+### 5.2 带状态的定时器注册
+```csharp
+// 带状态参数 - lambda 接受状态和 CancellationToken
+_timer = this.RegisterGrainTimer(
+    myStateObject,  // 传递状态对象
+    async (state, token) => await MyMethodWithStateAsync(state),  // 两个参数
+    new GrainTimerCreationOptions
+    {
+        DueTime = TimeSpan.FromSeconds(30),
+        Period = TimeSpan.FromSeconds(30),
+        Interleave = true
+    }
+);
+```
+
+### 5.3 定时器清理
+```csharp
+public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+{
+    _timer?.Dispose();
+    return base.OnDeactivateAsync(reason, cancellationToken);
+}
+```
+
+## 第六部分：AI 集成（AIGAgentBase）
+
+### 6.1 Brain 系统集成
+AIGAgentBase 通过 `IBrain` 接口和 `IBrainFactory` 使用 Brain 系统来管理 AI 功能：
+
+```csharp
+// 调用 InitializeAsync 时会自动初始化 Brain
+public async Task<bool> InitializeAsync(InitializeDto initializeDto)
+{
+    // 这将根据您的 LLM 配置创建和配置 brain
+    var result = await base.InitializeAsync(initializeDto);
+    
+    // 工具在 brain 初始化后注册
+    return result;
+}
+```
+
+### 6.2 LLM 配置
+```csharp
+// 使用集中式配置（推荐）
+var initDto = new InitializeDto
+{
+    LLMConfig = new LLMConfigDto
+    {
+        SystemLLM = "gpt-4"  // 引用系统范围的配置
+    },
+    Instructions = "你是一个有用的助手"
+};
+
+// 或提供自包含的配置
+var initDto = new InitializeDto
+{
+    LLMConfig = new LLMConfigDto
+    {
+        SelfLLMConfig = new SelfLLMConfigDto
+        {
+            ProviderEnum = LLMProviderEnum.OpenAI,
+            ModelIdEnum = ModelIdEnum.Gpt4,
+            ApiKey = "your-api-key"
+        }
+    },
+    Instructions = "你是一个有用的助手"
+};
+```
+
+### 6.3 工具注册
+
+#### MCP 工具注册
+MCP 工具通过 `RegisterMCPToolsAsync` 方法注册：
+
+```csharp
+// 在初始化期间
+var initDto = new InitializeDto
+{
+    EnableMCPTools = true,
+    MCPServers = new List<MCPServerConfig>
+    {
+        new MCPServerConfig
+        {
+            ServerName = "filesystem",
+            Command = "npx",
+            Arguments = new List<string> { "@modelcontextprotocol/server-filesystem", "/workspace" }
+        }
+    }
+};
+
+// MCP 工具会自动发现并注册为 Semantic Kernel 函数
+```
+
+#### GAgent 工具注册
+GAgent 工具允许 AI 代理调用系统中的其他 GAgent：
+
+```csharp
+// 在初始化期间
+var initDto = new InitializeDto
+{
+    EnableGAgentTools = true,
+    SelectedGAgents = new List<string> { "Calculator", "DataProcessor" },
+    // ... 其他配置
+};
+
+// RegisterGAgentsAsToolsAsync 方法将：
+// 1. 使用 IGAgentService 发现可用的 GAgent
+// 2. 为每个 GAgent 事件创建 Semantic Kernel 函数
+// 3. 通过 Brain 系统在内核中注册它们
+```
+
+### 6.4 工具执行流程
+```csharp
+// AI 在聊天期间自动调用工具
+var response = await aiGAgent.ChatAsync(new ChatRequestDto
+{
+    Prompt = "计算 5 和 10 的和",  // AI 将调用 Calculator GAgent
+    ChatId = Guid.NewGuid().ToString()
+});
+
+// 工具调用会自动跟踪
+// 每个工具调用包括时间、参数和结果
+```
+
+### 6.5 自定义工具注册
+```csharp
+// 如果需要自定义工具，可以通过反射访问内核
+private Kernel? GetKernelFromBrain()
+{
+    if (_brain == null) return null;
+    
+    var kernelProperty = _brain.GetType()
+        .GetProperty("Kernel", BindingFlags.Public | BindingFlags.Instance);
+    
+    return kernelProperty?.GetValue(_brain) as Kernel;
+}
+```
+
+## 第七部分：GAgent 实例化规则
+
+### 7.1 始终使用 IGAgentFactory
+```csharp
+// ✅ 正确 - 使用 IGAgentFactory
+var gAgentFactory = ServiceProvider.GetRequiredService<IGAgentFactory>();
+var agent = await gAgentFactory.GetGAgentAsync<IMyGAgent>(grainId);
+
+// ❌ 错误 - 永远不要直接使用 IGrainFactory
+```
+
+### 7.2 GAgent 特性规则
+- 必需：`[GAgent]` 或 `[GAgent("别名")]` 或 `[GAgent("别名", "命名空间")]`
+- 无参数时：使用 `type.Namespace + "." + type.Name`
+- 仅有别名时：使用 `type.Namespace + "." + 别名`
+- 两者都有时：使用 `命名空间 + "." + 别名`
+
+## 第八部分：文件组织
+
+```
+src/
+├── Events/                    # 共享事件（EventBase 派生）
+│   ├── NotificationEvent.cs
+│   ├── DataProcessingEvent.cs
+│   └── CoordinationEvent.cs
+└── GAgents/                   # GAgent 实现（一体化文件）
+    ├── MyGAgent.cs            # 包含：接口、状态、状态日志事件、实现
+    ├── NotificationGAgent.cs
+    ├── ProcessingGAgent.cs
+    └── CoordinatorGAgent.cs
+```
+
+**最佳实践**：将所有 GAgent 相关代码保存在单个文件中以提高可读性：
+- 接口定义（IMyGAgent）
+- 状态类（MyGAgentState）
+- 状态日志事件（作为嵌套类）
+- GAgent 实现（MyGAgent）
+
+## 第九部分：性能最佳实践
+
+1. **状态更新**：尽可能批量处理状态更改
+2. **事件发布**：使用适当的事件优先级
+3. **定时器间隔**：选择合理的间隔以避免系统过载
+4. **异步操作**：始终正确使用 async/await
+5. **资源清理**：始终在 OnDeactivateAsync 中释放资源
+
+## 第十部分：文档要求
+
+1. 记录所有公共接口
+2. 向 GAgent 接口添加 XML 注释
+3. 解释复杂的状态转换
+4. 记录 GAgent 之间的事件流
+5. 在注释中提供使用示例
+
+## 快速实现清单
+
+### 基本实现
+- [ ] 先定义接口（IStateGAgent<TState> 或 IStateGAgent<TState> + IAIGAgent）
+- [ ] 无构造函数参数
+- [ ] 具有 [GAgent] 特性
+- [ ] 实现 GetDescriptionAsync()
+- [ ] 使用 Logger 属性（非注入）
+- [ ] 通过 RaiseEvent + ConfirmEvents 更改状态
+- [ ] 在 GAgentTransitionState（或 AI 的 AIGAgentTransitionState）中处理状态转换
+- [ ] 在状态中初始化集合
+- [ ] 所有类都有 [GenerateSerializer]
+- [ ] 所有属性都有 [Id(n)]
+
+### 实例化
+- [ ] 使用 IGAgentFactory（而非 IGrainFactory）
+- [ ] GAgent 在同一组中注册以进行事件通信
+- [ ] 正确使用带有 Guid 参数的 GetGAgentAsync 方法

@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Aevatar.GAgents.AIGAgent\Aevatar.GAgents.AIGAgent.csproj" />
+        <ProjectReference Include="..\Aevatar.GAgents.GroupChat.Core\Aevatar.GAgents.GroupChat.Core.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Aevatar.Core" />
+    </ItemGroup>
+</Project>
