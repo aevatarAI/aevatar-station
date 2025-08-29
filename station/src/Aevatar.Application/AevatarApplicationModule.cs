@@ -105,6 +105,10 @@ public class AevatarApplicationModule : AbpModule
         {
             // Use local development emailer that only logs instead of sending real emails
             context.Services.AddTransient<IAevatarAccountEmailer, DevLocalAevatarAccountEmailer>();
+            
+            // Use DefaultHostDeployManager for local development instead of KubernetesHostManager
+            context.Services.AddTransient<IHostDeployManager, DefaultHostDeployManager>();
+            // Note: IHostCopyManager is not needed for local development, so we don't register it
         }
     }
     
