@@ -78,10 +78,31 @@ jobs:
         with:
           name: coverage-station
           path: coverage-station/
+  test-gagents:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Install dependencies
+        run: cd gagents && dotnet restore --verbosity quiet
+      - name: Build
+        run: cd gagents && dotnet build --no-restore /clp:ErrorsOnly /p:GeneratePackageOnBuild=false --verbosity quiet
+      - name: Test
+        run: |
+          cd gagents && dotnet test --no-restore --no-build --verbosity normal --logger trx --settings CodeCoverage.runsettings --results-directory ../coverage-gagents --collect:"XPlat Code Coverage"
+      - name: Upload gagents coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-gagents
+          path: coverage-gagents/
 
   upload-coverage:
     runs-on: ubuntu-22.04
-    needs: [test-framework, test-signalr, test-station]
+    needs: [test-framework, test-signalr, test-station, test-gagents]
     permissions:
       pull-requests: write
       contents: write
@@ -103,6 +124,11 @@ jobs:
         with:
           name: coverage-station
           path: coverage-station/
+      - name: Download gagents coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-gagents
+          path: coverage-gagents/
       - name: Upload unified coverage reports to Codecov
         uses: codecov/codecov-action@v4
         with:
