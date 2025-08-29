@@ -74,7 +74,7 @@ public class AevatarApplicationModule : AbpModule
         context.Services.AddTransient<IHostCopyManager, KubernetesHostManager>();
         context.Services.AddSingleton<INotificationHandlerFactory, NotificationProcessorFactory>();
         Configure<HostDeployOptions>(configuration.GetSection("HostDeploy"));
-        context.Services.Configure<HostOptions>(configuration.GetSection("Host"));
+        context.Services.Configure<Aevatar.Options.HostOptions>(configuration.GetSection("Host"));
         
         Configure<AccountOptions>(configuration.GetSection("Account"));
         Configure<ApiRequestOptions>(configuration.GetSection("ApiRequest"));
@@ -86,7 +86,7 @@ public class AevatarApplicationModule : AbpModule
         
         // 配置 SystemLLM 元信息选项
         Configure<SystemLLMMetaInfoOptions>(configuration.GetSection("SystemLLMConfig"));
-        
+
         // Configure local development email service
         ConfigureLocalDevelopmentServices(context);
         
@@ -104,7 +104,7 @@ public class AevatarApplicationModule : AbpModule
         if (hostingEnvironment.IsDevelopment())
         {
             // Use local development emailer that only logs instead of sending real emails
-            context.Services.AddTransient<IAevatarAccountEmailer, LocalDevelopmentAevatarAccountEmailer>();
+            context.Services.AddTransient<IAevatarAccountEmailer, DevLocalAevatarAccountEmailer>();
         }
     }
     
