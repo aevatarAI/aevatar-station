@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVersion>9.0.1</OrleansVersion>
-    <AevatarGAgentVersion>1.5.6-alpha.4</AevatarGAgentVersion>
+
   </PropertyGroup>
   <ItemGroup>
     <!-- AElf packages -->
@@ -12,27 +12,27 @@
     <PackageVersion Include="AElf.Sdk.CSharp" Version="1.5.0" />
     <PackageVersion Include="AElf.Types" Version="1.5.0" />
     <PackageVersion Include="AElf.OpenTelemetry" Version="8.2.0" />
-    <PackageVersion Include="Aevatar.GAgents.AIGAgent" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.AIGAgent.Core" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.SemanticKernel" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.AI.Abstractions" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.SocialGAgent" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.Twitter" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.ChatAgent" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.GroupChat" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.GroupChat.GroupMember" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.GroupChat.Core" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.Telegram" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.GraphRetrievalAgent" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.MultiAIChatGAgent" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.AElf" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.Pumpfun" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.PsiOmni" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.PsiOmni.Plugins" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.MCP" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.MCP.Core" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.Executor" Version="$(AevatarGAgentVersion)" />
-    <PackageVersion Include="Aevatar.GAgents.InputGAgent" Version="$(AevatarGAgentVersion)" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     <!-- AI and Analysis packages -->
     <PackageVersion Include="AutoGen" Version="0.2.1" />
     <PackageVersion Include="AutoGen.Core" Version="0.2.1" />

@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Aevatar.Core" />
+    <PackageReference Include="Aevatar.Core.Abstractions" />
+    <PackageReference Include="Aevatar.EventSourcing.Core" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Aevatar.GAgents.AI.Abstractions\Aevatar.GAgents.AI.Abstractions.csproj" />
+    <ProjectReference Include="..\Aevatar.GAgents.AIGAgent\Aevatar.GAgents.AIGAgent.csproj" />
+    <ProjectReference Include="..\Aevatar.GAgents.ChatAgent\Aevatar.GAgents.ChatAgent.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Aevatar.GAgents.AI.Abstractions">
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Options" />
+  </ItemGroup>
+</Project>

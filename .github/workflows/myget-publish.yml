@@ -56,6 +56,69 @@ jobs:
           - name: Aevatar.Station.Feature
             path: src/Aevatar.Station.Feature
             project_root: station
+          - name: Aevatar.GAgents.Twitter
+            path: src/Aevatar.GAgents.Twitter
+            project_root: gagents
+          - name: Aevatar.GAgents.Telegram
+            path: src/Aevatar.GAgents.Telegram
+            project_root: gagents
+          - name: Aevatar.GAgents.SocialGAgent
+            path: src/Aevatar.GAgents.SocialGAgent
+            project_root: gagents
+          - name: Aevatar.GAgents.Basic
+            path: src/Aevatar.GAgents.Basic
+            project_root: gagents
+          - name: Aevatar.GAgents.AI.Abstractions
+            path: src/Aevatar.GAgents.AI.Abstractions
+            project_root: gagents
+          - name: Aevatar.GAgents.AIGAgent
+            path: src/Aevatar.GAgents.AIGAgent
+            project_root: gagents
+          - name: Aevatar.GAgents.AIGAgent.Core
+            path: src/Aevatar.GAgents.AIGAgent.Core
+            project_root: gagents
+          - name: Aevatar.GAgents.SemanticKernel
+            path: src/Aevatar.GAgents.SemanticKernel
+            project_root: gagents
+          - name: Aevatar.GAgents.ChatAgent
+            path: src/Aevatar.GAgents.ChatAgent
+            project_root: gagents
+          - name: Aevatar.GAgents.Router
+            path: src/Aevatar.GAgents.Router
+            project_root: gagents
+          - name: Aevatar.GAgents.GraphRetrievalAgent
+            path: src/Aevatar.GAgents.GraphRetrievalAgent
+            project_root: gagents
+          - name: Aevatar.GAgents.GroupChat
+            path: src/Aevatar.GAgents.GroupChat
+            project_root: gagents
+          - name: Aevatar.GAgents.GroupChat.Core
+            path: src/Aevatar.GAgents.GroupChat.Core
+            project_root: gagents
+          - name: Aevatar.GAgents.MultiAIChatGAgent
+            path: src/Aevatar.GAgents.MultiAIChatGAgent
+            project_root: gagents
+          - name: Aevatar.GAgents.PsiOmni
+            path: src/Aevatar.GAgents.PsiOmni
+            project_root: gagents
+          - name: Aevatar.GAgents.PsiOmni.Plugins
+            path: src/Aevatar.GAgents.PsiOmni.Plugins
+            project_root: gagents
+          - name: Aevatar.GAgents.MCP
+            path: src/Aevatar.GAgents.MCP
+            project_root: gagents
+          - name: Aevatar.GAgents.MCP.Core
+            path: src/Aevatar.GAgents.MCP.Core
+            project_root: gagents
+          - name: Aevatar.GAgents.Executor
+            path: src/Aevatar.GAgents.Executor
+            project_root: gagents
+          - name: Aevatar.GAgents.InputGAgent
+            path: src/Aevatar.GAgents.InputGAgent
+            project_root: gagents
+          - name: Aevatar.GAgents.GroupChat.GroupMember
+            path: src/Aevatar.GAgents.GroupChat.GroupMember
+            project_root: gagents
 
     steps:
       - name: Checkout code
