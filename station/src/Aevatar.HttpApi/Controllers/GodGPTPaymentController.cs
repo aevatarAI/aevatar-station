@@ -179,7 +179,7 @@ public class GodGPTPaymentController : AevatarController
         
         _logger.LogInformation("[GodGPTPaymentController][VerifyGooglePlayTransactionAsync] Request received for userId: {UserId}, transactionId: {TransactionId}, requestIP: {RequestIP}", 
             currentUserId, input.TransactionIdentifier, HttpContext.Connection.RemoteIpAddress?.ToString());
-        
+            
         // Validate input
         if (input == null)
         {

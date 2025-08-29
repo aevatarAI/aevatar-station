@@ -32,6 +32,7 @@ public static class GodGPTExceptionMessageKeys
     public const string WebhookValidatingError = "WebhookValidatingError";
     public const string InvalidShare = "InvalidShare";
     public const string EmailFrequently = "EmailFrequently";
+    public const string InvalidUserName = "InvalidUserName";
 
     // File Operations
     public const string FileTooLarge = "FileTooLarge";
@@ -54,8 +55,15 @@ public static class GodGPTExceptionMessageKeys
     public const string SecurityVerificationRequired = "SecurityVerificationRequired";
     public const string SecurityVerificationFailed = "SecurityVerificationFailed";
     public const string RecaptchaVerificationFailed = "RecaptchaVerificationFailed";
-
-
-
+    
+    // Daily Push Notifications
+    public const string DeviceNotFound = "DeviceNotFound";
+    public const string InvalidTimezone = "InvalidTimezone";
+    public const string InvalidDeviceId = "InvalidDeviceId";
+    public const string InvalidPushToken = "InvalidPushToken";
+    public const string TestModeStartFailed = "TestModeStartFailed";
+    public const string TestModeStopFailed = "TestModeStopFailed";
+    public const string TestModeStatusFailed = "TestModeStatusFailed";
+    public const string PushNotificationServiceUnavailable = "PushNotificationServiceUnavailable";
     
 } 

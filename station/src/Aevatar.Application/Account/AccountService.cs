@@ -15,6 +15,8 @@ using IdentityUser = Volo.Abp.Identity.IdentityUser;
 using Aevatar.Application.Constants;
 using Aevatar.Application.Contracts.Services;
 using Aevatar.Domain.Shared;
+using Exception = System.Exception;
+using Newtonsoft.Json;
 
 namespace Aevatar.Account;
 
@@ -159,7 +161,23 @@ public class AccountService : AccountAppService, IAccountService
     
         input.MapExtraPropertiesTo(user);
 
-        (await UserManager.CreateAsync(user, input.Password)).CheckErrors();
+        try
+        {
+            (await UserManager.CreateAsync(user, input.Password)).CheckErrors();
+        }
+        catch (Exception ex)
+        {
+            var errorMessage = ex.Message.ToLower();
+            if (errorMessage.Contains("username") && errorMessage.Contains("is invalid"))
+            {
+                var localizedMessage =
+                    _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InvalidUserName, language);
+                throw new Exception(localizedMessage);
+            }
+            _logger.LogError(
+                    $"[GodgptRegisterAsync] error UserFriendlyException. Email: {input.EmailAddress} input:{JsonConvert.SerializeObject(input)} error:{ex.Message}");
+            throw ex;
+        }
 
         await UserManager.SetEmailAsync(user, input.EmailAddress);
         await UserManager.AddDefaultRolesAsync(user);
