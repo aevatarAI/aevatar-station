@@ -88,12 +88,12 @@ jobs:
         with:
           dotnet-version: '9.0.x'
       - name: Install dependencies
-        run: cd gagents && dotnet restore --verbosity quiet
+        run: cd gagents && dotnet restore AevatarGAgents.sln --verbosity quiet
       - name: Build
-        run: cd gagents && dotnet build --no-restore /clp:ErrorsOnly /p:GeneratePackageOnBuild=false --verbosity quiet
+        run: cd gagents && dotnet build AevatarGAgents.sln --no-restore /clp:ErrorsOnly /p:GeneratePackageOnBuild=false --verbosity quiet
       - name: Test
         run: |
-          cd gagents && dotnet test --no-restore --no-build --verbosity normal --logger trx --settings CodeCoverage.runsettings --results-directory ../coverage-gagents --collect:"XPlat Code Coverage"
+          cd gagents && dotnet test AevatarGAgents.sln --no-restore --no-build --verbosity normal --logger trx --settings CodeCoverage.runsettings --results-directory ../coverage-gagents --collect:"XPlat Code Coverage"
       - name: Upload gagents coverage artifacts
         uses: actions/upload-artifact@v4
         with:
