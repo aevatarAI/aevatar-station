@@ -350,6 +350,48 @@ public class DailyPushController : AbpControllerBase
     }
     
     /// <summary>
+    /// Clear read status for specific user - TODO: Remove before production
+    /// </summary>
+    /// <param name="userId">Target user ID</param>
+    [HttpPost("test/clear-read-status-by-user")]
+    public async Task<IActionResult> ClearReadStatusForUser([FromQuery] string userId)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var userGuid))
+            {
+                var language = HttpContext.GetGodGPTLanguage();
+                var localizedMessage = _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InvalidRequest, language);
+                return BadRequest(new {
+                    error = new { code = 1, message = $"{localizedMessage}: valid userId is required" },
+                    result = false
+                });
+            }
+            
+            _logger.LogInformation("Starting clear read status for user {UserId}", userGuid);
+            
+            var result = await _dailyPushService.ClearReadStatusForUserAsync(userGuid);
+            
+            // Follow GodGPT pattern: direct return with result data
+            return Ok(new {
+                result = true,
+                message = $"Read status cleared for user {userGuid}",
+                userId = userGuid,
+                cleared = result.Cleared,
+                timestamp = DateTime.Now
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to clear read status for user");
+            return StatusCode(500, new {
+                error = new { code = 500, message = "Internal server error" },
+                result = false
+            });
+        }
+    }
+
+    /// <summary>
     /// Clear read status for specific device - TODO: Remove before production
     /// </summary>
     /// <param name="deviceId">Target device ID</param>

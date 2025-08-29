@@ -369,6 +369,43 @@ public class DailyPushService : ApplicationService, IDailyPushService
     }
     
     /// <summary>
+    /// Clear read status for specific user - TODO: Remove before production
+    /// </summary>
+    /// <param name="userId">Target user ID</param>
+    public async Task<ClearReadStatusResult> ClearReadStatusForUserAsync(Guid userId)
+    {
+        try
+        {
+            _logger.LogInformation("Starting clear read status for user {UserId}", userId);
+            
+            // Direct clear read status for the user - no device lookup needed
+            var chatManagerGAgent = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
+            await chatManagerGAgent.ClearReadStatusAsync();
+            
+            _logger.LogInformation("Read status cleared for user {UserId}", userId);
+                
+            return new ClearReadStatusResult
+            {
+                UserId = userId,
+                DeviceId = "N/A", // Not applicable for user-based clearing
+                Cleared = true,
+                Timestamp = DateTime.UtcNow
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to clear read status for user {UserId}", userId);
+            return new ClearReadStatusResult
+            {
+                UserId = userId,
+                DeviceId = "N/A",
+                Cleared = false,
+                Timestamp = DateTime.UtcNow
+            };
+        }
+    }
+
+    /// <summary>
     /// Clear read status for specific device - TODO: Remove before production
     /// </summary>
     /// <param name="deviceId">Target device ID</param>
@@ -382,7 +419,10 @@ public class DailyPushService : ApplicationService, IDailyPushService
             var devicesInAllTimezones = new List<Contracts.DailyPush.TimezoneDeviceInfo>();
             
             // Search through common timezones to find the device
-            var commonTimezones = new[] { "Asia/Shanghai", "America/New_York", "Europe/London", "Asia/Tokyo", "UTC" };
+            var commonTimezones = new[] { 
+                "Asia/Shanghai", "America/New_York", "Europe/London", "Asia/Tokyo", "UTC",
+                "America/Sao_Paulo", "America/Argentina/Buenos_Aires", "Europe/Rome", "Europe/Paris", "Australia/Sydney"
+            };
             Guid? foundUserId = null;
             
             foreach (var timezone in commonTimezones)
