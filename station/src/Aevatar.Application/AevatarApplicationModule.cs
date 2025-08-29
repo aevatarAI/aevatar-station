@@ -10,9 +10,8 @@ using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
 using Aevatar.Kubernetes;
-using Aevatar.Kubernetes.Adapter;
-using Aevatar.LocalDevelopment;
 using Aevatar.Kubernetes.Manager;
+using Aevatar.LocalDevelopment;
 using Aevatar.Notification;
 using Aevatar.Options;
 using Aevatar.Plugins;
@@ -110,10 +109,9 @@ public class AevatarApplicationModule : AbpModule
             
             // Use DefaultHostDeployManager for local development instead of KubernetesHostManager
             context.Services.AddTransient<IHostDeployManager, DefaultHostDeployManager>();
-            // Note: IHostCopyManager is not needed for local development, so we don't register it
             
-            // Use local development Kubernetes client adapter that only logs instead of calling real K8s API
-            context.Services.AddTransient<IKubernetesClientAdapter, LocalDevelopmentKubernetesClientAdapter>();
+            // Use local development service that only logs instead of calling real K8s operations
+            context.Services.AddTransient<IDeveloperService, LocalDevelopmentDeveloperService>();
         }
     }
     
