@@ -12,7 +12,6 @@ using Aevatar.Application.Grains.Agents.ChatManager;
 using Aevatar.Application.Grains.Agents.ChatManager.Chat;
 using Aevatar.Application.Grains.Agents.ChatManager.Common;
 using Aevatar.Application.Grains.ChatManager.UserQuota;
-using Aevatar.Application.Service;
 using Aevatar.Core.Abstractions;
 using Aevatar.Extensions;
 using Aevatar.Quantum;
@@ -35,22 +34,17 @@ public class ChatMiddleware
     private readonly ILogger<ChatMiddleware> _logger;
     private readonly IOptions<AevatarOptions> _aevatarOptions;
     private readonly ILocalizationService _localizationService;
-    private readonly IIpLocationService _ipLocationService;
 
     private const int MaxImageCount = 10;
-    private const string CNDefaultRegion = "CN";
-    private const string DefaultRegion = "DEFAULT";
-    private const string CNConsoleRegion = "CNCONSOLE";
-    private const string ConsoleRegion = "CONSOLE";
+
     public ChatMiddleware(RequestDelegate next, ILogger<ChatMiddleware> logger, IClusterClient clusterClient,
-        IOptions<AevatarOptions> aevatarOptions, ILocalizationService localizationService,IIpLocationService ipLocationService)
+        IOptions<AevatarOptions> aevatarOptions, ILocalizationService localizationService)
     {
         _next = next;
         _logger = logger;
         _clusterClient = clusterClient;
         _aevatarOptions = aevatarOptions;
         _localizationService = localizationService;
-        _ipLocationService = ipLocationService;
 
     }
 
@@ -114,22 +108,6 @@ public class ChatMiddleware
 
         var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
         var request = JsonConvert.DeserializeObject<QuantumChatRequestDto>(body);
-        var clientIp = context.GetClientIpAddress();
-        var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp);
-
-        if (string.IsNullOrWhiteSpace(request.Region))
-        {
-            request.Region = isCN ? CNDefaultRegion : DefaultRegion;
-        }
-        else
-        {
-            if (request.Region.Equals(ConsoleRegion) && isCN)
-            {
-                request.Region = CNConsoleRegion;
-            }
-        }
-
-        RequestContext.Set("IsCN", isCN);
         if (!request.Images.IsNullOrEmpty() && request.Images.Count > MaxImageCount)
         {
             _logger.LogDebug("[GodGPTController][ChatWithSessionAsync] {0} Too many files. {1}", userId, request.Images.Count);
@@ -148,7 +126,7 @@ public class ChatMiddleware
         {
             var stopwatch = Stopwatch.StartNew();
             _logger.LogDebug(
-                $"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}, userId: {userId}, clientIp:{clientIp},isCN:{isCN},region:{request.Region}");
+                $"[GodGPTController][ChatWithSessionAsync] http start:{request.SessionId}, userId {userId}");
             var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
             if (!await manager.IsUserSessionAsync(request.SessionId))
             {
@@ -291,20 +269,7 @@ public class ChatMiddleware
         {
             var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
             var request = JsonConvert.DeserializeObject<GuestChatRequestDto>(body);
-            var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp);
-            if (string.IsNullOrWhiteSpace(request.Region))
-            {
-                request.Region = isCN ? CNDefaultRegion : DefaultRegion;
-            }
-            else
-            {
-                if (request.Region.Equals(ConsoleRegion) && isCN)
-                {
-                    request.Region = CNConsoleRegion;
-                }
-            }
-
-            RequestContext.Set("IsCN", isCN);
+            
             if (request == null || string.IsNullOrWhiteSpace(request.Content))
             {
                 _logger.LogWarning("[GuestChatMiddleware] Invalid request body for user: {0}", userHashId);
@@ -314,7 +279,7 @@ public class ChatMiddleware
                 return;
             }
             var stopwatch = Stopwatch.StartNew();
-            _logger.LogDebug($"[GuestChatMiddleware] Start processing guest chat for user: {userHashId} , clientIP:{clientIp}, isCN:{isCN}, region:{request.Region}");
+            _logger.LogDebug("[GuestChatMiddleware] Start processing guest chat for user: {0}", userHashId);
 
             // Get or create anonymous user grain for this IP
             var grainId = CommonHelper.StringToGuid(CommonHelper.GetAnonymousUserGAgentId(clientIp));
@@ -516,22 +481,7 @@ public class ChatMiddleware
         // Parse request body
         var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
         var request = JsonConvert.DeserializeObject<VoiceChatRequestDto>(body);
-        var clientIp = context.GetClientIpAddress();
-        var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp);
-
-        if (string.IsNullOrWhiteSpace(request.Region))
-        {
-            request.Region = isCN ? CNDefaultRegion : DefaultRegion;
-        }
-        else
-        {
-            if (request.Region.Equals(ConsoleRegion) && isCN)
-            {
-                request.Region = CNConsoleRegion;
-            }
-        }
-
-        RequestContext.Set("IsCN", isCN);
+        
         if (request == null || string.IsNullOrWhiteSpace(request.Content))
         {
             _logger.LogWarning($"[VoiceChatMiddleware] Invalid request body for user: {userId}");
@@ -553,7 +503,7 @@ public class ChatMiddleware
         {
             var stopwatch = Stopwatch.StartNew();
             RequestContext.Set("GodGPTLanguage", language.ToString());
-            _logger.LogDebug($"[VoiceChatMiddleware] HTTP start - SessionId: {request.SessionId}, UserId: {userId}, MessageType: {request.MessageType}, VoiceLanguage: {request.VoiceLanguage}, Language: {language},clientIp:{clientIp},isCN:{isCN}, region:{request.Region}");
+            _logger.LogDebug($"[VoiceChatMiddleware] HTTP start - SessionId: {request.SessionId}, UserId: {userId}, MessageType: {request.MessageType}, VoiceLanguage: {request.VoiceLanguage}, Language: {language}");
 
             // Validate session access
             var manager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);

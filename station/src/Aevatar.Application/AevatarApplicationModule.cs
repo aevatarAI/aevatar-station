@@ -84,7 +84,6 @@ public class AevatarApplicationModule : AbpModule
         Configure<ThumbnailOptions>(configuration.GetSection("Thumbnail"));
         Configure<GoogleAnalyticsOptions>(configuration.GetSection("GoogleAnalytics"));
         Configure<FirebaseAnalyticsOptions>(configuration.GetSection("FirebaseAnalytics"));
-        context.Services.AddSingleton<IIpLocationService, IpLocationService>();
         
         // Daily Push Service
         context.Services.AddTransient<IDailyPushService, DailyPushService>();

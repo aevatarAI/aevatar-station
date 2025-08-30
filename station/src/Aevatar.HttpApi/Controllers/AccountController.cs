@@ -28,20 +28,17 @@ public class AccountController : AevatarController
     private readonly ISecurityService _securityService;
     private readonly ILocalizationService _localizationService;
     private readonly ILogger<AccountController> _logger;
-    private readonly IIpLocationService _ipLocationService;
 
     public AccountController(
         IAccountService accountService,
         ISecurityService securityService,
         ILocalizationService localizationService,
-        ILogger<AccountController> logger,
-        IIpLocationService ipLocationService)
+        ILogger<AccountController> logger)
     {
         _accountService = accountService;
         _securityService = securityService;
         _localizationService = localizationService;
         _logger = logger;
-        _ipLocationService = ipLocationService;
     }
     
     [HttpPost]
@@ -120,13 +117,10 @@ public class AccountController : AevatarController
 
     [HttpPost]
     [Route("send-password-reset-code")]
-    public virtual async Task SendPasswordResetCodeAsync(SendPasswordResetCodeDto input)
+    public virtual Task SendPasswordResetCodeAsync(SendPasswordResetCodeDto input)
     {
-        var clientIp = HttpContext.GetClientIpAddress();
-        var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp);
-        RequestContext.Set("IsCN", isCN);
         var language = HttpContext.GetGodGPTLanguage();
-        await _accountService.SendPasswordResetCodeAsync(input, language);
+        return _accountService.SendPasswordResetCodeAsync(input, language);
     }
 
     [HttpPost]

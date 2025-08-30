@@ -129,9 +129,9 @@ public class LocalizationService : ILocalizationService
         return language switch
         {
             GodGPTChatLanguage.English => "en",
+            GodGPTChatLanguage.CN => "zh-cn",
             GodGPTChatLanguage.TraditionalChinese => "zh-tw",
             GodGPTChatLanguage.Spanish => "es",
-            GodGPTChatLanguage.CN => "zh",
             _ => "en"
         };
     }
