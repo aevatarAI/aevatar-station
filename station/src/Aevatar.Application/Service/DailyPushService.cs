@@ -155,7 +155,6 @@ public class DailyPushService : ApplicationService, IDailyPushService
             Domain.Shared.GodGPTChatLanguage.English => GodGPTLanguage.English,
             Domain.Shared.GodGPTChatLanguage.TraditionalChinese => GodGPTLanguage.TraditionalChinese,
             Domain.Shared.GodGPTChatLanguage.Spanish => GodGPTLanguage.Spanish,
-            Domain.Shared.GodGPTChatLanguage.CN => GodGPTLanguage.CN,
             _ => GodGPTLanguage.English
         };
     }
@@ -165,7 +164,6 @@ public class DailyPushService : ApplicationService, IDailyPushService
         return language switch
         {
             GodGPTLanguage.TraditionalChinese => "zh-tw",  // Traditional Chinese
-            GodGPTLanguage.CN => "zh-cn",                  // Simplified Chinese 
             GodGPTLanguage.Spanish => "es",
             GodGPTLanguage.English => "en",
             _ => "en"
