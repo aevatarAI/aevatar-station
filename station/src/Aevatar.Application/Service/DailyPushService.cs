@@ -14,9 +14,6 @@ using Volo.Abp.Application.Services;
 
 namespace Aevatar.Application.Service;
 
-// TODO: Remove these temporary interfaces once godgpt NuGet package is updated  
-// Note: These interfaces are for compilation only until godgpt NuGet package is updated
-
 /// <summary>
 /// Service for daily push notification operations
 /// </summary>
@@ -79,9 +76,6 @@ public class DailyPushService : ApplicationService, IDailyPushService
             // Call GAgent with basic types - convert enum to string
             var languageString = ConvertGodGPTLanguageToString(languageEnum);
             
-            _logger.LogInformation("📱 Device registration: DeviceId={DeviceId}, User={UserId}, Language={LanguageEnum}→{LanguageString}", 
-                request.DeviceId, userId, languageEnum, languageString);
-                
             var isNewRegistration = await chatManagerGAgent.RegisterOrUpdateDeviceAsync(
                 request.DeviceId,
                 request.PushToken,
@@ -141,8 +135,7 @@ public class DailyPushService : ApplicationService, IDailyPushService
                 PushLanguage = deviceInfo.PushLanguage,
                 PushToken = deviceInfo.PushToken
             };
-            
-            _logger.LogDebug("Retrieved device status for {DeviceId}, user {UserId}", deviceId, userId);
+
             return response;
         }
         catch (Exception ex)
@@ -151,82 +144,6 @@ public class DailyPushService : ApplicationService, IDailyPushService
             throw;
         }
     }
-    
-    // Test mode methods - TODO: Remove before production
-    
-    /// <summary>
-    /// Start test mode for rapid push testing in specified timezone
-    /// </summary>
-    /// <param name="timezone">Target timezone</param>
-    /// <param name="intervalSeconds">Push interval in seconds (default: 600 = 10 minutes)</param>
-    public async Task StartTestModeAsync(string timezone, int intervalSeconds = 600)
-    {
-        try
-        {
-            _logger.LogInformation("Starting test mode for timezone {Timezone} with {IntervalSeconds}s interval", 
-                timezone, intervalSeconds);
-            
-            var timezoneScheduler = _clusterClient.GetGrain<IDailyPushCoordinatorGAgent>(DailyPushConstants.TimezoneToGuid(timezone));
-            await timezoneScheduler.InitializeAsync(timezone);
-            await timezoneScheduler.StartTestModeAsync(intervalSeconds);
-            
-            _logger.LogInformation("Test mode started successfully for timezone {Timezone} with {IntervalSeconds}s interval", 
-                timezone, intervalSeconds);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to start test mode for timezone {Timezone}", timezone);
-            throw;
-        }
-    }
-    
-    /// <summary>
-    /// Stop test mode and cleanup test reminders for specified timezone
-    /// </summary>
-    public async Task StopTestModeAsync(string timezone)
-    {
-        try
-        {
-            _logger.LogInformation("Stopping test mode for timezone {Timezone}", timezone);
-            
-            var timezoneScheduler = _clusterClient.GetGrain<IDailyPushCoordinatorGAgent>(DailyPushConstants.TimezoneToGuid(timezone));
-            await timezoneScheduler.InitializeAsync(timezone);
-            await timezoneScheduler.StopTestModeAsync();
-            
-            _logger.LogInformation("Test mode stopped successfully for timezone {Timezone}", timezone);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to stop test mode for timezone {Timezone}", timezone);
-            throw;
-        }
-    }
-    
-    /// <summary>
-    /// Get test mode status for specified timezone
-    /// </summary>
-    public async Task<(bool IsActive, DateTime StartTime, int RoundsCompleted, int MaxRounds)> GetTestStatusAsync(string timezone)
-    {
-        try
-        {
-            _logger.LogDebug("Getting test status for timezone {Timezone}", timezone);
-            
-            var timezoneScheduler = _clusterClient.GetGrain<IDailyPushCoordinatorGAgent>(DailyPushConstants.TimezoneToGuid(timezone));
-            await timezoneScheduler.InitializeAsync(timezone);
-            var status = await timezoneScheduler.GetTestStatusAsync();
-            
-            _logger.LogDebug("Retrieved test status for timezone {Timezone}: Active={IsActive}, Rounds={RoundsCompleted}/{MaxRounds}", 
-                timezone, status.IsActive, status.RoundsCompleted, status.MaxRounds);
-                
-            return status;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to get test status for timezone {Timezone}", timezone);
-            throw;
-        }
-    }
-    
     
     /// <summary>
     /// Convert GodGPTChatLanguage enum to GodGPTLanguage enum
@@ -272,8 +189,6 @@ public class DailyPushService : ApplicationService, IDailyPushService
             // Get all active users in this timezone
             var activeUsers = await timezoneIndexGAgent.GetActiveUsersInTimezoneAsync(0, 1000); // Get up to 1000 users
             
-            _logger.LogInformation("Active users in timezone {Timezone}: {UserCount} users", timezone, activeUsers.Count);
-            
             foreach (var userId in activeUsers)
             {
                 try
@@ -281,9 +196,6 @@ public class DailyPushService : ApplicationService, IDailyPushService
                     // Get user's chat manager to access device information
                     var chatManager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
                     var allDevicesForUser = await chatManager.GetAllUserDevicesAsync();
-                    
-                    _logger.LogDebug("User {UserId} has {DeviceCount} total devices", userId, allDevicesForUser.Count);
-                    
                     // Filter devices that match the timezone and are enabled
                     var userTimezoneDevices = allDevicesForUser.Where(d => 
                         d.TimeZoneId == timezone && d.PushEnabled).ToList();
@@ -293,9 +205,6 @@ public class DailyPushService : ApplicationService, IDailyPushService
                         
                     foreach (var device in userTimezoneDevices)
                     {
-                        _logger.LogDebug("Adding device: UserId={UserId}, DeviceId={DeviceId}, TimeZoneId='{TimeZoneId}', PushEnabled={PushEnabled}", 
-                            userId, device.DeviceId, device.TimeZoneId, device.PushEnabled);
-                            
                         result.Add(new Contracts.DailyPush.TimezoneDeviceInfo
                         {
                             UserId = userId,
@@ -316,8 +225,6 @@ public class DailyPushService : ApplicationService, IDailyPushService
                 }
             }
             
-            _logger.LogInformation("Total devices found in timezone {Timezone}: {DeviceCount}", timezone, result.Count);
-            
             return result;
         }
         catch (Exception ex)
@@ -326,153 +233,5 @@ public class DailyPushService : ApplicationService, IDailyPushService
             return new List<Contracts.DailyPush.TimezoneDeviceInfo>();
         }
     }
-    
-    /// <summary>
-    /// Truncate push token for privacy protection - DISABLED for testing interface
-    /// </summary>
-    private static string TruncateToken(string token)
-    {
-        // Return full token for testing interface
-        return token;
-        
-        // Original privacy protection logic (commented out for testing)
-        // if (string.IsNullOrEmpty(token) || token.Length <= 10)
-        //     return token;
-        // return $"{token[..5]}...{token[^5..]}";
-    }
-    
-    public async Task<object> SendInstantPushAsync(string timezone = "Asia/Shanghai")
-    {
-        try
-        {
-            _logger.LogInformation("Starting instant push for timezone {Timezone}", timezone);
-            
-            // Delegate to DailyPushCoordinatorGAgent for actual push logic
-            var coordinator = _clusterClient.GetGrain<IDailyPushCoordinatorGAgent>(DailyPushConstants.TimezoneToGuid(timezone));
-            await coordinator.InitializeAsync(timezone);
-            
-            // Call the coordinator's instant push method
-            var result = await coordinator.SendInstantPushAsync();
-            
-            _logger.LogInformation("Instant push completed for timezone {Timezone}", timezone);
-            return result;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error during instant push for timezone {Timezone}", timezone);
-            return new { 
-                timezone = timezone, 
-                error = ex.Message, 
-                timestamp = DateTime.Now 
-            };
-        }
-    }
-    
-    /// <summary>
-    /// Clear read status for specific user - TODO: Remove before production
-    /// </summary>
-    /// <param name="userId">Target user ID</param>
-    public async Task<ClearReadStatusResult> ClearReadStatusForUserAsync(Guid userId)
-    {
-        try
-        {
-            _logger.LogInformation("Starting clear read status for user {UserId}", userId);
-            
-            // Direct clear read status for the user - no device lookup needed
-            var chatManagerGAgent = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
-            await chatManagerGAgent.ClearReadStatusAsync();
-            
-            _logger.LogInformation("Read status cleared for user {UserId}", userId);
-                
-            return new ClearReadStatusResult
-            {
-                UserId = userId,
-                DeviceId = "N/A", // Not applicable for user-based clearing
-                Cleared = true,
-                Timestamp = DateTime.UtcNow
-            };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to clear read status for user {UserId}", userId);
-            return new ClearReadStatusResult
-            {
-                UserId = userId,
-                DeviceId = "N/A",
-                Cleared = false,
-                Timestamp = DateTime.UtcNow
-            };
-        }
-    }
 
-    /// <summary>
-    /// Clear read status for specific device - TODO: Remove before production
-    /// </summary>
-    /// <param name="deviceId">Target device ID</param>
-    public async Task<ClearReadStatusResult> ClearReadStatusForDeviceAsync(string deviceId)
-    {
-        try
-        {
-            _logger.LogInformation("Starting clear read status for device {DeviceId}", deviceId);
-            
-            // Find user by device ID through devices endpoint logic
-            var devicesInAllTimezones = new List<Contracts.DailyPush.TimezoneDeviceInfo>();
-            
-            // Search through common timezones to find the device
-            var commonTimezones = new[] { 
-                "Asia/Shanghai", "America/New_York", "Europe/London", "Asia/Tokyo", "UTC",
-                "America/Sao_Paulo", "America/Argentina/Buenos_Aires", "Europe/Rome", "Europe/Paris", "Australia/Sydney"
-            };
-            Guid? foundUserId = null;
-            
-            foreach (var timezone in commonTimezones)
-            {
-                try
-                {
-                    var devices = await GetDevicesInTimezoneAsync(timezone);
-                    var device = devices.FirstOrDefault(d => d.DeviceId == deviceId);
-                    if (device != null)
-                    {
-                        foundUserId = device.UserId;
-                        break;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to search devices in timezone {Timezone}", timezone);
-                }
-            }
-            
-            if (!foundUserId.HasValue)
-            {
-                _logger.LogWarning("Device {DeviceId} not found in any timezone", deviceId);
-                return new ClearReadStatusResult
-                {
-                    UserId = Guid.Empty,
-                    DeviceId = deviceId,
-                    Cleared = false,
-                    Timestamp = DateTime.UtcNow
-                };
-            }
-            
-            // Clear read status for the user
-            var chatManagerGAgent = _clusterClient.GetGrain<IChatManagerGAgent>(foundUserId.Value);
-            await chatManagerGAgent.ClearReadStatusAsync();
-            
-            _logger.LogInformation("Read status cleared for device {DeviceId} (User: {UserId})", deviceId, foundUserId.Value);
-                
-            return new ClearReadStatusResult
-            {
-                UserId = foundUserId.Value,
-                DeviceId = deviceId,
-                Cleared = true,
-                Timestamp = DateTime.UtcNow
-            };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to clear read status for device {DeviceId}", deviceId);
-            throw;
-        }
-    }
 }
