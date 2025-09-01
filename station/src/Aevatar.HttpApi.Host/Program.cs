@@ -43,6 +43,16 @@ public class Program
             await builder.AddApplicationAsync<AevatarHttpApiHostModule>();
             var app = builder.Build();
             
+            // === ENVIRONMENT DEBUG INFO ===
+            Log.Information("=== ENVIRONMENT DEBUG INFO ===");
+            Log.Information("Environment.EnvironmentName: {EnvironmentName}", app.Environment.EnvironmentName);
+            Log.Information("IsDevelopment(): {IsDevelopment}", app.Environment.IsDevelopment());
+            Log.Information("IsStaging(): {IsStaging}", app.Environment.IsStaging()); 
+            Log.Information("IsProduction(): {IsProduction}", app.Environment.IsProduction());
+            Log.Information("ASPNETCORE_ENVIRONMENT env var: {AspNetCoreEnv}", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"));
+            Log.Information("DOTNET_ENVIRONMENT env var: {DotNetEnv}", Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT"));
+            Log.Information("=== END DEBUG INFO ===");
+            
             // URL rewriting must be added BEFORE app initialization to ensure it runs before routing
             if (app.Environment.IsDevelopment())
             {
