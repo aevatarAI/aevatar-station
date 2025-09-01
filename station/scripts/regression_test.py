@@ -390,7 +390,7 @@ def test_query_agent_list(api_headers, test_agent):
     """test query agent list"""
     # query available agent list
     response = requests.get(
-        f"{API_HOST}//api/agent/agent-type-info-list",
+        f"{API_HOST}/api/agent/agent-type-info-list",
         headers=api_headers,
         verify=False
     )
