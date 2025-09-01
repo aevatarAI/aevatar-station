@@ -59,6 +59,14 @@ public class LocalizationService : ILocalizationService
     }
     
     /// <summary>
+    /// Get localized message by key, language and category
+    /// </summary>
+    public string GetLocalizedMessage(string key, GodGPTChatLanguage language, string category)
+    {
+        return GetTranslation(key, language, category);
+    }
+    
+    /// <summary>
     /// Replace parameters in message template using {parameterName} format
     /// </summary>
     /// <param name="message">Message template</param>
@@ -306,13 +314,27 @@ public class LocalizationService : ILocalizationService
 
             },
             
+            ["emails"] = new Dictionary<string, string>
+            {
+                // Email subjects
+                ["en.RegistrationSubject"] = "Registration Verification Code",
+                ["zh.RegistrationSubject"] = "注册验证码",
+                ["zh-tw.RegistrationSubject"] = "註冊驗證碼",
+                ["es.RegistrationSubject"] = "Código de Verificación de Registro",
+                
+                ["en.PasswordResetSubject"] = "Password Reset",
+                ["zh.PasswordResetSubject"] = "密码重置",
+                ["zh-tw.PasswordResetSubject"] = "密碼重置",
+                ["es.PasswordResetSubject"] = "Restablecimiento de Contraseña"
+            },
+            
             ["messages"] = new Dictionary<string, string>
             {
                 // Add general messages here if needed
                 ["en.Success"] = "Operation completed successfully.",
                 ["zh-tw.Success"] = "操作成功完成。",
                 ["es.Success"] = "Operación completada exitosamente.",
-                ["en.Success"] = "操作已成功完成。"
+                ["zh.Success"] = "操作已成功完成。"
 
             }
         };

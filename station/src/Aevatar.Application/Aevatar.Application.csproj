@@ -36,6 +36,14 @@
 
     <ItemGroup>
         <EmbeddedResource Include="Account\Templates\RegisterCode.tpl" />
+        <EmbeddedResource Include="Account\Templates\RegisterCode_es.tpl" />
+        <EmbeddedResource Include="Account\Templates\RegisterCode_zh-cn.tpl" />
+        <EmbeddedResource Include="Account\Templates\RegisterCode_zh-tw.tpl" />
+
+        <EmbeddedResource Include="Account\Templates\PasswordResetLink.tpl" />
+        <EmbeddedResource Include="Account\Templates\PasswordResetLink_es.tpl" />
+        <EmbeddedResource Include="Account\Templates\PasswordResetLink_zh-cn.tpl" />
+        <EmbeddedResource Include="Account\Templates\PasswordResetLink_zh-tw.tpl" />
     </ItemGroup>
 
 </Project>
