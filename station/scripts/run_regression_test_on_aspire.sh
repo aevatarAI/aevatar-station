@@ -20,4 +20,4 @@ echo "API_HOST: $API_HOST"
 echo "API_SERVER_HOST: $API_SERVER_HOST"
 
 # Execute pytest
-pytest regression_test.py -v
+python3 -m pytest regression_test.py -v
