@@ -3,12 +3,10 @@ using System.Threading.Tasks;
 using Aevatar.Enum;
 using Aevatar.Service;
 using Microsoft.Extensions.Logging;
-using Volo.Abp.Application.Services;
-using Volo.Abp.DependencyInjection;
 
 namespace Aevatar.LocalDevelopment;
 
-public class LocalDevelopmentDeveloperService : ApplicationService, IDeveloperService, ITransientDependency
+public class LocalDevelopmentDeveloperService : IDeveloperService
 {
     private readonly ILogger<LocalDevelopmentDeveloperService> _logger;
 

@@ -5,7 +5,7 @@ using Volo.Abp.Identity;
 
 namespace Aevatar.Account;
 
-public class DevLocalAevatarAccountEmailer : IAevatarAccountEmailer, ITransientDependency
+public class DevLocalAevatarAccountEmailer : IAevatarAccountEmailer
 {
     private readonly ILogger<DevLocalAevatarAccountEmailer> _logger;
 
