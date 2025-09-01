@@ -42,18 +42,21 @@ public class Program
                 .AddSingleton<IAuthorizationMiddlewareResultHandler, AevatarAuthorizationMiddlewareResultHandler>();
             await builder.AddApplicationAsync<AevatarHttpApiHostModule>();
             var app = builder.Build();
-            await app.InitializeApplicationAsync();
             
-            // Add trace context middleware to capture trace IDs from HTTP requests
-            app.UseTraceContext();
-            
-            // URL rewriting for local development only
+            // URL rewriting must be added BEFORE app initialization to ensure it runs before routing
             if (app.Environment.IsDevelopment())
             {
                 var rewriteOptions = new RewriteOptions()
                     .AddRewrite(@"^/[^/]*-client(/.*)?$", "$1", skipRemainingRules: true);
                 app.UseRewriter(rewriteOptions);
+                
+                Log.Information("URL rewriting enabled for development environment - filtering /*-client path segments");
             }
+            
+            await app.InitializeApplicationAsync();
+            
+            // Add trace context middleware to capture trace IDs from HTTP requests
+            app.UseTraceContext();
             
             app.MapHub<AevatarSignalRHub>("api/agent/aevatarHub");
             app.MapHub<StationSignalRHub>("api/notifications").RequireAuthorization();
