@@ -128,8 +128,15 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
     private async Task<string> CreateHttpClientAsync(string appId, string version, string imageName, string config,
         List<string> Command, string hostName,bool isWebhook)
     {
+        _logger.LogDebug("[KubernetesHostManager] CreateHttpClientAsync - START: appId={AppId}, version={Version}, imageName={ImageName}, hostName={HostName}, isWebhook={IsWebhook}", 
+            appId, version, imageName, hostName, isWebhook);
+        
+        _logger.LogDebug("[KubernetesHostManager] CreateHttpClientAsync - Input config content:\n{InputConfig}", config);
+        
         // Ensure ConfigMaps (AppSettings and SideCar Configs) are created
         var appHostName = isWebhook ? appId : GetHostName(appId, KubernetesConstants.HostClient);
+        _logger.LogDebug("[KubernetesHostManager] CreateHttpClientAsync - Resolved appHostName: {AppHostName}", appHostName);
+        
         var configFiles = new Dictionary<string, string>
         {
             { KubernetesConstants.AppSettingFileName, config },
@@ -147,6 +154,9 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
                 GetHostClientConfigContent(appId, version, KubernetesConstants.AppSettingSiloSharedFileName, null)
             }
         };
+
+        _logger.LogDebug("[KubernetesHostManager] CreateHttpClientAsync - Generated configFiles: {@ConfigFiles}", 
+            configFiles.ToDictionary(kv => kv.Key, kv => kv.Value.Length > 500 ? $"{kv.Value.Substring(0, 500)}... (truncated, total length: {kv.Value.Length})" : kv.Value));
 
         // Add business configuration file if available
         var hostType = isWebhook ? HostTypeEnum.WebHook : HostTypeEnum.Client;
@@ -235,9 +245,20 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
         _logger.LogInformation(
             $"[KubernetesHostManager] Starting to update Host Client ConfigMap for appResourceId: {appId}, version: {version}, corsUrls: {corsUrls}, tenantId: {projectId}");
 
+        _logger.LogDebug("[KubernetesHostManager] UpdateHttpClientConfigMapAsync - START: appId={AppId}, version={Version}, corsUrls={CorsUrls}, projectId={ProjectId}", 
+            appId, version, corsUrls, projectId);
+
         var hostClientId = GetHostName(appId, KubernetesConstants.HostClient);
+        _logger.LogDebug("[KubernetesHostManager] UpdateHttpClientConfigMapAsync - Resolved hostClientId: {HostClientId}", hostClientId);
+        
+        _logger.LogDebug("[KubernetesHostManager] UpdateHttpClientConfigMapAsync - About to generate config from template with templatePath: {TemplatePath}", 
+            KubernetesConstants.HostClientSettingTemplateFilePath);
+        
         var config = GetHostClientConfigContent(appId, version, KubernetesConstants.HostClientSettingTemplateFilePath,
             corsUrls);
+        
+        _logger.LogDebug("[KubernetesHostManager] UpdateHttpClientConfigMapAsync - Main config generated:\n{MainConfig}", config);
+        
         var hostClientConfigContent = new Dictionary<string, string>
         {
             { KubernetesConstants.AppSettingFileName, config },
@@ -255,14 +276,24 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
                 GetHostClientConfigContent(appId, version, KubernetesConstants.AppSettingSiloSharedFileName, null)
             }
         };
+
+        _logger.LogDebug("[KubernetesHostManager] UpdateHttpClientConfigMapAsync - Complete hostClientConfigContent: {@ConfigContent}", 
+            hostClientConfigContent.ToDictionary(kv => kv.Key, kv => kv.Value.Length > 500 ? $"{kv.Value.Substring(0, 500)}... (truncated, total length: {kv.Value.Length})" : kv.Value));
         // Add business configuration file if available
         await AddBusinessConfigToConfigFilesAsync(appId, hostClientConfigContent, HostTypeEnum.Silo);
+        _logger.LogDebug("[KubernetesHostManager] UpdateHttpClientConfigMapAsync - After adding business config, final hostClientConfigContent: {@FinalConfigContent}", 
+            hostClientConfigContent.ToDictionary(kv => kv.Key, kv => kv.Value.Length > 500 ? $"{kv.Value.Substring(0, 500)}... (truncated, total length: {kv.Value.Length})" : kv.Value));
+        
+        var configMapName = ConfigMapHelper.GetAppSettingConfigMapName(hostClientId, version);
+        _logger.LogDebug("[KubernetesHostManager] UpdateHttpClientConfigMapAsync - About to ensure ConfigMap: {ConfigMapName}", configMapName);
         
         await EnsureConfigMapAsync(hostClientId, version, ConfigMapHelper.GetAppSettingConfigMapName,
             hostClientConfigContent, ConfigMapHelper.CreateAppSettingConfigMapDefinition);
 
         _logger.LogInformation(
             $"[KubernetesHostManager] Successfully updated Host Client ConfigMap for appResourceId: {appId}, version: {version}, corsUrls: {corsUrls}, tenantId: {projectId}");
+        
+        _logger.LogDebug("[KubernetesHostManager] UpdateHttpClientConfigMapAsync - COMPLETED successfully");
     }
 
     #endregion
@@ -401,20 +432,59 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
             .Replace(KubernetesConstants.HostPlaceHolderTenantId, projectId.ToString());
     }
 
-    private static string GetHostClientConfigContent(string appId, string version, string templateFilePath,
+    private string GetHostClientConfigContent(string appId, string version, string templateFilePath,
         [CanBeNull] string corsUrls, Guid? tenantId = null)
     {
+        _logger.LogDebug("[KubernetesHostManager] GetHostClientConfigContent - START: appId={AppId}, version={Version}, templateFilePath={TemplatePath}, corsUrls={CorsUrls}, tenantId={TenantId}", 
+            appId, version, templateFilePath, corsUrls, tenantId);
+        
         var configContent = File.ReadAllText(templateFilePath);
+        _logger.LogDebug("[KubernetesHostManager] Template content loaded from {TemplatePath}:\n{TemplateContent}", 
+            templateFilePath, configContent);
+        
         var unescapedContent = Regex.Unescape(configContent);
+        _logger.LogDebug("[KubernetesHostManager] Template after regex unescape:\n{UnescapedContent}", 
+            unescapedContent);
+        
+        // Log the parameter mapping
+        var mappingInfo = new {
+            AppIdPlaceholder = KubernetesConstants.HostPlaceHolderAppId,
+            AppIdValue = appId.ToLower(),
+            VersionPlaceholder = KubernetesConstants.HostPlaceHolderVersion,
+            VersionValue = version.ToLower(),
+            NameSpacePlaceholder = KubernetesConstants.HostPlaceHolderNameSpace,
+            NameSpaceValue = KubernetesConstants.AppNameSpace.ToLower(),
+            TenantIdPlaceholder = KubernetesConstants.HostPlaceHolderTenantId,
+            TenantIdValue = tenantId.ToString(),
+            CorsPlaceholder = KubernetesConstants.HostClientCors,
+            CorsValue = corsUrls
+        };
+        _logger.LogDebug("[KubernetesHostManager] Parameter mapping: {@MappingInfo}", mappingInfo);
+        
         unescapedContent = unescapedContent.Replace(KubernetesConstants.HostPlaceHolderAppId, appId.ToLower())
             .Replace(KubernetesConstants.HostPlaceHolderVersion, version.ToLower())
             .Replace(KubernetesConstants.HostPlaceHolderNameSpace, KubernetesConstants.AppNameSpace.ToLower())
             .Replace(KubernetesConstants.HostPlaceHolderTenantId, tenantId.ToString());
+        
+        _logger.LogDebug("[KubernetesHostManager] Template after basic placeholder replacement:\n{ContentAfterBasicReplace}", 
+            unescapedContent);
+        
         if (corsUrls != null)
         {
+            _logger.LogDebug("[KubernetesHostManager] Replacing CORS placeholder '{CorsPlaceholder}' with '{CorsUrls}'", 
+                KubernetesConstants.HostClientCors, corsUrls);
             unescapedContent = unescapedContent.Replace(KubernetesConstants.HostClientCors, corsUrls);
+            _logger.LogDebug("[KubernetesHostManager] Template after CORS placeholder replacement:\n{ContentAfterCorsReplace}", 
+                unescapedContent);
+        }
+        else
+        {
+            _logger.LogDebug("[KubernetesHostManager] No CORS URLs provided, skipping CORS placeholder replacement");
         }
 
+        _logger.LogDebug("[KubernetesHostManager] GetHostClientConfigContent - FINAL RESULT:\n{FinalContent}", 
+            unescapedContent);
+        
         return unescapedContent;
     }
 
