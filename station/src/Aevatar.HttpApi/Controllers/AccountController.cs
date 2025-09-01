@@ -126,7 +126,7 @@ public class AccountController : AevatarController
         var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp);
         RequestContext.Set("IsCN", isCN);
         var language = HttpContext.GetGodGPTLanguage();
-        return await _accountService.SendPasswordResetCodeAsync(input, language);
+        await _accountService.SendPasswordResetCodeAsync(input, language);
     }
 
     [HttpPost]
