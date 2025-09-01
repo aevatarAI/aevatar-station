@@ -50,20 +50,16 @@ public class DocumentationLinkProcessor : ISchemaProcessor
              var propertyName = GetPropertyName(property.Name);
              var documentationUrl = docLinkAttribute.DocumentationUrl;
                  
-             // Check if URL is marked as invalid in context first
-             if (_context?.InvalidUrls.Contains(documentationUrl) == true)
-             {
-                 continue; // Skip URLs that are known to be invalid
-             }
-             
-             // Fallback to basic URL format validation for URLs not in context
-                         // Skip URL validation here - it's handled by context from AgentService
-            // Only proceed if URL is not marked as invalid in the context
-            // Find the corresponding property schema and add documentation URL
+             // Find the corresponding property schema and add documentation URL
             if (!context.Schema.Properties.TryGetValue(propertyName, out var propertySchema)) continue;
-            // Add documentationUrl directly to the property schema
+            
+            // Determine if URL is valid based on context
+            var isUrlValid = !(_context?.InvalidUrls.Contains(documentationUrl) == true);
+            
+            // Add both documentationUrl and documentationUrlValid to the property schema
             propertySchema.ExtensionData ??= new Dictionary<string, object>();
             propertySchema.ExtensionData["documentationUrl"] = documentationUrl;
+            propertySchema.ExtensionData["documentationUrlValid"] = isUrlValid;
         }
     }
 
