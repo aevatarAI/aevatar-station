@@ -4,15 +4,18 @@ using System.Threading.Tasks;
 using Aevatar.Account;
 using Aevatar.Application.Constants;
 using Aevatar.Application.Contracts.Services;
+using Aevatar.Application.Service;
 using Aevatar.Domain.Shared;
 using Aevatar.Extensions;
 using Aevatar.Services;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Orleans.Runtime;
 using Volo.Abp;
 using Volo.Abp.Account;
 using Volo.Abp.Identity;
+using Volo.Abp.Threading;
 
 namespace Aevatar.Controllers;
 
@@ -116,7 +119,8 @@ public class AccountController : AevatarController
     [Route("send-password-reset-code")]
     public virtual Task SendPasswordResetCodeAsync(SendPasswordResetCodeDto input)
     {
-        return _accountService.SendPasswordResetCodeAsync(input);
+        var language = HttpContext.GetGodGPTLanguage();
+        return _accountService.SendPasswordResetCodeAsync(input, language);
     }
 
     [HttpPost]

@@ -66,31 +66,31 @@ public class DiagnosticServiceProviderWrapper : IServiceProvider, IDisposable
     {
         if (_disposed)
         {
-            Log.Warning("⚠️  Attempting to resolve service {ServiceType} from disposed provider!", serviceType.Name);
+            Log.Warning("Attempting to resolve service {ServiceType} from disposed provider!", serviceType.Name);
             Log.Warning("Stack trace: {StackTrace}", Environment.StackTrace);
             return null;
         }
 
         try
         {
-            Log.Debug("🔍 Resolving service: {ServiceType}", serviceType.Name);
+            Log.Debug("Resolving service: {ServiceType}", serviceType.Name);
             var service = _inner.GetService(serviceType);
             
             if (service != null)
             {
-                Log.Debug("✅ Successfully resolved {ServiceType} -> {ImplementationType}", 
+                Log.Debug("Successfully resolved {ServiceType} -> {ImplementationType}", 
                          serviceType.Name, service.GetType().Name);
             }
             else
             {
-                Log.Debug("❌ Service {ServiceType} not found", serviceType.Name);
+                Log.Debug("Service {ServiceType} not found", serviceType.Name);
             }
             
             return service;
         }
         catch (ObjectDisposedException ex)
         {
-            Log.Error(ex, "💥 ObjectDisposedException while resolving {ServiceType}! " +
+            Log.Error(ex, "ObjectDisposedException while resolving {ServiceType}! " +
                          "This indicates the DI container was disposed during service resolution.", 
                          serviceType.Name);
             Log.Error("Full stack trace: {StackTrace}", Environment.StackTrace);
@@ -98,7 +98,7 @@ public class DiagnosticServiceProviderWrapper : IServiceProvider, IDisposable
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "❌ Exception while resolving service {ServiceType}: {Message}", 
+            Log.Error(ex, "Exception while resolving service {ServiceType}: {Message}", 
                      serviceType.Name, ex.Message);
             throw;
         }
@@ -106,7 +106,7 @@ public class DiagnosticServiceProviderWrapper : IServiceProvider, IDisposable
 
     public void Dispose()
     {
-        Log.Information("🔄 DiagnosticServiceProviderWrapper disposing...");
+        Log.Information("DiagnosticServiceProviderWrapper disposing...");
         _disposed = true;
         
         if (_inner is IDisposable disposable)
@@ -114,11 +114,11 @@ public class DiagnosticServiceProviderWrapper : IServiceProvider, IDisposable
             try
             {
                 disposable.Dispose();
-                Log.Information("✅ Inner service provider disposed successfully");
+                Log.Information("Inner service provider disposed successfully");
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "❌ Error disposing inner service provider");
+                Log.Error(ex, "Error disposing inner service provider");
             }
         }
     }

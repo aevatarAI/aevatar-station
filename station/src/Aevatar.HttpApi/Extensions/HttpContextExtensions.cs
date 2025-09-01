@@ -26,6 +26,7 @@ public static class HttpContextExtensions
         return languageHeader.ToLowerInvariant() switch
         {
             "en" => GodGPTChatLanguage.English,
+            "zh-cn" => GodGPTChatLanguage.CN,
             "zh-tw" => GodGPTChatLanguage.TraditionalChinese,
             "es" => GodGPTChatLanguage.Spanish,
             _ => GodGPTChatLanguage.English // Default to English for unknown values
