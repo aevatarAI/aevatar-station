@@ -418,13 +418,10 @@ public class AppleSignatureVerificationService : ApplicationService, IAppleSigna
 
             // Decode signature
             var signatureBytes = Convert.FromBase64String(base64Signature);
-            if (signatureBytes.Length == 70)
+            var ieee1363Signature = ConvertDerToIeeeP1363(signatureBytes);
+            if (ieee1363Signature != null)
             {
-                var ieee1363Signature = ConvertDerToIeeeP1363(signatureBytes);
-                if (ieee1363Signature != null)
-                {
-                    signatureBytes = ieee1363Signature;
-                }
+                signatureBytes = ieee1363Signature;
             }
 
             // Verify signature using SHA-256
