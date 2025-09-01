@@ -34,10 +34,10 @@ public class Program
             ConfigureLogger(builder.Configuration);
             
             builder.Host
-                .UseOrleansClientConfiguration()
+               // .UseOrleansClientConfiguration()
                 .UseAutofac()
                 .UseSerilog();
-            builder.Services.AddSignalR(options => { options.EnableDetailedErrors = true; }).AddOrleans();
+           // builder.Services.AddSignalR(options => { options.EnableDetailedErrors = true; }).AddOrleans();
             builder.Services
                 .AddSingleton<IAuthorizationMiddlewareResultHandler, AevatarAuthorizationMiddlewareResultHandler>();
             await builder.AddApplicationAsync<AevatarHttpApiHostModule>();
@@ -94,8 +94,8 @@ public class Program
             // Add trace context middleware to capture trace IDs from HTTP requests
             app.UseTraceContext();
             
-            app.MapHub<AevatarSignalRHub>("api/agent/aevatarHub");
-            app.MapHub<StationSignalRHub>("api/notifications").RequireAuthorization();
+          //  app.MapHub<AevatarSignalRHub>("api/agent/aevatarHub");
+          //  app.MapHub<StationSignalRHub>("api/notifications").RequireAuthorization();
 
             await app.RunAsync();
             return 0;

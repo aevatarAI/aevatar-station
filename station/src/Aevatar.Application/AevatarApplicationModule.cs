@@ -102,16 +102,35 @@ public class AevatarApplicationModule : AbpModule
     {
         var hostingEnvironment = context.Services.GetHostingEnvironment();
         
+        // === DETAILED ENVIRONMENT DEBUG INFO IN APPLICATION MODULE ===
+        Console.WriteLine("=== AevatarApplicationModule ENVIRONMENT DEBUG ===");
+        Console.WriteLine($"hostingEnvironment.EnvironmentName: {hostingEnvironment.EnvironmentName}");
+        Console.WriteLine($"hostingEnvironment.IsDevelopment(): {hostingEnvironment.IsDevelopment()}");
+        Console.WriteLine($"hostingEnvironment.IsStaging(): {hostingEnvironment.IsStaging()}");
+        Console.WriteLine($"hostingEnvironment.IsProduction(): {hostingEnvironment.IsProduction()}");
+        Console.WriteLine($"Environment.GetEnvironmentVariable(\"ASPNETCORE_ENVIRONMENT\"): {Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}");
+        Console.WriteLine($"Environment.GetEnvironmentVariable(\"DOTNET_ENVIRONMENT\"): {Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")}");
+        Console.WriteLine("=== END APPLICATION MODULE DEBUG ===");
+        
         if (hostingEnvironment.IsDevelopment())
         {
+            Console.WriteLine("[AevatarApplicationModule] ENTERING DEVELOPMENT MODE - Registering local development services");
+            
             // Use local development emailer that only logs instead of sending real emails
             context.Services.AddTransient<IAevatarAccountEmailer, DevLocalAevatarAccountEmailer>();
+            Console.WriteLine("[AevatarApplicationModule] Registered DevLocalAevatarAccountEmailer");
             
             // Use DefaultHostDeployManager for local development instead of KubernetesHostManager
             context.Services.AddTransient<IHostDeployManager, DefaultHostDeployManager>();
+            Console.WriteLine("[AevatarApplicationModule] Registered DefaultHostDeployManager");
             
             // Use local development service that only logs instead of calling real K8s operations
             context.Services.AddTransient<IDeveloperService, LocalDevelopmentDeveloperService>();
+            Console.WriteLine("[AevatarApplicationModule] Registered LocalDevelopmentDeveloperService");
+        }
+        else
+        {
+            Console.WriteLine("[AevatarApplicationModule] NOT IN DEVELOPMENT MODE - Using production services");
         }
     }
     
