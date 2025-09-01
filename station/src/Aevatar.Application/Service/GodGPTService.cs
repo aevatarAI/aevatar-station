@@ -1204,13 +1204,15 @@ public class GodGPTService : ApplicationService, IGodGPTService
 
     public async Task<AppRatingRecordDto> RecordAppRatingAsync(Guid currentUserId, RecordAppRatingInput input)
     {
-        var userStatisticsGAgent = _clusterClient.GetGrain<IUserStatisticsGAgent>(currentUserId);
-        return await userStatisticsGAgent.RecordAppRatingAsync(input.Platform, input.DeviceId);
+        var grainId = CommonHelper.StringToGuid(input.DeviceId);
+        var userStatisticsGAgent = _clusterClient.GetGrain<IUserStatisticsGAgent>(grainId);
+        return await userStatisticsGAgent.RecordAppRatingAsync(currentUserId, input.Platform, input.DeviceId);
     }
 
     public async Task<bool> CanUserRateAppAsync(Guid currentUserId, CanUserRateAppInput input)
     {
-        var userStatisticsGAgent = _clusterClient.GetGrain<IUserStatisticsGAgent>(currentUserId);
+        var grainId = CommonHelper.StringToGuid(input.DeviceId);
+        var userStatisticsGAgent = _clusterClient.GetGrain<IUserStatisticsGAgent>(grainId);
         return await userStatisticsGAgent.CanUserRateAppAsync(input.DeviceId);
     }
 
