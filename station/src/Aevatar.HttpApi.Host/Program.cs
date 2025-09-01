@@ -47,7 +47,8 @@ public class Program
             if (app.Environment.IsDevelopment())
             {
                 var rewriteOptions = new RewriteOptions()
-                    .AddRewrite(@"^/[^/]*-client(/.*)?$", "$1", skipRemainingRules: true);
+                    .AddRewrite(@"^/[^/]*-client/(.*)$", "/$1", skipRemainingRules: true)
+                    .AddRewrite(@"^/[^/]*-client$", "/", skipRemainingRules: true);
                 app.UseRewriter(rewriteOptions);
                 
                 Log.Information("URL rewriting enabled for development environment - filtering /*-client path segments");
