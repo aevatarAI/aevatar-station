@@ -350,8 +350,7 @@ public class AgentService : ApplicationService, IAgentService
         var configuration = await GetAgentConfigurationAsync(businessAgent);
         if (configuration != null)
         {
-            var context = await CreateSchemaContextAsync(configuration.DtoType);
-            resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration.DtoType, context).ToJson();
+            resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration.DtoType).ToJson();
         }
 
         return resp;
@@ -524,8 +523,7 @@ public class AgentService : ApplicationService, IAgentService
         var configuration = await GetAgentConfigurationAsync(businessAgent);
         if (configuration != null)
         {
-            var context = await CreateSchemaContextAsync(configuration.DtoType);
-            resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration.DtoType, context).ToJson();
+            resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration.DtoType).ToJson();
         }
 
         return resp;
