@@ -66,6 +66,8 @@ export LOCAL_RUN=true
 export CLIENT_ID="Aevatar001"
 export CLIENT_SECRET="123456"
 
+echo "Runs regression tests against httpapi.host endpoints (not developer.host endpoints in ephemeral environment)."
+
 # Run the regression tests
 echo "Running regression tests against Aspire endpoints..."
 echo "AUTH_HOST: $AUTH_HOST"
