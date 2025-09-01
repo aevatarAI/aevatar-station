@@ -127,8 +127,11 @@ public class ThumbnailService : IThumbnailService, ITransientDependency
                     
                     originalSize = originalStream.Length;
                     
+                    // Save to blob storage using a new scope to avoid lifetime issues
                     originalStream.Seek(0, SeekOrigin.Begin);
-                    await _blobContainer.SaveAsync(fileName, originalStream, true);
+                    using var scope = _serviceScopeFactory.CreateScope();
+                    var blobContainer = scope.ServiceProvider.GetRequiredService<IBlobContainer>();
+                    await blobContainer.SaveAsync(fileName, originalStream, true);
                 }
                 
                 return new ThumbnailInfo

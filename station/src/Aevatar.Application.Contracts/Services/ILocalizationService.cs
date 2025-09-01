@@ -49,4 +49,13 @@ public interface ILocalizationService
     /// <param name="parameters">Parameters to replace in the message template</param>
     /// <returns>Localized message with parameters replaced</returns>
     string GetLocalizedMessage(string key, GodGPTChatLanguage language, Dictionary<string, string> parameters);
+    
+    /// <summary>
+    /// Get localized message by key, language and category
+    /// </summary>
+    /// <param name="key">Message key</param>
+    /// <param name="language">Target language</param>
+    /// <param name="category">Message category (e.g., "emails", "messages", "exceptions")</param>
+    /// <returns>Localized message</returns>
+    string GetLocalizedMessage(string key, GodGPTChatLanguage language, string category);
 } 
