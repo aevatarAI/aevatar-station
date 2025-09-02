@@ -8,6 +8,15 @@ public class SystemLLMMetaInfoOptions
     {
         new ()
         {
+            Name = "Azure",
+            Provider = "Azure",
+            Type = "Azure OpenAI",
+            Strengths = new List<string> { "Enterprise security", "Compliance", "Integration with Azure services" },
+            BestFor = new List<string> { "Enterprise applications", "Secure environments", "Azure ecosystem" },
+            Speed = "Fast"
+        },
+        new ()
+        {
             Name = "OpenAI",
             Provider = "OpenAI",
             Type = "GPT-4",
@@ -32,6 +41,15 @@ public class SystemLLMMetaInfoOptions
             Strengths = new List<string> { "Mathematical reasoning", "Scientific analysis", "Research capabilities" },
             BestFor = new List<string> { "Research tasks", "Data analysis", "Technical documentation" },
             Speed = "Medium"
+        },
+        new ()
+        {
+            Name = "Google",
+            Provider = "Google",
+            Type = "Gemini Pro",
+            Strengths = new List<string> { "Multimodal understanding", "Large context window", "Real-time information" },
+            BestFor = new List<string> { "Content analysis", "Document processing", "Information retrieval" },
+            Speed = "Fast"
         }
     };
 }

@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Aevatar.Agent;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
+using Aevatar.Options;
 using Aevatar.Schema;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -1233,5 +1235,104 @@ public abstract class AgentServiceTests<TStartupModule> : AevatarApplicationTest
         
         // 清理：删除创建的Agent
         await _agentService.DeleteAgentAsync(createdAgent.Id);
+    }
+
+    [Fact]
+    public void GetSystemLLMConfigsForAgent_WithSystemLLMProperty_ShouldReturnConfigs()
+    {
+        // Arrange
+        var configuration = new Configuration
+        {
+            DtoType = typeof(TestDtoWithSystemLLM)
+        };
+
+        // Act
+        var result = CallPrivateMethod<List<SystemLLMConfigDto>?>("GetSystemLLMConfigsForAgent", configuration);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Count.ShouldBeGreaterThan(0);
+        result.Any(c => c.Name == "Azure").ShouldBeTrue();
+        result.Any(c => c.Name == "OpenAI").ShouldBeTrue();
+        result.Any(c => c.Name == "DeepSeek").ShouldBeTrue();
+        result.Any(c => c.Name == "Google").ShouldBeTrue();
+    }
+
+    [Fact]
+    public void GetSystemLLMConfigsForAgent_WithModelIdProperty_ShouldReturnConfigs()
+    {
+        // Arrange
+        var configuration = new Configuration
+        {
+            DtoType = typeof(TestDtoWithModelId)
+        };
+
+        // Act
+        var result = CallPrivateMethod<List<SystemLLMConfigDto>?>("GetSystemLLMConfigsForAgent", configuration);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Count.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public void GetSystemLLMConfigsForAgent_WithoutTargetProperties_ShouldReturnNull()
+    {
+        // Arrange
+        var configuration = new Configuration
+        {
+            DtoType = typeof(TestDtoWithoutTargetProperties)
+        };
+
+        // Act
+        var result = CallPrivateMethod<List<SystemLLMConfigDto>?>("GetSystemLLMConfigsForAgent", configuration);
+
+        // Assert
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public void GetSystemLLMConfigsForAgent_WithNullDtoType_ShouldReturnNull()
+    {
+        // Arrange
+        var configuration = new Configuration
+        {
+            DtoType = null
+        };
+
+        // Act
+        var result = CallPrivateMethod<List<SystemLLMConfigDto>?>("GetSystemLLMConfigsForAgent", configuration);
+
+        // Assert
+        result.ShouldBeNull();
+    }
+
+    private T CallPrivateMethod<T>(string methodName, params object[] parameters)
+    {
+        var method = typeof(AgentService).GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Instance);
+        method.ShouldNotBeNull($"Method {methodName} should exist");
+
+        var agentService = GetRequiredService<AgentService>();
+        var result = method.Invoke(agentService, parameters);
+        return (T)result!;
+    }
+
+    // Test DTOs for GetSystemLLMConfigsForAgent testing
+    public class TestDtoWithSystemLLM
+    {
+        public string SystemLLM { get; set; } = string.Empty;
+        public string OtherProperty { get; set; } = string.Empty;
+    }
+
+    public class TestDtoWithModelId
+    {
+        public string ModelId { get; set; } = string.Empty;
+        public string OtherProperty { get; set; } = string.Empty;
+    }
+
+    public class TestDtoWithoutTargetProperties
+    {
+        public string SomeProperty { get; set; } = string.Empty;
+        public int NumberProperty { get; set; }
     }
 }
