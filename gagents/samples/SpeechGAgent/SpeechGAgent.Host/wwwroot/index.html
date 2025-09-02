@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>语音助手</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .section {
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        #audioPlayer {
+            width: 100%;
+            margin-top: 10px;
+        }
+        .recording-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: red;
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+        .recording-controls {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .recording-result-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+        }
+        .recording-result-item .time {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .recording-result-item .text {
+            margin: 5px 0;
+        }
+        .recording-result-item .actions {
+            display: flex;
+            gap: 10px;
+        }
+        .recording-result-item .actions button {
+            padding: 5px 10px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="section">
+            <h2>实时语音转文字</h2>
+            <div class="recording-controls">
+                <button id="startRecording" onclick="startRecording()">开始录音</button>
+                <button id="stopRecording" onclick="stopRecording()" disabled>停止录音</button>
+                <div id="recordingStatus" style="display: none;">
+                    <span class="recording-indicator"></span>
+                    <span>正在录音...</span>
+                </div>
+            </div>
+            <div id="recordingResult" style="margin-top: 20px;"></div>
+        </div>
+
+        <div class="section">
+            <h2>上传音频文件转文字</h2>
+            <input type="file" id="audioFile" accept=".wav" />
+            <button onclick="speechToText()">转换</button>
+            <div id="textResult"></div>
+        </div>
+
+        <div class="section">
+            <h2>文字转语音</h2>
+            <textarea id="textInput" rows="4" style="width: 100%"></textarea>
+            <button onclick="textToSpeech()">转换</button>
+            <audio id="audioPlayer" controls></audio>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let lastRecordingBlob = null;
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    lastRecordingBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    await processAudioBlob(lastRecordingBlob);
+                };
+
+                mediaRecorder.start(1000); // 每秒收集一次数据
+                isRecording = true;
+                document.getElementById('startRecording').disabled = true;
+                document.getElementById('stopRecording').disabled = false;
+                document.getElementById('recordingStatus').style.display = 'block';
+            } catch (error) {
+                console.error('Error accessing microphone:', error);
+                alert('无法访问麦克风，请确保已授予权限');
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                isRecording = false;
+                document.getElementById('startRecording').disabled = false;
+                document.getElementById('stopRecording').disabled = true;
+                document.getElementById('recordingStatus').style.display = 'none';
+            }
+        }
+
+        function playLastRecording() {
+            if (lastRecordingBlob) {
+                const audioUrl = URL.createObjectURL(lastRecordingBlob);
+                const audio = new Audio(audioUrl);
+                audio.play();
+            } else {
+                alert('没有可播放的录音');
+            }
+        }
+
+        async function processAudioBlob(audioBlob) {
+            const formData = new FormData();
+            formData.append('file', audioBlob, 'recording.wav');
+
+            try {
+                const response = await fetch('/api/speech-to-text', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                const resultDiv = document.getElementById('recordingResult');
+                const time = new Date().toLocaleTimeString();
+                
+                const resultItem = document.createElement('div');
+                resultItem.className = 'recording-result-item';
+                resultItem.innerHTML = `
+                    <div class="time">${time}</div>
+                    <div class="text">${result.text}</div>
+                    <div class="actions">
+                        <button onclick="playLastRecording()">播放录音</button>
+                    </div>
+                `;
+                
+                resultDiv.insertBefore(resultItem, resultDiv.firstChild);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('转换失败');
+            }
+        }
+
+        async function speechToText() {
+            const fileInput = document.getElementById('audioFile');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('请选择音频文件');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/speech-to-text', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                document.getElementById('textResult').textContent = result.text;
+            } catch (error) {
+                console.error('Error:', error);
+                alert('转换失败');
+            }
+        }
+
+        async function textToSpeech() {
+            const text = document.getElementById('textInput').value;
+            if (!text) {
+                alert('请输入文字');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/text-to-speech', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(text)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const blob = await response.blob();
+                const audioUrl = URL.createObjectURL(blob);
+                const audioPlayer = document.getElementById('audioPlayer');
+                audioPlayer.src = audioUrl;
+                audioPlayer.play();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('转换失败');
+            }
+        }
+    </script>
+</body>
+</html>
