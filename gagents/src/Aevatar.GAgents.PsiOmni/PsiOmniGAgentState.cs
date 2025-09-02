@@ -33,6 +33,7 @@ public class PsiOmniGAgentState : GroupMemberState
     [Id(14)] public Dictionary<string, Artifact> Artifacts { get; set; } = new();
     [Id(15)] public string DraftResponse { get; set; } = string.Empty;
     [Id(16)] public int IterationCount { get; set; }
+    [Id(17)] public Guid BlackboardId { get; set; } = Guid.Empty;
 }
 
 [GenerateSerializer]
@@ -61,6 +62,7 @@ public class UpdateSendConfigEvent : PsiOmniGAgentStateLogEvent
 public class ReceiveUserMessageEvent : PsiOmniGAgentStateLogEvent
 {
     [Id(0)] public UserMessageEvent Event { get; set; } = new();
+    [Id(1)] public Guid BlackboardId { get; set; } = Guid.Empty;
 }
 
 [GenerateSerializer]

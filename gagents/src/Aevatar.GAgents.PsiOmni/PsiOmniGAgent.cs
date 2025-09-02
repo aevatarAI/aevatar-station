@@ -10,6 +10,12 @@ using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Aevatar.GAgents.PsiOmni.Interfaces;
 using Aevatar.GAgents.PsiOmni.Models;
+using Aevatar.GAgents.AI.Common;
+using Aevatar.GAgents.AIGAgent.Dtos;
+using GroupChat.GAgent;
+using GroupChat.GAgent.Feature.Common;
+using GroupChat.GAgent.Feature.Coordinator.GEvent;
+using JsonConverter = Newtonsoft.Json.JsonConvert;
 
 namespace Aevatar.GAgents.PsiOmni;
 
@@ -273,6 +279,24 @@ public partial class
 
         // Initialize tracing after the grain is activated to ensure agent ID is available
         InitializeTracing();
+
+        // Initialize the AI agent with the provided configuration
+        if (!configuration.SystemLLM.IsNullOrEmpty() || !configuration.SelfLlmConfig.ApiKey.IsNullOrEmpty())
+        {
+            await InitializeAsync(new InitializeDto
+            {
+                Instructions = string.Empty,
+                LLMConfig = new LLMConfigDto
+                {
+                    SystemLLM = configuration.SystemLLM,
+                    SelfLLMConfig = configuration.SelfLlmConfig.ApiKey.IsNullOrEmpty()
+                        ? null
+                        : configuration.SelfLlmConfig
+                }
+            });
+        }
+
+
         State.Name = configuration.Name;
 
         RaiseEventWithTracing(new InitializeEvent
@@ -650,6 +674,31 @@ public partial class
                 }
 
                 LogEventDebug("No UserAgentId, logging result locally");
+                if (State.BlackboardId != Guid.Empty)
+                {
+                    var contentWithArtifacts = content ?? "";
+                    if (!finalResult.Artifacts.IsNullOrEmpty())
+                    {
+                        contentWithArtifacts = content + finalResult.Artifacts
+                            .Select(x => $"<artifact name=\"{x.Name}\" format=\"{x.Format}\">{x.Content}</artifact>")
+                            .JoinAsString("\n");
+                    }
+
+                    await PublishAsync(new ChatResponseEvent
+                    {
+                        BlackboardId = State.BlackboardId,
+                        MemberId = this.GetPrimaryKey(),
+                        MemberName = State.MemberName,
+                        ChatResponse = new ChatResponse()
+                        {
+                            Skip = false,
+                            Continue = false,
+                            Content = contentWithArtifacts
+                        },
+                        Term = 0
+                    });
+                }
+
                 return;
             }
 
@@ -753,6 +802,7 @@ public partial class
                 if (!payload.Event.Content.IsNullOrEmpty())
                 {
                     state.UserAgentId = payload.Event.ReplyToAgentId;
+                    state.BlackboardId = payload.BlackboardId;
                     var message = PsiOmniChatMessage.CreateUserMessage(payload.Event.Content);
                     message.Metadata["CallId"] = payload.Event.CallId;
                     state.ChatHistory.Add(message);
@@ -823,12 +873,14 @@ public partial class
                 else
                 {
                     todoItem.Status = TodoStatus.Completed;
-                    content += $"\n<system_note>Todo item {payload.Event.CallId} is marked as Completed. You don't need to mark it again.</system_note>";
+                    content +=
+                        $"\n<system_note>Todo item {payload.Event.CallId} is marked as Completed. You don't need to mark it again.</system_note>";
                 }
 
                 var amessage = PsiOmniChatMessage.CreateUserMessage(content);
                 amessage.Metadata["CallId"] = payload.Event.CallId;
                 state.ChatHistory.Add(amessage);
+
                 ScheduleTask(async () => await PublishAsyncToSelfWithTracing(new ContinuationEvent()
                 {
                     TargetAgentId = this.GetGrainId().ToString(),
@@ -1119,7 +1171,7 @@ public partial class
             case IterateEvent payload:
                 state.IterationCount += 1;
                 var userMessage = PsiOmniChatMessage.CreateUserMessage(
-                    $"<review_comment>{payload.Comment}</review_comment>\n"+
+                    $"<review_comment>{payload.Comment}</review_comment>\n" +
                     "<system_note>Use a tone as if this is the first response. DO NOT mention revision or iteration to user in your response. Please give a self-contained response. DO NOT ask the user to reference previous response!!!</system_note>"
                 );
                 userMessage.Metadata["IsReviewComment"] = true;
