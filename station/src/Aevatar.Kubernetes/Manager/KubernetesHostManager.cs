@@ -602,32 +602,16 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
             _logger.LogInformation("[KubernetesHostManager] ConfigMap {ConfigMapName} already exists, replacing with updated content in namespace {Namespace}", 
                 configMapName, KubernetesConstants.AppNameSpace);
             
-            await _kubernetesClientAdapter.ReplaceNamespacedConfigMapAsync(configMap, configMapName,
+            var replacedConfigMap = await _kubernetesClientAdapter.ReplaceNamespacedConfigMapAsync(configMap, configMapName,
                 KubernetesConstants.AppNameSpace);
                 
             _logger.LogInformation("[KubernetesHostManager] ConfigMap {ConfigMapName} successfully replaced in namespace {Namespace}", 
                 configMapName, KubernetesConstants.AppNameSpace);
             
-            // Verify the replacement by getting the actual ConfigMap from Kubernetes
-            try
-            {
-                var updatedConfigMaps = await _kubernetesClientAdapter.ListConfigMapAsync(KubernetesConstants.AppNameSpace);
-                var actualConfigMap = updatedConfigMaps.Items.FirstOrDefault(cm => cm.Metadata.Name == configMapName);
-                if (actualConfigMap != null && actualConfigMap.Data != null)
-                {
-                    _logger.LogInformation("[KubernetesHostManager] Verification - Actual ConfigMap {ConfigMapName} Data after replacement:", configMapName);
-                    var actualConfigData = System.Text.Json.JsonSerializer.Serialize(actualConfigMap.Data, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-                    _logger.LogInformation("[KubernetesHostManager] Actual ConfigMap Data:\n{ActualConfigData}", actualConfigData);
-                }
-                else
-                {
-                    _logger.LogWarning("[KubernetesHostManager] Could not retrieve ConfigMap {ConfigMapName} for verification", configMapName);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "[KubernetesHostManager] Failed to verify ConfigMap {ConfigMapName} after replacement", configMapName);
-            }
+            // Verify the replacement using the returned ConfigMap
+            _logger.LogInformation("[KubernetesHostManager] Verification - Replaced ConfigMap {ConfigMapName} Data:", configMapName);
+            var replacedConfigData = System.Text.Json.JsonSerializer.Serialize(replacedConfigMap.Data, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            _logger.LogInformation("[KubernetesHostManager] Replaced ConfigMap Data:\n{ReplacedConfigData}", replacedConfigData);
         }
     }
 
@@ -1486,41 +1470,15 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
             _logger.LogInformation("[KubernetesHostManager] Replacing ConfigMap {ConfigMapName} with business configuration in namespace {Namespace}", 
                 configMapName, KubernetesConstants.AppNameSpace);
                 
-            await _kubernetesClientAdapter.ReplaceNamespacedConfigMapAsync(updatedConfigMap, configMapName, KubernetesConstants.AppNameSpace);
+            var updatedReplacedConfigMap = await _kubernetesClientAdapter.ReplaceNamespacedConfigMapAsync(updatedConfigMap, configMapName, KubernetesConstants.AppNameSpace);
             
             _logger.LogInformation("[KubernetesHostManager] ConfigMap {ConfigMapName} successfully updated with latest business configuration for {HostType}", 
                 configMapName, hostType);
             
-            // Verify the replacement by getting the actual ConfigMap from Kubernetes
-            try
-            {
-                var verificationConfigMaps = await _kubernetesClientAdapter.ListConfigMapAsync(KubernetesConstants.AppNameSpace);
-                var actualConfigMap = verificationConfigMaps.Items.FirstOrDefault(cm => cm.Metadata.Name == configMapName);
-                if (actualConfigMap != null && actualConfigMap.Data != null)
-                {
-                    _logger.LogInformation("[KubernetesHostManager] Verification - Actual ConfigMap {ConfigMapName} Data after business config update:", configMapName);
-                    var actualConfigData = System.Text.Json.JsonSerializer.Serialize(actualConfigMap.Data, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-                    _logger.LogInformation("[KubernetesHostManager] Actual ConfigMap Data after update:\n{ActualConfigData}", actualConfigData);
-                    
-                    // Check if CORS configuration is present
-                    foreach (var kvp in actualConfigMap.Data)
-                    {
-                        if (kvp.Value?.Contains("Cors", StringComparison.OrdinalIgnoreCase) == true || 
-                            kvp.Value?.Contains("cors", StringComparison.OrdinalIgnoreCase) == true)
-                        {
-                            _logger.LogInformation("[KubernetesHostManager] CORS configuration found in actual ConfigMap {Key}", kvp.Key);
-                        }
-                    }
-                }
-                else
-                {
-                    _logger.LogWarning("[KubernetesHostManager] Could not retrieve ConfigMap {ConfigMapName} for verification after business config update", configMapName);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "[KubernetesHostManager] Failed to verify ConfigMap {ConfigMapName} after business config update", configMapName);
-            }
+            // Verify the replacement using the returned ConfigMap
+            _logger.LogInformation("[KubernetesHostManager] Verification - Updated ConfigMap {ConfigMapName} Data after business config update:", configMapName);
+            var replacedConfigMapData = System.Text.Json.JsonSerializer.Serialize(updatedReplacedConfigMap.Data, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            _logger.LogInformation("[KubernetesHostManager] Updated ConfigMap Data:\n{ReplacedConfigMapData}", replacedConfigMapData);
         }
         catch (Exception ex)
         {
