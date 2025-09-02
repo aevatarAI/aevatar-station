@@ -162,3 +162,74 @@ public class UserProfileDto
 
 #endregion
 
+# region Events
+
+[GenerateSerializer]
+public class TweetPosted : EventBase
+{
+    [Id(0)] public string Id { get; set; } = string.Empty;
+    [Id(1)] public string Text { get; set; } = string.Empty;
+    [Id(2)] public string AuthorId { get; set; } = string.Empty;
+    [Id(3)] public DateTime CreatedAt { get; set; }
+    [Id(4)] public Dictionary<string, object>? PublicMetrics { get; set; }
+    [Id(5)] public List<string>? EditHistoryTweetIds { get; set; }
+}
+
+[GenerateSerializer]
+public class TweetDeleted : EventBase
+{
+    [Id(0)] public string Id { get; set; } = string.Empty;
+    [Id(1)] public DateTime DeletedAt { get; set; }
+    [Id(2)] public bool Success { get; set; }
+}
+
+[GenerateSerializer]
+public class TweetLiked : EventBase
+{
+    [Id(0)] public string Id { get; set; } = string.Empty;
+    [Id(1)] public DateTime LikedAt { get; set; }
+    [Id(2)] public bool Success { get; set; }
+}
+
+[GenerateSerializer]
+public class TweetUnliked : EventBase
+{
+    [Id(0)] public string Id { get; set; } = string.Empty;
+    [Id(1)] public DateTime UnlikedAt { get; set; }
+    [Id(2)] public bool Success { get; set; }
+}
+
+[GenerateSerializer]
+public class Retweeted : EventBase
+{
+    [Id(0)] public string Id { get; set; } = string.Empty;
+    [Id(1)] public DateTime RetweetAt { get; set; }
+    [Id(2)] public bool Success { get; set; }
+}
+
+[GenerateSerializer]
+public class Unretweeted : EventBase
+{
+    [Id(0)] public string Id { get; set; } = string.Empty;
+    [Id(1)] public DateTime UnretweetedAt { get; set; }
+    [Id(2)] public bool Success { get; set; }
+}
+
+[GenerateSerializer]
+public class UserFollowed : EventBase
+{
+    [Id(0)] public string Id { get; set; } = string.Empty;
+    [Id(1)] public DateTime UserFollowedAt { get; set; }
+    [Id(2)] public bool Success { get; set; }
+}
+
+[GenerateSerializer]
+public class UserUnfollowed : EventBase
+{
+    [Id(0)] public string Id { get; set; } = string.Empty;
+    [Id(1)] public DateTime UserUnfollowedAt { get; set; }
+    [Id(2)] public bool Success { get; set; }
+}
+
+# endregion
+
