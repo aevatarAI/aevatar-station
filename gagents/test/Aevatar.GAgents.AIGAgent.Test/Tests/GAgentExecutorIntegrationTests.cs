@@ -42,7 +42,7 @@ public class GAgentExecutorIntegrationTests : AevatarAIGAgentTestBase
         // No manual registration needed
     }
 
-    //[Fact]
+    [Fact]
     public async Task FullExecutionFlow_ShouldCompleteSuccessfully()
     {
         // Arrange
@@ -62,7 +62,7 @@ public class GAgentExecutorIntegrationTests : AevatarAIGAgentTestBase
         state.EventCount.ShouldBeGreaterThan(0);
     }
 
-    //[Fact]
+    [Fact]
     public async Task ExecutionFlow_VerifyResultGAgentSubscribesToTargetDirectly()
     {
         // This test verifies the fix where ResultGAgent subscribes directly to targetGAgent
@@ -83,7 +83,7 @@ public class GAgentExecutorIntegrationTests : AevatarAIGAgentTestBase
         // not from an intermediate PublishingGAgent
     }
 
-    //[Fact]
+    [Fact]
     public async Task ConcurrentExecutions_ShouldHandleIndependently()
     {
         // Arrange
@@ -109,7 +109,7 @@ public class GAgentExecutorIntegrationTests : AevatarAIGAgentTestBase
         }
     }
 
-    //[Fact]
+    [Fact]
     public async Task ExecutionWithTimeout_ShouldRespectConfiguredTimeout()
     {
         // Arrange
@@ -128,7 +128,7 @@ public class GAgentExecutorIntegrationTests : AevatarAIGAgentTestBase
         elapsedTime.ShouldBeLessThan(AevatarGAgentExecutorConstants.GAgentExecutorTimeout.Add(TimeSpan.FromSeconds(1)));
     }
 
-    //[Fact]
+    [Fact]
     public async Task StreamCommunication_ShouldWorkCorrectly()
     {
         // Arrange
@@ -167,7 +167,7 @@ public class GAgentExecutorIntegrationTests : AevatarAIGAgentTestBase
         }
     }
 
-    //[Fact]
+    [Fact]
     public async Task MultipleGAgentTypes_ShouldExecuteCorrectHandlers()
     {
         // Arrange

@@ -7,9 +7,11 @@ namespace Aevatar.GAgents.PsiOmni;
 
 public partial class PsiOmniGAgent
 {
-    private Kernel GetKernel_Plain()
+    private Kernel GetKernel_Analyzer()
     {
-        var kernel = GetKernelFromBrain();
+        var kernel = _kernelFactory.CreateKernel(
+            State.Configuration!
+        ); // Orchestrator doesn't have specialized tools.
         if (kernel == null)
             throw new InvalidOperationException("Kernel is not configured for tool execution.");
 
@@ -18,13 +20,8 @@ public partial class PsiOmniGAgent
 
     private void OnChatDoneAsync_Analyzer(ChatHistory chatHistory, int preChatHistoryLength)
     {
-        LogEventDebug("Processing analyzer chat messages for AgentId={AgentId}, NewMessages={Count}", 
-            AgentId, chatHistory.Count - preChatHistoryLength);
-            
         var result = chatHistory.Last().Content ?? string.Empty;
-        LogEventInfo("OnChatDoneAsync_Analyzer Result for AgentId={AgentId}: {Result}", 
-            AgentId, result.Substring(0, Math.Min(200, result.Length)) + "...");
-            
+        Logger.LogInformation("OnChatDoneAsync_Analyzer Result: {Result}", result);
         if (result.Contains("ORCHESTRATOR") || result.Contains("SPECIALIZED"))
         {
             var jsonStartIndex = result.IndexOf('{');
@@ -48,7 +45,7 @@ public partial class PsiOmniGAgent
                 var tools = new List<ToolDefinition>();
                 foreach (var toolName in realizationResult.Tools)
                 {
-                    var kernelFunction = _kernelFunctionRegistry.GetToolByQualifiedName(toolName);
+                    var kernelFunction = _kernelFactory.FunctionRegistry?.GetToolByQualifiedName(toolName);
                     if (kernelFunction != null)
                     {
                         tools.Add(kernelFunction.ToToolDefinition());
@@ -67,7 +64,9 @@ public partial class PsiOmniGAgent
 
     private string GetAllToolDefinitions()
     {
-        var toolDefinitions = _kernelFunctionRegistry.GetAllToolDefinitions();
+        if (_kernelFactory.FunctionRegistry == null) return string.Empty;
+        var toolDefinitions = _kernelFactory.FunctionRegistry!.GetAllToolDefinitions();
+        // return JsonSerializer.Serialize(toolDefinitions);
         return toolDefinitions.ToYaml();
     }
 }

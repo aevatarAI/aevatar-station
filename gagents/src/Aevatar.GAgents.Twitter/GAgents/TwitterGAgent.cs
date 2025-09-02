@@ -16,7 +16,7 @@ using Newtonsoft.Json;
 
 namespace Aevatar.GAgents.Twitter.Agent;
 
-[Description("Comprehensive Twitter automation agent that handles tweet creation, timeline monitoring, user interactions, and social media analytics. Supports automated responses, content scheduling, and real-time social engagement.")]
+[Description("Handle twitter")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 [GAgent(nameof(TwitterGAgent))]
@@ -32,7 +32,17 @@ public class TwitterGAgent : GAgentBase<TwitterGAgentState, TweetSEvent, EventBa
 
     public override Task<string> GetDescriptionAsync()
     {
-        return Task.FromResult("Twitter Integration Agent");
+        var descriptionInfo = new AgentDescriptionInfo
+        {
+            Id = "TwitterGAgent",
+            Name = "Twitter Integration Agent",
+            L1Description = "AI agent for Twitter platform integration with tweet posting, monitoring, and interaction capabilities",
+            L2Description = "Comprehensive Twitter automation agent that handles tweet creation, timeline monitoring, user interactions, and social media analytics. Supports automated responses, content scheduling, and real-time social engagement.",
+            Category = "Social",
+            Capabilities = new List<string> { "tweet-posting", "timeline-monitoring", "social-interaction", "automated-responses" },
+            Tags = new List<string> { "twitter", "social-media", "automation", "engagement" }
+        };
+        return Task.FromResult(JsonConvert.SerializeObject(descriptionInfo));
     }
 
     [EventHandler]

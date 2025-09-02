@@ -20,7 +20,7 @@ public class LLMConfigurationCentralizationTest : AevatarAIGAgentTestBase
         _agentFactory = GetRequiredService<IGAgentFactory>();
     }
 
-    //[Fact]
+    [Fact]
     public async Task Should_NotStoreResolvedConfig_When_SystemLLMIsUsed()
     {
         // Arrange
@@ -41,7 +41,7 @@ public class LLMConfigurationCentralizationTest : AevatarAIGAgentTestBase
         state.LLM.ShouldBeNull(); // Should not store resolved config in new implementation
     }
 
-    //[Fact]
+    [Fact]
     public async Task Should_StoreSelfLLMConfig_When_SelfLLMConfigIsProvided()
     {
         // Arrange
@@ -72,7 +72,7 @@ public class LLMConfigurationCentralizationTest : AevatarAIGAgentTestBase
         state.LLM.ApiKey.ShouldBe("user-provided-key");
     }
 
-    //[Fact]
+    [Fact]
     public async Task Should_PreserveBackwardCompatibility_WithExistingStateFormat()
     {
         // Arrange
@@ -92,7 +92,7 @@ public class LLMConfigurationCentralizationTest : AevatarAIGAgentTestBase
         state.LLM.ShouldBeNull(); // Resolved config not stored in centralized approach
     }
 
-    //[Fact]
+    [Fact]
     public async Task Should_HandleNonExistentSystemLLM_Gracefully()
     {
         // Arrange

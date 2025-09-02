@@ -12,7 +12,7 @@ public class ChatAIGAgentConfigDto : GroupMemberConfigDto
     [Id(0)] 
     public string Instructions { get; set; } = "You are a helpful AI assistant";
 
-    [Id(1)] public string SystemLLM { get; set; } = "OpenAI";
+    [Id(1)] public string SystemLLM { get; set; } = "gpt-4";
 
     [Id(2)] public List<MCPServerConfig> MCPServers { get; set; } = [];
     [Id(3)] public List<GrainType> ToolGAgentTypes { get; set; } = [];

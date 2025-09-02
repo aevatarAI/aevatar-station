@@ -15,7 +15,7 @@ using WorkflowChatMessage = GroupChat.GAgent.Feature.Common.ChatMessage;
 
 namespace Aevatar.GAgents.Twitter.GAgents.ChatAIAgent;
 
-[Description("General-purpose conversational AI agent for group chat contexts, handling messages with history, tool-calls, and configurable instructions.")]
+[Description("AI chat agent with workflow support")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 [GAgent(nameof(ChatAIGAgent))]
@@ -32,7 +32,17 @@ public class ChatAIGAgent :
 
     public override Task<string> GetDescriptionAsync()
     {
-        return Task.FromResult("Chat AI Agent for group conversations");
+        var descriptionInfo = new AgentDescriptionInfo
+        {
+            Id = "ChatAIGAgent",
+            Name = "Twitter Chat AI Agent",
+            L1Description = "AI-powered chat agent specifically designed for Twitter social interactions and conversations",
+            L2Description = "Specialized conversational AI agent optimized for Twitter's social context, handling mentions, DMs, and public conversations with personality adaptation and engagement optimization.",
+            Category = "Social",
+            Capabilities = new List<string> { "twitter-conversation", "mention-handling", "dm-management", "engagement-optimization" },
+            Tags = new List<string> { "twitter", "chat", "ai", "conversation" }
+        };
+        return Task.FromResult(JsonConvert.SerializeObject(descriptionInfo));
     }
 
     // Implementation of GroupMemberGAgentBase abstract methods

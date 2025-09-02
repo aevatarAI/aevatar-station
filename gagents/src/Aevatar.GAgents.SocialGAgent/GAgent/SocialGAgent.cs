@@ -15,7 +15,7 @@ using Newtonsoft.Json;
 
 namespace Aevatar.GAgents.TestAgent;
 
-[System.ComponentModel.Description("A specialized AI agent designed for social scenarios that handles user chat requests with emotion recognition, multi-turn conversation memory, and personalized responses. Suitable for social media platforms, customer service systems, and other scenarios requiring friendly interactions.")]
+[System.ComponentModel.Description("I can chat with users.")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 [GAgent(nameof(SocialGAgent))]
@@ -31,7 +31,17 @@ public class SocialGAgent : ChatGAgentBase<ChatGAgentState, SocialGAgentLogEvent
 
     public override Task<string> GetDescriptionAsync()
     {
-        return Task.FromResult("Social Chat Agent");
+        var descriptionInfo = new AgentDescriptionInfo
+        {
+            Id = "SocialGAgent",
+            Name = "Social Chat Agent",
+            L1Description = "AI agent for social platform chat interactions with multi-turn conversation and emotion understanding capabilities",
+            L2Description = "A specialized AI agent designed for social scenarios that handles user chat requests with emotion recognition, multi-turn conversation memory, and personalized responses. Suitable for social media platforms, customer service systems, and other scenarios requiring friendly interactions.",
+            Category = "Social",
+            Capabilities = new List<string> { "chat", "social-interaction", "emotion-understanding", "multi-turn-conversation" },
+            Tags = new List<string> { "social", "chat", "ai", "conversation" }
+        };
+        return Task.FromResult(JsonConvert.SerializeObject(descriptionInfo));
     }
 
     [EventHandler]

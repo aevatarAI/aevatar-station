@@ -250,7 +250,7 @@ public class AIGAgentBaseMCPTest : AevatarAIGAgentTestBase
         toolCalls.ShouldBeEmpty();
     }
 
-    //[Fact]
+    [Fact]
     public async Task GenerateMCPFunctionName_Should_CreateValidFunctionName_When_LongNamesProvided()
     {
         // Arrange
@@ -332,7 +332,7 @@ public class AIGAgentBaseMCPTest : AevatarAIGAgentTestBase
         result.ShouldBeFalse(); // Should handle empty parameters gracefully
     }
 
-    //[Fact]
+    [Fact]
     public async Task MCPToolCall_Should_RecordTimestamp_When_ToolCalled()
     {
         // Arrange

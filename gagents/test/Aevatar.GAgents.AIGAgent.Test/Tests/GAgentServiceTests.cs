@@ -17,7 +17,7 @@ public class GAgentServiceTests : AevatarAIGAgentTestBase
         _gAgentFactory = GetRequiredService<IGAgentFactory>();
     }
 
-    //[Fact]
+    [Fact]
     public async Task GetAllAvailableGAgentInformation_ShouldReturnGAgentInfo()
     {
         // Act
@@ -39,7 +39,7 @@ public class GAgentServiceTests : AevatarAIGAgentTestBase
         }
     }
 
-    //[Fact]
+    [Fact]
     public async Task GetGAgentDetailInfoAsync_WithValidGAgent_ShouldReturnDetails()
     {
         // Arrange
@@ -60,7 +60,7 @@ public class GAgentServiceTests : AevatarAIGAgentTestBase
         detailInfo.SupportedEventTypes.ShouldContain(typeof(MockExecutorTimeoutEvent));
     }
 
-    //[Fact]
+    [Fact]
     public async Task GetGAgentDetailInfoAsync_WithNonExistentGAgent_ShouldThrowException()
     {
         // Arrange
@@ -74,7 +74,7 @@ public class GAgentServiceTests : AevatarAIGAgentTestBase
         });
     }
 
-    //[Fact]
+    [Fact]
     public async Task FindGAgentsByEventTypeAsync_WithValidEventType_ShouldReturnMatchingGAgents()
     {
         // Act
@@ -91,7 +91,7 @@ public class GAgentServiceTests : AevatarAIGAgentTestBase
         }
     }
 
-    //[Fact]
+    [Fact]
     public async Task FindGAgentsByEventTypeAsync_WithNonHandledEvent_ShouldReturnEmptyOrNoMatchingGAgents()
     {
         // Act
@@ -104,7 +104,7 @@ public class GAgentServiceTests : AevatarAIGAgentTestBase
             gt.ToString()!.Contains("MockExecutorGAgent", StringComparison.OrdinalIgnoreCase));
     }
 
-    //[Fact]
+    [Fact]
     public async Task GetGAgentDetailInfo_ShouldReturnCorrectConfigurationType()
     {
         // Arrange
@@ -120,7 +120,7 @@ public class GAgentServiceTests : AevatarAIGAgentTestBase
         detailInfo.ConfigurationType.ShouldBe(typeof(ConfigurationBase));
     }
 
-    //[Fact]
+    [Fact]
     public async Task GetAllAvailableGAgentInformation_MultipleCalls_ShouldBeCached()
     {
         // Arrange & Act

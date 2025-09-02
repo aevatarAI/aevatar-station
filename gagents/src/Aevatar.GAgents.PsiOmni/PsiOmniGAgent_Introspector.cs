@@ -10,7 +10,9 @@ public partial class PsiOmniGAgent
 {
     private Kernel GetKernel_Introspector()
     {
-        var kernel = GetKernelFromBrain();
+        var kernel = _kernelFactory.CreateKernel(
+            State.Configuration!
+        );
         if (kernel == null)
             throw new InvalidOperationException("Kernel is not configured for tool execution.");
 

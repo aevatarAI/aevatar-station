@@ -11,7 +11,7 @@ namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 
 public class MockBrainFactoryTest
 {
-    //[Fact]
+    [Fact]
     public void Should_CreateChatBrain_When_GetChatBrain()
     {
         // Arrange
@@ -32,7 +32,7 @@ public class MockBrainFactoryTest
         brain.ModelIdEnum.ShouldBe(ModelIdEnum.OpenAI);
     }
 
-    //[Fact]
+    [Fact]
     public void Should_CreateTextToImageBrain_When_GetTextToImageBrain()
     {
         // Arrange
@@ -53,7 +53,7 @@ public class MockBrainFactoryTest
         brain.ModelIdEnum.ShouldBe(ModelIdEnum.OpenAITextToImage);
     }
 
-    //[Fact]
+    [Fact]
     public void Should_CreateBrain_When_CreateBrain()
     {
         // Arrange
@@ -74,7 +74,7 @@ public class MockBrainFactoryTest
         brain.ModelIdEnum.ShouldBe(ModelIdEnum.Gemini);
     }
 
-    //[Fact]
+    [Fact]
     public void Should_ReturnSameBrainType_When_CalledMultipleTimes()
     {
         // Arrange
@@ -97,7 +97,7 @@ public class MockBrainFactoryTest
         brain1.ShouldBeSameAs(brain2); // Should be cached instances for shared state
     }
 
-    //[Fact]
+    [Fact]
     public void Should_HandleDifferentProviders_When_GetChatBrain()
     {
         // Arrange
@@ -121,7 +121,7 @@ public class MockBrainFactoryTest
         }
     }
 
-    //[Fact]
+    [Fact]
     public void Should_HandleTextToImageModels_When_GetTextToImageBrain()
     {
         // Arrange

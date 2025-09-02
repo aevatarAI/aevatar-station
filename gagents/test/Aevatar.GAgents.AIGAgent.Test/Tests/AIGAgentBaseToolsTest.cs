@@ -18,7 +18,7 @@ public class AIGAgentBaseToolsTest : AevatarAIGAgentTestBase
         _agentFactory = GetRequiredService<IGAgentFactory>();
     }
 
-    //[Fact]
+    [Fact]
     public async Task ConfigureGAgentToolsAsync_Should_ReturnTrue_When_ValidGAgentsProvided()
     {
         // Arrange
@@ -47,7 +47,7 @@ public class AIGAgentBaseToolsTest : AevatarAIGAgentTestBase
         state.ToolGAgents.Count.ShouldBe(2);
     }
 
-    //[Fact]
+    [Fact]
     public async Task ConfigureGAgentToolsAsync_Should_ReturnFalse_When_BrainNotInitialized()
     {
         // Arrange
@@ -66,7 +66,7 @@ public class AIGAgentBaseToolsTest : AevatarAIGAgentTestBase
         result.ShouldBeFalse();
     }
 
-    //[Fact]
+    [Fact]
     public async Task ConfigureGAgentToolsAsync_Should_UpdateStateCorrectly_When_MultipleGAgentsSelected()
     {
         // Arrange
@@ -97,7 +97,7 @@ public class AIGAgentBaseToolsTest : AevatarAIGAgentTestBase
         state.ToolGAgents.Select(t => t.Type).ShouldContain(GrainType.Create("test/telegramgagent"));
     }
 
-    //[Fact]
+    [Fact]
     public async Task ClearGAgentToolsAsync_Should_ReturnTrue_When_BrainInitialized()
     {
         // Arrange
@@ -126,7 +126,7 @@ public class AIGAgentBaseToolsTest : AevatarAIGAgentTestBase
         state.RegisteredGAgentFunctions.ShouldBeEmpty();
     }
 
-    //[Fact]
+    [Fact]
     public async Task ClearGAgentToolsAsync_Should_ReturnFalse_When_BrainNotInitialized()
     {
         // Arrange
@@ -140,7 +140,7 @@ public class AIGAgentBaseToolsTest : AevatarAIGAgentTestBase
         result.ShouldBeFalse();
     }
 
-    //[Fact]
+    [Fact]
     public async Task ClearGAgentToolsAsync_Should_ClearAllToolsAndState_When_Called()
     {
         // Arrange
@@ -172,7 +172,7 @@ public class AIGAgentBaseToolsTest : AevatarAIGAgentTestBase
         stateAfter.RegisteredGAgentFunctions.ShouldBeEmpty();
     }
 
-    //[Fact]
+    [Fact]
     public async Task GetCurrentToolCallsAsync_Should_ReturnEmptyList_When_NoToolsCalled()
     {
         // Arrange
@@ -191,7 +191,7 @@ public class AIGAgentBaseToolsTest : AevatarAIGAgentTestBase
         toolCalls.ShouldBeEmpty();
     }
 
-    //[Fact]
+    [Fact]
     public async Task ClearToolCallsAsync_Should_ClearToolCallTracking_When_Called()
     {
         // Arrange
@@ -210,7 +210,7 @@ public class AIGAgentBaseToolsTest : AevatarAIGAgentTestBase
         toolCalls.ShouldBeEmpty();
     }
 
-    //[Fact]
+    [Fact]
     public async Task GenerateFunctionName_Should_CreateValidFunctionName_When_LongGrainTypeProvided()
     {
         // Arrange
@@ -236,7 +236,7 @@ public class AIGAgentBaseToolsTest : AevatarAIGAgentTestBase
         state.ToolGAgents.ShouldNotBeEmpty();
     }
 
-    //[Fact]
+    [Fact]
     public async Task GenerateFunctionName_Should_CreateUniqueFunctionNames_When_DuplicateEventTypes()
     {
         // Arrange
@@ -263,7 +263,7 @@ public class AIGAgentBaseToolsTest : AevatarAIGAgentTestBase
         state.ToolGAgents.Count.ShouldBe(2);
     }
 
-    //[Fact]
+    [Fact]
     public async Task GenerateFunctionDescription_Should_CreateMeaningfulDescription_When_GrainTypeProvided()
     {
         // Arrange
@@ -289,7 +289,7 @@ public class AIGAgentBaseToolsTest : AevatarAIGAgentTestBase
         state.ToolGAgents.ShouldNotBeEmpty();
     }
 
-    //[Fact]
+    [Fact]
     public async Task IsGAgentAllowed_Should_ReturnTrue_When_NoRestrictionsSet()
     {
         // Arrange
@@ -317,7 +317,7 @@ public class AIGAgentBaseToolsTest : AevatarAIGAgentTestBase
         state.ToolGAgents.Count.ShouldBe(2);
     }
 
-    //[Fact]
+    [Fact]
     public async Task ToolExecution_Should_TrackToolCallDetails_When_ToolExecuted()
     {
         // This test verifies that tool execution tracking works correctly
@@ -348,7 +348,7 @@ public class AIGAgentBaseToolsTest : AevatarAIGAgentTestBase
         state.ToolGAgents.ShouldNotBeEmpty();
     }
 
-    //[Fact]
+    [Fact]
     public async Task ToolExecution_Should_HandleEventMapping_When_KernelArgumentsProvided()
     {
         // This test verifies that kernel arguments are properly mapped to event properties
@@ -377,7 +377,7 @@ public class AIGAgentBaseToolsTest : AevatarAIGAgentTestBase
         state.ToolGAgents.Select(t => t.Type).ShouldContain(GrainType.Create("test/chatgagent"));
     }
 
-    //[Fact]
+    [Fact]
     public async Task PluginManagement_Should_HandlePluginRegistration_When_GAgentsConfigured()
     {
         // This test verifies that plugin management works correctly
@@ -408,7 +408,7 @@ public class AIGAgentBaseToolsTest : AevatarAIGAgentTestBase
         state.ToolGAgents.Count.ShouldBe(2);
     }
 
-    //[Fact]
+    [Fact]
     public async Task PluginManagement_Should_RemoveExistingPlugins_When_NewPluginsRegistered()
     {
         // This test verifies that old plugins are removed when new ones are registered
@@ -449,7 +449,7 @@ public class AIGAgentBaseToolsTest : AevatarAIGAgentTestBase
         state.ToolGAgents.Select(t => t.Type).ShouldNotContain(GrainType.Create("test/chatgagent"));
     }
 
-    //[Fact]
+    [Fact]
     public async Task ErrorHandling_Should_HandleGrainActivationErrors_When_InvalidGrainTypeProvided()
     {
         // This test verifies that invalid grain types are handled gracefully
@@ -477,7 +477,7 @@ public class AIGAgentBaseToolsTest : AevatarAIGAgentTestBase
         state.ToolGAgents.ShouldNotBeEmpty();
     }
 
-    //[Fact]
+    [Fact]
     public async Task StateManagement_Should_PersistToolConfiguration_When_StateChanged()
     {
         // This test verifies that tool configuration is properly persisted

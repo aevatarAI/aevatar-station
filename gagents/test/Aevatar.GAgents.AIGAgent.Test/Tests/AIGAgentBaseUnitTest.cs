@@ -21,7 +21,7 @@ public class AIGAgentBaseUnitTest : AevatarAIGAgentTestBase
         _agentFactory = GetRequiredService<IGAgentFactory>();
     }
 
-    //[Fact]
+    [Fact]
     public async Task GetLLMConfigAsync_Should_ReturnSystemConfig_When_LLMConfigKeyIsSet()
     {
         // Arrange - Use existing configuration from appsettings.json
@@ -40,7 +40,7 @@ public class AIGAgentBaseUnitTest : AevatarAIGAgentTestBase
         resolvedConfig.ProviderEnum.ShouldBe(LLMProviderEnum.Azure);
     }
 
-    //[Fact]
+    [Fact]
     public async Task GetLLMConfigAsync_Should_FallbackToSystemLLM_When_LLMConfigKeyIsNull()
     {
         // Arrange - Use existing configuration from appsettings.json
@@ -60,7 +60,7 @@ public class AIGAgentBaseUnitTest : AevatarAIGAgentTestBase
         resolvedConfig.ProviderEnum.ShouldBe(LLMProviderEnum.Azure);
     }
 
-    //[Fact]
+    [Fact]
     public async Task GetLLMConfigAsync_Should_FallbackToResolvedLLM_When_BothKeysAreNull()
     {
         // Arrange - Use self-provided LLM config to test fallback
@@ -91,7 +91,7 @@ public class AIGAgentBaseUnitTest : AevatarAIGAgentTestBase
         resolvedConfig.ProviderEnum.ShouldBe(LLMProviderEnum.Google);
     }
 
-    //[Fact]
+    [Fact]
     public async Task GetLLMConfigAsync_Should_ReturnNull_When_SystemConfigNotFound()
     {
         // Arrange
@@ -106,7 +106,7 @@ public class AIGAgentBaseUnitTest : AevatarAIGAgentTestBase
         resolvedConfig.ShouldBeNull();
     }
 
-    //[Fact]
+    [Fact]
     public async Task GetLLMConfigAsync_Should_UsePriorityOrder_When_MultipleConfigsSet()
     {
         // Arrange - Test priority: LLMConfigKey (OpenAI) over SystemLLM (DeepSeek) over LLM (self-config)

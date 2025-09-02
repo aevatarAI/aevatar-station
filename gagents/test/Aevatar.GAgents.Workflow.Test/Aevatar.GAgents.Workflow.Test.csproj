@@ -14,10 +14,6 @@
     <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
     <PackageReference Include="Aevatar.Core" />
     <PackageReference Include="Aevatar.Core.Abstractions" />
-    <PackageReference Include="coverlet.collector">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Aevatar.GAgents.Router\Aevatar.GAgents.Router.csproj" />

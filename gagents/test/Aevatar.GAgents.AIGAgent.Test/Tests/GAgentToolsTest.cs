@@ -33,7 +33,7 @@ public sealed class GAgentToolsTest : AevatarAIGAgentTestBase
         _logger = GetRequiredService<ILogger<GAgentToolPlugin>>();
     }
 
-    //[Fact]
+    [Fact]
     public async Task Should_Enable_GAgent_Tools_When_Configured()
     {
         // Arrange
@@ -51,7 +51,7 @@ public sealed class GAgentToolsTest : AevatarAIGAgentTestBase
         state.EnableGAgentTools.ShouldBeTrue();
     }
 
-    //[Fact]
+    [Fact]
     public async Task Should_Register_Functions_When_Tools_Enabled()
     {
         // Arrange
@@ -74,7 +74,7 @@ public sealed class GAgentToolsTest : AevatarAIGAgentTestBase
         // This is expected in test environment
     }
 
-    //[Fact]
+    [Fact]
     public async Task GAgentToolPlugin_Should_List_Available_GAgents()
     {
         // Arrange
@@ -93,7 +93,7 @@ public sealed class GAgentToolsTest : AevatarAIGAgentTestBase
         result.ShouldContain("}");
     }
 
-    //[Fact]
+    [Fact]
     public async Task GAgentToolPlugin_Should_Get_GAgent_Info()
     {
         // Arrange
@@ -117,7 +117,7 @@ public sealed class GAgentToolsTest : AevatarAIGAgentTestBase
         (containsSuccess || containsError).ShouldBeTrue();
     }
 
-    //[Fact]
+    [Fact]
     public async Task GAgentToolPlugin_Should_Handle_Invalid_GAgent_Type()
     {
         // Arrange
@@ -132,7 +132,7 @@ public sealed class GAgentToolsTest : AevatarAIGAgentTestBase
         result.ShouldContain("No active nodes are compatible with grain");
     }
 
-    //[Fact]
+    [Fact]
     public async Task GAgentToolPlugin_Should_Handle_Invoke_With_Invalid_Parameters()
     {
         // Arrange
@@ -152,7 +152,7 @@ public sealed class GAgentToolsTest : AevatarAIGAgentTestBase
         result.ShouldContain("false");
     }
 
-    //[Fact]
+    [Fact]
     public async Task Should_Not_Register_Tools_When_Disabled()
     {
         // Arrange
@@ -171,7 +171,7 @@ public sealed class GAgentToolsTest : AevatarAIGAgentTestBase
         state.RegisteredGAgentFunctions.ShouldBeEmpty();
     }
 
-    //[Fact]
+    [Fact]
     public async Task Should_Filter_GAgents_By_Allowed_Types()
     {
         // Arrange
@@ -195,7 +195,7 @@ public sealed class GAgentToolsTest : AevatarAIGAgentTestBase
         // (or registration might fail due to reflection issues in test)
     }
 
-    //[Fact]
+    [Fact]
     public async Task GAgentService_Should_Return_Available_GAgents()
     {
         // This test verifies the GAgentService is working correctly

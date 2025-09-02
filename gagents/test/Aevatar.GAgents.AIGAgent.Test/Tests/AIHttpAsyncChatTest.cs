@@ -14,7 +14,7 @@ public class AIHttpAsyncChatTest : AevatarAIGAgentTestBase
         _agentFactory = GetRequiredService<IGAgentFactory>();
     }
 
-    //[Fact]
+    [Fact]
     public async Task AIHttpChatAsyncTest()
     {
         var chatAgent = await _agentFactory.GetGAgentAsync<IChatAIGAgent>(Guid.NewGuid());

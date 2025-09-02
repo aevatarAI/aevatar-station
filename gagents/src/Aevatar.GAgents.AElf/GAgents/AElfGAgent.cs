@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using Aevatar.Core;
@@ -18,7 +17,6 @@ using Aevatar.GAgents.AI.Common;
 
 namespace Aevatar.GAgents.AElf.Agent;
 
-[Description("Comprehensive AElf blockchain agent that handles wallet management, transaction execution, smart contract deployment and interaction, and blockchain state monitoring with enterprise-grade security.")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 [GAgent(nameof(AElfGAgent))]
@@ -30,7 +28,17 @@ public class AElfGAgent : GAgentBase<AElfAgentGState, TransactionStateLogEvent>,
 
     public override Task<string> GetDescriptionAsync()
     {
-        return Task.FromResult("AElf Blockchain Agent");
+        var descriptionInfo = new AgentDescriptionInfo
+        {
+            Id = "AElfGAgent",
+            Name = "AElf Blockchain Agent",
+            L1Description = "Blockchain integration agent for AElf network transactions and smart contract interactions",
+            L2Description = "Comprehensive AElf blockchain agent that handles wallet management, transaction execution, smart contract deployment and interaction, and blockchain state monitoring with enterprise-grade security.",
+            Category = "Blockchain",
+            Capabilities = new List<string> { "wallet-management", "transaction-execution", "smart-contract-interaction", "blockchain-monitoring" },
+            Tags = new List<string> { "blockchain", "aelf", "smart-contracts", "transactions" }
+        };
+        return Task.FromResult(JsonConvert.SerializeObject(descriptionInfo));
     }
 
     [EventHandler]

@@ -19,7 +19,7 @@ public class LLMConfigurationMigrationTest : AevatarAIGAgentTestBase
         _agentFactory = GetRequiredService<IGAgentFactory>();
     }
 
-    //[Fact]
+    [Fact]
     public async Task OnGAgentActivateAsync_Should_MigrateSystemLLMToLLMConfigKey_When_LegacyFormatDetected()
     {
         // Arrange - Create agent with legacy SystemLLM configuration
@@ -47,7 +47,7 @@ public class LLMConfigurationMigrationTest : AevatarAIGAgentTestBase
         resolvedConfig.ModelName.ShouldBe("gpt-4o"); // From appsettings.json
     }
 
-    //[Fact]
+    [Fact]
     public async Task OnGAgentActivateAsync_Should_MigrateResolvedLLMToSystemLLM_When_LegacyResolvedConfigExists()
     {
         // Arrange - Create agent with legacy resolved LLM configuration
@@ -85,7 +85,7 @@ public class LLMConfigurationMigrationTest : AevatarAIGAgentTestBase
         resolvedConfig.ModelName.ShouldBe("legacy-gpt-4");
     }
 
-    //[Fact]
+    [Fact]
     public async Task OnGAgentActivateAsync_Should_NotMigrate_When_AlreadyUsingNewFormat()
     {
         // Arrange - Create agent already using new centralized format
@@ -111,7 +111,7 @@ public class LLMConfigurationMigrationTest : AevatarAIGAgentTestBase
         resolvedConfig.ModelName.ShouldBe("DeepSeek-R1");
     }
 
-    //[Fact]
+    [Fact]
     public async Task OnGAgentActivateAsync_Should_NotMigrate_When_NoConfigurationExists()
     {
         // Arrange - Create agent with no configuration
@@ -136,7 +136,7 @@ public class LLMConfigurationMigrationTest : AevatarAIGAgentTestBase
         resolvedConfig.ShouldBeNull();
     }
 
-    //[Fact]
+    [Fact]
     public async Task OnGAgentActivateAsync_Should_PreserveBothConfigs_When_MigrationOccurs()
     {
         // Arrange - Create agent with both legacy SystemLLM and resolved LLM
@@ -175,7 +175,7 @@ public class LLMConfigurationMigrationTest : AevatarAIGAgentTestBase
         currentConfig.ModelName.ShouldBe("gpt-4o"); // From system config, not resolved config
     }
 
-    //[Fact]
+    [Fact]
     public async Task OnGAgentActivateAsync_Should_HandleInvalidSystemLLMDuringMigration()
     {
         // Arrange - Create agent with invalid SystemLLM key
@@ -207,7 +207,7 @@ public class LLMConfigurationMigrationTest : AevatarAIGAgentTestBase
         resolvedConfig.ShouldBeNull(); // Invalid system config returns null
     }
 
-    //[Fact]
+    [Fact]
     public async Task OnGAgentActivateAsync_Should_AutoMigrateOnStartup_When_ExistingAgentHasOnlySystemLLM()
     {
         // Arrange - Simulate an existing agent that was created before centralization

@@ -17,7 +17,7 @@ public sealed class GAgentExecutorTests : AevatarAIGAgentTestBase
         _gAgentFactory = GetRequiredService<IGAgentFactory>();
     }
 
-    //[Fact]
+    [Fact]
     public async Task ExecuteGAgentEventHandler_WithIGAgent_ShouldExecuteSuccessfully()
     {
         // Arrange
@@ -33,7 +33,7 @@ public sealed class GAgentExecutorTests : AevatarAIGAgentTestBase
         result.ShouldContain("Count: 1");
     }
 
-    //[Fact]
+    [Fact]
     public async Task ExecuteGAgentEventHandler_WithGrainId_ShouldExecuteSuccessfully()
     {
         // Arrange
@@ -49,7 +49,7 @@ public sealed class GAgentExecutorTests : AevatarAIGAgentTestBase
         result.ShouldContain("Processed: Test Message 2");
     }
 
-    //[Fact]
+    [Fact]
     public async Task ExecuteGAgentEventHandler_WithGrainType_ShouldExecuteSuccessfully()
     {
         // Arrange
@@ -80,7 +80,7 @@ public sealed class GAgentExecutorTests : AevatarAIGAgentTestBase
         });
     }
 
-    //[Fact]
+    [Fact]
     public async Task ExecuteGAgentEventHandler_ShouldHandleMultipleConcurrentExecutions()
     {
         // Arrange
@@ -105,7 +105,7 @@ public sealed class GAgentExecutorTests : AevatarAIGAgentTestBase
         }
     }
 
-    //[Fact]
+    [Fact]
     public async Task ExecuteGAgentEventHandler_WithFixedExecutionFlow_ShouldSubscribeCorrectly()
     {
         // Arrange
@@ -123,7 +123,7 @@ public sealed class GAgentExecutorTests : AevatarAIGAgentTestBase
         // (not through PublishingGAgent)
     }
 
-    //[Fact]
+    [Fact]
     public async Task ExecuteGAgentEventHandler_WithExpectedResultType_ShouldFilterResults()
     {
         // Arrange
@@ -139,7 +139,7 @@ public sealed class GAgentExecutorTests : AevatarAIGAgentTestBase
         result.ShouldContain("Processed: Expected Result Type Test");
     }
 
-    //[Fact]
+    [Fact]
     public async Task ExecuteGAgentEventHandler_WithGrainIdAndExpectedResultType_ShouldExecuteSuccessfully()
     {
         // Arrange
@@ -156,7 +156,7 @@ public sealed class GAgentExecutorTests : AevatarAIGAgentTestBase
         result.ShouldContain("Processed: GrainId Expected Result Test");
     }
 
-    //[Fact]
+    [Fact]
     public async Task ExecuteGAgentEventHandler_WithGrainTypeAndExpectedResultType_ShouldExecuteSuccessfully()
     {
         // Arrange
@@ -174,7 +174,7 @@ public sealed class GAgentExecutorTests : AevatarAIGAgentTestBase
         result.ShouldContain("Processed: GrainType Expected Result Test");
     }
 
-    //[Fact]
+    [Fact]
     public async Task ExecuteGAgentEventHandler_WithEventTypeNameAndJson_ShouldExecuteSuccessfully()
     {
         // Arrange
@@ -190,7 +190,7 @@ public sealed class GAgentExecutorTests : AevatarAIGAgentTestBase
         result.ShouldContain("Processed: Dynamic Event Test");
     }
 
-    //[Fact]
+    [Fact]
     public async Task ExecuteGAgentEventHandler_WithGrainIdEventTypeNameAndJson_ShouldExecuteSuccessfully()
     {
         // Arrange
@@ -207,7 +207,7 @@ public sealed class GAgentExecutorTests : AevatarAIGAgentTestBase
         result.ShouldContain("Processed: GrainId Dynamic Event Test");
     }
 
-    //[Fact]
+    [Fact]
     public async Task ExecuteGAgentEventHandler_WithGrainTypeEventTypeNameAndJson_ShouldExecuteSuccessfully()
     {
         // Arrange
@@ -225,7 +225,7 @@ public sealed class GAgentExecutorTests : AevatarAIGAgentTestBase
         result.ShouldContain("Processed: GrainType Dynamic Event Test");
     }
 
-    //[Fact]
+    [Fact]
     public async Task ExecuteGAgentEventHandler_WithEventTypeNameJsonAndExpectedResultType_ShouldExecuteSuccessfully()
     {
         // Arrange
@@ -242,7 +242,7 @@ public sealed class GAgentExecutorTests : AevatarAIGAgentTestBase
         result.ShouldContain("Processed: Dynamic Event with Expected Result Test");
     }
 
-    //[Fact]
+    [Fact]
     public async Task
         ExecuteGAgentEventHandler_WithGrainIdEventTypeNameJsonAndExpectedResultType_ShouldExecuteSuccessfully()
     {
@@ -261,7 +261,7 @@ public sealed class GAgentExecutorTests : AevatarAIGAgentTestBase
         result.ShouldContain("Processed: GrainId Dynamic Event with Expected Result Test");
     }
 
-    //[Fact]
+    [Fact]
     public async Task
         ExecuteGAgentEventHandler_WithGrainTypeEventTypeNameJsonAndExpectedResultType_ShouldExecuteSuccessfully()
     {
@@ -282,7 +282,7 @@ public sealed class GAgentExecutorTests : AevatarAIGAgentTestBase
     }
 
     // Error handling test cases
-    //[Fact]
+    [Fact]
     public async Task ExecuteGAgentEventHandler_WithInvalidEventTypeName_ShouldThrowException()
     {
         // Arrange
@@ -296,7 +296,7 @@ public sealed class GAgentExecutorTests : AevatarAIGAgentTestBase
         });
     }
 
-    //[Fact]
+    [Fact]
     public async Task ExecuteGAgentEventHandler_WithInvalidEventJson_ShouldThrowException()
     {
         // Arrange
@@ -310,7 +310,7 @@ public sealed class GAgentExecutorTests : AevatarAIGAgentTestBase
         });
     }
 
-    //[Fact]
+    [Fact]
     public async Task ExecuteGAgentEventHandler_WithInvalidGrainType_ShouldThrowException()
     {
         // Arrange
@@ -325,7 +325,7 @@ public sealed class GAgentExecutorTests : AevatarAIGAgentTestBase
         });
     }
 
-    //[Fact]
+    [Fact]
     public async Task ExecuteGAgentEventHandler_WithCaseInsensitiveEventTypeName_ShouldExecuteSuccessfully()
     {
         // Arrange
@@ -341,7 +341,7 @@ public sealed class GAgentExecutorTests : AevatarAIGAgentTestBase
         result.ShouldContain("Processed: Case Insensitive Test");
     }
 
-    //[Fact]
+    [Fact]
     public async Task ExecuteGAgentEventHandler_WithFullEventTypeName_ShouldExecuteSuccessfully()
     {
         // Arrange
@@ -358,7 +358,7 @@ public sealed class GAgentExecutorTests : AevatarAIGAgentTestBase
         result.ShouldContain("Processed: Full Type Name Test");
     }
 
-    //[Fact]
+    [Fact]
     public async Task ExecuteGAgentEventHandler_WithTimeoutEventAndExpectedResultType_ShouldThrowTimeoutException()
     {
         // Arrange
@@ -374,7 +374,7 @@ public sealed class GAgentExecutorTests : AevatarAIGAgentTestBase
         });
     }
     
-    //[Fact]
+    [Fact]
     public async Task TestEventHandlerExecutorGAgent()
     {
         var executorGAgent = await _gAgentFactory.GetGAgentAsync<IEventHandlerExecutorGAgent>();

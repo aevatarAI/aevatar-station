@@ -16,7 +16,7 @@ public sealed class AIStreamChatTest : AevatarAIGAgentTestBase
         _agentFactory = GetRequiredService<IGAgentFactory>();
     }
 
-    //[Fact]
+    [Fact]
     public async Task AIChatStreamAsyncTest()
     {
         var chatAgent = await _agentFactory.GetGAgentAsync<IChatAIGAgent>(Guid.NewGuid());
@@ -37,7 +37,7 @@ public sealed class AIStreamChatTest : AevatarAIGAgentTestBase
         secondState.ContentList.Count.ShouldBeGreaterThan(0);
     }
 
-    //[Fact]
+    [Fact]
     public async Task ChatWithHistoryAsyncTest()
     {
         var chatAgent = await _agentFactory.GetGAgentAsync<IChatWithHistoryGAgent>(Guid.NewGuid());

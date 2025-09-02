@@ -21,7 +21,7 @@ public class AevatarStreamingAIAgentTest : AevatarWorkflowTestBase
         _gAgentFactory = GetRequiredService<IGAgentFactory>();
     }
 
-    [Fact(Skip = "暂时跳过这个测试，存在问题需要后续修复")]
+    [Fact]
     public async Task StreamingAIGagentTest()
     {
         var socialAgent = await _gAgentFactory.GetGAgentAsync<ISocialGAgent>(Guid.NewGuid());
@@ -58,6 +58,6 @@ public class AevatarStreamingAIAgentTest : AevatarWorkflowTestBase
         });
         await Task.Delay(3000);
         var content = await testAIStreamingGAgent.GetContent(requestId);
-        content.ShouldBe("Mock Content");
+        response[0].Content.ShouldBe(content);
     }
 }

@@ -16,7 +16,7 @@ namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 
 public class MockTextToImageBrainTest
 {
-    //[Fact]
+    [Fact]
     public async Task Should_ReturnConfiguredResponse_When_GenerateTextToImageAsync()
     {
         // Arrange
@@ -63,7 +63,7 @@ public class MockTextToImageBrainTest
         result[0].ImageType.ShouldBe("png");
     }
 
-    //[Fact]
+    [Fact]
     public async Task Should_ReturnDefaultResponse_When_NoResponseConfigured()
     {
         // Arrange
@@ -92,7 +92,7 @@ public class MockTextToImageBrainTest
         result[0].ImageType.ShouldBe("png");
     }
 
-    //[Fact]
+    [Fact]
     public async Task Should_StoreInitializationParameters_When_InitializeAsync()
     {
         // Arrange
@@ -111,7 +111,7 @@ public class MockTextToImageBrainTest
         mockBrain.ModelIdEnum.ShouldBe(ModelIdEnum.OpenAITextToImage);
     }
 
-    //[Fact]
+    [Fact]
     public async Task Should_SupportKnowledgeUpsert_When_UpsertKnowledgeAsync()
     {
         // Arrange
@@ -130,7 +130,7 @@ public class MockTextToImageBrainTest
         result.ShouldBe(true);
     }
 
-    //[Fact]
+    [Fact]
     public async Task Should_HandleCancellationToken_When_GenerateTextToImageAsync()
     {
         // Arrange
@@ -158,7 +158,7 @@ public class MockTextToImageBrainTest
         result.Count.ShouldBe(1);
     }
 
-    //[Fact]
+    [Fact]
     public async Task Should_RespectResponseType_When_ConfiguredForUrl()
     {
         // Arrange

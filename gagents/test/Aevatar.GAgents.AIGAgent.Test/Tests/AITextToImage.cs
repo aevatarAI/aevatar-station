@@ -18,7 +18,7 @@ public class AITextToImage : AevatarAIGAgentTestBase
         _agentFactory = GetRequiredService<IGAgentFactory>();
     }
 
-    //[Fact]
+    [Fact]
     public async Task GenerateContentTest()
     {
         var chatAgent = await _agentFactory.GetGAgentAsync<IChatAIGAgent>(Guid.NewGuid());
@@ -36,7 +36,7 @@ public class AITextToImage : AevatarAIGAgentTestBase
         response[0].ResponseType.ShouldBe(TextToImageResponseType.Base64Content);
     }
 
-    //[Fact]
+    [Fact]
     public async Task GenerateImageUrlTest()
     {
         var chatAgent = await _agentFactory.GetGAgentAsync<IChatAIGAgent>(Guid.NewGuid());
@@ -55,7 +55,7 @@ public class AITextToImage : AevatarAIGAgentTestBase
         response[0].ResponseType.ShouldBe(TextToImageResponseType.Url);
     }
 
-    //[Fact]
+    [Fact]
     public async Task TextToImageAsyncTest()
     {
         var chatAgent = await _agentFactory.GetGAgentAsync<IChatAIGAgent>(Guid.NewGuid());

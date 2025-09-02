@@ -19,7 +19,7 @@ public class AIGAgentToolsIntegrationTest : AevatarAIGAgentTestBase
         _agentFactory = GetRequiredService<IGAgentFactory>();
     }
 
-    //[Fact]
+    [Fact]
     public async Task Agent_Should_SupportBothMCPAndGAgentTools_When_BothConfigured()
     {
         // Arrange
@@ -73,7 +73,7 @@ public class AIGAgentToolsIntegrationTest : AevatarAIGAgentTestBase
         gagentState.ToolGAgents.ShouldNotBeEmpty();
     }
 
-    //[Fact]
+    [Fact]
     public async Task Agent_Should_TrackToolCallsFromBothSources_When_BothTypesUsed()
     {
         // Arrange
@@ -114,7 +114,7 @@ public class AIGAgentToolsIntegrationTest : AevatarAIGAgentTestBase
         mcpToolCall.Arguments.ShouldContainKey("mcp_param");
     }
 
-    //[Fact]
+    [Fact]
     public async Task Agent_Should_HandleConcurrentToolCalls_When_BothTypesCalledSimultaneously()
     {
         // Arrange
@@ -160,7 +160,7 @@ public class AIGAgentToolsIntegrationTest : AevatarAIGAgentTestBase
         tool2Call.Arguments.ShouldContainKey("param2");
     }
 
-    //[Fact]
+    [Fact]
     public async Task Agent_Should_HandleToolCallErrors_When_InvalidToolsRequested()
     {
         // Arrange
@@ -188,7 +188,7 @@ public class AIGAgentToolsIntegrationTest : AevatarAIGAgentTestBase
         }
     }
 
-    //[Fact]
+    [Fact]
     public async Task Agent_Should_ClearToolCallsFromBothSources_When_ClearCalled()
     {
         // Arrange
@@ -229,7 +229,7 @@ public class AIGAgentToolsIntegrationTest : AevatarAIGAgentTestBase
         toolCallsAfter.ShouldBeEmpty();
     }
 
-    //[Fact]
+    [Fact]
     public async Task Agent_Should_HandleComplexParameterTypes_When_ToolsCalled()
     {
         // Arrange
@@ -285,7 +285,7 @@ public class AIGAgentToolsIntegrationTest : AevatarAIGAgentTestBase
         }
     }
 
-    //[Fact]
+    [Fact]
     public async Task Agent_Should_HandleToolCallTiming_When_ToolsExecuted()
     {
         // Arrange
@@ -329,7 +329,7 @@ public class AIGAgentToolsIntegrationTest : AevatarAIGAgentTestBase
         }
     }
 
-    //[Fact]
+    [Fact]
     public async Task Agent_Should_HandleStateTransitions_When_ToolsConfiguredAndCleared()
     {
         // Arrange
@@ -394,7 +394,7 @@ public class AIGAgentToolsIntegrationTest : AevatarAIGAgentTestBase
         clearedGAgentState.RegisteredGAgentFunctions.ShouldBeEmpty();
     }
 
-    //[Fact]
+    [Fact]
     public async Task Agent_Should_HandleMultipleServerConfiguration_When_ConfiguredSequentially()
     {
         // Arrange
@@ -440,7 +440,7 @@ public class AIGAgentToolsIntegrationTest : AevatarAIGAgentTestBase
         secondState.MCPAgents.Count.ShouldBe(1);
     }
 
-    //[Fact]
+    [Fact]
     public async Task Agent_Should_HandleEmptyConfiguration_When_EmptyListsProvided()
     {
         // Arrange

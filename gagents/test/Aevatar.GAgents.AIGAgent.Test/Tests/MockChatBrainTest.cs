@@ -16,7 +16,7 @@ namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 
 public class MockChatBrainTest
 {
-    //[Fact]
+    [Fact]
     public async Task Should_ReturnConfiguredResponse_When_InvokePromptAsync()
     {
         // Arrange
@@ -58,7 +58,7 @@ public class MockChatBrainTest
         result.TokenUsageStatistics.TotalUsageToken.ShouldBe(30);
     }
 
-    //[Fact]
+    [Fact]
     public async Task Should_ReturnDefaultResponse_When_NoResponseConfigured()
     {
         // Arrange
@@ -81,7 +81,7 @@ public class MockChatBrainTest
         result.TokenUsageStatistics.ShouldNotBeNull();
     }
 
-    //[Fact]
+    [Fact]
     public async Task Should_HandleStreamingRequest_When_InvokePromptStreamingAsync()
     {
         // Arrange
@@ -112,7 +112,7 @@ public class MockChatBrainTest
         tokenUsage.TotalUsageToken.ShouldBeGreaterThan(0);
     }
 
-    //[Fact]
+    [Fact]
     public async Task Should_StoreInitializationParameters_When_InitializeAsync()
     {
         // Arrange
@@ -131,7 +131,7 @@ public class MockChatBrainTest
         mockBrain.ModelIdEnum.ShouldBe(ModelIdEnum.Gemini);
     }
 
-    //[Fact]
+    [Fact]
     public async Task Should_SupportKnowledgeUpsert_When_UpsertKnowledgeAsync()
     {
         // Arrange

@@ -17,7 +17,6 @@ Aevatar Workshop 是一个基于 Orleans 的智能代理（GAgent）框架，支
 | **向量存储** | @🚧 | feature/vector-store | 语义搜索和知识管理 | 52:54:98:52:21:26 | 70% | ❌ |
 | **事件驱动架构** | @🔜 | - | 基于Orleans Streams的事件系统 | - | 0% | ❌ |
 | **插件系统** | @✅ | feature/gagent-plugin | GAgent工具和插件机制实现 | - | 88% | ✅ |
-| **artifact格式增强** | @✅ | feature/artifact-format-enhancement | PsiOmni支持包含内容的artifact标签格式 | 86:76:d2:43:c1:a2 | 95% | ❌ |
 | **监控和追踪** | @🔜 | - | 分布式追踪和性能监控 | - | 0% | ❌ |
 
 ### 技术债务和优化
@@ -78,11 +77,6 @@ Aevatar Workshop 是一个基于 Orleans 的智能代理（GAgent）框架，支
 - perf: 性能优化
 
 ## 最近更新记录
-
-### 2024-01-21
-- ✅ 实现PsiOmni artifact格式增强功能
-- ✅ 支持包含内容的artifact标签：`<artifact name="..." format="...">content</artifact>`
-- ✅ 保持向后兼容性，同时支持自闭合标签格式
 
 ### 2024-01-20
 - ✅ 完成MCP工具发现简化实现（URL模式提取）

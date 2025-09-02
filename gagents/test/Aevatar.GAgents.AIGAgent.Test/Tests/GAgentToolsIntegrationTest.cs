@@ -30,7 +30,7 @@ public sealed class GAgentToolsIntegrationTest : AevatarAIGAgentTestBase
         _gAgentExecutor = GetRequiredService<IGAgentExecutor>();
     }
 
-    //[Fact]
+    [Fact]
     public async Task Should_Execute_Complete_GAgent_Tools_Workflow()
     {
         // Arrange - Create and initialize AI agent with tools
@@ -58,7 +58,7 @@ public sealed class GAgentToolsIntegrationTest : AevatarAIGAgentTestBase
         allGAgents.Keys.Count.ShouldBeGreaterThan(0);
     }
 
-    //[Fact]
+    [Fact]
     public async Task Should_Handle_Multiple_Agents_With_Tools()
     {
         // Test multiple agents can be created with tools enabled
@@ -87,7 +87,7 @@ public sealed class GAgentToolsIntegrationTest : AevatarAIGAgentTestBase
         state2.EnableGAgentTools.ShouldBeTrue();
     }
 
-    //[Fact]
+    [Fact]
     public async Task Should_Maintain_State_After_Tools_Registration()
     {
         // Verify state is properly maintained after enabling tools
@@ -117,7 +117,7 @@ public sealed class GAgentToolsIntegrationTest : AevatarAIGAgentTestBase
 
 
 
-    //[Fact]
+    [Fact]
     public async Task Should_Handle_Concurrent_Tool_Registration()
     {
         // Test concurrent agent creation with tools

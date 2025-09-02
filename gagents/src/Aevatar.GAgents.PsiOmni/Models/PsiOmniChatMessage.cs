@@ -19,15 +19,6 @@ public class SerializedChatMessageContent
 
 [Serializable]
 [GenerateSerializer]
-public class TokenUsage
-{
-    [Id(0)] public int PromptTokens { get; set; } = 0;
-    [Id(1)] public int CompletionTokens { get; set; } = 0;
-    [Id(2)] public int TotalTokens { get; set; }
-}
-
-[Serializable]
-[GenerateSerializer]
 public class PsiOmniChatMessage
 {
     [Id(0)] public string Role { get; set; } = string.Empty;
@@ -42,7 +33,6 @@ public class PsiOmniChatMessage
 
     [Id(5)] public List<ToolCall> ToolCalls { get; set; } = new();
     [Id(6)] public SerializedChatMessageContent? Serialized { get; set; }
-    [Id(7)] public TokenUsage? TokenUsage { get; set; } = null;
 
     /// <summary>
     /// Default constructor

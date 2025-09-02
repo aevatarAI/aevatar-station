@@ -18,7 +18,6 @@ namespace Aevatar.GAgents.Twitter.Test;
 /// <summary>
 /// Unit tests for TwitterWebApiGAgent following Aevatar testing patterns
 /// </summary>
-[Trait("Category", "SkipOnCI")]
 public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
 {
     private readonly ITestOutputHelper _testOutputHelper;
@@ -32,7 +31,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
 
     #region Tweet Management Tests
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task PostTweetAsync_ValidText_ShouldReturnTweetDto()
     {
         // Arrange
@@ -55,7 +54,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
         _testOutputHelper.WriteLine($"Successfully posted tweet with ID: {result.Id}");
     }
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task PostTweetAsync_EmptyText_ShouldThrowArgumentException()
     {
         // Arrange
@@ -69,7 +68,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
         _testOutputHelper.WriteLine("Empty tweet text correctly threw ArgumentException");
     }
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task PostTweetAsync_WithMediaIds_ShouldIncludeMedia()
     {
         // Arrange
@@ -91,7 +90,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
         _testOutputHelper.WriteLine($"Posted tweet with {mediaIds.Count} media items");
     }
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task ReplyToTweetAsync_ValidInput_ShouldCreateReply()
     {
         // Arrange
@@ -114,7 +113,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
         _testOutputHelper.WriteLine($"Created reply to tweet {originalTweetId}");
     }
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task QuoteTweetAsync_ValidInput_ShouldCreateQuoteTweet()
     {
         // Arrange
@@ -137,7 +136,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
         _testOutputHelper.WriteLine($"Created quote tweet for {quotedTweetId}");
     }
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task DeleteTweetAsync_ValidId_ShouldReturnTrue()
     {
         // Arrange
@@ -159,7 +158,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
         _testOutputHelper.WriteLine($"Successfully deleted tweet {tweetId}");
     }
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task GetTweetByIdAsync_ValidId_ShouldReturnTweet()
     {
         // Arrange
@@ -182,7 +181,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
         _testOutputHelper.WriteLine($"Retrieved tweet: {result.Text}");
     }
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task SearchRecentTweetsAsync_ValidQuery_ShouldReturnTweets()
     {
         // Arrange
@@ -226,7 +225,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
 
     #region User Interaction Tests
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task LikeTweetAsync_ValidTweetId_ShouldReturnTrue()
     {
         // Arrange
@@ -253,7 +252,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
         _testOutputHelper.WriteLine($"Successfully liked tweet {tweetId}");
     }
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task UnlikeTweetAsync_ValidTweetId_ShouldReturnTrue()
     {
         // Arrange
@@ -276,7 +275,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
         _testOutputHelper.WriteLine($"Successfully unliked tweet {tweetId}");
     }
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task RetweetAsync_ValidTweetId_ShouldReturnTrue()
     {
         // Arrange
@@ -304,7 +303,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
 
     #region User Profile Tests
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task GetUserByUsernameAsync_ValidUsername_ShouldReturnProfile()
     {
         // Arrange
@@ -328,7 +327,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
         _testOutputHelper.WriteLine($"Retrieved profile for @{username}");
     }
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task GetUserByIdAsync_ValidId_ShouldReturnProfile()
     {
         // Arrange
@@ -351,7 +350,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
         _testOutputHelper.WriteLine($"Retrieved profile for user ID: {userId}");
     }
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task GetMyProfileAsync_WithOAuth_ShouldReturnOwnProfile()
     {
         // Arrange
@@ -381,7 +380,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
 
     #region Relationship Tests
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task FollowUserAsync_ValidUserId_ShouldReturnTrue()
     {
         // Arrange
@@ -405,7 +404,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
         _testOutputHelper.WriteLine($"Successfully followed user {targetUserId}");
     }
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task UnfollowUserAsync_ValidUserId_ShouldReturnTrue()
     {
         // Arrange
@@ -428,7 +427,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
         _testOutputHelper.WriteLine($"Successfully unfollowed user {targetUserId}");
     }
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task GetFollowersAsync_ValidUserId_ShouldReturnList()
     {
         // Arrange
@@ -460,7 +459,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
         _testOutputHelper.WriteLine($"Retrieved {results.Count} followers for user {userId}");
     }
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task GetFollowingAsync_ValidUserId_ShouldReturnList()
     {
         // Arrange
@@ -495,7 +494,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
 
     #region Event Handler Tests
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task HandlePostTweetEvent_ValidEvent_ShouldPostTweet()
     {
         // Arrange
@@ -523,7 +522,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
         _testOutputHelper.WriteLine("Event handler successfully posted tweet");
     }
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task HandleLikeTweetEvent_ValidEvent_ShouldLikeTweet()
     {
         // Arrange
@@ -555,7 +554,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
 
     #region Error Handling Tests
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task PostTweetAsync_ApiError_ShouldThrowHttpRequestException()
     {
         // Arrange
@@ -574,7 +573,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
         _testOutputHelper.WriteLine("API error correctly threw HttpRequestException");
     }
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task DeleteTweetAsync_NonExistentTweet_ShouldReturnFalse()
     {
         // Arrange
@@ -596,7 +595,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
         _testOutputHelper.WriteLine("Non-existent tweet deletion returned false as expected");
     }
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task GetUserByUsernameAsync_InvalidUsername_ShouldReturnNull()
     {
         // Arrange
@@ -622,7 +621,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
 
     #region State Management Tests
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task GAgent_StateOperations_ShouldUpdateCorrectly()
     {
         // Arrange
@@ -647,7 +646,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
         _testOutputHelper.WriteLine($"State correctly tracked {state.TweetsPosted.Count} tweets");
     }
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task GAgent_MultipleInstances_ShouldIsolateState()
     {
         // Arrange
@@ -680,7 +679,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
 
     #region Integration Tests
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task EndToEnd_TweetLifecycle_ShouldCompleteSuccessfully()
     {
         // Arrange
@@ -734,7 +733,7 @@ public sealed class TwitterWebApiGAgentTests : AevatarTwitterTestBase
 
     #region Performance Tests
 
-    //[Fact(Skip = "暂时跳过这个测试类，存在问题需要后续修复")]
+    [Fact]
     public async Task ConcurrentOperations_MultipleTweets_ShouldHandleCorrectly()
     {
         // Arrange

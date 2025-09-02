@@ -16,7 +16,7 @@ using Aevatar.GAgents.AI.Common;
 
 namespace Aevatar.GAgents.PumpFun.Agent;
 
-[Description("Advanced trading automation agent for PumpFun platform that handles token monitoring, automated trading strategies, market analysis, and portfolio management with real-time price tracking.")]
+[Description("Handle PumpFun")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 [GAgent(nameof(PumpFunGAgent))]
@@ -31,7 +31,22 @@ public class PumpFunGAgent : GAgentBase<PumpFunGAgentState, PumpfunSEventBase>, 
 
     public override Task<string> GetDescriptionAsync()
     {
-        return Task.FromResult("PumpFun Platform Agent");
+        return Task.FromResult(
+            "Represents an agent responsible for informing other agents when a PumpFun thread is published.");
+    }
+
+    public Task<AgentDescriptionInfo> GetDescriptionInfoAsync()
+    {
+        return Task.FromResult(new AgentDescriptionInfo
+        {
+            Id = "PumpFunGAgent",
+            Name = "PumpFun Platform Agent",
+            L1Description = "Specialized agent for PumpFun platform integration and automated trading operations",
+            L2Description = "Advanced trading automation agent for PumpFun platform that handles token monitoring, automated trading strategies, market analysis, and portfolio management with real-time price tracking.",
+            Category = "Trading",
+            Capabilities = new List<string> { "token-monitoring", "automated-trading", "market-analysis", "portfolio-management" },
+            Tags = new List<string> { "pumpfun", "trading", "automation", "defi" }
+        });
     }
 
     [EventHandler]
