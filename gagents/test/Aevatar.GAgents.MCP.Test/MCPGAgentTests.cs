@@ -26,14 +26,14 @@ public class MCPGAgentTests : AevatarMCPTestBase
     private readonly ITestOutputHelper _testOutputHelper;
     private readonly IGAgentFactory _gAgentFactory;
     private readonly IGAgentExecutor _gAgentExecutor;
-    private readonly MockMcpClientProvider _mockProvider;
+    private readonly MockStdioMcpClientProvider _mockStdioProvider;
 
     public MCPGAgentTests(ITestOutputHelper testOutputHelper)
     {
         _testOutputHelper = testOutputHelper;
         _gAgentFactory = GetRequiredService<IGAgentFactory>();
         _gAgentExecutor = GetRequiredService<IGAgentExecutor>();
-        _mockProvider = GetMockMcpClientProvider();
+        _mockStdioProvider = GetMockMcpClientProvider();
     }
 
     #region Configuration and Initialization Tests

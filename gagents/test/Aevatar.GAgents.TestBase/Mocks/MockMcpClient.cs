@@ -18,8 +18,7 @@ public class MockMcpClient : IMcpClient
 {
     private readonly string _serverName;
     private readonly List<MockTool> _tools;
-    private readonly Dictionary<string, object> _memoryStore = new();
-    private bool _disposed = false;
+    private bool _disposed;
 
     public bool IsConnected { get; private set; } = true;
 

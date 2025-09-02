@@ -10,7 +10,7 @@ public class StdioMcpClientProvider : McpClientProviderBase
     protected override IClientTransport CreateClientTransport(MCPServerConfig config)
     {
         return new StdioClientTransport(new StdioClientTransportOptions
-        {
+        { 
             Name = config.ServerName,
             Command = config.Command,
             Arguments = config.Args,

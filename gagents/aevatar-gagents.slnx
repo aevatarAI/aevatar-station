@@ -18,6 +18,7 @@
     <File Path="md\aevatar-gagents-aigagent.md" />
     <File Path="md\aevatar-gagents-semantickernel.md" />
     <File Path="md\aevatar-groupchat-analysis.md" />
+    <File Path="docs\GAgentDemo.ipynb" />
   </Folder>
   <Folder Name="/samples/" />
   <Folder Name="/samples/AIGAgent/">
@@ -61,6 +62,7 @@
     <Project Path="src\Aevatar.GAgents.Twitter\Aevatar.GAgents.Twitter.csproj" />
   </Folder>
   <Folder Name="/test/">
+    <Project Path="test\Aevatar.GAgents.AIGAgent.Test.GAgents\Aevatar.GAgents.AIGAgent.Test.GAgents.csproj" Type="Classic C#" />
     <Project Path="test\Aevatar.GAgents.AIGAgent.Test\Aevatar.GAgents.AIGAgent.Test.csproj" />
     <Project Path="test\Aevatar.GAgents.ChatAgent.Test\Aevatar.GAgents.ChatAgent.Test.csproj" />
     <Project Path="test\Aevatar.GAgents.GroupChat.Test\Aevatar.GAgents.GroupChat.Test.csproj" />

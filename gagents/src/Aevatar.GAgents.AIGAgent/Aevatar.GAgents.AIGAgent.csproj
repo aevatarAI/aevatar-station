@@ -2,7 +2,6 @@
     <PropertyGroup>
         <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
         <Nullable>enable</Nullable>
-        <RootNamespace>Aevatar.AI</RootNamespace>
         <PackageId>Aevatar.GAgents.AIGAgent</PackageId>
         <PackageType>Dependency</PackageType>
         <Title>aevatar Framework</Title>

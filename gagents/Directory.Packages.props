@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AbpVersion>9.0.3</AbpVersion>
     <OrleansVerion>9.0.1</OrleansVerion>
-    <AevatarCoreVersion>1.5.2-tool.2</AevatarCoreVersion>
+    <AevatarCoreVersion>1.5.3</AevatarCoreVersion>
     <SkVersion>1.57.0-alpha</SkVersion>
   </PropertyGroup>
   <ItemGroup>
@@ -119,6 +119,7 @@
     <PackageVersion Include="NSubstitute.Analyzers.CSharp" Version="1.0.17" />
     <PackageVersion Include="Shouldly" Version="4.2.1" />
     <PackageVersion Include="xunit" Version="2.7.0" />
+    <PackageVersion Include="xunit.abstractions" Version="2.0.3" />
     <PackageVersion Include="xunit.analyzers" Version="1.11.0" />
     <PackageVersion Include="xunit.extensibility.core" Version="2.7.0" />
     <PackageVersion Include="xunit.extensibility.execution" Version="2.7.0" />
@@ -139,10 +140,8 @@
     <PackageVersion Include="Microsoft.SemanticKernel.Connectors.AzureAIInference" Version="1.57.0-beta" />
     <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Qdrant" Version="1.33.0-preview" />
     <PackageVersion Include="Microsoft.SemanticKernel.Agents.OpenAI" Version="1.57.0-preview" />
-
     <!-- MCP packages -->
     <PackageVersion Include="ModelContextProtocol.Core" Version="0.3.0-preview.3" />
-
     <!-- Other packages -->
     <PackageVersion Include="Neo4j.Driver" Version="5.27.0" />
     <PackageVersion Include="OpenAI" Version="2.2.0-beta.4" />
@@ -150,7 +149,12 @@
     <PackageVersion Include="HtmlAgilityPack" Version="1.11.71" />
     <PackageVersion Include="DotNetEnv" Version="3.1.1" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.5" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.0" />
     <PackageVersion Include="JetBrains.Annotations" Version="2023.3.0" />
+    <PackageVersion Include="BenchmarkDotNet" Version="0.14.0" />
+    <PackageVersion Include="System.IO.Compression" Version="4.3.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="8.0.10" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.8.1" />
   </ItemGroup>
 </Project>

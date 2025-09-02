@@ -33,6 +33,7 @@
       <ProjectReference Include="..\..\src\Aevatar.GAgents.Basic\Aevatar.GAgents.Basic.csproj" />
       <ProjectReference Include="..\..\src\Aevatar.GAgents.ChatAgent\Aevatar.GAgents.ChatAgent.csproj" />
       <ProjectReference Include="..\..\src\Aevatar.GAgents.Executor\Aevatar.GAgents.Executor.csproj" />
+      <ProjectReference Include="..\Aevatar.GAgents.AIGAgent.Test.GAgents\Aevatar.GAgents.AIGAgent.Test.GAgents.csproj" />
       <ProjectReference Include="..\Aevatar.GAgents.TestBase\Aevatar.GAgents.TestBase.csproj" />
     </ItemGroup>
 

@@ -79,4 +79,11 @@ public class WorkflowCoordinatorState : StateBase
     {
         return CurrentWorkUnitInfos.Select(s => s.GrainId).Distinct().ToList();
     }
+
+    public List<string> GetNextWorkerUnitGrainIds(string currentGrainId)
+    {
+        return (from workUnitInfo in CurrentWorkUnitInfos
+            where workUnitInfo.GrainId == currentGrainId
+            select workUnitInfo.NextGrainId).ToList();
+    }
 }

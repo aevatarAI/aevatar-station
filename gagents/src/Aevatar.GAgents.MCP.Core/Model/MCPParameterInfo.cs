@@ -10,105 +10,129 @@ namespace Aevatar.GAgents.MCP.Core.Model;
 public class MCPParameterInfo
 {
     #region Basic properties (backward compatible)
+
     /// <summary>
     /// Parameter name
     /// </summary>
-    [Id(0)] public string Name { get; set; } = string.Empty;
-    
+    [Id(0)]
+    public string Name { get; set; } = string.Empty;
+
     /// <summary>
     /// Parameter type (simplified representation, maintaining backward compatibility)
     /// </summary>
-    [Id(1)] public string Type { get; set; } = string.Empty;
-    
+    [Id(1)]
+    public string Type { get; set; } = string.Empty;
+
     /// <summary>
     /// Parameter description
     /// </summary>
-    [Id(2)] public string Description { get; set; } = string.Empty;
-    
+    [Id(2)]
+    public string Description { get; set; } = string.Empty;
+
     /// <summary>
     /// Whether the parameter is required
     /// </summary>
-    [Id(3)] public bool Required { get; set; }
-    
+    [Id(3)]
+    public bool Required { get; set; }
+
     /// <summary>
     /// Default value
     /// </summary>
-    [Id(4)] public object? DefaultValue { get; set; }
+    [Id(4)]
+    public object? DefaultValue { get; set; }
+
     #endregion
 
     #region JsonSchema Extended Properties
+
     /// <summary>
     /// Complete JsonSchema raw data (serialized as string for storage)
     /// </summary>
-    [Id(5)] public string? RawJsonSchema { get; set; }
-    
+    [Id(5)]
+    public string? RawJsonSchema { get; set; }
+
     /// <summary>
     /// JsonSchema format constraints (e.g. date-time, email, etc.)
     /// </summary>
-    [Id(6)] public string? Format { get; set; }
-    
+    [Id(6)]
+    public string? Format { get; set; }
+
     /// <summary>
     /// String minimum length
     /// </summary>
-    [Id(7)] public int? MinLength { get; set; }
-    
+    [Id(7)]
+    public int? MinLength { get; set; }
+
     /// <summary>
     /// String maximum length
     /// </summary>
-    [Id(8)] public int? MaxLength { get; set; }
-    
+    [Id(8)]
+    public int? MaxLength { get; set; }
+
     /// <summary>
     /// Number minimum value
     /// </summary>
-    [Id(9)] public double? Minimum { get; set; }
-    
+    [Id(9)]
+    public double? Minimum { get; set; }
+
     /// <summary>
     /// Number maximum value
     /// </summary>
-    [Id(10)] public double? Maximum { get; set; }
-    
+    [Id(10)]
+    public double? Maximum { get; set; }
+
     /// <summary>
     /// Regular expression pattern
     /// </summary>
-    [Id(11)] public string? Pattern { get; set; }
-    
+    [Id(11)]
+    public string? Pattern { get; set; }
+
     /// <summary>
     /// Enumeration value list
     /// </summary>
-    [Id(12)] public List<string>? EnumValues { get; set; }
-    
+    [Id(12)]
+    public List<string>? EnumValues { get; set; }
+
     /// <summary>
     /// Array item type information (for array type)
     /// </summary>
-    [Id(13)] public MCPParameterInfo? ArrayItems { get; set; }
-    
+    [Id(13)]
+    public MCPParameterInfo? ArrayItems { get; set; }
+
     /// <summary>
     /// Object property information (for object type)
     /// </summary>
-    [Id(14)] public Dictionary<string, MCPParameterInfo>? ObjectProperties { get; set; }
-    
+    [Id(14)]
+    public Dictionary<string, MCPParameterInfo>? ObjectProperties { get; set; }
+
     /// <summary>
     /// Object required property list
     /// </summary>
-    [Id(15)] public List<string>? RequiredProperties { get; set; }
-    
+    [Id(15)]
+    public List<string>? RequiredProperties { get; set; }
+
     /// <summary>
     /// Whether to allow additional properties (object type)
     /// </summary>
-    [Id(16)] public bool? AdditionalProperties { get; set; }
-    
+    [Id(16)]
+    public bool? AdditionalProperties { get; set; }
+
     /// <summary>
     /// JsonSchema type details (supports union types like ["string", "null"])
     /// </summary>
-    [Id(17)] public List<string>? TypeArray { get; set; }
-    
+    [Id(17)]
+    public List<string>? TypeArray { get; set; }
+
     /// <summary>
     /// Example value list
     /// </summary>
-    [Id(18)] public List<string>? Examples { get; set; }
+    [Id(18)]
+    public List<string>? Examples { get; set; }
+
     #endregion
 
     #region Static Factory Methods
+
     /// <summary>
     /// Create MCPParameterInfo from official SDK's JsonElement
     /// </summary>
@@ -149,10 +173,12 @@ public class MCPParameterInfo
         {
             paramInfo.MinLength = minLengthElement.GetInt32();
         }
+
         if (schema.TryGetProperty("maxLength", out var maxLengthElement))
         {
             paramInfo.MaxLength = maxLengthElement.GetInt32();
         }
+
         if (schema.TryGetProperty("pattern", out var patternElement))
         {
             paramInfo.Pattern = patternElement.GetString();
@@ -163,6 +189,7 @@ public class MCPParameterInfo
         {
             paramInfo.Minimum = minimumElement.GetDouble();
         }
+
         if (schema.TryGetProperty("maximum", out var maximumElement))
         {
             paramInfo.Maximum = maximumElement.GetDouble();
@@ -184,7 +211,8 @@ public class MCPParameterInfo
         }
 
         // Parse examples
-        if (schema.TryGetProperty("examples", out var examplesElement) && examplesElement.ValueKind == JsonValueKind.Array)
+        if (schema.TryGetProperty("examples", out var examplesElement) &&
+            examplesElement.ValueKind == JsonValueKind.Array)
         {
             paramInfo.Examples = examplesElement.EnumerateArray()
                 .Select(e => e.GetRawText())
@@ -209,7 +237,8 @@ public class MCPParameterInfo
                 }
             }
 
-            if (schema.TryGetProperty("required", out var requiredElement) && requiredElement.ValueKind == JsonValueKind.Array)
+            if (schema.TryGetProperty("required", out var requiredElement) &&
+                requiredElement.ValueKind == JsonValueKind.Array)
             {
                 paramInfo.RequiredProperties = requiredElement.EnumerateArray()
                     .Where(e => e.ValueKind == JsonValueKind.String)
@@ -240,7 +269,7 @@ public class MCPParameterInfo
 
         // Get required parameter list
         var requiredParams = new HashSet<string>();
-        if (inputSchema.TryGetProperty("required", out var requiredElement) && 
+        if (inputSchema.TryGetProperty("required", out var requiredElement) &&
             requiredElement.ValueKind == JsonValueKind.Array)
         {
             foreach (var item in requiredElement.EnumerateArray())
@@ -264,9 +293,11 @@ public class MCPParameterInfo
 
         return parameters;
     }
+
     #endregion
 
     #region Conversion Methods
+
     /// <summary>
     /// Convert to Semantic Kernel's KernelParameterMetadata
     /// </summary>
@@ -281,7 +312,7 @@ public class MCPParameterInfo
             "Microsoft.SemanticKernel.KernelParameterMetadata, Microsoft.SemanticKernel",
             "Microsoft.SemanticKernel.KernelParameterMetadata, Microsoft.SemanticKernel.Core"
         };
-        
+
         Type? metadataType = null;
         foreach (var typeName in possibleAssemblyNames)
         {
@@ -289,16 +320,18 @@ public class MCPParameterInfo
             if (metadataType != null)
                 break;
         }
-        
+
         if (metadataType == null)
         {
-            throw new InvalidOperationException("Cannot find KernelParameterMetadata type, tried the following assemblies: " + string.Join(", ", possibleAssemblyNames));
+            throw new InvalidOperationException(
+                "Cannot find KernelParameterMetadata type, tried the following assemblies: " +
+                string.Join(", ", possibleAssemblyNames));
         }
 
         // Try to use basic constructor
         var constructors = metadataType.GetConstructors();
-        var simpleConstructor = constructors.FirstOrDefault(c => 
-            c.GetParameters().Length == 1 && 
+        var simpleConstructor = constructors.FirstOrDefault(c =>
+            c.GetParameters().Length == 1 &&
             c.GetParameters()[0].ParameterType == typeof(string));
 
         if (simpleConstructor == null)
@@ -323,12 +356,16 @@ public class MCPParameterInfo
                 if (schemaConstructor != null)
                 {
                     // Try to create KernelJsonSchema
-                    var schemaBuilderType = System.Type.GetType("Microsoft.SemanticKernel.KernelJsonSchemaBuilder, Microsoft.SemanticKernel")
-                                         ?? System.Type.GetType("Microsoft.SemanticKernel.KernelJsonSchemaBuilder, Microsoft.SemanticKernel.Abstractions");
+                    var schemaBuilderType =
+                        System.Type.GetType(
+                            "Microsoft.SemanticKernel.KernelJsonSchemaBuilder, Microsoft.SemanticKernel")
+                        ?? System.Type.GetType(
+                            "Microsoft.SemanticKernel.KernelJsonSchemaBuilder, Microsoft.SemanticKernel.Abstractions");
 
                     if (schemaBuilderType != null)
                     {
-                        var buildMethod = schemaBuilderType.GetMethod("Build", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                        var buildMethod = schemaBuilderType.GetMethod("Build",
+                            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
                         if (buildMethod != null)
                         {
                             var schema = GenerateJsonSchema();
@@ -352,7 +389,7 @@ public class MCPParameterInfo
                             }
 
                             var metadataWithSchema = schemaConstructor.Invoke(args);
-                            
+
                             // Set other properties
                             SetPropertySafely(metadataWithSchema, "Description", Description);
                             SetPropertySafely(metadataWithSchema, "IsRequired", Required);
@@ -360,7 +397,7 @@ public class MCPParameterInfo
                             {
                                 SetPropertySafely(metadataWithSchema, "DefaultValue", DefaultValue);
                             }
-                            
+
                             return metadataWithSchema;
                         }
                     }
@@ -372,13 +409,13 @@ public class MCPParameterInfo
                 Console.WriteLine($"Failed to create KernelParameterMetadata with schema: {ex.Message}");
             }
         }
-        
+
         var metadata = simpleConstructor.Invoke([Name]);
 
         // Use reflection to set properties
         SetPropertySafely(metadata, "Description", Description);
         SetPropertySafely(metadata, "IsRequired", Required);
-        
+
         // Try to set default value
         if (DefaultValue != null)
         {
@@ -399,11 +436,13 @@ public class MCPParameterInfo
             {
                 var schema = GenerateJsonSchema();
                 var schemaJson = System.Text.Json.JsonSerializer.Serialize(schema);
-                
+
                 // Try to create KernelJsonSchema (the actual type of Schema property)
-                var kernelJsonSchemaType = System.Type.GetType("Microsoft.SemanticKernel.KernelJsonSchema, Microsoft.SemanticKernel.Abstractions")
+                var kernelJsonSchemaType =
+                    System.Type.GetType(
+                        "Microsoft.SemanticKernel.KernelJsonSchema, Microsoft.SemanticKernel.Abstractions")
                     ?? System.Type.GetType("Microsoft.SemanticKernel.KernelJsonSchema, Microsoft.SemanticKernel");
-                
+
                 if (kernelJsonSchemaType != null)
                 {
                     // KernelJsonSchema has a constructor that accepts string parameter
@@ -439,7 +478,7 @@ public class MCPParameterInfo
                 if (propertyName == "Schema" && property.PropertyType.Name == "KernelJsonSchema")
                 {
                     var jsonString = System.Text.Json.JsonSerializer.Serialize(value);
-                    
+
                     var kernelJsonSchemaType = property.PropertyType;
                     var ctor = kernelJsonSchemaType.GetConstructor(new Type[] { typeof(string) });
                     if (ctor != null)
@@ -495,6 +534,7 @@ public class MCPParameterInfo
             {
                 properties[propName] = propInfo.GenerateJsonSchema();
             }
+
             schema["properties"] = properties;
 
             if (RequiredProperties?.Any() == true)
@@ -561,7 +601,7 @@ public class MCPParameterInfo
     public string GetEnhancedDescription()
     {
         var parts = new List<string>();
-        
+
         if (!string.IsNullOrEmpty(Description))
         {
             parts.Add(Description);
@@ -571,10 +611,11 @@ public class MCPParameterInfo
         if (Type == "array")
         {
             var schema = GenerateJsonSchema();
-            var schemaJson = System.Text.Json.JsonSerializer.Serialize(schema, new System.Text.Json.JsonSerializerOptions 
-            { 
-                WriteIndented = false 
-            });
+            var schemaJson = System.Text.Json.JsonSerializer.Serialize(schema,
+                new System.Text.Json.JsonSerializerOptions
+                {
+                    WriteIndented = false
+                });
             parts.Add($"JSON Schema: {schemaJson}");
         }
         else
@@ -616,9 +657,11 @@ public class MCPParameterInfo
 
         return string.Join(". ", parts);
     }
+
     #endregion
 
     #region Helper Methods
+
     private static string GetPrimaryType(JsonElement typeElement)
     {
         if (typeElement.ValueKind == JsonValueKind.String)
@@ -640,6 +683,7 @@ public class MCPParameterInfo
                 }
             }
         }
+
         return "any";
     }
 
@@ -652,6 +696,7 @@ public class MCPParameterInfo
                 .Select(e => e.GetString()!)
                 .ToList();
         }
+
         return null;
     }
 
@@ -667,5 +712,6 @@ public class MCPParameterInfo
             _ => element.GetRawText()
         };
     }
+
     #endregion
 }

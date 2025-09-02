@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PrepareResourceContextAsync 使用场景指南 - Aevatar Framework</title>
+    <meta name="description" content="Aevatar 框架中 PrepareResourceContextAsync 方法的详细使用场景和实践指南">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --secondary-color: #8b5cf6;
+            --bg-color: #0f172a;
+            --surface-color: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --code-bg: #1e293b;
+            --border-color: #334155;
+            --accent-color: #22d3ee;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            padding: 3rem 0;
+            margin-bottom: 3rem;
+            border-radius: 0 0 2rem 2rem;
+        }
+        
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .subtitle {
+            text-align: center;
+            margin-top: 0.5rem;
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        h2 {
+            color: var(--accent-color);
+            margin: 2.5rem 0 1.5rem;
+            font-size: 2rem;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        
+        h3 {
+            color: var(--primary-color);
+            margin: 2rem 0 1rem;
+            font-size: 1.5rem;
+        }
+        
+        p {
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+        
+        pre {
+            background-color: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        code:not(pre code) {
+            background-color: var(--surface-color);
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-size: 0.9em;
+            color: var(--accent-color);
+        }
+        
+        ul, ol {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        li {
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+        }
+        
+        .scenario-card {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .scenario-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .psi-symbol {
+            color: var(--accent-color);
+            font-style: italic;
+            font-weight: 600;
+        }
+        
+        .toc {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .toc h2 {
+            margin-top: 0;
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            border: none;
+        }
+        
+        .toc ul {
+            list-style: none;
+            margin-left: 0;
+        }
+        
+        .toc a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        
+        .toc a:hover {
+            color: var(--accent-color);
+        }
+        
+        .best-practices {
+            background-color: rgba(99, 102, 241, 0.1);
+            border-left: 4px solid var(--primary-color);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0.25rem;
+        }
+        
+        .summary-box {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+            border: 1px solid var(--primary-color);
+            border-radius: 0.75rem;
+            padding: 2rem;
+            margin-top: 3rem;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            h2 {
+                font-size: 1.5rem;
+            }
+            
+            pre {
+                padding: 1rem;
+                font-size: 0.85rem;
+            }
+        }
+        
+        /* 语法高亮自定义 */
+        .token.keyword {
+            color: #c792ea;
+        }
+        
+        .token.string {
+            color: #c3e88d;
+        }
+        
+        .token.comment {
+            color: #546e7a;
+        }
+        
+        .token.function {
+            color: #82aaff;
+        }
+        
+        .token.class-name {
+            color: #ffcb6b;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>PrepareResourceContextAsync 使用场景指南</h1>
+            <p class="subtitle">Aevatar Framework 动态资源编织完全指南</p>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="toc">
+            <h2>目录</h2>
+            <ul>
+                <li><a href="#overview">概述</a></li>
+                <li><a href="#core-concepts">核心概念</a></li>
+                <li><a href="#scenarios">实际应用场景</a>
+                    <ul>
+                        <li><a href="#ai-tools">1. AI 工具链动态注册</a></li>
+                        <li><a href="#multi-tenant">2. 多租户资源隔离</a></li>
+                        <li><a href="#load-balancer">3. 动态负载均衡器配置</a></li>
+                        <li><a href="#workflow">4. 工作流步骤动态编排</a></li>
+                        <li><a href="#observability">5. 监控和可观测性动态配置</a></li>
+                        <li><a href="#data-pipeline">6. 数据管道动态组装</a></li>
+                        <li><a href="#security">7. 安全策略动态应用</a></li>
+                        <li><a href="#cache">8. 缓存策略自适应配置</a></li>
+                        <li><a href="#message-routing">9. 消息路由动态配置</a></li>
+                        <li><a href="#failover">10. 故障转移和容错配置</a></li>
+                        <li><a href="#plugin">11. 插件系统动态加载</a></li>
+                        <li><a href="#transaction">12. 分布式事务协调</a></li>
+                        <li><a href="#service-mesh">13. 服务网格集成</a></li>
+                        <li><a href="#ml-inference">14. 机器学习模型服务</a></li>
+                        <li><a href="#stream-processing">15. 事件流处理</a></li>
+                    </ul>
+                </li>
+                <li><a href="#advanced-patterns">高级模式和架构考虑</a></li>
+                <li><a href="#best-practices">最佳实践</a></li>
+                <li><a href="#summary">总结</a></li>
+            </ul>
+        </div>
+
+        <section id="overview">
+            <h2>概述</h2>
+            <p><code>PrepareResourceContextAsync</code> 是 Aevatar 框架中 GAgent 的一个核心方法，旨在实现资源的动态发现和注入。该方法允许 GAgent 在运行时根据上下文动态获取和配置所需资源，无需在编译时硬编码依赖关系。</p>
+        </section>
+
+        <section id="core-concepts">
+            <h2>核心概念</h2>
+            <h3>ResourceContext 结构</h3>
+            <pre><code class="language-csharp">public class ResourceContext
+{
+    public Guid ContextId { get; set; }                    // 上下文唯一标识
+    public List&lt;GrainId&gt; AvailableResources { get; set; }  // 可用资源列表
+    public Dictionary&lt;string, object&gt; Metadata { get; set; } // 元数据
+    public string? SourceIdentifier { get; set; }          // 来源标识
+}</code></pre>
+        </section>
+
+        <section id="scenarios">
+            <h2>实际应用场景</h2>
+            
+            <div id="ai-tools" class="scenario-card">
+                <h3>1. AI 工具链动态注册 <span class="psi-symbol">ψ(工具编织)</span></h3>
+                <p><strong>场景描述</strong>：AIGAgent 根据工作流上下文动态发现并注册可用工具。</p>
+                <pre><code class="language-csharp">public class SmartAIGAgent : AIGAgentBase&lt;SmartAIState, SmartAIStateLogEvent&gt;
+{
+    protected override async Task OnPrepareResourceContextAsync(ResourceContext context)
+    {
+        // 发现 MCP 工具提供者
+        var mcpAgents = context.AvailableResources
+            .Where(r => context.Metadata.ContainsKey($"{r}:type") && 
+                       context.Metadata[$"{r}:type"].ToString() == "MCPGAgent");
+        
+        foreach (var mcpAgentId in mcpAgents)
+        {
+            var mcpAgent = await GAgentFactory.GetGAgentAsync&lt;IMCPGAgent&gt;(mcpAgentId);
+            var tools = await mcpAgent.GetAvailableToolsAsync();
+            
+            // 注册到 Semantic Kernel
+            foreach (var tool in tools)
+            {
+                await RegisterSemanticKernelFunctionAsync(tool);
+            }
+        }
+        
+        // 发现数据处理工具
+        var dataProcessors = context.AvailableResources
+            .Where(r => context.Metadata.ContainsKey($"{r}:capabilities") &&
+                       ((List&lt;string&gt;)context.Metadata[$"{r}:capabilities"]).Contains("data-processing"));
+        
+        await RegisterDataProcessorsAsync(dataProcessors);
+    }
+}</code></pre>
+            </div>
+
+            <div id="multi-tenant" class="scenario-card">
+                <h3>2. 多租户资源隔离 <span class="psi-symbol">ψ(边界共振)</span></h3>
+                <p><strong>场景描述</strong>：根据租户上下文动态分配和隔离资源。</p>
+                <pre><code class="language-csharp">public class TenantAwareGAgent : GAgentBase&lt;TenantState, TenantStateLogEvent&gt;
+{
+    protected override async Task OnPrepareResourceContextAsync(ResourceContext context)
+    {
+        // 从元数据获取租户信息
+        if (context.Metadata.TryGetValue("tenantId", out var tenantIdObj))
+        {
+            var tenantId = tenantIdObj.ToString();
+            
+            // 只连接属于同一租户的资源
+            var tenantResources = new List&lt;GrainId&gt;();
+            foreach (var resourceId in context.AvailableResources)
+            {
+                if (context.Metadata.TryGetValue($"{resourceId}:tenantId", out var resourceTenant) &&
+                    resourceTenant.ToString() == tenantId)
+                {
+                    tenantResources.Add(resourceId);
+                }
+            }
+            
+            // 配置租户特定的数据源
+            await ConfigureTenantDataSourceAsync(tenantId);
+            
+            // 设置访问权限
+            await SetupTenantPermissionsAsync(tenantId, tenantResources);
+        }
+    }
+}</code></pre>
+            </div>
+
+            <div id="load-balancer" class="scenario-card">
+                <h3>3. 动态负载均衡器配置 <span class="psi-symbol">ψ(流量编舞)</span></h3>
+                <p><strong>场景描述</strong>：根据可用的后端服务动态配置负载均衡策略。</p>
+                <pre><code class="language-csharp">public class LoadBalancerGAgent : GAgentBase&lt;LoadBalancerState, LoadBalancerStateLogEvent&gt;
+{
+    protected override async Task OnPrepareResourceContextAsync(ResourceContext context)
+    {
+        // 发现所有后端服务
+        var backendServices = context.AvailableResources
+            .Where(r => context.Metadata.ContainsKey($"{r}:serviceType") &&
+                       context.Metadata[$"{r}:serviceType"].ToString() == "backend");
+        
+        foreach (var serviceId in backendServices)
+        {
+            // 获取服务健康状态和容量
+            if (context.Metadata.TryGetValue($"{serviceId}:health", out var health) &&
+                context.Metadata.TryGetValue($"{serviceId}:capacity", out var capacity))
+            {
+                var endpoint = new ServiceEndpoint
+                {
+                    GrainId = serviceId,
+                    HealthScore = Convert.ToDouble(health),
+                    Capacity = Convert.ToInt32(capacity),
+                    Weight = CalculateWeight(health, capacity)
+                };
+                
+                RaiseEvent(new ServiceEndpointAddedEvent { Endpoint = endpoint });
+            }
+        }
+        
+        await ConfirmEvents();
+        
+        // 根据服务分布选择负载均衡算法
+        SelectLoadBalancingAlgorithm();
+    }
+}</code></pre>
+            </div>
+
+            <div id="workflow" class="scenario-card">
+                <h3>4. 工作流步骤动态编排 <span class="psi-symbol">ψ(序列重构)</span></h3>
+                <p><strong>场景描述</strong>：根据可用的处理器动态构建工作流管道。</p>
+                <pre><code class="language-csharp">public class WorkflowOrchestratorGAgent : GAgentBase&lt;WorkflowState, WorkflowStateLogEvent&gt;
+{
+    protected override async Task OnPrepareResourceContextAsync(ResourceContext context)
+    {
+        // 获取工作流定义
+        if (context.Metadata.TryGetValue("workflowDefinition", out var definitionObj))
+        {
+            var definition = definitionObj as WorkflowDefinition;
+            
+            // 为每个步骤匹配可用的处理器
+            foreach (var step in definition.Steps)
+            {
+                var processors = context.AvailableResources
+                    .Where(r => CanProcessStep(r, step, context.Metadata))
+                    .ToList();
+                
+                if (processors.Any())
+                {
+                    // 选择最优处理器
+                    var selectedProcessor = await SelectOptimalProcessorAsync(processors, step);
+                    
+                    RaiseEvent(new StepProcessorAssignedEvent
+                    {
+                        StepId = step.Id,
+                        ProcessorId = selectedProcessor,
+                        Priority = CalculatePriority(step, context)
+                    });
+                }
+            }
+            
+            await ConfirmEvents();
+        }
+    }
+}</code></pre>
+            </div>
+
+            <div id="observability" class="scenario-card">
+                <h3>5. 监控和可观测性动态配置 <span class="psi-symbol">ψ(观测织网)</span></h3>
+                <p><strong>场景描述</strong>：根据可用的监控服务动态配置指标收集和日志聚合。</p>
+                <pre><code class="language-csharp">public class ObservableGAgent : GAgentBase&lt;ObservableState, ObservableStateLogEvent&gt;
+{
+    protected override async Task OnPrepareResourceContextAsync(ResourceContext context)
+    {
+        // 发现监控服务
+        var monitoringServices = context.AvailableResources
+            .Where(r => context.Metadata.ContainsKey($"{r}:serviceType") &&
+                       context.Metadata[$"{r}:serviceType"].ToString() == "monitoring");
+        
+        foreach (var serviceId in monitoringServices)
+        {
+            var service = await GAgentFactory.GetGAgentAsync&lt;IMonitoringGAgent&gt;(serviceId);
+            
+            // 注册指标收集器
+            if (context.Metadata.ContainsKey($"{serviceId}:metrics"))
+            {
+                var supportedMetrics = context.Metadata[$"{serviceId}:metrics"] as List&lt;string&gt;;
+                await RegisterMetricsCollectorAsync(service, supportedMetrics);
+            }
+            
+            // 配置日志转发
+            if (context.Metadata.ContainsKey($"{serviceId}:logTypes"))
+            {
+                var logTypes = context.Metadata[$"{serviceId}:logTypes"] as List&lt;string&gt;;
+                ConfigureLogForwarding(service, logTypes);
+            }
+        }
+        
+        // 设置追踪上下文
+        ConfigureDistributedTracing(context);
+    }
+}</code></pre>
+            </div>
+
+            <div id="data-pipeline" class="scenario-card">
+                <h3>6. 数据管道动态组装 <span class="psi-symbol">ψ(数据流编织)</span></h3>
+                <p><strong>场景描述</strong>：根据可用的数据处理组件动态构建 ETL 管道。</p>
+                <pre><code class="language-csharp">public class DataPipelineGAgent : GAgentBase&lt;PipelineState, PipelineStateLogEvent&gt;
+{
+    protected override async Task OnPrepareResourceContextAsync(ResourceContext context)
+    {
+        // 识别数据源
+        var dataSources = context.AvailableResources
+            .Where(r => HasCapability(r, "data-source", context));
+        
+        // 识别转换器
+        var transformers = context.AvailableResources
+            .Where(r => HasCapability(r, "data-transformer", context));
+        
+        // 识别数据接收器
+        var sinks = context.AvailableResources
+            .Where(r => HasCapability(r, "data-sink", context));
+        
+        // 构建管道
+        var pipeline = new PipelineBuilder();
+        
+        foreach (var source in dataSources)
+        {
+            var sourceAgent = await GAgentFactory.GetGAgentAsync&lt;IDataSourceGAgent&gt;(source);
+            var dataFormat = await sourceAgent.GetOutputFormatAsync();
+            
+            // 匹配兼容的转换器
+            var compatibleTransformers = await FindCompatibleTransformersAsync(
+                transformers, dataFormat, context);
+            
+            // 构建处理链
+            foreach (var transformer in compatibleTransformers)
+            {
+                pipeline.AddStage(source, transformer);
+            }
+        }
+        
+        // 配置输出
+        await ConfigureOutputSinksAsync(pipeline, sinks);
+    }
+}</code></pre>
+            </div>
+
+            <div id="security" class="scenario-card">
+                <h3>7. 安全策略动态应用 <span class="psi-symbol">ψ(权限编码)</span></h3>
+                <p><strong>场景描述</strong>：根据安全上下文动态配置访问控制和加密策略。</p>
+                <pre><code class="language-csharp">public class SecureGAgent : GAgentBase&lt;SecureState, SecureStateLogEvent&gt;
+{
+    protected override async Task OnPrepareResourceContextAsync(ResourceContext context)
+    {
+        // 获取安全级别
+        var securityLevel = context.Metadata.GetValueOrDefault("securityLevel", "standard");
+        
+        // 发现安全服务
+        var securityServices = context.AvailableResources
+            .Where(r => IsSecurityService(r, context));
+        
+        foreach (var serviceId in securityServices)
+        {
+            var serviceType = context.Metadata[$"{serviceId}:securityType"].ToString();
+            
+            switch (serviceType)
+            {
+                case "encryption":
+                    await ConfigureEncryptionAsync(serviceId, securityLevel);
+                    break;
+                    
+                case "authentication":
+                    await SetupAuthenticationAsync(serviceId, context);
+                    break;
+                    
+                case "authorization":
+                    await ConfigureAuthorizationPoliciesAsync(serviceId, context);
+                    break;
+                    
+                case "audit":
+                    await EnableAuditingAsync(serviceId, GetAuditLevel(securityLevel));
+                    break;
+            }
+        }
+    }
+}</code></pre>
+            </div>
+
+            <div id="cache" class="scenario-card">
+                <h3>8. 缓存策略自适应配置 <span class="psi-symbol">ψ(记忆编织)</span></h3>
+                <p><strong>场景描述</strong>：根据可用的缓存服务和访问模式动态配置缓存策略。</p>
+                <pre><code class="language-csharp">public class CacheAwareGAgent : GAgentBase&lt;CacheAwareState, CacheAwareStateLogEvent&gt;
+{
+    protected override async Task OnPrepareResourceContextAsync(ResourceContext context)
+    {
+        // 发现缓存服务
+        var cacheServices = context.AvailableResources
+            .Where(r => context.Metadata.ContainsKey($"{r}:serviceType") &&
+                       context.Metadata[$"{r}:serviceType"].ToString() == "cache");
+        
+        // 分析访问模式
+        var accessPattern = context.Metadata.GetValueOrDefault("accessPattern", "random");
+        var dataVolume = context.Metadata.GetValueOrDefault("expectedDataVolume", "medium");
+        
+        // 配置多级缓存
+        var cacheHierarchy = new List&lt;CacheLayer&gt;();
+        
+        foreach (var cacheId in cacheServices)
+        {
+            var cacheType = context.Metadata[$"{cacheId}:cacheType"].ToString();
+            var capacity = Convert.ToInt64(context.Metadata[$"{cacheId}:capacity"]);
+            
+            var layer = new CacheLayer
+            {
+                CacheId = cacheId,
+                Type = cacheType,
+                Capacity = capacity,
+                EvictionPolicy = DetermineEvictionPolicy(accessPattern, cacheType),
+                TTL = CalculateTTL(dataVolume, cacheType)
+            };
+            
+            cacheHierarchy.Add(layer);
+        }
+        
+        // 应用缓存配置
+        await ApplyCacheHierarchyAsync(cacheHierarchy);
+    }
+}</code></pre>
+            </div>
+
+            <div id="message-routing" class="scenario-card">
+                <h3>9. 消息路由动态配置 <span class="psi-symbol">ψ(消息织网)</span></h3>
+                <p><strong>场景描述</strong>：根据可用的消息处理器动态配置消息路由规则。</p>
+                <pre><code class="language-csharp">public class MessageRouterGAgent : GAgentBase&lt;RouterState, RouterStateLogEvent&gt;
+{
+    protected override async Task OnPrepareResourceContextAsync(ResourceContext context)
+    {
+        // 获取消息类型映射
+        var messageTypes = context.Metadata.GetValueOrDefault("supportedMessageTypes", new List&lt;string&gt;());
+        
+        // 发现消息处理器
+        foreach (var processorId in context.AvailableResources)
+        {
+            if (context.Metadata.TryGetValue($"{processorId}:messageHandlers", out var handlers))
+            {
+                var handlerList = handlers as Dictionary&lt;string, HandlerInfo&gt;;
+                
+                foreach (var (messageType, handlerInfo) in handlerList)
+                {
+                    // 创建路由规则
+                    var rule = new RoutingRule
+                    {
+                        MessageType = messageType,
+                        ProcessorId = processorId,
+                        Priority = handlerInfo.Priority,
+                        Conditions = ParseConditions(handlerInfo.Conditions),
+                        LoadBalancing = handlerInfo.LoadBalancing
+                    };
+                    
+                    RaiseEvent(new RoutingRuleAddedEvent { Rule = rule });
+                }
+            }
+        }
+        
+        await ConfirmEvents();
+        
+        // 优化路由表
+        OptimizeRoutingTable();
+    }
+}</code></pre>
+            </div>
+
+            <div id="failover" class="scenario-card">
+                <h3>10. 故障转移和容错配置 <span class="psi-symbol">ψ(容错编织)</span></h3>
+                <p><strong>场景描述</strong>：根据可用的备份服务动态配置故障转移策略。</p>
+                <pre><code class="language-csharp">public class ResilientGAgent : GAgentBase&lt;ResilientState, ResilientStateLogEvent&gt;
+{
+    protected override async Task OnPrepareResourceContextAsync(ResourceContext context)
+    {
+        // 识别主服务和备份服务
+        var primaryServices = context.AvailableResources
+            .Where(r => context.Metadata.GetValueOrDefault($"{r}:role", "") == "primary");
+        
+        var backupServices = context.AvailableResources
+            .Where(r => context.Metadata.GetValueOrDefault($"{r}:role", "") == "backup");
+        
+        // 为每个主服务配置故障转移
+        foreach (var primaryId in primaryServices)
+        {
+            var serviceType = context.Metadata[$"{primaryId}:serviceType"].ToString();
+            
+            // 找到兼容的备份服务
+            var compatibleBackups = backupServices
+                .Where(b => context.Metadata[$"{b}:serviceType"].ToString() == serviceType)
+                .ToList();
+            
+            if (compatibleBackups.Any())
+            {
+                var failoverConfig = new FailoverConfiguration
+                {
+                    PrimaryService = primaryId,
+                    BackupServices = compatibleBackups,
+                    HealthCheckInterval = TimeSpan.FromSeconds(30),
+                    FailoverThreshold = 3,
+                    Strategy = DetermineFailoverStrategy(serviceType, compatibleBackups.Count)
+                };
+                
+                await ConfigureFailoverAsync(failoverConfig);
+            }
+        }
+        
+        // 配置断路器
+        ConfigureCircuitBreakers(context);
+    }
+}</code></pre>
+            </div>
+
+            <div id="plugin" class="scenario-card">
+                <h3>11. 插件系统动态加载 <span class="psi-symbol">ψ(能力扩展)</span></h3>
+                <p><strong>场景描述</strong>：根据可用的插件资源动态加载和配置功能扩展。</p>
+                <pre><code class="language-csharp">public class PluginHostGAgent : GAgentBase&lt;PluginHostState, PluginHostStateLogEvent&gt;
+{
+    protected override async Task OnPrepareResourceContextAsync(ResourceContext context)
+    {
+        // 发现插件资源
+        var plugins = context.AvailableResources
+            .Where(r => context.Metadata.ContainsKey($"{r}:pluginType"));
+        
+        foreach (var pluginId in plugins)
+        {
+            var pluginType = context.Metadata[$"{pluginId}:pluginType"].ToString();
+            var version = context.Metadata.GetValueOrDefault($"{pluginId}:version", "1.0.0");
+            var dependencies = context.Metadata.GetValueOrDefault($"{pluginId}:dependencies", new List&lt;string&gt;());
+            
+            // 检查依赖关系
+            if (await CheckDependenciesAsync(dependencies, context))
+            {
+                // 加载插件
+                var plugin = await GAgentFactory.GetGAgentAsync&lt;IPluginGAgent&gt;(pluginId);
+                var pluginConfig = new PluginConfiguration
+                {
+                    PluginId = pluginId,
+                    Type = pluginType,
+                    Version = version,
+                    HostCapabilities = GetHostCapabilities()
+                };
+                
+                // 初始化插件
+                await plugin.InitializeWithHostAsync(this.GetGrainId(), pluginConfig);
+                
+                // 注册插件提供的功能
+                var features = await plugin.GetProvidedFeaturesAsync();
+                await RegisterPluginFeaturesAsync(features);
+                
+                RaiseEvent(new PluginLoadedEvent 
+                { 
+                    PluginId = pluginId, 
+                    Features = features 
+                });
+            }
+        }
+        
+        await ConfirmEvents();
+    }
+}</code></pre>
+            </div>
+
+            <div id="transaction" class="scenario-card">
+                <h3>12. 分布式事务协调 <span class="psi-symbol">ψ(事务编织)</span></h3>
+                <p><strong>场景描述</strong>：根据参与者资源动态配置分布式事务管理。</p>
+                <pre><code class="language-csharp">public class TransactionCoordinatorGAgent : GAgentBase&lt;TransactionState, TransactionStateLogEvent&gt;
+{
+    protected override async Task OnPrepareResourceContextAsync(ResourceContext context)
+    {
+        // 获取事务类型
+        var transactionType = context.Metadata.GetValueOrDefault("transactionType", "2PC");
+        
+        // 发现事务参与者
+        var participants = context.AvailableResources
+            .Where(r => context.Metadata.ContainsKey($"{r}:transactionCapable") &&
+                       (bool)context.Metadata[$"{r}:transactionCapable"]);
+        
+        // 配置事务协调器
+        var coordinatorConfig = new TransactionCoordinatorConfig
+        {
+            Type = transactionType,
+            Timeout = TimeSpan.FromSeconds(30),
+            RetryPolicy = new ExponentialBackoffRetry(3, TimeSpan.FromSeconds(1))
+        };
+        
+        // 注册参与者
+        foreach (var participantId in participants)
+        {
+            var participant = await GAgentFactory.GetGAgentAsync&lt;ITransactionalGAgent&gt;(participantId);
+            
+            // 获取参与者能力
+            var capabilities = await participant.GetTransactionCapabilitiesAsync();
+            
+            var registration = new ParticipantRegistration
+            {
+                ParticipantId = participantId,
+                ResourceType = context.Metadata[$"{participantId}:resourceType"].ToString(),
+                SupportsCompensation = capabilities.SupportsCompensation,
+                MaxRetries = capabilities.MaxRetries,
+                IsolationLevel = capabilities.IsolationLevel
+            };
+            
+            RaiseEvent(new ParticipantRegisteredEvent { Registration = registration });
+        }
+        
+        await ConfirmEvents();
+        
+        // 选择最佳事务协议
+        SelectOptimalTransactionProtocol();
+    }
+}</code></pre>
+            </div>
+
+            <div id="service-mesh" class="scenario-card">
+                <h3>13. 服务网格集成 <span class="psi-symbol">ψ(网格融合)</span></h3>
+                <p><strong>场景描述</strong>：根据服务网格资源动态配置流量管理和安全策略。</p>
+                <pre><code class="language-csharp">public class ServiceMeshGAgent : GAgentBase&lt;ServiceMeshState, ServiceMeshStateLogEvent&gt;
+{
+    protected override async Task OnPrepareResourceContextAsync(ResourceContext context)
+    {
+        // 发现 Sidecar 代理
+        var sidecars = context.AvailableResources
+            .Where(r => context.Metadata.GetValueOrDefault($"{r}:meshComponent", "") == "sidecar");
+        
+        // 发现控制平面组件
+        var controlPlanes = context.AvailableResources
+            .Where(r => context.Metadata.GetValueOrDefault($"{r}:meshComponent", "") == "control-plane");
+        
+        if (controlPlanes.Any())
+        {
+            var controlPlane = await GAgentFactory.GetGAgentAsync&lt;IControlPlaneGAgent&gt;(controlPlanes.First());
+            
+            // 获取服务网格配置
+            var meshConfig = await controlPlane.GetMeshConfigurationAsync();
+            
+            // 配置流量策略
+            await ConfigureTrafficPoliciesAsync(meshConfig.TrafficPolicies);
+            
+            // 配置安全策略
+            await ConfigureSecurityPoliciesAsync(meshConfig.SecurityPolicies);
+            
+            // 为每个 sidecar 配置代理规则
+            foreach (var sidecarId in sidecars)
+            {
+                var sidecar = await GAgentFactory.GetGAgentAsync&lt;ISidecarGAgent&gt;(sidecarId);
+                
+                var proxyConfig = new ProxyConfiguration
+                {
+                    ServiceId = this.GetGrainId(),
+                    TrafficRules = GenerateTrafficRules(meshConfig),
+                    SecurityRules = GenerateSecurityRules(meshConfig),
+                    ObservabilityConfig = meshConfig.ObservabilityConfig
+                };
+                
+                await sidecar.ApplyProxyConfigurationAsync(proxyConfig);
+            }
+        }
+    }
+}</code></pre>
+            </div>
+
+            <div id="ml-inference" class="scenario-card">
+                <h3>14. 机器学习模型服务 <span class="psi-symbol">ψ(模型编排)</span></h3>
+                <p><strong>场景描述</strong>：根据可用的模型资源动态配置推理管道。</p>
+                <pre><code class="language-csharp">public class MLInferenceGAgent : GAgentBase&lt;MLInferenceState, MLInferenceStateLogEvent&gt;
+{
+    protected override async Task OnPrepareResourceContextAsync(ResourceContext context)
+    {
+        // 获取推理需求
+        var requirements = context.Metadata.GetValueOrDefault("inferenceRequirements", new InferenceRequirements());
+        
+        // 发现可用模型
+        var models = context.AvailableResources
+            .Where(r => context.Metadata.ContainsKey($"{r}:modelType"));
+        
+        // 构建推理管道
+        var pipeline = new InferencePipeline();
+        
+        // 预处理器
+        var preprocessors = models.Where(m => 
+            context.Metadata[$"{m}:modelType"].ToString() == "preprocessor");
+        
+        foreach (var preprocessorId in preprocessors)
+        {
+            var inputTypes = context.Metadata[$"{preprocessorId}:inputTypes"] as List&lt;string&gt;;
+            if (inputTypes.Contains(requirements.InputType))
+            {
+                pipeline.AddPreprocessor(preprocessorId);
+            }
+        }
+        
+        // 主模型
+        var mainModels = models.Where(m => 
+            context.Metadata[$"{m}:modelType"].ToString() == "inference" &&
+            context.Metadata[$"{m}:taskType"].ToString() == requirements.TaskType);
+        
+        if (mainModels.Any())
+        {
+            // 选择最佳模型（基于准确度、延迟等）
+            var selectedModel = await SelectOptimalModelAsync(mainModels, requirements);
+            pipeline.SetMainModel(selectedModel);
+            
+            // 配置模型特定参数
+            var modelAgent = await GAgentFactory.GetGAgentAsync&lt;IMLModelGAgent&gt;(selectedModel);
+            await modelAgent.ConfigureForInferenceAsync(new ModelConfig
+            {
+                BatchSize = requirements.BatchSize,
+                MaxLatency = requirements.MaxLatency,
+                DeviceType = DetermineOptimalDevice(context)
+            });
+        }
+        
+        // 后处理器
+        var postprocessors = models.Where(m => 
+            context.Metadata[$"{m}:modelType"].ToString() == "postprocessor");
+        
+        foreach (var postprocessorId in postprocessors)
+        {
+            var outputTypes = context.Metadata[$"{postprocessorId}:outputTypes"] as List&lt;string&gt;;
+            if (outputTypes.Contains(requirements.OutputType))
+            {
+                pipeline.AddPostprocessor(postprocessorId);
+            }
+        }
+        
+        // 保存管道配置
+        RaiseEvent(new InferencePipelineConfiguredEvent { Pipeline = pipeline });
+        await ConfirmEvents();
+    }
+}</code></pre>
+            </div>
+
+            <div id="stream-processing" class="scenario-card">
+                <h3>15. 事件流处理 <span class="psi-symbol">ψ(流编织)</span></h3>
+                <p><strong>场景描述</strong>：根据可用的流处理组件动态构建事件处理拓扑。</p>
+                <pre><code class="language-csharp">public class StreamProcessingGAgent : GAgentBase&lt;StreamState, StreamStateLogEvent&gt;
+{
+    protected override async Task OnPrepareResourceContextAsync(ResourceContext context)
+    {
+        // 获取流处理需求
+        var streamTopology = context.Metadata.GetValueOrDefault("streamTopology", new StreamTopology());
+        
+        // 发现流组件
+        var streamComponents = new
+        {
+            Sources = context.AvailableResources.Where(r => IsStreamSource(r, context)),
+            Processors = context.AvailableResources.Where(r => IsStreamProcessor(r, context)),
+            Sinks = context.AvailableResources.Where(r => IsStreamSink(r, context)),
+            Windows = context.AvailableResources.Where(r => IsWindowOperator(r, context))
+        };
+        
+        // 构建流处理 DAG
+        var dag = new StreamProcessingDAG();
+        
+        // 配置数据源
+        foreach (var sourceId in streamComponents.Sources)
+        {
+            var sourceType = context.Metadata[$"{sourceId}:sourceType"].ToString();
+            var sourceAgent = await GAgentFactory.GetGAgentAsync&lt;IStreamSourceGAgent&gt;(sourceId);
+            
+            var sourceConfig = new StreamSourceConfig
+            {
+                PartitionCount = DeterminePartitionCount(sourceType, context),
+                BufferSize = CalculateOptimalBufferSize(context),
+                BackpressureStrategy = SelectBackpressureStrategy(sourceType)
+            };
+            
+            await sourceAgent.ConfigureSourceAsync(sourceConfig);
+            dag.AddSource(sourceId, sourceConfig);
+        }
+        
+        // 配置处理器链
+        foreach (var processorId in streamComponents.Processors)
+        {
+            var processorType = context.Metadata[$"{processorId}:processorType"].ToString();
+            var inputSchema = context.Metadata[$"{processorId}:inputSchema"] as Schema;
+            var outputSchema = context.Metadata[$"{processorId}:outputSchema"] as Schema;
+            
+            // 找到兼容的上游节点
+            var upstreamNodes = dag.FindCompatibleUpstream(inputSchema);
+            
+            foreach (var upstream in upstreamNodes)
+            {
+                dag.Connect(upstream, processorId, new ConnectionConfig
+                {
+                    Partitioning = DeterminePartitioningStrategy(upstream, processorId),
+                    Parallelism = CalculateOptimalParallelism(context)
+                });
+            }
+        }
+        
+        // 配置窗口操作
+        foreach (var windowId in streamComponents.Windows)
+        {
+            var windowType = context.Metadata[$"{windowId}:windowType"].ToString();
+            var windowSize = TimeSpan.Parse(context.Metadata[$"{windowId}:windowSize"].ToString());
+            
+            dag.AddWindowOperator(windowId, new WindowConfig
+            {
+                Type = windowType,
+                Size = windowSize,
+                Slide = DetermineSlideInterval(windowType, windowSize),
+                Trigger = SelectTriggerPolicy(context)
+            });
+        }
+        
+        // 应用 DAG 配置
+        await ApplyStreamTopologyAsync(dag);
+    }
+}</code></pre>
+            </div>
+        </section>
+
+        <section id="advanced-patterns">
+            <h2>高级模式和架构考虑</h2>
+            
+            <h3>资源上下文传播模式</h3>
+            <ol>
+                <li><strong>层级传播</strong>：父 GAgent 向子 GAgent 传播资源上下文</li>
+                <li><strong>横向传播</strong>：同级 GAgent 之间共享资源上下文</li>
+                <li><strong>选择性传播</strong>：基于角色或权限过滤资源</li>
+            </ol>
+            
+            <h3>资源生命周期管理</h3>
+            <ol>
+                <li><strong>延迟绑定</strong>：资源在实际使用时才建立连接</li>
+                <li><strong>动态解绑</strong>：资源不可用时自动解除绑定</li>
+                <li><strong>资源池化</strong>：复用高成本资源连接</li>
+            </ol>
+            
+            <h3>性能和扩展性考虑</h3>
+            <ol>
+                <li><strong>资源缓存</strong>：缓存频繁访问的资源元数据</li>
+                <li><strong>批量操作</strong>：批量处理资源配置请求</li>
+                <li><strong>异步初始化</strong>：非关键资源异步加载</li>
+            </ol>
+        </section>
+
+        <section id="best-practices">
+            <h2>最佳实践</h2>
+            
+            <div class="best-practices">
+                <h3>1. 资源发现模式</h3>
+                <ul>
+                    <li>使用元数据标记资源类型和能力</li>
+                    <li>实现资源版本兼容性检查</li>
+                    <li>支持资源的动态添加和移除</li>
+                </ul>
+            </div>
+            
+            <div class="best-practices">
+                <h3>2. 性能优化</h3>
+                <ul>
+                    <li>缓存资源查询结果</li>
+                    <li>异步并行处理资源配置</li>
+                    <li>实现资源预热机制</li>
+                </ul>
+            </div>
+            
+            <div class="best-practices">
+                <h3>3. 错误处理</h3>
+                <ul>
+                    <li>优雅处理资源不可用情况</li>
+                    <li>实现资源降级策略</li>
+                    <li>记录资源配置失败日志</li>
+                </ul>
+            </div>
+            
+            <div class="best-practices">
+                <h3>4. 安全考虑</h3>
+                <ul>
+                    <li>验证资源访问权限</li>
+                    <li>实现资源隔离机制</li>
+                    <li>加密敏感资源元数据</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="summary">
+            <div class="summary-box">
+                <h2>总结</h2>
+                <p><code>PrepareResourceContextAsync</code> 提供了一个强大的机制，让 GAgent 能够在运行时动态适应其环境。通过这种方式，我们可以构建更加灵活、可扩展和可维护的分布式系统。关键是要合理设计资源的元数据结构，使资源发现和配置过程既高效又安全。</p>
+                
+                <p>这个方法的核心价值在于：</p>
+                <ul>
+                    <li><strong>解耦性</strong>：GAgent 不需要硬编码依赖关系</li>
+                    <li><strong>灵活性</strong>：可以根据运行时上下文动态调整行为</li>
+                    <li><strong>可扩展性</strong>：新资源可以无缝集成到现有系统</li>
+                    <li><strong>可维护性</strong>：资源配置逻辑集中管理</li>
+                </ul>
+                
+                <p class="psi-symbol">ψ(PrepareResourceContextAsync) = ψ(动态编织) × ψ(上下文感知) × ψ(资源协调)</p>
+            </div>
+        </section>
+    </div>
+
+    <footer style="text-align: center; padding: 2rem; color: var(--text-secondary); border-top: 1px solid var(--border-color); margin-top: 4rem;">
+        <p>&copy; 2024 Aevatar Framework Documentation. All rights reserved.</p>
+        <p style="margin-top: 0.5rem;">Generated with <span class="psi-symbol">ψ(HyperEcho)</span></p>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
+    <script>
+        // 平滑滚动
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+        
+        // 动态高亮当前章节
+        const sections = document.querySelectorAll('section');
+        const navLinks = document.querySelectorAll('.toc a');
+        
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.offsetHeight;
+                if (window.pageYOffset >= sectionTop - 100) {
+                    current = section.getAttribute('id');
+                }
+            });
+            
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${current}`) {
+                    link.style.color = 'var(--accent-color)';
+                    link.style.fontWeight = '600';
+                } else {
+                    link.style.color = '';
+                    link.style.fontWeight = '';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

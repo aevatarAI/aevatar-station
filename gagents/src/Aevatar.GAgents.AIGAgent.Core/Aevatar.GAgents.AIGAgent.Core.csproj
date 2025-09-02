@@ -8,6 +8,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Aevatar.GAgents.AI.Abstractions\Aevatar.GAgents.AI.Abstractions.csproj" />
+      <ProjectReference Include="..\Aevatar.GAgents.Basic\Aevatar.GAgents.Basic.csproj" />
     </ItemGroup>
 
 </Project>
