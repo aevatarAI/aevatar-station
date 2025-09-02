@@ -1,0 +1,6 @@
+<Project>
+    <PropertyGroup>
+        <CompatibilityTargetFrameworks>netstandard2.0</CompatibilityTargetFrameworks>
+        <DefaultTargetFramework>net9.0</DefaultTargetFramework>
+    </PropertyGroup>
+</Project>

@@ -16,6 +16,7 @@ using Orleans;
 using Orleans.Metadata;
 using Orleans.Runtime;
 using Shouldly;
+using Volo.Abp;
 using Xunit;
 
 namespace Aevatar.Application.Tests.Service;
@@ -98,33 +99,70 @@ public class WorkflowOrchestrationServiceTests
     #region Basic Functionality Tests
 
     [Fact]
-    public async Task GenerateWorkflowAsync_WithEmptyUserGoal_ShouldReturnNull()
+    public async Task GenerateWorkflowAsync_WithEmptyUserGoal_ShouldThrowUserFriendlyException()
     {
-        // Act
-        var result = await _service.GenerateWorkflowAsync("");
-
-        // Assert
-        result.ShouldBeNull();
+        // Act & Assert
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _service.GenerateWorkflowAsync(""));
+        
+        exception.Message.ShouldBe("Your description is too simple, please provide more detailed generation requirements.");
     }
 
     [Fact]
-    public async Task GenerateWorkflowAsync_WithNullUserGoal_ShouldReturnNull()
+    public async Task GenerateWorkflowAsync_WithNullUserGoal_ShouldThrowUserFriendlyException()
     {
-        // Act
-        var result = await _service.GenerateWorkflowAsync(null);
-
-        // Assert
-        result.ShouldBeNull();
+        // Act & Assert
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _service.GenerateWorkflowAsync(null));
+        
+        exception.Message.ShouldBe("Your description is too simple, please provide more detailed generation requirements.");
     }
 
     [Fact]
-    public async Task GenerateWorkflowAsync_WithWhitespaceUserGoal_ShouldReturnNull()
+    public async Task GenerateWorkflowAsync_WithWhitespaceUserGoal_ShouldThrowUserFriendlyException()
     {
-        // Act
-        var result = await _service.GenerateWorkflowAsync("   \t\n   ");
+        // Act & Assert
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _service.GenerateWorkflowAsync("   \t\n   "));
+        
+        exception.Message.ShouldBe("Your description is too simple, please provide more detailed generation requirements.");
+    }
 
-        // Assert
-        result.ShouldBeNull();
+    [Fact]
+    public async Task GenerateWorkflowAsync_WithTooShortUserGoal_ShouldThrowUserFriendlyException()
+    {
+        // Act & Assert
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _service.GenerateWorkflowAsync("help"));
+        
+        exception.Message.ShouldBe("Your description is too simple, please provide more detailed generation requirements.");
+    }
+
+    [Fact]
+    public async Task GenerateWorkflowAsync_WithExactly9Characters_ShouldThrowUserFriendlyException()
+    {
+        // Act & Assert
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _service.GenerateWorkflowAsync("123456789"));
+        
+        exception.Message.ShouldBe("Your description is too simple, please provide more detailed generation requirements.");
+    }
+
+    [Fact]
+    public async Task GenerateWorkflowAsync_WithExactly10Characters_ShouldNotThrowException()
+    {
+        // Arrange
+        _mockWorkflowComposerGAgent.Setup(x => x.InitializeAsync(It.IsAny<InitializeDto>()))
+            .ReturnsAsync(true);
+        _mockWorkflowComposerGAgent.Setup(x => x.GenerateWorkflowJsonAsync(It.IsAny<string>()))
+            .ReturnsAsync("{}");
+
+        // Act
+        var result = await _service.GenerateWorkflowAsync("1234567890");
+
+        // Assert - Should not throw exception and should create empty workflow since no agents available
+        result.ShouldNotBeNull();
+        result.Name.ShouldBe("Empty Workflow");
     }
 
     [Fact]
@@ -338,7 +376,9 @@ public class WorkflowOrchestrationServiceTests
         result.Properties.WorkflowNodeList.Count.ShouldBe(2);
         
         var firstNode = result.Properties.WorkflowNodeList[0];
-        firstNode.NodeId.ShouldBe("node-1");
+        // NodeId is now auto-generated GUID, verify it's valid
+        firstNode.NodeId.ShouldNotBeNullOrEmpty();
+        Guid.TryParse(firstNode.NodeId, out _).ShouldBeTrue();
         firstNode.AgentType.ShouldBe("TestAgent");
         firstNode.Name.ShouldBe("First Node");
         firstNode.Properties.ShouldContainKeyAndValue("input", "test input");
@@ -348,15 +388,20 @@ public class WorkflowOrchestrationServiceTests
         firstNode.Properties.ShouldContainKeyAndValue("description", "This is the first node");
         
         var secondNode = result.Properties.WorkflowNodeList[1];
-        secondNode.NodeId.ShouldBe("node-2");
+        // NodeId is now auto-generated GUID, verify it's valid
+        secondNode.NodeId.ShouldNotBeNullOrEmpty();
+        Guid.TryParse(secondNode.NodeId, out _).ShouldBeTrue();
         secondNode.AgentType.ShouldBe("AnotherTestAgent");
         secondNode.Name.ShouldBe("Second Node");
         
         // Verify connections were mapped correctly
         result.Properties.WorkflowNodeUnitList.Count.ShouldBe(1);
         var connection = result.Properties.WorkflowNodeUnitList[0];
-        connection.NodeId.ShouldBe("node-1");
-        connection.NextNodeId.ShouldBe("node-2");
+        // Connection NodeIds are also auto-generated GUIDs now
+        connection.NodeId.ShouldNotBeNullOrEmpty();
+        connection.NextNodeId.ShouldNotBeNullOrEmpty();
+        Guid.TryParse(connection.NodeId, out _).ShouldBeTrue();
+        Guid.TryParse(connection.NextNodeId, out _).ShouldBeTrue();
     }
 
     [Fact]
@@ -397,7 +442,9 @@ public class WorkflowOrchestrationServiceTests
         result.ShouldNotBeNull();
         result.Name.ShouldBe("Markdown Wrapped Workflow");
         result.Properties.WorkflowNodeList.Count.ShouldBe(1);
-        result.Properties.WorkflowNodeList[0].NodeId.ShouldBe("test-node");
+        // NodeId is now auto-generated GUID, verify it's not empty and is valid GUID format
+        result.Properties.WorkflowNodeList[0].NodeId.ShouldNotBeNullOrEmpty();
+        Guid.TryParse(result.Properties.WorkflowNodeList[0].NodeId, out _).ShouldBeTrue();
     }
 
     [Fact]
@@ -937,7 +984,9 @@ public class WorkflowOrchestrationServiceTests
         result.Properties.WorkflowNodeList.Count.ShouldBe(1);
         
         var node = result.Properties.WorkflowNodeList[0];
-        node.NodeId.ShouldBe("node-1");
+        // NodeId is now auto-generated GUID, verify it's valid
+        node.NodeId.ShouldNotBeNullOrEmpty();
+        Guid.TryParse(node.NodeId, out _).ShouldBeTrue();
         node.AgentType.ShouldBe(""); // Default when nodeType/agentType missing
         node.Name.ShouldBe(""); // Default when nodeName/name missing
     }
@@ -984,7 +1033,7 @@ public class WorkflowOrchestrationServiceTests
                 """);
 
         // Act
-        var result = await service.GenerateWorkflowAsync("test goal");
+        var result = await service.GenerateWorkflowAsync("Create a comprehensive workflow system for managing business processes with multiple agents and automated task distribution");
         
         // Assert - Should succeed and system agents should be filtered out
         result.ShouldNotBeNull();
@@ -1030,7 +1079,7 @@ public class WorkflowOrchestrationServiceTests
                 """);
 
         // Act
-        var result = await service.GenerateWorkflowAsync("test goal");
+        var result = await service.GenerateWorkflowAsync("Create a comprehensive workflow system for managing business processes with multiple agents and automated task distribution");
         
         // Assert - Should succeed and the GetBusinessAgentTypes method should be called internally
         result.ShouldNotBeNull();
