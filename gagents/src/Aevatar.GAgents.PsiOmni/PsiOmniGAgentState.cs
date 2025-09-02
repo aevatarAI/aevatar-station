@@ -29,10 +29,9 @@ public class PsiOmniGAgentState : GroupMemberState
     [Id(10)] public string CallId { get; set; } = string.Empty;
     [Id(11)] public List<PsiOmniChatMessage> ChatHistory { get; set; } = new();
     [Id(12)] public List<TodoItem> TodoList { get; set; } = new();
-    [Id(13)] public FramedTask CurrentTask { get; set; } = new();
+    [Id(13)] public string CurrentTask { get; set; } = string.Empty;
     [Id(14)] public Dictionary<string, Artifact> Artifacts { get; set; } = new();
     [Id(15)] public string DraftResponse { get; set; } = string.Empty;
-    [Id(16)] public int IterationCount { get; set; }
 }
 
 [GenerateSerializer]
@@ -124,7 +123,7 @@ public class WriteArtifact : PsiOmniGAgentStateLogEvent
 [GenerateSerializer]
 public class WriteTask : PsiOmniGAgentStateLogEvent
 {
-    [Id(0)] public FramedTask Task { get; set; } = new();
+    [Id(0)] public string Task { get; set; } = string.Empty;
 }
 
 [GenerateSerializer]
@@ -138,10 +137,4 @@ public class UpdateTodoList : PsiOmniGAgentStateLogEvent
 {
     [Id(0)] public List<TodoItem> AddedTodos { get; set; } = new();
     [Id(1)] public List<string> RemovedTodoIds { get; set; } = new();
-}
-
-[GenerateSerializer]
-public class IterateEvent : PsiOmniGAgentStateLogEvent
-{
-    [Id(0)] public string Comment { get; set; } = string.Empty;
 }

@@ -6,6 +6,7 @@ using Aevatar.GAgents.GroupChat.WorkflowCoordinator.Dto;
 using Aevatar.GAgents.GroupChat.WorkflowCoordinator.GEvent;
 using Aevatar.GAgents.GroupChat.Test.GAgents;
 using Aevatar.GAgents.GroupChat.WorkflowCoordinator;
+using GroupChat.GAgent.Feature.Coordinator.GEvent;
 using Shouldly;
 
 namespace Aevatar.GAgents.GroupChat.Test.Tests;
@@ -584,5 +585,95 @@ public sealed class GroupChatWorkflowTest : AevatarGroupChatTestBase
         });
         workflowState = await workflowCoordinator.GetStateAsync();
         workflowState.WorkflowStatus.ShouldBe(WorkflowCoordinatorStatus.Pending);
+    }
+
+    [Fact]
+    public async Task Workflow_WithExecutionRecord_Succeeds_ShouldCreateAndCompleteRecord()
+    {
+        var toni = await _agentFactory.GetGAgentAsync<IWorkerGAgent>(Guid.NewGuid());
+        await toni.ConfigAsync(new GroupMemberConfigDto() { MemberName = "Toni" });
+        var leader = await _agentFactory.GetGAgentAsync<ILeaderGAgent>(Guid.NewGuid());
+        await leader.ConfigAsync(new GroupMemberConfigDto() { MemberName = "Leader" });
+
+        var groupAgent = await _agentFactory.GetGAgentAsync<IGroupGAgent>(Guid.NewGuid());
+        var workflows = new List<WorkflowUnitDto>()
+        {
+            new WorkflowUnitDto() { GrainId = toni.GetGrainId().ToString(), NextGrainId = leader.GetGrainId().ToString() },
+            new WorkflowUnitDto() { GrainId = leader.GetGrainId().ToString(), NextGrainId = "" }
+        };
+
+        var coordinator = await _agentFactory.GetGAgentAsync<IWorkflowCoordinatorGAgent>(Guid.NewGuid());
+        await coordinator.ConfigAsync(new WorkflowCoordinatorConfigDto
+        {
+            WorkflowUnitList = workflows,
+            InitContent = "init",
+            EnableExecutionRecord = true
+        });
+
+        await groupAgent.RegisterAsync(coordinator);
+        await groupAgent.PublishEventAsync(new StartWorkflowCoordinatorEvent());
+
+        // Wait until execution record id is assigned
+        Guid recordId = Guid.Empty;
+        for (int i = 0; i < 20; i++)
+        {
+            var s = await coordinator.GetStateAsync();
+            recordId = s.CurrentExecutionRecordId;
+            if (recordId != Guid.Empty) break;
+            await Task.Delay(100);
+        }
+        recordId.ShouldNotBe(Guid.Empty);
+
+        // Wait for workflow to finish and record to be unregistered
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        var state = await coordinator.GetStateAsync();
+        state.WorkflowStatus.ShouldBe(WorkflowCoordinatorStatus.Pending);
+        state.CurrentExecutionRecordId.ShouldBe(Guid.Empty);
+    }
+
+    [Fact]
+    public async Task Workflow_WithExecutionRecord_Failure_ShouldMarkFailed()
+    {
+        var toni = await _agentFactory.GetGAgentAsync<IWorkerGAgent>(Guid.NewGuid());
+        await toni.ConfigAsync(new GroupMemberConfigDto() { MemberName = "Toni" });
+        await toni.SetFailureSummary("Exception");
+        var leader = await _agentFactory.GetGAgentAsync<ILeaderGAgent>(Guid.NewGuid());
+        await leader.ConfigAsync(new GroupMemberConfigDto() { MemberName = "Leader" });
+
+        var groupAgent = await _agentFactory.GetGAgentAsync<IGroupGAgent>(Guid.NewGuid());
+        var workflows = new List<WorkflowUnitDto>()
+        {
+            new WorkflowUnitDto() { GrainId = toni.GetGrainId().ToString(), NextGrainId = leader.GetGrainId().ToString() },
+            new WorkflowUnitDto() { GrainId = leader.GetGrainId().ToString(), NextGrainId = "" }
+        };
+
+        var coordinator = await _agentFactory.GetGAgentAsync<IWorkflowCoordinatorGAgent>(Guid.NewGuid());
+        await coordinator.ConfigAsync(new WorkflowCoordinatorConfigDto
+        {
+            WorkflowUnitList = workflows,
+            InitContent = "init",
+            EnableExecutionRecord = true
+        });
+
+        await groupAgent.RegisterAsync(coordinator);
+        await groupAgent.PublishEventAsync(new StartWorkflowCoordinatorEvent());
+        
+        // Wait a bit for first unit to be activated and term to be set
+        await Task.Delay(500);
+        // var cstateBefore = await coordinator.GetStateAsync();
+        // var currentTerm = cstateBefore.Term;
+        //
+        // await groupAgent.PublishEventAsync(new ChatResponseEvent
+        // {
+        //     BlackboardId = cstateBefore.BlackboardId,
+        //     MemberId = toni.GetPrimaryKey(),
+        //     MemberName = "Toni",
+        //     FailureSummary = "boom",
+        //     Term = currentTerm
+        // });
+        await Task.Delay(1000);
+
+        var cstate = await coordinator.GetStateAsync();
+        cstate.WorkflowStatus.ShouldBe(WorkflowCoordinatorStatus.Failed);
     }
 }

@@ -50,16 +50,31 @@ public abstract class
             return;
         }
 
-        // var history = await GetCareChatMessagesFromBlackboardAsync(@event.BlackboardId);
-        var talkResponse = await ChatAsync(@event.BlackboardId, @event.CoordinatorMessages);
-        await PublishAsync(new ChatResponseEvent
+        try
+        { 
+            // var history = await GetCareChatMessagesFromBlackboardAsync(@event.BlackboardId);
+            var talkResponse = await ChatAsync(@event.BlackboardId, @event.CoordinatorMessages);
+            await PublishAsync(new ChatResponseEvent
+            {
+                BlackboardId = @event.BlackboardId,
+                MemberId = this.GetPrimaryKey(),
+                MemberName = State.MemberName,
+                ChatResponse = talkResponse,
+                Term = @event.Term
+            });
+        }
+        catch (Exception e)
         {
-            BlackboardId = @event.BlackboardId,
-            MemberId = this.GetPrimaryKey(),
-            MemberName = State.MemberName,
-            ChatResponse = talkResponse,
-            Term = @event.Term
-        });
+            Logger.LogError($"[GroupMemberGAgentBase] Handler ChatEvent fail: {e.Message}");
+            await PublishAsync(new ChatResponseEvent()
+            {
+                BlackboardId = @event.BlackboardId,
+                MemberId = this.GetPrimaryKey(),
+                MemberName = State.MemberName,
+                FailureSummary = e.ToString(),
+                Term = @event.Term
+            });
+        }
     }
 
     [EventHandler]

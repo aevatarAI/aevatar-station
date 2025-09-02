@@ -128,27 +128,6 @@ public class OrchestratorMessage
 }
 
 [GenerateSerializer]
-[Description("Holds the detailed PRD of the task")]
-public class FramedTask
-{
-    [Id(0), Description("The title of the task in a few word.")]
-    public string Title { get; set; } = string.Empty;
-
-    [Id(1), Description("Understand user's intention in user's scenario.")]
-    public string Intention { get; set; } = string.Empty;
-
-    [Id(2), Description("A detailed description of the task.")]
-    public string DetailedDescription { get; set; } = string.Empty;
-
-    [Id(3), Description(
-         @"List of multi-dimensional criteria for evaluating the quality of the result. It ensures the result is thorough,
-         comprehensive and meets the user's expectations. It has to be useful for the user.
-         "
-         )]
-    public string AcceptanceCriteria { get; set; } = string.Empty;
-}
-
-[GenerateSerializer]
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum TodoStatus
 {
@@ -218,23 +197,6 @@ public class Artifact
 
     [Id(2), Description("The content of the artifact.")]
     public string Content { get; set; } = string.Empty;
-}
-
-
-[GenerateSerializer, JsonConverter(typeof(JsonStringEnumConverter))]
-public enum ReviewDecision
-{
-    UNDEFINED,
-    APPROVED,
-    NEEDS_FIXES,
-    MAJOR_ISSUES
-}
-
-[GenerateSerializer]
-public class ReviewResult
-{
-    [Id(0)] public ReviewDecision Decision { get; set; } = ReviewDecision.APPROVED;
-    [Id(1)] public string Comment { get; set; } = string.Empty;
 }
 
 [GenerateSerializer]

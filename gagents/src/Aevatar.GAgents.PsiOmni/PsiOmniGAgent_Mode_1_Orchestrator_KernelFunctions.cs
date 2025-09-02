@@ -1,8 +1,6 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
-using Aevatar.GAgents.AI.Options;
-using Aevatar.GAgents.AIGAgent.Dtos;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 
@@ -25,9 +23,7 @@ public partial class PsiOmniGAgent
             Description = x.Description,
             Examples = x.Examples,
             Tools = x.Tools,
-            HandlingTask =
-                State.TodoList.Find(y => y.AssigneeAgentName == x.Name && y.Status == TodoStatus.InProgress)?.Id ??
-                string.Empty
+            HandlingTask = State.TodoList.Find(y => y.AssigneeAgentName == x.Name && y.Status == TodoStatus.InProgress)?.Id ?? string.Empty
         }).ToList();
         return await Task.FromResult(result);
     }
@@ -35,9 +31,7 @@ public partial class PsiOmniGAgent
     [KernelFunction("write_artifact")]
     [Description("Write an artifact.")]
     public async Task<string> WriteArtifactAsync(
-        [Description(
-             "The name of the artifact. It has to be unique and must be a valid file name with a valid extension."),
-         Required]
+        [Description("The name of the artifact. It has to be unique and must be a valid file name with a valid extension."), Required]
         string name,
         [Description("The format of the artifact. It has to be a valid file extension."), Required]
         string format,
@@ -64,13 +58,11 @@ public partial class PsiOmniGAgent
         });
         return await Task.FromResult($"Written artifact {name}.");
     }
-
+    
     [KernelFunction("read_artifact")]
     [Description("Read an artifact.")]
     public async Task<Artifact?> ReadArtifactAsync(
-        [Description(
-             "The name of the artifact. It has to be unique and must be a valid file name with a valid extension."),
-         Required]
+        [Description("The name of the artifact. It has to be unique and must be a valid file name with a valid extension."), Required]
         string name
     )
     {
@@ -88,12 +80,12 @@ public partial class PsiOmniGAgent
     {
         return await Task.FromResult(State.Artifacts.Keys.OrderBy(x => x).ToList());
     }
-
+    
     [KernelFunction("write_task")]
     [Description("Rewrite the current task.")]
     public async Task<string> WriteTaskAsync(
-        [Description("The details of the task."), Required]
-        FramedTask task
+        [Description("The comprehensive description of the task."), Required]
+        string task
     )
     {
         RaiseEventWithTracing(new WriteTask()
@@ -105,7 +97,7 @@ public partial class PsiOmniGAgent
 
     [KernelFunction("read_task")]
     [Description("Read the current task.")]
-    public async Task<FramedTask> ReadTaskAsync(
+    public async Task<string> ReadTaskAsync(
     )
     {
         return await Task.FromResult(State.CurrentTask);
@@ -124,7 +116,7 @@ public partial class PsiOmniGAgent
         });
         return await Task.FromResult("Written draft response.");
     }
-
+    
     /// <summary>
     /// Create a new specialized agent with custom prompt and tools
     /// </summary>
@@ -144,7 +136,6 @@ public partial class PsiOmniGAgent
         {
             return $"Failed. Agent with name {name} already exists. Please pick another name.";
         }
-
         var parentAgentId = this.GetGrainId().ToString();
         try
         {
@@ -172,46 +163,6 @@ public partial class PsiOmniGAgent
             });
             var agentId = psi.GetGrainId();
             // There's a publisher tied to each parent agent.
-
-            var agent = await _gAgentFactory.GetGAgentAsync<IPsiOmniGAgent>(agentId);
-
-            // Use the same priority system as AIGAgentBase.GetCurrentLLMConfigAsync()
-            string? configKeyToPass = null;
-            SelfLLMConfig? selfLlmConfig = null;
-
-            // Priority 1: LLMConfigKey (if PsiOmni supported it)
-            if (!State.LLMConfigKey.IsNullOrEmpty())
-            {
-                configKeyToPass = State.LLMConfigKey;
-            }
-            // Priority 2: SystemLLM 
-            else if (!State.SystemLLM.IsNullOrEmpty())
-            {
-                configKeyToPass = State.SystemLLM;
-            }
-            // Priority 3: Fallback to resolved LLM
-            else if (State.LLM != null)
-            {
-                selfLlmConfig = new SelfLLMConfig
-                {
-                    ProviderEnum = State.LLM.ProviderEnum,
-                    ModelId = State.LLM.ModelIdEnum,
-                    ModelName = State.LLM.ModelName,
-                    ApiKey = State.LLM.ApiKey,
-                    Endpoint = State.LLM.Endpoint,
-                    Memo = State.LLM.Memo
-                };
-            }
-
-            await agent.InitializeAsync(new InitializeDto()
-            {
-                LLMConfig = new LLMConfigDto()
-                {
-                    SystemLLM = configKeyToPass,  // Pass the key, not just State.SystemLLM
-                    SelfLLMConfig = selfLlmConfig
-                }
-            });
-
             var configEvent = new AgentConfigEvent
             {
                 Configuration = agentConfig,
@@ -225,7 +176,7 @@ public partial class PsiOmniGAgent
                 AgentId = agentId.ToString(),
                 Description = description
             };
-
+            
             State.ChildAgents.Add(name, descriptor);
 
             RaiseEventWithTracing(new AddNewAgent()
@@ -278,19 +229,16 @@ public partial class PsiOmniGAgent
 
         return await TraceMethodAsync(async () =>
         {
-            var nowHandling =
-                State.TodoList.Find(x => x.AssigneeAgentName == name && x.Status == TodoStatus.InProgress);
+            var nowHandling = State.TodoList.Find(x => x.AssigneeAgentName == name && x.Status == TodoStatus.InProgress);
             if (nowHandling != null)
             {
                 return $"Failed to call agent {name}. Agent is handling call {nowHandling.Id}.";
             }
-
             var thisTodo = State.TodoList.Find(x => x.Id == callId);
             if (thisTodo == null)
             {
                 return $"Failed to call agent {name}. Todo item {callId} is not found.";
             }
-
             thisTodo.Status = TodoStatus.InProgress;
             thisTodo.AssigneeAgentName = name;
 
@@ -346,21 +294,13 @@ public partial class PsiOmniGAgent
         string todoId
     )
     {
-        var otherAgentsTodo = State.TodoList.Find(x => x.Id == todoId && !x.AssigneeAgentName.IsNullOrEmpty());
-        if (otherAgentsTodo != null)
-        {
-            return
-                $"Use todo_complete tool only for self assigned task. The todo item {todoId} is assigned to agent {otherAgentsTodo.AssigneeAgentName}";
-        }
-
         var todo = State.TodoList.Find(x => x.Id == todoId && x.Status == TodoStatus.Pending);
         if (todo == null)
         {
             return $"Failed to start self handling todo item {todoId}: Todo item is not found or not pending.";
         }
-
         todo.Status = TodoStatus.Completed;
-        todo.AssigneeAgentName = "__self__";
+        todo.AssigneeAgentName = this.GetGrainId().ToString();
         RaiseEventWithTracing(new CallAgent()
         {
             AgentCall = new AgentCall()
@@ -429,7 +369,7 @@ Use this tool to create and manage a structured task list for your current sessi
         var newTodoIds = newTodos.Select(x => x.Id).ToHashSet();
         var oldTodoIds = State.TodoList.Select(x => x.Id).ToHashSet();
 
-        if (newTodoIds.Intersect(oldTodoIds).Any())
+        if(newTodoIds.Intersect(oldTodoIds).Any())
         {
             return "Failed to update todo list: Cannot add todo items with the same id.";
         }

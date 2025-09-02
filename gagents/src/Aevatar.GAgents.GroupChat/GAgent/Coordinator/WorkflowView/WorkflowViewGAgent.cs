@@ -98,6 +98,8 @@ public class WorkflowViewGAgent : GAgentBase<WorkflowViewState, WorkflowViewLogE
                 AgentId = configuration.WorkflowCoordinatorGAgentId
             });
         }
+
+        await ConfirmEvents();
     }
 
     protected override void GAgentTransitionState(WorkflowViewState state,

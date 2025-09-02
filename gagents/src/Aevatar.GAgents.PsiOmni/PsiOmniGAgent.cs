@@ -4,23 +4,26 @@ using System.Net.Sockets;
 using System.Text.Json;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AIGAgent.Agent;
+using Aevatar.GAgents.AIGAgent.Dtos;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Aevatar.GAgents.PsiOmni.Interfaces;
 using Aevatar.GAgents.PsiOmni.Models;
+using Aevatar.GAgents.AI.Common;
+using GroupChat.GAgent;
+using JsonConverter = Newtonsoft.Json.JsonConvert;
 
 namespace Aevatar.GAgents.PsiOmni;
 
-public interface IPsiOmniGAgent : IStateGAgent<PsiOmniGAgentState>, IAIGAgent, IGAgent;
+public interface IPshOmniGAgent : IStateGAgent<PsiOmniGAgentState>;
 
-[Description(
-    "Sophisticated PsiOmni platform agent that provides advanced AI cognitive services, neural network processing, and intelligent automation capabilities for complex problem-solving scenarios.")]
+[Description("Sophisticated PsiOmni platform agent that provides advanced AI cognitive services, neural network processing, and intelligent automation capabilities for complex problem-solving scenarios.")]
 [GAgent("omni", "psi")]
 public partial class
     PsiOmniGAgent : PsiOmniAgentBase<PsiOmniGAgentState, PsiOmniGAgentStateLogEvent, EventBase, PsiOmniGAgentConfig>,
-    IPsiOmniGAgent
+    IPshOmniGAgent
 {
     private static readonly Dictionary<RealizationStatus, string> SystemPrompts =
         new()
@@ -251,17 +254,17 @@ public partial class
                                                     - Avoid putting specific tasks in the description.
                                                     """;
 
-    private readonly IKernelFunctionRegistry _kernelFunctionRegistry;
+    private readonly IKernelFactory _kernelFactory;
     private readonly IGAgentFactory _gAgentFactory;
     private readonly HashSet<string> _receivedMessageIds = new HashSet<string>();
 
     public PsiOmniGAgent(
-        IKernelFunctionRegistry kernelFunctionRegistry,
+        IKernelFactory kernelFactory,
         IGAgentFactory gAgentFactory,
         ILogger<PsiOmniGAgent> logger
     )
     {
-        _kernelFunctionRegistry = kernelFunctionRegistry;
+        _kernelFactory = kernelFactory;
         _gAgentFactory = gAgentFactory;
         Logger = logger;
     }
@@ -399,7 +402,7 @@ public partial class
                 var tools = new List<ToolDefinition>();
                 foreach (var toolName in realizationResult.Tools)
                 {
-                    var kernelFunction = _kernelFunctionRegistry.GetToolByQualifiedName(toolName);
+                    var kernelFunction = _kernelFactory.FunctionRegistry?.GetToolByQualifiedName(toolName);
                     if (kernelFunction != null)
                     {
                         tools.Add(kernelFunction.ToToolDefinition());
@@ -763,7 +766,6 @@ public partial class
                     });
                     if (state.RealizationStatus != RealizationStatus.Unrealized)
                     {
-                        state.IterationCount = 0;
                         LogEventDebug("Scheduling RunAsync for user message");
                         ScheduleTask(async () => await PublishAsyncToSelfWithTracing(new ContinuationEvent()
                         {
@@ -809,7 +811,7 @@ public partial class
                 }
 
                 content += "</agent_reply>";
-
+                
                 var todoItem = state.TodoList.Find(x =>
                     x.Id == payload.Event.CallId
                     && x.Status == TodoStatus.InProgress
@@ -823,7 +825,7 @@ public partial class
                 else
                 {
                     todoItem.Status = TodoStatus.Completed;
-                    content += $"\n<system_note>Todo item {payload.Event.CallId} is marked as Completed. You don't need to mark it again.</system_note>";
+                    content += "\nTodo item {} is marked completed";
                 }
 
                 var amessage = PsiOmniChatMessage.CreateUserMessage(content);
@@ -1012,7 +1014,7 @@ public partial class
                     ScheduleTask(async () => await PublishAsyncToSelfWithTracing(new ContinuationEvent()
                     {
                         TargetAgentId = this.GetGrainId().ToString(),
-                        ContinuationType = ContinuationType.IterateOrSelfReportAndReply,
+                        ContinuationType = ContinuationType.SelfReportAndReply,
                         FinalResponse = finalResult
                     }));
                 }
@@ -1093,14 +1095,12 @@ public partial class
                 {
                     LogEventDebug("Agent Message received for unknown todo item: CallId={CallId}",
                         payload.AgentCall.CallId);
-                }
-                else
-                {
+                } else {
                     todoItem.Status = TodoStatus.InProgress;
                     todoItem.AssigneeAgentName = payload.AgentCall.AgentName;
                 }
 
-                break;
+                break;                
             }
             case WriteArtifact payload:
                 LogEventInfo("Writing artifact: Name={ArtifactName}, Format={Format}, ContentLength={ContentLength}",
@@ -1115,21 +1115,6 @@ public partial class
                     });
                 }
 
-                break;
-            case IterateEvent payload:
-                state.IterationCount += 1;
-                var userMessage = PsiOmniChatMessage.CreateUserMessage(
-                    $"<review_comment>{payload.Comment}</review_comment>\n"+
-                    "<system_note>Use a tone as if this is the first response. DO NOT mention revision or iteration to user in your response. Please give a self-contained response. DO NOT ask the user to reference previous response!!!</system_note>"
-                );
-                userMessage.Metadata["IsReviewComment"] = true;
-                state.ChatHistory.Add(userMessage);
-                ScheduleTask(async () => await PublishAsyncToSelfWithTracing(new ContinuationEvent()
-                {
-                    TargetAgentId = this.GetGrainId().ToString(),
-                    ContinuationType = ContinuationType.Run,
-                    RunArg = "iterate response"
-                }));
                 break;
         }
 

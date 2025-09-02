@@ -12,13 +12,14 @@ public partial class PsiOmniGAgent
 {
     private Kernel GetKernel_Orchestrator()
     {
-        var kernel = GetKernelFromBrain();
+        var kernel = _kernelFactory.CreateKernel(
+            State.Configuration!
+        ); // Orchestrator doesn't have specialized tools.
         if (kernel == null)
-            throw new InvalidOperationException("Kernel is not configured.");
+            throw new InvalidOperationException("Kernel is not configured for tool execution.");
 
         // Add the orchestrator-specific functions as a plugin
-        if(!kernel.Plugins.Contains("AgentServices"))
-            kernel.Plugins.AddFromObject(this, "AgentServices");
+        kernel.Plugins.AddFromObject(this, "AgentServices");
 
         return kernel;
     }

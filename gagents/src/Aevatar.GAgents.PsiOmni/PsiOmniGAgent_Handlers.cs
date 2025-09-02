@@ -103,7 +103,7 @@ public partial class PsiOmniGAgent
     }
 
 
-    [EventHandler(allowSelfHandling: true)]
+    [EventHandler(allowSelfHandling:true)]
     public async Task HandleContinuationEventAsync(ContinuationEvent @event)
     {
         // Check if the message is for this agent
@@ -152,28 +152,9 @@ public partial class PsiOmniGAgent
                 case ContinuationType.Retrospect:
                     await RunIntrospectionAsync();
                     break;
-                case ContinuationType.IterateOrSelfReportAndReply:
-                    var needIteration = false;
-                    if (State.IterationCount < 3)
-                    {
-                        var result = await RunReviewAsync(@event.FinalResponse);
-                        LogEventDebug("Review result: IterationCount={IterationCount}, Decision={Decision}, Comment={Comment}", State.IterationCount, result.Decision, result.Comment);
-                        needIteration = result.Decision != ReviewDecision.APPROVED;
-                        if (needIteration)
-                        {
-                            RaiseEvent(new IterateEvent()
-                            {
-                                Comment = result.Comment
-                            });
-                        }
-                    }
-
-                    if (!needIteration)
-                    {
-                        await DoSelfReportAsync();
-                        await ReplyAsync(@event.FinalResponse);
-                    }
-
+                case ContinuationType.SelfReportAndReply:
+                    await DoSelfReportAsync();
+                    await ReplyAsync(@event.FinalResponse);
                     break;
                 case ContinuationType.SelfReport:
                     await DoSelfReportAsync();
