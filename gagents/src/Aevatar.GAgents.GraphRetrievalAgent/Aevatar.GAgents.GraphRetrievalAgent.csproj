@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Text.Json" />
+    <PackageReference Include="Volo.Abp.AutoMapper" />
+    <PackageReference Include="Neo4j.Driver" />
+    <PackageReference Include="Aevatar.Core" />
+    <PackageReference Include="Aevatar.Core.Abstractions" />
+    <PackageReference Include="Aevatar.EventSourcing.Core" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Aevatar.GAgents.AIGAgent\Aevatar.GAgents.AIGAgent.csproj" />
+  </ItemGroup>
+</Project>

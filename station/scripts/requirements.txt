@@ -1,0 +1,4 @@
+# Requirements for regression tests
+pytest>=8.4.0
+requests>=2.32.0
+urllib3>=2.5.0
