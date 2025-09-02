@@ -662,17 +662,13 @@ public class AgentService : ApplicationService, IAgentService
         if (configuration?.DtoType == null)
             return null;
 
-        // Check if the configuration DTO has SystemLLM property using reflection
-        var hasSystemLLMProperty = configuration.DtoType
+        // Check if the configuration DTO has SystemLLM or modelId property using reflection
+        var hasTargetProperty = configuration.DtoType
             .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Any(p => p.Name.Equals("SystemLLM", StringComparison.OrdinalIgnoreCase));
+            .Any(p => p.Name.Equals("SystemLLM", StringComparison.OrdinalIgnoreCase) || 
+                     p.Name.Equals("modelId", StringComparison.OrdinalIgnoreCase));
 
-        // Check if the configuration DTO has modelId property using reflection
-        var hasModelIdProperty = configuration.DtoType
-            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Any(p => p.Name.Equals("modelId", StringComparison.OrdinalIgnoreCase));
-
-        if (!hasSystemLLMProperty && !hasModelIdProperty)
+        if (!hasTargetProperty)
             return null;
 
         return _systemLLMConfigOptions.CurrentValue.SystemLLMConfigs;
