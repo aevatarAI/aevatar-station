@@ -192,7 +192,7 @@ public class GoogleAnalyticsService : IGoogleAnalyticsService, ITransientDepende
         {
             if (!_firebaseOptions.EnableAnalytics)
             {
-                _logger.LogDebug("Firebase Analytics reporting is disabled in configuration");
+                _logger.LogDebug("[GoogleAnalyticsService][TrackFirebaseEventAsync] Firebase Analytics reporting is disabled in configuration");
                 return new GoogleAnalyticsEventResponseDto
                 {
                     Success = false,
@@ -358,9 +358,9 @@ public class GoogleAnalyticsService : IGoogleAnalyticsService, ITransientDepende
             }
 
             // Check Firebase configuration
-            if (!_firebaseOptions.EnableAnalytics)
+            if (!_firebaseOptions.EnableBatchAnalytics)
             {
-                _logger.LogDebug("Firebase Analytics reporting is disabled in configuration");
+                _logger.LogDebug("[GoogleAnalyticsService][TrackFirebaseBatchEventsAsync] Firebase Analytics reporting is disabled in configuration");
                 return new GoogleAnalyticsBatchEventResponseDto
                 {
                     Success = false,
