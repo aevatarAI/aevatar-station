@@ -576,8 +576,14 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
         }
         else
         {
+            _logger.LogInformation("[KubernetesHostManager] ConfigMap {ConfigMapName} already exists, replacing with updated content in namespace {Namespace}", 
+                configMapName, KubernetesConstants.AppNameSpace);
+            
             await _kubernetesClientAdapter.ReplaceNamespacedConfigMapAsync(configMap, configMapName,
                 KubernetesConstants.AppNameSpace);
+                
+            _logger.LogInformation("[KubernetesHostManager] ConfigMap {ConfigMapName} successfully replaced in namespace {Namespace}", 
+                configMapName, KubernetesConstants.AppNameSpace);
         }
     }
 
@@ -1424,11 +1430,17 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
 
             // Create updated ConfigMap
             var updatedConfigMap = ConfigMapHelper.CreateAppSettingConfigMapDefinition(configMapName, updatedConfigData);
+            _logger.LogInformation("[KubernetesHostManager] Created updated ConfigMap definition for {ConfigMapName} with business configuration for {HostType}", 
+                configMapName, hostType);
 
             // Update the ConfigMap
+            _logger.LogInformation("[KubernetesHostManager] Replacing ConfigMap {ConfigMapName} with business configuration in namespace {Namespace}", 
+                configMapName, KubernetesConstants.AppNameSpace);
+                
             await _kubernetesClientAdapter.ReplaceNamespacedConfigMapAsync(updatedConfigMap, configMapName, KubernetesConstants.AppNameSpace);
             
-            _logger.LogInformation("ConfigMap {ConfigMapName} updated with latest business configuration for {HostType}", configMapName, hostType);
+            _logger.LogInformation("[KubernetesHostManager] ConfigMap {ConfigMapName} successfully updated with latest business configuration for {HostType}", 
+                configMapName, hostType);
         }
         catch (Exception ex)
         {
