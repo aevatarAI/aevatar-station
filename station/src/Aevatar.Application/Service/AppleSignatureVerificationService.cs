@@ -142,78 +142,29 @@ public class AppleSignatureVerificationService : ApplicationService, IAppleSigna
         {
             var appInstanceId = await GenerateUniqueNumericStringAsync();
 
+            var param = BuildCampaignDetailsEventParam(report, verificationResult);
+
             // Build Firebase event data
-            var firebaseEvent = new GoogleAnalyticsEventRequestDto
+            var firebaseEvents = new GoogleAnalyticsBatchEventRequestDto()
             {
-                EventName = "campaign_details",
-                UserId = null,
                 AppInstanceId = appInstanceId,
-                Parameters = new Dictionary<string, object>
+                Events = new List<SimpleBatchEventDto>()
                 {
-                    ["source_platform"] = "apple_skan",
-                    ["app_id"] = report.AppId,
-                    ["transaction_id"] = report.TransactionId,
-                    ["version"] = verificationResult.Version ?? "unknown",
-                    ["ad_network_id"] = report.AdNetworkId,
-                    ["attribution_signature"] = report.AttributionSignature ?? "unknown",
-                    ["is_verified"] = verificationResult.IsValid
+                    new SimpleBatchEventDto
+                    {
+                        EventName = "campaign_details",
+                        Parameters = param
+                    },
+                    new SimpleBatchEventDto
+                    {
+                        EventName = "campaign_details_skan_test",
+                        Parameters = param
+                    }
                 }
             };
             
-            // source、medium
-            if (report.CampaignId.HasValue)
-            {
-                firebaseEvent.Parameters["campaign_id"] = report.CampaignId.Value;
-            }
-
-            if (report.FidelityType.HasValue)
-            {
-                firebaseEvent.Parameters["fidelity_type"] = report.FidelityType.Value;
-            }
-
-            if (report.DidWin.HasValue)
-            {
-                firebaseEvent.Parameters["did_win"] = report.DidWin.Value;
-            }
-
-            if (report.Redownload.HasValue)
-            {
-                firebaseEvent.Parameters["redownload"] = report.Redownload.Value;
-            }
-
-            if (report.SourceAppId.HasValue)
-            {
-                firebaseEvent.Parameters["source_app_id"] = report.SourceAppId.Value;
-            }
-
-            if (report.ConversionValue.HasValue)
-            {
-                firebaseEvent.Parameters["conversion_value"] = report.ConversionValue.Value;
-            }
-
-            // Add optional parameters
-            if (!string.IsNullOrEmpty(report.SourceIdentifier))
-            {
-                firebaseEvent.Parameters["source_identifier"] = report.SourceIdentifier;
-            }
-
-            if (!string.IsNullOrEmpty(report.SourceDomain))
-            {
-                firebaseEvent.Parameters["source_domain"] = report.SourceDomain;
-            }
-
-            if (!string.IsNullOrEmpty(report.CoarseConversionValue))
-            {
-                firebaseEvent.Parameters["coarse_conversion_value"] = report.CoarseConversionValue;
-            }
-
-            if (report.PostbackSequenceIndex.HasValue)
-            {
-                firebaseEvent.Parameters["postback_sequence_index"] = report.PostbackSequenceIndex.Value;
-            }
-
             // Send to Firebase
-            await _googleAnalyticsService.TrackFirebaseEventAsync(firebaseEvent);
+            await _googleAnalyticsService.TrackFirebaseBatchEventsAsync(firebaseEvents);
 
             _logger.LogDebug(
                 "[AppleAttributionController][ForwardToFirebaseAnalyticsAsync] Apple attribution data forwarded to Firebase: TransactionId={TransactionId}",
@@ -226,6 +177,73 @@ public class AppleSignatureVerificationService : ApplicationService, IAppleSigna
                 report.TransactionId);
             throw;
         }
+    }
+
+    private static Dictionary<string, object> BuildCampaignDetailsEventParam(AppleAttributionReportDto report,
+        AppleAttributionVerificationResult verificationResult)
+    {
+        var parameters = new Dictionary<string, object>
+        {
+            ["source_platform"] = "apple_skan",
+            ["app_id"] = report.AppId,
+            ["transaction_id"] = report.TransactionId,
+            ["version"] = verificationResult.Version ?? "unknown",
+            ["ad_network_id"] = report.AdNetworkId,
+            ["attribution_signature"] = report.AttributionSignature ?? "unknown",
+            ["is_verified"] = verificationResult.IsValid
+        };
+        // source、medium
+        if (report.CampaignId.HasValue)
+        {
+            parameters["campaign_id"] = report.CampaignId.Value;
+        }
+
+        if (report.FidelityType.HasValue)
+        {
+            parameters["fidelity_type"] = report.FidelityType.Value;
+        }
+
+        if (report.DidWin.HasValue)
+        {
+            parameters["did_win"] = report.DidWin.Value;
+        }
+
+        if (report.Redownload.HasValue)
+        {
+            parameters["redownload"] = report.Redownload.Value;
+        }
+
+        if (report.SourceAppId.HasValue)
+        {
+            parameters["source_app_id"] = report.SourceAppId.Value;
+        }
+
+        if (report.ConversionValue.HasValue)
+        {
+            parameters["conversion_value"] = report.ConversionValue.Value;
+        }
+
+        // Add optional parameters
+        if (!string.IsNullOrEmpty(report.SourceIdentifier))
+        {
+            parameters["source_identifier"] = report.SourceIdentifier;
+        }
+
+        if (!string.IsNullOrEmpty(report.SourceDomain))
+        {
+            parameters["source_domain"] = report.SourceDomain;
+        }
+
+        if (!string.IsNullOrEmpty(report.CoarseConversionValue))
+        {
+            parameters["coarse_conversion_value"] = report.CoarseConversionValue;
+        }
+
+        if (report.PostbackSequenceIndex.HasValue)
+        {
+            parameters["postback_sequence_index"] = report.PostbackSequenceIndex.Value;
+        }
+        return parameters;
     }
 
     /// <summary>

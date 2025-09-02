@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -30,6 +31,13 @@ public interface IGoogleAnalyticsService
     /// <param name="eventRequest">Event request data</param>
     /// <returns>Tracking result</returns>
     Task<GoogleAnalyticsEventResponseDto> TrackFirebaseEventAsync(GoogleAnalyticsEventRequestDto eventRequest);
+    
+    /// <summary>
+    /// Track multiple events to Firebase Analytics in a single batch request
+    /// </summary>
+    /// <param name="batchRequest">Batch event request data</param>
+    /// <returns>Batch tracking result</returns>
+    Task<GoogleAnalyticsBatchEventResponseDto> TrackFirebaseBatchEventsAsync(GoogleAnalyticsBatchEventRequestDto batchRequest);
 } 
 
 /// <summary>
@@ -317,5 +325,149 @@ public class GoogleAnalyticsService : IGoogleAnalyticsService, ITransientDepende
     {
         var baseUrl = _firebaseOptions.ApiEndpoint;
         return $"{baseUrl}?firebase_app_id={_firebaseOptions.FirebaseAppId}&api_secret={_firebaseOptions.ApiSecret}";
+    }
+
+    /// <summary>
+    /// Track multiple events to Firebase Analytics in a single batch request (simplified)
+    /// </summary>
+    /// <param name="batchRequest">Batch event request data</param>
+    /// <returns>Batch tracking result</returns>
+    public async Task<GoogleAnalyticsBatchEventResponseDto> TrackFirebaseBatchEventsAsync(GoogleAnalyticsBatchEventRequestDto batchRequest)
+    {
+        try
+        {
+            // Validate input
+            if (batchRequest.Events == null || !batchRequest.Events.Any())
+            {
+                _logger.LogWarning("[GoogleAnalyticsService][TrackFirebaseBatchEventsAsync] No events provided in batch request");
+                return new GoogleAnalyticsBatchEventResponseDto
+                {
+                    Success = false,
+                    ErrorMessage = "No events provided"
+                };
+            }
+
+            if (string.IsNullOrWhiteSpace(batchRequest.AppInstanceId))
+            {
+                _logger.LogWarning("[GoogleAnalyticsService][TrackFirebaseBatchEventsAsync] AppInstanceId is required");
+                return new GoogleAnalyticsBatchEventResponseDto
+                {
+                    Success = false,
+                    ErrorMessage = "AppInstanceId is required"
+                };
+            }
+
+            // Check Firebase configuration
+            if (!_firebaseOptions.EnableAnalytics)
+            {
+                _logger.LogDebug("Firebase Analytics reporting is disabled in configuration");
+                return new GoogleAnalyticsBatchEventResponseDto
+                {
+                    Success = false,
+                    ErrorMessage = "Firebase Analytics reporting is disabled"
+                };
+            }
+            
+            if (string.IsNullOrWhiteSpace(_firebaseOptions.FirebaseAppId) || string.IsNullOrWhiteSpace(_firebaseOptions.ApiSecret))
+            {
+                _logger.LogWarning("[GoogleAnalyticsService][TrackFirebaseBatchEventsAsync] Firebase configuration not properly set");
+                return new GoogleAnalyticsBatchEventResponseDto
+                {
+                    Success = false,
+                    ErrorMessage = "Firebase Analytics not configured"
+                };
+            }
+
+            // Create Firebase payload with all events
+            var payload = new FirebaseMeasurementProtocolPayload
+            {
+                AppInstanceId = batchRequest.AppInstanceId
+            };
+
+            // Add all events to the payload
+            foreach (var eventDto in batchRequest.Events)
+            {
+                var firebaseEvent = new FirebaseEvent
+                {
+                    Name = eventDto.EventName,
+                    Parameters = new Dictionary<string, object>(eventDto.Parameters)
+                };
+                payload.Events.Add(firebaseEvent);
+            }
+
+            var jsonPayload = JsonConvert.SerializeObject(payload, new JsonSerializerSettings
+            {
+                NullValueHandling = NullValueHandling.Ignore
+            });
+
+            var url = BuildFirebaseRequestUrl();
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+            using var httpClient = _httpClientFactory.CreateClient();
+            httpClient.Timeout = TimeSpan.FromSeconds(_firebaseOptions.TimeoutSeconds);
+
+            _logger.LogDebug("[GoogleAnalyticsService][TrackFirebaseBatchEventsAsync] Sending {EventCount} events to Firebase for AppInstanceId: {AppInstanceId}, Payload: {Payload}",
+                batchRequest.Events.Count, batchRequest.AppInstanceId, jsonPayload);
+
+            var httpResponse = await httpClient.PostAsync(url, content);
+
+            if (httpResponse.IsSuccessStatusCode)
+            {
+                _logger.LogDebug("[GoogleAnalyticsService][TrackFirebaseBatchEventsAsync] Firebase Analytics batch sent successfully for AppInstanceId: {AppInstanceId}",
+                    batchRequest.AppInstanceId);
+                
+                return new GoogleAnalyticsBatchEventResponseDto
+                {
+                    Success = true
+                };
+            }
+            else
+            {
+                var responseContent = await httpResponse.Content.ReadAsStringAsync();
+                var errorMessage = $"Firebase API error: {httpResponse.StatusCode}";
+                
+                _logger.LogWarning("[GoogleAnalyticsService][TrackFirebaseBatchEventsAsync] Firebase Analytics API returned error for AppInstanceId: {AppInstanceId}, Status: {StatusCode}, Response: {Response}",
+                    batchRequest.AppInstanceId, httpResponse.StatusCode, responseContent);
+                
+                return new GoogleAnalyticsBatchEventResponseDto
+                {
+                    Success = false,
+                    ErrorMessage = errorMessage
+                };
+            }
+        }
+        catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
+        {
+            _logger.LogWarning(ex, "[GoogleAnalyticsService][TrackFirebaseBatchEventsAsync] Firebase Analytics API timeout for AppInstanceId: {AppInstanceId}",
+                batchRequest.AppInstanceId);
+            
+            return new GoogleAnalyticsBatchEventResponseDto
+            {
+                Success = false,
+                ErrorMessage = "Request timeout"
+            };
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "[GoogleAnalyticsService][TrackFirebaseBatchEventsAsync] HTTP error sending events to Firebase for AppInstanceId: {AppInstanceId}",
+                batchRequest.AppInstanceId);
+            
+            return new GoogleAnalyticsBatchEventResponseDto
+            {
+                Success = false,
+                ErrorMessage = "HTTP request failed"
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[GoogleAnalyticsService][TrackFirebaseBatchEventsAsync] Unexpected error processing batch events for AppInstanceId: {AppInstanceId}",
+                batchRequest.AppInstanceId);
+            
+            return new GoogleAnalyticsBatchEventResponseDto
+            {
+                Success = false,
+                ErrorMessage = ex.Message
+            };
+        }
     }
 } 
