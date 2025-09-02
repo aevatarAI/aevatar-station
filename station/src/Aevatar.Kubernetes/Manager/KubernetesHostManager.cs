@@ -157,6 +157,23 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
 
         _logger.LogInformation("[KubernetesHostManager] CreateHttpClientAsync - Generated configFiles: {@ConfigFiles}", 
             configFiles.ToDictionary(kv => kv.Key, kv => kv.Value.Length > 500 ? $"{kv.Value.Substring(0, 500)}... (truncated, total length: {kv.Value.Length})" : kv.Value));
+        
+        // Detailed analysis of each config file for CORS debugging
+        foreach (var configFile in configFiles)
+        {
+            _logger.LogInformation("[KubernetesHostManager] CreateHttpClientAsync - Config file {FileName} detailed content:", configFile.Key);
+            if (configFile.Value?.Contains("Cors") == true || configFile.Value?.Contains("cors") == true)
+            {
+                _logger.LogInformation("[KubernetesHostManager] CORS-related content detected in {FileName}", configFile.Key);
+                var corsLines = configFile.Value.Split('\n').Where(line => 
+                    line.Contains("Cors", StringComparison.OrdinalIgnoreCase) || 
+                    line.Contains("cors", StringComparison.OrdinalIgnoreCase)).ToList();
+                foreach (var corsLine in corsLines)
+                {
+                    _logger.LogInformation("[KubernetesHostManager] CORS line: {CorsLine}", corsLine.Trim());
+                }
+            }
+        }
 
         // Add business configuration file if available
         var hostType = isWebhook ? HostTypeEnum.WebHook : HostTypeEnum.Client;
@@ -567,6 +584,12 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
         Func<string, Dictionary<string, string>, V1ConfigMap> createConfigMapDefinitionFunc)
     {
         string configMapName = getConfigMapNameFunc(appId, version);
+        
+        // Serialize and log the configContent before creating ConfigMap
+        var configContentJson = System.Text.Json.JsonSerializer.Serialize(configContent, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        _logger.LogInformation("[KubernetesHostManager] ConfigContent to be used for ConfigMap {ConfigMapName}:\n{ConfigContentJson}", 
+            configMapName, configContentJson);
+        
         var configMaps = await _kubernetesClientAdapter.ListConfigMapAsync(KubernetesConstants.AppNameSpace);
         var configMap = createConfigMapDefinitionFunc(configMapName, configContent);
         if (!configMaps.Items.Any(configMap => configMap.Metadata.Name == configMapName))
@@ -1428,6 +1451,11 @@ public class KubernetesHostManager : IHostDeployManager,IHostCopyManager,ISingle
             // Add/update business configuration
             await AddBusinessConfigToConfigFilesAsync(hostId, updatedConfigData, hostType);
 
+            // Serialize and log the updatedConfigData before creating ConfigMap
+            var updatedConfigDataJson = System.Text.Json.JsonSerializer.Serialize(updatedConfigData, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            _logger.LogInformation("[KubernetesHostManager] UpdatedConfigData for ConfigMap {ConfigMapName}:\n{UpdatedConfigDataJson}", 
+                configMapName, updatedConfigDataJson);
+            
             // Create updated ConfigMap
             var updatedConfigMap = ConfigMapHelper.CreateAppSettingConfigMapDefinition(configMapName, updatedConfigData);
             _logger.LogInformation("[KubernetesHostManager] Created updated ConfigMap definition for {ConfigMapName} with business configuration for {HostType}", 
