@@ -1,0 +1,546 @@
+# GAgent Unit Testing Guide for Claude
+
+## Overview
+This guide provides comprehensive patterns and best practices for writing unit tests for GAgents in the Aevatar framework. Based on the existing test patterns in the workshop project.
+
+## Part 1: Test Infrastructure Setup
+
+### 1.1 Test Base Class
+```csharp
+[Collection(ClusterCollection.Name)]
+public sealed class MyGAgentTests : AevatarWorkshopTestBase<AevatarWorkshopTestModule>
+{
+    private readonly ITestOutputHelper _testOutputHelper;
+    private readonly IGAgentFactory _gAgentFactory;
+
+    public MyGAgentTests(ITestOutputHelper testOutputHelper)
+    {
+        _testOutputHelper = testOutputHelper;
+        _gAgentFactory = GetRequiredService<IGAgentFactory>();
+    }
+}
+```
+
+### 1.2 Required Using Statements
+```csharp
+using Aevatar.Core.Abstractions;
+using Aevatar.Workshop.TestBase;
+using Xunit.Abstractions;
+using Shouldly; // Recommended for better assertions
+```
+
+## Part 2: Test Patterns
+
+### 2.1 Basic GAgent Test Pattern
+```csharp
+[Fact]
+public async Task MyGAgent_BasicOperation_ShouldWorkCorrectly()
+{
+    // Arrange - Create GAgent instance
+    var myAgent = await _gAgentFactory.GetGAgentAsync<IMyGAgent>(Guid.NewGuid());
+    
+    // Act - Call the method under test
+    await myAgent.DoSomethingAsync("test input");
+    
+    // Assert - Verify the result
+    var result = await myAgent.GetResultAsync();
+    result.ShouldNotBeNull();
+    result.ShouldBe(expectedValue);
+    
+    // Optional: Log for debugging
+    _testOutputHelper.WriteLine($"Result: {result}");
+}
+```
+
+### 2.2 State-Based Testing Pattern
+```csharp
+[Fact]
+public async Task MyGAgent_StateOperation_ShouldUpdateStateCorrectly()
+{
+    // Arrange
+    var myAgent = await _gAgentFactory.GetGAgentAsync<IMyGAgent>(Guid.NewGuid());
+    
+    // Act - Perform state-changing operation
+    await myAgent.UpdateStateAsync("new value");
+    
+    // Assert - Verify state changes
+    var state = await myAgent.GetStateAsync();
+    state.Value.ShouldBe("new value");
+    state.UpdatedAt.ShouldBeGreaterThan(DateTime.UtcNow.AddMinutes(-1));
+    
+    // Optional: Check event history
+    foreach (var history in state.History)
+    {
+        _testOutputHelper.WriteLine(history);
+    }
+}
+```
+
+### 2.3 Event Communication Testing Pattern
+```csharp
+[Fact]
+public async Task MyGAgent_EventPublication_ShouldTriggerEventHandlers()
+{
+    // Arrange - Setup multiple GAgents
+    var publisher = await _gAgentFactory.GetGAgentAsync<IPublisherGAgent>();
+    var subscriber = await _gAgentFactory.GetGAgentAsync<ISubscriberGAgent>();
+    
+    // Register for event communication
+    await publisher.RegisterAsync(subscriber);
+    
+    // Act - Publish event
+    await publisher.PublishEventAsync(new MyEvent { Data = "test" });
+    
+    // Allow time for event processing
+    await Task.Delay(500);
+    
+    // Assert - Verify event was received and processed
+    var subscriberState = await subscriber.GetStateAsync();
+    subscriberState.ReceivedEvents.ShouldContain(e => e.Data == "test");
+}
+```
+
+## Part 3: Test Data Management
+
+### 3.1 Test Data Factory Methods
+```csharp
+private SubmitOrderRequest CreateTestOrderRequest(string customerId, string productName)
+{
+    return new SubmitOrderRequest
+    {
+        CustomerId = customerId,
+        CustomerEmail = $"{customerId}@example.com",
+        Items = new List<OrderItemRequest>
+        {
+            new OrderItemRequest
+            {
+                ProductId = Guid.NewGuid().ToString(),
+                ProductName = productName,
+                Quantity = 1,
+                Price = 99.99m,
+                SKU = "TEST-SKU"
+            }
+        },
+        ShippingAddress = new Address
+        {
+            Street = "123 Test St",
+            City = "Test City",
+            State = "TS",
+            PostalCode = "12345",
+            Country = "TestLand"
+        }
+    };
+}
+```
+
+### 3.2 Complex Test Data Setup
+```csharp
+private async Task SetupECommerceSystem()
+{
+    // Create coordinator
+    var coordinator = await _gAgentFactory.GetGAgentAsync<IECommerceCoordinatorGAgent>();
+    
+    // Create all agents
+    var orderAgent = await _gAgentFactory.GetGAgentAsync<IOrderGAgent>();
+    var inventoryAgent = await _gAgentFactory.GetGAgentAsync<IInventoryGAgent>();
+    var paymentAgent = await _gAgentFactory.GetGAgentAsync<IPaymentGAgent>();
+    var notificationAgent = await _gAgentFactory.GetGAgentAsync<INotificationGAgent>();
+    
+    // Register all agents for event communication
+    await coordinator.RegisterAsync(orderAgent);
+    await coordinator.RegisterAsync(inventoryAgent);
+    await coordinator.RegisterAsync(paymentAgent);
+    await coordinator.RegisterAsync(notificationAgent);
+    
+    // Initialize system
+    await coordinator.InitializeSystemAsync();
+    await coordinator.SeedTestDataAsync();
+}
+```
+
+## Part 4: Common Test Scenarios
+
+### 4.1 CRUD Operations Testing
+```csharp
+[Fact]
+public async Task OrderGAgent_CRUDOperations_ShouldWorkCorrectly()
+{
+    // Arrange
+    var orderAgent = await _gAgentFactory.GetGAgentAsync<IOrderGAgent>();
+    
+    // Create
+    var orderId = await orderAgent.SubmitOrderAsync(CreateTestOrderRequest("customer-001", "Test Product"));
+    orderId.ShouldNotBeNull();
+    
+    // Read
+    var order = await orderAgent.GetOrderAsync(orderId);
+    order.ShouldNotBeNull();
+    order.CustomerId.ShouldBe("customer-001");
+    
+    // Update
+    await orderAgent.CancelOrderAsync(orderId, "Test cancellation");
+    var status = await orderAgent.GetOrderStatusAsync(orderId);
+    status.ShouldBe(OrderStatus.Cancelled);
+    
+    // List
+    var customerOrders = await orderAgent.GetOrdersByCustomerAsync("customer-001");
+    customerOrders.Count.ShouldBe(1);
+}
+```
+
+### 4.2 Validation Testing
+```csharp
+[Fact]
+public async Task PaymentGAgent_Validation_ShouldValidateCorrectly()
+{
+    // Arrange
+    var paymentAgent = await _gAgentFactory.GetGAgentAsync<IPaymentGAgent>();
+    
+    // Valid case
+    var validPaymentMethod = new PaymentMethod
+    {
+        Type = PaymentMethodType.CreditCard,
+        CardNumber = "4111111111111111",
+        ExpiryDate = "12/25",
+        CVV = "123",
+        CardHolderName = "Test User"
+    };
+    
+    // Invalid case
+    var invalidPaymentMethod = new PaymentMethod
+    {
+        Type = PaymentMethodType.CreditCard,
+        CardNumber = "411111", // Too short
+        ExpiryDate = "",
+        CVV = ""
+    };
+    
+    // Act & Assert
+    (await paymentAgent.ValidatePaymentMethodAsync(validPaymentMethod)).ShouldBeTrue();
+    (await paymentAgent.ValidatePaymentMethodAsync(invalidPaymentMethod)).ShouldBeFalse();
+}
+```
+
+### 4.3 Error Handling Testing
+```csharp
+[Fact]
+public async Task OrderGAgent_InvalidOperations_ShouldThrowExceptions()
+{
+    // Arrange
+    var orderAgent = await _gAgentFactory.GetGAgentAsync<IOrderGAgent>();
+    
+    // Act & Assert - Empty customer ID
+    await Assert.ThrowsAsync<ArgumentException>(async () => 
+    {
+        await orderAgent.SubmitOrderAsync(new SubmitOrderRequest 
+        { 
+            CustomerId = "", 
+            Items = new List<OrderItemRequest>() 
+        });
+    });
+    
+    // Act & Assert - Cancel non-existent order
+    await Assert.ThrowsAsync<InvalidOperationException>(async () => 
+    {
+        await orderAgent.CancelOrderAsync("non-existent-order", "test");
+    });
+}
+```
+
+## Part 5: Integration Testing Patterns
+
+### 5.1 End-to-End Workflow Testing
+```csharp
+[Fact]
+public async Task ECommerceSystem_EndToEndWorkflow_ShouldProcessOrder()
+{
+    // Arrange - Setup complete system
+    await SetupECommerceSystem();
+    
+    var coordinator = await _gAgentFactory.GetGAgentAsync<IECommerceCoordinatorGAgent>();
+    
+    // Act - Process complete order
+    var orderRequest = new SubmitOrderRequest
+    {
+        CustomerId = "customer-e2e-001",
+        CustomerEmail = "customer@example.com",
+        Items = new List<OrderItemRequest>
+        {
+            new OrderItemRequest
+            {
+                ProductId = "prod-001",
+                ProductName = "iPhone 15 Pro",
+                Quantity = 1,
+                Price = 8999.00m,
+                SKU = "IPH15PRO-256GB"
+            }
+        },
+        ShippingAddress = new Address { /* address details */ }
+    };
+    
+    var orderId = await coordinator.ProcessOrderAsync(orderRequest);
+    
+    // Wait for event processing
+    await Task.Delay(1000);
+    
+    // Assert - Verify complete workflow
+    orderId.ShouldNotBeNull();
+    
+    var finalOrderStatus = await coordinator.GetOrderStatusAsync(orderId);
+    finalOrderStatus.ShouldBeOneOf(
+        OrderStatus.PaymentCompleted, 
+        OrderStatus.PaymentFailed,
+        OrderStatus.Validated,
+        OrderStatus.ValidationFailed);
+    
+    var systemHealth = await coordinator.GetSystemHealthAsync();
+    systemHealth.IsHealthy.ShouldBeTrue();
+}
+```
+
+### 5.2 Multi-Agent Coordination Testing
+```csharp
+[Fact]
+public async Task MultiAgentSystem_Coordination_ShouldWorkCorrectly()
+{
+    // Arrange
+    var coordinator = await _gAgentFactory.GetGAgentAsync<ICoordinatorGAgent>();
+    var agent1 = await _gAgentFactory.GetGAgentAsync<IWorkerGAgent>();
+    var agent2 = await _gAgentFactory.GetGAgentAsync<IWorkerGAgent>();
+    
+    // Register agents
+    await coordinator.RegisterAsync(agent1);
+    await coordinator.RegisterAsync(agent2);
+    
+    // Act - Distribute work
+    var workItems = new List<string> { "task1", "task2", "task3" };
+    await coordinator.DistributeWorkAsync(workItems);
+    
+    // Wait for processing
+    await Task.Delay(1000);
+    
+    // Assert - Verify work distribution
+    var coordinatorState = await coordinator.GetStateAsync();
+    coordinatorState.CompletedTasks.Count.ShouldBe(3);
+    
+    var agent1State = await agent1.GetStateAsync();
+    var agent2State = await agent2.GetStateAsync();
+    
+    (agent1State.ProcessedTasks.Count + agent2State.ProcessedTasks.Count).ShouldBe(3);
+}
+```
+
+## Part 6: AI GAgent Testing Patterns
+
+### 6.1 AI Tool Calling Testing
+```csharp
+[Fact]
+public async Task AIGAgent_ToolCalling_ShouldWorkCorrectly()
+{
+    // Arrange
+    var aiAgent = await _gAgentFactory.GetGAgentAsync<IToolAIGAgent>();
+    var mathAgent = await _gAgentFactory.GetGAgentAsync<IMathGAgent>();
+    
+    // Register math agent as tool
+    await aiAgent.RegisterToolAsync(mathAgent);
+    
+    // Act - Ask AI to perform calculation
+    var response = await aiAgent.ChatAsync(new ChatRequestDto
+    {
+        Prompt = "What is 25 * 4 + 10?",
+        ChatId = Guid.NewGuid().ToString()
+    });
+    
+    // Assert - Verify AI used the tool correctly
+    response.ShouldNotBeNull();
+    response.Content.ShouldContain("110");
+    
+    // Verify math agent was called
+    var mathState = await mathAgent.GetStateAsync();
+    mathState.Calculations.ShouldContain(c => c.Expression.Contains("25 * 4 + 10"));
+}
+```
+
+### 6.2 AI Response Validation
+```csharp
+[Fact]
+public async Task AIGAgent_ResponseQuality_ShouldMeetExpectations()
+{
+    // Arrange
+    var aiAgent = await _gAgentFactory.GetGAgentAsync<IToolAIGAgent>();
+    
+    var complexPrompt = @"Plan a project timeline for a 6-month software development project.
+    Include milestones for design, development, testing, and deployment phases.";
+    
+    // Act
+    var response = await aiAgent.ChatAsync(new ChatRequestDto
+    {
+        Prompt = complexPrompt,
+        ChatId = Guid.NewGuid().ToString()
+    });
+    
+    // Assert - Verify response quality
+    response.ShouldNotBeNull();
+    response.Content.Length.ShouldBeGreaterThan(200); // Substantial response
+    response.Content.ShouldContain("design", StringComparison.OrdinalIgnoreCase);
+    response.Content.ShouldContain("development", StringComparison.OrdinalIgnoreCase);
+    response.Content.ShouldContain("testing", StringComparison.OrdinalIgnoreCase);
+    response.Content.ShouldContain("deployment", StringComparison.OrdinalIgnoreCase);
+}
+```
+
+## Part 7: Performance and Load Testing
+
+### 7.1 Concurrent Operations Testing
+```csharp
+[Fact]
+public async Task GAgent_ConcurrentOperations_ShouldHandleCorrectly()
+{
+    // Arrange
+    var agent = await _gAgentFactory.GetGAgentAsync<IMyGAgent>();
+    var tasks = new List<Task<string>>();
+    
+    // Act - Execute concurrent operations
+    for (int i = 0; i < 10; i++)
+    {
+        var taskId = i;
+        tasks.Add(agent.ProcessAsync($"task-{taskId}"));
+    }
+    
+    var results = await Task.WhenAll(tasks);
+    
+    // Assert - Verify all operations completed
+    results.Length.ShouldBe(10);
+    results.All(r => !string.IsNullOrEmpty(r)).ShouldBeTrue();
+    
+    var state = await agent.GetStateAsync();
+    state.ProcessedCount.ShouldBe(10);
+}
+```
+
+## Part 8: Test Organization Best Practices
+
+### 8.1 Test Naming Conventions
+```csharp
+// Use this pattern: MethodName_Scenario_ExpectedResult
+[Fact]
+public async Task OrderGAgent_SubmitOrder_ShouldCreateOrder()
+[Fact]
+public async Task OrderGAgent_GetOrdersByCustomer_ShouldReturnCustomerOrders()
+[Fact]
+public async Task PaymentGAgent_ProcessPayment_ShouldHandleValidPayment()
+[Fact]
+public async Task AIGAgent_ToolCalling_ShouldWorkCorrectly()
+```
+
+### 8.2 Test Organization by Feature
+```csharp
+// Group related tests together
+#region Order Creation Tests
+[Fact]
+public async Task OrderGAgent_SubmitOrder_ShouldCreateOrder()
+[Fact]
+public async Task OrderGAgent_SubmitOrder_ShouldValidateInput()
+#endregion
+
+#region Order Status Tests
+[Fact]
+public async Task OrderGAgent_GetOrderStatus_ShouldReturnCorrectStatus()
+[Fact]
+public async Task OrderGAgent_CancelOrder_ShouldUpdateStatus()
+#endregion
+```
+
+### 8.3 Test Cleanup and Teardown
+```csharp
+// Use unique IDs for each test to avoid interference
+public async Task MyGAgent_ShouldIsolateState()
+{
+    // Use unique ID for each test
+    var agent1 = await _gAgentFactory.GetGAgentAsync<IMyGAgent>(Guid.NewGuid());
+    var agent2 = await _gAgentFactory.GetGAgentAsync<IMyGAgent>(Guid.NewGuid());
+    
+    // Operations on agent1 should not affect agent2
+    await agent1.UpdateAsync("value1");
+    await agent2.UpdateAsync("value2");
+    
+    var state1 = await agent1.GetStateAsync();
+    var state2 = await agent2.GetStateAsync();
+    
+    state1.Value.ShouldBe("value1");
+    state2.Value.ShouldBe("value2");
+}
+```
+
+## Part 9: Debugging and Logging
+
+### 9.1 Using Test Output Helper
+```csharp
+[Fact]
+public async Task DebugExample()
+{
+    var agent = await _gAgentFactory.GetGAgentAsync<IMyGAgent>();
+    
+    // Log intermediate steps
+    _testOutputHelper.WriteLine("Starting test execution");
+    
+    var result = await agent.DoWorkAsync();
+    
+    _testOutputHelper.WriteLine($"Operation completed with result: {result}");
+    _testOutputHelper.WriteLine($"Execution time: {stopwatch.ElapsedMilliseconds}ms");
+}
+```
+
+### 9.2 State Inspection
+```csharp
+[Fact]
+public async Task StateInspectionExample()
+{
+    var agent = await _gAgentFactory.GetGAgentAsync<IMyGAgent>();
+    
+    // Perform operations
+    await agent.DoMultipleOperationsAsync();
+    
+    // Inspect full state
+    var state = await agent.GetStateAsync();
+    
+    _testOutputHelper.WriteLine($"Final state:");
+    _testOutputHelper.WriteLine($"- Value: {state.Value}");
+    _testOutputHelper.WriteLine($"- Count: {state.Count}");
+    _testOutputHelper.WriteLine($"- LastUpdated: {state.LastUpdated}");
+    
+    foreach (var history in state.History)
+    {
+        _testOutputHelper.WriteLine($"- History: {history}");
+    }
+}
+```
+
+## Quick Reference Checklist
+
+### Test Structure
+- [ ] Use `AevatarWorkshopTestBase<T>` as base class
+- [ ] Add `[Collection(ClusterCollection.Name)]` attribute
+- [ ] Inject `ITestOutputHelper` for logging
+- [ ] Get `IGAgentFactory` from dependency injection
+- [ ] Use unique IDs for each test instance
+
+### Test Patterns
+- [ ] Arrange-Act-Assert structure
+- [ ] Create test data factory methods
+- [ ] Test both success and failure scenarios
+- [ ] Verify state changes through `GetStateAsync()`
+- [ ] Use appropriate delays for event processing
+
+### Assertions
+- [ ] Use `Shouldly` for readable assertions
+- [ ] Test null values and edge cases
+- [ ] Verify exception throwing for invalid operations
+- [ ] Check event history for complex workflows
+
+### Integration Tests
+- [ ] Setup multi-agent communication
+- [ ] Test end-to-end workflows
+- [ ] Verify system health and coordination
+
+This guide provides comprehensive patterns for testing GAgents in the Aevatar framework, covering everything from basic unit tests to complex integration scenarios and AI agent testing.

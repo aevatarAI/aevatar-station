@@ -10,9 +10,9 @@ public abstract class AevatarMCPTestBase : AevatarGAgentTestBase<AevatarMCPTestM
     /// <summary>
     /// Get Mock MCP client provider for special configuration during testing
     /// </summary>
-    protected MockMcpClientProvider GetMockMcpClientProvider()
+    protected MockStdioMcpClientProvider GetMockMcpClientProvider()
     {
-        return GetRequiredService<MockMcpClientProvider>();
+        return GetRequiredService<MockStdioMcpClientProvider>();
     }
     
     /// <summary>

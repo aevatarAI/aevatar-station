@@ -1,0 +1,101 @@
+{
+  "MCPServerOptions": {
+    "EnableAllMCPServers": false,
+    "ResetWhitelistEverytime": true,
+    "MCPServers": {
+      "github-oauth": {
+        "ServerName": "github-oauth",
+        "Url": "https://api.github.com/mcp/stream",
+        "Description": "GitHub MCP server with OAuth2 authentication",
+        "Type": "StreamableHttp",
+        "Headers": {
+          "Accept": "text/event-stream",
+          "User-Agent": "MyApp/1.0"
+        },
+        "OAuth": {
+          "ProviderType": "oauth2",
+          "ClientId": "${GITHUB_CLIENT_ID}",
+          "ClientSecret": "${GITHUB_CLIENT_SECRET}",
+          "AuthorizationUrl": "https://github.com/login/oauth/authorize",
+          "TokenUrl": "https://github.com/login/oauth/access_token",
+          "Scopes": ["repo", "read:user"],
+          "AdditionalParameters": {
+            "grant_type": "authorization_code"
+          }
+        }
+      },
+      "api-bearer": {
+        "ServerName": "api-bearer",
+        "Url": "https://api.example.com/mcp/events",
+        "Description": "API server with Bearer token authentication",
+        "Type": "StreamableHttp",
+        "Headers": {
+          "Accept": "text/event-stream",
+          "Content-Type": "application/json"
+        },
+        "OAuth": {
+          "ProviderType": "bearer",
+          "AccessToken": "${API_ACCESS_TOKEN}"
+        }
+      },
+      "internal-basic": {
+        "ServerName": "internal-basic",
+        "Url": "https://internal.company.com/mcp/stream",
+        "Description": "Internal API with Basic authentication",
+        "Type": "StreamableHttp",
+        "Headers": {
+          "Accept": "text/event-stream"
+        },
+        "OAuth": {
+          "ProviderType": "basic",
+          "AdditionalParameters": {
+            "username": "${INTERNAL_USERNAME}",
+            "password": "${INTERNAL_PASSWORD}"
+          }
+        }
+      },
+      "custom-oauth": {
+        "ServerName": "custom-oauth",
+        "Url": "https://custom.api.com/mcp/sse",
+        "Description": "Custom OAuth2 server with refresh token",
+        "Type": "StreamableHttp",
+        "Headers": {
+          "Accept": "text/event-stream",
+          "X-Client-Version": "1.0"
+        },
+        "OAuth": {
+          "ProviderType": "oauth2",
+          "ClientId": "${CUSTOM_CLIENT_ID}",
+          "ClientSecret": "${CUSTOM_CLIENT_SECRET}",
+          "AccessToken": "${CUSTOM_ACCESS_TOKEN}",
+          "RefreshToken": "${CUSTOM_REFRESH_TOKEN}",
+          "AuthorizationUrl": "https://auth.custom.api.com/oauth/authorize",
+          "TokenUrl": "https://auth.custom.api.com/oauth/token",
+          "Scopes": ["read", "write", "admin"],
+          "AdditionalParameters": {
+            "audience": "mcp-api",
+            "resource": "https://custom.api.com"
+          }
+        }
+      },
+      "custom-headers": {
+        "ServerName": "custom-headers",
+        "Url": "https://proprietary.api.com/mcp/stream",
+        "Description": "Proprietary API with custom authentication headers",
+        "Type": "StreamableHttp",
+        "Headers": {
+          "Accept": "text/event-stream"
+        },
+        "OAuth": {
+          "ProviderType": "custom",
+          "AdditionalParameters": {
+            "X-API-Key": "${PROPRIETARY_API_KEY}",
+            "X-Client-ID": "${PROPRIETARY_CLIENT_ID}",
+            "X-Signature": "${PROPRIETARY_SIGNATURE}",
+            "X-Timestamp": "${PROPRIETARY_TIMESTAMP}"
+          }
+        }
+      }
+    }
+  }
+}

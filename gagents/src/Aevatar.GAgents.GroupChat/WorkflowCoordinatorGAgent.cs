@@ -330,7 +330,7 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
 
             // Prepare resource context for all workflow units (including AI agents that may need MCP tools)
             var resourceContext = ResourceContext.Create(
-                State.GetAllWorkerUnitGrainIds().Select(GrainId.Parse),
+                State.GetNextWorkerUnitGrainIds(workUnitGrainId).Select(GrainId.Parse),
                 $"workflow:{State.BlackboardId}"
             )
             .WithMetadata("WorkflowId", State.BlackboardId)
@@ -340,27 +340,6 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
             await workUnitAgent.PrepareResourceContextAsync(resourceContext);
             Logger.LogInformation("Prepared resource context for workflow unit {WorkUnitGrainId} with {ResourceCount} resources", 
                 workUnitGrainId, resourceContext.AvailableResources.Count);
-
-            // // Also call the workflow-specific preparation if the agent implements IWorkflowUnit
-            // if (workUnitAgent is IWorkflowUnit workflowUnit)
-            // {
-            //     // Build execution context, including all workflow nodes as available resources
-            //     var workflowContext = new WorkflowExecutionContext
-            //     {
-            //         WorkflowId = State.BlackboardId, // Use BlackboardId as workflow ID
-            //         AvailableResources = State.GetAllWorkerUnitGrainIds()
-            //             .Select(GrainId.Parse)
-            //             .ToList(),
-            //         SharedData = new Dictionary<string, object>
-            //         {
-            //             ["NodeCapabilities"] = State.NodeCapabilities,
-            //             ["InitContent"] = content ?? State.Content ?? string.Empty
-            //         }
-            //     };
-            //
-            //     await workflowUnit.PrepareForExecutionAsync(workflowContext);
-            //     Logger.LogInformation("Prepared workflow execution context for workflow unit {WorkUnitGrainId}", workUnitGrainId);
-            // }
         }
         catch (Exception ex)
         {

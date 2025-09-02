@@ -1,20 +1,20 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
-using System.Reflection;
 using System.Text.Json;
-
 using System.Threading.Tasks;
-using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AIGAgent.State;
 using Aevatar.GAgents.AIGAgent.Dtos;
+using Aevatar.GAgents.Basic.BasicGEvent;
 using Aevatar.GAgents.MCP.Core;
+using Aevatar.GAgents.MCP.Core.Extensions;
 using Aevatar.GAgents.MCP.Core.Model;
+using Aevatar.GAgents.MCP.Core.Options;
 using Aevatar.GAgents.MCP.Options;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using Orleans;
 
@@ -24,153 +24,98 @@ namespace Aevatar.GAgents.AIGAgent.Agent;
 /// <summary>
 /// Partial class for AIGAgentBase that adds MCP (Model Context Protocol) tool capabilities
 /// </summary>
-public abstract partial class
-    AIGAgentBase<TState, TStateLogEvent, TEvent, TConfiguration>
+public abstract partial class AIGAgentBase<TState, TStateLogEvent, TEvent, TConfiguration>
     where TState : AIGAgentStateBase, new()
     where TStateLogEvent : StateLogEventBase<TStateLogEvent>
     where TEvent : EventBase
     where TConfiguration : ConfigurationBase
 {
-    private readonly Dictionary<string, string>
-        _toolNameMapping = new(); // Maps kernel function names to MCP tool names
+    #region Private Fields
 
+    /// <summary>
+    /// Maps kernel function names to MCP tool names for tool call resolution
+    /// </summary>
+    private readonly Dictionary<string, string> _toolNameMapping = new();
+
+    #endregion
+
+    #region MCP Configuration Methods
+
+    /// <summary>
+    /// Configure MCP servers using existing MCP agent instances
+    /// </summary>
+    /// <param name="mcpGAgents">List of existing MCP GAgent instances</param>
+    /// <returns>True if configuration was successful, false otherwise</returns>
     public virtual async Task<bool> ConfigureMCPServersAsync(List<IMCPGAgent> mcpGAgents)
     {
         try
         {
-            var mcpAgents = new Dictionary<string, MCPGAgentReference>();
-
-            foreach (var mcpAgent in mcpGAgents)
-            {
-                var mcpAgentId = mcpAgent.GetPrimaryKey();
-                var server = (await mcpAgent.GetStateAsync()).MCPServerConfig;
-
-                mcpAgents[server.ServerName] = new MCPGAgentReference
-                {
-                    AgentId = mcpAgentId,
-                    ServerName = server.ServerName,
-                    Description = server.Description
-                };
-
-                // Log available tools from this server
-                var serverTools = await mcpAgent.GetAvailableToolsAsync();
-                foreach (var tool in serverTools)
-                {
-                    Logger.LogInformation($"Registered MCP tool: {server.ServerName}.{tool.Name} - {tool.Description}");
-                }
-            }
-
-            if (!mcpAgents.Any())
-            {
-                // No valid MCP servers configured
-                return false;
-            }
-
-            // Update state
-            var configureServersEvent = new ConfigureMCPServersStateLogEvent
-            {
-                MCPServers = mcpAgents
-            };
-
-            var enableMCPToolsEvent = new SetEnableMCPToolsStateLogEvent
-            {
-                EnableMCPTools = true
-            };
-
-            RaiseEvent(configureServersEvent);
-            RaiseEvent(enableMCPToolsEvent);
-            await ConfirmEvents();
-
-            // Update kernel tools if brain is initialized
-            if (_brain != null)
-            {
-                await UpdateKernelWithMCPToolsAsync();
-            }
-
-            return true;
+            var mcpAgents = await ProcessMCPAgentsAsync(mcpGAgents);
+            return await CompleteMCPConfigurationAsync(mcpAgents);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to configure MCP servers 1");
+            Logger.LogError(ex, "Failed to configure MCP servers from existing agents");
             return false;
         }
     }
 
     /// <summary>
-    /// Configure MCP servers for this agent
+    /// Configure MCP servers using server configuration objects
     /// </summary>
+    /// <param name="servers">List of MCP server configurations</param>
+    /// <returns>True if configuration was successful, false otherwise</returns>
     public virtual async Task<bool> ConfigureMCPServersAsync(List<MCPServerConfig> servers)
     {
         try
         {
-            var gAgentFactory = ServiceProvider.GetRequiredService<IGAgentFactory>();
-            var mcpAgents = new Dictionary<string, MCPGAgentReference>();
-
-            foreach (var server in servers)
+            // Validate against whitelist
+            var whitelistValidationResult = await ValidateAgainstWhitelistAsync(servers);
+            if (!whitelistValidationResult.IsValid)
             {
-                if (!server.IsValid())
-                {
-                    Logger.LogWarning("Skipping invalid MCP server configuration");
-                    continue;
-                }
-
-                // Create config for the MCP agent
-                var mcpConfig = new MCPGAgentConfig
-                {
-                    ServerConfig = server
-                };
-
-                var mcpAgent = await gAgentFactory.GetGAgentAsync<IMCPGAgent>(mcpConfig);
-                var mcpAgentId = mcpAgent.GetPrimaryKey();
-
-                mcpAgents[server.ServerName] = new MCPGAgentReference
-                {
-                    AgentId = mcpAgentId,
-                    ServerName = server.ServerName,
-                    Description = server.Description
-                };
-
-                // Log available tools from this server
-                var serverTools = await mcpAgent.GetAvailableToolsAsync();
-                foreach (var tool in serverTools)
-                {
-                    Logger.LogInformation($"Registered MCP tool: {server.ServerName}.{tool.Name} - {tool.Description}");
-                }
-            }
-
-            if (!mcpAgents.Any())
-            {
-                // No valid MCP servers configured
+                Logger.LogError("MCP server configuration validation failed: {Error}",
+                    whitelistValidationResult.ErrorMessage);
                 return false;
             }
 
-            // Update state
-            var configureServersEvent = new ConfigureMCPServersStateLogEvent
-            {
-                MCPServers = mcpAgents
-            };
-
-            var enableMCPToolsEvent = new SetEnableMCPToolsStateLogEvent
-            {
-                EnableMCPTools = true
-            };
-
-            RaiseEvent(configureServersEvent);
-            RaiseEvent(enableMCPToolsEvent);
-            await ConfirmEvents();
-
-            // Update kernel tools if brain is initialized
-            if (_brain != null)
-            {
-                await UpdateKernelWithMCPToolsAsync();
-            }
-
-            return true;
+            var mcpAgents = await ProcessMCPServerConfigsAsync(servers);
+            return await CompleteMCPConfigurationAsync(mcpAgents);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to configure MCP servers 2");
+            Logger.LogError(ex, "Failed to configure MCP servers from configurations");
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Validate MCP server configurations against whitelist
+    /// </summary>
+    /// <param name="servers">List of MCP server configurations to validate</param>
+    /// <returns>Validation result</returns>
+    protected virtual async Task<MCPWhitelistValidationResult> ValidateAgainstWhitelistAsync(
+        List<MCPServerConfig> servers)
+    {
+        try
+        {
+            var mcpServerOptions = ServiceProvider.GetRequiredService<IOptions<MCPServerOptions>>();
+            if (mcpServerOptions.Value.EnableAllMCPServers)
+            {
+                return new MCPWhitelistValidationResult { IsValid = true };
+            }
+
+            var gAgentFactory = ServiceProvider.GetRequiredService<IGAgentFactory>();
+            var mcpServerConfigGAgent = await gAgentFactory.GetMCPServerConfigGAgent();
+            return await mcpServerConfigGAgent.ValidateServerAgainstWhitelistAsync(servers);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error validating MCP servers against whitelist");
+            return new MCPWhitelistValidationResult
+            {
+                IsValid = false,
+                ErrorMessage = $"Validation error: {ex.Message}"
+            };
         }
     }
 
@@ -347,12 +292,19 @@ public abstract partial class
                     // Check if we have type information for this parameter
                     if (toolInfo?.Parameters.TryGetValue(key, out var paramInfo) == true)
                     {
-                        parameters[key] = ConvertToExpectedType(value, paramInfo.Type);
+                        parameters[key] = JsonConversionHelper.ConvertToExpectedType(value, paramInfo.Type, Logger);
                     }
                     else
                     {
                         // No type info, use basic conversion
-                        parameters[key] = ConvertJsonElementToBasicType(value);
+                        if (value is JsonElement jsonElement)
+                        {
+                            parameters[key] = JsonConversionHelper.ConvertJsonElementToBasicType(jsonElement);
+                        }
+                        else
+                        {
+                            parameters[key] = value;
+                        }
                     }
                 }
             }
@@ -377,7 +329,7 @@ public abstract partial class
             else if (response.Result != null)
             {
                 // If not MCPToolCallResult, try to serialize as JSON
-                result = JsonSerializer.Serialize(response.Result);
+                result = System.Text.Json.JsonSerializer.Serialize(response.Result);
             }
             else
             {
@@ -481,7 +433,7 @@ public abstract partial class
     {
         // Generate description containing complete JSON Schema
         var schema = GenerateSchemaForParameter(paramInfo);
-        var schemaJson = JsonSerializer.Serialize(schema, new System.Text.Json.JsonSerializerOptions
+        var schemaJson = JsonSerializer.Serialize(schema, new JsonSerializerOptions
         {
             WriteIndented = false
         });
@@ -713,7 +665,7 @@ public abstract partial class
             try
             {
                 var schema = GenerateSchemaForParameter(paramInfo);
-                var schemaJson = JsonSerializer.Serialize(schema);
+                var schemaJson = System.Text.Json.JsonSerializer.Serialize(schema);
                 // Schema property is KernelJsonSchema type
                 var kernelJsonSchemaType = schemaProp.PropertyType;
                 var ctor = kernelJsonSchemaType.GetConstructor(new Type[] { typeof(string) });
@@ -803,208 +755,132 @@ public abstract partial class
         return schema;
     }
 
+    #endregion
+
+    #region Private Helper Methods
+
     /// <summary>
-    /// Convert JsonElement to basic types for Orleans serialization
+    /// Process existing MCP agents and extract server information
     /// </summary>
-    protected object ConvertJsonElementToBasicType(object value)
+    private async Task<Dictionary<string, MCPGAgentReference>> ProcessMCPAgentsAsync(List<IMCPGAgent> mcpGAgents)
     {
-        if (value is JsonElement element)
+        var mcpAgents = new Dictionary<string, MCPGAgentReference>();
+
+        foreach (var mcpAgent in mcpGAgents)
         {
-            switch (element.ValueKind)
+            var mcpAgentId = mcpAgent.GetPrimaryKey();
+            var server = (await mcpAgent.GetStateAsync()).MCPServerConfig;
+
+            mcpAgents[server.ServerName] = new MCPGAgentReference
             {
-                case JsonValueKind.String:
-                    return element.GetString() ?? string.Empty;
-                case JsonValueKind.Number:
-                    if (element.TryGetInt32(out int intValue))
-                        return intValue;
-                    if (element.TryGetInt64(out long longValue))
-                        return longValue;
-                    if (element.TryGetDouble(out double doubleValue))
-                        return doubleValue;
-                    return element.GetDecimal();
-                case JsonValueKind.True:
-                    return true;
-                case JsonValueKind.False:
-                    return false;
-                case JsonValueKind.Null:
-                    return null!;
-                case JsonValueKind.Array:
-                    var list = new List<object>();
-                    foreach (var item in element.EnumerateArray())
-                    {
-                        list.Add(ConvertJsonElementToBasicType(item));
-                    }
+                AgentId = mcpAgentId,
+                ServerName = server.ServerName,
+                Description = server.Description
+            };
 
-                    return list;
-                case JsonValueKind.Object:
-                    var dict = new Dictionary<string, object>();
-                    foreach (var prop in element.EnumerateObject())
-                    {
-                        dict[prop.Name] = ConvertJsonElementToBasicType(prop.Value);
-                    }
+            await LogServerToolsAsync(mcpAgent, server.ServerName);
+        }
 
-                    return dict;
-                default:
-                    return value.ToString() ?? string.Empty;
+        return mcpAgents;
+    }
+
+    /// <summary>
+    /// Process MCP server configurations and create agents
+    /// </summary>
+    private async Task<Dictionary<string, MCPGAgentReference>> ProcessMCPServerConfigsAsync(
+        List<MCPServerConfig> servers)
+    {
+        var gAgentFactory = ServiceProvider.GetRequiredService<IGAgentFactory>();
+        var mcpAgents = new Dictionary<string, MCPGAgentReference>();
+
+        foreach (var server in servers)
+        {
+            if (!server.IsValid())
+            {
+                Logger.LogWarning("Skipping invalid MCP server configuration for {ServerName}, {ServerConfig}",
+                    server.ServerName, server);
+                continue;
+            }
+
+            var mcpConfig = new MCPGAgentConfig
+            {
+                ServerConfig = server
+            };
+
+            var mcpAgent = await gAgentFactory.GetGAgentAsync<IMCPGAgent>(mcpConfig);
+            var mcpAgentId = mcpAgent.GetPrimaryKey();
+
+            mcpAgents[server.ServerName] = new MCPGAgentReference
+            {
+                AgentId = mcpAgentId,
+                ServerName = server.ServerName,
+                Description = server.Description
+            };
+
+            await LogServerToolsAsync(mcpAgent, server.ServerName);
+        }
+
+        return mcpAgents;
+    }
+
+    /// <summary>
+    /// Complete MCP configuration by updating state and kernel
+    /// </summary>
+    private async Task<bool> CompleteMCPConfigurationAsync(Dictionary<string, MCPGAgentReference> mcpAgents)
+    {
+        if (!mcpAgents.Any())
+        {
+            Logger.LogWarning("No valid MCP servers configured");
+            return false;
+        }
+
+        // Update state
+        var configureServersEvent = new ConfigureMCPServersStateLogEvent
+        {
+            MCPServers = mcpAgents
+        };
+
+        var enableMCPToolsEvent = new SetEnableMCPToolsStateLogEvent
+        {
+            EnableMCPTools = true
+        };
+
+        RaiseEvent(configureServersEvent);
+        RaiseEvent(enableMCPToolsEvent);
+        await ConfirmEvents();
+
+        // Update kernel tools if brain is initialized
+        if (_brain != null)
+        {
+            await UpdateKernelWithMCPToolsAsync();
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Log available tools from MCP server
+    /// </summary>
+    private async Task LogServerToolsAsync(IMCPGAgent mcpAgent, string serverName)
+    {
+        try
+        {
+            var serverTools = await mcpAgent.GetAvailableToolsAsync();
+            foreach (var tool in serverTools)
+            {
+                Logger.LogInformation("Registered MCP tool: {ServerName}.{ToolName} - {Description}",
+                    serverName, tool.Name, tool.Description);
             }
         }
-
-        return value;
-    }
-
-    /// <summary>
-    /// Convert a value to the expected type based on MCP parameter type definition
-    /// </summary>
-    private object ConvertToExpectedType(object value, string expectedType)
-    {
-        // Handle JsonElement conversion first
-        if (value is JsonElement element)
+        catch (Exception ex)
         {
-            return ConvertJsonElementToExpectedType(element, expectedType);
-        }
-
-        // Handle string to other types conversion
-        if (value is string strValue)
-        {
-            switch (expectedType.ToLower())
-            {
-                case "number":
-                case "float":
-                case "double":
-                    if (double.TryParse(strValue, out var doubleValue))
-                        return doubleValue;
-                    throw new InvalidOperationException($"Cannot convert string '{strValue}' to number");
-
-                case "integer":
-                case "int":
-                    if (int.TryParse(strValue, out var intValue))
-                        return intValue;
-                    throw new InvalidOperationException($"Cannot convert string '{strValue}' to integer");
-
-                case "boolean":
-                case "bool":
-                    if (bool.TryParse(strValue, out var boolValue))
-                        return boolValue;
-                    // Handle "0"/"1" as boolean
-                    if (strValue == "0") return false;
-                    if (strValue == "1") return true;
-                    throw new InvalidOperationException($"Cannot convert string '{strValue}' to boolean");
-
-                case "array":
-                    // Try to parse as JSON array
-                    try
-                    {
-                        return JsonSerializer.Deserialize<List<object>>(strValue) ?? new List<object>();
-                    }
-                    catch
-                    {
-                        // If not JSON, return as single-element list
-                        return new List<object> { strValue };
-                    }
-
-                case "object":
-                    // Try to parse as JSON object
-                    try
-                    {
-                        return JsonSerializer.Deserialize<Dictionary<string, object>>(strValue) ??
-                               new Dictionary<string, object>();
-                    }
-                    catch
-                    {
-                        // If not JSON, return as-is
-                        return strValue;
-                    }
-
-                case "string":
-                    return strValue;
-
-                default:
-                    // Unknown type, return as-is
-                    return strValue;
-            }
-        }
-
-        // For non-string values, use the existing conversion logic
-        return ConvertJsonElementToBasicType(value);
-    }
-
-    /// <summary>
-    /// Convert JsonElement to expected type based on MCP parameter type definition
-    /// </summary>
-    private object ConvertJsonElementToExpectedType(JsonElement element, string expectedType)
-    {
-        switch (expectedType.ToLower())
-        {
-            case "string":
-                return element.ValueKind == JsonValueKind.String
-                    ? element.GetString() ?? string.Empty
-                    : element.ToString();
-
-            case "number":
-            case "float":
-            case "double":
-                if (element.ValueKind == JsonValueKind.Number)
-                    return element.GetDouble();
-                if (element.ValueKind == JsonValueKind.String && double.TryParse(element.GetString(), out var d))
-                    return d;
-                throw new InvalidOperationException($"Cannot convert {element.ValueKind} to number");
-
-            case "integer":
-            case "int":
-                if (element.ValueKind == JsonValueKind.Number)
-                    return element.GetInt32();
-                if (element.ValueKind == JsonValueKind.String && int.TryParse(element.GetString(), out var i))
-                    return i;
-                throw new InvalidOperationException($"Cannot convert {element.ValueKind} to integer");
-
-            case "boolean":
-            case "bool":
-                if (element.ValueKind == JsonValueKind.True || element.ValueKind == JsonValueKind.False)
-                    return element.GetBoolean();
-                if (element.ValueKind == JsonValueKind.String)
-                {
-                    var str = element.GetString();
-                    if (bool.TryParse(str, out var b))
-                        return b;
-                    if (str == "0") return false;
-                    if (str == "1") return true;
-                }
-
-                throw new InvalidOperationException($"Cannot convert {element.ValueKind} to boolean");
-
-            case "array":
-                if (element.ValueKind == JsonValueKind.Array)
-                {
-                    var list = new List<object>();
-                    foreach (var item in element.EnumerateArray())
-                    {
-                        list.Add(ConvertJsonElementToBasicType(item));
-                    }
-
-                    return list;
-                }
-
-                throw new InvalidOperationException($"Cannot convert {element.ValueKind} to array");
-
-            case "object":
-                if (element.ValueKind == JsonValueKind.Object)
-                {
-                    var dict = new Dictionary<string, object>();
-                    foreach (var prop in element.EnumerateObject())
-                    {
-                        dict[prop.Name] = ConvertJsonElementToBasicType(prop.Value);
-                    }
-
-                    return dict;
-                }
-
-                throw new InvalidOperationException($"Cannot convert {element.ValueKind} to object");
-
-            default:
-                // Unknown type, use basic conversion
-                return ConvertJsonElementToBasicType(element);
+            Logger.LogError(ex, "Failed to log tools for MCP server {ServerName}", serverName);
         }
     }
+
+    #endregion
+
+    #region State Event Classes
 
     /// <summary>
     /// State log event for configuring MCP servers
@@ -1032,4 +908,6 @@ public abstract partial class
     {
         [Id(0)] public List<string> RegisteredFunctions { get; set; } = new();
     }
+
+    #endregion
 }

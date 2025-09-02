@@ -44,8 +44,8 @@ public class AevatarGAgentTestBaseModule : AbpModule
                 context.Services.GetRequiredService<IGAgentService>()));
         
         // 注册Mock MCP客户端提供者用于测试（ABP框架需要）
-        context.Services.AddSingleton<IMcpClientProvider, MockMcpClientProvider>();
-        context.Services.AddSingleton<MockMcpClientProvider>();
+        context.Services.AddSingleton<IMcpClientProvider, MockStdioMcpClientProvider>();
+        context.Services.AddSingleton<MockStdioMcpClientProvider>();
         
         Configure<AbpAutoMapperOptions>(options => { options.AddMaps<AevatarGAgentTestBaseModule>(); });
     }

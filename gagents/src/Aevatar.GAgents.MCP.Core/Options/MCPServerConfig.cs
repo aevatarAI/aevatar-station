@@ -25,6 +25,79 @@ public class MCPServerConfig
     [RegularExpression(@"^https?://[^\s/$.?#].[^\s]*$", ErrorMessage = "URL must start with http:// or https://")]
     public string? Url { get; set; }
     [Id(6)] public MCPServerType Type { get; set; }
+    
+    [Id(7)] public Dictionary<string, string> Headers { get; set; } = new();
+    
+    /// <summary>
+    /// OAuth configuration for StreamableHttp transport
+    /// </summary>
+    [Id(8)] public MCPOAuthConfig? OAuth { get; set; }
+    
+    public bool IsValid()
+    {
+        return !Command.IsNullOrWhiteSpace() || !Url.IsNullOrWhiteSpace();
+    }
+}
+
+/// <summary>
+/// OAuth configuration for MCP server authentication
+/// </summary>
+[GenerateSerializer]
+public class MCPOAuthConfig
+{
+    /// <summary>
+    /// OAuth provider type (e.g., "oauth2", "bearer", "basic")
+    /// </summary>
+    [Id(0)]
+    public string ProviderType { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Client ID for OAuth2
+    /// </summary>
+    [Id(1)]
+    public string? ClientId { get; set; }
+    
+    /// <summary>
+    /// Client Secret for OAuth2
+    /// </summary>
+    [Id(2)]
+    public string? ClientSecret { get; set; }
+    
+    /// <summary>
+    /// Access Token for Bearer authentication
+    /// </summary>
+    [Id(3)]
+    public string? AccessToken { get; set; }
+    
+    /// <summary>
+    /// Refresh Token for OAuth2
+    /// </summary>
+    [Id(4)]
+    public string? RefreshToken { get; set; }
+    
+    /// <summary>
+    /// Authorization URL for OAuth2
+    /// </summary>
+    [Id(5)]
+    public string? AuthorizationUrl { get; set; }
+    
+    /// <summary>
+    /// Token URL for OAuth2
+    /// </summary>
+    [Id(6)]
+    public string? TokenUrl { get; set; }
+    
+    /// <summary>
+    /// OAuth scopes
+    /// </summary>
+    [Id(7)]
+    public List<string> Scopes { get; set; } = new();
+    
+    /// <summary>
+    /// Additional OAuth parameters
+    /// </summary>
+    [Id(8)]
+    public Dictionary<string, string> AdditionalParameters { get; set; } = new();
 }
 
 /// <summary>
@@ -33,6 +106,7 @@ public class MCPServerConfig
 [GenerateSerializer]
 public enum MCPServerType
 {
+    Unknown,
     Stdio,
     StreamableHttp
 }
