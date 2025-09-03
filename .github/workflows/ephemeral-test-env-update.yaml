@@ -111,9 +111,9 @@ jobs:
         run: |
           # For Developer.Silo, use the regular Silo project but publish to Developer.Silo output directory
           if [[ "${{ matrix.servicename }}" == "Aevatar.Developer.Silo" ]]; then
-            dotnet publish station/src/Aevatar.Silo/Aevatar.Silo.csproj -o out/${{ matrix.servicename }}
+            dotnet publish station/src/Aevatar.Silo/Aevatar.Silo.csproj -c Release -o out/${{ matrix.servicename }}
           else
-            dotnet publish station/src/${{ matrix.servicename }}/${{ matrix.servicename }}.csproj -o out/${{ matrix.servicename }}
+            dotnet publish station/src/${{ matrix.servicename }}/${{ matrix.servicename }}.csproj -c Release -o out/${{ matrix.servicename }}
           fi
       
       # Upload build artifacts for the next job

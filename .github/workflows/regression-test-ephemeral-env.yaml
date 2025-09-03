@@ -96,7 +96,7 @@ jobs:
         if: ${{ steps.nuget-packages.outputs.cache-hit == 'true' }}
         continue-on-error: true
         run: ls -lh ~/.nuget/packages
-      - run: dotnet publish station/src/${{ matrix.servicename }}/${{ matrix.servicename }}.csproj -o out/${{ matrix.servicename }}
+      - run: dotnet publish station/src/${{ matrix.servicename }}/${{ matrix.servicename }}.csproj -c Release -o out/${{ matrix.servicename }}
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -124,9 +124,9 @@ jobs:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-${{ env.cache-name }}-benchmarks
       - name: Publish BroadcastLatencyBenchmark
-        run: dotnet publish station/benchmark/BroadcastLatencyBenchmark/BroadcastLatencyBenchmark.csproj -o out/BroadcastLatencyBenchmark
+        run: dotnet publish station/benchmark/BroadcastLatencyBenchmark/BroadcastLatencyBenchmark.csproj -c Release -o out/BroadcastLatencyBenchmark
       - name: Publish LatencyBenchmark  
-        run: dotnet publish station/benchmark/LatencyBenchmark/LatencyBenchmark.csproj -o out/LatencyBenchmark
+        run: dotnet publish station/benchmark/LatencyBenchmark/LatencyBenchmark.csproj -c Release -o out/LatencyBenchmark
       - name: Copy unified runner script
         run: cp unified-benchmark-runner.sh out/
       - name: Upload benchmark artifacts

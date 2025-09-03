@@ -51,7 +51,7 @@ jobs:
 
       # Publish .NET project
       - name: Publish .NET project      
-        run: dotnet publish station/src/${{ matrix.servicename }}/${{ matrix.servicename }}.csproj -o out/${{ matrix.servicename }}
+        run: dotnet publish station/src/${{ matrix.servicename }}/${{ matrix.servicename }}.csproj -c Release -o out/${{ matrix.servicename }}
       
       # Upload build artifacts for the next job
       - name: Upload build artifacts
