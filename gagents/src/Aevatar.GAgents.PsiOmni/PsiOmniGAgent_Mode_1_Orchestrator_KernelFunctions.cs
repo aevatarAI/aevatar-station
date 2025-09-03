@@ -168,7 +168,17 @@ public partial class PsiOmniGAgent
                 ParentId = parentAgentId,
                 Description = description,
                 Examples = exampleTasks,
-                Depth = State.Depth + 1
+                Depth = State.Depth + 1,
+                SystemLLM = State.SystemLLM ?? "",
+                SelfLlmConfig = new SelfLLMConfig
+                {
+                    ProviderEnum = State.LLM.ProviderEnum,
+                    ModelId = State.LLM.ModelIdEnum,
+                    ModelName = State.LLM.ModelName,
+                    ApiKey = State.LLM.ApiKey,
+                    Endpoint = State.LLM.Endpoint,
+                    Memo = State.LLM.Memo
+                }
             });
             var agentId = psi.GetGrainId();
             // There's a publisher tied to each parent agent.
