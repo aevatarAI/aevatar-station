@@ -741,8 +741,8 @@ jobs:
       PROJECT_NAME: ${{ needs.setup-ephermeral-test-env.outputs.project_name }}
       BROADCAST_STATUS: ${{ needs.run-broadcast-benchmark.outputs.status }}
       # Latency benchmark parameters - single source of truth
-      LAT_EPS: "10"
-      LAT_MAX_CONCURRENCY: "16"
+      LAT_EPS: "1"
+      LAT_MAX_CONCURRENCY: "128"
       LAT_DURATION: "120"
       LAT_WARMUP: "5"
       LAT_START_FROM_LEVEL: "16"
