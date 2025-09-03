@@ -217,4 +217,35 @@ public class DailyPushController : AbpControllerBase
             return StatusCode(500, new { error = localizedMessage });
         }
     }
+
+    /// <summary>
+    /// Get available timezones for testing
+    /// Helper endpoint to see which timezones have active users
+    /// </summary>
+    [HttpGet("test/timezones")]
+    public IActionResult GetAvailableTimezones()
+    {
+        // Common timezones for testing
+        var commonTimezones = new[]
+        {
+            "Asia/Shanghai",
+            "Asia/Tokyo", 
+            "America/New_York",
+            "America/Los_Angeles",
+            "Europe/London",
+            "Europe/Paris",
+            "Australia/Sydney",
+            "UTC"
+        };
+
+        return Ok(new
+        {
+            result = true,
+            data = new
+            {
+                timezones = commonTimezones,
+                note = "These are common timezones. Use any valid IANA timezone identifier."
+            }
+        });
+    }
 }
