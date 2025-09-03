@@ -37,18 +37,18 @@ namespace Aevatar.Controllers
         [HttpPost("generate")]
         public async Task<AiWorkflowViewConfigDto?> GenerateAsync([FromBody] GenerateWorkflowRequestDto request)
         {
-            _logger.LogInformation("收到工作流生成请求，用户目标：{UserGoal}", request.UserGoal);
+            _logger.LogInformation("Received workflow generation request. User goal: {UserGoal}", request.UserGoal);
 
             var result = await _workflowOrchestrationService.GenerateWorkflowAsync(request.UserGoal);
 
             if (result != null)
             {
-                _logger.LogInformation("工作流生成成功，包含 {NodeCount} 个节点",
+                _logger.LogInformation("Workflow generated successfully. Node count: {NodeCount}",
                     result.Properties?.WorkflowNodeList?.Count ?? 0);
             }
             else
             {
-                _logger.LogWarning("工作流生成失败");
+                _logger.LogWarning("Workflow generation failed");
             }
 
             return result;
@@ -63,11 +63,11 @@ namespace Aevatar.Controllers
         public async Task<TextCompletionResponseDto> GenerateTextCompletionAsync(
             [FromBody] TextCompletionRequestDto request)
         {
-            _logger.LogInformation("收到文本补全请求，输入：{UserGoal}", request.UserGoal);
+            _logger.LogInformation("Received text completion request. Input: {UserGoal}", request.UserGoal);
 
             var result = await _textCompletionService.GenerateCompletionsAsync(request);
 
-            _logger.LogInformation("文本补全生成成功，返回 {Count} 个选项", result.Completions?.Count ?? 0);
+            _logger.LogInformation("Text completions generated successfully. Count: {Count}", result.Completions?.Count ?? 0);
 
             return result;
         }

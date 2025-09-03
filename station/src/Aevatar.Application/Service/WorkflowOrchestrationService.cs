@@ -17,12 +17,14 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans;
 using Orleans.Runtime;
+using Orleans.Metadata;
 using Newtonsoft.Json;
 using JsonException = Newtonsoft.Json.JsonException;
 using JsonConvert = Newtonsoft.Json.JsonConvert;
 using Newtonsoft.Json.Linq;
 using Aevatar.Application.Contracts.WorkflowOrchestration;
 using Aevatar.Options;
+using Volo.Abp;
 
 namespace Aevatar.Application.Service;
 
@@ -35,23 +37,67 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     private readonly IClusterClient _clusterClient;
     private readonly IUserAppService _userAppService;
     private readonly IGAgentManager _gAgentManager;
-    private readonly IGAgentFactory _gAgentFactory;
     private readonly IOptionsMonitor<AIServicePromptOptions> _promptOptions;
+    private readonly IOptionsMonitor<AgentOptions> _agentOptions;
+    private readonly GrainTypeResolver _grainTypeResolver;
 
     public WorkflowOrchestrationService(
         ILogger<WorkflowOrchestrationService> logger,
         IClusterClient clusterClient,
         IUserAppService userAppService,
         IGAgentManager gAgentManager,
-        IGAgentFactory gAgentFactory,
-        IOptionsMonitor<AIServicePromptOptions> promptOptions)
+        IOptionsMonitor<AIServicePromptOptions> promptOptions,
+        IOptionsMonitor<AgentOptions> agentOptions,
+        GrainTypeResolver grainTypeResolver)
     {
         _logger = logger;
         _clusterClient = clusterClient;
         _userAppService = userAppService;
         _gAgentManager = gAgentManager;
-        _gAgentFactory = gAgentFactory;
         _promptOptions = promptOptions;
+        _agentOptions = agentOptions;
+        _grainTypeResolver = grainTypeResolver;
+    }
+
+    /// <summary>
+    /// 获取过滤后的业务Agent类型（排除系统Agent）
+    /// </summary>
+    private List<Type> GetBusinessAgentTypes()
+    {
+        _logger.LogInformation("=== GetBusinessAgentTypes: Starting agent filtering process ===");
+        
+        var systemAgents = _agentOptions.CurrentValue.SystemAgentList;
+        _logger.LogInformation("System agents to exclude: [{SystemAgents}]", string.Join(", ", systemAgents));
+        
+        var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
+        _logger.LogInformation("Total available GAgent types: {Count}", availableGAgents.Count());
+        _logger.LogDebug("All available GAgent types: [{AllAgents}]", 
+            string.Join(", ", availableGAgents.Select(a => $"{a.Name}({a.Namespace})")));
+        
+        var validAgents = availableGAgents.Where(a => !a.Namespace?.StartsWith("OrleansCodeGen") == true).ToList();
+        _logger.LogInformation("After filtering OrleansCodeGen: {Count} agents", validAgents.Count);
+        
+        if (validAgents.Count != availableGAgents.Count())
+        {
+            var excludedCodeGen = availableGAgents.Where(a => a.Namespace?.StartsWith("OrleansCodeGen") == true);
+            _logger.LogDebug("Excluded OrleansCodeGen agents: [{ExcludedAgents}]", 
+                string.Join(", ", excludedCodeGen.Select(a => a.Name)));
+        }
+        
+        var businessAgentTypes = validAgents.Where(a => !systemAgents.Contains(a.Name)).ToList();
+        _logger.LogInformation("Final business agents after excluding system agents: {Count}", businessAgentTypes.Count);
+        _logger.LogInformation("Business agent types: [{BusinessAgents}]", 
+            string.Join(", ", businessAgentTypes.Select(a => a.Name)));
+        
+        if (validAgents.Count != businessAgentTypes.Count)
+        {
+            var excludedSystemAgents = validAgents.Where(a => systemAgents.Contains(a.Name));
+            _logger.LogDebug("Excluded system agents: [{ExcludedSystemAgents}]", 
+                string.Join(", ", excludedSystemAgents.Select(a => a.Name)));
+        }
+        
+        _logger.LogInformation("=== GetBusinessAgentTypes: Filtering complete ===");
+        return businessAgentTypes;
     }
 
     /// <summary>
@@ -61,10 +107,11 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     /// <returns>前端可渲染的工作流视图配置</returns>
     public async Task<AiWorkflowViewConfigDto?> GenerateWorkflowAsync(string userGoal)
     {
-        if (string.IsNullOrWhiteSpace(userGoal))
+        // Check if user goal is empty or too short - require minimum meaningful description length
+        if (string.IsNullOrWhiteSpace(userGoal) || userGoal.Trim().Length < 10)
         {
-            _logger.LogWarning("Empty user goal provided for workflow generation");
-            return null;
+            _logger.LogWarning("User goal empty or too short for workflow generation: {UserGoal}", userGoal ?? "null");
+            throw new UserFriendlyException("Your description is too simple, please provide more detailed generation requirements.");
         }
 
         var currentUserId = _userAppService.GetCurrentUserId();
@@ -115,11 +162,10 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         
         try
         {
-            _logger.LogDebug("Getting available agent types from GAgentManager using reflection approach");
-            var availableTypes = _gAgentManager.GetAvailableGAgentTypes();
-            var validAgentTypes = availableTypes.Where(t => !t.Namespace?.StartsWith("OrleansCodeGen") == true).ToList();
+            _logger.LogDebug("Getting business agent types (excluding system agents)");
+            var validAgentTypes = GetBusinessAgentTypes();
             
-            _logger.LogInformation("Found {TypeCount} valid agent types to process", validAgentTypes.Count);
+            _logger.LogInformation("Found {TypeCount} business agent types to process", validAgentTypes.Count);
             
             var agentDescriptions = new List<AiWorkflowAgentInfoDto>();
             
@@ -164,6 +210,22 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             Type = agentType.FullName ?? agentType.Name,
             Description = description
         };
+    }
+
+    /// <summary>
+    /// 将AI生成的简单类型名称映射为完整的GrainType名称
+    /// </summary>
+    private string MapSimpleTypeNameToFullTypeName(string simpleTypeName)
+    {
+        if (string.IsNullOrEmpty(simpleTypeName) || _grainTypeResolver == null)
+            return simpleTypeName;
+
+        var matchedType = GetBusinessAgentTypes()
+            .FirstOrDefault(t => t.Name == simpleTypeName);
+
+        return matchedType != null 
+            ? _grainTypeResolver.GetGrainType(matchedType).ToString()
+            : simpleTypeName;
     }
 
     #endregion
@@ -245,7 +307,11 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             promptBuilder.AppendLine(_promptOptions.CurrentValue.OutputRequirementsTemplate);
             promptBuilder.AppendLine();
 
-            // 4. JSON格式规范
+            // 4. 重要约束条件
+            promptBuilder.AppendLine(_promptOptions.CurrentValue.CriticalConstraintsTemplate);
+            promptBuilder.AppendLine();
+
+            // 5. JSON格式规范
             promptBuilder.AppendLine(_promptOptions.CurrentValue.JsonFormatSpecificationTemplate);
 
             var baseInstructions = promptBuilder.ToString();
@@ -300,144 +366,149 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     {
         try
         {
-            _logger.LogInformation("开始解析工作流JSON. Content length: {ContentLength}", jsonContent?.Length ?? 0);
-            
+            _logger.LogInformation("Start parsing workflow JSON. Content length: {ContentLength}", jsonContent?.Length ?? 0);
+
             if (string.IsNullOrWhiteSpace(jsonContent))
             {
                 _logger.LogWarning("Empty JSON content provided for parsing");
                 return null;
             }
 
-            // Clean and validate JSON
             var cleanJson = AiAgentHelper.CleanJsonContent(jsonContent);
-            
             _logger.LogDebug("Parsing workflow JSON content: {CleanJson}", cleanJson);
-            
-            // Parse as JObject first to handle field mapping
+
             var jsonObject = JObject.Parse(cleanJson);
-            
-            // Create the mapped workflow configuration
-            var workflowConfig = new AiWorkflowViewConfigDto();
-            
-            // Map top-level fields
-            workflowConfig.Name = jsonObject["name"]?.ToString() ?? "Unnamed Workflow";
-            
-            // Handle properties object
-            var propertiesObj = jsonObject["properties"] as JObject;
-            if (propertiesObj != null)
+
+            // Simplified: expect the flat schema as primary, fall back to properties if present
+            var workflow = new AiWorkflowViewConfigDto
             {
-                workflowConfig.Properties = new AiWorkflowPropertiesDto
+                Name = jsonObject["name"]?.ToString() ?? "Unnamed Workflow",
+                Properties = new AiWorkflowPropertiesDto
                 {
-                    Name = propertiesObj["name"]?.ToString() ?? workflowConfig.Name,
+                    // Prefer nested properties.name when present, fall back to top-level name
+                    Name = (jsonObject["properties"] as JObject)?["name"]?.ToString()
+                           ?? jsonObject["name"]?.ToString()
+                           ?? "Unnamed Workflow",
                     WorkflowNodeList = new List<AiWorkflowNodeDto>(),
                     WorkflowNodeUnitList = new List<AiWorkflowNodeUnitDto>()
-                };
-                
-                // Map workflow nodes with field transformation
-                var nodeListArray = propertiesObj["workflowNodeList"] as JArray;
-                if (nodeListArray != null)
-                {
-                    foreach (var nodeToken in nodeListArray)
-                    {
-                        var nodeObj = nodeToken as JObject;
-                        if (nodeObj != null)
-                        {
-                            var mappedNode = new AiWorkflowNodeDto
-                            {
-                                NodeId = nodeObj["nodeId"]?.ToString() ?? Guid.NewGuid().ToString(),
-                                // Map AI's nodeType to frontend's agentType
-                                AgentType = nodeObj["nodeType"]?.ToString() ?? nodeObj["agentType"]?.ToString() ?? "",
-                                // Map AI's nodeName to frontend's name
-                                Name = nodeObj["nodeName"]?.ToString() ?? nodeObj["name"]?.ToString() ?? "",
-                                Properties = new Dictionary<string, object>()
-                            };
-                            
-                            // Handle extended data mapping
-                            var extendedDataObj = nodeObj["extendedData"] as JObject;
-                            if (extendedDataObj != null)
-                            {
-                                mappedNode.ExtendedData = new AiWorkflowNodeExtendedDataDto
-                                {
-                                    // Use AI's position if provided, otherwise default to "0"
-                                    XPosition = extendedDataObj["xPosition"]?.ToString() ?? "0",
-                                    YPosition = extendedDataObj["yPosition"]?.ToString() ?? "0"
-                                };
-                                
-                                // Store AI's description in properties for reference
-                                var description = extendedDataObj["description"]?.ToString();
-                                if (!string.IsNullOrEmpty(description))
-                                {
-                                    mappedNode.Properties["description"] = description;
-                                }
-                            }
-                            else
-                            {
-                                mappedNode.ExtendedData = new AiWorkflowNodeExtendedDataDto
-                                {
-                                    XPosition = "0",
-                                    YPosition = "0"
-                                };
-                            }
-                            
-                            // Copy node properties
-                            var propertiesObj2 = nodeObj["properties"] as JObject;
-                            if (propertiesObj2 != null)
-                            {
-                                foreach (var prop in propertiesObj2)
-                                {
-                                    mappedNode.Properties[prop.Key] = prop.Value?.ToObject<object>() ?? "";
-                                }
-                            }
-                            
-                            workflowConfig.Properties.WorkflowNodeList.Add(mappedNode);
-                            _logger.LogDebug("Mapped node: {NodeId} -> AgentType: {AgentType}, Name: {Name}",
-                                mappedNode.NodeId, mappedNode.AgentType, mappedNode.Name);
-                        }
-                    }
                 }
-                
-                // Map workflow node connections with field transformation
-                var nodeUnitArray = propertiesObj["workflowNodeUnitList"] as JArray;
-                if (nodeUnitArray != null)
-                {
-                    foreach (var unitToken in nodeUnitArray)
-                    {
-                        var unitObj = unitToken as JObject;
-                        if (unitObj != null)
-                        {
-                            var mappedUnit = new AiWorkflowNodeUnitDto
-                            {
-                                // Map AI's fromNodeId to frontend's nodeId
-                                NodeId = unitObj["fromNodeId"]?.ToString() ?? unitObj["nodeId"]?.ToString() ?? "",
-                                // Map AI's toNodeId to frontend's nextNodeId
-                                NextNodeId = unitObj["toNodeId"]?.ToString() ?? unitObj["nextNodeId"]?.ToString() ?? ""
-                            };
-                            
-                            workflowConfig.Properties.WorkflowNodeUnitList.Add(mappedUnit);
-                            _logger.LogDebug("Mapped connection: {NodeId} -> {NextNodeId}", 
-                                mappedUnit.NodeId, mappedUnit.NextNodeId);
-                        }
-                    }
-                }
-            }
-            else
+            };
+
+            // Pick node/edge arrays (flat first, then properties wrapper)
+            var nodesArray = (jsonObject["workflowNodeList"] as JArray)
+                             ?? (jsonObject["properties"] as JObject)?["workflowNodeList"] as JArray
+                             ?? new JArray();
+            var edgesArray = (jsonObject["workflowNodeUnitList"] as JArray)
+                             ?? (jsonObject["properties"] as JObject)?["workflowNodeUnitList"] as JArray
+                             ?? new JArray();
+
+            // 创建originalId到GUID的映射
+            var nodeIdMapping = new Dictionary<string, string>();
+            var nodeIndex = 0;
+
+            // 解析节点并建立映射关系
+            foreach (var token in nodesArray.OfType<JObject>())
             {
-                _logger.LogWarning("Properties object is missing, creating default");
-                workflowConfig.Properties = new AiWorkflowPropertiesDto
+                // 从JSON中获取原始的node ID
+                var originalNodeId = token.Value<string>("nodeId")
+                                   ?? $"node_{nodeIndex}"; // 为没有ID的节点创建fallback ID
+                
+                // 生成新的GUID并建立映射
+                var newNodeId = Guid.NewGuid().ToString();
+                nodeIdMapping[originalNodeId] = newNodeId;
+                _logger.LogDebug("Node ID mapping: {OriginalId} -> {NewGuid}", originalNodeId, newNodeId);
+                
+                // 从JSON中获取简单的agent类型名称
+                var simpleAgentType = token.Value<string>("nodeType")
+                                    ?? token.Value<string>("agentType")
+                                    ?? string.Empty;
+                
+                // 将简单类型名称映射为完整的GrainType名称
+                var fullAgentType = MapSimpleTypeNameToFullTypeName(simpleAgentType);
+                
+                // 直接使用GUID作为NodeId
+                var node = new AiWorkflowNodeDto
                 {
-                    Name = workflowConfig.Name,
-                    WorkflowNodeList = new List<AiWorkflowNodeDto>(),
-                    WorkflowNodeUnitList = new List<AiWorkflowNodeUnitDto>()
+                    NodeId = newNodeId, // 直接使用GUID
+                    AgentType = fullAgentType,
+                    // Support both nodeName and name as schema variants
+                    Name = token.Value<string>("nodeName")
+                           ?? token.Value<string>("name")
+                           ?? string.Empty,
+                    Properties = new Dictionary<string, object>(),
+                    ExtendedData = new AiWorkflowNodeExtendedDataDto
+                    {
+                        XPosition = token["extendedData"]?[(object)"xPosition"]?.ToString() ?? "0",
+                        YPosition = token["extendedData"]?[(object)"yPosition"]?.ToString() ?? "0"
+                    }
                 };
+
+                var desc = token["extendedData"]?[(object)"description"]?.ToString();
+                if (!string.IsNullOrEmpty(desc))
+                {
+                    node.Properties["description"] = desc;
+                }
+
+                // copy node properties as-is
+                var props = token["properties"] as JObject;
+                if (props != null)
+                {
+                    foreach (var p in props)
+                    {
+                        node.Properties[p.Key] = p.Value?.ToObject<object>() ?? string.Empty;
+                    }
+                }
+
+                workflow.Properties.WorkflowNodeList.Add(node);
+                nodeIndex++;
             }
 
-            _logger.LogInformation("Successfully parsed and mapped workflow JSON to view config with {NodeCount} nodes and {ConnectionCount} connections",
-                workflowConfig.Properties.WorkflowNodeList.Count, workflowConfig.Properties.WorkflowNodeUnitList.Count);
+            // 解析边并使用映射转换ID
+            foreach (var token in edgesArray.OfType<JObject>())
+            {
+                var originalFromNodeId = token.Value<string>("fromNodeId") ?? string.Empty;
+                var originalToNodeId = token.Value<string>("toNodeId") ?? string.Empty;
 
-            // Apply intelligent layout algorithm after parsing
-            ApplyIntelligentLayout(workflowConfig.Properties);
+                // 使用映射转换为GUID
+                var mappedFromNodeId = nodeIdMapping.ContainsKey(originalFromNodeId) 
+                    ? nodeIdMapping[originalFromNodeId] 
+                    : string.Empty;
+                var mappedToNodeId = nodeIdMapping.ContainsKey(originalToNodeId) 
+                    ? nodeIdMapping[originalToNodeId] 
+                    : string.Empty;
 
-            return workflowConfig;
+                if (!string.IsNullOrEmpty(mappedFromNodeId) && !string.IsNullOrEmpty(mappedToNodeId))
+                {
+                    var unit = new AiWorkflowNodeUnitDto
+                    {
+                        NodeId = mappedFromNodeId,     // 使用映射后的GUID
+                        NextNodeId = mappedToNodeId    // 使用映射后的GUID
+                    };
+                    workflow.Properties.WorkflowNodeUnitList.Add(unit);
+                }
+                else
+                {
+                    _logger.LogWarning("Skipping edge with unmapped node IDs: fromNodeId={FromNodeId}, toNodeId={ToNodeId}", 
+                        originalFromNodeId, originalToNodeId);
+                }
+            }
+
+            _logger.LogInformation("Parsed workflow: nodes={NodeCount}, connections={ConnCount}, nodeIdMappings={MappingCount}",
+                workflow.Properties.WorkflowNodeList.Count, workflow.Properties.WorkflowNodeUnitList.Count, nodeIdMapping.Count);
+
+            // Log all agent types generated by AI for debugging
+            var generatedAgentTypes = workflow.Properties.WorkflowNodeList
+                .Where(n => !string.IsNullOrEmpty(n.AgentType))
+                .Select(n => n.AgentType)
+                .Distinct()
+                .ToList();
+            _logger.LogInformation("AI generated agent types: [{GeneratedAgents}]", string.Join(", ", generatedAgentTypes));
+
+
+
+            // Layout
+            ApplyIntelligentLayout(workflow.Properties);
+            return workflow;
         }
         catch (JsonException ex)
         {

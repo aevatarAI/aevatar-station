@@ -9,6 +9,7 @@ using Orleans.Streams;
 // using Orleans.Runtime.Placement;
 using Orleans.Concurrency;
 using System.Diagnostics;
+using Aevatar.Core.Interception;
 
 namespace E2E.Grains;
 
@@ -59,6 +60,8 @@ public class TestDbGAgent : BroadcastGAgentBase<TestDbGState, TestDbStateLogEven
         _logger = logger;
     }
 
+
+    [Interceptor]
     protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)
     {
         using var activity = ActivitySource.StartActivity("OnGAgentActivate", ActivityKind.Internal);

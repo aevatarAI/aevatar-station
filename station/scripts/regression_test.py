@@ -21,7 +21,8 @@ EVENT_TYPE = "Aevatar.Application.Grains.Agents.TestAgent.FrontTestCreateEvent"
 EVENT_PARAM = "Name"
 
 AUTH_HOST = os.getenv("AUTH_HOST")
-API_HOST =  os.getenv("API_HOST")
+API_SERVER_HOST = os.getenv("API_SERVER_HOST")  # Only for CopyDeploymentWithPattern
+API_HOST = os.getenv("API_HOST")  # For most API endpoints
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 INDEX_NAME = f"aevatar-{CLIENT_ID}-testagentstateindex"
@@ -35,13 +36,27 @@ PERMISSION_EVENT_TYPE = "Aevatar.Application.Grains.Agents.TestAgent.SetAuthoriz
 
 @pytest.fixture(scope="session")
 def access_token():
-    """get access token"""
-    auth_data = {
-        "grant_type": "client_credentials",
-        "client_id": CLIENT_ID,
-        "client_secret": CLIENT_SECRET,
-        "scope": "Aevatar"
-    }
+    """get access token - uses admin credentials if LOCAL_RUN is set"""
+    # Check if LOCAL_RUN environment variable is set
+    if os.getenv("LOCAL_RUN", "").lower() in ["true", "1", "yes"]:
+        # Use admin credentials for local runs
+        auth_data = {
+            "grant_type": "password",
+            "username": ADMIN_USERNAME,
+            "password": ADMIN_PASSWORD,
+            "scope": "Aevatar",
+            "client_id": "AevatarAuthServer"
+        }
+        logger.info("Using admin access token (LOCAL_RUN is set)")
+    else:
+        # Use client credentials for normal runs
+        auth_data = {
+            "grant_type": "client_credentials",
+            "client_id": CLIENT_ID,
+            "client_secret": CLIENT_SECRET,
+            "scope": "Aevatar"
+        }
+        logger.info("Using client credentials access token")
 
     response = requests.post(
         f"{AUTH_HOST}/connect/token",
@@ -375,7 +390,7 @@ def test_query_agent_list(api_headers, test_agent):
     """test query agent list"""
     # query available agent list
     response = requests.get(
-        f"{API_HOST}//api/agent/agent-type-info-list",
+        f"{API_HOST}/api/agent/agent-type-info-list",
         headers=api_headers,
         verify=False
     )
@@ -680,6 +695,73 @@ def test_workflow_services_comprehensive(api_headers):
     assert "completions" in completion_result
     
     logger.info("Comprehensive workflow services test completed successfully")
+
+def test_create_default_workflow_view(api_headers, api_admin_headers):
+    """test create default workflow view"""
+    response = requests.post(
+        f"{API_HOST}/api/workflow-view/default",
+        json={},
+        headers=api_headers,
+        verify=False
+    )
+    assert_status_code(response)
+    view_agent_id = response.json()["data"]["id"]
+    logger.debug(f"view_agent_id: {view_agent_id}")
+    assert view_agent_id != "00000000-0000-0000-0000-000000000000"
+
+def test_silo_deployment_operations(api_admin_headers):
+    """Comprehensive test for silo deployment operations"""
+    logger.info("Running comprehensive silo deployment test")
+    
+    # Test copying multiple silo types
+    silo_types = [
+        {"pattern": "Scheduler", "version": "scheduler-v1"},
+        {"pattern": "User", "version": "user-v1"}
+    ]
+    
+    for silo_config in silo_types:
+        copy_params = {
+            "clientId": CLIENT_ID,
+            "sourceVersion": "1",
+            "targetVersion": silo_config["version"],
+            "siloNamePattern": silo_config["pattern"]
+        }
+        
+        logger.info(f"Copying {silo_config['pattern']} silo with version {silo_config['version']}")
+        response = requests.post(
+            f"{API_SERVER_HOST}/api/users/CopyDeploymentWithPattern",
+            params=copy_params,
+            headers=api_admin_headers,
+            verify=False
+        )
+        assert_status_code(response)
+        logger.info(f"{silo_config['pattern']} silo deployment completed")
+    
+    logger.info("Comprehensive silo deployment test completed successfully")
+
+
+def test_agent_validation_basic(api_headers):
+    """Basic agent validation service test"""
+    logger.info("Testing agent validation service")
+    
+    # Test with simple valid configuration
+    validation_request = {
+        "gAgentNamespace": TEST_AGENT,
+        "configJson": '{"name": "TestAgent"}'
+    }
+    
+    response = requests.post(
+        f"{API_HOST}/api/agent/validation/validate-config",
+        json=validation_request,
+        headers=api_headers,
+        verify=False
+    )
+    assert_status_code(response)
+    
+    # Verify basic response structure
+    response_data = response.json()
+    assert "data" in response_data
+    logger.info("Agent validation service test completed")
 
 
 def test_publish_workflow_view(api_headers, api_admin_headers):

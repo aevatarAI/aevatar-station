@@ -59,7 +59,7 @@ public class UserController : AevatarController
     {
         await _developerService.DeleteServiceAsync(clientId);
     }
-    
+
     [Authorize]
     [HttpPost("updateDockerImage")]
     public async Task UpdateDockerImageAsync(HostTypeEnum hostType, string imageName, string version = "1")
@@ -95,5 +95,14 @@ public class UserController : AevatarController
     public async Task CopyHost(string sourceClientId, string newClientId)
     {
         await _developerService.CopyHostAsync(sourceClientId, newClientId, "1");
+    }
+
+    [HttpPost("CopyDeploymentWithPattern")]
+    [Authorize(Policy = AevatarPermissions.AdminPolicy)]
+    public async Task CopyDeploymentWithPattern(string clientId, string sourceVersion, string targetVersion,
+        string siloNamePattern)
+    {
+        await _developerService.CopyDeploymentWithPatternAsync(clientId, sourceVersion, targetVersion, 
+            siloNamePattern);
     }
 }

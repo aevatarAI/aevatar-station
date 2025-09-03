@@ -1,0 +1,72 @@
+<Solution>
+  <Folder Name="/docs/">
+    <File Path="CLAUDE.md" />
+    <File Path="docs\SSE_MCP_Support.md" />
+    <File Path="docs\AIGAgentBase_Reference.md" />
+    <File Path="docs\SSE_MCP_Auto_Detection.md" />
+    <File Path="docs\GAgentToolsRegistration.md" />
+    <File Path="docs\AIGAgentBase_Reference_zh.md" />
+    <File Path="docs\mcp_provider_implementation.md" />
+    <File Path="docs\AIGAgentBase_MCP_Type_Conversion.md" />
+    <File Path="docs\GroupChat-Modular-Design-Proposal.md" />
+    <File Path="docs\MCP_Client_Providers_Architecture.md" />
+    <File Path="docs\AIGAgentBase_Tool_Integration_Guide.md" />
+    <File Path="docs\SSE_MCP_Tool_Calling_Implementation.md" />
+    <File Path="docs\AIGAgentBase_Tool_Architecture_Overview.md" />
+    <File Path="md\aevatar-gagents.md" />
+    <File Path="md\aevatar-gagents-ai-abstractions.md" />
+    <File Path="md\aevatar-gagents-aigagent.md" />
+    <File Path="md\aevatar-gagents-semantickernel.md" />
+    <File Path="md\aevatar-groupchat-analysis.md" />
+  </Folder>
+  <Folder Name="/samples/" />
+  <Folder Name="/samples/AIGAgent/">
+    <Project Path="simples\AIGAgent\SimpleAIGAgent.Client\SimpleAIGAgent.Client.csproj" />
+    <Project Path="simples\AIGAgent\SimpleAIGAgent.Grains\SimpleAIGAgent.Grains.csproj" />
+    <Project Path="simples\AIGAgent\SimpleAIGAgent.Silo\SimpleAIGAgent.Silo.csproj" />
+  </Folder>
+  <Folder Name="/samples/GroupChat/">
+    <Project Path="simples\GroupChat\GroupChat.Client\GroupChat.Client.csproj" />
+    <Project Path="simples\GroupChat\GroupChat.Grains\GroupChat.Grains.csproj" />
+    <Project Path="simples\GroupChat\GroupChat.Silo\GroupChat.Silo.csproj" />
+  </Folder>
+  <Folder Name="/solution-items/">
+    <File Path="common.props" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src\Aevatar.GAgents.AElf\Aevatar.GAgents.AElf.csproj" />
+    <Project Path="src\Aevatar.GAgents.AI.Abstractions\Aevatar.GAgents.AI.Abstractions.csproj" />
+    <Project Path="src\Aevatar.GAgents.AIGAgent.Core\Aevatar.GAgents.AIGAgent.Core.csproj" />
+    <Project Path="src\Aevatar.GAgents.AIGAgent\Aevatar.GAgents.AIGAgent.csproj" />
+    <Project Path="src\Aevatar.GAgents.Basic\Aevatar.GAgents.Basic.csproj" />
+    <Project Path="src\Aevatar.GAgents.ChatAgent\Aevatar.GAgents.ChatAgent.csproj" />
+    <Project Path="src\Aevatar.GAgents.Executor\Aevatar.GAgents.Executor.csproj" />
+    <Project Path="src\Aevatar.GAgents.GraphRetrievalAgent\Aevatar.GAgents.GraphRetrievalAgent.csproj" />
+    <Project Path="src\Aevatar.GAgents.GroupChat.Core\Aevatar.GAgents.GroupChat.Core.csproj" />
+    <Project Path="src\Aevatar.GAgents.GroupChat.GroupMember\Aevatar.GAgents.GroupChat.GroupMember.csproj" />
+    <Project Path="src\Aevatar.GAgents.GroupChat\Aevatar.GAgents.GroupChat.csproj" />
+    <Project Path="src\Aevatar.GAgents.InputGAgent\Aevatar.GAgents.InputGAgent.csproj" />
+    <Project Path="src\Aevatar.GAgents.MCP.Core\Aevatar.GAgents.MCP.Core.csproj" />
+    <Project Path="src\Aevatar.GAgents.MCP\Aevatar.GAgents.MCP.csproj" />
+    <Project Path="src\Aevatar.GAgents.MultiAIChatGAgent\Aevatar.GAgents.MultiAIChatGAgent.csproj" />
+    <Project Path="src\Aevatar.GAgents.PsiOmni.Plugins\Aevatar.GAgents.PsiOmni.Plugins.csproj" />
+    <Project Path="src\Aevatar.GAgents.PsiOmni\Aevatar.GAgents.PsiOmni.csproj" />
+    <Project Path="src\Aevatar.GAgents.Pumpfun\Aevatar.GAgents.Pumpfun.csproj" />
+    <Project Path="src\Aevatar.GAgents.Router\Aevatar.GAgents.Router.csproj" />
+    <Project Path="src\Aevatar.GAgents.SemanticKernel\Aevatar.GAgents.SemanticKernel.csproj" />
+    <Project Path="src\Aevatar.GAgents.SocialGAgent\Aevatar.GAgents.SocialGAgent.csproj" />
+    <Project Path="src\Aevatar.GAgents.Telegram\Aevatar.GAgents.Telegram.csproj" />
+    <Project Path="src\Aevatar.GAgents.Twitter\Aevatar.GAgents.Twitter.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test\Aevatar.GAgents.AIGAgent.Test\Aevatar.GAgents.AIGAgent.Test.csproj" />
+    <Project Path="test\Aevatar.GAgents.ChatAgent.Test\Aevatar.GAgents.ChatAgent.Test.csproj" />
+    <Project Path="test\Aevatar.GAgents.GroupChat.Test\Aevatar.GAgents.GroupChat.Test.csproj" />
+    <Project Path="test\Aevatar.GAgents.MCP.Test\Aevatar.GAgents.MCP.Test.csproj" />
+    <Project Path="test\Aevatar.GAgents.MultiAIChatGAgent.Test\Aevatar.GAgents.MultiAIChatGAgent.Test.csproj" />
+    <Project Path="test\Aevatar.GAgents.TestBase\Aevatar.GAgents.TestBase.csproj" />
+    <Project Path="test\Aevatar.GAgents.Workflow.Test\Aevatar.GAgents.Workflow.Test.csproj" />
+  </Folder>
+</Solution>

@@ -13,7 +13,10 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Orleans;
+using Orleans.Metadata;
+using Orleans.Runtime;
 using Shouldly;
+using Volo.Abp;
 using Xunit;
 
 namespace Aevatar.Application.Tests.Service;
@@ -27,9 +30,11 @@ public class WorkflowOrchestrationServiceTests
     private readonly Mock<IClusterClient> _mockClusterClient;
     private readonly Mock<IUserAppService> _mockUserAppService;
     private readonly Mock<IGAgentManager> _mockGAgentManager;
-    private readonly Mock<IGAgentFactory> _mockGAgentFactory;
     private readonly Mock<IOptionsMonitor<AIServicePromptOptions>> _mockPromptOptions;
+    private readonly Mock<IOptionsMonitor<AgentOptions>> _mockAgentOptions;
     private readonly Mock<IWorkflowComposerGAgent> _mockWorkflowComposerGAgent;
+
+
     private readonly WorkflowOrchestrationService _service;
 
     public WorkflowOrchestrationServiceTests()
@@ -38,8 +43,8 @@ public class WorkflowOrchestrationServiceTests
         _mockClusterClient = new Mock<IClusterClient>();
         _mockUserAppService = new Mock<IUserAppService>();
         _mockGAgentManager = new Mock<IGAgentManager>();
-        _mockGAgentFactory = new Mock<IGAgentFactory>();
         _mockPromptOptions = new Mock<IOptionsMonitor<AIServicePromptOptions>>();
+        _mockAgentOptions = new Mock<IOptionsMonitor<AgentOptions>>();
         _mockWorkflowComposerGAgent = new Mock<IWorkflowComposerGAgent>();
 
         SetupMockDefaults();
@@ -49,8 +54,9 @@ public class WorkflowOrchestrationServiceTests
             _mockClusterClient.Object,
             _mockUserAppService.Object,
             _mockGAgentManager.Object,
-            _mockGAgentFactory.Object,
-            _mockPromptOptions.Object);
+            _mockPromptOptions.Object,
+            _mockAgentOptions.Object,
+            null!);
     }
 
     private void SetupMockDefaults()
@@ -79,38 +85,84 @@ public class WorkflowOrchestrationServiceTests
             NoAgentsAvailableMessage = "No agents available"
         };
         _mockPromptOptions.Setup(x => x.CurrentValue).Returns(promptOptions);
+        
+        // Setup AgentOptions with empty SystemAgentList for testing
+        var agentOptions = new AgentOptions
+        {
+            SystemAgentList = new List<string>() // Empty list for testing
+        };
+        _mockAgentOptions.Setup(x => x.CurrentValue).Returns(agentOptions);
+        
+        // 在单元测试中，GrainTypeResolver将为null，映射功能不会被调用
     }
 
     #region Basic Functionality Tests
 
     [Fact]
-    public async Task GenerateWorkflowAsync_WithEmptyUserGoal_ShouldReturnNull()
+    public async Task GenerateWorkflowAsync_WithEmptyUserGoal_ShouldThrowUserFriendlyException()
     {
-        // Act
-        var result = await _service.GenerateWorkflowAsync("");
-
-        // Assert
-        result.ShouldBeNull();
+        // Act & Assert
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _service.GenerateWorkflowAsync(""));
+        
+        exception.Message.ShouldBe("Your description is too simple, please provide more detailed generation requirements.");
     }
 
     [Fact]
-    public async Task GenerateWorkflowAsync_WithNullUserGoal_ShouldReturnNull()
+    public async Task GenerateWorkflowAsync_WithNullUserGoal_ShouldThrowUserFriendlyException()
     {
-        // Act
-        var result = await _service.GenerateWorkflowAsync(null);
-
-        // Assert
-        result.ShouldBeNull();
+        // Act & Assert
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _service.GenerateWorkflowAsync(null));
+        
+        exception.Message.ShouldBe("Your description is too simple, please provide more detailed generation requirements.");
     }
 
     [Fact]
-    public async Task GenerateWorkflowAsync_WithWhitespaceUserGoal_ShouldReturnNull()
+    public async Task GenerateWorkflowAsync_WithWhitespaceUserGoal_ShouldThrowUserFriendlyException()
     {
-        // Act
-        var result = await _service.GenerateWorkflowAsync("   \t\n   ");
+        // Act & Assert
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _service.GenerateWorkflowAsync("   \t\n   "));
+        
+        exception.Message.ShouldBe("Your description is too simple, please provide more detailed generation requirements.");
+    }
 
-        // Assert
-        result.ShouldBeNull();
+    [Fact]
+    public async Task GenerateWorkflowAsync_WithTooShortUserGoal_ShouldThrowUserFriendlyException()
+    {
+        // Act & Assert
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _service.GenerateWorkflowAsync("help"));
+        
+        exception.Message.ShouldBe("Your description is too simple, please provide more detailed generation requirements.");
+    }
+
+    [Fact]
+    public async Task GenerateWorkflowAsync_WithExactly9Characters_ShouldThrowUserFriendlyException()
+    {
+        // Act & Assert
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _service.GenerateWorkflowAsync("123456789"));
+        
+        exception.Message.ShouldBe("Your description is too simple, please provide more detailed generation requirements.");
+    }
+
+    [Fact]
+    public async Task GenerateWorkflowAsync_WithExactly10Characters_ShouldNotThrowException()
+    {
+        // Arrange
+        _mockWorkflowComposerGAgent.Setup(x => x.InitializeAsync(It.IsAny<InitializeDto>()))
+            .ReturnsAsync(true);
+        _mockWorkflowComposerGAgent.Setup(x => x.GenerateWorkflowJsonAsync(It.IsAny<string>()))
+            .ReturnsAsync("{}");
+
+        // Act
+        var result = await _service.GenerateWorkflowAsync("1234567890");
+
+        // Assert - Should not throw exception and should create empty workflow since no agents available
+        result.ShouldNotBeNull();
+        result.Name.ShouldBe("Empty Workflow");
     }
 
     [Fact]
@@ -248,8 +300,9 @@ public class WorkflowOrchestrationServiceTests
             _mockClusterClient.Object,
             _mockUserAppService.Object,
             _mockGAgentManager.Object,
-            _mockGAgentFactory.Object,
-            _mockPromptOptions.Object);
+            _mockPromptOptions.Object,
+            _mockAgentOptions.Object,
+            null); // Null is allowed for unit tests
 
         service.ShouldNotBeNull();
     }
@@ -323,7 +376,9 @@ public class WorkflowOrchestrationServiceTests
         result.Properties.WorkflowNodeList.Count.ShouldBe(2);
         
         var firstNode = result.Properties.WorkflowNodeList[0];
-        firstNode.NodeId.ShouldBe("node-1");
+        // NodeId is now auto-generated GUID, verify it's valid
+        firstNode.NodeId.ShouldNotBeNullOrEmpty();
+        Guid.TryParse(firstNode.NodeId, out _).ShouldBeTrue();
         firstNode.AgentType.ShouldBe("TestAgent");
         firstNode.Name.ShouldBe("First Node");
         firstNode.Properties.ShouldContainKeyAndValue("input", "test input");
@@ -333,15 +388,20 @@ public class WorkflowOrchestrationServiceTests
         firstNode.Properties.ShouldContainKeyAndValue("description", "This is the first node");
         
         var secondNode = result.Properties.WorkflowNodeList[1];
-        secondNode.NodeId.ShouldBe("node-2");
+        // NodeId is now auto-generated GUID, verify it's valid
+        secondNode.NodeId.ShouldNotBeNullOrEmpty();
+        Guid.TryParse(secondNode.NodeId, out _).ShouldBeTrue();
         secondNode.AgentType.ShouldBe("AnotherTestAgent");
         secondNode.Name.ShouldBe("Second Node");
         
         // Verify connections were mapped correctly
         result.Properties.WorkflowNodeUnitList.Count.ShouldBe(1);
         var connection = result.Properties.WorkflowNodeUnitList[0];
-        connection.NodeId.ShouldBe("node-1");
-        connection.NextNodeId.ShouldBe("node-2");
+        // Connection NodeIds are also auto-generated GUIDs now
+        connection.NodeId.ShouldNotBeNullOrEmpty();
+        connection.NextNodeId.ShouldNotBeNullOrEmpty();
+        Guid.TryParse(connection.NodeId, out _).ShouldBeTrue();
+        Guid.TryParse(connection.NextNodeId, out _).ShouldBeTrue();
     }
 
     [Fact]
@@ -382,7 +442,9 @@ public class WorkflowOrchestrationServiceTests
         result.ShouldNotBeNull();
         result.Name.ShouldBe("Markdown Wrapped Workflow");
         result.Properties.WorkflowNodeList.Count.ShouldBe(1);
-        result.Properties.WorkflowNodeList[0].NodeId.ShouldBe("test-node");
+        // NodeId is now auto-generated GUID, verify it's not empty and is valid GUID format
+        result.Properties.WorkflowNodeList[0].NodeId.ShouldNotBeNullOrEmpty();
+        Guid.TryParse(result.Properties.WorkflowNodeList[0].NodeId, out _).ShouldBeTrue();
     }
 
     [Fact]
@@ -922,9 +984,108 @@ public class WorkflowOrchestrationServiceTests
         result.Properties.WorkflowNodeList.Count.ShouldBe(1);
         
         var node = result.Properties.WorkflowNodeList[0];
-        node.NodeId.ShouldBe("node-1");
+        // NodeId is now auto-generated GUID, verify it's valid
+        node.NodeId.ShouldNotBeNullOrEmpty();
+        Guid.TryParse(node.NodeId, out _).ShouldBeTrue();
         node.AgentType.ShouldBe(""); // Default when nodeType/agentType missing
         node.Name.ShouldBe(""); // Default when nodeName/name missing
+    }
+
+    #endregion
+
+    #region System Agent Filtering Tests
+
+    [Fact]
+    public async Task GenerateWorkflowAsync_WithSystemAgentsInList_ShouldFilterOutSystemAgents()
+    {
+        // Arrange - Setup SystemAgentList with some test agents
+        var systemAgents = new List<string> { "TestSystemAgent", "GroupGAgent" };
+        var agentOptions = new AgentOptions { SystemAgentList = systemAgents };
+        var mockAgentOptions = new Mock<IOptionsMonitor<AgentOptions>>();
+        mockAgentOptions.Setup(x => x.CurrentValue).Returns(agentOptions);
+        
+        // Setup available agent types including system agents
+        var allAgentTypes = new List<Type> 
+        { 
+            typeof(TestBusinessAgent), 
+            typeof(TestSystemAgent), 
+            typeof(TestAgent) 
+        };
+        _mockGAgentManager.Setup(x => x.GetAvailableGAgentTypes()).Returns(allAgentTypes);
+        
+        // Create service with system agent filtering
+        var service = new WorkflowOrchestrationService(
+            _mockLogger.Object,
+            _mockClusterClient.Object,
+            _mockUserAppService.Object,
+            _mockGAgentManager.Object,
+            _mockPromptOptions.Object,
+            mockAgentOptions.Object,
+            null);
+
+        _mockWorkflowComposerGAgent.Setup(x => x.GenerateWorkflowJsonAsync(It.IsAny<string>()))
+            .ReturnsAsync("""
+                {
+                    "name": "Test Workflow",
+                    "workflowNodeList": [],
+                    "workflowNodeUnitList": []
+                }
+                """);
+
+        // Act
+        var result = await service.GenerateWorkflowAsync("Create a comprehensive workflow system for managing business processes with multiple agents and automated task distribution");
+        
+        // Assert - Should succeed and system agents should be filtered out
+        result.ShouldNotBeNull();
+        
+        // Verify that GetAvailableGAgentTypes was called (indirectly testing GetBusinessAgentTypes)
+        _mockGAgentManager.Verify(x => x.GetAvailableGAgentTypes(), Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task GenerateWorkflowAsync_WithSystemAgentsFiltered_ShouldOnlyProcessBusinessAgents()
+    {
+        // Arrange - Setup SystemAgentList 
+        var systemAgents = new List<string> { "TestSystemAgent" };
+        var agentOptions = new AgentOptions { SystemAgentList = systemAgents };
+        var mockAgentOptions = new Mock<IOptionsMonitor<AgentOptions>>();
+        mockAgentOptions.Setup(x => x.CurrentValue).Returns(agentOptions);
+        
+        // Setup mixed agent types
+        var allAgentTypes = new List<Type> 
+        { 
+            typeof(TestBusinessAgent),  // Should be included
+            typeof(TestSystemAgent)     // Should be filtered out
+        };
+        _mockGAgentManager.Setup(x => x.GetAvailableGAgentTypes()).Returns(allAgentTypes);
+        
+        // Create service with filtering
+        var service = new WorkflowOrchestrationService(
+            _mockLogger.Object,
+            _mockClusterClient.Object,
+            _mockUserAppService.Object,
+            _mockGAgentManager.Object,
+            _mockPromptOptions.Object,
+            mockAgentOptions.Object,
+            null);
+
+        _mockWorkflowComposerGAgent.Setup(x => x.GenerateWorkflowJsonAsync(It.IsAny<string>()))
+            .ReturnsAsync("""
+                {
+                    "name": "Test Workflow",
+                    "workflowNodeList": [],
+                    "workflowNodeUnitList": []
+                }
+                """);
+
+        // Act
+        var result = await service.GenerateWorkflowAsync("Create a comprehensive workflow system for managing business processes with multiple agents and automated task distribution");
+        
+        // Assert - Should succeed and the GetBusinessAgentTypes method should be called internally
+        result.ShouldNotBeNull();
+        
+        // Verify that GetAvailableGAgentTypes was called - this indirectly tests GetBusinessAgentTypes
+        _mockGAgentManager.Verify(x => x.GetAvailableGAgentTypes(), Times.AtLeastOnce);
     }
 
     #endregion
@@ -980,4 +1141,22 @@ public class ProblematicAgent
     {
         get => throw new NotImplementedException("This property always throws");
     }
-} 
+}
+
+/// <summary>
+/// Test business agent class for filtering tests
+/// </summary>
+[Description("Business agent for workflow orchestration")]
+public class TestBusinessAgent
+{
+    public string Name => "TestBusinessAgent";
+}
+
+/// <summary>
+/// Test system agent class for filtering tests
+/// </summary>
+[Description("System agent that should be filtered out")]
+public class TestSystemAgent
+{
+    public string Name => "TestSystemAgent";
+}

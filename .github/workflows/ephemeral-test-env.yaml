@@ -10,9 +10,17 @@ on:
       cors_urls:
         description: "Comma-separated list of allowed CORS URLs"
         required: true
-        default: 'http://localhost:3000,http://localhost:5173,http://localhost:5174,https://*.aevatar.ai'
+        default: 'http://localhost:3000,http://localhost:5173,http://localhost:5174,https://*.aevatar.ai,http://*.aevatar.ai'
+      frontend_needed:
+        description: 'Whether to deploy the frontend'
+        type: boolean
+        default: false
+      frontend_branch:
+        description: 'Branch to deploy'
+        type: string
+        default: 'develop'
       
-
+      
 run-name: Run Aevatar Station Ephemeral Test Environment on ${{ github.ref_name }} from ${{ github.sha }}
 
 env:
@@ -140,21 +148,27 @@ jobs:
         with:
           github-token: ${{ secrets.TOK }}
           script: |
+            const inputs = {
+              project_name: "${{ steps.generate-uuid.outputs.project_name }}",
+              environment_ttl: "${{ inputs.environment_ttl }}",
+              client_id: "${{ steps.generate-uuid.outputs.client_id }}",
+              client_secret: "${{ steps.generate-uuid.outputs.client_secret }}",
+              station_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
+              cors_urls: "${{ inputs.cors_urls }}"
+            };
+
+            // Conditionally add frontend inputs
+            if ("${{ github.event.inputs.frontend_needed }}" === "true") {
+              inputs.frontend_needed = "true";
+              inputs.frontend_branch = "${{ github.event.inputs.frontend_branch }}";
+            }
+            
             await github.rest.actions.createWorkflowDispatch({
               owner: 'AElfDevops',
               repo: 'ephemeral-test-env',
               workflow_id: 'ephemeral-env-main.yaml',
               ref: 'main',
-              inputs: {
-                project_name: "${{ steps.generate-uuid.outputs.project_name }}",
-                environment_ttl: "${{ inputs.environment_ttl }}",
-                client_id: "${{ steps.generate-uuid.outputs.client_id }}",
-                client_secret: "${{ steps.generate-uuid.outputs.client_secret }}",
-                host_silo_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
-                host_client_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
-                station_image_tag: "sha-${{ needs.build-and-push-image.outputs.short_sha }}",
-                cors_urls: "${{ inputs.cors_urls }}",
-              }
+              inputs: inputs
             });
             
       - name: Wait for workflow run to complete
@@ -230,6 +244,7 @@ jobs:
           echo "auth_server_url=$(echo $content | jq -r '.auth_server_url')" >> $GITHUB_OUTPUT
           echo "api_server_url=$(echo $content | jq -r '.api_server_url')" >> $GITHUB_OUTPUT
           echo "app_url=$(echo $content | jq -r '.app_url')" >> $GITHUB_OUTPUT
+          echo "frontend_url=$(echo $content | jq -r '.frontend_url')" >> $GITHUB_OUTPUT
 
       - name: Set job summary
         run: |
@@ -247,4 +262,5 @@ jobs:
           echo "- **Auth Server URL**: \`${{ steps.extract.outputs.auth_server_url }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **API Server URL**: \`${{ steps.extract.outputs.api_server_url }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **App URL**: \`${{ steps.extract.outputs.app_url }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Frontend URL**: \`${{ steps.extract.outputs.frontend_url }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Configuration Mode**: Ephemeral (ENABLE_EPHEMERAL_CONFIG=true)" >> $GITHUB_STEP_SUMMARY

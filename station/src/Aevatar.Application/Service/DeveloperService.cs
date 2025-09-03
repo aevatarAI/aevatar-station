@@ -12,6 +12,7 @@ using Volo.Abp;
 using Aevatar.Enum;
 using Aevatar.Kubernetes.Manager;
 using Volo.Abp.Application.Services;
+using Volo.Abp.DependencyInjection;
 
 namespace Aevatar.Service;
 
@@ -29,9 +30,20 @@ public interface IDeveloperService
     Task UpdateBusinessConfigurationAsync(string hostId, string version, HostTypeEnum hostType);
 
     Task CopyHostAsync(string sourceClientId, string newClientId, string version);
+
+    /// <summary>
+    /// Copy deployment with custom version and silo name pattern modifications
+    /// Based on clone_deployment.sh script logic
+    /// </summary>
+    /// <param name="clientId">Client ID to copy deployment for</param>
+    /// <param name="sourceVersion">Source version to copy from</param>
+    /// <param name="targetVersion">Target version to copy to</param>
+    /// <param name="siloNamePattern">New SILO_NAME_PATTERN environment variable value</param>
+    Task CopyDeploymentWithPatternAsync(string clientId, string sourceVersion, string targetVersion, 
+        string siloNamePattern);
 }
 
-public class DeveloperService : ApplicationService, IDeveloperService
+public class DeveloperService : ApplicationService, IDeveloperService, ITransientDependency
 {
     private const string DefaultVersion = "1";
     private readonly IConfiguration _configuration;
@@ -137,6 +149,27 @@ public class DeveloperService : ApplicationService, IDeveloperService
         await _hostCopyManager.CopyHostAsync(sourceClientId, newClientId, version);
     }
 
+    public async Task CopyDeploymentWithPatternAsync(string clientId, string sourceVersion, string targetVersion, 
+        string siloNamePattern)
+    {
+        using var scope = _logger.BeginScope("ClientId: {ClientId}, SourceVersion: {SourceVersion}, TargetVersion: {TargetVersion}", 
+            clientId, sourceVersion, targetVersion);
+        
+        _logger.LogInformation("Starting deployment copy with pattern modification - SiloPattern: {SiloPattern}", siloNamePattern);
+        
+        try
+        {
+            await _hostCopyManager.CopyDeploymentWithPatternAsync(clientId, sourceVersion, targetVersion, 
+                siloNamePattern);
+            
+            _logger.LogInformation("Deployment copy with pattern completed successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to copy deployment with pattern modification");
+            throw;
+        }
+    }
 
     public async Task DeleteServiceAsync(string clientId)
     {
