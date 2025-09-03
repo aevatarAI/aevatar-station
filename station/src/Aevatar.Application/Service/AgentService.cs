@@ -492,10 +492,25 @@ public class AgentService : ApplicationService, IAgentService
 
     private async Task<Dictionary<string, AgentTypeData?>> GetAgentTypeDataMap()
     {
-        var systemAgents = _agentOptions.CurrentValue.SystemAgentList;
+        var agentOptions = _agentOptions.CurrentValue;
+        var systemAgents = agentOptions.SystemAgentList;
+        var whitelistAgents = agentOptions.WhitelistAgentList;
         var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
         var validAgent = availableGAgents.Where(a => !a.Namespace.StartsWith("OrleansCodeGen")).ToList();
-        var businessAgentTypes = validAgent.Where(a => !systemAgents.Contains(a.Name)).ToList();
+        
+        // Use whitelist if configured, otherwise use blacklist approach
+        List<Type> businessAgentTypes;
+        if (whitelistAgents != null && whitelistAgents.Any())
+        {
+            // Whitelist approach: include only agents in the whitelist
+            businessAgentTypes = validAgent.Where(a => whitelistAgents.Contains(a.Name) || 
+                                                      whitelistAgents.Contains(a.FullName)).ToList();
+        }
+        else
+        {
+            // Blacklist approach: exclude system agents (original behavior)
+            businessAgentTypes = validAgent.Where(a => !systemAgents.Contains(a.Name)).ToList();
+        }
 
         var dict = new Dictionary<string, AgentTypeData?>();
 
