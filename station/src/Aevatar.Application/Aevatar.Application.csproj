@@ -21,6 +21,10 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\..\gagents\src\Aevatar.GAgents.Basic\Aevatar.GAgents.Basic.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="Azure.AI.TextAnalytics" />
         <PackageReference Include="OpenAI.API" />
         <PackageReference Include="Volo.Abp.Account.Application" />
