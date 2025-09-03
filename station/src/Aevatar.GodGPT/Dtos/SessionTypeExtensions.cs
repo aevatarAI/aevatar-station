@@ -7,7 +7,7 @@ namespace Aevatar.GodGPT.Dtos;
 /// </summary>
 public static class SessionTypeExtensions
 {
-    public const string SharePrompt = "Please summarize our conversation history into 1 to 2 sentences, keeping the content within 20 words, suitable for sharing with others";
+    public const string SharePrompt = "Please summarize our conversation history into 1 to 2 sentences, keeping the content within 20 words, suitable for sharing with others. Only summary is included in your response. Don't need to tell me how many words you use.";
 
     /// <summary>
     /// Get default content for different session types when errors occur
