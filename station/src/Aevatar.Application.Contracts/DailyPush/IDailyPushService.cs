@@ -33,4 +33,14 @@ public interface IDailyPushService
     /// <returns>Device status or null if not found</returns>
     Task<DeviceStatusResponse?> GetDeviceStatusAsync(Guid userId, string deviceId);
     
+    /// <summary>
+    /// Send test push notification to all devices in specified timezone
+    /// Bypasses all business logic restrictions (read status, deduplication, etc.)
+    /// </summary>
+    /// <param name="timeZoneId">Target timezone (e.g., "Asia/Shanghai")</param>
+    /// <param name="title">Custom push title</param>
+    /// <param name="content">Custom push content</param>
+    /// <returns>Test push result with statistics</returns>
+    Task<TestPushResult> SendTestPushToTimezoneAsync(string timeZoneId, string title, string content);
+    
 }

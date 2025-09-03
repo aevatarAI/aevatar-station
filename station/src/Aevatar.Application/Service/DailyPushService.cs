@@ -10,6 +10,7 @@ using Orleans;
 using System.Collections.Generic;
 using System.Linq;
 using Volo.Abp.Application.Services;
+using System.Diagnostics;
 
 
 namespace Aevatar.Application.Service;
@@ -168,5 +169,130 @@ public class DailyPushService : ApplicationService, IDailyPushService
             GodGPTLanguage.English => "en",
             _ => "en"
         };
+    }
+
+    /// <summary>
+    /// Send test push notification to all devices in specified timezone
+    /// Bypasses all business logic restrictions (read status, deduplication, etc.)
+    /// </summary>
+    public async Task<TestPushResult> SendTestPushToTimezoneAsync(string timeZoneId, string title, string content)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var executionTime = DateTime.UtcNow;
+        
+        _logger.LogInformation("Starting test push to timezone {TimeZone} with title: '{Title}'", timeZoneId, title);
+
+        var result = new TestPushResult
+        {
+            TimeZoneId = timeZoneId,
+            Title = title,
+            Content = content,
+            ExecutionTime = executionTime,
+            Success = false
+        };
+
+        try
+        {
+            // Validate timezone
+            try
+            {
+                TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+            }
+            catch (Exception ex)
+            {
+                throw new ArgumentException($"Invalid timezone ID: {timeZoneId}", ex);
+            }
+
+            // Get timezone index GAgent
+            var timezoneIndexGAgent = _clusterClient.GetGrain<IPushSubscriberIndexGAgent>(DailyPushConstants.TimezoneToGuid(timeZoneId));
+
+            // Get all users in timezone (use large batch to get all at once for testing)
+            const int batchSize = 10000;
+            var allUsers = new List<Guid>();
+            int skip = 0;
+            List<Guid> userBatch;
+
+            do
+            {
+                userBatch = await timezoneIndexGAgent.GetActiveUsersInTimezoneAsync(skip, batchSize);
+                allUsers.AddRange(userBatch);
+                skip += batchSize;
+            } while (userBatch.Count == batchSize);
+
+            result.TotalUsers = allUsers.Count;
+            _logger.LogInformation("Found {UserCount} users in timezone {TimeZone}", allUsers.Count, timeZoneId);
+
+            if (allUsers.Count == 0)
+            {
+                result.Success = true;
+                result.ExecutionDurationMs = stopwatch.ElapsedMilliseconds;
+                return result;
+            }
+
+            // Process each user's devices
+            var totalDevices = 0;
+            var successfulPushes = 0;
+            var failedPushes = 0;
+            var usersWithNoDevices = 0;
+
+            foreach (var userId in allUsers)
+            {
+                try
+                {
+                    var chatManagerGAgent = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
+                    
+                    // Create test push data
+                    var testPushData = new Dictionary<string, object>
+                    {
+                        ["type"] = "test_push",
+                        ["timezone"] = timeZoneId,
+                        ["timestamp"] = executionTime.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                        ["test_id"] = Guid.NewGuid().ToString()
+                    };
+
+                    // Send test push to this user - bypassing all daily push business logic
+                    var userDeviceCount = await chatManagerGAgent.SendTestPushNotificationAsync(title, content, testPushData);
+                    
+                    if (userDeviceCount > 0)
+                    {
+                        totalDevices += userDeviceCount;
+                        successfulPushes += userDeviceCount;
+                    }
+                    else
+                    {
+                        usersWithNoDevices++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to send test push to user {UserId}", userId);
+                    failedPushes++;
+                }
+            }
+
+            stopwatch.Stop();
+
+            result.TotalDevices = totalDevices;
+            result.SuccessfulPushes = successfulPushes;
+            result.FailedPushes = failedPushes;
+            result.UsersWithNoDevices = usersWithNoDevices;
+            result.ExecutionDurationMs = stopwatch.ElapsedMilliseconds;
+            result.Success = true;
+
+            _logger.LogInformation(
+                "Test push completed for timezone {TimeZone}: {TotalUsers} users, {TotalDevices} devices, {SuccessfulPushes} successful, {FailedPushes} failed, {UsersWithNoDevices} users with no devices. Duration: {Duration}ms",
+                timeZoneId, result.TotalUsers, result.TotalDevices, result.SuccessfulPushes, result.FailedPushes, result.UsersWithNoDevices, result.ExecutionDurationMs);
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            result.Success = false;
+            result.ErrorMessage = ex.Message;
+            result.ExecutionDurationMs = stopwatch.ElapsedMilliseconds;
+            
+            _logger.LogError(ex, "Test push failed for timezone {TimeZone}: {ErrorMessage}", timeZoneId, ex.Message);
+        }
+
+        return result;
     }
 }
