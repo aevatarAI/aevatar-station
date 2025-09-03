@@ -8,6 +8,13 @@ namespace Aevatar.Application.Contracts.DailyPush;
 public class TestPushRequest
 {
     /// <summary>
+    /// Target timezone (e.g., "Asia/Shanghai")
+    /// </summary>
+    [Required]
+    [MaxLength(50)]
+    public string TimeZoneId { get; set; } = "";
+
+    /// <summary>
     /// Push notification title
     /// </summary>
     [Required]

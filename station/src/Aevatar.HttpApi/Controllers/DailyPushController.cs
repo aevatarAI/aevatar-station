@@ -165,20 +165,20 @@ public class DailyPushController : AbpControllerBase
     /// Send test push notification to all devices in specified timezone
     /// Bypasses all business logic restrictions for testing purposes
     /// </summary>
-    [HttpPost("test/{timeZoneId}")]
-    public async Task<IActionResult> SendTestPushAsync(string timeZoneId, [FromBody] TestPushRequest request)
+    [HttpPost("test")]
+    public async Task<IActionResult> SendTestPushAsync([FromBody] TestPushRequest request)
     {
         try
         {
-            _logger.LogInformation("Test push requested for timezone {TimeZone} with title: '{Title}'", timeZoneId, request.Title);
+            _logger.LogInformation("Test push requested for timezone {TimeZone} with title: '{Title}'", request.TimeZoneId, request.Title);
 
-            var result = await _dailyPushService.SendTestPushToTimezoneAsync(timeZoneId, request.Title, request.Content);
+            var result = await _dailyPushService.SendTestPushToTimezoneAsync(request.TimeZoneId, request.Title, request.Content);
 
             if (result.Success)
             {
                 _logger.LogInformation(
                     "Test push completed for timezone {TimeZone}: {TotalUsers} users, {SuccessfulPushes} successful pushes",
-                    timeZoneId, result.TotalUsers, result.SuccessfulPushes);
+                    request.TimeZoneId, result.TotalUsers, result.SuccessfulPushes);
 
                 return Ok(new
                 {
@@ -201,7 +201,7 @@ public class DailyPushController : AbpControllerBase
             var language = HttpContext.GetGodGPTLanguage();
             var localizedMessage =
                 _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InvalidTimezone, language);
-            _logger.LogWarning(ex, "Invalid timezone for test push: {TimeZone}", timeZoneId);
+            _logger.LogWarning(ex, "Invalid timezone for test push: {TimeZone}", request.TimeZoneId);
             return BadRequest(new
             {
                 error = new { code = 1, message = localizedMessage },
@@ -213,7 +213,7 @@ public class DailyPushController : AbpControllerBase
             var language = HttpContext.GetGodGPTLanguage();
             var localizedMessage =
                 _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InternalServerError, language);
-            _logger.LogError(ex, "Test push failed for timezone {TimeZone}: {ErrorMessage}", timeZoneId, ex.Message);
+            _logger.LogError(ex, "Test push failed for timezone {TimeZone}: {ErrorMessage}", request.TimeZoneId, ex.Message);
             return StatusCode(500, new { error = localizedMessage });
         }
     }
