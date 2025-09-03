@@ -502,14 +502,26 @@ public class AgentService : ApplicationService, IAgentService
         List<Type> businessAgentTypes;
         if (whitelistAgents != null && whitelistAgents.Any())
         {
+            _logger.LogInformation("[AgentService] Agent filtering using WHITELIST mode: configured {WhitelistCount} whitelist agents: [{WhitelistAgents}]", 
+                whitelistAgents.Count, string.Join(", ", whitelistAgents));
+            
             // Whitelist approach: include only agents in the whitelist
             businessAgentTypes = validAgent.Where(a => whitelistAgents.Contains(a.Name) || 
                                                       whitelistAgents.Contains(a.FullName)).ToList();
+            
+            _logger.LogInformation("[AgentService] Whitelist filtering result: filtered {FilteredCount} agents from {TotalAgents} available agents", 
+                businessAgentTypes.Count, validAgent.Count);
         }
         else
         {
+            _logger.LogInformation("[AgentService] Agent filtering using BLACKLIST mode: excluding {SystemAgentCount} system agents: [{SystemAgents}]", 
+                systemAgents.Count, string.Join(", ", systemAgents));
+                
             // Blacklist approach: exclude system agents (original behavior)
             businessAgentTypes = validAgent.Where(a => !systemAgents.Contains(a.Name)).ToList();
+            
+            _logger.LogInformation("[AgentService] Blacklist filtering result: filtered {FilteredCount} agents from {TotalAgents} available agents", 
+                businessAgentTypes.Count, validAgent.Count);
         }
 
         var dict = new Dictionary<string, AgentTypeData?>();
