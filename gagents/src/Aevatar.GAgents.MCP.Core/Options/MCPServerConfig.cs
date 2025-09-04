@@ -25,6 +25,44 @@ public class MCPServerConfig
     [RegularExpression(@"^https?://[^\s/$.?#].[^\s]*$", ErrorMessage = "URL must start with http:// or https://")]
     public string? Url { get; set; }
     [Id(6)] public MCPServerType Type { get; set; }
+
+    /// <summary>
+    /// Whether to use MCP Gateway for this server connection
+    /// </summary>
+    [Id(7)] public bool UseGateway { get; set; } = true;
+
+    /// <summary>
+    /// Gateway adapter name for routing (required when UseGateway is true)
+    /// </summary>
+    [Id(8)] 
+    [StringLength(100, ErrorMessage = "Gateway adapter name must not exceed 100 characters")]
+    public string? GatewayAdapterName { get; set; }
+
+    /// <summary>
+    /// Session ID for session-aware routing
+    /// </summary>
+    [Id(9)]
+    [StringLength(200, ErrorMessage = "Session ID must not exceed 200 characters")]
+    public string? SessionId { get; set; }
+
+    /// <summary>
+    /// Priority for load balancing (higher values get more traffic)
+    /// </summary>
+    [Id(10)]
+    [Range(1, 100, ErrorMessage = "Priority must be between 1 and 100")]
+    public int Priority { get; set; } = 50;
+
+    /// <summary>
+    /// Tags for adapter categorization and filtering
+    /// </summary>
+    [Id(11)]
+    public List<string> Tags { get; set; } = new();
+
+    /// <summary>
+    /// Additional metadata for the adapter
+    /// </summary>
+    [Id(12)]
+    public Dictionary<string, string> Metadata { get; set; } = new();
 }
 
 /// <summary>
@@ -34,7 +72,8 @@ public class MCPServerConfig
 public enum MCPServerType
 {
     Stdio,
-    StreamableHttp
+    StreamableHttp,
+    Gateway
 }
 
 /// <summary>
@@ -74,5 +113,76 @@ public static class MCPServerConfigExtensions
     public static bool IsValid(this MCPServerConfig config)
     {
         return !string.IsNullOrWhiteSpace(config.ServerName);
+    }
+
+    /// <summary>
+    /// Validate configuration for gateway usage
+    /// </summary>
+    public static bool IsValidForGateway(this MCPServerConfig config, out List<string> errors)
+    {
+        errors = new List<string>();
+
+        if (!config.IsValid())
+        {
+            errors.Add("Basic server configuration is invalid");
+        }
+
+        if (config.UseGateway)
+        {
+            if (string.IsNullOrWhiteSpace(config.GatewayAdapterName))
+            {
+                errors.Add("Gateway adapter name is required when UseGateway is true");
+            }
+            else if (config.GatewayAdapterName.Length > 100)
+            {
+                errors.Add("Gateway adapter name must not exceed 100 characters");
+            }
+
+            if (!string.IsNullOrEmpty(config.SessionId) && config.SessionId.Length > 200)
+            {
+                errors.Add("Session ID must not exceed 200 characters");
+            }
+
+            if (config.Priority < 1 || config.Priority > 100)
+            {
+                errors.Add("Priority must be between 1 and 100");
+            }
+        }
+        else
+        {
+            // For direct connections, ensure we have either Command or URL
+            if (string.IsNullOrWhiteSpace(config.Command) && string.IsNullOrWhiteSpace(config.Url))
+            {
+                errors.Add("Either Command or URL is required for direct connections");
+            }
+        }
+
+        return errors.Count == 0;
+    }
+
+    /// <summary>
+    /// Get the effective connection type
+    /// </summary>
+    public static MCPServerType GetEffectiveType(this MCPServerConfig config)
+    {
+        if (config.UseGateway)
+        {
+            return MCPServerType.Gateway;
+        }
+
+        return config.Type;
+    }
+
+    /// <summary>
+    /// Generate a session ID if not provided
+    /// </summary>
+    public static string GetOrGenerateSessionId(this MCPServerConfig config)
+    {
+        if (!string.IsNullOrEmpty(config.SessionId))
+        {
+            return config.SessionId;
+        }
+
+        return $"{config.ServerName}-{Guid.NewGuid():N}";
     }
 }
