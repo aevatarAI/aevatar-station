@@ -23,12 +23,7 @@ public class DynamicDropDownProcessor : ISchemaProcessor
     public void Process(SchemaProcessorContext context)
     {
         // Skip null schemas
-        if (context.Schema == null)
-        {
-            return;
-        }
-
-        Console.WriteLine($"🔍 [DynamicDropDownProcessor] Processing schema: Title='{context.Schema.Title}', Type='{context.ContextualType?.Type?.Name}'");
+        if (context.Schema == null) return;
 
         // Initialize ExtensionData if needed
         if (context.Schema.ExtensionData == null)
@@ -52,33 +47,20 @@ public class DynamicDropDownProcessor : ISchemaProcessor
                     var dynamicDropDownAttribute = property.GetCustomAttribute<DynamicDropDownAttribute>();
                     if (dynamicDropDownAttribute != null)
                     {
-                        Console.WriteLine($"✅ [DynamicDropDownProcessor] Found DynamicDropDown on property '{property.Name}' - injecting real AI configs");
-                        
-                                                 // Inject real AI model configurations for SystemLLM property
-                         if (property.Name == "SystemLLM")
-                         {
-                             // Set schema type to integer like MCPServerType
-                             context.Schema.Type = NJsonSchema.JsonObjectType.Integer;
-                             InjectSystemLLMConfigurations(context.Schema.ExtensionData);
-                         }
-                        
-                        Console.WriteLine($"🎉 [DynamicDropDownProcessor] Successfully injected AI configurations for '{property.Name}' property");
+                        // Set schema type to integer like MCPServerType
+                        context.Schema.Type = NJsonSchema.JsonObjectType.Integer;
+                        InjectSystemLLMConfigurations(context.Schema.ExtensionData);
                         return;
                     }
                 }
             }
-            
-            // Strategy 2: If strategy 1 failed, fall back to scanning all properties of the type
-            Console.WriteLine($"🔍 [DynamicDropDownProcessor] Scanning all properties of type '{type.Name}'");
             
             var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
             foreach (var property in properties)
             {
                 var dynamicDropDownAttribute = property.GetCustomAttribute<DynamicDropDownAttribute>();
                 if (dynamicDropDownAttribute != null)
-                {
-                    Console.WriteLine($"✅ [DynamicDropDownProcessor] Found DynamicDropDown on property '{property.Name}'");
-                    
+                {   
                     // Try to find the property schema in the current schema's properties
                     if (context.Schema.Properties != null && context.Schema.Properties.Count > 0)
                     {
@@ -92,23 +74,13 @@ public class DynamicDropDownProcessor : ISchemaProcessor
                         foreach (var key in possibleKeys)
                         {
                             if (context.Schema.Properties.TryGetValue(key, out var propertySchema))
-                            {
-                                Console.WriteLine($"🎯 [DynamicDropDownProcessor] Found property schema with key '{key}' - injecting AI configs");
-                                
-                                if (propertySchema.ExtensionData == null)
-                                {
-                                    propertySchema.ExtensionData = new Dictionary<string, object>();
-                                }
-                                
-                                                                 // Inject real AI model configurations for SystemLLM property
-                                 if (property.Name == "SystemLLM")
-                                 {
-                                     // Set schema type to integer like MCPServerType
-                                     propertySchema.Type = NJsonSchema.JsonObjectType.Integer;
-                                     InjectSystemLLMConfigurations(propertySchema.ExtensionData);
-                                 }
-                                
-                                Console.WriteLine($"🎉 [DynamicDropDownProcessor] Successfully injected AI configurations for property '{property.Name}' via key '{key}'");
+                            {   
+                                if (propertySchema.ExtensionData == null)    propertySchema.ExtensionData = new Dictionary<string, object>();
+                               
+                                // Set schema type to integer like MCPServerType
+                                propertySchema.Type = NJsonSchema.JsonObjectType.Integer;
+                                InjectSystemLLMConfigurations(propertySchema.ExtensionData);
+                              
                                 return;
                             }
                         }
@@ -122,58 +94,31 @@ public class DynamicDropDownProcessor : ISchemaProcessor
     /// Injects real SystemLLM configurations from the context into the property schema.
     /// </summary>
     private void InjectSystemLLMConfigurations(IDictionary<string, object?> extensionData)
-    {
-        if (_context?.AIModelConfigs != null && _context.AIModelConfigs.Any())
+    {  
+        // Create a dictionary of AI model configurations from the real data
+        var aiModelConfigs = new Dictionary<string, object>();
+        
+        foreach (var config in _context.AIModelConfigs)
         {
-            Console.WriteLine($"📋 [DynamicDropDownProcessor] Injecting {_context.AIModelConfigs.Count} real AI model configurations from context");
-            
-            // Create a dictionary of AI model configurations from the real data
-            var aiModelConfigs = new Dictionary<string, object>();
-            
-            foreach (var config in _context.AIModelConfigs)
+            aiModelConfigs[config.Name] = new
             {
-                aiModelConfigs[config.Name] = new
-                {
-                    Name = config.Name,
-                    Provider = config.Provider,
-                    Type = config.Type,
-                    Strengths = config.Strengths,
-                    BestFor = config.BestFor,
-                    Speed = config.Speed
-                };
-                
-                Console.WriteLine($"   ✅ Added AI model: {config.Name} ({config.Provider} - {config.Type})");
-            }
-            
-            // Create enum structure like MCPServerType with integer type
-            var enumNames = _context.AIModelConfigs.Select(c => c.Name).ToArray();
-            var enumValues = _context.AIModelConfigs.Select((c, i) => i).ToArray(); // Use integer indices
-            
-            // Inject the real configurations with enum structure
-            extensionData["x-enumLLMConfigs"] = aiModelConfigs;
-            extensionData["x-enumNames"] = enumNames;
-            extensionData["enum"] = enumValues;
-            
-            Console.WriteLine($"🎉 [DynamicDropDownProcessor] Successfully injected {aiModelConfigs.Count} real AI model configurations");
-        }
-        else
-        {
-            Console.WriteLine($"⚠️ [DynamicDropDownProcessor] No AI model configurations available in context - using fallback");
-            
-            // Fallback: Use basic configuration if context is not available
-            var fallbackNames = new[] { "OpenAI", "Azure" };
-            var fallbackValues = new[] { 0, 1 }; // Use integer indices for fallback too
-            
-            extensionData["x-enumLLMConfigs"] = new Dictionary<string, object>
-            {
-                ["OpenAI"] = new { Name = "OpenAI", Provider = "OpenAI", Type = "GPT-4", Speed = "Fast" },
-                ["Azure"] = new { Name = "Azure", Provider = "Azure", Type = "Azure OpenAI", Speed = "Fast" }
+                Name = config.Name,
+                Provider = config.Provider,
+                Type = config.Type,
+                Strengths = config.Strengths,
+                BestFor = config.BestFor,
+                Speed = config.Speed
             };
-            extensionData["x-enumNames"] = fallbackNames;
-            extensionData["enum"] = fallbackValues;
-            
-            Console.WriteLine($"   📋 Fallback enum names: [{string.Join(", ", fallbackNames)}]");
         }
+        
+        // Create enum structure like MCPServerType with integer type
+        var enumNames = _context.AIModelConfigs.Select(c => c.Name).ToArray();
+        var enumValues = _context.AIModelConfigs.Select((c, i) => i).ToArray(); // Use integer indices
+        
+        // Inject the real configurations with enum structure
+        extensionData["x-enumLLMConfigs"] = aiModelConfigs;
+        extensionData["x-enumNames"] = enumNames;
+        extensionData["enum"] = enumValues;
     }
 
     private PropertyInfo? FindPropertyBySchemaTitle(Type type, string schemaTitle)
@@ -188,11 +133,7 @@ public class DynamicDropDownProcessor : ISchemaProcessor
         foreach (var strategy in strategies)
         {
             var property = type.GetProperty(strategy, BindingFlags.Public | BindingFlags.Instance);
-            if (property != null)
-            {
-                Console.WriteLine($"🎯 [DynamicDropDownProcessor] Found property '{property.Name}' using strategy '{strategy}'");
-                return property;
-            }
+            if (property != null) return property;
         }
         
         return null;
