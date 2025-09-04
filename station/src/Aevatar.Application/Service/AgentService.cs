@@ -651,5 +651,16 @@ public class AgentService : ApplicationService, IAgentService
 
         return subAgentGrainIds;
     }
-    private DynamicDropDownContext CreateSchemaContextAsync() => new () { AIModelConfigs = _systemLLMConfigOptions.CurrentValue.SystemLLMConfigs };
+    private DynamicDropDownContext CreateSchemaContextAsync()
+    {
+        _logger.LogInformation("[AgentService] Creating schema context for dynamic dropdown processing");
+        
+        var configs = _systemLLMConfigOptions.CurrentValue.SystemLLMConfigs;
+        
+        _logger.LogInformation("[AgentService] Created schema context with {ConfigCount} AI model configurations: {ModelNames}", 
+            configs?.Count ?? 0, 
+            string.Join(", ", configs?.Select(c => c.Name) ?? Array.Empty<string>()));
+        
+        return new DynamicDropDownContext { AIModelConfigs = configs };
+    }
 }
