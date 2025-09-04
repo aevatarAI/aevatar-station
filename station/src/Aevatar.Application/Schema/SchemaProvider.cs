@@ -29,7 +29,6 @@ public class SchemaProvider : ISchemaProvider, ISingletonDependency
                 GenerateEnumMappingDescription = true,
                 SchemaProcessors = { 
                     new IgnoreSpecificBaseProcessor(),
-                    new TestProcessor(),
                     new DynamicDropDownProcessor(context) 
                 }
             };

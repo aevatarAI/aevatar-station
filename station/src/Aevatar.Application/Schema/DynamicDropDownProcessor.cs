@@ -1,134 +1,200 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Linq;
+using System.Reflection;
 using Aevatar.GAgents.Basic;
-using NJsonSchema;
 using NJsonSchema.Generation;
 
 namespace Aevatar.Schema;
 
+/// <summary>
+/// DynamicDropDown processor that injects real AI model configurations into property schemas.
+/// Uses AIModelConfigs from DynamicDropDownContext provided by AgentService.
+/// </summary>
 public class DynamicDropDownProcessor : ISchemaProcessor
 {
-    private readonly DynamicDropDownContext? _dropDownContext;
+    private readonly DynamicDropDownContext? _context;
 
-    public DynamicDropDownProcessor() : this(null)
+    public DynamicDropDownProcessor(DynamicDropDownContext? context = null)
     {
-    }
-
-    public DynamicDropDownProcessor(DynamicDropDownContext? dropDownContext)
-    {
-        _dropDownContext = dropDownContext;
+        _context = context;
     }
 
     public void Process(SchemaProcessorContext context)
     {
-        // If no dropdown context is provided, skip processing
-        if (_dropDownContext == null)
+        // Skip null schemas
+        if (context.Schema == null)
         {
-            Console.WriteLine("[DynamicDropDownProcessor] No dropdown context provided, skipping");
             return;
         }
-        
-        Console.WriteLine($"[DynamicDropDownProcessor] Processing schema for: '{context.Schema?.Title}' (Type: {context.ContextualType?.Type?.Name})");
 
-        ProcessDynamicDropDown(context);
-    }
+        Console.WriteLine($"🔍 [DynamicDropDownProcessor] Processing schema: Title='{context.Schema.Title}', Type='{context.ContextualType?.Type?.Name}'");
 
-    private void ProcessDynamicDropDown(SchemaProcessorContext context)
-    {
-        Console.WriteLine($"[DynamicDropDownProcessor] ProcessDynamicDropDown called");
-        Console.WriteLine($"[DynamicDropDownProcessor] ContextualType: {context.ContextualType?.Type?.Name}");
-        Console.WriteLine($"[DynamicDropDownProcessor] Title: {context.Schema?.Title}");
-        
-        // Check if this is a property being processed
-        if (context.ContextualType?.Type == null || context.Schema?.Title == null)
-            return;
-            
-        var parentType = context.ContextualType.Type;
-        var propertyName = context.Schema.Title;
-        
-        Console.WriteLine($"[DynamicDropDownProcessor] Checking property '{propertyName}' on type '{parentType.Name}'");
-        
-        // Skip if this is the class itself (not a property)
-        if (string.Equals(propertyName, parentType.Name, StringComparison.OrdinalIgnoreCase))
-        {
-            Console.WriteLine($"[DynamicDropDownProcessor] Skipping class definition: {parentType.Name}");
-            return;
-        }
-        
-        // Try to find the property using reflection with multiple strategies
-        PropertyInfo? property = null;
-        
-        // Strategy 1: Case-insensitive lookup
-        property = parentType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .FirstOrDefault(p => string.Equals(p.Name, propertyName, StringComparison.OrdinalIgnoreCase));
-        
-        // Strategy 2: Handle camelCase JSON naming - convert first char to uppercase (systemLLM -> SystemLLM)
-        if (property == null && !string.IsNullOrEmpty(propertyName))
-        {
-            var pascalCaseName = char.ToUpper(propertyName[0]) + propertyName.Substring(1);
-            property = parentType.GetProperty(pascalCaseName, BindingFlags.Public | BindingFlags.Instance);
-            Console.WriteLine($"[DynamicDropDownProcessor] Trying PascalCase: '{pascalCaseName}' for JSON field '{propertyName}'");
-        }
-        
-        if (property != null)
-        {
-            Console.WriteLine($"[DynamicDropDownProcessor] Found property via reflection: {property.Name}");
-            var dynamicDropDownAttribute = property.GetCustomAttribute<DynamicDropDownAttribute>();
-            
-            if (dynamicDropDownAttribute != null)
-            {
-                Console.WriteLine($"[DynamicDropDownProcessor] Found [DynamicDropDown] attribute on {property.Name}, adding metadata");
-                AddDynamicDropDownMetadata(context);
-            }
-            else
-            {
-                Console.WriteLine($"[DynamicDropDownProcessor] No [DynamicDropDown] attribute found on {property.Name}");
-            }
-        }
-        else
-        {
-            Console.WriteLine($"[DynamicDropDownProcessor] Could not find property '{propertyName}' on type {parentType.Name}");
-            
-            // Debug: List all properties on the type
-            var allProperties = parentType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-            Console.WriteLine($"[DynamicDropDownProcessor] Available properties on {parentType.Name}: {string.Join(", ", allProperties.Select(p => p.Name))}");
-        }
-    }
-
-    private void AddDynamicDropDownMetadata(SchemaProcessorContext context)
-    {
-        Console.WriteLine("[DynamicDropDownProcessor] Adding dynamic dropdown metadata");
-        
+        // Initialize ExtensionData if needed
         if (context.Schema.ExtensionData == null)
         {
             context.Schema.ExtensionData = new Dictionary<string, object>();
         }
 
-        // 先添加一个简单的测试字段验证processor工作
-        context.Schema.ExtensionData["x-dynamic-dropdown-test"] = "found-dynamic-dropdown-attribute";
-        
-        Console.WriteLine("[DynamicDropDownProcessor] Added test field x-dynamic-dropdown-test");
-
-        // 如果有AI model配置，再添加复杂的逻辑
-        if (_dropDownContext?.AIModelConfigs != null && _dropDownContext.AIModelConfigs.Any())
+        // Strategy 1: Check if this schema represents a property with DynamicDropDown attribute
+        if (context.ContextualType?.Type != null)
         {
-            var configs = _dropDownContext.AIModelConfigs;
-            Console.WriteLine($"[DynamicDropDownProcessor] Found {configs.Count} AI model configs");
+            var type = context.ContextualType.Type;
             
-            // 添加配置数据
-            context.Schema.ExtensionData["x-enumLLMConfigs"] = configs;
+            // Check if we're processing a specific property schema (not the main class)
+            if (!string.IsNullOrEmpty(context.Schema.Title) && 
+                !string.Equals(context.Schema.Title, type.Name, StringComparison.OrdinalIgnoreCase))
+            {
+                // This might be a property schema - try to find the corresponding property
+                var property = FindPropertyBySchemaTitle(type, context.Schema.Title);
+                if (property != null)
+                {
+                    var dynamicDropDownAttribute = property.GetCustomAttribute<DynamicDropDownAttribute>();
+                    if (dynamicDropDownAttribute != null)
+                    {
+                        Console.WriteLine($"✅ [DynamicDropDownProcessor] Found DynamicDropDown on property '{property.Name}' - injecting real AI configs");
+                        
+                                                 // Inject real AI model configurations for SystemLLM property
+                         if (property.Name == "SystemLLM")
+                         {
+                             // Set schema type to integer like MCPServerType
+                             context.Schema.Type = NJsonSchema.JsonObjectType.Integer;
+                             InjectSystemLLMConfigurations(context.Schema.ExtensionData);
+                         }
+                        
+                        Console.WriteLine($"🎉 [DynamicDropDownProcessor] Successfully injected AI configurations for '{property.Name}' property");
+                        return;
+                    }
+                }
+            }
             
-            // 生成模型名称列表
-            var enumValues = configs.Select(config => config.Name).ToArray();
-            context.Schema.ExtensionData["x-enumNames"] = enumValues;
+            // Strategy 2: If strategy 1 failed, fall back to scanning all properties of the type
+            Console.WriteLine($"🔍 [DynamicDropDownProcessor] Scanning all properties of type '{type.Name}'");
             
-            Console.WriteLine($"[DynamicDropDownProcessor] Added configs: {string.Join(", ", enumValues)}");
+            var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            foreach (var property in properties)
+            {
+                var dynamicDropDownAttribute = property.GetCustomAttribute<DynamicDropDownAttribute>();
+                if (dynamicDropDownAttribute != null)
+                {
+                    Console.WriteLine($"✅ [DynamicDropDownProcessor] Found DynamicDropDown on property '{property.Name}'");
+                    
+                    // Try to find the property schema in the current schema's properties
+                    if (context.Schema.Properties != null && context.Schema.Properties.Count > 0)
+                    {
+                        // Look for the property schema using different naming conventions
+                        string[] possibleKeys = { 
+                            property.Name.ToLowerInvariant(),           // systemllm
+                            char.ToLowerInvariant(property.Name[0]) + property.Name.Substring(1), // systemLLM -> systemLLM
+                            property.Name                                // SystemLLM
+                        };
+                        
+                        foreach (var key in possibleKeys)
+                        {
+                            if (context.Schema.Properties.TryGetValue(key, out var propertySchema))
+                            {
+                                Console.WriteLine($"🎯 [DynamicDropDownProcessor] Found property schema with key '{key}' - injecting AI configs");
+                                
+                                if (propertySchema.ExtensionData == null)
+                                {
+                                    propertySchema.ExtensionData = new Dictionary<string, object>();
+                                }
+                                
+                                                                 // Inject real AI model configurations for SystemLLM property
+                                 if (property.Name == "SystemLLM")
+                                 {
+                                     // Set schema type to integer like MCPServerType
+                                     propertySchema.Type = NJsonSchema.JsonObjectType.Integer;
+                                     InjectSystemLLMConfigurations(propertySchema.ExtensionData);
+                                 }
+                                
+                                Console.WriteLine($"🎉 [DynamicDropDownProcessor] Successfully injected AI configurations for property '{property.Name}' via key '{key}'");
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Injects real SystemLLM configurations from the context into the property schema.
+    /// </summary>
+    private void InjectSystemLLMConfigurations(IDictionary<string, object?> extensionData)
+    {
+        if (_context?.AIModelConfigs != null && _context.AIModelConfigs.Any())
+        {
+            Console.WriteLine($"📋 [DynamicDropDownProcessor] Injecting {_context.AIModelConfigs.Count} real AI model configurations from context");
+            
+            // Create a dictionary of AI model configurations from the real data
+            var aiModelConfigs = new Dictionary<string, object>();
+            
+            foreach (var config in _context.AIModelConfigs)
+            {
+                aiModelConfigs[config.Name] = new
+                {
+                    Name = config.Name,
+                    Provider = config.Provider,
+                    Type = config.Type,
+                    Strengths = config.Strengths,
+                    BestFor = config.BestFor,
+                    Speed = config.Speed
+                };
+                
+                Console.WriteLine($"   ✅ Added AI model: {config.Name} ({config.Provider} - {config.Type})");
+            }
+            
+            // Create enum structure like MCPServerType with integer type
+            var enumNames = _context.AIModelConfigs.Select(c => c.Name).ToArray();
+            var enumValues = _context.AIModelConfigs.Select((c, i) => i).ToArray(); // Use integer indices
+            
+            // Inject the real configurations with enum structure
+            extensionData["x-enumLLMConfigs"] = aiModelConfigs;
+            extensionData["x-enumNames"] = enumNames;
+            extensionData["enum"] = enumValues;
+            
+            Console.WriteLine($"🎉 [DynamicDropDownProcessor] Successfully injected {aiModelConfigs.Count} real AI model configurations");
         }
         else
         {
-            Console.WriteLine("[DynamicDropDownProcessor] No AI model configs found in context");
+            Console.WriteLine($"⚠️ [DynamicDropDownProcessor] No AI model configurations available in context - using fallback");
+            
+            // Fallback: Use basic configuration if context is not available
+            var fallbackNames = new[] { "OpenAI", "Azure" };
+            var fallbackValues = new[] { 0, 1 }; // Use integer indices for fallback too
+            
+            extensionData["x-enumLLMConfigs"] = new Dictionary<string, object>
+            {
+                ["OpenAI"] = new { Name = "OpenAI", Provider = "OpenAI", Type = "GPT-4", Speed = "Fast" },
+                ["Azure"] = new { Name = "Azure", Provider = "Azure", Type = "Azure OpenAI", Speed = "Fast" }
+            };
+            extensionData["x-enumNames"] = fallbackNames;
+            extensionData["enum"] = fallbackValues;
+            
+            Console.WriteLine($"   📋 Fallback enum names: [{string.Join(", ", fallbackNames)}]");
         }
+    }
+
+    private PropertyInfo? FindPropertyBySchemaTitle(Type type, string schemaTitle)
+    {
+        // Try different naming strategies
+        var strategies = new[]
+        {
+            schemaTitle,  // Exact match
+            char.ToUpperInvariant(schemaTitle[0]) + schemaTitle.Substring(1), // camelCase -> PascalCase
+        };
+        
+        foreach (var strategy in strategies)
+        {
+            var property = type.GetProperty(strategy, BindingFlags.Public | BindingFlags.Instance);
+            if (property != null)
+            {
+                Console.WriteLine($"🎯 [DynamicDropDownProcessor] Found property '{property.Name}' using strategy '{strategy}'");
+                return property;
+            }
+        }
+        
+        return null;
     }
 }
