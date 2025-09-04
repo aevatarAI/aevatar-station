@@ -34,23 +34,17 @@ public class DynamicDropDownProcessor : ISchemaProcessor
 
     private void ProcessDynamicDropDown(SchemaProcessorContext context)
     {
-        // Try to get property info from the parent type using reflection
-        var parentType = context.ContextualType?.Type;
-        var propertyName = context.Schema?.Title;
+        // Get property info directly from the context
+        var property = context.ContextualType?.PropertyInfo;
         
-        if (parentType == null || string.IsNullOrEmpty(propertyName))
+        if (property == null)
             return;
             
-        var property = parentType.GetProperty(propertyName);
+        var dynamicDropDownAttribute = property.GetCustomAttribute<DynamicDropDownAttribute>();
         
-        if (property != null)
+        if (dynamicDropDownAttribute != null)
         {
-            var dynamicDropDownAttribute = property.GetCustomAttribute<DynamicDropDownAttribute>();
-            
-            if (dynamicDropDownAttribute != null)
-            {
-                AddDynamicDropDownMetadata(context);
-            }
+            AddDynamicDropDownMetadata(context);
         }
     }
 
