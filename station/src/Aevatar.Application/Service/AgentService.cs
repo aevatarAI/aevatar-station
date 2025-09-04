@@ -651,26 +651,5 @@ public class AgentService : ApplicationService, IAgentService
 
         return subAgentGrainIds;
     }
-
-    /// <summary>
-    /// Check if agent configuration DTO has SystemLLM, LLMConfig, or modelId property and return the configuration list
-    /// </summary>
-    private List<SystemLLMConfigDto>? GetSystemLLMConfigsForAgent(Configuration? configuration)
-    {
-        if (configuration?.DtoType == null)
-            return null;
-
-        // Check if the configuration DTO has SystemLLM, LLMConfig, or modelId property using reflection
-        var hasTargetProperty = configuration.DtoType
-            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Any(p => p.Name.Equals("SystemLLM", StringComparison.OrdinalIgnoreCase) || 
-                     p.Name.Equals("LLMConfig", StringComparison.OrdinalIgnoreCase) ||
-                     p.Name.Equals("ModelId", StringComparison.OrdinalIgnoreCase));
-
-        if (!hasTargetProperty)
-            return null;
-
-        return _systemLLMConfigOptions.CurrentValue.SystemLLMConfigs;
-    }
     private SchemaProcessingContext CreateSchemaContextAsync() => new () { AIModelConfigs = _systemLLMConfigOptions.CurrentValue.SystemLLMConfigs };
 }
