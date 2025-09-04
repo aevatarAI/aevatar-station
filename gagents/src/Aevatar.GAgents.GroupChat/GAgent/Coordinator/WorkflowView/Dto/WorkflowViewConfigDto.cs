@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Aevatar.Core.Abstractions;
 
 namespace Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView.Dto;
