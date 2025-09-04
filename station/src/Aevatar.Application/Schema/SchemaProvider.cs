@@ -17,7 +17,8 @@ public class SchemaProvider : ISchemaProvider, ISingletonDependency
     {
         lock (_lockObj)
         {
-            if (_schemaDic.TryGetValue(type, out var queryData))
+            // Skip caching when context is provided to allow dynamic processing
+            if (context == null && _schemaDic.TryGetValue(type, out var queryData))
             {
                 return queryData;
             }
@@ -26,7 +27,11 @@ public class SchemaProvider : ISchemaProvider, ISingletonDependency
             {
                 FlattenInheritanceHierarchy = true,
                 GenerateEnumMappingDescription = true,
-                SchemaProcessors = { new IgnoreSpecificBaseProcessor(), new DynamicDropDownProcessor(context) }
+                SchemaProcessors = { 
+                    new IgnoreSpecificBaseProcessor(),
+                    new TestProcessor(),
+                    new DynamicDropDownProcessor(context) 
+                }
             };
             settings.SerializerOptions = new JsonSerializerOptions
             {
@@ -34,7 +39,11 @@ public class SchemaProvider : ISchemaProvider, ISingletonDependency
             };
 
             var schemaData = JsonSchema.FromType(type, settings);
-            _schemaDic.Add(type, schemaData);
+            // Only cache when no context is provided
+            if (context == null)
+            {
+                _schemaDic.Add(type, schemaData);
+            }
             return schemaData;
         }
     }

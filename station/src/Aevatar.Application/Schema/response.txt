@@ -1,0 +1,427 @@
+{
+    "code": "20000",
+    "data": [
+        {
+            "agentType": "Aevatar.SignalR.GAgents.SignalRGAgent",
+            "fullName": "Aevatar.SignalR.GAgents.SignalRGAgent",
+            "description": "SignalR Publisher.",
+            "agentParams": [
+                {
+                    "name": "ConnectionId",
+                    "type": "System.String"
+                }
+            ],
+            "propertyJsonSchema": "{\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\n  \"title\": \"SignalRGAgentConfiguration\",\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"properties\": {\n    \"correlationId\": {\n      \"type\": [\n        \"null\",\n        \"string\"\n      ],\n      \"format\": \"guid\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"publisherGrainId\": {\n      \"$ref\": \"#/definitions/GrainId\"\n    },\n    \"connectionId\": {\n      \"type\": \"string\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    }\n  },\n  \"definitions\": {\n    \"GrainId\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"type\": {\n          \"$ref\": \"#/definitions/GrainType\"\n        },\n        \"key\": {\n          \"$ref\": \"#/definitions/IdSpan\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"GrainType\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"value\": {\n          \"$ref\": \"#/definitions/IdSpan\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"IdSpan\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"value\": {\n          \"$ref\": \"#/definitions/ReadOnlyMemoryOfByte\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"ReadOnlyMemoryOfByte\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"length\": {\n          \"type\": \"integer\",\n          \"format\": \"int32\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"isEmpty\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"span\": {\n          \"$ref\": \"#/definitions/ReadOnlySpanOfByte\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"ReadOnlySpanOfByte\": {\n      \"type\": \"object\",\n      \"x-deprecated\": true,\n      \"x-deprecatedMessage\": \"Types with embedded references are not supported in this version of your compiler.\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"length\": {\n          \"type\": \"integer\",\n          \"format\": \"int32\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"isEmpty\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    }\n  },\n  \"x-test-processor\": \"TestProcessor is working!\"\n}",
+            "defaultValues": {
+                "connectionId": ""
+            }
+        },
+        {
+            "agentType": "agentchildtest",
+            "fullName": "Aevatar.Application.Grains.Agents.TestAgent.AgentChildTest",
+            "description": "this is used for front child test",
+            "agentParams": null,
+            "propertyJsonSchema": null,
+            "defaultValues": null
+        },
+        {
+            "agentType": "agentparenttest",
+            "fullName": "Aevatar.Application.Grains.Agents.TestAgent.AgentParentTest",
+            "description": "this is used for front parent test",
+            "agentParams": null,
+            "propertyJsonSchema": null,
+            "defaultValues": null
+        },
+        {
+            "agentType": "agentpermissiontest",
+            "fullName": "Aevatar.Application.Grains.Agents.TestAgent.AgentPermissionTest",
+            "description": "This is a permission test agent",
+            "agentParams": null,
+            "propertyJsonSchema": null,
+            "defaultValues": null
+        },
+        {
+            "agentType": "agenttest",
+            "fullName": "Aevatar.Application.Grains.Agents.TestAgent.AgentTest",
+            "description": "this is used for front test",
+            "agentParams": null,
+            "propertyJsonSchema": null,
+            "defaultValues": null
+        },
+        {
+            "agentType": "Aevatar.Application.Grains.Agents.TestAgent.SignalRTestGAgent",
+            "fullName": "Aevatar.Application.Grains.Agents.TestAgent.SignalRTestGAgent",
+            "description": "This is a GAgent for testing SignalRGAgent",
+            "agentParams": null,
+            "propertyJsonSchema": null,
+            "defaultValues": null
+        },
+        {
+            "agentType": "Aevatar.Application.Grains.Agents.Creator.CreatorGAgent",
+            "fullName": "Aevatar.Application.Grains.Agents.Creator.CreatorGAgent",
+            "description": "Represents an agent responsible for creating and grouping other agents",
+            "agentParams": null,
+            "propertyJsonSchema": null,
+            "defaultValues": null
+        },
+        {
+            "agentType": "hostconfigurationgagent",
+            "fullName": "Aevatar.Application.Grains.Agents.Configuration.HostConfigurationGAgent",
+            "description": "Simplified agent for persistent storage and retrieval of business configuration JSON.",
+            "agentParams": null,
+            "propertyJsonSchema": null,
+            "defaultValues": null
+        },
+        {
+            "agentType": "Aevatar.Application.Grains.Agents.AI.TextCompletion",
+            "fullName": "Aevatar.Application.Grains.Agents.AI.TextCompletionGAgent",
+            "description": "AI text completion agent that generates 5 different completion results based on user input.",
+            "agentParams": null,
+            "propertyJsonSchema": null,
+            "defaultValues": null
+        },
+        {
+            "agentType": "Aevatar.Application.Grains.Agents.AI.WorkflowComposer",
+            "fullName": "Aevatar.Application.Grains.Agents.AI.WorkflowComposerGAgent",
+            "description": "AI workflow generation agent that creates complete workflow JSON from user goals and available agent descriptions. Analyzes user goals and available agent capabilities to generate optimized workflow configurations with proper node connections and data flow management.",
+            "agentParams": null,
+            "propertyJsonSchema": null,
+            "defaultValues": null
+        },
+        {
+            "agentType": "aevatar.event-handler-executor",
+            "fullName": "Aevatar.GAgents.Executor.EventHandlerExecutorGAgent",
+            "description": "Event Handler Executor GAgent - Executes event handlers within Orleans grain context",
+            "agentParams": null,
+            "propertyJsonSchema": null,
+            "defaultValues": null
+        },
+        {
+            "agentType": "aevatar.result",
+            "fullName": "Aevatar.GAgents.Executor.ResultGAgent",
+            "description": "This is a GAgent for collecting GAgent's event handler execution results with Streams support.",
+            "agentParams": [
+                {
+                    "name": "ExecutionId",
+                    "type": "System.String"
+                },
+                {
+                    "name": "StreamProvider",
+                    "type": "System.String"
+                },
+                {
+                    "name": "StreamNamespace",
+                    "type": "System.String"
+                },
+                {
+                    "name": "ExpectedResultType",
+                    "type": "System.Type"
+                }
+            ],
+            "propertyJsonSchema": "{\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\n  \"title\": \"ResultGAgentConfiguration\",\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"properties\": {\n    \"correlationId\": {\n      \"type\": [\n        \"null\",\n        \"string\"\n      ],\n      \"format\": \"guid\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"publisherGrainId\": {\n      \"$ref\": \"#/definitions/GrainId\"\n    },\n    \"executionId\": {\n      \"type\": \"string\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"streamProvider\": {\n      \"type\": \"string\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"streamNamespace\": {\n      \"type\": \"string\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"expectedResultType\": {\n      \"type\": [\n        \"null\",\n        \"string\"\n      ],\n      \"x-test-processor\": \"TestProcessor is working!\"\n    }\n  },\n  \"definitions\": {\n    \"GrainId\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"type\": {\n          \"$ref\": \"#/definitions/GrainType\"\n        },\n        \"key\": {\n          \"$ref\": \"#/definitions/IdSpan\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"GrainType\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"value\": {\n          \"$ref\": \"#/definitions/IdSpan\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"IdSpan\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"value\": {\n          \"$ref\": \"#/definitions/ReadOnlyMemoryOfByte\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"ReadOnlyMemoryOfByte\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"length\": {\n          \"type\": \"integer\",\n          \"format\": \"int32\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"isEmpty\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"span\": {\n          \"$ref\": \"#/definitions/ReadOnlySpanOfByte\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"ReadOnlySpanOfByte\": {\n      \"type\": \"object\",\n      \"x-deprecated\": true,\n      \"x-deprecatedMessage\": \"Types with embedded references are not supported in this version of your compiler.\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"length\": {\n          \"type\": \"integer\",\n          \"format\": \"int32\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"isEmpty\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    }\n  },\n  \"x-test-processor\": \"TestProcessor is working!\"\n}",
+            "defaultValues": {
+                "executionId": null,
+                "streamProvider": null,
+                "streamNamespace": null,
+                "expectedResultType": null
+            }
+        },
+        {
+            "agentType": "Aevatar.GAgents.GroupChat.WorkflowCoordinator.WorkflowCoordinatorGAgent",
+            "fullName": "Aevatar.GAgents.GroupChat.WorkflowCoordinator.WorkflowCoordinatorGAgent",
+            "description": "WorkflowCoordinatorGAgent - Orchestrates complex workflow execution with DAG-based task dependencies. Manages workflow lifecycle (Pending→InProgress→Finished), validates topology to prevent loops, coordinates parallel execution of independent nodes, and ensures data flow through the Blackboard pattern. Current Status: Pending, Nodes: 0 (Completed: 0)",
+            "agentParams": [
+                {
+                    "name": "WorkflowUnitList",
+                    "type": "System.Collections.Generic.List`1[Aevatar.GAgents.GroupChat.WorkflowCoordinator.Dto.WorkflowUnitDto]"
+                },
+                {
+                    "name": "InitContent",
+                    "type": "System.String"
+                },
+                {
+                    "name": "EnableExecutionRecord",
+                    "type": "System.Boolean"
+                }
+            ],
+            "propertyJsonSchema": "{\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\n  \"title\": \"WorkflowCoordinatorConfigDto\",\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"properties\": {\n    \"correlationId\": {\n      \"type\": [\n        \"null\",\n        \"string\"\n      ],\n      \"format\": \"guid\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"publisherGrainId\": {\n      \"$ref\": \"#/definitions/GrainId\"\n    },\n    \"workflowUnitList\": {\n      \"type\": \"array\",\n      \"description\": \"List of workflow units that define the execution sequence and flow\",\n      \"items\": {\n        \"$ref\": \"#/definitions/WorkflowUnitDto\"\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"initContent\": {\n      \"type\": [\n        \"null\",\n        \"string\"\n      ],\n      \"description\": \"Initial content or context to start the workflow execution\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"enableExecutionRecord\": {\n      \"type\": \"boolean\",\n      \"description\": \"Enables recording and tracking of workflow execution steps for debugging and monitoring\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    }\n  },\n  \"definitions\": {\n    \"GrainId\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"type\": {\n          \"$ref\": \"#/definitions/GrainType\"\n        },\n        \"key\": {\n          \"$ref\": \"#/definitions/IdSpan\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"GrainType\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"value\": {\n          \"$ref\": \"#/definitions/IdSpan\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"IdSpan\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"value\": {\n          \"$ref\": \"#/definitions/ReadOnlyMemoryOfByte\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"ReadOnlyMemoryOfByte\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"length\": {\n          \"type\": \"integer\",\n          \"format\": \"int32\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"isEmpty\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"span\": {\n          \"$ref\": \"#/definitions/ReadOnlySpanOfByte\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"ReadOnlySpanOfByte\": {\n      \"type\": \"object\",\n      \"x-deprecated\": true,\n      \"x-deprecatedMessage\": \"Types with embedded references are not supported in this version of your compiler.\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"length\": {\n          \"type\": \"integer\",\n          \"format\": \"int32\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"isEmpty\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"WorkflowUnitDto\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"grainId\": {\n          \"type\": \"string\",\n          \"description\": \"Unique identifier for the current workflow unit/GAgent\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"nextGrainId\": {\n          \"type\": \"string\",\n          \"description\": \"Identifier for the next workflow unit/GAgent in the execution sequence\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"extendedData\": {\n          \"type\": \"object\",\n          \"description\": \"Additional configuration data and parameters specific to this workflow unit\",\n          \"additionalProperties\": {\n            \"type\": \"string\",\n            \"x-test-processor\": \"TestProcessor is working!\"\n          },\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    }\n  },\n  \"x-test-processor\": \"TestProcessor is working!\"\n}",
+            "defaultValues": {
+                "workflowUnitList": [],
+                "initContent": null,
+                "enableExecutionRecord": false
+            }
+        },
+        {
+            "agentType": "Aevatar.GAgents.GroupChat.WorkflowCoordinator.WorkflowExecutionRecordGAgent",
+            "fullName": "Aevatar.GAgents.GroupChat.WorkflowCoordinator.WorkflowExecutionRecordGAgent",
+            "description": "Workflow Execution Record GAgent",
+            "agentParams": null,
+            "propertyJsonSchema": null,
+            "defaultValues": null
+        },
+        {
+            "agentType": "Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView.WorkflowViewGAgent",
+            "fullName": "Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView.WorkflowViewGAgent",
+            "description": "Workflow View GAgent",
+            "agentParams": [
+                {
+                    "name": "WorkflowNodeList",
+                    "type": "System.Collections.Generic.List`1[Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView.Dto.WorkflowNodeDto]"
+                },
+                {
+                    "name": "WorkflowNodeUnitList",
+                    "type": "System.Collections.Generic.List`1[Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView.Dto.WorkflowNodeUnitDto]"
+                },
+                {
+                    "name": "Name",
+                    "type": "System.String"
+                },
+                {
+                    "name": "WorkflowCoordinatorGAgentId",
+                    "type": "System.Guid"
+                }
+            ],
+            "propertyJsonSchema": "{\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\n  \"title\": \"WorkflowViewConfigDto\",\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"properties\": {\n    \"correlationId\": {\n      \"type\": [\n        \"null\",\n        \"string\"\n      ],\n      \"format\": \"guid\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"publisherGrainId\": {\n      \"$ref\": \"#/definitions/GrainId\"\n    },\n    \"workflowNodeList\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"$ref\": \"#/definitions/WorkflowNodeDto\"\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"workflowNodeUnitList\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"$ref\": \"#/definitions/WorkflowNodeUnitDto\"\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"name\": {\n      \"type\": \"string\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"workflowCoordinatorGAgentId\": {\n      \"type\": \"string\",\n      \"format\": \"guid\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    }\n  },\n  \"definitions\": {\n    \"GrainId\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"type\": {\n          \"$ref\": \"#/definitions/GrainType\"\n        },\n        \"key\": {\n          \"$ref\": \"#/definitions/IdSpan\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"GrainType\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"value\": {\n          \"$ref\": \"#/definitions/IdSpan\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"IdSpan\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"value\": {\n          \"$ref\": \"#/definitions/ReadOnlyMemoryOfByte\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"ReadOnlyMemoryOfByte\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"length\": {\n          \"type\": \"integer\",\n          \"format\": \"int32\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"isEmpty\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"span\": {\n          \"$ref\": \"#/definitions/ReadOnlySpanOfByte\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"ReadOnlySpanOfByte\": {\n      \"type\": \"object\",\n      \"x-deprecated\": true,\n      \"x-deprecatedMessage\": \"Types with embedded references are not supported in this version of your compiler.\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"length\": {\n          \"type\": \"integer\",\n          \"format\": \"int32\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"isEmpty\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"WorkflowNodeDto\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"agentType\": {\n          \"type\": \"string\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"name\": {\n          \"type\": \"string\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"extendedData\": {\n          \"type\": \"object\",\n          \"additionalProperties\": {\n            \"type\": \"string\",\n            \"x-test-processor\": \"TestProcessor is working!\"\n          },\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"jsonProperties\": {\n          \"type\": \"string\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"nodeId\": {\n          \"type\": \"string\",\n          \"format\": \"guid\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"agentId\": {\n          \"type\": \"string\",\n          \"format\": \"guid\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"WorkflowNodeUnitDto\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"nodeId\": {\n          \"type\": \"string\",\n          \"format\": \"guid\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"nextNodeId\": {\n          \"type\": \"string\",\n          \"format\": \"guid\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    }\n  },\n  \"x-test-processor\": \"TestProcessor is working!\"\n}",
+            "defaultValues": {
+                "workflowNodeList": [],
+                "workflowNodeUnitList": [],
+                "name": null,
+                "workflowCoordinatorGAgentId": "00000000-0000-0000-0000-000000000000"
+            }
+        },
+        {
+            "agentType": "blackboardgagent",
+            "fullName": "GroupChat.GAgent.Feature.Blackboard.BlackboardGAgent",
+            "description": "BlackboardGAgent - A shared memory space for workflow execution. Stores conversation history, intermediate results, and enables data sharing between non-connected workflow nodes. Acts as the central data repository following the Blackboard architectural pattern.",
+            "agentParams": null,
+            "propertyJsonSchema": null,
+            "defaultValues": null
+        },
+        {
+            "agentType": "Aevatar.GAgents.InputGAgent.GAgent.InputGAgent",
+            "fullName": "Aevatar.GAgents.InputGAgent.GAgent.InputGAgent",
+            "description": "Input agent that returns configured input text",
+            "agentParams": [
+                {
+                    "name": "Input",
+                    "type": "System.String"
+                }
+            ],
+            "propertyJsonSchema": "{\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\n  \"title\": \"InputConfigDto\",\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"required\": [\n    \"memberName\",\n    \"input\"\n  ],\n  \"properties\": {\n    \"memberName\": {\n      \"type\": \"string\",\n      \"description\": \"The name of the group member agent, used for identification and display purposes\",\n      \"maxLength\": 100,\n      \"minLength\": 1,\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"correlationId\": {\n      \"type\": [\n        \"null\",\n        \"string\"\n      ],\n      \"format\": \"guid\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"publisherGrainId\": {\n      \"$ref\": \"#/definitions/GrainId\"\n    },\n    \"input\": {\n      \"type\": \"string\",\n      \"description\": \"The input text that will be returned as a chat response when the agent is queried\",\n      \"maxLength\": 5000,\n      \"minLength\": 1,\n      \"x-test-processor\": \"TestProcessor is working!\"\n    }\n  },\n  \"definitions\": {\n    \"GrainId\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"type\": {\n          \"$ref\": \"#/definitions/GrainType\"\n        },\n        \"key\": {\n          \"$ref\": \"#/definitions/IdSpan\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"GrainType\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"value\": {\n          \"$ref\": \"#/definitions/IdSpan\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"IdSpan\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"value\": {\n          \"$ref\": \"#/definitions/ReadOnlyMemoryOfByte\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"ReadOnlyMemoryOfByte\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"length\": {\n          \"type\": \"integer\",\n          \"format\": \"int32\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"isEmpty\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"span\": {\n          \"$ref\": \"#/definitions/ReadOnlySpanOfByte\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"ReadOnlySpanOfByte\": {\n      \"type\": \"object\",\n      \"x-deprecated\": true,\n      \"x-deprecatedMessage\": \"Types with embedded references are not supported in this version of your compiler.\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"length\": {\n          \"type\": \"integer\",\n          \"format\": \"int32\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"isEmpty\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    }\n  },\n  \"x-test-processor\": \"TestProcessor is working!\"\n}",
+            "defaultValues": {
+                "input": ""
+            }
+        },
+        {
+            "agentType": "aevatar.mcp",
+            "fullName": "Aevatar.GAgents.MCP.GAgents.MCPGAgent",
+            "description": "MCP GAgent for interacting with Model Context Protocol servers",
+            "agentParams": [
+                {
+                    "name": "ServerConfig",
+                    "type": "Aevatar.GAgents.MCP.Options.MCPServerConfig"
+                },
+                {
+                    "name": "RequestTimeout",
+                    "type": "System.TimeSpan"
+                }
+            ],
+            "propertyJsonSchema": "{\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\n  \"title\": \"MCPGAgentConfig\",\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"required\": [\n    \"memberName\",\n    \"serverConfig\"\n  ],\n  \"properties\": {\n    \"memberName\": {\n      \"type\": \"string\",\n      \"description\": \"The name of the group member agent, used for identification and display purposes\",\n      \"maxLength\": 100,\n      \"minLength\": 1,\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"correlationId\": {\n      \"type\": [\n        \"null\",\n        \"string\"\n      ],\n      \"format\": \"guid\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"publisherGrainId\": {\n      \"$ref\": \"#/definitions/GrainId\"\n    },\n    \"serverConfig\": {\n      \"description\": \"Configuration for the MCP (Model Context Protocol) server that provides tools and capabilities\",\n      \"oneOf\": [\n        {\n          \"$ref\": \"#/definitions/MCPServerConfig\"\n        }\n      ]\n    },\n    \"requestTimeout\": {\n      \"type\": \"string\",\n      \"description\": \"Timeout duration for MCP server requests to prevent hanging operations\",\n      \"format\": \"duration\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    }\n  },\n  \"definitions\": {\n    \"GrainId\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"type\": {\n          \"$ref\": \"#/definitions/GrainType\"\n        },\n        \"key\": {\n          \"$ref\": \"#/definitions/IdSpan\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"GrainType\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"value\": {\n          \"$ref\": \"#/definitions/IdSpan\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"IdSpan\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"value\": {\n          \"$ref\": \"#/definitions/ReadOnlyMemoryOfByte\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"ReadOnlyMemoryOfByte\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"length\": {\n          \"type\": \"integer\",\n          \"format\": \"int32\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"isEmpty\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"span\": {\n          \"$ref\": \"#/definitions/ReadOnlySpanOfByte\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"ReadOnlySpanOfByte\": {\n      \"type\": \"object\",\n      \"x-deprecated\": true,\n      \"x-deprecatedMessage\": \"Types with embedded references are not supported in this version of your compiler.\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"length\": {\n          \"type\": \"integer\",\n          \"format\": \"int32\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"isEmpty\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"MCPServerConfig\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"required\": [\n        \"serverName\",\n        \"command\"\n      ],\n      \"properties\": {\n        \"serverName\": {\n          \"type\": \"string\",\n          \"maxLength\": 100,\n          \"minLength\": 1,\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"command\": {\n          \"type\": \"string\",\n          \"maxLength\": 200,\n          \"minLength\": 1,\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"args\": {\n          \"type\": \"array\",\n          \"items\": {\n            \"type\": \"string\",\n            \"x-test-processor\": \"TestProcessor is working!\"\n          },\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"env\": {\n          \"type\": \"object\",\n          \"additionalProperties\": {\n            \"type\": \"string\",\n            \"x-test-processor\": \"TestProcessor is working!\"\n          },\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"description\": {\n          \"type\": \"string\",\n          \"maxLength\": 500,\n          \"minLength\": 0,\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"url\": {\n          \"type\": [\n            \"null\",\n            \"string\"\n          ],\n          \"maxLength\": 1000,\n          \"minLength\": 0,\n          \"pattern\": \"^https?://[^\\\\s/$.?#].[^\\\\s]*$\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"type\": {\n          \"$ref\": \"#/definitions/MCPServerType\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"MCPServerType\": {\n      \"type\": \"integer\",\n      \"description\": \"0 = Stdio\\n1 = StreamableHttp\",\n      \"x-enumNames\": [\n        \"Stdio\",\n        \"StreamableHttp\"\n      ],\n      \"enum\": [\n        0,\n        1\n      ],\n      \"x-test-processor\": \"TestProcessor is working!\"\n    }\n  },\n  \"x-test-processor\": \"TestProcessor is working!\"\n}",
+            "defaultValues": {
+                "serverConfig": {
+                    "serverName": "",
+                    "command": "",
+                    "args": [],
+                    "env": {},
+                    "description": "",
+                    "url": null,
+                    "type": 0
+                },
+                "requestTimeout": "00:00:30"
+            }
+        },
+        {
+            "agentType": "psi.omni",
+            "fullName": "Aevatar.GAgents.PsiOmni.PsiOmniGAgent",
+            "description": "PsiOmni Integration Agent",
+            "agentParams": [
+                {
+                    "name": "ParentId",
+                    "type": "System.String"
+                },
+                {
+                    "name": "Name",
+                    "type": "System.String"
+                },
+                {
+                    "name": "Depth",
+                    "type": "System.Int32"
+                },
+                {
+                    "name": "SystemLLM",
+                    "type": "System.String"
+                },
+                {
+                    "name": "SelfLlmConfig",
+                    "type": "Aevatar.GAgents.AIGAgent.Dtos.SelfLLMConfig"
+                },
+                {
+                    "name": "Description",
+                    "type": "System.String"
+                },
+                {
+                    "name": "Examples",
+                    "type": "System.String"
+                }
+            ],
+            "propertyJsonSchema": "{\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\n  \"title\": \"PsiOmniGAgentConfig\",\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"properties\": {\n    \"memberName\": {\n      \"type\": \"string\",\n      \"description\": \"The name of the group member agent, used for identification and display purposes\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"correlationId\": {\n      \"type\": [\n        \"null\",\n        \"string\"\n      ],\n      \"format\": \"guid\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"publisherGrainId\": {\n      \"$ref\": \"#/definitions/GrainId\"\n    },\n    \"parentId\": {\n      \"type\": \"string\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"name\": {\n      \"type\": \"string\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"depth\": {\n      \"type\": \"integer\",\n      \"format\": \"int32\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"systemLLM\": {\n      \"type\": \"string\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"selfLlmConfig\": {\n      \"$ref\": \"#/definitions/SelfLLMConfig\"\n    },\n    \"description\": {\n      \"type\": \"string\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"examples\": {\n      \"type\": \"string\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    }\n  },\n  \"definitions\": {\n    \"GrainId\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"type\": {\n          \"$ref\": \"#/definitions/GrainType\"\n        },\n        \"key\": {\n          \"$ref\": \"#/definitions/IdSpan\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"GrainType\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"value\": {\n          \"$ref\": \"#/definitions/IdSpan\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"IdSpan\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"value\": {\n          \"$ref\": \"#/definitions/ReadOnlyMemoryOfByte\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"ReadOnlyMemoryOfByte\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"length\": {\n          \"type\": \"integer\",\n          \"format\": \"int32\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"isEmpty\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"span\": {\n          \"$ref\": \"#/definitions/ReadOnlySpanOfByte\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"ReadOnlySpanOfByte\": {\n      \"type\": \"object\",\n      \"x-deprecated\": true,\n      \"x-deprecatedMessage\": \"Types with embedded references are not supported in this version of your compiler.\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"length\": {\n          \"type\": \"integer\",\n          \"format\": \"int32\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"isEmpty\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"SelfLLMConfig\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"required\": [\n        \"providerEnum\",\n        \"modelId\"\n      ],\n      \"properties\": {\n        \"providerEnum\": {\n          \"description\": \"The LLM provider to use (e.g., OpenAI, Azure, Anthropic)\",\n          \"oneOf\": [\n            {\n              \"$ref\": \"#/definitions/LLMProviderEnum\"\n            }\n          ]\n        },\n        \"modelId\": {\n          \"description\": \"The specific model ID to use from the selected provider\",\n          \"oneOf\": [\n            {\n              \"$ref\": \"#/definitions/ModelIdEnum\"\n            }\n          ]\n        },\n        \"modelName\": {\n          \"type\": \"string\",\n          \"description\": \"Custom model name, used when the standard ModelId doesn't match the actual model name\",\n          \"maxLength\": 200,\n          \"minLength\": 0,\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"apiKey\": {\n          \"type\": \"string\",\n          \"description\": \"The API key for authenticating with the LLM provider\",\n          \"maxLength\": 500,\n          \"minLength\": 0,\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"endpoint\": {\n          \"type\": \"string\",\n          \"description\": \"The API endpoint URL for the LLM provider service\",\n          \"format\": \"uri\",\n          \"maxLength\": 500,\n          \"minLength\": 0,\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"memo\": {\n          \"type\": [\n            \"null\",\n            \"object\"\n          ],\n          \"description\": \"Additional configuration parameters and metadata for the LLM setup\",\n          \"additionalProperties\": {},\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"LLMProviderEnum\": {\n      \"type\": \"integer\",\n      \"description\": \"0 = Azure\\n1 = OpenAI\\n2 = DeepSeek\\n3 = Google\",\n      \"x-enumNames\": [\n        \"Azure\",\n        \"OpenAI\",\n        \"DeepSeek\",\n        \"Google\"\n      ],\n      \"enum\": [\n        0,\n        1,\n        2,\n        3\n      ],\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"ModelIdEnum\": {\n      \"type\": \"integer\",\n      \"description\": \"0 = OpenAI\\n1 = DeepSeek\\n2 = Gemini\\n3 = OpenAITextToImage\",\n      \"x-enumNames\": [\n        \"OpenAI\",\n        \"DeepSeek\",\n        \"Gemini\",\n        \"OpenAITextToImage\"\n      ],\n      \"enum\": [\n        0,\n        1,\n        2,\n        3\n      ],\n      \"x-test-processor\": \"TestProcessor is working!\"\n    }\n  },\n  \"x-test-processor\": \"TestProcessor is working!\"\n}",
+            "defaultValues": {
+                "parentId": "",
+                "name": "",
+                "depth": 0,
+                "systemLLM": "OpenAI",
+                "selfLlmConfig": {
+                    "providerEnum": 0,
+                    "modelId": 0,
+                    "modelName": null,
+                    "apiKey": null,
+                    "endpoint": null,
+                    "memo": null
+                },
+                "description": "",
+                "examples": ""
+            }
+        },
+        {
+            "agentType": "Aevatar.GAgents.Twitter.Agent.TwitterGAgent",
+            "fullName": "Aevatar.GAgents.Twitter.Agent.TwitterGAgent",
+            "description": "Twitter Integration Agent",
+            "agentParams": [
+                {
+                    "name": "ConsumerKey",
+                    "type": "System.String"
+                },
+                {
+                    "name": "ConsumerSecret",
+                    "type": "System.String"
+                },
+                {
+                    "name": "EncryptionPassword",
+                    "type": "System.String"
+                },
+                {
+                    "name": "BearerToken",
+                    "type": "System.String"
+                },
+                {
+                    "name": "ReplyLimit",
+                    "type": "System.Int32"
+                }
+            ],
+            "propertyJsonSchema": "{\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\n  \"title\": \"InitTwitterOptionsDto\",\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"required\": [\n    \"consumerKey\",\n    \"consumerSecret\",\n    \"encryptionPassword\",\n    \"bearerToken\"\n  ],\n  \"properties\": {\n    \"correlationId\": {\n      \"type\": [\n        \"null\",\n        \"string\"\n      ],\n      \"format\": \"guid\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"publisherGrainId\": {\n      \"$ref\": \"#/definitions/GrainId\"\n    },\n    \"consumerKey\": {\n      \"type\": \"string\",\n      \"minLength\": 1,\n      \"pattern\": \"^[A-Za-z0-9]+$\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"consumerSecret\": {\n      \"type\": \"string\",\n      \"minLength\": 1,\n      \"pattern\": \"^[A-Za-z0-9]+$\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"encryptionPassword\": {\n      \"type\": \"string\",\n      \"minLength\": 1,\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"bearerToken\": {\n      \"type\": \"string\",\n      \"minLength\": 1,\n      \"pattern\": \"^[A-Za-z0-9_-]+$\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"replyLimit\": {\n      \"type\": \"integer\",\n      \"format\": \"int32\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    }\n  },\n  \"definitions\": {\n    \"GrainId\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"type\": {\n          \"$ref\": \"#/definitions/GrainType\"\n        },\n        \"key\": {\n          \"$ref\": \"#/definitions/IdSpan\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"GrainType\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"value\": {\n          \"$ref\": \"#/definitions/IdSpan\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"IdSpan\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"value\": {\n          \"$ref\": \"#/definitions/ReadOnlyMemoryOfByte\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"ReadOnlyMemoryOfByte\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"length\": {\n          \"type\": \"integer\",\n          \"format\": \"int32\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"isEmpty\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"span\": {\n          \"$ref\": \"#/definitions/ReadOnlySpanOfByte\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"ReadOnlySpanOfByte\": {\n      \"type\": \"object\",\n      \"x-deprecated\": true,\n      \"x-deprecatedMessage\": \"Types with embedded references are not supported in this version of your compiler.\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"length\": {\n          \"type\": \"integer\",\n          \"format\": \"int32\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"isEmpty\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    }\n  },\n  \"x-test-processor\": \"TestProcessor is working!\"\n}",
+            "defaultValues": {
+                "consumerKey": "YOUR_TWITTER_API_KEY",
+                "consumerSecret": "YOUR_API_SECRET",
+                "encryptionPassword": "YOUR_ENCRYPTION_PASSWORD",
+                "bearerToken": "YOUR_BEARER_TOKEN",
+                "replyLimit": 10
+            }
+        },
+        {
+            "agentType": "tool.twitter",
+            "fullName": "Aevatar.GAgents.Twitter.GAgents.TwitterWebApiGAgent",
+            "description": "Twitter Web API GAgent (Refactored) - Modular Twitter/X API v2 Integration\n\nARCHITECTURE:\n• TwitterApiClient - Handles HTTP communication with rate limiting\n• TwitterAuthenticationHandler - Manages OAuth 1.0a and Bearer token auth\n• TwitterRateLimiter - Implements token bucket rate limiting\n\nCAPABILITIES:\n• Tweet Management (post, reply, quote, delete, search)\n• User Interactions (like, retweet, follow)\n• Timeline Operations (home, mentions, user timelines)\n• User Profile Management\n• Relationship Management\n\nAll operations use event sourcing for state management and support both\ninterface methods and event handlers for maximum flexibility.",
+            "agentParams": [
+                {
+                    "name": "ConsumerKey",
+                    "type": "System.String"
+                },
+                {
+                    "name": "ConsumerSecret",
+                    "type": "System.String"
+                },
+                {
+                    "name": "OAuthToken",
+                    "type": "System.String"
+                },
+                {
+                    "name": "OAuthTokenSecret",
+                    "type": "System.String"
+                },
+                {
+                    "name": "BearerToken",
+                    "type": "System.String"
+                },
+                {
+                    "name": "BaseApiUrl",
+                    "type": "System.String"
+                },
+                {
+                    "name": "RequestTimeoutSeconds",
+                    "type": "System.Int32"
+                },
+                {
+                    "name": "MaxRequestsPerWindow",
+                    "type": "System.Int32"
+                },
+                {
+                    "name": "RateLimitWindowMinutes",
+                    "type": "System.Int32"
+                },
+                {
+                    "name": "EnableRateLimiting",
+                    "type": "System.Boolean"
+                }
+            ],
+            "propertyJsonSchema": "{\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\n  \"title\": \"TwitterWebApiGAgentConfiguration\",\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"required\": [\n    \"memberName\"\n  ],\n  \"properties\": {\n    \"memberName\": {\n      \"type\": \"string\",\n      \"description\": \"The name of the group member agent, used for identification and display purposes\",\n      \"maxLength\": 100,\n      \"minLength\": 1,\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"correlationId\": {\n      \"type\": [\n        \"null\",\n        \"string\"\n      ],\n      \"format\": \"guid\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"publisherGrainId\": {\n      \"$ref\": \"#/definitions/GrainId\"\n    },\n    \"consumerKey\": {\n      \"type\": \"string\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"consumerSecret\": {\n      \"type\": \"string\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"oAuthToken\": {\n      \"type\": \"string\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"oAuthTokenSecret\": {\n      \"type\": \"string\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"bearerToken\": {\n      \"type\": \"string\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"baseApiUrl\": {\n      \"type\": \"string\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"requestTimeoutSeconds\": {\n      \"type\": \"integer\",\n      \"format\": \"int32\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"maxRequestsPerWindow\": {\n      \"type\": \"integer\",\n      \"format\": \"int32\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"rateLimitWindowMinutes\": {\n      \"type\": \"integer\",\n      \"format\": \"int32\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"enableRateLimiting\": {\n      \"type\": \"boolean\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    }\n  },\n  \"definitions\": {\n    \"GrainId\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"type\": {\n          \"$ref\": \"#/definitions/GrainType\"\n        },\n        \"key\": {\n          \"$ref\": \"#/definitions/IdSpan\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"GrainType\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"value\": {\n          \"$ref\": \"#/definitions/IdSpan\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"IdSpan\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"value\": {\n          \"$ref\": \"#/definitions/ReadOnlyMemoryOfByte\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"ReadOnlyMemoryOfByte\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"length\": {\n          \"type\": \"integer\",\n          \"format\": \"int32\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"isEmpty\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"span\": {\n          \"$ref\": \"#/definitions/ReadOnlySpanOfByte\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"ReadOnlySpanOfByte\": {\n      \"type\": \"object\",\n      \"x-deprecated\": true,\n      \"x-deprecatedMessage\": \"Types with embedded references are not supported in this version of your compiler.\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"length\": {\n          \"type\": \"integer\",\n          \"format\": \"int32\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"isEmpty\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    }\n  },\n  \"x-test-processor\": \"TestProcessor is working!\"\n}",
+            "defaultValues": {
+                "consumerKey": "",
+                "consumerSecret": "",
+                "oAuthToken": "",
+                "oAuthTokenSecret": "",
+                "bearerToken": "",
+                "baseApiUrl": "https://api.twitter.com/2",
+                "requestTimeoutSeconds": 30,
+                "maxRequestsPerWindow": 300,
+                "rateLimitWindowMinutes": 15,
+                "enableRateLimiting": true
+            }
+        },
+        {
+            "agentType": "Aevatar.GAgents.Twitter.GAgents.ChatAIAgent.ChatAIGAgent",
+            "fullName": "Aevatar.GAgents.Twitter.GAgents.ChatAIAgent.ChatAIGAgent",
+            "description": "Chat AI Agent for group conversations",
+            "agentParams": [
+                {
+                    "name": "Instructions",
+                    "type": "System.String"
+                },
+                {
+                    "name": "SystemLLM",
+                    "type": "System.String"
+                },
+                {
+                    "name": "MCPServers",
+                    "type": "System.Collections.Generic.List`1[Aevatar.GAgents.MCP.Options.MCPServerConfig]"
+                },
+                {
+                    "name": "ToolGAgentTypes",
+                    "type": "System.Collections.Generic.List`1[Orleans.Runtime.GrainType]"
+                },
+                {
+                    "name": "ToolGAgents",
+                    "type": "System.Collections.Generic.List`1[Orleans.Runtime.GrainId]"
+                }
+            ],
+            "propertyJsonSchema": "{\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\n  \"title\": \"ChatAIGAgentConfigDto\",\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"properties\": {\n    \"memberName\": {\n      \"type\": \"string\",\n      \"description\": \"The name of the group member agent, used for identification and display purposes\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"correlationId\": {\n      \"type\": [\n        \"null\",\n        \"string\"\n      ],\n      \"format\": \"guid\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"publisherGrainId\": {\n      \"$ref\": \"#/definitions/GrainId\"\n    },\n    \"instructions\": {\n      \"type\": \"string\",\n      \"description\": \"System instructions that define the AI assistant's behavior and capabilities\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"systemLLM\": {\n      \"type\": \"string\",\n      \"description\": \"The system LLM configuration to use for AI chat functionality\",\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"mcpServers\": {\n      \"type\": \"array\",\n      \"description\": \"List of MCP (Model Context Protocol) servers to enable additional tools and capabilities\",\n      \"items\": {\n        \"$ref\": \"#/definitions/MCPServerConfig\"\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"toolGAgentTypes\": {\n      \"type\": \"array\",\n      \"description\": \"List of GAgent types that can be used as tools by the AI chat agent\",\n      \"items\": {\n        \"$ref\": \"#/definitions/GrainType\"\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"toolGAgents\": {\n      \"type\": \"array\",\n      \"description\": \"List of specific GAgent instances that can be invoked as tools by the AI chat agent\",\n      \"items\": {\n        \"$ref\": \"#/definitions/GrainId\"\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    }\n  },\n  \"definitions\": {\n    \"GrainId\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"type\": {\n          \"$ref\": \"#/definitions/GrainType\"\n        },\n        \"key\": {\n          \"$ref\": \"#/definitions/IdSpan\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"GrainType\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"value\": {\n          \"$ref\": \"#/definitions/IdSpan\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"IdSpan\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"value\": {\n          \"$ref\": \"#/definitions/ReadOnlyMemoryOfByte\"\n        },\n        \"isDefault\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"ReadOnlyMemoryOfByte\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"length\": {\n          \"type\": \"integer\",\n          \"format\": \"int32\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"isEmpty\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"span\": {\n          \"$ref\": \"#/definitions/ReadOnlySpanOfByte\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"ReadOnlySpanOfByte\": {\n      \"type\": \"object\",\n      \"x-deprecated\": true,\n      \"x-deprecatedMessage\": \"Types with embedded references are not supported in this version of your compiler.\",\n      \"additionalProperties\": false,\n      \"properties\": {\n        \"length\": {\n          \"type\": \"integer\",\n          \"format\": \"int32\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"isEmpty\": {\n          \"type\": \"boolean\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"MCPServerConfig\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"required\": [\n        \"serverName\",\n        \"command\"\n      ],\n      \"properties\": {\n        \"serverName\": {\n          \"type\": \"string\",\n          \"maxLength\": 100,\n          \"minLength\": 1,\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"command\": {\n          \"type\": \"string\",\n          \"maxLength\": 200,\n          \"minLength\": 1,\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"args\": {\n          \"type\": \"array\",\n          \"items\": {\n            \"type\": \"string\",\n            \"x-test-processor\": \"TestProcessor is working!\"\n          },\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"env\": {\n          \"type\": \"object\",\n          \"additionalProperties\": {\n            \"type\": \"string\",\n            \"x-test-processor\": \"TestProcessor is working!\"\n          },\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"description\": {\n          \"type\": \"string\",\n          \"maxLength\": 500,\n          \"minLength\": 0,\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"url\": {\n          \"type\": [\n            \"null\",\n            \"string\"\n          ],\n          \"maxLength\": 1000,\n          \"minLength\": 0,\n          \"pattern\": \"^https?://[^\\\\s/$.?#].[^\\\\s]*$\",\n          \"x-test-processor\": \"TestProcessor is working!\"\n        },\n        \"type\": {\n          \"$ref\": \"#/definitions/MCPServerType\"\n        }\n      },\n      \"x-test-processor\": \"TestProcessor is working!\"\n    },\n    \"MCPServerType\": {\n      \"type\": \"integer\",\n      \"description\": \"0 = Stdio\\n1 = StreamableHttp\",\n      \"x-enumNames\": [\n        \"Stdio\",\n        \"StreamableHttp\"\n      ],\n      \"enum\": [\n        0,\n        1\n      ],\n      \"x-test-processor\": \"TestProcessor is working!\"\n    }\n  },\n  \"x-test-processor\": \"TestProcessor is working!\"\n}",
+            "defaultValues": {
+                "instructions": "You are a helpful AI assistant",
+                "systemLLM": "OpenAI",
+                "mCPServers": [],
+                "toolGAgentTypes": [],
+                "toolGAgents": []
+            }
+        }
+    ],
+    "message": ""
+}
