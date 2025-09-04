@@ -17,6 +17,7 @@ using Aevatar.Station.Feature.CreatorGAgent;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using NJsonSchema;
 using Newtonsoft.Json.Serialization;
 using NJsonSchema.Validation;
 using Orleans;
@@ -92,14 +93,11 @@ public class AgentService : ApplicationService, IAgentService
                     }).ToList();
 
                     paramDto.PropertyJsonSchema =
-                        _schemaProvider.GetTypeSchema(kvp.Value.InitializationData.DtoType).ToJson();
+                        _schemaProvider.GetTypeSchema(kvp.Value.InitializationData.DtoType, CreateSchemaContextAsync()).ToJson();
 
                     // Get default values
                     paramDto.DefaultValues =
                         await GetConfigurationDefaultValuesAsync(kvp.Value.InitializationData.DtoType);
-
-                    // Check if agent has SystemLLMConfig and add it
-                    paramDto.SystemLLMConfigs = GetSystemLLMConfigsForAgent(kvp.Value.InitializationData);
                 }
             }
 
@@ -674,4 +672,5 @@ public class AgentService : ApplicationService, IAgentService
 
         return _systemLLMConfigOptions.CurrentValue.SystemLLMConfigs;
     }
+    private SchemaProcessingContext CreateSchemaContextAsync() => new () { AIModelConfigs = _systemLLMConfigOptions.CurrentValue.SystemLLMConfigs };
 }

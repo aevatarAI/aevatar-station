@@ -13,7 +13,7 @@ public class SchemaProvider : ISchemaProvider, ISingletonDependency
     private readonly object _lockObj = new object();
     private readonly Dictionary<Type, JsonSchema> _schemaDic = new Dictionary<Type, JsonSchema>();
 
-    public JsonSchema GetTypeSchema(Type type)
+    public JsonSchema GetTypeSchema(Type type, SchemaProcessingContext? context = null)
     {
         lock (_lockObj)
         {
@@ -26,7 +26,7 @@ public class SchemaProvider : ISchemaProvider, ISingletonDependency
             {
                 FlattenInheritanceHierarchy = true,
                 GenerateEnumMappingDescription = true,
-                SchemaProcessors = { new IgnoreSpecificBaseProcessor(), new GenericMetaProcessor() }
+                SchemaProcessors = { new IgnoreSpecificBaseProcessor(), new DynamicDropDownProcessor(context) }
             };
             settings.SerializerOptions = new JsonSerializerOptions
             {
