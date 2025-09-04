@@ -28,11 +28,8 @@ public class DynamicDropDownProcessor : ISchemaProcessor
             return;
         }
         
-        // Check if this is a property schema processing by checking schema type and title
-        if (context.Schema?.Type == JsonObjectType.String && !string.IsNullOrEmpty(context.Schema.Title))
-        {
-            ProcessDynamicDropDown(context);
-        }
+
+        ProcessDynamicDropDown(context);
     }
 
     private void ProcessDynamicDropDown(SchemaProcessorContext context)
