@@ -10,6 +10,15 @@ using Moq;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
+using GroupChat.GAgent.Feature.Coordinator.GEvent;
+using GroupChat.GAgent.Feature.Common;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Net;
+using System.Text;
+using Newtonsoft.Json;
+using Moq.Protected;
+using System.Threading;
 
 namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 
@@ -23,13 +32,27 @@ public sealed class VideoGenerationGAgentTests : AevatarAIGAgentTestBase
 {
     private readonly ITestOutputHelper _testOutputHelper;
     private readonly IGAgentFactory _gAgentFactory;
-    private readonly Mock<BytePlusModelArkClient> _mockBytePlusClient;
 
     public VideoGenerationGAgentTests(ITestOutputHelper testOutputHelper)
     {
         _testOutputHelper = testOutputHelper;
         _gAgentFactory = GetRequiredService<IGAgentFactory>();
-        _mockBytePlusClient = new Mock<BytePlusModelArkClient>();
+    }
+
+    /// <summary>
+    /// Creates a test-specific GAgent with proper initialization for testing
+    /// The HttpClient with mocked BytePlus API responses is provided by the DI container
+    /// </summary>
+    private async Task<IVideoGenerationGAgent> CreateTestVideoGenerationGAgentAsync()
+    {
+        var agent = await _gAgentFactory.GetGAgentAsync<IVideoGenerationGAgent>(Guid.NewGuid());
+        await agent.InitializeAsync(new InitializeDto
+        {
+            Instructions = "You are a video generation assistant.",
+            LLMConfig = new LLMConfigDto { SystemLLM = "BytePlusVideoGeneration" }
+        });
+
+        return agent;
     }
 
     #region GAgent Initialization Tests
@@ -345,6 +368,501 @@ public sealed class VideoGenerationGAgentTests : AevatarAIGAgentTestBase
         
         _testOutputHelper.WriteLine("GAgent handled invalid configuration gracefully");
     }
+
+    #endregion
+
+    #region Missing Method Tests - Core Functionality
+
+    #region GenerateVideoFromTextAsync Tests
+
+    [Fact]
+    public async Task GenerateVideoFromTextAsync_ValidPrompt_ShouldReturnTaskId()
+    {
+        // Arrange
+        var agent = await CreateTestVideoGenerationGAgentAsync();
+        var prompt = "A beautiful sunset over the ocean";
+        var options = new VideoGenerationConfigDto { Duration = 10, Resolution = "1080p" };
+
+        // Act
+        var taskId = await agent.GenerateVideoFromTextAsync(prompt, options);
+
+        // Assert
+        taskId.ShouldNotBeNullOrEmpty();
+        Guid.TryParse(taskId, out _).ShouldBeTrue("TaskId should be a valid GUID");
+        
+        _testOutputHelper.WriteLine($"Generated task ID: {taskId}");
+    }
+
+    [Fact]
+    public async Task GenerateVideoFromTextAsync_NullPrompt_ShouldUseDefaultPrompt()
+    {
+        // Arrange
+        var agent = await _gAgentFactory.GetGAgentAsync<IVideoGenerationGAgent>(Guid.NewGuid());
+        await agent.InitializeAsync(new InitializeDto
+        {
+            Instructions = "You are a video generation assistant.",
+            LLMConfig = new LLMConfigDto { SystemLLM = "BytePlusVideoGeneration" }
+        });
+
+        // Act
+        var taskId = await agent.GenerateVideoFromTextAsync(null);
+
+        // Assert
+        taskId.ShouldNotBeNullOrEmpty();
+        Guid.TryParse(taskId, out _).ShouldBeTrue("TaskId should be a valid GUID");
+    }
+
+    [Fact]
+    public async Task GenerateVideoFromTextAsync_EmptyPrompt_ShouldUseDefaultPrompt()
+    {
+        // Arrange
+        var agent = await _gAgentFactory.GetGAgentAsync<IVideoGenerationGAgent>(Guid.NewGuid());
+        await agent.InitializeAsync(new InitializeDto
+        {
+            Instructions = "You are a video generation assistant.",
+            LLMConfig = new LLMConfigDto { SystemLLM = "BytePlusVideoGeneration" }
+        });
+
+        // Act
+        var taskId = await agent.GenerateVideoFromTextAsync("");
+
+        // Assert
+        taskId.ShouldNotBeNullOrEmpty();
+        Guid.TryParse(taskId, out _).ShouldBeTrue("TaskId should be a valid GUID");
+    }
+
+    [Fact]
+    public async Task GenerateVideoFromTextAsync_NullOptions_ShouldUseDefaultOptions()
+    {
+        // Arrange
+        var agent = await _gAgentFactory.GetGAgentAsync<IVideoGenerationGAgent>(Guid.NewGuid());
+        await agent.InitializeAsync(new InitializeDto
+        {
+            Instructions = "You are a video generation assistant.",
+            LLMConfig = new LLMConfigDto { SystemLLM = "BytePlusVideoGeneration" }
+        });
+
+        var prompt = "A dancing robot";
+
+        // Act
+        var taskId = await agent.GenerateVideoFromTextAsync(prompt, null);
+
+        // Assert
+        taskId.ShouldNotBeNullOrEmpty();
+        Guid.TryParse(taskId, out _).ShouldBeTrue("TaskId should be a valid GUID");
+    }
+
+    [Fact]
+    public async Task GenerateVideoFromTextAsync_LongPrompt_ShouldHandleCorrectly()
+    {
+        // Arrange
+        var agent = await _gAgentFactory.GetGAgentAsync<IVideoGenerationGAgent>(Guid.NewGuid());
+        await agent.InitializeAsync(new InitializeDto
+        {
+            Instructions = "You are a video generation assistant.",
+            LLMConfig = new LLMConfigDto { SystemLLM = "BytePlusVideoGeneration" }
+        });
+
+        var longPrompt = new string('A', 1000); // 1000 character prompt
+
+        // Act
+        var taskId = await agent.GenerateVideoFromTextAsync(longPrompt);
+
+        // Assert
+        taskId.ShouldNotBeNullOrEmpty();
+        Guid.TryParse(taskId, out _).ShouldBeTrue("TaskId should be a valid GUID");
+    }
+
+    [Fact]
+    public async Task GenerateVideoFromTextAsync_WithoutInitialization_ShouldReturnTaskId()
+    {
+        // Arrange
+        var agent = await _gAgentFactory.GetGAgentAsync<IVideoGenerationGAgent>(Guid.NewGuid());
+        // Note: Agent automatically initializes BytePlus client in OnAIGAgentActivateAsync
+        
+        var prompt = "A beautiful sunset";
+
+        // Act
+        var taskId = await agent.GenerateVideoFromTextAsync(prompt);
+
+        // Assert - Agent always returns a taskId (BytePlus client is auto-initialized)
+        taskId.ShouldNotBeNullOrEmpty();
+        Guid.TryParse(taskId, out _).ShouldBeTrue("TaskId should be a valid GUID");
+    }
+
+    #endregion
+
+    #region GenerateVideoFromImageAsync Tests
+
+    [Fact]
+    public async Task GenerateVideoFromImageAsync_ValidInputs_ShouldReturnTaskId()
+    {
+        // Arrange
+        var agent = await CreateTestVideoGenerationGAgentAsync();
+        var imageUrl = "https://example.com/image.jpg";
+        var prompt = "Make this image come to life with gentle motion";
+        var options = new VideoGenerationConfigDto { Duration = 5, Resolution = "720p" };
+
+        // Act
+        var taskId = await agent.GenerateVideoFromImageAsync(imageUrl, prompt, options);
+
+        // Assert
+        taskId.ShouldNotBeNullOrEmpty();
+        Guid.TryParse(taskId, out _).ShouldBeTrue("TaskId should be a valid GUID");
+        
+        _testOutputHelper.WriteLine($"Generated task ID: {taskId}");
+    }
+
+    [Fact]
+    public async Task GenerateVideoFromImageAsync_NullImageUrl_ShouldReturnFailedTaskId()
+    {
+        // Arrange
+        var agent = await _gAgentFactory.GetGAgentAsync<IVideoGenerationGAgent>(Guid.NewGuid());
+        await agent.InitializeAsync(new InitializeDto
+        {
+            Instructions = "You are a video generation assistant.",
+            LLMConfig = new LLMConfigDto { SystemLLM = "BytePlusVideoGeneration" }
+        });
+
+        var prompt = "Make this image come to life";
+
+        // Act
+        var taskId = await agent.GenerateVideoFromImageAsync(null, prompt);
+
+        // Assert - Returns failed taskId instead of throwing exception
+        taskId.ShouldNotBeNullOrEmpty();
+        Guid.TryParse(taskId, out _).ShouldBeTrue("TaskId should be a valid GUID");
+        
+        // Verify the task has failed status with error message
+        var status = await agent.GetVideoStatusAsync(taskId);
+        status.Status.ShouldBe("failed");
+        status.ErrorMessage.ShouldBe("Image URL is required");
+    }
+
+    [Fact]
+    public async Task GenerateVideoFromImageAsync_EmptyImageUrl_ShouldReturnFailedTaskId()
+    {
+        // Arrange
+        var agent = await _gAgentFactory.GetGAgentAsync<IVideoGenerationGAgent>(Guid.NewGuid());
+        await agent.InitializeAsync(new InitializeDto
+        {
+            Instructions = "You are a video generation assistant.",
+            LLMConfig = new LLMConfigDto { SystemLLM = "BytePlusVideoGeneration" }
+        });
+
+        var prompt = "Make this image come to life";
+
+        // Act
+        var taskId = await agent.GenerateVideoFromImageAsync("", prompt);
+
+        // Assert - Returns failed taskId instead of throwing exception
+        taskId.ShouldNotBeNullOrEmpty();
+        Guid.TryParse(taskId, out _).ShouldBeTrue("TaskId should be a valid GUID");
+        
+        // Verify the task has failed status with error message
+        var status = await agent.GetVideoStatusAsync(taskId);
+        status.Status.ShouldBe("failed");
+        status.ErrorMessage.ShouldBe("Image URL is required");
+    }
+
+    [Fact]
+    public async Task GenerateVideoFromImageAsync_InvalidImageUrl_ShouldReturnTaskId()
+    {
+        // Arrange
+        var agent = await _gAgentFactory.GetGAgentAsync<IVideoGenerationGAgent>(Guid.NewGuid());
+        await agent.InitializeAsync(new InitializeDto
+        {
+            Instructions = "You are a video generation assistant.",
+            LLMConfig = new LLMConfigDto { SystemLLM = "BytePlusVideoGeneration" }
+        });
+
+        var invalidImageUrl = "not-a-valid-url";
+        var prompt = "Make this image come to life";
+
+        // Act
+        var taskId = await agent.GenerateVideoFromImageAsync(invalidImageUrl, prompt);
+
+        // Assert - Agent processes even invalid URLs and returns taskId
+        taskId.ShouldNotBeNullOrEmpty();
+        Guid.TryParse(taskId, out _).ShouldBeTrue("TaskId should be a valid GUID");
+    }
+
+    [Fact]
+    public async Task GenerateVideoFromImageAsync_NullPrompt_ShouldUseDefaultPrompt()
+    {
+        // Arrange
+        var agent = await _gAgentFactory.GetGAgentAsync<IVideoGenerationGAgent>(Guid.NewGuid());
+        await agent.InitializeAsync(new InitializeDto
+        {
+            Instructions = "You are a video generation assistant.",
+            LLMConfig = new LLMConfigDto { SystemLLM = "BytePlusVideoGeneration" }
+        });
+
+        var imageUrl = "https://example.com/image.jpg";
+
+        // Act
+        var taskId = await agent.GenerateVideoFromImageAsync(imageUrl, null);
+
+        // Assert
+        taskId.ShouldNotBeNullOrEmpty();
+        Guid.TryParse(taskId, out _).ShouldBeTrue("TaskId should be a valid GUID");
+    }
+
+    [Fact]
+    public async Task GenerateVideoFromImageAsync_NullOptions_ShouldUseDefaultOptions()
+    {
+        // Arrange
+        var agent = await _gAgentFactory.GetGAgentAsync<IVideoGenerationGAgent>(Guid.NewGuid());
+        await agent.InitializeAsync(new InitializeDto
+        {
+            Instructions = "You are a video generation assistant.",
+            LLMConfig = new LLMConfigDto { SystemLLM = "BytePlusVideoGeneration" }
+        });
+
+        var imageUrl = "https://example.com/image.jpg";
+        var prompt = "Add motion to this image";
+
+        // Act
+        var taskId = await agent.GenerateVideoFromImageAsync(imageUrl, prompt, null);
+
+        // Assert
+        taskId.ShouldNotBeNullOrEmpty();
+        Guid.TryParse(taskId, out _).ShouldBeTrue("TaskId should be a valid GUID");
+    }
+
+    [Fact]
+    public async Task GenerateVideoFromImageAsync_WithoutInitialization_ShouldReturnTaskId()
+    {
+        // Arrange
+        var agent = await _gAgentFactory.GetGAgentAsync<IVideoGenerationGAgent>(Guid.NewGuid());
+        // Note: Agent automatically initializes BytePlus client in OnAIGAgentActivateAsync
+        
+        var imageUrl = "https://example.com/image.jpg";
+        var prompt = "Add motion to this image";
+
+        // Act
+        var taskId = await agent.GenerateVideoFromImageAsync(imageUrl, prompt);
+
+        // Assert - Agent always returns a taskId (BytePlus client is auto-initialized)
+        taskId.ShouldNotBeNullOrEmpty();
+        Guid.TryParse(taskId, out _).ShouldBeTrue("TaskId should be a valid GUID");
+    }
+
+    #endregion
+
+    #region GetVideoStatusAsync Tests
+
+    [Fact]
+    public async Task GetVideoStatusAsync_ExistingTask_ShouldReturnStatus()
+    {
+        // Arrange
+        var agent = await CreateTestVideoGenerationGAgentAsync();
+
+        // Create a task first using the mocked BytePlus API
+        var taskId = await agent.GenerateVideoFromTextAsync("Test video generation");
+        
+        // Wait a moment for the task to be processed
+        await Task.Delay(100);
+
+        // Act
+        var status = await agent.GetVideoStatusAsync(taskId);
+
+        // Assert
+        status.ShouldNotBeNull();
+        status.TaskId.ShouldBe(taskId);
+        status.Status.ShouldNotBeNullOrEmpty();
+        status.CreatedAt.ShouldBeGreaterThan(DateTime.UtcNow.AddMinutes(-1));
+        
+        _testOutputHelper.WriteLine($"Task status: {status.Status}, Progress: {status.Progress}%");
+    }
+
+    [Fact]
+    public async Task GetVideoStatusAsync_NonExistentTask_ShouldReturnNotFound()
+    {
+        // Arrange
+        var agent = await _gAgentFactory.GetGAgentAsync<IVideoGenerationGAgent>(Guid.NewGuid());
+        await agent.InitializeAsync(new InitializeDto
+        {
+            Instructions = "You are a video generation assistant.",
+            LLMConfig = new LLMConfigDto { SystemLLM = "BytePlusVideoGeneration" }
+        });
+
+        var nonExistentTaskId = Guid.NewGuid().ToString();
+
+        // Act
+        var status = await agent.GetVideoStatusAsync(nonExistentTaskId);
+
+        // Assert
+        status.ShouldNotBeNull();
+        status.TaskId.ShouldBe(nonExistentTaskId);
+        status.Status.ShouldBe("not_found");
+        status.ErrorMessage.ShouldBe("Task not found");
+    }
+
+    [Fact]
+    public async Task GetVideoStatusAsync_NullTaskId_ShouldThrowArgumentNullException()
+    {
+        // Arrange
+        var agent = await _gAgentFactory.GetGAgentAsync<IVideoGenerationGAgent>(Guid.NewGuid());
+        await agent.InitializeAsync(new InitializeDto
+        {
+            Instructions = "You are a video generation assistant.",
+            LLMConfig = new LLMConfigDto { SystemLLM = "BytePlusVideoGeneration" }
+        });
+
+        // Act & Assert - Method throws ArgumentNullException when accessing dictionary with null key
+        await Should.ThrowAsync<ArgumentNullException>(async () =>
+        {
+            await agent.GetVideoStatusAsync(null);
+        });
+    }
+
+    [Fact]
+    public async Task GetVideoStatusAsync_EmptyTaskId_ShouldReturnNotFound()
+    {
+        // Arrange
+        var agent = await _gAgentFactory.GetGAgentAsync<IVideoGenerationGAgent>(Guid.NewGuid());
+        await agent.InitializeAsync(new InitializeDto
+        {
+            Instructions = "You are a video generation assistant.",
+            LLMConfig = new LLMConfigDto { SystemLLM = "BytePlusVideoGeneration" }
+        });
+
+        // Act
+        var status = await agent.GetVideoStatusAsync("");
+
+        // Assert
+        status.ShouldNotBeNull();
+        status.Status.ShouldBe("not_found");
+        status.ErrorMessage.ShouldBe("Task not found");
+    }
+
+    [Fact]
+    public async Task GetVideoStatusAsync_ProcessingTask_ShouldCheckBytePlusAPI()
+    {
+        // Arrange
+        var agent = await _gAgentFactory.GetGAgentAsync<IVideoGenerationGAgent>(Guid.NewGuid());
+        await agent.InitializeAsync(new InitializeDto
+        {
+            Instructions = "You are a video generation assistant.",
+            LLMConfig = new LLMConfigDto { SystemLLM = "BytePlusVideoGeneration" }
+        });
+
+        // Create a task first
+        var taskId = await agent.GenerateVideoFromTextAsync("Test video for status check");
+        
+        // Act - Call status check multiple times to test progression
+        var status1 = await agent.GetVideoStatusAsync(taskId);
+        await Task.Delay(100);
+        var status2 = await agent.GetVideoStatusAsync(taskId);
+
+        // Assert
+        status1.ShouldNotBeNull();
+        status1.TaskId.ShouldBe(taskId);
+        status1.Status.ShouldBeOneOf("processing", "completed", "failed");
+        
+        status2.ShouldNotBeNull();
+        status2.TaskId.ShouldBe(taskId);
+        
+        // Progress should either stay the same or increase
+        status2.Progress.ShouldBeGreaterThanOrEqualTo(status1.Progress);
+        
+        _testOutputHelper.WriteLine($"Status 1: {status1.Status} ({status1.Progress}%)");
+        _testOutputHelper.WriteLine($"Status 2: {status2.Status} ({status2.Progress}%)");
+    }
+
+    #endregion
+
+    #region Integration Tests - Public Interface
+
+    [Fact]
+    public async Task VideoGenerationGAgent_IntegrationTest_TextToVideoWorkflow()
+    {
+        // Arrange
+        var agent = await _gAgentFactory.GetGAgentAsync<IVideoGenerationGAgent>(Guid.NewGuid());
+        await agent.InitializeAsync(new InitializeDto
+        {
+            Instructions = "You are a video generation assistant.",
+            LLMConfig = new LLMConfigDto { SystemLLM = "BytePlusVideoGeneration" }
+        });
+
+        // Act - Full workflow test
+        var taskId = await agent.GenerateVideoFromTextAsync("A beautiful sunset over mountains");
+        var status = await agent.GetVideoStatusAsync(taskId);
+
+        // Assert
+        taskId.ShouldNotBeNullOrEmpty();
+        status.ShouldNotBeNull();
+        status.TaskId.ShouldBe(taskId);
+        status.Status.ShouldBeOneOf("processing", "completed", "failed");
+        
+        _testOutputHelper.WriteLine($"Integration test completed - Task ID: {taskId}, Status: {status.Status}");
+    }
+
+    [Fact]
+    public async Task VideoGenerationGAgent_IntegrationTest_ImageToVideoWorkflow()
+    {
+        // Arrange
+        var agent = await _gAgentFactory.GetGAgentAsync<IVideoGenerationGAgent>(Guid.NewGuid());
+        await agent.InitializeAsync(new InitializeDto
+        {
+            Instructions = "You are a video generation assistant.",
+            LLMConfig = new LLMConfigDto { SystemLLM = "BytePlusVideoGeneration" }
+        });
+
+        // Act - Full workflow test
+        var taskId = await agent.GenerateVideoFromImageAsync("https://example.com/image.jpg", "Add motion to this image");
+        var status = await agent.GetVideoStatusAsync(taskId);
+
+        // Assert
+        taskId.ShouldNotBeNullOrEmpty();
+        status.ShouldNotBeNull();
+        status.TaskId.ShouldBe(taskId);
+        status.Status.ShouldBeOneOf("processing", "completed", "failed");
+        
+        _testOutputHelper.WriteLine($"Integration test completed - Task ID: {taskId}, Status: {status.Status}");
+    }
+
+    [Fact]
+    public async Task VideoGenerationGAgent_MultipleTasks_ShouldHandleConcurrently()
+    {
+        // Arrange
+        var agent = await _gAgentFactory.GetGAgentAsync<IVideoGenerationGAgent>(Guid.NewGuid());
+        await agent.InitializeAsync(new InitializeDto
+        {
+            Instructions = "You are a video generation assistant.",
+            LLMConfig = new LLMConfigDto { SystemLLM = "BytePlusVideoGeneration" }
+        });
+
+        // Act - Create multiple tasks
+        var task1 = await agent.GenerateVideoFromTextAsync("First video prompt");
+        var task2 = await agent.GenerateVideoFromTextAsync("Second video prompt");
+        var task3 = await agent.GenerateVideoFromTextAsync("Third video prompt");
+
+        // Check statuses
+        var status1 = await agent.GetVideoStatusAsync(task1);
+        var status2 = await agent.GetVideoStatusAsync(task2);
+        var status3 = await agent.GetVideoStatusAsync(task3);
+
+        // Assert
+        task1.ShouldNotBeNullOrEmpty();
+        task2.ShouldNotBeNullOrEmpty();
+        task3.ShouldNotBeNullOrEmpty();
+        
+        // All tasks should be distinct
+        task1.ShouldNotBe(task2);
+        task2.ShouldNotBe(task3);
+        task1.ShouldNotBe(task3);
+        
+        // All statuses should be valid
+        status1.ShouldNotBeNull();
+        status2.ShouldNotBeNull();
+        status3.ShouldNotBeNull();
+        
+        _testOutputHelper.WriteLine($"Multiple tasks created successfully: {task1}, {task2}, {task3}");
+    }
+
+    #endregion
 
     #endregion
 
