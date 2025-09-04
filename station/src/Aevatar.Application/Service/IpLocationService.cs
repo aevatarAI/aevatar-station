@@ -237,13 +237,7 @@ public class IpLocationService : IIpLocationService
 
     public async Task<bool> IsInMainlandChinaAsync(string ipAddress)
     {
-        if ("122.11.245.139".Equals(ipAddress))
-        {
-            return true;
-        }
-
         return await IsIpInMainlandChinaMaxMindAsync(ipAddress);
-
     }
 
     public Task<IpLocationInfo> GetLocationAsync(string ipAddress)
