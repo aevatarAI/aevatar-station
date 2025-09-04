@@ -9,12 +9,26 @@ public partial class PsiOmniGAgent
         return Task.FromResult(1);
     }
 
-    protected override Task<ChatResponse> ChatAsync(Guid blackboardId, List<ChatMessage>? coordinatorMessages)
+    protected override async Task<ChatResponse> ChatAsync(Guid blackboardId, List<ChatMessage>? coordinatorMessages)
     {
-        return Task.FromResult(new ChatResponse
+        foreach (var msg in coordinatorMessages ?? new())
+        {
+            RaiseEventWithTracing(new ReceiveUserMessageEvent
+            {
+                Event = new UserMessageEvent
+                {
+                    TargetAgentId = this.GetGrainId().ToString(),
+                    Content = msg.Content
+                },
+                BlackboardId = blackboardId
+            });
+        }
+
+        await ConfirmEventsWithTracing();
+        return new ChatResponse
         {
             Skip = true,
             Continue = false
-        });
+        };
     }
 }
