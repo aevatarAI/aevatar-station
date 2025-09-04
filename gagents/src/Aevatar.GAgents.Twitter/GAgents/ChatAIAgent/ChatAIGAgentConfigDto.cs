@@ -18,7 +18,7 @@ public class ChatAIGAgentConfigDto : GroupMemberConfigDto
     [Id(1)] 
     [Description("The system LLM configuration to use for AI chat functionality")]
     [DynamicDropDown]
-    public string SystemLLM { get; set; } = "OpenAI";
+    public int SystemLLM { get; set; } = 0;
 
     [Id(2)] 
     [Description("List of MCP (Model Context Protocol) servers to enable additional tools and capabilities")]

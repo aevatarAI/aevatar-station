@@ -9,21 +9,21 @@ namespace Aevatar.Schema;
 
 public class DynamicDropDownProcessor : ISchemaProcessor
 {
-    private readonly SchemaProcessingContext? _processingContext;
+    private readonly DynamicDropDownContext? _dropDownContext;
 
     public DynamicDropDownProcessor() : this(null)
     {
     }
 
-    public DynamicDropDownProcessor(SchemaProcessingContext? processingContext)
+    public DynamicDropDownProcessor(DynamicDropDownContext? dropDownContext)
     {
-        _processingContext = processingContext;
+        _dropDownContext = dropDownContext;
     }
 
     public void Process(SchemaProcessorContext context)
     {
-        // If no processing context is provided, skip processing
-        if (_processingContext == null)
+        // If no dropdown context is provided, skip processing
+        if (_dropDownContext == null)
         {
             return;
         }
@@ -65,9 +65,31 @@ public class DynamicDropDownProcessor : ISchemaProcessor
         }
 
         // Add AI model configurations if available in context
-        if (_processingContext?.AIModelConfigs != null && _processingContext.AIModelConfigs.Any())
+        if (_dropDownContext?.AIModelConfigs != null && _dropDownContext.AIModelConfigs.Any())
         {
-            context.Schema.ExtensionData["x-enumLLMConfigs"] = _processingContext.AIModelConfigs;
+            var configs = _dropDownContext.AIModelConfigs;
+            
+            // Set schema type to integer
+            context.Schema.Type = JsonObjectType.Integer;
+            
+            // Create enum names array from AIModelConfigs names
+            var enumNames = configs.Select(config => config.Name).ToArray();
+            context.Schema.ExtensionData["x-enumNames"] = enumNames;
+            
+            // Create enum values array (0, 1, 2, ...)
+            var enumValues = Enumerable.Range(0, configs.Count).ToArray();
+            context.Schema.Enumeration.Clear();
+            foreach (var value in enumValues)
+            {
+                context.Schema.Enumeration.Add(value);
+            }
+            
+            // Keep x-enumLLMConfigs with full configurations in corresponding order
+            context.Schema.ExtensionData["x-enumLLMConfigs"] = configs;
+            
+            // Generate description showing enum mappings
+            var descriptionLines = configs.Select((config, index) => $"{index} = {config.Name}");
+            context.Schema.Description = string.Join("\n", descriptionLines);
         }
     }
 }

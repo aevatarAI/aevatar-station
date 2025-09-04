@@ -13,7 +13,7 @@ public class SchemaProvider : ISchemaProvider, ISingletonDependency
     private readonly object _lockObj = new object();
     private readonly Dictionary<Type, JsonSchema> _schemaDic = new Dictionary<Type, JsonSchema>();
 
-    public JsonSchema GetTypeSchema(Type type, SchemaProcessingContext? context = null)
+    public JsonSchema GetTypeSchema(Type type, DynamicDropDownContext? context = null)
     {
         lock (_lockObj)
         {

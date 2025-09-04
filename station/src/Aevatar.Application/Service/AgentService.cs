@@ -651,5 +651,5 @@ public class AgentService : ApplicationService, IAgentService
 
         return subAgentGrainIds;
     }
-    private SchemaProcessingContext CreateSchemaContextAsync() => new () { AIModelConfigs = _systemLLMConfigOptions.CurrentValue.SystemLLMConfigs };
+    private DynamicDropDownContext CreateSchemaContextAsync() => new () { AIModelConfigs = _systemLLMConfigOptions.CurrentValue.SystemLLMConfigs };
 }

@@ -4,9 +4,9 @@ using Aevatar.Options;
 namespace Aevatar.Schema;
 
 /// <summary>
-/// Context for schema processing that contains additional metadata and configuration
+/// Context for dynamic dropdown configuration during schema processing
 /// </summary>
-public class SchemaProcessingContext
+public class DynamicDropDownContext
 {
     /// <summary>
     /// AI model configurations available for dynamic dropdown processing
@@ -18,7 +18,7 @@ public class SchemaProcessingContext
     /// </summary>
     public Dictionary<string, object>? AdditionalData { get; set; }
 
-    public SchemaProcessingContext()
+    public DynamicDropDownContext()
     {
         AdditionalData = new Dictionary<string, object>();
     }
