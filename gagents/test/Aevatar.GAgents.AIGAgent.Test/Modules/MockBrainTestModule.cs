@@ -18,6 +18,9 @@ public class MockBrainTestModule : AbpModule
     {
         var services = context.Services;
 
+        // Register HttpClient for VideoGenerationGAgent
+        services.AddHttpClient();
+
         // Replace real BrainFactory with mock implementation
         services.AddSingleton<IBrainFactory, MockBrainFactory>();
         
@@ -69,6 +72,14 @@ public class MockBrainTestModule : AbpModule
                     ModelName = "gemini-pro",
                     Endpoint = "https://test.google.ai",
                     ApiKey = "test-key"
+                },
+                ["BytePlusVideoGeneration"] = new LLMConfig
+                {
+                    ProviderEnum = LLMProviderEnum.BytePlus,
+                    ModelIdEnum = ModelIdEnum.BytePlusVideoGeneration,
+                    ModelName = "test-video-model",
+                    Endpoint = "https://ark.ap-southeast.bytepluses.com",
+                    ApiKey = "test-byteplus-key"
                 }
             }
         };

@@ -156,6 +156,14 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                                 ModelName = "gemini-pro",
                                 Endpoint = "https://test.google.ai",
                                 ApiKey = "test-key"
+                            },
+                            ["BytePlusVideoGeneration"] = new LLMConfig
+                            {
+                                ProviderEnum = LLMProviderEnum.BytePlus,
+                                ModelIdEnum = ModelIdEnum.BytePlusVideoGeneration,
+                                ModelName = "test-video-model",
+                                Endpoint = "https://ark.ap-southeast.bytepluses.com",
+                                ApiKey = "test-byteplus-key"
                             }
                         }
                     };
