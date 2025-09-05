@@ -73,8 +73,6 @@ public interface IGodGPTService
     Task UpdateShowToastAsync(Guid currentUserId);
     Task<List<StripeProductDto>> GetStripeProductsAsync(Guid currentUserId);
     Task<string> CreateCheckoutSessionAsync(Guid currentUserId, CreateCheckoutSessionInput createCheckoutSessionInput);
-    Task<string> ParseEventAndGetUserIdAsync(string json);
-    Task<bool> HandleStripeWebhookEventAsync(Guid internalUserId, string json, StringValues stripeSignature);
     Task<List<PaymentSummary>> GetPaymentHistoryAsync(Guid currentUserId, GetPaymentHistoryInput input);
     Task<GetCustomerResponseDto> GetStripeCustomerAsync(Guid currentUserId);
     Task<SubscriptionResponseDto> CreateSubscriptionAsync(Guid currentUserId, CreateSubscriptionInput input);
@@ -385,84 +383,6 @@ public class GodGPTService : ApplicationService, IGodGPTService
             CancelUrl = createCheckoutSessionInput.CancelUrl
         });
         return result;
-    }
-
-    public async Task<string> ParseEventAndGetUserIdAsync(string json)
-    {
-        var stripeEvent = EventUtility.ParseEvent(json);
-        _logger.LogInformation("[GodGPTPaymentController][webhook] Type: {0}", stripeEvent.Type);
-        if (stripeEvent.Type == "checkout.session.completed")
-        {
-            var session = stripeEvent.Data.Object as Stripe.Checkout.Session;
-            var b = session.Metadata;
-            if (TryGetUserIdFromMetadata(session.Metadata, out  var userId))
-            {
-                _logger.LogDebug("[GodGPTService][ParseEventAndGetUserIdAsync] Type={0}, UserId={1}",stripeEvent.Type, userId);
-                return userId;
-            }
-            _logger.LogWarning("[GodGPTService][ParseEventAndGetUserIdAsync] Type={0}, not found uerid",stripeEvent.Type);
-        }
-        // else if (stripeEvent.Type == "invoice.payment_succeeded")
-        // {
-        //     var invoice = stripeEvent.Data.Object as Stripe.Invoice;
-        //     if (TryGetUserIdFromMetadata(invoice?.Parent?.SubscriptionDetails?.Metadata, out  var userId))
-        //     {
-        //         return userId;
-        //     }
-        // } 
-        else if (stripeEvent.Type is "invoice.paid" or "invoice.payment_failed")
-        {
-            var invoice = stripeEvent.Data.Object as Stripe.Invoice;
-            if (TryGetUserIdFromMetadata(invoice?.Parent?.SubscriptionDetails?.Metadata, out  var userId))
-            {
-                _logger.LogDebug("[GodGPTService][ParseEventAndGetUserIdAsync] Type={0}, UserId={1}",stripeEvent.Type, userId);
-                return userId;
-            }
-            _logger.LogWarning("[GodGPTService][ParseEventAndGetUserIdAsync] Type={0}, not found uerid",stripeEvent.Type);
-        }
-        // else if (stripeEvent.Type == "invoice.payment_failed")
-        // {
-        //     var invoice = stripeEvent.Data.Object as Stripe.Invoice;
-        //     if (TryGetUserIdFromMetadata(invoice.Metadata, out  var userId))
-        //     {
-        //         return userId;
-        //     }
-        // }
-        // else if (stripeEvent.Type == "payment_intent.succeeded")
-        // {
-        //     var paymentIntent = stripeEvent.Data.Object as Stripe.PaymentIntent;
-        //     if (TryGetUserIdFromMetadata(paymentIntent.Metadata, out  var userId))
-        //     {
-        //         return userId;
-        //     }
-        // }
-        else if (stripeEvent.Type is "customer.subscription.deleted" or "customer.subscription.updated")
-        {
-            var subscription = stripeEvent.Data.Object as Stripe.Subscription;
-            if (TryGetUserIdFromMetadata(subscription.Metadata, out  var userId))
-            {
-                return userId;
-            }
-        }
-        else if (stripeEvent.Type == "charge.refunded")
-        {
-            var charge = stripeEvent.Data.Object as Stripe.Charge;
-            var paymentIntentService = new PaymentIntentService(_stripeClient);
-            var paymentIntent = paymentIntentService.Get(charge.PaymentIntentId);
-            if (TryGetUserIdFromMetadata(paymentIntent.Metadata, out  var userId))
-            {
-                return userId;
-            }
-        }
-
-        return string.Empty;
-    }
-
-    public async Task<bool> HandleStripeWebhookEventAsync(Guid internalUserId, string json, StringValues stripeSignature)
-    {
-        var userBillingGAgent =
-            _clusterClient.GetGrain<IUserBillingGAgent>(internalUserId);
-        return await userBillingGAgent.HandleStripeWebhookEventAsync(json, stripeSignature);
     }
 
     public async Task<List<PaymentSummary>> GetPaymentHistoryAsync(Guid currentUserId, GetPaymentHistoryInput input)
