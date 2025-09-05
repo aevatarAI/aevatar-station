@@ -123,10 +123,10 @@ public class AccountController : AevatarController
     public virtual async Task SendPasswordResetCodeAsync(SendPasswordResetCodeDto input)
     {
         var clientIp = HttpContext.GetClientIpAddress();
-        var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp);
-        RequestContext.Set("IsCN", isCN);
         var appType = HttpContext.GetGodGPTAppType();
         RequestContext.Set("AppType", appType.ToString());
+        var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp,appType.ToString());
+        RequestContext.Set("IsCN", isCN);
         var language = HttpContext.GetGodGPTLanguage();
         await _accountService.SendPasswordResetCodeAsync(input, language);
     }

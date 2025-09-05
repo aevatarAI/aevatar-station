@@ -237,12 +237,14 @@ public class IpLocationService : IIpLocationService
         });
     }
 
-    public async Task<bool> IsInMainlandChinaAsync(string ipAddress)
+    public async Task<bool> IsInMainlandChinaAsync(string ipAddress, string appTypeString)
     {
-        var appType = GodGPTAppType.OTHER; // Default value
+        _logger.LogDebug("Processing IP location check start: {AppType}, IP: {IpAddress}", appTypeString, ipAddress);
+
+        var appType = GodGPTAppType.OTHER;
         try
         {
-            var appTypeString = RequestContext.Get("AppType");
+            //var appTypeString = RequestContext.Get("AppType");
         
             if (!string.IsNullOrEmpty((string?)appTypeString) && Enum.TryParse<GodGPTAppType>((string?)appTypeString, out var parsedAppType))
             {
@@ -254,7 +256,6 @@ public class IpLocationService : IIpLocationService
             }
         
             // Log the AppType for debugging purposes
-            _logger.LogDebug("Processing IP location check for AppType: {AppType}, IP: {IpAddress}", appType, ipAddress);
             if (appType == GodGPTAppType.WEB)
             {
                 _logger.LogDebug("Processing IP location check for AppType: {AppType}, IP: {IpAddress} return:{rtn}", appType, ipAddress, false);

@@ -117,7 +117,7 @@ public class ChatMiddleware
         var clientIp = context.GetClientIpAddress();
         var appType = context.GetGodGPTAppType();
         RequestContext.Set("AppType", appType.ToString());
-        var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp);
+        var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp,appType.ToString());
         if (string.IsNullOrWhiteSpace(request.Region))
         {
             request.Region = isCN ? CNDefaultRegion : DefaultRegion;
@@ -294,7 +294,7 @@ public class ChatMiddleware
             var request = JsonConvert.DeserializeObject<GuestChatRequestDto>(body);
             var appType = context.GetGodGPTAppType();
             RequestContext.Set("AppType", appType.ToString());
-            var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp);
+            var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp,appType.ToString());
             if (string.IsNullOrWhiteSpace(request.Region))
             {
                 request.Region = isCN ? CNDefaultRegion : DefaultRegion;
@@ -522,7 +522,7 @@ public class ChatMiddleware
         var clientIp = context.GetClientIpAddress();
         var appType = context.GetGodGPTAppType();
         RequestContext.Set("AppType", appType.ToString());
-        var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp);
+        var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp,appType.ToString());
 
         if (string.IsNullOrWhiteSpace(request.Region))
         {
