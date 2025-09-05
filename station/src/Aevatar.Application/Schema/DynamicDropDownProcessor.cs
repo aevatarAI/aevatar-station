@@ -58,8 +58,6 @@ public class DynamicDropDownProcessor : ISchemaProcessor
                             {   
                                 if (propertySchema.ExtensionData == null)    propertySchema.ExtensionData = new Dictionary<string, object>();
                                
-                                // Set schema type to integer like MCPServerType
-                                propertySchema.Type = NJsonSchema.JsonObjectType.Integer;
                                 InjectSystemLLMConfigurations(propertySchema.ExtensionData);
                               
                                 return;
