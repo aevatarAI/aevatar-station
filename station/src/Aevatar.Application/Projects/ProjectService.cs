@@ -42,13 +42,11 @@ public class ProjectService : OrganizationService, IProjectService
         IDeveloperService developerService, ILogger<ProjectService> logger,
         IOrganizationRoleService organizationRoleService,
         IDistributedCache<string, string> recentUsedProjectCache, IOrganizationService organizationService) :
-        IDeveloperService developerService, ILogger<ProjectService> logger) :
         base(organizationUnitManager, identityUserManager, organizationUnitRepository, roleManager, permissionManager,
             permissionChecker, permissionDefinitionManager, userRepository, notificationService)
     {
         _domainRepository = domainRepository;
         _developerService = developerService;
-        _logger = logger;
         _logger = logger;
         _organizationRoleService = organizationRoleService;
         _recentUsedProjectCache = recentUsedProjectCache;
