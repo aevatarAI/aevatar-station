@@ -160,4 +160,5 @@ public class DailyPushController : AbpControllerBase
             return StatusCode(500, new { error = localizedMessage });
         }
     }
+
 }

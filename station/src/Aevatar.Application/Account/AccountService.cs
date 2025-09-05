@@ -15,8 +15,8 @@ using IdentityUser = Volo.Abp.Identity.IdentityUser;
 using Aevatar.Application.Constants;
 using Aevatar.Application.Contracts.Services;
 using Aevatar.Domain.Shared;
-using Exception = System.Exception;
 using Newtonsoft.Json;
+using Exception = System.Exception;
 
 namespace Aevatar.Account;
 
@@ -95,8 +95,8 @@ public class AccountService : AccountAppService, IAccountService
         var code = await _registerCode.GetAsync(GetRegisterCodeKey(input.Email));
         return code == input.Code;
     }
-
-    public override async Task SendPasswordResetCodeAsync(SendPasswordResetCodeDto input)
+    
+    public async Task SendPasswordResetCodeAsync(SendPasswordResetCodeDto input, GodGPTChatLanguage language)
     {
         var user = await GetUserByEmailAsync(input.Email);
         if (user == null)
@@ -105,7 +105,7 @@ public class AccountService : AccountAppService, IAccountService
             return;
         }
         var resetToken = await UserManager.GeneratePasswordResetTokenAsync(user);
-        await _aevatarAccountEmailer.SendPasswordResetLinkAsync(user, input.Email, resetToken);
+        await _aevatarAccountEmailer.SendPasswordResetLinkAsync(user, input.Email, resetToken, language);
     }
     
     public async Task SendPasswordResetCodeAsync(SendPasswordResetCodeDto input, GodGPTChatLanguage language)

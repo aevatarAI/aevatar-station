@@ -10,6 +10,7 @@ using Orleans;
 using System.Collections.Generic;
 using System.Linq;
 using Volo.Abp.Application.Services;
+using System.Diagnostics;
 
 
 namespace Aevatar.Application.Service;
@@ -169,4 +170,5 @@ public class DailyPushService : ApplicationService, IDailyPushService
             _ => "en"
         };
     }
+
 }
