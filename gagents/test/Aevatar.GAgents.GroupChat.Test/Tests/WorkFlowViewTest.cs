@@ -147,4 +147,79 @@ public sealed class WorkFlowViewTest : AevatarGroupChatTestBase
         exception.Message.ShouldContain("already has a parent GAgent");
         
     }
+
+    [Fact]
+    public async Task WorkflowViewTest_Should_Throw_When_SelfLoopExists()
+    {
+        var workflowViewAgent = await _agentFactory.GetGAgentAsync<IWorkflowViewGAgent>(Guid.NewGuid());
+        var workflowViewConfig = new WorkflowViewConfigDto();
+        var fread = await _agentFactory.GetGAgentAsync<IWorkerGAgent>(Guid.NewGuid());
+        var nodeId = Guid.NewGuid();
+        workflowViewConfig.Name = "workflowView-selfloop";
+        workflowViewConfig.WorkflowNodeList.Add(new WorkflowNodeDto()
+        {
+            NodeId = nodeId,
+            AgentType = fread.GetGrainId().Type.ToString(),
+            JsonProperties = JsonConvert.SerializeObject(new Dictionary<string, object>()
+            {
+                {"MemberName","fread"}
+            }),
+            Name = "fread"
+        });
+        // self-loop
+        workflowViewConfig.WorkflowNodeUnitList.Add(new WorkflowNodeUnitDto()
+        {
+            NodeId = nodeId,
+            NextNodeId = nodeId
+        });
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(async () => await workflowViewAgent.ConfigAsync(workflowViewConfig));
+        exception.Message.ShouldContain("contains a cycle");
+    }
+
+    [Fact]
+    public async Task WorkflowViewTest_Should_Throw_When_CycleExists()
+    {
+        var workflowViewAgent = await _agentFactory.GetGAgentAsync<IWorkflowViewGAgent>(Guid.NewGuid());
+        var workflowViewConfig = new WorkflowViewConfigDto();
+        var fread = await _agentFactory.GetGAgentAsync<IWorkerGAgent>(Guid.NewGuid());
+        var moni = await _agentFactory.GetGAgentAsync<ILeaderGAgent>(Guid.NewGuid());
+        var nodeId1 = Guid.NewGuid();
+        var nodeId2 = Guid.NewGuid();
+        workflowViewConfig.Name = "workflowView-cycle";
+        workflowViewConfig.WorkflowNodeList.Add(new WorkflowNodeDto()
+        {
+            NodeId = nodeId1,
+            AgentType = fread.GetGrainId().Type.ToString(),
+            JsonProperties = JsonConvert.SerializeObject(new Dictionary<string, object>()
+            {
+                {"MemberName","fread"}
+            }),
+            Name = "fread"
+        });
+        workflowViewConfig.WorkflowNodeList.Add(new WorkflowNodeDto()
+        {
+            NodeId = nodeId2,
+            AgentType = moni.GetGrainId().Type.ToString(),
+            JsonProperties = JsonConvert.SerializeObject(new Dictionary<string, object>()
+            {
+                {"MemberName","moni"}
+            }),
+            Name = "moni"
+        });
+        // create a 2-node cycle: 1->2 and 2->1
+        workflowViewConfig.WorkflowNodeUnitList.Add(new WorkflowNodeUnitDto()
+        {
+            NodeId = nodeId1,
+            NextNodeId = nodeId2
+        });
+        workflowViewConfig.WorkflowNodeUnitList.Add(new WorkflowNodeUnitDto()
+        {
+            NodeId = nodeId2,
+            NextNodeId = nodeId1
+        });
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(async () => await workflowViewAgent.ConfigAsync(workflowViewConfig));
+        exception.Message.ShouldContain("contains a cycle");
+    }
 }
