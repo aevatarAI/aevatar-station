@@ -257,6 +257,7 @@ public class IpLocationService : IIpLocationService
             _logger.LogDebug("Processing IP location check for AppType: {AppType}, IP: {IpAddress}", appType, ipAddress);
             if (appType == GodGPTAppType.WEB)
             {
+                _logger.LogDebug("Processing IP location check for AppType: {AppType}, IP: {IpAddress} return:{rtn}", appType, ipAddress, false);
                 return false;
             }
         }
