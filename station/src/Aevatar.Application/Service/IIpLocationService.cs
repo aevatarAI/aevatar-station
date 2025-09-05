@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Aevatar.Domain.Shared;
 
 namespace Aevatar.Application.Service;
 
@@ -11,7 +12,7 @@ public interface IIpLocationService
     Task<bool> IsIpInMainlandChinaMaxMindAsync(string ipAddress);
     Task<IpLocationInfo> GetIpLocationMaxMindAsync(string ipAddress);
     
-    Task<bool> IsInMainlandChinaAsync(string ipAddress);
+    Task<bool> IsInMainlandChinaAsync(string ipAddress,string appTypeString);
     Task<IpLocationInfo> GetLocationAsync(string ipAddress);
 }
 
