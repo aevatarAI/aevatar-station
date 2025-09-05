@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json;
 using Aevatar.GAgents.Basic;
 using NJsonSchema.Generation;
 
@@ -48,7 +49,7 @@ public class DynamicDropDownProcessor : ISchemaProcessor
                     if (dynamicDropDownAttribute != null)
                     {
                         // Set schema type to integer like MCPServerType
-                        context.Schema.Type = NJsonSchema.JsonObjectType.Integer;
+                        // context.Schema.Type = NJsonSchema.JsonObjectType.Integer;
                         InjectSystemLLMConfigurations(context.Schema.ExtensionData);
                         return;
                     }
@@ -95,20 +96,13 @@ public class DynamicDropDownProcessor : ISchemaProcessor
     /// </summary>
     private void InjectSystemLLMConfigurations(IDictionary<string, object?> extensionData)
     {  
-        // Create a dictionary of AI model configurations from the real data
-        var aiModelConfigs = new Dictionary<string, object>();
+        // Create a list of AI model configurations as JSON strings
+        var configJsonList = new List<string>();
         
         foreach (var config in _context.AIModelConfigs)
         {
-            aiModelConfigs[config.Name] = new
-            {
-                Name = config.Name,
-                Provider = config.Provider,
-                Type = config.Type,
-                Strengths = config.Strengths,
-                BestFor = config.BestFor,
-                Speed = config.Speed
-            };
+            var configJson = JsonSerializer.Serialize(config);
+            configJsonList.Add(configJson);
         }
         
         // Create enum structure like MCPServerType with integer type
@@ -116,7 +110,7 @@ public class DynamicDropDownProcessor : ISchemaProcessor
         var enumValues = _context.AIModelConfigs.Select((c, i) => i).ToArray(); // Use integer indices
         
         // Inject the real configurations with enum structure
-        extensionData["x-enumLLMConfigs"] = aiModelConfigs;
+        extensionData["x-descriptions"] = configJsonList;
         extensionData["x-enumNames"] = enumNames;
         extensionData["enum"] = enumValues;
     }
