@@ -30,7 +30,6 @@ public class IpLocationController : ControllerBase
         {
             var ip = HttpContext.GetClientIpAddress();
             var appType = HttpContext.GetGodGPTAppType();
-            RequestContext.Set("AppType", appType.ToString());
 
             if (string.IsNullOrWhiteSpace(ip))
             {

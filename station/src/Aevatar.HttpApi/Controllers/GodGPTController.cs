@@ -99,7 +99,6 @@ public class GodGPTController : AevatarController
         var stopwatch = Stopwatch.StartNew();
         var clientIp = HttpContext.GetClientIpAddress();
         var appType = HttpContext.GetGodGPTAppType();
-        RequestContext.Set("AppType", appType.ToString());
         var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp,appType.ToString());
         RequestContext.Set("IsCN", isCN);
         var sessionId = await _godGptService.CreateSessionAsync((Guid)CurrentUser.Id!, _defaultLLM, _defaultPrompt, request.Guider);
@@ -115,7 +114,6 @@ public class GodGPTController : AevatarController
         var stopwatch = Stopwatch.StartNew();
         var clientIp = HttpContext.GetClientIpAddress();
         var appType = HttpContext.GetGodGPTAppType();
-        RequestContext.Set("AppType", appType.ToString());
         var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp,appType.ToString());
         RequestContext.Set("IsCN", isCN);
         var sessionId = await _godGptService.CreateSessionAsync((Guid)CurrentUser.Id!, _defaultLLM, _defaultPrompt, "");
@@ -488,7 +486,6 @@ public class GodGPTController : AevatarController
         try
         {
             var appType = HttpContext.GetGodGPTAppType();
-            RequestContext.Set("AppType", appType.ToString());
             var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp,appType.ToString());
             RequestContext.Set("IsCN", isCN);
             // Always check limits first to provide graceful response
@@ -589,7 +586,6 @@ public class GodGPTController : AevatarController
         processedContent = processedContent.AppendLanguagePrompt(language);
         var clientIp = HttpContext.GetClientIpAddress();
         var appType = HttpContext.GetGodGPTAppType();
-        RequestContext.Set("AppType", appType.ToString());
         var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp,appType.ToString());
         RequestContext.Set("IsCN", isCN);
         var response = await _godGptService.GetShareKeyWordWithAIAsync(sessionId, processedContent, region, sessionType, language);

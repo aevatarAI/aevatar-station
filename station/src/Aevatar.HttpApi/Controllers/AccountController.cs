@@ -124,7 +124,6 @@ public class AccountController : AevatarController
     {
         var clientIp = HttpContext.GetClientIpAddress();
         var appType = HttpContext.GetGodGPTAppType();
-        RequestContext.Set("AppType", appType.ToString());
         var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp,appType.ToString());
         RequestContext.Set("IsCN", isCN);
         var language = HttpContext.GetGodGPTLanguage();
