@@ -29,7 +29,6 @@ namespace Aevatar.Controllers;
 public class AppleADNetworkController : AevatarController
 {
     private readonly IAppleSignatureVerificationService _signatureVerificationService;
-    private readonly IGoogleAnalyticsService _googleAnalyticsService;
     private readonly IDeviceMappingService _deviceMappingService;
     private readonly ILogger<AppleADNetworkController> _logger;
 
@@ -40,7 +39,6 @@ public class AppleADNetworkController : AevatarController
         ILogger<AppleADNetworkController> logger)
     {
         _signatureVerificationService = signatureVerificationService;
-        _googleAnalyticsService = googleAnalyticsService;
         _deviceMappingService = deviceMappingService;
         _logger = logger;
     }
@@ -174,7 +172,7 @@ public class AppleADNetworkController : AevatarController
             {
                 try
                 {
-                    await ForwardToFirebaseAnalyticsAsync(report, verificationResult);
+                    await _signatureVerificationService.ForwardToFirebaseAnalyticsAsync(report, verificationResult);
                 }
                 catch (Exception ex)
                 {
@@ -202,89 +200,6 @@ public class AppleADNetworkController : AevatarController
                 
             // Return 200 OK even for errors to avoid Apple resending
             return Ok(new { status = "error", message = "Internal processing error" });
-        }
-    }
-
-    /// <summary>
-    /// Forward Apple attribution data to Firebase Analytics
-    /// </summary>
-    private async Task ForwardToFirebaseAnalyticsAsync(AppleAttributionReportDto report, AppleAttributionVerificationResult verificationResult)
-    {
-        try
-        {
-            // Try to find corresponding app_instance_id for this attribution
-            var deviceMappingData = await _deviceMappingService.GetDeviceMappingAsync(report.AppId.ToString());
-            var appInstanceId = deviceMappingData?.AppInstanceId;
-            if (string.IsNullOrEmpty(appInstanceId))
-            {
-                _logger.LogWarning("[AppleADNetworkController][ForwardToFirebaseAnalyticsAsync] No app_instance_id found for Apple attribution. " +
-                    "TransactionId={TransactionId}, AppId={AppId}. Event will be sent without app_instance_id.",
-                    report.TransactionId, report.AppId);
-            }
-            else
-            {
-                _logger.LogInformation("[AppleADNetworkController][ForwardToFirebaseAnalyticsAsync] Found app_instance_id for Apple attribution: " +
-                    "TransactionId={TransactionId}, AppId={AppId}, AppInstanceId={AppInstanceId}",
-                    report.TransactionId, report.AppId, appInstanceId);
-            }
-
-            // Build Firebase event data
-            var firebaseEvent = new GoogleAnalyticsEventRequestDto
-            {
-                EventName = "apple_skadnetwork_attribution",
-                UserId = null, // Apple attribution reports typically don't contain user ID
-                AppInstanceId = appInstanceId, // Add the found app_instance_id
-                Parameters = new Dictionary<string, object>
-                {
-                    ["transaction_id"] = report.TransactionId,
-                    ["ad_network_id"] = report.AdNetworkId,
-                    ["app_id"] = report.AppId,
-                    ["skadnetwork_version"] = verificationResult.Version ?? "unknown",
-                    ["is_verified"] = verificationResult.IsValid,
-                    ["is_winning_attribution"] = verificationResult.IsWinningAttribution,
-                    ["timestamp"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
-                }
-            };
-
-            // Add optional parameters
-            if (!string.IsNullOrEmpty(report.SourceIdentifier))
-                firebaseEvent.Parameters["source_identifier"] = report.SourceIdentifier;
-            
-            if (report.CampaignId.HasValue)
-                firebaseEvent.Parameters["campaign_id"] = report.CampaignId.Value;
-            
-            if (report.SourceAppId.HasValue)
-                firebaseEvent.Parameters["source_app_id"] = report.SourceAppId.Value;
-            
-            if (!string.IsNullOrEmpty(report.SourceDomain))
-                firebaseEvent.Parameters["source_domain"] = report.SourceDomain;
-            
-            if (report.ConversionValue.HasValue)
-                firebaseEvent.Parameters["conversion_value"] = report.ConversionValue.Value;
-            
-            if (!string.IsNullOrEmpty(report.CoarseConversionValue))
-                firebaseEvent.Parameters["coarse_conversion_value"] = report.CoarseConversionValue;
-            
-            if (report.FidelityType.HasValue)
-                firebaseEvent.Parameters["fidelity_type"] = report.FidelityType.Value;
-            
-            if (report.PostbackSequenceIndex.HasValue)
-                firebaseEvent.Parameters["postback_sequence_index"] = report.PostbackSequenceIndex.Value;
-            
-            if (report.Redownload.HasValue)
-                firebaseEvent.Parameters["is_redownload"] = report.Redownload.Value;
-
-            // Send to Firebase
-            await _googleAnalyticsService.TrackFirebaseEventAsync(firebaseEvent);
-
-            _logger.LogDebug("[AppleAttributionController][ForwardToFirebaseAnalyticsAsync] Apple attribution data forwarded to Firebase: TransactionId={TransactionId}",
-                report.TransactionId);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "[AppleAttributionController][ForwardToFirebaseAnalyticsAsync] Failed to forward Apple attribution to Firebase: TransactionId={TransactionId}",
-                report.TransactionId);
-            throw;
         }
     }
 }

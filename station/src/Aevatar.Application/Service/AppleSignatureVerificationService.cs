@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Aevatar.Application.Contracts.Analytics;
 using Aevatar.Dtos;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
@@ -24,6 +25,14 @@ public interface IAppleSignatureVerificationService
     /// <param name="report">Attribution report</param>
     /// <returns>Verification result</returns>
     Task<AppleAttributionVerificationResult> VerifySignatureAsync(AppleAttributionReportDto report);
+
+    /// <summary>
+    /// Generates a unique numeric string for app instance ID
+    /// </summary>
+    Task<string> GenerateUniqueNumericStringAsync();
+
+    Task ForwardToFirebaseAnalyticsAsync(AppleAttributionReportDto report,
+        AppleAttributionVerificationResult verificationResult);
 }
 
 [RemoteService(IsEnabled = false)]
@@ -31,27 +40,31 @@ public interface IAppleSignatureVerificationService
 public class AppleSignatureVerificationService : ApplicationService, IAppleSignatureVerificationService
 {
     private readonly ILogger<AppleSignatureVerificationService> _logger;
+    private readonly IGoogleAnalyticsService _googleAnalyticsService;
 
     // Apple's public keys for different SKAdNetwork versions
     private static readonly Dictionary<string, string> ApplePublicKeys = new()
     {
         // P-192 public key for SKAdNetwork 1.0
-        ["1.0"] = "MEkwEwYHKoZIzj0CAQYIKoZIzj0DAQEDMgAEMyHD625uvsmGq4C43cQ9BnfN2xslVT5V1nOmAMP6qaRRUll3PB1JYmgSm+62sosG",
-        
+        ["1.0"] =
+            "MEkwEwYHKoZIzj0CAQYIKoZIzj0DAQEDMgAEMyHD625uvsmGq4C43cQ9BnfN2xslVT5V1nOmAMP6qaRRUll3PB1JYmgSm+62sosG",
+
         // NIST P-256 public key for SKAdNetwork 2.0+
-        ["2.0+"] = "MFkwEwYHKoZIz0CAQYIKoZIz0DAQcDQgAEWdp8GPcGqmhgzEFj9Z2nSpQVddayaPe4FMzqM9wib1+aHaaIzoHoLN9zW4K8y4SPykE3YVK3sVqW6Af0lfx3gg=="
+        ["2.0+"] = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEWdp8GPcGqmhgzEFj9Z2nSpQVddayaPe4FMzqM9wib1+aHaaIzoHoLN9zW4K8y4SPykE3YVK3sVqW6Af0lfx3gg=="
     };
 
-    public AppleSignatureVerificationService(ILogger<AppleSignatureVerificationService> logger)
+    public AppleSignatureVerificationService(ILogger<AppleSignatureVerificationService> logger, IGoogleAnalyticsService googleAnalyticsService)
     {
         _logger = logger;
+        _googleAnalyticsService = googleAnalyticsService;
     }
 
     public async Task<AppleAttributionVerificationResult> VerifySignatureAsync(AppleAttributionReportDto report)
     {
         try
         {
-            _logger.LogDebug("[AppleSignatureVerificationService][VerifySignatureAsync] Starting signature verification for transaction: {TransactionId}", 
+            _logger.LogDebug(
+                "[AppleSignatureVerificationService][VerifySignatureAsync] Starting signature verification for transaction: {TransactionId}",
                 report.TransactionId);
 
             // Check basic parameters
@@ -67,14 +80,19 @@ public class AppleSignatureVerificationService : ApplicationService, IAppleSigna
 
             // Determine version
             var version = DetermineVersion(report);
-            _logger.LogDebug("[AppleSignatureVerificationService][VerifySignatureAsync] Detected SKAdNetwork version: {Version}", version);
+            _logger.LogDebug(
+                "[AppleSignatureVerificationService][VerifySignatureAsync] Detected SKAdNetwork version: {Version}",
+                version);
 
             // Build signature string
             var signatureString = BuildSignatureString(report, version);
-            _logger.LogDebug("[AppleSignatureVerificationService][VerifySignatureAsync] Built signature string length: {Length}", signatureString.Length);
+            _logger.LogDebug(
+                "[AppleSignatureVerificationService][VerifySignatureAsync] Built signature string length: {Length}",
+                signatureString.Length);
 
             // Verify signature
-            var isValidSignature = await VerifyECDSASignatureAsync(signatureString, report.AttributionSignature, version);
+            var isValidSignature =
+                await VerifyECDSASignatureAsync(signatureString, report.AttributionSignature, version);
 
             var result = new AppleAttributionVerificationResult
             {
@@ -85,14 +103,16 @@ public class AppleSignatureVerificationService : ApplicationService, IAppleSigna
                 ErrorMessage = isValidSignature ? null : "Signature verification failed"
             };
 
-            _logger.LogInformation("[AppleSignatureVerificationService][VerifySignatureAsync] Verification completed for transaction {TransactionId}: Valid={IsValid}, Version={Version}, IsWinning={IsWinning}",
+            _logger.LogInformation(
+                "[AppleSignatureVerificationService][VerifySignatureAsync] Verification completed for transaction {TransactionId}: Valid={IsValid}, Version={Version}, IsWinning={IsWinning}",
                 report.TransactionId, result.IsValid, result.Version, result.IsWinningAttribution);
 
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[AppleSignatureVerificationService][VerifySignatureAsync] Error verifying signature for transaction: {TransactionId}", 
+            _logger.LogError(ex,
+                "[AppleSignatureVerificationService][VerifySignatureAsync] Error verifying signature for transaction: {TransactionId}",
                 report.TransactionId);
 
             return new AppleAttributionVerificationResult
@@ -102,6 +122,128 @@ public class AppleSignatureVerificationService : ApplicationService, IAppleSigna
                 OriginalReport = report
             };
         }
+    }
+
+    public Task<string> GenerateUniqueNumericStringAsync()
+    {
+        var bytes = new byte[16];
+        var timestampBytes = BitConverter.GetBytes(DateTimeOffset.UtcNow.Ticks);
+        Array.Copy(timestampBytes, 0, bytes, 0, 8);
+        var random = new Random();
+        random.NextBytes(bytes.AsSpan(8, 8));
+        var hexString = Convert.ToHexString(bytes).ToLowerInvariant();
+        return Task.FromResult(hexString);
+    }
+
+    public async Task ForwardToFirebaseAnalyticsAsync(AppleAttributionReportDto report,
+        AppleAttributionVerificationResult verificationResult)
+    {
+        try
+        {
+            var appInstanceId = await GenerateUniqueNumericStringAsync();
+
+            var param = BuildCampaignDetailsEventParam(report, verificationResult);
+
+            // Build Firebase event data
+            var firebaseEvents = new GoogleAnalyticsBatchEventRequestDto()
+            {
+                AppInstanceId = appInstanceId,
+                Events = new List<SimpleBatchEventDto>()
+                {
+                    new SimpleBatchEventDto
+                    {
+                        EventName = "campaign_details",
+                        Parameters = param
+                    },
+                    new SimpleBatchEventDto
+                    {
+                        EventName = "campaign_details_skan_test",
+                        Parameters = param
+                    }
+                }
+            };
+            
+            // Send to Firebase
+            await _googleAnalyticsService.TrackFirebaseBatchEventsAsync(firebaseEvents);
+
+            _logger.LogDebug(
+                "[AppleAttributionController][ForwardToFirebaseAnalyticsAsync] Apple attribution data forwarded to Firebase: TransactionId={TransactionId}",
+                report.TransactionId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "[AppleAttributionController][ForwardToFirebaseAnalyticsAsync] Failed to forward Apple attribution to Firebase: TransactionId={TransactionId}",
+                report.TransactionId);
+            throw;
+        }
+    }
+
+    private static Dictionary<string, object> BuildCampaignDetailsEventParam(AppleAttributionReportDto report,
+        AppleAttributionVerificationResult verificationResult)
+    {
+        var parameters = new Dictionary<string, object>
+        {
+            ["source_platform"] = "apple_skan",
+            ["app_id"] = report.AppId,
+            ["transaction_id"] = report.TransactionId,
+            ["version"] = verificationResult.Version ?? "unknown",
+            ["ad_network_id"] = report.AdNetworkId,
+            ["attribution_signature"] = report.AttributionSignature ?? "unknown",
+            ["is_verified"] = verificationResult.IsValid
+        };
+        // source、medium
+        if (report.CampaignId.HasValue)
+        {
+            parameters["campaign_id"] = report.CampaignId.Value;
+        }
+
+        if (report.FidelityType.HasValue)
+        {
+            parameters["fidelity_type"] = report.FidelityType.Value;
+        }
+
+        if (report.DidWin.HasValue)
+        {
+            parameters["did_win"] = report.DidWin.Value;
+        }
+
+        if (report.Redownload.HasValue)
+        {
+            parameters["redownload"] = report.Redownload.Value;
+        }
+
+        if (report.SourceAppId.HasValue)
+        {
+            parameters["source_app_id"] = report.SourceAppId.Value;
+        }
+
+        if (report.ConversionValue.HasValue)
+        {
+            parameters["conversion_value"] = report.ConversionValue.Value;
+        }
+
+        // Add optional parameters
+        if (!string.IsNullOrEmpty(report.SourceIdentifier))
+        {
+            parameters["source_identifier"] = report.SourceIdentifier;
+        }
+
+        if (!string.IsNullOrEmpty(report.SourceDomain))
+        {
+            parameters["source_domain"] = report.SourceDomain;
+        }
+
+        if (!string.IsNullOrEmpty(report.CoarseConversionValue))
+        {
+            parameters["coarse_conversion_value"] = report.CoarseConversionValue;
+        }
+
+        if (report.PostbackSequenceIndex.HasValue)
+        {
+            parameters["postback_sequence_index"] = report.PostbackSequenceIndex.Value;
+        }
+        return parameters;
     }
 
     /// <summary>
@@ -278,36 +420,125 @@ public class AppleSignatureVerificationService : ApplicationService, IAppleSigna
         {
             // Get Apple's public key for the corresponding version
             var publicKeyBase64 = version == "1.0" ? ApplePublicKeys["1.0"] : ApplePublicKeys["2.0+"];
-            
+
             // Decode public key
             var publicKeyBytes = Convert.FromBase64String(publicKeyBase64);
-            
+
             // Create ECDsa instance
-            using var ecdsa = version == "1.0" ? 
-                ECDsa.Create(ECCurve.CreateFromFriendlyName("secp192r1")) : 
-                ECDsa.Create(ECCurve.NamedCurves.nistP256);
+            using var ecdsa = version == "1.0"
+                ? ECDsa.Create(ECCurve.CreateFromFriendlyName("secp192r1"))
+                : ECDsa.Create(ECCurve.NamedCurves.nistP256);
 
             // Import Apple's public key
             ecdsa.ImportSubjectPublicKeyInfo(publicKeyBytes, out _);
-
             // Prepare data to verify
             var dataBytes = Encoding.UTF8.GetBytes(signatureString);
-            
+
             // Decode signature
             var signatureBytes = Convert.FromBase64String(base64Signature);
+            var ieee1363Signature = ConvertDerToIeeeP1363(signatureBytes);
+            if (ieee1363Signature != null)
+            {
+                signatureBytes = ieee1363Signature;
+            }
 
             // Verify signature using SHA-256
             var isValid = ecdsa.VerifyData(dataBytes, signatureBytes, HashAlgorithmName.SHA256);
 
-            _logger.LogDebug("[AppleSignatureVerificationService][VerifyECDSASignatureAsync] ECDSA verification result: {IsValid}, Version: {Version}", 
+            _logger.LogDebug(
+                "[AppleSignatureVerificationService][VerifyECDSASignatureAsync] ECDSA verification result: {IsValid}, Version: {Version}",
                 isValid, version);
 
             return await Task.FromResult(isValid);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[AppleSignatureVerificationService][VerifyECDSASignatureAsync] ECDSA verification failed for version: {Version}", version);
+            _logger.LogError(ex,
+                "[AppleSignatureVerificationService][VerifyECDSASignatureAsync] ECDSA verification failed for version: {Version}",
+                version);
             return false;
+        }
+    }
+
+    private byte[]? ConvertDerToIeeeP1363(byte[] derSignature)
+    {
+        try
+        {
+            if (derSignature.Length < 6) return null;
+
+            int index = 0;
+
+            // SEQUENCE (0x30)
+            if (derSignature[index++] != 0x30) return null;
+
+            int sequenceLength = derSignature[index++];
+            if (sequenceLength >= 0x80)
+            {
+                int lengthBytes = sequenceLength & 0x7F;
+                sequenceLength = 0;
+                for (int i = 0; i < lengthBytes; i++)
+                {
+                    sequenceLength = (sequenceLength << 8) | derSignature[index++];
+                }
+            }
+
+            // r value
+            if (derSignature[index++] != 0x02) return null;
+            int rLength = derSignature[index++];
+            if (rLength >= 0x80)
+            {
+                var lengthBytes = rLength & 0x7F;
+                rLength = 0;
+                for (var i = 0; i < lengthBytes; i++)
+                {
+                    rLength = (rLength << 8) | derSignature[index++];
+                }
+            }
+
+            var rBytes = new byte[rLength];
+            Array.Copy(derSignature, index, rBytes, 0, rLength);
+            index += rLength;
+
+            //s value
+            if (derSignature[index++] != 0x02) return null;
+            int sLength = derSignature[index++];
+            if (sLength >= 0x80)
+            {
+                var lengthBytes = sLength & 0x7F;
+                sLength = 0;
+                for (var i = 0; i < lengthBytes; i++)
+                {
+                    sLength = (sLength << 8) | derSignature[index++];
+                }
+            }
+
+            var sBytes = new byte[sLength];
+            Array.Copy(derSignature, index, sBytes, 0, sLength);
+
+            //IEEE P1363(P-256，32 byte)
+            var ieee1363 = new byte[64];
+
+            var rStart = 0;
+            if (rBytes.Length > 1 && rBytes[0] == 0x00) rStart = 1;
+            var rActualLength = rBytes.Length - rStart;
+            if (rActualLength <= 32)
+            {
+                Array.Copy(rBytes, rStart, ieee1363, 32 - rActualLength, rActualLength);
+            }
+
+            var sStart = 0;
+            if (sBytes.Length > 1 && sBytes[0] == 0x00) sStart = 1;
+            var sActualLength = sBytes.Length - sStart;
+            if (sActualLength <= 32)
+            {
+                Array.Copy(sBytes, sStart, ieee1363, 32 + (32 - sActualLength), sActualLength);
+            }
+
+            return ieee1363;
+        }
+        catch
+        {
+            return null;
         }
     }
 }

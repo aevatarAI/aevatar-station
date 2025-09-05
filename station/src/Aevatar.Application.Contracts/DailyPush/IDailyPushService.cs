@@ -33,4 +33,5 @@ public interface IDailyPushService
     /// <returns>Device status or null if not found</returns>
     Task<DeviceStatusResponse?> GetDeviceStatusAsync(Guid userId, string deviceId);
     
+    
 }
