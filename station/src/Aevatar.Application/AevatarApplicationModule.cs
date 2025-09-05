@@ -127,5 +127,8 @@ public class AevatarApplicationModule : AbpModule
         
         // Register ITraceManager dependency
         context.Services.AddSingleton<Aevatar.Core.Interception.Services.ITraceManager, Aevatar.Core.Interception.Services.TraceManager>();
+        
+        // Workflow debugging services - dual interception strategy
+        context.Services.AddSingleton<Aevatar.Service.DebugWorkFlow.IBreakpointManager, Aevatar.Service.DebugWorkFlow.BreakpointManager>();
     }
 }
