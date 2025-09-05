@@ -1,8 +1,10 @@
 using System;
 using System.Threading.Tasks;
+using Aevatar.Domain.Shared;
 using Microsoft.Extensions.Logging;
 using ipdb;
 using MaxMind.GeoIP2;
+using Orleans.Runtime;
 
 namespace Aevatar.Application.Service;
 
@@ -237,6 +239,32 @@ public class IpLocationService : IIpLocationService
 
     public async Task<bool> IsInMainlandChinaAsync(string ipAddress)
     {
+        var appType = GodGPTAppType.OTHER; // Default value
+        try
+        {
+            var appTypeString = RequestContext.Get("AppType");
+        
+            if (!string.IsNullOrEmpty((string?)appTypeString) && Enum.TryParse<GodGPTAppType>((string?)appTypeString, out var parsedAppType))
+            {
+                appType = parsedAppType;
+            }
+            else
+            {
+                appType = GodGPTAppType.OTHER;
+            }
+        
+            // Log the AppType for debugging purposes
+            _logger.LogDebug("Processing IP location check for AppType: {AppType}, IP: {IpAddress}", appType, ipAddress);
+            if (appType == GodGPTAppType.WEB)
+            {
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "IsInMainlandChinaAsync Error getting AppType for IP {IpAddress} ,{appType}", ipAddress, appType);
+        }
+
         return await IsIpInMainlandChinaMaxMindAsync(ipAddress);
     }
 

@@ -87,4 +87,26 @@ public static class HttpContextExtensions
         // Last resort fallback
         return "127.0.0.1";
     }
+    /// <summary>
+    /// Get AppType from request headers
+    /// </summary>
+    /// <param name="context">The HttpContext instance</param>
+    /// <returns>value:web ios android other</returns>
+    public static GodGPTAppType GetGodGPTAppType(this HttpContext context)
+    {
+        var appTypeHeader = context.Request.Headers["AppType"].FirstOrDefault();
+        
+        if (string.IsNullOrWhiteSpace(appTypeHeader))
+        {
+            return GodGPTAppType.OTHER; // Default to APP IOS
+        }
+        
+        return appTypeHeader.ToLowerInvariant() switch
+        {
+            "web" => GodGPTAppType.WEB,
+            "ios" => GodGPTAppType.IOS,
+            "android" => GodGPTAppType.ANDROID,
+            _ => GodGPTAppType.OTHER // Default to English for unknown values
+        };
+    }
 } 
