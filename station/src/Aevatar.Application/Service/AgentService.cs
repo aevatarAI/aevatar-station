@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Aevatar.Agent;
 using Aevatar.Application.Grains.Agents.Creator;
@@ -10,6 +11,7 @@ using Aevatar.Common;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
 using Aevatar.Exceptions;
+using Aevatar.GAgents.AI.Common;
 using Aevatar.Options;
 using Aevatar.Query;
 using Aevatar.Schema;
@@ -92,11 +94,11 @@ public class AgentService : ApplicationService, IAgentService
                     }).ToList();
 
                     paramDto.PropertyJsonSchema =
-                        _schemaProvider.GetTypeSchema(kvp.Value.InitializationData.DtoType).ToJson();
+                        await EnhanceSchemaWithDefaults(kvp.Value.InitializationData.DtoType);
 
-                    // Get default values
+                    // Get default values for backward compatibility
                     paramDto.DefaultValues =
-                        await GetConfigurationDefaultValuesAsync(kvp.Value.InitializationData.DtoType);
+                        GetConfigurationDefaultValues(kvp.Value.InitializationData.DtoType);
 
                     // Check if agent has SystemLLMConfig and add it
                     paramDto.SystemLLMConfigs = GetSystemLLMConfigsForAgent(kvp.Value.InitializationData);
@@ -153,7 +155,7 @@ public class AgentService : ApplicationService, IAgentService
         var configuration = await GetAgentConfigurationAsync(businessAgent);
         if (configuration != null)
         {
-            resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration.DtoType).ToJson();
+            resp.PropertyJsonSchema = await EnhanceSchemaWithDefaults(configuration.DtoType);
         }
 
         return resp;
@@ -289,7 +291,10 @@ public class AgentService : ApplicationService, IAgentService
         var businessAgent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
 
         var configuration = await GetAgentConfigurationAsync(businessAgent);
-        if (configuration != null) resp.PropertyJsonSchema = _schemaProvider.GetTypeSchema(configuration.DtoType).ToJson();
+        if (configuration != null) 
+        {
+            resp.PropertyJsonSchema = await EnhanceSchemaWithDefaults(configuration.DtoType);
+        }
 
         return resp;
     }
@@ -536,9 +541,112 @@ public class AgentService : ApplicationService, IAgentService
         => ExtractConfigurationProperties(await agent.GetConfigurationTypeAsync());
 
     /// <summary>
-    /// Gets default values of configuration class properties
+    /// Enhances JSON Schema with default values and enum options from DefaultValuesAttribute
     /// </summary>
-    private async Task<Dictionary<string, object?>> GetConfigurationDefaultValuesAsync(Type configurationType)
+    private async Task<string> EnhanceSchemaWithDefaults(Type configurationType)
+    {
+        try
+        {
+            // Generate base schema
+            var baseSchema = _schemaProvider.GetTypeSchema(configurationType).ToJson();
+            var schemaDoc = JsonDocument.Parse(baseSchema);
+            
+            // Create instance to get default values
+            var instance = Activator.CreateInstance(configurationType);
+            if (instance == null)
+            {
+                return baseSchema;
+            }
+            
+            var properties = configurationType.GetProperties(BindingFlags.Public | 
+                BindingFlags.Instance | BindingFlags.DeclaredOnly);
+            
+            // Parse schema as mutable JSON
+            using var jsonDoc = JsonDocument.Parse(baseSchema);
+            var schemaObject = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(baseSchema);
+            
+            if (schemaObject != null && 
+                schemaObject.TryGetValue("properties", out var propertiesObj) &&
+                propertiesObj is JsonElement propertiesElement)
+            {
+                var schemaProperties = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(propertiesElement.GetRawText());
+                
+                foreach (var property in properties)
+                {
+                    var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
+                    
+                    if (schemaProperties != null && schemaProperties.TryGetValue(propertyName, out var propertySchemaObj))
+                    {
+                        try
+                        {
+                            Dictionary<string, object> propertySchema;
+                            
+                            // Handle JsonElement objects (preserve all properties including x-enumNames)
+                            if (propertySchemaObj is JsonElement jsonElement)
+                            {
+                                propertySchema = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(jsonElement.GetRawText()) ?? new Dictionary<string, object>();
+                            }
+                            else if (propertySchemaObj is Dictionary<string, object> dict)
+                            {
+                                propertySchema = new Dictionary<string, object>(dict);
+                            }
+                            else
+                            {
+                                propertySchema = new Dictionary<string, object>();
+                            }
+                            
+                            // Get default value
+                            var defaultValue = property.GetValue(instance);
+                            if (defaultValue != null)
+                            {
+                                propertySchema["default"] = defaultValue;
+                            }
+                            
+                            // Check for DefaultValuesAttribute
+                            var defaultValuesAttribute = property.GetCustomAttribute<DefaultValuesAttribute>();
+                            if (defaultValuesAttribute?.Values != null && defaultValuesAttribute.Values.Length > 1)
+                            {
+                                // Only create enum if there are multiple values (single values don't make sense for enums)
+                                propertySchema["enum"] = defaultValuesAttribute.Values;
+                                
+                                // Log warning if default doesn't match first enum value
+                                if (!Equals(defaultValue, defaultValuesAttribute.Values[0]))
+                                {
+                                    _logger.LogWarning("Property {PropertyName} default ({Default}) doesn't match first enum value ({EnumValue})",
+                                        property.Name, defaultValue, defaultValuesAttribute.Values[0]);
+                                }
+                            }
+                            
+                            // Update the properties dictionary with enhanced schema
+                            schemaProperties[propertyName] = propertySchema;
+                            
+                            _logger.LogDebug("Enhanced schema property {PropertyName} with default: {DefaultValue}",
+                                property.Name, defaultValue);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to enhance schema for property {PropertyName}", property.Name);
+                        }
+                    }
+                }
+                
+                // Update the schema object with enhanced properties
+                schemaObject["properties"] = schemaProperties;
+            }
+            
+            return System.Text.Json.JsonSerializer.Serialize(schemaObject, new JsonSerializerOptions { WriteIndented = false });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to enhance schema for type {TypeName}, returning base schema", configurationType.Name);
+            return _schemaProvider.GetTypeSchema(configurationType).ToJson();
+        }
+    }
+
+    /// <summary>
+    /// Gets default values of configuration class properties (backward compatibility)
+    /// </summary>
+    private Dictionary<string, object?> GetConfigurationDefaultValues(Type configurationType)
     {
         var defaultValues = new Dictionary<string, object?>();
 
@@ -556,20 +664,21 @@ public class AgentService : ApplicationService, IAgentService
                     var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
                     try
                     {
-                        defaultValues[propertyName] = property.GetValue(instance);
+                        var defaultValue = property.GetValue(instance);
+                        defaultValues[propertyName] = defaultValue;
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
+                        _logger.LogWarning(ex, "Failed to get default value for property {PropertyName} on type {TypeName}", 
+                            property.Name, configurationType.Name);
                         defaultValues[propertyName] = null;
                     }
-                    _logger.LogWarning("Get default value {Value} for property {PropertyName} in {ConfigType}",
-                            defaultValues[propertyName], property.Name, configurationType.Name);
                 }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to create instance of configuration type {ConfigType}", configurationType.Name);
+            _logger.LogError(ex, "Failed to create instance of {TypeName} for default values", configurationType.Name);
         }
 
         return defaultValues;
