@@ -2,20 +2,23 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Aevatar.Common;
 using Aevatar.Notification;
 using Aevatar.Organizations;
 using Aevatar.Permissions;
 using Aevatar.Service;
 using Microsoft.Extensions.Logging;
+using Elastic.Clients.Elasticsearch;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.Domain.Repositories;
-using Volo.Abp.EventBus.Distributed;
 using Volo.Abp.Identity;
 using Volo.Abp.PermissionManagement;
 using Microsoft.AspNetCore.Identity;
-using IdentityRole = Volo.Abp.Identity.IdentityRole;
+using Newtonsoft.Json;
+using Volo.Abp.Caching;
+using DistributedCacheEntryOptions = Microsoft.Extensions.Caching.Distributed.DistributedCacheEntryOptions;
 using IdentityUser = Volo.Abp.Identity.IdentityUser;
 
 namespace Aevatar.Projects;
@@ -26,12 +29,19 @@ public class ProjectService : OrganizationService, IProjectService
     private readonly IProjectDomainRepository _domainRepository;
     private readonly IDeveloperService _developerService;
     private readonly ILogger<ProjectService> _logger;
+    private readonly IOrganizationRoleService _organizationRoleService;
+    private readonly IDistributedCache<string, string> _recentUsedProjectCache;
+    private const string UserRecentUsedProjectKey = "UserRecentUsedProjectKey";
+    private readonly IOrganizationService _organizationService;
 
     public ProjectService(OrganizationUnitManager organizationUnitManager, IdentityUserManager identityUserManager,
         IRepository<OrganizationUnit, Guid> organizationUnitRepository, IdentityRoleManager roleManager,
         IPermissionManager permissionManager, IOrganizationPermissionChecker permissionChecker,
         IPermissionDefinitionManager permissionDefinitionManager, IRepository<IdentityUser, Guid> userRepository,
         INotificationService notificationService, IProjectDomainRepository domainRepository,
+        IDeveloperService developerService, ILogger<ProjectService> logger,
+        IOrganizationRoleService organizationRoleService,
+        IDistributedCache<string, string> recentUsedProjectCache, IOrganizationService organizationService) :
         IDeveloperService developerService, ILogger<ProjectService> logger) :
         base(organizationUnitManager, identityUserManager, organizationUnitRepository, roleManager, permissionManager,
             permissionChecker, permissionDefinitionManager, userRepository, notificationService)
@@ -39,14 +49,20 @@ public class ProjectService : OrganizationService, IProjectService
         _domainRepository = domainRepository;
         _developerService = developerService;
         _logger = logger;
+        _logger = logger;
+        _organizationRoleService = organizationRoleService;
+        _recentUsedProjectCache = recentUsedProjectCache;
+        _organizationService = organizationService;
     }
 
     public async Task<ProjectDto> CreateProjectAsync(CreateProjectDto input)
     {
         ValidateDisplayName(input.DisplayName);
 
-        var organization = await OrganizationUnitRepository.GetAsync(input.OrganizationId);
-        var domainName = GenerateDomainName(input.DisplayName, organization);
+        var domainName = new string(input.DisplayName
+            .ToLowerInvariant()
+            .Where(c => (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-')
+            .ToArray());
 
         // Ensure the generated domain name is not empty after filtering
         if (string.IsNullOrEmpty(domainName))
@@ -66,6 +82,7 @@ public class ProjectService : OrganizationService, IProjectService
             throw new UserFriendlyException($"DomainName: {domainName} already exists");
         }
 
+        var organization = await OrganizationUnitRepository.GetAsync(input.OrganizationId);
         var trimmedDisplayName = input.DisplayName.Trim();
         var projectId = GuidGenerator.Create();
         var project = new OrganizationUnit(
@@ -113,6 +130,44 @@ public class ProjectService : OrganizationService, IProjectService
         _logger.LogInformation("Project creation completed successfully. ProjectId: {ProjectId}, DomainName: {DomainName}", 
             project.Id, domainName);
         return result;
+    }
+    
+    public async Task<OrganizationWithDefaultProjectDto> CreateOrgWithDefaultProjectAsync(CreateOrganizationDto input)
+    {
+        var organizationDto = await _organizationService.CreateAsync(input);
+        var defaultProject = await CreateDefaultAsync(new CreateDefaultProjectDto()
+        {
+            OrganizationId = organizationDto.Id
+        });
+        var result = new OrganizationWithDefaultProjectDto()
+        {
+            Id = organizationDto.Id,
+            DisplayName = organizationDto.DisplayName,
+            MemberCount = organizationDto.MemberCount,
+            CreationTime = organizationDto.CreationTime,
+            Project = defaultProject
+        };
+        return result;
+    }
+
+    public async Task<ProjectDto> CreateDefaultAsync(CreateDefaultProjectDto input)
+    {
+        var projectList = await GetListAsync(new GetProjectListDto()
+        {
+            OrganizationId = input.OrganizationId
+        });
+        if (projectList.Items.Count > 0)
+        {
+            throw new UserFriendlyException("Already have project.");
+        }
+
+        var randomHash = MD5Util.CalculateMD5(Guid.NewGuid().ToString());
+        var projectDto = await CreateProjectAsync(new CreateProjectDto()
+        {
+            OrganizationId = input.OrganizationId,
+            DisplayName = $"default project {randomHash.Substring(randomHash.Length - 6)}"
+        });
+        return projectDto;
     }
 
     protected override List<string> GetOwnerPermissions()
@@ -257,18 +312,6 @@ public class ProjectService : OrganizationService, IProjectService
         }
     }
 
-    private static string GenerateDomainName(string displayName, OrganizationUnit organization)
-    {
-        // Generate domain name from display name by filtering valid characters
-        // Only keep letters, digits, and hyphens - remove spaces and special characters
-        var domainName = new string(displayName
-            .ToLowerInvariant()
-            .Where(c => (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-')
-            .ToArray());
-        
-        return domainName;
-    }
-
     private static void ValidateDisplayName(string displayName)
     {
         if (string.IsNullOrWhiteSpace(displayName))
@@ -284,5 +327,38 @@ public class ProjectService : OrganizationService, IProjectService
 
         // No need to validate individual characters - we'll filter them during domain name generation
         // This allows DisplayName to contain spaces and special characters for better UX
+    }
+
+    public async Task SaveRecentUsedProjectAsync(RecentUsedProjectDto input)
+    {
+        try
+        {
+            await OrganizationUnitRepository.GetAsync(input.OrganizationId);
+            await OrganizationUnitRepository.GetAsync(input.ProjectId);
+        }
+        catch (Exception e)
+        {
+            throw new UserFriendlyException("Organization or project not existed");
+        }
+        
+
+        var userId = CurrentUser.Id;
+        var cacheKey = $"{UserRecentUsedProjectKey}:{userId.ToString()}";
+        await _recentUsedProjectCache.SetAsync(cacheKey, JsonConvert.SerializeObject(input), new DistributedCacheEntryOptions()
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(30)
+        });
+    }
+
+    public async Task<RecentUsedProjectDto> GetRecentUsedProjectAsync()
+    {
+        var userId = CurrentUser.Id;
+        var cacheKey = $"{UserRecentUsedProjectKey}:{userId.ToString()}";
+        var value = await _recentUsedProjectCache.GetAsync(cacheKey);
+        if (value.IsNullOrEmpty())
+        {
+            throw new UserFriendlyException("No recent used projectId");
+        }
+        return JsonConvert.DeserializeObject<RecentUsedProjectDto>(value)!;
     }
 }

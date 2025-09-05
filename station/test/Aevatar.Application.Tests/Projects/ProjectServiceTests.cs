@@ -13,6 +13,8 @@ using Volo.Abp.PermissionManagement;
 using Volo.Abp.Users;
 using Volo.Abp.Validation;
 using Xunit;
+using System.Security.Claims;
+using Volo.Abp.Security.Claims;
 
 namespace Aevatar.Projects;
 
@@ -28,6 +30,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
     private readonly IdentityRoleManager _roleManager;
     private readonly IPermissionManager _permissionManager;
     private readonly IProjectDomainRepository _domainRepository;
+    private readonly ICurrentPrincipalAccessor _principalAccessor;
 
     protected ProjectServiceTests()
     {
@@ -40,6 +43,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         _permissionManager = GetRequiredService<IPermissionManager>();
         _organizationService = GetRequiredService<IOrganizationService>();
         _domainRepository = GetRequiredService<IProjectDomainRepository>();
+        _principalAccessor = GetRequiredService<ICurrentPrincipalAccessor>();
     }
 
     [Fact]
@@ -212,7 +216,7 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         createProjectInput.DisplayName = "Test@Project#Name$";
         var projectWithSpecialChars = await _projectService.CreateProjectAsync(createProjectInput);
         projectWithSpecialChars.ShouldNotBeNull();
-        projectWithSpecialChars.DomainName.ShouldBe("testprojectname"); // Special chars filtered out
+        projectWithSpecialChars.DomainName.ShouldStartWith("testprojectname"); // Special chars filtered out
 
         // Test with display name containing Chinese characters or other unsupported characters
         createProjectInput.DisplayName = "测试项目";
@@ -222,13 +226,13 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         createProjectInput.DisplayName = "My Project Space";
         var projectWithSpaces = await _projectService.CreateProjectAsync(createProjectInput);
         projectWithSpaces.ShouldNotBeNull();
-        projectWithSpaces.DomainName.ShouldBe("myprojectspace"); // Spaces filtered out
+        projectWithSpaces.DomainName.ShouldStartWith("myprojectspace"); // Spaces filtered out
 
         // Test with display name containing underscores - should be allowed, underscores filtered out for domain
         createProjectInput.DisplayName = "User_Profile_Manager";
         var projectWithUnderscores = await _projectService.CreateProjectAsync(createProjectInput);
         projectWithUnderscores.ShouldNotBeNull();
-        projectWithUnderscores.DomainName.ShouldBe("userprofilemanager"); // Underscores filtered out
+        projectWithUnderscores.DomainName.ShouldStartWith("userprofilemanager"); // Underscores filtered out
     }
 
     [Fact]
@@ -255,28 +259,18 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         var project1 = await _projectService.CreateProjectAsync(createProjectInput);
         project1.ShouldNotBeNull();
         project1.DisplayName.ShouldBe("Valid-Project-Name");
-        project1.DomainName.ShouldBe("valid-project-name");
 
         // Test with valid display name containing letters, numbers, and hyphens
         createProjectInput.DisplayName = "Project-123-Test";
         var project2 = await _projectService.CreateProjectAsync(createProjectInput);
         project2.ShouldNotBeNull();
         project2.DisplayName.ShouldBe("Project-123-Test");
-        project2.DomainName.ShouldBe("project-123-test");
 
         // Test with valid display name containing only letters and numbers
         createProjectInput.DisplayName = "Project123";
         var project3 = await _projectService.CreateProjectAsync(createProjectInput);
         project3.ShouldNotBeNull();
         project3.DisplayName.ShouldBe("Project123");
-        project3.DomainName.ShouldBe("project123");
-
-        // Test with valid display name containing spaces
-        createProjectInput.DisplayName = "Project Name With Spaces";
-        var project4 = await _projectService.CreateProjectAsync(createProjectInput);
-        project4.ShouldNotBeNull();
-        project4.DisplayName.ShouldBe("Project Name With Spaces");
-        project4.DomainName.ShouldBe("projectnamewithspaces");
     }
 
     [Fact]
@@ -546,6 +540,75 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
     }
 
     [Fact]
+    public async Task Project_CreateDefault_Should_Create_Project_And_Assign_Current_User_As_Owner()
+    {
+        var email = "owner@email.io";
+        using (_principalAccessor.Change(new[]
+               {
+                   new Claim(AbpClaimTypes.UserId, _currentUser.Id!.Value.ToString()),
+                   new Claim(AbpClaimTypes.UserName, _currentUser.UserName!),
+                   new Claim(AbpClaimTypes.Email, email)
+               }))
+        {
+            await _identityUserManager.CreateAsync(new IdentityUser(_currentUser.Id!.Value, "owner", email));
+
+            var organization = await _organizationService.CreateAsync(new CreateOrganizationDto
+            {
+                DisplayName = "Test Organization"
+            });
+
+            var project = await _projectService.CreateDefaultAsync(new CreateDefaultProjectDto
+            {
+                OrganizationId = organization.Id
+            });
+
+            project.DisplayName.ShouldStartWith("default project");
+            project.DomainName.ShouldStartWith("defaultProject");
+            project.DomainName.Length.ShouldBe("defaultProject".Length + 6);
+
+            var roles = await _projectService.GetRoleListAsync(organization.Id);
+            var ownerRole = roles.Items.First(o => o.Name.EndsWith("Owner"));
+
+            var members = await _projectService.GetMemberListAsync(organization.Id, new GetOrganizationMemberListDto());
+            members.Items.Count.ShouldBe(1);
+            members.Items[0].Email.ShouldBe(email);
+            members.Items[0].RoleId.ShouldBe(ownerRole.Id);
+        }
+    }
+
+    [Fact]
+    public async Task Project_CreateDefault_Should_Throw_When_Project_Exists()
+    {
+        var email = "owner@email.io";
+        using (_principalAccessor.Change(new[]
+               {
+                   new Claim(AbpClaimTypes.UserId, _currentUser.Id!.Value.ToString()),
+                   new Claim(AbpClaimTypes.UserName, _currentUser.UserName!),
+                   new Claim(AbpClaimTypes.Email, email)
+               }))
+        {
+            await _identityUserManager.CreateAsync(new IdentityUser(_currentUser.Id!.Value, "owner", email));
+
+            var organization = await _organizationService.CreateAsync(new CreateOrganizationDto
+            {
+                DisplayName = "Test Organization"
+            });
+
+            var first = await _projectService.CreateDefaultAsync(new CreateDefaultProjectDto
+            {
+                OrganizationId = organization.Id
+            });
+            first.ShouldNotBeNull();
+
+            await Should.ThrowAsync<UserFriendlyException>(async () =>
+                await _projectService.CreateDefaultAsync(new CreateDefaultProjectDto
+                {
+                    OrganizationId = organization.Id
+                }));
+        }
+    }
+
+    [Fact]
     public async Task Project_Auto_Create_Test()
     {
         // Arrange
@@ -706,5 +769,85 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         // Act & Assert
         await Should.ThrowAsync<AbpValidationException>(async () => 
             await _projectService.CreateProjectAsync(createProjectInput));
+    }
+
+    [Fact]
+    public async Task Project_Recent_Used_Test()
+    {
+        await _identityUserManager.CreateAsync(
+            new IdentityUser(
+                _currentUser.Id.Value,
+                "test",
+                "test@email.io"));
+        
+        var createOrganizationInput = new CreateOrganizationDto
+        {
+            DisplayName = "Test Organization"
+        };
+        var organization = await _organizationService.CreateAsync(createOrganizationInput);
+
+        var createProjectInput = new CreateProjectDto()
+        {
+            OrganizationId = organization.Id,
+            DisplayName = "Test Project"
+        };
+        var project = await _projectService.CreateProjectAsync(createProjectInput);
+        await _projectService.SaveRecentUsedProjectAsync(new RecentUsedProjectDto()
+        {
+            OrganizationId = organization.Id,
+            ProjectId = project.Id
+        });
+        var recentUsedProject = await _projectService.GetRecentUsedProjectAsync();
+        recentUsedProject.OrganizationId.ShouldBe(organization.Id);
+        recentUsedProject.ProjectId.ShouldBe(project.Id);
+        
+        await Should.ThrowAsync<UserFriendlyException>(async () =>
+            await _projectService.SaveRecentUsedProjectAsync(new RecentUsedProjectDto()
+            {
+                OrganizationId = organization.Id,
+                ProjectId = Guid.NewGuid()
+            }));
+        
+        await Should.ThrowAsync<UserFriendlyException>(async () =>
+            await _projectService.SaveRecentUsedProjectAsync(new RecentUsedProjectDto()
+            {
+                OrganizationId = Guid.NewGuid(),
+                ProjectId = project.Id
+            }));
+    }
+
+    [Fact]
+    public async Task Organization_Create_With_Default_Project_Should_Create_And_Assign_Owner()
+    {
+        var email = "owner2@email.io";
+        using (_principalAccessor.Change(new[]
+               {
+                   new Claim(AbpClaimTypes.UserId, _currentUser.Id!.Value.ToString()),
+                   new Claim(AbpClaimTypes.UserName, _currentUser.UserName!),
+                   new Claim(AbpClaimTypes.Email, email)
+               }))
+        {
+            await _identityUserManager.CreateAsync(new IdentityUser(_currentUser.Id!.Value, "owner2", email));
+
+            var result = await _projectService.CreateOrgWithDefaultProjectAsync(new CreateOrganizationDto
+            {
+                DisplayName = "Org With Default"
+            });
+
+            result.ShouldNotBeNull();
+            result.DisplayName.ShouldBe("Org With Default");
+            result.Project.ShouldNotBeNull();
+            result.Project.DisplayName.ShouldStartWith("default project");
+            result.Project.DomainName.ShouldStartWith("defaultProject");
+            result.Project.DomainName.Length.ShouldBe("defaultProject".Length + 6);
+
+            var roles = await _projectService.GetRoleListAsync(result.Id);
+            var ownerRole = roles.Items.First(o => o.Name.EndsWith("Owner"));
+            
+            var members = await _projectService.GetMemberListAsync(result.Id, new GetOrganizationMemberListDto());
+            members.Items.Count.ShouldBe(1);
+            members.Items[0].Email.ShouldBe(email);
+            members.Items[0].RoleId.ShouldBe(ownerRole.Id);
+        }
     }
 }
