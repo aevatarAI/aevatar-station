@@ -32,30 +32,10 @@ public class DynamicDropDownProcessor : ISchemaProcessor
             context.Schema.ExtensionData = new Dictionary<string, object>();
         }
 
-        // Strategy 1: Check if this schema represents a property with DynamicDropDown attribute
+        // Check all properties for DynamicDropDown attribute
         if (context.ContextualType?.Type != null)
         {
             var type = context.ContextualType.Type;
-            
-            // Check if we're processing a specific property schema (not the main class)
-            if (!string.IsNullOrEmpty(context.Schema.Title) && 
-                !string.Equals(context.Schema.Title, type.Name, StringComparison.OrdinalIgnoreCase))
-            {
-                // This might be a property schema - try to find the corresponding property
-                var property = FindPropertyBySchemaTitle(type, context.Schema.Title);
-                if (property != null)
-                {
-                    var dynamicDropDownAttribute = property.GetCustomAttribute<DynamicDropDownAttribute>();
-                    if (dynamicDropDownAttribute != null)
-                    {
-                        // Set schema type to integer like MCPServerType
-                        // context.Schema.Type = NJsonSchema.JsonObjectType.Integer;
-                        InjectSystemLLMConfigurations(context.Schema.ExtensionData);
-                        return;
-                    }
-                }
-            }
-            
             var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
             foreach (var property in properties)
             {
@@ -115,21 +95,4 @@ public class DynamicDropDownProcessor : ISchemaProcessor
         extensionData["enum"] = enumValues;
     }
 
-    private PropertyInfo? FindPropertyBySchemaTitle(Type type, string schemaTitle)
-    {
-        // Try different naming strategies
-        var strategies = new[]
-        {
-            schemaTitle,  // Exact match
-            char.ToUpperInvariant(schemaTitle[0]) + schemaTitle.Substring(1), // camelCase -> PascalCase
-        };
-        
-        foreach (var strategy in strategies)
-        {
-            var property = type.GetProperty(strategy, BindingFlags.Public | BindingFlags.Instance);
-            if (property != null) return property;
-        }
-        
-        return null;
-    }
 }
