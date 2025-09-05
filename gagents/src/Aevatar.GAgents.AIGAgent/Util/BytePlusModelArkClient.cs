@@ -13,24 +13,20 @@ using Aevatar.GAgents.AIGAgent.Dtos;
 
 namespace Aevatar.GAgents.AIGAgent.Util;
 
-public class BytePlusModelArkClient
+public class BytePlusModelArkClient : IBytePlusModelArkClient
 {
     private readonly HttpClient _httpClient;
-    private readonly ILogger _logger;
-    private readonly string _baseUrl;
+    private readonly ILogger<BytePlusModelArkClient> _logger;
 
-    public BytePlusModelArkClient(HttpClient httpClient, ILogger logger, string apiKey, string baseUrl)
+    public BytePlusModelArkClient(HttpClient httpClient, ILogger<BytePlusModelArkClient> logger)
     {
-        _httpClient = httpClient;
-        _logger = logger;
-        _baseUrl = baseUrl;
-        _httpClient.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", apiKey);
+        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<BytePlusVideoTaskResponse> CreateVideoGenerationTaskAsync(string prompt, string? imageUrl = null, VideoGenerationConfigDto? options = null)
+    public async Task<BytePlusVideoTaskResponse> CreateVideoGenerationTaskAsync(string prompt, string apiKey, string baseUrl, string? imageUrl = null, VideoGenerationConfigDto? options = null)
     {
-        var requestUrl = $"{_baseUrl}/api/v3/contents/generations/tasks";
+        var requestUrl = $"{baseUrl}/api/v3/contents/generations/tasks";
         
         // Validate image URL if provided
         if (!string.IsNullOrEmpty(imageUrl) && !IsValidImageUrl(imageUrl))
@@ -72,7 +68,14 @@ public class BytePlusModelArkClient
 
         try
         {
-            var response = await _httpClient.PostAsync(requestUrl, httpContent);
+            // Set authorization header for this request
+            using var requestMessage = new HttpRequestMessage(HttpMethod.Post, requestUrl)
+            {
+                Content = httpContent
+            };
+            requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            
+            var response = await _httpClient.SendAsync(requestMessage);
             var responseContent = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
@@ -93,15 +96,19 @@ public class BytePlusModelArkClient
         }
     }
 
-    public async Task<BytePlusVideoTaskStatus> GetVideoGenerationTaskAsync(string taskId)
+    public async Task<BytePlusVideoTaskStatus> GetVideoGenerationTaskAsync(string taskId, string apiKey, string baseUrl)
     {
-        var requestUrl = $"{_baseUrl}/api/v3/contents/generations/tasks/{taskId}";
+        var requestUrl = $"{baseUrl}/api/v3/contents/generations/tasks/{taskId}";
         
         _logger.LogDebug("Checking BytePlus video generation task status: {TaskId}", taskId);
 
         try
         {
-            var response = await _httpClient.GetAsync(requestUrl);
+            // Set authorization header for this request
+            using var requestMessage = new HttpRequestMessage(HttpMethod.Get, requestUrl);
+            requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            
+            var response = await _httpClient.SendAsync(requestMessage);
             var responseContent = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)

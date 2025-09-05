@@ -48,7 +48,7 @@ public sealed class BytePlusModelArkClientTests
         var testHttpClient = httpClientParam == "valid-http-client" ? _httpClient : null;
 
         // Act & Assert - Should not throw any exception
-        var client = new BytePlusModelArkClient(testHttpClient!, _logger, apiKey, baseUrl);
+        var client = new BytePlusModelArkClient(testHttpClient!, _logger);
         
         // Verify client was created successfully
         client.ShouldNotBeNull();
@@ -69,21 +69,21 @@ public sealed class BytePlusModelArkClientTests
     public async Task CreateVideoGenerationTaskAsync_WithValidImageUrls_ShouldAccept(string imageUrl, bool shouldBeValid)
     {
         // Arrange
-        var client = new BytePlusModelArkClient(_httpClient, _logger, "test-key", "https://api.test.com");
+        var client = new BytePlusModelArkClient(_httpClient, _logger);
         var mockResponse = CreateMockSuccessResponse();
         SetupMockHttpResponse(mockResponse);
 
         // Act & Assert
         if (shouldBeValid)
         {
-            await client.CreateVideoGenerationTaskAsync("Test prompt", imageUrl);
+            await client.CreateVideoGenerationTaskAsync("Test prompt", "test-key", "https://api.test.com", imageUrl);
             _testOutputHelper.WriteLine($"Valid image URL accepted: {imageUrl}");
         }
         else
         {
             await Should.ThrowAsync<ArgumentException>(async () =>
             {
-                await client.CreateVideoGenerationTaskAsync("Test prompt", imageUrl);
+                await client.CreateVideoGenerationTaskAsync("Test prompt", "test-key", "https://api.test.com", imageUrl);
             });
             _testOutputHelper.WriteLine($"Invalid image URL rejected: {imageUrl}");
         }
@@ -97,12 +97,12 @@ public sealed class BytePlusModelArkClientTests
     public async Task CreateVideoGenerationTaskAsync_WithInvalidImageUrls_ShouldReject(string invalidImageUrl)
     {
         // Arrange
-        var client = new BytePlusModelArkClient(_httpClient, _logger, "test-key", "https://api.test.com");
+        var client = new BytePlusModelArkClient(_httpClient, _logger);
 
         // Act & Assert
         await Should.ThrowAsync<ArgumentException>(async () =>
         {
-            await client.CreateVideoGenerationTaskAsync("Test prompt", invalidImageUrl);
+            await client.CreateVideoGenerationTaskAsync("Test prompt", "test-key", "https://api.test.com", invalidImageUrl);
         });
         
         _testOutputHelper.WriteLine($"Invalid image URL correctly rejected: {invalidImageUrl}");
@@ -116,7 +116,7 @@ public sealed class BytePlusModelArkClientTests
     public async Task CreateVideoGenerationTaskAsync_WithTextOnly_ShouldUseTextToVideoModel()
     {
         // Arrange
-        var client = new BytePlusModelArkClient(_httpClient, _logger, "test-key", "https://api.test.com");
+        var client = new BytePlusModelArkClient(_httpClient, _logger);
         var prompt = "A beautiful sunset";
         var options = CreateTestVideoOptions();
         var mockResponse = CreateMockSuccessResponse();
@@ -124,7 +124,7 @@ public sealed class BytePlusModelArkClientTests
         SetupMockHttpResponse(mockResponse);
 
         // Act
-        var result = await client.CreateVideoGenerationTaskAsync(prompt, null, options);
+        var result = await client.CreateVideoGenerationTaskAsync(prompt, "test-key", "https://api.test.com", null, options);
 
         // Assert
         result.ShouldNotBeNull();
@@ -140,7 +140,7 @@ public sealed class BytePlusModelArkClientTests
     public async Task CreateVideoGenerationTaskAsync_WithImageUrl_ShouldUseImageToVideoModel()
     {
         // Arrange
-        var client = new BytePlusModelArkClient(_httpClient, _logger, "test-key", "https://api.test.com");
+        var client = new BytePlusModelArkClient(_httpClient, _logger);
         var prompt = "Animate this image";
         var imageUrl = "https://example.com/image.jpg";
         var options = CreateTestVideoOptions();
@@ -149,7 +149,7 @@ public sealed class BytePlusModelArkClientTests
         SetupMockHttpResponse(mockResponse);
 
         // Act
-        var result = await client.CreateVideoGenerationTaskAsync(prompt, imageUrl, options);
+        var result = await client.CreateVideoGenerationTaskAsync(prompt, "test-key", "https://api.test.com", imageUrl, options);
 
         // Assert
         result.ShouldNotBeNull();
@@ -164,14 +164,14 @@ public sealed class BytePlusModelArkClientTests
     public async Task CreateVideoGenerationTaskAsync_WithNullOptions_ShouldUseDefaults()
     {
         // Arrange
-        var client = new BytePlusModelArkClient(_httpClient, _logger, "test-key", "https://api.test.com");
+        var client = new BytePlusModelArkClient(_httpClient, _logger);
         var prompt = "Test with null options";
         var mockResponse = CreateMockSuccessResponse();
         
         SetupMockHttpResponse(mockResponse);
 
         // Act
-        var result = await client.CreateVideoGenerationTaskAsync(prompt, null, null);
+        var result = await client.CreateVideoGenerationTaskAsync(prompt, "test-key", "https://api.test.com", null, null);
 
         // Assert
         result.ShouldNotBeNull();
@@ -188,14 +188,14 @@ public sealed class BytePlusModelArkClientTests
     public async Task GetVideoGenerationTaskAsync_WithValidTaskId_ShouldReturnStatus()
     {
         // Arrange
-        var client = new BytePlusModelArkClient(_httpClient, _logger, "test-key", "https://api.test.com");
+        var client = new BytePlusModelArkClient(_httpClient, _logger);
         var taskId = "test-task-123";
         var mockResponse = CreateMockStatusResponse();
         
         SetupMockHttpResponse(mockResponse);
 
         // Act
-        var result = await client.GetVideoGenerationTaskAsync(taskId);
+        var result = await client.GetVideoGenerationTaskAsync(taskId, "test-key", "https://api.test.com");
 
         // Assert
         result.ShouldNotBeNull();
@@ -214,7 +214,7 @@ public sealed class BytePlusModelArkClientTests
     public async Task GetVideoGenerationTaskAsync_WithInvalidTaskId_ShouldThrowHttpRequestException(string invalidTaskId)
     {
         // Arrange
-        var client = new BytePlusModelArkClient(_httpClient, _logger, "test-key", "https://api.test.com");
+        var client = new BytePlusModelArkClient(_httpClient, _logger);
 
         // Setup mock HTTP response for invalid task ID
         var errorResponse = new HttpResponseMessage(HttpStatusCode.NotFound)
@@ -226,7 +226,7 @@ public sealed class BytePlusModelArkClientTests
         // Act & Assert - BytePlus API returns HTTP error for invalid task IDs
         await Should.ThrowAsync<HttpRequestException>(async () =>
         {
-            await client.GetVideoGenerationTaskAsync(invalidTaskId);
+            await client.GetVideoGenerationTaskAsync(invalidTaskId, "test-key", "https://api.test.com");
         });
         
         _testOutputHelper.WriteLine($"Invalid task ID correctly handled: '{invalidTaskId}'");
@@ -240,7 +240,7 @@ public sealed class BytePlusModelArkClientTests
     public async Task CreateVideoGenerationTaskAsync_WithApiError_ShouldThrowHttpRequestException()
     {
         // Arrange
-        var client = new BytePlusModelArkClient(_httpClient, _logger, "test-key", "https://api.test.com");
+        var client = new BytePlusModelArkClient(_httpClient, _logger);
         var errorResponse = new HttpResponseMessage(HttpStatusCode.BadRequest)
         {
             Content = new StringContent("Bad Request Error")
@@ -251,7 +251,7 @@ public sealed class BytePlusModelArkClientTests
         // Act & Assert
         var exception = await Should.ThrowAsync<HttpRequestException>(async () =>
         {
-            await client.CreateVideoGenerationTaskAsync("Test prompt");
+            await client.CreateVideoGenerationTaskAsync("Test prompt", "test-key", "https://api.test.com");
         });
         
         exception.Message.ShouldContain("BadRequest");
@@ -262,7 +262,7 @@ public sealed class BytePlusModelArkClientTests
     public async Task GetVideoGenerationTaskAsync_WithNotFoundError_ShouldThrowHttpRequestException()
     {
         // Arrange
-        var client = new BytePlusModelArkClient(_httpClient, _logger, "test-key", "https://api.test.com");
+        var client = new BytePlusModelArkClient(_httpClient, _logger);
         var errorResponse = new HttpResponseMessage(HttpStatusCode.NotFound)
         {
             Content = new StringContent("Task not found")
@@ -273,7 +273,7 @@ public sealed class BytePlusModelArkClientTests
         // Act & Assert
         var exception = await Should.ThrowAsync<HttpRequestException>(async () =>
         {
-            await client.GetVideoGenerationTaskAsync("non-existent-task");
+            await client.GetVideoGenerationTaskAsync("non-existent-task", "test-key", "https://api.test.com");
         });
         
         exception.Message.ShouldContain("NotFound");
@@ -284,7 +284,7 @@ public sealed class BytePlusModelArkClientTests
     public async Task CreateVideoGenerationTaskAsync_WithNetworkTimeout_ShouldThrowTimeoutException()
     {
         // Arrange
-        var client = new BytePlusModelArkClient(_httpClient, _logger, "test-key", "https://api.test.com");
+        var client = new BytePlusModelArkClient(_httpClient, _logger);
         
         _mockHttpHandler.Protected()
             .Setup<Task<HttpResponseMessage>>(
@@ -296,7 +296,7 @@ public sealed class BytePlusModelArkClientTests
         // Act & Assert
         await Should.ThrowAsync<TaskCanceledException>(async () =>
         {
-            await client.CreateVideoGenerationTaskAsync("Test prompt");
+            await client.CreateVideoGenerationTaskAsync("Test prompt", "test-key", "https://api.test.com");
         });
         
         _testOutputHelper.WriteLine("Network timeout correctly handled");
@@ -310,7 +310,7 @@ public sealed class BytePlusModelArkClientTests
     public async Task CreateVideoGenerationTaskAsync_WithAllOptions_ShouldIncludeAllParameters()
     {
         // Arrange
-        var client = new BytePlusModelArkClient(_httpClient, _logger, "test-key", "https://api.test.com");
+        var client = new BytePlusModelArkClient(_httpClient, _logger);
         var options = new VideoGenerationConfigDto
         {
             Duration = 10,
@@ -327,7 +327,7 @@ public sealed class BytePlusModelArkClientTests
         SetupMockHttpResponse(mockResponse);
 
         // Act
-        var result = await client.CreateVideoGenerationTaskAsync("Comprehensive test", null, options);
+        var result = await client.CreateVideoGenerationTaskAsync("Comprehensive test", "test-key", "https://api.test.com", null, options);
 
         // Assert
         result.ShouldNotBeNull();
@@ -345,7 +345,7 @@ public sealed class BytePlusModelArkClientTests
     {
         // Arrange
         var apiKey = "test-api-key-123";
-        var client = new BytePlusModelArkClient(_httpClient, _logger, apiKey, "https://api.test.com");
+        var client = new BytePlusModelArkClient(_httpClient, _logger);
         var mockResponse = CreateMockSuccessResponse();
         
         HttpRequestMessage capturedRequest = null!;
@@ -361,7 +361,7 @@ public sealed class BytePlusModelArkClientTests
             .ReturnsAsync(mockResponse);
 
         // Act
-        await client.CreateVideoGenerationTaskAsync("Auth test");
+        await client.CreateVideoGenerationTaskAsync("Auth test", apiKey, "https://api.test.com");
 
         // Assert
         capturedRequest.ShouldNotBeNull();

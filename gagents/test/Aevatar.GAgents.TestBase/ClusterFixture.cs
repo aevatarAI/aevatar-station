@@ -15,6 +15,7 @@ using Aevatar.GAgents.Executor;
 using Aevatar.GAgents.MCP.McpClient;
 using Aevatar.GAgents.MCP.Options;
 using Aevatar.GAgents.MCP.Test.Mocks;
+using Aevatar.GAgents.AIGAgent.Util;
 using Aevatar.GAgents.SemanticKernel.Extensions;
 using Aevatar.GAgents.SemanticKernel.KernelBuilderFactory;
 using Aevatar.Plugins;
@@ -169,6 +170,9 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                     };
                     services.AddSingleton<IOptions<SystemLLMConfigOptions>>(new OptionsWrapper<SystemLLMConfigOptions>(systemLLMConfigOptions));
                     services.AddSingleton<IBlobContainer, MockBlobContainer>();
+                    
+                    // Register mock BytePlus client for Orleans grains to use in tests
+                    services.AddSingleton<Aevatar.GAgents.AIGAgent.Util.IBytePlusModelArkClient, Aevatar.GAgents.TestBase.Mocks.MockBytePlusModelArkClient>();
                     
                     services.AddSemanticKernel()
                         .AddQdrantVectorStore()

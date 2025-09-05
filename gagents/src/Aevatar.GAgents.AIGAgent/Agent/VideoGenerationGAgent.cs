@@ -27,22 +27,11 @@ namespace Aevatar.GAgents.AIGAgent.Agent;
 [GAgent(nameof(VideoGenerationGAgent))]
 public class VideoGenerationGAgent : AIGAgentBase<VideoGenerationState, VideoGenerationEvent, EventBase, VideoGenerationConfigDto>, IVideoGenerationGAgent
 {
-    private readonly HttpClient _httpClient;
-    private BytePlusModelArkClient? _bytePlusClient;
+    private readonly IBytePlusModelArkClient _bytePlusClient;
     
-    public VideoGenerationGAgent(HttpClient httpClient)
+    public VideoGenerationGAgent(IBytePlusModelArkClient bytePlusClient)
     {
-        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-    }
-    protected override async Task OnAIGAgentActivateAsync(CancellationToken cancellationToken)
-    {
-        await base.OnAIGAgentActivateAsync(cancellationToken);
-        
-        // Initialize BytePlus client after activation (ServiceProvider is now available)
-        var config = await ResolveSystemConfigAsync("BytePlusVideoGeneration");
-        var baseUrl = config.Endpoint ?? "https://ark.ap-southeast.bytepluses.com";
-        _bytePlusClient = new BytePlusModelArkClient(_httpClient, Logger, config.ApiKey, baseUrl);
-        Logger.LogInformation("BytePlus client initialized successfully");
+        _bytePlusClient = bytePlusClient ?? throw new ArgumentNullException(nameof(bytePlusClient));
     }
     public override Task<string> GetDescriptionAsync()
     {
@@ -72,35 +61,28 @@ public class VideoGenerationGAgent : AIGAgentBase<VideoGenerationState, VideoGen
         {
             Logger.LogInformation("Starting BytePlus API call for text-to-video generation");
             
+            // Get configuration for this request
+            var config = await ResolveSystemConfigAsync("BytePlusVideoGeneration");
+            var baseUrl = config.Endpoint ?? "https://ark.ap-southeast.bytepluses.com";
+            
             // Create the BytePlus task without waiting for completion
-            if (_bytePlusClient == null)
-            {
-                throw new InvalidOperationException("BytePlus client not initialized - video generation not available");
-            }
-            var bytePlusResponse = await _bytePlusClient.CreateVideoGenerationTaskAsync(normalizedPrompt, null, options);
+            var bytePlusResponse = await _bytePlusClient.CreateVideoGenerationTaskAsync(normalizedPrompt, config.ApiKey, baseUrl, null, options);
                 
             Logger.LogInformation("BytePlus API call completed successfully");
             
             // Store task in state with BytePlus task ID using event sourcing
-            var startEvent = new VideoGenerationEvent
+            // Single optimized event that combines start and task creation - eliminates redundancy
+            RaiseEvent(new VideoGenerationStartedEvent
             {
                 TaskId = taskId,
                 Prompt = normalizedPrompt,
+                ImageUrl = null,
                 Options = options,
+                BytePlusTaskId = bytePlusResponse.Id,
+                StartedAt = DateTime.UtcNow,
                 Id = Guid.NewGuid(),
                 Ctime = DateTime.UtcNow
-            };
-
-            State.ActiveTasks[taskId] = new VideoGenerationStatus
-            {
-                TaskId = taskId,
-                Status = "processing",
-                CreatedAt = DateTime.UtcNow,
-                Progress = 10,
-                VideoUrl = bytePlusResponse.Id // Store BytePlus task ID temporarily in VideoUrl field
-            };
-
-            RaiseEvent(startEvent);
+            });
             await ConfirmEvents();
 
             Logger.LogInformation("Video generation task started: {TaskId}, BytePlus ID: {BytePlusId}", taskId, bytePlusResponse.Id);
@@ -110,14 +92,14 @@ public class VideoGenerationGAgent : AIGAgentBase<VideoGenerationState, VideoGen
         {
             Logger.LogWarning("BytePlus API call timed out for text-to-video generation task: {TaskId}", taskId);
             
-            // Store failed state with timeout error
-            State.ActiveTasks[taskId] = new VideoGenerationStatus
-            {
-                TaskId = taskId,
-                Status = "failed",
-                CreatedAt = DateTime.UtcNow,
-                ErrorMessage = "API call timed out. Please try again."
-            };
+            // Store failed state with timeout error using event sourcing
+            RaiseEvent(new VideoGenerationFailedEvent 
+            { 
+                TaskId = taskId, 
+                ErrorMessage = "API call timed out. Please try again.",
+                FailedAt = DateTime.UtcNow
+            });
+            await ConfirmEvents();
             
             return taskId;
         }
@@ -125,15 +107,14 @@ public class VideoGenerationGAgent : AIGAgentBase<VideoGenerationState, VideoGen
         {
             Logger.LogError(ex, "Error starting video generation for task: {TaskId}", taskId);
             
-            // Store failed state
-            State.ActiveTasks[taskId] = new VideoGenerationStatus
-            {
-                TaskId = taskId,
-                Status = "failed",
-                CreatedAt = DateTime.UtcNow,
-                ErrorMessage = ex.Message
-            };
-            
+            // Store failed state using event sourcing
+            RaiseEvent(new VideoGenerationFailedEvent 
+            { 
+                TaskId = taskId, 
+                ErrorMessage = ex.Message,
+                FailedAt = DateTime.UtcNow
+            });
+            await ConfirmEvents();
 
             return taskId;
         }
@@ -147,13 +128,15 @@ public class VideoGenerationGAgent : AIGAgentBase<VideoGenerationState, VideoGen
         {
             Logger.LogWarning("Image URL is empty or null");
             var failedTaskId = Guid.NewGuid().ToString();
-            State.ActiveTasks[failedTaskId] = new VideoGenerationStatus
-            {
-                TaskId = failedTaskId,
-                Status = "failed",
-                CreatedAt = DateTime.UtcNow,
-                ErrorMessage = "Image URL is required"
-            };
+            
+            // Store failed state using event sourcing
+            RaiseEvent(new VideoGenerationFailedEvent 
+            { 
+                TaskId = failedTaskId, 
+                ErrorMessage = "Image URL is required",
+                FailedAt = DateTime.UtcNow
+            });
+            await ConfirmEvents();
 
             return failedTaskId;
         }
@@ -167,37 +150,27 @@ public class VideoGenerationGAgent : AIGAgentBase<VideoGenerationState, VideoGen
         {
             Logger.LogInformation("Starting BytePlus API call for image-to-video generation");
             
+            // Get configuration for this request
+            var config = await ResolveSystemConfigAsync("BytePlusVideoGeneration");
+            var baseUrl = config.Endpoint ?? "https://ark.ap-southeast.bytepluses.com";
+            
             // Create the BytePlus task without waiting for completion
-            if (_bytePlusClient == null)
-            {
-                throw new InvalidOperationException("BytePlus client not initialized - video generation not available");
-            }
-            var bytePlusResponse = await _bytePlusClient.CreateVideoGenerationTaskAsync(normalizedPrompt, imageUrl, options);
+            var bytePlusResponse = await _bytePlusClient.CreateVideoGenerationTaskAsync(normalizedPrompt, config.ApiKey, baseUrl, imageUrl, options);
                 
             Logger.LogInformation("BytePlus API call completed successfully");
             
-            // Store task in state with BytePlus task ID using event sourcing
-            var startEvent = new VideoGenerationEvent
+            // Single optimized event that combines start and task creation - eliminates redundancy
+            RaiseEvent(new VideoGenerationStartedEvent
             {
                 TaskId = taskId,
                 Prompt = normalizedPrompt,
                 ImageUrl = imageUrl,
                 Options = options,
+                BytePlusTaskId = bytePlusResponse.Id,
+                StartedAt = DateTime.UtcNow,
                 Id = Guid.NewGuid(),
                 Ctime = DateTime.UtcNow
-            };
-
-
-            State.ActiveTasks[taskId] = new VideoGenerationStatus
-            {
-                TaskId = taskId,
-                Status = "processing",
-                CreatedAt = DateTime.UtcNow,
-                Progress = 10,
-                VideoUrl = bytePlusResponse.Id // Store BytePlus task ID temporarily in VideoUrl field
-            };
-
-            RaiseEvent(startEvent);
+            });
             await ConfirmEvents();
 
             Logger.LogInformation("Image-to-video generation task started: {TaskId}, BytePlus ID: {BytePlusId}", taskId, bytePlusResponse.Id);
@@ -207,14 +180,14 @@ public class VideoGenerationGAgent : AIGAgentBase<VideoGenerationState, VideoGen
         {
             Logger.LogWarning("Invalid image URL provided for image-to-video generation task: {TaskId}", taskId);
             
-            // Store failed state with validation error
-            State.ActiveTasks[taskId] = new VideoGenerationStatus
-            {
-                TaskId = taskId,
-                Status = "failed",
-                CreatedAt = DateTime.UtcNow,
-                ErrorMessage = ex.Message
-            };
+            // Store failed state with validation error using event sourcing
+            RaiseEvent(new VideoGenerationFailedEvent 
+            { 
+                TaskId = taskId, 
+                ErrorMessage = ex.Message,
+                FailedAt = DateTime.UtcNow
+            });
+            await ConfirmEvents();
             
             return taskId;
         }
@@ -222,14 +195,14 @@ public class VideoGenerationGAgent : AIGAgentBase<VideoGenerationState, VideoGen
         {
             Logger.LogWarning("BytePlus API call timed out for image-to-video generation task: {TaskId}", taskId);
             
-            // Store failed state with timeout error
-            State.ActiveTasks[taskId] = new VideoGenerationStatus
-            {
-                TaskId = taskId,
-                Status = "failed",
-                CreatedAt = DateTime.UtcNow,
-                ErrorMessage = "API call timed out. Please try again."
-            };
+            // Store failed state with timeout error using event sourcing
+            RaiseEvent(new VideoGenerationFailedEvent 
+            { 
+                TaskId = taskId, 
+                ErrorMessage = "API call timed out. Please try again.",
+                FailedAt = DateTime.UtcNow
+            });
+            await ConfirmEvents();
             
             return taskId;
         }
@@ -237,15 +210,14 @@ public class VideoGenerationGAgent : AIGAgentBase<VideoGenerationState, VideoGen
         {
             Logger.LogError(ex, "Error starting image-to-video generation for task: {TaskId}", taskId);
             
-            // Store failed state
-            State.ActiveTasks[taskId] = new VideoGenerationStatus
-            {
-                TaskId = taskId,
-                Status = "failed",
-                CreatedAt = DateTime.UtcNow,
-                ErrorMessage = ex.Message
-            };
-            
+            // Store failed state using event sourcing
+            RaiseEvent(new VideoGenerationFailedEvent 
+            { 
+                TaskId = taskId, 
+                ErrorMessage = ex.Message,
+                FailedAt = DateTime.UtcNow
+            });
+            await ConfirmEvents();
 
             return taskId;
         }
@@ -269,11 +241,12 @@ public class VideoGenerationGAgent : AIGAgentBase<VideoGenerationState, VideoGen
             try
             {
                 var bytePlusTaskId = status.VideoUrl; // BytePlus ID stored in VideoUrl field
-                if (_bytePlusClient == null)
-                {
-                    throw new InvalidOperationException("BytePlus client not initialized - video generation not available");
-                }
-                var bytePlusStatus = await _bytePlusClient.GetVideoGenerationTaskAsync(bytePlusTaskId);
+                
+                // Get configuration for this request
+                var config = await ResolveSystemConfigAsync("BytePlusVideoGeneration");
+                var baseUrl = config.Endpoint ?? "https://ark.ap-southeast.bytepluses.com";
+                
+                var bytePlusStatus = await _bytePlusClient.GetVideoGenerationTaskAsync(bytePlusTaskId, config.ApiKey, baseUrl);
                 
                 Logger.LogDebug("BytePlus task {TaskId} status: {Status}", bytePlusTaskId, bytePlusStatus.Status);
                 
@@ -284,10 +257,16 @@ public class VideoGenerationGAgent : AIGAgentBase<VideoGenerationState, VideoGen
                         status.VideoUrl = bytePlusStatus.Content?.VideoUrl ?? "";
                         status.Progress = 100;
                         status.CompletedAt = DateTime.UtcNow;
-                        State.TotalVideosGenerated++;
-                        State.LastGenerationTime = DateTime.UtcNow;
             
                         Logger.LogInformation("Video generation completed: {TaskId}, Video URL: {VideoUrl}", taskId, status.VideoUrl);
+                        
+                        // Use VideoGenerationCompletedEvent for successful completion
+                        RaiseEvent(new VideoGenerationCompletedEvent 
+                        { 
+                            TaskId = taskId, 
+                            VideoUrl = status.VideoUrl,
+                            CompletedAt = status.CompletedAt ?? DateTime.UtcNow
+                        });
                         break;
                         
                     case "failed":
@@ -296,6 +275,14 @@ public class VideoGenerationGAgent : AIGAgentBase<VideoGenerationState, VideoGen
                         status.VideoUrl = "";
             
                         Logger.LogError("Video generation failed: {TaskId}, Error: {Error}", taskId, status.ErrorMessage);
+                        
+                        // Use VideoGenerationFailedEvent for failed tasks
+                        RaiseEvent(new VideoGenerationFailedEvent 
+                        { 
+                            TaskId = taskId, 
+                            ErrorMessage = status.ErrorMessage,
+                            FailedAt = DateTime.UtcNow
+                        });
                         break;
                         
                     case "processing":
@@ -303,37 +290,45 @@ public class VideoGenerationGAgent : AIGAgentBase<VideoGenerationState, VideoGen
                         var elapsed = DateTime.UtcNow - status.CreatedAt;
                         var estimatedProgress = Math.Min(90, 10 + (int)(elapsed.TotalMinutes * 20)); // Estimate up to 90%
                         status.Progress = estimatedProgress;
-            
+                        
+                        // Use VideoGenerationProgressUpdatedEvent for progress updates
+                        RaiseEvent(new VideoGenerationProgressUpdatedEvent 
+                        { 
+                            TaskId = taskId, 
+                            Progress = status.Progress,
+                            Status = status.Status
+                        });
                         break;
                 }
                 
-                // Update state with new status
-                State.ActiveTasks[taskId] = status;
+                // Confirm all events after processing
+                await ConfirmEvents();
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error checking BytePlus status for task: {TaskId}. Using simulation mode.", taskId);
+                Logger.LogError(ex, "Error checking BytePlus status for task: {TaskId}. Marking task as failed.", taskId);
                 
-                // Simulation mode: simulate completion after some time if API fails
-                var elapsed = DateTime.UtcNow - status.CreatedAt;
-                if (elapsed.TotalSeconds > 30) // Simulate completion after 30 seconds for demo
+                // When exception occurs, properly fail the task with exception details
+                var errorMessage = $"BytePlus API error: {ex.Message}";
+                if (ex.InnerException != null)
                 {
-                    status.Status = "completed";
-                    status.VideoUrl = $"https://demo-video-storage.example.com/videos/{taskId}.mp4";
-                    status.Progress = 100;
-                    status.CompletedAt = DateTime.UtcNow;
-                    State.TotalVideosGenerated++;
-                    State.LastGenerationTime = DateTime.UtcNow;
-                    
-                    Logger.LogInformation("Demo simulation: Video generation completed for task: {TaskId}", taskId);
-                    State.ActiveTasks[taskId] = status;
+                    errorMessage += $" Inner exception: {ex.InnerException.Message}";
                 }
-                else
+                
+                // Use VideoGenerationFailedEvent to record the failure with full exception details
+                RaiseEvent(new VideoGenerationFailedEvent 
+                { 
+                    TaskId = taskId, 
+                    ErrorMessage = errorMessage,
+                    FailedAt = DateTime.UtcNow
+                });
+                
+                await ConfirmEvents();
+                
+                // Return the failed status immediately - don't continue processing
+                if (State.ActiveTasks.TryGetValue(taskId, out var failedStatus))
                 {
-                    // Update progress while waiting
-                    var progressEstimate = Math.Min(90, 10 + (int)(elapsed.TotalSeconds * 2)); // 2% per second up to 90%
-                    status.Progress = progressEstimate;
-                    State.ActiveTasks[taskId] = status;
+                    return failedStatus;
                 }
             }
         }
@@ -591,6 +586,69 @@ public class VideoGenerationGAgent : AIGAgentBase<VideoGenerationState, VideoGen
                 state.AutoReturnResult = configEvent.AutoReturnResult;
                 Logger.LogDebug("Configuration applied to state: Duration={Duration}, Resolution={Resolution}", 
                     state.Duration, state.Resolution);
+                break;
+                
+            case VideoGenerationStartedEvent startedEvent:
+                // Create new task with all details in one event - eliminates redundancy
+                state.ActiveTasks[startedEvent.TaskId] = new VideoGenerationStatus
+                {
+                    TaskId = startedEvent.TaskId,
+                    Status = "processing",
+                    CreatedAt = startedEvent.StartedAt,
+                    Progress = 10,
+                    VideoUrl = startedEvent.BytePlusTaskId // Store BytePlus task ID temporarily
+                };
+                Logger.LogDebug("Video generation started: {TaskId} with prompt: {Prompt}", 
+                    startedEvent.TaskId, startedEvent.Prompt);
+                break;
+                
+            case VideoGenerationProgressUpdatedEvent progressEvent:
+                if (state.ActiveTasks.TryGetValue(progressEvent.TaskId, out var existingTask))
+                {
+                    existingTask.Status = progressEvent.Status;
+                    existingTask.Progress = progressEvent.Progress;
+                    state.ActiveTasks[progressEvent.TaskId] = existingTask;
+                    Logger.LogDebug("Video generation progress: {TaskId} -> {Progress}%", 
+                        progressEvent.TaskId, progressEvent.Progress);
+                }
+                break;
+                
+            case VideoGenerationCompletedEvent completedEvent:
+                if (state.ActiveTasks.TryGetValue(completedEvent.TaskId, out var completedTask))
+                {
+                    completedTask.Status = "completed";
+                    completedTask.VideoUrl = completedEvent.VideoUrl;
+                    completedTask.Progress = 100;
+                    completedTask.CompletedAt = completedEvent.CompletedAt;
+                    state.ActiveTasks[completedEvent.TaskId] = completedTask;
+                }
+                state.TotalVideosGenerated++;
+                state.LastGenerationTime = completedEvent.CompletedAt;
+                state.LastGeneratedVideoUrl = completedEvent.VideoUrl;
+                Logger.LogInformation("Video generation completed: {TaskId}, Total: {Total}", 
+                    completedEvent.TaskId, state.TotalVideosGenerated);
+                break;
+                
+            case VideoGenerationFailedEvent failedEvent:
+                if (state.ActiveTasks.TryGetValue(failedEvent.TaskId, out var failedTask))
+                {
+                    failedTask.Status = "failed";
+                    failedTask.ErrorMessage = failedEvent.ErrorMessage;
+                    state.ActiveTasks[failedEvent.TaskId] = failedTask;
+                }
+                else
+                {
+                    // Create failed task if it doesn't exist
+                    state.ActiveTasks[failedEvent.TaskId] = new VideoGenerationStatus
+                    {
+                        TaskId = failedEvent.TaskId,
+                        Status = "failed",
+                        CreatedAt = failedEvent.FailedAt,
+                        ErrorMessage = failedEvent.ErrorMessage
+                    };
+                }
+                Logger.LogWarning("Video task failed: {TaskId}, Error: {Error}", 
+                    failedEvent.TaskId, failedEvent.ErrorMessage);
                 break;
         }
     }
