@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text.Json;
 using Aevatar.GAgents.Basic;
 using NJsonSchema.Generation;
 
@@ -74,13 +73,21 @@ public class DynamicDropDownProcessor : ISchemaProcessor
     /// </summary>
     private void InjectSystemLLMConfigurations(IDictionary<string, object?> extensionData)
     {  
-        // Create a list of AI model configurations as JSON strings
-        var configJsonList = new List<string>();
+        // Create a list of AI model configurations as objects
+        var configObjectList = new List<object>();
         
         foreach (var config in _context.AIModelConfigs)
         {
-            var configJson = JsonSerializer.Serialize(config);
-            configJsonList.Add(configJson);
+            var configObject = new
+            {
+                Name = config.Name,
+                Provider = config.Provider,
+                Type = config.Type,
+                Strengths = config.Strengths,
+                BestFor = config.BestFor,
+                Speed = config.Speed
+            };
+            configObjectList.Add(configObject);
         }
         
         // Create enum structure like MCPServerType with integer type
@@ -88,7 +95,7 @@ public class DynamicDropDownProcessor : ISchemaProcessor
         var enumValues = _context.AIModelConfigs.Select((c, i) => i).ToArray(); // Use integer indices
         
         // Inject the real configurations with enum structure
-        extensionData["x-descriptions"] = configJsonList;
+        extensionData["x-descriptions"] = configObjectList;
         extensionData["x-enumNames"] = enumNames;
         extensionData["enum"] = enumValues;
     }
