@@ -609,6 +609,19 @@ public class AgentService : ApplicationService, IAgentService
                                 // Only create enum if there are multiple values (single values don't make sense for enums)
                                 propertySchema["enum"] = defaultValuesAttribute.Values;
                                 
+                                // Add descriptions if available
+                                if (defaultValuesAttribute.Descriptions != null && 
+                                    defaultValuesAttribute.Descriptions.Length == defaultValuesAttribute.Values.Length)
+                                {
+                                    var hasDescriptions = defaultValuesAttribute.Descriptions.Any(d => !string.IsNullOrEmpty(d));
+                                    if (hasDescriptions)
+                                    {
+                                        propertySchema["x-descriptions"] = defaultValuesAttribute.Descriptions;
+                                        _logger.LogDebug("Added x-descriptions for property {PropertyName}: {Descriptions}",
+                                            property.Name, string.Join(", ", defaultValuesAttribute.Descriptions));
+                                    }
+                                }
+                                
                                 // Log warning if default doesn't match first enum value
                                 if (!Equals(defaultValue, defaultValuesAttribute.Values[0]))
                                 {
