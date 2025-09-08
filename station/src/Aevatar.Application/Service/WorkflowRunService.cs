@@ -153,7 +153,33 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
 
         if (publishedAgent == null) throw new UserFriendlyException("Failed to publish workflow");
 
-        return publishedAgent.Id;
+        // Extract WorkflowCoordinatorGAgentId from publishedAgent properties
+        if (publishedAgent.Properties == null)
+        {
+            throw new UserFriendlyException("Published workflow agent has no properties");
+        }
+
+        var configJson = JsonConvert.SerializeObject(publishedAgent.Properties);
+        WorkflowViewConfigDto? viewConfigDto;
+        try
+        {
+            viewConfigDto = JsonConvert.DeserializeObject<WorkflowViewConfigDto>(configJson);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to deserialize workflow configuration from published agent: {AgentId}", publishedAgent.Id);
+            throw new UserFriendlyException("Invalid workflow configuration in published agent");
+        }
+
+        if (viewConfigDto?.WorkflowCoordinatorGAgentId == null || viewConfigDto.WorkflowCoordinatorGAgentId == Guid.Empty)
+        {
+            throw new UserFriendlyException("WorkflowCoordinatorGAgentId not found in published workflow");
+        }
+
+        _logger.LogInformation("Successfully extracted WorkflowCoordinatorGAgentId: {CoordinatorId} from published workflow: {ViewAgentId}", 
+            viewConfigDto.WorkflowCoordinatorGAgentId, viewAgentId);
+
+        return viewConfigDto.WorkflowCoordinatorGAgentId;
     }
 
     /// <summary>
