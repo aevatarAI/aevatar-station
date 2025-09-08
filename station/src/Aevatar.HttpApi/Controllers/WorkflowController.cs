@@ -2,7 +2,6 @@ using System.Threading.Tasks;
 using Aevatar.Service;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Volo.Abp.AspNetCore.Mvc;
 
 namespace Aevatar.Controllers
@@ -17,16 +16,16 @@ namespace Aevatar.Controllers
     {
         private readonly IWorkflowOrchestrationService _workflowOrchestrationService;
         private readonly ITextCompletionService _textCompletionService;
-        private readonly ILogger<WorkflowController> _logger;
+        private readonly IWorkflowRunService _workflowRunService;
 
         public WorkflowController(
             IWorkflowOrchestrationService workflowOrchestrationService,
             ITextCompletionService textCompletionService,
-            ILogger<WorkflowController> logger)
+            IWorkflowRunService workflowRunService)
         {
             _workflowOrchestrationService = workflowOrchestrationService;
             _textCompletionService = textCompletionService;
-            _logger = logger;
+            _workflowRunService = workflowRunService;
         }
 
         /// <summary>
@@ -37,21 +36,7 @@ namespace Aevatar.Controllers
         [HttpPost("generate")]
         public async Task<AiWorkflowViewConfigDto?> GenerateAsync([FromBody] GenerateWorkflowRequestDto request)
         {
-            _logger.LogInformation("Received workflow generation request. User goal: {UserGoal}", request.UserGoal);
-
-            var result = await _workflowOrchestrationService.GenerateWorkflowAsync(request.UserGoal);
-
-            if (result != null)
-            {
-                _logger.LogInformation("Workflow generated successfully. Node count: {NodeCount}",
-                    result.Properties?.WorkflowNodeList?.Count ?? 0);
-            }
-            else
-            {
-                _logger.LogWarning("Workflow generation failed");
-            }
-
-            return result;
+            return await _workflowOrchestrationService.GenerateWorkflowAsync(request.UserGoal);
         }
 
         /// <summary>
@@ -63,14 +48,20 @@ namespace Aevatar.Controllers
         public async Task<TextCompletionResponseDto> GenerateTextCompletionAsync(
             [FromBody] TextCompletionRequestDto request)
         {
-            _logger.LogInformation("Received text completion request. Input: {UserGoal}", request.UserGoal);
-
-            var result = await _textCompletionService.GenerateCompletionsAsync(request);
-
-            _logger.LogInformation("Text completions generated successfully. Count: {Count}", result.Completions?.Count ?? 0);
-
-            return result;
+            return await _textCompletionService.GenerateCompletionsAsync(request);
         }
+
+        /// <summary>
+        /// 运行工作流 - 包含验证、发布、执行的完整流程
+        /// </summary>
+        /// <param name="request">工作流运行请求</param>
+        /// <returns>工作流运行结果</returns>
+        [HttpPost("run")]
+        public async Task<WorkflowRunResultDto> RunWorkflowAsync([FromBody] WorkflowRunRequestDto request)
+        {
+            return await _workflowRunService.RunWorkflowAsync(request);
+        }
+
     }
 
     /// <summary>
