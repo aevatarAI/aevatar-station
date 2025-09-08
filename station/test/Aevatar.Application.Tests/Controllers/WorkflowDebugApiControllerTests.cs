@@ -8,6 +8,7 @@ using NSubstitute;
 using Shouldly;
 using Xunit;
 using Aevatar.Service.DebugWorkFlow;
+using GroupChat.GAgent.Feature.Common;
 
 namespace Aevatar.Application.Tests.Controllers;
 
@@ -38,7 +39,7 @@ public class WorkflowDebugApiControllerTests
             WorkflowId = Guid.NewGuid(),
             NodeId = "test-node",
             Type = BreakpointType.BeforeExecution,
-            Description = "Test breakpoint"
+            Condition = "Test condition"
         };
 
         // Act
@@ -55,7 +56,7 @@ public class WorkflowDebugApiControllerTests
             request.WorkflowId, 
             request.NodeId, 
             request.Type, 
-            request.Description
+            request.Condition
         );
     }
 
@@ -106,13 +107,13 @@ public class WorkflowDebugApiControllerTests
             {
                 NodeId = "test-node-1",
                 Type = BreakpointType.BeforeExecution,
-                Description = "Test breakpoint 1"
+                Condition = "Test condition 1"
             },
             new ExtendedBreakpointInfo
             {
                 NodeId = "test-node-2", 
                 Type = BreakpointType.AfterExecution,
-                Description = "Test breakpoint 2"
+                Condition = "Test condition 2"
             }
         };
 
@@ -134,37 +135,37 @@ public class WorkflowDebugApiControllerTests
     #region 即时控制API测试
 
     [Fact]
-    public async Task ContinueToNextNode_Should_ReturnOk_When_Success()
+    public async Task ContinueNode_Should_ReturnOk_When_Success()
     {
         // Arrange
         var workflowId = Guid.NewGuid();
         var nodeId = "test-node";
 
+        // Mock successful result
+        _breakpointManager.ContinueNodeAsync(workflowId, nodeId)
+            .Returns(Task.FromResult(ApiResponse<string>.SuccessResult("Continue successful", "Node continued")));
+
         // Act
-        var result = await _controller.ContinueToNextNode(workflowId, nodeId);
+        var result = await _controller.ContinueNode(workflowId, nodeId);
 
         // Assert
         result.ShouldBeOfType<OkObjectResult>();
         
-        var okResult = (OkObjectResult)result;
-        var response = okResult.Value;
-        response.ShouldNotBeNull();
-        
-        await _breakpointManager.Received(1).ContinueToNextNodeAsync(workflowId, nodeId);
+        await _breakpointManager.Received(1).ContinueNodeAsync(workflowId, nodeId);
     }
 
     [Fact]
-    public async Task ContinueToNextNode_Should_ReturnBadRequest_When_Exception()
+    public async Task ContinueNode_Should_ReturnBadRequest_When_Exception()
     {
         // Arrange
         var workflowId = Guid.NewGuid();
         var nodeId = "test-node";
 
-        _breakpointManager.ContinueToNextNodeAsync(workflowId, nodeId)
-            .Returns(Task.FromException(new InvalidOperationException("Test exception")));
+        _breakpointManager.ContinueNodeAsync(workflowId, nodeId)
+            .Returns(Task.FromException<ApiResponse<string>>(new InvalidOperationException("Test exception")));
 
         // Act
-        var result = await _controller.ContinueToNextNode(workflowId, nodeId);
+        var result = await _controller.ContinueNode(workflowId, nodeId);
 
         // Assert
         result.ShouldBeOfType<BadRequestObjectResult>();
@@ -175,64 +176,58 @@ public class WorkflowDebugApiControllerTests
     }
 
     [Fact]
-    public async Task RetryCurrentNode_Should_ReturnOk_When_Success()
+    public async Task RetryNode_Should_ReturnOk_When_Success()
     {
         // Arrange
         var workflowId = Guid.NewGuid();
         var nodeId = "test-node";
         var retryRequest = new RetryNodeRequest
         {
-            ModifiedParams = new Dictionary<string, object> { { "temperature", 0.3 } },
+            CoordinatorMessages = new List<ChatMessage>(),
             Note = "Retry with lower temperature"
         };
 
+        // Mock successful result
+        _breakpointManager.RetryNodeAsync(workflowId, nodeId, Arg.Any<List<ChatMessage>>())
+            .Returns(Task.FromResult(ApiResponse<string>.SuccessResult("Retry successful", "Node retried")));
+
         // Act
-        var result = await _controller.RetryCurrentNode(workflowId, nodeId, retryRequest);
+        var result = await _controller.RetryNode(workflowId, nodeId, retryRequest);
 
         // Assert
         result.ShouldBeOfType<OkObjectResult>();
         
-        await _breakpointManager.Received(1).RetryCurrentNodeAsync(
+        await _breakpointManager.Received(1).RetryNodeAsync(
             workflowId, 
             nodeId, 
-            retryRequest.ModifiedParams
+            retryRequest.CoordinatorMessages
         );
     }
 
     [Fact]
-    public async Task RetryCurrentNode_Should_ReturnOk_When_NoRequestBody()
+    public async Task RetryNode_Should_ReturnOk_When_NoRequestBody()
     {
         // Arrange
         var workflowId = Guid.NewGuid();
         var nodeId = "test-node";
 
+        // Mock successful result
+        _breakpointManager.RetryNodeAsync(workflowId, nodeId, Arg.Any<List<ChatMessage>>())
+            .Returns(Task.FromResult(ApiResponse<string>.SuccessResult("Retry successful", "Node retried")));
+
         // Act
-        var result = await _controller.RetryCurrentNode(workflowId, nodeId, null);
+        var result = await _controller.RetryNode(workflowId, nodeId, null);
 
         // Assert
         result.ShouldBeOfType<OkObjectResult>();
         
-        await _breakpointManager.Received(1).RetryCurrentNodeAsync(
+        await _breakpointManager.Received(1).RetryNodeAsync(
             workflowId, 
             nodeId, 
-            null
+            Arg.Any<List<ChatMessage>>()
         );
     }
 
-    [Fact]
-    public async Task SkipNode_Should_ReturnOk_When_Success()
-    {
-        // Arrange
-        var nodeId = "test-node";
-
-        // Act
-        var result = await _controller.SkipNode(nodeId);
-
-        // Assert
-        result.ShouldBeOfType<OkObjectResult>();
-        
-        await _breakpointManager.Received(1).SkipNodeAsync(nodeId);
-    }
 
     #endregion
 
@@ -313,40 +308,6 @@ public class WorkflowDebugApiControllerTests
 
     #endregion
 
-    #region 工作流管理API测试
-
-    [Fact]
-    public async Task AbortWorkflow_Should_ReturnOk_When_Success()
-    {
-        // Arrange
-        var request = new AbortWorkflowRequest { WorkflowId = Guid.NewGuid() };
-
-        // Act
-        var result = await _controller.AbortWorkflow(request);
-
-        // Assert
-        result.ShouldBeOfType<OkObjectResult>();
-        
-        await _breakpointManager.Received(1).AbortWorkflowAsync(request.WorkflowId);
-    }
-
-    [Fact]
-    public async Task AbortWorkflow_Should_ReturnBadRequest_When_Exception()
-    {
-        // Arrange
-        var request = new AbortWorkflowRequest { WorkflowId = Guid.NewGuid() };
-
-        _breakpointManager.AbortWorkflowAsync(request.WorkflowId)
-            .Returns(Task.FromException(new InvalidOperationException("Test exception")));
-
-        // Act
-        var result = await _controller.AbortWorkflow(request);
-
-        // Assert
-        result.ShouldBeOfType<BadRequestObjectResult>();
-    }
-
-    #endregion
 
     #region 批量操作API测试
 
@@ -492,20 +453,20 @@ public class WorkflowDebugApiControllerTests
     }
 
     [Fact]
-    public async Task ContinueToNextNode_Should_ReturnBadRequest_When_EmptyGuidWorkflowId()
+    public async Task ContinueNode_Should_ReturnBadRequest_When_EmptyGuidWorkflowId()
     {
         // Act
-        var result = await _controller.ContinueToNextNode(Guid.Empty, "test-node");
+        var result = await _controller.ContinueNode(Guid.Empty, "test-node");
 
         // Assert
         result.ShouldBeOfType<BadRequestObjectResult>();
     }
 
     [Fact]
-    public async Task RetryCurrentNode_Should_ReturnBadRequest_When_EmptyNodeId()
+    public async Task RetryNode_Should_ReturnBadRequest_When_EmptyNodeId()
     {
         // Act
-        var result = await _controller.RetryCurrentNode(Guid.NewGuid(), "");
+        var result = await _controller.RetryNode(Guid.NewGuid(), "");
 
         // Assert
         result.ShouldBeOfType<BadRequestObjectResult>();
@@ -546,7 +507,7 @@ public class TestWorkflowDebugApiController : ControllerBase
                 request.WorkflowId, 
                 request.NodeId, 
                 request.Type, 
-                request.Description);
+                request.Condition);
 
             return Ok(new { Success = true, Message = "断点设置成功" });
         }
@@ -582,15 +543,23 @@ public class TestWorkflowDebugApiController : ControllerBase
         }
     }
 
-    public async Task<IActionResult> ContinueToNextNode(Guid workflowId, string nodeId)
+    public async Task<IActionResult> ContinueNode(Guid workflowId, string nodeId)
     {
         try
         {
             if (workflowId == Guid.Empty)
                 return BadRequest(new { Success = false, Message = "Invalid WorkflowId" });
 
-            await _breakpointManager.ContinueToNextNodeAsync(workflowId, nodeId);
-            return Ok(new { Success = true, Message = "已触发继续到下游节点" });
+            var result = await _breakpointManager.ContinueNodeAsync(workflowId, nodeId);
+            
+            if (result.Success)
+            {
+                return Ok(result);
+            }
+            else
+            {
+                return BadRequest(result);
+            }
         }
         catch (Exception ex)
         {
@@ -598,15 +567,29 @@ public class TestWorkflowDebugApiController : ControllerBase
         }
     }
 
-    public async Task<IActionResult> RetryCurrentNode(Guid workflowId, string nodeId, RetryNodeRequest? request = null)
+    public async Task<IActionResult> ContinueNode(ContinueNodeRequest request)
+    {
+        return await ContinueNode(request.WorkflowId, request.NodeId);
+    }
+
+    public async Task<IActionResult> RetryNode(Guid workflowId, string nodeId, RetryNodeRequest? request = null)
     {
         try
         {
             if (string.IsNullOrEmpty(nodeId))
                 return BadRequest(new { Success = false, Message = "Invalid NodeId" });
 
-            await _breakpointManager.RetryCurrentNodeAsync(workflowId, nodeId, request?.ModifiedParams);
-            return Ok(new { Success = true, Message = "已触发重试当前节点" });
+            var coordinatorMessages = request?.CoordinatorMessages ?? new List<ChatMessage>();
+            var result = await _breakpointManager.RetryNodeAsync(workflowId, nodeId, coordinatorMessages);
+            
+            if (result.Success)
+            {
+                return Ok(result);
+            }
+            else
+            {
+                return BadRequest(result);
+            }
         }
         catch (Exception ex)
         {
@@ -614,18 +597,11 @@ public class TestWorkflowDebugApiController : ControllerBase
         }
     }
 
-    public async Task<IActionResult> SkipNode(string nodeId)
+    public async Task<IActionResult> RetryNode(RetryNodeRequest request)
     {
-        try
-        {
-            await _breakpointManager.SkipNodeAsync(nodeId);
-            return Ok(new { Success = true, Message = "已跳过节点" });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { Success = false, Message = ex.Message });
-        }
+        return await RetryNode(request.WorkflowId, request.NodeId, request);
     }
+
 
     public async Task<IActionResult> GetPausedNodes()
     {
@@ -653,18 +629,6 @@ public class TestWorkflowDebugApiController : ControllerBase
         }
     }
 
-    public async Task<IActionResult> AbortWorkflow(AbortWorkflowRequest request)
-    {
-        try
-        {
-            await _breakpointManager.AbortWorkflowAsync(request.WorkflowId);
-            return Ok(new { Success = true, Message = "工作流已中止" });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { Success = false, Message = ex.Message });
-        }
-    }
 
     public async Task<IActionResult> BatchSetBreakpoints(BatchBreakpointRequest? request)
     {
@@ -682,7 +646,7 @@ public class TestWorkflowDebugApiController : ControllerBase
                     breakpointRequest.WorkflowId,
                     breakpointRequest.NodeId,
                     breakpointRequest.Type,
-                    breakpointRequest.Description);
+                    breakpointRequest.Condition);
 
                 results.Add(new { NodeId = breakpointRequest.NodeId, Success = true });
                 successCount++;
@@ -706,18 +670,22 @@ public class SetBreakpointRequest
     public Guid WorkflowId { get; set; }
     public string NodeId { get; set; } = string.Empty;
     public BreakpointType Type { get; set; }
-    public string? Description { get; set; }
+    public string? Condition { get; set; }
 }
 
 public class RetryNodeRequest
 {
-    public Dictionary<string, object>? ModifiedParams { get; set; }
+    public Guid WorkflowId { get; set; }
+    public string NodeId { get; set; } = string.Empty;
+    public List<ChatMessage> CoordinatorMessages { get; set; } = new List<ChatMessage>();
     public string? Note { get; set; }
 }
 
-public class AbortWorkflowRequest
+public class ContinueNodeRequest
 {
     public Guid WorkflowId { get; set; }
+    public string NodeId { get; set; } = string.Empty;
+    public string? Note { get; set; }
 }
 
 public class BatchBreakpointRequest

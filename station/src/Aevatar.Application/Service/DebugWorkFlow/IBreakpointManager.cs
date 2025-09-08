@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using Aevatar.GAgents.GroupChat;
 using GroupChat.GAgent.Feature.Coordinator.GEvent;
+using GroupChat.GAgent.Feature.Common;
 
 namespace Aevatar.Service.DebugWorkFlow
 {
@@ -43,13 +44,6 @@ namespace Aevatar.Service.DebugWorkFlow
         /// <param name="nodeId">节点ID</param>
         Task ContinueToNextNodeAsync(Guid workflowId, string nodeId);
 
-        /// <summary>
-        /// 直接重试当前节点 - 重新发起当前节点执行
-        /// </summary>  
-        /// <param name="workflowId">工作流ID</param>
-        /// <param name="nodeId">节点ID</param>
-        /// <param name="modifiedParams">修改后的参数（可选）</param>
-        Task RetryCurrentNodeAsync(Guid workflowId, string nodeId, Dictionary<string, object>? modifiedParams = null);
 
         /// <summary>
         /// 设置断点
@@ -81,9 +75,16 @@ namespace Aevatar.Service.DebugWorkFlow
         Task SkipNodeAsync(string nodeId);
 
         /// <summary>
-        /// 重试当前节点
+        /// Legacy retry method by nodeId - deprecated
         /// </summary>
-        Task RetryNodeAsync(string nodeId, Dictionary<string, object>? newParameters = null);
+        [Obsolete("Use RetryNodeAsync(Guid workflowId, string nodeId, List<ChatMessage> coordinatorMessages) instead")]
+        Task RetryNodeByIdAsync(string nodeId, Dictionary<string, object>? newParameters = null);
+
+        /// <summary>
+        /// Retry node execution using workflowId and nodeId
+        /// Internal logic will automatically resolve term from these parameters
+        /// </summary>
+        Task<ApiResponse<string>> RetryNodeAsync(Guid workflowId, string nodeId, List<ChatMessage> coordinatorMessages);
 
         /// <summary>
         /// 中止工作流
@@ -104,6 +105,28 @@ namespace Aevatar.Service.DebugWorkFlow
         /// 获取暂停节点详细信息
         /// </summary>
         Task<IEnumerable<PausedNodeInfo>> GetPausedNodeInfosAsync();
+
+
+        /// <summary>
+        /// Continue node execution using workflowId and nodeId  
+        /// Internal logic will automatically resolve term from these parameters
+        /// </summary>
+        Task<ApiResponse<string>> ContinueNodeAsync(Guid workflowId, string nodeId);
+
+        /// <summary>
+        /// Edit input data for a specific node (modifies WorkflowExecutionRecord)
+        /// </summary>
+        Task<ApiResponse<string>> EditNodeInputDataAsync(Guid workflowId, string nodeId, string inputData);
+
+        /// <summary>
+        /// Edit state data for a specific workflow node
+        /// </summary>
+        Task<ApiResponse<string>> EditNodeStateAsync(Guid workflowId, string nodeId, Dictionary<string, object> stateData);
+
+        /// <summary>
+        /// Check if a breakpoint exists for the specified key and stage
+        /// </summary>
+        Task<bool> HasBreakpointAsync(string breakpointKey, string stage);
     }
 
     /// <summary>
@@ -199,5 +222,36 @@ namespace Aevatar.Service.DebugWorkFlow
         /// 备注
         /// </summary>
         public string? Note { get; set; }
+    }
+
+    /// <summary>
+    /// API响应结果
+    /// </summary>
+    public class ApiResponse<T>
+    {
+        public bool Success { get; set; } = true;
+        public string Message { get; set; } = string.Empty;
+        public T? Data { get; set; }
+        public string? ErrorCode { get; set; }
+
+        public static ApiResponse<T> SuccessResult(T data, string message = "Success")
+        {
+            return new ApiResponse<T>
+            {
+                Success = true,
+                Message = message,
+                Data = data
+            };
+        }
+
+        public static ApiResponse<T> ErrorResult(string message, string? errorCode = null)
+        {
+            return new ApiResponse<T>
+            {
+                Success = false,
+                Message = message,
+                ErrorCode = errorCode
+            };
+        }
     }
 }

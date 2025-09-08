@@ -64,18 +64,8 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
         RaiseEvent(new FinishedWorkUnitLogEvent() { Term = @event.Term, WorkUnitGrainId = workUnitInfo.GrainId });
         await ConfirmEvents();
 
-        var downStreamList = State.GetDownStreamGrainIds(workUnitInfo.GrainId);
-        // indicate: no next work unit
-        if (downStreamList.Count == 0)
-        {
-            await TryFinishWorkflowAsync();
-            return;
-        }
-
-        foreach (var grainId in downStreamList)
-        {
-            await TryActiveWorkUnitAsync(grainId);
-        }
+        // Continue to downstream nodes after completion
+        await ContinueToDownstreamAsync(@event.Term);
 
         Logger.LogDebug("[WorkflowCoordinatorGAgent] handler ChatResponseEvent end");
     }
@@ -555,6 +545,78 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
         var eventWrapper = new EventWrapper<T>(@event, Guid.NewGuid(), this.GetGrainId());
         await stream.OnNextAsync(eventWrapper);
         Logger.LogDebug($"[WorkflowCoordinatorGAgent] PublishP2PAsync to {grainId} done");
+    }
+
+    #endregion
+
+    #region Debug Support Methods
+
+        /// <summary>
+        /// Execute the current node with the provided parameters
+        /// Used for both initial execution and re-execution during debugging
+        /// </summary>
+        public async Task ExecuteCurrentNodeAsync(long term, List<ChatMessage> coordinatorMessages)
+    {
+        Logger.LogDebug("[WorkflowCoordinatorGAgent] ExecuteCurrentNodeAsync start - Term: {Term}", term);
+        
+        var workUnitInfo = State.GetWorkUnitFromTerm(term);
+        if (workUnitInfo == null)
+        {
+            Logger.LogError("[WorkflowCoordinatorGAgent] ExecuteCurrentNodeAsync - Cannot find work unit for term: {Term}", term);
+            return;
+        }
+
+        // Get the speaker (work unit grain)
+        var speaker = GrainId.Parse(workUnitInfo.GrainId);
+        
+        // Directly publish ChatEvent to execute the work unit with provided messages
+        await PublishP2PAsync(speaker, new ChatEvent 
+        { 
+            BlackboardId = State.BlackboardId, 
+            Speaker = speaker.GetGuidKey(), 
+            Term = term, 
+            CoordinatorMessages = coordinatorMessages 
+        });
+        
+        Logger.LogDebug("[WorkflowCoordinatorGAgent] ExecuteCurrentNodeAsync completed - Term: {Term}, Messages: {MessageCount}", term, coordinatorMessages.Count);
+    }
+
+    /// <summary>
+    /// Continue execution to downstream nodes after current node completion
+    /// Used when debugging confirms current results are acceptable
+    /// </summary>
+    public async Task ContinueToDownstreamAsync(long term)
+    {
+        Logger.LogDebug("[WorkflowCoordinatorGAgent] ContinueToDownstreamAsync start - Term: {Term}", term);
+        
+        var workUnitInfo = State.GetWorkUnitFromTerm(term);
+        if (workUnitInfo == null)
+        {
+            Logger.LogError("[WorkflowCoordinatorGAgent] ContinueToDownstreamAsync - Cannot find work unit for term: {Term}", term);
+            return;
+        }
+
+        // Get downstream work units  
+        var downStreamList = State.GetDownStreamGrainIds(workUnitInfo.GrainId);
+        
+        // Check if this is the final work unit
+        if (downStreamList.Count == 0)
+        {
+            Logger.LogInformation("[WorkflowCoordinatorGAgent] ContinueToDownstreamAsync - No downstream units, finishing workflow for term: {Term}", term);
+            await TryFinishWorkflowAsync();
+            return;
+        }
+
+        // Activate all downstream work units
+        Logger.LogInformation("[WorkflowCoordinatorGAgent] ContinueToDownstreamAsync - Activating {Count} downstream units for term: {Term}", 
+            downStreamList.Count, term);
+            
+        foreach (var grainId in downStreamList)
+        {
+            await TryActiveWorkUnitAsync(grainId);
+        }
+        
+        Logger.LogDebug("[WorkflowCoordinatorGAgent] ContinueToDownstreamAsync completed - Term: {Term}", term);
     }
 
     #endregion

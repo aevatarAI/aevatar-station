@@ -7,9 +7,11 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Volo.Abp.DependencyInjection;
 using Orleans;
+using Orleans.Runtime;
 using GroupChat.GAgent.Feature.Coordinator.GEvent;
 using Aevatar.GAgents.GroupChat;
 using GroupChat.GAgent.Feature.Common;
+using Aevatar.GAgents.GroupChat.Core;
 
 namespace Aevatar.Service.DebugWorkFlow
 {
@@ -177,7 +179,6 @@ namespace Aevatar.Service.DebugWorkFlow
                     
                     // 获取WorkflowCoordinatorGAgent
                     var coordinator = _grainFactory.GetGrain<IWorkflowCoordinatorGAgent>(workflowId);
-                    
                     // 重新发起流转到下游
                     if (pausedInfo.Context != null && pausedInfo.Context.TryGetValue("CoordinatorMessages", out var messages))
                     {
@@ -202,7 +203,7 @@ namespace Aevatar.Service.DebugWorkFlow
                 }
                 else
                 {
-                    _logger.LogWarning("⚠️ 未找到暂停节点信息: {WorkflowId}:{NodeId}", workflowId, nodeId);
+                    _logger.LogWarning("⚠️ No paused node found: {WorkflowId}:{NodeId}", workflowId, nodeId);
                 }
                 
                 await Task.CompletedTask;
@@ -213,43 +214,6 @@ namespace Aevatar.Service.DebugWorkFlow
             }
         }
 
-        /// <summary>
-        /// 直接重试当前节点 - 重新发起当前节点执行
-        /// </summary>
-        public async Task RetryCurrentNodeAsync(Guid workflowId, string nodeId, Dictionary<string, object>? modifiedParams = null)
-        {
-            try
-            {
-                var pauseKey = $"{workflowId}:{nodeId}";
-                
-                if (_pausedNodes.TryGetValue(pauseKey, out var pausedInfo))
-                {
-                    _logger.LogInformation("🔄 重试当前节点: {WorkflowId}:{NodeId} (修改参数: {HasParams})", 
-                        workflowId, nodeId, modifiedParams != null);
-                    
-                    // 获取WorkflowCoordinatorGAgent
-                    var coordinator = _grainFactory.GetGrain<IWorkflowCoordinatorGAgent>(workflowId);
-                    
-                    // 重新发起当前节点执行
-                    // 这里需要重新创建ChatResponseEvent来触发HandleEventAsync
-                    
-                    _logger.LogInformation("🔄 重新发起节点执行事件");
-                    
-                    // 清理暂停状态
-                    _pausedNodes.TryRemove(pauseKey, out _);
-                }
-                else
-                {
-                    _logger.LogWarning("⚠️ 未找到暂停节点信息: {WorkflowId}:{NodeId}", workflowId, nodeId);
-                }
-                
-                await Task.CompletedTask;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "重试当前节点时发生错误: {WorkflowId}:{NodeId}", workflowId, nodeId);
-            }
-        }
 
         #endregion
 
@@ -352,19 +316,14 @@ namespace Aevatar.Service.DebugWorkFlow
         }
 
         /// <summary>
-        /// 重试当前节点 - 转发到RetryCurrentNodeAsync
+        /// Legacy retry method by nodeId - use RetryNodeAsync(workflowId, term, messages) instead
         /// </summary>
-        public async Task RetryNodeAsync(string nodeId, Dictionary<string, object>? newParameters = null)
+        [Obsolete("Use RetryNodeAsync(Guid workflowId, long term, List<ChatMessage> coordinatorMessages) instead")]
+        public async Task RetryNodeByIdAsync(string nodeId, Dictionary<string, object>? newParameters = null)
         {
-            var pausedNode = _pausedNodes.Values.FirstOrDefault(p => p.NodeId == nodeId);
-            if (pausedNode != null)
-            {
-                await RetryCurrentNodeAsync(pausedNode.WorkflowId, nodeId, newParameters);
-            }
-            else
-            {
-                _logger.LogWarning("⚠️ 未找到暂停节点，无法重试: {NodeId}", nodeId);
-            }
+            _logger.LogWarning("⚠️ Using legacy RetryNodeByIdAsync method - consider upgrading to term-based RetryNodeAsync");
+            _logger.LogInformation("🔄 Legacy retry for nodeId: {NodeId}", nodeId);
+            await Task.CompletedTask; // Placeholder for legacy compatibility
         }
 
         /// <summary>
@@ -429,6 +388,27 @@ namespace Aevatar.Service.DebugWorkFlow
             var pausedInfos = _pausedNodes.Values.ToList();
             await Task.CompletedTask;
             return pausedInfos;
+        }
+
+        /// <summary>
+        /// 检查是否存在指定的断点
+        /// </summary>
+        public async Task<bool> HasBreakpointAsync(string breakpointKey, string stage)
+        {
+            await Task.CompletedTask;
+            
+            if (!_breakpoints.TryGetValue(breakpointKey, out var breakpoint))
+                return false;
+                
+            if (!breakpoint.IsEnabled)
+                return false;
+                
+            return stage switch
+            {
+                "PreExecution" => breakpoint.Type == BreakpointType.BeforeExecution || breakpoint.Type == BreakpointType.Conditional,
+                "PostExecution" => breakpoint.Type == BreakpointType.AfterExecution,
+                _ => false
+            };
         }
 
         #endregion
@@ -508,6 +488,174 @@ namespace Aevatar.Service.DebugWorkFlow
                 _ => $"断点 at {nodeId}"
             };
         }
+
+        #endregion
+
+        #region New API Methods
+
+        /// <summary>
+        /// Retry node execution using workflowId and nodeId
+        /// Internal logic will automatically resolve term from these parameters
+        /// </summary>
+        public async Task<ApiResponse<string>> RetryNodeAsync(Guid workflowId, string nodeId, List<ChatMessage> coordinatorMessages)
+        {
+            try
+            {
+                _logger.LogInformation("🔄 Retrying node - WorkflowId: {WorkflowId}, NodeId: {NodeId}, Messages: {MessageCount}", 
+                    workflowId, nodeId, coordinatorMessages.Count);
+
+                // Get term from nodeId internally
+                var term = await GetTermByNodeIdInternalAsync(workflowId, nodeId);
+                if (term == null)
+                {
+                    return ApiResponse<string>.ErrorResult($"Could not find term for WorkflowId: {workflowId}, NodeId: {nodeId}", "TERM_NOT_FOUND");
+                }
+
+                var coordinatorGAgent = _grainFactory.GetGrain<IWorkflowCoordinatorGAgent>(workflowId);
+                await coordinatorGAgent.ExecuteCurrentNodeAsync(term.Value, coordinatorMessages);
+
+                // Remove from paused nodes if exists
+                var pausedKey = $"{workflowId}:{nodeId}";
+                _pausedNodes.TryRemove(pausedKey, out _);
+
+                _logger.LogInformation("✅ Node retry completed - WorkflowId: {WorkflowId}, NodeId: {NodeId}", workflowId, nodeId);
+                return ApiResponse<string>.SuccessResult($"Node retry completed for node {nodeId}", "Retry successful");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error retrying node - WorkflowId: {WorkflowId}, NodeId: {NodeId}", workflowId, nodeId);
+                return ApiResponse<string>.ErrorResult($"Failed to retry node: {ex.Message}", "RETRY_ERROR");
+            }
+        }
+
+        /// <summary>
+        /// Continue node execution using workflowId and nodeId  
+        /// Internal logic will automatically resolve term from these parameters
+        /// </summary>
+        public async Task<ApiResponse<string>> ContinueNodeAsync(Guid workflowId, string nodeId)
+        {
+            try
+            {
+                _logger.LogInformation("▶️ Continuing to downstream - WorkflowId: {WorkflowId}, NodeId: {NodeId}", workflowId, nodeId);
+
+                // Get term from nodeId internally
+                var term = await GetTermByNodeIdInternalAsync(workflowId, nodeId);
+                if (term == null)
+                {
+                    return ApiResponse<string>.ErrorResult($"Could not find term for WorkflowId: {workflowId}, NodeId: {nodeId}", "TERM_NOT_FOUND");
+                }
+
+                var coordinatorGAgent = _grainFactory.GetGrain<IWorkflowCoordinatorGAgent>(workflowId);
+                await coordinatorGAgent.ContinueToDownstreamAsync(term.Value);
+
+                // Remove from paused nodes if exists
+                var pausedKey = $"{workflowId}:{nodeId}";
+                _pausedNodes.TryRemove(pausedKey, out _);
+
+                _logger.LogInformation("✅ Continue to downstream completed - WorkflowId: {WorkflowId}, NodeId: {NodeId}", workflowId, nodeId);
+                return ApiResponse<string>.SuccessResult($"Continue to downstream completed for node {nodeId}", "Continue successful");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error continuing to downstream - WorkflowId: {WorkflowId}, NodeId: {NodeId}", workflowId, nodeId);
+                return ApiResponse<string>.ErrorResult($"Failed to continue to downstream: {ex.Message}", "CONTINUE_ERROR");
+            }
+        }
+
+        /// <summary>
+        /// Edit input data for a specific node (modifies WorkflowExecutionRecord)
+        /// </summary>
+        public async Task<ApiResponse<string>> EditNodeInputDataAsync(Guid workflowId, string nodeId, string inputData)
+        {
+            try
+            {
+                _logger.LogInformation("📝 Editing node input data - WorkflowId: {WorkflowId}, NodeId: {NodeId}", workflowId, nodeId);
+
+                // Note: This is a placeholder implementation. In a real system, you would need to:
+                // 1. Access the execution record grain that stores input data
+                // 2. Update the specific work unit's input data
+                // 3. Ensure proper event sourcing for state changes
+                
+                _logger.LogWarning("⚠️ Input data editing not fully implemented - would update input data for node: {NodeId} with data: {InputData}", nodeId, inputData);
+
+                _logger.LogInformation("✅ Node input data edit initiated - WorkflowId: {WorkflowId}, NodeId: {NodeId}", workflowId, nodeId);
+                return ApiResponse<string>.SuccessResult($"Input data update initiated for node {nodeId}", "Edit initiated (full implementation pending)");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error editing node input data - WorkflowId: {WorkflowId}, NodeId: {NodeId}", workflowId, nodeId);
+                return ApiResponse<string>.ErrorResult($"Failed to edit input data: {ex.Message}", "EDIT_INPUT_ERROR");
+            }
+        }
+
+        /// <summary>
+        /// Edit state data for a specific workflow node
+        /// </summary>
+        public async Task<ApiResponse<string>> EditNodeStateAsync(Guid workflowId, string nodeId, Dictionary<string, object> stateData)
+        {
+            try
+            {
+                _logger.LogInformation("🔧 Editing node state - WorkflowId: {WorkflowId}, NodeId: {NodeId}, StateKeys: {StateKeys}", 
+                    workflowId, nodeId, string.Join(", ", stateData.Keys));
+
+                // Note: This is a placeholder implementation. In a real system, you would need to:
+                // 1. Parse the nodeId to get the actual grain ID
+                // 2. Get the specific GAgent grain instance
+                // 3. Call methods on the GAgent to modify its state through proper event sourcing
+                // 4. Ensure consistency with the overall workflow state
+                
+                _logger.LogWarning("⚠️ State editing not fully implemented - would modify state with data: {StateData}", 
+                    System.Text.Json.JsonSerializer.Serialize(stateData));
+
+                _logger.LogInformation("✅ Node state edit initiated - WorkflowId: {WorkflowId}, NodeId: {NodeId}", workflowId, nodeId);
+                return ApiResponse<string>.SuccessResult($"State data update initiated for node {nodeId}", "Edit initiated (full implementation pending)");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error editing node state - WorkflowId: {WorkflowId}, NodeId: {NodeId}", workflowId, nodeId);
+                return ApiResponse<string>.ErrorResult($"Failed to edit state: {ex.Message}", "EDIT_STATE_ERROR");
+            }
+        }
+
+        /// <summary>
+        /// Internal helper method to get term ID from workflowId and nodeId (workUnitGrainId)
+        /// </summary>
+        private async Task<long?> GetTermByNodeIdInternalAsync(Guid workflowId, string nodeId)
+        {
+            try
+            {
+                _logger.LogDebug("Getting term for WorkflowId: {WorkflowId}, NodeId: {NodeId}", workflowId, nodeId);
+
+                var coordinatorGAgent = _grainFactory.GetGrain<IWorkflowCoordinatorGAgent>(workflowId);
+                var coordinatorState = await coordinatorGAgent.GetStateAsync();
+
+                // Check if state is valid
+                if (coordinatorState?.TermToWorkUnitGrainId == null)
+                {
+                    _logger.LogWarning("No state or TermToWorkUnitGrainId found for WorkflowId: {WorkflowId}", workflowId);
+                    return null;
+                }
+
+                // Find term by reverse lookup in TermToWorkUnitGrainId mapping
+                foreach (var kvp in coordinatorState.TermToWorkUnitGrainId)
+                {
+                    if (kvp.Value == nodeId)
+                    {
+                        _logger.LogDebug("Found term {Term} for NodeId: {NodeId}", kvp.Key, nodeId);
+                        return kvp.Key;
+                    }
+                }
+
+                _logger.LogWarning("No term found for WorkflowId: {WorkflowId}, NodeId: {NodeId}", workflowId, nodeId);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting term for WorkflowId: {WorkflowId}, NodeId: {NodeId}", workflowId, nodeId);
+                return null;
+            }
+        }
+
 
         #endregion
     }

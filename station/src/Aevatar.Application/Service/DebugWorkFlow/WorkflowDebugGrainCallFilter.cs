@@ -37,7 +37,7 @@ namespace Aevatar.Service.DebugWorkFlow
         }
 
         /// <summary>
-        /// Orleans Grain调用拦截入口 - 双重拦截策略
+        /// Orleans Grain调用拦截入口 - 完整接口拦截策略
         /// </summary>
         public async Task Invoke(IIncomingGrainCallContext context)
         {
@@ -46,15 +46,10 @@ namespace Aevatar.Service.DebugWorkFlow
             
             try
             {
-                // 策略1：拦截WorkflowCoordinatorGAgent的HandleEventAsync - 执行前控制
-                if (IsWorkflowHandleEventCall(context))
+                // 检查是否为IWorkflowCoordinatorGAgent接口的方法调用
+                if (IsWorkflowCoordinatorGAgentCall(context))
                 {
-                    await InterceptWorkflowHandleEventAsync(context);
-                }
-                // 策略2：拦截PublishP2PAsync调用 - 执行后流转控制  
-                else if (IsWorkflowPublishP2PCall(context))
-                {
-                    await InterceptWorkflowPublishP2PAsync(context);
+                    await InterceptWorkflowCoordinatorMethod(context);
                 }
                 else
                 {
@@ -73,121 +68,159 @@ namespace Aevatar.Service.DebugWorkFlow
         }
 
         /// <summary>
-        /// 拦截WorkflowCoordinatorGAgent的HandleEventAsync - 执行前控制
+        /// 拦截IWorkflowCoordinatorGAgent接口的所有方法调用
         /// </summary>
-        private async Task InterceptWorkflowHandleEventAsync(IIncomingGrainCallContext context)
+        private async Task InterceptWorkflowCoordinatorMethod(IIncomingGrainCallContext context)
         {
             System.Threading.Interlocked.Increment(ref _debugChecks);
             
-            _logger.LogDebug("🎯 拦截HandleEventAsync方法调用");
+            var methodName = context.InterfaceMethod?.Name ?? "Unknown";
+            _logger.LogDebug("🎯 拦截IWorkflowCoordinatorGAgent方法调用: {MethodName}", methodName);
             
-            // 通过反射从方法参数中提取ChatResponseEvent
-            var chatEvent = ExtractChatResponseEventFromContext(context);
-            if (chatEvent == null)
+            // 从grain获取workflowId
+            var workflowId = GetWorkflowIdFromGrain((IGrain)context.Grain);
+            
+            // 根据方法类型进行断点检查 - 简化逻辑
+            switch (methodName)
             {
-                // 在测试环境中，如果无法提取参数，创建一个默认的事件对象
-                _logger.LogDebug("无法提取ChatResponseEvent，使用默认事件进行断点检查");
-                chatEvent = new ChatResponseEvent 
-                { 
-                    BlackboardId = Guid.NewGuid(), 
-                    MemberId = Guid.NewGuid(), 
-                    Term = 1L 
-                };
+                case "ExecuteCurrentNodeAsync":
+                    await InterceptExecuteCurrentNodeAsync(context, workflowId);
+                    break;
+                    
+                case "ContinueToDownstreamAsync":
+                    await InterceptContinueToDownstreamAsync(context, workflowId);
+                    break;
+                    
+                default:
+                    // 其他方法直接执行，不进行断点检查
+                    await context.Invoke();
+                    break;
             }
+        }
+
+        /// <summary>
+        /// 拦截ExecuteCurrentNodeAsync方法 - 执行前断点控制
+        /// 这是事前拦截点：用户想执行某个节点时检查断点
+        /// </summary>
+        private async Task InterceptExecuteCurrentNodeAsync(IIncomingGrainCallContext context, Guid workflowId)
+        {
+            _logger.LogDebug("🎯 拦截ExecuteCurrentNodeAsync方法调用 - 事前断点检查");
             
-            var workflowId = chatEvent.BlackboardId;
-            var nodeId = GetNodeIdFromEvent(chatEvent);
+            // 提取term参数（第一个参数是term）
+            var term = ExtractTermFromContext(context);
+            var nodeId = $"node-{term}";
             
-            _logger.LogDebug("🎯 检查执行前断点: WorkflowId={WorkflowId}, NodeId={NodeId}", workflowId, nodeId);
+            _logger.LogDebug("🔍 检查执行前断点: WorkflowId={WorkflowId}, NodeId={NodeId}, Term={Term}", workflowId, nodeId, term);
             
-            // 执行前断点检查
-            var shouldPauseBeforeExecution = await _breakpointManager.ShouldPauseBeforeExecutionAsync(chatEvent);
-            
-            if (shouldPauseBeforeExecution)
+            // 检查是否有执行前断点
+            var breakpointKey = $"{workflowId}:{nodeId}";
+            if (_breakpointManager.HasBreakpointAsync(breakpointKey, "PreExecution").GetAwaiter().GetResult())
             {
                 System.Threading.Interlocked.Increment(ref _pausedCalls);
                 
-                _logger.LogInformation("⏸️ 工作流在节点 {NodeId} 执行前暂停 - 直接返回", nodeId);
+                _logger.LogInformation("⏸️ 命中执行前断点 - 暂停执行: WorkflowId={WorkflowId}, NodeId={NodeId}", workflowId, nodeId);
                 
                 // 记录暂停状态，直接返回不执行
-                var currentParams = new Dictionary<string, object>(); // Simplified - would extract from real event
-                await _breakpointManager.RecordPausedNodeAsync(workflowId, nodeId, "PreExecution", currentParams);
+                await _breakpointManager.RecordPausedNodeAsync(workflowId, nodeId, "PreExecution", null);
                 
                 return; // 直接返回，暂停执行
             }
             
-            // 执行原方法 - 这里会执行完整的HandleEventAsync
+            // 没有断点，执行原方法
+            _logger.LogDebug("✅ 无执行前断点，执行节点: WorkflowId={WorkflowId}, NodeId={NodeId}", workflowId, nodeId);
             await context.Invoke();
         }
 
         /// <summary>
-        /// 拦截PublishP2PAsync调用 - 执行后流转控制
-        /// 这是真正的流转控制点，在数据发送到下游agent之前拦截
+        /// 拦截ContinueToDownstreamAsync方法 - 执行后断点控制
+        /// 这是事后拦截点：用户确认结果要继续到下游时检查断点
         /// </summary>
-        private async Task InterceptWorkflowPublishP2PAsync(IIncomingGrainCallContext context)
+        private async Task InterceptContinueToDownstreamAsync(IIncomingGrainCallContext context, Guid workflowId)
         {
-            System.Threading.Interlocked.Increment(ref _debugChecks);
+            _logger.LogDebug("🎯 拦截ContinueToDownstreamAsync方法调用 - 事后断点检查");
             
-            _logger.LogDebug("🎯 拦截PublishP2PAsync方法调用");
+            // 提取term参数（第一个参数是term）
+            var term = ExtractTermFromContext(context);
+            var nodeId = $"node-{term}";
             
-            // 通过简化方法提取ChatEvent（第二个参数通常是ChatEvent）
-            var chatEvent = ExtractChatEventFromPublishP2PContext(context);
-            if (chatEvent == null)
-            {
-                // 在测试环境中，如果无法提取参数，创建一个默认的事件对象
-                _logger.LogDebug("无法提取ChatEvent，使用默认事件进行断点检查");
-                chatEvent = new ChatEvent
-                {
-                    BlackboardId = Guid.NewGuid(),
-                    Speaker = Guid.NewGuid(),
-                    Term = 1L,
-                    CoordinatorMessages = new List<ChatMessage>()
-                };
-            }
-                
-            var workflowId = chatEvent.BlackboardId;
-            var nodeId = GetNodeIdFromChatEvent(chatEvent);
+            _logger.LogDebug("🔍 检查执行后断点: WorkflowId={WorkflowId}, NodeId={NodeId}, Term={Term}", workflowId, nodeId, term);
             
-            _logger.LogDebug("🎯 检查执行后断点: WorkflowId={WorkflowId}, NodeId={NodeId}", workflowId, nodeId);
-                
-            // 执行后断点检查（流转控制）
-            var shouldPauseAfterExecution = await _breakpointManager.ShouldPauseAfterExecutionAsync(chatEvent, null);
-                
-            if (shouldPauseAfterExecution)
+            // 检查是否有执行后断点
+            var breakpointKey = $"{workflowId}:{nodeId}";
+            if (_breakpointManager.HasBreakpointAsync(breakpointKey, "PostExecution").GetAwaiter().GetResult())
             {
                 System.Threading.Interlocked.Increment(ref _pausedCalls);
                 
-                _logger.LogInformation("⏸️ 工作流在流转前暂停 - 直接返回 NodeId: {NodeId}", nodeId);
+                _logger.LogInformation("⏸️ 命中执行后断点 - 暂停流转: WorkflowId={WorkflowId}, NodeId={NodeId}", workflowId, nodeId);
                 
                 // 记录暂停状态，直接返回不执行流转
                 await _breakpointManager.RecordPausedNodeAsync(workflowId, nodeId, "PostExecution", null);
-                    
-                return; // 直接返回，阻止流转
+                
+                return; // 直接返回，暂停流转
             }
             
-            // 执行PublishP2PAsync - 数据流转到下游agent
+            // 没有断点，执行原方法
+            _logger.LogDebug("✅ 无执行后断点，继续到下游: WorkflowId={WorkflowId}, NodeId={NodeId}", workflowId, nodeId);
             await context.Invoke();
         }
+
 
         #region 判断拦截目标
 
         /// <summary>
-        /// 判断是否为WorkflowCoordinatorGAgent的HandleEventAsync调用
+        /// 判断是否为IWorkflowCoordinatorGAgent接口的方法调用
         /// </summary>
-        private static bool IsWorkflowHandleEventCall(IIncomingGrainCallContext context)
+        private static bool IsWorkflowCoordinatorGAgentCall(IIncomingGrainCallContext context)
         {
-            return context.Grain is IWorkflowCoordinatorGAgent && 
-                   context.InterfaceMethod?.Name.Contains("HandleEventAsync") == true;
+            return context.Grain is IWorkflowCoordinatorGAgent;
         }
 
         /// <summary>
-        /// 判断是否为WorkflowCoordinatorGAgent发起的PublishP2PAsync调用
-        /// 这是流转到下游agent的关键调用点
+        /// 从Grain实例中获取WorkflowId
         /// </summary>
-        private static bool IsWorkflowPublishP2PCall(IIncomingGrainCallContext context)
+        private Guid GetWorkflowIdFromGrain(IGrain grain)
         {
-            return context.Grain is IWorkflowCoordinatorGAgent && 
-                   context.InterfaceMethod?.Name == "PublishP2PAsync";
+            try
+            {
+                // WorkflowCoordinatorGAgent的GrainId就是WorkflowId
+                if (grain is IWorkflowCoordinatorGAgent coordinatorGAgent)
+                {
+                    // 获取grain的ID，这通常就是workflowId
+                    var grainId = coordinatorGAgent.GetGrainId();
+                    if (grainId.TryGetGuidKey(out var workflowId, out var _))
+                    {
+                        return workflowId;
+                    }
+                }
+                
+                _logger.LogWarning("无法从Grain中提取WorkflowId");
+                return Guid.Empty;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "提取WorkflowId时发生错误");
+                return Guid.Empty;
+            }
+        }
+
+        /// <summary>
+        /// 从Orleans调用上下文中提取Term参数
+        /// </summary>
+        private long ExtractTermFromContext(IIncomingGrainCallContext context)
+        {
+            try
+            {
+                // TODO: 在生产环境中需要实现真正的参数提取逻辑
+                // Orleans的IIncomingGrainCallContext接口可能不直接暴露Arguments属性
+                // 这里暂时返回默认值，由调用方处理
+                _logger.LogDebug("Orleans参数提取功能待实现 - 方法: {MethodName}", context.InterfaceMethod?.Name);
+                return 1L; // 默认返回1
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "从Orleans上下文提取Term失败");
+                return 1L;
+            }
         }
 
         #endregion

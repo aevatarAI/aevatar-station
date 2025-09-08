@@ -1,5 +1,6 @@
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.GroupChat.Core;
+using GroupChat.GAgent.Feature.Common;
 
 namespace Aevatar.GAgents.GroupChat.WorkflowCoordinator;
 
@@ -79,4 +80,5 @@ public class WorkflowCoordinatorState : StateBase
     {
         return CurrentWorkUnitInfos.Select(s => s.GrainId).Distinct().ToList();
     }
+
 }

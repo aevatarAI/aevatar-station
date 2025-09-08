@@ -11,8 +11,11 @@ using Xunit;
 using Aevatar.Service.DebugWorkFlow;
 using GroupChat.GAgent.Feature.Coordinator.GEvent;
 using Aevatar.GAgents.GroupChat;
+using Aevatar.GAgents.GroupChat.Core;
+using Aevatar.GAgents.GroupChat.WorkflowCoordinator;
 using Microsoft.AspNetCore.Mvc;
 using Aevatar.Application.Tests.Controllers;
+using GroupChat.GAgent.Feature.Common;
 
 namespace Aevatar.Application.Tests.Service.DebugWorkFlow;
 
@@ -36,6 +39,42 @@ public class WorkflowDebugIntegrationTests
         
         // 注册Mock的Orleans
         var grainFactory = Substitute.For<IGrainFactory>();
+        
+                // Set up mock grains to return proper state for any workflow
+                grainFactory.GetGrain<IWorkflowCoordinatorGAgent>(Arg.Any<Guid>()).Returns(callInfo =>
+                {
+                    var workflowId = (Guid)callInfo[0];
+                    var coordinatorGAgent = Substitute.For<IWorkflowCoordinatorGAgent>();
+                    var coordinatorState = new WorkflowCoordinatorState
+                    {
+                        TermToWorkUnitGrainId = new Dictionary<long, string> 
+                        { 
+                            { 1L, "1" },
+                            { 2L, "2" },
+                            { 3L, "3" },
+                            // Add mappings for the test node IDs used in tests
+                            { 10L, "retry-test-node" },
+                            { 11L, "parallel-test-node" },
+                            { 12L, "integration-test-node" },
+                            { 13L, "error-test-node" },
+                            // Note: "non-existent-node" is intentionally NOT included to test error handling
+                            // Add mappings for performance test nodes
+                            { 20L, "perf-test-node-0" },
+                            { 21L, "perf-test-node-1" },
+                            { 22L, "perf-test-node-2" },
+                            { 23L, "perf-test-node-3" },
+                            { 24L, "perf-test-node-4" },
+                            { 25L, "perf-test-node-5" },
+                            { 26L, "perf-test-node-6" },
+                            { 27L, "perf-test-node-7" },
+                            { 28L, "perf-test-node-8" },
+                            { 29L, "perf-test-node-9" }
+                        }
+                    };
+                    coordinatorGAgent.GetStateAsync().Returns(coordinatorState);
+                    return coordinatorGAgent;
+                });
+        
         services.AddSingleton(grainFactory);
         
         // 注册调试服务
@@ -65,7 +104,7 @@ public class WorkflowDebugIntegrationTests
             WorkflowId = workflowId,
             NodeId = nodeId,
             Type = BreakpointType.BeforeExecution,
-            Description = "Integration test breakpoint"
+            Condition = "Integration test breakpoint"
         };
 
         // Step 1: 通过API设置断点
@@ -110,9 +149,14 @@ public class WorkflowDebugIntegrationTests
         var pausedNodes = await _breakpointManager.GetPausedNodesAsync();
         pausedNodes.ShouldContain("1");
 
-        // Step 6: 通过API继续执行（跳过）
-        var skipResult = await _apiController.SkipNode("1");
-        skipResult.ShouldBeOfType<OkObjectResult>();
+        // Step 6: 通过API继续执行
+        var continueRequest = new ContinueNodeRequest
+        {
+            WorkflowId = workflowId,
+            NodeId = "1"
+        };
+        var continueResult = await _apiController.ContinueNode(continueRequest);
+        continueResult.ShouldBeOfType<OkObjectResult>();
 
         // Step 7: 验证暂停状态已清理
         var finalPausedNodes = await _breakpointManager.GetPausedNodesAsync();
@@ -158,7 +202,12 @@ public class WorkflowDebugIntegrationTests
         pausedInfo.Stage.ShouldBe(PauseStage.PostExecution);
 
         // Step 5: 通过API继续到下游
-        var continueResult = await _apiController.ContinueToNextNode(workflowId, "1");
+        var continueRequest = new ContinueNodeRequest
+        {
+            WorkflowId = workflowId,
+            NodeId = "1"
+        };
+        var continueResult = await _apiController.ContinueNode(continueRequest);
         continueResult.ShouldBeOfType<OkObjectResult>();
 
         // Step 6: 验证暂停状态已清理
@@ -178,19 +227,24 @@ public class WorkflowDebugIntegrationTests
         await _breakpointManager.RecordPausedNodeAsync(workflowId, nodeId, "PostExecution", new Dictionary<string, object>());
 
         // Step 2: 通过API重试节点（带修改参数）
-        var modifiedParams = new Dictionary<string, object>
-        {
-            { "temperature", 0.3 },
-            { "maxTokens", 1000 }
-        };
-
         var retryRequest = new RetryNodeRequest
         {
-            ModifiedParams = modifiedParams,
+            WorkflowId = workflowId,
+            NodeId = nodeId,
+            CoordinatorMessages = new List<ChatMessage>
+            {
+                new ChatMessage 
+                { 
+                    Content = "Retry with optimized parameters", 
+                    MessageType = MessageType.User,
+                    AgentName = "TestUser",
+                    MemberId = Guid.NewGuid()
+                }
+            },
             Note = "Retry with optimized parameters"
         };
 
-        var retryResult = await _apiController.RetryCurrentNode(workflowId, nodeId, retryRequest);
+        var retryResult = await _apiController.RetryNode(retryRequest);
         retryResult.ShouldBeOfType<OkObjectResult>();
 
         // Step 3: 验证暂停状态已清理
@@ -232,17 +286,29 @@ public class WorkflowDebugIntegrationTests
         workflow2Paused.Stage.ShouldBe(PauseStage.PostExecution);
 
         // Step 4: 继续第一个工作流
-        await _apiController.SkipNode(nodeId + "-workflow1");  // 由于是相同nodeId，这里模拟不同的处理
-        await _breakpointManager.SkipNodeAsync(nodeId); // 直接调用会影响第一个找到的
+        var continueRequest1 = new ContinueNodeRequest
+        {
+            WorkflowId = workflow1Id,
+            NodeId = nodeId
+        };
+        var continueResult1 = await _apiController.ContinueNode(continueRequest1);
+        continueResult1.ShouldBeOfType<OkObjectResult>();
         
-        // Step 5: 中止第二个工作流
-        var abortResult = await _apiController.AbortWorkflow(new AbortWorkflowRequest { WorkflowId = workflow2Id });
-        abortResult.ShouldBeOfType<OkObjectResult>();
+        // Step 5: 继续第二个工作流
+        var continueRequest2 = new ContinueNodeRequest
+        {
+            WorkflowId = workflow2Id,
+            NodeId = nodeId
+        };
+        var continueResult2 = await _apiController.ContinueNode(continueRequest2);
+        continueResult2.ShouldBeOfType<OkObjectResult>();
 
-        // Step 6: 验证第二个工作流的暂停状态已清理
+        // Step 6: 验证两个工作流的暂停状态都已清理
         var finalPausedNodeInfos = await _breakpointManager.GetPausedNodeInfosAsync();
-        var remainingPaused = finalPausedNodeInfos.Where(p => p.WorkflowId == workflow2Id);
-        remainingPaused.ShouldBeEmpty();
+        var remainingPaused1 = finalPausedNodeInfos.Where(p => p.WorkflowId == workflow1Id);
+        var remainingPaused2 = finalPausedNodeInfos.Where(p => p.WorkflowId == workflow2Id);
+        remainingPaused1.ShouldBeEmpty();
+        remainingPaused2.ShouldBeEmpty();
     }
 
     #endregion
@@ -303,15 +369,28 @@ public class WorkflowDebugIntegrationTests
         await _breakpointManager.RecordPausedNodeAsync(workflowId, nodeId, "PreExecution", new Dictionary<string, object>());
 
         // Step 3: 尝试操作不存在的节点（应该优雅处理）
-        var nonExistentResult = await _apiController.ContinueToNextNode(Guid.NewGuid(), "non-existent-node");
-        nonExistentResult.ShouldBeOfType<OkObjectResult>(); // 应该返回成功但记录警告日志
+        var nonExistentRequest = new ContinueNodeRequest
+        {
+            WorkflowId = Guid.NewGuid(),
+            NodeId = "non-existent-node"
+        };
+        var nonExistentResult = await _apiController.ContinueNode(nonExistentRequest);
+        // 应该返回错误，因为找不到对应的节点
+        nonExistentResult.ShouldBeOfType<BadRequestObjectResult>();
 
         // Step 4: 验证原始暂停状态未受影响
         var pausedNodes = await _breakpointManager.GetPausedNodesAsync();
         pausedNodes.ShouldContain(nodeId);
 
         // Step 5: 正常清理
-        await _breakpointManager.SkipNodeAsync(nodeId);
+        var cleanupRequest = new ContinueNodeRequest
+        {
+            WorkflowId = workflowId,
+            NodeId = nodeId
+        };
+        var cleanupResult = await _apiController.ContinueNode(cleanupRequest);
+        cleanupResult.ShouldBeOfType<OkObjectResult>();
+        
         var finalPausedNodes = await _breakpointManager.GetPausedNodesAsync();
         finalPausedNodes.ShouldNotContain(nodeId);
     }
@@ -364,7 +443,12 @@ public class WorkflowDebugIntegrationTests
         for (int i = 0; i < nodeCount; i++)
         {
             var nodeId = $"perf-test-node-{i}";
-            tasks.Add(_breakpointManager.SkipNodeAsync(nodeId));
+            var continueRequest = new ContinueNodeRequest
+            {
+                WorkflowId = workflowId,
+                NodeId = nodeId
+            };
+            tasks.Add(_apiController.ContinueNode(continueRequest));
         }
 
         await Task.WhenAll(tasks);
@@ -381,3 +465,4 @@ public class WorkflowDebugIntegrationTests
         _serviceProvider?.GetService<IServiceScope>()?.Dispose();
     }
 }
+

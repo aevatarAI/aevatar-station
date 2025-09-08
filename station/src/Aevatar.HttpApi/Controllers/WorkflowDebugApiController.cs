@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Aevatar.Service.DebugWorkFlow;
+using GroupChat.GAgent.Feature.Common;
 
 namespace Aevatar.Controllers
 {
@@ -12,7 +14,7 @@ namespace Aevatar.Controllers
     /// Direct integration with BreakpointManager for simplified architecture
     /// </summary>
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/WorkflowDebug")]
     public class WorkflowDebugApiController : ControllerBase
     {
         private readonly IBreakpointManager _breakpointManager;
@@ -29,7 +31,7 @@ namespace Aevatar.Controllers
         #region Breakpoint Management API
 
         /// <summary>
-        /// 设置断点
+        /// Set debugging breakpoint for workflow node
         /// POST /api/WorkflowDebugApi/breakpoint
         /// </summary>
         [HttpPost("breakpoint")]
@@ -37,16 +39,16 @@ namespace Aevatar.Controllers
         {
             try
             {
-                _logger.LogInformation("🔴 API设置断点: {WorkflowId}:{NodeId}", request.WorkflowId, request.NodeId);
+                _logger.LogInformation("🔴 API set breakpoint: {WorkflowId}:{NodeId}", request.WorkflowId, request.NodeId);
                 
                 await _breakpointManager.SetBreakpointAsync(request.WorkflowId, request.NodeId, request.Type, request.Condition);
                 
-                return Ok(new { Success = true, Message = "断点设置成功" });
+                return Ok(new { Success = true, Message = "Breakpoint set successfully" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "设置断点失败: {WorkflowId}:{NodeId}", request.WorkflowId, request.NodeId);
-                return BadRequest(new { Success = false, Message = "设置断点失败: " + ex.Message });
+                _logger.LogError(ex, "Failed to set breakpoint: {WorkflowId}:{NodeId}", request.WorkflowId, request.NodeId);
+                return BadRequest(new { Success = false, Message = "Failed to set breakpoint: " + ex.Message });
             }
         }
 
@@ -100,94 +102,11 @@ namespace Aevatar.Controllers
 
         #endregion
 
-        #region 即时控制API
+
+        #region Status Query API
 
         /// <summary>
-        /// 继续到下游节点
-        /// POST /api/WorkflowDebugApi/continue-next/{workflowId}/{nodeId}
-        /// </summary>
-        [HttpPost("continue-next/{workflowId}/{nodeId}")]
-        public async Task<IActionResult> ContinueToNextNode(Guid workflowId, string nodeId)
-        {
-            try
-            {
-                _logger.LogInformation("➡️ API继续到下游: {WorkflowId}:{NodeId}", workflowId, nodeId);
-                
-                await _breakpointManager.ContinueToNextNodeAsync(workflowId, nodeId);
-                
-                return Ok(new { Success = true, Message = "已触发继续到下游节点" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "继续到下游失败: {WorkflowId}:{NodeId}", workflowId, nodeId);
-                return BadRequest(new { Success = false, Message = "继续到下游失败: " + ex.Message });
-            }
-        }
-
-        /// <summary>
-        /// 重试当前节点
-        /// POST /api/WorkflowDebugApi/retry-current/{workflowId}/{nodeId}
-        /// </summary>
-        [HttpPost("retry-current/{workflowId}/{nodeId}")]
-        public async Task<IActionResult> RetryCurrentNode(Guid workflowId, string nodeId, [FromBody] RetryNodeRequest? request = null)
-        {
-            try
-            {
-                _logger.LogInformation("🔄 API重试当前节点: {WorkflowId}:{NodeId}", workflowId, nodeId);
-                
-                await _breakpointManager.RetryCurrentNodeAsync(workflowId, nodeId, request?.ModifiedParams);
-                
-                return Ok(new { Success = true, Message = "已触发重试当前节点" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "重试当前节点失败: {WorkflowId}:{NodeId}", workflowId, nodeId);
-                return BadRequest(new { Success = false, Message = "重试当前节点失败: " + ex.Message });
-            }
-        }
-
-        /// <summary>
-        /// 跳过当前节点（清理暂停状态）
-        /// POST /api/WorkflowDebugApi/skip/{nodeId}
-        /// </summary>
-        [HttpPost("skip/{nodeId}")]
-        public async Task<IActionResult> SkipNode(string nodeId)
-        {
-            try
-            {
-                _logger.LogInformation("⏭️ API跳过节点: {NodeId}", nodeId);
-                
-                await _breakpointManager.SkipNodeAsync(nodeId);
-                
-                return Ok(new { Success = true, Message = "已跳过节点（清理暂停状态）" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "跳过节点失败: {NodeId}", nodeId);
-                return BadRequest(new { Success = false, Message = "跳过节点失败: " + ex.Message });
-            }
-        }
-
-        /// <summary>
-        /// 中止工作流
-        /// POST /api/WorkflowDebugApi/abort
-        /// </summary>
-        [HttpPost("abort")]
-        public async Task<IActionResult> AbortWorkflow([FromBody] AbortWorkflowRequest request)
-        {
-            _logger.LogWarning("🛑 API中止工作流: {WorkflowId}", request.WorkflowId);
-            
-            await _breakpointManager.AbortWorkflowAsync(request.WorkflowId);
-            
-            return Ok(new { Success = true, Message = $"工作流 {request.WorkflowId} 已中止" });
-        }
-
-        #endregion
-
-        #region 状态查询API
-
-        /// <summary>
-        /// 获取暂停的节点列表
+        /// Get list of paused workflow nodes
         /// GET /api/WorkflowDebugApi/paused-nodes
         /// </summary>
         [HttpGet("paused-nodes")]
@@ -195,7 +114,7 @@ namespace Aevatar.Controllers
         {
             try
             {
-                _logger.LogInformation("📋 API获取暂停节点");
+                _logger.LogInformation("📋 API get paused nodes");
                 
                 var pausedNodes = await _breakpointManager.GetPausedNodesAsync();
                 
@@ -203,13 +122,13 @@ namespace Aevatar.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "获取暂停节点失败");
-                return BadRequest(new { Success = false, Message = "获取暂停节点失败: " + ex.Message });
+                _logger.LogError(ex, "Get paused nodes failed");
+                return BadRequest(new { Success = false, Message = "Get paused nodes failed: " + ex.Message });
             }
         }
 
         /// <summary>
-        /// 获取暂停节点详细信息
+        /// Get detailed information of paused nodes
         /// GET /api/WorkflowDebugApi/paused-nodes/details
         /// </summary>
         [HttpGet("paused-nodes/details")]
@@ -217,7 +136,7 @@ namespace Aevatar.Controllers
         {
             try
             {
-                _logger.LogInformation("📋 API获取暂停节点详细信息");
+                _logger.LogInformation("📋 API get paused node details");
                 
                 var pausedNodeInfos = await _breakpointManager.GetPausedNodeInfosAsync();
                 
@@ -225,72 +144,24 @@ namespace Aevatar.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "获取暂停节点详细信息失败");
-                return BadRequest(new { Success = false, Message = "获取暂停节点详细信息失败: " + ex.Message });
+                _logger.LogError(ex, "Get paused node details failed");
+                return BadRequest(new { Success = false, Message = "Get paused node details failed: " + ex.Message });
             }
         }
 
-        /// <summary>
-        /// 获取拦截器统计信息
-        /// GET /api/WorkflowDebugApi/stats
-        /// </summary>
-        [HttpGet("stats")]
-        public async Task<IActionResult> GetInterceptorStats()
-        {
-            // Note: This would need to be implemented if InterceptorStats are needed
-            var stats = new { Message = "调试拦截器统计功能待实现" };
-            
-            return Ok(new { Success = true, Data = stats });
-        }
-
-        /// <summary>
-        /// 健康检查
-        /// GET /api/WorkflowDebugApi/health
-        /// </summary>
-        [HttpGet("health")]
-        public async Task<IActionResult> HealthCheck()
-        {
-            try
-            {
-                // Note: Using basic health check without detailed stats for now
-                var stats = new { TotalBreakpoints = 0, IsHealthy = true };
-                
-                var healthInfo = new
-                {
-                    Status = "Healthy",
-                    Timestamp = DateTime.UtcNow,
-                    Version = "1.0.0",
-                    Component = "WorkflowDebugGrainCallFilter",
-                    Stats = stats
-                };
-                
-                return Ok(healthInfo);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "调试服务健康检查失败");
-                
-                return StatusCode(500, new
-                {
-                    Status = "Unhealthy",
-                    Error = ex.Message,
-                    Timestamp = DateTime.UtcNow
-                });
-            }
-        }
 
         #endregion
 
-        #region 高级功能API
+        #region Advanced Features API
 
         /// <summary>
-        /// 批量设置断点
+        /// Set multiple breakpoints in batch
         /// POST /api/WorkflowDebugApi/breakpoint/batch
         /// </summary>
         [HttpPost("breakpoint/batch")]
         public async Task<IActionResult> SetBatchBreakpoints([FromBody] BatchBreakpointRequest request)
         {
-            _logger.LogInformation("🔴 API批量设置断点: {Count}个", request.Breakpoints?.Count ?? 0);
+            _logger.LogInformation("🔴 API batch set breakpoints: {Count} items", request.Breakpoints?.Count ?? 0);
             
             var results = new List<object>();
             
@@ -310,59 +181,145 @@ namespace Aevatar.Controllers
                 }
             }
             
-            var successCount = results.Count;
+            var successCount = results.Where(r => ((dynamic)r).Success == true).Count();
             var response = new
             {
                 Success = true,
-                Message = $"批量设置断点完成: {successCount}/{results.Count} 成功",
+                Message = $"Batch breakpoint operation completed: {successCount}/{results.Count} successful",
                 Results = results
             };
             
             return Ok(response);
         }
 
+        #endregion
+
+        #region Core Debug Control API
+
         /// <summary>
-        /// 快速调试模式 - 为整个工作流设置断点
-        /// POST /api/WorkflowDebugApi/quick-debug/{workflowId}
+        /// Retry node execution using workflowId and nodeId
+        /// POST /api/WorkflowDebugApi/retry-node
         /// </summary>
-        [HttpPost("quick-debug/{workflowId}")]
-        public async Task<IActionResult> EnableQuickDebugMode(Guid workflowId, [FromQuery] string? nodePattern = "*")
+        [HttpPost("retry-node")]
+        public async Task<IActionResult> RetryNode([FromBody] RetryNodeRequest request)
         {
-            _logger.LogInformation("⚡ API启用快速调试模式: {WorkflowId} (模式: {Pattern})", workflowId, nodePattern);
-            
             try
             {
-                // TODO: 实现快速调试模式 - 为工作流的所有节点或匹配模式的节点设置断点
-                var result = new
-                {
-                    Success = true,
-                    Message = $"快速调试模式已启用 (工作流: {workflowId}, 模式: {nodePattern})",
-                    WorkflowId = workflowId,
-                    Pattern = nodePattern,
-                    EnabledAt = DateTime.UtcNow
-                };
+                _logger.LogInformation("🔄 API retry node: {WorkflowId}:{NodeId}", request.WorkflowId, request.NodeId);
                 
-                return Ok(result);
+                var result = await _breakpointManager.RetryNodeAsync(request.WorkflowId, request.NodeId, request.CoordinatorMessages);
+                
+                if (result.Success)
+                {
+                    return Ok(result);
+                }
+                else
+                {
+                    return BadRequest(result);
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "启用快速调试模式失败: {WorkflowId}", workflowId);
-                
-                return BadRequest(new
-                {
-                    Success = false,
-                    Message = "启用快速调试模式失败: " + ex.Message
-                });
+                _logger.LogError(ex, "Retry node failed: {WorkflowId}:{NodeId}", request.WorkflowId, request.NodeId);
+                return BadRequest(new { Success = false, Message = "Retry node failed: " + ex.Message });
             }
         }
+
+        /// <summary>
+        /// Continue node execution using workflowId and nodeId
+        /// POST /api/WorkflowDebugApi/continue-node
+        /// </summary>
+        [HttpPost("continue-node")]
+        public async Task<IActionResult> ContinueNode([FromBody] ContinueNodeRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("▶️ API continue to downstream: {WorkflowId}:{NodeId}", request.WorkflowId, request.NodeId);
+                
+                var result = await _breakpointManager.ContinueNodeAsync(request.WorkflowId, request.NodeId);
+                
+                if (result.Success)
+                {
+                    return Ok(result);
+                }
+                else
+                {
+                    return BadRequest(result);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Continue to downstream failed: {WorkflowId}:{NodeId}", request.WorkflowId, request.NodeId);
+                return BadRequest(new { Success = false, Message = "Continue to downstream failed: " + ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Edit node input data
+        /// PUT /api/WorkflowDebugApi/edit-input-data
+        /// </summary>
+        [HttpPut("edit-input-data")]
+        public async Task<IActionResult> EditNodeInputData([FromBody] EditInputDataRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("📝 API edit input data: {WorkflowId}:{NodeId}", request.WorkflowId, request.NodeId);
+                
+                var result = await _breakpointManager.EditNodeInputDataAsync(request.WorkflowId, request.NodeId, request.InputData);
+                
+                if (result.Success)
+                {
+                    return Ok(result);
+                }
+                else
+                {
+                    return BadRequest(result);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Edit input data failed: {WorkflowId}:{NodeId}", request.WorkflowId, request.NodeId);
+                return BadRequest(new { Success = false, Message = "Edit input data failed: " + ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Edit node state data
+        /// PUT /api/WorkflowDebugApi/edit-state-data
+        /// </summary>
+        [HttpPut("edit-state-data")]
+        public async Task<IActionResult> EditNodeStateData([FromBody] EditStateDataRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("🔧 API edit state data: {WorkflowId}:{NodeId}", request.WorkflowId, request.NodeId);
+                
+                var result = await _breakpointManager.EditNodeStateAsync(request.WorkflowId, request.NodeId, request.StateData);
+                
+                if (result.Success)
+                {
+                    return Ok(result);
+                }
+                else
+                {
+                    return BadRequest(result);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Edit state data failed: {WorkflowId}:{NodeId}", request.WorkflowId, request.NodeId);
+                return BadRequest(new { Success = false, Message = "Edit state data failed: " + ex.Message });
+            }
+        }
+
 
         #endregion
     }
 
-    #region DTO类定义
+    #region DTO Definitions
 
     /// <summary>
-    /// 设置断点请求
+    /// Request for setting workflow breakpoint
     /// </summary>
     public class SetBreakpointRequest
     {
@@ -372,30 +329,56 @@ namespace Aevatar.Controllers
         public string? Condition { get; set; }
     }
 
-    /// <summary>
-    /// 中止工作流请求
-    /// </summary>
-    public class AbortWorkflowRequest
-    {
-        public Guid WorkflowId { get; set; }
-        public string? Reason { get; set; }
-    }
 
     /// <summary>
-    /// 重试节点请求
+    /// Request for retrying node execution
     /// </summary>
     public class RetryNodeRequest
     {
-        public Dictionary<string, object>? ModifiedParams { get; set; }
+        public Guid WorkflowId { get; set; }
+        public string NodeId { get; set; } = string.Empty;
+        public List<ChatMessage> CoordinatorMessages { get; set; } = new List<ChatMessage>();
         public string? Note { get; set; }
     }
 
     /// <summary>
-    /// 批量断点操作请求
+    /// Request for batch breakpoint operations
     /// </summary>
     public class BatchBreakpointRequest
     {
         public List<SetBreakpointRequest>? Breakpoints { get; set; }
+    }
+
+    /// <summary>
+    /// Request for continuing node execution
+    /// </summary>
+    public class ContinueNodeRequest
+    {
+        public Guid WorkflowId { get; set; }
+        public string NodeId { get; set; } = string.Empty;
+        public string? Note { get; set; }
+    }
+
+    /// <summary>
+    /// Request for editing node input data
+    /// </summary>
+    public class EditInputDataRequest
+    {
+        public Guid WorkflowId { get; set; }
+        public string NodeId { get; set; } = string.Empty;
+        public string InputData { get; set; } = string.Empty;
+        public string? Note { get; set; }
+    }
+
+    /// <summary>
+    /// Request for editing node state data
+    /// </summary>
+    public class EditStateDataRequest
+    {
+        public Guid WorkflowId { get; set; }
+        public string NodeId { get; set; } = string.Empty;
+        public Dictionary<string, object> StateData { get; set; } = new Dictionary<string, object>();
+        public string? Note { get; set; }
     }
 
     #endregion

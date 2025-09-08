@@ -10,6 +10,8 @@ using Xunit;
 using Aevatar.Service.DebugWorkFlow;
 using GroupChat.GAgent.Feature.Coordinator.GEvent;
 using Aevatar.GAgents.GroupChat;
+using Aevatar.GAgents.GroupChat.Core;
+using Aevatar.GAgents.GroupChat.WorkflowCoordinator;
 using GroupChat.GAgent.Feature.Common;
 
 namespace Aevatar.Application.Tests.Service.DebugWorkFlow;
@@ -181,8 +183,13 @@ public class BreakpointManagerTests
         };
         await _breakpointManager.RecordPausedNodeAsync(workflowId, nodeId, "PostExecution", context);
 
-        // Mock WorkflowCoordinatorGAgent
+        // Mock WorkflowCoordinatorGAgent with proper state
         var coordinatorGAgent = Substitute.For<IWorkflowCoordinatorGAgent>();
+        var coordinatorState = new WorkflowCoordinatorState
+        {
+            TermToWorkUnitGrainId = new Dictionary<long, string> { { 1L, nodeId } }
+        };
+        coordinatorGAgent.GetStateAsync().Returns(coordinatorState);
         _grainFactory.GetGrain<IWorkflowCoordinatorGAgent>(workflowId).Returns(coordinatorGAgent);
 
         // Act
@@ -204,12 +211,17 @@ public class BreakpointManagerTests
         // 先记录暂停状态
         await _breakpointManager.RecordPausedNodeAsync(workflowId, nodeId, "PreExecution", new Dictionary<string, object>());
 
-        // Mock WorkflowCoordinatorGAgent
+        // Mock WorkflowCoordinatorGAgent with proper state
         var coordinatorGAgent = Substitute.For<IWorkflowCoordinatorGAgent>();
+        var coordinatorState = new WorkflowCoordinatorState
+        {
+            TermToWorkUnitGrainId = new Dictionary<long, string> { { 1L, nodeId } }
+        };
+        coordinatorGAgent.GetStateAsync().Returns(coordinatorState);
         _grainFactory.GetGrain<IWorkflowCoordinatorGAgent>(workflowId).Returns(coordinatorGAgent);
 
         // Act
-        await _breakpointManager.RetryCurrentNodeAsync(workflowId, nodeId, modifiedParams);
+        var result = await _breakpointManager.RetryNodeAsync(workflowId, nodeId, new List<ChatMessage>());
 
         // Assert
         var pausedNodes = await _breakpointManager.GetPausedNodesAsync();
@@ -328,7 +340,7 @@ public class BreakpointManagerTests
         _logger.Received().Log(
             LogLevel.Warning,
             Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString().Contains("未找到暂停节点信息")),
+            Arg.Is<object>(o => o.ToString().Contains("No paused node found")),
             Arg.Any<Exception>(),
             Arg.Any<Func<object, Exception, string>>()
         );
@@ -342,14 +354,14 @@ public class BreakpointManagerTests
         var nodeId = "non-existent-node";
 
         // Act
-        await _breakpointManager.RetryCurrentNodeAsync(workflowId, nodeId);
+        var result = await _breakpointManager.RetryNodeAsync(workflowId, nodeId, new List<ChatMessage>());
 
         // Assert
         // 验证日志记录了警告
         _logger.Received().Log(
             LogLevel.Warning,
             Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString().Contains("未找到暂停节点信息")),
+            Arg.Is<object>(o => o.ToString().Contains("No state or TermToWorkUnitGrainId found")),
             Arg.Any<Exception>(),
             Arg.Any<Func<object, Exception, string>>()
         );
