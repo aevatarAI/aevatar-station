@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Application.Grains.Agents.Creator;
@@ -48,7 +49,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         _logger.LogInformation("Starting workflow run for ViewAgentId: {ViewAgentId}", request.ViewAgentId);
 
         // Step 1: Validate workflow configuration
-        // await ValidateWorkflowConfigurationAsync(request.ViewAgentId);
+        await ValidateWorkflowConfigurationAsync(request.ViewAgentId);
 
         // Step 2: Publish workflow
         var workflowCoordinatorAgentId = await PublishWorkflowAsync(request.ViewAgentId);
@@ -115,10 +116,11 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             throw new UserFriendlyException("Workflow contains no nodes");
         }
 
-        var validationTasks = viewConfigDto.WorkflowNodeList
-            .Select((workflowNode, index) => ValidateWorkflowNodeAsync(workflowNode, index + 1)).ToArray();
-
-        await Task.WhenAll(validationTasks);
+        // Step 3: 验证每个工作流节点 - 类似PublishWorkflowAsync的逻辑
+        foreach (var workflowNode in viewConfigDto.WorkflowNodeList)
+        {
+            await ValidateWorkflowNodePropertiesAsync(workflowNode, viewAgentId);
+        }
 
         _logger.LogInformation(
             "Workflow configuration validation passed for ViewAgentId: {ViewAgentId} with {NodeCount} nodes",
@@ -126,24 +128,52 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
     }
 
     /// <summary>
-    /// 验证单个工作流节点的用户设置参数
+    /// 验证单个工作流节点的属性配置 - 类似PublishWorkflowAsync处理节点的方式
     /// </summary>
-    private async Task ValidateWorkflowNodeAsync(WorkflowNodeDto workflowNode, int nodeIndex)
+    private async Task ValidateWorkflowNodePropertiesAsync(WorkflowNodeDto workflowNode, Guid viewAgentId)
     {
-        if (string.IsNullOrEmpty(workflowNode.AgentType) || string.IsNullOrEmpty(workflowNode.JsonProperties))
+        _logger.LogInformation("Validating workflow node: {NodeName} (AgentType: {AgentType}) for ViewAgentId: {ViewAgentId}",
+            workflowNode.Name, workflowNode.AgentType, viewAgentId);
+
+        if (string.IsNullOrEmpty(workflowNode.AgentType))
         {
-            throw new UserFriendlyException($"Node {nodeIndex} ({workflowNode.Name}): Agent meta data is missing");
+            throw new UserFriendlyException($"Node '{workflowNode.Name}': AgentType is missing");
         }
 
+        if (string.IsNullOrEmpty(workflowNode.JsonProperties))
+        {
+            throw new UserFriendlyException($"Node '{workflowNode.Name}': JsonProperties is missing");
+        }
+
+        // 反序列化节点属性 - 与PublishWorkflowAsync中的逻辑一致
+        Dictionary<string, object> nodeAgentProperties;
+        try
+        {
+            nodeAgentProperties = JsonConvert.DeserializeObject<Dictionary<string, object>>(workflowNode.JsonProperties);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to deserialize JsonProperties for node '{NodeName}' in ViewAgentId: {ViewAgentId}",
+                workflowNode.Name, viewAgentId);
+            throw new UserFriendlyException($"Node '{workflowNode.Name}': Invalid JsonProperties format");
+        }
+
+        // 获取AgentType的propertyJsonSchema并验证节点属性
         var validationResult = await _agentValidationService.ValidateConfigAsync(new()
         {
             GAgentNamespace = workflowNode.AgentType,
-            ConfigJson = workflowNode.JsonProperties
+            ConfigJson = JsonConvert.SerializeObject(nodeAgentProperties)
         });
 
-        if (!validationResult.IsValid) throw new UserFriendlyException($"Node {nodeIndex} ({workflowNode.Name}) validation failed: {validationResult.Message}");
-        
-        _logger.LogDebug("Node {NodeIndex} ({NodeName}) validation passed", nodeIndex, workflowNode.Name);
+        if (!validationResult.IsValid)
+        {
+            _logger.LogWarning("Validation failed for node '{NodeName}' (AgentType: {AgentType}): {Message}",
+                workflowNode.Name, workflowNode.AgentType, validationResult.Message);
+            throw new UserFriendlyException($"Node '{workflowNode.Name}' validation failed: {validationResult.Message}");
+        }
+
+        _logger.LogDebug("Validation passed for node '{NodeName}' (AgentType: {AgentType})",
+            workflowNode.Name, workflowNode.AgentType);
     }
 
     private async Task<Guid> PublishWorkflowAsync(Guid viewAgentId)
