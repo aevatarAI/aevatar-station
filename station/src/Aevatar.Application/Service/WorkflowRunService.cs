@@ -194,7 +194,6 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
                     attempt, coordinatorAgentId);
             }
 
-            // 如果不是最后一次尝试，等待500ms再重试
             if (attempt < maxRetries)
             {
                 _logger.LogInformation("Waiting {DelayMs}ms before next attempt for agent: {AgentId}", 
