@@ -152,15 +152,22 @@ public class DailyPushService : ApplicationService, IDailyPushService
         {
             var chatManagerGAgent = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
             
-            // Clear all V2 device data and get count of cleared devices
+            // ⚠️ COMPATIBILITY NOTICE: Station project uses old GodGPT.GAgents package (v1.28.0-alpha-test-2)
+            // The GetAllDevicesV2Async method is not available in this version
+            // The ClearAllV2DevicesAsync method successfully clears V2 data but returns Task (not Task<int>)
+            
+            // Clear all V2 device data (actual clearing happens successfully)
             await chatManagerGAgent.ClearAllV2DevicesAsync();
             
-            // Since we're using old GodGPT.GAgents version, manually return 0 as placeholder
-            // TODO: Update to return actual count when GodGPT.GAgents package is updated
+            // ⚠️ TEMPORARY: Return 0 as placeholder due to old package version
+            // The clearing operation IS SUCCESSFUL - only the count reporting is affected
+            // To get accurate count, upgrade to GodGPT.GAgents v1.28.0-alpha-test-14+ 
             int clearedCount = 0;
             
-            _logger.LogWarning("Cleared {DeviceCount} V2 devices for user {UserId}", 
-                clearedCount, userId);
+            _logger.LogWarning("V2 device data cleared for user {UserId}. " +
+                "Note: clearedCount=0 is placeholder due to old GodGPT.GAgents version (v1.28.0-alpha-test-2). " +
+                "Actual clearing operation completed successfully. " +
+                "Upgrade to v1.28.0-alpha-test-14+ for accurate count reporting.", userId);
                 
             return clearedCount;
         }
