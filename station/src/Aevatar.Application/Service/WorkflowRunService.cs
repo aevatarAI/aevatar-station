@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Aevatar.AgentValidation;
 using Aevatar.Subscription;
 using Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView.Dto;
 using Microsoft.Extensions.Logging;
@@ -59,6 +58,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         return new WorkflowRunResultDto
         {
             IsSuccess = true,
+            WorkflowId = workflowCoordinatorAgentId,
             Message = "Workflow executed successfully"
         };
     }
