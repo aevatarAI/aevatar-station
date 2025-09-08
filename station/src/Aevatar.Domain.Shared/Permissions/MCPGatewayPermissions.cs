@@ -56,11 +56,6 @@ public static class MCPGatewayPermissions
         public const string TestConnection = Default + ".TestConnection";
 
         /// <summary>
-        /// Permission to restart adapters
-        /// </summary>
-        public const string Restart = Default + ".Restart";
-
-        /// <summary>
         /// Permission to view adapter logs
         /// </summary>
         public const string ViewLogs = Default + ".ViewLogs";
@@ -154,7 +149,6 @@ public static class MCPGatewayPermissions
             Adapters.ManageAll,
             Adapters.ViewMetrics,
             Adapters.TestConnection,
-            Adapters.Restart,
             Adapters.ViewLogs,
 
             // Gateway permissions
@@ -195,7 +189,6 @@ public static class MCPGatewayPermissions
             Adapters.Update,
             Adapters.ViewMetrics,
             Adapters.TestConnection,
-            Adapters.Restart,
             Gateway.ViewHealth,
             Gateway.ViewConfiguration,
             Gateway.ViewSystemMetrics,

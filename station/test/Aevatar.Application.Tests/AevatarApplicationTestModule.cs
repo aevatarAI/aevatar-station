@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Aevatar.Application.MCPGateway;
+using Aevatar.Application.Tests.MCPGateway;
 using Aevatar.CQRS.Handler;
 using Aevatar.Kubernetes.Manager;
 using Aevatar.Kubernetes.Adapter;
@@ -9,7 +11,6 @@ using Aevatar.Kubernetes.ResourceDefinition;
 using Aevatar.Options;
 using Aevatar.SignalR;
 using Aevatar.Mock;
-using Aevatar.SignalR;
 using Aevatar.SignalR.SignalRMessage;
 using Aevatar.WebHook.Deploy;
 using Elastic.Clients.Elasticsearch;
@@ -20,6 +21,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver.Core.Configuration;
 using Moq;
 using Volo.Abp.Auditing;
+using Volo.Abp.AuditLogging;
 using Volo.Abp.AutoMapper;
 using Volo.Abp.Data;
 using Volo.Abp.Emailing;
@@ -27,7 +29,6 @@ using Volo.Abp.EventBus;
 using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
 using ChatConfigOptions = Aevatar.Options.ChatConfigOptions;
-using Moq;
 using k8s.Models;
 using k8s;
 
@@ -50,6 +51,14 @@ public class AevatarApplicationTestModule : AbpModule
         Configure<AbpAuditingOptions>(options =>
         {
             options.IsEnabled = false;
+        });
+
+        // 添加Mock的审计日志仓储
+        context.Services.AddTransient<IAuditLogRepository>(provider =>
+        {
+            var mock = new Mock<IAuditLogRepository>();
+            // 简化Mock实现，只返回空的Task
+            return mock.Object;
         });
         
         var configuration = context.Services.GetConfiguration();
