@@ -33,5 +33,12 @@ public interface IDailyPushService
     /// <returns>Device status or null if not found</returns>
     Task<DeviceStatusResponse?> GetDeviceStatusAsync(Guid userId, string deviceId);
     
+    /// <summary>
+    /// Clear all V2 device data for testing purposes
+    /// WARNING: This will permanently delete all V2 device registrations for the user
+    /// </summary>
+    /// <param name="userId">User ID to clear V2 data for</param>
+    /// <returns>Number of devices cleared</returns>
+    Task<int> ClearV2DeviceDataAsync(Guid userId);
     
 }
