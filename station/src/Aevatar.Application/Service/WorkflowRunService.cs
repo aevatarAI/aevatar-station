@@ -89,15 +89,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         _logger.LogInformation("Starting workflow configuration validation for ViewAgentId: {ViewAgentId}",
             viewAgentId);
 
-        // Step 1: 获取工作流视图Agent配置
         var agentDto = await _agentService.GetAgentAsync(viewAgentId);
-        if (agentDto.Properties == null)
-        {
-            _logger.LogWarning("Workflow agent properties is null for ViewAgentId: {ViewAgentId}", viewAgentId);
-            throw new UserFriendlyException("Workflow configuration not found");
-        }
-
-        // Step 2: 反序列化工作流配置
         var configJson = JsonConvert.SerializeObject(agentDto.Properties);
         WorkflowViewConfigDto? viewConfigDto;
         try
@@ -111,16 +103,16 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             throw new UserFriendlyException("Invalid workflow configuration format");
         }
 
-        if (viewConfigDto?.WorkflowNodeList == null || !viewConfigDto.WorkflowNodeList.Any())
+        if (viewConfigDto == null)
         {
             throw new UserFriendlyException("Workflow contains no nodes");
         }
 
-        // Step 3: 验证每个工作流节点 - 类似PublishWorkflowAsync的逻辑
-        foreach (var workflowNode in viewConfigDto.WorkflowNodeList)
-        {
-            await ValidateWorkflowNodePropertiesAsync(workflowNode, viewAgentId);
-        }
+        // Step 3: 并发验证每个工作流节点 - 类似PublishWorkflowAsync的逻辑
+        var validationTasks = viewConfigDto.WorkflowNodeList
+            .Select(workflowNode => ValidateWorkflowNodePropertiesAsync(workflowNode, viewAgentId));
+        
+        await Task.WhenAll(validationTasks);
 
         _logger.LogInformation(
             "Workflow configuration validation passed for ViewAgentId: {ViewAgentId} with {NodeCount} nodes",
@@ -145,24 +137,11 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             throw new UserFriendlyException($"Node '{workflowNode.Name}': JsonProperties is missing");
         }
 
-        // 反序列化节点属性 - 与PublishWorkflowAsync中的逻辑一致
-        Dictionary<string, object> nodeAgentProperties;
-        try
-        {
-            nodeAgentProperties = JsonConvert.DeserializeObject<Dictionary<string, object>>(workflowNode.JsonProperties);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to deserialize JsonProperties for node '{NodeName}' in ViewAgentId: {ViewAgentId}",
-                workflowNode.Name, viewAgentId);
-            throw new UserFriendlyException($"Node '{workflowNode.Name}': Invalid JsonProperties format");
-        }
-
         // 获取AgentType的propertyJsonSchema并验证节点属性
         var validationResult = await _agentValidationService.ValidateConfigAsync(new()
         {
             GAgentNamespace = workflowNode.AgentType,
-            ConfigJson = JsonConvert.SerializeObject(nodeAgentProperties)
+            ConfigJson = workflowNode.JsonProperties
         });
 
         if (!validationResult.IsValid)
