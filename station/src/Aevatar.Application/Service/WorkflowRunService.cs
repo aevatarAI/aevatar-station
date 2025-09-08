@@ -50,7 +50,18 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         var workflowCoordinatorAgentId = await PublishWorkflowAsync(request.ViewAgentId);
 
         // Step 3: Execute workflow
-        await ExecuteWorkflowAsync(workflowCoordinatorAgentId, request);
+        var executionSuccess = await ExecuteWorkflowAsync(workflowCoordinatorAgentId, request);
+
+        if (!executionSuccess)
+        {
+            _logger.LogWarning("Workflow execution failed for ViewAgentId: {ViewAgentId}, coordinator agent not ready", request.ViewAgentId);
+            return new WorkflowRunResultDto
+            {
+                IsSuccess = false,
+                WorkflowId = workflowCoordinatorAgentId,
+                Message = "Workflow coordinator agent is not ready yet. Please retry the execution in a few moments."
+            };
+        }
 
         // All steps completed successfully
         _logger.LogInformation("Workflow run completed successfully for ViewAgentId: {ViewAgentId}", request.ViewAgentId);
@@ -98,9 +109,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             throw new UserFriendlyException("Workflow contains no nodes");
         }
         
-        var validationTasks = viewConfigDto.WorkflowNodeList.Select((workflowNode, index) =>
-            ValidateWorkflowNodeAsync(workflowNode, index + 1)
-        ).ToArray();
+        var validationTasks = viewConfigDto.WorkflowNodeList.Select((workflowNode, index) => ValidateWorkflowNodeAsync(workflowNode, index + 1)).ToArray();
 
         await Task.WhenAll(validationTasks);
 
@@ -139,15 +148,54 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
     }
 
     /// <summary>
-    /// 执行工作流
+    /// 执行工作流 - 检查事件是否可用后再发布
     /// </summary>
-    private async Task ExecuteWorkflowAsync(Guid coordinatorAgentId, WorkflowRunRequestDto request)
+    private async Task<bool> ExecuteWorkflowAsync(Guid coordinatorAgentId, WorkflowRunRequestDto request)
     {
-        await _subscriptionAppService.PublishEventAsync(new PublishEventDto
+        const string targetEventType = "Aevatar.GAgents.GroupChat.WorkflowCoordinator.GEvent.StartWorkflowCoordinatorEvent";
+        const int maxRetries = 5;
+
+        _logger.LogInformation("Starting workflow execution for coordinator agent: {CoordinatorAgentId}", coordinatorAgentId);
+
+        // 循环检查事件是否已经可用
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
-            AgentId = coordinatorAgentId,
-            EventType = "Aevatar.GAgents.GroupChat.WorkflowCoordinator.GEvent.StartWorkflowCoordinatorEvent",
-            EventProperties = request.EventProperties
-        });
+            _logger.LogInformation("Checking event availability, attempt {Attempt}/{MaxRetries} for agent: {AgentId}", 
+                attempt, maxRetries, coordinatorAgentId);
+
+            try
+            {
+                var availableEvents = await _subscriptionAppService.GetAvailableEventsAsync(coordinatorAgentId);
+                var targetEvent = availableEvents.FirstOrDefault(e => e.EventType == targetEventType);
+
+                if (targetEvent != null)
+                {
+                    _logger.LogInformation("Target event {EventType} found on attempt {Attempt}, proceeding with workflow execution", 
+                        targetEventType, attempt);
+
+                    await _subscriptionAppService.PublishEventAsync(new PublishEventDto
+                    {
+                        AgentId = coordinatorAgentId,
+                        EventType = targetEventType,
+                        EventProperties = request.EventProperties
+                    });
+
+                    _logger.LogInformation("Workflow event published successfully for agent: {AgentId}", coordinatorAgentId);
+                    return true;
+                }
+
+                _logger.LogWarning("Target event {EventType} not found on attempt {Attempt}, available events: {AvailableEvents}", 
+                    targetEventType, attempt, string.Join(", ", availableEvents.Select(e => e.EventType)));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking event availability on attempt {Attempt} for agent: {AgentId}", 
+                    attempt, coordinatorAgentId);
+            }
+        }
+
+        _logger.LogError("Failed to find target event {EventType} after {MaxRetries} attempts for agent: {AgentId}", 
+            targetEventType, maxRetries, coordinatorAgentId);
+        return false;
     }
 }
