@@ -15,6 +15,7 @@ public enum McpClientType
 {
     Stdio,
     Sse,
+    Gateway // Actually using streamable http
     // Included to Sse
     // Http
 }

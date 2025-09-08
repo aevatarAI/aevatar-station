@@ -56,23 +56,122 @@ public abstract partial class MCPGAgentBase<TState, TStateLogEvent, TEvent, TCon
             Logger.LogDebug("Provider found: Type={Type}, ClientType={ClientType}", 
                 provider.GetType().Name, provider.ClientType);
         }
-        
-        if (mcpConfig.Url.IsNullOrEmpty())
+
+        // Priority 1: Gateway connection (if configured)
+        if (mcpConfig.UseGateway && !string.IsNullOrEmpty(mcpConfig.GatewayAdapterName))
         {
-            var stdioProvider = providers.SingleOrDefault(p => p.ClientType == McpClientType.Stdio);
-            if (stdioProvider == null)
+            Logger.LogInformation("Attempting Gateway connection for server {ServerName} via adapter {AdapterName}", 
+                mcpConfig.ServerName, mcpConfig.GatewayAdapterName);
+
+            var gatewayProvider = providers.SingleOrDefault(p => p.ClientType == McpClientType.Gateway);
+            if (gatewayProvider != null)
             {
-                throw new InvalidOperationException($"No MCP client provider found for ClientType={McpClientType.Stdio}. Available providers: {string.Join(", ", providers.Select(p => $"{p.GetType().Name}({p.ClientType})"))}");
+                try
+                {
+                    var gatewayClient = await gatewayProvider.GetOrCreateClientAsync(mcpConfig);
+                    
+                    // Update state to track gateway connection
+                    RaiseEvent(new UpdateConnectionStateLogEvent
+                    {
+                        ConnectionType = "Gateway",
+                        SessionId = mcpConfig.SessionId,
+                        GatewayAdapterName = mcpConfig.GatewayAdapterName,
+                        LastConnected = DateTime.UtcNow,
+                        RetryCount = 0,
+                        LastConnectionError = null
+                    });
+                    
+                    Logger.LogInformation("Successfully connected to Gateway for server {ServerName}", 
+                        mcpConfig.ServerName);
+                    
+                    return gatewayClient;
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Gateway connection failed for server {ServerName}: {Error}. Falling back to direct connection.", 
+                        mcpConfig.ServerName, ex.Message);
+                    
+                    // Update state with error
+                    RaiseEvent(new UpdateConnectionStateLogEvent
+                    {
+                        ConnectionType = "Gateway",
+                        SessionId = mcpConfig.SessionId,
+                        GatewayAdapterName = mcpConfig.GatewayAdapterName,
+                        LastConnected = null,
+                        RetryCount = State.RetryCount + 1,
+                        LastConnectionError = ex.Message
+                    });
+                    
+                    // Continue to fallback logic below
+                }
             }
-            return await stdioProvider.GetOrCreateClientAsync(mcpConfig);
+            else
+            {
+                Logger.LogWarning("Gateway provider not found but gateway connection requested for server {ServerName}. Falling back to direct connection.", 
+                    mcpConfig.ServerName);
+            }
         }
 
-        var sseProvider = providers.SingleOrDefault(p => p.ClientType == McpClientType.Sse);
-        if (sseProvider == null)
+        // Priority 2: Direct connection fallback
+        Logger.LogInformation("Attempting direct connection for server {ServerName}", mcpConfig.ServerName);
+        
+        try
         {
-            throw new InvalidOperationException($"No MCP client provider found for ClientType={McpClientType.Sse}. Available providers: {string.Join(", ", providers.Select(p => $"{p.GetType().Name}({p.ClientType})"))}");
+            IMcpClient directClient;
+            
+            // Priority 2a: SSE/HTTP connection (if URL provided)
+            if (!mcpConfig.Url.IsNullOrEmpty())
+            {
+                var sseProvider = providers.SingleOrDefault(p => p.ClientType == McpClientType.Sse);
+                if (sseProvider == null)
+                {
+                    throw new InvalidOperationException($"No SSE MCP client provider found. Available providers: {string.Join(", ", providers.Select(p => $"{p.GetType().Name}({p.ClientType})"))}");
+                }
+                directClient = await sseProvider.GetOrCreateClientAsync(mcpConfig);
+                Logger.LogInformation("Successfully connected via SSE for server {ServerName}", mcpConfig.ServerName);
+            }
+            // Priority 2b: Stdio connection
+            else
+            {
+                var stdioProvider = providers.SingleOrDefault(p => p.ClientType == McpClientType.Stdio);
+                if (stdioProvider == null)
+                {
+                    throw new InvalidOperationException($"No Stdio MCP client provider found. Available providers: {string.Join(", ", providers.Select(p => $"{p.GetType().Name}({p.ClientType})"))}");
+                }
+                directClient = await stdioProvider.GetOrCreateClientAsync(mcpConfig);
+                Logger.LogInformation("Successfully connected via Stdio for server {ServerName}", mcpConfig.ServerName);
+            }
+
+            // Update state for successful direct connection
+            RaiseEvent(new UpdateConnectionStateLogEvent
+            {
+                ConnectionType = "Direct",
+                SessionId = null,
+                GatewayAdapterName = null,
+                LastConnected = DateTime.UtcNow,
+                RetryCount = 0,
+                LastConnectionError = null
+            });
+
+            return directClient;
         }
-        return await sseProvider.GetOrCreateClientAsync(mcpConfig);
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "All connection attempts failed for server {ServerName}", mcpConfig.ServerName);
+            
+            // Update state with final error
+            RaiseEvent(new UpdateConnectionStateLogEvent
+            {
+                ConnectionType = "Failed",
+                SessionId = mcpConfig.SessionId,
+                GatewayAdapterName = mcpConfig.GatewayAdapterName,
+                LastConnected = null,
+                RetryCount = State.RetryCount + 1,
+                LastConnectionError = ex.Message
+            });
+            
+            throw new InvalidOperationException($"Failed to establish MCP connection for server {mcpConfig.ServerName}. Gateway and direct connections both failed.", ex);
+        }
     }
 
     /// <summary>
@@ -145,6 +244,15 @@ public abstract partial class MCPGAgentBase<TState, TStateLogEvent, TEvent, TCon
                 state.LastToolCall = updateEvent.LastToolCall;
                 break;
 
+            case UpdateConnectionStateLogEvent connectionEvent:
+                state.ConnectionType = connectionEvent.ConnectionType;
+                state.SessionId = connectionEvent.SessionId;
+                state.GatewayAdapterName = connectionEvent.GatewayAdapterName;
+                state.LastConnected = connectionEvent.LastConnected;
+                state.RetryCount = connectionEvent.RetryCount;
+                state.LastConnectionError = connectionEvent.LastConnectionError;
+                break;
+
             default:
                 MCPTransitionState(state, @event);
                 break;
@@ -184,5 +292,19 @@ public abstract partial class MCPGAgentBase<TState, TStateLogEvent, TEvent, TCon
     public class UpdateLastToolCallLogEvent : StateLogEventBase<TStateLogEvent>
     {
         [Id(0)] public DateTime LastToolCall { get; set; }
+    }
+
+    /// <summary>
+    /// Log event for updating connection state
+    /// </summary>
+    [GenerateSerializer]
+    public class UpdateConnectionStateLogEvent : StateLogEventBase<TStateLogEvent>
+    {
+        [Id(0)] public string ConnectionType { get; set; } = string.Empty;
+        [Id(1)] public string? SessionId { get; set; }
+        [Id(2)] public string? GatewayAdapterName { get; set; }
+        [Id(3)] public DateTime? LastConnected { get; set; }
+        [Id(4)] public int RetryCount { get; set; }
+        [Id(5)] public string? LastConnectionError { get; set; }
     }
 }
