@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Aevatar.Application.Grains.Agents.Creator;
 using Aevatar.Subscription;
 using Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView.Dto;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Orleans;
 using Volo.Abp.Application.Services;
 using Volo.Abp;
 
@@ -19,6 +21,7 @@ public interface IWorkflowRunService
 [RemoteService(IsEnabled = false)]
 public class WorkflowRunService : ApplicationService, IWorkflowRunService
 {
+    private readonly IClusterClient _clusterClient;
     private readonly IAgentValidationService _agentValidationService;
     private readonly IWorkflowViewService _workflowViewService;
     private readonly ISubscriptionAppService _subscriptionAppService;
@@ -30,13 +33,15 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         IWorkflowViewService workflowViewService,
         ISubscriptionAppService subscriptionAppService,
         IAgentService agentService,
-        ILogger<WorkflowRunService> logger)
+        ILogger<WorkflowRunService> logger,
+        IClusterClient clusterClient)
     {
         _agentValidationService = agentValidationService;
         _workflowViewService = workflowViewService;
         _subscriptionAppService = subscriptionAppService;
         _agentService = agentService;
         _logger = logger;
+        _clusterClient = clusterClient;
     }
 
     public async Task<WorkflowRunResultDto> RunWorkflowAsync(WorkflowRunRequestDto request)
@@ -54,7 +59,8 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
 
         if (!executionSuccess)
         {
-            _logger.LogWarning("Workflow execution failed for ViewAgentId: {ViewAgentId}, coordinator agent not ready", request.ViewAgentId);
+            _logger.LogWarning("Workflow execution failed for ViewAgentId: {ViewAgentId}, coordinator agent not ready",
+                request.ViewAgentId);
             return new WorkflowRunResultDto
             {
                 IsSuccess = false,
@@ -64,7 +70,8 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         }
 
         // All steps completed successfully
-        _logger.LogInformation("Workflow run completed successfully for ViewAgentId: {ViewAgentId}", request.ViewAgentId);
+        _logger.LogInformation("Workflow run completed successfully for ViewAgentId: {ViewAgentId}",
+            request.ViewAgentId);
 
         return new WorkflowRunResultDto
         {
@@ -108,12 +115,14 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         {
             throw new UserFriendlyException("Workflow contains no nodes");
         }
-        
-        var validationTasks = viewConfigDto.WorkflowNodeList.Select((workflowNode, index) => ValidateWorkflowNodeAsync(workflowNode, index + 1)).ToArray();
+
+        var validationTasks = viewConfigDto.WorkflowNodeList
+            .Select((workflowNode, index) => ValidateWorkflowNodeAsync(workflowNode, index + 1)).ToArray();
 
         await Task.WhenAll(validationTasks);
 
-        _logger.LogInformation("Workflow configuration validation passed for ViewAgentId: {ViewAgentId} with {NodeCount} nodes",
+        _logger.LogInformation(
+            "Workflow configuration validation passed for ViewAgentId: {ViewAgentId} with {NodeCount} nodes",
             viewAgentId, viewConfigDto.WorkflowNodeList.Count);
     }
 
@@ -158,21 +167,19 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
 
         _logger.LogInformation("Starting workflow execution for coordinator agent: {CoordinatorAgentId}", coordinatorAgentId);
 
-        // 循环检查事件是否已经可用
-        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        for (var attempt = 1; attempt <= maxRetries; attempt++)
         {
             _logger.LogInformation("Checking event availability, attempt {Attempt}/{MaxRetries} for agent: {AgentId}", 
                 attempt, maxRetries, coordinatorAgentId);
 
             try
             {
-                var availableEvents = await _subscriptionAppService.GetAvailableEventsAsync(coordinatorAgentId);
-                var targetEvent = availableEvents.FirstOrDefault(e => e.EventType == targetEventType);
-
+                var agent = _clusterClient.GetGrain<ICreatorGAgent>(coordinatorAgentId);
+                var agentState = await agent.GetAgentAsync();
+                var targetEvent =  agentState.EventInfoList.Find(i => i.EventType.FullName == targetEventType);
                 if (targetEvent != null)
                 {
-                    _logger.LogInformation("Target event {EventType} found on attempt {Attempt}, proceeding with workflow execution", 
-                        targetEventType, attempt);
+                    _logger.LogInformation("StartWorkflowCoordinatorEvent found on attempt {Attempt}, proceeding with workflow execution", attempt);
 
                     await _subscriptionAppService.PublishEventAsync(new PublishEventDto
                     {
@@ -181,29 +188,26 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
                         EventProperties = request.EventProperties
                     });
 
-                    _logger.LogInformation("Workflow event published successfully for agent: {AgentId}", coordinatorAgentId);
+                    _logger.LogInformation("Workflow event published successfully for agent: {AgentId}",
+                        coordinatorAgentId);
                     return true;
                 }
 
-                _logger.LogWarning("Target event {EventType} not found on attempt {Attempt}, available events: {AvailableEvents}", 
-                    targetEventType, attempt, string.Join(", ", availableEvents.Select(e => e.EventType)));
+                _logger.LogWarning("StartWorkflowCoordinatorEvent not found on attempt {Attempt}",attempt);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error checking event availability on attempt {Attempt} for agent: {AgentId}", 
-                    attempt, coordinatorAgentId);
+                _logger.LogError(ex, "Error checking event availability on attempt {Attempt} for agent: {AgentId}", attempt, coordinatorAgentId);
             }
 
             if (attempt < maxRetries)
             {
-                _logger.LogInformation("Waiting {DelayMs}ms before next attempt for agent: {AgentId}", 
-                    retryDelayMs, coordinatorAgentId);
+                _logger.LogInformation("Waiting {DelayMs}ms before next attempt for agent: {AgentId}", retryDelayMs, coordinatorAgentId);
                 await Task.Delay(retryDelayMs);
             }
         }
 
-        _logger.LogError("Failed to find target event {EventType} after {MaxRetries} attempts for agent: {AgentId}", 
-            targetEventType, maxRetries, coordinatorAgentId);
+        _logger.LogError("Failed to find StartWorkflowCoordinatorEvent after {MaxRetries} attempts for agent: {AgentId}", maxRetries, coordinatorAgentId);
         return false;
     }
 }
