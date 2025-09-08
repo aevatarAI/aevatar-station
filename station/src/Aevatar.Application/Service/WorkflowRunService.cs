@@ -210,8 +210,8 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
     private async Task<bool> ExecuteWorkflowAsync(Guid coordinatorAgentId, WorkflowRunRequestDto request)
     {
         const string targetEventType = "Aevatar.GAgents.GroupChat.WorkflowCoordinator.GEvent.StartWorkflowCoordinatorEvent";
-        const int maxRetries = 5;
-        const int retryDelayMs = 500;
+        const int maxRetries = 20;
+        const int retryDelayMs = 1000;
 
         _logger.LogInformation("Starting workflow execution for coordinator agent: {CoordinatorAgentId}", coordinatorAgentId);
 
@@ -224,6 +224,13 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             {
                 var agent = _clusterClient.GetGrain<ICreatorGAgent>(coordinatorAgentId);
                 var agentState = await agent.GetAgentAsync();
+                
+                // Log all available events in EventInfoList
+                _logger.LogInformation("Agent {AgentId} has {EventCount} events in EventInfoList: {EventList}", 
+                    coordinatorAgentId, 
+                    agentState.EventInfoList.Count,
+                    string.Join(", ", agentState.EventInfoList.Select(e => e.EventType.FullName ?? "Unknown")));
+                
                 var targetEvent =  agentState.EventInfoList.Find(i => i.EventType.FullName == targetEventType);
                 if (targetEvent != null)
                 {
