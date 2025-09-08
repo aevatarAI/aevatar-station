@@ -154,6 +154,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
     {
         const string targetEventType = "Aevatar.GAgents.GroupChat.WorkflowCoordinator.GEvent.StartWorkflowCoordinatorEvent";
         const int maxRetries = 5;
+        const int retryDelayMs = 500;
 
         _logger.LogInformation("Starting workflow execution for coordinator agent: {CoordinatorAgentId}", coordinatorAgentId);
 
@@ -191,6 +192,14 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             {
                 _logger.LogError(ex, "Error checking event availability on attempt {Attempt} for agent: {AgentId}", 
                     attempt, coordinatorAgentId);
+            }
+
+            // 如果不是最后一次尝试，等待500ms再重试
+            if (attempt < maxRetries)
+            {
+                _logger.LogInformation("Waiting {DelayMs}ms before next attempt for agent: {AgentId}", 
+                    retryDelayMs, coordinatorAgentId);
+                await Task.Delay(retryDelayMs);
             }
         }
 
