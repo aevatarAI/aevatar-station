@@ -145,6 +145,31 @@ public class DailyPushService : ApplicationService, IDailyPushService
             throw;
         }
     }
+
+    public async Task<int> ClearV2DeviceDataAsync(Guid userId)
+    {
+        try
+        {
+            var chatManagerGAgent = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
+            
+            // Get current V2 device count before clearing
+            var currentV2Devices = await chatManagerGAgent.GetAllDevicesV2Async();
+            var deviceCountBeforeClear = currentV2Devices.Count;
+            
+            // Clear all V2 device data
+            await chatManagerGAgent.ClearAllV2DevicesAsync();
+            
+            _logger.LogWarning("Cleared {DeviceCount} V2 devices for user {UserId}", 
+                deviceCountBeforeClear, userId);
+                
+            return deviceCountBeforeClear;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to clear V2 device data for user {UserId}", userId);
+            throw;
+        }
+    }
     
     /// <summary>
     /// Convert GodGPTChatLanguage enum to GodGPTLanguage enum

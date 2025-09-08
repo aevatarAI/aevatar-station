@@ -161,4 +161,46 @@ public class DailyPushController : AbpControllerBase
         }
     }
 
+    /// <summary>
+    /// Clear all V2 device data for testing purposes (ADMIN ONLY)
+    /// WARNING: This will permanently delete all V2 device registrations for the specified user
+    /// </summary>
+    [HttpPost("admin/clear-v2-data")]
+    public async Task<IActionResult> ClearV2DeviceDataAsync([FromBody] ClearV2DataRequest request)
+    {
+        try
+        {
+            // Validate confirmation
+            if (!request.ConfirmClear)
+            {
+                return BadRequest(new
+                {
+                    error = new { code = 1, message = "Confirmation flag must be true to proceed with data clearing" },
+                    result = false
+                });
+            }
+
+            var clearedCount = await _dailyPushService.ClearV2DeviceDataAsync(request.UserId);
+
+            _logger.LogWarning("V2 device data cleared for user {UserId}: {ClearedCount} devices removed", 
+                request.UserId, clearedCount);
+
+            // Follow GodGPT pattern: direct return with result data
+            return Ok(new
+            {
+                result = true,
+                clearedCount = clearedCount,
+                userId = request.UserId
+            });
+        }
+        catch (Exception ex)
+        {
+            var language = HttpContext.GetGodGPTLanguage();
+            var localizedMessage =
+                _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InternalServerError, language);
+            _logger.LogError(ex, "Failed to clear V2 device data for user {UserId}", request.UserId);
+            return StatusCode(500, new { error = localizedMessage });
+        }
+    }
+
 }
