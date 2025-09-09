@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # Local Docker Registry for MCP Server Images
+  registry:
+    image: registry:2.7
+    ports:
+      - "5000:5000"
+    environment:
+      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /data
+    volumes:
+      - registry_data:/data
+
+  # Example MCP Server - Filesystem
+  mcp-filesystem:
+    build:
+      context: ./mcp-servers/filesystem
+      dockerfile: Dockerfile
+    image: localhost:5000/mcp-filesystem:1.0.0
+    environment:
+      - MCP_SERVER_NAME=filesystem
+      - WORKSPACE_PATH=/workspace
+    volumes:
+      - ./workspace:/workspace
+    ports:
+      - "3001:3000"
+
+  # Example MCP Server - SQLite
+  mcp-sqlite:
+    build:
+      context: ./mcp-servers/sqlite
+      dockerfile: Dockerfile
+    image: localhost:5000/mcp-sqlite:1.0.0
+    environment:
+      - MCP_SERVER_NAME=sqlite
+      - DATABASE_PATH=/data/sqlite.db
+    volumes:
+      - sqlite_data:/data
+    ports:
+      - "3002:3000"
+
+  # Aevatar Station (with MCP Gateway integration)
+  aevatar-station:
+    build:
+      context: .
+      dockerfile: station/src/Aevatar.HttpApi.Host/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - MCPGateway__GatewayBaseUrl=http://mcp-gateway:8000
+      - MCPGateway__AuthToken=Bearer dev-token-12345
+      - MCPGateway__EnableDetailedLogging=true
+    ports:
+      - "5000:80"
+    depends_on:
+      - mcp-gateway
+
+  # MCP Gateway (if running locally)
+  mcp-gateway:
+    image: mcr.microsoft.com/mcp-gateway:latest
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./mcp-gateway-config:/app/config
+
+volumes:
+  registry_data:
+  sqlite_data:
