@@ -170,6 +170,7 @@ public partial class PsiOmniGAgent
                 Examples = exampleTasks,
                 Depth = State.Depth + 1,
                 SystemLLM = State.SystemLLM ?? "",
+#if ENABLE_SELF_LLM_CONFIG
                 SelfLlmConfig = new SelfLLMConfig
                 {
                     ProviderEnum = State.LLM.ProviderEnum,
@@ -178,7 +179,8 @@ public partial class PsiOmniGAgent
                     ApiKey = State.LLM.ApiKey,
                     Endpoint = State.LLM.Endpoint,
                     Memo = State.LLM.Memo
-                }
+                },
+#endif
             });
             var agentId = psi.GetGrainId();
             // There's a publisher tied to each parent agent.
@@ -217,7 +219,7 @@ public partial class PsiOmniGAgent
             {
                 LLMConfig = new LLMConfigDto()
                 {
-                    SystemLLM = configKeyToPass,  // Pass the key, not just State.SystemLLM
+                    SystemLLM = configKeyToPass, // Pass the key, not just State.SystemLLM
                     SelfLLMConfig = selfLlmConfig
                 }
             });

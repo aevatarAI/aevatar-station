@@ -281,7 +281,12 @@ public partial class
         InitializeTracing();
 
         // Initialize the AI agent with the provided configuration
-        if (!configuration.SystemLLM.IsNullOrEmpty() || !configuration.SelfLlmConfig.ApiKey.IsNullOrEmpty())
+        if (!configuration.SystemLLM.IsNullOrEmpty()
+#if ENABLE_SELF_LLM_CONFIG
+            || !configuration.SelfLlmConfig.ApiKey.IsNullOrEmpty()
+#endif
+
+           )
         {
             await InitializeAsync(new InitializeDto
             {
@@ -289,9 +294,11 @@ public partial class
                 LLMConfig = new LLMConfigDto
                 {
                     SystemLLM = configuration.SystemLLM,
+#if ENABLE_SELF_LLM_CONFIG
                     SelfLLMConfig = configuration.SelfLlmConfig.ApiKey.IsNullOrEmpty()
                         ? null
-                        : configuration.SelfLlmConfig
+                        : configuration.SelfLlmConfig,
+#endif
                 }
             });
         }
