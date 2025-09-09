@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Aevatar.Agent;
 using Aevatar.AgentValidation;
 using Aevatar.Application.Grains.Agents.Creator;
 using Aevatar.Core.Abstractions;
@@ -118,8 +120,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             throw new UserFriendlyException("Workflow contains no nodes");
         }
         
-        var validationTasks = viewConfigDto.WorkflowNodeList
-            .Select(workflowNode => ValidateWorkflowNodePropertiesAsync(workflowNode));
+        var validationTasks = viewConfigDto.WorkflowNodeList.Select(ValidateWorkflowNodePropertiesAsync);
         
         await Task.WhenAll(validationTasks);
 
@@ -146,23 +147,14 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         }
 
         // 1. 先反序列化为Dictionary（与WorkflowViewService.PublishWorkflowAsync保持一致）
-        Dictionary<string, object> nodeAgentProperties;
-        try
-        {
-            nodeAgentProperties = JsonConvert.DeserializeObject<Dictionary<string, object>>(workflowNode.JsonProperties);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to deserialize JsonProperties for node '{NodeName}': {JsonProperties}", 
-                workflowNode.Name, workflowNode.JsonProperties);
-            throw new UserFriendlyException($"Node '{workflowNode.Name}': Invalid JsonProperties format");
-        }
+     
+        var nodeAgentProperties = JsonConvert.DeserializeObject<Dictionary<string, object>>(workflowNode.JsonProperties);
 
         // 2. 重新序列化为JSON字符串（模拟AgentService.CreateAgentAsync的Properties处理）
-        var configJson = JsonConvert.SerializeObject(nodeAgentProperties);
+        var initializationParam = JsonConvert.SerializeObject(nodeAgentProperties);
 
         // 3. 验证Agent配置
-        await ValidateAgentConfigAsync(workflowNode.AgentType, configJson);
+        await ValidateAgentConfigAsync(workflowNode.AgentType, initializationParam);
 
         _logger.LogDebug("Validation passed for node '{NodeName}' (AgentType: {AgentType})",
             workflowNode.Name, workflowNode.AgentType);
@@ -303,7 +295,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             var agent = await _gAgentFactory.GetGAgentAsync(tempGrainId);
             
             // 2. 获取配置类型（模拟AgentService.GetAgentConfigurationAsync）
-            var configurationType = await agent.GetConfigurationTypeAsync();
+            var configurationType = ExtractConfigurationProperties(await agent.GetConfigurationTypeAsync());
             if (configurationType == null)
             {
                 _logger.LogWarning("[AgentValidation] No configuration type found for agent: {AgentType}", agentType);
@@ -320,42 +312,45 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             throw new UserFriendlyException($"Invalid agent type '{agentType}': {ex.Message}");
         }
     }
+    
+    private Configuration? ExtractConfigurationProperties(Type? configurationType)
+    {
+        if (configurationType == null || configurationType.IsAbstract) return null;
+        var properties = configurationType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+        var configuration = new Configuration { DtoType = configurationType };
+        var propertyData = properties
+            .Select(property => new PropertyData() { Name = property.Name, Type = property.PropertyType }).ToList();
+        configuration.Properties = propertyData;
+        return configuration;
+    }
 
-
-    private async Task ValidateConfigurationDataAsync(Type configType, string configJson)
+    private async Task ValidateConfigurationDataAsync(Configuration configType, string configJson)
     {
         try
         {
-            _logger.LogDebug("[AgentValidation] Starting validation for {ConfigType} with JSON: {ConfigJson}", configType.Name, configJson);
+            _logger.LogDebug("[AgentValidation] Starting validation for {ConfigType} with JSON: {ConfigJson}", configType.DtoType, configJson);
 
             // 1. 创建配置实例（模拟AgentService.SetupConfigurationData）
-            var actualDto = Activator.CreateInstance(configType);
-            if (actualDto == null)
-            {
-                _logger.LogError("[AgentValidation] Failed to create instance of {ConfigType}", configType.Name);
-                throw new UserFriendlyException($"Failed to create configuration instance for {configType.Name}");
-            }
-
-            // 2. Schema验证（使用与AgentService相同的设置）
-            // var schema = _schemaProvider.GetTypeSchema(configType);
-            // var validateResponse = schema.Validate(configJson, new JsonSchemaValidatorSettings 
-            // { 
-            //     PropertyStringComparer = StringComparer.CurrentCultureIgnoreCase 
-            // });
-            //
-            // if (validateResponse.Count > 0)
+            var actualDto = Activator.CreateInstance(configType.DtoType);
+            var config = (ConfigurationBase)actualDto!;
+            // if (actualDto == null)
             // {
-            //     _logger.LogWarning("[AgentValidation] Schema validation failed for {ConfigType}", configType.Name);
-            //     throw new UserFriendlyException($"Schema validation failed for {configType.Name}");
+            //     _logger.LogError("[AgentValidation] Failed to create instance of {ConfigType}", configType.Name);
+            //     throw new UserFriendlyException($"Failed to create configuration instance for {configType.Name}");
             // }
 
+            // 2. Schema验证（使用与AgentService相同的设置）
+            var schema = _schemaProvider.GetTypeSchema(config.GetType());
+            var validateResponse = schema.Validate(configJson, new JsonSchemaValidatorSettings { PropertyStringComparer = StringComparer.CurrentCultureIgnoreCase });
+            if (validateResponse.Count > 0) throw new UserFriendlyException($"Schema validation failed for {configType.DtoType}");
+
             // 3. JSON反序列化验证（使用Newtonsoft.Json，与AgentService保持一致）
-            var config = JsonConvert.DeserializeObject(configJson, configType);
-            if (config == null)
-            {
-                _logger.LogError("[AgentValidation] Failed to deserialize JSON to {ConfigType}", configType.Name);
-                throw new UserFriendlyException($"JSON deserialization failed for {configType.Name}");
-            }
+            // var config = JsonConvert.DeserializeObject(configJson, configType);
+            // if (config == null)
+            // {
+            //     _logger.LogError("[AgentValidation] Failed to deserialize JSON to {ConfigType}", configType.Name);
+            //     throw new UserFriendlyException($"JSON deserialization failed for {configType.Name}");
+            // }
 
             // 4. 自定义验证（IValidatableObject）
             // if (config is IValidatableObject validatableConfig)
@@ -370,12 +365,12 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             //     }
             // }
 
-            _logger.LogDebug("[AgentValidation] All validations passed for {ConfigType}", configType.Name);
+            // _logger.LogDebug("[AgentValidation] All validations passed for {ConfigType}", configType.Name);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[AgentValidation] Unexpected error during config validation for {ConfigType}", configType.Name);
-            throw new UserFriendlyException($"Validation error for {configType.Name}: {ex.Message}");
+            // _logger.LogError(ex, "[AgentValidation] Unexpected error during config validation for {ConfigType}", configType.Name);
+            throw new UserFriendlyException($"Validation error: {ex.Message}");
         }
     }
 
