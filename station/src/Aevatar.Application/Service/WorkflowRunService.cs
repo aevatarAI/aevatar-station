@@ -49,7 +49,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         _logger.LogInformation("Starting workflow run for ViewAgentId: {ViewAgentId}", request.ViewAgentId);
 
         // Step 1: Validate workflow configuration
-        // await ValidateWorkflowConfigurationAsync(request.ViewAgentId);
+        await ValidateWorkflowConfigurationAsync(request.ViewAgentId);
 
         // Step 2: Publish workflow
         var workflowCoordinatorAgentId = await PublishWorkflowAsync(request.ViewAgentId);
@@ -80,10 +80,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             Message = "Workflow executed successfully"
         };
     }
-
-    /// <summary>
-    /// 验证工作流配置 - 遍历视图中的每个节点并验证用户设置的参数
-    /// </summary>
+    
     private async Task ValidateWorkflowConfigurationAsync(Guid viewAgentId)
     {
         _logger.LogInformation("Starting workflow configuration validation for ViewAgentId: {ViewAgentId}",
