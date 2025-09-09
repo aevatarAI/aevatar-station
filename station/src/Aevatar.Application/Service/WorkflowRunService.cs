@@ -104,12 +104,8 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         {
             throw new UserFriendlyException("Workflow contains no nodes");
         }
-
-        // Step 3: 并发验证每个工作流节点 - 类似PublishWorkflowAsync的逻辑
-        var validationTasks = viewConfigDto.WorkflowNodeList
-            .Select(workflowNode => ValidateWorkflowNodePropertiesAsync(workflowNode, viewAgentId));
         
-        await Task.WhenAll(validationTasks);
+        await Task.WhenAll(viewConfigDto.WorkflowNodeList.Select(ValidateWorkflowNodePropertiesAsync));
 
         _logger.LogInformation(
             "Workflow configuration validation passed for ViewAgentId: {ViewAgentId} with {NodeCount} nodes",
@@ -119,10 +115,9 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
     /// <summary>
     /// 验证单个工作流节点的属性配置 - 类似PublishWorkflowAsync处理节点的方式
     /// </summary>
-    private async Task ValidateWorkflowNodePropertiesAsync(WorkflowNodeDto workflowNode, Guid viewAgentId)
+    private async Task ValidateWorkflowNodePropertiesAsync(WorkflowNodeDto workflowNode)
     {
-        _logger.LogInformation("Validating workflow node: {NodeName} (AgentType: {AgentType}) for ViewAgentId: {ViewAgentId}",
-            workflowNode.Name, workflowNode.AgentType, viewAgentId);
+        _logger.LogInformation("Validating workflow node: {NodeName} (AgentType: {AgentType})", workflowNode.Name, workflowNode.AgentType);
 
         if (string.IsNullOrEmpty(workflowNode.AgentType))
         {
