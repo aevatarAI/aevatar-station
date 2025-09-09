@@ -75,13 +75,12 @@ public class WorkUnitExecutionRecord  // 专注于记录单个Agent节点
     [Id(6)] public string InputDataJson { get; set; } = string.Empty;
     [Id(7)] public string OutputDataJson { get; set; } = string.Empty;
     
-    // 状态快照
-    [Id(8)] public string PreExecutionStateJson { get; set; } = string.Empty;
-    [Id(9)] public string PostExecutionStateJson { get; set; } = string.Empty;
+    // 实时状态快照（根据执行阶段动态更新）
+    [Id(8)] public string CurrentStateJson { get; set; } = string.Empty;
     
     // 执行统计
-    [Id(10)] public int RetryCount { get; set; } = 0;
-    [Id(11)] public List<string> ErrorMessages { get; set; } = new();
+    [Id(9)] public int RetryCount { get; set; } = 0;
+    [Id(10)] public List<string> ErrorMessages { get; set; } = new();
 }
 
 // 新增：事件流转记录（简化版）
@@ -129,21 +128,18 @@ public enum ExecutionStatus
 [EventHandler]
 public async Task HandleEventAsync(ChatEvent @event)
 {
-    // 原有逻辑：记录输入
-    // 新增逻辑：
-    // 1. 记录事件流转（从 CoordinatorGAgent 到 WorkUnit）
-    // 2. 解析并记录结构化参数
-    // 3. 捕获WorkUnit的Pre-execution state
+    // 开始执行WorkUnit时：
+    // 1. 记录输入数据
+    // 2. 捕获执行前的实时状态
+    // 3. 记录事件流转
     
     RaiseEvent(new StartExecuteWorkUnitLogEvent
     {
-        // 原有字段
         WorkUnitGrainId = @event.Speaker.ToString(),
-        InputData = JsonConvert.SerializeObject(@event.CoordinatorMessages),
-        
-        // 新增字段
-        InputParameters = ExtractParameters(@event.CoordinatorMessages),
-        PreExecutionStateJson = await CaptureAgentStateAsync(@event.Speaker)
+        BeforeAgentIds = GetBeforeAgentIds(@event.Speaker),
+        InputDataJson = JsonConvert.SerializeObject(@event.CoordinatorMessages),
+        CurrentStateJson = await CaptureAgentStateAsync(@event.Speaker), // 执行前状态
+        Status = WorkflowExecutionStatus.Running
     });
     
     // 记录事件流转
@@ -162,21 +158,18 @@ public async Task HandleEventAsync(ChatEvent @event)
 [EventHandler] 
 public async Task HandleEventAsync(ChatResponseEvent @event)
 {
-    // 原有逻辑：记录输出
-    // 新增逻辑：
-    // 1. 记录事件流转（从 WorkUnit 到 CoordinatorGAgent）
-    // 2. 解析并记录结构化输出参数
-    // 3. 捕获WorkUnit的Post-execution state
+    // 完成执行WorkUnit时：
+    // 1. 记录输出数据
+    // 2. 更新为执行后的实时状态
+    // 3. 记录事件流转
     
     RaiseEvent(new FinishExecuteWorkUnitLogEvent
     {
-        // 原有字段  
         WorkUnitGrainId = @event.PublisherGrainId.ToString(),
-        OutputData = JsonConvert.SerializeObject(@event.ChatResponse?.Content),
-        
-        // 新增字段
-        OutputParameters = ExtractOutputParameters(@event.ChatResponse),
-        PostExecutionStateJson = await CaptureAgentStateAsync(@event.PublisherGrainId)
+        OutputDataJson = JsonConvert.SerializeObject(@event.ChatResponse?.Content),
+        CurrentStateJson = await CaptureAgentStateAsync(@event.PublisherGrainId), // 执行后状态
+        Status = WorkflowExecutionStatus.Completed,
+        EndTime = DateTime.UtcNow
     });
     
     // 记录事件流转
@@ -235,32 +228,16 @@ public partial class WorkUnitExecutionRecord
     }
     
     /// <summary>
-    /// 获取执行前Agent状态（按需解析）
+    /// 获取当前Agent状态（按需解析）
+    /// 根据执行阶段，可能是执行前状态或执行后状态
     /// </summary>
-    public T? GetPreExecutionState<T>() where T : class
+    public T? GetCurrentState<T>() where T : class
     {
-        if (string.IsNullOrEmpty(PreExecutionStateJson)) return null;
+        if (string.IsNullOrEmpty(CurrentStateJson)) return null;
         
         try
         {
-            return JsonConvert.DeserializeObject<T>(PreExecutionStateJson);
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-    }
-    
-    /// <summary>
-    /// 获取执行后Agent状态（按需解析）
-    /// </summary>
-    public T? GetPostExecutionState<T>() where T : class
-    {
-        if (string.IsNullOrEmpty(PostExecutionStateJson)) return null;
-        
-        try
-        {
-            return JsonConvert.DeserializeObject<T>(PostExecutionStateJson);
+            return JsonConvert.DeserializeObject<T>(CurrentStateJson);
         }
         catch (Exception)
         {
@@ -344,24 +321,43 @@ public class WorkflowCoordinatorConfigDto
 ### ✅ 新增的功能  
 1. **数据来源追踪** - BeforeAgentIds 记录Agent的数据来源
 2. **JSON数据存储** - InputDataJson/OutputDataJson 统一存储
-3. **Agent状态快照** - 执行前后的完整状态记录
+3. **实时状态快照** - CurrentStateJson 根据执行阶段动态更新，更关注当前状态
 4. **便利解析方法** - 提供按需解析的便利方法
 5. **执行统计信息** - RetryCount、ErrorMessages等
 
 ### ✅ 实现优势
-1. **存储效率** - 避免String和Dictionary的重复存储
+1. **存储效率** - 避免String和Dictionary的重复存储，单一状态避免前后状态重复
 2. **调试友好** - JSON格式易于查看和分析
 3. **灵活性强** - 可以存储任何结构的数据
 4. **性能优化** - 按需解析，不是每次都解析
 5. **类型安全** - 提供泛型解析方法
+6. **实时性强** - CurrentStateJson 反映当前执行阶段的真实状态，更有实际意义
 
 ### ✅ 使用场景示例
 ```csharp
-// 调试场景：追踪数据流向
+// 调试场景：追踪数据流向和实时状态
 var record = records.First(r => r.AgentGrainId == "AgentC");
-var sources = record.BeforeAgentIds; // 数据来源
-var inputParams = record.GetInputParameters(); // 按需解析输入
+
+// 数据血缘追踪
+var sources = record.BeforeAgentIds; // 数据来源: ["AgentA", "AgentB"]
+
+// 按需解析数据
+var inputParams = record.GetInputParameters(); // 输入参数
+var outputParams = record.GetOutputParameters(); // 输出参数
+
+// 实时状态查看
+var currentState = record.GetCurrentState<MyAgentState>(); // 当前状态
+var isCompleted = record.Status == WorkflowExecutionStatus.Completed; // 是否完成
+
+// 性能分析
 var duration = record.GetDuration(); // 执行时长
+var retryCount = record.RetryCount; // 重试次数
+
+// 状态含义：
+// - 如果Status是Running，CurrentStateJson是执行前状态
+// - 如果Status是Completed，CurrentStateJson是执行后状态
+Console.WriteLine($"Agent {record.AgentGrainId} 当前状态: {record.Status}");
+Console.WriteLine($"状态快照时间: {(isCompleted ? record.EndTime : record.StartTime)}");
 ```
 
 这个优化方案既满足了记录event流转方向、出入参数和agent state的需求，又保持了原有设计的简洁性和高效性。
