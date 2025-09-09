@@ -8,13 +8,19 @@ using Newtonsoft.Json;
 
 namespace Aevatar.GAgents.GroupChat.WorkflowCoordinator;
 
+/// <summary>
+/// Workflow Execution Record GAgent (DEPRECATED)
+/// This class is obsolete and will be removed in a future version. 
+/// Use WorkflowRunRecordGAgent instead for enhanced workflow execution tracking.
+/// </summary>
+[Obsolete("This GAgent is deprecated. Use WorkflowRunRecordGAgent instead for enhanced workflow execution tracking with real-time state and data lineage.", false)]
 [GAgent]
 public class WorkflowExecutionRecordGAgent :
     GAgentBase<WorkflowExecutionRecordState, WorkflowExecutionRecordLogEvent, EventBase>, IWorkflowExecutionRecordGAgent
 {
     public override Task<string> GetDescriptionAsync()
     {
-        return Task.FromResult("Workflow Execution Record GAgent");
+        return Task.FromResult("[DEPRECATED] Workflow Execution Record GAgent - Use WorkflowRunRecordGAgent instead");
     }
 
     [EventHandler]
@@ -66,81 +72,126 @@ public class WorkflowExecutionRecordGAgent :
     {
         switch (@event)
         {
-            case StartExecuteWorkflowLogEvent startExecuteWorkflowLogEvent:
-                state.WorkflowId = startExecuteWorkflowLogEvent.WorkflowId;
-                state.RoundId = startExecuteWorkflowLogEvent.RoundId;
-                state.WorkUnitInfos = startExecuteWorkflowLogEvent.WorkUnitInfos;
-                state.InitContent = startExecuteWorkflowLogEvent.Content;
+            case StartExecuteWorkflowLogEvent startEvent:
+                state.WorkflowId = startEvent.WorkflowId;
+                state.RoundId = startEvent.RoundId;
+                state.WorkUnitInfos = startEvent.WorkUnitInfos;
+                state.InitContent = startEvent.Content;
                 state.StartTime = DateTime.UtcNow;
-                state.Status = WorkflowExecutionStatus.Running;
-                state.WorkUnitRecords = startExecuteWorkflowLogEvent.WorkUnitInfos.Select(o =>
-                    new WorkUnitExecutionRecord
-                    {
-                        WorkUnitGrainId = o.GrainId,
-                        Status = WorkflowExecutionStatus.Pending
-                    }).ToList();
-                break;
-            case FinishExecuteWorkflowLogEvent finishExecuteWorkflowLogEvent:
-                state.EndTime = DateTime.UtcNow;
-                state.Status = WorkflowExecutionStatus.Completed;
-                break;
-            case StartExecuteWorkUnitLogEvent startExecuteWorkUnitLogEvent:
-                var startUnit = state.WorkUnitRecords.First(o =>
-                    o.WorkUnitGrainId == startExecuteWorkUnitLogEvent.WorkUnitGrainId);
-                startUnit.WorkUnitGrainId = startExecuteWorkUnitLogEvent.WorkUnitGrainId;
-                startUnit.StartTime = DateTime.UtcNow;
-                if (startUnit.Status == WorkflowExecutionStatus.Pending)
+                state.Status = Core.States.WorkflowExecutionStatus.Running;
+                
+                foreach (var workUnitInfo in startEvent.WorkUnitInfos)
                 {
-                    startUnit.Status = WorkflowExecutionStatus.Running;
+                    var existingRecord = state.WorkUnitRecords.FirstOrDefault(r => r.WorkUnitGrainId == workUnitInfo.GrainId);
+                    if (existingRecord == null)
+                    {
+                        state.WorkUnitRecords.Add(new WorkUnitExecutionRecord
+                        {
+                            WorkUnitGrainId = workUnitInfo.GrainId,
+                            Status = Core.States.WorkflowExecutionStatus.Pending,
+                            StartTime = DateTime.UtcNow,
+                            InputData = "",
+                            OutputData = ""
+                        });
+                    }
+                    else
+                    {
+                        existingRecord.Status = Core.States.WorkflowExecutionStatus.Running;
+                    }
                 }
-                startUnit.InputData = startExecuteWorkUnitLogEvent.InputData;
                 break;
-            case FinishExecuteWorkUnitLogEvent finishExecuteWorkUnitLogEvent:
-                var workUnit = state.WorkUnitRecords.First(o =>
-                    o.WorkUnitGrainId == finishExecuteWorkUnitLogEvent.WorkUnitGrainId);
-                workUnit.EndTime = DateTime.UtcNow;
-                workUnit.Status = WorkflowExecutionStatus.Completed;
-                workUnit.OutputData = finishExecuteWorkUnitLogEvent.OutputData;
+
+            case FinishExecuteWorkflowLogEvent:
+                state.Status = Core.States.WorkflowExecutionStatus.Completed;
+                state.EndTime = DateTime.UtcNow;
+                break;
+
+            case StartExecuteWorkUnitLogEvent startUnitEvent:
+                var record = state.WorkUnitRecords.FirstOrDefault(r => r.WorkUnitGrainId == startUnitEvent.WorkUnitGrainId);
+                if (record == null)
+                {
+                    state.WorkUnitRecords.Add(new WorkUnitExecutionRecord
+                    {
+                        WorkUnitGrainId = startUnitEvent.WorkUnitGrainId,
+                        Status = Core.States.WorkflowExecutionStatus.Running,
+                        StartTime = DateTime.UtcNow,
+                        InputData = startUnitEvent.InputData,
+                        OutputData = ""
+                    });
+                }
+                else
+                {
+                    if (record.Status != Core.States.WorkflowExecutionStatus.Completed)
+                    {
+                        record.Status = Core.States.WorkflowExecutionStatus.Running;
+                        record.StartTime = DateTime.UtcNow;
+                        record.InputData = startUnitEvent.InputData;
+                    }
+                }
+                break;
+
+            case FinishExecuteWorkUnitLogEvent finishUnitEvent:
+                var finishedRecord = state.WorkUnitRecords.FirstOrDefault(r => r.WorkUnitGrainId == finishUnitEvent.WorkUnitGrainId);
+                if (finishedRecord != null)
+                {
+                    finishedRecord.Status = Core.States.WorkflowExecutionStatus.Completed;
+                    finishedRecord.EndTime = DateTime.UtcNow;
+                    finishedRecord.OutputData = finishUnitEvent.OutputData;
+                }
                 break;
         }
     }
 }
 
+/// <summary>
+/// Base log event for WorkflowExecutionRecordGAgent (DEPRECATED)
+/// </summary>
+[Obsolete("This log event is deprecated. Use WorkflowRunRecordLogEvent instead.", false)]
 [GenerateSerializer]
 public class WorkflowExecutionRecordLogEvent : StateLogEventBase<WorkflowExecutionRecordLogEvent>
 {
-    
 }
 
+/// <summary>
+/// DEPRECATED: Use WorkflowRunRecordLogEvent equivalents instead
+/// </summary>
+[Obsolete("Use WorkflowRunRecordLogEvent equivalents instead.", false)]
 [GenerateSerializer]
 public class StartExecuteWorkflowLogEvent : WorkflowExecutionRecordLogEvent
 {
     [Id(0)] public Guid WorkflowId { get; set; }
     [Id(1)] public long RoundId { get; set; }
     [Id(2)] public List<WorkUnitInfo> WorkUnitInfos { get; set; } = new();
-    [Id(3)] public string? Content { get; set; } = null;
+    [Id(3)] public string? Content { get; set; }
 }
 
-[GenerateSerializer]
-public class FinishExecuteWorkflowLogEvent : WorkflowExecutionRecordLogEvent
-{
-
-}
-
+/// <summary>
+/// DEPRECATED: Use WorkflowRunRecordLogEvent equivalents instead
+/// </summary>
+[Obsolete("Use WorkflowRunRecordLogEvent equivalents instead.", false)]
 [GenerateSerializer]
 public class StartExecuteWorkUnitLogEvent : WorkflowExecutionRecordLogEvent
 {
-    [Id(0)]
-    public string WorkUnitGrainId { get; set; }
-    [Id(1)]
-    public string InputData { get; set; }
+    [Id(0)] public string WorkUnitGrainId { get; set; } = string.Empty;
+    [Id(1)] public string InputData { get; set; } = string.Empty;
 }
 
+/// <summary>
+/// DEPRECATED: Use WorkflowRunRecordLogEvent equivalents instead
+/// </summary>
+[Obsolete("Use WorkflowRunRecordLogEvent equivalents instead.", false)]
 [GenerateSerializer]
 public class FinishExecuteWorkUnitLogEvent : WorkflowExecutionRecordLogEvent
 {
-    [Id(0)]
-    public string WorkUnitGrainId { get; set; }
-    [Id(1)]
-    public string OutputData { get; set; }
+    [Id(0)] public string WorkUnitGrainId { get; set; } = string.Empty;
+    [Id(1)] public string OutputData { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// DEPRECATED: Use WorkflowRunRecordLogEvent equivalents instead
+/// </summary>
+[Obsolete("Use WorkflowRunRecordLogEvent equivalents instead.", false)]
+[GenerateSerializer]
+public class FinishExecuteWorkflowLogEvent : WorkflowExecutionRecordLogEvent
+{
 }

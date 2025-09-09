@@ -17,6 +17,7 @@ namespace Aevatar.GAgents.GroupChat.WorkflowCoordinator;
 public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, WorkflowCoordinatorLogEvent, EventBase,
     WorkflowCoordinatorConfigDto>, IWorkflowCoordinatorGAgent
 {
+    private IGAgentFactory GAgentFactory => ServiceProvider.GetRequiredService<IGAgentFactory>();
     public override Task<string> GetDescriptionAsync()
     {
         var status = State.WorkflowStatus.ToString();
@@ -510,7 +511,7 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
         }
 
         var id = Guid.NewGuid();
-        var executionRecordAgent = GrainFactory.GetGrain<IWorkflowExecutionRecordGAgent>(id);
+        var executionRecordAgent = await GAgentFactory.GetGAgentAsync<IWorkflowRunRecordGAgent>(id);
         await RegisterAsync(executionRecordAgent);
 
         await PublishAsync(new StartExecuteWorkflowEvent
@@ -531,7 +532,7 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
             return;
         }
         
-        var executionRecordAgent = GrainFactory.GetGrain<IWorkflowExecutionRecordGAgent>(State.CurrentExecutionRecordId);
+        var executionRecordAgent = await GAgentFactory.GetGAgentAsync<IWorkflowRunRecordGAgent>(State.CurrentExecutionRecordId);
         
         await PublishP2PAsync(executionRecordAgent.GetGrainId(), new GroupChatFinishEvent()
         {
