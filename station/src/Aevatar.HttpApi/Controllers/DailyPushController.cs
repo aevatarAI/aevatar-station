@@ -203,4 +203,38 @@ public class DailyPushController : AbpControllerBase
         }
     }
 
+    /// <summary>
+    /// Clear ALL V2 device data across all timezones and users (GLOBAL CLEANUP - ADMIN ONLY)
+    /// WARNING: This will permanently delete ALL V2 device registrations system-wide
+    /// Simply call this URL to clean everything - no parameters needed
+    /// </summary>
+    [HttpPost("admin/clear-all-v2-data")]
+    public async Task<IActionResult> ClearAllV2DeviceDataAsync()
+    {
+        try
+        {
+            _logger.LogWarning("🚨 GLOBAL V2 cleanup initiated - this will clear ALL V2 devices across ALL timezones and users");
+
+            var cleanupResult = await _dailyPushService.ClearAllV2DeviceDataAsync();
+
+            _logger.LogWarning("🧹 GLOBAL V2 cleanup completed: {TimezoneCount} timezones, {UserCount} users, {DeviceCount} devices cleared, {ProcessingTime}ms", 
+                cleanupResult.TimezonesProcessed, cleanupResult.UsersProcessed, cleanupResult.TotalDevicesCleared, cleanupResult.ProcessingTime.TotalMilliseconds);
+
+            // Follow GodGPT pattern: direct return with result data
+            return Ok(new
+            {
+                result = true,
+                globalCleanupResult = cleanupResult
+            });
+        }
+        catch (Exception ex)
+        {
+            var language = HttpContext.GetGodGPTLanguage();
+            var localizedMessage =
+                _localizationService.GetLocalizedException(GodGPTExceptionMessageKeys.InternalServerError, language);
+            _logger.LogError(ex, "❌ Failed to perform global V2 device data cleanup");
+            return StatusCode(500, new { error = localizedMessage });
+        }
+    }
+
 }

@@ -41,4 +41,11 @@ public interface IDailyPushService
     /// <returns>Number of devices cleared</returns>
     Task<int> ClearV2DeviceDataAsync(Guid userId);
     
+    /// <summary>
+    /// Clear ALL V2 device data across all timezones and users (GLOBAL CLEANUP)
+    /// WARNING: This will permanently delete all V2 device registrations system-wide
+    /// </summary>
+    /// <returns>Global cleanup result with statistics</returns>
+    Task<GlobalV2CleanupResult> ClearAllV2DeviceDataAsync();
+    
 }
