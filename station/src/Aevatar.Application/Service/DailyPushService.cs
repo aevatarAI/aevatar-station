@@ -178,6 +178,131 @@ public class DailyPushService : ApplicationService, IDailyPushService
         }
     }
     
+    public async Task<GlobalV2CleanupResult> ClearAllV2DeviceDataAsync()
+    {
+        var startTime = DateTime.UtcNow;
+        var result = new GlobalV2CleanupResult
+        {
+            CleanupTimestamp = startTime
+        };
+        
+        var overallStopwatch = System.Diagnostics.Stopwatch.StartNew();
+        
+        try
+        {
+            _logger.LogWarning("🧹 Starting GLOBAL V2 device data cleanup - this will clear ALL V2 devices across ALL timezones and users");
+            
+            // Step 1: Get all timezone mappings from DailyContentGAgent
+            var contentGAgent = _clusterClient.GetGrain<GodGPT.GAgents.DailyPush.IDailyContentGAgent>(
+                GodGPT.GAgents.DailyPush.DailyPushConstants.CONTENT_GAGENT_ID);
+            var allTimezones = await contentGAgent.GetAllTimezoneMappingsAsync();
+            
+            result.TimezonesProcessed = allTimezones.Count;
+            _logger.LogInformation("📋 Found {TimezoneCount} registered timezones for cleanup", allTimezones.Count);
+            
+            // Step 2: Process each timezone
+            foreach (var timezoneMapping in allTimezones)
+            {
+                var timezoneStopwatch = System.Diagnostics.Stopwatch.StartNew();
+                var timezoneGuid = timezoneMapping.Key;
+                var timezoneId = timezoneMapping.Value;
+                
+                var timezoneStats = new TimezoneCleanupStats
+                {
+                    TimezoneId = timezoneId
+                };
+                
+                try
+                {
+                    _logger.LogInformation("🔄 Processing timezone: {TimezoneId} (GUID: {TimezoneGuid})", timezoneId, timezoneGuid);
+                    
+                    // Get PushSubscriberIndexGAgent for this timezone
+                    var pushSubscriberIndex = _clusterClient.GetGrain<GodGPT.GAgents.DailyPush.IPushSubscriberIndexGAgent>(timezoneGuid);
+                    
+                    // Get all users in this timezone
+                    var allUsers = await pushSubscriberIndex.GetActiveUsersAsync();
+                    timezoneStats.UserCount = allUsers.Count;
+                    result.UsersProcessed += allUsers.Count;
+                    
+                    _logger.LogInformation("👥 Found {UserCount} users in timezone {TimezoneId}", allUsers.Count, timezoneId);
+                    
+                    // Step 3: Clear V2 devices for each user in this timezone
+                    var usersWithClearedDevices = 0;
+                    var totalDevicesCleared = 0;
+                    
+                    foreach (var userId in allUsers)
+                    {
+                        try
+                        {
+                            var chatManagerGAgent = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
+                            
+                            // Clear V2 devices for this user
+                            var userClearedCount = await chatManagerGAgent.ClearAllV2DevicesAsync();
+                            
+                            // Note: Due to version compatibility, userClearedCount is always 0
+                            // But the actual clearing operation happens successfully
+                            if (userClearedCount > 0)
+                            {
+                                usersWithClearedDevices++;
+                                totalDevicesCleared += userClearedCount;
+                            }
+                            
+                            _logger.LogDebug("🧹 Cleared V2 devices for user {UserId} in timezone {TimezoneId}", userId, timezoneId);
+                        }
+                        catch (Exception userEx)
+                        {
+                            var errorMessage = $"Failed to clear V2 devices for user {userId} in timezone {timezoneId}: {userEx.Message}";
+                            result.Errors.Add(errorMessage);
+                            _logger.LogError(userEx, "❌ Failed to clear V2 devices for user {UserId} in timezone {TimezoneId}", userId, timezoneId);
+                        }
+                    }
+                    
+                    timezoneStats.UsersWithClearedDevices = usersWithClearedDevices;
+                    timezoneStats.DevicesCleared = totalDevicesCleared;
+                    result.UsersWithClearedDevices += usersWithClearedDevices;
+                    result.TotalDevicesCleared += totalDevicesCleared;
+                    
+                    timezoneStopwatch.Stop();
+                    timezoneStats.ProcessingTime = timezoneStopwatch.Elapsed;
+                    
+                    _logger.LogInformation("✅ Completed timezone {TimezoneId}: {UserCount} users, {DevicesCleared} devices cleared, {UsersWithDevices} users affected in {ProcessingTime}ms", 
+                        timezoneId, timezoneStats.UserCount, timezoneStats.DevicesCleared, timezoneStats.UsersWithClearedDevices, timezoneStats.ProcessingTime.TotalMilliseconds);
+                }
+                catch (Exception timezoneEx)
+                {
+                    var errorMessage = $"Failed to process timezone {timezoneId}: {timezoneEx.Message}";
+                    result.Errors.Add(errorMessage);
+                    _logger.LogError(timezoneEx, "❌ Failed to process timezone {TimezoneId}", timezoneId);
+                    
+                    timezoneStopwatch.Stop();
+                    timezoneStats.ProcessingTime = timezoneStopwatch.Elapsed;
+                }
+                
+                result.TimezoneBreakdown[timezoneId] = timezoneStats;
+            }
+            
+            overallStopwatch.Stop();
+            result.ProcessingTime = overallStopwatch.Elapsed;
+            
+            _logger.LogWarning("🎉 GLOBAL V2 cleanup completed! " +
+                "Timezones: {TimezoneCount}, Users: {UserCount}, Devices cleared: {DeviceCount}, " +
+                "Users affected: {UsersAffected}, Processing time: {ProcessingTime}ms, Errors: {ErrorCount}",
+                result.TimezonesProcessed, result.UsersProcessed, result.TotalDevicesCleared,
+                result.UsersWithClearedDevices, result.ProcessingTime.TotalMilliseconds, result.Errors.Count);
+                
+            return result;
+        }
+        catch (Exception ex)
+        {
+            overallStopwatch.Stop();
+            result.ProcessingTime = overallStopwatch.Elapsed;
+            result.Errors.Add($"Global cleanup failed: {ex.Message}");
+            
+            _logger.LogError(ex, "❌ GLOBAL V2 cleanup failed after {ProcessingTime}ms", result.ProcessingTime.TotalMilliseconds);
+            throw;
+        }
+    }
+    
     /// <summary>
     /// Convert GodGPTChatLanguage enum to GodGPTLanguage enum
     /// </summary>
