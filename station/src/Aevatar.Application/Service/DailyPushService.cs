@@ -193,8 +193,7 @@ public class DailyPushService : ApplicationService, IDailyPushService
             _logger.LogWarning("🧹 Starting GLOBAL V2 device data cleanup - this will clear ALL V2 devices across ALL timezones and users");
             
             // Step 1: Get all timezone mappings from DailyContentGAgent
-            var contentGAgent = _clusterClient.GetGrain<GodGPT.GAgents.DailyPush.IDailyContentGAgent>(
-                GodGPT.GAgents.DailyPush.DailyPushConstants.CONTENT_GAGENT_ID);
+            var contentGAgent = _clusterClient.GetGrain<IDailyContentGAgent>(DailyPushConstants.CONTENT_GAGENT_ID);
             var allTimezones = await contentGAgent.GetAllTimezoneMappingsAsync();
             
             result.TimezonesProcessed = allTimezones.Count;
@@ -217,7 +216,7 @@ public class DailyPushService : ApplicationService, IDailyPushService
                     _logger.LogInformation("🔄 Processing timezone: {TimezoneId} (GUID: {TimezoneGuid})", timezoneId, timezoneGuid);
                     
                     // Get PushSubscriberIndexGAgent for this timezone
-                    var pushSubscriberIndex = _clusterClient.GetGrain<GodGPT.GAgents.DailyPush.IPushSubscriberIndexGAgent>(timezoneGuid);
+                    var pushSubscriberIndex = _clusterClient.GetGrain<IPushSubscriberIndexGAgent>(timezoneGuid);
                     
                     // Get all users in this timezone
                     var allUsers = await pushSubscriberIndex.GetActiveUsersAsync();
