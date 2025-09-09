@@ -1,10 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
+using Aevatar.AgentValidation;
 using Aevatar.Application.Grains.Agents.Creator;
-using Aevatar.Subscription;
+using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView.Dto;
+using Aevatar.Schema;
+using Aevatar.Subscription;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Orleans;
@@ -22,24 +27,27 @@ public interface IWorkflowRunService
 public class WorkflowRunService : ApplicationService, IWorkflowRunService
 {
     private readonly IClusterClient _clusterClient;
-    private readonly IAgentValidationService _agentValidationService;
     private readonly IWorkflowViewService _workflowViewService;
     private readonly ISubscriptionAppService _subscriptionAppService;
     private readonly IAgentService _agentService;
+    private readonly IGAgentManager _gAgentManager;
+    private readonly ISchemaProvider _schemaProvider;
     private readonly ILogger<WorkflowRunService> _logger;
 
     public WorkflowRunService(
-        IAgentValidationService agentValidationService,
         IWorkflowViewService workflowViewService,
         ISubscriptionAppService subscriptionAppService,
         IAgentService agentService,
+        IGAgentManager gAgentManager,
+        ISchemaProvider schemaProvider,
         ILogger<WorkflowRunService> logger,
         IClusterClient clusterClient)
     {
-        _agentValidationService = agentValidationService;
         _workflowViewService = workflowViewService;
         _subscriptionAppService = subscriptionAppService;
         _agentService = agentService;
+        _gAgentManager = gAgentManager;
+        _schemaProvider = schemaProvider;
         _logger = logger;
         _clusterClient = clusterClient;
     }
@@ -105,7 +113,10 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             throw new UserFriendlyException("Workflow contains no nodes");
         }
         
-        await Task.WhenAll(viewConfigDto.WorkflowNodeList.Select(ValidateWorkflowNodePropertiesAsync));
+        var validationTasks = viewConfigDto.WorkflowNodeList
+            .Select(workflowNode => ValidateWorkflowNodePropertiesAsync(workflowNode));
+        
+        await Task.WhenAll(validationTasks);
 
         _logger.LogInformation(
             "Workflow configuration validation passed for ViewAgentId: {ViewAgentId} with {NodeCount} nodes",
@@ -130,11 +141,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         }
 
         // 获取AgentType的propertyJsonSchema并验证节点属性
-        var validationResult = await _agentValidationService.ValidateConfigAsync(new()
-        {
-            GAgentNamespace = workflowNode.AgentType,
-            ConfigJson = workflowNode.JsonProperties
-        });
+        var validationResult = await ValidateAgentConfigAsync(workflowNode.AgentType, workflowNode.JsonProperties);
 
         if (!validationResult.IsValid)
         {
@@ -265,4 +272,110 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         _logger.LogError("Failed to find StartWorkflowCoordinatorEvent after {MaxRetries} attempts for agent: {AgentId}", maxRetries, coordinatorAgentId);
         return false;
     }
+
+    #region Agent Validation Methods - Migrated from AgentValidationService
+
+    /// <summary>
+    /// 验证Agent配置 - 从AgentValidationService迁移
+    /// </summary>
+    private async Task<ConfigValidationResultDto> ValidateAgentConfigAsync(string gAgentNamespace, string configJson)
+    {
+        _logger.LogInformation("[AgentValidation] Validating {GAgentNamespace}", gAgentNamespace);
+
+        var configType = FindConfigTypeByAgentNamespace(gAgentNamespace);
+        if (configType == null)
+        {
+            _logger.LogWarning("[AgentValidation] Unknown GAgent type: {GAgentNamespace}", gAgentNamespace);
+            return ConfigValidationResultDto.Failure();
+        }
+
+        var result = await ValidateConfigByTypeAsync(configType, configJson);
+        _logger.LogInformation("[AgentValidation] Validation completed: {GAgentNamespace}, IsValid: {IsValid}", gAgentNamespace, result.IsValid);
+        return result;
+    }
+
+    private Type? FindConfigTypeByAgentNamespace(string agentNamespace)
+    {
+        var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
+        var agentType = availableGAgents.FirstOrDefault(a => a.FullName == agentNamespace);
+        if (agentType == null)
+        {
+            _logger.LogWarning("[AgentValidation] Agent type not found: {AgentNamespace}", agentNamespace);
+            return null;
+        }
+
+        return FindConfigTypeInAgentAssembly(agentType);
+    }
+
+    private Type? FindConfigTypeInAgentAssembly(Type agentType)
+    {
+        var configType = GetConfigurationTypeFromGAgent(agentType);
+        if (configType != null) return configType;
+        var configTypes = agentType.Assembly.GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && IsConfigurationBase(type)).ToList();
+        return configTypes.FirstOrDefault();
+    }
+
+    private Type? GetConfigurationTypeFromGAgent(Type agentType)
+    {
+        var currentType = agentType;
+        while (currentType != null)
+        {
+            if (currentType.IsGenericType && currentType.GetGenericTypeDefinition().Name.StartsWith("GAgentBase") &&
+                currentType.GenericTypeArguments.Length >= 4)
+            {
+                var configurationType = currentType.GenericTypeArguments[3];
+                if (IsConfigurationBase(configurationType)) return configurationType;
+            }
+
+            currentType = currentType.BaseType;
+        }
+
+        return null;
+    }
+
+    private bool IsConfigurationBase(Type type)
+    {
+        if (type == null) return false;
+        var currentType = type.BaseType;
+        while (currentType != null)
+        {
+            if (currentType.Name == "ConfigurationBase") return true;
+            currentType = currentType.BaseType;
+        }
+
+        return false;
+    }
+
+    private async Task<ConfigValidationResultDto> ValidateConfigByTypeAsync(Type configType, string configJson)
+    {
+        try
+        {
+            var schema = _schemaProvider.GetTypeSchema(configType);
+            var validationErrors = schema.Validate(configJson);
+            if (validationErrors.Any())
+            {
+                _logger.LogInformation("[AgentValidation] Schema validation failed for {ConfigType}", configType.Name);
+                return ConfigValidationResultDto.Failure();
+            }
+
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var config = System.Text.Json.JsonSerializer.Deserialize(configJson, configType, options);
+
+            if (config == null) return ConfigValidationResultDto.Failure();
+
+            var validationContext = new ValidationContext(config);
+            if (config is not IValidatableObject validatableConfig)
+                return ConfigValidationResultDto.Success("Configuration validation passed");
+            var customResults = validatableConfig.Validate(validationContext).ToList();
+            return !customResults.Any() ? ConfigValidationResultDto.Success("Configuration validation passed") : ConfigValidationResultDto.Failure();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[AgentValidation] Unexpected error during config validation for {ConfigType}", configType.Name);
+            return ConfigValidationResultDto.Failure();
+        }
+    }
+
+    #endregion
 }
