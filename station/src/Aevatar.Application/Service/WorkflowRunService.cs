@@ -34,7 +34,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
     private readonly IWorkflowViewService _workflowViewService;
     private readonly ISubscriptionAppService _subscriptionAppService;
     private readonly IAgentService _agentService;
-    private readonly IGAgentManager _gAgentManager;
+    // private readonly IGAgentManager _gAgentManager;
     private readonly IGAgentFactory _gAgentFactory;
     private readonly ISchemaProvider _schemaProvider;
     private readonly ILogger<WorkflowRunService> _logger;
@@ -43,7 +43,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         IWorkflowViewService workflowViewService,
         ISubscriptionAppService subscriptionAppService,
         IAgentService agentService,
-        IGAgentManager gAgentManager,
+        // IGAgentManager gAgentManager,
         IGAgentFactory gAgentFactory,
         ISchemaProvider schemaProvider,
         ILogger<WorkflowRunService> logger,
@@ -52,7 +52,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         _workflowViewService = workflowViewService;
         _subscriptionAppService = subscriptionAppService;
         _agentService = agentService;
-        _gAgentManager = gAgentManager;
+        // _gAgentManager = gAgentManager;
         _gAgentFactory = gAgentFactory;
         _schemaProvider = schemaProvider;
         _logger = logger;
@@ -64,7 +64,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         _logger.LogInformation("Starting workflow run for ViewAgentId: {ViewAgentId}", request.ViewAgentId);
 
         // Step 1: Validate workflow configuration
-        await ValidateWorkflowConfigurationAsync(request.ViewAgentId);
+        // await ValidateWorkflowConfigurationAsync(request.ViewAgentId);
 
         // Step 2: Publish workflow
         var workflowCoordinatorAgentId = await PublishWorkflowAsync(request.ViewAgentId);
@@ -100,7 +100,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
     {
         _logger.LogInformation("Starting workflow configuration validation for ViewAgentId: {ViewAgentId}",
             viewAgentId);
-
+        
         var agentDto = await _agentService.GetAgentAsync(viewAgentId);
         var configJson = JsonConvert.SerializeObject(agentDto.Properties);
         WorkflowViewConfigDto? viewConfigDto;
@@ -120,8 +120,8 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             throw new UserFriendlyException("Workflow contains no nodes");
         }
         
-        // var validationTasks = viewConfigDto.WorkflowNodeList.Select(ValidateWorkflowNodePropertiesAsync);
-        // await Task.WhenAll(validationTasks);
+        var validationTasks = viewConfigDto.WorkflowNodeList.Select(ValidateWorkflowNodePropertiesAsync);
+        await Task.WhenAll(validationTasks);
 
         _logger.LogInformation(
             "Workflow configuration validation passed for ViewAgentId: {ViewAgentId} with {NodeCount} nodes",
@@ -332,11 +332,6 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             // 1. 创建配置实例（模拟AgentService.SetupConfigurationData）
             var actualDto = Activator.CreateInstance(configType.DtoType);
             var config = (ConfigurationBase)actualDto!;
-            // if (actualDto == null)
-            // {
-            //     _logger.LogError("[AgentValidation] Failed to create instance of {ConfigType}", configType.Name);
-            //     throw new UserFriendlyException($"Failed to create configuration instance for {configType.Name}");
-            // }
 
             // 2. Schema验证（使用与AgentService相同的设置）
             var schema = _schemaProvider.GetTypeSchema(config.GetType());

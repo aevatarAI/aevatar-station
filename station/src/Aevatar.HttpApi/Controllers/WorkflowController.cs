@@ -11,7 +11,7 @@ namespace Aevatar.Controllers
     /// </summary>
     [ApiController]
     [Route("api/workflow")]
-    [Authorize]
+    // [Authorize]
     public class WorkflowController : AbpControllerBase
     {
         private readonly IWorkflowOrchestrationService _workflowOrchestrationService;
@@ -57,7 +57,7 @@ namespace Aevatar.Controllers
         /// <param name="request">工作流运行请求</param>
         /// <returns>工作流运行结果</returns>
         [HttpPost("run")]
-        public async Task<WorkflowRunResultDto> RunWorkflowAsync([FromBody] WorkflowRunRequestDto request)
+        public async Task<WorkflowRunResultDto> RunWorkflowAsync(WorkflowRunRequestDto request)
         {
             return await _workflowRunService.RunWorkflowAsync(request);
         }
