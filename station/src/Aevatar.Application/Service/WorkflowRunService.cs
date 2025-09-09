@@ -337,17 +337,17 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             }
 
             // 2. Schema验证（使用与AgentService相同的设置）
-            var schema = _schemaProvider.GetTypeSchema(configType);
-            var validateResponse = schema.Validate(configJson, new JsonSchemaValidatorSettings 
-            { 
-                PropertyStringComparer = StringComparer.CurrentCultureIgnoreCase 
-            });
-            
-            if (validateResponse.Count > 0)
-            {
-                _logger.LogWarning("[AgentValidation] Schema validation failed for {ConfigType}", configType.Name);
-                throw new UserFriendlyException($"Schema validation failed for {configType.Name}");
-            }
+            // var schema = _schemaProvider.GetTypeSchema(configType);
+            // var validateResponse = schema.Validate(configJson, new JsonSchemaValidatorSettings 
+            // { 
+            //     PropertyStringComparer = StringComparer.CurrentCultureIgnoreCase 
+            // });
+            //
+            // if (validateResponse.Count > 0)
+            // {
+            //     _logger.LogWarning("[AgentValidation] Schema validation failed for {ConfigType}", configType.Name);
+            //     throw new UserFriendlyException($"Schema validation failed for {configType.Name}");
+            // }
 
             // 3. JSON反序列化验证（使用Newtonsoft.Json，与AgentService保持一致）
             var config = JsonConvert.DeserializeObject(configJson, configType);
