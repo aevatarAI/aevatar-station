@@ -358,17 +358,17 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             }
 
             // 4. 自定义验证（IValidatableObject）
-            if (config is IValidatableObject validatableConfig)
-            {
-                var validationContext = new ValidationContext(config);
-                var customResults = validatableConfig.Validate(validationContext).ToList();
-                if (customResults.Any())
-                {
-                    var errors = string.Join("; ", customResults.Select(r => r.ErrorMessage));
-                    _logger.LogWarning("[AgentValidation] Custom validation failed for {ConfigType}: {Errors}", configType.Name, errors);
-                    throw new UserFriendlyException($"Custom validation failed for {configType.Name}: {errors}");
-                }
-            }
+            // if (config is IValidatableObject validatableConfig)
+            // {
+            //     var validationContext = new ValidationContext(config);
+            //     var customResults = validatableConfig.Validate(validationContext).ToList();
+            //     if (customResults.Any())
+            //     {
+            //         var errors = string.Join("; ", customResults.Select(r => r.ErrorMessage));
+            //         _logger.LogWarning("[AgentValidation] Custom validation failed for {ConfigType}: {Errors}", configType.Name, errors);
+            //         throw new UserFriendlyException($"Custom validation failed for {configType.Name}: {errors}");
+            //     }
+            // }
 
             _logger.LogDebug("[AgentValidation] All validations passed for {ConfigType}", configType.Name);
         }
