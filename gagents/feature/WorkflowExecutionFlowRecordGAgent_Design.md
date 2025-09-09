@@ -35,7 +35,7 @@
 
 ### 优化的 State 结构
 
-基于原有的 `WorkflowRunRecordState`，适度增加字段：
+基于原有的 `WorkflowRunRecordState`，采用"点+数据来源"设计：
 
 ```csharp
 [GenerateSerializer]
@@ -48,32 +48,40 @@ public class WorkflowRunRecordState : StateBase  // 保持原有命名
     [Id(3)] public DateTime? EndTime { get; set; }
     [Id(4)] public WorkflowRunStatus Status { get; set; }
     [Id(5)] public string? InitContent { get; set; }
-    [Id(6)] public List<WorkUnitInfo> WorkUnitInfos { get; set; } = new();
-    [Id(7)] public List<WorkUnitExecutionRecord> WorkUnitRecords { get; set; } = new();
+    
+    // 核心：纯"点"记录，专注于单个Agent节点的执行过程
+    [Id(6)] public List<WorkUnitExecutionRecord> ExecutionRecords { get; set; } = new();
     
     // 新增：事件流转记录
-    [Id(8)] public List<EventFlowRecord> EventFlows { get; set; } = new();
+    [Id(7)] public List<EventFlowRecord> EventFlows { get; set; } = new();
 }
 
 [GenerateSerializer]
-public class WorkUnitExecutionRecord  // 保持原有命名
+public class WorkUnitExecutionRecord  // 专注于记录单个Agent节点
 {
-    // 原有字段保持不变
-    [Id(0)] public string WorkUnitGrainId { get; set; }
-    [Id(1)] public long Term { get; set; }
-    [Id(2)] public DateTime StartTime { get; set; }
-    [Id(3)] public DateTime? EndTime { get; set; }
-    [Id(4)] public ExecutionStatus Status { get; set; }
-    [Id(5)] public string InputData { get; set; }
-    [Id(6)] public string OutputData { get; set; }
+    // 节点标识
+    [Id(0)] public string AgentGrainId { get; set; }
+    [Id(1)] public string AgentType { get; set; }
     
-    // 新增：结构化参数记录
-    [Id(7)] public Dictionary<string, object> InputParameters { get; set; } = new();
-    [Id(8)] public Dictionary<string, object> OutputParameters { get; set; } = new();
+    // 数据来源（记录数据血缘关系）
+    [Id(2)] public List<string> BeforeAgentIds { get; set; } = new();
     
-    // 新增：Agent状态快照（简化版）
-    [Id(9)] public string PreExecutionStateJson { get; set; } = string.Empty;
-    [Id(10)] public string PostExecutionStateJson { get; set; } = string.Empty;
+    // 执行时间
+    [Id(3)] public DateTime? StartTime { get; set; }
+    [Id(4)] public DateTime? EndTime { get; set; }
+    [Id(5)] public WorkflowExecutionStatus Status { get; set; }
+    
+    // 节点数据（JSON字符串格式，避免重复）
+    [Id(6)] public string InputDataJson { get; set; } = string.Empty;
+    [Id(7)] public string OutputDataJson { get; set; } = string.Empty;
+    
+    // 状态快照
+    [Id(8)] public string PreExecutionStateJson { get; set; } = string.Empty;
+    [Id(9)] public string PostExecutionStateJson { get; set; } = string.Empty;
+    
+    // 执行统计
+    [Id(10)] public int RetryCount { get; set; } = 0;
+    [Id(11)] public List<string> ErrorMessages { get; set; } = new();
 }
 
 // 新增：事件流转记录（简化版）
@@ -185,30 +193,102 @@ public async Task HandleEventAsync(ChatResponseEvent @event)
 }
 ```
 
-## 工具方法
+## WorkUnitExecutionRecord 便利方法
 
-需要实现的辅助方法：
+为了方便使用JSON数据，提供便利方法：
 
 ```csharp
-// 提取结构化参数
-private Dictionary<string, object> ExtractParameters(List<ChatMessage>? messages)
+public partial class WorkUnitExecutionRecord
 {
-    if (messages == null) return new Dictionary<string, object>();
-    
-    var parameters = new Dictionary<string, object>();
-    foreach (var message in messages)
+    /// <summary>
+    /// 获取结构化输入参数（按需解析）
+    /// </summary>
+    public Dictionary<string, object>? GetInputParameters()
     {
-        parameters[$"Message_{message.MessageType}"] = message.Content ?? string.Empty;
+        if (string.IsNullOrEmpty(InputDataJson)) return null;
+        
+        try
+        {
+            return JsonConvert.DeserializeObject<Dictionary<string, object>>(InputDataJson);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
-    return parameters;
+    
+    /// <summary>
+    /// 获取结构化输出参数（按需解析）
+    /// </summary>
+    public Dictionary<string, object>? GetOutputParameters()
+    {
+        if (string.IsNullOrEmpty(OutputDataJson)) return null;
+        
+        try
+        {
+            return JsonConvert.DeserializeObject<Dictionary<string, object>>(OutputDataJson);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+    
+    /// <summary>
+    /// 获取执行前Agent状态（按需解析）
+    /// </summary>
+    public T? GetPreExecutionState<T>() where T : class
+    {
+        if (string.IsNullOrEmpty(PreExecutionStateJson)) return null;
+        
+        try
+        {
+            return JsonConvert.DeserializeObject<T>(PreExecutionStateJson);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+    
+    /// <summary>
+    /// 获取执行后Agent状态（按需解析）
+    /// </summary>
+    public T? GetPostExecutionState<T>() where T : class
+    {
+        if (string.IsNullOrEmpty(PostExecutionStateJson)) return null;
+        
+        try
+        {
+            return JsonConvert.DeserializeObject<T>(PostExecutionStateJson);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+    
+    /// <summary>
+    /// 获取执行持续时间
+    /// </summary>
+    public TimeSpan? GetDuration()
+    {
+        if (!StartTime.HasValue || !EndTime.HasValue) return null;
+        return EndTime.Value - StartTime.Value;
+    }
 }
+```
 
+## 辅助工具方法
+
+GAgent中需要实现的辅助方法：
+
+```csharp
 // 捕获Agent状态快照  
 private async Task<string> CaptureAgentStateAsync(GrainId agentGrainId)
 {
     try
     {
-        // 通过反射获取Agent的状态
         var agent = GrainFactory.GetGrain<IGAgent>(agentGrainId);
         var state = await agent.GetStateAsync();
         return JsonConvert.SerializeObject(state, JsonSettings);
@@ -219,6 +299,14 @@ private async Task<string> CaptureAgentStateAsync(GrainId agentGrainId)
             agentGrainId, ex.Message);
         return $"{{\"error\": \"{ex.Message}\"}}";
     }
+}
+
+// 获取上游Agent列表
+private List<string> GetBeforeAgentIds(GrainId currentAgentId)
+{
+    // 从WorkflowCoordinator状态中获取上游节点
+    var upstreamGrains = State.GetUpStreamGrainIds(currentAgentId.ToString());
+    return upstreamGrains.ToList();
 }
 ```
 
@@ -234,8 +322,8 @@ public class WorkflowCoordinatorConfigDto
     // 新增字段
     public bool EnableRunRecord { get; set; } = true;
     public bool CaptureEventFlows { get; set; } = true;      // 是否记录事件流转
-    public bool CaptureAgentStates { get; set; } = false;    // 是否捕获Agent状态 
-    public bool CaptureStructuredParams { get; set; } = true; // 是否记录结构化参数
+    public bool CaptureAgentStates { get; set; } = false;    // 是否捕获Agent状态快照
+    public bool CaptureErrorDetails { get; set; } = true;    // 是否记录错误详情
 }
 ```
 
@@ -243,20 +331,37 @@ public class WorkflowCoordinatorConfigDto
 
 基于原有 `WorkflowRunRecordGAgent` 设计的优化方案：
 
+### ✅ 核心设计理念
+- **"点"记录模式** - 专注于记录单个Agent节点的执行过程，不关心连接关系
+- **数据血缘追踪** - 通过 BeforeAgentIds 记录数据来源，便于调试追溯
+- **JSON字符串存储** - 避免数据重复，按需解析，存储高效
+
 ### ✅ 保持不变的优点
 - **非侵入性架构** - 通过事件监听，不修改现有逻辑
-- **简洁的数据结构** - 在原有基础上适度扩展
+- **简洁的数据结构** - 避免复杂的嵌套对象
 - **配置化控制** - 通过 EnableRunRecord 等配置控制功能
 
 ### ✅ 新增的功能  
-1. **Event流转追踪** - EventFlowRecord 记录事件的来源和目标
-2. **结构化参数** - InputParameters/OutputParameters 字典记录
-3. **Agent状态快照** - PreExecutionStateJson/PostExecutionStateJson 简单记录
+1. **数据来源追踪** - BeforeAgentIds 记录Agent的数据来源
+2. **JSON数据存储** - InputDataJson/OutputDataJson 统一存储
+3. **Agent状态快照** - 执行前后的完整状态记录
+4. **便利解析方法** - 提供按需解析的便利方法
+5. **执行统计信息** - RetryCount、ErrorMessages等
 
-### ✅ 实现策略
-1. 保持原有的 WorkflowRunRecordGAgent 命名和架构
-2. 在现有 State 结构基础上增加必要字段
-3. 优化现有事件处理器，增加新功能
-4. 通过配置控制新功能的启用/禁用
+### ✅ 实现优势
+1. **存储效率** - 避免String和Dictionary的重复存储
+2. **调试友好** - JSON格式易于查看和分析
+3. **灵活性强** - 可以存储任何结构的数据
+4. **性能优化** - 按需解析，不是每次都解析
+5. **类型安全** - 提供泛型解析方法
 
-这个优化方案既满足了您的新需求，又保持了原有设计的简洁性和可维护性。
+### ✅ 使用场景示例
+```csharp
+// 调试场景：追踪数据流向
+var record = records.First(r => r.AgentGrainId == "AgentC");
+var sources = record.BeforeAgentIds; // 数据来源
+var inputParams = record.GetInputParameters(); // 按需解析输入
+var duration = record.GetDuration(); // 执行时长
+```
+
+这个优化方案既满足了记录event流转方向、出入参数和agent state的需求，又保持了原有设计的简洁性和高效性。
