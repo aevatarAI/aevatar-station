@@ -64,7 +64,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         _logger.LogInformation("Starting workflow run for ViewAgentId: {ViewAgentId}", request.ViewAgentId);
 
         // Step 1: Validate workflow configuration
-        // await ValidateWorkflowConfigurationAsync(request.ViewAgentId);
+        await ValidateWorkflowConfigurationAsync(request.ViewAgentId);
 
         // Step 2: Publish workflow
         var workflowCoordinatorAgentId = await PublishWorkflowAsync(request.ViewAgentId);
