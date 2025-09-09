@@ -120,9 +120,8 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             throw new UserFriendlyException("Workflow contains no nodes");
         }
         
-        var validationTasks = viewConfigDto.WorkflowNodeList.Select(ValidateWorkflowNodePropertiesAsync);
-        
-        await Task.WhenAll(validationTasks);
+        // var validationTasks = viewConfigDto.WorkflowNodeList.Select(ValidateWorkflowNodePropertiesAsync);
+        // await Task.WhenAll(validationTasks);
 
         _logger.LogInformation(
             "Workflow configuration validation passed for ViewAgentId: {ViewAgentId} with {NodeCount} nodes",
@@ -344,26 +343,18 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             var validateResponse = schema.Validate(configJson, new JsonSchemaValidatorSettings { PropertyStringComparer = StringComparer.CurrentCultureIgnoreCase });
             if (validateResponse.Count > 0) throw new UserFriendlyException($"Schema validation failed for {configType.DtoType}");
 
-            // 3. JSON反序列化验证（使用Newtonsoft.Json，与AgentService保持一致）
-            // var config = JsonConvert.DeserializeObject(configJson, configType);
-            // if (config == null)
-            // {
-            //     _logger.LogError("[AgentValidation] Failed to deserialize JSON to {ConfigType}", configType.Name);
-            //     throw new UserFriendlyException($"JSON deserialization failed for {configType.Name}");
-            // }
-
-            // 4. 自定义验证（IValidatableObject）
-            // if (config is IValidatableObject validatableConfig)
-            // {
-            //     var validationContext = new ValidationContext(config);
-            //     var customResults = validatableConfig.Validate(validationContext).ToList();
-            //     if (customResults.Any())
-            //     {
-            //         var errors = string.Join("; ", customResults.Select(r => r.ErrorMessage));
-            //         _logger.LogWarning("[AgentValidation] Custom validation failed for {ConfigType}: {Errors}", configType.Name, errors);
-            //         throw new UserFriendlyException($"Custom validation failed for {configType.Name}: {errors}");
-            //     }
-            // }
+            // 3. 自定义验证（IValidatableObject）
+            if (config is IValidatableObject validatableConfig)
+            {
+                var validationContext = new ValidationContext(config);
+                var customResults = validatableConfig.Validate(validationContext).ToList();
+                if (customResults.Any())
+                {
+                    var errors = string.Join("; ", customResults.Select(r => r.ErrorMessage));
+                    _logger.LogWarning("[AgentValidation] Custom validation failed for {ConfigType}: {Errors}", configType.DtoType, errors);
+                    throw new UserFriendlyException($"Custom validation failed for {configType.DtoType}: {errors}");
+                }
+            }
 
             // _logger.LogDebug("[AgentValidation] All validations passed for {ConfigType}", configType.Name);
         }
