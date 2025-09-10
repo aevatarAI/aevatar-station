@@ -4,7 +4,6 @@ using Aevatar.GAgents.GroupChat.Core;
 using Aevatar.GAgents.GroupChat.Core.States;
 using Aevatar.GAgents.GroupChat.WorkflowCoordinator.GEvent;
 using GroupChat.GAgent.Feature.Coordinator.GEvent;
-using Newtonsoft.Json;
 
 namespace Aevatar.GAgents.GroupChat.WorkflowCoordinator;
 
@@ -33,11 +32,21 @@ public class WorkflowExecutionRecordGAgent :
     [EventHandler]
     public async Task HandleEventAsync(StartExecuteWorkUnitEvent @event)
     {
+        // Extract upstream agent from the last message in CoordinatorMessages
+        string? sourceAgentId = null;
+        if (@event.CoordinatorMessages?.Count > 0)
+        {
+            var lastMessage = @event.CoordinatorMessages.Last();
+            sourceAgentId = lastMessage.MemberId.ToString();
+        }
+        
         RaiseEvent(new StartExecuteWorkUnitLogEvent
         {
             WorkUnitGrainId = @event.WorkUnitGrainId,
-            InputData = JsonConvert.SerializeObject(@event.CoordinatorMessages)
+            SourceAgentId = sourceAgentId,
+            InputData = System.Text.Json.JsonSerializer.Serialize(@event.CoordinatorMessages)
         });
+        
         await ConfirmEvents();
     }
 
@@ -47,7 +56,7 @@ public class WorkflowExecutionRecordGAgent :
         RaiseEvent(new FinishExecuteWorkUnitLogEvent
         {
             WorkUnitGrainId = @event.PublisherGrainId.ToString(),
-            OutputData = JsonConvert.SerializeObject(@event.ChatResponse?.Content)
+            OutputData = System.Text.Json.JsonSerializer.Serialize(@event.ChatResponse?.Content)
         });
         await ConfirmEvents();
     }
@@ -73,34 +82,54 @@ public class WorkflowExecutionRecordGAgent :
                 state.InitContent = startExecuteWorkflowLogEvent.Content;
                 state.StartTime = DateTime.UtcNow;
                 state.Status = WorkflowExecutionStatus.Running;
-                state.WorkUnitRecords = startExecuteWorkflowLogEvent.WorkUnitInfos.Select(o =>
-                    new WorkUnitExecutionRecord
-                    {
-                        WorkUnitGrainId = o.GrainId,
-                        Status = WorkflowExecutionStatus.Pending
-                    }).ToList();
+                // Do NOT create records here - they will be created dynamically based on message flow
                 break;
             case FinishExecuteWorkflowLogEvent finishExecuteWorkflowLogEvent:
                 state.EndTime = DateTime.UtcNow;
                 state.Status = WorkflowExecutionStatus.Completed;
                 break;
             case StartExecuteWorkUnitLogEvent startExecuteWorkUnitLogEvent:
-                var startUnit = state.WorkUnitRecords.First(o =>
-                    o.WorkUnitGrainId == startExecuteWorkUnitLogEvent.WorkUnitGrainId);
-                startUnit.WorkUnitGrainId = startExecuteWorkUnitLogEvent.WorkUnitGrainId;
-                startUnit.StartTime = DateTime.UtcNow;
-                if (startUnit.Status == WorkflowExecutionStatus.Pending)
+                // Create or find execution record for the message flow: source -> target
+                var recordKey = $"{startExecuteWorkUnitLogEvent.SourceAgentId ?? "START"}|{startExecuteWorkUnitLogEvent.WorkUnitGrainId}";
+                var existingRecord = state.WorkUnitRecords.FirstOrDefault(r => 
+                    r.SourceAgentId == startExecuteWorkUnitLogEvent.SourceAgentId && 
+                    r.WorkUnitGrainId == startExecuteWorkUnitLogEvent.WorkUnitGrainId);
+                
+                if (existingRecord == null)
                 {
-                    startUnit.Status = WorkflowExecutionStatus.Running;
+                    // Create new record for this message flow
+                    var newRecord = new WorkUnitExecutionRecord
+                    {
+                        WorkUnitGrainId = startExecuteWorkUnitLogEvent.WorkUnitGrainId,
+                        SourceAgentId = startExecuteWorkUnitLogEvent.SourceAgentId,
+                        StartTime = DateTime.UtcNow,
+                        Status = WorkflowExecutionStatus.Running,
+                        InputData = startExecuteWorkUnitLogEvent.InputData
+                    };
+                    state.WorkUnitRecords.Add(newRecord);
                 }
-                startUnit.InputData = startExecuteWorkUnitLogEvent.InputData;
+                else
+                {
+                    // Update existing record
+                    existingRecord.StartTime = DateTime.UtcNow;
+                    existingRecord.Status = WorkflowExecutionStatus.Running;
+                    existingRecord.InputData = startExecuteWorkUnitLogEvent.InputData;
+                }
                 break;
             case FinishExecuteWorkUnitLogEvent finishExecuteWorkUnitLogEvent:
-                var workUnit = state.WorkUnitRecords.First(o =>
-                    o.WorkUnitGrainId == finishExecuteWorkUnitLogEvent.WorkUnitGrainId);
-                workUnit.EndTime = DateTime.UtcNow;
-                workUnit.Status = WorkflowExecutionStatus.Completed;
-                workUnit.OutputData = finishExecuteWorkUnitLogEvent.OutputData;
+                // Finish ALL running records for this target agent
+                // An agent's response completes all input flows to that agent
+                var runningRecords = state.WorkUnitRecords
+                    .Where(r => r.WorkUnitGrainId == finishExecuteWorkUnitLogEvent.WorkUnitGrainId)
+                    .Where(r => r.Status == WorkflowExecutionStatus.Running)
+                    .ToList();
+                    
+                foreach (var record in runningRecords)
+                {
+                    record.EndTime = DateTime.UtcNow;
+                    record.Status = WorkflowExecutionStatus.Completed;
+                    record.OutputData = finishExecuteWorkUnitLogEvent.OutputData;
+                }
                 break;
         }
     }
@@ -134,6 +163,8 @@ public class StartExecuteWorkUnitLogEvent : WorkflowExecutionRecordLogEvent
     public string WorkUnitGrainId { get; set; }
     [Id(1)]
     public string InputData { get; set; }
+    [Id(2)]
+    public string? SourceAgentId { get; set; }
 }
 
 [GenerateSerializer]

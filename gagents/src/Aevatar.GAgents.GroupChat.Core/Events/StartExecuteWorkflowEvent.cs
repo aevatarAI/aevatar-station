@@ -19,4 +19,6 @@ public class StartExecuteWorkUnitEvent : EventBase
     public string WorkUnitGrainId { get; set; }
     [Id(1)]
     public List<ChatMessage>? CoordinatorMessages { get; set; } = null;
+    [Id(2)]
+    public List<string> UpstreamAgentIds { get; set; } = new();
 }

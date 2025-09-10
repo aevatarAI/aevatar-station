@@ -39,4 +39,6 @@ public class WorkUnitExecutionRecord
     public string InputData { get; set; }
     [Id(5)]
     public string OutputData { get; set; }
+    [Id(6)]
+    public string? SourceAgentId { get; set; }
 }
