@@ -43,7 +43,7 @@ public class SchemaConfigurationGAgentState : StateBase
 }
 
 /// <summary>
-/// Base event for Schema Configuration Agent - minimal events for configuration reading
+/// Minimal event class for SchemaConfigurationGAgent - required by GAgentBase but unused
 /// </summary>
 [GenerateSerializer]
 public abstract class SchemaConfigurationGEvent : StateLogEventBase<SchemaConfigurationGEvent>
@@ -51,22 +51,6 @@ public abstract class SchemaConfigurationGEvent : StateLogEventBase<SchemaConfig
     [Id(0)] public override Guid Id { get; set; } = Guid.NewGuid();
 }
 
-/// <summary>
-/// Event raised when schema context is retrieved - simplified for configuration reading
-/// </summary>
-[GenerateSerializer]
-public class SchemaContextRetrievedGEvent : SchemaConfigurationGEvent
-{
-    /// <summary>
-    /// Number of AI model configurations retrieved
-    /// </summary>
-    [Id(0)] public int ConfigurationCount { get; set; }
-    
-    /// <summary>
-    /// Source of the configuration (Silo, Default, etc.)
-    /// </summary>
-    [Id(1)] public string ConfigurationSource { get; set; } = "Silo";
-}
 
 /// <summary>
 /// Schema configuration grain that provides dynamic dropdown context from silo's SystemLLMConfigOptions
@@ -142,16 +126,6 @@ public class SchemaConfigurationGAgent : GAgentBase<SchemaConfigurationGAgentSta
             configurationSource = "Fallback";
         }
 
-        // Raise event to track schema context retrieval
-        var retrievalEvent = new SchemaContextRetrievedGEvent
-        {
-            Ctime = DateTime.UtcNow,
-            ConfigurationCount = aiModelConfigs.Count,
-            ConfigurationSource = configurationSource
-        };
-
-        RaiseEvent(retrievalEvent);
-        await ConfirmEvents();
 
         var context = new DynamicDropDownContext
         {
