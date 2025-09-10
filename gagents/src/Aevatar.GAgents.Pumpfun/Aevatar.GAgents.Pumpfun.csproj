@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\common.props" />
+  <PropertyGroup>
+    <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+    <Nullable>enable</Nullable>
+    <RootNamespace>AISmart</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Aevatar.GAgents.Basic\Aevatar.GAgents.Basic.csproj" />
+    <ProjectReference Include="..\Aevatar.GAgents.AI.Abstractions\Aevatar.GAgents.AI.Abstractions.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="AElf.Sdk.CSharp" />
+    <PackageReference Include="Microsoft.Orleans.EventSourcing" />
+    <PackageReference Include="Volo.Abp.AutoMapper" />
+    <PackageReference Include="Aevatar.Core" />
+  </ItemGroup>
+</Project>

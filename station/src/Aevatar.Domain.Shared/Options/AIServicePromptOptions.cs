@@ -55,8 +55,16 @@ Please strictly follow the following JSON format for workflow generation. This f
 
 - **nodeType**: The exact agent class name that will handle this node's execution
 - **extendedData.description**: Detailed explanation of what this node accomplishes in the workflow
+- **extendedData.xPosition**: X coordinate for horizontal layout (start from 100, increment by 200 for each node: 100, 300, 500, 700...)
+- **extendedData.yPosition**: Y coordinate with natural variation (base 100, add gentle waves: 80-120 range with slight variations)
 - **properties**: Configuration parameters specific to the agent type (see examples below)
 - **connectionType**: Defines execution flow - use ""Sequential"" for step-by-step execution
+
+### Node Layout Guidelines:
+- Arrange nodes horizontally from left to right (100, 300, 500, 700...)
+- Add natural Y-position variations for aesthetic appeal (80, 90, 110, 105...)
+- Maintain readable spacing between nodes (200px X intervals)
+- Create gentle vertical waves rather than straight lines for better visual flow
 
 ### Configuration Examples by Agent Type:
 
@@ -115,7 +123,9 @@ Please strictly follow the following JSON format for workflow generation. This f
         ""nodeName"": ""Collect User Data"",
         ""nodeType"": ""DataCollectorGAgent"",
         ""extendedData"": {
-          ""description"": ""Gathers input data from various sources for analysis""
+          ""description"": ""Gathers input data from various sources for analysis"",
+          ""xPosition"": ""100"",
+          ""yPosition"": ""85""
         },
         ""properties"": {
           ""dataSource"": ""user_input"",
@@ -128,7 +138,9 @@ Please strictly follow the following JSON format for workflow generation. This f
         ""nodeName"": ""Analyze Data Patterns"",
         ""nodeType"": ""DataAnalysisGAgent"",
         ""extendedData"": {
-          ""description"": ""Performs statistical analysis and pattern recognition on collected data""
+          ""description"": ""Performs statistical analysis and pattern recognition on collected data"",
+          ""xPosition"": ""300"",
+          ""yPosition"": ""110""
         },
         ""properties"": {
           ""analysisType"": ""pattern_recognition"",
@@ -141,7 +153,9 @@ Please strictly follow the following JSON format for workflow generation. This f
         ""nodeName"": ""Generate Analysis Report"",
         ""nodeType"": ""ReportGeneratorGAgent"",
         ""extendedData"": {
-          ""description"": ""Creates comprehensive report with findings and visualizations""
+          ""description"": ""Creates comprehensive report with findings and visualizations"",
+          ""xPosition"": ""500"",
+          ""yPosition"": ""95""
         },
         ""properties"": {
           ""reportFormat"": ""pdf_with_charts"",
@@ -178,7 +192,9 @@ Please strictly follow the following JSON format for workflow generation. This f
         ""nodeName"": ""Classify Customer Inquiry"",
         ""nodeType"": ""InquiryClassifierGAgent"",
         ""extendedData"": {
-          ""description"": ""Analyzes customer request and categorizes it for appropriate handling""
+          ""description"": ""Analyzes customer request and categorizes it for appropriate handling"",
+          ""xPosition"": ""100"",
+          ""yPosition"": ""105""
         },
         ""properties"": {
           ""classificationModel"": ""intent_detection_v2"",
@@ -191,7 +207,9 @@ Please strictly follow the following JSON format for workflow generation. This f
         ""nodeName"": ""Search Knowledge Base"",
         ""nodeType"": ""KnowledgeSearchGAgent"",
         ""extendedData"": {
-          ""description"": ""Searches internal knowledge base for relevant information""
+          ""description"": ""Searches internal knowledge base for relevant information"",
+          ""xPosition"": ""300"",
+          ""yPosition"": ""85""
         },
         ""properties"": {
           ""searchEngine"": ""semantic_search"",
@@ -205,7 +223,9 @@ Please strictly follow the following JSON format for workflow generation. This f
         ""nodeName"": ""Generate Customer Response"",
         ""nodeType"": ""ResponseGeneratorGAgent"",
         ""extendedData"": {
-          ""description"": ""Crafts personalized response based on inquiry type and knowledge base results""
+          ""description"": ""Crafts personalized response based on inquiry type and knowledge base results"",
+          ""xPosition"": ""500"",
+          ""yPosition"": ""115""
         },
         ""properties"": {
           ""responseStyle"": ""professional_friendly"",
@@ -220,6 +240,67 @@ Please strictly follow the following JSON format for workflow generation. This f
 ```
 
 The output must be a valid JSON object that can be parsed directly. Do not include any additional text or explanation outside the JSON structure.";
+
+    /// <summary>
+    /// Critical constraints template for workflow generation
+    /// </summary>
+    public string CriticalConstraintsTemplate { get; set; } = @"## CRITICAL CONSTRAINTS
+
+1. **Agent Scope Restriction**: Only use Agent types explicitly listed in the above Agent catalog for workflow construction. Do not use any Agent types not listed in the catalog.
+
+2. **Handling Unclear Requirements**: If the user goal description is unclear, cannot be understood, or cannot generate a valid workflow using available Agents, return empty workflowNodeList and workflowNodeUnitList:
+```json
+{
+  ""name"": ""Unable to Generate Workflow"",
+  ""properties"": {
+    ""name"": ""Unable to Generate Workflow"",
+    ""workflowNodeList"": [],
+    ""workflowNodeUnitList"": []
+  }
+}
+```
+
+3. **Strict Validation**: You MUST NOT use any Agent types that are not explicitly listed in the provided Agent catalog. Only select from the available agents shown above. Do not create or reference any agents outside of this list.
+
+4. **Insufficient Agent Capabilities**: If the available agents cannot fulfill the requirements to build the target workflow, return an empty workflow. This applies when the goal requires functionality that none of the available agents can provide.
+
+### Empty Workflow Return Examples:
+
+**Example 1: Unclear/Ambiguous Goal**
+```json
+{
+  ""name"": ""Unable to Generate Workflow - Unclear Goal"",
+  ""properties"": {
+    ""name"": ""Unable to Generate Workflow - Unclear Goal"",
+    ""workflowNodeList"": [],
+    ""workflowNodeUnitList"": []
+  }
+}
+```
+
+**Example 2: Insufficient Agent Capabilities**
+```json
+{
+  ""name"": ""Unable to Generate Workflow - Insufficient Capabilities"",
+  ""properties"": {
+    ""name"": ""Unable to Generate Workflow - Insufficient Capabilities"",
+    ""workflowNodeList"": [],
+    ""workflowNodeUnitList"": []
+  }
+}
+```
+
+**Example 3: Goal Cannot Be Achieved**
+```json
+{
+  ""name"": ""Unable to Generate Workflow - Goal Not Achievable"",
+  ""properties"": {
+    ""name"": ""Unable to Generate Workflow - Goal Not Achievable"",
+    ""workflowNodeList"": [],
+    ""workflowNodeUnitList"": []
+  }
+}
+```";
 
     /// <summary>
     /// 无可用Agent时的提示消息

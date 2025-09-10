@@ -12,6 +12,7 @@ using Volo.Abp;
 using Aevatar.Enum;
 using Aevatar.Kubernetes.Manager;
 using Volo.Abp.Application.Services;
+using Volo.Abp.DependencyInjection;
 
 namespace Aevatar.Service;
 
@@ -42,7 +43,7 @@ public interface IDeveloperService
         string siloNamePattern);
 }
 
-public class DeveloperService : ApplicationService, IDeveloperService
+public class DeveloperService : ApplicationService, IDeveloperService, ITransientDependency
 {
     private const string DefaultVersion = "1";
     private readonly IConfiguration _configuration;

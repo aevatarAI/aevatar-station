@@ -19,7 +19,9 @@ using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver.Core.Configuration;
 using Moq;
+using Volo.Abp.Auditing;
 using Volo.Abp.AutoMapper;
+using Volo.Abp.Data;
 using Volo.Abp.Emailing;
 using Volo.Abp.EventBus;
 using Volo.Abp.Identity;
@@ -43,6 +45,13 @@ public class AevatarApplicationTestModule : AbpModule
     {
         base.ConfigureServices(context);
         Configure<AbpAutoMapperOptions>(options => { options.AddMaps<AevatarApplicationModule>(); });
+        
+        // 禁用审计功能以避免IAuditLogRepository依赖问题
+        Configure<AbpAuditingOptions>(options =>
+        {
+            options.IsEnabled = false;
+        });
+        
         var configuration = context.Services.GetConfiguration();
         Configure<ChatConfigOptions>(configuration.GetSection("Chat"));
         context.Services.AddSingleton<ElasticsearchClient>(sp =>

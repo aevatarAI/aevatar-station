@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Aevatar.GAgents.AI.Abstractions\Aevatar.GAgents.AI.Abstractions.csproj" />
+      <ProjectReference Include="..\Aevatar.GAgents.AIGAgent.Core\Aevatar.GAgents.AIGAgent.Core.csproj" />
+    </ItemGroup>
+
+</Project>
