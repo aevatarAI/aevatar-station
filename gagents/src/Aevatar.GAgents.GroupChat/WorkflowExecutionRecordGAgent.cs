@@ -4,6 +4,8 @@ using Aevatar.GAgents.GroupChat.Core;
 using Aevatar.GAgents.GroupChat.Core.States;
 using Aevatar.GAgents.GroupChat.WorkflowCoordinator.GEvent;
 using GroupChat.GAgent.Feature.Coordinator.GEvent;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Aevatar.GAgents.GroupChat.WorkflowCoordinator;
 
@@ -14,6 +16,31 @@ public class WorkflowExecutionRecordGAgent :
     public override Task<string> GetDescriptionAsync()
     {
         return Task.FromResult("Workflow Execution Record GAgent");
+    }
+    
+    /// <summary>
+    /// Capture the current state snapshot of a target GAgent
+    /// </summary>
+    private Task<string?> CaptureAgentStateAsync(string targetAgentId)
+    {
+        try
+        {
+            // For now, we'll create a simple snapshot with basic info
+            // In the future, this could be enhanced to call specific GAgent methods
+            var snapshot = new
+            {
+                targetAgentId = targetAgentId,
+                timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                note = "Basic state snapshot - enhanced state capture can be implemented later"
+            };
+            
+            return Task.FromResult<string?>(System.Text.Json.JsonSerializer.Serialize(snapshot));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning("Failed to capture agent state for {TargetAgentId}: {Error}", targetAgentId, ex.Message);
+            return Task.FromResult<string?>(null);
+        }
     }
 
     [EventHandler]
@@ -43,11 +70,15 @@ public class WorkflowExecutionRecordGAgent :
         // Extract target agent info from GrainId
         var targetAgentId = @event.TargetAgentId;
         
+        // Capture current state snapshot of target agent
+        var stateSnapshot = await CaptureAgentStateAsync(targetAgentId);
+        
         RaiseEvent(new StartExecuteWorkUnitLogEvent
         {
             TargetAgentId = targetAgentId,
             SourceAgentId = sourceAgentId,
-            InputData = System.Text.Json.JsonSerializer.Serialize(@event.CoordinatorMessages)
+            InputData = System.Text.Json.JsonSerializer.Serialize(@event.CoordinatorMessages),
+            CurrentStateSnapshot = stateSnapshot
         });
         
         await ConfirmEvents();
@@ -57,6 +88,10 @@ public class WorkflowExecutionRecordGAgent :
     public async Task HandleEventAsync(ChatResponseEvent @event)
     {
         var targetAgentId = @event.PublisherGrainId.ToString();
+        
+        // Capture current state snapshot of target agent after completion
+        var stateSnapshot = await CaptureAgentStateAsync(targetAgentId);
+        
         // Find records that are Running or Pending (for incorrect sequence scenarios)
         var eligibleRecords = State.WorkUnitRecords
             .Where(r => r.TargetAgentId == targetAgentId)
@@ -71,7 +106,8 @@ public class WorkflowExecutionRecordGAgent :
                 {
                     TargetAgentId = targetAgentId,
                     SourceAgentId = record.SourceAgentId,
-                    OutputData = System.Text.Json.JsonSerializer.Serialize(@event.ChatResponse?.Content)
+                    OutputData = System.Text.Json.JsonSerializer.Serialize(@event.ChatResponse?.Content),
+                    CurrentStateSnapshot = stateSnapshot
                 });
             }
         }
@@ -83,14 +119,16 @@ public class WorkflowExecutionRecordGAgent :
             {
                 TargetAgentId = targetAgentId,
                 SourceAgentId = null, // Will be updated when StartExecuteWorkUnitEvent arrives
-                InputData = null
+                InputData = null,
+                CurrentStateSnapshot = stateSnapshot
             });
             
             RaiseEvent(new FinishExecuteWorkUnitLogEvent
             {
                 TargetAgentId = targetAgentId,
                 SourceAgentId = null,
-                OutputData = System.Text.Json.JsonSerializer.Serialize(@event.ChatResponse?.Content)
+                OutputData = System.Text.Json.JsonSerializer.Serialize(@event.ChatResponse?.Content),
+                CurrentStateSnapshot = stateSnapshot
             });
         }
         
@@ -230,6 +268,8 @@ public class StartExecuteWorkUnitLogEvent : WorkflowExecutionRecordLogEvent
     public string InputData { get; set; }
     [Id(2)]
     public string? SourceAgentId { get; set; }
+    [Id(3)]
+    public string? CurrentStateSnapshot { get; set; }
 }
 
 [GenerateSerializer]
@@ -241,4 +281,6 @@ public class FinishExecuteWorkUnitLogEvent : WorkflowExecutionRecordLogEvent
     public string OutputData { get; set; }
     [Id(2)]
     public string? SourceAgentId { get; set; }
+    [Id(3)]
+    public string? CurrentStateSnapshot { get; set; }
 }
