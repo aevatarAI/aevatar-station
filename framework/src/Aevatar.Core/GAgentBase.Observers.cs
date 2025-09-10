@@ -168,6 +168,16 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
         return eventWrapper.GrainId == this.GetGrainId() && !method.IsSelfHandlingAllowed();
     }
 
+    private static bool IsEventBaseType(Type type)
+    {
+        return typeof(EventBase).IsAssignableFrom(type);
+    }
+
+    private static bool IsEventWrapperBaseType(Type type)
+    {
+        return typeof(EventWrapperBase).IsAssignableFrom(type);
+    }
+
     private async Task HandleEventWrapper(
         MethodInfo method,
         Type parameterType,
@@ -176,16 +186,16 @@ public abstract partial class GAgentBase<TState, TStateLogEvent, TEvent, TConfig
     {
         switch (eventWrapper.Event)
         {
-            case { } ev when parameterType.BaseType == typeof(EventBase):
-                await HandleEvent(method, ev);
-                break;
-            
-            case not null when parameterType == typeof(EventWrapperBase):
+            case not null when IsEventWrapperBaseType(parameterType):
                 await HandleEventWrapperBase(method, eventWrapper);
                 break;
-
+            
             case { } ev when isResponseHandler:
                 await HandleEventWithResponse(method, ev, eventWrapper.EventId);
+                break;
+
+            case { } ev when IsEventBaseType(parameterType):
+                await HandleEvent(method, ev);
                 break;
 
             default:

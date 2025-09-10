@@ -11,10 +11,12 @@ using Aevatar.Handler;
 using Aevatar.Hubs;
 using Aevatar.SignalR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Rewrite;
 using Orleans.Hosting;
 using Serilog;
 using Serilog.Events;
 using Aevatar.Domain.Shared.Configuration;
+using Aevatar.Core.Interception.Extensions;
 
 namespace Aevatar;
 
@@ -40,7 +42,48 @@ public class Program
                 .AddSingleton<IAuthorizationMiddlewareResultHandler, AevatarAuthorizationMiddlewareResultHandler>();
             await builder.AddApplicationAsync<AevatarHttpApiHostModule>();
             var app = builder.Build();
+            
+            // URL rewriting must be added BEFORE app initialization to ensure it runs before routing
+            if (app.Environment.IsDevelopment())
+            {
+                var rewriteOptions = new RewriteOptions()
+                    .Add(context =>
+                    {
+                        var request = context.HttpContext.Request;
+                        var originalPath = request.Path.Value ?? "";
+                        
+                        Log.Information("=== URL REWRITE DEBUG === Original Path: {OriginalPath}", originalPath);
+                        
+                        // Pattern 1: /xxx-client/yyy -> /yyy
+                        if (System.Text.RegularExpressions.Regex.IsMatch(originalPath, @"^/[^/]+-client/(.*)$"))
+                        {
+                            var match = System.Text.RegularExpressions.Regex.Match(originalPath, @"^/[^/]+-client/(.*)$");
+                            var newPath = "/" + match.Groups[1].Value;
+                            request.Path = newPath;
+                            Log.Information("=== URL REWRITE === {OriginalPath} -> {NewPath}", originalPath, newPath);
+                            return;
+                        }
+                        
+                        // Pattern 2: /xxx-client -> /
+                        if (System.Text.RegularExpressions.Regex.IsMatch(originalPath, @"^/[^/]+-client$"))
+                        {
+                            request.Path = "/";
+                            Log.Information("=== URL REWRITE === {OriginalPath} -> /", originalPath);
+                            return;
+                        }
+                        
+                        Log.Information("=== URL REWRITE === No match for: {OriginalPath}", originalPath);
+                    });
+                app.UseRewriter(rewriteOptions);
+                
+                Log.Information("Custom URL rewriting enabled for development environment - filtering /*-client path segments");
+            }
+            
             await app.InitializeApplicationAsync();
+            
+            // Add trace context middleware to capture trace IDs from HTTP requests
+            app.UseTraceContext();
+            
             app.MapHub<AevatarSignalRHub>("api/agent/aevatarHub");
             app.MapHub<StationSignalRHub>("api/notifications").RequireAuthorization();
 

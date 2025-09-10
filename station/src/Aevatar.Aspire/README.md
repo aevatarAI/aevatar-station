@@ -59,6 +59,16 @@ dotnet build
 
 From the `src/Aevatar.Aspire` directory:
 
+First, set up local network aliases (required for macOS):
+
+```bash
+sudo ifconfig lo0 alias 127.0.0.2
+sudo ifconfig lo0 alias 127.0.0.3
+sudo ifconfig lo0 alias 127.0.0.4
+```
+
+Then run the application:
+
 ```bash
 dotnet run
 ```

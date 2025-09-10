@@ -24,6 +24,7 @@ using JsonConvert = Newtonsoft.Json.JsonConvert;
 using Newtonsoft.Json.Linq;
 using Aevatar.Application.Contracts.WorkflowOrchestration;
 using Aevatar.Options;
+using Volo.Abp;
 
 namespace Aevatar.Application.Service;
 
@@ -63,14 +64,39 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     /// </summary>
     private List<Type> GetBusinessAgentTypes()
     {
-        var systemAgents = _agentOptions.CurrentValue.SystemAgentList;
-        var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
-        var validAgents = availableGAgents.Where(a => !a.Namespace?.StartsWith("OrleansCodeGen") == true).ToList();
-        var businessAgentTypes = validAgents.Where(a => !systemAgents.Contains(a.Name)).ToList();
+        _logger.LogInformation("=== GetBusinessAgentTypes: Starting agent filtering process ===");
         
-        _logger.LogDebug("Filtered {TotalCount} available agents to {BusinessCount} business agents. Excluded system agents: {SystemAgents}", 
-            availableGAgents.Count(), businessAgentTypes.Count, string.Join(", ", systemAgents));
-            
+        var systemAgents = _agentOptions.CurrentValue.SystemAgentList;
+        _logger.LogInformation("System agents to exclude: [{SystemAgents}]", string.Join(", ", systemAgents));
+        
+        var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
+        _logger.LogInformation("Total available GAgent types: {Count}", availableGAgents.Count());
+        _logger.LogDebug("All available GAgent types: [{AllAgents}]", 
+            string.Join(", ", availableGAgents.Select(a => $"{a.Name}({a.Namespace})")));
+        
+        var validAgents = availableGAgents.Where(a => !a.Namespace?.StartsWith("OrleansCodeGen") == true).ToList();
+        _logger.LogInformation("After filtering OrleansCodeGen: {Count} agents", validAgents.Count);
+        
+        if (validAgents.Count != availableGAgents.Count())
+        {
+            var excludedCodeGen = availableGAgents.Where(a => a.Namespace?.StartsWith("OrleansCodeGen") == true);
+            _logger.LogDebug("Excluded OrleansCodeGen agents: [{ExcludedAgents}]", 
+                string.Join(", ", excludedCodeGen.Select(a => a.Name)));
+        }
+        
+        var businessAgentTypes = validAgents.Where(a => !systemAgents.Contains(a.Name)).ToList();
+        _logger.LogInformation("Final business agents after excluding system agents: {Count}", businessAgentTypes.Count);
+        _logger.LogInformation("Business agent types: [{BusinessAgents}]", 
+            string.Join(", ", businessAgentTypes.Select(a => a.Name)));
+        
+        if (validAgents.Count != businessAgentTypes.Count)
+        {
+            var excludedSystemAgents = validAgents.Where(a => systemAgents.Contains(a.Name));
+            _logger.LogDebug("Excluded system agents: [{ExcludedSystemAgents}]", 
+                string.Join(", ", excludedSystemAgents.Select(a => a.Name)));
+        }
+        
+        _logger.LogInformation("=== GetBusinessAgentTypes: Filtering complete ===");
         return businessAgentTypes;
     }
 
@@ -81,10 +107,11 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
     /// <returns>前端可渲染的工作流视图配置</returns>
     public async Task<AiWorkflowViewConfigDto?> GenerateWorkflowAsync(string userGoal)
     {
-        if (string.IsNullOrWhiteSpace(userGoal))
+        // Check if user goal is empty or too short - require minimum meaningful description length
+        if (string.IsNullOrWhiteSpace(userGoal) || userGoal.Trim().Length < 10)
         {
-            _logger.LogWarning("Empty user goal provided for workflow generation");
-            return null;
+            _logger.LogWarning("User goal empty or too short for workflow generation: {UserGoal}", userGoal ?? "null");
+            throw new UserFriendlyException("Your description is too simple, please provide more detailed generation requirements.");
         }
 
         var currentUserId = _userAppService.GetCurrentUserId();
@@ -280,7 +307,11 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             promptBuilder.AppendLine(_promptOptions.CurrentValue.OutputRequirementsTemplate);
             promptBuilder.AppendLine();
 
-            // 4. JSON格式规范
+            // 4. 重要约束条件
+            promptBuilder.AppendLine(_promptOptions.CurrentValue.CriticalConstraintsTemplate);
+            promptBuilder.AppendLine();
+
+            // 5. JSON格式规范
             promptBuilder.AppendLine(_promptOptions.CurrentValue.JsonFormatSpecificationTemplate);
 
             var baseInstructions = promptBuilder.ToString();
@@ -371,8 +402,22 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                              ?? (jsonObject["properties"] as JObject)?["workflowNodeUnitList"] as JArray
                              ?? new JArray();
 
+            // 创建originalId到GUID的映射
+            var nodeIdMapping = new Dictionary<string, string>();
+            var nodeIndex = 0;
+
+            // 解析节点并建立映射关系
             foreach (var token in nodesArray.OfType<JObject>())
             {
+                // 从JSON中获取原始的node ID
+                var originalNodeId = token.Value<string>("nodeId")
+                                   ?? $"node_{nodeIndex}"; // 为没有ID的节点创建fallback ID
+                
+                // 生成新的GUID并建立映射
+                var newNodeId = Guid.NewGuid().ToString();
+                nodeIdMapping[originalNodeId] = newNodeId;
+                _logger.LogDebug("Node ID mapping: {OriginalId} -> {NewGuid}", originalNodeId, newNodeId);
+                
                 // 从JSON中获取简单的agent类型名称
                 var simpleAgentType = token.Value<string>("nodeType")
                                     ?? token.Value<string>("agentType")
@@ -381,10 +426,10 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                 // 将简单类型名称映射为完整的GrainType名称
                 var fullAgentType = MapSimpleTypeNameToFullTypeName(simpleAgentType);
                 
+                // 直接使用GUID作为NodeId
                 var node = new AiWorkflowNodeDto
                 {
-                    NodeId = token.Value<string>("nodeId") ?? Guid.NewGuid().ToString(),
-                    // 使用映射后的完整类型名称
+                    NodeId = newNodeId, // 直接使用GUID
                     AgentType = fullAgentType,
                     // Support both nodeName and name as schema variants
                     Name = token.Value<string>("nodeName")
@@ -415,24 +460,51 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                 }
 
                 workflow.Properties.WorkflowNodeList.Add(node);
+                nodeIndex++;
             }
 
+            // 解析边并使用映射转换ID
             foreach (var token in edgesArray.OfType<JObject>())
             {
-                var unit = new AiWorkflowNodeUnitDto
-                {
-                    NodeId = token.Value<string>("fromNodeId") ?? string.Empty,
-                    NextNodeId = token.Value<string>("toNodeId") ?? string.Empty
-                };
+                var originalFromNodeId = token.Value<string>("fromNodeId") ?? string.Empty;
+                var originalToNodeId = token.Value<string>("toNodeId") ?? string.Empty;
 
-                if (!string.IsNullOrEmpty(unit.NodeId) && !string.IsNullOrEmpty(unit.NextNodeId))
+                // 使用映射转换为GUID
+                var mappedFromNodeId = nodeIdMapping.ContainsKey(originalFromNodeId) 
+                    ? nodeIdMapping[originalFromNodeId] 
+                    : string.Empty;
+                var mappedToNodeId = nodeIdMapping.ContainsKey(originalToNodeId) 
+                    ? nodeIdMapping[originalToNodeId] 
+                    : string.Empty;
+
+                if (!string.IsNullOrEmpty(mappedFromNodeId) && !string.IsNullOrEmpty(mappedToNodeId))
                 {
+                    var unit = new AiWorkflowNodeUnitDto
+                    {
+                        NodeId = mappedFromNodeId,     // 使用映射后的GUID
+                        NextNodeId = mappedToNodeId    // 使用映射后的GUID
+                    };
                     workflow.Properties.WorkflowNodeUnitList.Add(unit);
+                }
+                else
+                {
+                    _logger.LogWarning("Skipping edge with unmapped node IDs: fromNodeId={FromNodeId}, toNodeId={ToNodeId}", 
+                        originalFromNodeId, originalToNodeId);
                 }
             }
 
-            _logger.LogInformation("Parsed workflow: nodes={NodeCount}, connections={ConnCount}",
-                workflow.Properties.WorkflowNodeList.Count, workflow.Properties.WorkflowNodeUnitList.Count);
+            _logger.LogInformation("Parsed workflow: nodes={NodeCount}, connections={ConnCount}, nodeIdMappings={MappingCount}",
+                workflow.Properties.WorkflowNodeList.Count, workflow.Properties.WorkflowNodeUnitList.Count, nodeIdMapping.Count);
+
+            // Log all agent types generated by AI for debugging
+            var generatedAgentTypes = workflow.Properties.WorkflowNodeList
+                .Where(n => !string.IsNullOrEmpty(n.AgentType))
+                .Select(n => n.AgentType)
+                .Distinct()
+                .ToList();
+            _logger.LogInformation("AI generated agent types: [{GeneratedAgents}]", string.Join(", ", generatedAgentTypes));
+
+
 
             // Layout
             ApplyIntelligentLayout(workflow.Properties);
