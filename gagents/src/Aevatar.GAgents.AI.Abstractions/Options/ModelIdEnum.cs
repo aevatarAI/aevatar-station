@@ -5,5 +5,6 @@ public enum ModelIdEnum
     OpenAI ,
     DeepSeek,
     Gemini,
-    OpenAITextToImage
+    OpenAITextToImage,
+    BytePlusVideoGeneration
 }
