@@ -98,8 +98,8 @@ public class AgentService : ApplicationService, IAgentService
 
                     // Create schema context with documentation link validation
                     var context = await CreateSchemaContextAsync(kvp.Value.InitializationData.DtoType);
-                    var baseSchema = _schemaProvider.GetTypeSchema(kvp.Value.InitializationData.DtoType, context).ToJson();
-                    paramDto.PropertyJsonSchema = await EnhanceSchemaWithDefaultsFromBase(baseSchema, kvp.Value.InitializationData.DtoType);
+                    paramDto.PropertyJsonSchema =
+                        await EnhanceSchemaWithDefaults(kvp.Value.InitializationData.DtoType, context);
 
                     // Get default values for backward compatibility
                     paramDto.DefaultValues =
@@ -160,7 +160,8 @@ public class AgentService : ApplicationService, IAgentService
         var configuration = await GetAgentConfigurationAsync(businessAgent);
         if (configuration != null)
         {
-            resp.PropertyJsonSchema = await EnhanceSchemaWithDefaults(configuration.DtoType);
+            var context = await CreateSchemaContextAsync(configuration.DtoType);
+            resp.PropertyJsonSchema = await EnhanceSchemaWithDefaults(configuration.DtoType, context);
         }
 
         return resp;
@@ -298,7 +299,8 @@ public class AgentService : ApplicationService, IAgentService
         var configuration = await GetAgentConfigurationAsync(businessAgent);
         if (configuration != null) 
         {
-            resp.PropertyJsonSchema = await EnhanceSchemaWithDefaults(configuration.DtoType);
+            var context = await CreateSchemaContextAsync(configuration.DtoType);
+            resp.PropertyJsonSchema = await EnhanceSchemaWithDefaults(configuration.DtoType, context);
         }
 
         return resp;
@@ -647,12 +649,12 @@ public class AgentService : ApplicationService, IAgentService
     /// <summary>
     /// Enhances JSON Schema with default values and enum options from DefaultValuesAttribute
     /// </summary>
-    private async Task<string> EnhanceSchemaWithDefaults(Type configurationType)
+    private async Task<string> EnhanceSchemaWithDefaults(Type configurationType, SchemaProcessingContext? context = null)
     {
         try
         {
             // Generate base schema
-            var baseSchema = _schemaProvider.GetTypeSchema(configurationType).ToJson();
+            var baseSchema = _schemaProvider.GetTypeSchema(configurationType, context).ToJson();
             var schemaDoc = JsonDocument.Parse(baseSchema);
             
             // Create instance to get default values
@@ -743,7 +745,7 @@ public class AgentService : ApplicationService, IAgentService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to enhance schema for type {TypeName}, returning base schema", configurationType.Name);
-            return _schemaProvider.GetTypeSchema(configurationType).ToJson();
+            return _schemaProvider.GetTypeSchema(configurationType, context).ToJson();
         }
     }
 
