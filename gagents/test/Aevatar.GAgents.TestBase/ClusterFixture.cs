@@ -15,6 +15,7 @@ using Aevatar.GAgents.Executor;
 using Aevatar.GAgents.MCP.McpClient;
 using Aevatar.GAgents.MCP.Options;
 using Aevatar.GAgents.MCP.Test.Mocks;
+using Aevatar.GAgents.AIGAgent.Util;
 using Aevatar.GAgents.SemanticKernel.Extensions;
 using Aevatar.GAgents.SemanticKernel.KernelBuilderFactory;
 using Aevatar.Plugins;
@@ -156,11 +157,22 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                                 ModelName = "gemini-pro",
                                 Endpoint = "https://test.google.ai",
                                 ApiKey = "test-key"
+                            },
+                            ["BytePlusVideoGeneration"] = new LLMConfig
+                            {
+                                ProviderEnum = LLMProviderEnum.BytePlus,
+                                ModelIdEnum = ModelIdEnum.BytePlusVideoGeneration,
+                                ModelName = "test-video-model",
+                                Endpoint = "https://ark.ap-southeast.bytepluses.com",
+                                ApiKey = "test-byteplus-key"
                             }
                         }
                     };
                     services.AddSingleton<IOptions<SystemLLMConfigOptions>>(new OptionsWrapper<SystemLLMConfigOptions>(systemLLMConfigOptions));
                     services.AddSingleton<IBlobContainer, MockBlobContainer>();
+                    
+                    // Register mock BytePlus client for Orleans grains to use in tests
+                    services.AddSingleton<Aevatar.GAgents.AIGAgent.Util.IBytePlusModelArkClient, Aevatar.GAgents.TestBase.Mocks.MockBytePlusModelArkClient>();
                     
                     services.AddSemanticKernel()
                         .AddQdrantVectorStore()
