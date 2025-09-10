@@ -1,0 +1,43 @@
+using System;
+using System.Collections.Generic;
+using Aevatar.Options;
+
+namespace Aevatar.Agent;
+
+public class AgentTypeDto
+{
+    public string AgentType { get; set; }
+    public string FullName { get; set; }
+    public string? Description { get; set; }
+    public List<ParamDto> AgentParams { get; set; }
+    public string PropertyJsonSchema { get; set; }
+    public Dictionary<string, object?>? DefaultValues { get; set; }
+    public List<SystemLLMConfigDto>? SystemLLMConfigs { get; set; }
+}
+
+public class ParamDto
+{
+    public string Name { get; set; }
+    public string Type { get; set; }
+}
+
+
+public class Configuration
+{
+    public Type DtoType { get; set; }
+    public List<PropertyData> Properties { get; set; }
+}
+
+
+public class AgentTypeData
+{
+    public string? FullName { get; set; }
+    public string Description { get; set; }
+    public Configuration? InitializationData { get; set; } 
+}
+
+public class PropertyData
+{
+    public string Name { get; set; }
+    public Type Type { get; set; }
+}

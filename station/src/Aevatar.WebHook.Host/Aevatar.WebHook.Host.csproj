@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+    <Import Project="..\..\common.props"/>
+    <PropertyGroup>
+        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+        <RootNamespace>Aevatar.Webhook</RootNamespace>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Orleans.Client"/>
+        <PackageReference Include="Orleans.Providers.MongoDB"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Aevatar.WebHook.SDK\Aevatar.WebHook.SDK.csproj"/>
+        <ProjectReference Include="..\Aevatar.Domain.Shared\Aevatar.Domain.Shared.csproj"/>
+    </ItemGroup>
+    
+    <ItemGroup>
+        <Content Include="../../configurations/appsettings.Shared.json" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" Link="appsettings.Shared.json" />
+    </ItemGroup>
+
+</Project>

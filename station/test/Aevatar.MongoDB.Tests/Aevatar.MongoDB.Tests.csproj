@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <Import Project="..\..\common.props" />
+
+    <PropertyGroup>
+        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+        <Nullable>enable</Nullable>
+        <RootNamespace>Aevatar</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\Aevatar.MongoDB\Aevatar.MongoDB.csproj" />
+        <ProjectReference Include="..\Aevatar.Application.Tests\Aevatar.Application.Tests.csproj" />
+        <ProjectReference Include="..\Aevatar.AuthServer.Grants.Tests\Aevatar.AuthServer.Grants.Tests.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="EphemeralMongo.Core" />
+        <PackageReference Include="EphemeralMongo6.runtime.linux-x64" Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
+        <PackageReference Include="EphemeralMongo6.runtime.osx-x64" Condition="$([MSBuild]::IsOSPlatform('OSX'))" />
+        <PackageReference Include="EphemeralMongo6.runtime.win-x64" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
+        <PackageReference Include="xunit.extensibility.core" />
+        <PackageReference Include="coverlet.collector">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Folder Include="MongoDb\Domains\" />
+    </ItemGroup>
+
+</Project>

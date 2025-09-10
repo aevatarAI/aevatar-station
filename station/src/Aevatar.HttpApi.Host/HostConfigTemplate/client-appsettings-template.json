@@ -1,0 +1,60 @@
+{
+  "Serilog": {
+    "Properties": {
+      "Application": "Aevatar.Developer.Host"
+    },
+    "WriteTo": [
+      {
+        "Name": "Console"
+      },
+      {
+        "Name": "File",
+        "Args": {
+          "Path": "Logs/log-.log",
+          "formatter": {
+            "type": "Serilog.Formatting.Compact.RenderedCompactJsonFormatter, Serilog.Formatting.Compact"
+          }
+        }
+      }
+    ]
+  },
+  "Kestrel": {
+    "EndPoints": {
+      "Http": {
+        "Url": "http://*:8308"
+      }
+    }
+  },
+  "ConnectionStrings": {
+    "Default": "mongodb://localhost:27017/Aevatar"
+  },
+  "StringEncryption": {
+    "DefaultPassPhrase": "RpedX3sEVmQ2o9Lm"
+  },
+  "Orleans": {
+    "ClusterId": "AevatarSiloCluster",
+    "ServiceId": "AevatarBasicService",
+    "DataBase": "AevatarDb"
+  },
+  "OpenTelemetry": {
+    "ServiceName": "Aevatar.HttpApi.Host",
+    "ServiceVersion": "1.0.0"
+  },
+  "Host": {
+    "HostId": "[HostId]",
+    "Version": "[Version]"
+  },
+  "OrleansStream": {
+    "Provider": "Kafka",
+    "Brokers": [
+      "kafka-cluster-kafka-bootstrap.aismart-testnet:9092"
+    ],
+    "Partitions": 1,
+    "ReplicationFactor": 3,
+    "MessageMaxBytes": 104857600,
+    "Topics": "[HostId]Silo"
+  },
+  "DebugMode": {
+    "ExecuteRecordMode": true
+  }
+}

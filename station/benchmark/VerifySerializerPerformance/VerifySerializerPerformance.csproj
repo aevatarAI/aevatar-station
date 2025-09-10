@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+    <PackageReference Include="Microsoft.Orleans.Client" />
+    <!-- <PackageReference Include="Microsoft.Orleans.Serialization" /> -->
+    <!-- <PackageReference Include="Microsoft.Orleans.Core" /> -->
+    <PackageReference Include="MongoDB.Bson" />
+    <PackageReference Include="MongoDB.Driver" />
+    <PackageReference Include="Orleans.Providers.MongoDB" />
+    <PackageReference Include="Orleans.Streams.Kafka" />
+    <PackageReference Include="Newtonsoft.Json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\samples\E2E.Grains\E2E.Grains.csproj" />
+    <ProjectReference Include="..\..\..\framework\src\Aevatar\Aevatar.csproj" />
+    <ProjectReference Include="..\..\..\framework\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project> 

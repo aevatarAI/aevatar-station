@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(chmod:*)",
+      "Bash(dotnet build)",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet run:*)",
+      "Bash(ls:*)",
+      "Bash(./cleanup-unused-files.sh:*)",
+      "mcp__ide__executeCode",
+      "mcp__sequentialthinking__sequentialthinking",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(gh pr create:*)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(dotnet test:*)",
+      "Bash(dotnet list:*)",
+      "Bash(dotnet restore:*)",
+      "Bash(dotnet nuget locals:*)",
+      "Bash(dotnet publish:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh api:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr checkout:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(curl:*)",
+      "Bash(gh pr comment:*)",
+      "Bash(gh pr review:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true
+}

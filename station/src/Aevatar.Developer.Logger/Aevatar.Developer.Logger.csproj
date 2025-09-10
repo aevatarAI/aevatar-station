@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="..\..\common.props" />
+    <PropertyGroup>
+        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <RootNamespace>Aevatar.Developer.Logger</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Elastic.Clients.Elasticsearch" />
+        <PackageReference Include="Newtonsoft.Json" />
+        <PackageReference Include="Volo.Abp.Core" />
+    </ItemGroup>
+
+</Project>

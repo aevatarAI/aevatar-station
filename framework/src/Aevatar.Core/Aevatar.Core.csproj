@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+        <Version>$(AevatarSourceCodeVersion)</Version>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <PackageType>Dependency</PackageType>
+        <PackageId>Aevatar.Core</PackageId>
+        <Title>aevatar Framework</Title>
+        <Authors>AElf</Authors>
+        <Description>A distributed AI agent-based framework built on Microsoft Orleans for building scalable event-sourced applications.</Description>
+        <PackageTags>agent</PackageTags>
+        <RepositoryUrl>https://github.com/aevatarAI/aevatar-framework</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageProjectUrl>https://github.com/aevatarAI/aevatar-framework</PackageProjectUrl>
+    </PropertyGroup>
+    
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Orleans.EventSourcing" />
+        <PackageReference Include="Microsoft.Orleans.Streaming" />
+        <PackageReference Include="Orleans.Streams.Kafka" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+        <PackageReference Include="Microsoft.Extensions.Logging" />
+        <PackageReference Include="Microsoft.Extensions.Options" />
+        <PackageReference Include="AElf.OpenTelemetry" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
+    </ItemGroup>
+
+</Project>

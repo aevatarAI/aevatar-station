@@ -1,9 +1,24 @@
 codecov:
+  max_report_age: off  # Disable the 12h age check for reports
+  require_ci_to_pass: false  # Don't require CI to pass before processing
   notify:
-    after_n_builds: 1
+    after_n_builds: 1  # Wait for 1 build to complete before processing
+
 coverage:
   status:
     project:
       default:
         target: auto
-        threshold: 5
+        threshold: 1%
+        if_ci_failed: error
+    patch:
+      default:
+        target: auto
+        threshold: 1%
+        if_ci_failed: error
+
+comment:
+  layout: "reach,diff,flags,tree"
+  behavior: default
+  require_changes: false
+  require_base: false  # Don't require base coverage to exist

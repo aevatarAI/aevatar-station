@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <Import Project="..\..\common.props"/>
+
+    <PropertyGroup>
+        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+        <Nullable>enable</Nullable>
+        <RootNamespace>Aevatar</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.PermissionManagement\Aevatar.PermissionManagement.csproj" />
+        <ProjectReference Include="..\Aevatar.Domain.Grains\Aevatar.Domain.Grains.csproj"/>
+        <ProjectReference Include="..\Aevatar.Domain.Shared\Aevatar.Domain.Shared.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Orleans.Streaming"/>
+        <PackageReference Include="NJsonSchema"/>
+        <PackageReference Include="Volo.Abp.Dapr"/>
+        <PackageReference Include="Volo.Abp.AspNetCore.Mvc.Dapr.EventBus"/>
+        <PackageReference Include="Volo.Abp.ObjectExtending"/>
+        <PackageReference Include="Volo.Abp.Account.Application.Contracts"/>
+        <PackageReference Include="Volo.Abp.Identity.Application.Contracts"/>
+        <PackageReference Include="Volo.Abp.PermissionManagement.Application.Contracts"/>
+        <PackageReference Include="AElf.Client"/>
+        <PackageReference Include="AElf.Types"/>
+        <PackageReference Include="AElf.Sdk.CSharp"/>
+        <PackageReference Include="Elastic.Clients.Elasticsearch"/>
+    </ItemGroup>
+
+</Project>
