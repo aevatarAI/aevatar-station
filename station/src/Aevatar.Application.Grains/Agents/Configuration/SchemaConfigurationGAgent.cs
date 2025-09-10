@@ -23,8 +23,6 @@ namespace Aevatar.Application.Grains.Agents.Configuration;
 /// This grain runs in the silo and can access silo configuration directly
 /// </summary>
 [Description("Schema Configuration Agent for Dynamic Dropdown Context")]
-[StorageProvider(ProviderName = "PubSubStore")]
-[LogConsistencyProvider(ProviderName = "LogStorage")]
 public class SchemaConfigurationGAgent : GAgentBase<SchemaConfigurationGAgentState, SchemaConfigurationGEvent>, ISchemaConfigurationGAgent
 {
     private readonly ILogger<SchemaConfigurationGAgent> _logger;
@@ -98,7 +96,6 @@ public class SchemaConfigurationGAgent : GAgentBase<SchemaConfigurationGAgentSta
         var retrievalEvent = new SchemaContextRetrievedGEvent
         {
             Ctime = DateTime.UtcNow,
-            AgentId = this.GetPrimaryKeyString(),
             ConfigurationCount = aiModelConfigs.Count,
             ConfigurationSource = configurationSource
         };
