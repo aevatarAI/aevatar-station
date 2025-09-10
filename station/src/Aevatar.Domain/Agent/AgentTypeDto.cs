@@ -12,7 +12,6 @@ public class AgentTypeDto
     public List<ParamDto> AgentParams { get; set; }
     public string PropertyJsonSchema { get; set; }
     public Dictionary<string, object?>? DefaultValues { get; set; }
-    public List<SystemLLMConfigDto>? SystemLLMConfigs { get; set; }
 }
 
 public class ParamDto

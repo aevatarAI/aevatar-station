@@ -12,6 +12,7 @@ using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
 using Aevatar.Exceptions;
 using Aevatar.GAgents.AI.Common;
+using Aevatar.GAgents.Basic.Common;
 using Aevatar.Options;
 using Aevatar.Query;
 using Aevatar.Schema;
@@ -104,9 +105,6 @@ public class AgentService : ApplicationService, IAgentService
                     // Get default values for backward compatibility
                     paramDto.DefaultValues =
                         GetConfigurationDefaultValues(kvp.Value.InitializationData.DtoType);
-
-                    // Check if agent has SystemLLMConfig and add it
-                    paramDto.SystemLLMConfigs = GetSystemLLMConfigsForAgent(kvp.Value.InitializationData);
                 }
             }
 
@@ -900,7 +898,7 @@ public class AgentService : ApplicationService, IAgentService
         
         foreach (var property in properties)
         {
-            var docLinkAttributes = property.GetCustomAttributes<Aevatar.GAgents.Basic.Common.DocumentationLinkAttribute>(true);
+            var docLinkAttributes = property.GetCustomAttributes<DocumentationLinkAttribute>(true);
             
             foreach (var attribute in docLinkAttributes)
             {
