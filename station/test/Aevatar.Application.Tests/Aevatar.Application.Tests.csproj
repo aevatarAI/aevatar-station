@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Aevatar.Application\Aevatar.Application.csproj" />
+    <ProjectReference Include="..\..\src\Aevatar.HttpApi.Admin\Aevatar.HttpApi.Admin.csproj" />
     <ProjectReference Include="..\Aevatar.Domain.Tests\Aevatar.Domain.Tests.csproj" />
     <ProjectReference Include="..\Aevatar.Orleans.TestBase\Aevatar.Orleans.TestBase.csproj" />
     <ProjectReference Include="..\..\src\Aevatar.WebHook.Host\Aevatar.WebHook.Host.csproj" />

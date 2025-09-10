@@ -1,0 +1,639 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# GAgent Unit Testing Guide for Aevatar GAgents
+
+## Overview
+This guide provides comprehensive patterns and best practices for writing unit tests for GAgents in the Aevatar framework. Each test project should define its own TestBase and TestModule following the patterns established in this guide.
+
+## Part 1: Test Infrastructure Setup
+
+### IMPORTANT: Orleans Service Injection
+**DO NOT** implement `ISiloConfigurator` in individual test projects. All Orleans-related service injection should be handled through the `ClusterFixture` in the `Aevatar.GAgents.TestBase` project. If you need to register services for Orleans Grains/GAgents to use, add them to the `TestSiloConfigurations.Configure` method in `ClusterFixture.cs`.
+
+### 1.1 Test Module Definition
+Each test project should define its own test module inheriting from `AbpModule`:
+
+```csharp
+using Aevatar.GAgents.TestBase;
+using Volo.Abp.Modularity;
+
+namespace Aevatar.GAgents.YourModule.Test;
+
+[DependsOn(
+    typeof(AevatarGAgentTestBaseModule),
+    typeof(AevatarGAgentsYourModule) // The module being tested
+)]
+public class AevatarYourModuleTestModule : AbpModule
+{
+    public override void ConfigureServices(ServiceConfigurationContext context)
+    {
+        // Add test-specific service configurations here
+        var services = context.Services;
+        
+        // Example: Register mock services
+        services.AddSingleton<IMockService, MockService>();
+        
+        // Example: Configure HttpClient for testing
+        services.AddHttpClient();
+    }
+}
+```
+
+### 1.2 Test Base Class
+Each test project should define its own test base class:
+
+```csharp
+using Aevatar.GAgents.TestBase;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Aevatar.GAgents.YourModule.Test;
+
+public abstract class AevatarYourModuleTestBase : AevatarGAgentTestBase<AevatarYourModuleTestModule>
+{
+    // Add common helper methods for your module's tests
+    
+    /// <summary>
+    /// Example: Create test configuration
+    /// </summary>
+    protected YourModuleConfiguration CreateTestConfiguration()
+    {
+        return new YourModuleConfiguration
+        {
+            // Set default test values
+        };
+    }
+    
+    /// <summary>
+    /// Example: Get a service with test configuration
+    /// </summary>
+    protected IYourService GetYourService()
+    {
+        return GetRequiredService<IYourService>();
+    }
+}
+```
+
+### 1.3 Actual Test Class
+```csharp
+using Xunit;
+using Xunit.Abstractions;
+using Aevatar.Core.Abstractions;
+
+[Collection(ClusterCollection.Name)]
+public sealed class MyGAgentTests : AevatarYourModuleTestBase
+{
+    private readonly ITestOutputHelper _testOutputHelper;
+    private readonly IGAgentFactory _gAgentFactory;
+
+    public MyGAgentTests(ITestOutputHelper testOutputHelper)
+    {
+        _testOutputHelper = testOutputHelper;
+        _gAgentFactory = GetRequiredService<IGAgentFactory>();
+    }
+}
+```
+
+### 1.4 Required Using Statements
+```csharp
+using System;
+using System.Threading.Tasks;
+using Aevatar.Core.Abstractions;
+using Aevatar.GAgents.TestBase;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
+using Xunit.Abstractions;
+using Shouldly; // Recommended for better assertions
+```
+
+## Part 2: Test Patterns
+
+### 2.1 Basic GAgent Test Pattern
+```csharp
+[Fact]
+public async Task MyGAgent_BasicOperation_ShouldWorkCorrectly()
+{
+    // Arrange - Create GAgent instance with configuration
+    var config = new MyGAgentConfiguration
+    {
+        // Set configuration properties
+    };
+    var myAgent = await _gAgentFactory.GetGAgentAsync<IMyGAgent>(Guid.NewGuid(), config);
+    
+    // Act - Call the method under test
+    await myAgent.DoSomethingAsync("test input");
+    
+    // Assert - Verify the result
+    var result = await myAgent.GetResultAsync();
+    result.ShouldNotBeNull();
+    result.ShouldBe(expectedValue);
+    
+    // Optional: Log for debugging
+    _testOutputHelper.WriteLine($"Result: {result}");
+}
+```
+
+### 2.2 State-Based Testing Pattern
+```csharp
+[Fact]
+public async Task MyGAgent_StateOperation_ShouldUpdateStateCorrectly()
+{
+    // Arrange
+    var myAgent = await _gAgentFactory.GetGAgentAsync<IMyGAgent>(Guid.NewGuid());
+    
+    // Act - Perform state-changing operation
+    await myAgent.UpdateStateAsync("new value");
+    
+    // Assert - Verify state changes through events
+    var state = await myAgent.GetStateAsync();
+    state.Value.ShouldBe("new value");
+    state.UpdatedAt.ShouldBeGreaterThan(DateTime.UtcNow.AddMinutes(-1));
+    
+    // Optional: Check event history
+    foreach (var history in state.History)
+    {
+        _testOutputHelper.WriteLine(history);
+    }
+}
+```
+
+### 2.3 Event Communication Testing Pattern
+```csharp
+[Fact]
+public async Task MyGAgent_EventPublication_ShouldTriggerEventHandlers()
+{
+    // Arrange - Setup multiple GAgents
+    var publisher = await _gAgentFactory.GetGAgentAsync<IPublisherGAgent>(Guid.NewGuid());
+    var subscriber = await _gAgentFactory.GetGAgentAsync<ISubscriberGAgent>(Guid.NewGuid());
+    
+    // Register for event communication
+    await publisher.RegisterAsync(subscriber);
+    
+    // Act - Publish event
+    await publisher.PublishAsync(new MyEvent { Data = "test" });
+    
+    // Allow time for event processing
+    await Task.Delay(500);
+    
+    // Assert - Verify event was received and processed
+    var subscriberState = await subscriber.GetStateAsync();
+    subscriberState.ReceivedEvents.ShouldContain(e => e.Data == "test");
+}
+```
+
+## Part 3: Test Data Management
+
+### 3.1 Test Data Factory Methods
+```csharp
+private SubmitOrderRequest CreateTestOrderRequest(string customerId, string productName)
+{
+    return new SubmitOrderRequest
+    {
+        CustomerId = customerId,
+        CustomerEmail = $"{customerId}@example.com",
+        Items = new List<OrderItemRequest>
+        {
+            new OrderItemRequest
+            {
+                ProductId = Guid.NewGuid().ToString(),
+                ProductName = productName,
+                Quantity = 1,
+                Price = 99.99m,
+                SKU = "TEST-SKU"
+            }
+        },
+        ShippingAddress = new Address
+        {
+            Street = "123 Test St",
+            City = "Test City",
+            State = "TS",
+            PostalCode = "12345",
+            Country = "TestLand"
+        }
+    };
+}
+```
+
+### 3.2 Complex Test Data Setup
+```csharp
+private async Task SetupComplexSystem()
+{
+    // Create coordinator
+    var coordinator = await _gAgentFactory.GetGAgentAsync<ICoordinatorGAgent>(Guid.NewGuid());
+    
+    // Create all agents with unique IDs
+    var agent1 = await _gAgentFactory.GetGAgentAsync<IWorkerGAgent>(Guid.NewGuid());
+    var agent2 = await _gAgentFactory.GetGAgentAsync<IWorkerGAgent>(Guid.NewGuid());
+    
+    // Register all agents for event communication
+    await coordinator.RegisterAsync(agent1);
+    await coordinator.RegisterAsync(agent2);
+    
+    // Initialize system
+    await coordinator.InitializeSystemAsync();
+}
+```
+
+## Part 4: Common Test Scenarios
+
+### 4.1 CRUD Operations Testing
+```csharp
+[Fact]
+public async Task MyGAgent_CRUDOperations_ShouldWorkCorrectly()
+{
+    // Arrange
+    var agent = await _gAgentFactory.GetGAgentAsync<IMyGAgent>(Guid.NewGuid());
+    
+    // Create
+    var itemId = await agent.CreateItemAsync(new ItemRequest { Name = "Test Item" });
+    itemId.ShouldNotBeNull();
+    
+    // Read
+    var item = await agent.GetItemAsync(itemId);
+    item.ShouldNotBeNull();
+    item.Name.ShouldBe("Test Item");
+    
+    // Update
+    await agent.UpdateItemAsync(itemId, new ItemRequest { Name = "Updated Item" });
+    var updatedItem = await agent.GetItemAsync(itemId);
+    updatedItem.Name.ShouldBe("Updated Item");
+    
+    // Delete
+    var deleted = await agent.DeleteItemAsync(itemId);
+    deleted.ShouldBeTrue();
+}
+```
+
+### 4.2 Validation Testing
+```csharp
+[Fact]
+public async Task MyGAgent_Validation_ShouldValidateCorrectly()
+{
+    // Arrange
+    var agent = await _gAgentFactory.GetGAgentAsync<IMyGAgent>(Guid.NewGuid());
+    
+    // Valid case
+    var validRequest = new MyRequest
+    {
+        RequiredField = "value",
+        OptionalField = "optional"
+    };
+    
+    // Invalid case
+    var invalidRequest = new MyRequest
+    {
+        RequiredField = "", // Empty required field
+        OptionalField = null
+    };
+    
+    // Act & Assert
+    (await agent.ValidateRequestAsync(validRequest)).ShouldBeTrue();
+    (await agent.ValidateRequestAsync(invalidRequest)).ShouldBeFalse();
+}
+```
+
+### 4.3 Error Handling Testing
+```csharp
+[Fact]
+public async Task MyGAgent_InvalidOperations_ShouldThrowExceptions()
+{
+    // Arrange
+    var agent = await _gAgentFactory.GetGAgentAsync<IMyGAgent>(Guid.NewGuid());
+    
+    // Act & Assert - Invalid input
+    await Assert.ThrowsAsync<ArgumentException>(async () => 
+    {
+        await agent.ProcessAsync(null);
+    });
+    
+    // Act & Assert - Operation on non-existent resource
+    await Assert.ThrowsAsync<InvalidOperationException>(async () => 
+    {
+        await agent.UpdateItemAsync("non-existent-id", new ItemRequest());
+    });
+}
+```
+
+## Part 5: Integration Testing Patterns
+
+### 5.1 End-to-End Workflow Testing
+```csharp
+[Fact]
+public async Task System_EndToEndWorkflow_ShouldProcessCorrectly()
+{
+    // Arrange - Setup complete system
+    await SetupComplexSystem();
+    
+    var coordinator = await _gAgentFactory.GetGAgentAsync<ICoordinatorGAgent>(Guid.NewGuid());
+    
+    // Act - Process complete workflow
+    var request = CreateTestRequest();
+    var result = await coordinator.ProcessWorkflowAsync(request);
+    
+    // Wait for async event processing
+    await Task.Delay(1000);
+    
+    // Assert - Verify complete workflow
+    result.ShouldNotBeNull();
+    result.Status.ShouldBeOneOf(
+        WorkflowStatus.Completed,
+        WorkflowStatus.CompletedWithWarnings);
+    
+    var systemHealth = await coordinator.GetSystemHealthAsync();
+    systemHealth.IsHealthy.ShouldBeTrue();
+}
+```
+
+### 5.2 Multi-Agent Coordination Testing
+```csharp
+[Fact]
+public async Task MultiAgentSystem_Coordination_ShouldWorkCorrectly()
+{
+    // Arrange - Create agents with unique IDs
+    var coordinator = await _gAgentFactory.GetGAgentAsync<ICoordinatorGAgent>(Guid.NewGuid());
+    var agent1 = await _gAgentFactory.GetGAgentAsync<IWorkerGAgent>(Guid.NewGuid());
+    var agent2 = await _gAgentFactory.GetGAgentAsync<IWorkerGAgent>(Guid.NewGuid());
+    
+    // Register agents
+    await coordinator.RegisterAsync(agent1);
+    await coordinator.RegisterAsync(agent2);
+    
+    // Act - Distribute work
+    var workItems = new List<string> { "task1", "task2", "task3" };
+    await coordinator.DistributeWorkAsync(workItems);
+    
+    // Wait for processing
+    await Task.Delay(1000);
+    
+    // Assert - Verify work distribution
+    var coordinatorState = await coordinator.GetStateAsync();
+    coordinatorState.CompletedTasks.Count.ShouldBe(3);
+}
+```
+
+## Part 6: AI GAgent Testing Patterns
+
+### 6.1 AI Tool Calling Testing
+```csharp
+[Fact]
+public async Task AIGAgent_ToolCalling_ShouldWorkCorrectly()
+{
+    // Arrange
+    var config = new AIGAgentConfiguration
+    {
+        LLMConfig = new LLMConfigDto { SystemLLM = "test-model" },
+        EnableGAgentTools = true
+    };
+    
+    var aiAgent = await _gAgentFactory.GetGAgentAsync<IMyAIGAgent>(Guid.NewGuid(), config);
+    
+    // Initialize AI agent
+    await aiAgent.InitializeAsync(new InitializeDto
+    {
+        Instructions = "You are a helpful assistant",
+        EnableGAgentTools = true
+    });
+    
+    // Act - Ask AI to perform task
+    var response = await aiAgent.ChatAsync(new ChatRequestDto
+    {
+        Prompt = "Process this request",
+        ChatId = Guid.NewGuid().ToString()
+    });
+    
+    // Assert
+    response.ShouldNotBeNull();
+    response.Content.ShouldNotBeNullOrEmpty();
+}
+```
+
+### 6.2 AI Response Validation
+```csharp
+[Fact]
+public async Task AIGAgent_ResponseQuality_ShouldMeetExpectations()
+{
+    // Arrange
+    var aiAgent = await _gAgentFactory.GetGAgentAsync<IMyAIGAgent>(Guid.NewGuid());
+    
+    var complexPrompt = @"Plan a project timeline for a 6-month software development project.
+    Include milestones for design, development, testing, and deployment phases.";
+    
+    // Act
+    var response = await aiAgent.ChatAsync(new ChatRequestDto
+    {
+        Prompt = complexPrompt,
+        ChatId = Guid.NewGuid().ToString()
+    });
+    
+    // Assert - Verify response quality
+    response.ShouldNotBeNull();
+    response.Content.Length.ShouldBeGreaterThan(200); // Substantial response
+    response.Content.ShouldContain("design", StringComparison.OrdinalIgnoreCase);
+    response.Content.ShouldContain("development", StringComparison.OrdinalIgnoreCase);
+    response.Content.ShouldContain("testing", StringComparison.OrdinalIgnoreCase);
+    response.Content.ShouldContain("deployment", StringComparison.OrdinalIgnoreCase);
+}
+```
+
+## Part 7: Performance and Load Testing
+
+### 7.1 Concurrent Operations Testing
+```csharp
+[Fact]
+public async Task GAgent_ConcurrentOperations_ShouldHandleCorrectly()
+{
+    // Arrange
+    var agent = await _gAgentFactory.GetGAgentAsync<IMyGAgent>(Guid.NewGuid());
+    var tasks = new List<Task<string>>();
+    
+    // Act - Execute concurrent operations
+    for (int i = 0; i < 10; i++)
+    {
+        var taskId = i;
+        tasks.Add(agent.ProcessAsync($"task-{taskId}"));
+    }
+    
+    var results = await Task.WhenAll(tasks);
+    
+    // Assert - Verify all operations completed
+    results.Length.ShouldBe(10);
+    results.All(r => !string.IsNullOrEmpty(r)).ShouldBeTrue();
+    
+    var state = await agent.GetStateAsync();
+    state.ProcessedCount.ShouldBe(10);
+}
+```
+
+## Part 8: Test Organization Best Practices
+
+### 8.1 Test Naming Conventions
+```csharp
+// Use this pattern: MethodName_Scenario_ExpectedResult
+[Fact]
+public async Task CreateItem_ValidInput_ShouldReturnItemId()
+[Fact]
+public async Task GetItem_NonExistentId_ShouldReturnNull()
+[Fact]
+public async Task ProcessRequest_InvalidData_ShouldThrowException()
+[Fact]
+public async Task PublishEvent_WithSubscribers_ShouldNotifyAll()
+```
+
+### 8.2 Test Organization by Feature
+```csharp
+// Group related tests together
+#region Item Management Tests
+[Fact]
+public async Task CreateItem_ValidInput_ShouldSucceed()
+[Fact]
+public async Task CreateItem_DuplicateName_ShouldFail()
+#endregion
+
+#region Event Handling Tests
+[Fact]
+public async Task HandleEvent_ValidEvent_ShouldProcess()
+[Fact]
+public async Task HandleEvent_InvalidEvent_ShouldIgnore()
+#endregion
+```
+
+### 8.3 Test Cleanup and Isolation
+```csharp
+// Always use unique IDs for each test to ensure isolation
+public async Task MyGAgent_ShouldIsolateState()
+{
+    // Use unique ID for each test
+    var agent1 = await _gAgentFactory.GetGAgentAsync<IMyGAgent>(Guid.NewGuid());
+    var agent2 = await _gAgentFactory.GetGAgentAsync<IMyGAgent>(Guid.NewGuid());
+    
+    // Operations on agent1 should not affect agent2
+    await agent1.UpdateAsync("value1");
+    await agent2.UpdateAsync("value2");
+    
+    var state1 = await agent1.GetStateAsync();
+    var state2 = await agent2.GetStateAsync();
+    
+    state1.Value.ShouldBe("value1");
+    state2.Value.ShouldBe("value2");
+}
+```
+
+## Part 9: Debugging and Logging
+
+### 9.1 Using Test Output Helper
+```csharp
+[Fact]
+public async Task DebugExample()
+{
+    var agent = await _gAgentFactory.GetGAgentAsync<IMyGAgent>(Guid.NewGuid());
+    
+    // Log intermediate steps
+    _testOutputHelper.WriteLine("Starting test execution");
+    
+    var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+    var result = await agent.DoWorkAsync();
+    stopwatch.Stop();
+    
+    _testOutputHelper.WriteLine($"Operation completed with result: {result}");
+    _testOutputHelper.WriteLine($"Execution time: {stopwatch.ElapsedMilliseconds}ms");
+}
+```
+
+### 9.2 State Inspection
+```csharp
+[Fact]
+public async Task StateInspectionExample()
+{
+    var agent = await _gAgentFactory.GetGAgentAsync<IMyGAgent>(Guid.NewGuid());
+    
+    // Perform operations
+    await agent.DoMultipleOperationsAsync();
+    
+    // Inspect full state
+    var state = await agent.GetStateAsync();
+    
+    _testOutputHelper.WriteLine($"Final state:");
+    _testOutputHelper.WriteLine($"- Id: {state.Id}");
+    _testOutputHelper.WriteLine($"- Value: {state.Value}");
+    _testOutputHelper.WriteLine($"- Count: {state.Count}");
+    _testOutputHelper.WriteLine($"- LastUpdated: {state.LastUpdated}");
+    
+    foreach (var history in state.History)
+    {
+        _testOutputHelper.WriteLine($"- History: {history}");
+    }
+}
+```
+
+## Part 10: Module-Specific Test Base Examples
+
+### 10.1 Example: MCP Module Test Base
+```csharp
+namespace Aevatar.GAgents.MCP.Test;
+
+public abstract class AevatarMCPTestBase : AevatarGAgentTestBase<AevatarMCPTestModule>
+{
+    protected MCPServerConfig CreateTestServerConfig(string serverName)
+    {
+        return new MCPServerConfig
+        {
+            ServerName = serverName,
+            Command = "mock-command",
+            Args = ["arg1", "arg2"],
+            Description = "Test server"
+        };
+    }
+}
+```
+
+### 10.2 Example: Twitter Module Test Base
+```csharp
+namespace Aevatar.GAgents.Twitter.Test;
+
+public abstract class AevatarTwitterTestBase : AevatarGAgentTestBase<AevatarTwitterTestModule>
+{
+    protected TwitterWebApiGAgentConfiguration CreateTestConfiguration()
+    {
+        return new TwitterWebApiGAgentConfiguration
+        {
+            BearerToken = "test-token",
+            BaseApiUrl = "https://api.twitter.com/2",
+            RequestTimeoutSeconds = 30
+        };
+    }
+}
+```
+
+## Quick Reference Checklist
+
+### Test Structure
+- [ ] Create module-specific `TestModule` class (e.g., `AevatarYourModuleTestModule`)
+- [ ] Create module-specific `TestBase` class (e.g., `AevatarYourModuleTestBase`)
+- [ ] Add `[Collection(ClusterCollection.Name)]` attribute to test classes
+- [ ] Inject `ITestOutputHelper` for logging
+- [ ] Get `IGAgentFactory` from dependency injection
+- [ ] Use unique Guid for each GAgent instance
+
+### Test Patterns
+- [ ] Arrange-Act-Assert structure
+- [ ] Create test data factory methods
+- [ ] Test both success and failure scenarios
+- [ ] Verify state changes through `GetStateAsync()`
+- [ ] Use appropriate delays for event processing
+
+### Assertions
+- [ ] Use `Shouldly` for readable assertions
+- [ ] Test null values and edge cases
+- [ ] Verify exception throwing for invalid operations
+- [ ] Check event history for complex workflows
+
+### Integration Tests
+- [ ] Setup multi-agent communication with `RegisterAsync`
+- [ ] Test end-to-end workflows
+- [ ] Verify system health and coordination
+- [ ] Use unique IDs to ensure test isolation
+
+This guide provides comprehensive patterns for testing GAgents in the Aevatar framework. Each module should adapt these patterns to its specific needs while maintaining consistency with the overall testing approach.

@@ -63,6 +63,53 @@ public class KubernetesConstants
     public const string HostSilo = "silo";
     public const string HostClient = "client";
     public const string HostClientCors = "[Cors]";
+    
+    // Environment variables
+    /// <summary>
+    /// Orleans Silo name pattern environment variable used for grain placement and identification
+    /// </summary>
+    public const string SiloNamePatternEnvVar = "SILO_NAME_PATTERN";
+    
+    // JSON constants
+    /// <summary>
+    /// Empty JSON object string used as default configuration when no business config is available
+    /// </summary>
+    public const string EmptyJsonObject = "{}";
+    
+    // Kubernetes annotations and labels
+    /// <summary>
+    /// Kubernetes annotation key for marking when a deployment was last restarted
+    /// Used by kubectl and Kubernetes controllers to track restart operations
+    /// </summary>
+    public const string RestartAnnotationKey = "kubectl.kubernetes.io/restartedAt";
+    
+    // Health check paths
+    /// <summary>
+    /// Standard health check endpoint path for application health monitoring
+    /// </summary>
+    public const string HealthCheckPath = "/health";
+    
+    // DateTime formatting
+    /// <summary>
+    /// ISO 8601 sortable date/time format used for Kubernetes timestamps
+    /// </summary>
+    public const string TimestampFormat = "s";
+    
+    // Naming prefixes and separators
+    /// <summary>
+    /// Prefix used in deployment names, typically replaced with container prefix when needed
+    /// </summary>
+    public const string DeploymentNamePrefix = "deployment-";
+    
+    /// <summary>
+    /// Prefix used in container names, typically used when converting from deployment names
+    /// </summary>
+    public const string ContainerNamePrefix = "container-";
+    
+    /// <summary>
+    /// Standard separator character used in Kubernetes resource names
+    /// </summary>
+    public const string NameSeparator = "-";
 
     public static readonly List<string> HostSiloCommand = new() { "dotnet", "Aevatar.Silo.dll" };
     public static readonly List<string> HostClientCommand = new() { "dotnet", "Aevatar.Developer.Host.dll" };
