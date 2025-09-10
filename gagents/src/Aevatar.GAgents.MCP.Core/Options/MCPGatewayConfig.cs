@@ -28,7 +28,8 @@ public class MCPGatewayConfig
     /// Request timeout for gateway operations
     /// </summary>
     [Id(2)]
-    [Range(typeof(TimeSpan), "00:00:01", "00:10:00", ErrorMessage = "Request timeout must be between 1 second and 10 minutes")]
+    [Range(typeof(TimeSpan), "00:00:01", "00:10:00",
+        ErrorMessage = "Request timeout must be between 1 second and 10 minutes")]
     public TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
     /// <summary>
@@ -54,7 +55,8 @@ public class MCPGatewayConfig
     /// Delay between retry attempts
     /// </summary>
     [Id(6)]
-    [Range(typeof(TimeSpan), "00:00:00.100", "00:01:00", ErrorMessage = "Retry delay must be between 100ms and 1 minute")]
+    [Range(typeof(TimeSpan), "00:00:00.100", "00:01:00",
+        ErrorMessage = "Retry delay must be between 100ms and 1 minute")]
     public TimeSpan RetryDelay { get; set; } = TimeSpan.FromSeconds(1);
 
     /// <summary>
@@ -80,7 +82,7 @@ public class MCPGatewayConfig
         {
             errors.Add("Gateway base URL is required");
         }
-        else if (!Uri.TryCreate(GatewayBaseUrl, UriKind.Absolute, out var uri) || 
+        else if (!Uri.TryCreate(GatewayBaseUrl, UriKind.Absolute, out var uri) ||
                  (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
             errors.Add("Gateway base URL must be a valid HTTP/HTTPS URL");

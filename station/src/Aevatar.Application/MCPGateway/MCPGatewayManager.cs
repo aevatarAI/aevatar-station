@@ -31,7 +31,7 @@ public class MCPGatewayManager : IMCPGatewayManager, ITransientDependency
         _httpClient = httpClient;
         _config = config.Value;
         _logger = logger;
-        
+
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -83,7 +83,7 @@ public class MCPGatewayManager : IMCPGatewayManager, ITransientDependency
             };
 
             var response = await _httpClient.PostAsJsonAsync("/adapters", createRequest, _jsonOptions);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<MCPAdapterDto>(_jsonOptions);
@@ -127,7 +127,7 @@ public class MCPGatewayManager : IMCPGatewayManager, ITransientDependency
             };
 
             var response = await _httpClient.PutAsJsonAsync($"/adapters/{name}", updateRequest, _jsonOptions);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<MCPAdapterDto>(_jsonOptions);
@@ -155,7 +155,7 @@ public class MCPGatewayManager : IMCPGatewayManager, ITransientDependency
             _logger.LogInformation("Deleting adapter {AdapterName}", name);
 
             var response = await _httpClient.DeleteAsync($"/adapters/{name}");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 _logger.LogInformation("Successfully deleted adapter {AdapterName}", name);
@@ -181,7 +181,7 @@ public class MCPGatewayManager : IMCPGatewayManager, ITransientDependency
             _logger.LogDebug("Fetching all adapters from gateway");
 
             var response = await _httpClient.GetAsync("/adapters");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<List<MCPAdapterDto>>(_jsonOptions);
@@ -209,7 +209,7 @@ public class MCPGatewayManager : IMCPGatewayManager, ITransientDependency
             _logger.LogDebug("Fetching adapter {AdapterName}", name);
 
             var response = await _httpClient.GetAsync($"/adapters/{name}");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<MCPAdapterDto>(_jsonOptions);
@@ -243,7 +243,7 @@ public class MCPGatewayManager : IMCPGatewayManager, ITransientDependency
             _logger.LogDebug("Fetching adapter status for {AdapterName}", name);
 
             var response = await _httpClient.GetAsync($"/adapters/{name}/status");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<MCPAdapterStatusDto>(_jsonOptions);
@@ -271,7 +271,7 @@ public class MCPGatewayManager : IMCPGatewayManager, ITransientDependency
             _logger.LogDebug("Fetching gateway health status");
 
             var response = await _httpClient.GetAsync(_config.HealthCheckPath);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<MCPGatewayHealthDto>(_jsonOptions);
@@ -301,7 +301,7 @@ public class MCPGatewayManager : IMCPGatewayManager, ITransientDependency
             var startTime = DateTime.UtcNow;
             var response = await _httpClient.PostAsync($"/adapters/{name}/test", null);
             var latency = (DateTime.UtcNow - startTime).TotalMilliseconds;
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<MCPConnectionTestResultDto>(_jsonOptions);
@@ -310,14 +310,15 @@ public class MCPGatewayManager : IMCPGatewayManager, ITransientDependency
                     result.LatencyMs = latency;
                     result.TestedAt = DateTime.UtcNow;
                 }
-                _logger.LogInformation("Connection test successful for adapter {AdapterName}, latency: {Latency}ms", 
+
+                _logger.LogInformation("Connection test successful for adapter {AdapterName}, latency: {Latency}ms",
                     name, latency);
                 return result!;
             }
 
             var errorContent = await response.Content.ReadAsStringAsync();
             _logger.LogWarning("Connection test failed for adapter {AdapterName}: {Error}", name, errorContent);
-            
+
             return new MCPConnectionTestResultDto
             {
                 IsSuccessful = false,
@@ -329,7 +330,7 @@ public class MCPGatewayManager : IMCPGatewayManager, ITransientDependency
         catch (Exception ex)
         {
             _logger.LogError(ex, "Exception testing connection to adapter {AdapterName}: {Error}", name, ex.Message);
-            
+
             return new MCPConnectionTestResultDto
             {
                 IsSuccessful = false,
@@ -348,7 +349,8 @@ public class MCPGatewayManager : IMCPGatewayManager, ITransientDependency
     /// <summary>
     /// Get adapter metrics and usage statistics
     /// </summary>
-    public async Task<MCPAdapterMetricsDto> GetAdapterMetricsAsync(string name, DateTime? from = null, DateTime? to = null)
+    public async Task<MCPAdapterMetricsDto> GetAdapterMetricsAsync(string name, DateTime? from = null,
+        DateTime? to = null)
     {
         try
         {
@@ -362,7 +364,7 @@ public class MCPGatewayManager : IMCPGatewayManager, ITransientDependency
 
             var query = queryParams.Any() ? "?" + string.Join("&", queryParams) : "";
             var response = await _httpClient.GetAsync($"/adapters/{name}/metrics{query}");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<MCPAdapterMetricsDto>(_jsonOptions);
@@ -397,15 +399,15 @@ public class MCPGatewayManager : IMCPGatewayManager, ITransientDependency
 
             var query = queryParams.Any() ? "?" + string.Join("&", queryParams) : "";
             var response = await _httpClient.GetAsync($"/adapters/{name}/logs{query}");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var logsContent = await response.Content.ReadAsStringAsync();
                 var logLines = logsContent.Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList();
-                
-                _logger.LogDebug("Successfully fetched {Count} log lines for adapter {AdapterName}", 
+
+                _logger.LogDebug("Successfully fetched {Count} log lines for adapter {AdapterName}",
                     logLines.Count, name);
-                    
+
                 return logLines;
             }
 
@@ -426,7 +428,7 @@ public class MCPGatewayManager : IMCPGatewayManager, ITransientDependency
     {
         var errorContent = await response.Content.ReadAsStringAsync();
         var statusCode = response.StatusCode;
-        
+
         _logger.LogError("Gateway API error: {Operation} failed with {StatusCode}: {Error}",
             operation, statusCode, errorContent);
 
