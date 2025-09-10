@@ -461,6 +461,10 @@ jobs:
             local env_name="$3"
             local image_tag="$4"
 
+            echo "================================================"
+            echo "Updating $deployment $env_name"
+            echo "================================================"
+
             # Get current env value
             local current_value
             current_value=$(kubectl get deployment "${deployment}" -n "${namespace}" \
