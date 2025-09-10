@@ -1,5 +1,6 @@
 // ABOUTME: This file implements the Schema Configuration Agent
 // ABOUTME: Provides dynamic dropdown context from silo's SystemLLMConfigOptions
+// ABOUTME: Contains all related types: interface, state, events, and implementation
 
 using System;
 using System.Collections.Generic;
@@ -14,9 +15,58 @@ using Aevatar.Schema;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Orleans;
 using Orleans.Providers;
 
 namespace Aevatar.Application.Grains.Agents.Configuration;
+
+/// <summary>
+/// Schema configuration grain interface for providing dynamic dropdown context from silo configuration
+/// </summary>
+public interface ISchemaConfigurationGAgent : IStateGAgent<SchemaConfigurationGAgentState>, IGrainWithStringKey
+{
+    /// <summary>
+    /// Get dynamic dropdown context containing AI model configurations from silo's SystemLLMConfigOptions
+    /// </summary>
+    /// <returns>DynamicDropDownContext with AI model configurations</returns>
+    Task<DynamicDropDownContext> GetSchemaContextAsync();
+}
+
+/// <summary>
+/// State for Schema Configuration Agent
+/// Simple state for configuration reading agent - minimal state required
+/// </summary>
+[GenerateSerializer]
+public class SchemaConfigurationGAgentState : StateBase
+{
+    // This agent only reads configuration, no complex state needed
+}
+
+/// <summary>
+/// Base event for Schema Configuration Agent - minimal events for configuration reading
+/// </summary>
+[GenerateSerializer]
+public abstract class SchemaConfigurationGEvent : StateLogEventBase<SchemaConfigurationGEvent>
+{
+    [Id(0)] public override Guid Id { get; set; } = Guid.NewGuid();
+}
+
+/// <summary>
+/// Event raised when schema context is retrieved - simplified for configuration reading
+/// </summary>
+[GenerateSerializer]
+public class SchemaContextRetrievedGEvent : SchemaConfigurationGEvent
+{
+    /// <summary>
+    /// Number of AI model configurations retrieved
+    /// </summary>
+    [Id(0)] public int ConfigurationCount { get; set; }
+    
+    /// <summary>
+    /// Source of the configuration (Silo, Default, etc.)
+    /// </summary>
+    [Id(1)] public string ConfigurationSource { get; set; } = "Silo";
+}
 
 /// <summary>
 /// Schema configuration grain that provides dynamic dropdown context from silo's SystemLLMConfigOptions
