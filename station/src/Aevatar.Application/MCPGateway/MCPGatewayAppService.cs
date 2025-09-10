@@ -17,7 +17,6 @@ namespace Aevatar.Application.MCPGateway;
 /// <summary>
 /// Application service for MCP Gateway management
 /// </summary>
-[Authorize]
 [RemoteService(false)]
 public class MCPGatewayAppService : ApplicationService, IMCPGatewayAppService
 {
@@ -35,7 +34,6 @@ public class MCPGatewayAppService : ApplicationService, IMCPGatewayAppService
     /// <summary>
     /// Create a new MCP adapter
     /// </summary>
-    [Authorize(MCPGatewayPermissions.Adapters.Create)]
     [Audited]
     public async Task<MCPAdapterDto> CreateAdapterAsync(CreateMCPAdapterDto input)
     {
@@ -64,7 +62,6 @@ public class MCPGatewayAppService : ApplicationService, IMCPGatewayAppService
     /// <summary>
     /// Update an existing MCP adapter
     /// </summary>
-    [Authorize(MCPGatewayPermissions.Adapters.Update)]
     [Audited]
     public async Task<MCPAdapterDto> UpdateAdapterAsync(string name, UpdateMCPAdapterDto input)
     {
@@ -93,7 +90,6 @@ public class MCPGatewayAppService : ApplicationService, IMCPGatewayAppService
     /// <summary>
     /// Delete an MCP adapter
     /// </summary>
-    [Authorize(MCPGatewayPermissions.Adapters.Delete)]
     [Audited]
     public async Task DeleteAdapterAsync(string name)
     {
@@ -120,7 +116,6 @@ public class MCPGatewayAppService : ApplicationService, IMCPGatewayAppService
     /// <summary>
     /// Get all MCP adapters with pagination
     /// </summary>
-    [Authorize(MCPGatewayPermissions.Adapters.Read)]
     public async Task<PagedResultDto<MCPAdapterDto>> GetAdaptersAsync(GetAdaptersInput input)
     {
         _logger.LogDebug("User {UserId} fetching MCP adapters with filter: {Filter}",
@@ -159,7 +154,6 @@ public class MCPGatewayAppService : ApplicationService, IMCPGatewayAppService
     /// <summary>
     /// Get a specific MCP adapter by name
     /// </summary>
-    [Authorize(MCPGatewayPermissions.Adapters.Read)]
     public async Task<MCPAdapterDto> GetAdapterAsync(string name)
     {
         _logger.LogDebug("User {UserId} fetching MCP adapter {AdapterName}",
@@ -187,7 +181,6 @@ public class MCPGatewayAppService : ApplicationService, IMCPGatewayAppService
     /// <summary>
     /// Get the status of a specific MCP adapter
     /// </summary>
-    [Authorize(MCPGatewayPermissions.Adapters.Read)]
     public async Task<MCPAdapterStatusDto> GetAdapterStatusAsync(string name)
     {
         _logger.LogDebug("User {UserId} fetching status for MCP adapter {AdapterName}",
@@ -208,7 +201,6 @@ public class MCPGatewayAppService : ApplicationService, IMCPGatewayAppService
     /// <summary>
     /// Get health status of the MCP Gateway
     /// </summary>
-    [Authorize(MCPGatewayPermissions.Gateway.ViewHealth)]
     public async Task<MCPGatewayHealthDto> GetGatewayHealthAsync()
     {
         _logger.LogDebug("User {UserId} fetching MCP Gateway health", CurrentUser.Id);
@@ -228,7 +220,6 @@ public class MCPGatewayAppService : ApplicationService, IMCPGatewayAppService
     /// <summary>
     /// Test connection to a specific adapter
     /// </summary>
-    [Authorize(MCPGatewayPermissions.Adapters.TestConnection)]
     [Audited]
     public async Task<MCPConnectionTestResultDto> TestAdapterConnectionAsync(string name)
     {
@@ -250,7 +241,6 @@ public class MCPGatewayAppService : ApplicationService, IMCPGatewayAppService
     /// <summary>
     /// Get adapter metrics and usage statistics
     /// </summary>
-    [Authorize(MCPGatewayPermissions.Adapters.ViewMetrics)]
     public async Task<MCPAdapterMetricsDto> GetAdapterMetricsAsync(string name, DateTime? from = null,
         DateTime? to = null)
     {
@@ -272,7 +262,6 @@ public class MCPGatewayAppService : ApplicationService, IMCPGatewayAppService
     /// <summary>
     /// Get adapter logs
     /// </summary>
-    [Authorize(MCPGatewayPermissions.Adapters.ViewLogs)]
     public async Task<List<string>> GetAdapterLogsAsync(string name, int? lines = null, bool? follow = null)
     {
         _logger.LogDebug("User {UserId} fetching logs for MCP adapter {AdapterName}",

@@ -16,7 +16,7 @@ namespace Aevatar.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/mcp-gateway")]
-[Authorize]
+//[Authorize]
 public class MCPGatewayController : AbpControllerBase, IMCPGatewayAppService
 {
     private readonly IMCPGatewayAppService _mcpGatewayAppService;

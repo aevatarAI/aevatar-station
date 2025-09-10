@@ -116,62 +116,108 @@ fi
 
 echo -e "${GREEN}✅ Local Docker registry is running at localhost:$REGISTRY_PORT${NC}"
 
-# Step 3: Clone and Setup MCP Gateway Repository
-echo -e "${BLUE}📋 Step 3: Cloning MCP Gateway Repository${NC}"
+# Step 3: Setup MCP Gateway Repository (optimized for official image)
+echo -e "${BLUE}📋 Step 3: Setting up MCP Gateway Repository${NC}"
 
-if [ -d "$WORK_DIR" ]; then
-    echo -e "${YELLOW}🔄 Removing existing work directory${NC}"
-    rm -rf "$WORK_DIR"
+# Check if we can use official image directly without source code
+USE_OFFICIAL_IMAGE_ONLY=false
+echo -e "${BLUE}🔍 Checking if official image is available${NC}"
+if docker pull ghcr.io/microsoft/mcp-gateway:latest >/dev/null 2>&1; then
+    echo -e "${GREEN}✅ Official image is available, source code clone optional${NC}"
+    USE_OFFICIAL_IMAGE_ONLY=true
+else
+    echo -e "${YELLOW}⚠️  Official image not available, will need source code${NC}"
+    USE_OFFICIAL_IMAGE_ONLY=false
 fi
 
-echo -e "${BLUE}📁 Creating work directory: $WORK_DIR${NC}"
-mkdir -p "$WORK_DIR"
-cd "$WORK_DIR" || {
-    echo -e "${RED}❌ Failed to change to work directory: $WORK_DIR${NC}"
-    exit 1
-}
+if [ "$USE_OFFICIAL_IMAGE_ONLY" = false ]; then
+    # Only clone if we need source code for building
+    if [ -d "$WORK_DIR" ]; then
+        echo -e "${YELLOW}🔄 Removing existing work directory${NC}"
+        rm -rf "$WORK_DIR"
+    fi
 
-echo -e "${BLUE}📥 Cloning MCP Gateway repository${NC}"
-git clone $MCP_GATEWAY_REPO .
+    echo -e "${BLUE}📁 Creating work directory: $WORK_DIR${NC}"
+    mkdir -p "$WORK_DIR"
+    cd "$WORK_DIR" || {
+        echo -e "${RED}❌ Failed to change to work directory: $WORK_DIR${NC}"
+        exit 1
+    }
 
-# Step 4: Build MCP Example Server Image
-echo -e "${BLUE}📋 Step 4: Building MCP Example Server${NC}"
-
-if [ ! -d "mcp-example-server" ]; then
-    echo -e "${RED}❌ mcp-example-server directory not found${NC}"
-    exit 1
+    echo -e "${BLUE}📥 Cloning MCP Gateway repository${NC}"
+    git clone $MCP_GATEWAY_REPO .
+else
+    # Create minimal work directory for configuration
+    echo -e "${BLUE}📁 Creating minimal work directory: $WORK_DIR${NC}"
+    mkdir -p "$WORK_DIR"
+    cd "$WORK_DIR" || {
+        echo -e "${RED}❌ Failed to change to work directory: $WORK_DIR${NC}"
+        exit 1
+    }
+    
+    # Download deployment files only
+    echo -e "${BLUE}📥 Downloading deployment configurations${NC}"
+    mkdir -p deployment/k8s
+    curl -s -o deployment/k8s/local-deployment.yml \
+        https://raw.githubusercontent.com/microsoft/mcp-gateway/main/deployment/k8s/local-deployment.yml || {
+        echo -e "${YELLOW}⚠️  Failed to download deployment config, cloning full repository${NC}"
+        git clone $MCP_GATEWAY_REPO .
+    }
 fi
 
-echo -e "${BLUE}🔨 Building MCP example server image${NC}"
-docker build -f mcp-example-server/Dockerfile mcp-example-server -t localhost:$REGISTRY_PORT/mcp-example:1.0.0
+# Step 4: Build MCP Example Server Image (if needed)
+echo -e "${BLUE}📋 Step 4: Setting up MCP Example Server${NC}"
 
-echo -e "${BLUE}📤 Pushing MCP example server to local registry${NC}"
-docker push localhost:$REGISTRY_PORT/mcp-example:1.0.0
+# Check if we already have the example server image
+if docker images localhost:$REGISTRY_PORT/mcp-example:1.0.0 | grep -q "mcp-example" && \
+   curl -s http://localhost:$REGISTRY_PORT/v2/mcp-example/tags/list | grep -q "1.0.0"; then
+    echo -e "${GREEN}✅ MCP example server image already available${NC}"
+else
+    if [ -d "mcp-example-server" ]; then
+        echo -e "${BLUE}🔨 Building MCP example server image${NC}"
+        docker build -f mcp-example-server/Dockerfile mcp-example-server -t localhost:$REGISTRY_PORT/mcp-example:1.0.0
 
-echo -e "${GREEN}✅ MCP example server image built and pushed${NC}"
+        echo -e "${BLUE}📤 Pushing MCP example server to local registry${NC}"
+        docker push localhost:$REGISTRY_PORT/mcp-example:1.0.0
 
-# Step 5: Build MCP Gateway Service
-echo -e "${BLUE}📋 Step 5: Building MCP Gateway Service${NC}"
-
-if [ ! -f "dotnet/Microsoft.McpGateway.sln" ]; then
-    echo -e "${RED}❌ MCP Gateway solution file not found${NC}"
-    exit 1
+        echo -e "${GREEN}✅ MCP example server image built and pushed${NC}"
+    else
+        echo -e "${YELLOW}⚠️  mcp-example-server directory not found, skipping example server build${NC}"
+        echo -e "${YELLOW}⚠️  You can still use the MCP Gateway without the example server${NC}"
+    fi
 fi
 
-echo -e "${BLUE}🔨 Building MCP Gateway service${NC}"
-cd dotnet
+# Step 5: Setup MCP Gateway Service
+echo -e "${BLUE}📋 Step 5: Setting up MCP Gateway Service${NC}"
 
-# Build the solution
-dotnet restore Microsoft.McpGateway.sln
-dotnet build Microsoft.McpGateway.sln -c Release
+# Skip .NET build if using official image
+if [ "$USE_OFFICIAL_IMAGE_ONLY" = true ]; then
+    echo -e "${BLUE}🚀 Using official image, skipping .NET build${NC}"
+    # We'll handle the image in the next step
+else
+    if [ ! -f "dotnet/Microsoft.McpGateway.sln" ]; then
+        echo -e "${RED}❌ MCP Gateway solution file not found${NC}"
+        exit 1
+    fi
 
-# Check if we have the publish profile, if not create a simple one
-PUBLISH_PROFILE_DIR="Microsoft.McpGateway.Service/Properties/PublishProfiles"
-PUBLISH_PROFILE="$PUBLISH_PROFILE_DIR/localhost_${REGISTRY_PORT}.pubxml"
+    echo -e "${BLUE}🔨 Building MCP Gateway service from source${NC}"
+    cd dotnet
+fi
 
-mkdir -p "$PUBLISH_PROFILE_DIR"
+# Build the solution (only if building from source)
+if [ "$USE_OFFICIAL_IMAGE_ONLY" = false ]; then
+    dotnet restore Microsoft.McpGateway.sln
+    dotnet build Microsoft.McpGateway.sln -c Release
+fi
 
-cat > "$PUBLISH_PROFILE" << EOF
+# Check if we have the publish profile, if not create a simple one (only if building from source)
+if [ "$USE_OFFICIAL_IMAGE_ONLY" = false ]; then
+    PUBLISH_PROFILE_DIR="Microsoft.McpGateway.Service/Properties/PublishProfiles"
+    PUBLISH_PROFILE="$PUBLISH_PROFILE_DIR/localhost_${REGISTRY_PORT}.pubxml"
+
+    mkdir -p "$PUBLISH_PROFILE_DIR"
+
+    cat > "$PUBLISH_PROFILE" << EOF
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
@@ -183,36 +229,70 @@ cat > "$PUBLISH_PROFILE" << EOF
   </PropertyGroup>
 </Project>
 EOF
+fi
 
 # Publish the container image
 echo -e "${BLUE}📤 Publishing MCP Gateway container image${NC}"
 
-# Try multiple approaches to build the MCP Gateway image
+# Try multiple approaches to build/obtain the MCP Gateway image
 IMAGE_BUILT=false
 
-# Approach 1: Try dotnet publish with container
-echo -e "${BLUE}🔨 Approach 1: Using dotnet publish with container${NC}"
-if dotnet publish Microsoft.McpGateway.Service/src/Microsoft.McpGateway.Service.csproj -c Release /p:PublishProfile=localhost_${REGISTRY_PORT}.pubxml 2>/dev/null; then
-    echo -e "${GREEN}✅ dotnet publish completed${NC}"
+# Approach 1: Use official Microsoft Docker image (NEW - PREFERRED)
+echo -e "${BLUE}🔨 Approach 1: Using official Microsoft MCP Gateway image${NC}"
+OFFICIAL_IMAGE="ghcr.io/microsoft/mcp-gateway:latest"
+LOCAL_IMAGE="localhost:$REGISTRY_PORT/mcp-gateway:latest"
+
+echo -e "${BLUE}📥 Pulling official Microsoft MCP Gateway image${NC}"
+if docker pull "$OFFICIAL_IMAGE"; then
+    echo -e "${GREEN}✅ Official image pulled successfully${NC}"
     
-    # Verify the image was actually created and pushed
-    sleep 2
-    if curl -s http://localhost:$REGISTRY_PORT/v2/_catalog | grep -q "mcp-gateway"; then
-        IMAGE_BUILT=true
-        echo -e "${GREEN}✅ Container published successfully via dotnet publish${NC}"
+    # Tag and push to local registry for Kubernetes
+    echo -e "${BLUE}🏷️  Tagging image for local registry${NC}"
+    if docker tag "$OFFICIAL_IMAGE" "$LOCAL_IMAGE"; then
+        echo -e "${GREEN}✅ Image tagged successfully${NC}"
+        
+        echo -e "${BLUE}📤 Pushing to local registry${NC}"
+        if docker push "$LOCAL_IMAGE"; then
+            IMAGE_BUILT=true
+            echo -e "${GREEN}✅ Official MCP Gateway image ready in local registry${NC}"
+        else
+            echo -e "${YELLOW}⚠️  Failed to push to local registry, trying alternative approaches${NC}"
+            IMAGE_BUILT=false
+        fi
     else
-        echo -e "${YELLOW}⚠️  dotnet publish succeeded but image not found in registry${NC}"
-        echo -e "${YELLOW}⚠️  Falling back to manual Docker build${NC}"
+        echo -e "${YELLOW}⚠️  Failed to tag image, trying alternative approaches${NC}"
         IMAGE_BUILT=false
     fi
 else
-    echo -e "${YELLOW}⚠️  dotnet publish failed, trying alternative approaches${NC}"
+    echo -e "${YELLOW}⚠️  Failed to pull official image, trying alternative approaches${NC}"
     IMAGE_BUILT=false
 fi
 
-# Approach 2: Try to find and use Dockerfile
-if [ "$IMAGE_BUILT" = false ]; then
-    echo -e "${BLUE}🔨 Approach 2: Looking for Dockerfile${NC}"
+# Approach 2: Try dotnet publish with container (fallback)
+if [ "$IMAGE_BUILT" = false ] && [ "$USE_OFFICIAL_IMAGE_ONLY" = false ]; then
+    echo -e "${BLUE}🔨 Approach 2: Using dotnet publish with container${NC}"
+    if dotnet publish Microsoft.McpGateway.Service/src/Microsoft.McpGateway.Service.csproj -c Release /p:PublishProfile=localhost_${REGISTRY_PORT}.pubxml 2>/dev/null; then
+        echo -e "${GREEN}✅ dotnet publish completed${NC}"
+        
+        # Verify the image was actually created and pushed
+        sleep 2
+        if curl -s http://localhost:$REGISTRY_PORT/v2/_catalog | grep -q "mcp-gateway"; then
+            IMAGE_BUILT=true
+            echo -e "${GREEN}✅ Container published successfully via dotnet publish${NC}"
+        else
+            echo -e "${YELLOW}⚠️  dotnet publish succeeded but image not found in registry${NC}"
+            echo -e "${YELLOW}⚠️  Falling back to manual Docker build${NC}"
+            IMAGE_BUILT=false
+        fi
+    else
+        echo -e "${YELLOW}⚠️  dotnet publish failed, trying alternative approaches${NC}"
+        IMAGE_BUILT=false
+    fi
+fi
+
+# Approach 3: Try to find and use Dockerfile
+if [ "$IMAGE_BUILT" = false ] && [ "$USE_OFFICIAL_IMAGE_ONLY" = false ]; then
+    echo -e "${BLUE}🔨 Approach 3: Looking for Dockerfile${NC}"
     
     # Look for Dockerfile in common locations
     DOCKERFILE_LOCATIONS=(
@@ -233,9 +313,9 @@ if [ "$IMAGE_BUILT" = false ]; then
     done
 fi
 
-# Approach 3: Manual Docker build without Dockerfile
-if [ "$IMAGE_BUILT" = false ]; then
-    echo -e "${BLUE}🔨 Approach 3: Creating Dockerfile automatically${NC}"
+# Approach 4: Manual Docker build without Dockerfile
+if [ "$IMAGE_BUILT" = false ] && [ "$USE_OFFICIAL_IMAGE_ONLY" = false ]; then
+    echo -e "${BLUE}🔨 Approach 4: Creating Dockerfile automatically${NC}"
     
     # Create a comprehensive Dockerfile for MCP Gateway
     echo -e "${BLUE}📝 Creating optimized Dockerfile for MCP Gateway${NC}"
@@ -350,9 +430,12 @@ else
     echo -e "${YELLOW}⚠️  Local image verification failed, but registry push succeeded${NC}"
 fi
 
-cd ..
+# Return to work directory
+if [ "$USE_OFFICIAL_IMAGE_ONLY" = false ]; then
+    cd ..
+fi
 
-echo -e "${GREEN}✅ MCP Gateway service built and pushed${NC}"
+echo -e "${GREEN}✅ MCP Gateway service ready${NC}"
 
 # Step 6: Prepare Kubernetes Deployment
 echo -e "${BLUE}📋 Step 6: Preparing Kubernetes Deployment${NC}"

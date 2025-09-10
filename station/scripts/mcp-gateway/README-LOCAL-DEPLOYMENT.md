@@ -6,11 +6,14 @@
 
 ## 🎯 **解决的问题**
 
+- ✅ **官方镜像优先**: 自动使用Microsoft官方Docker镜像 `ghcr.io/microsoft/mcp-gateway:latest`
+- ✅ **智能fallback**: 官方镜像不可用时自动从源码构建
 - ✅ **端口冲突处理**: 自动检测并避开5000端口冲突
 - ✅ **完整自动化**: 一键部署整个MCP Gateway环境  
 - ✅ **环境检查**: 自动验证所有必需的依赖项
 - ✅ **错误处理**: 提供详细的错误信息和解决方案
 - ✅ **资源清理**: 完整的清理脚本，避免资源残留
+- ✅ **性能优化**: 跳过不必要的源码克隆和.NET构建
 
 ## 📋 **前置要求**
 
@@ -48,9 +51,10 @@ chmod +x *.sh
 脚本将自动执行以下步骤：
 - ✅ 检查环境依赖
 - ✅ 启动本地Docker Registry (端口5001或其他可用端口)
-- ✅ 克隆Microsoft MCP Gateway仓库
-- ✅ 构建MCP示例服务器镜像
-- ✅ 构建MCP Gateway服务镜像
+- ✅ **优先使用官方镜像** `ghcr.io/microsoft/mcp-gateway:latest`
+- ✅ 智能源码管理 (仅在需要时克隆仓库)
+- ✅ 构建MCP示例服务器镜像 (如果需要)
+- ✅ 准备MCP Gateway镜像 (官方镜像或源码构建)
 - ✅ 部署到Kubernetes
 - ✅ 设置端口转发
 - ✅ 创建测试适配器
@@ -59,8 +63,17 @@ chmod +x *.sh
 ### 3. 验证部署
 
 ```bash
-# 运行测试脚本
+# 快速测试当前MCP Gateway
+./test-current-mcp-gateway.sh
+
+# 完整功能测试
 ./test-mcp-gateway.sh
+
+# 测试Aevatar API集成 (需要Aevatar服务运行)
+./test-aevatar-mcp-api.sh
+
+# 快速Aevatar API测试
+./quick-test-aevatar-api.sh
 ```
 
 ### 4. 清理环境

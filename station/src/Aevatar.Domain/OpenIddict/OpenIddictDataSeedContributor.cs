@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Aevatar.Options;
+using Aevatar.Permissions;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Localization;
@@ -70,6 +71,7 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
         await CreateScopesAsync();
         await CreateApplicationsAsync();
         await SeedAdminUserAsync();
+        await SeedMCPGatewayRolesAndPermissionsAsync();
     }
 
     private async Task CreateScopesAsync()
@@ -199,6 +201,39 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
                 postLogoutRedirectUri: authServerRootUrl
             );
         }
+
+        // HttpApi Client for MCP Gateway API access
+        await CreateApplicationAsync(
+            name: "Aevatar_HttpApi",
+            type: OpenIddictConstants.ClientTypes.Confidential,
+            consentType: OpenIddictConstants.ConsentTypes.Implicit,
+            displayName: "Aevatar HttpApi Client",
+            secret: "1q2w3e*",
+            grantTypes: new List<string>
+            {
+                OpenIddictConstants.GrantTypes.ClientCredentials,
+                OpenIddictConstants.GrantTypes.Password,
+                OpenIddictConstants.GrantTypes.RefreshToken
+            },
+            scopes: commonScopes,
+            clientUri: "http://localhost:7002",
+            redirectUri: "http://localhost:7002"
+        );
+
+        // MCP Gateway Test Client
+        await CreateApplicationAsync(
+            name: "MCPGateway_Test_Client", 
+            type: OpenIddictConstants.ClientTypes.Confidential,
+            consentType: OpenIddictConstants.ConsentTypes.Implicit,
+            displayName: "MCP Gateway Test Client",
+            secret: "mcp-gateway-test-secret-123",
+            grantTypes: new List<string>
+            {
+                OpenIddictConstants.GrantTypes.ClientCredentials
+            },
+            scopes: commonScopes,
+            clientUri: "http://localhost:8000"
+        );
     }
 
     private async Task CreateApplicationAsync(
@@ -420,5 +455,93 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
     private bool HasSameScopes(OpenIddictApplication existingClient, AbpApplicationDescriptor application)
     {
         return existingClient.Permissions == JsonSerializer.Serialize(application.Permissions.Select(q => q.ToString().TrimEnd('/')));
+    }
+
+    /// <summary>
+    /// Seed MCP Gateway roles and permissions
+    /// </summary>
+    private async Task SeedMCPGatewayRolesAndPermissionsAsync()
+    {
+        // Create MCP Gateway Admin role
+        const string mcpGatewayAdminRole = "MCPGatewayAdmin";
+        if (!await _roleManager.RoleExistsAsync(mcpGatewayAdminRole))
+        {
+            var adminRole = new IdentityRole(Guid.NewGuid(), mcpGatewayAdminRole)
+            {
+                IsPublic = true,
+                IsStatic = true
+            };
+
+            var result = await _roleManager.CreateAsync(adminRole);
+            if (!result.Succeeded)
+            {
+                throw new Exception($"Failed to create role '{mcpGatewayAdminRole}': " +
+                                    $"{string.Join(", ", result.Errors.Select(e => e.Description))}");
+            }
+        }
+
+        // Assign all MCP Gateway permissions to the admin role
+        var mcpGatewayPermissions = new[]
+        {
+            MCPGatewayPermissions.Adapters.Default,
+            MCPGatewayPermissions.Adapters.Create,
+            MCPGatewayPermissions.Adapters.Read,
+            MCPGatewayPermissions.Adapters.Update,
+            MCPGatewayPermissions.Adapters.Delete,
+            MCPGatewayPermissions.Adapters.ManageAll,
+            MCPGatewayPermissions.Adapters.ViewMetrics,
+            MCPGatewayPermissions.Adapters.TestConnection,
+            MCPGatewayPermissions.Adapters.ViewLogs,
+            MCPGatewayPermissions.Gateway.Default,
+            MCPGatewayPermissions.Gateway.ViewHealth,
+            MCPGatewayPermissions.Gateway.ViewConfiguration,
+            MCPGatewayPermissions.Gateway.UpdateConfiguration,
+            MCPGatewayPermissions.Gateway.ViewSystemMetrics,
+            MCPGatewayPermissions.Gateway.Manage,
+            MCPGatewayPermissions.Gateway.ViewAuditLogs,
+            MCPGatewayPermissions.Sessions.Default,
+            MCPGatewayPermissions.Sessions.View,
+            MCPGatewayPermissions.Sessions.Terminate,
+            MCPGatewayPermissions.Sessions.ViewDetails,
+            MCPGatewayPermissions.Sessions.ManageRouting
+        };
+
+        foreach (var permission in mcpGatewayPermissions)
+        {
+            await _permissionManager.SetAsync(
+                permission,
+                RolePermissionValueProvider.ProviderName,
+                mcpGatewayAdminRole,
+                true);
+        }
+
+        // Assign MCP Gateway permissions to HttpApi client
+        const string httpApiClientName = "Aevatar_HttpApi";
+        foreach (var permission in mcpGatewayPermissions)
+        {
+            await _permissionManager.SetAsync(
+                permission,
+                ClientPermissionValueProvider.ProviderName,
+                httpApiClientName,
+                true);
+        }
+
+        // Also assign to test client
+        const string testClientName = "MCPGateway_Test_Client";
+        foreach (var permission in mcpGatewayPermissions)
+        {
+            await _permissionManager.SetAsync(
+                permission,
+                ClientPermissionValueProvider.ProviderName,
+                testClientName,
+                true);
+        }
+
+        // Assign the MCP Gateway Admin role to the admin user (if exists)
+        var adminUser = await _identityUserManager.FindByNameAsync("admin");
+        if (adminUser != null && !await _identityUserManager.IsInRoleAsync(adminUser, mcpGatewayAdminRole))
+        {
+            await _identityUserManager.AddToRoleAsync(adminUser, mcpGatewayAdminRole);
+        }
     }
 }
