@@ -16,9 +16,7 @@ public class StartExecuteWorkflowEvent: EventBase
 public class StartExecuteWorkUnitEvent : EventBase
 {
     [Id(0)]
-    public string WorkUnitGrainId { get; set; }
+    public string TargetAgentId { get; set; }
     [Id(1)]
     public List<ChatMessage>? CoordinatorMessages { get; set; } = null;
-    [Id(2)]
-    public List<string> UpstreamAgentIds { get; set; } = new();
 }

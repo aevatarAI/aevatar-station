@@ -384,9 +384,8 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
 
         await PublishAsync(new StartExecuteWorkUnitEvent
         {
-            WorkUnitGrainId = speaker.ToString(),
-            CoordinatorMessages = messages,
-            UpstreamAgentIds = State.GetUpStreamGrainIds(workUnitGrainId)
+            TargetAgentId = speaker.ToString(),
+            CoordinatorMessages = messages
         });
 
         RaiseEvent(new StartWorkUnitLogEvent() { WorkUnitGrainId = workUnitGrainId, Term = State.Term });

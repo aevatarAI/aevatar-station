@@ -34,16 +34,24 @@ public class WorkflowExecutionRecordGAgent :
     {
         // Extract upstream agent from the last message in CoordinatorMessages
         string? sourceAgentId = null;
+        string? sourceAgentName = null;
         if (@event.CoordinatorMessages?.Count > 0)
         {
             var lastMessage = @event.CoordinatorMessages.Last();
             sourceAgentId = lastMessage.MemberId.ToString();
+            sourceAgentName = lastMessage.AgentName;
         }
+        
+        // Extract target agent info from GrainId
+        var targetAgentId = @event.TargetAgentId;
+        var targetAgentName = ExtractAgentNameFromGrainId(targetAgentId);
         
         RaiseEvent(new StartExecuteWorkUnitLogEvent
         {
-            WorkUnitGrainId = @event.WorkUnitGrainId,
+            TargetAgentId = targetAgentId,
             SourceAgentId = sourceAgentId,
+            SourceAgentName = sourceAgentName,
+            TargetAgentName = targetAgentName,
             InputData = System.Text.Json.JsonSerializer.Serialize(@event.CoordinatorMessages)
         });
         
@@ -53,11 +61,25 @@ public class WorkflowExecutionRecordGAgent :
     [EventHandler]
     public async Task HandleEventAsync(ChatResponseEvent @event)
     {
-        RaiseEvent(new FinishExecuteWorkUnitLogEvent
+        var targetAgentId = @event.PublisherGrainId.ToString();
+        // Find records that are Running or Pending (for incorrect sequence scenarios)
+        var eligibleRecords = State.WorkUnitRecords
+            .Where(r => r.TargetAgentId == targetAgentId)
+            .Where(r => r.Status == WorkflowExecutionStatus.Running || r.Status == WorkflowExecutionStatus.Pending)
+            .ToList();
+            
+        foreach (var record in eligibleRecords)
         {
-            WorkUnitGrainId = @event.PublisherGrainId.ToString(),
-            OutputData = System.Text.Json.JsonSerializer.Serialize(@event.ChatResponse?.Content)
-        });
+            RaiseEvent(new FinishExecuteWorkUnitLogEvent
+            {
+                TargetAgentId = targetAgentId,
+                SourceAgentId = record.SourceAgentId,
+                SourceAgentName = record.SourceAgentName,
+                TargetAgentName = record.TargetAgentName,
+                OutputData = System.Text.Json.JsonSerializer.Serialize(@event.ChatResponse?.Content)
+            });
+        }
+        
         await ConfirmEvents();
     }
 
@@ -82,55 +104,139 @@ public class WorkflowExecutionRecordGAgent :
                 state.InitContent = startExecuteWorkflowLogEvent.Content;
                 state.StartTime = DateTime.UtcNow;
                 state.Status = WorkflowExecutionStatus.Running;
-                // Do NOT create records here - they will be created dynamically based on message flow
+                // Create initial skeleton records - they will be populated with SourceAgent info when StartExecuteWorkUnitEvent is received
+                state.WorkUnitRecords = startExecuteWorkflowLogEvent.WorkUnitInfos.Select(o =>
+                    new WorkUnitExecutionRecord
+                    {
+                        TargetAgentId = o.GrainId,
+                        TargetAgentName = ExtractAgentNameFromGrainId(o.GrainId),
+                        SourceAgentId = null, // Will be set when StartExecuteWorkUnitEvent is received
+                        SourceAgentName = null,
+                        StartTime = DateTime.MinValue, // Will be updated when StartExecuteWorkUnitEvent is received
+                        Status = WorkflowExecutionStatus.Pending,
+                        InputData = null,
+                        OutputData = null
+                    }).ToList();
                 break;
             case FinishExecuteWorkflowLogEvent finishExecuteWorkflowLogEvent:
                 state.EndTime = DateTime.UtcNow;
                 state.Status = WorkflowExecutionStatus.Completed;
                 break;
             case StartExecuteWorkUnitLogEvent startExecuteWorkUnitLogEvent:
-                // Create or find execution record for the message flow: source -> target
-                var recordKey = $"{startExecuteWorkUnitLogEvent.SourceAgentId ?? "START"}|{startExecuteWorkUnitLogEvent.WorkUnitGrainId}";
+                // Find existing record for this TargetAgentId and update it
                 var existingRecord = state.WorkUnitRecords.FirstOrDefault(r => 
-                    r.SourceAgentId == startExecuteWorkUnitLogEvent.SourceAgentId && 
-                    r.WorkUnitGrainId == startExecuteWorkUnitLogEvent.WorkUnitGrainId);
+                    r.TargetAgentId == startExecuteWorkUnitLogEvent.TargetAgentId);
                 
-                if (existingRecord == null)
+                    if (existingRecord != null)
+                    {
+                        // Only update if the record is not already completed
+                        if (existingRecord.Status != WorkflowExecutionStatus.Completed)
+                        {
+                            // Update existing record with source agent and mark as running
+                            existingRecord.SourceAgentId = startExecuteWorkUnitLogEvent.SourceAgentId;
+                            existingRecord.SourceAgentName = startExecuteWorkUnitLogEvent.SourceAgentName;
+                            existingRecord.TargetAgentName = startExecuteWorkUnitLogEvent.TargetAgentName;
+                            existingRecord.StartTime = DateTime.UtcNow;
+                            existingRecord.Status = WorkflowExecutionStatus.Running;
+                            existingRecord.InputData = startExecuteWorkUnitLogEvent.InputData;
+                        }
+                        else
+                        {
+                            // Even if completed, update InputData if it's null (for incorrect sequence scenarios)
+                            if (string.IsNullOrEmpty(existingRecord.InputData))
+                            {
+                                existingRecord.InputData = startExecuteWorkUnitLogEvent.InputData;
+                                existingRecord.SourceAgentId = startExecuteWorkUnitLogEvent.SourceAgentId;
+                                existingRecord.SourceAgentName = startExecuteWorkUnitLogEvent.SourceAgentName;
+                                existingRecord.TargetAgentName = startExecuteWorkUnitLogEvent.TargetAgentName;
+                            }
+                        }
+                    }
+                else
                 {
-                    // Create new record for this message flow
+                    // Create new record if none exists (fallback case)
                     var newRecord = new WorkUnitExecutionRecord
                     {
-                        WorkUnitGrainId = startExecuteWorkUnitLogEvent.WorkUnitGrainId,
+                        TargetAgentId = startExecuteWorkUnitLogEvent.TargetAgentId,
+                        TargetAgentName = startExecuteWorkUnitLogEvent.TargetAgentName,
                         SourceAgentId = startExecuteWorkUnitLogEvent.SourceAgentId,
+                        SourceAgentName = startExecuteWorkUnitLogEvent.SourceAgentName,
                         StartTime = DateTime.UtcNow,
                         Status = WorkflowExecutionStatus.Running,
                         InputData = startExecuteWorkUnitLogEvent.InputData
                     };
                     state.WorkUnitRecords.Add(newRecord);
                 }
-                else
-                {
-                    // Update existing record
-                    existingRecord.StartTime = DateTime.UtcNow;
-                    existingRecord.Status = WorkflowExecutionStatus.Running;
-                    existingRecord.InputData = startExecuteWorkUnitLogEvent.InputData;
-                }
                 break;
             case FinishExecuteWorkUnitLogEvent finishExecuteWorkUnitLogEvent:
-                // Finish ALL running records for this target agent
-                // An agent's response completes all input flows to that agent
-                var runningRecords = state.WorkUnitRecords
-                    .Where(r => r.WorkUnitGrainId == finishExecuteWorkUnitLogEvent.WorkUnitGrainId)
-                    .Where(r => r.Status == WorkflowExecutionStatus.Running)
-                    .ToList();
-                    
-                foreach (var record in runningRecords)
+                // If SourceAgentId is specified, use precise matching
+                if (finishExecuteWorkUnitLogEvent.SourceAgentId != null)
                 {
-                    record.EndTime = DateTime.UtcNow;
-                    record.Status = WorkflowExecutionStatus.Completed;
-                    record.OutputData = finishExecuteWorkUnitLogEvent.OutputData;
+                    var targetRecord = state.WorkUnitRecords.FirstOrDefault(r => 
+                        r.TargetAgentId == finishExecuteWorkUnitLogEvent.TargetAgentId &&
+                        r.SourceAgentId == finishExecuteWorkUnitLogEvent.SourceAgentId);
+                        
+                    if (targetRecord != null)
+                    {
+                        targetRecord.EndTime = DateTime.UtcNow;
+                        targetRecord.Status = WorkflowExecutionStatus.Completed;
+                        targetRecord.OutputData = finishExecuteWorkUnitLogEvent.OutputData;
+                    }
+                }
+                else
+                {
+                    // Fallback: Complete any running or pending record for this TargetAgentId
+                    var targetRecord = state.WorkUnitRecords.FirstOrDefault(r => 
+                        r.TargetAgentId == finishExecuteWorkUnitLogEvent.TargetAgentId &&
+                        (r.Status == WorkflowExecutionStatus.Running || r.Status == WorkflowExecutionStatus.Pending));
+                        
+                    if (targetRecord != null)
+                    {
+                        targetRecord.EndTime = DateTime.UtcNow;
+                        targetRecord.Status = WorkflowExecutionStatus.Completed;
+                        targetRecord.OutputData = finishExecuteWorkUnitLogEvent.OutputData;
+                    }
                 }
                 break;
+        }
+    }
+    
+    /// <summary>
+    /// Extract agent name from GrainId string
+    /// Example: "Aevatar.GAgents.InputGAgent.GAgent.InputGAgent/guid" -> "InputGAgent"
+    /// </summary>
+    private string? ExtractAgentNameFromGrainId(string grainId)
+    {
+        if (string.IsNullOrEmpty(grainId))
+            return null;
+            
+        try
+        {
+            // Split by '/' to get the type part
+            var typePart = grainId.Split('/')[0];
+            
+            // Split by '.' to get namespaces
+            var namespaces = typePart.Split('.');
+            
+            // Look for the agent name - usually the last non-duplicate part
+            // Example: ["Aevatar", "GAgents", "InputGAgent", "GAgent", "InputGAgent"]
+            for (int i = namespaces.Length - 1; i >= 0; i--)
+            {
+                var part = namespaces[i];
+                if (!string.IsNullOrEmpty(part) && 
+                    part != "GAgent" && 
+                    part != "GAgents" && 
+                    part != "Aevatar")
+                {
+                    return part;
+                }
+            }
+            
+            return null;
+        }
+        catch
+        {
+            return null;
         }
     }
 }
@@ -160,18 +266,28 @@ public class FinishExecuteWorkflowLogEvent : WorkflowExecutionRecordLogEvent
 public class StartExecuteWorkUnitLogEvent : WorkflowExecutionRecordLogEvent
 {
     [Id(0)]
-    public string WorkUnitGrainId { get; set; }
+    public string TargetAgentId { get; set; }
     [Id(1)]
     public string InputData { get; set; }
     [Id(2)]
     public string? SourceAgentId { get; set; }
+    [Id(3)]
+    public string? SourceAgentName { get; set; }
+    [Id(4)]
+    public string? TargetAgentName { get; set; }
 }
 
 [GenerateSerializer]
 public class FinishExecuteWorkUnitLogEvent : WorkflowExecutionRecordLogEvent
 {
     [Id(0)]
-    public string WorkUnitGrainId { get; set; }
+    public string TargetAgentId { get; set; }
     [Id(1)]
     public string OutputData { get; set; }
+    [Id(2)]
+    public string? SourceAgentId { get; set; }
+    [Id(3)]
+    public string? SourceAgentName { get; set; }
+    [Id(4)]
+    public string? TargetAgentName { get; set; }
 }

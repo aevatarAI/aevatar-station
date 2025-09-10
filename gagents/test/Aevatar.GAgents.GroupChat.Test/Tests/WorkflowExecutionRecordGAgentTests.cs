@@ -6,7 +6,7 @@ using Aevatar.GAgents.GroupChat.WorkflowCoordinator;
 using Aevatar.GAgents.GroupChat.WorkflowCoordinator.GEvent;
 using GroupChat.GAgent.Feature.Common;
 using GroupChat.GAgent.Feature.Coordinator.GEvent;
-using Newtonsoft.Json;
+using System.Text.Json;
 using Shouldly;
 
 namespace Aevatar.GAgents.GroupChat.Test.Tests;
@@ -53,7 +53,7 @@ public class WorkflowExecutionRecordGAgentTests : AevatarGroupChatTestBase
         state.WorkUnitInfos.Count.ShouldBe(1);
         state.WorkUnitInfos.ShouldContain(o => o.GrainId == workerGrainId.ToString());
         state.WorkUnitRecords.Count.ShouldBe(1);
-        state.WorkUnitRecords.ShouldContain(o => o.WorkUnitGrainId == workerGrainId.ToString());
+        state.WorkUnitRecords.ShouldContain(o => o.TargetAgentId == workerGrainId.ToString());
     }
 
     [Fact]
@@ -89,16 +89,16 @@ public class WorkflowExecutionRecordGAgentTests : AevatarGroupChatTestBase
 
         var startExecuteGrain = new StartExecuteWorkUnitEvent
         {
-            WorkUnitGrainId = workerGrainId.ToString(),
+            TargetAgentId = workerGrainId.ToString(),
             CoordinatorMessages = new List<ChatMessage> { new ChatMessage { Content = "Input A" } }
         };
         await groupAgent.PublishEventAsync(startExecuteGrain);
         await Task.Delay(1000);
 
         var state = await recordAgent.GetStateAsync();
-        var grainARecord = state.WorkUnitRecords.First(o => o.WorkUnitGrainId == workerGrainId.ToString());
+        var grainARecord = state.WorkUnitRecords.First(o => o.TargetAgentId == workerGrainId.ToString());
         grainARecord.Status.ShouldBe(WorkflowExecutionStatus.Running);
-        grainARecord.InputData.ShouldBe(JsonConvert.SerializeObject(startExecuteGrain.CoordinatorMessages));
+        grainARecord.InputData.ShouldBe(JsonSerializer.Serialize(startExecuteGrain.CoordinatorMessages));
     }
 
     [Fact]
@@ -113,16 +113,16 @@ public class WorkflowExecutionRecordGAgentTests : AevatarGroupChatTestBase
 
         var startExecuteGrain = new StartExecuteWorkUnitEvent
         {
-            WorkUnitGrainId = workerGrainId.ToString(),
+            TargetAgentId = workerGrainId.ToString(),
             CoordinatorMessages = new List<ChatMessage> { new ChatMessage { Content = "Input A" } }
         };
         await groupAgent.PublishEventAsync(startExecuteGrain);
         await Task.Delay(1000);
 
         var state = await recordAgent.GetStateAsync();
-        var grainARecord = state.WorkUnitRecords.First(o => o.WorkUnitGrainId == workerGrainId.ToString());
+        var grainARecord = state.WorkUnitRecords.First(o => o.TargetAgentId == workerGrainId.ToString());
         grainARecord.Status.ShouldBe(WorkflowExecutionStatus.Running);
-        grainARecord.InputData.ShouldBe(JsonConvert.SerializeObject(startExecuteGrain.CoordinatorMessages));
+        grainARecord.InputData.ShouldBe(JsonSerializer.Serialize(startExecuteGrain.CoordinatorMessages));
 
         var finishExecuteGrainA = new ChatResponseEvent
         {
@@ -136,9 +136,9 @@ public class WorkflowExecutionRecordGAgentTests : AevatarGroupChatTestBase
         await Task.Delay(1000);
 
         state = await recordAgent.GetStateAsync();
-        grainARecord = state.WorkUnitRecords.First(o => o.WorkUnitGrainId == workerGrainId.ToString());
+        grainARecord = state.WorkUnitRecords.First(o => o.TargetAgentId == workerGrainId.ToString());
         grainARecord.Status.ShouldBe(WorkflowExecutionStatus.Completed);
-        grainARecord.OutputData.ShouldBe(JsonConvert.SerializeObject(finishExecuteGrainA.ChatResponse.Content));
+        grainARecord.OutputData.ShouldBe(JsonSerializer.Serialize(finishExecuteGrainA.ChatResponse.Content));
     }
 
     [Fact]
@@ -163,22 +163,22 @@ public class WorkflowExecutionRecordGAgentTests : AevatarGroupChatTestBase
         await Task.Delay(1000);
 
         var state = await recordAgent.GetStateAsync();
-        var grainARecord = state.WorkUnitRecords.First(o => o.WorkUnitGrainId == workerGrainId.ToString());
+        var grainARecord = state.WorkUnitRecords.First(o => o.TargetAgentId == workerGrainId.ToString());
         grainARecord.Status.ShouldBe(WorkflowExecutionStatus.Completed);
-        grainARecord.OutputData.ShouldBe(JsonConvert.SerializeObject(finishExecuteGrainA.ChatResponse.Content));
+        grainARecord.OutputData.ShouldBe(JsonSerializer.Serialize(finishExecuteGrainA.ChatResponse.Content));
 
         var startExecuteGrain = new StartExecuteWorkUnitEvent
         {
-            WorkUnitGrainId = workerGrainId.ToString(),
+            TargetAgentId = workerGrainId.ToString(),
             CoordinatorMessages = new List<ChatMessage> { new ChatMessage { Content = "Input A" } }
         };
         await groupAgent.PublishEventAsync(startExecuteGrain);
         await Task.Delay(1000);
 
         state = await recordAgent.GetStateAsync();
-        grainARecord = state.WorkUnitRecords.First(o => o.WorkUnitGrainId == workerGrainId.ToString());
+        grainARecord = state.WorkUnitRecords.First(o => o.TargetAgentId == workerGrainId.ToString());
         grainARecord.Status.ShouldBe(WorkflowExecutionStatus.Completed);
-        grainARecord.InputData.ShouldBe(JsonConvert.SerializeObject(startExecuteGrain.CoordinatorMessages));
+        grainARecord.InputData.ShouldBe(JsonSerializer.Serialize(startExecuteGrain.CoordinatorMessages));
     }
 
     private async Task StartExecuteWorkflowAsync(IGroupGAgent groupAgent, GrainId workerGrainId)
